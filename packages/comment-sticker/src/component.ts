@@ -1,5 +1,4 @@
 import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-kit";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, StoredValue } from "@hypit/protocol";
 import type { SemanticTrack } from "@hypit/semantic-track";
@@ -8,7 +7,7 @@ import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 import type { Text } from "@hypit/text";
 
 import { commentStickerProducers, commentStickerTypes } from "./manifest.js";
-import { appendMomentCommentSticker, appendProgramCommentSticker, appendSelectionCommentSticker, assertCommentStickerProgram, createCommentStickerSet, createCommentStickerContent, setCommentStickerContentText, finalizeCommentSticker, renderCommentSticker } from "./program.js";
+import { appendProjectedCommentSticker, assertCommentStickerProgram, createCommentStickerSet, createCommentStickerContent, setCommentStickerContentText, finalizeCommentSticker, renderCommentSticker } from "./program.js";
 import type {
   CommentStickerHeader,
   CommentStickerContent,
@@ -17,6 +16,7 @@ import type {
   CommentStickerSet,
   CommentStickerStyle,
 } from "./types.js";
+import type { TemporalWindow } from "@hypit/temporal";
 
 function inline<T>(value: StoredValue | undefined, label: string): T {
   if (value?.kind !== "inline") throw new Error(`${label} must be inline.`);
@@ -34,6 +34,7 @@ function common(inputs: Record<string, { readonly value: StoredValue } | undefin
     semantic: inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
     spec: inline<CommentStickerItemSpec>(inputs.spec?.value, "CommentStickerItemSpec"),
     content: inline<CommentStickerContent>(inputs.content?.value, "CommentStickerContent"),
+    window: inline<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
   };
 }
 
@@ -62,42 +63,14 @@ export const commentStickerComponent = {
       handler: () => ({ outputs: { set: output(createCommentStickerSet()) }, needs: {} }),
     },
     ...([
-      [commentStickerProducers.appendProgram, false],
-      [commentStickerProducers.appendProgramAvatar, true],
+      [commentStickerProducers.appendItem, false],
+      [commentStickerProducers.appendItemAvatar, true],
     ] as const).map(([producer, avatar]) => ({
       producer,
       handler: ({ inputs }: ProducerHandlerContext) => {
         const values = common(inputs);
-        return { outputs: { set: output(appendProgramCommentSticker(
-          values.set, values.header, values.frame, values.style, values.semantic, values.spec, values.content,
-          ...(avatar ? [inline<BlobRef>(inputs.avatar?.value, "Comment Sticker avatar")] : []),
-        )) }, needs: {} };
-      },
-    })),
-    ...([
-      [commentStickerProducers.appendSelection, false],
-      [commentStickerProducers.appendSelectionAvatar, true],
-    ] as const).map(([producer, avatar]) => ({
-      producer,
-      handler: ({ inputs }: ProducerHandlerContext) => {
-        const values = common(inputs);
-        return { outputs: { set: output(appendSelectionCommentSticker(
-          values.set, values.header, values.frame, values.style, values.semantic,
-          inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelection"), values.spec, values.content,
-          ...(avatar ? [inline<BlobRef>(inputs.avatar?.value, "Comment Sticker avatar")] : []),
-        )) }, needs: {} };
-      },
-    })),
-    ...([
-      [commentStickerProducers.appendMoment, false],
-      [commentStickerProducers.appendMomentAvatar, true],
-    ] as const).map(([producer, avatar]) => ({
-      producer,
-      handler: ({ inputs }: ProducerHandlerContext) => {
-        const values = common(inputs);
-        return { outputs: { set: output(appendMomentCommentSticker(
-          values.set, values.header, values.frame, values.style, values.semantic,
-          inline<NarrativeMomentRef>(inputs.moment?.value, "NarrativeMoment"), values.spec, values.content,
+        return { outputs: { set: output(appendProjectedCommentSticker(
+          values.set, values.header, values.frame, values.style, values.spec, values.content, values.window,
           ...(avatar ? [inline<BlobRef>(inputs.avatar?.value, "Comment Sticker avatar")] : []),
         )) }, needs: {} };
       },

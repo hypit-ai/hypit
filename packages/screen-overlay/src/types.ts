@@ -1,5 +1,4 @@
 import type { FrameSpan } from "@hypit/composition";
-import type { OccurrenceExpansion, TemporalWindowProjection } from "@hypit/temporal";
 
 export type FlashOverlay = {
   readonly kind: "flash"; readonly color: string; readonly intensity: number;
@@ -52,8 +51,6 @@ export type ScreenOverlayComponent =
 export type ScreenOverlayItemSpec = {
   readonly id: string;
   readonly content: ScreenOverlayComponent;
-  readonly projection: TemporalWindowProjection;
-  readonly expansion: OccurrenceExpansion;
   readonly stackingOrder: number;
 };
 export type ScreenOverlayHeader = { readonly id: string };

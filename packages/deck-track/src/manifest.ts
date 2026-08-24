@@ -18,11 +18,12 @@ import {
   mediaTrackTypes,
 } from "@hypit/media-track";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
-import { temporalDependency } from "@hypit/temporal";
+import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import { textDependency, textTypes } from "@hypit/text";
 
 const previewImage = (file: string) => ({
@@ -43,11 +44,8 @@ export const depthStackTypes = {
 } satisfies Record<string, TypeRef>;
 export const depthStackProducers = {
   createCards: { module: depthStackModuleRef, name: "create-depth-stack-card-set" },
-  appendMomentCard: { module: depthStackModuleRef, name: "append-depth-stack-moment-card" },
-  finalizeProgramEnd: { module: depthStackModuleRef, name: "finalize-depth-stack-at-program-end" },
-  finalizeUntilMoment: { module: depthStackModuleRef, name: "finalize-depth-stack-until-moment" },
-  finalizeUntilSelectionStart: { module: depthStackModuleRef, name: "finalize-depth-stack-until-selection-start" },
-  finalizeUntilSelectionEnd: { module: depthStackModuleRef, name: "finalize-depth-stack-until-selection-end" },
+  appendCard: { module: depthStackModuleRef, name: "append-depth-stack-card" },
+  finalize: { module: depthStackModuleRef, name: "finalize-depth-stack" },
   render: { module: depthStackModuleRef, name: "render-depth-stack" },
   bindLabelText: { module: depthStackModuleRef, name: "bind-depth-stack-label-text" },
 } satisfies Record<string, ProducerRef>;
@@ -118,7 +116,7 @@ export const depthStackProgramSchema: ValueSchema = object({
 const finalizeInputs = [
   { name: "set", type: depthStackTypes.cardSet }, { name: "header", type: depthStackTypes.header },
   { name: "frame", type: spatialTypes.frame }, { name: "spec", type: depthStackTypes.spec },
-  { name: "semantic", type: semanticTrackTypes.track },
+  { name: "space", type: programSpaceTypes.programSpace },
 ] as const;
 
 export const depthStackMarkupSurfaces = [
@@ -159,6 +157,7 @@ export const depthStackMarkupSurfaces = [
       depthStackTypes.header, depthStackTypes.spec, depthStackTypes.cardSpec,
       spatialTypes.fit, mediaTrackTypes.sampleLayerSpec, mediaTrackTypes.paintLayerSpec,
       depthStackTypes.cardLabel, depthStackTypes.cardLabelStyle, textTypes.text,
+      temporalTypes.pointSpec,
       depthStackTypes.program, compositionTypes.visualTrack,
     ],
       vocabulary: {
@@ -409,7 +408,7 @@ export const depthStackMarkupSurfaces = [
 
 export const depthStackManifest: ModuleManifest = {
   format: "hypit.module@1", name: depthStackModuleRef.name, version: depthStackModuleRef.version,
-  dependencies: [narrativeDependency, semanticTrackDependency, spatialDependency, temporalDependency, mediaDependency, mediaTrackDependency, compositionDependency, textDependency],
+  dependencies: [narrativeDependency, programSpaceDependency, semanticTrackDependency, spatialDependency, temporalDependency, mediaDependency, mediaTrackDependency, compositionDependency, textDependency],
   types: [
     { name: depthStackTypes.header.name },
     { name: depthStackTypes.spec.name },
@@ -422,22 +421,16 @@ export const depthStackManifest: ModuleManifest = {
   producers: [
     { name: depthStackProducers.bindLabelText.name, inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }], outputs: [{ name: "label", type: depthStackTypes.cardLabel }], needs: [] },
     { name: depthStackProducers.createCards.name, inputs: [], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [] },
-    { name: depthStackProducers.appendMomentCard.name, inputs: [
+    { name: depthStackProducers.appendCard.name, inputs: [
       { name: "set", type: depthStackTypes.cardSet }, { name: "material", type: mediaTrackTypes.layerSet },
       { name: "label", type: depthStackTypes.cardLabel }, { name: "spec", type: depthStackTypes.cardSpec },
-      { name: "semantic", type: semanticTrackTypes.track }, { name: "moment", type: narrativeTypes.moment },
+      { name: "activation", type: temporalTypes.point },
     ], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [] },
-    { name: depthStackProducers.finalizeProgramEnd.name, inputs: finalizeInputs, outputs: [{ name: "program", type: depthStackTypes.program }], needs: [] },
-    ...([
-      [depthStackProducers.finalizeUntilMoment, narrativeTypes.moment],
-      [depthStackProducers.finalizeUntilSelectionStart, narrativeTypes.selection],
-      [depthStackProducers.finalizeUntilSelectionEnd, narrativeTypes.selection],
-    ] as const).map(([producer, terminalType]) => ({
-      name: producer.name, inputs: [...finalizeInputs, { name: "terminal", type: terminalType }],
-      outputs: [{ name: "program", type: depthStackTypes.program }], needs: [],
-    })),
+    { name: depthStackProducers.finalize.name,
+      inputs: [...finalizeInputs, { name: "terminal", type: temporalTypes.point }],
+      outputs: [{ name: "program", type: depthStackTypes.program }], needs: [] },
     { name: depthStackProducers.render.name, inputs: [
-      { name: "canvas", type: spatialTypes.canvas }, { name: "semantic", type: semanticTrackTypes.track },
+      { name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace },
       { name: "program", type: depthStackTypes.program },
     ], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
   ],

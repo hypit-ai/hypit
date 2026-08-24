@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
+import { processAlive, stopProcessTree } from "./process-control.js";
+
 export type RuntimeWorkerLaunch = {
   readonly command: string;
   readonly args: readonly string[];
@@ -49,18 +51,6 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    // POSIX uses EPERM when the process exists but the caller may not signal it.
-    // Treat only an absent process as stopped; otherwise a restricted shell can
-    // make every CLI invocation launch another Worker for the same Profile.
-    return error instanceof Error && "code" in error && error.code === "EPERM";
-  }
-}
-
 async function rotateLog(path: string): Promise<void> {
   let size = 0;
   try {
@@ -96,7 +86,7 @@ export async function runtimeProcessStatus(
 ): Promise<RuntimeProcessState> {
   const location = paths(dataRoot);
   const current = await record(profile, dataRoot);
-  if (current === undefined || !alive(current.pid)) {
+  if (current === undefined || !processAlive(current.pid)) {
     return { state: "stopped", profile: resolve(profile), logPath: location.log };
   }
   return {
@@ -177,26 +167,32 @@ export async function ensureRuntimeProcess(
 async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, timeoutMs: number): Promise<RuntimeProcessState> {
   const current = await record(profile, dataRoot);
   const location = paths(dataRoot);
-  if (current === undefined || !alive(current.pid)) {
+  if (current === undefined || !processAlive(current.pid)) {
     await rm(location.pid, { force: true });
     await rm(location.ready, { force: true });
     return { state: "stopped", profile: resolve(profile), logPath: location.log };
   }
-  try {
-    process.kill(current.pid, "SIGTERM");
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "EPERM") {
-      throw new Error(
-        `Runtime Worker ${current.pid} is running but this environment cannot stop it; profile: ${resolve(profile)}`,
-      );
-    }
-    if (!(error instanceof Error && "code" in error && error.code === "ESRCH")) throw error;
+  if (await stopProcessTree(current.pid) === "denied") {
+    throw new Error(
+      `Runtime Worker ${current.pid} is running but this environment cannot stop it; profile: ${resolve(profile)}`,
+    );
   }
   const deadline = Date.now() + timeoutMs;
-  while (Date.now() <= deadline && alive(current.pid)) {
+  while (Date.now() <= deadline && processAlive(current.pid)) {
     await new Promise((resolveWait) => setTimeout(resolveWait, 50));
   }
-  if (alive(current.pid)) throw new Error(`Runtime Worker ${current.pid} did not stop within ${timeoutMs}ms`);
+  if (processAlive(current.pid)) {
+    if (await stopProcessTree(current.pid, true) === "denied") {
+      throw new Error(`Runtime Worker ${current.pid} did not stop within ${timeoutMs}ms`);
+    }
+    const forceDeadline = Date.now() + 2_000;
+    while (Date.now() <= forceDeadline && processAlive(current.pid)) {
+      await new Promise((resolveWait) => setTimeout(resolveWait, 20));
+    }
+    if (processAlive(current.pid)) {
+      throw new Error(`Runtime Worker ${current.pid} remained alive after forced termination`);
+    }
+  }
   await rm(location.pid, { force: true });
   await rm(location.ready, { force: true });
   return { state: "stopped", profile: resolve(profile), logPath: location.log };

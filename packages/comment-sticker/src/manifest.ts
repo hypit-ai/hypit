@@ -8,7 +8,7 @@ import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/p
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
-import { temporalDependency } from "@hypit/temporal";
+import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import { textDependency, textTypes } from "@hypit/text";
 
 const previewImage = (file: string) => ({
@@ -30,12 +30,8 @@ export const commentStickerTypes = {
 
 export const commentStickerProducers = {
   createSet: { module: commentStickerModuleRef, name: "create-comment-sticker-set" },
-  appendProgram: { module: commentStickerModuleRef, name: "append-program-comment-sticker" },
-  appendProgramAvatar: { module: commentStickerModuleRef, name: "append-program-comment-sticker-avatar" },
-  appendSelection: { module: commentStickerModuleRef, name: "append-selection-comment-sticker" },
-  appendSelectionAvatar: { module: commentStickerModuleRef, name: "append-selection-comment-sticker-avatar" },
-  appendMoment: { module: commentStickerModuleRef, name: "append-moment-comment-sticker" },
-  appendMomentAvatar: { module: commentStickerModuleRef, name: "append-moment-comment-sticker-avatar" },
+  appendItem: { module: commentStickerModuleRef, name: "append-comment-sticker" },
+  appendItemAvatar: { module: commentStickerModuleRef, name: "append-comment-sticker-with-avatar" },
   finalize: { module: commentStickerModuleRef, name: "finalize-comment-sticker" },
   render: { module: commentStickerModuleRef, name: "render-comment-sticker" },
   createContent: { module: commentStickerModuleRef, name: "create-comment-sticker-content" },
@@ -64,13 +60,6 @@ const duration: ValueSchema = { kind: "oneOf", variants: [
   object({ unit: { schema: { kind: "literal", value: "milliseconds" } }, value: { schema: integer } }),
   object({ unit: { schema: { kind: "literal", value: "seconds" } }, numerator: { schema: integer }, denominator: { schema: positiveInteger } }),
 ] };
-const point: ValueSchema = { kind: "oneOf", variants: [
-  ...["program.start", "program.end", "selection.start", "selection.end", "moment.cue"].map((ref) => object({
-    ref: { schema: { kind: "literal", value: ref } }, offset: { schema: duration, optional: true },
-  })),
-  object({ ref: { schema: { kind: "literal", value: "absolute" } }, at: { schema: duration } }),
-] };
-const projection = object({ start: { schema: point }, end: { schema: point } });
 const textStyle = object({
   fonts: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } },
   sizePx: { schema: positive }, weight: { schema: positiveInteger }, lineHeight: { schema: positive }, color: { schema: string },
@@ -119,8 +108,7 @@ const content = object({
 });
 const itemSpec = object({
 
-  id: { schema: string }, projection: { schema: projection },
-  expansion: { schema: object({ kind: { schema: enumString(["one", "each"]) } }) },
+  id: { schema: string },
 });
 const frameSpan = object({ startFrame: { schema: unsignedInteger }, endFrameExclusive: { schema: positiveInteger } });
 const item = object({
@@ -145,7 +133,7 @@ const appendInputs = [
   { name: "set", type: commentStickerTypes.set }, { name: "header", type: commentStickerTypes.header },
   { name: "frame", type: spatialTypes.frame }, { name: "style", type: commentStickerTypes.style },
   { name: "semantic", type: semanticTrackTypes.track }, { name: "spec", type: commentStickerTypes.itemSpec },
-  { name: "content", type: commentStickerTypes.content },
+  { name: "content", type: commentStickerTypes.content }, { name: "window", type: temporalTypes.window },
 ] as const;
 
 export const commentStickerMarkupSurfaces = [
@@ -275,7 +263,7 @@ export const commentStickerMarkupSurfaces = [
         ],
       },
     },
-    { name: "track", tag: "Track", mode: "structured", outputs: [textTypes.text, commentStickerTypes.header, commentStickerTypes.itemSpec, commentStickerTypes.program, compositionTypes.visualTrack],
+    { name: "track", tag: "Track", mode: "structured", outputs: [textTypes.text, commentStickerTypes.header, commentStickerTypes.itemSpec, temporalTypes.windowSpec, commentStickerTypes.program, compositionTypes.visualTrack],
       vocabulary: {
         summary: "Places social comment cards over the Program and renders them as one self-contained VisualTrack.",
         appearance: "One rounded card per Sticker, tilted a couple of degrees and lifted on a soft drop shadow, drawn at the place and size its Frame gives it on the Canvas, with a small triangular speech tail hanging from the card's lower edge. Inside the card a circular avatar sits at the left — the supplied image Artifact, or a filled disc bearing the author's initial — and a text column runs beside it from top to bottom: a small faint header line such as `Reply to @viewer's comment`, then the comment copy in large heavy type wrapped to a few lines and ellipsized, then a small faint metadata row pinned to the card's bottom edge when one is supplied. Each card keeps its own window rather than a shared one: it pops in scaling up and unwinding its tilt, rises and rocks gently while it holds, then fades upward as it leaves. Cards are placed by their Frames alone, so several stand on screen at once and none reflows around another.",
@@ -322,8 +310,6 @@ export const commentStickerMarkupSurfaces = [
                 summary: "Resolves `selection.start` and `selection.end` in an explicit start and end window." },
               { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment],
                 summary: "Resolves `moment.cue` in an explicit start and end window." },
-              { name: "occurrences", kind: "literal", required: false, values: ["one", "each"],
-                summary: "Decides whether a bound Selection or Moment places one card or one card per occurrence, defaulting to `one`." },
             ],
             text: "The card's comment copy, read when `comment` is absent.",
           },
@@ -381,12 +367,8 @@ export const commentStickerManifest: ModuleManifest = {
     })),
     { name: commentStickerProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: commentStickerTypes.set }], needs: [] },
     ...([
-      [commentStickerProducers.appendProgram, []],
-      [commentStickerProducers.appendProgramAvatar, [{ name: "avatar", type: artifactTypes.blob }]],
-      [commentStickerProducers.appendSelection, [{ name: "selection", type: narrativeTypes.selection }]],
-      [commentStickerProducers.appendSelectionAvatar, [{ name: "selection", type: narrativeTypes.selection }, { name: "avatar", type: artifactTypes.blob }]],
-      [commentStickerProducers.appendMoment, [{ name: "moment", type: narrativeTypes.moment }]],
-      [commentStickerProducers.appendMomentAvatar, [{ name: "moment", type: narrativeTypes.moment }, { name: "avatar", type: artifactTypes.blob }]],
+      [commentStickerProducers.appendItem, []],
+      [commentStickerProducers.appendItemAvatar, [{ name: "avatar", type: artifactTypes.blob }]],
     ] as const).map(([producer, extra]) => ({
       name: producer.name,
       inputs: [...appendInputs, ...extra],

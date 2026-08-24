@@ -18,6 +18,11 @@ semantic projection combines this evidence with one explicit Script Segment late
 
 ## Install
 
+For an ordinary installed Distribution, select the local WhisperX Endpoint and run
+`hypit runtime up`. The Runtime creates this environment in the machine Program Home only when it is
+missing, and reuses it across projects and sessions. The commands below are contributor/operator
+diagnostics for a deliberately managed deployment:
+
 WhisperX 3.8.6 supports Python 3.10 through 3.13. The checked-in lock selects Python 3.13:
 
 ```bash
@@ -29,8 +34,8 @@ uv run --project services/whisperx --frozen hypit-whisperx-check
 
 The first model start may download ASR and alignment weights. Production should put the relevant
 Hugging Face cache on persistent storage. `hypit-whisperx-prepare` separately installs NLTK's
-`punkt_tab` sentence data from a commit-pinned official archive after verifying its SHA-256. This
-resource is required by WhisperX alignment and is never downloaded inside an inference request.
+`punkt_tab` sentence data through NLTK's own downloader. This resource is required by WhisperX
+alignment and is prepared explicitly before the warm service starts, never inside an inference request.
 
 ## Run
 

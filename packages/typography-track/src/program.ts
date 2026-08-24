@@ -1,25 +1,12 @@
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
-import {
-  assertSemanticTrackIdentity,
-  assertNarrativeMomentIdentity,
-  assertNarrativeSelectionIdentity,
-} from "@hypit/semantic-track";
-import type { SemanticTrack } from "@hypit/semantic-track";
 import {
   assertSpatialFrame,
   assertSpatialPath,
   assertSpatialPoint,
 } from "@hypit/spatial";
 import type { SpatialFrame, SpatialPath, SpatialPoint } from "@hypit/spatial";
-import {
-  assertWindowRelation,
-  projectMomentWindows,
-  projectProgramWindow,
-  projectSelectionWindows,
-} from "@hypit/temporal";
-import type { ProjectedOccurrence } from "@hypit/temporal";
+import type { ProjectedWindow } from "@hypit/temporal";
 import {
   assertVisualTrackIdentity,
   sealVisualTrack,
@@ -210,8 +197,6 @@ export function materializePlainTextItem(spec: PlainTextItemSpec, content: Text)
         inlines: [{ kind: "text", id: `${spec.id}:text`, text: content.value }],
       }],
     },
-    projection: spec.projection,
-    expansion: spec.expansion,
   });
 }
 
@@ -273,24 +258,22 @@ export function createTypographyTrackSet(): TypographyTrackSet {
   return { items: [] };
 }
 
-function occurrenceItem(
+function projectedItem(
   header: TypographyTrackHeader,
   spec: TextItemSpec,
   style: TextStyle,
   motion: TextMotion,
   geometry: TextGeometry,
-  occurrence: ProjectedOccurrence,
-  index: number,
-  count: number,
+  window: ProjectedWindow,
 ): TextItem {
   return {
-    id: count === 1 ? spec.id : occurrence.id,
-    span: { ...occurrence.span },
+    id: spec.id,
+    span: { ...window.span },
     geometry: structuredClone(geometry),
     document: structuredClone(spec.document),
     style: structuredClone(style),
     motion: structuredClone(motion),
-    tieBreak: `${header.id}:${spec.id}:${index + 1}`,
+    tieBreak: `${header.id}:${spec.id}`,
   };
 }
 
@@ -301,7 +284,7 @@ function append(
   style: TextStyle,
   motion: TextMotion,
   geometry: TextGeometry,
-  occurrences: readonly ProjectedOccurrence[],
+  window: ProjectedWindow,
 ): TypographyTrackSet {
   assertTypographyTrackSet(set);
   assertTypographyTrackHeader(header);
@@ -310,60 +293,23 @@ function append(
   assertTextMotion(motion);
   assertGeometry(geometry);
   const existing = new Set(set.items.map((item) => item.id));
-  const additions = occurrences.map((occurrence, index) => occurrenceItem(header, spec, style, motion, geometry, occurrence, index, occurrences.length));
-  if (additions.some((item) => existing.has(item.id))) throw new Error(`TypographyTrackSet already contains ${spec.id}.`);
-  return { items: [...set.items, ...additions] };
+  const addition = projectedItem(header, spec, style, motion, geometry, window);
+  if (existing.has(addition.id)) throw new Error(`TypographyTrackSet already contains ${spec.id}.`);
+  return { items: [...set.items, addition] };
 }
 
-export function appendProgramTextItem(
+/** Component entry point: timing is supplied as a resolved TemporalWindow. */
+export function appendProjectedTextItem(
   set: TypographyTrackSet,
   header: TypographyTrackHeader,
-  semantic: SemanticTrack,
   placement: TextPlacement,
   spec: TextItemSpec,
   style: TextStyle,
   motion: TextMotion,
+  window: ProjectedWindow,
 ): TypographyTrackSet {
-  assertSemanticTrackIdentity(semantic);
   assertTextPlacement(placement);
-  if (spec.expansion.kind !== "one") throw new Error("Program Text uses one occurrence.");
-  return append(set, header, spec, style, motion, placement.geometry, [projectProgramWindow({ itemId: spec.id, semantic, projection: spec.projection })]);
-}
-
-export function appendSelectionTextItem(
-  set: TypographyTrackSet,
-  header: TypographyTrackHeader,
-  semantic: SemanticTrack,
-  selection: NarrativeSelectionRef,
-  placement: TextPlacement,
-  spec: TextItemSpec,
-  style: TextStyle,
-  motion: TextMotion,
-): TypographyTrackSet {
-  assertSemanticTrackIdentity(semantic);
-  assertNarrativeSelectionIdentity(selection);
-  assertTextPlacement(placement);
-  return append(set, header, spec, style, motion, placement.geometry, assertWindowRelation(projectSelectionWindows({
-    itemId: spec.id, semantic, selection, projection: spec.projection, expansion: spec.expansion,
-  }), "disjoint"));
-}
-
-export function appendMomentTextItem(
-  set: TypographyTrackSet,
-  header: TypographyTrackHeader,
-  semantic: SemanticTrack,
-  moment: NarrativeMomentRef,
-  placement: TextPlacement,
-  spec: TextItemSpec,
-  style: TextStyle,
-  motion: TextMotion,
-): TypographyTrackSet {
-  assertSemanticTrackIdentity(semantic);
-  assertNarrativeMomentIdentity(moment);
-  assertTextPlacement(placement);
-  return append(set, header, spec, style, motion, placement.geometry, assertWindowRelation(projectMomentWindows({
-    itemId: spec.id, semantic, moment, projection: spec.projection, expansion: spec.expansion,
-  }), "disjoint"));
+  return append(set, header, spec, style, motion, placement.geometry, window);
 }
 
 function programContent(value: TypographyTrackProgram): TypographyTrackProgram {

@@ -7,9 +7,7 @@ export const narrativeType: TypeRef = narrativeTypes.narrative;
 export const narrativeExcerptType: TypeRef = narrativeTypes.excerpt;
 export const narrativeSelectionType: TypeRef = narrativeTypes.selection;
 export const narrativeMomentType: TypeRef = narrativeTypes.moment;
-export const captionDisplayType: TypeRef = narrativeTypes.captionDisplay;
-export const captionCorrespondenceType: TypeRef = narrativeTypes.captionCorrespondence;
-export const captionDisplayWordSubsetType: TypeRef = narrativeTypes.captionDisplayWordSubset;
+export const captionDocumentType: TypeRef = narrativeTypes.captionDocument;
 export { narrativeSchema };
 
 export const scriptMarkupSurfaces = [
@@ -23,9 +21,7 @@ export const scriptMarkupSurfaces = [
       textTypes.text,
       narrativeSelectionType,
       narrativeMomentType,
-      captionDisplayType,
-      captionCorrespondenceType,
-      captionDisplayWordSubsetType,
+      captionDocumentType,
     ],
     vocabulary: {
       summary: "Holds every spoken word as prose-first Segments and publishes the authored Narrative with the Selections, Moments and text projections the rest of the source reads.",
@@ -33,7 +29,7 @@ export const scriptMarkupSurfaces = [
         { name: "id", kind: "identifier", required: false,
           summary: "Names the Narrative Record and prefixes every view this element publishes." },
       ],
-      text: "The element's own content is the Script body: named Segments holding prose, Role Cues, Dual Text, and zero-width Selection and Moment markers. It carries no timecode, no media reference and no generation parameter.",
+      text: "The element's own content is the Script body: named Segments holding prose, Role Cues, Dual Text, flat token attributes, and zero-width Selection and Moment markers. It carries no timecode, no media reference and no generation parameter.",
       ports: [
         { name: "", type: narrativeType,
           summary: "The whole authored Narrative, addressed by the element's own id." },
@@ -43,12 +39,8 @@ export const scriptMarkupSurfaces = [
           summary: "One Segment as display-independent dialogue, keeping Role Cue labels and the spoken side of Dual Text." },
         { name: "segment.<id>.speech", type: textTypes.text,
           summary: "One Segment as pronunciation only, with Role Cue labels dropped." },
-        { name: "caption", type: captionDisplayType,
-          summary: "The ordered display Atoms of the whole Script." },
-        { name: "caption.correspondence", type: captionCorrespondenceType,
-          summary: "The edge from each whole display Atom to its authored speech-token range." },
-        { name: "caption.selection.<id>", type: captionDisplayWordSubsetType,
-          summary: "The display words wholly owned by one Selection." },
+        { name: "caption", type: captionDocumentType,
+          summary: "The complete Script-owned CaptionDocument: display Words, N:M Alignment Units, Cue breaks and speech correspondence." },
         { name: "selection.<id>", type: narrativeSelectionType,
           summary: "One named range over the Narrative, reusable wherever a Selection is read." },
         { name: "moment.<id>", type: narrativeMomentType,
@@ -73,6 +65,7 @@ export const scriptMarkupSurfaces = [
         "A Segment is opened by its own lower-case name and closed by that exact name, or written self-closing as `<pause/>`; the name is the Segment id, must be unique within the Script, and `script` is reserved. Segments do not nest.",
         "A Role Cue such as `<HOST>` is a bare tag inside a Segment with no close; its turn runs until the next Cue or the end of the Segment, and a Cue may not follow unowned speech in the same Segment. Role state resets when the Segment closes.",
         "Dual Text is written `<display | speech>`: the left side reaches the caption projection and the right side reaches dialogue and speech. The spoken side must not be empty; the displayed side may be, which speaks a word that is never displayed.",
+        "A flat token attribute follows a complete display token as `{name}` or `{name=value}`; multiple attributes use one comma-separated block. Attributes do not nest, do not carry timing, and never split a Dual Alignment Unit.",
         "Selection and Moment markers are zero-width, share one name namespace, and may not split a speech token:",
         [
           "| Marker | Meaning |",
@@ -84,8 +77,8 @@ export const scriptMarkupSurfaces = [
           "| `@id!` | A Moment at the next word's start |",
           "| `~@id!` | A Moment at the previous word's end |",
         ].join("\n"),
-        "One Selection name may open and close more than once, giving a Selection with gaps, and two Selections may cross each other rather than nest.",
-        "`<!-- -->` comments never enter any projection, and `\\@`, `\\<` and `\\\\` write those characters literally; inside Dual Text `\\|` and `\\>` do the same.",
+        "Each Selection name has one opening and one closing marker; use distinct names for distinct semantic ranges.",
+        "`<!-- -->` comments never enter any projection, and `\\@`, `\\<`, `\\\\`, `\\{` and `\\}` write those characters literally; inside Dual Text `\\|` and `\\>` do the same.",
       ],
     },
   },

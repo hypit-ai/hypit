@@ -45,6 +45,9 @@ export async function loadStudioDomain(input: {
     source: input.run,
     workspaceRoot: input.workspaceRoot,
     packageRoot: input.packageRoot,
+    ...(videoCliDistribution.packageRoot === undefined
+      ? {}
+      : { distributionPackageRoot: videoCliDistribution.packageRoot }),
   });
   const contributions = packages.map((item) => item.contribution);
   const manifests = contributions.flatMap((item) =>

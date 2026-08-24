@@ -1,11 +1,13 @@
-import type { StudioFailure, StudioSnapshot } from "../shared.js";
+import type { Clip, StudioFailure, StudioSnapshot } from "../shared.js";
 import { createCodePane } from "./code.js";
 import { setIcon } from "./icons.js";
+import { createLibraryPane } from "./library.js";
 import { createHandle } from "./resize.js";
 import type { Highlight } from "./code.js";
-import { liveRanges, markerTones, spanAtOffset } from "./markers.js";
+import { intentAtOffset, spanAtOffset } from "./markers.js";
 import { clipAtOffset, createStore } from "./selection.js";
 import { createStage } from "./stage.js";
+import { applyStudioMutation } from "./writeback.js";
 import { createTimeline } from "./timeline.js";
 import "../style.css";
 
@@ -37,7 +39,7 @@ app.innerHTML = `
   </header>
   <main class="studio-shell">
     <section class="upper-shell">
-      <aside class="source-panel" data-code></aside>
+      <aside class="source-panel" data-library></aside>
       <div class="preview-panel" data-stage></div>
       <aside class="workspace-panel">
         <div class="pane-heading workspace-heading">
@@ -58,9 +60,10 @@ app.innerHTML = `
 
 const store = createStore();
 const code = createCodePane();
+const library = createLibraryPane(code);
 const timeline = createTimeline(store);
 const stage = createStage(store);
-app.querySelector<HTMLElement>("[data-code]")!.append(code.element);
+app.querySelector<HTMLElement>("[data-library]")!.append(library.element);
 app.querySelector<HTMLElement>("[data-timeline]")!.append(timeline.element);
 app.querySelector<HTMLElement>("[data-stage]")!.append(stage.element);
 
@@ -97,10 +100,16 @@ const project = app.querySelector<HTMLElement>("[data-project]")!;
 const status = app.querySelector<HTMLElement>("[data-status]")!;
 const failureView = app.querySelector<HTMLElement>("[data-failure]")!;
 
+timeline.element.addEventListener("studio:write", (event) => {
+  const state = (event as CustomEvent<{ readonly state?: string }>).detail.state;
+  status.className = state === "error" ? "status error" : state === "saved" ? "status saved" : "status saving";
+  status.textContent = state === "error" ? "Save failed" : state === "saved" ? "Saved" : "Saving";
+});
+
 // Program-level facts never change while a Source is being read, so they live in
 // the header rather than taking a panel that would have to sit over something.
 function renderMeta(snapshot: StudioSnapshot): void {
-  project.textContent = snapshot.source.path.split("/").at(-1) ?? snapshot.source.path;
+  project.textContent = snapshot.source.path.split(/[\\/]/u).at(-1) ?? snapshot.source.path;
   project.title = snapshot.source.path;
   // Sequence facts belong to the project/inspector, not the application chrome.
   // The timeline transport is the single persistent time readout.
@@ -129,6 +138,149 @@ function group(label: string, items: readonly HTMLElement[], className = ""): HT
   return node;
 }
 
+function parameterControl(entityId: string, parameter: Clip["parameters"][number]): HTMLElement {
+  const row = document.createElement("label");
+  row.className = `parameter-row${parameter.writable ? " parameter-editable" : " parameter-readonly"}${parameter.group === undefined ? "" : " parameter-declared"}`;
+  const name = document.createElement("span");
+  name.className = "parameter-label";
+  name.textContent = parameter.label;
+  name.title = parameter.summary ?? parameter.label;
+  const source = document.createElement("small");
+  source.className = "parameter-source";
+  source.textContent = `${parameter.language.toUpperCase()} · ${parameter.source.path}:${parameter.source.range.start}`;
+  source.title = parameter.disabledReason ?? parameter.source.preimage;
+  const value = parameter.writable
+    ? document.createElement(parameter.control === "select" ? "select" : "input")
+    : document.createElement("strong");
+  value.className = "parameter-value";
+  if (value instanceof HTMLInputElement) {
+    value.type = parameter.control === "number" ? "number" : parameter.control === "boolean" ? "checkbox" : "text";
+    if (value.type === "checkbox") value.checked = parameter.value === "true";
+    else value.value = parameter.value;
+    value.dataset.parameterId = parameter.id;
+    value.title = parameter.source.preimage;
+    value.addEventListener("change", () => {
+      void writeParameter(entityId, parameter, value.type === "checkbox" ? String(value.checked) : value.value);
+    });
+  } else if (value instanceof HTMLSelectElement) {
+    for (const option of parameter.options ?? []) {
+      const item = document.createElement("option");
+      item.value = option;
+      item.textContent = option;
+      item.selected = option === parameter.value;
+      value.append(item);
+    }
+    value.addEventListener("change", () => void writeParameter(entityId, parameter, value.value));
+  } else {
+    value.textContent = parameter.value;
+    value.title = parameter.disabledReason ?? parameter.source.preimage;
+  }
+  const suffix = parameter.unit === undefined ? "" : ` ${parameter.unit}`;
+  const right = document.createElement("span");
+  right.className = "parameter-right";
+  right.append(value);
+  if (suffix.length > 0) {
+    const unit = document.createElement("small");
+    unit.textContent = suffix;
+    right.append(unit);
+  }
+  row.append(name, right);
+  if (parameter.group === undefined) row.append(source);
+  else row.title = `${parameter.summary ?? parameter.label}\n${source.textContent}`;
+  if (!parameter.writable) row.title = parameter.disabledReason ?? "Read-only source parameter";
+  return row;
+}
+
+function parameterGroups(entityId: string, parameters: readonly Clip["parameters"][number][]): readonly HTMLElement[] {
+  type StudioParameterValue = Clip["parameters"][number];
+  const groups = new Map<string, StudioParameterValue[]>();
+  for (const parameter of parameters) {
+    const key = parameter.group === undefined
+      ? `source\u0000${parameter.language}\u0000${parameter.source.path}`
+      : `recipe\u0000${parameter.group}\u0000${parameter.section ?? "parameters"}`;
+    const held = groups.get(key) ?? [];
+    held.push(parameter);
+    groups.set(key, held);
+  }
+  return [...groups].map(([key, values]) => {
+    const [kind, first = "", second = ""] = key.split("\u0000");
+    const title = kind === "recipe"
+      ? `${first.slice(0, 1).toUpperCase()}${first.slice(1)} · ${second.replaceAll("-", " ")}`
+      : second.length === 0 ? first.toUpperCase() : `${first.toUpperCase()} · ${second}`;
+    return group(title, values.map((parameter) => parameterControl(entityId, parameter)), "parameter-group");
+  });
+}
+
+const operationLabels: Readonly<Record<Clip["editHandles"][number]["gesture"], string>> = {
+  move: "Move",
+  "trim-start": "Trim start",
+  "trim-end": "Trim end",
+};
+
+const operationCoordinateLabels: Readonly<Record<NonNullable<Clip["editHandles"][number]["coordinate"]>, string>> = {
+  "program-frame": "program frames",
+  "semantic-anchor": "semantic anchors",
+  "source-frame": "source frames",
+  "canvas-pixel": "canvas pixels",
+  "normalized-progress": "normalized progress",
+};
+
+function operationGroups(handles: readonly Clip["editHandles"][number][]): readonly HTMLElement[] {
+  if (handles.length === 0) return [];
+  return [group("Timeline operations", handles.map((handle) => {
+    const node = document.createElement("div");
+    node.className = `operation-row${handle.enabled ? " operation-enabled" : " operation-disabled"}`;
+    const copy = document.createElement("span");
+    copy.className = "operation-copy";
+    const label = document.createElement("strong");
+    label.className = "operation-label";
+    label.textContent = operationLabels[handle.gesture];
+    const detail = document.createElement("small");
+    detail.className = "operation-detail";
+    const coordinate = handle.coordinate === undefined ? "" : operationCoordinateLabels[handle.coordinate];
+    const snap = handle.snapTo === undefined || handle.snapTo.length === 0
+      ? ""
+      : `snap ${handle.snapTo.join(" · ")}`;
+    const source = handle.sources === undefined || handle.sources.length === 0
+      ? ""
+      : handle.sources.map((item) => `${item.role} → ${item.source.path}:${item.source.range.start}`).join(" · ");
+    detail.textContent = [coordinate, snap, source].filter((value) => value.length > 0).join(" · ");
+    copy.append(label, detail);
+    const state = document.createElement("strong");
+    state.className = "operation-state";
+    state.textContent = handle.enabled ? "Timeline" : "—";
+    node.title = handle.disabledReason
+      ?? (handle.enabled ? "按时间线把手操作，成功后会回写源文件。" : "当前实体没有可逆的 Studio 写回。" );
+    node.append(copy, state);
+    return node;
+  }), "operation-group")];
+}
+
+let parameterWriteState: "" | "Saving" | "Saved" | "Failed" = "";
+async function writeParameter(entityId: string, parameter: Clip["parameters"][number], replacement: string): Promise<void> {
+  const state = store.current();
+  if (state === undefined || !parameter.writable) return;
+  parameterWriteState = "Saving";
+  status.textContent = parameterWriteState;
+  status.className = "status saving";
+  try {
+    await applyStudioMutation({
+      type: "parameter.adjust",
+      revision: state.snapshot.revision,
+      entityId,
+      parameterId: parameter.id,
+      value: replacement,
+    });
+    parameterWriteState = "Saved";
+    status.textContent = parameterWriteState;
+    status.className = "status saved";
+  } catch (error) {
+    parameterWriteState = "Failed";
+    status.textContent = error instanceof Error ? "Save failed" : parameterWriteState;
+    status.className = "status error";
+  }
+}
+
 /**
  * A single strip between the picture and the timeline. It is a row of the
  * layout rather than a floating card, so it can never cover the frame being
@@ -138,7 +290,35 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
   const clip = clipId === undefined ? undefined : store.clip(clipId);
 
   if (clip === undefined) {
-    inspector.replaceChildren();
+    const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
+    const hero = document.createElement("div");
+    hero.className = "selection-hero overview-hero";
+    hero.innerHTML = `
+      <span class="selection-icon" data-selection-icon></span>
+      <div class="selection-title"><strong></strong><small></small></div>
+      <span class="selection-kind">Project</span>`;
+    setIcon(hero.querySelector("[data-selection-icon]")!, "preview");
+    hero.querySelector("strong")!.textContent = snapshot.source.path.split(/[\\/]/u).at(-1) ?? snapshot.source.path;
+    hero.querySelector("small")!.textContent = `${snapshot.tracks.length} tracks · ${snapshot.source.files.length} source files`;
+    inspector.replaceChildren(hero,
+      group("Canvas", [
+        property("Size", `${snapshot.space.canvasWidth} × ${snapshot.space.canvasHeight}`, "property-number"),
+        property("Frame rate", `${fps.toFixed(Number.isInteger(fps) ? 0 : 2)} fps`, "property-number"),
+        property("Duration", `${snapshot.space.durationSec.toFixed(2)}s`, "property-number"),
+        property("Frames", String(snapshot.space.frameCount), "property-number"),
+      ]),
+      group("Source", [
+        property("Author", snapshot.source.path, "property-wide property-code"),
+        property("Run", snapshot.run.path, "property-wide property-code"),
+        property("Closure", `${snapshot.source.files.length} referenced files`),
+      ]),
+      group("Build intent", [
+        property("Targets", snapshot.run.targets
+          .map((target) => target.split("::output::").at(-1) ?? target)
+          .join(", ") || "—", "property-wide property-code"),
+        property("Candidates", String(snapshot.run.satisfactions.length), "property-number"),
+      ]),
+    );
     return;
   }
 
@@ -171,12 +351,25 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
   ]);
   const source = clip.temporal === undefined ? undefined : group("Binding", [
     property("Source", `${clip.temporal.source.kind}${clip.temporal.source.id === undefined ? "" : ` · ${clip.temporal.source.id}`}`, "property-wide property-code"),
-    ...(clip.temporal.projection === undefined ? [] : [
-      property("From", clip.temporal.projection.startExpression, "property-wide property-code"),
-      property("To", clip.temporal.projection.endExpression, "property-wide property-code"),
-    ]),
+    ...(clip.temporal.projection === undefined ? []
+      : clip.temporal.projection.kind === "point"
+        ? [property("At", clip.temporal.projection.expression, "property-wide property-code")]
+        : [
+            property("From", clip.temporal.projection.startExpression, "property-wide property-code"),
+            property("To", clip.temporal.projection.endExpression, "property-wide property-code"),
+          ]),
   ]);
-  inspector.replaceChildren(hero, placement, timing, ...(source === undefined ? [] : [source]));
+  const provenance = track === undefined ? undefined : group("Provenance", [
+    property("Output", track.provenance.output, "property-wide property-code"),
+    ...(track.provenance.candidateId === undefined ? [] : [
+      property("Candidate", track.provenance.candidateId, "property-wide property-code"),
+    ]),
+    property("Status", track.provenance.status),
+  ]);
+  const operations = operationGroups(clip.editHandles);
+  const parameters = parameterGroups(clip.id, clip.parameters);
+  inspector.replaceChildren(hero, placement, timing, ...operations, ...parameters,
+    ...(source === undefined ? [] : [source]), ...(provenance === undefined ? [] : [provenance]));
 }
 
 function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): void {
@@ -201,6 +394,59 @@ function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): v
   ]));
 }
 
+function renderSemanticSelectionInspector(snapshot: StudioSnapshot, selectionId: string): void {
+  const selection = snapshot.semantic.selections.find((item) => item.id === selectionId);
+  if (selection === undefined) { inspector.replaceChildren(); return; }
+  const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
+  const durationFrames = selection.endFrameExclusive - selection.startFrame;
+  const source = snapshot.script?.selections.find((item) => item.id === selectionId);
+  const hero = document.createElement("div");
+  hero.className = "selection-hero";
+  hero.innerHTML = `
+    <span class="selection-icon" data-selection-icon></span>
+    <div class="selection-title"><strong></strong><small></small></div>
+    <span class="selection-kind">Selection</span>`;
+  setIcon(hero.querySelector("[data-selection-icon]")!, "link");
+  hero.querySelector("strong")!.textContent = selection.id;
+  hero.querySelector("small")!.textContent = "Author intent";
+  inspector.replaceChildren(hero,
+    group("Timing", [
+      property("Start", `${selection.startFrame}f`, "property-number"),
+      property("End", `${selection.endFrameExclusive}f`, "property-number"),
+      property("Duration", `${durationFrames}f`, "property-number"),
+      property("Seconds", `${(durationFrames / fps).toFixed(2)}s`, "property-number"),
+    ]),
+    ...(source === undefined ? [] : [group("Source", [
+      property("Range", `${source.open.start}–${source.close.end}`, "property-wide property-code"),
+    ])]),
+  );
+}
+
+function renderSemanticMomentInspector(snapshot: StudioSnapshot, momentId: string): void {
+  const moment = snapshot.semantic.moments.find((item) => item.id === momentId);
+  if (moment === undefined) { inspector.replaceChildren(); return; }
+  const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
+  const source = snapshot.script?.moments.find((item) => item.id === momentId);
+  const hero = document.createElement("div");
+  hero.className = "selection-hero";
+  hero.innerHTML = `
+    <span class="selection-icon" data-selection-icon></span>
+    <div class="selection-title"><strong></strong><small></small></div>
+    <span class="selection-kind">Moment</span>`;
+  setIcon(hero.querySelector("[data-selection-icon]")!, "moment");
+  hero.querySelector("strong")!.textContent = moment.id;
+  hero.querySelector("small")!.textContent = "Author intent";
+  inspector.replaceChildren(hero,
+    group("Timing", [
+      property("Frame", `${moment.frame}f`, "property-number"),
+      property("Seconds", `${(moment.frame / fps).toFixed(2)}s`, "property-number"),
+    ]),
+    ...(source === undefined ? [] : [group("Source", [
+      property("Range", `${source.range.start}–${source.range.end}`, "property-wide property-code"),
+    ])]),
+  );
+}
+
 // The word being spoken at the playhead, which is the point of carrying token
 // timings at all: it ties the Script text to the frame on screen.
 store.subscribe(({ snapshot, playhead }) => {
@@ -218,25 +464,26 @@ store.subscribe(({ snapshot, selection, playhead }) => {
   const chosenSegment = selection.kind === "semantic-segment"
     ? snapshot.semantic.segments.find((item) => item.id === selection.segmentId)
     : undefined;
+  const chosenSelection = selection.kind === "semantic-selection"
+    ? snapshot.semantic.selections.find((item) => item.id === selection.selectionId)
+    : undefined;
+  const chosenMoment = selection.kind === "semantic-moment"
+    ? snapshot.semantic.moments.find((item) => item.id === selection.momentId)
+    : undefined;
   // Rebuilding this every frame of playback would be DOM churn for no change.
-  const describes = `${snapshot.revision}:${chosen?.id ?? chosenSegment?.id ?? ""}`;
+  const describes = `${snapshot.revision}:${selection.kind}:${chosen?.id ?? chosenSegment?.id ?? chosenSelection?.id ?? chosenMoment?.id ?? ""}`;
   if (describes !== described) {
     described = describes;
     if (chosenSegment !== undefined) renderSemanticInspector(snapshot, chosenSegment.id);
+    else if (chosenSelection !== undefined) renderSemanticSelectionInspector(snapshot, chosenSelection.id);
+    else if (chosenMoment !== undefined) renderSemanticMomentInspector(snapshot, chosenMoment.id);
     else renderInspector(snapshot, chosen?.id);
   }
 
-  // Every Selection the playhead is inside is outlined, not only what was
-  // clicked, and not only what has a clip. A Selection inside another Selection
-  // is still inside it, so the enclosing pair stays outlined while the inner one
-  // is — that nesting is the whole point of the markers.
-  const tones = markerTones(snapshot);
-  const live = store.clipsAt(playhead.frame);
-  const highlights: Highlight[] = liveRanges(snapshot, playhead.frame).map((selection) => ({
-    range: selection.range,
-    tone: "binding" as const,
-    depth: tones.get(selection.id) ?? 0,
-  }));
+  // Source outlines are selection affordances, not a second always-on syntax
+  // layer. Keeping every live Selection outlined made the code pane fill with
+  // yellow polygons while the author was merely playing the film.
+  const highlights: Highlight[] = [];
   // The element that placed what is on screen is outlined too. Knowing a cutaway
   // is running is half the answer; the other half is which line put it there.
   // Only what was chosen is outlined. What is merely drawn at this frame is
@@ -248,29 +495,50 @@ store.subscribe(({ snapshot, selection, playhead }) => {
   if (chosenSegment?.range !== undefined) {
     highlights.push({ range: chosenSegment.range, tone: "element" });
   }
+  const sourceSelection = chosenSelection === undefined
+    ? undefined
+    : snapshot.script?.selections.find((item) => item.id === chosenSelection.id);
+  const sourceMoment = chosenMoment === undefined
+    ? undefined
+    : snapshot.script?.moments.find((item) => item.id === chosenMoment.id);
+  const chosenIntentRange = sourceSelection === undefined
+    ? sourceMoment?.range
+    : { start: sourceSelection.open.start, end: sourceSelection.close.end };
+  if (chosenIntentRange !== undefined) highlights.push({ range: chosenIntentRange, tone: "binding" });
 
   // Scroll only when the selection actually moved, and never toward the pane
   // the author is pointing at: following the playhead every frame would drag
   // the source out from under whoever is reading it.
   const focused = chosen === undefined && chosenSegment === undefined
+    && chosenSelection === undefined && chosenMoment === undefined
     ? ""
-    : `${snapshot.revision}:${chosen?.id ?? chosenSegment?.id}`;
+    : `${snapshot.revision}:${selection.kind}:${chosen?.id ?? chosenSegment?.id ?? chosenSelection?.id ?? chosenMoment?.id}`;
   const moved = focused.length > 0 && focused !== scrolledTo;
   scrolledTo = focused;
   code.highlight(highlights, moved && origin !== "code");
 });
 
 // Clicking a marked region in the source selects what it binds and looks at the
-// instant it covers. The lines that bind something carry a coloured gutter bar,
-// so what is clickable is visible standing still.
+// instant it covers. The source token and range overlay carry that relationship;
+// the line-number gutter stays quiet.
 code.element.addEventListener("click", (event) => {
   if ((event.target as HTMLElement | null)?.closest("button, textarea") !== null) return;
   const state = store.current();
   if (state === undefined) return;
+  if (code.activePath() !== state.snapshot.source.path) return;
   const offset = code.offsetAt(event);
   // Below the last line, or in the heading: nothing is being pointed at.
   if (offset === undefined) {
     store.clearSelection();
+    return;
+  }
+  const intent = intentAtOffset(state.snapshot, offset);
+  if (intent?.kind === "selection") {
+    store.selectSemanticSelection(intent.id, "code");
+    return;
+  }
+  if (intent?.kind === "moment") {
+    store.selectSemanticMoment(intent.id, "code");
     return;
   }
   const clip = clipAtOffset(state.snapshot, offset);
@@ -342,7 +610,7 @@ function applySnapshot(snapshot: StudioSnapshot): void {
   status.className = "status";
   status.textContent = "";
   renderMeta(snapshot);
-  code.show(snapshot);
+  library.show(snapshot);
   store.load(snapshot);
 }
 
@@ -351,12 +619,23 @@ function applyFailure(failure: StudioFailure): void {
   status.textContent = "Compile failed";
   failureView.textContent = failure.error;
   if (failure.range !== undefined) code.highlight([{ range: failure.range, tone: "element" }], true);
+  // A parameter control changes immediately in the browser, but the source
+  // remains the only truth. If recompilation rejects the transaction, rebuild
+  // the Inspector from the last accepted snapshot instead of leaving a false
+  // value visible in the field.
+  const current = store.current();
+  if (current === undefined) return;
+  if (current.selection.kind === "clip") renderInspector(current.snapshot, current.selection.clipId);
+  else if (current.selection.kind === "semantic-segment") renderSemanticInspector(current.snapshot, current.selection.segmentId);
+  else if (current.selection.kind === "semantic-selection") renderSemanticSelectionInspector(current.snapshot, current.selection.selectionId);
+  else if (current.selection.kind === "semantic-moment") renderSemanticMomentInspector(current.snapshot, current.selection.momentId);
 }
 
 const response = await fetch("/__studio/session");
 const initial = await response.json() as StudioSnapshot | StudioFailure;
 if (response.ok && "tracks" in initial) applySnapshot(initial);
 else applyFailure(initial as StudioFailure);
+void library.refresh();
 
 type Hot = { on(event: string, listener: (value: unknown) => void): void };
 const hot = (import.meta as ImportMeta & { hot?: Hot }).hot;

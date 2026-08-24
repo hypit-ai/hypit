@@ -44,7 +44,6 @@ async function serving(response: unknown, run: () => Promise<void>): Promise<voi
         device: "cpu",
         compute: "int8",
         batchSize: 8,
-        punktTabDigest: "e57f64187974277726a3417ca6f181ec5403676c717672eef6a748a7b20e0106",
       }
     : response), { headers: { "content-type": "application/json" } })) as typeof fetch;
   try { await run(); } finally { globalThis.fetch = original; }
@@ -62,7 +61,7 @@ test("every word carries its own start and end in seconds, not only the passage 
       { text: "five", start: 1.2, end: 1.6 },
     ] }],
   }, async () => {
-    const passages = await transcribeSpeechAudio(audioPath);
+    const passages = await transcribeSpeechAudio(audioPath, "en");
     assert.equal(passages.length, 1);
     assert.equal(passages[0]!.text, "number five");
     assert.deepEqual(passages[0]!.words, [
@@ -80,7 +79,7 @@ test("a complete transcript is written beside the other prepared artifacts and s
     language: "en",
     segments: [{ start: 0, end: 2, words: [{ text: "hello", start: 0.1, end: 0.4 }, { text: "world", start: 1.2, end: 1.6 }] }],
   }, async () => {
-    const result = await prepareTranscript(REFERENCE, join(root, "reference.mp4"), root, true, false);
+    const result = await prepareTranscript(REFERENCE, join(root, "reference.mp4"), root, true, "en", false);
     assert.deepEqual(result, { status: "complete", transcript_ref: join(root, "transcript.json"), word_count: 2 });
 
     const file = JSON.parse(await readFile(join(root, "transcript.json"), "utf8")) as TranscriptFile;
@@ -93,12 +92,12 @@ test("a complete transcript is written beside the other prepared artifacts and s
 test("a WhisperX that cannot answer leaves the transcript unavailable with its reason instead of failing preparation", async () => {
   const root = await mkdtemp(join(tmpdir(), "reference-video-transcript-"));
   assert.deepEqual(
-    await prepareTranscript(REFERENCE, join(root, "reference.mp4"), root, false, false),
+    await prepareTranscript(REFERENCE, join(root, "reference.mp4"), root, false, "en", false),
     { status: "unavailable", transcript_ref: null, word_count: 0, reason: "the reference video has no audio track" },
     "a silent reference is prepared, not refused");
 
   await writeFile(join(root, "reference.mp4"), "not a video", "utf8");
-  const failed = await prepareTranscript(REFERENCE, join(root, "reference.mp4"), root, true, false);
+  const failed = await prepareTranscript(REFERENCE, join(root, "reference.mp4"), root, true, "en", false);
   assert.equal(failed.status, "unavailable");
   assert.equal(failed.transcript_ref, null);
   assert.equal(typeof failed.reason === "string" && failed.reason.length > 0, true,

@@ -30,5 +30,6 @@ Provider; it is a different deployment package but must return the same
 The configured model, device, compute mode and batch size are checked through `/health` before use.
 This prevents a warm process with an incompatible inference configuration from accepting work.
 
-Install and run the service with the commands in `services/whisperx/README.md`. The current local
-package and service are trusted code; this is not a community-plugin sandbox.
+The Runtime installs and starts the packaged service in the machine Program Home when this Endpoint
+is selected. The environment is reused across projects and sessions. The current local package and
+service are trusted code; this is not a community-plugin sandbox.

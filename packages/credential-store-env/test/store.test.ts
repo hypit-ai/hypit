@@ -13,5 +13,5 @@ test("environment credentials resolve only the explicitly requested key", async 
     secret: "secret-value",
   });
   assert.equal(await store.resolve(credentialRef("env", "MISSING")), undefined);
-  assert.equal(await store.resolve(credentialRef("keychain", "PROVIDER_KEY")), undefined);
+  assert.equal(await store.resolve(credentialRef("os", "PROVIDER_KEY")), undefined);
 });

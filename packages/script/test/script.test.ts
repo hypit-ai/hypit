@@ -1,13 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import type { Narrative } from "@hypit/narrative";
 import {
   ScriptSyntaxError,
-  captionCorrespondence,
-  captionDisplaySequence,
-  formatScript,
+  adjustScriptMoment,
+  adjustScriptSelection,
+  captionDocument,
   narrativeValue,
   parseScript,
   serializeCaption,
@@ -15,129 +13,155 @@ import {
   serializeSpeech,
 } from "@hypit/script";
 
-test("named blocks are Segments and Role Cues do not depend on line breaks", () => {
-  const compact = parseScript(
-    "compact.svml",
-    "<opening><ALICE>Hello there.<BOB>Good morning.</opening><pause/>",
-  );
-  const multiline = parseScript(
-    "multiline.svml",
-    `
-      <opening>
-        <ALICE>Hello there.
-        <BOB>Good morning.
-      </opening>
+test("Selection source edits relocate markers by 2M + 2N Anchor identity", () => {
+  const source = "<one><HOST>@focus alpha beta @/focus gamma</one>\r\n<two><HOST>delta epsilon</two>";
+  const parsed = parseScript("selection-adjust.svml", source);
+  const movedWords = adjustScriptSelection({
+    sourceName: "selection-adjust.svml",
+    source,
+    parsed,
+    adjustment: {
+      id: "focus",
+      startAnchorId: "segment:one:token:2:start",
+      endAnchorId: "segment:one:token:3:end",
+    },
+  });
+  const wordSelection = parseScript("selection-adjust.svml", movedWords).selections[0]!;
+  assert.deepEqual([wordSelection.startAnchorId, wordSelection.endAnchorId], [
+    "segment:one:token:2:start", "segment:one:token:3:end",
+  ]);
 
-      <pause/>
-    `,
-  );
-
-  assert.equal(fixtureDigest(narrativeValue(compact)), fixtureDigest(narrativeValue(multiline)));
-  assert.deepEqual(compact.segments.map((segment) => segment.id), ["opening", "pause"]);
-  assert.deepEqual(compact.turns.map((turn) => turn.role), ["ALICE", "BOB"]);
-  assert.equal(serializeDialogue(compact), "ALICE: Hello there.\nBOB: Good morning.");
+  const movedSegment = adjustScriptSelection({
+    sourceName: "selection-adjust.svml",
+    source: movedWords,
+    parsed: parseScript("selection-adjust.svml", movedWords),
+    adjustment: {
+      id: "focus",
+      startAnchorId: "segment:two:start",
+      endAnchorId: "segment:two:end",
+    },
+  });
+  const reparsed = parseScript("selection-adjust.svml", movedSegment);
+  assert.deepEqual(reparsed.tokens.map((token) => token.text), ["alpha", "beta", "gamma", "delta", "epsilon"]);
+  assert.deepEqual([reparsed.selections[0]!.startAnchorId, reparsed.selections[0]!.endAnchorId], [
+    "segment:two:start", "segment:two:end",
+  ]);
 });
 
-test("Role is optional per Turn and never leaks across Segment boundaries", () => {
+test("Moment source edits relocate one marker to an exact semantic Anchor", () => {
+  const source = "<one><HOST>alpha @cue! beta</one><two><HOST>gamma</two>";
+  const moved = adjustScriptMoment({
+    sourceName: "moment-adjust.svml",
+    source,
+    parsed: parseScript("moment-adjust.svml", source),
+    adjustment: { id: "cue", anchorId: "segment:two:end" },
+  });
+  const parsed = parseScript("moment-adjust.svml", moved);
+  assert.equal(parsed.moments[0]!.anchorId, "segment:two:end");
+  assert.deepEqual(parsed.tokens.map((token) => token.text), ["alpha", "beta", "gamma"]);
+});
+
+test("Script keeps speech, dialogue and CaptionDocument as separate projections", () => {
+  const parsed = parseScript("rich.svml", "<answer><BOB>I <laughed | laughed my ass off> there.</answer>");
+  assert.equal(serializeSpeech(parsed), "I laughed my ass off there.");
+  assert.equal(serializeDialogue(parsed), "BOB: I laughed my ass off there.");
+  assert.equal(serializeCaption(parsed), "I laughed there.");
+  const document = captionDocument(parsed, "story.caption");
+  assert.equal(document.units.length, 3);
+  assert.equal(document.units[1]!.wordIds.length, 1);
+  assert.equal(document.units[1]!.sourceTokenIds.length, 4);
+  assert.deepEqual(document.cueBreaks, []);
+  assert.equal((narrativeValue(parsed) as { semanticIndex: { anchors: unknown[] } }).semanticIndex.anchors.length,
+    2 * parsed.tokens.length + 2 * parsed.segments.length);
+});
+
+test("Cue breaks are authored between complete units", () => {
+  const parsed = parseScript("break.svml", "<line>one two || three four</line>");
+  const document = captionDocument(parsed, "story.caption");
+  assert.equal(document.cueBreaks.length, 1);
+  assert.equal(document.cueBreaks[0]!.afterUnitId, document.units[1]!.id);
+});
+
+test("Caption punctuation is display-only and CJK uses lexical character units", () => {
+  const parsed = parseScript("punctuation-cjk.svml", "<line><test | now>. here 你好，世界！</line>");
+  const document = captionDocument(parsed, "story.caption");
+  assert.deepEqual(parsed.tokens.map((token) => token.text), ["now", "here", "你", "好", "世", "界"]);
+  assert.deepEqual(document.words.slice(0, 2).map((word) => word.text), ["test.", "here"]);
+  assert.deepEqual(document.words.slice(-4).map((word) => word.text), ["你", "好，", "世", "界！"]);
+});
+
+test("Caption punctuation assigns ASCII quotes to the enclosed display words", () => {
   const parsed = parseScript(
-    "optional-role.svml",
-    "<intro>Roleless narration.</intro><answer><ALICE>Named reply.</answer><close>Roleless close.</close>",
+    "punctuation-quotes.svml",
+    "<line>He said <\"hello world\" | hello world>. 他说 <“你好” | 你好>。</line>",
   );
-  assert.deepEqual(parsed.turns.map((turn) => turn.role), [undefined, "ALICE", undefined]);
-  assert.equal(
-    serializeDialogue(parsed),
-    "Roleless narration.\nALICE: Named reply.\nRoleless close.",
-  );
+  const document = captionDocument(parsed, "story.caption");
+  assert.deepEqual(parsed.tokens.map((token) => token.text), [
+    "He", "said", "hello", "world", "他", "说", "你", "好",
+  ]);
+  assert.deepEqual(document.words.map((word) => word.text), [
+    "He", "said", "\"hello", "world\".", "他", "说", "“你", "好”。",
+  ]);
 });
 
-test("Script produces exactly 2M + 2N independent semantic anchors", () => {
-  const parsed = parseScript("anchors.svml", "<one>One two.</one><silence/><two>Three.</two>");
-  assert.equal(
-    parsed.semanticIndex.anchors.length,
-    2 * parsed.tokens.length + 2 * parsed.segments.length,
-  );
-  assert.equal(new Set(parsed.semanticIndex.anchors.map((anchor) => anchor.id)).size, parsed.semanticIndex.anchors.length);
-  assert.deepEqual(
-    parsed.segments.map((segment) => [segment.startAnchorId, segment.endAnchorId]),
-    [
-      ["segment:one:start", "segment:one:end"],
-      ["segment:silence:start", "segment:silence:end"],
-      ["segment:two:start", "segment:two:end"],
-    ],
-  );
-});
-
-test("selections, moments and Dual Text preserve separate semantic projections", () => {
+test("Script keeps ordinary compounds and formatted numbers lexical", () => {
   const parsed = parseScript(
-    "rich.svml",
-    `@whole
-      <answer>
-        <BOB>I @beat!really <laughed | laughed my ass off> there.</answer>
-      @/whole~`,
+    "punctuation-compounds.svml",
+    "<line>rock ’n’ roll costs 1,234.56 dollars.</line>",
   );
-
-  assert.equal(serializeSpeech(parsed), "I really laughed my ass off there.");
-  assert.equal(serializeCaption(parsed), "I really laughed there.");
-  assert.equal(serializeDialogue(parsed), "BOB: I really laughed my ass off there.");
-  assert.deepEqual(parsed.selections.map((selection) => selection.id), ["whole"]);
-  assert.deepEqual(parsed.moments.map((moment) => moment.id), ["beat"]);
-  assert.equal(parsed.captionProjection.regions.find((region) => region.kind === "alias")?.display, "laughed");
-  const publicNarrative = narrativeValue(parsed) as unknown as Narrative;
-  assert.deepEqual(Object.keys(publicNarrative.selections[0]!.occurrences[0]!).sort(),
-    ["endAnchorId", "occurrence", "startAnchorId"]);
-  assert.deepEqual(Object.keys(publicNarrative.moments[0]!.occurrences[0]!).sort(),
-    ["anchorId", "occurrence"]);
+  const document = captionDocument(parsed, "story.caption");
+  assert.deepEqual(parsed.tokens.map((token) => token.text), [
+    "rock", "n", "roll", "costs", "1,234.56", "dollars",
+  ]);
+  assert.deepEqual(document.words.map((word) => word.text), [
+    "rock", "’n’", "roll", "costs", "1,234.56", "dollars.",
+  ]);
 });
 
-test("every explicit Dual Text is one whole display Atom without inferred internal correspondence", () => {
+test("A single pipe is literal and a double pipe is an authored Cue Break", () => {
+  const parsed = parseScript("pipes.svml", "<line>one | two || three \\|\\| four</line>");
+  const document = captionDocument(parsed, "story.caption");
+  assert.equal(document.cueBreaks.length, 1);
+  assert.equal(serializeCaption(parsed), "one | two three || four");
+  assert.deepEqual(document.words.map((word) => word.text), ["one|", "two", "three||", "four"]);
+});
+
+test("Dual display text cannot contain semantic markers", () => {
+  assert.throws(
+    () => parseScript("dual-marker.svml", "<line><@bad | spoken></line>"),
+    (error: unknown) => error instanceof ScriptSyntaxError && error.code === "SCRIPT_DUAL_DISPLAY_MARKER",
+  );
+
+  const parsed = parseScript("dual-spoken-selection.svml", "<line><shown | @start spoken words @/start></line>");
+  assert.equal(parsed.selections.length, 1);
+});
+
+test("Script projects flat token attributes onto display words without changing timing units", () => {
   const parsed = parseScript(
-    "caption.svml",
-    `<line>
-      <test this | test this>
-      <15% off | fifteen percent off>
-      <that was insane | what the fuck>
-      <what the— | what the fuck>
-      < | um>
-    </line>`,
+    "word-attributes.svml",
+    "<line>This is really{emphasis,keyword} <hypit{brand} | hype it> now.</line>",
   );
-  const display = captionDisplaySequence(parsed, "story.caption");
-  const correspondence = captionCorrespondence(parsed, display.id);
-
-  assert.deepEqual(display.atoms.map((atom) => atom.wordIds.length), [2, 2, 3, 2]);
-  assert.deepEqual(correspondence.atoms.map((mapping) => mapping.sourceTokenIds.length), [2, 3, 3, 3]);
-  assert.equal(display.words.some((word) => word.text === "um"), false);
+  const document = captionDocument(parsed, "story.caption");
+  assert.deepEqual(document.words.map((word) => [word.text, word.attributes]), [
+    ["This", []],
+    ["is", []],
+    ["really", [
+      { name: "emphasis", value: true },
+      { name: "keyword", value: true },
+    ]],
+    ["hypit", [{ name: "brand", value: true }]],
+    ["now.", []],
+  ]);
+  assert.equal(document.units[3]!.sourceTokenIds.length, 2);
 });
 
-test("mismatched named Segment closes are rejected", () => {
+test("Token attributes are flat and must follow a complete display token", () => {
   assert.throws(
-    () => parseScript("bad.svml", "<opening>Hello.</ending>"),
-    (error: unknown) => error instanceof ScriptSyntaxError && error.code === "SCRIPT_SEGMENT_MISMATCH",
+    () => parseScript("attribute-nested.svml", "<line>really{emphasis{bad}}</line>"),
+    (error: unknown) => error instanceof ScriptSyntaxError && error.code === "SCRIPT_ATTRIBUTE_NESTED",
   );
   assert.throws(
-    () => parseScript("attribute.svml", "<opening id=\"old\">Hello.</opening>"),
-    (error: unknown) => error instanceof ScriptSyntaxError && error.code === "SCRIPT_SEGMENT_OPEN",
-  );
-});
-
-test("zero-width temporal markers may touch a token edge but cannot split a token", () => {
-  const parsed = parseScript("edge.svml", "<line>@beat!really good</line>");
-  assert.deepEqual(parsed.tokens.map((token) => token.text), ["really", "good"]);
-  assert.deepEqual(parsed.moments.map((moment) => moment.id), ["beat"]);
-
-  assert.throws(
-    () => parseScript("split.svml", "<line>re@beat!ally good</line>"),
-    (error: unknown) =>
-      error instanceof ScriptSyntaxError && error.code === "SCRIPT_MARKER_TOKEN_BOUNDARY",
-  );
-});
-
-test("the formatter is semantic-preserving and idempotent", () => {
-  const input = "<opening><ALICE>Hello there.<BOB>Good morning.</opening><pause/>";
-  const once = formatScript("format.svml", input);
-  const twice = formatScript("format.svml", once);
-  assert.equal(twice, once);
-  assert.equal(
-    fixtureDigest(narrativeValue(parseScript("before.svml", input))),
-    fixtureDigest(narrativeValue(parseScript("after.svml", once))),
+    () => parseScript("attribute-space.svml", "<line>really {emphasis}</line>"),
+    (error: unknown) => error instanceof ScriptSyntaxError && error.code === "SCRIPT_ATTRIBUTE_TARGET",
   );
 });

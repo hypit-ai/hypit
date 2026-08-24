@@ -1,7 +1,7 @@
 import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@hypit/protocol";
-import type { Narrative, NarrativeMomentOccurrence, NarrativeSegment, NarrativeSelectionOccurrence, NarrativeToken, NarrativeTurn } from "@hypit/narrative";
+import type { CaptionWordAttribute, Narrative, NarrativeMoment, NarrativeSegment, NarrativeSelection, NarrativeToken, NarrativeTurn } from "@hypit/narrative";
 
-export type { Narrative, SemanticAnchor } from "@hypit/narrative";
+export type { CaptionWordAttribute, Narrative, SemanticAnchor } from "@hypit/narrative";
 
 export type Affinity = "left" | "right";
 
@@ -35,6 +35,8 @@ export type ParsedSegment = NarrativeSegment & {
   readonly index: number;
   readonly atoms: readonly ParsedAtom[];
   readonly range: SourceRange;
+  /** Exact body range between the Segment tags, used only for source-preserving marker edits. */
+  readonly contentRange: SourceRange;
   readonly selfClosing: boolean;
 };
 
@@ -46,24 +48,14 @@ export type ParsedToken = NarrativeToken & {
 };
 export type ParsedTurn = NarrativeTurn & { readonly range: SourceRange };
 
-export type ParsedSelectionOccurrence = NarrativeSelectionOccurrence & {
+export type ParsedSelection = NarrativeSelection & {
   readonly open: { readonly affinity: Affinity; readonly boundary: MarkerBoundary; readonly range: SourceRange };
   readonly close: { readonly affinity: Affinity; readonly boundary: MarkerBoundary; readonly range: SourceRange };
 };
-
-export type ParsedSelection = {
-  readonly id: string;
-  readonly occurrences: readonly ParsedSelectionOccurrence[];
-};
-
-export type ParsedMomentOccurrence = NarrativeMomentOccurrence & {
+export type ParsedMoment = NarrativeMoment & {
   readonly affinity: Affinity;
   readonly boundary: MarkerBoundary;
   readonly range: SourceRange;
-};
-export type ParsedMoment = {
-  readonly id: string;
-  readonly occurrences: readonly ParsedMomentOccurrence[];
 };
 
 export type ParsedCaptionRegion = {
@@ -73,6 +65,11 @@ export type ParsedCaptionRegion = {
   readonly startToken: number;
   readonly endTokenExclusive: number;
   readonly kind: "identity" | "alias" | "hidden";
+  /** Flat word attributes authored on the display side; indices address displayWordSurfaces(display). */
+  readonly marks: readonly {
+    readonly displayIndex: number;
+    readonly attributes: readonly CaptionWordAttribute[];
+  }[];
   readonly range: SourceRange;
 };
 
@@ -93,6 +90,7 @@ export type ParsedNarrative = Omit<
   readonly captionProjection: {
     readonly text: string;
     readonly regions: readonly ParsedCaptionRegion[];
+    readonly breaks: readonly { readonly tokenIndex: number; readonly range: SourceRange }[];
   };
 };
 

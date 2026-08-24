@@ -52,7 +52,7 @@ test("Script teaches Markup <script> only through its imported Manifest", async 
     scriptContext(),
   );
 
-  assert.equal(result.records.length, 6);
+  assert.equal(result.records.length, 5);
   assert.equal(result.records[0]?.id, "story");
   assert.equal(result.records[0]?.type.name, "Narrative");
   assert.equal(result.records.some((record) =>
@@ -62,9 +62,7 @@ test("Script teaches Markup <script> only through its imported Manifest", async 
   assert.equal(result.records.some((record) =>
     record.id === "story.segment.opening.speech" && record.type.name === "Text"), true);
   assert.equal(result.records.some((record) =>
-    record.id === "story.caption" && record.type.name === "CaptionDisplaySequence"), true);
-  assert.equal(result.records.some((record) =>
-    record.id === "story.caption.correspondence" && record.type.name === "CaptionCorrespondence"), true);
+    record.id === "story.caption" && record.type.name === "CaptionDocument"), true);
 });
 
 test("the same Script meaning has the same authored Record digest across reflow", async () => {

@@ -1,0 +1,15 @@
+{
+  "name": "@hypit/whisperx-service-runtime",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    "./pyproject.toml": "./pyproject.toml"
+  },
+  "files": [
+    "pyproject.toml",
+    "uv.lock",
+    "src/**/*.py",
+    "README.md"
+  ]
+}

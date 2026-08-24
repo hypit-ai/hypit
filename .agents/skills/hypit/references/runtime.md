@@ -1,6 +1,6 @@
 # Durable Runtime and Build lifecycle
 
-Read `docs/quickstart/run.md` as the authority for Run Source, Target, Candidate, Runtime Profile,
+Read `https://narratage.hypit.ai/quickstart/run` as the authority for Run Source, Target, Candidate, Runtime Profile,
 Build, retrieval, and reuse syntax. Use this file as the operational checklist.
 
 ## Author the Runtime Profile
@@ -56,6 +56,9 @@ hypit runtime use hypit.runtime.json
 
 hypit plan build.svrun
 
+# Required once after changing Runtime packages, or whenever preflight reports not-ready state.
+hypit runtime up
+
 hypit build build.svrun --follow
 
 hypit inspect <build-id>
@@ -63,9 +66,15 @@ hypit get <build-id> \
   --name final.video --to output/final.mp4
 ```
 
-Install dependencies after package selection changes. Use `check` during authoring and `doctor`
-or `runtime status` when diagnosing the deployment. `build` already ensures the detached Worker
-and demanded Managed Programs are available.
+Use `check` during authoring. `plan` works without a Runtime as a graph-only operation; with the
+project's selected Runtime it performs a cheap, read-only preflight over only unsatisfied Needs and
+returns non-zero when that slice is not ready. It never installs, starts or contacts a remote Store.
+
+After Runtime package selection changes, run `runtime up`: this is the explicit provisioning
+boundary for machine npm dependencies, Managed Programs and the detached Worker. Use `doctor` for
+an active full-profile diagnosis and `runtime status` to observe the deployment. `build` repeats the
+cheap preflight and fails before durable submission when deployment is not ready; it never installs
+or starts a Managed Program.
 
 Use `runtime logs` to diagnose the Worker. Use `runtime down` to stop it from claiming more Builds.
 External programs are intentionally independent; stop them only with `programs down`. Durable
@@ -73,9 +82,10 @@ Builds remain archived and neither command cancels remote Provider work.
 
 ## Preserve durable semantics
 
-- `runtime up` starts or reuses the detached Worker plus declared external programs. A direct
-  `build` durably submits first, then ensures a Worker containing every queued Build's implementation
-  packages is running. A Worker skips work whose packages it has not loaded.
+- `runtime up` installs or reuses only the selected upstream npm packages, then starts or reuses the
+  declared external programs and detached Worker. A direct `build` does no provisioning: after a
+  clean preflight it submits durably, then ensures the Worker is running. A Worker skips work whose
+  implementation packages it has not loaded.
 - `programs up/status/down` manages external programs only. Do not use it as the normal Build
   bootstrap because it does not own the Worker lifecycle.
 - A Build continues after durable submission. `--follow` only observes progress; interrupting the
@@ -89,14 +99,14 @@ Builds remain archived and neither command cancels remote Provider work.
 - There is no implicit cache or Pin state. Reuse Records through a new `.svrun` containing
   `build-record` and `satisfy`; the Candidate supplies the exact nominal Type required by the
   current Logical Output.
-- **A running Worker holds the package code it loaded.** Edit a package — yours or an installed one —
-  and the Worker that is already up keeps executing the version it started with, so the next Build
+- **A running Worker holds the package code it loaded.** Edit a project package or update the
+  Distribution and the Worker that is already up keeps executing the version it started with, so
+  the next Build
   fails exactly as the last one did. Stop it before resubmitting; the next `build` starts a fresh one
   that loads the edit:
 
   ```bash
-  ps -eo pid,command | grep "hypit.mjs _worker" | grep <project>/hypit.runtime.json
-  kill <pid>
+  hypit runtime down
   ```
 
   Read an identical repeat failure as this until you have ruled it out. Reasoning about why a correct
@@ -110,20 +120,23 @@ Builds remain archived and neither command cancels remote Provider work.
   a change that costs nothing on an idle Runtime costs the whole Build on a busy one. Nothing is lost
   by waiting: accepted Records are durable, and the requests still in flight are the expensive ones.
 
-## Keep project and package boundaries distinct
+## Keep the Distribution and every project physically separate
 
-A project lives at `projects/<name>/` in the checkout — its own directory, holding the four Sources,
-its assets and any project-local package. `pnpm-workspace.yaml` covers `projects/*/packages/*` and
-Git ignores `projects/`, so a project is installed and type-checked like the examples while staying
-out of the repository's history.
+The Distribution reported by `hypit paths --json` is package-manager-owned and replaceable. Never
+create an authored project, project-local package, generated asset or Build output inside it. A
+project is any independent directory such as `<home>/<name>/`, holding its Sources, assets and
+`packages/` directory in its own Git/workspace boundary. Published examples are read-only reference
+material, never a place to turn into the author's project.
 
-`examples/` is the published example set. Read it for the nearest Runtime Profile and the closest
-source shape, and write under `projects/`.
+Studio and the CLI resolve explicit project packages from the project root, then fall back to the
+read-only Hypit Distribution. The `@hypit/*` namespace is reserved for the active Distribution and
+is resolved there first; project packages use their own scope. This bridge is Host configuration;
+it does not add the project to Hypit's contributor workspace or modify the Distribution.
 
 Relative Author Sources and assets stay inside the independently resolved Source Workspace.
 
 - `--workspace` explicitly selects the Source Workspace boundary.
 - `--package-root` only changes where the Host locates installed packages. It does not widen Source
   access.
-- Do not symlink an external project into the repository to bypass containment; canonical-path
-  checks reject that escape.
+- Do not symlink an external project into the Distribution. The external directory is the intended
+  workspace, not an escape from one.

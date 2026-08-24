@@ -16,9 +16,11 @@ import { parseStructuredElement } from "@hypit/markup";
 import type { SurfaceResolvedReference } from "@hypit/markup";
 import { sealText } from "@hypit/text";
 import { textTypes } from "@hypit/text";
+import { temporalProducers } from "@hypit/temporal";
+import { projectProgramWindow } from "@hypit/temporal";
 
 import {
-  appendProgramCommentSticker,
+  appendProjectedCommentSticker,
   commentStickerProducers,
   commentStickerTypes,
   createCommentStickerSet,
@@ -56,8 +58,6 @@ function item(id: string) {
   return sealCommentStickerItemSpec({
 
     id,
-    projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
-    expansion: { kind: "one" },
   });
 }
 
@@ -69,7 +69,10 @@ function content(meta?: string) {
 }
 
 function track(meta?: string) {
-  const set = appendProgramCommentSticker(createCommentStickerSet(), header, frame, style, semantic, item("opening"), content(meta));
+  const spec = item("opening");
+  const set = appendProjectedCommentSticker(createCommentStickerSet(), header, frame, style, spec, content(meta), projectProgramWindow({
+    itemId: spec.id, semantic, projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
+  }));
   return renderCommentSticker(canvas, space, finalizeCommentSticker(set, header));
 }
 
@@ -116,8 +119,11 @@ test("short Sticker windows compose overlapping enter and exit motion instead of
       hold: "none",
     },
   }, fonts, "compressed");
-  const set = appendProgramCommentSticker(
-    createCommentStickerSet(), header, frame, compressed, semantic, item("compressed"), content(),
+  const spec = item("compressed");
+  const set = appendProjectedCommentSticker(
+    createCommentStickerSet(), header, frame, compressed, spec, content(), projectProgramWindow({
+      itemId: spec.id, semantic, projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
+    }),
   );
   const rendered = renderCommentSticker(canvas, space, finalizeCommentSticker(set, header));
   const animation = rendered.presents[0]?.elements.find((element) => element.animation !== undefined)?.animation;
@@ -184,8 +190,9 @@ test("Track Surface lowers mixed program and semantic Stickers to a finite expli
     commentStickerProducers.createContent.name,
     commentStickerProducers.setContentAuthor.name,
     commentStickerProducers.setContentMeta.name,
-    commentStickerProducers.appendProgramAvatar.name,
+    commentStickerProducers.appendItemAvatar.name,
     commentStickerProducers.finalize.name,
+    temporalProducers.projectProgram.name,
     commentStickerProducers.render.name,
   ].sort());
   assert.equal(result.components[0]?.outputs.track, "comments.track");

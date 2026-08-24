@@ -16,10 +16,7 @@
     from="./fixtures/studio-opening-take.json"/>
   <value id="studio-closing-take" type="@hypit/speech@1#SemanticTake"
     from="./fixtures/studio-closing-take.json"/>
-  <value id="studio-caption-plan" type="@hypit/caption@1#CaptionPlan"
-    from="./fixtures/studio-caption-plan.json"/>
 
   <satisfy output="opening-semantic.take" candidate="studio-opening-take"/>
   <satisfy output="closing-semantic.take" candidate="studio-closing-take"/>
-  <satisfy output="cue-plan.plan" candidate="studio-caption-plan"/>
 </svrun>

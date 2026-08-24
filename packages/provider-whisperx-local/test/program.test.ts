@@ -1,37 +1,33 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { tmpdir } from "node:os";
 import test from "node:test";
 
 import { localWhisperXProgram } from "../src/program.js";
 
 const context = (config: Record<string, unknown> = {}) => ({
-  dataRoot: "/tmp", instance: "whisperx.test", config: config as never,
+  hostStateRoot: join(tmpdir(), "hypit-whisperx-host"),
+  dataRoot: tmpdir(), instance: "whisperx.test", config: config as never,
 });
 
 test("the Provider declares how to bring WhisperX up and how to recognise it", () => {
   const program = localWhisperXProgram(context());
   assert.equal(program.id, "whisperx");
-  assert.equal(program.start?.command, "uv");
-  assert.equal(program.start?.args.at(-1), "hypit-whisperx-service");
-  assert.equal(program.prepare?.args.at(-1), "hypit-whisperx-prepare");
-  // Absolute: a Runtime root is wherever the Profile lives, not where the
-  // pinned uv project lives.
-  const project = program.start?.args.at(-3) ?? "";
+  assert.match(program.start?.command ?? "", /hypit-whisperx-service(?:\.exe)?$/u);
+  assert.equal(program.installation?.commands[0]?.command, "uv");
+  assert.match(program.installation?.commands[1]?.command ?? "", /hypit-whisperx-prepare(?:\.exe)?$/u);
+  const project = program.installation?.commands[0]?.args.at(-3) ?? "";
   assert.ok(isAbsolute(project), `${project} must be absolute`);
   assert.ok(existsSync(join(project, "pyproject.toml")), `${project} must be the pinned uv project`);
+  assert.equal(program.stateRoot, join(context().hostStateRoot, "programs", "whisperx"));
 });
 
 test("a deployment that installs WhisperX elsewhere overrides the command", () => {
   const program = localWhisperXProgram(context({ serviceCommand: ["conda", "run", "whisperx-serve"] }));
   assert.deepEqual(program.start, { command: "conda", args: ["run", "whisperx-serve"] });
-  assert.equal(program.prepare, undefined);
-});
-
-test("custom prepare and probe-only deployments do not inherit managed lifecycle commands", () => {
-  const prepared = localWhisperXProgram(context({ servicePrepareCommand: ["make", "models"] }));
-  assert.deepEqual(prepared.prepare, { command: "make", args: ["models"] });
-  assert.equal(prepared.start, undefined);
+  assert.equal(program.installation, undefined);
+  assert.equal(program.stateRoot, undefined);
 });
 
 test("a program answering with another identity is reported, never used", async () => {
@@ -43,7 +39,6 @@ test("a program answering with another identity is reported, never used", async 
     whisperxVersion: "3.8.6",
     model: "large-v3",
     device: "cpu",
-    punktTabDigest: "sha256:" + "0".repeat(64),
   }), { status: 200 })) as typeof fetch;
   try {
     const state = await localWhisperXProgram(context()).probe();

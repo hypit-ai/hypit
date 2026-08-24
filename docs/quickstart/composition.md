@@ -123,7 +123,6 @@ The complete data flow from Script to rendered video. This example is based on
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="caption" from="@hypit/caption@1"/>
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
-  <import as="caption-ai" from="@hypit/caption-gemini@1"/>
   <import as="fonts" from="@hypit/fonts-open@1"/>
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="text" from="@hypit/typography-track@1"/>
@@ -174,7 +173,7 @@ The complete data flow from Script to rendered video. This example is based on
   <pipeline:Normalize id="motion-media" source={motion.video}
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
   <whisperx:SemanticTake id="opening-semantic" narrative={story}
-    segment={story.segment.opening} media={take-media.media}/>
+    segment={story.segment.opening} media={take-media.media} language="en"/>
   <speech:Track id="speech"
     visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
     <speech:Take source={opening-semantic.take}/>
@@ -184,11 +183,10 @@ The complete data flow from Script to rendered video. This example is based on
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
   <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
   <caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
-  <caption:Program id="caption-program" display={story.caption}
+  <caption:Program id="caption-program" document={story.caption} narrative={story}
     default={base-caption}/>
-  <caption-ai:Planner id="cue-plan" display={story.caption}
-    program={caption-program} model="gemini-2.5-flash"/>
-  <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} semantic={speech.semantic} plan={cue-plan.plan} program={caption-program}/>
+  <caption-fine:Track id="captions" document={story.caption}
+    semantic={speech.semantic} program={caption-program}/>
 
   <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
     <media-track:Item media={motion-media.media} during={story.selection.demo}

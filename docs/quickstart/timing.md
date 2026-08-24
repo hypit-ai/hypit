@@ -46,10 +46,13 @@ authored Segment:
 
 ```svml
 <whisperx:SemanticTake id="opening-semantic" narrative={story}
-  segment={story.segment.opening} media={opening-media.media}/>
+  segment={story.segment.opening} media={opening-media.media} language="en"/>
 <whisperx:SemanticTake id="answer-semantic" narrative={story}
-  segment={story.segment.answer} media={answer-media.media}/>
+  segment={story.segment.answer} media={answer-media.media} language="en"/>
 ```
+
+`language` is required on every alignment call and currently accepts `en` or `zh`. It is passed
+unchanged to WhisperX; Hypit does not detect or route languages from Script text or audio.
 
 Each output contains the normalized media, the Segment identity, every authored word's local frame
 window, and all of that Segment's structural anchors. There are two anchors for the Segment and two
@@ -99,11 +102,9 @@ deterministic Track:
 </media-track:Track>
 
 <caption-fine:Track id="captions"
-  display={story.caption}
-  correspondence={story.caption.correspondence}
+  document={story.caption}
   semantic={speech.semantic}
-  program={caption-program}
-  plan={caption-plan.plan}/>
+  program={caption-program}/>
 
 <film:Film id="main" canvas={vertical}
   semantic={speech.semantic} appearance={recipes.film.vertical}>

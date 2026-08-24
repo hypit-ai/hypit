@@ -32,8 +32,17 @@ export function localOpenCvProgram(context: RuntimeAdapterFactoryContext): Manag
   const python = deployment.pythonExecutable;
   return {
     id: "image-opencv",
-    ...(deployment.prepare === undefined ? {} : { prepare: deployment.prepare }),
-    async probe(): Promise<ManagedProgramState> {
+    ...(deployment.stateRoot === undefined ? {} : { stateRoot: deployment.stateRoot }),
+    ...(deployment.installCommands === undefined ? {} : {
+      installation: {
+        commands: deployment.installCommands,
+        probe,
+      },
+    }),
+    probe,
+  };
+
+  async function probe(): Promise<ManagedProgramState> {
       const result = await run(python, ["-c", PROBE_PROGRAM]);
       if (!result.ok) return { state: "down", detail: `${python} cannot import cv2 and numpy: ${result.output}` };
       let found: Record<string, string>;
@@ -48,6 +57,5 @@ export function localOpenCvProgram(context: RuntimeAdapterFactoryContext): Manag
       return differs.length === 0
         ? { state: "ready" }
         : { state: "mismatch", detail: `${python} carries ${differs.join("; ")}` };
-    },
-  };
+  }
 }

@@ -5,12 +5,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts"
   },
   "dependencies": {
     "@hypit/cli": "workspace:*",
     "@hypit/compiler-markup-node": "workspace:*",
     "@hypit/credential-store-env": "workspace:*",
+    "@hypit/credential-store-os": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/endpoint-kit": "workspace:*",
     "@hypit/generation": "workspace:*",
@@ -19,6 +21,7 @@
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/provider-kie": "workspace:*",
+    "@hypit/runtime-host-node": "workspace:*",
     "@hypit/runtime-local": "workspace:*",
     "@hypit/workspace-fs-node": "workspace:*"
   }

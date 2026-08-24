@@ -14,7 +14,7 @@ import {
 } from "@hypit/runtime-kit";
 import type { RuntimeAdapterFactoryContext } from "@hypit/runtime-kit";
 
-const context = { dataRoot: "/tmp", instance: "one", config: {} };
+const context = { hostStateRoot: "/host", dataRoot: "/tmp", instance: "one", config: {} };
 const endpointPackage = (instance: string) => ({
   name: instance,
   manifest: { facets: [] },
