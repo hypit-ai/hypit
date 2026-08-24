@@ -84,8 +84,8 @@ export function traceFor(source: CompiledSource, ref: string): StudioTrace {
   };
 }
 
-/** Additional same-Surface realizations an adapter needs beyond the terminal Track. */
-export function tracedStudioRealizations(
+/** Additional same-Surface values a Companion requires beyond the terminal Track. */
+export function tracedStudioValues(
   registry: StudioAdapterRegistry,
   source: CompiledSource,
   ref: string,
@@ -97,24 +97,16 @@ export function tracedStudioRealizations(
     const found = outputFor(source, port.ref);
     return found === undefined ? [] : [found.type];
   });
-  const ports = new Set(registry.realizationPorts(output.type, placement, siblingTypes));
-  return placement.outputPorts
-    .filter((port) => ports.has(port.name))
-    .flatMap((port) => {
-      const found = outputFor(source, port.ref);
-      return found === undefined ? [] : [found.ref];
-    });
-}
-
-export function tracedRealizations(
-  registry: StudioAdapterRegistry,
-  source: CompiledSource,
-  ref: string,
-): readonly { ref: string; role: StudioProjectionRole }[] {
-  const role = roleFor(registry, source, ref);
-  if (role === undefined) return [];
-  return traceFor(source, ref).references.flatMap((dependency) => {
-    const dependencyRole = registry.dependencyRole(role, dependency.type);
-    return dependencyRole === undefined ? [] : [{ ref: dependency.ref, role: dependencyRole }];
+  const ports = registry.requiredValuePorts(output.type, placement, siblingTypes);
+  return ports.map((name) => {
+    const port = placement.outputPorts.find((candidate) => candidate.name === name);
+    if (port === undefined) {
+      throw new Error(`Studio Companion for ${output.type} requires missing ${placement.tag} output port ${name}`);
+    }
+    const found = outputFor(source, port.ref);
+    if (found === undefined) {
+      throw new Error(`Studio Companion for ${output.type} cannot resolve ${placement.tag} output port ${name}`);
+    }
+    return found.ref;
   });
 }

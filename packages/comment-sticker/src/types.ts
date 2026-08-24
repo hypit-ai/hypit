@@ -89,6 +89,8 @@ export type CommentStickerHeader = {
 
 export type CommentStickerItemProgram = {
   readonly id: string;
+  /** Author-owned Item realized by this externally projected window. */
+  readonly subjectId: string;
   readonly span: FrameSpan;
   readonly frame: SpatialFrame;
   readonly style: CommentStickerStyle;

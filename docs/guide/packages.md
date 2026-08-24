@@ -157,7 +157,7 @@ queues, stores, credentials and process lifecycle; they never define author synt
 @hypit/cli                 generic command engine (requires explicit Distribution)
 @hypit/video-cli           video command application (selects Markup compiler, no built-in author packages)
 @hypit/studio-adapter      stable Studio companion ABI and presentation DTOs
-@hypit/studio-video-adapters official video-domain Studio interpretation
+@hypit/*-studio             independent official Studio companions selected explicitly by the Distribution
 @hypit/studio              development preview for a Run, never runs a Provider
 ```
 

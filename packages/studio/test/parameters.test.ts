@@ -6,15 +6,17 @@ import type {
   StudioSemanticTimeline,
   StudioTemporalLineage,
 } from "@hypit/studio-adapter";
+import { projectedWindowTimelineEdits } from "@hypit/studio-adapter";
 import type { MarkupSurfaceRegistryLike, RegisteredSurface } from "@hypit/markup";
 
-import { parametersForDraft, timelineAdjustHandles } from "../src/parameters.js";
+import { parametersForDraft, resolveTimelineEditHandles } from "../src/parameters.js";
 
 const semantic: StudioSemanticTimeline = {
   presentation: {
     family: "speech",
-    icon: "speech",
-    lane: { layout: "flat", height: { minPx: 44, preferredPx: 52, maxPx: 96 } },
+    tone: "teal",
+    icon: "timeline",
+    lane: { heightPx: 52 },
   },
   anchors: [
     { id: "segment:a:start", kind: "segment-start", frame: 0, segmentId: "a" },
@@ -47,7 +49,9 @@ test("timeline gestures resolve through the shared Selection identity", () => {
     },
     phases: [],
   };
-  const handles = timelineAdjustHandles([], ["move", "trim-start", "trim-end"], temporal, semantic);
+  const handles = resolveTimelineEditHandles(
+    [], projectedWindowTimelineEdits({ start: "start", end: "end", duration: "for" }), temporal, semantic,
+  );
 
   assert.deepEqual(handles.map((handle) => [handle.operation, handle.gesture, handle.coordinate, handle.enabled]), [
     ["timeline.adjust", "move", "semantic-anchor", true],
@@ -63,7 +67,9 @@ test("timeline gestures resolve through the shared Selection identity", () => {
 });
 
 test("moving a Moment projection resolves to the shared Moment identity", () => {
-  const handles = timelineAdjustHandles([], ["move", "trim-start", "trim-end"], {
+  const handles = resolveTimelineEditHandles([], projectedWindowTimelineEdits({
+    start: "start", end: "end", duration: "for",
+  }), {
     source: { kind: "moment", id: "beat" },
     projection: { kind: "point", expression: "moment.beat", frame: 12 },
     phases: [],
@@ -84,6 +90,48 @@ test("moving a Moment projection resolves to the shared Moment identity", () => 
   });
 });
 
+test("absolute Window edits use only the Companion's exact parameter vocabulary", () => {
+  const source = (start: number, end: number) => ({
+    path: "main.svml",
+    range: { start, end },
+    preimage: "1f",
+  });
+  const parameters = [
+    {
+      id: "from", name: "from", label: "From", control: "text" as const,
+      value: "1f", language: "svml" as const, writable: true, source: source(0, 2),
+    },
+    {
+      id: "until", name: "until", label: "Until", control: "text" as const,
+      value: "20f", language: "svml" as const, writable: true, source: source(3, 6),
+    },
+  ];
+  const handles = resolveTimelineEditHandles(
+    parameters,
+    projectedWindowTimelineEdits({ start: "from", end: "until", duration: "length" }),
+    {
+      source: { kind: "program" },
+      projection: {
+        kind: "window", startExpression: "1f", endExpression: "20f",
+        startFrame: 1, endFrameExclusive: 20,
+      },
+      phases: [],
+    },
+    semantic,
+  );
+
+  assert.deepEqual(handles.map((handle) => ({
+    gesture: handle.gesture,
+    enabled: handle.enabled,
+    roles: handle.sources?.map((item) => item.role),
+    starts: handle.sources?.map((item) => item.source.range.start),
+  })), [
+    { gesture: "move", enabled: true, roles: ["start", "end"], starts: [0, 3] },
+    { gesture: "trim-start", enabled: true, roles: ["start"], starts: [0] },
+    { gesture: "trim-end", enabled: true, roles: ["end"], starts: [3] },
+  ]);
+});
+
 test("parameter Source paths stay relative to the author workspace", () => {
   const text = "start=\"1f\"";
   const parameters = parametersForDraft({
@@ -102,7 +150,7 @@ test("parameter Source paths stay relative to the author workspace", () => {
       referenceAttributes: {}, referenceTypes: {}, references: [],
     },
     draft: {
-      id: "entity:item", authoredId: "item", label: "item",
+      id: "entity:item", authoredId: "item", display: { title: "item", layers: [] },
       startFrame: 1, endFrameExclusive: 2, stackOrder: 0,
       elementRange: { start: 0, end: text.length },
     },
@@ -113,7 +161,7 @@ test("parameter Source paths stay relative to the author workspace", () => {
   assert.equal(parameters[0]!.source.preimage, "1f");
 });
 
-test("a derived entity follows its actual Style and the package-owned Recipe vocabulary", () => {
+test("a derived entity follows its actual Style and Companion-owned Recipe presentation", () => {
   const main = "<caption-fine:Track id=\"captions\" program={caption-program}/>";
   const sheet = `<sheet version="1">
   caption.alt { x: 0.4; handoff: overlap; }
@@ -148,8 +196,8 @@ test("a derived entity follows its actual Style and the package-owned Recipe voc
     vocabulary: { summary: "Caption Style", example: "<Style/>", attributes: [{
       name: "recipe", kind: "reference", required: true, summary: "Recipe",
       recipe: [
-        { name: "x", required: true, summary: "Horizontal position", group: "where", section: "region" },
-        { name: "handoff", required: false, summary: "Cue handoff", group: "when", section: "envelope", values: ["cut", "overlap"] },
+        { name: "x", required: true, summary: "Horizontal position" },
+        { name: "handoff", required: false, summary: "Cue handoff", values: ["cut", "overlap"] },
       ],
     }] },
     handler: () => ({ records: [], components: [], fragments: [], exports: [] }),
@@ -170,12 +218,21 @@ test("a derived entity follows its actual Style and the package-owned Recipe voc
     placement: track,
     placements: [track, style],
     draft: {
-      id: "captions:cue:2", authoredId: "captions", presentId: "cue:2", label: "cue:2",
+      id: "captions:cue:2", authoredId: "captions", presentId: "cue:2", display: { title: "cue:2", layers: [] },
       startFrame: 0, endFrameExclusive: 10, stackOrder: 70,
       elementRange: track.range,
       parameterReferences: { program: "alternate-caption" },
     },
-    declarations: [{ name: "program", label: "Program", writable: false }],
+    declarations: [{
+      name: "program", label: "Program", writable: false,
+      recipe: {
+        through: ["recipe"],
+        parameters: [
+          { name: "x", group: "where", section: "region" },
+          { name: "handoff", group: "when", section: "envelope" },
+        ],
+      },
+    }],
     surfaces,
   });
 

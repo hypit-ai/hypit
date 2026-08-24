@@ -25,6 +25,7 @@ export function projectSpeechTrackVisual(track: SemanticTrack, set: SpeechTrackS
         if (visual === undefined || placement === undefined) return [];
         return [{
           id: item.take.segment.segmentId,
+          subjectId: item.take.segment.segmentId,
           span: { startFrame, endFrameExclusive },
           artifact: visual.artifact,
           extent: { widthPx: visual.width, heightPx: visual.height },

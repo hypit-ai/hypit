@@ -29,6 +29,7 @@ export function projectSemanticAudioTrack(track: SemanticTrack): AudioTrack {
     const targetEndSampleExclusive = programFrameSampleBoundary(space, endFrameExclusive, 48_000);
     return [{
       id: item.take.segment.segmentId,
+      subjectId: item.take.segment.segmentId,
       artifact: audio.artifact,
       target: { startSample: targetStartSample, endSampleExclusive: targetEndSampleExclusive },
       source: {

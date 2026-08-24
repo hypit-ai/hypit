@@ -27,40 +27,20 @@ const itemMetrics = {
 } as const;
 
 const labelFont = '500 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
-const monoLabelFont = '500 11px "SF Mono", "SFMono-Regular", ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace';
-const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 const textMeasure = document.createElement("canvas").getContext("2d");
 const textWidths = new Map<string, number>();
+const wordLabelPaddingPx = 5;
+const wordLabelEnterBufferPx = 1;
 
 function measuredText(value: string, font = labelFont): number {
   const key = `${font}\u0000${value}`;
   const cached = textWidths.get(key);
   if (cached !== undefined) return cached;
-  if (textMeasure === null) return [...graphemes.segment(value)].length * 7;
+  if (textMeasure === null) return Array.from(value).length * 7;
   textMeasure.font = font;
   const width = textMeasure.measureText(value).width;
   textWidths.set(key, width);
   return width;
-}
-
-/** Return the longest prefix whose final grapheme is wholly visible. */
-function fittedText(value: string, width: number): string {
-  const available = Math.max(0, width - 1);
-  if (measuredText(value) <= available) return value;
-  const parts = [...graphemes.segment(value)].map((part) => part.segment);
-  let low = 0;
-  let high = parts.length;
-  while (low < high) {
-    const middle = Math.ceil((low + high) / 2);
-    if (measuredText(parts.slice(0, middle).join("")) <= available) low = middle;
-    else high = middle - 1;
-  }
-  return parts.slice(0, low).join("");
-}
-
-function fitLabel(node: HTMLElement, value: string, width: number): void {
-  node.dataset.fullLabel = value;
-  node.textContent = fittedText(value, width);
 }
 
 function timecode(seconds: number): string {
@@ -90,31 +70,14 @@ function displayTrackName(track: StudioSnapshot["tracks"][number]): string {
   return track.label;
 }
 
-function clipHeaderLabel(clip: StudioSnapshot["tracks"][number]["clips"][number]): string {
-  return clip.presentation.shape === "text" ? clip.authoredId : clip.label;
-}
-
-function clipBodyLabel(clip: StudioSnapshot["tracks"][number]["clips"][number]): string {
-  return clip.presentation.shape === "text" ? clip.label : "";
-}
-
-/**
- * Keep an item's authored geometry intact while placing its text inside the
- * portion of that geometry which is actually visible in the current window.
- * Material, phases and edit handles must continue to use the full rectangle.
- */
-function placeVisibleLabel(
-  node: HTMLElement,
+function visibleItemWidth(
   from: number,
   to: number,
   laneWidth: number,
 ): number {
   const visibleFrom = Math.max(0, from);
   const visibleTo = Math.min(1, to);
-  const visibleWidth = Math.max(0, visibleTo - visibleFrom) * laneWidth;
-  node.style.setProperty("--item-visible-offset", `${Math.max(0, visibleFrom - from) * laneWidth}px`);
-  node.style.setProperty("--item-visible-width", `${Math.max(1, visibleWidth - itemMetrics.gapPx)}px`);
-  return visibleWidth;
+  return Math.max(0, visibleTo - visibleFrom) * laneWidth;
 }
 
 export function createTimeline(store: Store): Timeline {
@@ -183,6 +146,7 @@ export function createTimeline(store: Store): Timeline {
   let built = -1;
   let paintFrame = 0;
   let rebuildFrame = 0;
+  const readableWordLabels = new Set<string>();
   let clipNodes: readonly {
     readonly node: HTMLElement;
     readonly start: number;
@@ -389,7 +353,7 @@ export function createTimeline(store: Store): Timeline {
       const next = state.snapshot.semantic.anchors.find((anchor) => anchor.id === target.anchorId)?.frame;
       if (current === undefined || next === undefined) return undefined;
       const delta = next - current.frame;
-      return edit.clip.temporal?.projection?.kind === "point"
+      return edit.handle.moveEffect === "move-start"
         ? { startFrame: edit.clip.startFrame + delta, endFrameExclusive: edit.clip.endFrameExclusive }
         : { startFrame: edit.clip.startFrame + delta, endFrameExclusive: edit.clip.endFrameExclusive + delta };
     }
@@ -599,11 +563,11 @@ export function createTimeline(store: Store): Timeline {
     // This is one semantic ruler group, not a regular Film lane. Its three
     // bands share the same inner inset as ordinary items, so the first pixel
     // of the semantic content aligns with the first pixel of the label card.
-    const laneHeight = presentation.lane.height.preferredPx;
+    const laneHeight = presentation.lane.heightPx;
     const bandHeight = Math.max(1, (laneHeight - itemMetrics.insetYPx * 2) / 3);
     const label = createTrackLabel(
-      presentation.label ?? "Speech",
-      presentation.family,
+      presentation.label ?? "Semantic",
+      presentation.tone,
       presentation.icon,
       `${snapshot.semantic.segments.length} take${snapshot.semantic.segments.length === 1 ? "" : "s"}`,
       laneHeight,
@@ -612,7 +576,7 @@ export function createTimeline(store: Store): Timeline {
     labels.append(label);
 
     const lane = document.createElement("div");
-    lane.className = `lane semantic-lane track-${presentation.family}`;
+    lane.className = `lane semantic-lane track-tone-${presentation.tone}`;
     lane.style.height = `${laneHeight}px`;
     lane.style.setProperty("--semantic-band-height", `${bandHeight}px`);
     const laneWidth = lanes.clientWidth;
@@ -649,20 +613,13 @@ export function createTimeline(store: Store): Timeline {
       node.style.left = `${from * 100}%`;
       const segmentWidth = Math.max(0, to - from) * 100;
       node.style.width = `max(2px, calc(${segmentWidth}% - ${itemMetrics.gapPx}px))`;
-      const visibleWidthPx = placeVisibleLabel(node, from, to, laneWidth);
-      node.title = `${segment.id} · ${segment.startFrame}-${segment.endFrameExclusive}f`;
+      node.title = segment.id;
       const segmentLabel = document.createElement("span");
       segmentLabel.className = "semantic-segment-label";
-      node.classList.toggle("semantic-wide", visibleWidthPx >= 140);
+      segmentLabel.textContent = segment.id;
       const head = document.createElement("div");
       head.className = "semantic-cell-content";
-      const segmentDuration = document.createElement("span");
-      segmentDuration.className = "semantic-segment-duration";
-      const segmentDurationText = `${segment.endFrameExclusive - segment.startFrame}f`;
-      segmentDuration.textContent = segmentDurationText;
-      fitLabel(segmentLabel, segment.id, visibleWidthPx - itemMetrics.gapPx - 10
-        - (visibleWidthPx >= 140 ? measuredText(segmentDurationText, monoLabelFont) + 6 : 0));
-      head.append(segmentLabel, segmentDuration);
+      head.append(segmentLabel);
       node.append(head);
       node.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -694,12 +651,22 @@ export function createTimeline(store: Store): Timeline {
       word.dataset.semanticToken = token.id;
       word.setAttribute("aria-label", token.text);
       word.style.left = `${wordFrom * 100}%`;
-      word.style.width = `max(1px, calc(${Math.max(0, wordTo - wordFrom) * 100}% - 1px))`;
-      const wordVisibleWidth = placeVisibleLabel(word, wordFrom, wordTo, laneWidth);
-      word.title = `${token.text} · ${token.startFrame}-${token.endFrameExclusive}f`;
+      const wordWidth = Math.max(0, wordTo - wordFrom);
+      word.style.width = `max(1px, calc(${wordWidth * 100}% - ${itemMetrics.gapPx}px))`;
+      word.title = token.text;
       const text = document.createElement("span");
       text.className = "semantic-word-label";
-      fitLabel(text, token.text, wordVisibleWidth - itemMetrics.gapPx - 10);
+      text.textContent = token.text;
+      const wordWidthPx = Math.max(1, wordWidth * laneWidth - itemMetrics.gapPx);
+      const textWidthPx = measuredText(token.text);
+      const contentWidthPx = Math.max(0, wordWidthPx - wordLabelPaddingPx * 2);
+      const wasReadable = readableWordLabels.has(token.id);
+      const textFitsCell = contentWidthPx >= textWidthPx + (wasReadable ? 0 : wordLabelEnterBufferPx);
+      if (textFitsCell) readableWordLabels.add(token.id);
+      else readableWordLabels.delete(token.id);
+      const textFitsViewport = wordFrom >= 0
+        && wordFrom * laneWidth + wordLabelPaddingPx * 2 + textWidthPx <= laneWidth;
+      word.classList.toggle("word-label-visible", textFitsCell && textFitsViewport);
       const wordContent = document.createElement("span");
       wordContent.className = "semantic-cell-content";
       wordContent.append(text);
@@ -722,11 +689,10 @@ export function createTimeline(store: Store): Timeline {
       node.setAttribute("aria-label", `Selection ${selection.id}`);
       node.style.left = `${from * 100}%`;
       node.style.width = `max(2px, calc(${Math.max(0, to - from) * 100}% - ${itemMetrics.gapPx}px))`;
-      const selectionVisibleWidth = placeVisibleLabel(node, from, to, laneWidth);
-      node.title = `${selection.id} · ${selection.startFrame}-${selection.endFrameExclusive}f`;
+      node.title = selection.id;
       const selectionLabel = document.createElement("span");
       selectionLabel.className = "semantic-selection-label";
-      fitLabel(selectionLabel, selection.id, selectionVisibleWidth - itemMetrics.gapPx - 10);
+      selectionLabel.textContent = selection.id;
       const selectionContent = document.createElement("div");
       selectionContent.className = "semantic-cell-content";
       selectionContent.append(selectionLabel);
@@ -748,7 +714,7 @@ export function createTimeline(store: Store): Timeline {
       node.tabIndex = 0;
       node.setAttribute("aria-label", `Moment ${moment.id}`);
       node.style.left = `${at * 100}%`;
-      node.title = `${moment.id} · ${moment.frame}f`;
+      node.title = moment.id;
       node.addEventListener("click", (event) => {
         event.stopPropagation();
         store.selectSemanticMoment(moment.id, "timeline");
@@ -766,7 +732,7 @@ export function createTimeline(store: Store): Timeline {
     nextClipNodes: { node: HTMLElement; start: number; end: number; id: string }[],
     attached = false,
   ): void => {
-    const kind = track.binding.family;
+    const tone = track.binding.tone;
     const freeFrom: number[] = [];
     const rowOf = new Map<string, number>();
     for (const clip of [...track.clips].sort((a, b) => b.stackOrder - a.stackOrder || a.startFrame - b.startFrame)) {
@@ -778,11 +744,11 @@ export function createTimeline(store: Store): Timeline {
     const depth = Math.max(1, freeFrom.length);
     const folded = depth > 1 && !opened.has(track.id);
     const shownRows = folded ? 1 : depth;
-    const laneHeight = track.binding.lane.height.preferredPx;
+    const laneHeight = track.binding.lane.heightPx;
     const displayedItems = track.clips.length;
     const label = createTrackLabel(
       displayTrackName(track),
-      kind,
+      tone,
       track.binding.icon,
       `${displayedItems} item${displayedItems === 1 ? "" : "s"}`,
       shownRows * laneHeight,
@@ -809,15 +775,13 @@ export function createTimeline(store: Store): Timeline {
     labels.append(label);
 
     const lane = document.createElement("div");
-    lane.className = `lane track-${kind} track-facet-${track.binding.facet}${attached ? " lane-attached" : ""}`;
+    lane.className = `lane track-tone-${tone} track-facet-${track.binding.facet}${attached ? " lane-attached" : ""}`;
     lane.style.height = `${shownRows * laneHeight}px`;
     lane.style.setProperty("--lane-height", `${laneHeight}px`);
-    lane.style.setProperty("--lane-min-height", `${track.binding.lane.height.minPx}px`);
-    lane.style.setProperty("--lane-max-height", `${track.binding.lane.height.maxPx}px`);
     const laneWidth = lanes.clientWidth;
     const materialMounts: {
       readonly target: HTMLElement;
-      readonly preview: NonNullable<StudioSnapshot["tracks"][number]["clips"][number]["preview"]>;
+      readonly preview: Extract<StudioSnapshot["tracks"][number]["clips"][number]["display"]["layers"][number], { readonly kind: "preview" }>["preview"];
     }[] = [];
     for (const clip of track.clips) {
       const from = place(clip.startFrame, snapshot.space.frameCount, zoom.window());
@@ -827,23 +791,30 @@ export function createTimeline(store: Store): Timeline {
       if (folded && row > 0) continue;
       const node = document.createElement("button");
       node.type = "button";
-      node.className = `clip clip-${kind} clip-facet-${track.binding.facet} clip-shape-${clip.presentation.shape}`;
+      node.className = `clip clip-tone-${tone} clip-facet-${track.binding.facet} clip-chrome-${clip.presentation.chrome}`;
       node.classList.toggle("clip-editable", clip.editHandles.some((handle) => handle.enabled));
       node.dataset.clip = clip.id;
-      node.setAttribute("aria-label", clip.label);
+      node.setAttribute("aria-label", clip.display.title);
       node.style.left = `${from * 100}%`;
       node.style.width = `max(2px, calc(${Math.max(0, to - from) * 100}% - ${itemMetrics.gapPx}px))`;
-      const visibleWidthPx = placeVisibleLabel(node, from, to, laneWidth);
-      node.classList.toggle("clip-wide", visibleWidthPx >= 110);
+      const visibleWidthPx = visibleItemWidth(from, to, laneWidth);
       node.classList.toggle("clip-preview-wide", visibleWidthPx >= 92);
       node.style.top = `${row * laneHeight}px`;
-      node.title = `${clip.label} · ${clip.startFrame}-${clip.endFrameExclusive}f`;
-      node.innerHTML = `<span class="clip-head"><span class="clip-name"></span><span class="clip-meta"></span></span><span class="clip-body"><span class="clip-material" aria-hidden="true"></span><span class="clip-content"><span class="clip-content-text"></span></span><span class="clip-phases"></span></span><span class="clip-selection" aria-hidden="true"></span>`;
-      const material = node.querySelector<HTMLElement>(".clip-material")!;
-      if (clip.preview !== undefined) {
-        node.classList.add("clip-has-material");
-        materialMounts.push({ target: material, preview: clip.preview });
-      }
+      node.title = `${clip.display.title} · ${clip.startFrame}-${clip.endFrameExclusive}f`;
+      node.innerHTML = `<span class="clip-head"><span class="clip-name"></span><span class="clip-meta"></span></span><span class="clip-body"><span class="clip-layers" aria-hidden="true"></span><span class="clip-phases"></span></span><span class="clip-selection" aria-hidden="true"></span>`;
+      const layers = node.querySelector<HTMLElement>(".clip-layers")!;
+      clip.display.layers.forEach((layer, index) => {
+        const layerNode = document.createElement("span");
+        layerNode.className = `clip-layer clip-layer-${layer.kind} clip-layer-role-${layer.role}`;
+        layerNode.style.zIndex = String(index + 1);
+        if (layer.kind === "text") {
+          layerNode.textContent = layer.text;
+        } else {
+          layerNode.classList.add(`clip-layer-layout-${layer.layout}`);
+          materialMounts.push({ target: layerNode, preview: layer.preview });
+        }
+        layers.append(layerNode);
+      });
       const phaseLayer = node.querySelector<HTMLElement>(".clip-phases")!;
       for (const phase of clip.temporal?.phases ?? []) {
         if (phase.endFrameExclusive <= clip.startFrame || phase.startFrame >= clip.endFrameExclusive) continue;
@@ -853,13 +824,12 @@ export function createTimeline(store: Store): Timeline {
         phaseNode.style.width = `${(phase.endFrameExclusive - phase.startFrame) / Math.max(1, clip.endFrameExclusive - clip.startFrame) * 100}%`;
         phaseLayer.append(phaseNode);
       }
-      const metaText = `${((clip.endFrameExclusive - clip.startFrame) / fps(snapshot)).toFixed(2)}s`;
+      const metaText = clip.presentation.chrome === "point"
+        ? `${(clip.startFrame / fps(snapshot)).toFixed(2)}s`
+        : `${((clip.endFrameExclusive - clip.startFrame) / fps(snapshot)).toFixed(2)}s`;
       const headerLabel = node.querySelector<HTMLElement>(".clip-name")!;
-      const bodyLabel = node.querySelector<HTMLElement>(".clip-content-text")!;
       node.querySelector(".clip-meta")!.textContent = metaText;
-      fitLabel(headerLabel, clipHeaderLabel(clip), visibleWidthPx - itemMetrics.gapPx - 10
-        - (visibleWidthPx >= 110 ? measuredText(metaText, monoLabelFont) + 6 : 0));
-      fitLabel(bodyLabel, clipBodyLabel(clip), visibleWidthPx - itemMetrics.gapPx - 10);
+      headerLabel.textContent = clip.display.title;
       node.addEventListener("pointerdown", (event) => {
         const rect = node.getBoundingClientRect();
         const edge = Math.min(8, Math.max(4, rect.width / 3));
@@ -897,7 +867,7 @@ export function createTimeline(store: Store): Timeline {
           store.select(clip.id, "timeline");
           return;
         }
-        if (clip.interaction.select) store.select(clip.id, "timeline");
+        store.select(clip.id, "timeline");
       });
       node.addEventListener("dblclick", () => store.seek(clip.startFrame, "timeline"));
       nextClipNodes.push({ node, start: clip.startFrame, end: clip.endFrameExclusive, id: clip.id });

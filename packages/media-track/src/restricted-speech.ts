@@ -10,6 +10,7 @@ import type { MediaItemProgram } from "./types.js";
 
 export type RestrictedSpeechVisualClip = {
   readonly id: string;
+  readonly subjectId?: string;
   readonly span: { readonly startFrame: number; readonly endFrameExclusive: number };
   readonly artifact: BlobRef;
   readonly extent: IntrinsicExtent;
@@ -53,6 +54,7 @@ export function lowerRestrictedSpeechVisualPresents(
     }
     const item: MediaItemProgram = {
       id: `${trackId}:${clip.id}`,
+      subjectId: clip.subjectId ?? clip.id,
       span: { ...clip.span },
       frame: structuredClone(clip.frame),
       presentation: {
@@ -86,6 +88,7 @@ export function lowerRestrictedSpeechVisualPresents(
     };
     return {
       id: item.id,
+      subjectId: clip.subjectId ?? clip.id,
       span: { ...item.span },
       stacking: { ...item.stacking },
       elements: lowerMediaItemElements(item, space),

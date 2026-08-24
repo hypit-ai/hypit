@@ -328,6 +328,7 @@ export function renderDepthStack(
       }
       const mediaItem: MediaItemProgram = {
         id: "deck-material",
+        subjectId: card.id,
         span: { startFrame: stageStart, endFrameExclusive: stageEnd },
         frame: localFrame(program.frame),
         presentation: structuredClone(program.spec.presentation),
@@ -346,6 +347,7 @@ export function renderDepthStack(
       const label = labelElement(card, frameId, material.reduce((maximum, element) => Math.max(maximum, element.order), 0) + 1);
       presents.push({
         id: `${card.id}:stage:${stageIndex + 1}`,
+        subjectId: card.id,
         span: { startFrame: stageStart, endFrameExclusive: stageEnd },
         stacking: {
           order: program.spec.stackingOrder + (newDepth === undefined

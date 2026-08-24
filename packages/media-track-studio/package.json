@@ -1,16 +1,13 @@
 {
-  "name": "@hypit/studio-video-adapters",
+  "name": "@hypit/media-track-studio",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "hypit": {
-    "activation": "./src/activation.ts"
-  },
+  "exports": { ".": "./src/index.ts" },
+  "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
+    "@hypit/media-track": "workspace:*",
     "@hypit/studio-adapter": "workspace:*"
   }
 }

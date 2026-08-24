@@ -210,6 +210,7 @@ function realized(
   if (avatar !== undefined) assertAvatar(avatar);
   const addition: CommentStickerItemProgram = {
     id: window.id,
+    subjectId: spec.id,
     span: { ...window.span },
     frame: structuredClone(frame),
     style: structuredClone(style),
@@ -242,6 +243,7 @@ export function assertCommentStickerProgram(value: CommentStickerProgram): void 
   const ids = new Set<string>();
   for (const item of value.items) {
     identity(item.id, "CommentStickerItemProgram.id");
+    identity(item.subjectId, "CommentStickerItemProgram.subjectId");
     assert(!ids.has(item.id), `Duplicate Comment Sticker Item ${item.id}.`);
     ids.add(item.id);
     assert(item.span.startFrame >= 0 && item.span.endFrameExclusive > item.span.startFrame,
@@ -592,6 +594,7 @@ export function renderCommentSticker(canvas: CanvasSpace, space: ProgramSpace, p
     id: program.id,
     presents: program.items.map((item) => ({
       id: item.id,
+      subjectId: item.subjectId,
       span: { ...item.span },
       stacking: { order: item.style.stackingOrder, tieBreak: item.tieBreak },
       elements: stickerElements(item),

@@ -2,7 +2,6 @@ import { readFile } from "node:fs/promises";
 
 import { captionManifest, captionModuleRef, captionTypes } from "@hypit/caption";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
-import type { SurfaceRecipePropertyVocabulary } from "@hypit/markup";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import type { ModuleManifest, ProducerRef } from "@hypit/protocol";
@@ -16,57 +15,6 @@ const previewImage = (file: string) => ({
   path: `preview/${file}`,
   open: async () => Uint8Array.from(await readFile(new URL(`../preview/${file}`, import.meta.url))),
 });
-
-const WHERE_PROPERTIES = new Set([
-  "stack-order", "x", "y", "width", "height", "anchor-x", "anchor-y", "align", "block-align",
-  "inline-size", "wrap", "overflow", "max-lines", "max-words-per-line", "direction", "line-height",
-  "letter-spacing", "word-gap",
-]);
-
-const TIMED_ACTIVE_BOX_PROPERTIES = new Set([
-  "active-box",
-  "active-box-continuity",
-  "active-box-enter",
-  "active-box-exit",
-  "active-box-transition-frames",
-]);
-
-function fineCaptionRecipeGroup(name: string): "where" | "how" | "when" {
-  if (WHERE_PROPERTIES.has(name)) return "where";
-  if (name === "lead-frames" || name === "tail-frames" || name === "handoff"
-    || name === "karaoke" || name === "karaoke-transition"
-    || name === "active-underline"
-    || name.startsWith("cue-enter") || name.startsWith("cue-exit")
-    || name.startsWith("atom-") || name.startsWith("active-response")
-    || name.startsWith("loop") || name === "slide-distance" || name === "active-scale"
-    || TIMED_ACTIVE_BOX_PROPERTIES.has(name)) return "when";
-  return "how";
-}
-
-function fineCaptionRecipeSection(name: string, group: "where" | "how" | "when"): string {
-  if (group === "where") return ["x", "y", "width", "height", "anchor-x", "anchor-y", "stack-order"].includes(name)
-    ? "region" : "flow";
-  if (group === "when") {
-    if (["lead-frames", "tail-frames", "handoff"].includes(name)) return "envelope";
-    if (name.startsWith("cue-")) return "cue";
-    if (name.startsWith("loop")) return "loop";
-    return "token";
-  }
-  if (["size", "kerning", "caps", "text-transform"].includes(name)) return "typography";
-  if (name === "background" || name === "border-color" || name === "border-width" || name === "padding"
-    || name === "radius" || name.startsWith("cue-shadow")) return "cue-box";
-  if (name.startsWith("active-box") || name.includes("underline")) return "decoration";
-  return name.startsWith("active-") ? "active-paint" : "base-paint";
-}
-
-function withFineCaptionRecipeGroups<const T extends readonly SurfaceRecipePropertyVocabulary[]>(
-  properties: T,
-): readonly SurfaceRecipePropertyVocabulary[] {
-  return properties.map((property) => {
-    const group = fineCaptionRecipeGroup(property.name);
-    return { ...property, group, section: fineCaptionRecipeSection(property.name, group) };
-  });
-}
 
 export const captionFineModuleRef = { name: "@hypit/caption-fine", version: "1" } as const;
 export const captionFineTypes = {
@@ -87,7 +35,7 @@ export const captionFineMarkupSurfaces = [
             summary: "Names this Style so a Caption Program can assign it." },
           { name: "recipe", kind: "reference", required: true, accepts: [svsRecipeType],
             summary: "Chooses the Recipe that carries Cue geometry, Paint and local motion.",
-            recipe: withFineCaptionRecipeGroups([
+            recipe: [
               { name: "stack-order", required: true,
                 summary: "Places this Style's Cues in the Track's drawing order, low behind high." },
               { name: "x", required: true,
@@ -319,7 +267,7 @@ export const captionFineMarkupSurfaces = [
                 summary: "Keeps the Cue visible this many Frames after its last semantic Word without extending any Word timing." },
               { name: "handoff", required: false, values: ["cut", "overlap"], fallback: "cut",
                 summary: "Chooses whether adjacent Cue visibility envelopes meet without overlap or may coexist." },
-            ]) },
+            ] },
           { name: "font", kind: "reference", required: true,
             accepts: [mediaTypes.fontArtifact, mediaTypes.fontStack],
             summary: "Chooses the primary face, or a whole reusable stack that already carries its own fallbacks." },
@@ -344,7 +292,7 @@ export const captionFineMarkupSurfaces = [
       },
     },
     {
-      name: "track", tag: "Track", mode: "structured", outputs: [compositionTypes.visualTrack],
+      name: "track", tag: "Track", mode: "structured", outputs: [captionFineTypes.schedule, compositionTypes.visualTrack],
       vocabulary: {
         summary: "Joins the authored CaptionDocument against the SemanticTrack and renders it as one ordinary peer VisualTrack.",
         appearance: "One block of caption text wrapped into lines inside a rounded Cue box, placed at a Recipe-chosen point on the Canvas and spanning a fraction of its width. Cues follow the speech one after another, each arriving and leaving with its own motion, and the Words of a Cue either stand there together from its first Frame or uncover as they are spoken. As the speech advances, the Word being spoken, or every Word up to it, is repainted in the active Paint, snapping at the Word boundary or sweeping across the glyphs, and it may take a rule beneath it, a rounded highlight capsule behind it and a brief pop at the moment it becomes the spoken one. That capsule either stands alone on each Atom or grows as one continuous run over everything already read, following the Words across line breaks.\n\nEvery Word of every Cue is drawn in one typeface, the one its Style names: emphasis varies by Word through the active Paint, never by typeface, and lines exist only where the text wraps, so a line cannot be given a face, colour or weight of its own. A caption whose lines are set in different typefaces is outside what this Track can draw.",
@@ -360,6 +308,8 @@ export const captionFineMarkupSurfaces = [
             summary: "Chooses the Style assignment that decides which Style each run is rendered in." },
         ],
         ports: [
+          { name: "schedule", type: captionFineTypes.schedule,
+            summary: "The visible Cue schedule consumed by the renderer and other declared tools." },
           { name: "track", type: compositionTypes.visualTrack,
             summary: "The rendered Caption as one self-contained VisualTrack." },
         ],

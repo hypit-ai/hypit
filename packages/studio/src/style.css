@@ -21,16 +21,15 @@
   --interaction-pressed: var(--brand-600);
   --danger: #c00015;
   --ok: #64c99a;
-  /* Track families occupy fixed hue slots; variants stay on their family's hue. */
-  --component: #ac571d;
-  --component-rail: #ff9858;
-  /* Ranking reveal is a darker component variant, not a new family. */
-  --ranking-reveal: #7b3702;
-  --ranking-reveal-rail: #e7834c;
-  --audio: #38853e;
-  --audio-rail: #75d079;
-  --speech: #008889;
-  --speech-rail: #00d4d5;
+  /* Studio palette tokens; Companion families never become CSS selectors. */
+  --tone-orange: #ac571d;
+  --tone-orange-rail: #ff9858;
+  --tone-orange-muted: #7b3702;
+  --tone-orange-muted-rail: #e7834c;
+  --tone-green: #38853e;
+  --tone-green-rail: #75d079;
+  --tone-teal: #008889;
+  --tone-teal-rail: #00d4d5;
   /* Semantic ruler: brightness separates content from its own band; hue marks state. */
   --semantic-segment: #417370;
   --semantic-word: #005551;
@@ -43,14 +42,14 @@
   --intent-depth-1: #c0aa54;
   --intent-depth-2: #a28b2b;
   --intent-depth-3: #846d00;
-  --media: #1777b8;
-  --media-rail: #58c0ff;
-  --text-track: #6f63b8;
-  --text-rail: #b3a6ff;
-  --caption: #995398;
-  --caption-rail: #ea93e8;
-  --visual: #6a737c;
-  --visual-rail: #aeb9c4;
+  --tone-blue: #1777b8;
+  --tone-blue-rail: #58c0ff;
+  --tone-violet: #6f63b8;
+  --tone-violet-rail: #b3a6ff;
+  --tone-magenta: #995398;
+  --tone-magenta-rail: #ea93e8;
+  --tone-neutral: #6a737c;
+  --tone-neutral-rail: #aeb9c4;
   --timeline-label-width: 188px;
   --source-width: 350px;
   --workspace-width: 300px;
@@ -808,14 +807,14 @@ button:focus-visible, textarea:focus-visible {
   height: 1.5px;
   transform: translateY(-50%);
 }
-.track-media { --track: var(--media); --rail: var(--media-rail); }
-.track-speech { --track: var(--speech); --rail: var(--speech-rail); }
-.track-caption { --track: var(--caption); --rail: var(--caption-rail); }
-.track-component { --track: var(--component); --rail: var(--component-rail); }
-.track-ranking-reveal { --track: var(--ranking-reveal); --rail: var(--ranking-reveal-rail); }
-.track-audio { --track: var(--audio); --rail: var(--audio-rail); }
-.track-text { --track: var(--text-track); --rail: var(--text-rail); }
-.track-visual { --track: var(--visual); --rail: var(--visual-rail); }
+.track-tone-blue { --track: var(--tone-blue); --rail: var(--tone-blue-rail); }
+.track-tone-green { --track: var(--tone-green); --rail: var(--tone-green-rail); }
+.track-tone-teal { --track: var(--tone-teal); --rail: var(--tone-teal-rail); }
+.track-tone-violet { --track: var(--tone-violet); --rail: var(--tone-violet-rail); }
+.track-tone-magenta { --track: var(--tone-magenta); --rail: var(--tone-magenta-rail); }
+.track-tone-orange { --track: var(--tone-orange); --rail: var(--tone-orange-rail); }
+.track-tone-orange-muted { --track: var(--tone-orange-muted); --rail: var(--tone-orange-muted-rail); }
+.track-tone-neutral { --track: var(--tone-neutral); --rail: var(--tone-neutral-rail); }
 .timeline-lanes { position: relative; min-width: 0; cursor: default; user-select: none; touch-action: pan-y; }
 .ruler {
   position: sticky;
@@ -937,28 +936,30 @@ button:focus-visible, textarea:focus-visible {
   font-weight: 500;
   white-space: nowrap;
 }
-.semantic-segment-duration {
-  flex: 0 0 auto;
-  color: rgba(255, 255, 255, .75);
-  font: 500 11px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-.semantic-segment:not(.semantic-wide) .semantic-segment-duration { display: none; }
 .semantic-word.current { background: var(--semantic-current); color: #fff; }
-.semantic-word-label { display: block; min-width: 0; overflow: hidden; font-size: 11px; font-weight: 500; line-height: 1; text-overflow: clip; white-space: nowrap; }
+.semantic-word-label {
+  display: none;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.semantic-word.word-label-visible .semantic-word-label { display: block; }
 .semantic-cell-content {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: var(--item-visible-offset, 0);
-  width: var(--item-visible-width, 100%);
+  left: 0;
+  width: 100%;
   min-width: 0;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 6px;
   overflow: hidden;
-  padding: 0 5px;
+  padding: 0 0 0 5px;
 }
+.semantic-word .semantic-cell-content { padding: 0 5px; }
 .semantic-moment {
   position: absolute;
   top: 4px;
@@ -1074,14 +1075,14 @@ button:focus-visible, textarea:focus-visible {
   position: absolute;
   z-index: 3;
   top: 0;
-  left: var(--item-visible-offset, 0);
-  width: var(--item-visible-width, 100%);
+  left: 0;
+  width: 100%;
   height: var(--timeline-item-header-height);
   display: flex;
   align-items: center;
   gap: 6px;
   overflow: hidden;
-  padding: 0 5px;
+  padding: 0 0 0 5px;
   border-bottom: 1px solid rgba(255, 255, 255, .13);
   background: var(--item-head);
   border-radius: var(--timeline-item-radius) var(--timeline-item-radius) 0 0;
@@ -1096,13 +1097,16 @@ button:focus-visible, textarea:focus-visible {
   background: var(--item-body);
   border-radius: 0 0 var(--timeline-item-radius) var(--timeline-item-radius);
 }
-.clip-material { position: absolute; z-index: 1; inset: 0; overflow: hidden; pointer-events: none; }
+.clip-layers { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.clip-layer { position: absolute; inset: 0; display: block; overflow: hidden; pointer-events: none; }
 .clip-material-image, .clip-material-video {
   background-position: left center;
   background-size: auto 100%;
   opacity: 1;
 }
-.clip-material-image { background-repeat: repeat-x; }
+.clip-layer-layout-repeat-x { background-repeat: repeat-x; background-position: left center; background-size: auto 100%; }
+.clip-layer-layout-cover { background-repeat: no-repeat; background-position: center; background-size: cover; }
+.clip-layer-layout-contain { background-repeat: no-repeat; background-position: left center; background-size: contain; }
 .clip-material-video { background: none; }
 .clip-video-frame {
   position: absolute;
@@ -1110,30 +1114,19 @@ button:focus-visible, textarea:focus-visible {
   bottom: 0;
   background-repeat: no-repeat;
 }
-.clip-material-audio {
+.clip-layer-layout-waveform {
   inset: 2px 5px;
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100% 100%;
   opacity: .9;
 }
-.clip-material { display: block; }
-.clip-content {
-  position: absolute;
-  z-index: 2;
-  top: 0;
-  bottom: 0;
-  left: var(--item-visible-offset, 0);
-  width: var(--item-visible-width, 100%);
-  min-width: 0;
-  overflow: hidden;
-}
-.clip-content-text {
-  display: none;
+.clip-layer-text {
+  display: flex;
   height: 100%;
   align-items: center;
   overflow: hidden;
-  padding: 0 5px;
+  padding: 0 0 0 5px;
   color: #e7e8eb;
   font-size: 11px;
   font-weight: 500;
@@ -1146,33 +1139,27 @@ button:focus-visible, textarea:focus-visible {
 .clip-phase-active, .clip-phase-enter, .clip-phase-exit { background: rgba(255, 255, 255, .24); }
 .clip-phase-settled, .clip-phase-body { background: rgba(255, 255, 255, .10); }
 .clip-phase-preferred { border-top: 1px dashed rgba(255, 255, 255, .48); background: transparent; }
-.clip-name, .clip-meta { display: block; min-width: 0; overflow: hidden; text-overflow: clip; white-space: nowrap; }
-.clip-name { flex: 1 1 auto; color: #eef0f3; font-size: 11px; font-weight: 500; }
+.clip-name, .clip-meta { display: block; flex: 0 0 auto; white-space: nowrap; }
+.clip-name { color: #eef0f3; font-size: 11px; font-weight: 500; }
 .clip-meta {
-  flex: 0 0 auto;
-  display: none;
   color: rgba(255, 255, 255, .75);
   font: 500 11px/1 var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
-.clip-wide .clip-meta { display: block; }
-.clip-media { --track: var(--media); }
-.clip-speech { --track: var(--speech); }
-.clip-audio { --track: var(--audio); }
-.clip-text { --track: var(--text-track); }
-.clip-caption { --track: var(--caption); }
-.clip-component { --track: var(--component); }
-.clip-ranking-reveal { --track: var(--ranking-reveal); }
-.clip-visual { --track: var(--visual); }
-.clip-shape-waveform.clip-has-material .clip-content { display: none; }
-.clip-shape-text .clip-content-text { display: flex; }
-.clip-shape-group {
+.clip-tone-blue { --track: var(--tone-blue); }
+.clip-tone-green { --track: var(--tone-green); }
+.clip-tone-teal { --track: var(--tone-teal); }
+.clip-tone-violet { --track: var(--tone-violet); }
+.clip-tone-magenta { --track: var(--tone-magenta); }
+.clip-tone-orange { --track: var(--tone-orange); }
+.clip-tone-orange-muted { --track: var(--tone-orange-muted); }
+.clip-tone-neutral { --track: var(--tone-neutral); }
+.clip-chrome-group {
   border: 0;
   background: var(--item-body);
   box-shadow: none;
 }
-.clip-shape-group > .clip-body { background: var(--item-body); }
-.clip-shape-group .clip-meta { display: none; }
+.clip-chrome-group > .clip-body { background: var(--item-body); }
 .timeline-hover {
   position: absolute;
   top: 0;

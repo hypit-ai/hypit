@@ -24,6 +24,9 @@ importers:
       '@hypit/audio-track':
         specifier: workspace:*
         version: link:packages/audio-track
+      '@hypit/audio-track-studio':
+        specifier: workspace:*
+        version: link:packages/audio-track-studio
       '@hypit/background-removal':
         specifier: workspace:*
         version: link:packages/background-removal
@@ -33,9 +36,15 @@ importers:
       '@hypit/caption-fine':
         specifier: workspace:*
         version: link:packages/caption-fine
+      '@hypit/caption-fine-studio':
+        specifier: workspace:*
+        version: link:packages/caption-fine-studio
       '@hypit/comment-sticker':
         specifier: workspace:*
         version: link:packages/comment-sticker
+      '@hypit/comment-sticker-studio':
+        specifier: workspace:*
+        version: link:packages/comment-sticker-studio
       '@hypit/composition':
         specifier: workspace:*
         version: link:packages/composition
@@ -48,6 +57,9 @@ importers:
       '@hypit/deck-track':
         specifier: workspace:*
         version: link:packages/deck-track
+      '@hypit/deck-track-studio':
+        specifier: workspace:*
+        version: link:packages/deck-track-studio
       '@hypit/estimate':
         specifier: workspace:*
         version: link:packages/estimate
@@ -84,6 +96,9 @@ importers:
       '@hypit/media-track':
         specifier: workspace:*
         version: link:packages/media-track
+      '@hypit/media-track-studio':
+        specifier: workspace:*
+        version: link:packages/media-track-studio
       '@hypit/mimo-tts':
         specifier: workspace:*
         version: link:packages/mimo-tts
@@ -129,6 +144,9 @@ importers:
       '@hypit/ranking':
         specifier: workspace:*
         version: link:packages/ranking
+      '@hypit/ranking-studio':
+        specifier: workspace:*
+        version: link:packages/ranking-studio
       '@hypit/raster':
         specifier: workspace:*
         version: link:packages/raster
@@ -150,6 +168,9 @@ importers:
       '@hypit/screen-overlay':
         specifier: workspace:*
         version: link:packages/screen-overlay
+      '@hypit/screen-overlay-studio':
+        specifier: workspace:*
+        version: link:packages/screen-overlay-studio
       '@hypit/script':
         specifier: workspace:*
         version: link:packages/script
@@ -180,15 +201,15 @@ importers:
       '@hypit/speech-track':
         specifier: workspace:*
         version: link:packages/speech-track
+      '@hypit/speech-track-studio':
+        specifier: workspace:*
+        version: link:packages/speech-track-studio
       '@hypit/store-sqlite':
         specifier: workspace:*
         version: link:packages/store-sqlite
       '@hypit/studio-adapter':
         specifier: workspace:*
         version: link:packages/studio-adapter
-      '@hypit/studio-video-adapters':
-        specifier: workspace:*
-        version: link:packages/studio-video-adapters
       '@hypit/svs':
         specifier: workspace:*
         version: link:packages/svs
@@ -201,6 +222,9 @@ importers:
       '@hypit/typography-track':
         specifier: workspace:*
         version: link:packages/typography-track
+      '@hypit/typography-track-studio':
+        specifier: workspace:*
+        version: link:packages/typography-track-studio
       '@hypit/visual-ir':
         specifier: workspace:*
         version: link:packages/visual-ir
@@ -308,6 +332,15 @@ importers:
         specifier: workspace:*
         version: link:../visual-ir
 
+  packages/audio-track-studio:
+    dependencies:
+      '@hypit/audio-track':
+        specifier: workspace:*
+        version: link:../audio-track
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
+
   packages/background-removal:
     dependencies:
       '@hypit/artifact':
@@ -403,6 +436,18 @@ importers:
         specifier: workspace:*
         version: link:../script
 
+  packages/caption-fine-studio:
+    dependencies:
+      '@hypit/caption-fine':
+        specifier: workspace:*
+        version: link:../caption-fine
+      '@hypit/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
+
   packages/cli:
     dependencies:
       '@hypit/compiler-node':
@@ -481,6 +526,15 @@ importers:
       '@hypit/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes
+
+  packages/comment-sticker-studio:
+    dependencies:
+      '@hypit/comment-sticker':
+        specifier: workspace:*
+        version: link:../comment-sticker
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
 
   packages/compiler-markup-node:
     dependencies:
@@ -668,6 +722,15 @@ importers:
       '@hypit/media-pipeline':
         specifier: workspace:*
         version: link:../media-pipeline
+
+  packages/deck-track-studio:
+    dependencies:
+      '@hypit/deck-track':
+        specifier: workspace:*
+        version: link:../deck-track
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
 
   packages/driver-node:
     dependencies:
@@ -1462,6 +1525,15 @@ importers:
         specifier: workspace:*
         version: link:../temporal
 
+  packages/media-track-studio:
+    dependencies:
+      '@hypit/media-track':
+        specifier: workspace:*
+        version: link:../media-track
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
+
   packages/mimo-tts:
     dependencies:
       '@hypit/artifact':
@@ -1950,6 +2022,15 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/ranking-studio:
+    dependencies:
+      '@hypit/ranking':
+        specifier: workspace:*
+        version: link:../ranking
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
+
   packages/raster:
     dependencies:
       '@hypit/artifact':
@@ -2222,6 +2303,15 @@ importers:
         specifier: workspace:*
         version: link:../visual-ir
 
+  packages/screen-overlay-studio:
+    dependencies:
+      '@hypit/screen-overlay':
+        specifier: workspace:*
+        version: link:../screen-overlay
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
+
   packages/script:
     dependencies:
       '@hypit/markup':
@@ -2439,6 +2529,15 @@ importers:
         specifier: workspace:*
         version: link:../validation
 
+  packages/speech-track-studio:
+    dependencies:
+      '@hypit/speech-track':
+        specifier: workspace:*
+        version: link:../speech-track
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
+
   packages/store-sqlite:
     dependencies:
       '@hypit/core':
@@ -2453,9 +2552,18 @@ importers:
 
   packages/studio:
     dependencies:
+      '@hypit/audio-track-studio':
+        specifier: workspace:*
+        version: link:../audio-track-studio
+      '@hypit/caption-fine-studio':
+        specifier: workspace:*
+        version: link:../caption-fine-studio
       '@hypit/cli':
         specifier: workspace:*
         version: link:../cli
+      '@hypit/comment-sticker-studio':
+        specifier: workspace:*
+        version: link:../comment-sticker-studio
       '@hypit/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
@@ -2468,6 +2576,9 @@ importers:
       '@hypit/core':
         specifier: workspace:*
         version: link:../core
+      '@hypit/deck-track-studio':
+        specifier: workspace:*
+        version: link:../deck-track-studio
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
@@ -2480,6 +2591,9 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
+      '@hypit/media-track-studio':
+        specifier: workspace:*
+        version: link:../media-track-studio
       '@hypit/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
@@ -2489,6 +2603,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/ranking-studio':
+        specifier: workspace:*
+        version: link:../ranking-studio
       '@hypit/run':
         specifier: workspace:*
         version: link:../run
@@ -2498,21 +2615,27 @@ importers:
       '@hypit/runtime-host-node':
         specifier: workspace:*
         version: link:../runtime-host-node
+      '@hypit/screen-overlay-studio':
+        specifier: workspace:*
+        version: link:../screen-overlay-studio
       '@hypit/script':
         specifier: workspace:*
         version: link:../script
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../semantic-track
+      '@hypit/speech-track-studio':
+        specifier: workspace:*
+        version: link:../speech-track-studio
       '@hypit/studio-adapter':
         specifier: workspace:*
         version: link:../studio-adapter
-      '@hypit/studio-video-adapters':
-        specifier: workspace:*
-        version: link:../studio-video-adapters
       '@hypit/svs':
         specifier: workspace:*
         version: link:../svs
+      '@hypit/typography-track-studio':
+        specifier: workspace:*
+        version: link:../typography-track-studio
       '@hypit/validation':
         specifier: workspace:*
         version: link:../validation
@@ -2534,12 +2657,6 @@ importers:
       '@hypit/host':
         specifier: workspace:*
         version: link:../host
-
-  packages/studio-video-adapters:
-    dependencies:
-      '@hypit/studio-adapter':
-        specifier: workspace:*
-        version: link:../studio-adapter
 
   packages/svs:
     dependencies:
@@ -2656,6 +2773,15 @@ importers:
       '@hypit/validation':
         specifier: workspace:*
         version: link:../validation
+
+  packages/typography-track-studio:
+    dependencies:
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
+      '@hypit/typography-track':
+        specifier: workspace:*
+        version: link:../typography-track
 
   packages/validation:
     dependencies:

@@ -55,7 +55,10 @@ export type ScreenOverlayItemSpec = {
 };
 export type ScreenOverlayHeader = { readonly id: string };
 export type ScreenOverlayItemProgram = {
-  readonly id: string; readonly span: FrameSpan;
+  readonly id: string;
+  /** Author-owned Item realized by this externally projected window. */
+  readonly subjectId: string;
+  readonly span: FrameSpan;
   readonly content: ScreenOverlayComponent;
   readonly stacking: { readonly order: number; readonly tieBreak: string };
 };

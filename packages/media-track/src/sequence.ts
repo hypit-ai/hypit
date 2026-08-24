@@ -364,6 +364,7 @@ export function lowerMediaSequencePresents(
     const outgoing = sequence.handoffs[index];
     const item: MediaItemProgram = {
       id: `${sequence.id}:${member.id}`,
+      subjectId: sequence.id,
       span: { ...member.visualSpan },
       frame: { ...sequence.frame },
       presentation: structuredClone(sequence.presentation),
@@ -382,6 +383,7 @@ export function lowerMediaSequencePresents(
     const endOffset = member.visualSpan.endFrameExclusive - sequence.span.startFrame;
     return {
       id: item.id,
+      subjectId: sequence.id,
       span: { ...item.span },
       stacking: { ...item.stacking },
       elements: lowerMediaItemElements(item, space, {

@@ -18,7 +18,7 @@ export function findSurfacePreview(
   return domain.surfaces.resolve(module, surface)?.vocabulary?.preview;
 }
 
-/** A URL for a selected package resource, not a generated Build artifact. */
+/** A selected package resource descriptor; transport remains Studio-owned. */
 export function studioSurfacePreview(
   domain: StudioDomain,
   moduleName: string,
@@ -30,6 +30,8 @@ export function studioSurfacePreview(
   if (preview === undefined) return undefined;
   const kind = kindOf(preview.mediaType);
   if (kind === undefined) return undefined;
-  const query = new URLSearchParams({ module: module.name, version: module.version, surface });
-  return { kind, url: `/__studio/surface-preview?${query.toString()}` };
+  return {
+    kind,
+    source: { kind: "surface-preview", module: module.name, version: module.version, surface },
+  };
 }

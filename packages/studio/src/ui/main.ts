@@ -335,7 +335,7 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
   hero.querySelector(".selection-kind")!.textContent = track === undefined
     ? "Track"
     : `${track.binding.family} · ${track.binding.facet}`;
-  hero.querySelector("strong")!.textContent = clip.label;
+  hero.querySelector("strong")!.textContent = clip.display.title;
   hero.querySelector("small")!.textContent = track?.label ?? "Visual track";
 
   const timing = group("Timing", [
@@ -382,10 +382,11 @@ function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): v
   hero.innerHTML = `
     <span class="selection-icon" data-selection-icon></span>
     <div class="selection-title"><strong></strong><small></small></div>
-    <span class="selection-kind">Speech</span>`;
+    <span class="selection-kind"></span>`;
   setIcon(hero.querySelector("[data-selection-icon]")!, snapshot.semantic.presentation.icon);
   hero.querySelector("strong")!.textContent = segment.id;
   hero.querySelector("small")!.textContent = "Semantic take";
+  hero.querySelector(".selection-kind")!.textContent = snapshot.semantic.presentation.label ?? "Semantic";
   inspector.replaceChildren(hero, group("Timing", [
     property("Start", `${segment.startFrame}f`, "property-number"),
     property("End", `${segment.endFrameExclusive}f`, "property-number"),

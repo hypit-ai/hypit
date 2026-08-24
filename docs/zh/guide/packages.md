@@ -149,7 +149,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/cli                 generic command engine (requires explicit Distribution)
 @hypit/video-cli           video command application (selects Markup compiler, no built-in author packages)
 @hypit/studio-adapter      stable Studio companion ABI and presentation DTOs
-@hypit/studio-video-adapters official video-domain Studio interpretation
+@hypit/*-studio             由 Distribution 显式选择的独立官方 Studio Companion
 @hypit/studio              development preview for a Run, never runs a Provider
 ```
 

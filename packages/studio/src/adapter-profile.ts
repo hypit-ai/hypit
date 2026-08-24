@@ -5,7 +5,20 @@ import { installDistributionPackageResolution, loadNodePackageSelection } from "
 import { studioAdaptersFromPackage } from "@hypit/studio-adapter";
 import type { StudioAdapter } from "@hypit/studio-adapter";
 
+import { fallbackStudioAdapters } from "./fallback-adapters.js";
 import { StudioAdapterRegistry } from "./studio-registry.js";
+
+export const officialStudioAdapterPackages = [
+  "@hypit/audio-track-studio",
+  "@hypit/caption-fine-studio",
+  "@hypit/comment-sticker-studio",
+  "@hypit/deck-track-studio",
+  "@hypit/media-track-studio",
+  "@hypit/ranking-studio",
+  "@hypit/screen-overlay-studio",
+  "@hypit/speech-track-studio",
+  "@hypit/typography-track-studio",
+] as const;
 
 export const studioProfileFilename = "hypit.studio.json";
 
@@ -93,14 +106,14 @@ export async function loadStudioAdapterRegistry(input: {
 }): Promise<StudioAdapterRegistry> {
   installDistributionPackageResolution([input.distributionPackageRoot]);
   const officialPackages = await loadNodePackageSelection(
-    ["@hypit/studio-video-adapters"],
+    officialStudioAdapterPackages,
     input.distributionPackageRoot,
   );
   const officialAdapters = officialPackages.flatMap((item) =>
     studioAdaptersFromPackage(item.specifier, item.contribution.hostFacets ?? []));
   const project = await loadProjectStudioAdapters(input);
   return new StudioAdapterRegistry(
-    [...officialAdapters, ...project.adapters],
+    [...fallbackStudioAdapters, ...officialAdapters, ...project.adapters],
     { replace: project.replace },
   );
 }
