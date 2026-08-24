@@ -81,6 +81,28 @@ an omission.
 `docs/quickstart/composition.md` still show them; a Recipe carrying either is refused as an unknown
 property, since the Style admits exactly the required keys plus the documented optional ones.
 
+## Cue boundaries are marked in the Script, with `||`
+
+A Recipe holds no rule for where one Cue ends and the next begins. **The Script does**, as a `||`
+between two complete Alignment Units — `docs/quickstart/script.md` is authoritative for it, and
+`packages/script/src/parser.ts` reads it into the breaks the Caption Document carries.
+
+```
+<PRESENTER> It's generally good || at a lot of || different things, ||
+  but it's not || as specialized || as some of these || other models.
+```
+
+A Segment with no `||` in it is **one Cue**, however long it is: the whole passage renders as a
+single line and runs off both edges of the frame. That is the shape to recognise — a caption that
+overflows is a Segment nobody broke, not a Style whose width or size is wrong, and widening the box
+or shrinking the type will not close it.
+
+Mark the breaks where the reference breaks. The observation for a shot says what is on screen at
+once, and that is the Cue.
+
+`||` cannot sit inside a Dual Text unit or split one, since a break falls between units and never
+through one. Timing is not authored with it: each Cue is still timed from the alignment.
+
 ## Keep the Script authoritative
 
 - Preserve the exact Script display text. Do not copy burned-in reference subtitles or rewrite the

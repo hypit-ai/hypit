@@ -142,7 +142,9 @@ Decide, for each thing you place, which of three kinds it is:
 
   A plain `@a … @/a @b … @/b` closes on one word's end and opens on another word's start, and the
   pause between those two words is in neither Selection. Written `@/a~` or `~@b` the two windows meet,
-  and what is under them stays under them. `docs/quickstart/script.md` is authoritative for the
+  and what is under them stays under them. The same file carries `||`, which marks where one Caption
+  Cue ends and the next begins — `captions.md` says what happens to a Segment nobody broke.
+  `docs/quickstart/script.md` is authoritative for the
   markers.
 - **Genuinely coming and going** — an insert that appears for one phrase and leaves. A plain Selection
   is exactly right, and the gap is the point.
