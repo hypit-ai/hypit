@@ -36,10 +36,10 @@ rules here are the contract, the closest package is only a shape to learn from.
 
 Then read:
 
-1. `https://narratage.hypit.ai/guide/component-anatomy` — the roles every component package fills, and how to find each
+1. `../../../../docs/guide/component-anatomy.md` — the roles every component package fills, and how to find each
    one in an existing package. Read this first; it is what the rest is measured against.
-2. `https://narratage.hypit.ai/guide/author-packages`
-3. `https://narratage.hypit.ai/guide/packages` and `https://narratage.hypit.ai/guide/conventions`
+2. `../../../../docs/guide/author-packages.md`
+3. `../../../../docs/guide/packages.md` and `../../../../docs/guide/conventions.md`
 4. the installed `@hypit/component-kit` README
 
 Use `hypit paths --json` to locate the installed Distribution. Then open the closest existing
