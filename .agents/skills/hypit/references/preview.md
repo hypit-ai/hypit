@@ -24,9 +24,10 @@ The same check is also a bin of its own:
 hypit-preview-check /path/to/project/build.svrun
 ```
 
-Prefer the subcommand. It honours `--package-root`, so it reaches a project's own
-`packages/local-<slug>/` from wherever you are standing, and it is a subcommand of the bin the
-reconstruction route already runs. The bare bin fixes the package root to the Run file's own
+Prefer the subcommand. It takes `--package-root <dir>`, which is where the packages the Source
+imports are resolved from — a project's own `packages/local-<slug>/` are installed against the
+project root, so name it there and the check reaches them from wherever you are standing. Without
+the flag the working directory is used. The bare bin fixes the package root to the Run file's own
 directory and takes no flags, so reach for it when the Run sits at the project root and you want the
 prose summary rather than a JSON result.
 
