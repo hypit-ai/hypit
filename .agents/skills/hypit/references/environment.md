@@ -140,6 +140,20 @@ uv python install 3.13
 
 Open a new PowerShell session if `uv` is not immediately on `PATH` after the Winget install.
 
+Windows-specific checks before provisioning:
+
+```powershell
+Get-Command uv, ffmpeg, ffprobe
+uv --version
+ffmpeg -version
+ffprobe -version
+```
+
+If the Hypit contributor checkout already contains a host toolchain (for example under
+`.tools\ffmpeg-extract\...\bin`), prepend that `bin` directory to `$env:Path` for the current
+PowerShell process before running media commands. Do not copy those executables into an author
+project, and do not assume that a repository-local path is visible in a new shell.
+
 ### Install WhisperX prerequisites on macOS
 
 Use macOS 13 or newer:
@@ -179,6 +193,30 @@ machine Program Home, installs the locked service, prepares NLTK `punkt_tab`, st
 service on `127.0.0.1:8765`, and then starts the Worker. The first start may download the selected
 Whisper and language-alignment model weights, so it can take substantially longer than later starts.
 Do not run `uv sync` in an author project and do not install the `whisperx` Python package by hand.
+
+On Windows, treat `runtime up` printing `Ready whisperx` as a provisioning result, not as proof that
+the HTTP service is still reachable from the next command. Some terminal/automation hosts reap child
+processes when the launching command exits, which leaves `runtime status` reporting `whisperx: down`
+or makes `127.0.0.1:8765` refuse connections even though the managed environment is installed. Run
+`runtime up` from a normal PowerShell session (or keep the launching session alive), then verify the
+service before `prepare_reference` or a Build:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8765/health
+hypit programs status
+hypit doctor
+```
+
+If the health check fails, do not reinstall Python packages. Re-run `hypit runtime up` while the
+PowerShell session remains open and inspect `hypit runtime logs`; the managed WhisperX log is also at
+`$env:LOCALAPPDATA\Hypit\programs\whisperx\program.log`. A first start can spend several minutes
+loading the model before the health endpoint answers, so poll rather than launching a second copy.
+
+The log may contain a `torchcodec` warning about missing `libtorchcodec_core*.dll`, especially when
+the host FFmpeg build is newer than the versions supported by that optional decoder. The warning is
+diagnostic only: accept the service only after `/health` answers and a real Hypit transcription
+request succeeds. Do not repair it with an author-project `pip install`; keep the Runtime-managed
+environment authoritative.
 
 Verify a running service with `hypit programs status` or `hypit doctor`. If preparation fails, read
 `hypit runtime logs`; for a contributor checkout only, `services/whisperx/README.md` contains the
