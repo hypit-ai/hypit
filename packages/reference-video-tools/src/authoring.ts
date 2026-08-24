@@ -153,7 +153,7 @@ function nearestPackageRoot(start: string): string | undefined {
 
 /** Where a relative path on the command line is measured from. */
 export function invokedFrom(): string {
-  return process.env.INIT_CWD ?? process.cwd();
+  return process.cwd();
 }
 
 /** The Script body, which `parseScript` takes on its own. */
@@ -495,16 +495,29 @@ export async function spokenRange(
     `the reference's transcript carries none of the words of ${focus.selection ?? focus.segment}, so the seconds it spoke them at are unknown`);
 
   const spans = wordSpans(parsed.tokens.length, pairs, reference);
-  const word = (index: number): ReferenceWord => ({
+
+  // Where the range closes. A render gives each word the screen until the next one starts, so the
+  // pause the reference leaves between two words belongs to the word before it and a Take covers its
+  // Segment without holes — `standInTakes` says why. A Selection closing part-way through a Segment
+  // is therefore drawn up to the next word's start, and cutting the reference at the last word's end
+  // instead leaves the reference short of the render by that pause. The Segment's own last word has
+  // no next word inside it and closes on its own end, which is the length the take was given.
+  const holder = parsed.segments.find((item) => end - 1 >= item.tokenStart && end - 1 < item.tokenEndExclusive);
+  const closesMidSegment = holder !== undefined && end < holder.tokenEndExclusive;
+  const endSeconds = closesMidSegment ? spans[end]!.start : spans[end - 1]!.end;
+
+  const word = (index: number, until = spans[index]!.end): ReferenceWord => ({
     text: parsed.tokens[index]!.text,
     startSeconds: spans[index]!.start,
-    endSeconds: spans[index]!.end,
+    endSeconds: until,
   });
   return {
     startSeconds: spans[start]!.start,
-    endSeconds: spans[end - 1]!.end,
+    endSeconds,
     first: word(start),
-    last: word(end - 1),
+    // The end word carries the same close, so moving the end onto a shot boundary inside it looks at
+    // the seconds the render actually drew rather than a shorter word.
+    last: word(end - 1, endSeconds),
     words: end - start,
     matched,
   };
@@ -515,10 +528,28 @@ export async function standInTakes(
   frameRate: number,
   focus: StandInFocus = {},
   reference: readonly ReferenceWord[] = [],
+  timingSource: string = svmlPath,
 ): Promise<StandInTakes> {
   const svml = await readFile(svmlPath, "utf8");
   const body = scriptBody(svml);
   const parsed = parseScript(svmlPath, body.text, body.offset);
+
+  // Which Script the reference is aligned against. A render is drawn from a fragment holding one
+  // Segment, and aligning that fragment's words against the whole transcript is not the same
+  // alignment the whole Script produces: a word that matched inside a longer run of context stops
+  // matching, and the unmatched runs at the fragment's own two ends are interpolated from the words
+  // just outside them rather than from the neighbouring Segments. The comparison reads the whole
+  // Source, so a render timed from the fragment covers seconds the comparison never cuts.
+  //
+  // So the alignment is made once, against the whole Source, and each Segment takes its own slice out
+  // of it by id. The fragment is a byte-for-byte cut, so a Segment holds the same words in both.
+  const timed = timingSource === svmlPath
+    ? parsed
+    : await (async () => {
+      const text = await readFile(timingSource, "utf8");
+      const whole = scriptBody(text);
+      return parseScript(timingSource, whole.text, whole.offset);
+    })();
   const sheets = await recipeSheets(svml, svmlPath);
   const { policies, shared, policyCount } = policiesBySegment(svml, sheets);
 
@@ -542,8 +573,8 @@ export async function standInTakes(
   const words = reference.length === 0
     ? undefined
     : (() => {
-      const pairs = alignWords(parsed.tokens.map((token) => normalizeWord(token.text)), reference.map((word) => normalizeWord(word.text)));
-      return pairs.size === 0 ? undefined : { pairs, spans: wordSpans(parsed.tokens.length, pairs, reference) };
+      const pairs = alignWords(timed.tokens.map((token) => normalizeWord(token.text)), reference.map((word) => normalizeWord(word.text)));
+      return pairs.size === 0 ? undefined : { pairs, spans: wordSpans(timed.tokens.length, pairs, reference) };
     })();
 
   const takes: StandInTake[] = [];
@@ -560,13 +591,14 @@ export async function standInTakes(
     // A Segment is timed from the reference when the reference was heard saying some of its words.
     // The decision is made per Segment: an ordinary transcription difference costs one Segment its
     // reference clock and leaves the rest of the Script on it.
+    const whole = timed.segments.find((item) => item.id === segment.id);
     let matched = 0;
-    if (words !== undefined) {
-      for (let index = segment.tokenStart; index < segment.tokenEndExclusive; index += 1) if (words.pairs.has(index)) matched += 1;
+    if (words !== undefined && whole !== undefined) {
+      for (let index = whole.tokenStart; index < whole.tokenEndExclusive; index += 1) if (words.pairs.has(index)) matched += 1;
     }
-    const spoken = words === undefined || matched === 0
+    const spoken = words === undefined || whole === undefined || matched === 0
       ? undefined
-      : words.spans.slice(segment.tokenStart, segment.tokenEndExclusive);
+      : words.spans.slice(whole.tokenStart, whole.tokenEndExclusive);
 
     // How long the Segment runs. The reference's own words when it was heard saying them, the
     // estimator the Source already trusts when it was not.
@@ -850,7 +882,7 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const reference = input.reference_id?.trim();
   const spoken = reference === undefined || reference.length === 0 ? [] : await referenceWords(reference);
 
-  const { takes, selections, frameCount: programFrames, timing } = await standInTakes(sourcePath, frameRate, focus, spoken);
+  const { takes, selections, frameCount: programFrames, timing } = await standInTakes(sourcePath, frameRate, focus, spoken, svmlPath);
   const framesBySegment = new Map(takes.map((item) => [item.segmentId, item.take.segment.endFrameExclusive]));
   // A Selection's window in frames, summed over the stand-in tokens it covers. This is the same word
   // span the Source binds to, carried into frames by the same clock that sized the Segment.
