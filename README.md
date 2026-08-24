@@ -46,13 +46,8 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 ## Install once
 
 ```bash
-npm install --global hypit
-npx skills add hypit-ai/hypit --global
+npx skills add hypit-ai/hypit -g
 ```
-
-The npm package is the Hypit Distribution: CLI, Studio, official components and managed-service
-source. The global skill is discoverable by later agent sessions in any project. Neither command
-clones an authoring repository into your project.
 
 ## Use the Hypit skill
 
@@ -70,17 +65,6 @@ Or start without a reference video:
 ```
 
 Your agent can check the environment, request only the credentials the video needs, preview the result, and build it.
-
-Projects, generated files and project-local components stay in that project directory. Machine
-programs such as WhisperX are installed on demand into the Hypit Program Home and reused by every
-project. Upstream npm packages such as one Fontsource family or HyperFrames are likewise installed
-only when selected, into a separate shared machine package home. Opening a new session does not
-install either again. Check with `hypit --version` and
-`npm outdated --global hypit`; update deliberately with `npm update --global hypit` and
-`npx skills update --global`.
-
-The supported desktop baseline is macOS 13+ or Windows 10/11 x64 with Node.js 22+. Repository cloning,
-pnpm and Corepack are contributor-only concerns.
 
 ## License
 
