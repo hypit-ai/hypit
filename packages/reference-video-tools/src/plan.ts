@@ -24,7 +24,7 @@
  * at. Both sides of a comparison already work in words — `frameOfToken` here, `spokenRange` on the
  * reference — so the range is what they both take, and a name comes along only to be read.
  */
-import { parseScript } from "@hypit/script";
+import { captionDocument, parseScript } from "@hypit/script";
 import type { ParsedNarrative } from "@hypit/script";
 
 /** One thing to look at: an element, over a range of the Script's words, and why it earned a look. */
@@ -195,6 +195,28 @@ function bodyOf(svml: string, alias: string, tag: string, id: string): string {
   return close === -1 ? after : after.slice(0, close);
 }
 
+/**
+ * What an element's own children add to its declaration.
+ *
+ * A child that binds a window is a placement in its own right and is read as one. A child that does
+ * not is part of how its parent looks: `<media-track:Sampling>` is a zoom across the whole window,
+ * `<text:Motion>` holds the keyframes, `<caption-fine:Fallback>` names the font to reach for, and a
+ * `<P>` or `<Span>` overrides the Style for one run of text. None of them appears on the parent tag,
+ * so a key built from attributes alone reads two Items as one design when only one of them animates.
+ *
+ * Sorted, because the order children are written in is not what they look like.
+ */
+function childDeclarations(body: string, parsed: ParsedNarrative): readonly string[] {
+  const parts: string[] = [];
+  for (const child of body.matchAll(/<([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*|[A-Z][A-Za-z0-9]*)\b([^>]*?)\/?>/gsu)) {
+    const tag = child[1] ?? "";
+    const attributes = attributesOf(child[0] ?? "");
+    if (stretchOf(attributes, parsed) !== undefined) continue;
+    parts.push(declarationKey(tag, attributes));
+  }
+  return parts.sort();
+}
+
 /** The opening tag of one element, by id. */
 function openingOf(svml: string, alias: string, tag: string, id: string): string {
   return new RegExp(`<${alias}:${tag}\\b[^>]*?\\bid="${id}"[^>]*?/?>`, "su").exec(svml)?.[0] ?? "";
@@ -260,26 +282,33 @@ function placementsOf(svml: string, element: PlannedElement, parsed: ParsedNarra
   const found: Placement[] = [];
   const opening = openingOf(svml, element.alias, element.tag, element.id);
   const own = attributesOf(opening);
+  const body = bodyOf(svml, element.alias, element.tag, element.id);
+  const ownKey = [declarationKey(`${element.alias}:${element.tag}`, own), ...childDeclarations(body, parsed)].join("&&");
   const ownStretch = stretchOf(own, parsed);
   if (ownStretch !== undefined) {
     found.push({
       element: element.id, tag: `${element.alias}:${element.tag}`,
-      key: declarationKey(`${element.alias}:${element.tag}`, own), stretch: ownStretch, attributes: own,
+      key: ownKey, stretch: ownStretch, attributes: own,
     });
   }
 
-  for (const child of bodyOf(svml, element.alias, element.tag, element.id)
-    .matchAll(/<([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)\/?>/gsu)) {
+  for (const child of body.matchAll(/<([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)(\/?)>/gsu)) {
     const tag = child[1] ?? "";
     const attributes = attributesOf(child[0] ?? "");
     const stretch = stretchOf(attributes, parsed);
     if (stretch === undefined) continue;
+    // An Item's own children — its Sampling, its Paint, its inline runs — are part of how it looks.
+    const inner = child[3] === "/" ? "" : (() => {
+      const after = body.slice((child.index ?? 0) + (child[0]?.length ?? 0));
+      const close = after.indexOf(`</${tag}>`);
+      return close === -1 ? "" : after.slice(0, close);
+    })();
     // The child's own declaration is what it draws, but it sits inside the Track's, so the Track's
     // is part of the key: the same Item under two Tracks with different Canvases is two pictures.
     found.push({
       element: element.id,
       tag,
-      key: `${declarationKey(`${element.alias}:${element.tag}`, own)}>>${declarationKey(tag, attributes)}`,
+      key: `${ownKey}>>${[declarationKey(tag, attributes), ...childDeclarations(inner, parsed)].join("&&")}`,
       stretch,
       attributes,
     });
@@ -291,7 +320,7 @@ function placementsOf(svml: string, element: PlannedElement, parsed: ParsedNarra
     found.push({
       element: element.id,
       tag: `${element.alias}:${element.tag}`,
-      key: declarationKey(`${element.alias}:${element.tag}`, own),
+      key: ownKey,
       stretch: wholeProgram(parsed),
       attributes: own,
     });
@@ -307,30 +336,62 @@ function placementsOf(svml: string, element: PlannedElement, parsed: ParsedNarra
  * changing, and a Style changing. Partitioning on the authored breaks alone reads a two-speaker
  * script as a handful of enormous Cues, and then reports the longest line as the whole exchange.
  *
- * The partition is computed in token space rather than by calling `temporalizeCaptionDocument`,
- * which needs a SemanticTrack this check never builds. The four facts are the same ones it groups on
- * and all four are Script-side, so the boundaries land in the same places; what is not computed here
- * is the frame each Cue occupies, which nothing on this path asks for.
+ * The units come from `captionDocument`, and each one carries the speech tokens it corresponds to.
+ * That mapping is what makes the answer a range of the Script's own words rather than a guess: a Dual
+ * Text alias is one indivisible unit spanning its whole region, and reading its display words back
+ * against the speech by counting would land in the wrong place.
+ *
+ * `temporalizeCaptionDocument` groups on the same four facts, but it needs a SemanticTrack to assign
+ * frames and this check never builds one. Only the grouping is repeated here; the frames it would
+ * have assigned are not something anything on this path asks for.
  */
-function longestCue(parsed: ParsedNarrative, styleBoundaries: readonly number[]): Stretch | undefined {
-  const total = parsed.tokens.length;
-  if (total === 0) return undefined;
-  const boundaries = new Set<number>([0, total]);
-  for (const segment of parsed.segments) boundaries.add(segment.tokenStart);
-  for (const turn of parsed.turns) boundaries.add(turn.tokenStart);
-  for (const authored of parsed.captionProjection.breaks) boundaries.add(authored.tokenIndex);
-  for (const boundary of styleBoundaries) boundaries.add(boundary);
+function longestCue(
+  parsed: ParsedNarrative,
+  styleBoundaries: ReadonlySet<number>,
+  svmlPath: string,
+): Stretch | undefined {
+  let document;
+  try { document = captionDocument(parsed, "captions"); } catch { return undefined; }
+  if (document.units.length === 0) return undefined;
 
-  const edges = [...boundaries].filter((at) => at >= 0 && at <= total).sort((one, other) => one - other);
-  let best: { readonly from: number; readonly to: number; readonly characters: number } | undefined;
-  for (let index = 0; index + 1 < edges.length; index += 1) {
-    const from = edges[index]!;
-    const to = edges[index + 1]!;
-    if (to <= from) continue;
-    const characters = parsed.tokens.slice(from, to).reduce((sum, token) => sum + token.text.length, 0);
-    if (best === undefined || characters > best.characters) best = { from, to, characters };
+  const tokenIndex = new Map(parsed.tokens.map((token, index) => [token.id, index] as const));
+  const spanOf = (unit: typeof document.units[number]): { readonly from: number; readonly to: number } | undefined => {
+    const indexes = unit.sourceTokenIds.flatMap((id) => {
+      const at = tokenIndex.get(id);
+      return at === undefined ? [] : [at];
+    });
+    return indexes.length === 0 ? undefined : { from: Math.min(...indexes), to: Math.max(...indexes) + 1 };
+  };
+
+  const breaks = new Set(document.cueBreaks.map((cueBreak) => cueBreak.afterUnitId));
+  let current: { from: number; to: number; characters: number } | undefined;
+  let previous: typeof document.units[number] | undefined;
+  let best: { from: number; to: number; characters: number } | undefined;
+  const close = (): void => {
+    if (current !== undefined && (best === undefined || current.characters > best.characters)) best = current;
+  };
+
+  for (const unit of document.units) {
+    const span = spanOf(unit);
+    if (span === undefined) continue;
+    const characters = unit.wordIds.length === 0
+      ? 0
+      : document.words.filter((word) => word.unitId === unit.id).reduce((sum, word) => sum + word.text.length, 0);
+    // The same four things that end a Cue: a Segment ends, the speaker changes, the Style changes, or
+    // the author wrote one. The first two are on the unit; the third is where a `caption:Use` starts
+    // or stops; the fourth is the document's own list.
+    const ended = previous !== undefined && (
+      previous.segmentId !== unit.segmentId
+      || previous.turnId !== unit.turnId
+      || breaks.has(previous.id)
+      || styleBoundaries.has(span.from));
+    if (current === undefined || ended) { close(); current = { ...span, characters }; }
+    else { current = { from: current.from, to: span.to, characters: current.characters + characters }; }
+    previous = unit;
   }
+  close();
   if (best === undefined) return undefined;
+
   const holding = parsed.segments.find((item) => best!.from >= item.tokenStart && best!.from < item.tokenEndExclusive);
   return {
     tokens: [best.from, best.to],
@@ -345,14 +406,15 @@ function longestCue(parsed: ParsedNarrative, styleBoundaries: readonly number[])
  * only place a caption's declaration varies — the Track's own tag is identical over the whole
  * program. Both ends of the named Selection are Cue boundaries, because a Style change ends a Cue.
  */
-function captionStyleBoundaries(svml: string, parsed: ParsedNarrative): readonly number[] {
-  const found: number[] = [];
+function captionStyleBoundaries(svml: string, parsed: ParsedNarrative): ReadonlySet<number> {
+  const found = new Set<number>();
   for (const use of svml.matchAll(/<[a-z][a-z0-9-]*:(?:Use|Mute)\b([^>]*?)\/?>/gsu)) {
     const selection = /\bselection=\{story\.selection\.([A-Za-z0-9_-]+)\}/u.exec(use[1] ?? "")?.[1];
     if (selection === undefined) continue;
     const marked = parsed.selections.find((item) => item.id === selection);
     if (marked === undefined) continue;
-    found.push(marked.open.boundary.tokenIndex, marked.close.boundary.tokenIndex);
+    found.add(marked.open.boundary.tokenIndex);
+    found.add(marked.close.boundary.tokenIndex);
   }
   return found;
 }
@@ -471,7 +533,7 @@ export function reviewPlan(input: {
     // Rule 2. A caption's layout breaks on a Cue, and a list's breaks on how many items one stretch
     // holds; every other element draws one thing and has no content extreme to find.
     if (element.specifier.includes("caption")) {
-      const cue = longestCue(parsed, styleBoundaries);
+      const cue = longestCue(parsed, styleBoundaries, input.svmlPath);
       if (cue !== undefined) entries.push({ element: element.id, tokens: cue.tokens, named: cue.named, why: ["longest cue"] });
     }
     const fullest = fullestStretch(placements);
