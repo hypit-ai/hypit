@@ -71,10 +71,7 @@ through `.svrun` `build-record` and `satisfy`.
 Read `../craft/b-roll.md`, `../craft/captions.md`, `../craft/overlays.md`, and
 `../craft/persona-and-audio.md`.
 
-That list is complete: `../index.md` does not repeat it, and the craft its required load
-order marks always-read is required regardless of format.
+That list is complete, and the always-read craft in `../index.md` applies regardless of format.
 
-- The base is meant to stay hidden, so the covering Selections tile the Segment: its first word
-  opens one, its last word closes one, and nothing falls between. Join them with the Script's
-  absorbing markers — `../craft/generated-dependencies.md` holds the table. A gap shows the
-  speaker for half a second in a program that has none.
+- The base is meant to stay hidden, so the covering Selections tile the Segment.
+  `../craft/generated-dependencies.md` states that rule and holds the marker table.

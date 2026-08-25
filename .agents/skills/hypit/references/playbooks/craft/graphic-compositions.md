@@ -141,5 +141,4 @@ that needs one of those documents in order to draw itself has inverted that rela
 - Generate one material per depicted thing, at the aspect ratio it will be used at, carrying only
   what it depicts. Keep captions, labels, arrows, badges and titles out of the prompt; the
   composition draws those.
-- Pass every generated image through the image gate in `production-gates.md` before connecting it
-  downstream, and pin accepted Records for reuse.
+- Pin accepted Records for reuse. `../../authoring.md` says how a Record is named in the Run Source.

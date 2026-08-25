@@ -28,7 +28,7 @@ temperature of `1.0` buys paraphrase drift and another bill, so never re-run a c
 to "check" it. `--reobserve` exists for a shot whose media was rebuilt, not for doubt.
 
 Cached does not mean correct. The authority on the reference side is the picture, not the prose
-written about it. `workflow.md` says when an observation is worth doubting and how to settle it: a
+written about it. `evidence.md` says when an observation is worth doubting and how to settle it: a
 narrow `observe_reference --question` over the shot, put to the reference's own observer. That is
 cheaper than re-observing the whole shot, and on the `gemini` observer it is how the picture gets
 looked at, since opening it yourself is what the blindness rule below forbids.
@@ -280,17 +280,16 @@ then source usage. Fixing source usage over a broken implementation hides the de
 **There is one comparison round.** What it returns is the whole difference set this reconstruction
 gets. Repair against that set and stop; do not compare again. This bounds the comparing, and nothing
 else: a narrow `observe_reference --question` settles disagreeing evidence at any point, which is
-what `workflow.md` is for.
+what `evidence.md` is for.
 
 The reference has nothing further to say after it: it already showed every stretch, and a second look
 re-reads the same frames to check your own work. That spends the expensive half of the route — the
 renders and the observer — on verifying a repair rather than on learning anything about the
 reference.
 
-So **a repair is not verified here**, and the honest place to say so is the report:
-`../playbooks/craft/production-gates.md` Gate 4 measures the delivery, and the section at the end of
-this file says what this route left unchecked. Passing `pnpm check` and `hypit check` is the
-precondition for the round, not a result of it.
+So **a repair is not verified here**, and the honest place to say so is the report: the section at
+the end of this file says what this route left unchecked. Passing `pnpm check` and `hypit check` is
+the precondition for the round, not a result of it.
 
 Two things follow, and they are the whole discipline:
 
@@ -357,22 +356,21 @@ When there is no next element the reconstruction is complete, and three things f
 was watched, because on this route no video exists: the Build has not run. Report the difference
 rather than letting the word carry it.
 
-State plainly, in the completion report, that the following are unverified and name the gate each one
-waits for in `../playbooks/craft/production-gates.md`:
+State plainly, in the completion report, that the following are unverified:
 
-- **every generated picture and take** — the images and the shots a Provider has still to make, at
-  Gate 1 and Gate 2;
+- **every generated picture and take** — the images and the shots a Provider has still to make;
 - **the timing of every Track** — this route compares each one against a stand-in SemanticTake, so
   how a Caption, Media or Typography Track sits against the speech that is finally delivered is
-  measured at Gate 3, against the real SemanticTrack;
+  settled once that speech exists;
 - **whether the picture is continuous** — the frames nobody authored that `frame-coverage.md` is
-  about, at Gate 4, which measures them on the delivery. One inherited edge is settled before then:
-  `reconstruction_check` reads each Recipe's `playback` and refuses an insert configured to stop
-  when its material runs out. The rest
+  about. One inherited edge is settled here: `reconstruction_check` reads each Recipe's `playback`
+  and refuses an insert configured to stop when its material runs out. The rest
   of them — a window that starts late, a blend whose frames are half-covered, a schedule inside a
-  component that stops between activations — are measured on the delivery;
-- **whether the delivery says the Script's words** — measured at Gate 4 by transcribing the finished
-  video, since a take generated from a prompt that lost its dialogue passes every gate before it.
+  component that stops between activations — appear in the delivery;
+- **whether the delivery says the Script's words** — a take generated from a prompt that lost its
+  dialogue passes every check this route runs.
+  `../playbooks/craft/seedance-directing.md` says how to trace a take's prompt back to the Segment's
+  `dialogue` while the Source is being written, which is where this one is prevented.
 
 `reconstruction_check` is the mechanical half of this: it names the elements that were never compared
 and the timed pictures configured to empty their windows, and refuses to pass while either remains.
@@ -380,9 +378,9 @@ It cannot name what a Build has not produced yet, which is why
 this list is stated rather than computed.
 
 If the author wants the result to differ from the reference — their presenter, their product, their
-brand — read the sources you wrote and change them to what they asked for. `index.md` says why that
+brand — read the sources you wrote and change them to what they asked for. `route.md` says why that
 happens here rather than earlier.
 
 If a project-local package was built along the way, decide whether it should outlive this video and
-put that to the author: `../local-author-package.md` says how to judge it and what promoting it
+put that to the author: `../package-promotion.md` says how to judge it and what promoting it
 actually costs.

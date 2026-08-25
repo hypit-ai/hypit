@@ -269,7 +269,7 @@ const SILENT_AUDIO: BlobRef = { kind: "blob", digest: `sha256:${"0".repeat(64)}`
  *
  * Word ranges and Recipe values are exact on either clock, so which elements are on screen together,
  * where each sits, at what size and colour follow from the Source itself. Alignment against the
- * speech a Build synthesizes waits for `production-gates.md` Gate 3.
+ * speech a Build synthesizes is settled once that speech exists.
  *
  * @param svmlPath  the Author SVML this Source is written in
  * @param frameRate the Program's frame rate, as a whole number of frames per second
@@ -829,8 +829,8 @@ function timingReport(reference: string | undefined, segments: readonly StandInT
  *
  * What this settles: which elements are on screen together, where each sits, at what size, weight and
  * colour, and — on a reference-timed stand-in — how long each of them has to arrive in. What it does
- * not: alignment against the speech a Build synthesizes, which waits for
- * `playbooks/craft/production-gates.md` Gate 3. `timing` in the result, and the sidecar written
+ * not: alignment against the speech a Build synthesizes, which is settled once that speech
+ * exists. `timing` in the result, and the sidecar written
  * beside the output, name which of the two clocks sized each Segment.
  */
 export async function renderElement(input: RenderElementInput): Promise<Record<string, unknown>> {

@@ -20,8 +20,8 @@ choice between things that all work, and asking costs the author an interruption
 the references already answer. Decide it and keep going. A run that stops half way with a question is
 a run the author has to restart.
 
-Use this file only to route the task. Read the selected reference completely before acting; when
-that reference names required child references, read those completely in the stated order.
+Use this file only to route the task. A route file is a sequence of numbered steps, and each step
+names the files it needs; read those when you reach that step rather than all of them up front.
 
 Keep `.svml` Author Source, `.svs` Recipe Source, `.svrun` Run Source, and
 `hypit.runtime.json` Runtime Profile as separate languages and responsibilities.
@@ -38,7 +38,7 @@ the boundary and launcher selection. Read it before the first command of any rou
 ## Route
 
 - Reference-video reconstruction, reverse engineering, shot/B-roll/overlay analysis, or recreating
-  a video as Hypit source → read `references/reconstruction/index.md`. This is the route whatever
+  a video as Hypit source → read `references/reconstruction/route.md`. This is the route whatever
   the author calls it — reconstruct, reverse-engineer, recreate, replicate, clone, remake, copy,
   rebuild, or the same idea in any language — and **a path to a video file, with or without words
   around it, is this route** even when no verb is given at all. A video path with a change attached —
@@ -46,7 +46,7 @@ the boundary and launcher selection. Read it before the first command of any rou
   on the finished reconstruction. The path is the whole request: the working directory, the project
   location and the vocabulary are yours to decide rather than to ask for.
 - Making a video from a description, brief, topic, script or format name, with nothing to copy →
-  read `references/original-authoring/index.md`. This is the route whatever shape the request takes —
+  read `references/original-authoring/route.md`. This is the route whatever shape the request takes —
   "make me a 45-second ranking video", "a talking-head explainer about X", an ad for a product, a
   written script to produce, a topic and a duration, a format named on its own, or the same idea in
   any language — and **a description with no video path attached is this route** even when no verb is
@@ -55,11 +55,11 @@ the boundary and launcher selection. Read it before the first command of any rou
   ask for.
 - A syntax question about one element, or a source that already exists → read
   `references/authoring.md`, then `references/quickstart.md` and the linked authoritative
-  docs/package READMEs. A whole video is `references/original-authoring/index.md`, not this file.
+  docs/package READMEs. A whole video is `references/original-authoring/route.md`, not this file.
 - Which package owns an element, what vocabulary is installed at all, or whether a capability is
   genuinely missing → read `references/vocabulary.md`.
-- Creating a new author component outside reference reconstruction → read
-  `references/local-author-package.md`.
+- Creating a new author component → read `references/local-author-package.md`. Both routes reach it
+  at the step that proves a vocabulary gap.
 - Seeing what the sources produce, or proving the graph traces before any Build → read
   `references/preview.md`.
 - Runtime setup, plan/build/status/inspect/get/reuse → read `references/runtime.md`.
@@ -67,8 +67,7 @@ the boundary and launcher selection. Read it before the first command of any rou
   `references/credentials.md`.
 - Seedance prompt assembly → read `references/seedance-kits.md`.
 - Production craft or format selection → read `references/playbooks/index.md` and follow its
-  required load order. That list is the authority for which craft every program needs; naming a
-  subset here is how it goes stale.
+  required load order, which names the craft every program needs regardless of format.
 
 Preserve unrelated changes. Keep credentials, generated media, runtime state, and logs out of
 commits. Installed package declarations and published docs remain authoritative; repository

@@ -34,13 +34,12 @@ Do this after placing a Selection and before paying for a generation. Startup an
 
 1. Put the reference-frame prompt in an English `copy:Value` and generate the image with an explicit
    image Surface such as `gpt:Image`.
-2. Pass the image through the image gate in `production-gates.md` before using it as a video reference.
-3. Vendor `broll-v1.svs`, choose the stable material/story/edit/camera/motion axes in an SVS Recipe,
+2. Vendor `broll-v1.svs`, choose the stable material/story/edit/camera/motion axes in an SVS Recipe,
    and put only the shot-specific micro-story in an English `copy:Value`.
-4. Render the Kit with `copy:Render` and connect the story through `copy:Set`.
-5. Generate through `seedance:ReferenceVideo` with `generate-audio="false"` and explicit ordered
+3. Render the Kit with `copy:Render` and connect the story through `copy:Set`.
+4. Generate through `seedance:ReferenceVideo` with `generate-audio="false"` and explicit ordered
    references.
-6. Place accepted shots with `media-track:Track` and `media-track:Item` or `media-track:Sequence`.
+5. Place shots with `media-track:Track` and `media-track:Item` or `media-track:Sequence`.
 
 ```svml
 <copy:Value id="demo-story">

@@ -66,22 +66,6 @@ Distribution is present and stop. A registry install is not a recovery path.
 machine npm package home and selected Distribution. Those paths are facts; no repository locator or
 environment lock is involved.
 
-Updates to an installed, published Distribution are an explicit package-manager operation, never an
-automatic mutation during authoring:
-
-```text
-npm outdated --global hypit
-npm update --global hypit
-npx skills update --global
-```
-
-Use `hypit --version` to report the installed Distribution. Check npm only when the user asks about
-updates or during deliberate environment maintenance; do not add a registry request to every route.
-
-Do not run those npm commands for a contributor checkout; update it through its repository workflow.
-After updating Hypit, stop an idle Runtime Worker before the next Build so the next process loads the
-new Distribution. Existing project Sources and accepted Build records remain in the project.
-
 ## Supported hosts and prerequisites
 
 The supported desktop baseline is:
@@ -93,113 +77,16 @@ The supported desktop baseline is:
 Windows XP is not a supported target: Node.js 22, current Python and the Windows Credential Locker do
 not run there. Do not claim compatibility that the platform dependencies cannot provide.
 
-Run this skill-owned probe from the installed skill directory when diagnosing a machine:
-
-```text
-node scripts/check-environment.mjs
-```
-
 `hypit` and Node are required. `ffmpeg` and `ffprobe` are required by local media and preview paths; a
-host package manager puts them on `PATH` on macOS and Linux, and the section below unpacks them by
-hand on Windows. Credentials load from a project's `.env` in the same shell that runs the commands:
+host package manager puts them on `PATH` on macOS and Linux, and a manual install puts them on `PATH`
+on Windows. Credentials load from a project's `.env` in the same shell that runs the commands:
 `set -a && . ./.env && set +a`.
 `uv` is required only when the selected Runtime Profile uses a managed Python program such as
-WhisperX or OpenCV. Install `uv` with the host package manager, then let `uv` install the pinned
-Python interpreter.
+WhisperX or OpenCV.
 
-### Install FFmpeg prerequisites on Windows
-
-Install a current FFmpeg build so both `ffmpeg.exe` and `ffprobe.exe` are available on `PATH`.
-The preferred machine-wide route is Winget:
-
-```powershell
-winget install --id Gyan.FFmpeg.Shared -e
-ffmpeg -version
-ffprobe -version
-```
-
-If Winget is unavailable, download the current essentials ZIP from
-`https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip`, extract it to a stable
-directory such as `C:\Tools\ffmpeg`, and add its `bin` directory (for example,
-`C:\Tools\ffmpeg\bin`) to the user or machine `PATH`. Open a new PowerShell window and verify:
-
-```powershell
-ffmpeg -version
-ffprobe -version
-```
-
-Do not install FFmpeg into an author project or rely on a temporary download directory; the
-executables are host prerequisites shared by Hypit projects.
-
-### Install WhisperX prerequisites on Windows
-
-Use Windows 10 or 11 x64 in PowerShell:
-
-```powershell
-winget install --id astral-sh.uv -e
-uv --version
-uv python install 3.13
-```
-
-Open a new PowerShell session if `uv` is not immediately on `PATH` after the Winget install.
-
-Windows-specific checks before provisioning:
-
-```powershell
-Get-Command uv, ffmpeg, ffprobe
-uv --version
-ffmpeg -version
-ffprobe -version
-```
-
-If the Hypit contributor checkout already contains a host toolchain (for example under
-`.tools\ffmpeg-extract\...\bin`), prepend that `bin` directory to `$env:Path` for the current
-PowerShell process before running media commands. Do not copy those executables into an author
-project, and do not assume that a repository-local path is visible in a new shell.
-
-### Install WhisperX prerequisites on macOS
-
-Use macOS 13 or newer:
-
-```bash
-brew install uv
-uv --version
-uv python install 3.13
-```
-
-If Homebrew is not installed, install `uv` using Astral's current official installation method;
-do not improvise a Python `pip install` for this managed-program workflow.
-
-### Let Hypit install and run WhisperX
-
-The project Runtime Profile must select the local WhisperX Endpoint. A minimal endpoint inside the
-profile's `runtime.config.endpoints` is:
-
-```json
-"whisperx.local": {
-  "use": "@hypit/provider-whisperx-local",
-  "config": { "defaultConcurrency": 1 }
-}
-```
-
-Then select and provision the Profile with the chosen Hypit launcher:
-
-```text
-hypit runtime use hypit.runtime.json
-hypit runtime up
-hypit runtime status
-hypit doctor
-```
-
-`runtime up` owns the WhisperX installation: it creates or reuses the managed environment in the
-machine Program Home, installs the locked service, prepares NLTK `punkt_tab`, starts the loopback
-service on `127.0.0.1:8765`, and then starts the Worker. The first start may download the selected
-Whisper and language-alignment model weights, so it can take substantially longer than later starts.
-Do not run `uv sync` in an author project and do not install the `whisperx` Python package by hand.
-
-`runtime up` printing `Ready whisperx` reports that the service answered its health probe. Verify it
-again before `prepare_reference` or a Build, since a first start can spend several minutes loading the
-model:
+When the Runtime Profile selects the local WhisperX Endpoint, verify that the service answered its
+health probe before `prepare_reference` or a Build, since a first start can spend several minutes
+loading the model:
 
 ```powershell
 Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8765/health
@@ -207,67 +94,8 @@ hypit programs status
 hypit doctor
 ```
 
-If the health check fails, do not reinstall Python packages: poll rather than launching a second copy,
-and read `hypit runtime logs`. The managed WhisperX log is also at
-`$env:LOCALAPPDATA\Hypit\programs\whisperx\program.log`, with the service's error stream beside it
-in `program.err.log`.
-
-The log may contain a `torchcodec` warning about missing `libtorchcodec_core*.dll`, especially when
-the host FFmpeg build is newer than the versions supported by that optional decoder. The warning is
-diagnostic only: accept the service only after `/health` answers and a real Hypit transcription
-request succeeds. Do not repair it with an author-project `pip install`; keep the Runtime-managed
-environment authoritative.
-
-Verify a running service with `hypit programs status` or `hypit doctor`. If preparation fails, read
-`hypit runtime logs`; for a contributor checkout only, `services/whisperx/README.md` contains the
-manual `uv sync --frozen`, prepare and check commands used to diagnose the packaged service.
-
-If `runtime up` reports that NLTK `punkt_tab` is missing because Python's downloader was blocked by
-a proxy or SSRF policy, install the same archive from NLTK's official data repository into the
-managed WhisperX data root, then run `hypit runtime up` again. Do this only for that explicit network
-failure; ordinary installs stay Runtime-managed.
-
-Windows PowerShell:
-
-```powershell
-$whisperxData = Join-Path $env:LOCALAPPDATA "Hypit\programs\whisperx\nltk_data"
-$download = Join-Path $env:TEMP ("hypit-punkt-" + [guid]::NewGuid().ToString("N"))
-New-Item -ItemType Directory -Path $download | Out-Null
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/tokenizers/punkt_tab.zip" -OutFile (Join-Path $download "punkt_tab.zip")
-New-Item -ItemType Directory -Path (Join-Path $whisperxData "tokenizers") -Force | Out-Null
-Expand-Archive -LiteralPath (Join-Path $download "punkt_tab.zip") -DestinationPath (Join-Path $whisperxData "tokenizers") -Force
-hypit runtime up
-```
-
-macOS:
-
-```bash
-whisperx_data="$HOME/Library/Application Support/Hypit/programs/whisperx/nltk_data"
-download_dir="$(mktemp -d)"
-mkdir -p "$whisperx_data/tokenizers"
-curl -L "https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/tokenizers/punkt_tab.zip" \
-  -o "$download_dir/punkt_tab.zip"
-unzip -q "$download_dir/punkt_tab.zip" -d "$whisperx_data/tokenizers"
-hypit runtime up
-```
-
-`runtime up` probes each selected program. It creates that program's environment only when absent or
-unhealthy, then reuses it across projects and sessions. It never runs `uv sync` merely because a new
-project or Runtime Worker started.
-
-Upstream npm dependencies follow the same lifetime. The Distribution ships first-party Model,
-Provider, component and Studio code, but not every Fontsource family, AWS SDK, HyperFrames browser
-package or optional observer SDK. `runtime up` prepares only dependencies declared by the selected
-Runtime adapters. An author package reports an exact command when its own optional dependency is
-missing:
-
-```text
-hypit packages install @fontsource-variable/inter@5.3.0
-hypit packages status @fontsource-variable/inter@5.3.0
-```
-
-These commands use npm's ordinary `package.json` in the machine package home with no Hypit lock,
-receipt, digest inventory or project-local copy.
+`host-setup.md` holds the host toolchain installations and repairs, and is read when a command
+reports that a service or a binary is unavailable.
 
 ## Machine Program Home
 

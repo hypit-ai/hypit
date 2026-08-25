@@ -76,11 +76,5 @@ tiling it is the other one, and it is just as covered. A `until={story.moment.X}
 element claims, so a picture that leaves half way through the program answers for the words before
 that Moment and not the ones after.
 
-What is left for the delivery is what only the delivery shows. An instant is a thirtieth of a second:
-watching finds a scene that is wrong and slides straight past a frame that is, and the shorter the
-hole the more it reads as intentional cutting. Both measurements are in `production-gates.md` Gate 4,
-one for holes over nothing and one for holes over something. Run both — a hole with something under
-it passes the first.
-
-Anything the measurements report is an inherited edge. Take it back to the interval that produced it
-rather than to the layer that revealed it.
+Anything `reconstruction_check` reports under `coverage.gaps` is an inherited edge. Take it back to
+the interval that produced it rather than to the layer that revealed it.
