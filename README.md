@@ -60,6 +60,8 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
   </tr>
 </table>
 
+Local-hosted MiniMax H3; 3 GPT Image 2 generations; Ranking board, TikTok-style captions, visual effects rendered in headless chromium. Total cost: $0.15.
+
 ### Podcast
 
 <table>
@@ -76,6 +78,27 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
     <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
   </tr>
 </table>
+
+Local-hosted MiniMax H3; 3 GPT Image 2 generations; Ranking board, TikTok-style captions, visual effects rendered in headless chromium. Total cost: $0.15.
+
+### UGC
+
+<table>
+  <tr>
+    <th>Reference</th>
+    <td></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td></td>
+  </tr>
+  <tr>
+    <th>Clones</th>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+  </tr>
+</table>
+
+Local-hosted MiniMax H3; 3 GPT Image 2 generations; Ranking board, TikTok-style captions, visual effects rendered in headless chromium. Total cost: $0.15.
 
 ## Install once
 

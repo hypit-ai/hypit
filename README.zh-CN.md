@@ -60,6 +60,8 @@ Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语�
   </tr>
 </table>
 
+本地部署的 MiniMax H3；3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕、视觉特效在 headless chromium 中渲染。总成本：$0.15。
+
 ### 播客
 
 <table>
@@ -76,6 +78,27 @@ Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语�
     <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
   </tr>
 </table>
+
+本地部署的 MiniMax H3；3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕、视觉特效在 headless chromium 中渲染。总成本：$0.15。
+
+### UGC
+
+<table>
+  <tr>
+    <th>参考视频</th>
+    <td></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td></td>
+  </tr>
+  <tr>
+    <th>复刻视频</th>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+  </tr>
+</table>
+
+本地部署的 MiniMax H3；3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕、视觉特效在 headless chromium 中渲染。总成本：$0.15。
 
 ## 只安装一次
 
