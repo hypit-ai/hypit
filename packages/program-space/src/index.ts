@@ -5,6 +5,10 @@ export type ProgramClock = {
 };
 
 export type ProgramSpace = {
+  /** Author-visible identity of the SemanticTrack defining this time axis. */
+  readonly id: string;
+  /** Author-visible Script identity behind the semantic time axis. */
+  readonly narrativeId: string;
   readonly durationSec: number;
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
 };
@@ -16,9 +20,12 @@ export const programSpaceTypes = {
 } satisfies Record<string, TypeRef>;
 const number = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
+const string = { kind: "string", minLength: 1 } as const;
 export const programSpaceSchema: ValueSchema = {
   kind: "object",
   fields: {
+    id: { schema: string },
+    narrativeId: { schema: string },
     durationSec: { schema: number },
     frameRate: { schema: { kind: "object", fields: {
       numerator: { schema: integer }, denominator: { schema: integer },
@@ -83,7 +90,8 @@ export function programFrameSampleBoundary(
 }
 export function assertProgramSpaceIdentity(programSpace: ProgramSpace): void {
   const { numerator, denominator } = programSpace.frameRate;
-  if (!Number.isSafeInteger(numerator) || numerator <= 0 || !Number.isSafeInteger(denominator)
+  if (!programSpace.id.trim() || !programSpace.narrativeId.trim()
+    || !Number.isSafeInteger(numerator) || numerator <= 0 || !Number.isSafeInteger(denominator)
     || denominator <= 0 || !Number.isFinite(programSpace.durationSec) || programSpace.durationSec <= 0) {
     throw new Error("ProgramSpace is invalid.");
   }

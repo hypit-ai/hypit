@@ -2,12 +2,11 @@ import { artifactTypes } from "@hypit/artifact";
 import { mediaTypes } from "@hypit/media";
 import type { FontStackRef } from "@hypit/media";
 import { mediaTrackTypes } from "@hypit/media-track";
-import { narrativeTypes } from "@hypit/narrative";
 import type { TypeRef } from "@hypit/protocol";
 import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
-import { temporalTypes } from "@hypit/temporal";
+import { createTemporalInstantProjection, temporalInstantAttributeNames } from "@hypit/temporal-markup";
 import type { SvsRecipe } from "@hypit/svs";
 import { sealText, textTypes } from "@hypit/text";
 import { sealGraphFragment } from "@hypit/elaborator";
@@ -15,6 +14,7 @@ import type { AuthorValueRef } from "@hypit/elaborator";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
+  SurfaceComponentDraft,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
   MarkupAttributeValue,
@@ -28,10 +28,7 @@ import {
 import {
   createDepthStackFragment,
 } from "./fragment.js";
-import type {
-  DepthStackFragmentCard,
-  DepthStackFragmentTerminal,
-} from "./fragment.js";
+import type { DepthStackFragmentCard } from "./fragment.js";
 import { depthStackProducers, depthStackTypes } from "./manifest.js";
 import {
   noDepthStackCardLabel,
@@ -183,26 +180,6 @@ export const decodeDepthStackLabelSurface: StructuredSurfaceHandler = ({ element
   };
 };
 
-function terminal(
-  element: StructuredElement,
-  resolve: (path: string) => SurfaceResolvedReference | undefined,
-): { readonly terminal: DepthStackFragmentTerminal; readonly reference?: SurfaceResolvedReference } {
-  const raw = element.attributes.until;
-  if (typeof raw === "string") {
-    if (raw.trim() !== "program.end") throw new Error(`${element.name}.until text must be program.end.`);
-    if (element.attributes["until-boundary"] !== undefined) throw new Error(`${element.name}.until-boundary requires a Selection.`);
-    return { terminal: { kind: "program-end" } };
-  }
-  const value = oneOfReference(raw, `${element.name}.until`, [narrativeTypes.moment, narrativeTypes.selection], resolve);
-  if (sameType(value.type, narrativeTypes.moment)) {
-    if (element.attributes["until-boundary"] !== undefined) throw new Error(`${element.name}.until-boundary requires a Selection.`);
-    return { terminal: { kind: "moment", inputName: "terminal", specName: "terminal-spec" }, reference: value };
-  }
-  const boundary = text(element, "until-boundary", "end");
-  if (boundary !== "start" && boundary !== "end") throw new Error(`${element.name}.until-boundary is invalid.`);
-  return { terminal: { kind: boundary === "start" ? "selection-start" : "selection-end", inputName: "terminal", specName: "terminal-spec" }, reference: value };
-}
-
 export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   allowed(element, ["id", "semantic", "canvas", "frame", "appearance", "until", "until-boundary"]);
   const id = text(element, "id");
@@ -210,8 +187,13 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
   const canvas = reference(element.attributes.canvas, `${element.name}.canvas`, spatialTypes.canvas, resolveReference);
   const frame = reference(element.attributes.frame, `${element.name}.frame`, spatialTypes.frame, resolveReference);
   const appearance = recipe(element.attributes.appearance, `${element.name}.appearance`, resolveReference);
-  const terminalValue = terminal(element, resolveReference);
-  const records: SurfaceRecordDraft[] = [];
+  const terminal = createTemporalInstantProjection({
+    id: `${id}.terminal`, subjectId: id, element, semantic, resolveReference,
+    semanticAttribute: "until", boundaryAttribute: "until-boundary", boundaryFallback: "end", projectedAttribute: false,
+  });
+  const records: SurfaceRecordDraft[] = [...terminal.records];
+  const temporalComponents: SurfaceComponentDraft[] = [...terminal.components];
+  const temporalFragments = [...terminal.fragments];
   const headerId = `${id}.header`;
   const specId = `${id}.spec`;
   records.push(
@@ -220,22 +202,8 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
   );
   const inputs: Record<string, typeof semantic.ref> = {
     canvas: canvas.ref, frame: frame.ref, header: { kind: "record", id: headerId }, semantic: semantic.ref,
-    spec: { kind: "record", id: specId },
+    spec: { kind: "record", id: specId }, terminal: terminal.ref,
   };
-  const terminalSpecId = `${id}.terminal.point`;
-  const terminalSpecName = terminalValue.terminal.kind === "program-end" ? "program-spec" : terminalValue.terminal.specName;
-  records.push({ id: terminalSpecId, type: temporalTypes.pointSpec, value: { kind: "inline", value: {
-    id: `${id}.terminal`,
-    projection: terminalValue.terminal.kind === "program-end"
-      ? { ref: "program.end" }
-      : terminalValue.terminal.kind === "moment"
-        ? { ref: "moment.cue" }
-        : terminalValue.terminal.kind === "selection-start"
-          ? { ref: "selection.start" }
-          : { ref: "selection.end" },
-  } }, range: element.range });
-  if (terminalValue.reference !== undefined) inputs.terminal = terminalValue.reference.ref;
-  inputs[terminalSpecName] = { kind: "record", id: terminalSpecId };
   const cards: DepthStackFragmentCard[] = [];
   let cardIndex = 0;
   for (const child of element.children) {
@@ -244,7 +212,7 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
       continue;
     }
     if (child.name.split(":").at(-1) !== "Card") throw new Error(`${element.name} accepts Card children only.`);
-    allowed(child, ["id", "source", "extent", "at", "appearance", "label"]);
+    allowed(child, ["id", "source", "extent", ...temporalInstantAttributeNames, "appearance", "label"]);
     empty(child);
     cardIndex += 1;
     const suffix = String(cardIndex).padStart(4, "0");
@@ -256,7 +224,8 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
       : reference(child.attributes.extent, `${child.name}.extent`, spatialTypes.extent, resolveReference);
     if (sourceKind === "still" && extent === undefined) throw new Error(`${child.name}.extent is required for a still image.`);
     if (sourceKind !== "still" && extent !== undefined) throw new Error(`${child.name}.extent belongs only to a still image.`);
-    const moment = reference(child.attributes.at, `${child.name}.at`, narrativeTypes.moment, resolveReference);
+    const activation = createTemporalInstantProjection({ id: `${id}.${cardId}`, subjectId: cardId, element: child, semantic, resolveReference });
+    records.push(...activation.records); temporalComponents.push(...activation.components); temporalFragments.push(...activation.fragments);
     const cardAppearance = child.attributes.appearance === undefined
       ? appearance : recipe(child.attributes.appearance, `${child.name}.appearance`, resolveReference);
     const material = decodeDepthStackMaterial(cardAppearance, `${id}.${cardId}`, sourceKind);
@@ -272,20 +241,13 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
     const fitName = `card-${suffix}-fit`;
     const sampleSpecName = `card-${suffix}-sample-spec`;
     const cardSpecName = `card-${suffix}-spec`;
-    const momentName = `card-${suffix}-moment`;
-    const pointSpecName = `card-${suffix}-point-spec`;
+    const activationName = `card-${suffix}-activation`;
     const labelName = `card-${suffix}-label`;
     inputs[sourceName] = source.ref;
     inputs[fitName] = { kind: "record", id: fitId };
     inputs[sampleSpecName] = { kind: "record", id: sampleId };
     inputs[cardSpecName] = { kind: "record", id: cardSpecId };
-    inputs[momentName] = moment.ref;
-    const pointSpecId = `${id}.card.${suffix}.point`;
-    records.push({ id: pointSpecId, type: temporalTypes.pointSpec, value: { kind: "inline", value: {
-      id: `${id}.${cardId}`,
-      projection: { ref: "moment.cue" },
-    } }, range: child.range });
-    inputs[pointSpecName] = { kind: "record", id: pointSpecId };
+    inputs[activationName] = activation.ref;
     let labelRef: typeof semantic.ref;
     if (child.attributes.label === undefined) {
       const labelId = `${id}.card.${suffix}.label-none`;
@@ -309,14 +271,15 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
     }
     cards.push({
       suffix, sourceKind, sourceName, ...(extentName === undefined ? {} : { extentName }), fitName, sampleSpecName,
-      ...(framePaintSpecName === undefined ? {} : { framePaintSpecName }), labelName, cardSpecName, momentName, pointSpecName,
+      ...(framePaintSpecName === undefined ? {} : { framePaintSpecName }), labelName, cardSpecName, activationName,
     });
   }
   if (cards.length === 0) throw new Error(`${element.name} requires at least one Card.`);
-  const fragment = createDepthStackFragment(cards, terminalValue.terminal);
+  const fragment = createDepthStackFragment(cards, "terminal");
   return {
     records,
-    components: [{ id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, track: `${id}.track` }, range: element.range }],
-    fragments: [fragment],
+    components: [...temporalComponents, { id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, track: `${id}.track` }, range: element.range }],
+    fragments: [...temporalFragments, fragment],
+    exports: [`${id}.program`, `${id}.track`],
   };
 };

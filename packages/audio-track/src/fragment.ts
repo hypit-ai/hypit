@@ -2,52 +2,40 @@ import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation } from "@hypit/elaborator";
 import { mediaTypes } from "@hypit/media";
-import { narrativeTypes } from "@hypit/narrative";
-import { semanticTrackTypes } from "@hypit/semantic-track";
-import { temporalProducers, temporalTypes } from "@hypit/temporal";
+import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
+import { temporalTypes } from "@hypit/temporal";
 
 import { audioTrackProducers, audioTrackTypes } from "./manifest.js";
 
-export type AudioTrackFragmentItem =
-  | { readonly kind: "program"; readonly mediaName: string; readonly specName: string; readonly windowSpecName: string }
-  | { readonly kind: "selection"; readonly mediaName: string; readonly specName: string; readonly windowSpecName: string; readonly sourceName: string }
-  | { readonly kind: "moment"; readonly mediaName: string; readonly specName: string; readonly windowSpecName: string; readonly sourceName: string };
+export type AudioTrackFragmentItem = {
+  readonly mediaName: string;
+  readonly specName: string;
+  readonly windowName: string;
+};
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[]) {
   if (items.length === 0) throw new Error("Audio Track Fragment requires at least one Item.");
-  const inputTypes = new Map<string, (typeof audioTrackTypes.clipSpec | typeof mediaTypes.synchronized | typeof narrativeTypes.selection | typeof narrativeTypes.moment | typeof temporalTypes.windowSpec)>();
+  const inputTypes = new Map<string, (typeof audioTrackTypes.clipSpec | typeof mediaTypes.synchronized | typeof temporalTypes.window)>();
   const operations: FragmentOperation[] = [
+    { id: "audio:space", producer: semanticTrackProducers.projectProgramSpace, inputs: { track: input("semantic") }, result: { kind: "output", name: "space" } },
     { id: "audio:set:empty", producer: audioTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } },
   ];
   let current = "audio:set:empty";
   items.forEach((item, index) => {
     inputTypes.set(item.mediaName, mediaTypes.synchronized);
     inputTypes.set(item.specName, audioTrackTypes.clipSpec);
-    inputTypes.set(item.windowSpecName, temporalTypes.windowSpec);
-    if (item.kind !== "program") {
-      inputTypes.set(item.sourceName, item.kind === "selection" ? narrativeTypes.selection : narrativeTypes.moment);
-    }
+    inputTypes.set(item.windowName, temporalTypes.window);
     const id = `audio:set:append:${String(index + 1).padStart(4, "0")}`;
-    const windowId = `audio:window:${String(index + 1).padStart(4, "0")}`;
-    const windowProducer = item.kind === "program" ? temporalProducers.projectProgram
-      : item.kind === "selection" ? temporalProducers.projectSelection : temporalProducers.projectMoment;
-    operations.push({
-      id: windowId,
-      producer: windowProducer,
-      inputs: { semantic: input("semantic"), spec: input(item.windowSpecName),
-        ...(item.kind === "program" ? {} : { [item.kind]: input(item.sourceName) }) },
-      result: { kind: "output", name: "window" },
-    });
     operations.push({
       id,
       producer: audioTrackProducers.appendItem,
       inputs: {
-        set: operation(current), header: input("header"), semantic: input("semantic"),
+        set: operation(current), header: input("header"), space: operation("audio:space"),
         media: input(item.mediaName), spec: input(item.specName),
-        window: operation(windowId),
+        window: input(item.windowName),
       },
       result: { kind: "output", name: "set" },
     });
@@ -55,7 +43,7 @@ export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[
   });
   operations.push(
     { id: "audio:program", producer: audioTrackProducers.finalize, inputs: { set: operation(current), header: input("header") }, result: { kind: "output", name: "program" } },
-    { id: "audio:track", producer: audioTrackProducers.render, inputs: { semantic: input("semantic"), program: operation("audio:program") }, result: { kind: "output", name: "track" } },
+    { id: "audio:track", producer: audioTrackProducers.render, inputs: { space: operation("audio:space"), program: operation("audio:program") }, result: { kind: "output", name: "track" } },
   );
   return sealGraphFragment({
     inputs: [
@@ -72,5 +60,5 @@ export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[
 }
 
 export const programAudioTrackFragment = createAudioTrackFragment([
-  { kind: "program", mediaName: "media", specName: "spec", windowSpecName: "window-spec" },
+  { mediaName: "media", specName: "spec", windowName: "window" },
 ]);

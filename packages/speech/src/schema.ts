@@ -34,6 +34,7 @@ export const speechEvidenceAudioSchema: ValueSchema = object({
   sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
 });
 export const semanticTakeSchema: ValueSchema = object({
+  narrativeId: { schema: string },
   media: { schema: synchronizedMediaSchema },
   segment: { schema: semanticTakeSegment },
   tokens: { schema: { kind: "array", items: semanticTakeToken } },

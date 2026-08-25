@@ -1,8 +1,7 @@
 import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-kit";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, StoredValue } from "@hypit/protocol";
-import type { SemanticTrack } from "@hypit/semantic-track";
-import { projectSemanticProgramSpace } from "@hypit/semantic-track";
+import type { ProgramSpace } from "@hypit/program-space";
 import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 import type { Text } from "@hypit/text";
 
@@ -29,9 +28,9 @@ function common(inputs: Record<string, { readonly value: StoredValue } | undefin
   return {
     set: inline<CommentStickerSet>(inputs.set?.value, "CommentStickerSet"),
     header: inline<CommentStickerHeader>(inputs.header?.value, "CommentStickerHeader"),
+    space: inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
     frame: inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
     style: inline<CommentStickerStyle>(inputs.style?.value, "CommentStickerStyle"),
-    semantic: inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
     spec: inline<CommentStickerItemSpec>(inputs.spec?.value, "CommentStickerItemSpec"),
     content: inline<CommentStickerContent>(inputs.content?.value, "CommentStickerContent"),
     window: inline<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
@@ -70,8 +69,8 @@ export const commentStickerComponent = {
       handler: ({ inputs }: ProducerHandlerContext) => {
         const values = common(inputs);
         return { outputs: { set: output(appendProjectedCommentSticker(
-          values.set, values.header, values.frame, values.style, values.spec, values.content, values.window,
-          ...(avatar ? [inline<BlobRef>(inputs.avatar?.value, "Comment Sticker avatar")] : []),
+          values.set, values.header, values.space, values.frame, values.style, values.spec, values.content, values.window,
+          avatar ? inline<BlobRef>(inputs.avatar?.value, "Comment Sticker avatar") : undefined,
         )) }, needs: {} };
       },
     })),
@@ -86,7 +85,7 @@ export const commentStickerComponent = {
       producer: commentStickerProducers.render,
       handler: ({ inputs }) => ({ outputs: { track: output(renderCommentSticker(
         inline<CanvasSpace>(inputs.canvas?.value, "CanvasSpace"),
-        projectSemanticProgramSpace(inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack")),
+        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
         inline<CommentStickerProgram>(inputs.program?.value, "CommentStickerProgram"),
       )) }, needs: {} }),
     },

@@ -4,7 +4,7 @@ import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, StoredValue } from "@hypit/protocol";
 import type { ProgramSpace } from "@hypit/program-space";
 import type { CanvasSpace, ContentFit, IntrinsicExtent, SpatialFrame, SpatialPath } from "@hypit/spatial";
-import type { TemporalPoint, TemporalWindow } from "@hypit/temporal";
+import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
 
 import {
   appendMediaPaintLayer,
@@ -65,9 +65,10 @@ function itemInputs(inputs: ProducerHandlerContext["inputs"]) {
 function memberInputs(inputs: ProducerHandlerContext["inputs"]) {
   return {
     members: inline<MediaSequenceMemberSet>(inputs.members?.value, "MediaSequenceMemberSet"),
+    space: inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
     layers: inline<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"),
     spec: inline<MediaSequenceMemberSpec>(inputs.spec?.value, "MediaSequenceMemberSpec"),
-    activation: inline<TemporalPoint>(inputs.activation?.value, "TemporalPoint"),
+    activation: inline<TemporalInstant>(inputs.activation?.value, "TemporalInstant"),
   };
 }
 
@@ -81,7 +82,7 @@ function sequenceInputs(inputs: ProducerHandlerContext["inputs"]) {
     frame: inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
     spec: inline<MediaSequenceSpec>(inputs.spec?.value, "MediaSequenceSpec"),
     sounds: inline<MediaSoundSet>(inputs.sounds?.value, "MediaSoundSet"),
-    terminal: inline<TemporalPoint>(inputs.terminal?.value, "TemporalPoint"),
+    terminal: inline<TemporalInstant>(inputs.terminal?.value, "TemporalInstant"),
   };
 }
 
@@ -128,7 +129,7 @@ export const mediaTrackComponent = {
     { producer: mediaTrackProducers.appendMember, handler: ({ inputs }) => {
       const value = memberInputs(inputs);
       return { outputs: { members: output(appendMediaSequenceMember(
-        value.members, value.layers, value.spec, value.activation,
+        value.members, value.space, value.layers, value.spec, value.activation,
       )) }, needs: {} };
     } },
     { producer: mediaTrackProducers.appendSequence, handler: ({ inputs }) => {

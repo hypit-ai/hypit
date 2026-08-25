@@ -31,7 +31,8 @@ export type TemporalDuration =
   | { readonly unit: "milliseconds"; readonly value: number }
   | { readonly unit: "seconds"; readonly numerator: number; readonly denominator: number };
 
-export type TemporalPointExpression =
+/** A single projected boundary before it is resolved into ProgramSpace. */
+export type TemporalInstantExpression =
   | { readonly ref: "program.start"; readonly offset?: TemporalDuration }
   | { readonly ref: "program.end"; readonly offset?: TemporalDuration }
   | { readonly ref: "selection.start"; readonly offset?: TemporalDuration }
@@ -41,27 +42,42 @@ export type TemporalPointExpression =
   | { readonly ref: "moment.cue"; readonly offset?: TemporalDuration }
   | { readonly ref: "absolute"; readonly at: TemporalDuration };
 
-export type TemporalWindowProjection = {
-  readonly start: TemporalPointExpression;
-  readonly end: TemporalPointExpression;
-};
-
-/** Authored semantic source used by a temporal projection. */
+/** Runtime dependency used to resolve an Instant. This is not its authoring authority. */
 export type TemporalSource = {
+  readonly spaceId: string;
+  readonly narrativeId: string;
   readonly kind: "program" | "selection" | "segment" | "moment";
   readonly id: string;
 };
 
-/** Input value for the Temporal projection producer. */
-export type TemporalWindowSpec = {
+/**
+ * The author-owned inverse of one projected Instant. Runtime dependencies and
+ * author authority are deliberately separate: an expression may read an
+ * anchor while remaining writable only at its author parameter.
+ */
+export type TemporalInstantAuthority =
+  | { readonly kind: "semantic"; readonly boundary: "start" | "end" | "cue" }
+  | {
+      readonly kind: "parameter";
+      readonly binding: string;
+      readonly relation: "direct" | "after-start" | "before-end";
+    }
+  | { readonly kind: "fixed" };
+
+/** Input value for an Instant projection producer. */
+export type TemporalInstantSpec = {
   readonly id: string;
-  readonly projection: TemporalWindowProjection;
+  /** Author/domain entity whose timing this projection controls. */
+  readonly subjectId: string;
+  readonly projection: TemporalInstantExpression;
+  readonly authority: TemporalInstantAuthority;
 };
 
-/** Input value for a Temporal point projection producer. */
-export type TemporalPointSpec = {
+/** Input value for composing two resolved Instants into a Window. */
+export type TemporalWindowSpec = {
   readonly id: string;
-  readonly projection: TemporalPointExpression;
+  /** Author/domain entity whose timing this projection controls. */
+  readonly subjectId: string;
 };
 
 export type FrameSpan = {
@@ -69,25 +85,28 @@ export type FrameSpan = {
   readonly endFrameExclusive: number;
 };
 
-export type ProjectedWindow = {
+export type ProjectedInstant = {
   readonly id: string;
+  readonly subjectId: string;
   readonly source: TemporalSource;
-  readonly projection: TemporalWindowProjection;
-  readonly span: FrameSpan;
-};
-
-export type ProjectedPoint = {
-  readonly id: string;
-  readonly source: TemporalSource;
-  readonly projection: TemporalPointExpression;
+  readonly projection: TemporalInstantExpression;
+  readonly authority: TemporalInstantAuthority;
   readonly frame: number;
 };
 
-/** Public protocol name for the resolved window consumed by domain programs. */
-export type TemporalWindow = ProjectedWindow;
+export type ProjectedWindow = {
+  readonly id: string;
+  readonly subjectId: string;
+  readonly start: ProjectedInstant;
+  readonly end: ProjectedInstant;
+  readonly span: FrameSpan;
+};
 
-/** Public protocol name for the resolved boundary consumed by domain programs. */
-export type TemporalPoint = ProjectedPoint;
+/** Public projection protocol consumed by domain programs. */
+export type TemporalInstant = ProjectedInstant;
+
+/** Public projection protocol composed from two independently traced Instants. */
+export type TemporalWindow = ProjectedWindow;
 
 export type WindowRelation = "independent" | "disjoint";
 

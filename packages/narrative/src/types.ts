@@ -31,7 +31,10 @@ export type NarrativeSelection = {
 };
 
 /** One explicitly authored semantic window, independently referenceable by graph edges. */
-export type NarrativeSelectionRef = NarrativeSelection;
+export type NarrativeSelectionRef = NarrativeSelection & {
+  /** Author-visible `<script id>` that owns this independently exported Selection. */
+  readonly narrativeId: string;
+};
 
 export type NarrativeMoment = {
   readonly id: string;
@@ -40,7 +43,10 @@ export type NarrativeMoment = {
 };
 
 /** One explicitly authored semantic instant, independently referenceable by graph edges. */
-export type NarrativeMomentRef = NarrativeMoment;
+export type NarrativeMomentRef = NarrativeMoment & {
+  /** Author-visible `<script id>` that owns this independently exported Moment. */
+  readonly narrativeId: string;
+};
 
 /** One author-visible word surface. Punctuation owned by the surface is preserved. */
 export type CaptionDisplayWord = {
@@ -79,20 +85,37 @@ export type CaptionCueBreak = {
 
 /** Complete Script-owned Caption truth. It contains no frame or measured timing facts. */
 export type CaptionDocument = {
+  /** Author-visible `<script id>` that owns this caption projection. */
+  readonly narrativeId: string;
   readonly id: string;
   readonly units: readonly CaptionAlignmentUnit[];
   readonly words: readonly CaptionDisplayWord[];
   readonly cueBreaks: readonly CaptionCueBreak[];
 };
 
-export type SemanticAnchor = {
-  readonly id: string;
-  readonly kind: "segment-start" | "token-start" | "token-end" | "segment-end";
-  readonly segmentId: string;
-  readonly tokenId?: string;
-};
+export type SemanticAnchor =
+  | {
+      readonly id: "program:start";
+      readonly kind: "program-start";
+      readonly segmentId?: never;
+      readonly tokenId?: never;
+    }
+  | {
+      readonly id: "program:end";
+      readonly kind: "program-end";
+      readonly segmentId?: never;
+      readonly tokenId?: never;
+    }
+  | {
+      readonly id: string;
+      readonly kind: "segment-start" | "token-start" | "token-end" | "segment-end";
+      readonly segmentId: string;
+      readonly tokenId?: string;
+    };
 
 export type Narrative = {
+  /** Author-visible `<script id>`; every exported semantic view retains it. */
+  readonly id: string;
   readonly segments: readonly NarrativeSegment[];
   readonly tokens: readonly NarrativeToken[];
   readonly turns: readonly NarrativeTurn[];
@@ -110,6 +133,8 @@ export type Narrative = {
  */
 export type NarrativeExcerpt = {
   readonly kind: "segment";
+  /** Author-visible `<script id>` that owns this Segment. */
+  readonly narrativeId: string;
   readonly id: string;
   readonly tokenStart: number;
   readonly tokenEndExclusive: number;

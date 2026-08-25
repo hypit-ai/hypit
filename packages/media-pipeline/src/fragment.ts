@@ -1,5 +1,7 @@
 import { mediaTypes } from "@hypit/media";
 import { artifactTypes } from "@hypit/artifact";
+import { programSpaceTypes } from "@hypit/program-space";
+import { speechTypes } from "@hypit/speech";
 import { sealGraphFragment } from "@hypit/elaborator";
 
 import {
@@ -116,5 +118,32 @@ export const extractFrameFragment = sealGraphFragment({
     name: "image",
     type: artifactTypes.blob,
     root: operation("extract"),
+  }],
+});
+
+export const stillVideoFragment = sealGraphFragment({
+  inputs: [
+    { name: "source", type: artifactTypes.blob },
+    { name: "duration", type: speechTypes.duration },
+    { name: "clock", type: programSpaceTypes.clock },
+  ],
+  operations: [
+    {
+      id: "plan",
+      producer: mediaPipelineProducers.planStill,
+      inputs: { duration: input("duration"), clock: input("clock") },
+      result: { kind: "output", name: "request" },
+    },
+    {
+      id: "render",
+      producer: mediaPipelineProducers.renderStill,
+      inputs: { source: input("source"), request: operation("plan") },
+      result: { kind: "need", name: "video" },
+    },
+  ],
+  exports: [{
+    name: "video",
+    type: artifactTypes.blob,
+    root: operation("render"),
   }],
 });

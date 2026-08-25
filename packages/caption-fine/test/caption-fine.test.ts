@@ -65,7 +65,7 @@ const recipe: SvsRecipe = {
 
 function fixture() {
   const parsed = parseScript("caption-fine.svml", "<line>one two || three four</line>");
-  const document = captionDocument(parsed, "story.caption");
+  const document = captionDocument(parsed, "story.caption", "story");
   const style = fineCaptionStyle("plain", recipe, [font]);
   const program: CaptionProgram = {
     id: "captions",
@@ -78,6 +78,8 @@ function fixture() {
   const [first, second, third, fourth] = document.units;
   assert.ok(first && second && third && fourth);
   const projection: TimedCaptionProjection = {
+    spaceId: "test-space",
+    narrativeId: "story",
     documentId: document.id,
     cues: [
       {
@@ -124,7 +126,7 @@ test("Fine Caption schedules visibility outside semantic Word timing and cuts on
   ]);
 
   const track = renderFineCaption(schedule, program, document,
-    sealProgramSpace({ durationSec: 3, frameRate: { numerator: 30, denominator: 1 } }));
+    sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3, frameRate: { numerator: 30, denominator: 1 } }));
   assert.deepEqual(track.presents.map((present) => present.span), [
     { startFrame: 6, endFrameExclusive: 36 },
     { startFrame: 36, endFrameExclusive: 62 },

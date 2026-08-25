@@ -6,6 +6,7 @@ import {
   assertSpatialPoint,
 } from "@hypit/spatial";
 import type { SpatialFrame, SpatialPath, SpatialPoint } from "@hypit/spatial";
+import { assertTemporalWindowFor } from "@hypit/temporal";
 import type { ProjectedWindow } from "@hypit/temporal";
 import {
   assertVisualTrackIdentity,
@@ -100,6 +101,7 @@ export function assertTextStyle(style: TextStyle): void {
   }
   assertVisualTrackIdentity({
     kind: "visual",
+    programSpaceId: "text-style-validation",
     visualIr: "hypit.visual-ir@1",
     id: "text-style-validation",
     presents: [{
@@ -302,6 +304,7 @@ function append(
 export function appendProjectedTextItem(
   set: TypographyTrackSet,
   header: TypographyTrackHeader,
+  space: ProgramSpace,
   placement: TextPlacement,
   spec: TextItemSpec,
   style: TextStyle,
@@ -309,6 +312,7 @@ export function appendProjectedTextItem(
   window: ProjectedWindow,
 ): TypographyTrackSet {
   assertTextPlacement(placement);
+  assertTemporalWindowFor(window, { subjectId: spec.id, space });
   return append(set, header, spec, style, motion, placement.geometry, window);
 }
 
@@ -555,6 +559,7 @@ function elements(item: TextItem): VisualElement[] {
 export function renderTypographyTrack(space: ProgramSpace, program: TypographyTrackProgram): VisualTrack {
   assertTypographyTrackProgramIdentity(program, space);
   const track = sealVisualTrack({
+    programSpaceId: space.id,
     visualIr: "hypit.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({
@@ -581,6 +586,7 @@ export function renderTextMaskTrack(
     throw new Error("Official Text Mask requires one explicit still material Surface; timed materials use an independent package.");
   }
   const track = sealVisualTrack({
+    programSpaceId: space.id,
     visualIr: "hypit.visual-ir@1",
     id: spec.id,
     presents: program.items.map((item) => {

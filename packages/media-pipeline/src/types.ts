@@ -67,6 +67,17 @@ export type FrameExtractionRequest = {
   readonly output: { readonly format: "png" };
 };
 
+/** Exact silent video requested from one authored still image. */
+export type StillVideoRequest = {
+  readonly frameRate: MediaRational;
+  readonly frameCount: number;
+  readonly output: {
+    readonly container: "mp4";
+    readonly codec: "h264";
+    readonly pixelFormat: "yuv420p";
+  };
+};
+
 export type TransformMediaNeed = {
   readonly media: import("@hypit/media").SynchronizedMedia;
   readonly program: MediaTransformProgram;
@@ -84,6 +95,11 @@ export type ExtractFrameNeed = {
   readonly sourceFrameCount: number;
   readonly at: FrameExtractionRequest["at"];
   readonly output: FrameExtractionRequest["output"];
+};
+
+export type RenderStillVideoNeed = {
+  readonly source: BlobRef;
+  readonly request: StillVideoRequest;
 };
 
 export type NormalizeMediaNeed = {

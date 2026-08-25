@@ -6,6 +6,7 @@ export {
   executeNormalizeMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
+  executeRenderStillVideo,
   executeTransformMedia,
 } from "./execute.js";
 export { parseMediaInspection } from "./probe.js";

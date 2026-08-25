@@ -1,0 +1,17 @@
+{
+  "name": "@hypit/temporal-markup",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/narrative": "workspace:*",
+    "@hypit/semantic-track": "workspace:*",
+    "@hypit/temporal": "workspace:*"
+  }
+}

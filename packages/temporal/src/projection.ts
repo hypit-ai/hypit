@@ -5,42 +5,88 @@ import { projectSemanticProgramSpace } from "@hypit/semantic-track";
 import type { SemanticTrack } from "@hypit/semantic-track";
 
 import { locateMoment, locateProgram, locateSegment, locateSelection } from "./location.js";
-import {
-  add,
-  compare,
-  durationInFrames,
-  maximum,
-  minimum,
-  quantizeBoundary,
-  rational,
-} from "./rational.js";
+import { add, compare, durationInFrames, quantizeBoundary, rational } from "./rational.js";
 import type { Rational } from "./rational.js";
 import type {
-  FrameSpan,
   LocatedMoment,
   LocatedProgram,
   LocatedSegment,
   LocatedSelection,
-  ProjectedPoint,
+  ProjectedInstant,
   ProjectedWindow,
+  TemporalInstantExpression,
+  TemporalInstant,
+  TemporalInstantSpec,
   TemporalSource,
-  TemporalPointSpec,
+  TemporalWindow,
   TemporalWindowSpec,
-  TemporalPointExpression,
-  TemporalWindowProjection,
   WindowRelation,
 } from "./types.js";
 
-type PointEnvironment = {
+export type TemporalConsumption = {
+  readonly subjectId: string;
+  readonly space?: ProgramSpace;
+};
+
+/** Verify the public identity carried across a Temporal consumer boundary. */
+export function assertTemporalInstantFor(
+  instant: TemporalInstant,
+  expected: TemporalConsumption,
+): void {
+  if (!expected.subjectId || instant.subjectId !== expected.subjectId) {
+    throw new Error(`Temporal Instant subject ${instant.subjectId} does not match ${expected.subjectId}.`);
+  }
+  if (!instant.source.spaceId || !instant.source.narrativeId) {
+    throw new Error("Temporal Instant has no ProgramSpace identity.");
+  }
+  if (!Number.isSafeInteger(instant.frame) || instant.frame < 0) {
+    throw new Error("Temporal Instant frame is invalid.");
+  }
+  if (expected.space !== undefined) {
+    assertProgramSpaceIdentity(expected.space);
+    if (instant.source.spaceId !== expected.space.id
+      || instant.source.narrativeId !== expected.space.narrativeId) {
+      throw new Error("Temporal Instant belongs to a different ProgramSpace or Narrative.");
+    }
+    if (instant.frame > programSpaceFrameCount(expected.space)) {
+      throw new Error("Temporal Instant falls outside its ProgramSpace.");
+    }
+  }
+}
+
+/** Verify both endpoint provenance and the materialized span consumed by a domain program. */
+export function assertTemporalWindowFor(
+  window: TemporalWindow,
+  expected: TemporalConsumption,
+): void {
+  if (window.subjectId !== expected.subjectId
+    || window.start.subjectId !== expected.subjectId
+    || window.end.subjectId !== expected.subjectId) {
+    throw new Error(`Temporal Window subject ${window.subjectId} does not match ${expected.subjectId}.`);
+  }
+  assertTemporalInstantFor(window.start, expected);
+  assertTemporalInstantFor(window.end, expected);
+  if (window.start.source.spaceId !== window.end.source.spaceId
+    || window.start.source.narrativeId !== window.end.source.narrativeId) {
+    throw new Error("Temporal Window endpoints belong to different ProgramSpaces or Narratives.");
+  }
+  if (window.span.startFrame !== window.start.frame
+    || window.span.endFrameExclusive !== window.end.frame
+    || window.span.endFrameExclusive <= window.span.startFrame) {
+    throw new Error("Temporal Window span disagrees with its endpoints.");
+  }
+}
+
+type InstantEnvironment = {
   readonly program: LocatedProgram;
   readonly selection?: LocatedSelection;
   readonly moment?: LocatedMoment;
   readonly segment?: LocatedSegment;
 };
 
-function evaluatePoint(
-  expression: TemporalPointExpression,
-  environment: PointEnvironment,
+function evaluateInstant(
+  expression: TemporalInstantExpression,
+  environment: InstantEnvironment,
   space: ProgramSpace,
 ): Rational {
   if (expression.ref === "absolute") return durationInFrames(expression.at, space);
@@ -79,48 +125,22 @@ function evaluatePoint(
     : add(rational(BigInt(base)), durationInFrames(expression.offset, space));
 }
 
-export function projectTemporalWindow(
-  projection: TemporalWindowProjection,
-  environment: PointEnvironment,
-  space: ProgramSpace,
-): FrameSpan {
-  assertProgramSpaceIdentity(space);
-  const totalFrames = programSpaceFrameCount(space);
-  const rawStart = evaluatePoint(projection.start, environment, space);
-  const rawEnd = evaluatePoint(projection.end, environment, space);
-  if (compare(rawEnd, rawStart) < 0) throw new Error("Temporal projection produces a reversed raw window.");
-  if (compare(rawEnd, rawStart) === 0) throw new Error("Temporal projection produces a zero raw window.");
-  const lower = rational(0n);
-  const upper = rational(BigInt(totalFrames));
-  const clippedStart = maximum(rawStart, lower);
-  const clippedEnd = minimum(rawEnd, upper);
-  if (compare(clippedEnd, clippedStart) <= 0) {
-    throw new Error("Temporal projection does not intersect ProgramSpace.");
-  }
-  const startFrame = quantizeBoundary(clippedStart);
-  const endFrameExclusive = quantizeBoundary(clippedEnd);
-  if (startFrame < 0 || endFrameExclusive > totalFrames || endFrameExclusive <= startFrame) {
-    throw new Error("Temporal projection is shorter than one frame after quantization.");
-  }
-  return { startFrame, endFrameExclusive };
-}
-
-export function projectTemporalPoint(
-  projection: TemporalPointExpression,
-  environment: PointEnvironment,
+export function projectTemporalInstant(
+  projection: TemporalInstantExpression,
+  environment: InstantEnvironment,
   space: ProgramSpace,
 ): number {
   assertProgramSpaceIdentity(space);
   const totalFrames = programSpaceFrameCount(space);
-  const raw = evaluatePoint(projection, environment, space);
+  const raw = evaluateInstant(projection, environment, space);
   const lower = rational(0n);
   const upper = rational(BigInt(totalFrames));
   if (compare(raw, lower) < 0 || compare(raw, upper) > 0) {
-    throw new Error("Temporal point projection falls outside ProgramSpace.");
+    throw new Error("Temporal Instant projection falls outside ProgramSpace.");
   }
   const frame = quantizeBoundary(raw);
   if (frame < 0 || frame > totalFrames) {
-    throw new Error("Temporal point projection quantizes outside ProgramSpace.");
+    throw new Error("Temporal Instant projection quantizes outside ProgramSpace.");
   }
   return frame;
 }
@@ -130,154 +150,112 @@ function projectedId(itemId: string, sourceId: string): string {
   return `${itemId}::${sourceId}`;
 }
 
-function projectedWindow(
-  spec: TemporalWindowSpec,
-  source: TemporalSource,
-  span: FrameSpan,
-): ProjectedWindow {
-  return {
-    id: projectedId(spec.id, source.id),
-    source: { ...source },
-    projection: structuredClone(spec.projection),
-    span: { ...span },
-  };
-}
-
-function projectedPoint(
-  spec: TemporalPointSpec,
+function projectedInstant(
+  spec: TemporalInstantSpec,
   source: TemporalSource,
   frame: number,
-): ProjectedPoint {
+): ProjectedInstant {
   return {
     id: projectedId(spec.id, source.id),
+    subjectId: spec.subjectId,
     source: { ...source },
     projection: structuredClone(spec.projection),
+    authority: structuredClone(spec.authority),
     frame,
   };
 }
 
-export function projectSelectionPoint(input: {
+export function projectSelectionInstant(input: {
   readonly itemId: string;
+  readonly subjectId: string;
   readonly semantic: SemanticTrack;
   readonly selection: NarrativeSelectionRef;
-  readonly projection: TemporalPointExpression;
-}): ProjectedPoint {
+  readonly projection: TemporalInstantExpression;
+  readonly authority: TemporalInstantSpec["authority"];
+}): ProjectedInstant {
   const space = projectSemanticProgramSpace(input.semantic);
   const program = locateProgram(input.semantic);
   const selection = locateSelection(input.semantic, input.selection);
-  return projectedPoint(
-    { id: input.itemId, projection: input.projection },
-    { kind: "selection", id: selection.id },
-    projectTemporalPoint(input.projection, { program, selection }, space),
+  return projectedInstant(
+    { id: input.itemId, subjectId: input.subjectId, projection: input.projection, authority: input.authority },
+    { spaceId: space.id, narrativeId: space.narrativeId, kind: "selection", id: selection.id },
+    projectTemporalInstant(input.projection, { program, selection }, space),
   );
 }
 
-export function projectMomentPoint(input: {
+export function projectMomentInstant(input: {
   readonly itemId: string;
+  readonly subjectId: string;
   readonly semantic: SemanticTrack;
   readonly moment: NarrativeMomentRef;
-  readonly projection: TemporalPointExpression;
-}): ProjectedPoint {
+  readonly projection: TemporalInstantExpression;
+  readonly authority: TemporalInstantSpec["authority"];
+}): ProjectedInstant {
   const space = projectSemanticProgramSpace(input.semantic);
   const program = locateProgram(input.semantic);
   const moment = locateMoment(input.semantic, input.moment);
-  return projectedPoint(
-    { id: input.itemId, projection: input.projection },
-    { kind: "moment", id: moment.id },
-    projectTemporalPoint(input.projection, { program, moment }, space),
+  return projectedInstant(
+    { id: input.itemId, subjectId: input.subjectId, projection: input.projection, authority: input.authority },
+    { spaceId: space.id, narrativeId: space.narrativeId, kind: "moment", id: moment.id },
+    projectTemporalInstant(input.projection, { program, moment }, space),
   );
 }
 
-export function projectProgramPoint(input: {
+export function projectProgramInstant(input: {
   readonly itemId: string;
+  readonly subjectId: string;
   readonly semantic: SemanticTrack;
-  readonly projection: TemporalPointExpression;
-}): ProjectedPoint {
+  readonly projection: TemporalInstantExpression;
+  readonly authority: TemporalInstantSpec["authority"];
+}): ProjectedInstant {
   const space = projectSemanticProgramSpace(input.semantic);
   const program = locateProgram(input.semantic);
-  return projectedPoint(
-    { id: input.itemId, projection: input.projection },
-    { kind: "program", id: program.id },
-    projectTemporalPoint(input.projection, { program }, space),
+  return projectedInstant(
+    { id: input.itemId, subjectId: input.subjectId, projection: input.projection, authority: input.authority },
+    { spaceId: space.id, narrativeId: space.narrativeId, kind: "program", id: program.id },
+    projectTemporalInstant(input.projection, { program }, space),
   );
 }
 
-export function projectSegmentPoint(input: {
+export function projectSegmentInstant(input: {
   readonly itemId: string;
+  readonly subjectId: string;
   readonly semantic: SemanticTrack;
   readonly segment: NarrativeExcerpt;
-  readonly projection: TemporalPointExpression;
-}): ProjectedPoint {
+  readonly projection: TemporalInstantExpression;
+  readonly authority: TemporalInstantSpec["authority"];
+}): ProjectedInstant {
   const space = projectSemanticProgramSpace(input.semantic);
   const program = locateProgram(input.semantic);
   const segment = locateSegment(input.semantic, input.segment);
-  return projectedPoint(
-    { id: input.itemId, projection: input.projection },
-    { kind: "segment", id: segment.id },
-    projectTemporalPoint(input.projection, { program, segment }, space),
+  return projectedInstant(
+    { id: input.itemId, subjectId: input.subjectId, projection: input.projection, authority: input.authority },
+    { spaceId: space.id, narrativeId: space.narrativeId, kind: "segment", id: segment.id },
+    projectTemporalInstant(input.projection, { program, segment }, space),
   );
 }
 
-export function projectSelectionWindow(input: {
-  readonly itemId: string;
-  readonly semantic: SemanticTrack;
-  readonly selection: NarrativeSelectionRef;
-  readonly projection: TemporalWindowProjection;
-}): ProjectedWindow {
-  const space = projectSemanticProgramSpace(input.semantic);
-  const program = locateProgram(input.semantic);
-  const selection = locateSelection(input.semantic, input.selection);
-  return projectedWindow(
-    { id: input.itemId, projection: input.projection },
-    { kind: "selection", id: selection.id },
-    projectTemporalWindow(input.projection, { program, selection }, space),
-  );
-}
-
-export function projectMomentWindow(input: {
-  readonly itemId: string;
-  readonly semantic: SemanticTrack;
-  readonly moment: NarrativeMomentRef;
-  readonly projection: TemporalWindowProjection;
-}): ProjectedWindow {
-  const space = projectSemanticProgramSpace(input.semantic);
-  const program = locateProgram(input.semantic);
-  const moment = locateMoment(input.semantic, input.moment);
-  return projectedWindow(
-    { id: input.itemId, projection: input.projection },
-    { kind: "moment", id: moment.id },
-    projectTemporalWindow(input.projection, { program, moment }, space),
-  );
-}
-
-export function projectProgramWindow(input: {
-  readonly itemId: string;
-  readonly semantic: SemanticTrack;
-  readonly projection: TemporalWindowProjection;
-}): ProjectedWindow {
-  const space = projectSemanticProgramSpace(input.semantic);
-  const program = locateProgram(input.semantic);
-  return projectedWindow(
-    { id: input.itemId, projection: input.projection },
-    { kind: "program", id: program.id },
-    projectTemporalWindow(input.projection, { program }, space),
-  );
-}
-
-export function projectSegmentWindow(input: {
-  readonly itemId: string;
-  readonly semantic: SemanticTrack;
-  readonly segment: NarrativeExcerpt;
-  readonly projection: TemporalWindowProjection;
-}): ProjectedWindow {
-  const space = projectSemanticProgramSpace(input.semantic);
-  const program = locateProgram(input.semantic);
-  const segment = locateSegment(input.semantic, input.segment);
-  return projectedWindow(
-    { id: input.itemId, projection: input.projection },
-    { kind: "segment", id: segment.id },
-    projectTemporalWindow(input.projection, { program, segment }, space),
-  );
+export function composeTemporalWindow(
+  spec: TemporalWindowSpec,
+  start: ProjectedInstant,
+  end: ProjectedInstant,
+): ProjectedWindow {
+  if (spec.id.length === 0) throw new Error("Temporal Window id must not be empty.");
+  if (!spec.subjectId || start.subjectId !== spec.subjectId || end.subjectId !== spec.subjectId) {
+    throw new Error("Temporal Window endpoints must explicitly name the Window subject.");
+  }
+  if (start.source.spaceId !== end.source.spaceId || start.source.narrativeId !== end.source.narrativeId) {
+    throw new Error("Temporal Window endpoints must belong to one ProgramSpace and Narrative.");
+  }
+  if (end.frame < start.frame) throw new Error("Temporal Window endpoints are reversed.");
+  if (end.frame === start.frame) throw new Error("Temporal Window endpoints produce a zero window.");
+  return {
+    id: spec.id,
+    subjectId: spec.subjectId,
+    start: structuredClone(start),
+    end: structuredClone(end),
+    span: { startFrame: start.frame, endFrameExclusive: end.frame },
+  };
 }
 
 export function assertWindowRelation(

@@ -7,7 +7,7 @@ import type { Affinity, ParsedNarrative, SemanticAnchor } from "./types.js";
 export type ScriptAnchorEditSite = {
   readonly anchorId: string;
   readonly kind: SemanticAnchor["kind"];
-  readonly segmentId: string;
+  readonly segmentId?: string;
   readonly offset: number;
   readonly affinity: Affinity;
   readonly placement: "before" | "after";
@@ -26,17 +26,30 @@ export type ScriptMomentAdjustment = {
 
 type Edit = { readonly range: SourceRange; readonly replacement: string };
 
-/** Script owns the exact source inverse of every one of its 2M + 2N anchors. */
+/** Script owns the exact source inverse of every one of its 2M + 2N + 2 anchors. */
 export function scriptAnchorEditSites(parsed: ParsedNarrative): readonly ScriptAnchorEditSite[] {
   const segments = new Map(parsed.segments.map((segment) => [segment.id, segment] as const));
   const tokens = new Map(parsed.tokens.map((token) => [token.id, token] as const));
   return parsed.semanticIndex.anchors.map((anchor): ScriptAnchorEditSite => {
-    const segment = segments.get(anchor.segmentId);
-    if (segment === undefined) throw new Error(`Semantic Anchor ${anchor.id} names unknown Segment ${anchor.segmentId}.`);
+    if (anchor.kind === "program-start") {
+      return {
+        anchorId: anchor.id, kind: anchor.kind, offset: parsed.sourceRange.start,
+        affinity: "left", placement: "before",
+      };
+    }
+    if (anchor.kind === "program-end") {
+      return {
+        anchorId: anchor.id, kind: anchor.kind, offset: parsed.sourceRange.end,
+        affinity: "right", placement: "after",
+      };
+    }
+    const segmentId = anchor.segmentId;
+    const segment = segments.get(segmentId);
+    if (segment === undefined) throw new Error(`Semantic Anchor ${anchor.id} names unknown Segment ${segmentId}.`);
     if (anchor.kind === "segment-start") {
       const first = parsed.tokens[segment.tokenStart];
       return {
-        anchorId: anchor.id, kind: anchor.kind, segmentId: anchor.segmentId,
+        anchorId: anchor.id, kind: anchor.kind, segmentId,
         offset: first?.range.start ?? segment.contentRange.start,
         affinity: "left", placement: "before",
       };
@@ -44,7 +57,7 @@ export function scriptAnchorEditSites(parsed: ParsedNarrative): readonly ScriptA
     if (anchor.kind === "segment-end") {
       const last = parsed.tokens[segment.tokenEndExclusive - 1];
       return {
-        anchorId: anchor.id, kind: anchor.kind, segmentId: anchor.segmentId,
+        anchorId: anchor.id, kind: anchor.kind, segmentId,
         offset: last?.range.end ?? segment.contentRange.end,
         affinity: "right", placement: "after",
       };
@@ -52,10 +65,10 @@ export function scriptAnchorEditSites(parsed: ParsedNarrative): readonly ScriptA
     const token = anchor.tokenId === undefined ? undefined : tokens.get(anchor.tokenId);
     if (token === undefined) throw new Error(`Semantic Anchor ${anchor.id} names no Script Token.`);
     return anchor.kind === "token-start" ? {
-      anchorId: anchor.id, kind: anchor.kind, segmentId: anchor.segmentId,
+      anchorId: anchor.id, kind: anchor.kind, segmentId,
       offset: token.range.start, affinity: "right", placement: "before",
     } : {
-      anchorId: anchor.id, kind: anchor.kind, segmentId: anchor.segmentId,
+      anchorId: anchor.id, kind: anchor.kind, segmentId,
       offset: token.range.end, affinity: "left", placement: "after",
     };
   });
@@ -123,8 +136,8 @@ export function adjustScriptSelection(input: {
   if (rewritten?.startAnchorId !== start.anchorId || rewritten.endAnchorId !== end.anchorId) {
     throw new Error(`Script refused to move Selection ${selection.id} to the requested Anchors.`);
   }
-  const before = narrativeValue(input.parsed) as unknown as { readonly selections: readonly { readonly id: string }[] };
-  const after = narrativeValue(reparsed) as unknown as { readonly selections: readonly { readonly id: string }[] };
+  const before = narrativeValue(input.parsed, "comparison") as unknown as { readonly selections: readonly { readonly id: string }[] };
+  const after = narrativeValue(reparsed, "comparison") as unknown as { readonly selections: readonly { readonly id: string }[] };
   if (before.selections.length !== after.selections.length
     || before.selections.some((item) => !after.selections.some((candidate) => candidate.id === item.id))) {
     throw new Error("Script Selection adjustment changed authored identities.");

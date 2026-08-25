@@ -10,12 +10,14 @@ import {
 import { sameType, type CanonicalValue } from "@hypit/protocol";
 import { artifactTypes } from "@hypit/artifact";
 import { mediaTypes } from "@hypit/media";
+import { speechTypes } from "@hypit/speech";
 import { programSpaceTypes, type ProgramClock } from "@hypit/program-space";
 import { svsRecipeType, type SvsRecipe } from "@hypit/svs";
 
 import {
   extractAudioFragment,
   extractFrameFragment,
+  stillVideoFragment,
   synchronizedMediaFragment,
   transformMediaFragment,
 } from "./fragment.js";
@@ -223,6 +225,36 @@ export const decodeSynchronizedMediaSurface: StructuredSurfaceHandler = ({ eleme
       range: element.range,
     }],
     fragments: [synchronizedMediaFragment],
+  };
+};
+
+export const decodeStillVideoSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  exactAttributes(element, ["id", "source", "duration", "clock"]);
+  empty(element);
+  const id = text(element, "id");
+  const source = ref(element.attributes.source, `${element.name}.source`, resolveReference);
+  const duration = typedReference(
+    element.attributes.duration,
+    `${element.name}.duration`,
+    speechTypes.duration,
+    resolveReference,
+  );
+  const clock = typedReference(
+    element.attributes.clock,
+    `${element.name}.clock`,
+    programSpaceTypes.clock,
+    resolveReference,
+  );
+  return {
+    records: [],
+    components: [{
+      id,
+      fragment: stillVideoFragment.id,
+      inputs: { source: source.ref, duration: duration.ref, clock: clock.ref },
+      outputs: { video: `${id}.video` },
+      range: element.range,
+    }],
+    fragments: [stillVideoFragment],
   };
 };
 

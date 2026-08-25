@@ -3,12 +3,14 @@ import { readFile } from "node:fs/promises";
 import { artifactDependency, artifactTypes } from "@hypit/artifact";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { fontArtifactSchema, mediaDependency, mediaTypes } from "@hypit/media";
-import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { narrativeDependency } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalWindowAttributeVocabulary } from "@hypit/temporal-markup";
 import { textDependency, textTypes } from "@hypit/text";
 
 const previewImage = (file: string) => ({
@@ -131,8 +133,9 @@ export const commentStickerProgramSchema: ValueSchema = object({
 });
 const appendInputs = [
   { name: "set", type: commentStickerTypes.set }, { name: "header", type: commentStickerTypes.header },
+  { name: "space", type: programSpaceTypes.programSpace },
   { name: "frame", type: spatialTypes.frame }, { name: "style", type: commentStickerTypes.style },
-  { name: "semantic", type: semanticTrackTypes.track }, { name: "spec", type: commentStickerTypes.itemSpec },
+  { name: "spec", type: commentStickerTypes.itemSpec },
   { name: "content", type: commentStickerTypes.content }, { name: "window", type: temporalTypes.window },
 ] as const;
 
@@ -263,7 +266,7 @@ export const commentStickerMarkupSurfaces = [
         ],
       },
     },
-    { name: "track", tag: "Track", mode: "structured", outputs: [textTypes.text, commentStickerTypes.header, commentStickerTypes.itemSpec, temporalTypes.windowSpec, commentStickerTypes.program, compositionTypes.visualTrack],
+    { name: "track", tag: "Track", mode: "structured", outputs: [textTypes.text, commentStickerTypes.header, commentStickerTypes.itemSpec, temporalTypes.instantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window, commentStickerTypes.program, compositionTypes.visualTrack],
       vocabulary: {
         summary: "Places social comment cards over the Program and renders them as one self-contained VisualTrack.",
         appearance: "One rounded card per Sticker, tilted a couple of degrees and lifted on a soft drop shadow, drawn at the place and size its Frame gives it on the Canvas, with a small triangular speech tail hanging from the card's lower edge. Inside the card a circular avatar sits at the left — the supplied image Artifact, or a filled disc bearing the author's initial — and a text column runs beside it from top to bottom: a small faint header line such as `Reply to @viewer's comment`, then the comment copy in large heavy type wrapped to a few lines and ellipsized, then a small faint metadata row pinned to the card's bottom edge when one is supplied. Each card keeps its own window rather than a shared one: it pops in scaling up and unwinding its tilt, rises and rocks gently while it holds, then fades upward as it leaves. Cards are placed by their Frames alone, so several stand on screen at once and none reflows around another.",
@@ -296,20 +299,7 @@ export const commentStickerMarkupSurfaces = [
                 summary: "Supplies the card's metadata row, which is not rendered when it is absent." },
               { name: "avatar", kind: "reference", required: false, accepts: [artifactTypes.blob],
                 summary: "Supplies the image Artifact drawn as the commenter's avatar." },
-              { name: "during", kind: "expression", required: false, values: ["program"], accepts: [narrativeTypes.selection],
-                summary: "Spans the whole Program when written as `program`, or the referenced Selection." },
-              { name: "at", kind: "reference", required: false, accepts: [narrativeTypes.moment],
-                summary: "Opens the card's window at the referenced Moment's cue." },
-              { name: "for", kind: "literal", required: false,
-                summary: "Sets the length of a Moment window as an exact duration such as `48f`, `240ms` or `2.5s`." },
-              { name: "start", kind: "literal", required: false,
-                summary: "Opens the window at `program.start`, `program.end`, `selection.start`, `selection.end` or `moment.cue` with an optional `+` or `-` duration offset, or at a bare duration measured from the start of the Program." },
-              { name: "end", kind: "literal", required: false,
-                summary: "Closes the window at `program.start`, `program.end`, `selection.start`, `selection.end` or `moment.cue` with an optional `+` or `-` duration offset, or at a bare duration measured from the start of the Program." },
-              { name: "selection", kind: "reference", required: false, accepts: [narrativeTypes.selection],
-                summary: "Resolves `selection.start` and `selection.end` in an explicit start and end window." },
-              { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment],
-                summary: "Resolves `moment.cue` in an explicit start and end window." },
+              ...temporalWindowAttributeVocabulary,
             ],
             text: "The card's comment copy, read when `comment` is absent.",
           },
@@ -344,7 +334,7 @@ export const commentStickerManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: commentStickerModuleRef.name,
   version: commentStickerModuleRef.version,
-  dependencies: [artifactDependency, narrativeDependency, semanticTrackDependency, spatialDependency, temporalDependency, mediaDependency, compositionDependency, textDependency],
+  dependencies: [artifactDependency, narrativeDependency, programSpaceDependency, semanticTrackDependency, spatialDependency, temporalDependency, mediaDependency, compositionDependency, textDependency],
   types: [
     { name: commentStickerTypes.header.name },
     { name: commentStickerTypes.style.name },
@@ -376,7 +366,7 @@ export const commentStickerManifest: ModuleManifest = {
       needs: [],
     })),
     { name: commentStickerProducers.finalize.name, inputs: [{ name: "set", type: commentStickerTypes.set }, { name: "header", type: commentStickerTypes.header }], outputs: [{ name: "program", type: commentStickerTypes.program }], needs: [] },
-    { name: commentStickerProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: commentStickerTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+    { name: commentStickerProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: commentStickerTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
   ],
 };
 

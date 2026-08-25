@@ -1,10 +1,12 @@
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { narrativeDependency } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import { blobRefObjectSchema } from "@hypit/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalWindowAttributeVocabulary } from "@hypit/temporal-markup";
 
 export const audioTrackModuleRef = { name: "@hypit/audio-track", version: "1" } as const;
 export const audioTrackTypes = {
@@ -65,13 +67,13 @@ export const audioTrackProgramSchema: ValueSchema = object({
 
 const baseInputs = [
   { name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header },
-  { name: "semantic", type: semanticTrackTypes.track }, { name: "media", type: mediaTypes.synchronized },
+  { name: "space", type: programSpaceTypes.programSpace }, { name: "media", type: mediaTypes.synchronized },
   { name: "spec", type: audioTrackTypes.clipSpec }, { name: "window", type: temporalTypes.window },
 ] as const;
 
 export const audioTrackMarkupSurfaces = [{
     name: "track", tag: "Track", mode: "structured",
-    outputs: [audioTrackTypes.header, audioTrackTypes.clipSpec, temporalTypes.windowSpec, audioTrackTypes.program, compositionTypes.audioTrack],
+    outputs: [audioTrackTypes.header, audioTrackTypes.clipSpec, temporalTypes.instantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window, audioTrackTypes.program, compositionTypes.audioTrack],
     vocabulary: {
       summary: "One Audio Track: explicitly prepared audio Clips placed on a shared SemanticTrack and lowered to one ordinary peer AudioTrack.",
       attributes: [
@@ -87,24 +89,7 @@ export const audioTrackMarkupSurfaces = [{
             { name: "source", kind: "reference", required: true,
               accepts: [mediaTypes.synchronized],
               summary: "Selects the explicitly prepared audio this Clip plays." },
-            { name: "during", kind: "expression", required: false, values: ["program"],
-              accepts: [narrativeTypes.selection],
-              summary: "Spans the whole program when written as `program`, or the window of the referenced Selection." },
-            { name: "at", kind: "reference", required: false,
-              accepts: [narrativeTypes.moment],
-              summary: "Starts the window at the cue of the referenced Moment." },
-            { name: "for", kind: "literal", required: false,
-              summary: "Fixes the exact length of a Moment window, such as `12f`, `250ms` or `1.5s`." },
-            { name: "start", kind: "literal", required: false,
-              summary: "Places the window start at a point expression." },
-            { name: "end", kind: "literal", required: false,
-              summary: "Places the window end at a point expression." },
-            { name: "selection", kind: "reference", required: false,
-              accepts: [narrativeTypes.selection],
-              summary: "Binds the Selection that resolves `selection.start` and `selection.end` in a start/end window." },
-            { name: "moment", kind: "reference", required: false,
-              accepts: [narrativeTypes.moment],
-              summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
+            ...temporalWindowAttributeVocabulary,
             { name: "trim-start", kind: "literal", required: false,
               summary: "Removes an exact duration from the head of the source." },
             { name: "trim-end", kind: "literal", required: false,
@@ -134,7 +119,7 @@ export const audioTrackMarkupSurfaces = [{
 </audio:Track>`,
       notes: [
         "A Track requires at least one Clip, and neither a Track nor a Clip accepts text content.",
-        "A Clip states exactly one window form: `during`, `at` with `for`, or `start` with `end`.",
+        "A Clip states exactly one window form: `during`, `at` with `for`, `until` with `for`, or `start` with `end`.",
         "A point expression is `program.start`, `program.end`, `selection.start`, `selection.end` or `moment.cue`, each optionally offset by `+` or `-` and a duration, or a bare duration read as an absolute position.",
         "`selection` and `moment` cannot be written together.",
         "`min-rate` and `max-rate` are rejected unless `playback` is `stretch`.",
@@ -147,7 +132,7 @@ export const audioTrackManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: audioTrackModuleRef.name,
   version: audioTrackModuleRef.version,
-  dependencies: [mediaDependency, narrativeDependency, semanticTrackDependency, temporalDependency, compositionDependency],
+  dependencies: [mediaDependency, narrativeDependency, programSpaceDependency, semanticTrackDependency, temporalDependency, compositionDependency],
   types: [
     { name: audioTrackTypes.header.name },
     { name: audioTrackTypes.clipSpec.name },
@@ -159,7 +144,7 @@ export const audioTrackManifest: ModuleManifest = {
     { name: audioTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
     { name: audioTrackProducers.appendItem.name, inputs: [...baseInputs], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
     { name: audioTrackProducers.finalize.name, inputs: [{ name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header }], outputs: [{ name: "program", type: audioTrackTypes.program }], needs: [] },
-    { name: audioTrackProducers.render.name, inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: audioTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [] },
+    { name: audioTrackProducers.render.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: audioTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [] },
   ],
 };
 export const audioTrackDependency = { module: audioTrackModuleRef } as const;

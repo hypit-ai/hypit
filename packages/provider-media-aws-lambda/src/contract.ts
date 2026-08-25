@@ -18,6 +18,7 @@ export const mediaLambdaOperations = [
   "transform",
   "extract-audio",
   "extract-frame",
+  "render-still",
   "project-speech-evidence-audio",
   "render-audio",
   "mux",

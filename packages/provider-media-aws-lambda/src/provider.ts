@@ -147,6 +147,12 @@ export function createAwsLambdaMediaProvider(config: CreateAwsLambdaMediaProvide
       },
       {
         lifecycle: "immediate" as const,
+        capability: mediaPipelineCapabilities.renderStill,
+        returns: artifactTypes.blob,
+        handler: operation("render-still"),
+      },
+      {
+        lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.projectSpeechEvidenceAudio,
         returns: speechTypes.evidenceAudio,
         handler: operation("project-speech-evidence-audio"),

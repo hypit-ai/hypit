@@ -63,6 +63,9 @@ export type TimedCaptionCue = {
 };
 
 export type TimedCaptionProjection = {
+  /** Semantic ProgramSpace from which every unit frame was measured. */
+  readonly spaceId: string;
+  readonly narrativeId: string;
   readonly documentId: string;
   readonly cues: readonly TimedCaptionCue[];
 };

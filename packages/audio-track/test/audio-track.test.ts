@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
+import { projectMomentWindow, projectProgramWindow, projectSelectionWindow } from "../../../test/temporal-fixture.js";
+import type { TemporalWindowProjection } from "../../../test/temporal-fixture.js";
 
 import {
   audioTrackManifest,
@@ -30,9 +32,8 @@ import { narrativeManifest } from "@hypit/narrative";
 import { compileAudioProgramPlan } from "@hypit/media-pipeline";
 import { programSpaceDependency, programSpaceManifest, programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
 import type { ModuleManifest } from "@hypit/protocol";
-import { semanticTrackDependency, semanticTrackManifest, semanticTrackTypes } from "@hypit/semantic-track";
-import { projectMomentWindow, projectProgramWindow, projectSelectionWindow, temporalProducers } from "@hypit/temporal";
-import type { TemporalWindowProjection } from "@hypit/temporal";
+import { projectSemanticProgramSpace, semanticTrackDependency, semanticTrackManifest, semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
+import { temporalProducers } from "@hypit/temporal";
 import { speechEvidenceManifest } from "@hypit/speech-evidence";
 import { speechManifest } from "@hypit/speech";
 import { spatialManifest } from "@hypit/spatial";
@@ -41,7 +42,7 @@ import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup
 import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
 import { visualIrManifest } from "@hypit/visual-ir";
 
-const space = sealProgramSpace({
+const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
   durationSec: 10,
   frameRate: { numerator: 30, denominator: 1 },
 });
@@ -90,7 +91,7 @@ function appendProgramAudioItem(
   source: SynchronizedMedia, authored: TestAudioClipSpec,
 ): AudioTrackSet {
   const { projection, ...clip } = authored;
-  return appendProjectedAudioItem(set, trackHeader, semanticTrack, source, clip, projectProgramWindow({
+  return appendProjectedAudioItem(set, trackHeader, projectSemanticProgramSpace(semanticTrack), source, clip, projectProgramWindow({
     itemId: clip.id, semantic: semanticTrack, projection,
   }));
 }
@@ -100,7 +101,7 @@ function appendSelectionAudioItem(
   source: SynchronizedMedia, selection: NarrativeSelectionRef, authored: TestAudioClipSpec,
 ): AudioTrackSet {
   const { projection, ...clip } = authored;
-  return appendProjectedAudioItem(set, trackHeader, semanticTrack, source, clip, projectSelectionWindow({
+  return appendProjectedAudioItem(set, trackHeader, projectSemanticProgramSpace(semanticTrack), source, clip, projectSelectionWindow({
     itemId: clip.id, semantic: semanticTrack, selection, projection,
   }));
 }
@@ -110,7 +111,7 @@ function appendMomentAudioItem(
   source: SynchronizedMedia, moment: NarrativeMomentRef, authored: TestAudioClipSpec,
 ): AudioTrackSet {
   const { projection, ...clip } = authored;
-  return appendProjectedAudioItem(set, trackHeader, semanticTrack, source, clip, projectMomentWindow({
+  return appendProjectedAudioItem(set, trackHeader, projectSemanticProgramSpace(semanticTrack), source, clip, projectMomentWindow({
     itemId: clip.id, semantic: semanticTrack, moment, projection,
   }));
 }
@@ -188,11 +189,13 @@ test("trim and fades quantize once into the same sample domain", () => {
 
 test("Selection and Moment each place one independent item", () => {
   const selection: NarrativeSelectionRef = {
+    narrativeId: "test-narrative",
     id: "mentions",
     startAnchorId: "a",
     endAnchorId: "b",
   };
   const moment: NarrativeMomentRef = {
+    narrativeId: "test-narrative",
     id: "hits",
     anchorId: "c",
   };
@@ -218,6 +221,7 @@ test("one Track with overlaps and two peer Tracks compile to the same determinis
   const combined = {
     kind: "audio" as const,
     id: "combined",
+    programSpaceId: space.id,
     clips: [
       { ...first.clips[0]!, id: "a" },
       { ...second.clips[0]!, id: "b" },
@@ -242,12 +246,12 @@ test("one Track with overlaps and two peer Tracks compile to the same determinis
 
 test("dynamic Fragment keeps every material and temporal dependency as an explicit input", () => {
   const fragment = createAudioTrackFragment([
-    { kind: "program", mediaName: "music", specName: "music-spec", windowSpecName: "music-window-spec" },
-    { kind: "selection", mediaName: "voice", specName: "voice-spec", sourceName: "selection", windowSpecName: "voice-window-spec" },
-    { kind: "moment", mediaName: "impact", specName: "impact-spec", sourceName: "moment", windowSpecName: "impact-window-spec" },
+    { mediaName: "music", specName: "music-spec", windowName: "music-window" },
+    { mediaName: "voice", specName: "voice-spec", windowName: "voice-window" },
+    { mediaName: "impact", specName: "impact-spec", windowName: "impact-window" },
   ]);
   assert.deepEqual(fragment.inputs.map((input) => input.name), [
-    "header", "impact", "impact-spec", "impact-window-spec", "moment", "music", "music-spec", "music-window-spec", "selection", "semantic", "voice", "voice-spec", "voice-window-spec",
+    "header", "impact", "impact-spec", "impact-window", "music", "music-spec", "music-window", "semantic", "voice", "voice-spec", "voice-window",
   ]);
   assert.equal(fragment.exports[1]?.name, "track");
 });
@@ -332,7 +336,10 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     audioTrackProducers.createSet.name,
     audioTrackProducers.appendItem.name,
     audioTrackProducers.finalize.name,
-    temporalProducers.projectProgram.name,
+    temporalProducers.projectProgramInstant.name,
+    temporalProducers.projectProgramInstant.name,
+    temporalProducers.composeWindow.name,
+    semanticTrackProducers.projectProgramSpace.name,
     audioTrackProducers.render.name,
   ].sort());
 });

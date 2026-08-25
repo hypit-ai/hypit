@@ -5,8 +5,26 @@ const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (
   fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>,
 ): ValueSchema => ({ kind: "object", fields });
+const semanticAnchor: ValueSchema = { kind: "oneOf", variants: [
+  object({
+    id: { schema: { kind: "literal", value: "program:start" } },
+    kind: { schema: { kind: "literal", value: "program-start" } },
+  }),
+  object({
+    id: { schema: string }, kind: { schema: { kind: "string", enum: ["segment-start", "segment-end"] } },
+    segmentId: { schema: string },
+  }),
+  object({
+    id: { schema: string }, kind: { schema: { kind: "string", enum: ["token-start", "token-end"] } },
+    segmentId: { schema: string }, tokenId: { schema: string },
+  }),
+  object({
+    id: { schema: { kind: "literal", value: "program:end" } },
+    kind: { schema: { kind: "literal", value: "program-end" } },
+  }),
+] };
 export const narrativeSchema: ValueSchema = object({
-
+  id: { schema: string },
   segments: { schema: { kind: "array", minItems: 1, items: object({
     id: { schema: string }, startAnchorId: { schema: string },
     endAnchorId: { schema: string }, tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer },
@@ -28,16 +46,12 @@ export const narrativeSchema: ValueSchema = object({
   }) } },
   semanticIndex: { schema: object({
 
-    anchors: { schema: { kind: "array", minItems: 2, items: object({
-      id: { schema: string },
-      kind: { schema: { kind: "string", enum: ["segment-start", "token-start", "token-end", "segment-end"] } },
-      segmentId: { schema: string }, tokenId: { schema: string, optional: true },
-    }) } },
+    anchors: { schema: { kind: "array", minItems: 2, items: semanticAnchor } },
   }) },
 });
 
 export const narrativeExcerptSchema: ValueSchema = object({
-
+  narrativeId: { schema: string },
   kind: { schema: { kind: "literal", value: "segment" } }, id: { schema: string },
   tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer },
 });
@@ -57,17 +71,19 @@ const captionAlignmentUnit = object({
 });
 const captionCueBreak = object({ afterUnitId: { schema: string } });
 export const captionDocumentSchema: ValueSchema = object({
-
+  narrativeId: { schema: string },
   id: { schema: string },
   units: { schema: { kind: "array", minItems: 1, items: captionAlignmentUnit } },
   words: { schema: { kind: "array", minItems: 1, items: captionDisplayWord } },
   cueBreaks: { schema: { kind: "array", items: captionCueBreak } },
 });
 export const narrativeMomentSchema: ValueSchema = object({
+  narrativeId: { schema: string },
   id: { schema: string },
   anchorId: { schema: string },
 });
 export const narrativeSelectionSchema: ValueSchema = object({
+  narrativeId: { schema: string },
   id: { schema: string },
   startAnchorId: { schema: string }, endAnchorId: { schema: string },
 });

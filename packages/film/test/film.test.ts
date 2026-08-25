@@ -1,7 +1,7 @@
 import { compositionComponent, spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
 import { registerTypeValidatorFacets } from "@hypit/component-kit";
 import { programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
-import { projectSemanticProgramSpace, semanticTrackTypes } from "@hypit/semantic-track";
+import { projectSemanticProgramSpace, semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import type { SemanticTrack } from "@hypit/semantic-track";
 import { compositionTypes, sealAudioTrack, sealVisualTrack } from "@hypit/composition";
 import type { Composition, Track } from "@hypit/composition";
@@ -35,7 +35,7 @@ import { renderTypographyTrack, sealTypographyTrackProgram, stillTextMotion, typ
 import type { TextStyle } from "@hypit/typography-track";
 import { admitRecord, TypeValidatorRegistry } from "@hypit/validation";
 
-const space = sealProgramSpace({
+const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
   durationSec: 4,
   frameRate: { numerator: 30, denominator: 1 },
 });
@@ -102,7 +102,7 @@ const textProgram = sealTypographyTrackProgram({
     motion: stillTextMotion(),
   }],
 });
-const background = sealVisualTrack({
+const background = sealVisualTrack({ programSpaceId: "test-space",
   visualIr: "hypit.visual-ir@1",
   id: "background-track",
   presents: [{
@@ -112,7 +112,7 @@ const background = sealVisualTrack({
     elements: [{ id: "root", kind: "box", order: 0, style: [{ name: "background-color", value: "#223344" }] }],
   }],
 });
-const audio = sealAudioTrack({
+const audio = sealAudioTrack({ programSpaceId: "test-space",
   id: "empty-audio-track",
   clips: [],
 });
@@ -213,7 +213,10 @@ function producerModules(target: string): string[] {
 }
 
 test("Film stops at Composition and Hyperframes remains an ordinary downstream Fragment", () => {
-  assert.deepEqual(producerNames("title.track"), [typographyTrackProducers.render.name]);
+  assert.deepEqual(producerNames("title.track"), [
+    typographyTrackProducers.render.name,
+    semanticTrackProducers.projectProgramSpace.name,
+  ]);
   assert.equal(producerModules("main.composition").includes(hyperframesProducers.compile.module.name), false);
   assert.deepEqual(producerNames("main.composition").filter((name) => name.startsWith("append-")).sort(), [
     filmProducers.appendAudioTrack.name,
@@ -228,9 +231,13 @@ test("Film stops at Composition and Hyperframes remains an ordinary downstream F
 
 test("the Driver folds peer Tracks, then independently compiles the Composition", async () => {
   const registry = new ProducerRegistry();
+  registry.registerProducer(semanticTrackProducers.projectProgramSpace, ({ inputs }) => ({
+    outputs: { space: stored(projectSemanticProgramSpace(inline(inputs.track) as SemanticTrack)) },
+    needs: {},
+  }));
   registry.registerProducer(typographyTrackProducers.render, ({ inputs }) => ({
     outputs: { track: stored(renderTypographyTrack(
-      projectSemanticProgramSpace(inline(inputs.semantic) as SemanticTrack),
+      inline(inputs.space) as typeof space,
       inline(inputs.program) as typeof textProgram,
     )) },
     needs: {},
@@ -242,7 +249,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
   registry.registerProducer(filmProducers.appendVisualTrack, ({ inputs }) => ({
     outputs: { set: stored(appendFilmVisualTrack(
       inline(inputs.set) as never,
-      projectSemanticProgramSpace(inline(inputs.semantic) as SemanticTrack),
+      inline(inputs.space) as typeof space,
       inline(inputs.track) as never,
     )) },
     needs: {},
@@ -250,7 +257,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
   registry.registerProducer(filmProducers.appendAudioTrack, ({ inputs }) => ({
     outputs: { set: stored(appendFilmAudioTrack(
       inline(inputs.set) as never,
-      projectSemanticProgramSpace(inline(inputs.semantic) as SemanticTrack),
+      inline(inputs.space) as typeof space,
       inline(inputs.track) as never,
     )) },
     needs: {},
@@ -259,7 +266,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
     outputs: { composition: stored(compileFilmComposition(
       inline(inputs.program) as never,
       inline(inputs.canvas) as typeof canvas,
-      projectSemanticProgramSpace(inline(inputs.semantic) as SemanticTrack),
+      inline(inputs.space) as typeof space,
       inline(inputs.set) as never,
     )) },
     needs: {},
@@ -284,6 +291,6 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
 
 test("Film rejects duplicate Track ids before Composition", () => {
   const set = appendFilmVisualTrack(createFilmTrackSet(), space, background);
-  const duplicate = sealVisualTrack({ ...background });
+  const duplicate = sealVisualTrack({...background });
   assert.throws(() => appendFilmVisualTrack(set, space, duplicate), /already contains Track id/u);
 });

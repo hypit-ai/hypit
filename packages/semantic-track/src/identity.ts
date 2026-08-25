@@ -9,13 +9,18 @@ export function sealSemanticTrack(value: SemanticTrack): SemanticTrack {
 }
 
 export function assertSemanticTrackIdentity(track: SemanticTrack): void {
-  if (!track.id.trim() || track.items.length === 0) throw new Error("SemanticTrack must contain at least one item.");
+  if (!track.id.trim() || !track.narrativeId.trim() || track.items.length === 0) {
+    throw new Error("SemanticTrack must have identities and contain at least one item.");
+  }
   const segmentIds = new Set<string>();
   const tokenIds = new Set<string>();
   const anchorIds = new Set<string>();
   let frameRate: SemanticTrack["items"][number]["take"]["media"]["timeline"]["frameRate"] | undefined;
   for (const item of track.items) {
     assertSemanticTakeIdentity(item.take);
+    if (item.take.narrativeId !== track.narrativeId) {
+      throw new Error(`SemanticTrack ${track.id} mixes Narrative ${item.take.narrativeId} into ${track.narrativeId}.`);
+    }
     const rate = item.take.media.timeline.frameRate;
     if (frameRate === undefined) frameRate = rate;
     else if (frameRate.numerator !== rate.numerator || frameRate.denominator !== rate.denominator) {
@@ -29,6 +34,9 @@ export function assertSemanticTrackIdentity(track: SemanticTrack): void {
       tokenIds.add(token.tokenId);
     }
     for (const anchor of item.take.anchors) {
+      if (anchor.identity === "program:start" || anchor.identity === "program:end") {
+        throw new Error(`SemanticTake cannot declare reserved Program Anchor ${anchor.identity}.`);
+      }
       if (anchorIds.has(anchor.identity)) throw new Error(`SemanticTrack repeats Anchor ${anchor.identity}.`);
       anchorIds.add(anchor.identity);
     }

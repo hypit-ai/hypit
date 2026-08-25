@@ -17,3 +17,8 @@ to complete alignment units before timing; a Selection that cuts through an N:M 
 Script-native word attributes are resolved separately as local word Style runs and do not create
 another timing source. They are part of the common Caption contract for structural Caption families;
 `@hypit/caption-fine` deliberately rejects them because Fine requires one uniform token rule per Cue.
+
+`TimedCaptionProjection` is intentionally not a `TemporalWindow` collection. Cue timing is a
+read-only projection of token evidence, not an author-controlled placement window. It nevertheless
+carries the exact `spaceId`, `narrativeId` and `documentId`, so another SemanticTrack or Script cannot
+be substituted silently.

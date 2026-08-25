@@ -5,7 +5,10 @@ export type MediaToolchainState =
   | { readonly state: "down" | "mismatch"; readonly detail: string };
 
 const REQUIRED_ENCODERS = ["aac", "libx264", "pcm_s16le"] as const;
-const REQUIRED_FILTERS = ["aformat", "amix", "aresample", "asetpts", "atempo", "atrim", "scale", "setsar"] as const;
+const REQUIRED_FILTERS = [
+  "aformat", "amix", "aresample", "asetpts", "atempo", "atrim",
+  "loop", "pad", "scale", "select", "setpts", "setsar", "trim",
+] as const;
 
 function run(executable: string, args: readonly string[]): Promise<{ ok: boolean; output: string }> {
   return new Promise((resolve) => {

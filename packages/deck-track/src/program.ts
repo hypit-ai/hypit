@@ -16,7 +16,8 @@ import { verifyText } from "@hypit/text";
 import type { Text } from "@hypit/text";
 import { assertSpatialFrame } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
-import type { TemporalPoint } from "@hypit/temporal";
+import { assertTemporalInstantFor } from "@hypit/temporal";
+import type { TemporalInstant } from "@hypit/temporal";
 
 import type {
   DeckCardTone,
@@ -228,11 +229,13 @@ function appendDepthStackCardAtFrame(
 
 export function appendDepthStackCard(
   set: DepthStackCardSet,
+  space: ProgramSpace,
   material: DepthStackCardSet["cards"][number]["material"],
   label: DepthStackCardLabel,
   spec: DepthStackCardSpec,
-  activation: TemporalPoint,
+  activation: TemporalInstant,
 ): DepthStackCardSet {
+  assertTemporalInstantFor(activation, { subjectId: spec.id, space });
   return appendDepthStackCardAtFrame(set, material, label, spec, activation.frame);
 }
 
@@ -269,9 +272,10 @@ export function finalizeDepthStack(
   header: DepthStackHeader,
   frame: SpatialFrame,
   spec: DepthStackSpec,
-  terminal: TemporalPoint,
+  terminal: TemporalInstant,
   space: ProgramSpace,
 ): DepthStackProgram {
+  assertTemporalInstantFor(terminal, { subjectId: header.id, space });
   return finalizeDepthStackAtFrame(set, header, frame, spec, terminal.frame, space);
 }
 

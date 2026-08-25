@@ -15,7 +15,7 @@ function turnForRegion(parsed: ParsedNarrative, region: ParsedCaptionRegion): Pa
   return turn;
 }
 
-function projectCaption(parsed: ParsedNarrative, id: string): CaptionDocument {
+function projectCaption(parsed: ParsedNarrative, id: string, narrativeId: string): CaptionDocument {
   const units: CaptionAlignmentUnit[] = [];
   const words: CaptionDisplayWord[] = [];
   for (const region of parsed.captionProjection.regions) {
@@ -89,15 +89,15 @@ function projectCaption(parsed: ParsedNarrative, id: string): CaptionDocument {
     }
     return { afterUnitId: previous.id };
   });
-  return { id, units, words, cueBreaks };
+  return { narrativeId, id, units, words, cueBreaks };
 }
 
-export function captionDocument(parsed: ParsedNarrative, id: string): CaptionDocument {
-  return projectCaption(parsed, id);
+export function captionDocument(parsed: ParsedNarrative, id: string, narrativeId: string): CaptionDocument {
+  return projectCaption(parsed, id, narrativeId);
 }
 
-export function captionDocumentValue(parsed: ParsedNarrative, id: string): CanonicalValue {
-  return canonicalize(captionDocument(parsed, id));
+export function captionDocumentValue(parsed: ParsedNarrative, id: string, narrativeId: string): CanonicalValue {
+  return canonicalize(captionDocument(parsed, id, narrativeId));
 }
 
 function segmentSerializations(segment: ParsedNarrative["segments"][number]): {
@@ -131,9 +131,11 @@ function segmentSerializations(segment: ParsedNarrative["segments"][number]): {
 export function narrativeSegmentExcerptValue(
   parsed: ParsedNarrative,
   segment: ParsedNarrative["segments"][number],
+  narrativeId: string,
 ): CanonicalValue {
   return canonicalize({
     kind: "segment",
+    narrativeId,
     id: segment.id,
     tokenStart: segment.tokenStart,
     tokenEndExclusive: segment.tokenEndExclusive,
@@ -148,20 +150,22 @@ export function narrativeSpeechTextValue(segment: ParsedNarrative["segments"][nu
   return sealText(segmentSerializations(segment).speech) as unknown as CanonicalValue;
 }
 
-export function narrativeSelectionValue(selection: ParsedNarrative["selections"][number]): CanonicalValue {
+export function narrativeSelectionValue(selection: ParsedNarrative["selections"][number], narrativeId: string): CanonicalValue {
   return canonicalize({
+    narrativeId,
     id: selection.id,
     startAnchorId: selection.open.boundary.anchorId,
     endAnchorId: selection.close.boundary.anchorId,
   });
 }
 
-export function narrativeMomentValue(moment: ParsedNarrative["moments"][number]): CanonicalValue {
-  return canonicalize({ id: moment.id, anchorId: moment.boundary.anchorId });
+export function narrativeMomentValue(moment: ParsedNarrative["moments"][number], narrativeId: string): CanonicalValue {
+  return canonicalize({ narrativeId, id: moment.id, anchorId: moment.boundary.anchorId });
 }
 
-export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
+export function narrativeValue(parsed: ParsedNarrative, id: string): CanonicalValue {
   return canonicalize({
+    id,
     segments: parsed.segments.map((segment) => ({
       id: segment.id,
       startAnchorId: segment.startAnchorId,
@@ -194,8 +198,8 @@ export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
       anchors: parsed.semanticIndex.anchors.map((anchor) => ({
         id: anchor.id,
         kind: anchor.kind,
-        segmentId: anchor.segmentId,
-        ...(anchor.tokenId === undefined ? {} : { tokenId: anchor.tokenId }),
+        ...("segmentId" in anchor ? { segmentId: anchor.segmentId } : {}),
+        ...("tokenId" in anchor && anchor.tokenId !== undefined ? { tokenId: anchor.tokenId } : {}),
       })),
     },
   });

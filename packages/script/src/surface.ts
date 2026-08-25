@@ -80,13 +80,13 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
       {
         id: rawId,
         type: narrativeType,
-        value: { kind: "inline", value: narrativeValue(parsed) },
+        value: { kind: "inline", value: narrativeValue(parsed, rawId) },
         range: { start: input.openingStart, end: close.end },
       },
       ...parsed.segments.map((segment) => ({
         id: `${rawId}.segment.${segment.id}`,
         type: narrativeExcerptType,
-        value: { kind: "inline" as const, value: narrativeSegmentExcerptValue(parsed, segment) },
+        value: { kind: "inline" as const, value: narrativeSegmentExcerptValue(parsed, segment, rawId) },
         range: segment.range,
       })),
       ...parsed.segments.flatMap((segment) => [
@@ -106,13 +106,13 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
       {
         id: captionId,
         type: captionDocumentType,
-        value: { kind: "inline" as const, value: captionDocumentValue(parsed, captionId) },
+        value: { kind: "inline" as const, value: captionDocumentValue(parsed, captionId, rawId) },
         range: { start: input.openingStart, end: close.end },
       },
       ...parsed.selections.map((selection) => ({
         id: `${rawId}.selection.${selection.id}`,
         type: narrativeSelectionType,
-        value: { kind: "inline" as const, value: narrativeSelectionValue(selection) },
+        value: { kind: "inline" as const, value: narrativeSelectionValue(selection, rawId) },
         range: {
           start: selection.open.range.start,
           end: selection.close.range.end,
@@ -121,11 +121,12 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
       ...parsed.moments.map((moment) => ({
         id: `${rawId}.moment.${moment.id}`,
         type: narrativeMomentType,
-        value: { kind: "inline" as const, value: narrativeMomentValue(moment) },
+        value: { kind: "inline" as const, value: narrativeMomentValue(moment, rawId) },
         range: moment.range,
       })),
     ],
     components: [],
     fragments: [],
+    identities: [{ namespace: narrativeType, id: rawId }],
   };
 }

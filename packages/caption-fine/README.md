@@ -21,6 +21,10 @@ Caption first projects authored Script units onto semantic Word timing. Fine the
 explicit visible Schedule and renders that Schedule. Lead and tail never change the semantic Word
 times used by Karaoke.
 
+The Fine Schedule preserves the Caption projection's ProgramSpace, Narrative and document identities.
+The renderer rejects any mismatched Space or document. Studio may expose lead, tail and handoff as
+ordinary parameter edits, but Cue rectangles remain read-only semantic evidence.
+
 Cue grouping is authored by Script segments, turns, Style changes and `||`; it is not delegated to
 an LLM. Fine rejects word-specific Style runs. A caption whose Cue contains structural roles or
 relationships—an emphasis group with another font and layout, alternating full-frame inversion, or

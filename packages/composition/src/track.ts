@@ -358,6 +358,8 @@ export type VisualPresent = {
 
 export type VisualTrack = {
   readonly kind: "visual";
+  /** ProgramSpace identity this terminal placement was rendered against. */
+  readonly programSpaceId: string;
   /** The one terminal visual language shared by official video components. */
   readonly visualIr: typeof VISUAL_IR_V1;
   readonly id: string;
@@ -394,6 +396,8 @@ export type AudioClip = {
 
 export type AudioTrack = {
   readonly kind: "audio";
+  /** ProgramSpace identity this terminal placement was rendered against. */
+  readonly programSpaceId: string;
   readonly id: string;
   readonly clips: readonly AudioClip[];
 };
@@ -1195,6 +1199,7 @@ function normalizeElement(element: VisualElement): VisualElement {
 function visualTrackContent(value: Omit<VisualTrack, "kind">): VisualTrack {
   return {
     kind: "visual",
+    programSpaceId: value.programSpaceId,
     visualIr: value.visualIr,
     id: value.id,
     presents: [...value.presents]
@@ -1215,6 +1220,7 @@ function visualTrackContent(value: Omit<VisualTrack, "kind">): VisualTrack {
 function audioTrackContent(value: Omit<AudioTrack, "kind">): AudioTrack {
   return {
     kind: "audio",
+    programSpaceId: value.programSpaceId,
     id: value.id,
     clips: [...value.clips]
       .map((clip) => ({
@@ -1245,6 +1251,10 @@ export function assertVisualTrackIdentity(track: VisualTrack, programSpace?: Pro
   if (programSpace !== undefined) assertProgramSpaceIdentity(programSpace);
   if (track.kind !== "visual") throw new Error("VisualTrack kind is invalid.");
   if (track.visualIr !== VISUAL_IR_V1) throw new Error("Unsupported VisualTrack visual IR.");
+  assertNonEmpty(track.programSpaceId, "VisualTrack programSpaceId");
+  if (programSpace !== undefined && track.programSpaceId !== programSpace.id) {
+    throw new Error(`VisualTrack ${track.id} belongs to ProgramSpace ${track.programSpaceId}, not ${programSpace.id}.`);
+  }
   assertNonEmpty(track.id, "VisualTrack id");
   const presentIds = new Set<string>();
   for (const present of track.presents) {
@@ -1257,6 +1267,10 @@ export function assertVisualTrackIdentity(track: VisualTrack, programSpace?: Pro
 export function assertAudioTrackIdentity(track: AudioTrack, programSpace?: ProgramSpace): void {
   if (programSpace !== undefined) assertProgramSpaceIdentity(programSpace);
   if (track.kind !== "audio") throw new Error("AudioTrack kind is invalid.");
+  assertNonEmpty(track.programSpaceId, "AudioTrack programSpaceId");
+  if (programSpace !== undefined && track.programSpaceId !== programSpace.id) {
+    throw new Error(`AudioTrack ${track.id} belongs to ProgramSpace ${track.programSpaceId}, not ${programSpace.id}.`);
+  }
   assertNonEmpty(track.id, "AudioTrack id");
   const totalSamples = programSpace === undefined
     ? Number.MAX_SAFE_INTEGER

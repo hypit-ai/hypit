@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 
-import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { narrativeDependency } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import {
   compositionDependency,
@@ -24,6 +25,7 @@ import { svsRecipeType } from "@hypit/svs";
 import { textDependency, textTypes } from "@hypit/text";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalWindowAttributeVocabulary } from "@hypit/temporal-markup";
 
 const previewImage = (file: string) => ({
   mediaType: "image/png",
@@ -418,7 +420,7 @@ export const typographyTrackMarkupSurfaces = [
         ],
       },
     },
-    { name: "track", tag: "Track", mode: "structured", outputs: [typographyTrackTypes.header, typographyTrackTypes.itemSpec, typographyTrackTypes.plainItemSpec, typographyTrackTypes.motion, typographyTrackTypes.set, typographyTrackTypes.placement, temporalTypes.windowSpec, typographyTrackTypes.program, compositionTypes.visualTrack],
+    { name: "track", tag: "Track", mode: "structured", outputs: [typographyTrackTypes.header, typographyTrackTypes.itemSpec, typographyTrackTypes.plainItemSpec, typographyTrackTypes.motion, typographyTrackTypes.set, typographyTrackTypes.placement, temporalTypes.instantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window, typographyTrackTypes.program, compositionTypes.visualTrack],
       vocabulary: {
         summary: "One Typography Track: independently placed and timed text items on a shared ProgramSpace, lowered to one addressable TypographyTrackProgram and one peer VisualTrack.",
         appearance: "Text alone on an otherwise empty Canvas: the glyphs, plus whatever Paint the Style puts around them — fills, outlines, glows, shadows and rounded, bordered, optionally tailed boxes drawn behind the frame, paragraph, line, run, word or grapheme. Each item holds its own region of the Canvas: a Point item is one unwrapped block that hugs its text and hangs off a single coordinate by its inline and block anchors, an Area item flows and wraps inside a rectangle under its own alignment, columns, clipping and overflow, and a Path item strings the glyphs along a curve, on one side of it, turning with it or standing upright. Items switch on and off at their own frame windows and overlap in the stacking order their Styles declare, so titles, labels and captions can occupy different corners at once and outlast or outlive one another. While an item is on screen it plays its Motion: the whole block translating, scaling, rotating, skewing, fading, blurring, recoloring or wiping open from an edge, and its paragraphs, lines, runs, words or graphemes arriving one behind another in a staggered run.",
@@ -438,13 +440,7 @@ export const typographyTrackMarkupSurfaces = [
               { name: "style", kind: "reference", required: true, accepts: [typographyTrackTypes.style], summary: "Chooses the compiled Style the item is drawn in." },
               { name: "motion", kind: "reference", required: false, accepts: [typographyTrackTypes.motion], summary: "Chooses the Motion the item plays; the Track supplies a still Motion otherwise." },
               { name: "content", kind: "reference", required: false, accepts: [textTypes.text], summary: "Reads an ordinary graph Text as one plain run, which requires the item to be written empty." },
-              { name: "during", kind: "expression", required: false, accepts: [narrativeTypes.selection], summary: "Spans the whole program when written as `program`, or the window of the referenced Selection." },
-              { name: "at", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Starts the window at the cue of the referenced Moment." },
-              { name: "for", kind: "literal", required: false, summary: "Fixes the exact length of a Moment window, such as `12f`, `250ms` or `1.5s`." },
-              { name: "start", kind: "literal", required: false, summary: "Places the window start at a point expression." },
-              { name: "end", kind: "literal", required: false, summary: "Places the window end at a point expression." },
-              { name: "selection", kind: "reference", required: false, accepts: [narrativeTypes.selection], summary: "Binds the Selection that resolves `selection.start` and `selection.end` in a start/end window." },
-              { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
+              ...temporalWindowAttributeVocabulary,
             ],
             children: documentChildren,
             text: "Direct text is the item's whole document, read as one paragraph." },
@@ -456,13 +452,7 @@ export const typographyTrackMarkupSurfaces = [
               { name: "style", kind: "reference", required: true, accepts: [typographyTrackTypes.style], summary: "Chooses the compiled Style the item is drawn in." },
               { name: "motion", kind: "reference", required: false, accepts: [typographyTrackTypes.motion], summary: "Chooses the Motion the item plays; the Track supplies a still Motion otherwise." },
               { name: "content", kind: "reference", required: false, accepts: [textTypes.text], summary: "Reads an ordinary graph Text as one plain run, which requires the item to be written empty." },
-              { name: "during", kind: "expression", required: false, accepts: [narrativeTypes.selection], summary: "Spans the whole program when written as `program`, or the window of the referenced Selection." },
-              { name: "at", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Starts the window at the cue of the referenced Moment." },
-              { name: "for", kind: "literal", required: false, summary: "Fixes the exact length of a Moment window, such as `12f`, `250ms` or `1.5s`." },
-              { name: "start", kind: "literal", required: false, summary: "Places the window start at a point expression." },
-              { name: "end", kind: "literal", required: false, summary: "Places the window end at a point expression." },
-              { name: "selection", kind: "reference", required: false, accepts: [narrativeTypes.selection], summary: "Binds the Selection that resolves `selection.start` and `selection.end` in a start/end window." },
-              { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
+              ...temporalWindowAttributeVocabulary,
             ],
             children: documentChildren,
             text: "Direct text is the item's whole document, read as one paragraph." },
@@ -474,13 +464,7 @@ export const typographyTrackMarkupSurfaces = [
               { name: "style", kind: "reference", required: true, accepts: [typographyTrackTypes.style], summary: "Chooses the compiled Style the item is drawn in." },
               { name: "motion", kind: "reference", required: false, accepts: [typographyTrackTypes.motion], summary: "Chooses the Motion the item plays; the Track supplies a still Motion otherwise." },
               { name: "content", kind: "reference", required: false, accepts: [textTypes.text], summary: "Reads an ordinary graph Text as one plain run, which requires the item to be written empty." },
-              { name: "during", kind: "expression", required: false, accepts: [narrativeTypes.selection], summary: "Spans the whole program when written as `program`, or the window of the referenced Selection." },
-              { name: "at", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Starts the window at the cue of the referenced Moment." },
-              { name: "for", kind: "literal", required: false, summary: "Fixes the exact length of a Moment window, such as `12f`, `250ms` or `1.5s`." },
-              { name: "start", kind: "literal", required: false, summary: "Places the window start at a point expression." },
-              { name: "end", kind: "literal", required: false, summary: "Places the window end at a point expression." },
-              { name: "selection", kind: "reference", required: false, accepts: [narrativeTypes.selection], summary: "Binds the Selection that resolves `selection.start` and `selection.end` in a start/end window." },
-              { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
+              ...temporalWindowAttributeVocabulary,
             ],
             children: documentChildren,
             text: "Direct text is the item's whole document, read as one paragraph." },
@@ -501,7 +485,7 @@ export const typographyTrackMarkupSurfaces = [
 </text:Track>`,
         notes: [
           "A Track requires at least one `<Point>`, `<Area>` or `<Path>` and accepts no text content of its own.",
-          "An item states exactly one window form: `during`, `at` with `for`, or `start` with `end`; `selection` and `moment` bind a start/end window and cannot be written together.",
+          "An item states exactly one window form: `during`, `at` with `for`, `until` with `for`, or `start` with `end`; `selection`, `segment` and `moment` bind a start/end window and cannot be written together.",
           "A point expression is `program.start`, `program.end`, `selection.start`, `selection.end` or `moment.cue`, each optionally offset by `+` or `-` and a duration, or a bare duration read as an absolute position.",
           "An item written without `content` owns its own document: direct text becomes one paragraph, and `<P>` children carry rich runs instead; a document mixes neither `<P>` children with direct text nor direct text with nested elements.",
           "Neither a `<P>` nor a `<Span>` may be empty, and a `style` on either must name a Style Record authored in this Source or imported from another, because its typography and Paint are copied into the document as the item is decoded.",
@@ -546,7 +530,7 @@ export const typographyTrackManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: typographyTrackModuleRef.name,
   version: typographyTrackModuleRef.version,
-  dependencies: [narrativeDependency, semanticTrackDependency, spatialDependency, mediaDependency, compositionDependency, textDependency, temporalDependency],
+  dependencies: [narrativeDependency, programSpaceDependency, semanticTrackDependency, spatialDependency, mediaDependency, compositionDependency, textDependency, temporalDependency],
   types: [
     { name: typographyTrackTypes.style.name },
     { name: typographyTrackTypes.motion.name },
@@ -565,9 +549,9 @@ export const typographyTrackManifest: ModuleManifest = {
     { name: typographyTrackProducers.bindArea.name, inputs: [{ name: "frame", type: spatialTypes.frame }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [] },
     { name: typographyTrackProducers.bindPath.name, inputs: [{ name: "path", type: spatialTypes.path }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [] },
     { name: typographyTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
-    { name: typographyTrackProducers.appendItem.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "semantic", type: semanticTrackTypes.track }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }, { name: "window", type: temporalTypes.window }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
+    { name: typographyTrackProducers.appendItem.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }, { name: "window", type: temporalTypes.window }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
     { name: typographyTrackProducers.finalize.name, inputs: [{ name: "header", type: typographyTrackTypes.header }, { name: "set", type: typographyTrackTypes.set }], outputs: [{ name: "program", type: typographyTrackTypes.program }], needs: [] },
-    { name: typographyTrackProducers.render.name, inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: typographyTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
-    { name: typographyTrackProducers.renderMask.name, inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: typographyTrackTypes.program }, { name: "material", type: mediaTypes.compositableSurface }, { name: "spec", type: typographyTrackTypes.maskSpec }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+    { name: typographyTrackProducers.render.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: typographyTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+    { name: typographyTrackProducers.renderMask.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: typographyTrackTypes.program }, { name: "material", type: mediaTypes.compositableSurface }, { name: "spec", type: typographyTrackTypes.maskSpec }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
   ],
 };

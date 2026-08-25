@@ -1,6 +1,7 @@
 import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 import {
   decodeSynchronizedMediaSurface,
+  decodeStillVideoSurface,
   decodeExtractAudioSurface,
   decodeExtractFrameSurface,
   decodeTransformMediaSurface,
@@ -18,6 +19,10 @@ export const hypitPackage = {
     module: mediaPipelineModuleRef,
     declaration: mediaPipelineMarkupSurfaces.find((item) => item.name === "synchronized-media")!,
     handler: decodeSynchronizedMediaSurface,
+  }), createMarkupSurfaceHostFacet({
+    module: mediaPipelineModuleRef,
+    declaration: mediaPipelineMarkupSurfaces.find((item) => item.name === "still-video")!,
+    handler: decodeStillVideoSurface,
   }), createMarkupSurfaceHostFacet({
     module: mediaPipelineModuleRef,
     declaration: mediaPipelineMarkupSurfaces.find((item) => item.name === "transform-media")!,

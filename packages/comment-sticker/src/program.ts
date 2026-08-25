@@ -17,6 +17,7 @@ import { canonicalize, isDigest } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
+import { assertTemporalWindowFor } from "@hypit/temporal";
 import type { ProjectedWindow } from "@hypit/temporal";
 import { verifyText } from "@hypit/text";
 import type { Text } from "@hypit/text";
@@ -194,6 +195,7 @@ export function assertCommentStickerSet(value: CommentStickerSet): void {
 function realized(
   set: CommentStickerSet,
   header: CommentStickerHeader,
+  space: ProgramSpace,
   frame: SpatialFrame,
   style: CommentStickerStyle,
   spec: CommentStickerItemSpec,
@@ -227,6 +229,7 @@ function realized(
 export function appendProjectedCommentSticker(
   set: CommentStickerSet,
   header: CommentStickerHeader,
+  space: ProgramSpace,
   frame: SpatialFrame,
   style: CommentStickerStyle,
   spec: CommentStickerItemSpec,
@@ -234,7 +237,8 @@ export function appendProjectedCommentSticker(
   window: ProjectedWindow,
   avatar?: BlobRef,
 ): CommentStickerSet {
-  return realized(set, header, frame, style, spec, content, window, avatar);
+  assertTemporalWindowFor(window, { subjectId: spec.id, space });
+  return realized(set, header, space, frame, style, spec, content, window, avatar);
 }
 
 export function assertCommentStickerProgram(value: CommentStickerProgram): void {
@@ -590,6 +594,7 @@ export function renderCommentSticker(canvas: CanvasSpace, space: ProgramSpace, p
   assertProgramSpaceIdentity(space);
   assertCommentStickerProgram(program);
   const track = sealVisualTrack({
+    programSpaceId: space.id,
     visualIr: "hypit.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({

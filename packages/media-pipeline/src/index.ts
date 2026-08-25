@@ -6,6 +6,7 @@ export {
   extractAudioFragment,
   extractFrameFragment,
   synchronizedMediaFragment,
+  stillVideoFragment,
   transformMediaFragment,
 } from "./fragment.js";
 export {
@@ -13,13 +14,13 @@ export {
   sealAudioProgramPlan,
   verifyAudioProgramPlan,
 } from "./audio-plan.js";
-export { mediaPipelineCapabilities, mediaPipelineManifest, mediaPipelineMarkupSurfaces, mediaPipelineModuleRef, mediaPipelineProducers, mediaPipelineTypes, audioProgramPlanSchema, mediaSelectionRequestSchema, audioExtractionRequestSchema, frameExtractionRequestSchema, mediaTransformProgramSchema } from "./manifest.js";
+export { mediaPipelineCapabilities, mediaPipelineManifest, mediaPipelineMarkupSurfaces, mediaPipelineModuleRef, mediaPipelineProducers, mediaPipelineTypes, audioProgramPlanSchema, mediaSelectionRequestSchema, audioExtractionRequestSchema, frameExtractionRequestSchema, stillVideoRequestSchema, mediaTransformProgramSchema } from "./manifest.js";
 export {
   sealMediaSelectionRequest,
   selectMediaStreams,
   verifyMediaSelectionRequest,
 } from "./selection.js";
-export { decodeSynchronizedMediaSurface } from "./surface.js";
+export { decodeSynchronizedMediaSurface, decodeStillVideoSurface } from "./surface.js";
 export {
   decodeExtractAudioSurface,
   decodeExtractFrameSurface,
@@ -29,10 +30,12 @@ export {
   sealAudioExtractionRequest,
   sealFrameExtractionRequest,
   sealMediaTransformProgram,
+  sealStillVideoRequest,
   selectAudioStream,
   selectVideoStream,
   verifyAudioExtractionRequest,
   verifyFrameExtractionRequest,
   verifyMediaTransformProgram,
+  verifyStillVideoRequest,
 } from "./operations.js";
 export type * from "./types.js";

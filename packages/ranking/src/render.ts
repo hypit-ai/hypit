@@ -28,8 +28,16 @@ import {
   assertTierBoardProgram,
   assertTopThreeProgram,
   fitColumnRevealMotion,
-  fitRankingStageMotion,
+  fitRankingEntranceMotion,
 } from "./schedule.js";
+import {
+  directTierItemPose,
+  fromHighTierItemPose,
+  tierBoardGeometry,
+  tierCell,
+  tierStageGeometry,
+} from "./tier.js";
+import type { TierCell, TierItemPose } from "./tier.js";
 import type {
   ColumnItem,
   ColumnProgram,
@@ -212,35 +220,39 @@ function finalTransform(): string {
   return "translate(0px,0px) scale(1)";
 }
 
-function stageTransform(finalX: number, finalY: number, stageX: number, stageY: number, scale: number): string {
-  return `translate(${px(stageX - finalX)},${px(stageY - finalY)}) scale(${scale})`;
-}
-
-function settledItemAnimation(input: {
-  readonly duration: number;
-  readonly appearFrames: number;
-  readonly moveStart: number;
-  readonly moveEnd: number;
-  readonly stageTransform: string;
-  readonly easing: "linear" | "ease-in" | "ease-out" | "ease-in-out";
-}): VisualAnimation {
-  return animation(input.duration, [
-    { atFrame: 0, style: transformStyle(`${input.stageTransform} scale(0.82)`, 0), easing: "ease-out" },
-    { atFrame: input.appearFrames, style: transformStyle(input.stageTransform, 1) },
-    { atFrame: input.moveStart, style: transformStyle(input.stageTransform, 1), easing: input.easing },
-    { atFrame: input.moveEnd, style: transformStyle(finalTransform(), 1) },
-  ]);
-}
-
-function directItemAnimation(duration: number, appearFrames: number): VisualAnimation {
+function directItemAnimation(
+  duration: number,
+  appearFrames: number,
+  easing: "linear" | "ease-in" | "ease-out" | "ease-in-out" = "ease-out",
+): VisualAnimation {
   return animation(duration, [
-    { atFrame: 0, style: transformStyle("translate(0px,8px) scale(0.82)", 0), easing: "ease-out" },
+    { atFrame: 0, style: transformStyle("translate(0px,8px) scale(0.82)", 0), easing },
     { atFrame: appearFrames, style: transformStyle(finalTransform(), 1) },
   ]);
 }
 
+function tierItemStyle(pose: TierItemPose, cell: TierCell): VisualStyleDeclaration[] {
+  return [
+    { name: "filter", value: `blur(${px(pose.blurPx)}) drop-shadow(0 ${px(pose.shadowY)} ${px(pose.shadowBlur)} rgba(0,0,0,${Math.round(pose.shadowOpacity * 1_000_000) / 1_000_000}))` },
+    { name: "opacity", value: Math.round(pose.opacity * 1_000_000) / 1_000_000 },
+    { name: "transform", value: `translate(${px(pose.x - cell.x)},${px(pose.y - cell.y)}) scale(${Math.round(pose.scale * 1_000_000) / 1_000_000}) rotate(${Math.round(pose.rotateDeg * 1_000_000) / 1_000_000}deg)` },
+  ];
+}
+
+function tierItemAnimation(
+  duration: number,
+  cell: TierCell,
+  poseAt: (frame: number) => TierItemPose,
+): VisualAnimation {
+  return animation(duration, Array.from({ length: duration + 1 }, (_, frame) => ({
+    atFrame: frame,
+    easing: "linear" as const,
+    style: tierItemStyle(poseAt(frame), cell),
+  })));
+}
+
 function sealTrack(space: ProgramSpace, id: string, presents: readonly VisualPresent[]): VisualTrack {
-  const value = sealVisualTrack({ visualIr: "hypit.visual-ir@1", id, presents });
+  const value = sealVisualTrack({ programSpaceId: space.id, visualIr: "hypit.visual-ir@1", id, presents });
   assertVisualTrackIdentity(value, space);
   return value;
 }
@@ -248,87 +260,105 @@ function sealTrack(space: ProgramSpace, id: string, presents: readonly VisualPre
 export function renderTierBoard(space: ProgramSpace, program: TierBoardProgram): VisualTrack {
   assertProgramSpaceIdentity(space);
   assertTierBoardProgram(program);
-  const { frame, style, schedule } = program;
+  const { canvas, frame, style, schedule } = program;
+  const geometry = tierBoardGeometry(frame.widthPx, frame.heightPx, style);
+  const stage = tierStageGeometry(canvas.widthPx, canvas.heightPx, style);
   const presents: VisualPresent[] = [];
   const boardElements: VisualElement[] = [absoluteBox({
-    id: "tier-board", order: 0, x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
-    style: boardStyle(style.board),
+    id: "tier-board-root", order: 0,
+    x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
   })];
+  const labelTypography: RankingTextStyle = {
+    fonts: structuredClone(style.fonts),
+    sizePx: geometry.rowHeight * style.labelSizeRatio,
+    weight: style.fonts[0]!.weight,
+    color: style.labelTextColor,
+    lineHeight: style.labelLineHeight,
+  };
   for (const [index, row] of style.rows.entries()) {
-    const y = style.paddingPx + index * (style.rowHeightPx + style.rowGapPx);
+    const root = `tier-row-${row.id}`;
+    const y = index * geometry.rowHeight;
+    const last = index === style.rows.length - 1;
     boardElements.push(absoluteBox({
-      id: `tier-row-${row.id}`, parent: "tier-board", order: boardElements.length,
-      x: style.paddingPx, y, width: frame.widthPx - style.paddingPx * 2, height: style.rowHeightPx,
-      style: [{ name: "background", value: row.color }, { name: "border-radius", value: px(Math.min(12, style.iconRadiusPx)) }],
+      id: root, parent: "tier-board-root", order: boardElements.length,
+      x: 0, y, width: frame.widthPx, height: geometry.rowHeight,
+      style: [
+        { name: "border-top", value: `${px(style.borderWidthPx)} solid ${style.borderColor}` },
+        { name: "border-left", value: `${px(style.borderWidthPx)} solid ${style.borderColor}` },
+        { name: "border-right", value: `${px(style.borderWidthPx)} solid ${style.borderColor}` },
+        ...(last ? [{ name: "border-bottom", value: `${px(style.borderWidthPx)} solid ${style.borderColor}` } satisfies VisualStyleDeclaration] : []),
+        { name: "box-sizing", value: "border-box" },
+      ],
+    }));
+    boardElements.push(absoluteBox({
+      id: `${root}-content`, parent: root, order: boardElements.length,
+      x: geometry.labelWidth, y: 0, width: frame.widthPx - geometry.labelWidth, height: geometry.rowHeight,
+      style: [{ name: "background", value: style.boardColor }],
     }));
     boardElements.push(simpleText({
-      id: `tier-label-${row.id}`, parent: `tier-row-${row.id}`, order: boardElements.length,
-      text: row.label, typography: style.text, x: 0, y: 0, width: style.labelWidthPx, height: style.rowHeightPx,
+      id: `${root}-label`, parent: root, order: boardElements.length,
+      text: row.label, typography: labelTypography, x: 0, y: 0,
+      width: geometry.labelWidth, height: geometry.rowHeight,
+      style: [
+        { name: "background", value: row.color },
+        { name: "border-right", value: `${px(style.borderWidthPx)} solid ${style.borderColor}` },
+        { name: "box-sizing", value: "border-box" },
+      ],
     }));
   }
   presents.push(present({
     id: `${program.id}:board`, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
     stacking: style.boardStackingOrder, tieBreak: `${program.id}:0000:board`, elements: boardElements,
   }));
-  if (program.items.some((item) => item.entry === "stage")) {
-    const size = style.stageSizePx;
-    presents.push(present({
-      id: `${program.id}:stage`, start: schedule.entries[0]!.triggerFrame, end: schedule.terminalFrame,
-      stacking: style.stageStackingOrder, tieBreak: `${program.id}:0001:stage`, elements: [absoluteBox({
-        id: "tier-stage", order: 0,
-        x: frame.xPx + frame.widthPx * style.stagePoint.x - size / 2,
-        y: frame.yPx + frame.heightPx * style.stagePoint.y - size / 2,
-        width: size, height: size,
-        style: [
-          { name: "border", value: `${px(2)} dashed ${style.text.color}` },
-          { name: "border-radius", value: px(style.iconRadiusPx) },
-          { name: "opacity", value: 0.45 },
-        ],
-      })],
-    }));
-  }
+  const entries = new Map(schedule.entries.map((entry) => [entry.itemId, entry]));
   const rowCounts = new Map<string, number>();
   for (const [index, item] of program.items.entries()) {
-    const entry = schedule.entries[index]!;
+    const entry = entries.get(item.id)!;
     const rowIndex = style.rows.findIndex((row) => row.id === item.tier);
-    const cell = rowCounts.get(item.tier) ?? 0;
-    rowCounts.set(item.tier, cell + 1);
-    const x = frame.xPx + style.paddingPx + style.labelWidthPx + cell * (style.iconSizePx + style.cellGapPx);
-    const y = frame.yPx + style.paddingPx + rowIndex * (style.rowHeightPx + style.rowGapPx)
-      + (style.rowHeightPx - style.iconSizePx) / 2;
-    assert(x + style.iconSizePx <= frame.xPx + frame.widthPx - style.paddingPx,
+    const column = rowCounts.get(item.tier) ?? 0;
+    rowCounts.set(item.tier, column + 1);
+    const cell = tierCell(geometry, rowIndex, column);
+    assert(cell.x + cell.size <= frame.widthPx,
       `TierBoard row ${item.tier} cannot fit Item ${item.id}.`);
-    const duration = entry.stage.endFrameExclusive - entry.stage.startFrame;
-    const fitted = fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, item.entry === "stage");
-    const rootAnimation = item.entry === "direct"
-      ? directItemAnimation(duration, fitted.appearFrames)
-      : settledItemAnimation({
-          duration,
-          appearFrames: fitted.appearFrames,
-          moveStart: entry.stage.endFrameExclusive - fitted.moveFrames - entry.triggerFrame,
-          moveEnd: entry.stage.endFrameExclusive - entry.triggerFrame,
-          stageTransform: stageTransform(
-            x, y,
-            frame.xPx + frame.widthPx * style.stagePoint.x - style.iconSizePx / 2,
-            frame.yPx + frame.heightPx * style.stagePoint.y - style.iconSizePx / 2,
-            style.stageSizePx / style.iconSizePx,
-          ),
-          easing: style.motion.easing,
-        });
+    const radius = Math.round(geometry.rowHeight * style.iconRadiusRatio);
+    const absoluteCell: TierCell = {
+      x: frame.xPx + cell.x,
+      y: frame.yPx + cell.y,
+      size: cell.size,
+    };
     const root = `tier-item-${item.id}`;
     const itemElements = (animationValue?: VisualAnimation): VisualElement[] => [
-      absoluteBox({ id: root, order: 0, x, y, width: style.iconSizePx, height: style.iconSizePx,
-        ...(animationValue === undefined ? {} : { animation: animationValue }) }),
-      iconElement({ id: "icon", parent: root, order: 1, artifact: item.icon, x: 0, y: 0, size: style.iconSizePx, radius: style.iconRadiusPx, fit: style.iconFit }),
+      absoluteBox({
+        id: root, order: 0,
+        x: absoluteCell.x, y: absoluteCell.y, width: cell.size, height: cell.size,
+        style: [
+          { name: "border-radius", value: px(radius) },
+          { name: "filter", value: "blur(0px) drop-shadow(0 7px 10px rgba(0,0,0,0.2))" },
+          ...(style.iconFit === "contain" ? [{ name: "background", value: "rgba(255,255,255,0.96)" } satisfies VisualStyleDeclaration] : []),
+          { name: "overflow", value: "hidden" },
+          { name: "transform-origin", value: "center center" },
+        ],
+        ...(animationValue === undefined ? {} : { animation: animationValue }),
+      }),
+      iconElement({ id: "icon", parent: root, order: 1, artifact: item.icon, x: 0, y: 0,
+        size: cell.size, radius, fit: style.iconFit }),
     ];
-    presents.push(present({
-      id: `${program.id}:item:${item.id}:stage`,
-      start: entry.stage.startFrame,
-      end: entry.stage.endFrameExclusive,
-      stacking: item.stackingOrder ?? style.itemStackingOrder,
-      tieBreak: `${program.id}:item:${String(index).padStart(4, "0")}:${item.id}:stage`,
-      elements: itemElements(rootAnimation),
-    }));
+    if (entry.mode === "reveal") {
+      assert(!item.preset, `TierBoard reveal ${item.id} cannot be preset.`);
+      const duration = entry.window.endFrameExclusive - entry.window.startFrame;
+      const rootAnimation = tierItemAnimation(duration, absoluteCell, item.entry === "direct"
+        ? (localFrame) => directTierItemPose(localFrame, absoluteCell, style.motion.appearFrames)
+        : (localFrame) => fromHighTierItemPose(
+            localFrame, duration, stage, absoluteCell, style.motion.appearFrames, style.motion.moveFrames));
+      presents.push(present({
+        id: `${program.id}:item:${item.id}:reveal`,
+        start: entry.window.startFrame,
+        end: entry.window.endFrameExclusive,
+        stacking: item.stackingOrder ?? (item.entry === "drop" ? style.stageStackingOrder : style.itemStackingOrder),
+        tieBreak: `${program.id}:item:${String(index).padStart(4, "0")}:${item.id}:reveal`,
+        elements: itemElements(rootAnimation),
+      }));
+    }
     if (entry.settled.endFrameExclusive > entry.settled.startFrame) presents.push(present({
       id: `${program.id}:item:${item.id}:settled`,
       start: entry.settled.startFrame,
@@ -585,7 +615,7 @@ export function renderTopThree(space: ProgramSpace, program: TopThreeProgram): V
         id: root, order: 0, x, y, width: style.iconSizePx,
         height: style.iconSizePx + style.labelGapPx + style.text.sizePx * style.text.lineHeight,
         ...(active ? { animation: directItemAnimation(duration,
-          fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, false).appearFrames) } : {}),
+          fitRankingEntranceMotion(duration, style.motion.appearFrames, style.motion.moveFrames, false).appearFrames) } : {}),
       })];
       if (active) elements.push(absoluteBox({ id: accent, parent: root, order: 1, x: 0, y: 0, width: style.iconSizePx, height: style.iconSizePx,
         style: [
@@ -656,7 +686,7 @@ export function renderRankingAudio(
     if (sounds[kind] !== undefined) assert(clips.some((clip) => clip.id.endsWith(`:${kind}`)),
       `Ranking ${kind} sound has no matching visual event.`);
   }
-  const track = sealAudioTrack({ id: `${plan.id}.audio`, clips });
+  const track = sealAudioTrack({ programSpaceId: space.id, id: `${plan.id}.audio`, clips });
   assertAudioTrackIdentity(track, space);
   return track;
 }

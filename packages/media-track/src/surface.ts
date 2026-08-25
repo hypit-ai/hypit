@@ -5,6 +5,7 @@ import {
   optionalTextAttribute as optionalText,
   type StructuredElement,
   type StructuredSurfaceHandler,
+  type SurfaceComponentDraft,
   type SurfaceRecordDraft,
   type SurfaceResolvedReference,
   type MarkupAttributeValue,
@@ -15,17 +16,12 @@ import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation } from "@hypit/elaborator";
 import { mediaTypes } from "@hypit/media";
-import { narrativeTypes } from "@hypit/narrative";
 import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
-import type {
-  TemporalDuration,
-  TemporalPointExpression,
-  TemporalWindowProjection,
-} from "@hypit/temporal";
-import { temporalProducers, temporalTypes } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal";
+import { createTemporalInstantProjection, createTemporalWindowProjection, temporalInstantAttributeNames, temporalWindowAttributeNames } from "@hypit/temporal-markup";
 
 import {
   decodeMediaFit,
@@ -74,133 +70,11 @@ function reference(
   return value;
 }
 
-function oneOfReferences(
-  raw: MarkupAttributeValue | undefined,
-  label: string,
-  expected: readonly TypeRef[],
-  resolve: (path: string) => SurfaceResolvedReference | undefined,
-): SurfaceResolvedReference {
-  if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${label} must be a reference.`);
-  const value = resolve(raw.path);
-  if (value === undefined || !expected.some((type) => sameType(value.type, type))) {
-    throw new Error(`${label} has the wrong Type.`);
-  }
-  return value;
-}
-
 function recipe(value: SurfaceResolvedReference, label: string): SvsRecipe {
   if (!sameType(value.type, svsRecipeType) || value.record?.value.kind !== "inline") {
     throw new Error(`${label} must be an authored SVS Recipe.`);
   }
   return value.record.value.value as unknown as SvsRecipe;
-}
-
-function divisor(left: number, right: number): number {
-  let a = Math.abs(left);
-  let b = Math.abs(right);
-  while (b !== 0) [a, b] = [b, a % b];
-  return a;
-}
-
-function duration(value: string, label: string): TemporalDuration {
-  const match = /^(\d+)(?:\.(\d+))?(f|ms|s)$/u.exec(value.trim());
-  if (match === null) throw new Error(`${label} must be an exact duration such as 12f, 250ms or 1.5s.`);
-  const whole = Number(match[1]);
-  const fraction = match[2] ?? "";
-  const unit = match[3];
-  if (!Number.isSafeInteger(whole)) throw new Error(`${label} is outside safe arithmetic.`);
-  if (unit === "f" || unit === "ms") {
-    if (fraction.length > 0) throw new Error(`${label} ${unit} duration must be an integer.`);
-    return { unit: unit === "f" ? "frames" : "milliseconds", value: whole };
-  }
-  const scale = 10 ** fraction.length;
-  const numerator = whole * scale + (fraction.length === 0 ? 0 : Number(fraction));
-  if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(scale)) throw new Error(`${label} is outside safe arithmetic.`);
-  const gcd = divisor(numerator, scale);
-  return { unit: "seconds", numerator: numerator / gcd, denominator: scale / gcd };
-}
-
-function negate(value: TemporalDuration): TemporalDuration {
-  return value.unit === "seconds" ? { ...value, numerator: -value.numerator } : { ...value, value: -value.value };
-}
-
-function point(value: string, label: string): TemporalPointExpression {
-  const trimmed = value.trim();
-  const refs = ["program.start", "program.end", "selection.start", "selection.end", "segment.start", "segment.end", "moment.cue"] as const;
-  for (const ref of refs) {
-    if (trimmed === ref) return { ref };
-    const match = new RegExp(`^${ref.replace(".", "\\.")}\\s*([+-])\\s*(.+)$`, "u").exec(trimmed);
-    if (match !== null) {
-      const offset = duration(match[2]!, `${label} offset`);
-      return { ref, offset: match[1] === "-" ? negate(offset) : offset };
-    }
-  }
-  return { ref: "absolute", at: duration(trimmed, label) };
-}
-
-type TemporalBinding = {
-  readonly kind: "program" | "selection" | "segment" | "moment";
-  readonly projection: TemporalWindowProjection;
-  readonly source?: SurfaceResolvedReference;
-};
-
-function temporalBinding(
-  element: StructuredElement,
-  resolve: (path: string) => SurfaceResolvedReference | undefined,
-): TemporalBinding {
-  const during = element.attributes.during;
-  const at = element.attributes.at;
-  const start = optionalText(element, "start");
-  const end = optionalText(element, "end");
-  const selection = element.attributes.selection;
-  const segment = element.attributes.segment;
-  const moment = element.attributes.moment;
-  const forms = Number(during !== undefined) + Number(at !== undefined) + Number(start !== undefined || end !== undefined);
-  if (forms !== 1) throw new Error(`${element.name} requires exactly one of during, at/for, or start/end.`);
-  if (during !== undefined) {
-    if (typeof during === "string") {
-      if (during.trim() !== "program") throw new Error(`${element.name}.during text must be program.`);
-      return { kind: "program", projection: { start: { ref: "program.start" }, end: { ref: "program.end" } } };
-    }
-    const source = oneOfReferences(during, `${element.name}.during`, [narrativeTypes.selection, narrativeTypes.excerpt], resolve);
-    return sameType(source.type, narrativeTypes.selection) ? {
-      kind: "selection",
-      source,
-      projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
-    } : {
-      kind: "segment",
-      source,
-      projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
-    };
-  }
-  if (at !== undefined) {
-    const forDuration = duration(text(element, "for"), `${element.name}.for`);
-    return {
-      kind: "moment",
-      source: reference(at, `${element.name}.at`, narrativeTypes.moment, resolve),
-      projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: forDuration } },
-    };
-  }
-  if (start === undefined || end === undefined) throw new Error(`${element.name} explicit timing requires start and end.`);
-  if (Number(selection !== undefined) + Number(segment !== undefined) + Number(moment !== undefined) > 1) {
-    throw new Error(`${element.name} cannot bind Selection, Segment and Moment together.`);
-  }
-  if (selection !== undefined) return {
-    kind: "selection",
-    source: reference(selection, `${element.name}.selection`, narrativeTypes.selection, resolve),
-    projection: { start: point(start, `${element.name}.start`), end: point(end, `${element.name}.end`) },
-  };
-  if (moment !== undefined) return {
-    kind: "moment",
-    source: reference(moment, `${element.name}.moment`, narrativeTypes.moment, resolve),
-    projection: { start: point(start, `${element.name}.start`), end: point(end, `${element.name}.end`) },
-  };
-  if (segment !== undefined) return {
-    kind: "segment",
-    source: reference(segment, `${element.name}.segment`, narrativeTypes.excerpt, resolve),
-    projection: { start: point(start, `${element.name}.start`), end: point(end, `${element.name}.end`) },
-  };
-  return { kind: "program", projection: { start: point(start, `${element.name}.start`), end: point(end, `${element.name}.end`) } };
 }
 
 type FragmentLayer =
@@ -212,9 +86,7 @@ type FragmentSound = { readonly sourceName: string; readonly specName: string };
 
 type FragmentItem = {
   readonly suffix: string;
-  readonly binding: TemporalBinding["kind"];
-  readonly sourceName?: string;
-  readonly windowSpecName: string;
+  readonly windowName: string;
   readonly frameName: string;
   readonly specName: string;
   readonly clipPathName?: string;
@@ -224,18 +96,14 @@ type FragmentItem = {
 
 type FragmentMember = {
   readonly suffix: string;
-  readonly binding: "moment" | "selection-start" | "selection-end";
-  readonly sourceName: string;
-  readonly pointSpecName: string;
+  readonly instantName: string;
   readonly specName: string;
   readonly layers: readonly FragmentLayer[];
 };
 
 type FragmentSequence = {
   readonly suffix: string;
-  readonly terminal: "program-end" | "moment" | "selection-start" | "selection-end";
-  readonly terminalSourceName?: string;
-  readonly terminalSpecName: string;
+  readonly terminalName: string;
   readonly frameName: string;
   readonly specName: string;
   readonly clipPathName?: string;
@@ -289,14 +157,6 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
     const prefix = `item:${item.suffix}`;
     const layers = appendLayers(operations, prefix, item.layers);
     const sounds = appendSounds(operations, prefix, item.sounds);
-    const windowId = `${prefix}:window`;
-    const windowProducer = item.binding === "program" ? temporalProducers.projectProgram
-      : item.binding === "selection" ? temporalProducers.projectSelection
-        : item.binding === "segment" ? temporalProducers.projectSegment : temporalProducers.projectMoment;
-    operations.push({ id: windowId, producer: windowProducer, inputs: {
-      semantic: input("semantic"), spec: input(item.windowSpecName),
-      ...(item.binding === "program" ? {} : { [item.binding]: input(item.sourceName!) }),
-    }, result: { kind: "output", name: "window" } });
     const appendId = `${prefix}:append`;
     let spec: FragmentOperation["inputs"][string] = input(item.specName);
     if (item.clipPathName !== undefined) {
@@ -308,7 +168,7 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
     }
     const common = {
       set: operation(set), header: input("header"), space: operation("track:space"), canvas: input("canvas"),
-      layers: operation(layers), frame: input(item.frameName), spec, sounds: operation(sounds), window: operation(windowId),
+      layers: operation(layers), frame: input(item.frameName), spec, sounds: operation(sounds), window: input(item.windowName),
     };
     operations.push({ id: appendId, producer: mediaTrackProducers.appendItem, inputs: common, result: { kind: "output", name: "set" } });
     set = appendId;
@@ -322,14 +182,8 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
       const memberPrefix = `${prefix}:member:${member.suffix}`;
       const layers = appendLayers(operations, memberPrefix, member.layers);
       const appendId = `${memberPrefix}:append`;
-      const pointId = `${memberPrefix}:point`;
-      const pointProducer = member.binding === "moment" ? temporalProducers.projectMomentPoint : temporalProducers.projectSelectionPoint;
-      operations.push({ id: pointId, producer: pointProducer, inputs: {
-        semantic: input("semantic"), spec: input(member.pointSpecName),
-        [member.binding === "moment" ? "moment" : "selection"]: input(member.sourceName),
-      }, result: { kind: "output", name: "point" } });
       operations.push({ id: appendId, producer: mediaTrackProducers.appendMember, inputs: {
-        members: operation(members), layers: operation(layers), spec: input(member.specName), activation: operation(pointId),
+        members: operation(members), space: operation("track:space"), layers: operation(layers), spec: input(member.specName), activation: input(member.instantName),
       }, result: { kind: "output", name: "members" } });
       members = appendId;
     }
@@ -347,17 +201,8 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
       set: operation(set), header: input("header"), space: operation("track:space"), canvas: input("canvas"),
       members: operation(members), frame: input(sequence.frameName), spec, sounds: operation(sounds),
     };
-    const terminalPointId = `${prefix}:terminal`;
-    const terminalProducer = sequence.terminal === "program-end" ? temporalProducers.projectProgramPoint
-      : sequence.terminal === "moment" ? temporalProducers.projectMomentPoint : temporalProducers.projectSelectionPoint;
-    operations.push({ id: terminalPointId, producer: terminalProducer, inputs: {
-      semantic: input("semantic"), spec: input(sequence.terminalSpecName),
-      ...(sequence.terminal === "program-end" ? {} : {
-        [sequence.terminal === "moment" ? "moment" : "selection"]: input(sequence.terminalSourceName!),
-      }),
-    }, result: { kind: "output", name: "point" } });
     operations.push({ id: appendId, producer: mediaTrackProducers.appendSequence,
-      inputs: { ...common, terminal: operation(terminalPointId) }, result: { kind: "output", name: "set" } });
+      inputs: { ...common, terminal: input(sequence.terminalName) }, result: { kind: "output", name: "set" } });
     set = appendId;
   }
   operations.push(
@@ -382,6 +227,7 @@ type SurfaceBuilder = {
   readonly inputTypes: { name: string; type: TypeRef }[];
   addReference(name: string, value: SurfaceResolvedReference): void;
   addRecord(name: string, id: string, type: TypeRef, value: unknown, range: StructuredElement["range"]): void;
+  addValue(name: string, value: SurfaceResolvedReference["ref"], type: TypeRef): void;
 };
 
 function builder(): SurfaceBuilder {
@@ -401,6 +247,11 @@ function builder(): SurfaceBuilder {
       if (inputs[name] !== undefined) throw new Error(`Media Surface repeats input ${name}.`);
       records.push({ id, type, value: { kind: "inline", value: value as never }, range });
       inputs[name] = { kind: "record", id };
+      inputTypes.push({ name, type });
+    },
+    addValue(name, value, type) {
+      if (inputs[name] !== undefined) throw new Error(`Media Surface repeats input ${name}.`);
+      inputs[name] = value;
       inputTypes.push({ name, type });
     },
   };
@@ -641,13 +492,16 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
   allowed(element, ["id", "semantic", "canvas"]);
   const trackId = text(element, "id");
   const state = builder();
-  state.addReference("semantic", reference(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference));
+  const semantic = reference(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
+  state.addReference("semantic", semantic);
   state.addReference("canvas", reference(element.attributes.canvas, `${element.name}.canvas`, spatialTypes.canvas, resolveReference));
   const headerId = `${trackId}.header`;
   state.addRecord("header", headerId, mediaTrackTypes.header,
     sealMediaTrackHeader({ id: trackId }), element.range);
   const items: FragmentItem[] = [];
   const sequences: FragmentSequence[] = [];
+  const temporalComponents: SurfaceComponentDraft[] = [];
+  const temporalFragments: ReturnType<typeof createTemporalWindowProjection>["fragments"][number][] = [];
   let itemIndex = 0;
   let sequenceIndex = 0;
   let hasAudio = false;
@@ -661,7 +515,7 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
       const itemSuffix = suffix(itemIndex);
       allowed(child, [
         "id", "image", "media", "surface", "extent", "frame", "appearance", "motion", "source-audio", "audio-gain",
-        "clip", "during", "at", "for", "start", "end", "selection", "segment", "moment",
+        "clip", ...temporalWindowAttributeNames,
       ]);
       const id = optionalText(child, "id") ?? `${trackId}.item.${itemSuffix}`;
       const appearance = recipe(reference(child.attributes.appearance, `${child.name}.appearance`, svsRecipeType, resolveReference), `${child.name}.appearance`);
@@ -672,16 +526,16 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
       }
       const motionRecipe = child.attributes.motion === undefined ? undefined
         : recipe(reference(child.attributes.motion, `${child.name}.motion`, svsRecipeType, resolveReference), `${child.name}.motion`);
-      const binding = temporalBinding(child, resolveReference);
+      const temporal = createTemporalWindowProjection({ id, element: child, semantic, resolveReference });
+      state.records.push(...temporal.records); temporalComponents.push(...temporal.components); temporalFragments.push(...temporal.fragments);
       const directSource = declaredVisualSource(child, resolveReference);
       validateUnitChildren(child, directSource !== undefined, true);
       const layers = unitLayers(state, { trackId, unitSuffix: `item-${itemSuffix}`, element: child, appearance,
         ...(directSource === undefined ? {} : { directSource }), allowFramePaint: true }, resolveReference);
       const selectedAudio = sourceAudio(child);
       const specName = `item-${itemSuffix}-spec`;
-      const windowSpecName = `item-${itemSuffix}-window-spec`;
-      state.addRecord(windowSpecName, `${trackId}.item.${itemSuffix}.window`, temporalTypes.windowSpec,
-        { id, projection: binding.projection }, child.range);
+      const windowName = `item-${itemSuffix}-window`;
+      state.addValue(windowName, temporal.ref, temporalTypes.window);
       state.addRecord(specName, `${trackId}.item.${itemSuffix}.spec`, mediaTrackTypes.itemSpec,
         decodeMediaItemSpec(appearance, { id,
           motion: decodeMediaMotion(motionRecipe), ...(selectedAudio === undefined ? {} : { sourceAudio: selectedAudio }) }), child.range);
@@ -694,9 +548,7 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
         }
       }
       if (selectedAudio !== undefined || fragmentSounds.length > 0) hasAudio = true;
-      const sourceName = binding.kind === "program" ? undefined : `item-${itemSuffix}-${binding.kind}`;
-      if (binding.source !== undefined) state.addReference(sourceName!, binding.source);
-      items.push({ suffix: itemSuffix, binding: binding.kind, ...(sourceName === undefined ? {} : { sourceName }), windowSpecName, frameName, specName,
+      items.push({ suffix: itemSuffix, windowName, frameName, specName,
         ...(clipPathName === undefined ? {} : { clipPathName }), layers, sounds: fragmentSounds });
       continue;
     }
@@ -734,13 +586,9 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
     const members: FragmentMember[] = [];
     for (const [index, member] of memberElements.entries()) {
       const memberSuffix = suffix(index + 1);
-      allowed(member, ["id", "image", "media", "surface", "extent", "appearance", "at", "boundary", "source-audio", "audio-gain"]);
-      const at = oneOfReferences(member.attributes.at, `${member.name}.at`, [narrativeTypes.moment, narrativeTypes.selection], resolveReference);
-      const boundary = optionalText(member, "boundary");
-      const binding = sameType(at.type, narrativeTypes.moment) ? "moment"
-        : boundary === "start" ? "selection-start" : boundary === "end" ? "selection-end" : undefined;
-      if (binding === undefined) throw new Error(`${member.name}.boundary must be start or end for a Selection activation.`);
-      if (sameType(at.type, narrativeTypes.moment) && boundary !== undefined) throw new Error(`${member.name}.boundary is invalid for a Moment activation.`);
+      allowed(member, ["id", "image", "media", "surface", "extent", "appearance", ...temporalInstantAttributeNames, "source-audio", "audio-gain"]);
+      const temporal = createTemporalInstantProjection({ id: `${id}.${memberIds[index]}`, subjectId: memberIds[index]!, element: member, semantic, resolveReference });
+      state.records.push(...temporal.records); temporalComponents.push(...temporal.components); temporalFragments.push(...temporal.fragments);
       const memberAppearance = member.attributes.appearance === undefined ? appearance
         : recipe(reference(member.attributes.appearance, `${member.name}.appearance`, svsRecipeType, resolveReference), `${member.name}.appearance`);
       const directSource = declaredVisualSource(member, resolveReference);
@@ -751,21 +599,12 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
       const selectedAudio = sourceAudio(member);
       if (selectedAudio !== undefined) hasAudio = true;
       const specName = `${unitSuffix}-spec`;
-      const pointSpecName = `${unitSuffix}-point-spec`;
       state.addRecord(specName, `${trackId}.${unitSuffix}.spec`, mediaTrackTypes.memberSpec,
         sealMediaSequenceMemberSpec({ id: memberIds[index]!,
           ...(selectedAudio === undefined ? {} : { sourceAudio: selectedAudio }) }), member.range);
-      state.addRecord(pointSpecName, `${trackId}.${unitSuffix}.point`, temporalTypes.pointSpec, {
-        id: `${id}.${memberIds[index]}`,
-        projection: binding === "moment"
-          ? { ref: "moment.cue" }
-          : boundary === "start"
-            ? { ref: "selection.start" }
-            : { ref: "selection.end" },
-      }, member.range);
-      const sourceName = `${unitSuffix}-${binding === "moment" ? "moment" : "selection"}`;
-      state.addReference(sourceName, at);
-      members.push({ suffix: memberSuffix, binding, sourceName, specName, pointSpecName, layers });
+      const instantName = `${unitSuffix}-instant`;
+      state.addValue(instantName, temporal.ref, temporalTypes.instant);
+      members.push({ suffix: memberSuffix, instantName, specName, layers });
     }
     const sequenceSounds: FragmentSound[] = [];
     for (const soundChild of child.children) {
@@ -777,52 +616,29 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
       )) throw new Error(`${child.name} accepts only Member, Handoff and Sound children.`);
     }
     if (sequenceSounds.length > 0) hasAudio = true;
-    const until = child.attributes.until;
-    let terminal: FragmentSequence["terminal"];
-    let terminalReference: SurfaceResolvedReference | undefined;
-    if (typeof until === "string") {
-      if (until.trim() !== "program.end") throw new Error(`${child.name}.until text must be program.end.`);
-      terminal = "program-end";
-      if (child.attributes["until-boundary"] !== undefined) throw new Error(`${child.name}.until-boundary is invalid for program.end.`);
-    } else {
-      terminalReference = oneOfReferences(until, `${child.name}.until`, [narrativeTypes.moment, narrativeTypes.selection], resolveReference);
-      if (sameType(terminalReference.type, narrativeTypes.moment)) {
-        if (child.attributes["until-boundary"] !== undefined) throw new Error(`${child.name}.until-boundary is invalid for a Moment.`);
-        terminal = "moment";
-      } else {
-        const boundary = text(child, "until-boundary", "end");
-        if (boundary !== "start" && boundary !== "end") throw new Error(`${child.name}.until-boundary must be start or end.`);
-        terminal = boundary === "start" ? "selection-start" : "selection-end";
-      }
-    }
+    const terminalTemporal = createTemporalInstantProjection({
+      id: `${id}.terminal`, subjectId: id, element: child, semantic, resolveReference,
+      semanticAttribute: "until", boundaryAttribute: "until-boundary", projectedAttribute: false,
+      boundaryFallback: "end",
+    });
+    state.records.push(...terminalTemporal.records); temporalComponents.push(...terminalTemporal.components); temporalFragments.push(...terminalTemporal.fragments);
     const frameName = `sequence-${sequenceSuffix}-frame`;
     state.addReference(frameName, reference(child.attributes.frame, `${child.name}.frame`, spatialTypes.frame, resolveReference));
     const specName = `sequence-${sequenceSuffix}-spec`;
     state.addRecord(specName, `${trackId}.sequence.${sequenceSuffix}.spec`, mediaTrackTypes.sequenceSpec,
       decodeMediaSequenceSpec(appearance, id, decodeMediaMotion(motionRecipe), handoffs), child.range);
-    const terminalSourceName = terminalReference === undefined ? undefined : `sequence-${sequenceSuffix}-terminal`;
-    if (terminalReference !== undefined) state.addReference(terminalSourceName!, terminalReference);
-    const terminalSpecName = `sequence-${sequenceSuffix}-terminal-point-spec`;
-    state.addRecord(terminalSpecName, `${trackId}.sequence.${sequenceSuffix}.terminal-point`, temporalTypes.pointSpec, {
-      id: `${id}.terminal`,
-      projection: terminal === "program-end"
-        ? { ref: "program.end" }
-        : terminal === "moment"
-          ? { ref: "moment.cue" }
-          : terminal === "selection-start"
-            ? { ref: "selection.start" }
-            : { ref: "selection.end" },
-    }, child.range);
-    sequences.push({ suffix: sequenceSuffix, terminal, ...(terminalSourceName === undefined ? {} : { terminalSourceName }), terminalSpecName, frameName, specName,
+    const terminalName = `sequence-${sequenceSuffix}-terminal`;
+    state.addValue(terminalName, terminalTemporal.ref, temporalTypes.instant);
+    sequences.push({ suffix: sequenceSuffix, terminalName, frameName, specName,
       ...(clipPathName === undefined ? {} : { clipPathName }), members, sounds: sequenceSounds });
   }
   if (items.length === 0 && sequences.length === 0) throw new Error(`${element.name} requires at least one Item or Sequence.`);
   const fragment = createMediaTrackSurfaceFragment(state.inputTypes, items, sequences, hasAudio);
   return {
     records: state.records,
-    components: [{ id: trackId, fragment: fragment.id, inputs: state.inputs,
+    components: [...temporalComponents, { id: trackId, fragment: fragment.id, inputs: state.inputs,
       outputs: { program: `${trackId}.program`, visual: `${trackId}.visual`, ...(hasAudio ? { audio: `${trackId}.audio` } : {}) }, range: element.range }],
-    fragments: [fragment],
+    fragments: [...temporalFragments, fragment],
     exports: [`${trackId}.program`, `${trackId}.visual`, ...(hasAudio ? [`${trackId}.audio`] : [])],
   };
 };

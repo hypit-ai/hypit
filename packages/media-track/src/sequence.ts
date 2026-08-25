@@ -9,8 +9,8 @@ import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize } from "@hypit/protocol";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
-import { resolveTriggeredSchedule } from "@hypit/temporal";
-import type { TemporalPoint } from "@hypit/temporal";
+import { assertTemporalInstantFor, resolveTriggeredSchedule } from "@hypit/temporal";
+import type { TemporalInstant } from "@hypit/temporal";
 
 import { assertMediaIdentity, assertMediaLayerSet } from "./layers.js";
 import { lowerMediaItemElements } from "./lower.js";
@@ -109,10 +109,12 @@ function appendMediaSequenceMemberAtFrame(
 
 export function appendMediaSequenceMember(
   set: MediaSequenceMemberSet,
+  space: ProgramSpace,
   layers: MediaLayerSet,
   spec: MediaSequenceMemberSpec,
-  activation: TemporalPoint,
+  activation: TemporalInstant,
 ): MediaSequenceMemberSet {
+  assertTemporalInstantFor(activation, { subjectId: spec.id, space });
   return appendMediaSequenceMemberAtFrame(set, layers, spec, activation.frame);
 }
 

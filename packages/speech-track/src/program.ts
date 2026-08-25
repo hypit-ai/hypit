@@ -121,8 +121,12 @@ export function assembleSpeechTrack(
   assertSpeechTrackSet(set);
   assert(set.takes.length > 0, "Speech Track must contain at least one Take");
   for (const take of set.takes) assertTake(take);
+  const narrativeId = set.takes[0]!.semantic.narrativeId;
+  assert(set.takes.every((take) => take.semantic.narrativeId === narrativeId),
+    "Speech Track cannot mix Takes from different Narratives");
   return sealSemanticTrack({
     id: header.id,
+    narrativeId,
     items: set.takes.map((item) => ({ take: item.semantic })),
   });
 }

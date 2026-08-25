@@ -1,11 +1,13 @@
 import { readFile } from "node:fs/promises";
 
 import { compositionDependency, compositionTypes } from "@hypit/composition";
-import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { narrativeDependency } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalWindowAttributeVocabulary } from "@hypit/temporal-markup";
 
 const previewImage = (file: string) => ({
   mediaType: "image/png",
@@ -62,31 +64,18 @@ export const screenOverlayHeaderSchema: ValueSchema = object({ id: { schema: str
 export const screenOverlayItemSpecSchema: ValueSchema = itemSpec;
 export const screenOverlaySetSchema: ValueSchema = object({ items: { schema: { kind: "array", items: item } } });
 export const screenOverlayProgramSchema: ValueSchema = object({ id: { schema: string }, items: { schema: { kind: "array", minItems: 1, items: item } } });
-const appendInputs = [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }, { name: "semantic", type: semanticTrackTypes.track }, { name: "spec", type: screenOverlayTypes.itemSpec }, { name: "window", type: temporalTypes.window }] as const;
+const appendInputs = [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "spec", type: screenOverlayTypes.itemSpec }, { name: "window", type: temporalTypes.window }] as const;
 
 const itemAttributes = [
   { name: "id", kind: "identifier", required: false,
     summary: "Names this item; the overlay numbers the item after its kind when it is omitted." },
   { name: "z", kind: "literal", required: true,
     summary: "Sets the stacking order this item is painted in against its siblings." },
-  { name: "during", kind: "expression", required: false, values: ["program"], accepts: [narrativeTypes.selection],
-    summary: "Holds the item across the whole programme, or across the Selection it names." },
-  { name: "at", kind: "reference", required: false, accepts: [narrativeTypes.moment],
-    summary: "Starts the item at the cue of the Moment it names." },
-  { name: "for", kind: "literal", required: false,
-    summary: "Sets the exact duration the item holds past the Moment cue." },
-  { name: "start", kind: "literal", required: false,
-    summary: "Sets the point the item begins at, as a named edge with an optional offset or as an absolute duration." },
-  { name: "end", kind: "literal", required: false,
-    summary: "Sets the point the item ends at, as a named edge with an optional offset or as an absolute duration." },
-  { name: "selection", kind: "reference", required: false, accepts: [narrativeTypes.selection],
-    summary: "Binds explicit `start` and `end` timing to a Selection." },
-  { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment],
-    summary: "Binds explicit `start` and `end` timing to a Moment." },
+  ...temporalWindowAttributeVocabulary,
 ] as const;
 
 export const screenOverlayMarkupSurfaces = [
-  { name: "track", tag: "Track", mode: "structured", outputs: [screenOverlayTypes.header, screenOverlayTypes.itemSpec, temporalTypes.windowSpec, screenOverlayTypes.program, compositionTypes.visualTrack],
+  { name: "track", tag: "Track", mode: "structured", outputs: [screenOverlayTypes.header, screenOverlayTypes.itemSpec, temporalTypes.instantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window, screenOverlayTypes.program, compositionTypes.visualTrack],
     vocabulary: {
       summary: "Paints self-contained screen treatments across the whole Canvas and publishes the overlay Program and the VisualTrack it renders to.",
       appearance: "Treatments laid edge to edge over the whole Canvas, never a panel, a card or text, each item covering the frame for its own span only and painted over its siblings in `z` order. Flash pulses one color up to full and back down across the frame, ColorWash holds that same flat color still, and Vignette leaves the middle clear and darkens outwards to one color in an ellipse around a chosen centre. Four items cross the frame as travelling geometry: ScanLines rule it with evenly spaced white stripes at an angle, DirectionalMatte sweeps a feathered wall of color over it, WhipVeil slides a single soft-edged white band left, right, up or down, and LightLeak drags a heavily blurred angled gradient of colors from one side to the other. The remaining four scatter many small shapes from a seed: GlitchVeil throws wide colored horizontal bars that jump sideways, Grain sprinkles fine specks that crawl diagonally, Bokeh floats blurred round discs of one color that drift apart, and TVStatic fills the frame with grey noise cells beneath fine horizontal scan lines.",
@@ -299,7 +288,7 @@ export const screenOverlayMarkupSurfaces = [
 
 export const screenOverlayManifest: ModuleManifest = {
   format: "hypit.module@1", name: screenOverlayModuleRef.name, version: screenOverlayModuleRef.version,
-  dependencies: [narrativeDependency, semanticTrackDependency, spatialDependency, temporalDependency, compositionDependency],
+  dependencies: [narrativeDependency, programSpaceDependency, semanticTrackDependency, spatialDependency, temporalDependency, compositionDependency],
   types: [
     { name: screenOverlayTypes.header.name },
     { name: screenOverlayTypes.itemSpec.name },
@@ -310,7 +299,7 @@ export const screenOverlayManifest: ModuleManifest = {
     { name: screenOverlayProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
     { name: screenOverlayProducers.appendItem.name, inputs: [...appendInputs], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
     { name: screenOverlayProducers.finalize.name, inputs: [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }], outputs: [{ name: "program", type: screenOverlayTypes.program }], needs: [] },
-    { name: screenOverlayProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: screenOverlayTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+    { name: screenOverlayProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: screenOverlayTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
   ],
 };
 export const screenOverlayDependency = { module: screenOverlayModuleRef } as const;

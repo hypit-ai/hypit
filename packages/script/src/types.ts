@@ -48,11 +48,11 @@ export type ParsedToken = NarrativeToken & {
 };
 export type ParsedTurn = NarrativeTurn & { readonly range: SourceRange };
 
-export type ParsedSelection = NarrativeSelection & {
+export type ParsedSelection = Omit<NarrativeSelection, "narrativeId"> & {
   readonly open: { readonly affinity: Affinity; readonly boundary: MarkerBoundary; readonly range: SourceRange };
   readonly close: { readonly affinity: Affinity; readonly boundary: MarkerBoundary; readonly range: SourceRange };
 };
-export type ParsedMoment = NarrativeMoment & {
+export type ParsedMoment = Omit<NarrativeMoment, "narrativeId"> & {
   readonly affinity: Affinity;
   readonly boundary: MarkerBoundary;
   readonly range: SourceRange;
@@ -75,8 +75,10 @@ export type ParsedCaptionRegion = {
 
 export type ParsedNarrative = Omit<
   Narrative,
-  "segments" | "tokens" | "turns" | "selections" | "moments"
+  "id" | "segments" | "tokens" | "turns" | "selections" | "moments"
 > & {
+  /** Exact Script body range, used only for source-preserving Program-boundary edits. */
+  readonly sourceRange: SourceRange;
   readonly segments: readonly ParsedSegment[];
   readonly tokens: readonly ParsedToken[];
   readonly turns: readonly ParsedTurn[];
@@ -116,4 +118,8 @@ export type ScriptSurfaceOutput = {
   /** Script is a record-only Surface; it cannot smuggle executable graph declarations. */
   readonly components: readonly never[];
   readonly fragments: readonly never[];
+  readonly identities: readonly {
+    readonly namespace: TypeRef;
+    readonly id: string;
+  }[];
 };

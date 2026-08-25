@@ -1,15 +1,15 @@
 import { mediaTypes } from "@hypit/media";
-import { narrativeTypes } from "@hypit/narrative";
 import { semanticTrackTypes } from "@hypit/semantic-track";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
+  SurfaceComponentDraft,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
   MarkupAttributeValue,
 } from "@hypit/markup";
-import type { TemporalDuration, TemporalPointExpression, TemporalWindowProjection } from "@hypit/temporal";
-import { temporalTypes } from "@hypit/temporal";
+import type { TemporalDuration } from "@hypit/temporal";
+import { createTemporalWindowProjection, temporalWindowAttributeNames } from "@hypit/temporal-markup";
 
 import { createAudioTrackFragment } from "./fragment.js";
 import { audioTrackTypes } from "./manifest.js";
@@ -77,27 +77,6 @@ function duration(value: string, label: string): TemporalDuration {
   return { unit: "seconds", numerator: numerator / gcd, denominator: scale / gcd };
 }
 
-function negate(value: TemporalDuration): TemporalDuration {
-  return value.unit === "seconds"
-    ? { ...value, numerator: -value.numerator }
-    : { ...value, value: -value.value };
-}
-
-function point(value: string, label: string): TemporalPointExpression {
-  const trimmed = value.trim();
-  const refs = ["program.start", "program.end", "selection.start", "selection.end", "moment.cue"] as const;
-  for (const ref of refs) {
-    if (trimmed === ref) return { ref };
-    const escaped = ref.replace(".", "\\.");
-    const match = new RegExp(`^${escaped}\\s*([+-])\\s*(.+)$`, "u").exec(trimmed);
-    if (match !== null) {
-      const offset = duration(match[2]!, `${label} offset`);
-      return { ref, offset: match[1] === "-" ? negate(offset) : offset };
-    }
-  }
-  return { ref: "absolute", at: duration(trimmed, label) };
-}
-
 function numeric(element: StructuredElement, name: string, fallback?: number): number {
   const raw = optionalText(element, name);
   if (raw === undefined && fallback !== undefined) return fallback;
@@ -124,57 +103,6 @@ function occupancy(element: StructuredElement): AudioOccupancy {
   }
 }
 
-type TemporalBinding = {
-  readonly kind: "program" | "selection" | "moment";
-  readonly projection: TemporalWindowProjection;
-  readonly source?: SurfaceResolvedReference;
-};
-
-function temporalBinding(
-  element: StructuredElement,
-  resolve: (path: string) => SurfaceResolvedReference | undefined,
-): TemporalBinding {
-  const during = element.attributes.during;
-  const at = element.attributes.at;
-  const explicitStart = optionalText(element, "start");
-  const explicitEnd = optionalText(element, "end");
-  const selection = element.attributes.selection;
-  const moment = element.attributes.moment;
-  const forms = Number(during !== undefined) + Number(at !== undefined) + Number(explicitStart !== undefined || explicitEnd !== undefined);
-  if (forms !== 1) throw new Error(`${element.name} requires exactly one of during, at/for, or start/end.`);
-  if (during !== undefined) {
-    if (typeof during === "string") {
-      if (during.trim() !== "program") throw new Error(`${element.name}.during text must be program.`);
-      return { kind: "program", projection: { start: { ref: "program.start" }, end: { ref: "program.end" } } };
-    }
-    const source = resolved(during, `${element.name}.during`, narrativeTypes.selection, resolve);
-    return { kind: "selection", source, projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } } };
-  }
-  if (at !== undefined) {
-    const source = resolved(at, `${element.name}.at`, narrativeTypes.moment, resolve);
-    const forDuration = duration(text(element, "for"), `${element.name}.for`);
-    return { kind: "moment", source, projection: {
-      start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: forDuration },
-    } };
-  }
-  if (explicitStart === undefined || explicitEnd === undefined) throw new Error(`${element.name} explicit timing requires start and end.`);
-  if (selection !== undefined && moment !== undefined) throw new Error(`${element.name} cannot bind Selection and Moment together.`);
-  if (selection !== undefined) return {
-    kind: "selection",
-    source: resolved(selection, `${element.name}.selection`, narrativeTypes.selection, resolve),
-    projection: { start: point(explicitStart, `${element.name}.start`), end: point(explicitEnd, `${element.name}.end`) },
-  };
-  if (moment !== undefined) return {
-    kind: "moment",
-    source: resolved(moment, `${element.name}.moment`, narrativeTypes.moment, resolve),
-    projection: { start: point(explicitStart, `${element.name}.start`), end: point(explicitEnd, `${element.name}.end`) },
-  };
-  return {
-    kind: "program",
-    projection: { start: point(explicitStart, `${element.name}.start`), end: point(explicitEnd, `${element.name}.end`) },
-  };
-}
-
 export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   allowed(element, ["id", "semantic"]);
   const id = text(element, "id");
@@ -186,6 +114,8 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     value: { kind: "inline", value: sealAudioTrackHeader({ id }) },
     range: element.range,
   }];
+  const temporalComponents: SurfaceComponentDraft[] = [];
+  const temporalFragments: ReturnType<typeof createTemporalWindowProjection>["fragments"][number][] = [];
   const fragmentItems: Parameters<typeof createAudioTrackFragment>[0][number][] = [];
   const inputs: Record<string, { kind: "record"; id: string } | { kind: "component-output"; component: string; output: string }> = {
     header: { kind: "record", id: headerId },
@@ -200,14 +130,17 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     if (!child.name.endsWith(":Clip") && child.name !== "Clip") throw new Error(`${element.name} accepts only Clip children.`);
     if (child.children.some((node) => node.kind === "element" || node.value.trim())) throw new Error(`${child.name} must be empty.`);
     allowed(child, [
-      "id", "source", "during", "at", "for", "start", "end", "selection", "moment",
+      "id", "source", ...temporalWindowAttributeNames,
       "trim-start", "trim-end", "playback", "min-rate", "max-rate", "gain", "fade-in", "fade-out",
     ]);
     itemIndex += 1;
     const suffix = String(itemIndex).padStart(4, "0");
     const clipId = optionalText(child, "id") ?? `${id}.clip.${suffix}`;
     const source = resolved(child.attributes.source, `${child.name}.source`, mediaTypes.synchronized, resolveReference);
-    const binding = temporalBinding(child, resolveReference);
+    const temporal = createTemporalWindowProjection({ id: clipId, element: child, semantic, resolveReference });
+    records.push(...temporal.records);
+    temporalComponents.push(...temporal.components);
+    temporalFragments.push(...temporal.fragments);
     const playback = occupancy(child);
     if (playback.mode !== "stretch" && (child.attributes["min-rate"] !== undefined || child.attributes["max-rate"] !== undefined)) {
       throw new Error(`${child.name} rate bounds require stretch playback.`);
@@ -226,35 +159,28 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
         fadeOut: duration(text(child, "fade-out", "0f"), `${child.name}.fade-out`),
       },
     });
-    const windowSpecName = `item-${suffix}-window-spec`;
-    records.push({ id: `${id}.clip.${suffix}.window`, type: temporalTypes.windowSpec,
-      value: { kind: "inline", value: { id: clipId, projection: binding.projection } }, range: child.range });
-    inputs[windowSpecName] = { kind: "record", id: `${id}.clip.${suffix}.window` };
+    const windowName = `item-${suffix}-window`;
+    inputs[windowName] = temporal.ref;
     const mediaName = `item-${suffix}-media`;
     const specName = `item-${suffix}-spec`;
     const specId = `${id}.clip.${suffix}.spec`;
     records.push({ id: specId, type: audioTrackTypes.clipSpec, value: { kind: "inline", value: clipSpec }, range: child.range });
     inputs[mediaName] = source.ref;
     inputs[specName] = { kind: "record", id: specId };
-    if (binding.kind === "program") {
-      fragmentItems.push({ kind: "program", mediaName, specName, windowSpecName });
-    } else {
-      const sourceName = `item-${suffix}-${binding.kind}`;
-      inputs[sourceName] = binding.source!.ref;
-      fragmentItems.push({ kind: binding.kind, mediaName, specName, sourceName, windowSpecName });
-    }
+    fragmentItems.push({ mediaName, specName, windowName });
   }
   if (fragmentItems.length === 0) throw new Error(`${element.name} requires at least one Clip.`);
   const fragment = createAudioTrackFragment(fragmentItems);
   return {
     records,
-    components: [{
+    components: [...temporalComponents, {
       id,
       fragment: fragment.id,
       inputs,
       outputs: { program: `${id}.program`, track: `${id}.track` },
       range: element.range,
     }],
-    fragments: [fragment],
+    fragments: [...temporalFragments, fragment],
+    exports: [`${id}.program`, `${id}.track`],
   };
 };

@@ -4,10 +4,9 @@ import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation, GraphFragment } from "@hypit/elaborator";
 import { mediaTypes } from "@hypit/media";
 import { mediaTrackProducers, mediaTrackTypes } from "@hypit/media-track";
-import { narrativeTypes } from "@hypit/narrative";
 import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
-import { temporalProducers, temporalTypes } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal";
 
 import { depthStackProducers, depthStackTypes } from "./manifest.js";
 
@@ -24,13 +23,8 @@ export type DepthStackFragmentCard = {
   readonly framePaintSpecName?: string;
   readonly labelName: string;
   readonly cardSpecName: string;
-  readonly momentName: string;
-  readonly pointSpecName: string;
+  readonly activationName: string;
 };
-
-export type DepthStackFragmentTerminal =
-  | { readonly kind: "program-end" }
-  | { readonly kind: "moment" | "selection-start" | "selection-end"; readonly inputName: string; readonly specName: string };
 
 function sourceInput(card: DepthStackFragmentCard): GraphFragment["inputs"][number] {
   const type = card.sourceKind === "still"
@@ -41,7 +35,7 @@ function sourceInput(card: DepthStackFragmentCard): GraphFragment["inputs"][numb
 
 export function createDepthStackFragment(
   cards: readonly DepthStackFragmentCard[],
-  terminal: DepthStackFragmentTerminal,
+  terminalName: string,
 ) {
   if (cards.length === 0) throw new Error("DepthStack Fragment requires Cards.");
   const inputs: Array<GraphFragment["inputs"][number]> = [
@@ -51,12 +45,20 @@ export function createDepthStackFragment(
     { name: "semantic", type: semanticTrackTypes.track },
     { name: "spec", type: depthStackTypes.spec },
   ];
-  const operations: FragmentOperation[] = [{
-    id: "cards",
-    producer: depthStackProducers.createCards,
-    inputs: {},
-    result: { kind: "output", name: "set" },
-  }];
+  const operations: FragmentOperation[] = [
+    {
+      id: "space",
+      producer: semanticTrackProducers.projectProgramSpace,
+      inputs: { track: input("semantic") },
+      result: { kind: "output", name: "space" },
+    },
+    {
+      id: "cards",
+      producer: depthStackProducers.createCards,
+      inputs: {},
+      result: { kind: "output", name: "set" },
+    },
+  ];
   let cardSet = operation("cards");
   for (const card of cards) {
     inputs.push(sourceInput(card));
@@ -66,8 +68,7 @@ export function createDepthStackFragment(
       { name: card.sampleSpecName, type: mediaTrackTypes.sampleLayerSpec },
       { name: card.labelName, type: depthStackTypes.cardLabel },
       { name: card.cardSpecName, type: depthStackTypes.cardSpec },
-      { name: card.momentName, type: narrativeTypes.moment },
-      { name: card.pointSpecName, type: temporalTypes.pointSpec },
+      { name: card.activationName, type: temporalTypes.instant },
     );
     if (card.framePaintSpecName !== undefined) {
       inputs.push({ name: card.framePaintSpecName, type: mediaTrackTypes.paintLayerSpec });
@@ -107,53 +108,22 @@ export function createDepthStackFragment(
       result: { kind: "output", name: "layers" },
     });
     const appendId = `append-${card.suffix}`;
-    const pointId = `point-${card.suffix}`;
-    operations.push({
-      id: pointId,
-      producer: temporalProducers.projectMomentPoint,
-      inputs: { semantic: input("semantic"), moment: input(card.momentName), spec: input(card.pointSpecName) },
-      result: { kind: "output", name: "point" },
-    });
     operations.push({
       id: appendId,
       producer: depthStackProducers.appendCard,
       inputs: {
         set: cardSet,
+        space: operation("space"),
         material: operation(sampleId),
         label: input(card.labelName),
         spec: input(card.cardSpecName),
-        activation: operation(pointId),
+        activation: input(card.activationName),
       },
       result: { kind: "output", name: "set" },
     });
     cardSet = operation(appendId);
   }
-  if (terminal.kind !== "program-end") {
-    inputs.push({
-      name: terminal.inputName,
-      type: terminal.kind === "moment" ? narrativeTypes.moment : narrativeTypes.selection,
-    });
-    inputs.push({ name: terminal.specName, type: temporalTypes.pointSpec });
-  }
-  const terminalPoint = terminal.kind === "program-end" ? "program-point" : "terminal-point";
-  if (terminal.kind === "program-end") {
-    inputs.push({ name: "program-spec", type: temporalTypes.pointSpec });
-    operations.push({ id: terminalPoint, producer: temporalProducers.projectProgramPoint,
-      inputs: { semantic: input("semantic"), spec: input("program-spec") }, result: { kind: "output", name: "point" } });
-  } else {
-    operations.push({ id: terminalPoint,
-      producer: terminal.kind === "moment" ? temporalProducers.projectMomentPoint : temporalProducers.projectSelectionPoint,
-      inputs: {
-        semantic: input("semantic"), spec: input(terminal.specName),
-        [terminal.kind === "moment" ? "moment" : "selection"]: input(terminal.inputName),
-      }, result: { kind: "output", name: "point" } });
-  }
-  operations.push({
-    id: "space",
-    producer: semanticTrackProducers.projectProgramSpace,
-    inputs: { track: input("semantic") },
-    result: { kind: "output", name: "space" },
-  });
+  inputs.push({ name: terminalName, type: temporalTypes.instant });
   operations.push({
     id: "program",
     producer: depthStackProducers.finalize,
@@ -163,7 +133,7 @@ export function createDepthStackFragment(
       frame: input("frame"),
       spec: input("spec"),
       space: operation("space"),
-      terminal: operation(terminalPoint),
+      terminal: input(terminalName),
     },
     result: { kind: "output", name: "program" },
   });

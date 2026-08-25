@@ -13,7 +13,7 @@ import {
   serializeSpeech,
 } from "@hypit/script";
 
-test("Selection source edits relocate markers by 2M + 2N Anchor identity", () => {
+test("Selection source edits relocate markers by 2M + 2N + 2 Anchor identity", () => {
   const source = "<one><HOST>@focus alpha beta @/focus gamma</one>\r\n<two><HOST>delta epsilon</two>";
   const parsed = parseScript("selection-adjust.svml", source);
   const movedWords = adjustScriptSelection({
@@ -48,6 +48,32 @@ test("Selection source edits relocate markers by 2M + 2N Anchor identity", () =>
   ]);
 });
 
+test("Program boundaries are distinct writable semantic Anchors", () => {
+  const source = "<one>alpha</one>\n<two>beta</two>";
+  const withSelection = adjustScriptSelection({
+    sourceName: "program-boundaries.svml",
+    source: "@focus <one>alpha</one>\n<two>beta @/focus</two>",
+    parsed: parseScript("program-boundaries.svml", "@focus <one>alpha</one>\n<two>beta @/focus</two>"),
+    adjustment: { id: "focus", startAnchorId: "program:start", endAnchorId: "program:end" },
+  });
+  const selection = parseScript("program-boundaries.svml", withSelection).selections[0]!;
+  assert.deepEqual([selection.startAnchorId, selection.endAnchorId], ["program:start", "program:end"]);
+  assert.match(withSelection, /^~@focus /u);
+  assert.match(withSelection, / @\/focus~$/u);
+
+  const withMoment = adjustScriptMoment({
+    sourceName: "program-boundaries.svml",
+    source: `${source.slice(0, source.indexOf("beta"))}@cue! ${source.slice(source.indexOf("beta"))}`,
+    parsed: parseScript(
+      "program-boundaries.svml",
+      `${source.slice(0, source.indexOf("beta"))}@cue! ${source.slice(source.indexOf("beta"))}`,
+    ),
+    adjustment: { id: "cue", anchorId: "program:end" },
+  });
+  assert.equal(parseScript("program-boundaries.svml", withMoment).moments[0]!.anchorId, "program:end");
+  assert.match(withMoment, / @cue!$/u);
+});
+
 test("Moment source edits relocate one marker to an exact semantic Anchor", () => {
   const source = "<one><HOST>alpha @cue! beta</one><two><HOST>gamma</two>";
   const moved = adjustScriptMoment({
@@ -66,25 +92,25 @@ test("Script keeps speech, dialogue and CaptionDocument as separate projections"
   assert.equal(serializeSpeech(parsed), "I laughed my ass off there.");
   assert.equal(serializeDialogue(parsed), "BOB: I laughed my ass off there.");
   assert.equal(serializeCaption(parsed), "I laughed there.");
-  const document = captionDocument(parsed, "story.caption");
+  const document = captionDocument(parsed, "story.caption", "story");
   assert.equal(document.units.length, 3);
   assert.equal(document.units[1]!.wordIds.length, 1);
   assert.equal(document.units[1]!.sourceTokenIds.length, 4);
   assert.deepEqual(document.cueBreaks, []);
-  assert.equal((narrativeValue(parsed) as { semanticIndex: { anchors: unknown[] } }).semanticIndex.anchors.length,
-    2 * parsed.tokens.length + 2 * parsed.segments.length);
+  assert.equal((narrativeValue(parsed, "story") as { semanticIndex: { anchors: unknown[] } }).semanticIndex.anchors.length,
+    2 * parsed.tokens.length + 2 * parsed.segments.length + 2);
 });
 
 test("Cue breaks are authored between complete units", () => {
   const parsed = parseScript("break.svml", "<line>one two || three four</line>");
-  const document = captionDocument(parsed, "story.caption");
+  const document = captionDocument(parsed, "story.caption", "story");
   assert.equal(document.cueBreaks.length, 1);
   assert.equal(document.cueBreaks[0]!.afterUnitId, document.units[1]!.id);
 });
 
 test("Caption punctuation is display-only and CJK uses lexical character units", () => {
   const parsed = parseScript("punctuation-cjk.svml", "<line><test | now>. here 你好，世界！</line>");
-  const document = captionDocument(parsed, "story.caption");
+  const document = captionDocument(parsed, "story.caption", "story");
   assert.deepEqual(parsed.tokens.map((token) => token.text), ["now", "here", "你", "好", "世", "界"]);
   assert.deepEqual(document.words.slice(0, 2).map((word) => word.text), ["test.", "here"]);
   assert.deepEqual(document.words.slice(-4).map((word) => word.text), ["你", "好，", "世", "界！"]);
@@ -95,7 +121,7 @@ test("Caption punctuation assigns ASCII quotes to the enclosed display words", (
     "punctuation-quotes.svml",
     "<line>He said <\"hello world\" | hello world>. 他说 <“你好” | 你好>。</line>",
   );
-  const document = captionDocument(parsed, "story.caption");
+  const document = captionDocument(parsed, "story.caption", "story");
   assert.deepEqual(parsed.tokens.map((token) => token.text), [
     "He", "said", "hello", "world", "他", "说", "你", "好",
   ]);
@@ -109,7 +135,7 @@ test("Script keeps ordinary compounds and formatted numbers lexical", () => {
     "punctuation-compounds.svml",
     "<line>rock ’n’ roll costs 1,234.56 dollars.</line>",
   );
-  const document = captionDocument(parsed, "story.caption");
+  const document = captionDocument(parsed, "story.caption", "story");
   assert.deepEqual(parsed.tokens.map((token) => token.text), [
     "rock", "n", "roll", "costs", "1,234.56", "dollars",
   ]);
@@ -120,7 +146,7 @@ test("Script keeps ordinary compounds and formatted numbers lexical", () => {
 
 test("A single pipe is literal and a double pipe is an authored Cue Break", () => {
   const parsed = parseScript("pipes.svml", "<line>one | two || three \\|\\| four</line>");
-  const document = captionDocument(parsed, "story.caption");
+  const document = captionDocument(parsed, "story.caption", "story");
   assert.equal(document.cueBreaks.length, 1);
   assert.equal(serializeCaption(parsed), "one | two three || four");
   assert.deepEqual(document.words.map((word) => word.text), ["one|", "two", "three||", "four"]);
@@ -141,7 +167,7 @@ test("Script projects flat token attributes onto display words without changing 
     "word-attributes.svml",
     "<line>This is really{emphasis,keyword} <hypit{brand} | hype it> now.</line>",
   );
-  const document = captionDocument(parsed, "story.caption");
+  const document = captionDocument(parsed, "story.caption", "story");
   assert.deepEqual(document.words.map((word) => [word.text, word.attributes]), [
     ["This", []],
     ["is", []],

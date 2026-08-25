@@ -43,7 +43,21 @@ The frame clock is a separate program fact and can be shared by every Normalize 
 An SVS recipe may centralize the stream policy (`video`, `audio` and `span-authority`); it does not
 hide the Normalize graph node or turn multiple sources into one opaque batch operation.
 
-Three ordinary author operations reuse that same inspection/execution boundary:
+A still image becomes ordinary video before it enters that waist:
+
+```svml
+<media:StillVideo id="opening-still" source={opening-head}
+  duration={opening-duration.duration} clock={clock}/>
+<pipeline:Normalize id="opening-media" source={opening-still.video}
+  video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+```
+
+`StillVideo` returns a silent MP4 `BlobArtifact`, not `SynchronizedMedia`. Encoding its first decoded
+image frame is a `render-still-video` Need; inspection and normalization remain the same explicit
+steps used by imported or generated moving video. The Blob can therefore serve B-roll through
+Normalize, or continue into either estimated or measured A-roll semantics afterward.
+
+Four ordinary author operations reuse that same inspection/execution boundary:
 
 ```xml
 <pipeline:Normalize id="shot-media" source={shot.video}

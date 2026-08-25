@@ -12,7 +12,7 @@ activation points and pairwise Handoffs. Package-owned Recipes cover fitting, so
 frame Paint, clipping, borders, shadows, lifecycle motion and sampling motion.
 
 Ordinary Items consume projected `TemporalWindow` values. Sequence Member activations and the
-Sequence terminal consume projected `TemporalPoint` values instead; the Sequence component owns
+Sequence terminal consume projected `TemporalInstant` values instead; the Sequence component owns
 only the schedule and handoff consumption that follows those points. All domain Producers receive
 ProgramSpace explicitly and do not locate semantic sources themselves.
 

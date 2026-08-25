@@ -184,6 +184,8 @@ export type FineCaptionScheduledCue = {
 
 /** Explicit projection consumed by the Fine renderer. */
 export type FineCaptionSchedule = {
+  readonly spaceId: string;
+  readonly narrativeId: string;
   readonly documentId: string;
   readonly cues: readonly FineCaptionScheduledCue[];
 };

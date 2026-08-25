@@ -20,6 +20,7 @@ export const mediaPipelineTypes = {
   transformProgram: { module: mediaPipelineModuleRef, name: "MediaTransformProgram" },
   audioExtractionRequest: { module: mediaPipelineModuleRef, name: "AudioExtractionRequest" },
   frameExtractionRequest: { module: mediaPipelineModuleRef, name: "FrameExtractionRequest" },
+  stillVideoRequest: { module: mediaPipelineModuleRef, name: "StillVideoRequest" },
 } satisfies Record<string, TypeRef>;
 export const mediaPipelineCapabilities = {
   inspect: { module: mediaPipelineModuleRef, name: "inspect-media" },
@@ -27,6 +28,7 @@ export const mediaPipelineCapabilities = {
   transform: { module: mediaPipelineModuleRef, name: "transform-media" },
   extractAudio: { module: mediaPipelineModuleRef, name: "extract-media-audio" },
   extractFrame: { module: mediaPipelineModuleRef, name: "extract-media-frame" },
+  renderStill: { module: mediaPipelineModuleRef, name: "render-still-video" },
   projectSpeechEvidenceAudio: { module: mediaPipelineModuleRef, name: "project-speech-evidence-audio" },
   renderAudio: { module: mediaPipelineModuleRef, name: "render-timeline-audio" },
   mux: { module: mediaPipelineModuleRef, name: "mux-program-media" },
@@ -38,6 +40,8 @@ export const mediaPipelineProducers = {
   transform: { module: mediaPipelineModuleRef, name: "request-media-transform" },
   extractAudio: { module: mediaPipelineModuleRef, name: "request-audio-extraction" },
   extractFrame: { module: mediaPipelineModuleRef, name: "request-frame-extraction" },
+  planStill: { module: mediaPipelineModuleRef, name: "plan-still-video" },
+  renderStill: { module: mediaPipelineModuleRef, name: "request-still-video" },
   projectSpeechEvidenceAudio: { module: mediaPipelineModuleRef, name: "request-speech-evidence-audio" },
   planAudio: { module: mediaPipelineModuleRef, name: "compile-audio-program" },
   renderAudio: { module: mediaPipelineModuleRef, name: "request-audio-render" },
@@ -145,6 +149,28 @@ export const frameExtractionRequestSchema: ValueSchema = {
   },
 };
 
+export const stillVideoRequestSchema: ValueSchema = {
+  kind: "object",
+  fields: {
+    frameRate: { schema: {
+      kind: "object",
+      fields: {
+        numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
+        denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
+      },
+    } },
+    frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
+    output: { schema: {
+      kind: "object",
+      fields: {
+        container: { schema: { kind: "literal", value: "mp4" } },
+        codec: { schema: { kind: "literal", value: "h264" } },
+        pixelFormat: { schema: { kind: "literal", value: "yuv420p" } },
+      },
+    } },
+  },
+};
+
 const blobRefSchema: ValueSchema = {
   kind: "object",
   fields: {
@@ -234,6 +260,32 @@ export const mediaPipelineMarkupSurfaces = [
           "Write exactly one of recipe or the direct video/audio/span-authority attributes, and exactly one of clock or frame-rate.",
           "`primary-moving` excludes attached-picture streams, prefers one declared default and fails closed on an ambiguous container; `stream:<index>` is for a container the author genuinely knows.",
           "Selecting embedded audio is a media fact only and makes no SemanticTake, speaker or alignment claim.",
+        ],
+      },
+    },
+    {
+      name: "still-video", tag: "StillVideo", mode: "structured",
+      outputs: [mediaPipelineTypes.stillVideoRequest, artifactTypes.blob],
+      vocabulary: {
+        summary: "Encodes one authored image as an ordinary silent MP4 Blob on an explicit duration and frame clock.",
+        attributes: [
+          { name: "id", kind: "identifier", required: true,
+            summary: "Names the still-video operation and the MP4 Artifact it publishes." },
+          { name: "source", kind: "reference", required: true, accepts: [artifactTypes.blob],
+            summary: "Selects the authored image whose first decoded frame is held for the full video." },
+          { name: "duration", kind: "reference", required: true, accepts: [speechTypes.duration],
+            summary: "Selects the positive duration used to establish the video's finite frame count." },
+          { name: "clock", kind: "reference", required: true, accepts: [programSpaceTypes.clock],
+            summary: "Selects the frame clock used by the generated MP4." },
+        ],
+        ports: [{ name: "video", type: artifactTypes.blob,
+          summary: "The ordinary silent MP4 Artifact, addressed as `<id>.video`." }],
+        example: `<media:StillVideo id="opening-still" source={opening-head}
+  duration={opening-duration.duration} clock={clock}/>`,
+        notes: [
+          "The result is a normal video Blob, not SynchronizedMedia and not a SemanticTake.",
+          "Use Normalize afterward exactly as for generated or imported moving video.",
+          "Encoding is a render-still-video Need fulfilled by the selected media Provider; this Surface never invokes FFmpeg itself.",
         ],
       },
     },
@@ -370,6 +422,9 @@ export const mediaPipelineManifest: ModuleManifest = {
     {
       name: mediaPipelineTypes.frameExtractionRequest.name,
     },
+    {
+      name: mediaPipelineTypes.stillVideoRequest.name,
+    },
   ],
   capabilities: [
     { name: mediaPipelineCapabilities.inspect.name, returns: mediaTypes.inspection },
@@ -377,6 +432,7 @@ export const mediaPipelineManifest: ModuleManifest = {
     { name: mediaPipelineCapabilities.transform.name, returns: artifactTypes.blob },
     { name: mediaPipelineCapabilities.extractAudio.name, returns: artifactTypes.blob },
     { name: mediaPipelineCapabilities.extractFrame.name, returns: artifactTypes.blob },
+    { name: mediaPipelineCapabilities.renderStill.name, returns: artifactTypes.blob },
     { name: mediaPipelineCapabilities.projectSpeechEvidenceAudio.name, returns: speechTypes.evidenceAudio },
     { name: mediaPipelineCapabilities.renderAudio.name, returns: mediaTypes.timelineAudio },
     { name: mediaPipelineCapabilities.mux.name, returns: mediaTypes.muxed },
@@ -457,6 +513,28 @@ export const mediaPipelineManifest: ModuleManifest = {
       needs: [{
         name: "image",
         capability: mediaPipelineCapabilities.extractFrame,
+        returns: artifactTypes.blob,
+      }],
+    },
+    {
+      name: mediaPipelineProducers.planStill.name,
+      inputs: [
+        { name: "duration", type: speechTypes.duration },
+        { name: "clock", type: programSpaceTypes.clock },
+      ],
+      outputs: [{ name: "request", type: mediaPipelineTypes.stillVideoRequest }],
+      needs: [],
+    },
+    {
+      name: mediaPipelineProducers.renderStill.name,
+      inputs: [
+        { name: "source", type: artifactTypes.blob },
+        { name: "request", type: mediaPipelineTypes.stillVideoRequest },
+      ],
+      outputs: [],
+      needs: [{
+        name: "video",
+        capability: mediaPipelineCapabilities.renderStill,
         returns: artifactTypes.blob,
       }],
     },

@@ -8,6 +8,7 @@ import type {
   MediaAudioSelector,
   MediaTransformProgram,
   MediaVideoSelector,
+  StillVideoRequest,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -110,6 +111,25 @@ export function verifyFrameExtractionRequest(value: unknown): asserts value is F
 export function sealFrameExtractionRequest(value: FrameExtractionRequest): FrameExtractionRequest {
   const result = canonicalize(value) as unknown as FrameExtractionRequest;
   verifyFrameExtractionRequest(result);
+  return result;
+}
+
+export function verifyStillVideoRequest(value: unknown): asserts value is StillVideoRequest {
+  const request = object(value, "StillVideoRequest");
+  const frameRate = object(request.frameRate, "StillVideoRequest.frameRate");
+  assert(Number.isSafeInteger(frameRate.numerator) && (frameRate.numerator as number) > 0
+    && Number.isSafeInteger(frameRate.denominator) && (frameRate.denominator as number) > 0,
+  "StillVideoRequest.frameRate must be a positive rational");
+  assert(Number.isSafeInteger(request.frameCount) && (request.frameCount as number) > 0,
+    "StillVideoRequest.frameCount must be positive");
+  const output = object(request.output, "StillVideoRequest.output");
+  assert(output.container === "mp4" && output.codec === "h264" && output.pixelFormat === "yuv420p",
+    "StillVideoRequest output profile is unsupported");
+}
+
+export function sealStillVideoRequest(value: StillVideoRequest): StillVideoRequest {
+  const result = canonicalize(value) as unknown as StillVideoRequest;
+  verifyStillVideoRequest(result);
   return result;
 }
 

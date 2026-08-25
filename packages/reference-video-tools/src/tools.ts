@@ -1,8 +1,7 @@
 import type { Part } from "@google/genai";
 import { access, readdir, stat, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { createRequire } from "node:module";
-import { loadNodePackageSelection } from "@hypit/package-loader-node";
+import { join, resolve } from "node:path";
+import { loadNodePackageSelection, locateNodePackage } from "@hypit/package-loader-node";
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface, SurfaceVocabulary } from "@hypit/markup";
 import { exactModelHostAbi } from "@hypit/model-kit";
@@ -762,17 +761,10 @@ function withoutPreview(value: SurfaceVocabulary | undefined): SurfaceVocabulary
 
 function readmePath(specifier: string, root: string): string | undefined {
   try {
-    const require = createRequire(join(root, "__hypit_reference_tools__.cjs"));
-    const entry = require.resolve(specifier) as string;
-    let cursor = dirname(entry);
-    while (cursor !== dirname(cursor)) {
-      try {
-        const candidate = join(cursor, "package.json");
-        const packageJson = require(candidate) as { name?: string };
-        if (packageJson.name === specifier) return join(cursor, "README.md");
-      } catch { /* keep walking */ }
-      cursor = dirname(cursor);
-    }
-    return undefined;
+    const located = locateNodePackage(specifier, {
+      from: join(root, "__hypit_reference_tools__.mjs"),
+      workspaceRoots: [root],
+    });
+    return join(located.root, "README.md");
   } catch { return undefined; }
 }

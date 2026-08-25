@@ -33,6 +33,7 @@ function semantic(id: string, visual: boolean): SemanticTake {
     audio: { artifact: { kind: "blob", digest: fixtureDigest(`${id}:audio`), size: 1, mediaType: "audio/wav" } },
   };
   return {
+    narrativeId: "test-narrative",
     media,
     segment: {
       segmentId: id,

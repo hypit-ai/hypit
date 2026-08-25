@@ -2,8 +2,10 @@ import { mediaComponent } from "@hypit/media";
 import type { ComponentPackage } from "@hypit/component-kit";
 import { synchronizedMediaSampleFrames, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
 import type { MediaInspection, MediaStreamSelection, MuxedMedia, RenderedVisual, SynchronizedMedia, TimelineAudio } from "@hypit/media";
-import type { ProgramSpace } from "@hypit/program-space";
-import { speechEvidenceSampleBoundary } from "@hypit/speech";
+import { assertProgramClockIdentity } from "@hypit/program-space";
+import type { ProgramClock, ProgramSpace } from "@hypit/program-space";
+import { assertSpeechDurationIdentity, speechEvidenceSampleBoundary } from "@hypit/speech";
+import type { SpeechDuration } from "@hypit/speech";
 import type { Composition } from "@hypit/composition";
 import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
 import { canonicalize } from "@hypit/protocol";
@@ -20,9 +22,11 @@ import {
 import {
   selectAudioStream,
   selectVideoStream,
+  sealStillVideoRequest,
   verifyAudioExtractionRequest,
   verifyFrameExtractionRequest,
   verifyMediaTransformProgram,
+  verifyStillVideoRequest,
 } from "./operations.js";
 import type {
   AudioExtractionRequest,
@@ -35,6 +39,8 @@ import type {
   NormalizeMediaNeed,
   ProjectSpeechEvidenceAudioNeed,
   RenderAudioNeed,
+  RenderStillVideoNeed,
+  StillVideoRequest,
   TransformMediaNeed,
 } from "./types.js";
 
@@ -78,6 +84,12 @@ export const mediaPipelineComponent = {
       type: mediaPipelineTypes.frameExtractionRequest,
       handler: ({ value }) => {
         verifyFrameExtractionRequest(inline(value, "FrameExtractionRequest"));
+      },
+    },
+    {
+      type: mediaPipelineTypes.stillVideoRequest,
+      handler: ({ value }) => {
+        verifyStillVideoRequest(inline(value, "StillVideoRequest"));
       },
     },
   ],
@@ -177,6 +189,36 @@ export const mediaPipelineComponent = {
           output: request.output,
         };
         return { outputs: {}, needs: { image: canonicalize(need) } };
+      },
+    },
+    {
+      producer: mediaPipelineProducers.planStill,
+      handler: ({ inputs }) => {
+        const duration = inline(inputs.duration!.value, "SpeechDuration") as unknown as SpeechDuration;
+        const clock = inline(inputs.clock!.value, "ProgramClock") as unknown as ProgramClock;
+        assertSpeechDurationIdentity(duration);
+        assertProgramClockIdentity(clock);
+        const frames = Math.round(duration * clock.frameRate.numerator / clock.frameRate.denominator);
+        if (!Number.isSafeInteger(frames) || frames < 1) {
+          throw new Error("Still video duration does not produce a positive safe frame count");
+        }
+        const request = sealStillVideoRequest({
+          frameRate: clock.frameRate,
+          frameCount: frames,
+          output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
+        });
+        return { outputs: { request: { kind: "inline", value: canonicalize(request) } }, needs: {} };
+      },
+    },
+    {
+      producer: mediaPipelineProducers.renderStill,
+      handler: ({ inputs }) => {
+        const source = blob(inputs.source!.value, "Still video source");
+        const request = inline(inputs.request!.value, "StillVideoRequest") as unknown as StillVideoRequest;
+        if (!source.mediaType.startsWith("image/")) throw new Error("Still video source must be an image Artifact");
+        verifyStillVideoRequest(request);
+        const need: RenderStillVideoNeed = { source, request };
+        return { outputs: {}, needs: { video: canonicalize(need) } };
       },
     },
     {

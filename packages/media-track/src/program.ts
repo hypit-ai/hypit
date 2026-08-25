@@ -17,7 +17,8 @@ import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
 import { assertSpatialPath } from "@hypit/spatial";
 import type { SpatialPath } from "@hypit/spatial";
-import type { ProjectedWindow, TemporalPoint } from "@hypit/temporal";
+import { assertTemporalInstantFor, assertTemporalWindowFor } from "@hypit/temporal";
+import type { ProjectedWindow, TemporalInstant } from "@hypit/temporal";
 
 import {
   assertMediaIdentity,
@@ -140,6 +141,7 @@ function realizedItems(
   assert(layers.layers.length > 0, `Media Item ${spec.id} requires at least one layer.`);
   assertSpatialFrame(frame);
   assertMediaItemSpec(spec);
+  assertTemporalWindowFor(window, { subjectId: spec.id, space });
   assertMediaSoundSet(sounds);
   assert(!sounds.sounds.some((sound) => sound.trigger.kind === "handoff"),
     `Media Item ${spec.id} cannot own a Handoff sound.`);
@@ -255,8 +257,9 @@ export function appendMediaSequence(
   frame: MediaSequenceProgram["frame"],
   spec: MediaSequenceSpec,
   sounds: MediaSoundSet,
-  terminal: TemporalPoint,
+  terminal: TemporalInstant,
 ): MediaTrackSet {
+  assertTemporalInstantFor(terminal, { subjectId: spec.id, space });
   return appendMediaSequenceAtFrame(set, header, space, canvas, members, frame, spec, sounds, terminal.frame);
 }
 
@@ -363,6 +366,7 @@ export function assertMediaTrackProgramIdentity(value: MediaTrackProgram, space:
 export function projectMediaVisualTrack(space: ProgramSpace, program: MediaTrackProgram): VisualTrack {
   assertMediaTrackProgramIdentity(program, space);
   const track = sealVisualTrack({
+    programSpaceId: space.id,
     visualIr: "hypit.visual-ir@1",
     id: program.id,
     presents: [
@@ -554,7 +558,7 @@ export function projectMediaAudioTrack(space: ProgramSpace, program: MediaTrackP
     return [...(source === undefined ? [] : [source]), ...edgeSoundClips(item, space)];
   }).concat(program.sequences.flatMap((sequence) => sequenceAudioClips(sequence, space)));
   assert(clips.length > 0, `Media Program ${program.id} has no explicitly authored audio projection.`);
-  const track = sealAudioTrack({ id: `${program.id}:audio`, clips });
+  const track = sealAudioTrack({ programSpaceId: space.id, id: `${program.id}:audio`, clips });
   assertAudioTrackIdentity(track, space);
   return track;
 }

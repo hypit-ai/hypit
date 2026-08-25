@@ -8,19 +8,19 @@ import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import {
   assertWindowRelation,
+  composeTemporalWindow,
   locateSelection,
-  projectMomentPoint,
-  projectMomentWindow,
-  projectProgramPoint,
-  projectProgramWindow,
-  projectSelectionPoint,
-  projectSegmentWindow,
-  projectSelectionWindow,
+  projectMomentInstant,
+  projectProgramInstant,
+  projectSelectionInstant,
+  projectSegmentInstant,
   resolveTriggeredSchedule,
   temporalDurationInSamples,
 } from "../src/index.js";
 
 const space: ProgramSpace = {
+  id: "test-space",
+  narrativeId: "test-narrative",
   durationSec: 10,
   frameRate: { numerator: 30, denominator: 1 },
 };
@@ -44,11 +44,44 @@ const semantic = semanticTrackFixture(space, {
 });
 
 const selection = (id: string, startAnchorId: string, endAnchorId: string): NarrativeSelectionRef => ({
-  id, startAnchorId, endAnchorId,
+  narrativeId: "test-narrative", id, startAnchorId, endAnchorId,
 });
-const moment = (id: string, anchorId: string): NarrativeMomentRef => ({ id, anchorId });
+const moment = (id: string, anchorId: string): NarrativeMomentRef => ({ narrativeId: "test-narrative", id, anchorId });
 const frames = (value: number) => ({ unit: "frames" as const, value });
 const seconds = (numerator: number, denominator = 1) => ({ unit: "seconds" as const, numerator, denominator });
+const fixed = { kind: "fixed" as const };
+type Projection = import("../src/index.js").TemporalInstantExpression;
+const projectProgramInstantFixture = (input: { itemId: string; semantic: typeof semantic; projection: Projection }) =>
+  projectProgramInstant({ ...input, subjectId: input.itemId, authority: fixed });
+const projectMomentInstantFixture = (input: { itemId: string; semantic: typeof semantic; moment: NarrativeMomentRef; projection: Projection }) =>
+  projectMomentInstant({ ...input, subjectId: input.itemId, authority: fixed });
+const projectSelectionInstantFixture = (input: { itemId: string; semantic: typeof semantic; selection: NarrativeSelectionRef; projection: Projection }) =>
+  projectSelectionInstant({ ...input, subjectId: input.itemId, authority: fixed });
+const projectSelectionWindow = (input: {
+  itemId: string; semantic: typeof semantic; selection: NarrativeSelectionRef;
+  projection: { start: Projection; end: Projection };
+}) => composeTemporalWindow({ id: input.itemId, subjectId: input.itemId },
+  projectSelectionInstant({ itemId: `${input.itemId}.start`, subjectId: input.itemId, semantic: input.semantic, selection: input.selection, projection: input.projection.start, authority: fixed }),
+  input.projection.end.ref.startsWith("program.") || input.projection.end.ref === "absolute"
+    ? projectProgramInstant({ itemId: `${input.itemId}.end`, subjectId: input.itemId, semantic: input.semantic, projection: input.projection.end, authority: fixed })
+    : projectSelectionInstant({ itemId: `${input.itemId}.end`, subjectId: input.itemId, semantic: input.semantic, selection: input.selection, projection: input.projection.end, authority: fixed }));
+const projectMomentWindow = (input: {
+  itemId: string; semantic: typeof semantic; moment: NarrativeMomentRef;
+  projection: { start: Projection; end: Projection };
+}) => composeTemporalWindow({ id: input.itemId, subjectId: input.itemId },
+  projectMomentInstant({ itemId: `${input.itemId}.start`, subjectId: input.itemId, semantic: input.semantic, moment: input.moment, projection: input.projection.start, authority: fixed }),
+  projectMomentInstant({ itemId: `${input.itemId}.end`, subjectId: input.itemId, semantic: input.semantic, moment: input.moment, projection: input.projection.end, authority: fixed }));
+const projectSegmentWindow = (input: {
+  itemId: string; semantic: typeof semantic; segment: import("@hypit/narrative").NarrativeExcerpt;
+  projection: { start: Projection; end: Projection };
+}) => composeTemporalWindow({ id: input.itemId, subjectId: input.itemId },
+  projectSegmentInstant({ itemId: `${input.itemId}.start`, subjectId: input.itemId, semantic: input.semantic, segment: input.segment, projection: input.projection.start, authority: fixed }),
+  projectSegmentInstant({ itemId: `${input.itemId}.end`, subjectId: input.itemId, semantic: input.semantic, segment: input.segment, projection: input.projection.end, authority: fixed }));
+const projectProgramWindow = (input: {
+  itemId: string; semantic: typeof semantic; projection: { start: Projection; end: Projection };
+}) => composeTemporalWindow({ id: input.itemId, subjectId: input.itemId },
+  projectProgramInstant({ itemId: `${input.itemId}.start`, subjectId: input.itemId, semantic: input.semantic, projection: input.projection.start, authority: fixed }),
+  projectProgramInstant({ itemId: `${input.itemId}.end`, subjectId: input.itemId, semantic: input.semantic, projection: input.projection.end, authority: fixed }));
 
 test("one Selection projects exact local points and stable source identity", () => {
   const result = projectSelectionWindow({
@@ -57,46 +90,60 @@ test("one Selection projects exact local points and stable source identity", () 
     selection: selection("proof", "a", "b"),
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   });
-  assert.deepEqual(result, {
-    id: "card::proof",
-    source: { kind: "selection", id: "proof" },
-    projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
-    span: { startFrame: 30, endFrameExclusive: 60 },
-  });
+  assert.equal(result.id, "card");
+  assert.equal(result.start.source.id, "proof");
+  assert.equal(result.end.source.id, "proof");
+  assert.deepEqual(result.span, { startFrame: 30, endFrameExclusive: 60 });
 });
 
 test("points preserve source identity and admit both ProgramSpace boundaries", () => {
-  assert.deepEqual(projectProgramPoint({
+  assert.deepEqual(projectProgramInstantFixture({
     itemId: "terminal",
     semantic,
     projection: { ref: "program.end" },
   }), {
     id: "terminal::program",
-    source: { kind: "program", id: "program" },
+    subjectId: "terminal",
+    source: { spaceId: "test-space", narrativeId: "test-narrative", kind: "program", id: "program" },
     projection: { ref: "program.end" },
+    authority: fixed,
     frame: 300,
   });
-  assert.deepEqual(projectMomentPoint({
+  assert.deepEqual(projectMomentInstantFixture({
     itemId: "terminal",
     semantic,
     moment: moment("done", "end"),
     projection: { ref: "moment.cue" },
   }), {
     id: "terminal::done",
-    source: { kind: "moment", id: "done" },
+    subjectId: "terminal",
+    source: { spaceId: "test-space", narrativeId: "test-narrative", kind: "moment", id: "done" },
     projection: { ref: "moment.cue" },
+    authority: fixed,
     frame: 300,
   });
-  assert.equal(projectProgramPoint({
+  assert.equal(projectProgramInstantFixture({
     itemId: "start",
     semantic,
     projection: { ref: "program.start" },
   }).frame, 0);
 });
 
+test("Script Program Anchors resolve through the SemanticTrack without entering a SemanticTake", () => {
+  assert.deepEqual(locateSelection(semantic, selection("whole", "program:start", "program:end")), {
+    id: "whole", start: { frame: 0 }, end: { frame: 300 },
+  });
+  assert.equal(projectMomentInstantFixture({
+    itemId: "outro",
+    semantic,
+    moment: moment("outro", "program:end"),
+    projection: { ref: "moment.cue" },
+  }).frame, 300);
+});
+
 test("a point may consume one boundary of a crossed Selection", () => {
   const crossed = selection("crossed", "d", "a");
-  assert.equal(projectSelectionPoint({
+  assert.equal(projectSelectionInstantFixture({
     itemId: "boundary",
     semantic,
     selection: crossed,
@@ -105,12 +152,12 @@ test("a point may consume one boundary of a crossed Selection", () => {
 });
 
 test("points reject exact coordinates outside ProgramSpace", () => {
-  assert.throws(() => projectProgramPoint({
+  assert.throws(() => projectProgramInstantFixture({
     itemId: "before",
     semantic,
     projection: { ref: "program.start", offset: frames(-1) },
   }), /falls outside ProgramSpace/u);
-  assert.throws(() => projectProgramPoint({
+  assert.throws(() => projectProgramInstantFixture({
     itemId: "after",
     semantic,
     projection: { ref: "program.end", offset: frames(1) },
@@ -121,19 +168,17 @@ test("one Segment projects from its own structural start and end anchors", () =>
   const result = projectSegmentWindow({
     itemId: "answer-card",
     semantic,
-    segment: { kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
+    segment: { kind: "segment", narrativeId: "test-narrative", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
     projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
   });
-  assert.deepEqual(result, {
-    id: "answer-card::answer",
-    source: { kind: "segment", id: "answer" },
-    projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
-    span: { startFrame: 60, endFrameExclusive: 120 },
-  });
+  assert.equal(result.id, "answer-card");
+  assert.equal(result.start.source.id, "answer");
+  assert.equal(result.end.source.id, "answer");
+  assert.deepEqual(result.span, { startFrame: 60, endFrameExclusive: 120 });
 });
 
-test("negative intermediate points clip before nearest half-later frame quantization", () => {
-  const result = projectMomentWindow({
+test("Instant endpoints outside ProgramSpace are rejected before Window composition", () => {
+  assert.throws(() => projectMomentWindow({
     itemId: "lead",
     semantic,
     moment: moment("cue", "a"),
@@ -141,12 +186,12 @@ test("negative intermediate points clip before nearest half-later frame quantiza
       start: { ref: "moment.cue", offset: seconds(-2) },
       end: { ref: "moment.cue", offset: { unit: "milliseconds", value: 550 } },
     },
-  });
-  assert.deepEqual(result.span, { startFrame: 0, endFrameExclusive: 47 });
+  }), /falls outside ProgramSpace/u);
 });
 
 test("program and absolute projections use exact rational frame-rate arithmetic", () => {
   const ntsc: ProgramSpace = {
+    id: "test-space", narrativeId: "test-narrative",
     durationSec: 1.001,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   };
@@ -163,6 +208,7 @@ test("program and absolute projections use exact rational frame-rate arithmetic"
 
 test("frame and authored durations enter one exact sample-boundary rule", () => {
   const ntsc: ProgramSpace = {
+    id: "test-space", narrativeId: "test-narrative",
     durationSec: 1.001,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   };
@@ -172,6 +218,7 @@ test("frame and authored durations enter one exact sample-boundary rule", () => 
   assert.equal(temporalDurationInSamples({ unit: "milliseconds", value: 125 }, ntsc), 6_000);
   assert.equal(temporalDurationInSamples(seconds(1, 3), ntsc), 16_000);
   const twentyFour: ProgramSpace = {
+    id: "test-space", narrativeId: "test-narrative",
     durationSec: 1,
     frameRate: { numerator: 24, denominator: 1 },
   };
@@ -187,7 +234,7 @@ test("crossed source anchors are allowed until a projection actually consumes th
   assert.throws(() => projectSelectionWindow({
     itemId: "identity", semantic, selection: crossed,
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
-  }), /reversed raw window/u);
+  }), /endpoints are reversed/u);
   assert.deepEqual(projectSelectionWindow({
     itemId: "persist", semantic, selection: crossed,
     projection: { start: { ref: "selection.start" }, end: { ref: "program.end" } },
@@ -198,18 +245,18 @@ test("zero, fully outside and sub-frame windows fail atomically", () => {
   assert.throws(() => projectProgramWindow({
     itemId: "zero", semantic,
     projection: { start: { ref: "program.start" }, end: { ref: "program.start" } },
-  }), /zero raw window/u);
+  }), /zero window/u);
   assert.throws(() => projectProgramWindow({
     itemId: "outside", semantic,
     projection: { start: { ref: "program.end", offset: frames(1) }, end: { ref: "program.end", offset: frames(2) } },
-  }), /does not intersect/u);
+  }), /falls outside ProgramSpace/u);
   assert.throws(() => projectProgramWindow({
     itemId: "tiny", semantic,
     projection: {
       start: { ref: "absolute", at: seconds(1, 100) },
       end: { ref: "absolute", at: seconds(7, 500) },
     },
-  }), /shorter than one frame/u);
+  }), /zero window/u);
 });
 
 test("disjoint validation checks physical overlap without reordering the input", () => {

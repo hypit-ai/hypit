@@ -41,7 +41,7 @@ import { sealProgramSpace } from "@hypit/program-space";
 import type { ModuleManifest } from "@hypit/protocol";
 import { semanticTrackTypes } from "@hypit/semantic-track";
 import { temporalTypes } from "@hypit/temporal";
-import type { TemporalPoint } from "@hypit/temporal";
+import type { TemporalInstant } from "@hypit/temporal";
 import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { sealText, textManifest, textTypes } from "@hypit/text";
@@ -55,7 +55,7 @@ import type {
 import { artifactTypes } from "@hypit/artifact";
 import { mediaTrackManifest, mediaTrackTypes } from "@hypit/media-track";
 
-const space = sealProgramSpace({
+const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
@@ -102,7 +102,7 @@ test("DepthStack Surface declares every sealed Record it may emit", () => {
     depthStackTypes.cardLabel,
     depthStackTypes.cardLabelStyle,
     textTypes.text,
-    temporalTypes.pointSpec,
+    temporalTypes.instantSpec,
     depthStackTypes.program,
     compositionTypes.visualTrack,
   ]) {
@@ -204,21 +204,25 @@ function cardSpec(id: string, past: "hold-tail" | "continue" | "hide" = "hold-ta
   });
 }
 
-function momentPoint(id: string, frameValue: number): TemporalPoint {
+function momentPoint(id: string, frameValue: number): TemporalInstant {
   return {
     id: `${id}::moment`,
-    source: { kind: "moment", id },
+    subjectId: id,
+    source: { spaceId: space.id, narrativeId: space.narrativeId, kind: "moment", id },
     projection: { ref: "moment.cue" },
     frame: frameValue,
+    authority: { kind: "fixed" },
   };
 }
 
-function programPoint(endFrame: number): TemporalPoint {
+function programPoint(subjectId: string, endFrame: number): TemporalInstant {
   return {
     id: "program::program",
-    source: { kind: "program", id: "program" },
+    subjectId,
+    source: { spaceId: space.id, narrativeId: space.narrativeId, kind: "program", id: "program" },
     projection: { ref: "program.end" },
     frame: endFrame,
+    authority: { kind: "fixed" },
   };
 }
 
@@ -236,6 +240,7 @@ function program(input: {
     const id = `card-${index + 1}`;
     set = appendDepthStackCard(
       set,
+      space,
       input.materials?.[index] ?? stillMaterial(id),
       input.labels?.[index] ?? noDepthStackCardLabel(),
       input.playbacks?.[index] ?? cardSpec(id),
@@ -247,7 +252,7 @@ function program(input: {
     sealDepthStackHeader({ id: "proof-stack" }),
     frame,
     input.spec ?? baseSpec(),
-    programPoint(input.terminal ?? 60),
+    programPoint("proof-stack", input.terminal ?? 60),
     space,
   );
 }
@@ -282,7 +287,7 @@ test("explicit wrapping never aliases one Card into several relative depths", ()
 test("missing, equal, reversed and terminal-crossing triggers fail in authored order", () => {
   assert.throws(() => finalizeDepthStack(
     createDepthStackCardSet(), sealDepthStackHeader({ id: "empty" }),
-    frame, baseSpec(), programPoint(60), space,
+    frame, baseSpec(), programPoint("empty", 60), space,
   ), /at least one Card/u);
   assert.throws(() => program({ triggers: [0, 20, 20] }), /strictly increasing/u);
   assert.throws(() => program({ triggers: [0, 30, 20] }), /strictly increasing/u);
@@ -436,15 +441,24 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
     resolveReference: (path) => references.get(path),
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
-  assert.equal(result.components.length, 1);
-  assert.deepEqual(Object.keys(result.components[0]!.outputs).sort(), ["program", "track"]);
-  const fragment = result.fragments[0]!;
+  const component = result.components.find((candidate) => candidate.outputs.track !== undefined);
+  assert.ok(component !== undefined);
+  assert.deepEqual(Object.keys(component.outputs).sort(), ["program", "track"]);
+  const fragment = result.fragments.find((candidate) => candidate.exports.some((output) => output.name === "track"))!;
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-still-media-layer"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-timed-media-layer"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-depth-stack-card"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "finalize-depth-stack"));
-  assert.ok(fragment.operations.some((operation) => operation.producer.name === "project-selection-point"));
-  assert.equal(fragment.inputs.filter((input) => input.type.name === narrativeTypes.moment.name).length, 2);
+  assert.ok(result.fragments.some((candidate) => candidate.operations.some((operation) =>
+    operation.producer.name === "project-selection-instant")));
+  const temporalSubjects = new Set(result.records.flatMap((record) =>
+    record.value.kind === "inline"
+      && typeof record.value.value === "object"
+      && record.value.value !== null
+      && "subjectId" in record.value.value
+      ? [String((record.value.value as { readonly subjectId: unknown }).subjectId)]
+      : []));
+  assert.deepEqual([...temporalSubjects].sort(), ["one", "proof", "two"]);
   assert.ok(fragment.inputs.some((input) => input.name === "frame"));
   assert.ok(fragment.inputs.some((input) => input.name === "terminal"));
 });

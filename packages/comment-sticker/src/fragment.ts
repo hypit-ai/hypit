@@ -2,22 +2,16 @@ import { artifactTypes } from "@hypit/artifact";
 import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation } from "@hypit/elaborator";
-import { narrativeTypes } from "@hypit/narrative";
 import type { TypeRef } from "@hypit/protocol";
-import { semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { textTypes } from "@hypit/text";
-import { temporalProducers, temporalTypes } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal";
 
 import { commentStickerProducers, commentStickerTypes } from "./manifest.js";
 
-type TimedItem =
-  | { readonly kind: "program" }
-  | { readonly kind: "selection"; readonly sourceName: string }
-  | { readonly kind: "moment"; readonly sourceName: string };
-
-export type CommentStickerFragmentItem = TimedItem & {
-  readonly windowSpecName: string;
+export type CommentStickerFragmentItem = {
+  readonly windowName: string;
   readonly specName: string;
   readonly frameName: string;
   readonly styleName: string;
@@ -38,16 +32,24 @@ function appendProducer(item: CommentStickerFragmentItem) {
 export function createCommentStickerFragment(items: readonly CommentStickerFragmentItem[]) {
   if (items.length === 0) throw new Error("Comment Sticker Fragment requires at least one Item.");
   const types = new Map<string, TypeRef>();
-  const operations: FragmentOperation[] = [{
-    id: "comment:set:empty",
-    producer: commentStickerProducers.createSet,
-    inputs: {},
-    result: { kind: "output", name: "set" },
-  }];
+  const operations: FragmentOperation[] = [
+    {
+      id: "comment:space",
+      producer: semanticTrackProducers.projectProgramSpace,
+      inputs: { track: input("semantic") },
+      result: { kind: "output", name: "space" },
+    },
+    {
+      id: "comment:set:empty",
+      producer: commentStickerProducers.createSet,
+      inputs: {},
+      result: { kind: "output", name: "set" },
+    },
+  ];
   let current = "comment:set:empty";
   items.forEach((item, index) => {
     types.set(item.specName, commentStickerTypes.itemSpec);
-    types.set(item.windowSpecName, temporalTypes.windowSpec);
+    types.set(item.windowName, temporalTypes.window);
     types.set(item.frameName, spatialTypes.frame);
     types.set(item.styleName, commentStickerTypes.style);
     types.set(item.commentName, textTypes.text);
@@ -55,9 +57,6 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
     if (item.headerTextName !== undefined) types.set(item.headerTextName, textTypes.text);
     if (item.metaName !== undefined) types.set(item.metaName, textTypes.text);
     if (item.avatarName !== undefined) types.set(item.avatarName, artifactTypes.blob);
-    if (item.kind !== "program") {
-      types.set(item.sourceName, item.kind === "selection" ? narrativeTypes.selection : narrativeTypes.moment);
-    }
     const suffix = String(index + 1).padStart(4, "0");
     const createContentId = `comment:content:${suffix}:create`;
     operations.push({
@@ -83,22 +82,16 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
       content = operation(fieldId);
     }
     const id = `comment:set:append:${suffix}`;
-    const windowId = `comment:window:${suffix}`;
-    const windowProducer = item.kind === "program" ? temporalProducers.projectProgram
-      : item.kind === "selection" ? temporalProducers.projectSelection : temporalProducers.projectMoment;
-    operations.push({ id: windowId, producer: windowProducer, inputs: {
-      semantic: input("semantic"), spec: input(item.windowSpecName),
-      ...(item.kind === "program" ? {} : { [item.kind]: input(item.sourceName) }),
-    }, result: { kind: "output", name: "window" } });
     operations.push({
       id,
       producer: appendProducer(item),
       inputs: {
         set: operation(current),
         header: input("header"),
+        space: operation("comment:space"),
         frame: input(item.frameName),
         style: input(item.styleName),
-        semantic: input("semantic"), window: operation(windowId),
+        window: input(item.windowName),
         spec: input(item.specName),
         content,
         ...(item.avatarName === undefined ? {} : { avatar: input(item.avatarName) }),
@@ -117,7 +110,7 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
     {
       id: "comment:track",
       producer: commentStickerProducers.render,
-      inputs: { canvas: input("canvas"), semantic: input("semantic"), program: operation("comment:program") },
+      inputs: { canvas: input("canvas"), space: operation("comment:space"), program: operation("comment:program") },
       result: { kind: "output", name: "track" },
     },
   );

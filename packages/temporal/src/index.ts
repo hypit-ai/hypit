@@ -1,5 +1,5 @@
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { narrativeTypes, narrativeDependency } from "@hypit/narrative";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { programSpaceDependency } from "@hypit/program-space";
 
@@ -12,17 +12,29 @@ const duration: ValueSchema = { kind: "oneOf", variants: [
   object({ unit: { schema: { kind: "literal", value: "milliseconds" } }, value: { schema: integer } }),
   object({ unit: { schema: { kind: "literal", value: "seconds" } }, numerator: { schema: integer }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } } }),
 ] };
-const point: ValueSchema = { kind: "oneOf", variants: [
+const instant: ValueSchema = { kind: "oneOf", variants: [
   ...["program.start", "program.end", "selection.start", "selection.end", "segment.start", "segment.end", "moment.cue"].map((ref) => object({
     ref: { schema: { kind: "literal", value: ref } }, offset: { schema: duration, optional: true },
   })),
   object({ ref: { schema: { kind: "literal", value: "absolute" } }, at: { schema: duration } }),
 ] };
-const projectionSchema: ValueSchema = object({ start: { schema: point }, end: { schema: point } });
 const sourceSchema: ValueSchema = { kind: "oneOf", variants: [
   ...["program", "selection", "segment", "moment"].map((kind) => object({
+    spaceId: { schema: string }, narrativeId: { schema: string },
     kind: { schema: { kind: "literal", value: kind } }, id: { schema: string },
   })),
+] };
+const authoritySchema: ValueSchema = { kind: "oneOf", variants: [
+  object({
+    kind: { schema: { kind: "literal", value: "semantic" } },
+    boundary: { schema: { kind: "string", enum: ["start", "end", "cue"] } },
+  }),
+  object({
+    kind: { schema: { kind: "literal", value: "parameter" } },
+    binding: { schema: string },
+    relation: { schema: { kind: "string", enum: ["direct", "after-start", "before-end"] } },
+  }),
+  object({ kind: { schema: { kind: "literal", value: "fixed" } } }),
 ] };
 const frameSpanSchema: ValueSchema = object({
   startFrame: { schema: unsignedInteger },
@@ -37,20 +49,17 @@ export type * from "./types.js";
 
 export const temporalModuleRef = { name: "@hypit/temporal", version: "1" } as const;
 export const temporalTypes = {
-  pointSpec: { module: temporalModuleRef, name: "TemporalPointSpec" },
-  point: { module: temporalModuleRef, name: "TemporalPoint" },
+  instantSpec: { module: temporalModuleRef, name: "TemporalInstantSpec" },
+  instant: { module: temporalModuleRef, name: "TemporalInstant" },
   windowSpec: { module: temporalModuleRef, name: "TemporalWindowSpec" },
   window: { module: temporalModuleRef, name: "TemporalWindow" },
 } satisfies Record<string, TypeRef>;
 export const temporalProducers = {
-  projectProgramPoint: { module: temporalModuleRef, name: "project-program-point" },
-  projectSelectionPoint: { module: temporalModuleRef, name: "project-selection-point" },
-  projectSegmentPoint: { module: temporalModuleRef, name: "project-segment-point" },
-  projectMomentPoint: { module: temporalModuleRef, name: "project-moment-point" },
-  projectProgram: { module: temporalModuleRef, name: "project-program-window" },
-  projectSelection: { module: temporalModuleRef, name: "project-selection-window" },
-  projectSegment: { module: temporalModuleRef, name: "project-segment-window" },
-  projectMoment: { module: temporalModuleRef, name: "project-moment-window" },
+  projectProgramInstant: { module: temporalModuleRef, name: "project-program-instant" },
+  projectSelectionInstant: { module: temporalModuleRef, name: "project-selection-instant" },
+  projectSegmentInstant: { module: temporalModuleRef, name: "project-segment-instant" },
+  projectMomentInstant: { module: temporalModuleRef, name: "project-moment-instant" },
+  composeWindow: { module: temporalModuleRef, name: "compose-window" },
 } satisfies Record<string, ProducerRef>;
 export const temporalManifest: ModuleManifest = {
   format: "hypit.module@1",
@@ -58,50 +67,44 @@ export const temporalManifest: ModuleManifest = {
   version: temporalModuleRef.version,
   dependencies: [narrativeDependency, programSpaceDependency, semanticTrackDependency],
   types: [
-    { name: temporalTypes.pointSpec.name },
-    { name: temporalTypes.point.name },
+    { name: temporalTypes.instantSpec.name },
+    { name: temporalTypes.instant.name },
     { name: temporalTypes.windowSpec.name },
     { name: temporalTypes.window.name },
   ],
   capabilities: [],
   producers: [
-    { name: temporalProducers.projectProgramPoint.name,
-      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "spec", type: temporalTypes.pointSpec }],
-      outputs: [{ name: "point", type: temporalTypes.point }], needs: [] },
-    { name: temporalProducers.projectSelectionPoint.name,
-      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "selection", type: narrativeTypes.selection }, { name: "spec", type: temporalTypes.pointSpec }],
-      outputs: [{ name: "point", type: temporalTypes.point }], needs: [] },
-    { name: temporalProducers.projectSegmentPoint.name,
-      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "segment", type: narrativeTypes.excerpt }, { name: "spec", type: temporalTypes.pointSpec }],
-      outputs: [{ name: "point", type: temporalTypes.point }], needs: [] },
-    { name: temporalProducers.projectMomentPoint.name,
-      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "moment", type: narrativeTypes.moment }, { name: "spec", type: temporalTypes.pointSpec }],
-      outputs: [{ name: "point", type: temporalTypes.point }], needs: [] },
-    { name: temporalProducers.projectProgram.name,
-      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "spec", type: temporalTypes.windowSpec }],
-      outputs: [{ name: "window", type: temporalTypes.window }], needs: [] },
-    { name: temporalProducers.projectSelection.name,
-      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "selection", type: narrativeTypes.selection }, { name: "spec", type: temporalTypes.windowSpec }],
-      outputs: [{ name: "window", type: temporalTypes.window }], needs: [] },
-    { name: temporalProducers.projectSegment.name,
-      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "segment", type: narrativeTypes.excerpt }, { name: "spec", type: temporalTypes.windowSpec }],
-      outputs: [{ name: "window", type: temporalTypes.window }], needs: [] },
-    { name: temporalProducers.projectMoment.name,
-      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "moment", type: narrativeTypes.moment }, { name: "spec", type: temporalTypes.windowSpec }],
+    { name: temporalProducers.projectProgramInstant.name,
+      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "spec", type: temporalTypes.instantSpec }],
+      outputs: [{ name: "instant", type: temporalTypes.instant }], needs: [] },
+    { name: temporalProducers.projectSelectionInstant.name,
+      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "selection", type: narrativeTypes.selection }, { name: "spec", type: temporalTypes.instantSpec }],
+      outputs: [{ name: "instant", type: temporalTypes.instant }], needs: [] },
+    { name: temporalProducers.projectSegmentInstant.name,
+      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "segment", type: narrativeTypes.excerpt }, { name: "spec", type: temporalTypes.instantSpec }],
+      outputs: [{ name: "instant", type: temporalTypes.instant }], needs: [] },
+    { name: temporalProducers.projectMomentInstant.name,
+      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "moment", type: narrativeTypes.moment }, { name: "spec", type: temporalTypes.instantSpec }],
+      outputs: [{ name: "instant", type: temporalTypes.instant }], needs: [] },
+    { name: temporalProducers.composeWindow.name,
+      inputs: [{ name: "spec", type: temporalTypes.windowSpec }, { name: "start", type: temporalTypes.instant }, { name: "end", type: temporalTypes.instant }],
       outputs: [{ name: "window", type: temporalTypes.window }], needs: [] },
   ],
 };
 export const temporalDependency = { module: temporalModuleRef } as const;
 
-export const temporalPointSpecSchema: ValueSchema = object({
-  id: { schema: string }, projection: { schema: point },
+export const temporalInstantSpecSchema: ValueSchema = object({
+  id: { schema: string }, subjectId: { schema: string }, projection: { schema: instant }, authority: { schema: authoritySchema },
 });
-export const temporalPointSchema: ValueSchema = object({
-  id: { schema: string }, source: { schema: sourceSchema }, projection: { schema: point }, frame: { schema: unsignedInteger },
+export const temporalInstantSchema: ValueSchema = object({
+  id: { schema: string }, subjectId: { schema: string }, source: { schema: sourceSchema }, projection: { schema: instant },
+  authority: { schema: authoritySchema }, frame: { schema: unsignedInteger },
 });
-export const temporalWindowSpecSchema: ValueSchema = object({
-  id: { schema: string }, projection: { schema: projectionSchema },
-});
+export const temporalWindowSpecSchema: ValueSchema = object({ id: { schema: string }, subjectId: { schema: string } });
 export const temporalWindowSchema: ValueSchema = object({
-  id: { schema: string }, source: { schema: sourceSchema }, projection: { schema: projectionSchema }, span: { schema: frameSpanSchema },
+  id: { schema: string },
+  subjectId: { schema: string },
+  start: { schema: temporalInstantSchema },
+  end: { schema: temporalInstantSchema },
+  span: { schema: frameSpanSchema },
 });

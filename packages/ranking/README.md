@@ -6,8 +6,8 @@ Three independent progressive-ranking author components over one private schedul
 - `Column`
 - `TopThree`
 
-The package owns variant-specific Programs and Styles. It consumes explicit Segment/Selection/Moment,
-SemanticTrack, SpatialFrame, font, image and optional sound edges, then lowers to peer
+The package owns variant-specific Programs and Styles. It consumes explicit Program/Segment/Selection/Moment,
+SemanticTrack, Canvas, SpatialFrame, font, image and optional sound edges, then lowers to peer
 `VisualTrack` and optional `AudioTrack` values. It adds no Ranking field to Core, Composition or
 Visual IR.
 
@@ -43,17 +43,43 @@ copy.
 ```
 
 Column separates placement from reveal time. `rank` determines the numbered row only. Every
-non-preset Item owns one Selection whose projected window is its reveal interval. Every sibling
-window must already be disjoint and contained by the container's Segment/Selection `during` span;
+non-preset Item owns one Segment or Selection whose projected window is its reveal interval. Every sibling
+window must already be disjoint and contained by the container's Program/Segment/Selection `during` span;
 invalid input is refused instead of clamped or rearranged. Reveal time, child order and rank may all differ. A preset Item
 has no child `during` and is settled from the beginning of the outer window.
 
-TierBoard and TopThree triggers and terminals are explicit `TemporalPoint` values. Column outer and
-reveal inputs remain `TemporalWindow` values. Ranking consumes those projections plus
-ProgramSpace and owns only the subsequent visual schedule; it does not locate
-Moment/Selection frames internally.
+TierBoard follows the same window contract. A preset Item is settled from the start and has no
+`during` or `entry`. Every other Item owns one Segment or Selection and explicitly chooses `entry="direct"` or
+`entry="drop"`. The windows must be contained, non-empty and mutually disjoint. Presets take the
+innermost cells in author order; non-preset Items then take cells from inside to outside in strict
+window order, regardless of child order. Its board and explanation stage are independent: `frame`
+is only the continuous colored-label/dark-content tier table, while `canvas` supplies the coordinate
+space for the stage. A direct Item appears in place at its target cell with a quick scale overshoot
+and soft settle. A drop Item uses the same in-place entrance on the stage, holds perfectly still
+while that Item is discussed, and only follows an eased curved glide into its target cell during the
+final `move-frames` ending exactly at the window boundary. It then remains settled.
 
-The Column's `frame` is the fixed left ranking rail; `canvas` supplies the independent coordinate
-space for the large reveal stage. `stage-x` and `stage-y` are normalized Canvas coordinates. Each
-normal reveal rises from below the Canvas, holds on that stage, then shrinks and moves into its
-ranked content slot.
+TierBoard and Column accept `during="program"` when their outer lifetime is the complete
+SemanticTrack domain. The author Surface projects that Program source to the same `TemporalWindow`
+consumed by the Ranking schedule; the component does not learn a separate Program timing mode.
+
+```svml
+<ranking:TierBoard id="tiers" semantic={speech.semantic} canvas={vertical}
+  frame={layout.tiers} during={story.segment.tiers} style={tier-style}>
+  <ranking:TierItem tier="s" preset="true" icon={brand}/>
+  <ranking:TierItem tier="a" entry="direct" icon={first}
+    during={story.selection.first}/>
+  <ranking:TierItem tier="a" entry="drop" icon={second}
+    during={story.selection.second}/>
+</ranking:TierBoard>
+```
+
+TopThree triggers and its terminal remain explicit `TemporalInstant` values. TierBoard and Column
+outer/reveal inputs are `TemporalWindow` values. Ranking consumes those projections plus
+ProgramSpace and owns only the subsequent visual schedule; it never locates Moment/Selection
+frames internally.
+
+TierBoard and Column both separate their compact `frame` from an independent Canvas stage.
+`stage-x` and `stage-y` are normalized Canvas coordinates, and `stage-size` is independent from the
+settled cell size. Column reveals rise from below the Canvas; Tier entries appear in place, and only
+`drop` entries later move from the stage into the board.

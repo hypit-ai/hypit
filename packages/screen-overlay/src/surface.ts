@@ -1,15 +1,13 @@
-import { narrativeTypes } from "@hypit/narrative";
 import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceRecordDraft, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
-import type { TemporalDuration, TemporalPointExpression, TemporalWindowProjection } from "@hypit/temporal";
-import { temporalTypes } from "@hypit/temporal";
+import type { StructuredElement, StructuredSurfaceHandler, SurfaceComponentDraft, SurfaceRecordDraft, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
+import { createTemporalWindowProjection, temporalWindowAttributeNames } from "@hypit/temporal-markup";
 import { createScreenOverlayFragment } from "./fragment.js";
 import { screenOverlayTypes } from "./manifest.js";
 import { sealScreenOverlayHeader, sealScreenOverlayItemSpec } from "./program.js";
 import type { ScreenOverlayComponent } from "./types.js";
 
-const TIMING = ["during", "at", "for", "start", "end", "selection", "moment"] as const;
+const TIMING = temporalWindowAttributeNames;
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
   return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
 }
@@ -29,28 +27,6 @@ function ref(raw: MarkupAttributeValue | undefined, label: string, expected: Sur
   if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${label} must be a reference.`);
   const value = resolve(raw.path); if (value === undefined || !sameType(value.type, expected)) throw new Error(`${label} has the wrong Type.`); return value;
 }
-function gcd(left: number, right: number): number { let a = Math.abs(left); let b = Math.abs(right); while (b !== 0) [a, b] = [b, a % b]; return a; }
-function duration(value: string, label: string): TemporalDuration {
-  const match = /^(\d+)(?:\.(\d+))?(f|ms|s)$/u.exec(value.trim());
-  if (!match) throw new Error(`${label} must be an exact duration.`);
-  const whole = Number(match[1]); const fraction = match[2] ?? ""; const unit = match[3];
-  if (unit === "f" || unit === "ms") {
-    if (fraction) throw new Error(`${label} ${unit} duration must be integral.`);
-    return { unit: unit === "f" ? "frames" : "milliseconds", value: whole };
-  }
-  const scale = 10 ** fraction.length; const numerator = whole * scale + (fraction ? Number(fraction) : 0); const divisor = gcd(numerator, scale);
-  return { unit: "seconds", numerator: numerator / divisor, denominator: scale / divisor };
-}
-function negate(value: TemporalDuration): TemporalDuration { return value.unit === "seconds" ? { ...value, numerator: -value.numerator } : { ...value, value: -value.value }; }
-function point(value: string, label: string): TemporalPointExpression {
-  const trimmed = value.trim(); const refs = ["program.start", "program.end", "selection.start", "selection.end", "moment.cue"] as const;
-  for (const reference of refs) {
-    if (trimmed === reference) return { ref: reference };
-    const match = new RegExp(`^${reference.replace(".", "\\.")}\\s*([+-])\\s*(.+)$`, "u").exec(trimmed);
-    if (match) { const offset = duration(match[2]!, `${label} offset`); return { ref: reference, offset: match[1] === "-" ? negate(offset) : offset }; }
-  }
-  return { ref: "absolute", at: duration(trimmed, label) };
-}
 function numeric(element: StructuredElement, name: string, fallback?: number): number {
   const raw = optionalText(element, name); if (raw === undefined && fallback !== undefined) return fallback;
   const value = Number(raw); if (!Number.isFinite(value)) throw new Error(`${element.name}.${name} must be numeric.`); return value;
@@ -62,31 +38,6 @@ function colors(element: StructuredElement, name: string): string[] {
   const values = text(element, name).split(",").map((value) => value.trim()).filter(Boolean);
   if (values.length === 0) throw new Error(`${element.name}.${name} requires colors.`); return values;
 }
-type Binding = { readonly kind: "program" | "selection" | "moment"; readonly projection: TemporalWindowProjection; readonly source?: SurfaceResolvedReference };
-function binding(element: StructuredElement, resolve: (path: string) => SurfaceResolvedReference | undefined): Binding {
-  const during = element.attributes.during; const at = element.attributes.at;
-  const start = optionalText(element, "start"); const end = optionalText(element, "end");
-  const forms = Number(during !== undefined) + Number(at !== undefined) + Number(start !== undefined || end !== undefined);
-  if (forms !== 1) throw new Error(`${element.name} requires exactly one temporal form.`);
-  if (during !== undefined) {
-    if (typeof during === "string") {
-      if (during.trim() !== "program") throw new Error(`${element.name}.during text must be program.`);
-      return { kind: "program", projection: { start: { ref: "program.start" }, end: { ref: "program.end" } } };
-    }
-    return { kind: "selection", source: ref(during, `${element.name}.during`, narrativeTypes.selection, resolve),
-      projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } } };
-  }
-  if (at !== undefined) return { kind: "moment", source: ref(at, `${element.name}.at`, narrativeTypes.moment, resolve),
-    projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: duration(text(element, "for"), `${element.name}.for`) } } };
-  if (start === undefined || end === undefined) throw new Error(`${element.name} explicit timing requires start and end.`);
-  const selection = element.attributes.selection; const moment = element.attributes.moment;
-  if (selection !== undefined && moment !== undefined) throw new Error(`${element.name} cannot bind Selection and Moment together.`);
-  const projection = { start: point(start, `${element.name}.start`), end: point(end, `${element.name}.end`) };
-  if (selection !== undefined) return { kind: "selection", source: ref(selection, `${element.name}.selection`, narrativeTypes.selection, resolve), projection };
-  if (moment !== undefined) return { kind: "moment", source: ref(moment, `${element.name}.moment`, narrativeTypes.moment, resolve), projection };
-  return { kind: "program", projection };
-}
-
 function content(element: StructuredElement): { readonly value: ScreenOverlayComponent; readonly attributes: readonly string[] } {
   const name = element.name.split(":").at(-1);
   switch (name) {
@@ -111,6 +62,8 @@ export const decodeScreenOverlaySurface: StructuredSurfaceHandler = ({ element, 
   const semantic = ref(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
   const headerId = `${id}.header`; const records: SurfaceRecordDraft[] = [{ id: headerId, type: screenOverlayTypes.header,
     value: { kind: "inline", value: sealScreenOverlayHeader({ id }) }, range: element.range }];
+  const temporalComponents: SurfaceComponentDraft[] = [];
+  const temporalFragments: ReturnType<typeof createTemporalWindowProjection>["fragments"][number][] = [];
   const fragmentItems: Parameters<typeof createScreenOverlayFragment>[0][number][] = [];
   const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, header: { kind: "record", id: headerId }, semantic: semantic.ref };
   let index = 0;
@@ -118,24 +71,19 @@ export const decodeScreenOverlaySurface: StructuredSurfaceHandler = ({ element, 
     if (child.kind === "text") { if (child.value.trim()) throw new Error(`${element.name} accepts only component children.`); continue; }
     if (child.children.some((node) => node.kind === "element" || node.value.trim())) throw new Error(`${child.name} must be empty.`);
     index += 1; const suffix = String(index).padStart(4, "0"); const decoded = content(child);
-    allowed(child, ["id", "z", ...TIMING, ...decoded.attributes]); const temporal = binding(child, resolveReference);
+    allowed(child, ["id", "z", ...TIMING, ...decoded.attributes]);
     const itemSpec = sealScreenOverlayItemSpec({
       id: optionalText(child, "id") ?? `${id}.${decoded.value.kind}.${suffix}`, content: decoded.value,
       stackingOrder: integer(child, "z") });
+    const temporal = createTemporalWindowProjection({ id: itemSpec.id, element: child, semantic, resolveReference });
+    records.push(...temporal.records); temporalComponents.push(...temporal.components); temporalFragments.push(...temporal.fragments);
     const specId = `${id}.item.${suffix}.spec`; const specName = `item-${suffix}-spec`;
-    const windowSpecId = `${id}.item.${suffix}.window`; const windowSpecName = `item-${suffix}-window-spec`;
-    records.push({ id: windowSpecId, type: temporalTypes.windowSpec,
-      value: { kind: "inline", value: { id: itemSpec.id, projection: temporal.projection } }, range: child.range });
     records.push({ id: specId, type: screenOverlayTypes.itemSpec, value: { kind: "inline", value: itemSpec }, range: child.range });
-    inputs[specName] = { kind: "record", id: specId }; inputs[windowSpecName] = { kind: "record", id: windowSpecId };
-    if (temporal.kind === "program") fragmentItems.push({ kind: "program", specName, windowSpecName });
-    else {
-      const sourceName = `item-${suffix}-${temporal.kind}`;
-      inputs[sourceName] = temporal.source!.ref;
-      fragmentItems.push({ kind: temporal.kind, specName, sourceName, windowSpecName });
-    }
+    const windowName = `item-${suffix}-window`;
+    inputs[specName] = { kind: "record", id: specId }; inputs[windowName] = temporal.ref;
+    fragmentItems.push({ specName, windowName });
   }
   if (fragmentItems.length === 0) throw new Error(`${element.name} requires at least one component.`);
   const fragment = createScreenOverlayFragment(fragmentItems);
-  return { records, components: [{ id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, track: `${id}.track` }, range: element.range }], fragments: [fragment] };
+  return { records, components: [...temporalComponents, { id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, track: `${id}.track` }, range: element.range }], fragments: [...temporalFragments, fragment], exports: [`${id}.program`, `${id}.track`] };
 };
