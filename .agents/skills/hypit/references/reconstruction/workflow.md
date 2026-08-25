@@ -25,7 +25,8 @@ the repository root.
 
 A reference is found from the Distribution rather than from where you are standing, so these commands
 may be run from anywhere. What does depend on where you are is which packages resolve: name the
-project with `--package-root` when the command is not run from inside it.
+project with `--package-root` when the command is not run from inside it. `paths` reports both roots
+and every prepared reference, which is what to run when a command reports something it cannot see.
 
 Defaults are sufficient for normal use. Each also accepts `--input <json>`. Follow this sequence:
 

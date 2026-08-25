@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@google/genai": "1.52.0",
+    "@hypit/composition": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/estimate": "workspace:*",
     "@hypit/hyperframes": "workspace:*",

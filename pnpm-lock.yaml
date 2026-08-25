@@ -1970,6 +1970,9 @@ importers:
       '@google/genai':
         specifier: 1.52.0
         version: 1.52.0
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
