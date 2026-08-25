@@ -2,8 +2,7 @@ import { defineConfig } from "vitepress";
 import type { ShikiTransformer } from "shiki";
 
 // Keep the server deployment at /docs/ while allowing the custom-domain
-// GitHub Pages workflow to publish the same site at the domain root. The
-// pre-paint script below has to agree with this, so both read the one value.
+// GitHub Pages workflow to publish the same site at the domain root.
 const base = process.env.VITEPRESS_BASE || "/docs/";
 
 function svmlSelectionHighlighter(): ShikiTransformer {
@@ -244,27 +243,35 @@ export default defineConfig({
     codeTransformers: [svmlSelectionHighlighter()],
   },
   head: [
-    ["meta", { name: "theme-color", content: "#f3f0e8", media: "(prefers-color-scheme: light)" }],
-    ["meta", { name: "theme-color", content: "#131211", media: "(prefers-color-scheme: dark)" }],
-    // Runs before first paint: marks the home page so the branded palette paints
-    // without a flash, and sends zh-preferring visitors to the Chinese home.
+    // Paints the selection tokens `svmlSelectionHighlighter` marks up inside every
+    // SVML, SVS and SVRun code block. It is the one rule the stock theme needs.
     [
-      "script",
+      "style",
       {},
-      `(function(){var p=location.pathname,b=${JSON.stringify(base)},k="hypit-locale",d=document.documentElement,l;try{l=localStorage.getItem(k)}catch(e){}if(!l)l=(navigator.language||"").toLowerCase().indexOf("zh")===0?"zh":"en";var en=p===b||(b.length>1&&p===b.slice(0,-1)),zh=p===b+"zh/"||p===b+"zh";if(en||zh)d.classList.add("home-page");if(en&&l==="zh")location.replace(b+"zh/"+location.search+location.hash)})()`,
-    ],
-    ["link", { rel: "preconnect", href: "https://fonts.googleapis.com" }],
-    ["link", { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" }],
-    // The only webfont the site still needs: the demo players' audio toggle.
-    // Everything else is the system monospace stack.
-    [
-      "link",
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20,400,0,0",
-      },
+      ".svml-selection{--shiki-light:#8250DF !important;--shiki-dark:#D2A8FF !important;font-weight:600}",
     ],
   ],
+  vite: {
+    plugins: [
+      {
+        name: "section-root-redirect",
+        // The two section roots are static pages in public/, which the build copies
+        // into the output and the deploy serves directly. The dev server routes the
+        // same paths through VitePress, which has no page there, so it would answer
+        // with its 404. Redirect them here to keep dev and the deploy in agreement.
+        configureServer(server) {
+          server.middlewares.use((request, response, next) => {
+            const path = request.url?.split("?")[0];
+            const target =
+              path === base ? `${base}quickstart` : path === `${base}zh/` ? `${base}zh/quickstart` : null;
+            if (!target) return next();
+            response.writeHead(302, { Location: target });
+            response.end();
+          });
+        },
+      },
+    ],
+  },
   locales: {
     root: { label: "English", lang: "en-US", themeConfig: enTheme },
     zh: { label: "简体中文", lang: "zh-CN", link: "/zh/", themeConfig: zhTheme },
