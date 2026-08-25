@@ -157,7 +157,7 @@ export function sliceSource(source: string, segment: string): SliceResult {
   // A name outside the cut is not always a name the element can do without. An element given the span
   // it occupies and a Moment to cut it — `during="program" until={story.moment.done}` — is on screen
   // for the whole of any stretch that ends before that word. Dropping it made the one element a
-  // reference is about unrenderable over every Segment but the last, while the loop asks for it to be
+  // reference is about unrenderable over every Segment but the last, while the round asks for it to be
   // compared over each of them. Marked before the cut it really is gone, and marked inside it survives
   // already, so this is the one case: a close that has not arrived yet, which the fragment reaches by
   // no longer closing.

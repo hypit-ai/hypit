@@ -2,7 +2,7 @@
 import { readFile } from "node:fs/promises";
 
 import { createReferenceVideoTools } from "./tools.js";
-import type { CompareReconstructionInput, ObserveReferenceInput, RenderElementInput } from "./tools.js";
+import type { CompareReconstructionInput, ObserveReferenceInput, RenderElementInput, ReviewElementInput } from "./tools.js";
 
 type Flags = ReadonlyMap<string, string | readonly string[] | boolean>;
 
@@ -21,12 +21,16 @@ function usage(): string {
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <build.svrun> --segment <id>|--selection <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch <comparisons.json>",
+    "  hypit-reference-video-tools review_element --run <build.svrun> --element <id> --segment <id>|--selection <id> --video <path>|--image <path> --intent-file <path> [--question <scope>]",
+    "  hypit-reference-video-tools review_element --run <build.svrun> --batch <reviews.json>",
+    "  hypit-reference-video-tools record_review --run <build.svrun> --review-id <id> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools make-placeholder --out <path> --width <w> --height <h> [--color light|mid|dark|white|black|#RRGGBB] [--video] [--seconds <s>]",
     "  hypit-reference-video-tools render_element <build.svrun> --element <id> --out <path.png|path.mp4> [--segment <id>] [--selection <id>] [--reference-id <id>]",
     "  hypit-reference-video-tools render_element <build.svrun> --batch <renders.json> [--reference-id <id>]",
     "  hypit-reference-video-tools render_previews <package-dir> [...]",
     "  hypit-reference-video-tools preview_check <build.svrun> [<hypit.runtime.json>]",
     "  hypit-reference-video-tools reconstruction_check <build.svrun> [--reference-id <id>]",
+    "  hypit-reference-video-tools authoring_check <build.svrun>",
     "",
     "preview_check opens the Run the way Studio does and reports whether the graph traces. `sound` is",
     "true when every Track resolved, and also when the only thing missing is capabilities a Provider has",
@@ -105,7 +109,7 @@ function usage(): string {
     "placeholder and is therefore still whatever the reference does.",
     "",
     "make-placeholder writes a correctly-sized placeholder for a media slot the Source declares as a",
-    "generation and a Build has not filled. It is deterministic and Provider-free: the comparison loop",
+    "generation and a Build has not filled. It is deterministic and Provider-free: the comparison round",
     "uses its output to mock an empty slot, and the observer is told the slot is a placeholder so it is",
     "bypassed rather than reported as a difference. `--color` picks the fill from the named presets (the",
     "default `light` shows on a dark base; `dark` shows on a light one) or a six-digit hex, and the",
@@ -115,16 +119,31 @@ function usage(): string {
     "script written by hand.",
     "",
     "record_observation takes the keys the agent observer is handed: the four whole-reference keys, a",
-    "shot key such as visual:003 or boundary:004, a narrow question keyed by the shots it was asked over",
-    "(question:003+004), and a comparison keyed by the `comparison_id` compare_reconstruction returned",
-    "(comparison:<id>). A comparison's answer is written back onto its own line of the log, which is",
+    "shot key such as visual:shot-003 or boundary:shot-004, a narrow question keyed by the shots it was",
+    "asked over and by the question itself (question:shot-003+shot-004:<digest>), and a comparison keyed",
+    "by the `comparison_id` compare_reconstruction returned (comparison:<id>). Pass the key back exactly",
+    "as it was handed out. A comparison's answer is written back onto its own line of the log, which is",
     "what makes it count toward coverage; until then reconstruction_check lists it under",
     "`awaiting_answer`.",
+    "",
+    "review_element is the counterpart on the route with no reference: it reads one rendered element",
+    "against what that element was asked to be, rather than against a video to copy. --intent-file",
+    "carries the author's own words and is required; --element is required too, so a review credits an",
+    "element by construction. A clip becomes a grid of its own frames, and the task comes back to be",
+    "answered — nobody is billed to look at a local render — with record_review closing it. Reviews are",
+    "logged under the project, at <project>/.hypit/reviews.jsonl, and authoring_check reads them.",
+    "",
+    "authoring_check is reconstruction_check for a program authored from a description. It resolves no",
+    "reference and credits an element from the review log, and it applies every check the Source alone",
+    "decides — an uncovered stretch, a Frame reaching past the Canvas, a `playback` left at its default.",
+    "Pick the command that matches the route; neither infers which one you meant.",
     "",
     "--observer picks who reads the reference, once per reference. `gemini` uploads video to Vertex and",
     "needs GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS_JSON. `agent` needs no credentials: it",
     "returns each observation as a task carrying its prompt and one tiled picture per shot, which the",
-    "calling agent answers with record_observation.",
+    "calling agent answers with record_observation. A task whose question needs sound also carries the",
+    "words WhisperX measured — `transcript_words` for its own stretch, `transcript_ref` for the whole",
+    "file — since that observer reads pictures and the words are the only record of when speech happens.",
     "",
     "inspect_visual_contract answers what a Producer that draws may return: the element kinds, the style",
     "names admitted on them, which take an enum, and how few keyframes an animation carries. Every line is",
@@ -149,7 +168,7 @@ function usage(): string {
 // `preview_check` and `reconstruction_check`, one or more package directories for `render_previews` —
 // so a token that is not a flag is collected rather than refused. Every other command still refuses
 // one, which is why the check is made per command rather than dropped here.
-const COMMANDS_WITH_OPERANDS = new Set(["render_element", "render_previews", "preview_check", "reconstruction_check"]);
+const COMMANDS_WITH_OPERANDS = new Set(["render_element", "render_previews", "preview_check", "reconstruction_check", "authoring_check"]);
 
 function parse(argv: readonly string[]): { readonly command: string; readonly operands: readonly string[]; readonly flags: Flags } {
   const command = argv[0];
@@ -268,6 +287,37 @@ async function main(): Promise<void> {
       text: textFile === undefined ? required(flags, "text") : await readFile(textFile, "utf8"),
     };
     result = await tools.record_observation(input as { reference_id: string; key: string; text: string });
+  } else if (command === "review_element") {
+    const reviewFile = one(flags, "batch");
+    if (reviewFile !== undefined) {
+      const parsed: unknown = JSON.parse(await readFile(reviewFile, "utf8"));
+      const list = Array.isArray(parsed) ? parsed : (parsed as { reviews?: unknown }).reviews;
+      if (!Array.isArray(list)) throw new Error(`${reviewFile} must hold a JSON array of reviews, or an object with a "reviews" array`);
+      result = await tools.review_element({ run: required(flags, "run"), reviews: list } as ReviewElementInput);
+      report(`${JSON.stringify(result, null, 2)}\n`);
+      return;
+    }
+    const input = supplied ?? {
+      run: required(flags, "run"),
+      element: required(flags, "element"),
+      ...(one(flags, "segment") === undefined ? {} : { segment: one(flags, "segment") }),
+      ...(one(flags, "selection") === undefined ? {} : { selection: one(flags, "selection") }),
+      ...(one(flags, "image") === undefined ? {} : { image_path: one(flags, "image") }),
+      ...(one(flags, "video") === undefined ? {} : { video_path: one(flags, "video") }),
+      ...(one(flags, "intent-file") === undefined ? {} : { intent_file: one(flags, "intent-file") }),
+      ...(one(flags, "intent") === undefined ? {} : { intent: one(flags, "intent") }),
+      ...(one(flags, "question") === undefined ? {} : { question: one(flags, "question") }),
+    };
+    result = await tools.review_element(input as ReviewElementInput);
+  } else if (command === "record_review") {
+    // Findings are paragraphs of prose, so they arrive the way an observation's do.
+    const textFile = one(flags, "text-file");
+    const input = supplied ?? {
+      run: required(flags, "run"),
+      review_id: required(flags, "review-id"),
+      text: textFile === undefined ? required(flags, "text") : await readFile(textFile, "utf8"),
+    };
+    result = await tools.record_review(input as { run: string; review_id: string; text: string });
   } else if (command === "compare_reconstruction") {
     // A round is a list of comparisons, and a list is too long for flags. --batch names a JSON file
     // holding it, which is also how it survives being written by one step and read by another.
@@ -373,6 +423,10 @@ async function main(): Promise<void> {
       ...(one(flags, "reference-id") === undefined ? {} : { reference_id: one(flags, "reference-id") }),
     };
     result = await tools.reconstruction_check(input as { run: string; reference_id?: string });
+  } else if (command === "authoring_check") {
+    const run = operands[0];
+    if (supplied === undefined && run === undefined) throw new Error(`a <build.svrun> is required\n\n${usage()}`);
+    result = await tools.authoring_check((supplied ?? { run }) as { run: string });
   } else {
     throw new Error(`unknown command ${command}\n\n${usage()}`);
   }

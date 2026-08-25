@@ -11,7 +11,7 @@ between the two — what a picture is, what one generation owes another, which p
 — is the same work and is written once, in the files these steps link. This page owns the order.
 
 **This route spends.** One Build generates the pictures, the takes, the speech and the render, and
-step 10 is where the author says yes to it. There is no reference to check against, so the two things
+step 13 is where the author says yes to it. There is no reference to check against, so the two things
 a reconstruction gets for free have to be decided deliberately: what the program is *for*, and what
 every appearance value *is*. Neither has an evidence file to consult. Write them down rather than
 discovering them at render time.
@@ -58,8 +58,8 @@ claims before any prompt is written. Everything downstream is measured against t
 ### 5. Choose the packages
 
 **Read now:** `../vocabulary.md` — which installed packages own the systems this program contains,
-and whether any is genuinely missing. A system you never inspected is a system you are about to
-invent, and inventing one here is easy: there is no reference to contradict you.
+and whether any is genuinely missing. That file states why a system nobody inspected is one you are
+about to invent, and this route is where that is easiest: there is no reference to contradict you.
 
 For a proven gap, read `../local-author-package.md` completely and build the package.
 
@@ -67,8 +67,10 @@ For a proven gap, read `../local-author-package.md` completely and build the pac
 
 The Script comes first and the shots come out of it: a Segment is what one `whisperx:SemanticTake`
 aligns one Take to, so how the Script is cut decides how many generations there are and where the
-seams fall. `../playbooks/craft/generated-dependencies.md` says why over-splitting manufactures seams
-nobody asked for.
+seams fall.
+
+**Read now:** `../script-time.md` — where a Segment ends, where a forced seam goes, and why each
+take's duration comes from `estimate:Speech` rather than from the duration the author asked for.
 
 Give every planned shot one job — hook, context, evidence, mechanism, reaction, payoff, transition,
 or CTA. Delete shots with no distinct job.
@@ -87,12 +89,37 @@ reused in the Run Source. `../runtime.md` — how to author a Profile.
 tracing. `../preview.md` proves the Run traces before a Provider is reached. Neither is bounded by any
 attempt ceiling: a graph that does not trace is work that is not done.
 
-### 9. See it before paying for it
+### 9. Render every stretch of every element
 
-`../preview.md` again: one element rendered to a still locally, or the whole Run opened in Studio for
-the author. Both are free.
+**Read now:** `../element-review.md` — the round unit, what a render has to include, and how many
+stretches to draw. `../preview.md` holds `render_element` itself.
 
-### 10. The Build
+Render the whole set before reading any of it. Studio is also free and is for the author to look at;
+it is not the picture this round reads.
+
+### 10. Read each element against what you asked for
+
+**Read now:** `conformance-round.md` — what the element is judged against, the
+`--intent-file` it is judged with, and what the reader is asked.
+
+One subagent per picture where the harness has them, dispatched together, and never opened by you.
+
+### 11. Repair against what the round returned
+
+Inside the two ceilings `../element-review.md` sets, in the dependency order it gives. A repair aimed
+at something the round did not name is thrashing and earns no attempt.
+
+### 12. Close the pre-Build work on the check
+
+```bash
+hypit-reference-video-tools authoring_check projects/<name>/build.svrun
+```
+
+**Done when:** `"passed": true`. It refuses while any drawing element has never been looked at, while
+any stretch of the Script has nothing drawing a full frame over it, and while any timed picture is
+configured to empty its window.
+
+### 13. The Build
 
 Confirm credentials, the Runtime Profile, the installed packages, model limits, resolution and
 Endpoint prerequisites. Run `doctor`, `check` and `plan`.
@@ -103,7 +130,7 @@ submitting it.** This is the one point on this route where their money is spent.
 **Read now:** `../runtime.md` — submitting the Build, `status`, `inspect`, and `get` for the finished
 Artifact.
 
-### 11. Ask whether the package outlives the video
+### 14. Ask whether the package outlives the video
 
 If this job produced a project-local package, `../package-promotion.md` says how to judge whether it
 should leave the project and what promoting it costs.

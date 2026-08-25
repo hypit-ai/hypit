@@ -129,6 +129,37 @@ export type ReconstructionCheckInput = {
 };
 
 /**
+ * Which route wrote the Source, and therefore what "this element was looked at" means.
+ *
+ * `reconstruction` credits a comparison against the reference video, logged under that reference.
+ * `description` credits a review of the element against what the author asked for, logged under the
+ * project — there is no reference to compare to, so the question is conformance rather than
+ * difference. Everything else the check does is the same on both: which elements draw, which words
+ * nothing covers, which Frames reach past the Canvas, and which timed pictures empty their windows
+ * are all read from the Source and know nothing about where the Source came from.
+ */
+export type AuthoringCheckMode = "reconstruction" | "description";
+
+export type AuthoringCheckInput = ReconstructionCheckInput & {
+  readonly mode?: AuthoringCheckMode;
+};
+
+/**
+ * Where a description-authored project's reviews are logged.
+ *
+ * Beside the per-render directories rather than inside them: `render_element` empties its own
+ * `.hypit/compare/<key>` on the way in, and a log kept under there would be deleted by the next
+ * render of the element it is the evidence for.
+ *
+ * Under the project rather than under a reference, because a review is about one project. That is
+ * also what spares this log the cross-project filter the comparison log needs: a reference is shared
+ * between every reconstruction of one video, and a project's `.hypit` is not shared with anyone.
+ */
+export function reviewLogPath(runPath: string): string {
+  return join(dirname(runPath), ".hypit", "reviews.jsonl");
+}
+
+/**
  * Which clock timed the stand-ins an element's comparisons were made over.
  *
  * `reference` is every recorded comparison drawn at the pace the reference speaks those words;
@@ -423,18 +454,22 @@ function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
 }
 
 /**
- * Report what the route can still settle after the Source is written and before a Build runs: which
- * reconstructed elements have never been compared against the reference, which words of the Script
- * nothing draws a full-frame picture over, and which timed pictures are configured to stop before
- * their window ends.
+ * Report what a route can still settle after the Source is written and before a Build runs: which
+ * drawing elements nobody has looked at, which words of the Script nothing draws a full-frame
+ * picture over, and which timed pictures are configured to stop before their window ends.
  *
- * `preview_check` proves the graph is wired. It proves nothing about whether what the graph draws
- * resembles the reference video, and a Source can pass every structural check while a component
- * draws something the reference never contained. Closing that gap is
- * `references/reconstruction/reconstruction-loop.md`, which is prose, and prose is what a route
- * skips silently. This is the same requirement as a command that answers whether it was met.
+ * Both routes end here, and `mode` is the only thing that differs. A reconstruction is looked at by
+ * comparing each element against the reference; a description-authored program has no reference, so
+ * each element is reviewed against what the author asked for. What counts as evidence and where it
+ * is logged follow from that; everything else below is read from the Source and does not care.
  *
- * What it checks is **participation, not convergence**. The loop is deliberately bounded and may
+ * `preview_check` proves the graph is wired. It proves nothing about whether what the graph draws is
+ * what was wanted, and a Source can pass every structural check while a component draws something
+ * nobody asked for. Closing that gap is `references/element-review.md` and the route file beside it,
+ * which is prose, and prose is what a route skips silently. This is the same requirement as a command
+ * that answers whether it was met.
+ *
+ * What it checks is **participation, not convergence**. The round is deliberately bounded and may
  * stop with visible differences remaining, so requiring convergence here would contradict it. An
  * element that was compared once and stopped at its ceiling passes; an element nobody ever looked
  * at does not.
@@ -444,11 +479,10 @@ function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
  * colour and placement are as unverified as a new package's — and `render_element` stands in for the
  * speech, so it renders before a Build like any other.
  *
- * A comparison counts whether its answer came back in-band (`complete`, the gemini observer) or was
- * handed out to be answered by looking (`pending`, the agent observer); only `failed` is not a
- * comparison. The gate cannot judge whether the shot an element was compared against actually showed
- * it, so the shots are reported for a reader, and a lone comparison is called out rather than assumed
- * meaningful.
+ * A look counts once it has been answered: in band (`complete`, the gemini observer) or handed out
+ * and closed by whoever answered it (`pending` until then). Only `failed` is not a look. The gate
+ * cannot judge whether the stretch an element was looked at over actually showed it, so the stretches
+ * are reported for a reader, and a lone look is called out rather than assumed meaningful.
  *
  * Each element also carries what timed the stand-ins it was compared over, read from the sidecar
  * `render_element` writes beside its output and carried into the log by `compare_reconstruction`.
@@ -467,10 +501,17 @@ function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
  *
  * A project that places no drawing element passes with nothing to require.
  */
-export async function reconstructionCheck(
-  input: ReconstructionCheckInput,
+export async function authoringCheck(
+  input: AuthoringCheckInput,
   roots: { readonly packageRoot: string },
 ): Promise<Record<string, unknown>> {
+  const mode: AuthoringCheckMode = input.mode ?? "reconstruction";
+  // What looking at an element is called on this route. A reconstruction compares it against the
+  // reference; a description-authored program has nothing to compare to and is read against what the
+  // author asked for. The arithmetic is the same either way, so only the word differs — and the keys
+  // do not, so one shape describes both reports.
+  const looked = mode === "reconstruction" ? "compared" : "reviewed";
+  const looking = mode === "reconstruction" ? "comparison" : "review";
   const cwd = invokedFrom();
   const runPath = resolve(cwd, input.run);
   // Where the Source's imports resolve from. A project's own packages are installed against the
@@ -784,16 +825,24 @@ export async function reconstructionCheck(
 
   // The Source does not name the reference it reconstructs, so a single prepared reference is used
   // when there is exactly one and named explicitly when there is more than one.
+  //
+  // Only on the route that has a reference. A description-authored project has none, and resolving
+  // one here is what used to stop this command before it reached the checks that have nothing to do
+  // with a reference — the `playback` refusal, frame coverage and the Canvas overhang are read from
+  // the Source alone, and were unreachable to that route for no reason but this block.
   const preparedRoot = referenceRoot();
-  const prepared = (await readdir(preparedRoot, { withFileTypes: true }).catch(() => []))
-    .filter((entry) => entry.isDirectory()).map((entry) => entry.name);
-  let reference = input.reference_id;
-  if (reference === undefined) {
-    assert(prepared.length > 0, `no prepared reference under ${preparedRoot}; run prepare_reference first`);
-    assert(prepared.length === 1, `${prepared.length} prepared references; pass --reference-id (${prepared.join(", ")})`);
-    reference = prepared[0]!;
+  let reference: string | undefined;
+  if (mode === "reconstruction") {
+    const prepared = (await readdir(preparedRoot, { withFileTypes: true }).catch(() => []))
+      .filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+    reference = input.reference_id;
+    if (reference === undefined) {
+      assert(prepared.length > 0, `no prepared reference under ${preparedRoot}; run prepare_reference first`);
+      assert(prepared.length === 1, `${prepared.length} prepared references; pass --reference-id (${prepared.join(", ")})`);
+      reference = prepared[0]!;
+    }
+    assert(prepared.includes(reference), `reference ${reference} is not prepared under ${preparedRoot}`);
   }
-  assert(prepared.includes(reference), `reference ${reference} is not prepared under ${preparedRoot}`);
 
   type LoggedComparison = {
     readonly element?: string;
@@ -811,7 +860,9 @@ export async function reconstructionCheck(
     ?? (entry.range?.segment === undefined ? undefined : `segment ${entry.range.segment}`)
     ?? (entry.range?.selection === undefined ? undefined : `selection ${entry.range.selection}`)
     ?? "an unnamed stretch";
-  const logPath = join(preparedRoot, reference, "comparisons.jsonl");
+  const logPath = mode === "reconstruction"
+    ? join(preparedRoot, reference!, "comparisons.jsonl")
+    : reviewLogPath(runPath);
   // A reference is keyed by the video, and rightly: its observations are about that video and cost
   // real money, so two reconstructions of one file share them. Its comparisons are not about the
   // video — they are about one reconstruction — and they were being kept in the same place, so a
@@ -821,7 +872,11 @@ export async function reconstructionCheck(
   // What separates them is already on every row: the render it compared. A render belongs to the
   // project that produced it, so a row whose picture is not under this project is not this project's
   // evidence. Nothing has to move and no earlier log has to be migrated.
+  //
+  // A review log needs none of this: it is already the project's own, so every row in it is this
+  // project's evidence and there is nothing to separate.
   const inThisProject = (entry: LoggedComparison): boolean => {
+    if (mode === "description") return true;
     if (entry.image_path === undefined) return false;
     const at = resolve(entry.image_path);
     return at === packageRoot || at.startsWith(`${packageRoot}${sep}`);
@@ -876,8 +931,8 @@ export async function reconstructionCheck(
   const elements: ElementReport[] = drawn.map((element) => {
     const stretches = rounds.get(element.id) ?? [];
     const state = stretches.length === 0
-      ? "never compared"
-      : `${stretches.length} comparison${stretches.length === 1 ? "" : "s"} against ${[...new Set(stretches)].join(", ")}`;
+      ? `never ${looked}`
+      : `${stretches.length} ${looking}${stretches.length === 1 ? "" : "s"} against ${[...new Set(stretches)].join(", ")}`;
     return {
       element: `${element.alias}:${element.tag}`,
       id: element.id,
@@ -888,7 +943,7 @@ export async function reconstructionCheck(
       timing_basis: timingBasis(element.id),
       // The gate cannot judge whether the stretch chosen actually showed the element, so a lone
       // comparison is called out for a reader to confirm rather than silently accepted.
-      ...(stretches.length === 1 ? { note: "single comparison — confirm this stretch shows the element, not a look-alike" } : {}),
+      ...(stretches.length === 1 ? { note: `single ${looking} — confirm this stretch shows the element, not a look-alike` } : {}),
     };
   });
 
@@ -898,9 +953,9 @@ export async function reconstructionCheck(
 
   const summary: string[] = [];
   if (never.length === 0 && running.length === 0) {
-    summary.push(`every drawing element has been compared (${elements.length}), and every timed picture fills its window.`);
+    summary.push(`every drawing element has been ${looked} (${elements.length}), and every timed picture fills its window.`);
   }
-  if (never.length > 0) summary.push(`${never.length} of ${elements.length} elements have never been compared.`);
+  if (never.length > 0) summary.push(`${never.length} of ${elements.length} elements have never been ${looked}.`);
   if (running.length > 0) {
     summary.push(`${running.length} window${running.length === 1 ? "" : "s"} will empty before ${running.length === 1 ? "it ends" : "they end"}.`);
   }
@@ -912,10 +967,18 @@ export async function reconstructionCheck(
       + `${overhang.length === 1 ? "reaches" : "reach"} past the Canvas; read each one against the reference.`);
   }
   const compared = elements.filter((element) => element.comparisons > 0).length;
-  if (compared > 0) {
+  if (compared > 0 && mode === "reconstruction") {
     summary.push(untimed.length === 0
       ? `every compared element was looked at over a reference-timed stand-in (${compared}).`
       : `${untimed.length} of ${compared} compared elements have comparisons over a stand-in that was not reference-timed.`);
+  }
+  // On the description route every stand-in is estimate-timed, because `estimate:Speech` is the only
+  // clock there is until the Build synthesizes the speech. Reporting that as a shortfall would name
+  // every element every time and ask for a re-render against a reference that does not exist, so it
+  // is stated once as what it is.
+  if (compared > 0 && mode === "description") {
+    summary.push(`every ${looking} was made over a stand-in timed by estimate:Speech (${compared}); how each element `
+      + "sits against the speech the Build synthesizes is settled once that speech exists.");
   }
   if (unresolved.length > 0) {
     summary.push(`${unresolved.length} imported package${unresolved.length === 1 ? "" : "s"} could not be resolved, `
@@ -926,41 +989,59 @@ export async function reconstructionCheck(
       + "outside this project and are not counted here.");
   }
   if (awaiting.length > 0) {
-    summary.push(`${awaiting.length} comparison${awaiting.length === 1 ? " is" : "s are"} still waiting for `
-      + "the differences to be recorded.");
+    summary.push(`${awaiting.length} ${looking}${awaiting.length === 1 ? " is" : "s are"} still waiting for `
+      + `${mode === "reconstruction" ? "the differences" : "the findings"} to be recorded.`);
   }
 
   return {
     run: runPath,
-    reference_id: reference,
+    ...(reference === undefined ? {} : { reference_id: reference }),
     // Where this command actually read and resolved from. Said here, no document has to describe it
     // from the outside and go stale when it moves.
-    roots: { reference: preparedRoot, packages: packageRoot },
+    roots: mode === "reconstruction"
+      ? { reference: preparedRoot, packages: packageRoot }
+      : { reviews: logPath, packages: packageRoot },
     passed: never.length === 0 && running.length === 0 && coverage.gaps.length === 0 && unresolved.length === 0,
     summary,
     elements,
     ...(never.length === 0 ? {} : {
       never_compared: {
         ids: never.map((element) => element.id),
-        next: "Read .agents/skills/hypit/references/reconstruction/reconstruction-loop.md, then for each: "
-          + "render the element as the Source configures it, mock the layers a Build has not made, "
-          + "and compare the whole stretch blind — one comparison per Segment or Selection it is drawn over.",
-        commands: never.map((element) =>
-          `hypit-reference-video-tools compare_reconstruction --reference-id ${reference} --run ${runPath} `
-          + `--segment <each Segment ${element.id} is drawn over> `
-          + `--video <rendered clip>.mp4 --element ${element.id}`),
+        next: mode === "reconstruction"
+          ? "Read .agents/skills/hypit/references/element-review.md and "
+            + ".agents/skills/hypit/references/reconstruction/comparison-round.md, then for each: "
+            + "render the element as the Source configures it, mock the layers a Build has not made, "
+            + "and compare the whole stretch blind — one comparison per Segment or Selection it is drawn over."
+          : "Read .agents/skills/hypit/references/element-review.md and "
+            + ".agents/skills/hypit/references/original-authoring/conformance-round.md, then for each: "
+            + "render the element as the Source configures it, mock the layers a Build has not made, "
+            + "and have it read against what this element was asked to be — one review per Segment or "
+            + "Selection it is drawn over.",
+        commands: never.map((element) => mode === "reconstruction"
+          ? `hypit-reference-video-tools compare_reconstruction --reference-id ${reference} --run ${runPath} `
+            + `--segment <each Segment ${element.id} is drawn over> `
+            + `--video <rendered clip>.mp4 --element ${element.id}`
+          : `hypit-reference-video-tools review_element --run ${runPath} `
+            + `--segment <each Segment ${element.id} is drawn over> `
+            + `--video <rendered clip>.mp4 --element ${element.id} --intent-file <what ${element.id} was asked to be>`),
       },
     }),
     ...(awaiting.length === 0 ? {} : {
       awaiting_answer: {
         ids: awaiting.map((entry) => entry.id).filter((id) => id !== undefined),
         elements: [...new Set(awaiting.map((entry) => entry.element).filter((id) => id !== undefined))],
-        note: `${awaiting.length} comparison${awaiting.length === 1 ? " was" : "s were"} performed and handed to an `
-          + "observer that answers out of band, and the differences have not come back. Until they do, the pair has "
-          + "been drawn and cut but nobody has said what it shows, so it credits nothing here.\n\n"
-          + "Close each one with its id:\n"
-          + "  hypit-reference-video-tools record_observation --reference-id "
-          + `${reference} --key comparison:<id> --text-file <the differences>`,
+        note: mode === "reconstruction"
+          ? `${awaiting.length} comparison${awaiting.length === 1 ? " was" : "s were"} performed and handed to an `
+            + "observer that answers out of band, and the differences have not come back. Until they do, the pair has "
+            + "been drawn and cut but nobody has said what it shows, so it credits nothing here.\n\n"
+            + "Close each one with its id:\n"
+            + "  hypit-reference-video-tools record_observation --reference-id "
+            + `${reference} --key comparison:<id> --text-file <the differences>`
+          : `${awaiting.length} review${awaiting.length === 1 ? " was" : "s were"} handed out and the findings have `
+            + "not come back. Until they do, the picture has been drawn but nobody has said what it shows, so it "
+            + "credits nothing here.\n\n"
+            + "Close each one with its id:\n"
+            + `  hypit-reference-video-tools record_review --run ${runPath} --review-id <id> --text-file <the findings>`,
       },
     }),
     ...(unresolved.length === 0 ? {} : {
@@ -990,7 +1071,10 @@ export async function reconstructionCheck(
         note: `${unlabelled} comparison${unlabelled === 1 ? " was" : "s were"} recorded without --element and cannot be credited to one.`,
       },
     }),
-    ...(untimed.length === 0 ? {} : {
+    // Only where a reference-timed stand-in is reachable. On the description route every stand-in is
+    // estimate-timed by definition, so this would list every element and point at a `--reference-id`
+    // that does not exist; the summary states that fact once instead.
+    ...(untimed.length === 0 || mode === "description" ? {} : {
       timing_next: {
         ids: untimed.map((element) => element.id),
         note: "A stand-in sized by estimate:Speech puts every element where the Source puts it and gives it "
