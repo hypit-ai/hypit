@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
-import { createRequire } from "node:module";
 import { join } from "node:path";
 
+import { resolveNodePackageResource } from "@hypit/package-loader-node";
 import { runtimeConfigObject, runtimeConfigString } from "@hypit/runtime-kit";
 import type { RuntimeAdapterFactoryContext, ManagedProgramCommand } from "@hypit/runtime-kit";
 import {
@@ -13,9 +13,8 @@ import {
  * The locked Python project is its own package asset. Repository workspaces and
  * installed npm distributions therefore resolve the same immutable input.
  */
-const require = createRequire(import.meta.url);
 export const localOpenCvManagedProject = join(
-  require.resolve("@hypit/image-opencv-runtime/pyproject.toml"),
+  resolveNodePackageResource("@hypit/image-opencv-runtime", "pyproject.toml", { from: import.meta.url }),
   "..",
 );
 

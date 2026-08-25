@@ -11,4 +11,13 @@ export {
   installDistributionPackageResolution,
   installExternalPackageResolution,
 } from "./distribution-resolution.js";
+export {
+  locateNodePackage,
+  resolveNodePackageExecutable,
+  resolveNodePackageResource,
+} from "./location.js";
+export type {
+  LocatedNodePackage,
+  LocateNodePackageOptions,
+} from "./location.js";
 export type * from "./types.js";

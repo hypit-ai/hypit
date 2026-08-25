@@ -20,11 +20,11 @@ const liveEnabled = process.env.HYPIT_BROWSER_TESTS === "1";
 const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore", windowsHide: true }).status === 0;
 
 function documentFixture(surface?: CompositableSurfaceRef) {
-  const programSpace = sealProgramSpace({
+  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec: 1,
     frameRate: { numerator: 12, denominator: 1 },
   });
-  const track = sealVisualTrack({
+  const track = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "provider-fixture",
     presents: [{

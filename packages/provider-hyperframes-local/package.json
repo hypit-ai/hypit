@@ -15,6 +15,7 @@
     "@hypit/hyperframes": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/media-execution": "workspace:*",
+    "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/render-hyperframes": "workspace:*",
     "@hypit/runtime": "workspace:*",

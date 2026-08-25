@@ -221,5 +221,5 @@ hypit doctor hypit.runtime.json
 | `provider-hyperframes-local` | Local process: Chrome rendering with worker parallelism and output probe validation |
 | `provider-hyperframes-aws-lambda` | Remote asynchronous job: Step Functions submission, polling and S3 streaming |
 | `provider-image-opencv-local` | Local Python: bounded OpenCV/NumPy with locked Python environment |
-| `provider-media-aws-lambda` | Remote synchronous Lambda: the same eight capabilities as local media |
+| `provider-media-aws-lambda` | Remote synchronous Lambda: the same nine capabilities as local media |
 | `provider-xiaomi-mimo` | Remote immediate API: exact MiMo TTS requests to persisted audio Artifacts |

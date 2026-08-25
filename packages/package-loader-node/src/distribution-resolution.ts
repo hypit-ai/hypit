@@ -1,7 +1,13 @@
-import { createRequire, registerHooks } from "node:module";
-import { basename, join, resolve } from "node:path";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { registerHooks } from "node:module";
+import { join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+
+import {
+  distributionPackageDirectory,
+  setActiveDistributionPackageRoots,
+  setActiveExternalPackageRoots,
+} from "./location.js";
 
 let installed: readonly string[] = [];
 let externalInstalled: readonly string[] = [];
@@ -15,26 +21,17 @@ function packageAddress(specifier: string): { readonly name: string; readonly su
   return { name: parts[0]!, subpath: parts.slice(1).join("/") };
 }
 
-function packageDirectory(root: string, name: string): string | undefined {
-  const conventional = join(root, "packages", basename(name));
-  if (existsSync(join(conventional, "package.json"))) return conventional;
-  const services = join(root, "services");
-  if (!existsSync(services)) return undefined;
-  for (const entry of readdirSync(services, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const candidate = join(services, entry.name);
-    const manifestPath = join(candidate, "package.json");
-    if (!existsSync(manifestPath)) continue;
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { readonly name?: string };
-    if (manifest.name === name) return candidate;
-  }
-  return undefined;
+function barePackageSpecifier(specifier: string): boolean {
+  return !specifier.startsWith(".")
+    && !specifier.startsWith("/")
+    && !specifier.startsWith("#")
+    && !specifier.includes(":");
 }
 
 function distributionPackageEntry(root: string, specifier: string): string | undefined {
   const address = packageAddress(specifier);
   if (address === undefined) return undefined;
-  const packageRoot = packageDirectory(root, address.name);
+  const packageRoot = distributionPackageDirectory(root, address.name);
   if (packageRoot === undefined) return undefined;
   const manifestPath = join(packageRoot, "package.json");
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
@@ -58,7 +55,7 @@ export function installDistributionPackageResolution(roots: readonly string[]): 
   if (next.every((root, index) => root === installed[index]) && next.length === installed.length) return;
   if (installed.length > 0) throw new Error("Distribution package roots cannot change inside one Host process");
   installed = next;
-  const resolvers = installed.map((root) => createRequire(join(root, "__hypit_distribution__.cjs")));
+  setActiveDistributionPackageRoots(installed);
   const rootUrls = installed.map((root) => pathToFileURL(`${root}/`).href);
   registerHooks({
     resolve(specifier, context, nextResolve) {
@@ -75,14 +72,9 @@ export function installDistributionPackageResolution(roots: readonly string[]): 
         } catch {
           // Try the explicit Distribution resolvers below.
         }
-        for (const resolver of resolvers) {
-          try {
-            return { url: pathToFileURL(resolver.resolve(specifier)).href, shortCircuit: true };
-          } catch {
-            const entry = distributionPackageEntry(installed[resolvers.indexOf(resolver)]!, specifier);
-            if (entry !== undefined) return { url: pathToFileURL(entry).href, shortCircuit: true };
-            // Try the next explicit Distribution root.
-          }
+        for (const root of installed) {
+          const entry = distributionPackageEntry(root, specifier);
+          if (entry !== undefined) return { url: pathToFileURL(entry).href, shortCircuit: true };
         }
         throw new Error(`Active Hypit Distribution does not provide ${specifier}`);
       }
@@ -104,16 +96,19 @@ export function installExternalPackageResolution(roots: readonly string[]): void
     throw new Error("External package roots cannot change inside one Host process");
   }
   externalInstalled = next;
-  const resolvers = externalInstalled.map((root) => createRequire(join(root, "__hypit_external__.cjs")));
+  setActiveExternalPackageRoots(externalInstalled);
+  const parentUrls = externalInstalled.map((root) => pathToFileURL(join(root, "__hypit_external__.mjs")).href);
   registerHooks({
     resolve(specifier, context, nextResolve) {
-      if (specifier.startsWith("@hypit/")) return nextResolve(specifier, context);
+      if (specifier.startsWith("@hypit/") || !barePackageSpecifier(specifier)) {
+        return nextResolve(specifier, context);
+      }
       try {
         return nextResolve(specifier, context);
       } catch (original) {
-        for (const resolver of resolvers) {
+        for (const parentURL of parentUrls) {
           try {
-            return { url: pathToFileURL(resolver.resolve(specifier)).href, shortCircuit: true };
+            return nextResolve(specifier, { ...context, parentURL });
           } catch {
             // Try the next machine package root before preserving Node's error.
           }
