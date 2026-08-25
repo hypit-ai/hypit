@@ -117,6 +117,66 @@ function run(root: string, command: ManagedProgramCommand): Promise<{ ok: boolea
  * weights; `mismatch` is not, and stops the wait — a program that is answering
  * with another identity will not become the right one by waiting.
  */
+/** POSIX: its own session, and stdio already pointed at the log. */
+async function startDetached(start: ManagedProgramCommand, root: string, logFd: number): Promise<number | undefined> {
+  const child = spawn(start.command, [...start.args], {
+    cwd: start.cwd ?? root,
+    env: { ...process.env, ...start.env },
+    shell: false,
+    detached: true,
+    windowsHide: true,
+    stdio: ["ignore", logFd, logFd],
+  });
+  child.unref();
+  return child.pid;
+}
+
+/** A PowerShell single-quoted literal, which escapes by doubling the quote and nothing else. */
+function powershellLiteral(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
+/**
+ * Windows: a console of its own, hidden, so the launching console's destruction does not take it.
+ *
+ * The script is fed on stdin rather than as a command-line argument, so no quoting of ours crosses a
+ * shell boundary. `Start-Process` refuses to send both streams to one file, so the error stream gets
+ * its own beside the log; `-PassThru` reports the new process, which is the pid everything after this
+ * waits on and stores.
+ */
+async function startWithOwnConsole(start: ManagedProgramCommand, root: string, logPath: string): Promise<number | undefined> {
+  const errorPath = `${logPath.replace(/\.log$/u, "")}.err.log`;
+  const environment = Object.entries(start.env ?? {})
+    .map(([name, value]) => `$env:${name} = ${powershellLiteral(String(value))}`).join("\n");
+  const argumentList = start.args.length === 0
+    ? ""
+    : ` -ArgumentList @(${start.args.map(powershellLiteral).join(", ")})`;
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    environment,
+    `$p = Start-Process -FilePath ${powershellLiteral(start.command)}${argumentList}`
+      + ` -WorkingDirectory ${powershellLiteral(start.cwd ?? root)}`
+      + ` -RedirectStandardOutput ${powershellLiteral(logPath)}`
+      + ` -RedirectStandardError ${powershellLiteral(errorPath)}`
+      + " -WindowStyle Hidden -PassThru",
+    "[Console]::Out.Write($p.Id)",
+  ].filter((line) => line.length > 0).join("\n");
+
+  const printed = await new Promise<string>((settle) => {
+    const shell = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "-"], {
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "ignore"],
+    });
+    let output = "";
+    shell.stdout.on("data", (chunk: Buffer) => { output += chunk.toString("utf8"); });
+    shell.on("error", () => settle(""));
+    shell.on("close", () => settle(output.trim()));
+    shell.stdin.end(script, "utf8");
+  });
+  const pid = Number(printed);
+  return Number.isSafeInteger(pid) && pid > 0 ? pid : undefined;
+}
+
 async function waitForReady(program: ManagedProgram, pid: number, maxWaitMs: number): Promise<ManagedProgramState> {
   const deadline = Date.now() + maxWaitMs;
   let state = await program.probe();
@@ -178,24 +238,27 @@ async function bringUp(
   await rotateLog(logPath);
   const log = await open(logPath, "a");
   try {
-    const child = spawn(program.start.command, [...program.start.args], {
-      cwd: program.start.cwd ?? root,
-      env: { ...process.env, ...program.start.env },
-      shell: false,
-      // Outliving this process is the point, and each platform grants that differently. POSIX
-      // wants its own session. Windows already gives an unreferenced child its own lifetime, and
-      // asking to detach there costs the console: a detached process has none, so every console
-      // grandchild it starts is handed a fresh visible window instead. That is what a transcribing
-      // program looks like when `uv` re-execs Python and Python opens a pool of workers. Taking
-      // the hidden console instead leaves one console for the whole tree, and no window at all.
-      detached: process.platform !== "win32",
-      windowsHide: true,
-      stdio: ["ignore", log.fd, log.fd],
-    });
-    child.unref();
-    if (child.pid === undefined) {
+    // Outliving this process is the point, and what grants it differs by platform.
+    //
+    // POSIX wants its own session, which `detached` gives.
+    //
+    // Windows ties a process's lifetime to the console it is attached to. A child spawned from here
+    // inherits this one, so when the launching `node` exits its console is destroyed and every
+    // process on it is sent CTRL_CLOSE_EVENT and terminated. `unref` does not change that — it
+    // removes an event-loop reference and nothing else — so the service reported ready, answered one
+    // health probe, and was gone by the next command, with no error anywhere to read.
+    //
+    // What it needs is a console of its own, hidden. `detached` on Windows means DETACHED_PROCESS,
+    // which is no console at all, and then the first console grandchild — `uv` re-execing Python,
+    // Python opening workers — allocates a fresh visible one. `Start-Process -WindowStyle Hidden`
+    // creates a new console and hides it, which is the combination neither spawn option reaches.
+    const pid = process.platform === "win32"
+      ? await startWithOwnConsole(program.start, root, logPath)
+      : await startDetached(program.start, root, log.fd);
+    if (pid === undefined) {
       return { ...base, action: "unchanged", state: initial, detail: `${program.start.command} did not start`, logPath };
     }
+    const child = { pid };
     onProgress?.({ id: program.id, phase: "waiting" });
     const state = await waitForReady(program, child.pid, maxWaitMs);
     if (state.state === "ready") onProgress?.({ id: program.id, phase: "ready" });

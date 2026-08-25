@@ -197,12 +197,9 @@ service on `127.0.0.1:8765`, and then starts the Worker. The first start may dow
 Whisper and language-alignment model weights, so it can take substantially longer than later starts.
 Do not run `uv sync` in an author project and do not install the `whisperx` Python package by hand.
 
-On Windows, treat `runtime up` printing `Ready whisperx` as a provisioning result, not as proof that
-the HTTP service is still reachable from the next command. Some terminal/automation hosts reap child
-processes when the launching command exits, which leaves `runtime status` reporting `whisperx: down`
-or makes `127.0.0.1:8765` refuse connections even though the managed environment is installed. Run
-`runtime up` from a normal PowerShell session (or keep the launching session alive), then verify the
-service before `prepare_reference` or a Build:
+`runtime up` printing `Ready whisperx` reports that the service answered its health probe. Verify it
+again before `prepare_reference` or a Build, since a first start can spend several minutes loading the
+model:
 
 ```powershell
 Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8765/health
@@ -210,10 +207,10 @@ hypit programs status
 hypit doctor
 ```
 
-If the health check fails, do not reinstall Python packages. Re-run `hypit runtime up` while the
-PowerShell session remains open and inspect `hypit runtime logs`; the managed WhisperX log is also at
-`$env:LOCALAPPDATA\Hypit\programs\whisperx\program.log`. A first start can spend several minutes
-loading the model before the health endpoint answers, so poll rather than launching a second copy.
+If the health check fails, do not reinstall Python packages: poll rather than launching a second copy,
+and read `hypit runtime logs`. The managed WhisperX log is also at
+`$env:LOCALAPPDATA\Hypit\programs\whisperx\program.log`, with the service's error stream beside it
+in `program.err.log`.
 
 The log may contain a `torchcodec` warning about missing `libtorchcodec_core*.dll`, especially when
 the host FFmpeg build is newer than the versions supported by that optional decoder. The warning is
