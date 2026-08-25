@@ -58,6 +58,9 @@ hypit-reference-video-tools render_element projects/<name>/build.svrun \
   --element <id> --segment <id>|--selection <id> --reference-id <id> --out <path>.mp4
 ```
 
+A whole round is one call: `--batch <renders.json>`, an array of `{element, segment|selection, out}`
+inheriting the Run and the reference. They run together.
+
 `--element` takes the element's bare id — `captions`, the `id=` the Source wrote on the element. The
 command appends the output suffix itself when it looks for the track, so `--element captions.track`
 matches nothing: it refuses with `the Source places no element named captions.track` and lists the
@@ -67,6 +70,11 @@ It reads the Canvas, the Recipe values and the Script text out of the Source, mo
 Build has not made, and drives the package's Producer. Nothing is transcribed by hand, so nothing is
 transcribed one line at a time — which is what made a caption system look correct while its lines
 collided.
+
+**It draws the whole stretch, not the element alone.** `--element` names which element the comparison
+is about; the picture is everything the Source places over those words, so two elements over one
+Segment produce the same picture. Scope the comparison with `--question` — that is what tells the
+observer which part of it to read.
 
 `--reference-id` names the reference, and it times the stand-in from that reference's own transcript,
 so each Segment runs for as long as the reference spends on its words. Pass it every time: the
@@ -267,10 +275,12 @@ When the difference is structural rather than cosmetic, repair in the order give
 Producer, Type and Validator agreement, Surface vocabulary and decoding, implementation behaviour,
 then source usage. Fixing source usage over a broken implementation hides the defect one layer down.
 
-## The reference is asked once
+## One comparison round
 
 **There is one comparison round.** What it returns is the whole difference set this reconstruction
-gets. Repair against that set and stop; do not compare again.
+gets. Repair against that set and stop; do not compare again. This bounds the comparing, and nothing
+else: a narrow `observe_reference --question` settles disagreeing evidence at any point, which is
+what `workflow.md` is for.
 
 The reference has nothing further to say after it: it already showed every stretch, and a second look
 re-reads the same frames to check your own work. That spends the expensive half of the route — the

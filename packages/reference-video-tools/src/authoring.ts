@@ -746,9 +746,16 @@ function silentWav(sampleFrames: number): Buffer {
 }
 
 export type RenderElementInput = {
-  readonly run: string;
-  readonly element: string;
-  readonly out: string;
+  /**
+   * A round of renders, run together. Each entry names its own element, stretch and output and
+   * inherits `run` and `reference_id`. The route renders every element before it compares any, and
+   * each render is now written under its own directory, so a round has nothing to serialise for.
+   */
+  readonly renders?: readonly RenderElementInput[];
+  /** Required for one render; a round carries them per entry and inherits `run` from the outer input. */
+  readonly run?: string;
+  readonly element?: string;
+  readonly out?: string;
   readonly segment?: string;
   readonly selection?: string;
   /**
@@ -827,20 +834,26 @@ function timingReport(reference: string | undefined, segments: readonly StandInT
  * beside the output, name which of the two clocks sized each Segment.
  */
 export async function renderElement(input: RenderElementInput): Promise<Record<string, unknown>> {
+  // A round carries these per entry; one render has to name all three itself.
+  assert(input.run !== undefined, "run is required");
+  assert(input.element !== undefined, "element is required");
+  assert(input.out !== undefined, "out is required");
   const element = input.element;
+  const out = input.out;
+  const run = input.run;
   const cwd = invokedFrom();
-  const runPath = resolve(cwd, input.run);
+  const runPath = resolve(cwd, run);
   const projectRoot = dirname(runPath);
   // Where installed packages are found, which is not where the Hypit tree is. A project carries its
   // own `packages/local-*`, so the search starts at the project and walks up the way the CLI's does —
   // resolving against the tree instead would miss every package the project installed for itself.
   const packageRoot = nearestPackageRoot(projectRoot) ?? repositoryRoot();
-  const outPath = resolve(cwd, input.out);
+  const outPath = resolve(cwd, out);
 
   const runSource = await readFile(runPath, "utf8").catch(() => undefined);
   assert(runSource !== undefined, `cannot read ${runPath}`);
   const author = /<author\s+source="([^"]+)"/u.exec(runSource)?.[1];
-  assert(author !== undefined, `${input.run} declares no <author source="…"/>`);
+  assert(author !== undefined, `${run} declares no <author source="…"/>`);
   const svmlPath = resolve(projectRoot, author);
   let svml = await readFile(svmlPath, "utf8").catch(() => undefined);
   assert(svml !== undefined, `cannot read ${svmlPath}`);
@@ -883,7 +896,15 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   };
 
   // The derived Run is written here, and so is the cut, so the directory comes first.
-  const compareRoot = join(projectRoot, ".hypit", "compare");
+  // One directory per render, named for what this render is. Every call used to write one shared
+  // `.hypit/compare` and empty it on the way in, so two renders could not run at once — the second
+  // deleted the first one's sliced Source and mocks out from under it. The route asks for every
+  // element to be rendered before any is compared, which is a set of renders with nothing to say to
+  // each other, and they can now run together.
+  const renderKey = createHash("sha256")
+    .update(`${resolve(out)}\u0000${element}\u0000${focus.segment ?? focus.selection ?? ""}`)
+    .digest("hex").slice(0, 12);
+  const compareRoot = join(projectRoot, ".hypit", "compare", renderKey);
   await rm(compareRoot, { recursive: true, force: true });
   await mkdir(compareRoot, { recursive: true });
 
@@ -898,9 +919,9 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   if (focusedSegment !== undefined) {
     sliced = sliceSource(svml, focusedSegment);
     sourcePath = join(compareRoot, "sliced.svml");
-    // The fragment sits two directories below the Source it came from, so its own relative imports
+    // The fragment sits three directories below the Source it came from, so its own relative imports
     // have to reach back the same distance the derived Run's carried files do.
-    const repointed = sliced.text.replace(/(\s(?:source|from)=")\.\//gu, "$1../../");
+    const repointed = sliced.text.replace(/(\s(?:source|from)=")\.\//gu, "$1../../../");
     await writeFile(sourcePath, repointed, "utf8");
     // Everything downstream reads the Source: which Takes to stand in for, which media to mock, which
     // outputs to satisfy. Left on the original it would declare mocks for elements the cut removed,

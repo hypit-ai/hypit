@@ -2,7 +2,7 @@
 import { readFile } from "node:fs/promises";
 
 import { createReferenceVideoTools } from "./tools.js";
-import type { CompareReconstructionInput } from "./tools.js";
+import type { CompareReconstructionInput, ObserveReferenceInput, RenderElementInput } from "./tools.js";
 
 type Flags = ReadonlyMap<string, string | readonly string[] | boolean>;
 
@@ -13,6 +13,7 @@ function usage(): string {
     "  hypit-reference-video-tools prepare_reference --video-path <path> [--observer gemini|agent] [--redo media|transcript|people|voices|systems|places|all]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> [--shot-id <id> ...] [--reobserve]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> [--shot-id <id> ...] --question <text>",
+    "  hypit-reference-video-tools observe_reference --reference-id <id> --batch <questions.json>",
     "  hypit-reference-video-tools record_observation --reference-id <id> --key <key> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <build.svrun> --segment <id>|--selection <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
@@ -20,6 +21,7 @@ function usage(): string {
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch <comparisons.json>",
     "  hypit-reference-video-tools make-placeholder --out <path> --width <w> --height <h> [--color light|mid|dark|white|black|#RRGGBB] [--video] [--seconds <s>]",
     "  hypit-reference-video-tools render_element <build.svrun> --element <id> --out <path.png|path.mp4> [--segment <id>] [--selection <id>] [--reference-id <id>]",
+    "  hypit-reference-video-tools render_element <build.svrun> --batch <renders.json> [--reference-id <id>]",
     "  hypit-reference-video-tools render_previews <package-dir> [...]",
     "  hypit-reference-video-tools preview_check <build.svrun> [<hypit.runtime.json>]",
     "  hypit-reference-video-tools reconstruction_check <build.svrun> [--reference-id <id>]",
@@ -230,6 +232,19 @@ async function main(): Promise<void> {
     };
     result = await tools.prepare_reference(input as { video_path: string; observer?: "gemini" | "agent"; redo?: "media" | "transcript" | "people" | "voices" | "systems" | "places" | "all" });
   } else if (command === "observe_reference") {
+    // A round of narrow questions is a list, and a list is too long for flags.
+    const askFile = one(flags, "batch");
+    if (askFile !== undefined) {
+      const parsed: unknown = JSON.parse(await readFile(askFile, "utf8"));
+      const list = Array.isArray(parsed) ? parsed : (parsed as { questions?: unknown }).questions;
+      if (!Array.isArray(list)) throw new Error(`${askFile} must hold a JSON array of {shot_ids, question}, or an object with a "questions" array`);
+      result = await tools.observe_reference({
+        reference_id: required(flags, "reference-id"),
+        questions: list as ObserveReferenceInput["questions"] & object,
+      });
+      report(`${JSON.stringify(result, null, 2)}\n`);
+      return;
+    }
     const input = supplied ?? {
       reference_id: required(flags, "reference-id"),
       ...(many(flags, "shot-id").length === 0 ? {} : { shot_ids: many(flags, "shot-id") }),
@@ -299,6 +314,19 @@ async function main(): Promise<void> {
     };
     result = await tools.make_placeholder(input as { out: string; width: number; height: number; color?: string; video?: boolean; seconds?: number });
   } else if (command === "render_element") {
+    const renderFile = one(flags, "batch");
+    if (renderFile !== undefined) {
+      const parsed: unknown = JSON.parse(await readFile(renderFile, "utf8"));
+      const list = Array.isArray(parsed) ? parsed : (parsed as { renders?: unknown }).renders;
+      if (!Array.isArray(list)) throw new Error(`${renderFile} must hold a JSON array of renders, or an object with a "renders" array`);
+      result = await tools.render_element({
+        ...(operands[0] === undefined ? {} : { run: operands[0] }),
+        ...(one(flags, "reference-id") === undefined ? {} : { reference_id: one(flags, "reference-id") }),
+        renders: list,
+      } as RenderElementInput);
+      report(`${JSON.stringify(result, null, 2)}\n`);
+      return;
+    }
     const run = operands[0];
     if (supplied === undefined && run === undefined) throw new Error(`a <build.svrun> is required\n\n${usage()}`);
     const input = supplied ?? {

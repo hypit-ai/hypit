@@ -1,5 +1,5 @@
 import { readFile, readdir } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface } from "@hypit/markup";
@@ -498,13 +498,23 @@ export async function reconstructionCheck(
   // Every package this Source imports. The scope is whatever the Source wrote: a project that declares
   // a vocabulary gap and fills it publishes under its own scope, and those elements draw exactly as an
   // installed one does.
-  const imports = [...svml.matchAll(/<import\s+as="([^"]+)"\s+from="(@[^"@/]+\/[^"@]+)@\d+"/gu)]
-    .map((match) => ({ alias: match[1] ?? "", specifier: match[2] ?? "" }));
+  // Attribute order is not significant in this markup, and a pattern that fixed it read a Source
+  // written the other way round as importing nothing at all — then passed it, because nothing to
+  // compare and nothing found look alike from here.
+  const imports = [...svml.matchAll(/<import\b([^>]*?)\/?>/gsu)]
+    .map((match) => ({
+      alias: /\bas="([^"]+)"/u.exec(match[1] ?? "")?.[1] ?? "",
+      specifier: /\bfrom="(@[^"@/]+\/[^"@]+)@\d+"/u.exec(match[1] ?? "")?.[1] ?? "",
+    }))
+    .filter((item) => item.alias.length > 0 && item.specifier.length > 0);
   if (imports.length === 0) {
     return {
       run: runPath,
-      passed: true,
-      summary: ["the Source imports no package; nothing to compare."],
+      // Not one aliased package import could be read. Whether the Source truly imports nothing or
+      // this failed to read it, what follows knows nothing about what the Source draws — and a
+      // reading that came back empty is not a reconstruction that is covered.
+      passed: false,
+      summary: [`no aliased package import could be read from ${svmlPath}, so nothing is known about what this Source draws.`],
       elements: [],
       playback: [],
       uncovered: [],
@@ -743,14 +753,33 @@ export async function reconstructionCheck(
   const running = await playbackReport();
 
   if (drawn.length === 0 && running.length === 0) {
+    // Nothing placed and nothing seen are the same answer from here, and only one of them is a pass.
+    // A project whose vocabulary resolved and placed no drawing element has nothing to require; one
+    // whose packages did not resolve, or none of whose packages publishes a Surface that draws, has
+    // been read by something that could not see — and the names of what it could not see were being
+    // dropped on the way out.
+    const blind = unresolved.length > 0 || drawingTags.size === 0;
     return {
       run: runPath,
-      passed: true,
-      summary: ["no drawing element is placed in the Source; nothing to require."],
+      passed: !blind,
+      summary: [unresolved.length > 0
+        ? `${unresolved.length} imported package${unresolved.length === 1 ? "" : "s"} could not be resolved from ${packageRoot}, so nothing is known about what the Source draws.`
+        : drawingTags.size === 0
+          ? `no package the Source imports publishes a Surface that draws, so nothing is known about what the Source draws.`
+          : "no drawing element is placed in the Source; nothing to require."],
       elements: [],
       playback: [],
       uncovered: [],
       out_of_bounds: overhang,
+      ...(unresolved.length === 0 ? {} : {
+        unresolved_packages: {
+          names: unresolved,
+          package_root: packageRoot,
+          note: "A project that publishes its own packages resolves them from the project root, where "
+            + "`packages/<name>/package.json` carries the scoped name. Run the command from that directory, "
+            + "or pass --package-root <project directory>.",
+        },
+      }),
     };
   }
 
@@ -776,6 +805,7 @@ export async function reconstructionCheck(
     readonly range?: { readonly segment?: string; readonly selection?: string };
     readonly status: string;
     readonly id?: string;
+    readonly image_path?: string;
     readonly stand_in?: { readonly timing?: { readonly basis?: string } };
   };
   // What the comparison was made against, as a reader would name it: a shot, or the words a Segment
@@ -786,9 +816,25 @@ export async function reconstructionCheck(
     ?? (entry.range?.selection === undefined ? undefined : `selection ${entry.range.selection}`)
     ?? "an unnamed stretch";
   const logPath = join(preparedRoot, reference, "comparisons.jsonl");
-  const logged = (await readFile(logPath, "utf8").catch(() => ""))
+  // A reference is keyed by the video, and rightly: its observations are about that video and cost
+  // real money, so two reconstructions of one file share them. Its comparisons are not about the
+  // video — they are about one reconstruction — and they were being kept in the same place, so a
+  // second project reconstructing the same file was credited with the first one's looking, over
+  // Segments its own Script does not contain.
+  //
+  // What separates them is already on every row: the render it compared. A render belongs to the
+  // project that produced it, so a row whose picture is not under this project is not this project's
+  // evidence. Nothing has to move and no earlier log has to be migrated.
+  const inThisProject = (entry: LoggedComparison): boolean => {
+    if (entry.image_path === undefined) return false;
+    const at = resolve(entry.image_path);
+    return at === packageRoot || at.startsWith(`${packageRoot}${sep}`);
+  };
+  const everything = (await readFile(logPath, "utf8").catch(() => ""))
     .split("\n").filter((line) => line.trim().length > 0)
     .flatMap((line) => { try { return [JSON.parse(line) as LoggedComparison]; } catch { return []; } });
+  const elsewhere = everything.length - everything.filter(inThisProject).length;
+  const logged = everything.filter(inThisProject);
   // A pair handed out and not yet reported on. Naming these separately is what keeps an element with
   // three open comparisons from reading as one that was never looked at.
   const awaiting = logged.filter((entry) => entry.status === "pending");
@@ -879,6 +925,10 @@ export async function reconstructionCheck(
     summary.push(`${unresolved.length} imported package${unresolved.length === 1 ? "" : "s"} could not be resolved, `
       + "so nothing is known about what they draw.");
   }
+  if (elsewhere > 0) {
+    summary.push(`${elsewhere} comparison${elsewhere === 1 ? "" : "s"} in this reference's log compared a render `
+      + "outside this project and are not counted here.");
+  }
   if (awaiting.length > 0) {
     summary.push(`${awaiting.length} comparison${awaiting.length === 1 ? " is" : "s are"} still waiting for `
       + "the differences to be recorded.");
@@ -887,6 +937,9 @@ export async function reconstructionCheck(
   return {
     run: runPath,
     reference_id: reference,
+    // Where this command actually read and resolved from. Said here, no document has to describe it
+    // from the outside and go stale when it moves.
+    roots: { reference: preparedRoot, packages: packageRoot },
     passed: never.length === 0 && running.length === 0 && coverage.gaps.length === 0 && unresolved.length === 0,
     summary,
     elements,
