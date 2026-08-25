@@ -31,20 +31,22 @@ const COMMON_KEYS = [
   "appear-frames", "move-frames", "motion-easing",
   "board-background", "board-border-color", "board-border-width", "board-radius",
   "board-shadow-x", "board-shadow-y", "board-shadow-blur", "board-shadow-spread", "board-shadow-color",
-  "board-stack", "item-stack", "stage-stack",
+  "board-stack", "item-stack",
   "appear-gain", "move-gain", "sound-fade-frames",
 ] as const;
 
 const TIER_KEYS = [
-  ...COMMON_KEYS,
-  "rows", "label-width", "padding", "row-height", "row-gap", "cell-gap",
-  "icon-size", "icon-radius", "icon-fit", "stage-x", "stage-y", "stage-size",
+  "rows", "label-text-color", "label-size", "line-height",
+  "board-background", "board-border-color", "board-border-width",
+  "label-width", "stage-x", "stage-y", "stage-size", "icon-radius-ratio", "icon-fit",
+  "appear-frames", "move-frames", "board-stack", "stage-stack", "item-stack",
+  "appear-gain", "move-gain", "sound-fade-frames",
 ] as const;
 
 const COLUMN_KEYS = [
   ...COMMON_KEYS,
   "rank-colors", "padding", "row-height", "row-gap", "icon-size", "icon-radius", "icon-fit",
-  "stage-x", "stage-y", "stage-size",
+  "stage-x", "stage-y", "stage-size", "stage-stack",
 ] as const;
 
 const TOP_KEYS = [
@@ -73,6 +75,13 @@ function number(recipe: SvsRecipe, name: string, fallback: number): number {
 function integer(recipe: SvsRecipe, name: string, fallback: number): number {
   const value = number(recipe, name, fallback);
   if (!Number.isSafeInteger(value)) fail(recipe, `${name} must be an integer.`);
+  return value;
+}
+
+function optionalNumber(recipe: SvsRecipe, name: string): number | undefined {
+  const value = recipe.properties[name];
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value)) fail(recipe, `${name} must be a finite number.`);
   return value;
 }
 
@@ -145,10 +154,11 @@ function sound(recipe: SvsRecipe): RankingSoundStyle {
 
 function rowList(recipe: SvsRecipe): TierRowStyle[] {
   const value = recipe.properties.rows ?? [
-    { id: "s", label: "S", color: "#ef4444" },
-    { id: "a", label: "A", color: "#f59e0b" },
-    { id: "b", label: "B", color: "#22c55e" },
-    { id: "c", label: "C", color: "#3b82f6" },
+    { id: "s", label: "S", color: "#EE5F52" },
+    { id: "a", label: "A", color: "#F0A04C" },
+    { id: "b", label: "B", color: "#F0C84D" },
+    { id: "c", label: "C", color: "#EDE356" },
+    { id: "d", label: "D", color: "#A6DA7B" },
   ];
   if (!Array.isArray(value) || value.length === 0) fail(recipe, "rows must be a non-empty array.");
   return value.map((item, index) => {
@@ -180,22 +190,25 @@ export function decodeTierBoardStyle(
 ): { readonly style: TierBoardStyle; readonly sound: RankingSoundStyle } {
   known(recipe, TIER_KEYS);
   const fonts = exactFonts(font);
+  const labelWidthRatio = optionalNumber(recipe, "label-width");
   const style: TierBoardStyle = {
-
     rows: rowList(recipe),
-    board: board(recipe),
-    text: typography(recipe, fonts),
-    labelWidthPx: number(recipe, "label-width", 72),
-    paddingPx: number(recipe, "padding", 18),
-    rowHeightPx: number(recipe, "row-height", 92),
-    rowGapPx: number(recipe, "row-gap", 10),
-    cellGapPx: number(recipe, "cell-gap", 12),
-    iconSizePx: number(recipe, "icon-size", 72),
-    iconRadiusPx: number(recipe, "icon-radius", 12),
+    fonts,
+    labelTextColor: text(recipe, "label-text-color", "#2c2c2c"),
+    labelSizeRatio: number(recipe, "label-size", 0.3),
+    labelLineHeight: number(recipe, "line-height", 1),
+    boardColor: text(recipe, "board-background", "#2b2b30"),
+    borderColor: text(recipe, "board-border-color", "#111315"),
+    borderWidthPx: number(recipe, "board-border-width", 3),
+    ...(labelWidthRatio === undefined ? {} : { labelWidthRatio }),
+    stagePoint: { x: number(recipe, "stage-x", 0.2), y: number(recipe, "stage-y", 0.3) },
+    stageSizePx: number(recipe, "stage-size", 168),
+    iconRadiusRatio: number(recipe, "icon-radius-ratio", 0.12),
     iconFit: oneOf(recipe, "icon-fit", ["contain", "cover"] as const, "cover"),
-    stagePoint: { x: number(recipe, "stage-x", 0.5), y: number(recipe, "stage-y", 0.23) },
-    stageSizePx: number(recipe, "stage-size", 108),
-    motion: motion(recipe),
+    motion: {
+      appearFrames: integer(recipe, "appear-frames", 8),
+      moveFrames: integer(recipe, "move-frames", 14),
+    },
     boardStackingOrder: integer(recipe, "board-stack", 20),
     stageStackingOrder: integer(recipe, "stage-stack", 25),
     itemStackingOrder: integer(recipe, "item-stack", 30),

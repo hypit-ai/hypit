@@ -4,6 +4,7 @@ import { captionManifest, captionModuleRef, captionTypes } from "@hypit/caption"
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { svsRecipeType } from "@hypit/svs";
@@ -332,6 +333,7 @@ export const captionFineManifest: ModuleManifest = {
     compositionDependency,
     mediaDependency,
     narrativeDependency,
+    programSpaceDependency,
     semanticTrackDependency,
   ],
   types: [{ name: captionFineTypes.schedule.name }],
@@ -353,7 +355,7 @@ export const captionFineManifest: ModuleManifest = {
         { name: "schedule", type: captionFineTypes.schedule },
         { name: "program", type: captionTypes.program },
         { name: "document", type: narrativeTypes.captionDocument },
-        { name: "semantic", type: semanticTrackTypes.track },
+        { name: "space", type: programSpaceTypes.programSpace },
       ],
       outputs: [{ name: "track", type: compositionTypes.visualTrack }],
       needs: [],

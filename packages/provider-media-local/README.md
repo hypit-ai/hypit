@@ -1,6 +1,6 @@
 # `@hypit/provider-media-local`
 
-Trusted local ffprobe/ffmpeg implementation of `@hypit/media-pipeline`'s eight exact byte-operation
+Trusted local ffprobe/ffmpeg implementation of `@hypit/media-pipeline`'s nine exact byte-operation
 capabilities. It is Runtime configuration and is never imported by author `.svml`.
 
 ```ts
@@ -22,6 +22,7 @@ The Endpoint:
 - preserves source A/V offset through deterministic trim, delay, pad and crop operations;
 - emits a silent CFR H.264 visual and, when selected, an exact-length 48 kHz stereo PCM WAV.
 - transforms synchronized A/V, extracts generic reference audio and extracts exact source frames;
+- encodes one authored image frame as an ordinary finite silent MP4 before normalization;
 - renders an explicit `AudioProgramPlan` into one exact-length 48 kHz stereo PCM `TimelineAudio`;
 - muxes exactly one verified silent visual stream and one verified program-audio stream into MP4;
 - distinguishes AAC coding-frame padding from the authoritative packet presentation span.

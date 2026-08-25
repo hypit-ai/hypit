@@ -5,7 +5,7 @@ import type {
 } from "@hypit/media";
 import type { BlobRef } from "@hypit/protocol";
 import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
-import type { TemporalPoint, TemporalWindow } from "@hypit/temporal";
+import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
 
 export type RankingVariant = "tier-board" | "column" | "top-three";
 
@@ -24,7 +24,7 @@ export type TriggeredRankingScheduleEntry = {
 
 export type TriggeredRankingSchedule = {
   readonly id: string;
-  readonly variant: Exclude<RankingVariant, "column">;
+  readonly variant: "top-three";
   readonly outer: FrameSpan;
   readonly terminalFrame: number;
   readonly entries: readonly TriggeredRankingScheduleEntry[];
@@ -32,23 +32,26 @@ export type TriggeredRankingSchedule = {
 
 export type TriggeredRankingCandidate = {
   readonly itemId: string;
-  readonly activation: TemporalPoint;
+  readonly activation: TemporalInstant;
 };
 
 export type TriggeredRankingCandidateSet = {
   readonly entries: readonly TriggeredRankingCandidate[];
 };
 
-export type ColumnWindowInput = {
+export type RankingWindowInput = {
   readonly itemId: string;
   readonly window: TemporalWindow;
 };
 
-export type ColumnWindowSet = {
-  readonly entries: readonly ColumnWindowInput[];
+export type RankingWindowSet = {
+  readonly entries: readonly RankingWindowInput[];
 };
 
-export type ColumnScheduleEntry =
+export type TierBoardWindowSet = RankingWindowSet;
+export type ColumnWindowSet = RankingWindowSet;
+
+export type WindowedRankingScheduleEntry =
   | {
       readonly itemId: string;
       readonly mode: "preset";
@@ -61,14 +64,21 @@ export type ColumnScheduleEntry =
       readonly settled: FrameSpan;
     };
 
+export type TierBoardSchedule = {
+  readonly id: string;
+  readonly variant: "tier-board";
+  readonly outer: FrameSpan;
+  readonly entries: readonly WindowedRankingScheduleEntry[];
+};
+
 export type ColumnSchedule = {
   readonly id: string;
   readonly variant: "column";
   readonly outer: FrameSpan;
-  readonly entries: readonly ColumnScheduleEntry[];
+  readonly entries: readonly WindowedRankingScheduleEntry[];
 };
 
-export type RankingSchedule = TriggeredRankingSchedule | ColumnSchedule;
+export type RankingSchedule = TriggeredRankingSchedule | TierBoardSchedule | ColumnSchedule;
 
 export type RankingTextStyle = {
   readonly fonts: readonly FontArtifactRef[];
@@ -98,6 +108,11 @@ export type RankingMotionStyle = {
   readonly easing: "linear" | "ease-in" | "ease-out" | "ease-in-out";
 };
 
+export type TierBoardMotionStyle = {
+  readonly appearFrames: number;
+  readonly moveFrames: number;
+};
+
 export type RankingSoundStyle = {
   readonly appearGain: number;
   readonly moveGain: number;
@@ -112,19 +127,19 @@ export type TierRowStyle = {
 
 export type TierBoardStyle = {
   readonly rows: readonly TierRowStyle[];
-  readonly board: RankingBoardPaint;
-  readonly text: RankingTextStyle;
-  readonly labelWidthPx: number;
-  readonly paddingPx: number;
-  readonly rowHeightPx: number;
-  readonly rowGapPx: number;
-  readonly cellGapPx: number;
-  readonly iconSizePx: number;
-  readonly iconRadiusPx: number;
-  readonly iconFit: "contain" | "cover";
+  readonly fonts: readonly FontArtifactRef[];
+  readonly labelTextColor: string;
+  readonly labelSizeRatio: number;
+  readonly labelLineHeight: number;
+  readonly boardColor: string;
+  readonly borderColor: string;
+  readonly borderWidthPx: number;
+  readonly labelWidthRatio?: number;
   readonly stagePoint: { readonly x: number; readonly y: number };
   readonly stageSizePx: number;
-  readonly motion: RankingMotionStyle;
+  readonly iconRadiusRatio: number;
+  readonly iconFit: "contain" | "cover";
+  readonly motion: TierBoardMotionStyle;
   readonly boardStackingOrder: number;
   readonly stageStackingOrder: number;
   readonly itemStackingOrder: number;
@@ -164,13 +179,17 @@ export type TopThreeStyle = {
   readonly itemStackingOrder: number;
 };
 
-export type TierBoardItemSpec = {
+type TierBoardItemBase = {
   readonly variant: "tier-board";
   readonly id: string;
   readonly tier: string;
-  readonly entry: "direct" | "stage";
   readonly stackingOrder?: number;
 };
+
+export type TierBoardItemSpec = TierBoardItemBase & (
+  | { readonly preset: true }
+  | { readonly preset: false; readonly entry: "direct" | "drop" }
+);
 
 export type ColumnItemSpec = {
   readonly variant: "column";
@@ -216,8 +235,9 @@ export type TopThreeItemSet = {
 
 export type TierBoardProgram = {
   readonly id: string;
+  readonly canvas: CanvasSpace;
   readonly frame: SpatialFrame;
-  readonly schedule: TriggeredRankingSchedule;
+  readonly schedule: TierBoardSchedule;
   readonly style: TierBoardStyle;
   readonly items: readonly TierBoardItem[];
 };

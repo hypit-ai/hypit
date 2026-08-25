@@ -8,6 +8,7 @@ import { createResolvedClosure } from "@hypit/core";
 import type { ModuleManifest } from "@hypit/protocol";
 import {
   decodeScriptSurface,
+  narrativeType,
   scriptManifest,
   scriptMarkupSurfaces,
   scriptModuleRef,
@@ -63,6 +64,7 @@ test("Script teaches Markup <script> only through its imported Manifest", async 
     record.id === "story.segment.opening.speech" && record.type.name === "Text"), true);
   assert.equal(result.records.some((record) =>
     record.id === "story.caption" && record.type.name === "CaptionDocument"), true);
+  assert.deepEqual(result.identities, [{ namespace: narrativeType, id: "story" }]);
 });
 
 test("the same Script meaning has the same authored Record digest across reflow", async () => {

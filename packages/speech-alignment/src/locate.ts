@@ -3,6 +3,7 @@ import type { BlobRef } from "@hypit/protocol";
 import type { Narrative, NarrativeToken } from "@hypit/narrative";
 import { programFrameSampleBoundary, programSpaceFrameCount } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
+import type { SemanticTakeTimedToken, SemanticTakeTiming } from "@hypit/speech";
 import type {
   AlignedTranscriptEvidence,
   SpeechActivitySpan,
@@ -16,20 +17,9 @@ import { SpeechAlignmentError } from "./error.js";
 import { alignCharacters, alignmentCharacters } from "./normalize.js";
 import type { AlignmentGroup, TimedSpeechSegment } from "./types.js";
 
-export type LocalTimedSpeechToken = {
-  readonly tokenId: string;
-  readonly segmentId: string;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
-};
-
-export type LocalSemanticTimePoint = { readonly identity: string; readonly frame: number };
-
-/** Private alignment result used only to materialize one SemanticTake. */
-export type LocalSemanticTiming = {
-  readonly tokens: readonly LocalTimedSpeechToken[];
-  readonly anchors: readonly LocalSemanticTimePoint[];
-};
+export type LocalTimedSpeechToken = SemanticTakeTimedToken;
+export type LocalSemanticTimePoint = SemanticTakeTiming["anchors"][number];
+export type LocalSemanticTiming = SemanticTakeTiming;
 
 /** Package-private clock used while aligning exactly one normalized Segment Take. */
 export type AlignmentBasis = {
@@ -465,17 +455,19 @@ export function locateAlignedSegmentTiming(
 
   const tokensById = new Map(timedTokens.map((token) => [token.tokenId, token]));
   const segmentsById = new Map(timedSegments.map((segment) => [segment.segmentId, segment]));
-  const anchors: LocalSemanticTimePoint[] = narrative.semanticIndex.anchors.map((anchor) => {
+  const anchors: LocalSemanticTimePoint[] = narrative.semanticIndex.anchors.flatMap((anchor): LocalSemanticTimePoint[] => {
+    // Program boundaries belong to the assembled SemanticTrack, never to one Segment-local Take.
+    if (anchor.kind === "program-start" || anchor.kind === "program-end") return [];
     if (anchor.kind === "segment-start" || anchor.kind === "segment-end") {
       const segment = segmentsById.get(anchor.segmentId)!;
-      return anchor.kind === "segment-start"
+      return [anchor.kind === "segment-start"
         ? { identity: anchor.id, frame: segment.startFrame }
-        : { identity: anchor.id, frame: segment.endFrameExclusive };
+        : { identity: anchor.id, frame: segment.endFrameExclusive }];
     }
     const token = tokensById.get(anchor.tokenId!)!;
-    return anchor.kind === "token-start"
+    return [anchor.kind === "token-start"
       ? { identity: anchor.id, frame: token.startFrame }
-      : { identity: anchor.id, frame: token.endFrameExclusive };
+      : { identity: anchor.id, frame: token.endFrameExclusive }];
   });
   return { tokens: timedTokens, anchors };
 }

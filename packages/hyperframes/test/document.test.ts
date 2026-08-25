@@ -22,7 +22,7 @@ const fixtureFont: FontArtifactRef = {
 };
 
 function fixture() {
-  const programSpace = sealProgramSpace({
+  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec: 1001 / 1000,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   });
@@ -38,7 +38,7 @@ function fixture() {
     size: 20,
     mediaType: "audio/wav",
   };
-  const lower = sealVisualTrack({
+  const lower = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "lower",
     presents: [{
@@ -54,7 +54,7 @@ function fixture() {
       }],
     }],
   });
-  const upper = sealVisualTrack({
+  const upper = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "upper",
     presents: [{
@@ -67,7 +67,7 @@ function fixture() {
       ],
     }],
   });
-  const audio = sealAudioTrack({
+  const audio = sealAudioTrack({ programSpaceId: "test-space",
     id: "sound",
     clips: [{
       id: "main",
@@ -162,8 +162,7 @@ test("HyperFrames emits frame-bound local animation without creating a Track sta
   assert(lower?.kind === "visual");
   const present = lower.presents[0]!;
   const media = present.elements[0]!;
-  const animated = sealVisualTrack({
-    ...lower,
+  const animated = sealVisualTrack({...lower,
     presents: [{
       ...present,
       elements: [{
@@ -195,8 +194,7 @@ test("HyperFrames clips a long animation by Present visibility instead of reject
   assert(lower?.kind === "visual");
   const present = lower.presents[0]!;
   const media = present.elements[0]!;
-  const animated = sealVisualTrack({
-    ...lower,
+  const animated = sealVisualTrack({...lower,
     presents: [{ ...present, elements: [{ ...media, animation: { keyframes: [
       { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
       { atFrame: 45, style: [{ name: "opacity", value: 1 }] },
@@ -212,7 +210,7 @@ test("HyperFrames clips a long animation by Present visibility instead of reject
 });
 
 test("content-bound fonts and typed compositable Surfaces cross the same Artifact boundary", () => {
-  const space = sealProgramSpace({
+  const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -227,7 +225,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
     style: "normal",
   };
   const surfaceDigest = fixtureDigest("hyperframes:alpha-surface");
-  const track = sealVisualTrack({
+  const track = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "bound-render-dependencies",
     presents: [{
@@ -287,7 +285,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
 });
 
 test("exact timed sampling lowers loop boundaries and held frames without zero-rate browser media", () => {
-  const programSpace = sealProgramSpace({
+  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec: 8 / 30,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -297,7 +295,7 @@ test("exact timed sampling lowers loop boundaries and held frames without zero-r
     size: 1_000,
     mediaType: "video/mp4",
   };
-  const track = sealVisualTrack({
+  const track = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "sampled",
     presents: [{
@@ -352,11 +350,11 @@ test("a Track naming five takes still lowers to DOM identities a Windows path ca
   const trackId = "speech-visual:opening-monologue-take-1+opening-monologue-take-2"
     + "+opening-monologue-take-3+opening-monologue-take-4+opening-monologue-take-5";
   const presentId = `${trackId}:clip-1`;
-  const programSpace = sealProgramSpace({
+  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec: 8 / 30,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  const track = sealVisualTrack({
+  const track = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: trackId,
     presents: [{

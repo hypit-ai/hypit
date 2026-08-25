@@ -3,7 +3,7 @@ import { canonicalize } from "@hypit/protocol";
 import type { StoredValue } from "@hypit/protocol";
 import type { ProgramSpace } from "@hypit/program-space";
 import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
-import type { TemporalPoint } from "@hypit/temporal";
+import type { TemporalInstant } from "@hypit/temporal";
 import type { MediaLayerSet } from "@hypit/media-track";
 import type { Text } from "@hypit/text";
 
@@ -53,10 +53,11 @@ export const depthStackComponent = {
       producer: depthStackProducers.appendCard,
       handler: ({ inputs }) => ({ outputs: { set: output(appendDepthStackCard(
         inline<DepthStackCardSet>(inputs.set?.value, "DepthStackCardSet"),
+        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
         inline<MediaLayerSet>(inputs.material?.value, "MediaLayerSet"),
         inline<DepthStackCardLabel>(inputs.label?.value, "DepthStackCardLabel"),
         inline<DepthStackCardSpec>(inputs.spec?.value, "DepthStackCardSpec"),
-        inline<TemporalPoint>(inputs.activation?.value, "TemporalPoint"),
+        inline<TemporalInstant>(inputs.activation?.value, "TemporalInstant"),
       )) }, needs: {} }),
     },
     {
@@ -65,7 +66,7 @@ export const depthStackComponent = {
         const value = finalizeInputs(inputs);
         return { outputs: { program: output(finalizeDepthStack(
           value.set, value.header, value.frame, value.spec,
-          inline<TemporalPoint>(inputs.terminal?.value, "TemporalPoint"), value.space,
+          inline<TemporalInstant>(inputs.terminal?.value, "TemporalInstant"), value.space,
         )) }, needs: {} };
       },
     },

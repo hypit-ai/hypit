@@ -1,4 +1,5 @@
 import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@hypit/composition";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
@@ -99,6 +100,7 @@ export const filmManifest: ModuleManifest = {
   name: filmModuleRef.name,
   version: filmModuleRef.version,
   dependencies: [
+    programSpaceDependency,
     semanticTrackDependency,
     spatialDependency,
     compositionDependency,
@@ -120,7 +122,7 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.appendVisualTrack.name,
       inputs: [
         { name: "set", type: filmTypes.trackSet },
-        { name: "semantic", type: semanticTrackTypes.track },
+        { name: "space", type: programSpaceTypes.programSpace },
         { name: "track", type: compositionTypes.visualTrack },
       ],
       outputs: [{ name: "set", type: filmTypes.trackSet }],
@@ -130,7 +132,7 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.appendAudioTrack.name,
       inputs: [
         { name: "set", type: filmTypes.trackSet },
-        { name: "semantic", type: semanticTrackTypes.track },
+        { name: "space", type: programSpaceTypes.programSpace },
         { name: "track", type: compositionTypes.audioTrack },
       ],
       outputs: [{ name: "set", type: filmTypes.trackSet }],
@@ -141,7 +143,7 @@ export const filmManifest: ModuleManifest = {
       inputs: [
         { name: "program", type: filmTypes.program },
         { name: "canvas", type: spatialTypes.canvas },
-        { name: "semantic", type: semanticTrackTypes.track },
+        { name: "space", type: programSpaceTypes.programSpace },
         { name: "set", type: filmTypes.trackSet },
       ],
       outputs: [{ name: "composition", type: compositionTypes.composition }],

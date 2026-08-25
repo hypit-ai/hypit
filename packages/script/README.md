@@ -2,7 +2,8 @@
 
 Official raw Script Surface for the Markup Frontend. It parses prose-first named Segment blocks,
 newline-independent Role Cues, Dual Text, Selection and Moment syntax, and lowers them to a
-canonical authored Narrative value with exactly `2M + 2N` semantic anchor identities.
+canonical authored Narrative value with exactly `2M + 2N + 2` semantic anchor identities: both
+ends of every Token and Segment, plus the Script Program's own start and end.
 
 The package is an ordinary statically declared Surface module. Core does not import it and does not
 know that Script, Segment or Narrative exist.

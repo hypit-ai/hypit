@@ -611,6 +611,40 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
     assert.equal(extractedFrame.mediaType, "image/png");
     const frameInspection = await inspectArtifact(artifacts, extractedFrame);
     assert.equal(frameInspection.streams.find((item) => item.kind === "video")?.decodedUnitCount, 1);
+
+    const stillVideo = await executeArtifact(need(
+      "need:render-still-video",
+      mediaPipelineCapabilities.renderStill,
+      artifactTypes.blob,
+      canonicalize({
+        source: extractedFrame,
+        request: {
+          frameRate: { numerator: 30, denominator: 1 },
+          frameCount: 15,
+          output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
+        },
+      }),
+    ));
+    assert.equal(stillVideo.mediaType, "video/mp4");
+    const stillInspection = await inspectArtifact(artifacts, stillVideo);
+    assert.equal(stillInspection.streams.length, 1);
+    assert.equal(stillInspection.streams[0]?.kind, "video");
+    assert.equal(stillInspection.streams[0]?.decodedUnitCount, 15);
+    const stillSelection = selectMediaStreams(stillInspection, sealMediaSelectionRequest({
+      video: { mode: "primary-moving" },
+      audio: { mode: "none" },
+      spanAuthority: "video",
+      frameRate: { numerator: 30, denominator: 1 },
+    }));
+    const stillNormalized = await normalizeArtifact({
+      artifacts,
+      source: stillVideo,
+      inspection: stillInspection,
+      selection: stillSelection,
+      frameRate: { numerator: 30, denominator: 1 },
+    });
+    assert.equal(stillNormalized.timeline.frameCount, 15);
+    assert.equal(stillNormalized.audio, undefined);
   } finally {
     await rm(root, { recursive: true, force: true }).catch(() => {});
   }

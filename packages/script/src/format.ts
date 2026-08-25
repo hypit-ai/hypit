@@ -72,7 +72,7 @@ export function formatScript(sourceName: string, source: string): string {
   while (output.at(-1) === "") output.pop();
   const formatted = `${output.join("\n")}\n`;
   const reparsed = parseScript(sourceName, formatted);
-  if (canonicalStringify(narrativeValue(parsed)) !== canonicalStringify(narrativeValue(reparsed))) {
+  if (canonicalStringify(narrativeValue(parsed, "comparison")) !== canonicalStringify(narrativeValue(reparsed, "comparison"))) {
     throw new ScriptSyntaxError(
       "SCRIPT_FORMAT_SEMANTICS",
       "Formatter refused to change Script semantics.",

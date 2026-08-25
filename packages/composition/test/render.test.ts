@@ -15,7 +15,7 @@ import {
 } from "../src/index.js";
 import type { VisualTrack } from "../src/index.js";
 
-const space = sealProgramSpace({
+const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
@@ -80,7 +80,7 @@ test("CompositableSurfaceRef distinguishes a typed alpha surface from an ordinar
 });
 
 test("exact fonts own font selection and cannot conflict with raw CSS font facts", () => {
-  const invalid = sealVisualTrack({
+  const invalid = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "invalid-font-track",
     presents: [{
@@ -108,7 +108,7 @@ test("exact fonts own font selection and cannot conflict with raw CSS font facts
 });
 
 test("animated materialized Surfaces must exactly share the Present frame domain", () => {
-  const valid = sealVisualTrack({
+  const valid = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "surface-track",
     presents: [{
@@ -127,8 +127,7 @@ test("animated materialized Surfaces must exactly share the Present frame domain
   const content = structuredClone(valid) as VisualTrack;
   const surface = content.presents[0]!.elements[0]!;
   assert(surface.kind === "surface");
-  const invalid = sealVisualTrack({
-    ...content,
+  const invalid = sealVisualTrack({...content,
     presents: [{
       ...content.presents[0]!,
       span: { startFrame: 0, endFrameExclusive: 30 },
@@ -149,7 +148,7 @@ test("animated materialized Surfaces must exactly share the Present frame domain
 });
 
 test("a local mask owns exactly one mask root and one content root inside its Present", () => {
-  const track = sealVisualTrack({
+  const track = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "masked-text",
     presents: [{
@@ -182,8 +181,7 @@ test("a local mask owns exactly one mask root and one content root inside its Pr
   const invalid = structuredClone(track) as VisualTrack;
   const root = invalid.presents[0]!.elements[0]!;
   assert(root.kind === "mask");
-  const broken = sealVisualTrack({
-    ...invalid,
+  const broken = sealVisualTrack({...invalid,
     presents: [{
       ...invalid.presents[0]!,
       elements: [{ ...root, contentElement: "foreign" }, ...invalid.presents[0]!.elements.slice(1)],
@@ -194,8 +192,7 @@ test("a local mask owns exactly one mask root and one content root inside its Pr
     canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [broken],
   }), space), /declared mask and content roots/u);
 
-  const nested = sealVisualTrack({
-    ...track,
+  const nested = sealVisualTrack({...track,
     presents: [{
       ...track.presents[0]!,
       elements: [

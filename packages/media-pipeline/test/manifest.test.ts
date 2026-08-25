@@ -1,6 +1,7 @@
 import { artifactTypes } from "@hypit/artifact";
 import { mediaTypes } from "@hypit/media";
 import { programSpaceTypes } from "@hypit/program-space";
+import { speechTypes } from "@hypit/speech";
 import { svsRecipeType } from "@hypit/svs";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -11,10 +12,12 @@ import {
   decodeExtractAudioSurface,
   decodeExtractFrameSurface,
   decodeTransformMediaSurface,
+  decodeStillVideoSurface,
   extractAudioFragment,
   extractFrameFragment,
   synchronizedMediaFragment,
   transformMediaFragment,
+  stillVideoFragment,
 } from "../src/index.js";
 
 test("the Normalize Surface makes inspection and normalization an explicit author graph branch", async () => {
@@ -111,4 +114,34 @@ test("media operations are ordinary graph branches over BlobArtifact", async () 
   });
   assert.equal(frame.fragments[0]?.id, extractFrameFragment.id);
   assert.deepEqual(frame.components[0]?.outputs, { image: "continuity.image" });
+});
+
+test("StillVideo stops at an ordinary MP4 branch before Normalize", async () => {
+  const range = { source: "still.svml", start: 0, end: 1 };
+  const output = await decodeStillVideoSurface({
+    sourceName: range.source,
+    element: {
+      kind: "element",
+      name: "media:StillVideo",
+      attributes: {
+        id: "opening-still",
+        source: { kind: "reference", path: "opening-head" },
+        duration: { kind: "reference", path: "opening-duration.duration" },
+        clock: { kind: "reference", path: "clock" },
+      },
+      children: [],
+      range,
+    },
+    resolveReference: (path) => path === "opening-head"
+      ? { path, ref: { kind: "record", id: path }, type: artifactTypes.blob }
+      : path === "opening-duration.duration"
+        ? { path, ref: { kind: "record", id: path }, type: speechTypes.duration }
+        : path === "clock"
+          ? { path, ref: { kind: "record", id: path }, type: programSpaceTypes.clock }
+          : undefined,
+    resolveAsset: async () => { throw new Error("no asset resolution expected"); },
+  });
+  assert.equal(output.fragments[0]?.id, stillVideoFragment.id);
+  assert.deepEqual(output.components[0]?.outputs, { video: "opening-still.video" });
+  assert.equal(stillVideoFragment.exports[0]?.type.name, artifactTypes.blob.name);
 });

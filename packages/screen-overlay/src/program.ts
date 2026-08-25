@@ -5,6 +5,7 @@ import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize } from "@hypit/protocol";
 import { assertCanvasSpace } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
+import { assertTemporalWindowFor } from "@hypit/temporal";
 import type { ProjectedWindow } from "@hypit/temporal";
 
 import type {
@@ -106,10 +107,11 @@ export function assertScreenOverlaySet(value: ScreenOverlaySet): void {
 }
 
 function realized(
-  set: ScreenOverlaySet, header: ScreenOverlayHeader, spec: ScreenOverlayItemSpec,
+  set: ScreenOverlaySet, header: ScreenOverlayHeader, space: ProgramSpace, spec: ScreenOverlayItemSpec,
   window: ProjectedWindow,
 ): ScreenOverlaySet {
   assertScreenOverlaySet(set); assertScreenOverlayHeader(header); assertScreenOverlayItemSpec(spec);
+  assertTemporalWindowFor(window, { subjectId: spec.id, space });
   const addition = {
     id: window.id,
     subjectId: spec.id,
@@ -126,10 +128,11 @@ function realized(
 export function appendProjectedScreenOverlay(
   set: ScreenOverlaySet,
   header: ScreenOverlayHeader,
+  space: ProgramSpace,
   spec: ScreenOverlayItemSpec,
   window: ProjectedWindow,
 ): ScreenOverlaySet {
-  return realized(set, header, spec, window);
+  return realized(set, header, space, spec, window);
 }
 export function sealScreenOverlayProgram(value: ScreenOverlayProgram): ScreenOverlayProgram {
   const normalized = { id: value.id,
@@ -307,7 +310,7 @@ function overlayElements(content: ScreenOverlayComponent, canvas: CanvasSpace, d
 export function renderScreenOverlay(canvas: CanvasSpace, space: ProgramSpace, program: ScreenOverlayProgram): VisualTrack {
   assertCanvasSpace(canvas); assertProgramSpaceIdentity(space); assertScreenOverlayProgram(program);
   const track = sealVisualTrack({
-    visualIr: "hypit.visual-ir@1", id: program.id,
+    programSpaceId: space.id, visualIr: "hypit.visual-ir@1", id: program.id,
     presents: program.items.map((item) => ({
       id: item.id, subjectId: item.subjectId, span: { ...item.span }, stacking: { ...item.stacking },
       elements: overlayElements(item.content, canvas, item.span.endFrameExclusive - item.span.startFrame),

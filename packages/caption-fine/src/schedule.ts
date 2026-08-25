@@ -24,6 +24,9 @@ export function scheduleFineCaption(
   assertTimedCaptionProjection(projection);
   assertCaptionProgramForDocument(program, document);
   if (projection.documentId !== document.id) throw new Error("Fine Caption Schedule received another CaptionDocument");
+  if (projection.narrativeId !== document.narrativeId) {
+    throw new Error("Fine Caption Schedule received a CaptionDocument from another Narrative");
+  }
   if (program.wordRuns.length !== 0) {
     throw new Error("Fine Caption accepts one uniform token rule and cannot consume word-specific Style runs");
   }
@@ -89,11 +92,18 @@ export function scheduleFineCaption(
       throw new Error(`Fine Caption Cue ${cue.id} has an invalid visible envelope`);
     }
   }
-  return { documentId: document.id, cues };
+  return {
+    spaceId: projection.spaceId,
+    narrativeId: projection.narrativeId,
+    documentId: document.id,
+    cues,
+  };
 }
 
 export function assertFineCaptionSchedule(value: FineCaptionSchedule): void {
-  if (!value.documentId) throw new Error("Fine Caption Schedule document identity is empty");
+  if (!value.spaceId || !value.narrativeId || !value.documentId) {
+    throw new Error("Fine Caption Schedule provenance is empty");
+  }
   const ids = new Set<string>();
   for (const cue of value.cues) {
     if (!cue.id || !cue.styleId || ids.has(cue.id) || cue.units.length === 0) {

@@ -17,6 +17,7 @@ const string = { kind: "string", minLength: 1 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 export const semanticTrackSchema: ValueSchema = object({
   id: { schema: string },
+  narrativeId: { schema: string },
   items: { schema: { kind: "array", minItems: 1, items: object({
     take: { schema: semanticTakeSchema },
   }) } },

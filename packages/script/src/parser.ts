@@ -751,10 +751,11 @@ export function parseScript(
 
   const segmentById = new Map(segments.map((segment) => [segment.id, segment]));
   /**
-   * Resolve one marker to the exact `2m + 2n` anchor its affinity names. Token and
+   * Resolve one marker to the exact `2m + 2n + 2` anchor its affinity names. Token and
    * Segment cuts are equal citizens: a marker with nothing to its left inside a
    * Segment snaps to that Segment's own start, never across into the previous
-   * Segment, whose end may sit at a different time.
+   * Segment, whose end may sit at a different time. At the Script body's outer
+   * cuts, affinity distinguishes the Program boundary from its first/last Segment.
    */
   const anchorForBoundary = (boundary: RawMarkerBoundary, affinity: Affinity): string => {
     if (segments.length === 0) fail("SCRIPT_ANCHOR_UNRESOLVED", "Script declares no Segment to anchor markers to.");
@@ -769,13 +770,13 @@ export function parseScript(
         ? tokens[boundary.tokenIndex]!.startAnchorId
         : inside.endAnchorId;
     }
-    // Between Segments: structuralPosition counts the Segments already closed.
+    // Outside or between Segments: structuralPosition counts the Segments already closed.
     if (affinity === "left") {
       const previous = segments[boundary.structuralPosition - 1];
-      return previous ? previous.endAnchorId : segments[0]!.startAnchorId;
+      return previous ? previous.endAnchorId : "program:start";
     }
     const next = segments[boundary.structuralPosition];
-    return next ? next.startAnchorId : segments.at(-1)!.endAnchorId;
+    return next ? next.startAnchorId : "program:end";
   };
   const anchored = <T extends { readonly affinity: Affinity; readonly boundary: RawMarkerBoundary }>(
     edge: T,
@@ -784,31 +785,36 @@ export function parseScript(
     boundary: { ...edge.boundary, anchorId: anchorForBoundary(edge.boundary, edge.affinity) },
   });
 
-  const anchors: SemanticAnchor[] = segments.flatMap((segment) => [
-    { id: segment.startAnchorId, kind: "segment-start" as const, segmentId: segment.id },
-    ...tokens.slice(segment.tokenStart, segment.tokenEndExclusive).flatMap((token) => [
-      {
-        id: token.startAnchorId,
-        kind: "token-start" as const,
-        segmentId: segment.id,
-        tokenId: token.id,
-        segmentTokenIndex: token.segmentTokenIndex,
-      },
-      {
-        id: token.endAnchorId,
-        kind: "token-end" as const,
-        segmentId: segment.id,
-        tokenId: token.id,
-        segmentTokenIndex: token.segmentTokenIndex,
-      },
+  const anchors: SemanticAnchor[] = [
+    { id: "program:start", kind: "program-start" },
+    ...segments.flatMap((segment) => [
+      { id: segment.startAnchorId, kind: "segment-start" as const, segmentId: segment.id },
+      ...tokens.slice(segment.tokenStart, segment.tokenEndExclusive).flatMap((token) => [
+        {
+          id: token.startAnchorId,
+          kind: "token-start" as const,
+          segmentId: segment.id,
+          tokenId: token.id,
+          segmentTokenIndex: token.segmentTokenIndex,
+        },
+        {
+          id: token.endAnchorId,
+          kind: "token-end" as const,
+          segmentId: segment.id,
+          tokenId: token.id,
+          segmentTokenIndex: token.segmentTokenIndex,
+        },
+      ]),
+      { id: segment.endAnchorId, kind: "segment-end" as const, segmentId: segment.id },
     ]),
-    { id: segment.endAnchorId, kind: "segment-end" as const, segmentId: segment.id },
-  ]);
-  if (anchors.length !== 2 * tokens.length + 2 * segments.length) {
-    fail("SCRIPT_ANCHOR_CARDINALITY", "Semantic anchor cardinality is not 2M + 2N.");
+    { id: "program:end", kind: "program-end" },
+  ];
+  if (anchors.length !== 2 * tokens.length + 2 * segments.length + 2) {
+    fail("SCRIPT_ANCHOR_CARDINALITY", "Semantic anchor cardinality is not 2M + 2N + 2.");
   }
   return {
 
+    sourceRange: { start: sourceOffset, end: sourceOffset + source.length },
     segments,
     tokens,
     turns,

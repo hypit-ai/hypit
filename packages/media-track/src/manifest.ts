@@ -20,6 +20,7 @@ import {
 } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalWindowAttributeVocabulary } from "@hypit/temporal-markup";
 
 const previewImage = (file: string) => ({
   mediaType: "image/png",
@@ -255,15 +256,15 @@ const itemInputs = [
   { name: "sounds", type: mediaTrackTypes.soundSet }, { name: "window", type: temporalTypes.window },
 ] as const;
 const memberInputs = [
-  { name: "members", type: mediaTrackTypes.memberSet }, { name: "layers", type: mediaTrackTypes.layerSet },
-  { name: "spec", type: mediaTrackTypes.memberSpec }, { name: "activation", type: temporalTypes.point },
+  { name: "members", type: mediaTrackTypes.memberSet }, { name: "space", type: programSpaceTypes.programSpace }, { name: "layers", type: mediaTrackTypes.layerSet },
+  { name: "spec", type: mediaTrackTypes.memberSpec }, { name: "activation", type: temporalTypes.instant },
 ] as const;
 const sequenceInputs = [
   { name: "set", type: mediaTrackTypes.set }, { name: "header", type: mediaTrackTypes.header },
   { name: "space", type: programSpaceTypes.programSpace }, { name: "canvas", type: spatialTypes.canvas },
   { name: "members", type: mediaTrackTypes.memberSet },
   { name: "frame", type: spatialTypes.frame }, { name: "spec", type: mediaTrackTypes.sequenceSpec },
-  { name: "sounds", type: mediaTrackTypes.soundSet }, { name: "terminal", type: temporalTypes.point },
+  { name: "sounds", type: mediaTrackTypes.soundSet }, { name: "terminal", type: temporalTypes.instant },
 ] as const;
 
 const appearanceRecipeProperties = [
@@ -358,7 +359,7 @@ export const mediaTrackMarkupSurfaces = [{
       mediaTrackTypes.layerSet, mediaTrackTypes.soundSpec, mediaTrackTypes.soundSet,
       mediaTrackTypes.itemSpec, mediaTrackTypes.memberSpec, mediaTrackTypes.memberSet,
       mediaTrackTypes.handoffSpec, mediaTrackTypes.sequenceSpec, mediaTrackTypes.set,
-      temporalTypes.pointSpec, temporalTypes.windowSpec, mediaTrackTypes.program,
+      temporalTypes.instantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window, mediaTrackTypes.program,
       compositionTypes.visualTrack, compositionTypes.audioTrack],
     vocabulary: {
       summary: "One Media Track: independently timed Items and replacement Sequences placed on a shared SemanticTrack and Canvas, lowered to one peer VisualTrack and, when audio is authored, one peer AudioTrack.",
@@ -404,23 +405,7 @@ export const mediaTrackMarkupSurfaces = [{
               summary: "Names the layer whose source audio this Item emits." },
             { name: "audio-gain", kind: "literal", required: false,
               summary: "Scales the selected source audio by a linear gain; defaults to `1`." },
-            { name: "during", kind: "expression", required: false, values: ["program"],
-              accepts: [narrativeTypes.selection, narrativeTypes.excerpt],
-              summary: "Spans the whole program when written as `program`, or the window of the referenced Selection or Segment." },
-            { name: "at", kind: "reference", required: false, accepts: [narrativeTypes.moment],
-              summary: "Starts the window at the cue of the referenced Moment." },
-            { name: "for", kind: "literal", required: false,
-              summary: "Fixes the exact length of a Moment window, such as `12f`, `250ms` or `1.5s`." },
-            { name: "start", kind: "literal", required: false,
-              summary: "Places the window start at a point expression." },
-            { name: "end", kind: "literal", required: false,
-              summary: "Places the window end at a point expression." },
-            { name: "selection", kind: "reference", required: false, accepts: [narrativeTypes.selection],
-              summary: "Binds the Selection that resolves `selection.start` and `selection.end` in a start/end window." },
-            { name: "segment", kind: "reference", required: false, accepts: [narrativeTypes.excerpt],
-              summary: "Binds the Segment that resolves `segment.start` and `segment.end` in a start/end window." },
-            { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment],
-              summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
+            ...temporalWindowAttributeVocabulary,
           ] },
         { tag: "Sequence", cardinality: "many",
           summary: "One Frame whose Members replace each other at explicit activation points, written as ordered Member, Handoff and Sound children.",
@@ -458,7 +443,7 @@ export const mediaTrackMarkupSurfaces = [{
 </media-track:Track>`,
       notes: [
         "A Track requires at least one Item or Sequence and accepts no text content.",
-        "An Item states exactly one window form: `during`, `at` with `for`, or `start` with `end`; `selection`, `segment` and `moment` bind a start/end window and cannot be written together.",
+        "An Item states exactly one window form: `during`, `at` with `for`, `until` with `for`, or `start` with `end`; `selection`, `segment` and `moment` bind a start/end window and cannot be written together.",
         "A point expression is `program.start`, `program.end`, `selection.start`, `selection.end`, `segment.start`, `segment.end` or `moment.cue`, each optionally offset by `+` or `-` and a duration, or a bare duration read as an absolute position.",
         "A unit that names a direct source names exactly one of `image`, `video`, `media` or `surface`; `extent` is required with `image` and refused otherwise, and `audio` is only valid with `video`.",
         "`audio-gain` is refused without selected source audio.",

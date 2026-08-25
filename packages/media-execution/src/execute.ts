@@ -22,7 +22,9 @@ import {
   type NormalizeMediaNeed,
   type ProjectSpeechEvidenceAudioNeed,
   type RenderAudioNeed,
+  type RenderStillVideoNeed,
   type TransformMediaNeed,
+  verifyStillVideoRequest,
 } from "@hypit/media-pipeline";
 import type { AudioProgramClip, AudioProgramPlan, MediaTransformOperation } from "@hypit/media-pipeline";
 import {
@@ -483,6 +485,14 @@ function extractFrameNeed(value: CanonicalValue): ExtractFrameNeed {
   return item;
 }
 
+function renderStillVideoNeed(value: CanonicalValue): RenderStillVideoNeed {
+  const item = object(value, "RenderStillVideoNeed") as unknown as RenderStillVideoNeed;
+  assert(item.source?.kind === "blob" && item.source.mediaType.startsWith("image/"),
+    "RenderStillVideoNeed source must be an image Artifact");
+  verifyStillVideoRequest(item.request);
+  return item;
+}
+
 function evidenceAudioNeed(value: CanonicalValue): ProjectSpeechEvidenceAudioNeed {
   const item = object(value, "ProjectSpeechEvidenceAudioNeed") as unknown as ProjectSpeechEvidenceAudioNeed;
   assert(item.source?.kind === "blob", "ProjectSpeechEvidenceAudioNeed is invalid");
@@ -718,6 +728,64 @@ export async function executeNormalizeMedia(
       }),
     });
     return inlineResult(canonicalize(media));
+  } finally {
+    await rm(work, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/** Encode one authored image into an exact silent CFR video. */
+export async function executeRenderStillVideo(
+  env: MediaExecutionEnvironment,
+  constraints: CanonicalValue,
+): Promise<MediaOperationResult> {
+  const need = renderStillVideoNeed(constraints);
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-still-"));
+  try {
+    const input = join(work, "source.image");
+    const output = join(work, "still.mp4");
+    await stageArtifact(env, need.source, input);
+    const fps = `${need.request.frameRate.numerator}/${need.request.frameRate.denominator}`;
+    const filter = [
+      "select=eq(n\\,0)",
+      "loop=loop=-1:size=1:start=0",
+      `trim=start_frame=0:end_frame=${need.request.frameCount}`,
+      `setpts=N*${need.request.frameRate.denominator}/(${need.request.frameRate.numerator}*TB)`,
+      "pad=ceil(iw/2)*2:ceil(ih/2)*2:(ow-iw)/2:(oh-ih)/2:color=black",
+      "setsar=1",
+    ].join(",");
+    await runProcess({
+      executable: env.ffmpegPath,
+      argv: [
+        "-y", "-i", input, "-map", "0:v:0", "-an", "-vf", filter,
+        "-frames:v", String(need.request.frameCount), "-r", fps, "-fps_mode", "cfr",
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart", output,
+      ],
+      timeoutMs: env.processTimeoutMs,
+      maxStdoutBytes: 64 * 1024,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    });
+    const inspected = await outputInspection({
+      path: output,
+      mediaType: "video/mp4",
+      ffprobePath: env.ffprobePath,
+      timeoutMs: env.processTimeoutMs,
+      maxProbeOutputBytes: env.maxProbeOutputBytes,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    });
+    const videos = inspected.streams.filter((item): item is MediaVideoStream => item.kind === "video");
+    assert(videos.length === 1 && inspected.streams.length === 1
+      && videos[0]!.decodedUnitCount === need.request.frameCount,
+    "Still media output differs from its requested frame domain");
+    const visual = videos[0]!;
+    assert(visual.sampleAspectRatio.numerator === 1 && visual.sampleAspectRatio.denominator === 1
+      && visual.rotationDegrees === 0,
+    "Still media output retains non-square samples or display rotation");
+    assert(visual.averageFrameRate !== undefined
+      && visual.averageFrameRate.numerator * need.request.frameRate.denominator
+        === need.request.frameRate.numerator * visual.averageFrameRate.denominator,
+    "Still media output differs from its requested frame rate");
+    return artifactResult(await env.artifacts.putFile(output, "video/mp4"));
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }

@@ -14,6 +14,8 @@ export function projectSemanticProgramSpace(track: SemanticTrack): ProgramSpace 
   assertSemanticTrackIdentity(track);
   const frameRate = track.items[0]!.take.media.timeline.frameRate;
   return sealProgramSpace({
+    id: track.id,
+    narrativeId: track.narrativeId,
     durationSec: semanticTrackFrameCount(track) * frameRate.denominator / frameRate.numerator,
     frameRate,
   });
@@ -46,5 +48,5 @@ export function projectSemanticAudioTrack(track: SemanticTrack): AudioTrack {
       fadeOutSamples: 0,
     }];
   });
-  return sealAudioTrack({ id: `${track.id}:audio`, clips });
+  return sealAudioTrack({ programSpaceId: space.id, id: `${track.id}:audio`, clips });
 }

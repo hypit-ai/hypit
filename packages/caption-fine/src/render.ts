@@ -877,6 +877,10 @@ export function renderFineCaption(
     throw new Error("Fine Caption accepts one uniform token rule and cannot consume word-specific Style runs");
   }
   assertProgramSpaceIdentity(space);
+  if (schedule.spaceId !== space.id || schedule.narrativeId !== space.narrativeId
+    || document.narrativeId !== space.narrativeId) {
+    throw new Error("Fine Caption inputs belong to different ProgramSpaces or Narratives");
+  }
   const styles = new Map(program.styles.map((style) => [style.id, style]));
   const wordText = new Map(document.words.map((word) => [word.id, word.text]));
   const atomById = new Map(document.units.map((atom) => [atom.id, atom]));
@@ -911,6 +915,7 @@ export function renderFineCaption(
     }];
   });
   const track = sealVisualTrack({
+    programSpaceId: space.id,
     visualIr: "hypit.visual-ir@1",
     id: program.id,
     presents,

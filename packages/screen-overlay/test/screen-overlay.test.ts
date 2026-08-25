@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
+import { projectProgramWindow } from "../../../test/temporal-fixture.js";
 
 import { artifactManifest } from "@hypit/artifact";
 import { registerTypeValidatorFacets } from "@hypit/component-kit";
@@ -28,11 +29,11 @@ import {
   sealScreenOverlayItemSpec,
 } from "@hypit/screen-overlay";
 import type { ScreenOverlayComponent } from "@hypit/screen-overlay";
-import { semanticTrackDependency, semanticTrackManifest, semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackDependency, semanticTrackManifest, semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { speechEvidenceManifest } from "@hypit/speech-evidence";
 import { speechManifest } from "@hypit/speech";
 import { sealCanvasSpace, spatialComponent, spatialDependency, spatialManifest, spatialTypes } from "@hypit/spatial";
-import { projectProgramWindow, temporalManifest, temporalProducers } from "@hypit/temporal";
+import { temporalManifest, temporalProducers } from "@hypit/temporal";
 import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
 import { visualIrManifest } from "@hypit/visual-ir";
@@ -41,7 +42,7 @@ const canvas = sealCanvasSpace({
   widthPx: 1080, heightPx: 1920,
   origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
 });
-const space = sealProgramSpace({
+const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
   durationSec: 2, frameRate: { numerator: 30, denominator: 1 },
 });
 const header = sealScreenOverlayHeader({ id: "screen" });
@@ -71,7 +72,7 @@ function trackFor(content: ScreenOverlayComponent, stackingOrder = 50) {
     projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
   });
   return renderScreenOverlay(canvas, space, finalizeScreenOverlay(
-    appendProjectedScreenOverlay(createScreenOverlaySet(), header, spec, window), header,
+    appendProjectedScreenOverlay(createScreenOverlaySet(), header, space, spec, window), header,
   ));
 }
 
@@ -106,7 +107,7 @@ test("explicit seeds control stochastic component identity", () => {
 test("overlay Tracks interleave with peer Tracks only through absolute stacking", () => {
   const below = trackFor(components[1]!, 20);
   const above = { ...trackFor(components[0]!, 80), id: "screen-above" };
-  const middle = sealVisualTrack({
+  const middle = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1", id: "middle",
     presents: [{ id: "middle", span: { startFrame: 0, endFrameExclusive: 60 }, stacking: { order: 50, tieBreak: "middle" },
       elements: [{ id: "root", order: 0, kind: "box", style: [{ name: "background-color", value: "#112233" }] }] }],
@@ -122,8 +123,8 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
 });
 
 test("the package has no lower-composite, sibling Track, backdrop-filter or hidden audio port", () => {
-  const fragment = createScreenOverlayFragment([{ kind: "program", specName: "spec", windowSpecName: "window-spec" }]);
-  assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "semantic", "spec", "window-spec"]);
+  const fragment = createScreenOverlayFragment([{ specName: "spec", windowName: "window" }]);
+  assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "semantic", "spec", "window"]);
   assert.equal(fragment.exports.some((output) => output.type.name === "AudioTrack"), false);
   assert.throws(() => sealScreenOverlayItemSpec({
     id: "blur",
@@ -212,7 +213,10 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     screenOverlayProducers.createSet.name,
     screenOverlayProducers.appendItem.name,
     screenOverlayProducers.finalize.name,
-    temporalProducers.projectProgram.name,
+    temporalProducers.projectProgramInstant.name,
+    temporalProducers.projectProgramInstant.name,
+    temporalProducers.composeWindow.name,
+    semanticTrackProducers.projectProgramSpace.name,
     screenOverlayProducers.render.name,
   ].sort());
 });

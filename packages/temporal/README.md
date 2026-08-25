@@ -1,18 +1,26 @@
 # `@hypit/temporal`
 
-Focused video-domain temporal projection. It locates one authored Program, Selection, Segment or
-Moment through `@hypit/semantic-track`, evaluates exact rational point expressions and projects
-them into ProgramSpace.
+Runtime protocol for projected video time.
 
-The graph-facing protocol has two distinct results. `TemporalPointSpec -> TemporalPoint` preserves
-one frame boundary, including `program.end`; `TemporalWindowSpec -> TemporalWindow` preserves a
-non-empty half-open frame span. Author Surfaces emit the appropriate Spec and one `project-*-point`
-or `project-*` operation. Downstream components consume the projected value and ProgramSpace; they
-do not receive a Selection or Moment to locate internally.
+The public values are `TemporalInstant` and `TemporalWindow`. An Instant retains its runtime source,
+exact projection expression, resolved ProgramSpace frame and author authority. A Window is composed
+from two independently traced Instants; it has no synthetic single source.
 
-Both results retain source identity and the authored projection expression. Studio reads those
-executed records and their real consumer edges, so Point values are never disguised as one-frame
-Windows and no second timing truth is reconstructed from source attribute names.
+Every source names its exact `ProgramSpace` and `Narrative`, and every projection retains the
+consumer's public domain identity as `subjectId`. These are public provenance fields, not generated hashes
+or editor metadata. A graph-qualified projection `id` and its author-facing `subjectId` are separate
+on purpose.
 
-The package also provides pure sibling-window validation and triggered-stage scheduling. It defines
-no Core branch, renderer behavior, media playback policy, Provider or authoring super-program.
+Author syntax does not live here. `@hypit/temporal-markup` lowers SVML timing forms into ordinary
+Instant projection and Window composition operations. The graph supplies ProgramSpace separately;
+domain components receive only ProgramSpace plus the resulting Instant or Window and never locate a
+Selection, Segment or Moment themselves.
+
+Every official consumer verifies the projection at its public boundary: `subjectId` must name the
+domain object being built, both endpoints must retain one ProgramSpace/Narrative, and that identity
+must equal the explicitly supplied ProgramSpace. ProgramSpace is therefore an ordinary graph input
+to the consumer, not ambient renderer state.
+
+Temporal rejects Instants outside ProgramSpace and Windows that are reversed or empty. It does not
+clip or repair author time. The package also provides sibling-window validation and triggered-stage
+scheduling, but no renderer, Provider, media policy or Studio behavior.

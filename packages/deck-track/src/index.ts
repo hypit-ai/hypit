@@ -5,7 +5,7 @@ export {
 } from "./author.js";
 export { depthStackComponent } from "./component.js";
 export { createDepthStackFragment } from "./fragment.js";
-export type { DepthStackFragmentCard, DepthStackFragmentTerminal } from "./fragment.js";
+export type { DepthStackFragmentCard } from "./fragment.js";
 export {
   decodeDepthStackLabelSurface,
   decodeDepthStackSurface,

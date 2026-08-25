@@ -360,6 +360,7 @@ export function renderDepthStack(
     }
   }
   const track = sealVisualTrack({
+    programSpaceId: space.id,
     visualIr: "hypit.visual-ir@1",
     id: program.id,
     presents,

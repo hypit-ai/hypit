@@ -24,6 +24,7 @@ import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-tra
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalInstantAttributeVocabulary } from "@hypit/temporal-markup";
 import { textDependency, textTypes } from "@hypit/text";
 
 const previewImage = (file: string) => ({
@@ -157,7 +158,7 @@ export const depthStackMarkupSurfaces = [
       depthStackTypes.header, depthStackTypes.spec, depthStackTypes.cardSpec,
       spatialTypes.fit, mediaTrackTypes.sampleLayerSpec, mediaTrackTypes.paintLayerSpec,
       depthStackTypes.cardLabel, depthStackTypes.cardLabelStyle, textTypes.text,
-      temporalTypes.pointSpec,
+      temporalTypes.instantSpec, temporalTypes.instant,
       depthStackTypes.program, compositionTypes.visualTrack,
     ],
       vocabulary: {
@@ -330,8 +331,7 @@ export const depthStackMarkupSurfaces = [
                 summary: "Chooses the picture the Card shows, as a still image Artifact, a Synchronized Medium or a Compositable Surface." },
               { name: "extent", kind: "reference", required: false, accepts: [spatialTypes.extent],
                 summary: "Gives a still image its pixel Extent, which timed and surface sources already carry." },
-              { name: "at", kind: "reference", required: true, accepts: [narrativeTypes.moment],
-                summary: "Chooses the Moment the Card is dealt on." },
+              ...temporalInstantAttributeVocabulary,
               { name: "appearance", kind: "reference", required: false, accepts: [svsRecipeType],
                 summary: "Chooses this Card's own Recipe in place of the deck's, adding explicit future and past playback.",
                 recipe: [
@@ -422,12 +422,12 @@ export const depthStackManifest: ModuleManifest = {
     { name: depthStackProducers.bindLabelText.name, inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }], outputs: [{ name: "label", type: depthStackTypes.cardLabel }], needs: [] },
     { name: depthStackProducers.createCards.name, inputs: [], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [] },
     { name: depthStackProducers.appendCard.name, inputs: [
-      { name: "set", type: depthStackTypes.cardSet }, { name: "material", type: mediaTrackTypes.layerSet },
+      { name: "set", type: depthStackTypes.cardSet }, { name: "space", type: programSpaceTypes.programSpace }, { name: "material", type: mediaTrackTypes.layerSet },
       { name: "label", type: depthStackTypes.cardLabel }, { name: "spec", type: depthStackTypes.cardSpec },
-      { name: "activation", type: temporalTypes.point },
+      { name: "activation", type: temporalTypes.instant },
     ], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [] },
     { name: depthStackProducers.finalize.name,
-      inputs: [...finalizeInputs, { name: "terminal", type: temporalTypes.point }],
+      inputs: [...finalizeInputs, { name: "terminal", type: temporalTypes.instant }],
       outputs: [{ name: "program", type: depthStackTypes.program }], needs: [] },
     { name: depthStackProducers.render.name, inputs: [
       { name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace },

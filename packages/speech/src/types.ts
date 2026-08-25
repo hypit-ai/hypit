@@ -25,6 +25,8 @@ export type SemanticTakeToken = {
  * coordinates travel with this Take instead of requiring a second Script edge.
  */
 export type SemanticTake = {
+  /** Author-visible Script identity carried through every semantic projection. */
+  readonly narrativeId: string;
   readonly media: SynchronizedMedia;
   readonly segment: {
     readonly segmentId: string;
@@ -34,5 +36,19 @@ export type SemanticTake = {
     readonly endFrameExclusive: number;
   };
   readonly tokens: readonly SemanticTakeToken[];
+  readonly anchors: readonly { readonly identity: string; readonly frame: number }[];
+};
+
+/** One authored Token located in a Segment-local frame domain. */
+export type SemanticTakeTimedToken = {
+  readonly tokenId: string;
+  readonly segmentId: string;
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+};
+
+/** Provider measurement and preview estimation both materialize through this narrow timing waist. */
+export type SemanticTakeTiming = {
+  readonly tokens: readonly SemanticTakeTimedToken[];
   readonly anchors: readonly { readonly identity: string; readonly frame: number }[];
 };

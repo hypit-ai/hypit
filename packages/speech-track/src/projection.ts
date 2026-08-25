@@ -14,6 +14,7 @@ export function projectSpeechTrackVisual(track: SemanticTrack, set: SpeechTrackS
     ? []
     : [[item.semantic.segment.segmentId, item.visual] as const]));
   return sealVisualTrack({
+    programSpaceId: space.id,
     visualIr: "hypit.visual-ir@1",
     id: trackId,
     presents: lowerRestrictedSpeechVisualPresents(

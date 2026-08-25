@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
+import { projectProgramWindow } from "../../../test/temporal-fixture.js";
 
 import { artifactTypes } from "@hypit/artifact";
 import { compileHyperframesDocument } from "@hypit/hyperframes";
 import type { FontArtifactRef, FontStackRef } from "@hypit/media";
 import { mediaTypes } from "@hypit/media";
 import { sealProgramSpace } from "@hypit/program-space";
-import { semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
@@ -17,7 +18,6 @@ import type { SurfaceResolvedReference } from "@hypit/markup";
 import { sealText } from "@hypit/text";
 import { textTypes } from "@hypit/text";
 import { temporalProducers } from "@hypit/temporal";
-import { projectProgramWindow } from "@hypit/temporal";
 
 import {
   appendProjectedCommentSticker,
@@ -50,7 +50,7 @@ const style = decodeCommentStickerStyle(recipe, fonts, "social-comment");
 const frame = { xPx: 80, yPx: 140, widthPx: 920, heightPx: 360 };
 const canvas = { widthPx: 1080, heightPx: 1920,
   origin: "top-left" as const, xDirection: "right" as const, yDirection: "down" as const, pixelAspect: "square" as const };
-const space = sealProgramSpace({ durationSec: 3, frameRate: { numerator: 30, denominator: 1 } });
+const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative", durationSec: 3, frameRate: { numerator: 30, denominator: 1 } });
 const header = sealCommentStickerHeader({ id: "comments" });
 const semantic = semanticTrackFixture(space);
 
@@ -70,7 +70,7 @@ function content(meta?: string) {
 
 function track(meta?: string) {
   const spec = item("opening");
-  const set = appendProjectedCommentSticker(createCommentStickerSet(), header, frame, style, spec, content(meta), projectProgramWindow({
+  const set = appendProjectedCommentSticker(createCommentStickerSet(), header, space, frame, style, spec, content(meta), projectProgramWindow({
     itemId: spec.id, semantic, projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
   }));
   return renderCommentSticker(canvas, space, finalizeCommentSticker(set, header));
@@ -121,7 +121,7 @@ test("short Sticker windows compose overlapping enter and exit motion instead of
   }, fonts, "compressed");
   const spec = item("compressed");
   const set = appendProjectedCommentSticker(
-    createCommentStickerSet(), header, frame, compressed, spec, content(), projectProgramWindow({
+    createCommentStickerSet(), header, space, frame, compressed, spec, content(), projectProgramWindow({
       itemId: spec.id, semantic, projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
     }),
   );
@@ -184,16 +184,19 @@ test("Track Surface lowers mixed program and semantic Stickers to a finite expli
     resolveReference: (path) => refs.get(path),
     resolveAsset: noAsset,
   });
-  assert.equal(result.components.length, 1);
-  assert.deepEqual(result.fragments[0]?.operations.map((operation) => operation.producer.name).sort(), [
+  assert.equal(result.components.filter((component) => component.outputs.track !== undefined).length, 1);
+  assert.deepEqual(result.fragments.flatMap((fragment) => fragment.operations.map((operation) => operation.producer.name)).sort(), [
     commentStickerProducers.createSet.name,
     commentStickerProducers.createContent.name,
     commentStickerProducers.setContentAuthor.name,
     commentStickerProducers.setContentMeta.name,
     commentStickerProducers.appendItemAvatar.name,
     commentStickerProducers.finalize.name,
-    temporalProducers.projectProgram.name,
+    temporalProducers.projectProgramInstant.name,
+    temporalProducers.projectProgramInstant.name,
+    temporalProducers.composeWindow.name,
+    semanticTrackProducers.projectProgramSpace.name,
     commentStickerProducers.render.name,
   ].sort());
-  assert.equal(result.components[0]?.outputs.track, "comments.track");
+  assert.equal(result.components.find((component) => component.outputs.track !== undefined)?.outputs.track, "comments.track");
 });

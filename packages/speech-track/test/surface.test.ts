@@ -10,6 +10,7 @@ import { svsRecipeType } from "@hypit/svs";
 import { decodeSpeechTrackSurface } from "@hypit/speech-track";
 
 const take: SemanticTake = {
+  narrativeId: "test-narrative",
   media: {
     timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 30 },
     visual: {

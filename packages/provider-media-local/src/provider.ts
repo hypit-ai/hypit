@@ -8,6 +8,7 @@ import {
   executeNormalizeMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
+  executeRenderStillVideo,
   executeTransformMedia,
 } from "@hypit/media-execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-execution";
@@ -111,6 +112,12 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
         capability: mediaPipelineCapabilities.extractFrame,
         returns: artifactTypes.blob,
         handler: operation(executeExtractFrame),
+      },
+      {
+        lifecycle: "immediate" as const,
+        capability: mediaPipelineCapabilities.renderStill,
+        returns: artifactTypes.blob,
+        handler: operation(executeRenderStillVideo),
       },
       {
         lifecycle: "immediate" as const,

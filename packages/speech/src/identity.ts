@@ -13,9 +13,14 @@ export function speechEvidenceSampleBoundary(masterSampleBoundary: number): numb
 }
 export function sealSpeechEvidenceAudio(value: SpeechEvidenceAudio): SpeechEvidenceAudio { return structuredClone(value); }
 
-export function sealSemanticTake(value: SemanticTake): SemanticTake { return structuredClone(value); }
+export function sealSemanticTake(value: SemanticTake): SemanticTake {
+  const take = structuredClone(value);
+  assertSemanticTakeIdentity(take);
+  return take;
+}
 
 export function assertSemanticTakeIdentity(take: SemanticTake): void {
+  if (!take.narrativeId.trim()) throw new Error("SemanticTake narrativeId must not be empty.");
   verifySynchronizedMedia(take.media);
   const frameCount = take.media.timeline.frameCount;
   const { segment } = take;
@@ -23,30 +28,40 @@ export function assertSemanticTakeIdentity(take: SemanticTake): void {
     || segment.startFrame !== 0 || segment.endFrameExclusive !== frameCount) {
     throw new Error("SemanticTake Segment must cover its local media frame domain.");
   }
-  const tokenIds = new Set<string>();
-  const referencedAnchorIds = new Set<string>([segment.startAnchorId, segment.endAnchorId]);
-  for (const token of take.tokens) {
-    if (!token.tokenId || !token.segmentId || token.segmentId !== segment.segmentId || !token.text
-      || !token.startAnchorId || !token.endAnchorId || tokenIds.has(token.tokenId)
-      || !Number.isSafeInteger(token.startFrame) || !Number.isSafeInteger(token.endFrameExclusive)
-      || token.startFrame < 0 || token.endFrameExclusive < 0
-      || token.startFrame > frameCount || token.endFrameExclusive > frameCount) {
-      throw new Error(`SemanticTake token ${token.tokenId || "<unnamed>"} is invalid.`);
-    }
-    referencedAnchorIds.add(token.startAnchorId);
-    referencedAnchorIds.add(token.endAnchorId);
-    tokenIds.add(token.tokenId);
-  }
   const anchorIds = new Set<string>();
+  const anchorFrames = new Map<string, number>();
   for (const anchor of take.anchors) {
     if (!anchor.identity || anchorIds.has(anchor.identity) || !Number.isSafeInteger(anchor.frame)
       || anchor.frame < 0 || anchor.frame > frameCount) {
       throw new Error(`SemanticTake anchor ${anchor.identity || "<unnamed>"} is invalid.`);
     }
     anchorIds.add(anchor.identity);
+    anchorFrames.set(anchor.identity, anchor.frame);
   }
-  for (const anchorId of referencedAnchorIds) {
-    if (!anchorIds.has(anchorId)) throw new Error(`SemanticTake is missing referenced Anchor ${anchorId}.`);
+  if (anchorFrames.get(segment.startAnchorId) !== 0
+    || anchorFrames.get(segment.endAnchorId) !== frameCount) {
+    throw new Error("SemanticTake Segment Anchors must equal its media boundaries.");
+  }
+  const tokenIds = new Set<string>();
+  let previousStart = 0;
+  let previousEnd = 0;
+  for (const token of take.tokens) {
+    if (!token.tokenId || !token.segmentId || token.segmentId !== segment.segmentId || !token.text
+      || !token.startAnchorId || !token.endAnchorId || tokenIds.has(token.tokenId)
+      || !Number.isSafeInteger(token.startFrame) || !Number.isSafeInteger(token.endFrameExclusive)
+      || token.startFrame < 0 || token.endFrameExclusive < 0
+      || token.startFrame > token.endFrameExclusive
+      || token.startFrame > frameCount || token.endFrameExclusive > frameCount
+      || token.startFrame < previousStart || token.endFrameExclusive < previousEnd) {
+      throw new Error(`SemanticTake token ${token.tokenId || "<unnamed>"} is invalid.`);
+    }
+    if (anchorFrames.get(token.startAnchorId) !== token.startFrame
+      || anchorFrames.get(token.endAnchorId) !== token.endFrameExclusive) {
+      throw new Error(`SemanticTake token ${token.tokenId} disagrees with its Anchors.`);
+    }
+    tokenIds.add(token.tokenId);
+    previousStart = token.startFrame;
+    previousEnd = token.endFrameExclusive;
   }
 }
 export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): void {

@@ -9,9 +9,7 @@ import {
 } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize, isDigest } from "@hypit/protocol";
-import { projectSemanticProgramSpace } from "@hypit/semantic-track";
-import type { SemanticTrack } from "@hypit/semantic-track";
-import { temporalDurationInSamples } from "@hypit/temporal";
+import { assertTemporalWindowFor, temporalDurationInSamples } from "@hypit/temporal";
 import type { ProjectedWindow, TemporalDuration } from "@hypit/temporal";
 
 import type {
@@ -96,16 +94,16 @@ function sourceFacts(media: SynchronizedMedia): AudioItemProgram["source"] {
 function realizedItems(
   set: AudioTrackSet,
   header: AudioTrackHeader,
-  semantic: SemanticTrack,
+  space: ProgramSpace,
   media: SynchronizedMedia,
   spec: AudioClipSpec,
   window: ProjectedWindow,
 ): AudioTrackSet {
-  const space = projectSemanticProgramSpace(semantic);
   assertAudioTrackSet(set);
   assertAudioTrackHeader(header);
   assertProgramSpaceIdentity(space);
   assertAudioClipSpec(spec);
+  assertTemporalWindowFor(window, { subjectId: spec.id, space });
   const source = sourceFacts(media);
   const trimStart = spec.trim.start === undefined ? 0 : temporalDurationInSamples(spec.trim.start, space);
   const trimEnd = spec.trim.end === undefined ? source.sampleFrames : temporalDurationInSamples(spec.trim.end, space);
@@ -131,12 +129,12 @@ function realizedItems(
 export function appendProjectedAudioItem(
   set: AudioTrackSet,
   header: AudioTrackHeader,
-  semantic: SemanticTrack,
+  space: ProgramSpace,
   media: SynchronizedMedia,
   spec: AudioClipSpec,
   window: ProjectedWindow,
 ): AudioTrackSet {
-  return realizedItems(set, header, semantic, media, spec, window);
+  return realizedItems(set, header, space, media, spec, window);
 }
 
 function normalizeProgram(value: AudioTrackProgram): AudioTrackProgram {
@@ -244,6 +242,7 @@ export function renderAudioTrack(space: ProgramSpace, program: AudioTrackProgram
   assertAudioTrackProgram(program);
   const totalSamples = programSpaceSampleFrames(space, 48_000);
   const track = sealAudioTrack({
+    programSpaceId: space.id,
     id: program.id,
     clips: program.items.map((item) => terminalClip(item, space)),
   });

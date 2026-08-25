@@ -1,6 +1,5 @@
 import type { ComponentPackage } from "@hypit/component-kit";
-import { projectSemanticProgramSpace } from "@hypit/semantic-track";
-import type { SemanticTrack } from "@hypit/semantic-track";
+import type { ProgramSpace } from "@hypit/program-space";
 import type { CanvasSpace } from "@hypit/spatial";
 import type { AudioTrack, VisualTrack } from "@hypit/composition";
 import type { StoredValue } from "@hypit/protocol";
@@ -29,7 +28,7 @@ export const filmComponent = {
       handler: ({ inputs }) => ({
         outputs: { set: { kind: "inline", value: canonicalize(appendFilmVisualTrack(
           inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
-          projectSemanticProgramSpace(inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack")),
+          inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
           inline<VisualTrack>(inputs.track?.value, "VisualTrack"),
         )) } },
         needs: {},
@@ -40,7 +39,7 @@ export const filmComponent = {
       handler: ({ inputs }) => ({
         outputs: { set: { kind: "inline", value: canonicalize(appendFilmAudioTrack(
           inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
-          projectSemanticProgramSpace(inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack")),
+          inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
           inline<AudioTrack>(inputs.track?.value, "AudioTrack"),
         )) } },
         needs: {},
@@ -52,7 +51,7 @@ export const filmComponent = {
         outputs: { composition: { kind: "inline", value: canonicalize(compileFilmComposition(
           inline<FilmProgram>(inputs.program?.value, "FilmProgram"),
           inline<CanvasSpace>(inputs.canvas?.value, "CanvasSpace"),
-          projectSemanticProgramSpace(inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack")),
+          inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
           inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
         )) } },
         needs: {},

@@ -1,13 +1,13 @@
 import type { Narrative } from "@hypit/narrative";
 import { sealProgramSpace } from "@hypit/program-space";
-import { materializeSemanticTake } from "../src/materialize.js";
+import { materializeSemanticTake } from "@hypit/speech";
 import { sealAlignedTranscriptEvidence } from "@hypit/speech-evidence";
 import type { AlignedTranscriptEvidence, SpeechCharacterEvidence, SpeechWordEvidence } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { parseScript } from "@hypit/script";
+import { narrativeValue, parseScript as parseScriptSource } from "@hypit/script";
 import {
   SpeechAlignmentError,
   alignWordGroups,
@@ -21,6 +21,10 @@ type WordFixture = {
   readonly endSec?: number;
   readonly score?: number;
 };
+
+function parseScript(sourceName: string, source: string): Narrative {
+  return narrativeValue(parseScriptSource(sourceName, source), "test-narrative") as unknown as Narrative;
+}
 
 function wordEvidence(word: WordFixture): SpeechWordEvidence {
   return {
@@ -77,7 +81,7 @@ function speechBasis(
   durationSec = 2,
 ): AlignmentBasis {
   if (narrative.segments.length !== 1) throw new Error("Test alignment requires one Segment.");
-  const programSpace = sealProgramSpace({
+  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec,
     frameRate: { numerator: 1_000, denominator: 1 },
   });
@@ -150,7 +154,7 @@ test("a measured Segment-local map becomes a self-contained SemanticTake", () =>
   const segment = narrative.segments[0]!;
   const take = materializeSemanticTake(
     narrative,
-    { kind: "segment", id: segment.id, tokenStart: segment.tokenStart, tokenEndExclusive: segment.tokenEndExclusive },
+    { narrativeId: narrative.id, kind: "segment", id: segment.id, tokenStart: segment.tokenStart, tokenEndExclusive: segment.tokenEndExclusive },
     {
       timeline: { frameRate: { numerator: 1_000, denominator: 1 }, frameCount: 2_000 },
       visual: { artifact: { kind: "blob", digest: fixtureDigest("materialize:video"), size: 1, mediaType: "video/mp4" }, width: 720, height: 1280 },
@@ -323,7 +327,7 @@ test("a collapsed WhisperX word is assigned the available interval between its n
 test("three Script words may share the two video frames covered by one evidence word", () => {
   const narrative = parseScript("pigeonhole.svml", "<line>alpha beta gamma</line>");
   const original = speechBasis(narrative, 1);
-  const programSpace = sealProgramSpace({
+  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec: 1,
     frameRate: { numerator: 32, denominator: 1 },
   });
@@ -350,7 +354,7 @@ test("Evidence is interpreted only through the explicitly connected alignment cl
     basis,
     words: [{ text: "Hello", startSec: 0.1, endSec: 0.4 }, { text: "world", startSec: 0.5, endSec: 0.9 }],
   });
-  const anotherSpace = sealProgramSpace({
+  const anotherSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec: 2,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -366,7 +370,7 @@ test("Evidence is interpreted only through the explicitly connected alignment cl
 test("the final map is quantized once into the selected ProgramSpace", () => {
   const narrative = parseScript("frames.svml", "<line>Hello.</line>");
   const original = speechBasis(narrative, 1);
-  const programSpace = sealProgramSpace({
+  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });

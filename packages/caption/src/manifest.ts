@@ -35,6 +35,8 @@ export const captionProgramSchema: ValueSchema = object({
 });
 const timedUnit = object({ unitId: { schema: string }, startFrame: { schema: integer }, endFrameExclusive: { schema: integer } });
 export const timedCaptionProjectionSchema: ValueSchema = object({
+  spaceId: { schema: string },
+  narrativeId: { schema: string },
   documentId: { schema: string },
   cues: { schema: { kind: "array", items: object({
     id: { schema: string }, styleId: { schema: string }, startFrame: { schema: integer }, endFrameExclusive: { schema: integer },

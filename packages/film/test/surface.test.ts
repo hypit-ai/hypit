@@ -1,7 +1,7 @@
 import { compositionComponent, spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
 import { registerTypeValidatorFacets } from "@hypit/component-kit";
 import { programSpaceDependency, programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
-import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackDependency, semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { compositionDependency, compositionTypes, sealAudioTrack, sealVisualTrack } from "@hypit/composition";
 import type { Track } from "@hypit/composition";
 import assert from "node:assert/strict";
@@ -57,17 +57,17 @@ const fixtureManifest: ModuleManifest = {
   producers: [],
 };
 
-const space = sealProgramSpace({
+const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const semantic = semanticTrackFixture(space);
-const visual = sealVisualTrack({
+const visual = sealVisualTrack({ programSpaceId: "test-space",
   visualIr: "hypit.visual-ir@1",
   id: "visual",
   presents: [],
 });
-const audio = sealAudioTrack({
+const audio = sealAudioTrack({ programSpaceId: "test-space",
   id: "audio",
   clips: [],
 });
@@ -172,6 +172,7 @@ test("the official Film Surface validates SVS and lowers dynamic peer Tracks", a
     filmProducers.appendAudioTrack.name,
     filmProducers.appendVisualTrack.name,
     filmProducers.compileComposition.name,
+    semanticTrackProducers.projectProgramSpace.name,
   ].sort());
 });
 

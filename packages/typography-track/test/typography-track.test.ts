@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
+import { projectSelectionWindow } from "../../../test/temporal-fixture.js";
 
 import { spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
 import { registerTypeValidatorFacets } from "@hypit/component-kit";
@@ -47,9 +48,8 @@ import { svsManifest, svsRecipeType } from "@hypit/svs";
 import { sealText, textComponent, textDependency, textManifest, textTypes } from "@hypit/text";
 import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
-import { projectSelectionWindow } from "@hypit/temporal";
 
-const space = sealProgramSpace({
+const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
   durationSec: 5,
   frameRate: { numerator: 30, denominator: 1 },
 });
@@ -189,7 +189,7 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
   assert.deepEqual(track.presents.map((present) => present.id), ["watermark", "callout"]);
   assert.equal(track.presents[0]?.elements[2]?.kind, "text-flow");
 
-  const lower = sealVisualTrack({
+  const lower = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "lower",
     presents: [{
@@ -278,6 +278,7 @@ test("TypographyTrackProgram rejects a frame span outside ProgramSpace", () => {
 
 test("Selection Text consumes explicit Selection, SemanticTrack, Style, Motion and Placement edges", () => {
   const selection: NarrativeSelectionRef = {
+    narrativeId: space.narrativeId,
     id: "callout",
     startAnchorId: "selection:start",
     endAnchorId: "selection:end",
@@ -291,6 +292,7 @@ test("Selection Text consumes explicit Selection, SemanticTrack, Style, Motion a
   const program = finalizeTypographyTrack(header, appendProjectedTextItem(
     createTypographyTrackSet(),
     header,
+    space,
     bindAreaTextPlacement({ xPx: 108, yPx: 192, widthPx: 864, heightPx: 192 }),
     spec,
     textStyle("meaning", 80),

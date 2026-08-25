@@ -23,6 +23,8 @@ export function verifyAudioProgramPlan(value: unknown): asserts value is AudioPr
   assert(Number.isSafeInteger(item.frameCount) && item.frameCount > 0, "AudioProgramPlan frame count is invalid");
   assert(item.sampleRate === 48_000, "AudioProgramPlan sample rate must be 48000");
   const planSpace = {
+    id: "audio-program-plan",
+    narrativeId: "audio-program-plan",
     durationSec: item.frameCount * item.frameRate.denominator / item.frameRate.numerator,
     frameRate: item.frameRate,
   };

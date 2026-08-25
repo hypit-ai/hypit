@@ -10,6 +10,7 @@ export type SemanticTrackItem = {
  */
 export type SemanticTrack = {
   readonly id: string;
+  readonly narrativeId: string;
   readonly items: readonly SemanticTrackItem[];
 };
 

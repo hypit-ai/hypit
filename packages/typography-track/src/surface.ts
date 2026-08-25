@@ -1,5 +1,4 @@
-import { narrativeTypes } from "@hypit/narrative";
-import { semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { compositionTypes } from "@hypit/composition";
 import type {
   VisualColorPaint,
@@ -25,16 +24,13 @@ import { textTypes } from "@hypit/text";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
+  SurfaceComponentDraft,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
   MarkupAttributeValue,
 } from "@hypit/markup";
-import type {
-  TemporalDuration,
-  TemporalPointExpression,
-  TemporalWindowProjection,
-} from "@hypit/temporal";
-import { temporalProducers, temporalTypes } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal";
+import { createTemporalWindowProjection, temporalWindowAttributeNames } from "@hypit/temporal-markup";
 
 import { typographyTrackProducers, typographyTrackTypes } from "./manifest.js";
 import {
@@ -536,77 +532,6 @@ export const decodeTypographyMotionSurface: StructuredSurfaceHandler = ({ elemen
   return { records: [{ id, type: typographyTrackTypes.motion, value: { kind: "inline", value: motion }, range: element.range }], components: [], fragments: [] };
 };
 
-function divisor(left: number, right: number): number {
-  let a = Math.abs(left); let b = Math.abs(right);
-  while (b !== 0) [a, b] = [b, a % b];
-  return a;
-}
-
-function duration(value: string, label: string): TemporalDuration {
-  const match = /^(\d+)(?:\.(\d+))?(f|ms|s)$/u.exec(value.trim());
-  if (match === null) throw new Error(`${label} must be an exact duration such as 12f, 250ms or 1.5s.`);
-  const whole = Number(match[1]); const fraction = match[2] ?? ""; const unit = match[3];
-  if (!Number.isSafeInteger(whole)) throw new Error(`${label} is outside safe arithmetic.`);
-  if (unit === "f" || unit === "ms") {
-    if (fraction.length > 0) throw new Error(`${label} ${unit} duration must be an integer.`);
-    return { unit: unit === "f" ? "frames" : "milliseconds", value: whole };
-  }
-  const scale = 10 ** fraction.length;
-  const numerator = whole * scale + (fraction.length === 0 ? 0 : Number(fraction));
-  const gcd = divisor(numerator, scale);
-  return { unit: "seconds", numerator: numerator / gcd, denominator: scale / gcd };
-}
-
-function negate(value: TemporalDuration): TemporalDuration {
-  return value.unit === "seconds" ? { ...value, numerator: -value.numerator } : { ...value, value: -value.value };
-}
-
-function pointExpression(value: string, label: string): TemporalPointExpression {
-  const trimmed = value.trim();
-  const refs = ["program.start", "program.end", "selection.start", "selection.end", "moment.cue"] as const;
-  for (const ref of refs) {
-    if (trimmed === ref) return { ref };
-    const match = new RegExp(`^${ref.replace(".", "\\.")}\\s*([+-])\\s*(.+)$`, "u").exec(trimmed);
-    if (match !== null) {
-      const offset = duration(match[2]!, `${label} offset`);
-      return { ref, offset: match[1] === "-" ? negate(offset) : offset };
-    }
-  }
-  return { ref: "absolute", at: duration(trimmed, label) };
-}
-
-type TemporalBinding = {
-  readonly kind: "program" | "selection" | "moment";
-  readonly projection: TemporalWindowProjection;
-  readonly source?: SurfaceResolvedReference;
-};
-
-function temporalBinding(element: StructuredElement, resolve: (path: string) => SurfaceResolvedReference | undefined): TemporalBinding {
-  const during = element.attributes.during;
-  const at = element.attributes.at;
-  const start = optionalText(element, "start");
-  const end = optionalText(element, "end");
-  const selection = element.attributes.selection;
-  const moment = element.attributes.moment;
-  const forms = Number(during !== undefined) + Number(at !== undefined) + Number(start !== undefined || end !== undefined);
-  if (forms !== 1) throw new Error(`${element.name} requires exactly one of during, at/for, or start/end.`);
-  if (during !== undefined) {
-    if (typeof during === "string") {
-      if (during.trim() !== "program") throw new Error(`${element.name}.during text must be program.`);
-      return { kind: "program", projection: { start: { ref: "program.start" }, end: { ref: "program.end" } } };
-    }
-    return { kind: "selection", source: reference(during, `${element.name}.during`, narrativeTypes.selection, resolve), projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } } };
-  }
-  if (at !== undefined) {
-    return { kind: "moment", source: reference(at, `${element.name}.at`, narrativeTypes.moment, resolve), projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: duration(text(element, "for"), `${element.name}.for`) } } };
-  }
-  if (start === undefined || end === undefined) throw new Error(`${element.name} explicit timing requires start and end.`);
-  if (selection !== undefined && moment !== undefined) throw new Error(`${element.name} cannot bind Selection and Moment together.`);
-  if (selection !== undefined) return { kind: "selection", source: reference(selection, `${element.name}.selection`, narrativeTypes.selection, resolve), projection: { start: pointExpression(start, `${element.name}.start`), end: pointExpression(end, `${element.name}.end`) } };
-  if (moment !== undefined) return { kind: "moment", source: reference(moment, `${element.name}.moment`, narrativeTypes.moment, resolve), projection: { start: pointExpression(start, `${element.name}.start`), end: pointExpression(end, `${element.name}.end`) } };
-  return { kind: "program", projection: { start: pointExpression(start, `${element.name}.start`), end: pointExpression(end, `${element.name}.end`) } };
-}
-
 function dedent(value: string): string {
   const lines = value.replace(/^\n/u, "").replace(/\n\s*$/u, "").split("\n");
   const indentation = lines.filter((line) => line.trim()).reduce((min, line) => Math.min(min, /^\s*/u.exec(line)?.[0].length ?? 0), Number.POSITIVE_INFINITY);
@@ -690,9 +615,7 @@ function document(element: StructuredElement, resolve: (path: string) => Surface
 
 type FragmentItem = {
   readonly suffix: string;
-  readonly binding: TemporalBinding["kind"];
-  readonly sourceName?: string;
-  readonly windowSpecName: string;
+  readonly windowName: string;
   readonly placementKind: "point" | "area" | "path";
   readonly geometryName: string;
   readonly specName: string;
@@ -702,7 +625,10 @@ type FragmentItem = {
 };
 
 function createTrackFragment(id: string, items: readonly FragmentItem[]): GraphFragment {
-  const operations: FragmentOperation[] = [{ id: "text:set:empty", producer: typographyTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } }];
+  const operations: FragmentOperation[] = [
+    { id: "text:space", producer: semanticTrackProducers.projectProgramSpace, inputs: { track: input("semantic") }, result: { kind: "output", name: "space" } },
+    { id: "text:set:empty", producer: typographyTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } },
+  ];
   let current = "text:set:empty";
   for (const [index, item] of items.entries()) {
     const bind = `text:placement:${String(index + 1).padStart(4, "0")}`;
@@ -721,25 +647,18 @@ function createTrackFragment(id: string, items: readonly FragmentItem[]): GraphF
         result: { kind: "output", name: "spec" },
       });
     }
-    const windowId = `text:window:${String(index + 1).padStart(4, "0")}`;
-    const windowProducer = item.binding === "program" ? temporalProducers.projectProgram
-      : item.binding === "selection" ? temporalProducers.projectSelection : temporalProducers.projectMoment;
-    operations.push({ id: windowId, producer: windowProducer, inputs: {
-      semantic: input("semantic"), spec: input(item.windowSpecName),
-      ...(item.binding === "program" ? {} : { [item.binding]: input(item.sourceName!) }),
-    }, result: { kind: "output", name: "window" } });
     const append = `text:set:append:${String(index + 1).padStart(4, "0")}`;
     const common = {
-      set: operation(current), header: input("header"), semantic: input("semantic"), placement: operation(bind),
+      set: operation(current), header: input("header"), space: operation("text:space"), placement: operation(bind),
       spec: item.contentName === undefined ? input(item.specName) : operation(materialized),
-      style: input(item.styleName), motion: input(item.motionName), window: operation(windowId),
+      style: input(item.styleName), motion: input(item.motionName), window: input(item.windowName),
     };
     operations.push({ id: append, producer: typographyTrackProducers.appendItem, inputs: common, result: { kind: "output", name: "set" } });
     current = append;
   }
   operations.push(
     { id: "text:finalize", producer: typographyTrackProducers.finalize, inputs: { header: input("header"), set: operation(current) }, result: { kind: "output", name: "program" } },
-    { id: "text:render", producer: typographyTrackProducers.render, inputs: { semantic: input("semantic"), program: operation("text:finalize") }, result: { kind: "output", name: "track" } },
+    { id: "text:render", producer: typographyTrackProducers.render, inputs: { space: operation("text:space"), program: operation("text:finalize") }, result: { kind: "output", name: "track" } },
   );
   const inputEntries = [
     { name: "semantic", type: semanticTrackTypes.track },
@@ -750,8 +669,7 @@ function createTrackFragment(id: string, items: readonly FragmentItem[]): GraphF
       ...(item.contentName === undefined ? [] : [{ name: item.contentName, type: textTypes.text }]),
       { name: item.styleName, type: typographyTrackTypes.style },
       { name: item.motionName, type: typographyTrackTypes.motion },
-      { name: item.windowSpecName, type: temporalTypes.windowSpec },
-      ...(item.sourceName === undefined ? [] : [{ name: item.sourceName, type: item.binding === "selection" ? narrativeTypes.selection : narrativeTypes.moment }]),
+      { name: item.windowName, type: temporalTypes.window },
     ]),
   ];
   const inputs = [...new Map(inputEntries.map((value) => [value.name, value])).values()];
@@ -780,11 +698,13 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
   }];
   const defaultMotionId = `${id}.__still-motion`;
   records.push({ id: defaultMotionId, type: typographyTrackTypes.motion, value: { kind: "inline", value: stillTextMotion(defaultMotionId) }, range: element.range });
+  const temporalComponents: SurfaceComponentDraft[] = [];
+  const temporalFragments: ReturnType<typeof createTemporalWindowProjection>["fragments"][number][] = [];
   const items: Array<FragmentItem & {
     readonly geometry: SurfaceResolvedReference;
     readonly style: SurfaceResolvedReference;
     readonly motion: AuthorValueRef;
-    readonly source?: SurfaceResolvedReference;
+    readonly window: ReturnType<typeof createTemporalWindowProjection>["ref"];
     readonly content?: SurfaceResolvedReference;
     readonly specId: string;
   }> = [];
@@ -807,10 +727,11 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
     const index = items.length + 1;
     const suffix = String(index).padStart(4, "0");
     allowed(child, [
-      "id", "content", "placement", "style", "motion", "during", "at", "for", "start", "end", "selection", "moment",
+      "id", "content", "placement", "style", "motion", ...temporalWindowAttributeNames,
     ], ["id", "placement", "style"]);
     const itemId = text(child, "id");
-    const binding = temporalBinding(child, resolveReference);
+    const temporal = createTemporalWindowProjection({ id: itemId, element: child, semantic, resolveReference });
+    records.push(...temporal.records); temporalComponents.push(...temporal.components); temporalFragments.push(...temporal.fragments);
     const placementKind = form.toLowerCase() as "point" | "area" | "path";
     const geometry = reference(child.attributes.placement, `${child.name}.placement`, placementKind === "point" ? spatialTypes.point : placementKind === "area" ? spatialTypes.frame : spatialTypes.path, resolveReference);
     const style = reference(child.attributes.style, `${child.name}.style`, typographyTrackTypes.style, resolveReference);
@@ -818,8 +739,7 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
       ? ({ kind: "record", id: defaultMotionId } as const)
       : reference(child.attributes.motion, `${child.name}.motion`, typographyTrackTypes.motion, resolveReference).ref;
     const specId = `${id}.item.${suffix}.spec`;
-    const windowSpecId = `${id}.item.${suffix}.window`;
-    const windowSpecName = `item-${suffix}-window-spec`;
+    const windowName = `item-${suffix}-window`;
     const content = child.attributes.content === undefined
       ? undefined
       : reference(child.attributes.content, `${child.name}.content`, textTypes.text, resolveReference);
@@ -837,43 +757,36 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
       type: content === undefined ? typographyTrackTypes.itemSpec : typographyTrackTypes.plainItemSpec,
       value: { kind: "inline", value: spec }, range: child.range,
     });
-    records.push({
-      id: windowSpecId,
-      type: temporalTypes.windowSpec,
-      value: { kind: "inline", value: { id: itemId, projection: binding.projection } }, range: child.range,
-    });
     items.push({
-      suffix, binding: binding.kind, placementKind, windowSpecName,
+      suffix, placementKind, windowName,
       geometryName: sharedInputName("geometry", geometry.ref, suffix), specName: `item-${suffix}-spec`,
       styleName: sharedInputName("style", style.ref, suffix), motionName: sharedInputName("motion", motionRef, suffix),
       ...(content === undefined ? {} : { contentName: sharedInputName("content", content.ref, suffix), content }),
-      ...(binding.source === undefined ? {} : { sourceName: sharedInputName("source", binding.source.ref, suffix), source: binding.source }),
-      geometry, style, motion: motionRef, specId,
+      geometry, style, motion: motionRef, specId, window: temporal.ref,
     });
   }
   if (items.length === 0) throw new Error(`${element.name} requires at least one Point, Area or Path.`);
-  const fragmentItems: FragmentItem[] = items.map(({ suffix, binding, sourceName, placementKind, geometryName, specName, styleName, motionName, contentName, windowSpecName }) => ({
-    suffix, binding, placementKind, geometryName, specName, styleName, motionName, windowSpecName,
-    ...(contentName === undefined ? {} : { contentName }), ...(sourceName === undefined ? {} : { sourceName }),
+  const fragmentItems: FragmentItem[] = items.map(({ suffix, placementKind, geometryName, specName, styleName, motionName, contentName, windowName }) => ({
+    suffix, placementKind, geometryName, specName, styleName, motionName, windowName,
+    ...(contentName === undefined ? {} : { contentName }),
   }));
   const fragment = createTrackFragment(id, fragmentItems);
   return {
     records,
-    components: [{
+    components: [...temporalComponents, {
       id, fragment: fragment.id,
       inputs: {
         semantic: semantic.ref, header: { kind: "record", id: headerId },
         ...Object.fromEntries(items.flatMap((item) => [
           [item.geometryName, item.geometry.ref], [item.specName, { kind: "record" as const, id: item.specId }],
-          [item.windowSpecName, { kind: "record" as const, id: `${id}.item.${item.suffix}.window` }],
+          [item.windowName, item.window],
           [item.styleName, item.style.ref], [item.motionName, item.motion],
           ...(item.content === undefined ? [] : [[item.contentName!, item.content.ref] as const]),
-          ...(item.source === undefined ? [] : [[item.sourceName!, item.source.ref] as const]),
         ])),
       },
       outputs: { program: `${id}.program`, track: `${id}.track` }, range: element.range,
     }],
-    fragments: [fragment],
+    fragments: [...temporalFragments, fragment],
     exports: [`${id}.program`, `${id}.track`],
   };
 };
@@ -887,11 +800,17 @@ function createMaskFragment(id: string): GraphFragment {
   ];
   return sealGraphFragment({
     inputs,
-    operations: [{
-      id: "text-mask:render", producer: typographyTrackProducers.renderMask,
-      inputs: { semantic: input("semantic"), program: input("program"), material: input("material"), spec: input("spec") },
-      result: { kind: "output", name: "track" },
-    }],
+    operations: [
+      {
+        id: "text-mask:space", producer: semanticTrackProducers.projectProgramSpace,
+        inputs: { track: input("semantic") }, result: { kind: "output", name: "space" },
+      },
+      {
+        id: "text-mask:render", producer: typographyTrackProducers.renderMask,
+        inputs: { space: operation("text-mask:space"), program: input("program"), material: input("material"), spec: input("spec") },
+        result: { kind: "output", name: "track" },
+      },
+    ],
     exports: [{
       name: "track", type: compositionTypes.visualTrack, root: operation("text-mask:render"),
     }],

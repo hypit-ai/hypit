@@ -45,11 +45,11 @@ const audio: BlobRef = {
 };
 
 function fixture() {
-  const programSpace = sealProgramSpace({
+  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec: 4,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  const visual = sealVisualTrack({
+  const visual = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "caption",
     presents: [{
@@ -62,7 +62,7 @@ function fixture() {
       ],
     }],
   });
-  const sound = sealAudioTrack({
+  const sound = sealAudioTrack({ programSpaceId: "test-space",
     id: "speech",
     clips: [{
       id: "speech",
@@ -105,8 +105,7 @@ test("VisualTrack rejects cross-Track pixel sampling styles", () => {
   const { programSpace, visual, sound } = fixture();
   const content = structuredClone(visual) as VisualTrack;
   const first = content.presents[0]!.elements[0]!;
-  const invasive = sealVisualTrack({
-    ...content,
+  const invasive = sealVisualTrack({...content,
     presents: [{
       ...content.presents[0]!,
       elements: [{ ...first, style: [{ name: "backdrop-filter", value: "blur(20px)" }] }],
@@ -124,8 +123,7 @@ test("VisualTrack style values cannot smuggle a second declaration", () => {
   const { programSpace, visual } = fixture();
   const content = structuredClone(visual) as VisualTrack;
   const first = content.presents[0]!.elements[0]!;
-  const smuggled = sealVisualTrack({
-    ...content,
+  const smuggled = sealVisualTrack({...content,
     presents: [{
       ...content.presents[0]!,
       elements: [{ ...first, style: [{ name: "color", value: "red;backdrop-filter:blur(20px)" }] }],
@@ -144,8 +142,7 @@ test("VisualTrack style values cannot smuggle a second declaration", () => {
 test("VisualTrack cannot silently extend the versioned public Visual IR", () => {
   const { programSpace, visual } = fixture();
   const first = visual.presents[0]!.elements[0]!;
-  const unknownStyle = sealVisualTrack({
-    ...visual,
+  const unknownStyle = sealVisualTrack({...visual,
     presents: [{
       ...visual.presents[0]!,
       elements: [{ ...first, style: [{ name: "mask-image", value: "linear-gradient(black, transparent)" }] }],
@@ -160,8 +157,7 @@ test("VisualTrack cannot silently extend the versioned public Visual IR", () => 
     /outside hypit\.visual-ir@1/u,
   );
 
-  const fixedPosition = sealVisualTrack({
-    ...visual,
+  const fixedPosition = sealVisualTrack({...visual,
     presents: [{
       ...visual.presents[0]!,
       elements: [{ ...first, style: [{ name: "position", value: "fixed" }] }],
@@ -172,8 +168,7 @@ test("VisualTrack cannot silently extend the versioned public Visual IR", () => 
     /position has unsupported value fixed/u,
   );
 
-  const environmentBound = sealVisualTrack({
-    ...visual,
+  const environmentBound = sealVisualTrack({...visual,
     presents: [{
       ...visual.presents[0]!,
       elements: [{ ...first, style: [{ name: "color", value: "var(--host-color)" }] }],
@@ -199,8 +194,7 @@ test("VisualTrack explicitly binds the visual IR instead of trusting the Runtime
 test("the Type owner rejects an invalid VisualTrack at the shared admission gate", async () => {
   const { visual } = fixture();
   const present = visual.presents[0]!;
-  const invalid = sealVisualTrack({
-    ...visual,
+  const invalid = sealVisualTrack({...visual,
     presents: [{
       ...present,
       elements: [
@@ -225,7 +219,7 @@ test("the Type owner rejects an invalid VisualTrack at the shared admission gate
 
 test("Composition validates Track frame ranges against the explicitly connected ProgramSpace", () => {
   const { programSpace, visual } = fixture();
-  const foreign = sealProgramSpace({
+  const foreign = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec: 1,
     frameRate: { numerator: 24, denominator: 1 },
   });
@@ -246,8 +240,7 @@ test("one authoring Track may contribute independently stacked Presents", () => 
     id: "cue-2",
     stacking: { order: 30, tieBreak: "board" },
   };
-  const interleaved = sealVisualTrack({
-    ...content,
+  const interleaved = sealVisualTrack({...content,
     presents: [
       { ...content.presents[0]!, stacking: { order: 80, tieBreak: "icon" } },
       second,
@@ -266,8 +259,7 @@ test("Visual Present animations may finish before or after their visibility wind
   const { programSpace, visual } = fixture();
   const present = visual.presents[0]!;
   const root = present.elements[0]!;
-  const animated = sealVisualTrack({
-    ...visual,
+  const animated = sealVisualTrack({...visual,
     presents: [{
       ...present,
       elements: [{
@@ -286,8 +278,7 @@ test("Visual Present animations may finish before or after their visibility wind
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [animated],
   }), programSpace));
-  const clipped = sealVisualTrack({
-    ...visual,
+  const clipped = sealVisualTrack({...visual,
     presents: [{
       ...present,
       elements: [{
@@ -306,8 +297,7 @@ test("Visual Present animations may finish before or after their visibility wind
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [clipped],
   }), programSpace));
-  const invasive = sealVisualTrack({
-    ...visual,
+  const invasive = sealVisualTrack({...visual,
     presents: [{
       ...present,
       elements: [{

@@ -1,7 +1,7 @@
 # Hypit media execution service
 
-This service answers eight media Needs in AWS Lambda: inspect, normalize, transform, extract audio,
-extract frame, speech-evidence projection, timeline audio and mux. It is deployment state, not an
+This service answers nine media Needs in AWS Lambda: inspect, normalize, transform, extract audio,
+extract frame, still-video rendering, speech-evidence projection, timeline audio and mux. It is deployment state, not an
 author-importable SVML package.
 
 It owns no media semantics. `@hypit/media-execution` contains the FFmpeg commands and
