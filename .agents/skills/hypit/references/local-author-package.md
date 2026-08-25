@@ -52,9 +52,12 @@ hypit-reference-video-tools inspect_visual_contract
 
 It answers the questions a component is written against — which element kinds exist, which style
 names are admitted on them, which of those take an enum, how few keyframes an animation carries, and
-the four rules the seal enforces about parents, `order` and interpolation. Every line is generated
-from the Composition schema, so it says what will be accepted rather than what one package happened
-to do. `inspect_svml_vocabulary` answers the other half: what a Source may write.
+the four rules the seal enforces about parents, `order` and interpolation. Add
+`--producers-of @hypit/temporal` for the Producers a Fragment calls to turn a Script name into a
+window, with their port names, and the same for any package whose Producers you chain. Every line is
+generated from the Composition schema and the Modules themselves, so it says what will be accepted
+rather than what one package happened to do. `inspect_svml_vocabulary` answers the other half: what a
+Source may write.
 
 Open a package's source only when neither command settles it — a role whose shape the guide leaves
 implicit, an export whose signature you need exactly. Use `hypit paths --json` to locate

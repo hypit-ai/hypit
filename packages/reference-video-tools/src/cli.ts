@@ -16,7 +16,7 @@ function usage(): string {
     "  hypit-reference-video-tools observe_reference --reference-id <id> --batch <questions.json>",
     "  hypit-reference-video-tools record_observation --reference-id <id> --key <key> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
-    "  hypit-reference-video-tools inspect_visual_contract [--shape visual-track|text-flow|text-typography|text-paint|text-document|path-command]",
+    "  hypit-reference-video-tools inspect_visual_contract [--shape visual-track|text-flow|text-typography|text-paint|text-document|path-command] [--producers-of <package> ...]",
     "  hypit-reference-video-tools paths",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <build.svrun> --segment <id>|--selection <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
@@ -306,7 +306,10 @@ async function main(): Promise<void> {
     };
     result = await tools.compare_reconstruction(input as { reference_id: string; shot_id?: string; segment?: string; selection?: string; run?: string; image_path?: string; video_path?: string; question?: string; element?: string });
   } else if (command === "inspect_visual_contract") {
-    result = await tools.inspect_visual_contract({ ...(one(flags, "shape") === undefined ? {} : { shape: one(flags, "shape")! }) });
+    result = await tools.inspect_visual_contract({
+      ...(one(flags, "shape") === undefined ? {} : { shape: one(flags, "shape")! }),
+      ...(many(flags, "producers-of").length === 0 ? {} : { producers: many(flags, "producers-of") }),
+    });
   } else if (command === "paths") {
     result = await tools.paths();
   } else if (command === "inspect_svml_vocabulary") {
