@@ -305,7 +305,7 @@ const appearanceRecipeProperties = [
     summary: "Orders this unit against every other Item and Sequence on the Track, higher drawing in front." },
   { name: "clip", required: false, values: ["none", "frame", "rounded"], fallback: "frame",
     summary: "Decides how the picture is clipped to the Frame." },
-  { name: "radius", required: false, fallback: 0,
+  { name: "radius", required: false, fallback: "0",
     summary: "Rounds the clipped corners by a pixel radius, and is read only for a `rounded` clip." },
   { name: "padding", required: false, fallback: "0",
     summary: "Insets the picture from the Frame edges, written as one, two or four pixel numbers." },
