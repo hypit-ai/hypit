@@ -1,13 +1,15 @@
-import { captionFineMarkupSurfaces } from "@hypit/caption-fine";
+import { captionFineMarkupSurfaces, captionFineModuleRef } from "@hypit/caption-fine";
 import type { FineCaptionSchedule } from "@hypit/caption-fine";
+import { compositionTypes } from "@hypit/composition";
+import { narrativeTypes } from "@hypit/narrative";
 import type { CaptionDocument } from "@hypit/narrative";
 import type {
-  StudioAdapter,
-  StudioAdapterContext,
+  StudioTrackCompanion,
+  StudioTrackCompanionContext,
   StudioEntityDraft,
   StudioInspectorFieldDeclaration,
 } from "@hypit/studio-adapter";
-import { requiredSurfaceValue, temporalLineageFor, textLayer } from "@hypit/studio-adapter";
+import { requiredReferencedValue, requiredSurfaceValue, textLayer } from "@hypit/studio-adapter";
 
 const styleSurface = captionFineMarkupSurfaces.find((surface) => surface.name === "style");
 const recipeVocabulary = styleSurface?.vocabulary.attributes
@@ -95,17 +97,6 @@ export const captionFineInspectorFields: readonly StudioInspectorFieldDeclaratio
   };
 });
 
-function captionDocument(context: StudioAdapterContext, id: string): CaptionDocument | undefined {
-  for (const value of context.values.values()) {
-    if (value === null || typeof value !== "object" || Array.isArray(value)) continue;
-    const candidate = value as Partial<CaptionDocument>;
-    if (candidate.id === id && Array.isArray(candidate.units) && Array.isArray(candidate.words)) {
-      return candidate as CaptionDocument;
-    }
-  }
-  return undefined;
-}
-
 function cueText(document: CaptionDocument | undefined, unitIds: readonly string[]): string {
   if (document === undefined) return "";
   const selected = new Set(unitIds);
@@ -117,15 +108,15 @@ function cueText(document: CaptionDocument | undefined, unitIds: readonly string
     .trim();
 }
 
-function projectCaption(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectCaption(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const schedule = requiredSurfaceValue(context, "schedule") as FineCaptionSchedule;
-  const document = captionDocument(context, schedule.documentId);
+  const document = requiredReferencedValue(context, "document", narrativeTypes.captionDocument) as CaptionDocument;
+  if (document.id !== schedule.documentId) throw new Error("Caption Studio Schedule belongs to another CaptionDocument.");
   const rendered = new Map(context.generic().flatMap((entity) =>
     entity.presentId === undefined ? [] : [[entity.presentId, entity] as const]));
   return schedule.cues.map((cue): StudioEntityDraft => {
     const base = rendered.get(cue.id);
     const label = cueText(document, cue.units.map((unit) => unit.unitId));
-    const temporal = temporalLineageFor(context, cue.id);
     const authoredId = context.placement?.id ?? cue.id;
     return {
       ...(base ?? {
@@ -148,15 +139,14 @@ function projectCaption(context: StudioAdapterContext): readonly StudioEntityDra
       endFrameExclusive: cue.visibleEndFrameExclusive,
       presentation: { entity: "caption-cue", chrome: "standard" },
       parameterReferences: { program: cue.styleId },
-      ...(temporal === undefined ? {} : { temporal }),
     };
   });
 }
 
-export const captionFineStudioAdapters: readonly StudioAdapter[] = [
+export const captionFineStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "track", role: "track",
-    output: { type: "VisualTrack", surface: "track", modules: ["@hypit/caption-fine"] },
+    output: { type: compositionTypes.visualTrack, surface: "track", modules: [captionFineModuleRef] },
     family: "caption", tone: "magenta", icon: "captions",
     bindings: [
       {

@@ -8,6 +8,7 @@
   "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@hypit/deck-track": "workspace:*",
+    "@hypit/composition": "workspace:*",
     "@hypit/studio-adapter": "workspace:*"
   }
 }

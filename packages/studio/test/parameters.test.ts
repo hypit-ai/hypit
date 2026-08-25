@@ -6,13 +6,15 @@ import type {
   StudioSemanticTimeline,
   StudioTemporalLineage,
 } from "@hypit/studio-adapter";
-import { projectedWindowTimelineEdits } from "@hypit/studio-adapter";
 import type { MarkupSurfaceRegistryLike, RegisteredSurface } from "@hypit/markup";
 
 import { inspectorFieldsForBindings, resolveTimelineEditHandles, sourceBindingsForDraft } from "../src/parameters.js";
 import { serializeParameterValue, validateParameterValue } from "../src/parameter-values.js";
 
+const temporalIdentity = { spaceId: "speech", narrativeId: "story" } as const;
+
 const semantic: StudioSemanticTimeline = {
+  ...temporalIdentity,
   presentation: {
     family: "speech",
     tone: "teal",
@@ -47,19 +49,24 @@ test("structured parameter values validate and serialize through the generic SVS
 
 test("timeline gestures resolve through the shared Selection identity", () => {
   const temporal: StudioTemporalLineage = {
-    source: { kind: "selection", id: "claim" },
     projection: {
       kind: "window",
-      startExpression: "selection.claim.start",
-      endExpression: "selection.claim.end",
+      start: {
+        kind: "instant", expression: "selection.start", reference: "selection.start", frame: 0,
+        source: { ...temporalIdentity, kind: "selection", id: "claim" },
+        authority: { kind: "semantic", source: { ...temporalIdentity, kind: "selection", id: "claim" }, boundary: "start" },
+      },
+      end: {
+        kind: "instant", expression: "selection.end", reference: "selection.end", frame: 12,
+        source: { ...temporalIdentity, kind: "selection", id: "claim" },
+        authority: { kind: "semantic", source: { ...temporalIdentity, kind: "selection", id: "claim" }, boundary: "end" },
+      },
       startFrame: 0,
       endFrameExclusive: 12,
     },
     phases: [],
   };
-  const handles = resolveTimelineEditHandles(
-    [], projectedWindowTimelineEdits({ start: "start", end: "end", duration: "for" }), temporal, semantic,
-  );
+  const handles = resolveTimelineEditHandles([], temporal, semantic);
 
   assert.deepEqual(handles.map((handle) => [handle.operation, handle.gesture, handle.coordinate, handle.enabled]), [
     ["timeline.adjust", "move", "semantic-anchor", true],
@@ -68,6 +75,7 @@ test("timeline gestures resolve through the shared Selection identity", () => {
   ]);
   assert.deepEqual(handles.map((handle) => handle.semantic), Array.from({ length: 3 }, () => ({
     kind: "selection",
+    narrativeId: "story",
     id: "claim",
     startAnchorId: "segment:a:token:1:start",
     endAnchorId: "segment:a:token:1:end",
@@ -75,31 +83,73 @@ test("timeline gestures resolve through the shared Selection identity", () => {
 });
 
 test("moving a Moment projection resolves to the shared Moment identity", () => {
-  const handles = resolveTimelineEditHandles([], projectedWindowTimelineEdits({
-    start: "start", end: "end", duration: "for",
-  }), {
-    source: { kind: "moment", id: "beat" },
-    projection: { kind: "point", expression: "moment.beat", frame: 12 },
+  const handles = resolveTimelineEditHandles([], {
+    projection: {
+      kind: "instant", expression: "moment.cue", reference: "moment.cue", frame: 12,
+      source: { ...temporalIdentity, kind: "moment", id: "beat" },
+      authority: { kind: "semantic", source: { ...temporalIdentity, kind: "moment", id: "beat" }, boundary: "cue" },
+    },
     phases: [],
   }, {
     ...semantic,
     moments: [{ id: "beat", anchorId: "segment:a:token:1:end", frame: 12 }],
   });
 
-  assert.deepEqual(handles.map((handle) => [handle.gesture, handle.enabled]), [
-    ["move", true],
-    ["trim-start", false],
-    ["trim-end", false],
-  ]);
+  assert.deepEqual(handles.map((handle) => [handle.gesture, handle.enabled]), [["move", true]]);
   assert.deepEqual(handles[0]!.semantic, {
     kind: "moment",
+    narrativeId: "story",
     id: "beat",
     anchorId: "segment:a:token:1:end",
   });
 });
 
+test("at/for and until/for derive complementary semantic and duration inverses", () => {
+  const duration = {
+    id: "for", binding: "for", name: "for", value: "8f", language: "svml" as const, writable: true,
+    source: { endpoint: "main::for", path: "main.svml", range: { start: 4, end: 6 }, preimage: "8f" },
+  };
+  const withMoment = {
+    ...semantic,
+    moments: [{ id: "beat", anchorId: "segment:a:token:1:end", frame: 12 }],
+  };
+  const moment = {
+    kind: "instant" as const, expression: "moment.cue", reference: "moment.cue" as const, frame: 12,
+    source: { ...temporalIdentity, kind: "moment" as const, id: "beat" },
+    authority: { kind: "semantic" as const, source: { ...temporalIdentity, kind: "moment" as const, id: "beat" }, boundary: "cue" as const },
+  };
+  const after = {
+    kind: "instant" as const, expression: "moment.cue+8f", reference: "moment.cue" as const, frame: 20,
+    source: { ...temporalIdentity, kind: "moment" as const, id: "beat" },
+    authority: { kind: "parameter" as const, binding: "for", relation: "after-start" as const },
+  };
+  const before = {
+    kind: "instant" as const, expression: "moment.cue-8f", reference: "moment.cue" as const, frame: 4,
+    source: { ...temporalIdentity, kind: "moment" as const, id: "beat" },
+    authority: { kind: "parameter" as const, binding: "for", relation: "before-end" as const },
+  };
+  const atFor = resolveTimelineEditHandles([duration], {
+    projection: { kind: "window", start: moment, end: after, startFrame: 12, endFrameExclusive: 20 }, phases: [],
+  }, withMoment);
+  assert.deepEqual(atFor.map((handle) => [handle.gesture, handle.semantic?.kind, handle.sources?.map((source) => source.role)]), [
+    ["move", "moment", undefined],
+    ["trim-start", "moment", ["duration"]],
+    ["trim-end", undefined, ["duration"]],
+  ]);
+
+  const untilFor = resolveTimelineEditHandles([duration], {
+    projection: { kind: "window", start: before, end: moment, startFrame: 4, endFrameExclusive: 12 }, phases: [],
+  }, withMoment);
+  assert.deepEqual(untilFor.map((handle) => [handle.gesture, handle.semantic?.kind, handle.sources?.map((source) => source.role)]), [
+    ["move", "moment", undefined],
+    ["trim-start", undefined, ["duration"]],
+    ["trim-end", "moment", ["duration"]],
+  ]);
+});
+
 test("absolute Window edits use only the Companion's exact parameter vocabulary", () => {
   const source = (start: number, end: number) => ({
+    endpoint: `main::${start}`,
     path: "main.svml",
     range: { start, end },
     preimage: "1f",
@@ -116,11 +166,17 @@ test("absolute Window edits use only the Companion's exact parameter vocabulary"
   ];
   const handles = resolveTimelineEditHandles(
     parameters,
-    projectedWindowTimelineEdits({ start: "from", end: "until", duration: "length" }),
     {
-      source: { kind: "program" },
       projection: {
-        kind: "window", startExpression: "1f", endExpression: "20f",
+        kind: "window",
+        start: {
+          kind: "instant", expression: "1f", reference: "absolute", frame: 1, source: { ...temporalIdentity, kind: "program", id: "program" },
+          authority: { kind: "parameter", binding: "from", relation: "direct" },
+        },
+        end: {
+          kind: "instant", expression: "20f", reference: "absolute", frame: 20, source: { ...temporalIdentity, kind: "program", id: "program" },
+          authority: { kind: "parameter", binding: "until", relation: "direct" },
+        },
         startFrame: 1, endFrameExclusive: 20,
       },
       phases: [],

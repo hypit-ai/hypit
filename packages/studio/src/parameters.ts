@@ -8,11 +8,13 @@ import type {
   StudioParameterControl,
   StudioRecipeReferenceBindingDeclaration,
   StudioEntityDraft,
+  StudioEditSource,
   StudioPlacement,
   StudioEditHandle,
   StudioSemanticTimeline,
+  StudioTemporalInstantProjection,
   StudioTemporalLineage,
-  StudioTimelineEditDeclaration,
+  StudioTimelineGesture,
 } from "@hypit/studio-adapter";
 import { parseSvs } from "@hypit/svs";
 
@@ -28,27 +30,42 @@ export type StudioSourceFile = {
 };
 
 type AuthorElement = {
+  readonly authorElement?: string;
+  readonly authorEndpoints: Readonly<Record<string, string>>;
   readonly id?: string;
   readonly sourcePath: string;
   readonly attributes: Readonly<Record<string, string>>;
   readonly references: Readonly<Record<string, string>>;
+  readonly resolvedReferences: Readonly<Record<string, string>>;
+  readonly records: readonly string[];
+  readonly outputs: readonly string[];
   readonly attributeValueRanges: Readonly<Record<string, Range>>;
 };
 
 function authoredElements(placements: readonly Placement[]): readonly AuthorElement[] {
   return placements.flatMap((placement) => [
     {
+      ...(placement.authorElement === undefined ? {} : { authorElement: placement.authorElement }),
+      authorEndpoints: placement.authorEndpoints ?? {},
       ...(placement.id === undefined ? {} : { id: placement.id }),
       sourcePath: placement.sourcePath,
       attributes: placement.attributes,
       references: placement.referenceAttributes,
+      resolvedReferences: placement.resolvedReferenceAttributes ?? {},
+      records: placement.records,
+      outputs: placement.outputs,
       attributeValueRanges: placement.attributeValueRanges,
     },
     ...placement.children.map((child) => ({
+      ...(child.authorElement === undefined ? {} : { authorElement: child.authorElement }),
+      authorEndpoints: child.authorEndpoints ?? {},
       ...(child.id === undefined ? {} : { id: child.id }),
       sourcePath: child.sourcePath,
       attributes: child.attributes,
       references: child.referenceAttributes,
+      resolvedReferences: child.resolvedReferenceAttributes ?? {},
+      records: child.records ?? [],
+      outputs: child.outputs ?? [],
       attributeValueRanges: child.attributeValueRanges,
     })),
   ]);
@@ -61,17 +78,27 @@ function sameRange(left: Range | undefined, right: Range | undefined): boolean {
 function elementFor(placement: StudioPlacement, draft: StudioEntityDraft): AuthorElement | undefined {
   const candidates: readonly (AuthorElement & { readonly id?: string; readonly range: Range })[] = [
     {
+      ...(placement.authorElement === undefined ? {} : { authorElement: placement.authorElement }),
+      authorEndpoints: placement.authorEndpoints ?? {},
       sourcePath: placement.sourcePath,
       attributes: placement.attributes,
       references: placement.referenceAttributes,
+      resolvedReferences: placement.resolvedReferenceAttributes ?? {},
+      records: placement.records,
+      outputs: placement.outputs,
       attributeValueRanges: placement.attributeValueRanges,
       ...(placement.id === undefined ? {} : { id: placement.id }),
       range: placement.range,
     },
     ...placement.children.map((child) => ({
+      ...(child.authorElement === undefined ? {} : { authorElement: child.authorElement }),
+      authorEndpoints: child.authorEndpoints ?? {},
       sourcePath: child.sourcePath,
       attributes: child.attributes,
       references: child.referenceAttributes,
+      resolvedReferences: child.resolvedReferenceAttributes ?? {},
+      records: child.records ?? [],
+      outputs: child.outputs ?? [],
       attributeValueRanges: child.attributeValueRanges,
       ...(child.id === undefined ? {} : { id: child.id }),
       range: child.range,
@@ -79,12 +106,6 @@ function elementFor(placement: StudioPlacement, draft: StudioEntityDraft): Autho
   ];
   return candidates.find((candidate) => sameRange(candidate.range, draft.elementRange))
     ?? candidates.find((candidate) => candidate.id === draft.authoredId);
-}
-
-function languageOf(path: string): StudioSourceFile["language"] {
-  if (path.endsWith(".svs")) return "svs";
-  if (path.endsWith(".svrun")) return "svrun";
-  return "svml";
 }
 
 function sourceFor(
@@ -117,20 +138,26 @@ function recipeParameters(input: {
   readonly draft: StudioEntityDraft;
   readonly referenceName: string;
   readonly referencePath: string;
+  readonly referenceRef?: string;
   readonly placements: readonly Placement[];
   readonly recipe: StudioRecipeReferenceBindingDeclaration;
   readonly through: readonly string[];
 }): readonly StudioSourceBinding[] {
   const [attribute, ...remaining] = input.through;
   if (attribute !== undefined) {
-    const local = input.placements.find((candidate) => candidate.id === input.referencePath);
+    const local = authoredElements(input.placements).find((candidate) => input.referenceRef !== undefined
+      ? candidate.records.includes(input.referenceRef) || candidate.outputs.includes(input.referenceRef)
+      : candidate.sourcePath === input.current.path && candidate.id === input.referencePath);
     if (local === undefined) return [];
-    const referencePath = local.referenceAttributes[attribute];
+    const referencePath = local.references[attribute];
     if (referencePath === undefined || referencePath === input.referencePath) return [];
     return recipeParameters({
       ...input,
       current: sourceFor(input.root, local.sourcePath, input.files) ?? input.current,
       referencePath,
+      ...(local.resolvedReferences[attribute] === undefined
+        ? {}
+        : { referenceRef: local.resolvedReferences[attribute] }),
       through: remaining,
     });
   }
@@ -198,11 +225,14 @@ function referencedParameters(input: {
   readonly draft: StudioEntityDraft;
   readonly referenceName: string;
   readonly referencePath: string;
+  readonly referenceRef?: string;
   readonly declarations: readonly StudioSourceBindingDeclaration[];
   readonly placements: readonly Placement[];
 }): readonly StudioSourceBinding[] {
   const targetId = input.referencePath;
-  const target = authoredElements(input.placements).find((candidate) => candidate.id === targetId);
+  const target = authoredElements(input.placements).find((candidate) => input.referenceRef !== undefined
+    ? candidate.records.includes(input.referenceRef) || candidate.outputs.includes(input.referenceRef)
+    : candidate.id === targetId);
   if (target === undefined) return [];
   const file = sourceFor(input.root, target.sourcePath, input.files);
   if (file === undefined) return [];
@@ -219,9 +249,12 @@ function referencedParameters(input: {
       name: declaration.name,
       value,
       ...(declaration.schema === undefined ? {} : { schema: declaration.schema }),
-      language: languageOf(target.sourcePath),
+      language: file.language,
       writable,
       source: {
+        ...(target.authorEndpoints[declaration.name] === undefined
+          ? {}
+          : { endpoint: target.authorEndpoints[declaration.name] }),
         path: relative(input.root, sourceAbsolute(input.root, target.sourcePath)),
         range,
         preimage,
@@ -270,9 +303,10 @@ export function sourceBindingsForDraft(input: {
       name,
       value,
       ...(declaration.schema === undefined ? {} : { schema: declaration.schema }),
-      language: languageOf(element.sourcePath),
+      language: file.language,
       writable,
       source: {
+        ...(element.authorEndpoints[name] === undefined ? {} : { endpoint: element.authorEndpoints[name] }),
         path: relative(input.root, sourceAbsolute(input.root, element.sourcePath)),
         range,
         preimage,
@@ -294,6 +328,9 @@ export function sourceBindingsForDraft(input: {
         draft: input.draft,
         referenceName: declaration.name,
         referencePath,
+        ...(element.resolvedReferences[declaration.name] === undefined
+          ? {}
+          : { referenceRef: element.resolvedReferences[declaration.name] }),
         declarations: declaration.referenced,
         placements: input.placements ?? [],
       });
@@ -306,6 +343,9 @@ export function sourceBindingsForDraft(input: {
         draft: input.draft,
         referenceName: declaration.name,
         referencePath,
+        ...(element.resolvedReferences[declaration.name] === undefined
+          ? {}
+          : { referenceRef: element.resolvedReferences[declaration.name] }),
         placements: input.placements ?? [],
         recipe: declaration.recipe,
         through: declaration.recipe.through ?? [],
@@ -357,18 +397,22 @@ export function inspectorFieldsForBindings(
   });
 }
 
-const ABSOLUTE_DURATION = /^\s*\d+(?:\.\d+)?(?:f|ms|s)\s*$/u;
+/** Runtime authority, rather than a Companion allowlist, makes timing fields writable. */
+export function temporalBindingDeclarations(
+  temporal?: StudioTemporalLineage,
+): readonly StudioSourceBindingDeclaration[] {
+  if (temporal === undefined) return [];
+  const endpoints = temporal.projection.kind === "instant"
+    ? [temporal.projection]
+    : [temporal.projection.start, temporal.projection.end];
+  return [...new Set(endpoints.flatMap((endpoint) => endpoint.authority.kind === "parameter"
+    ? [endpoint.authority.binding]
+    : []))].map((name) => ({ name, writable: true }));
+}
 
-/**
- * Resolve an adapter-declared gesture through the entity's actual temporal
- * lineage. A Selection is the writable author identity, so every rectangle
- * projected from it edits the same Script markers. Literal absolute Windows
- * remain directly writable. Other projections stay visible but read-only
- * until their package declares an unambiguous inverse.
- */
+/** Resolve finite timeline gestures from the exact endpoint authorities in the executed graph. */
 export function resolveTimelineEditHandles(
   bindings: readonly StudioSourceBinding[],
-  declarations: readonly StudioTimelineEditDeclaration[],
   temporal?: StudioTemporalLineage,
   semantic?: StudioSemanticTimeline,
 ): readonly StudioEditHandle[] {
@@ -379,98 +423,119 @@ export function resolveTimelineEditHandles(
     // window when a clip is being dragged.
     if (binding.language === "svml" && !byName.has(binding.binding)) byName.set(binding.binding, binding);
   }
-  const absolute = (binding: StudioSourceBinding | undefined): binding is StudioSourceBinding =>
-    binding !== undefined && binding.writable && typeof binding.value === "string" && ABSOLUTE_DURATION.test(binding.value);
-  const disabled = (gesture: StudioTimelineEditDeclaration["gesture"], reason: string): StudioEditHandle => ({
+  const writable = (binding: StudioSourceBinding | undefined): binding is StudioSourceBinding =>
+    binding !== undefined && binding.writable && binding.source.endpoint !== undefined;
+  const disabled = (gesture: StudioTimelineGesture, reason: string): StudioEditHandle => ({
     id: `timeline.adjust:${gesture}`,
     operation: "timeline.adjust",
     gesture,
     enabled: false,
     disabledReason: reason,
   });
-  const handles: StudioEditHandle[] = [];
-  if (temporal === undefined) return handles;
-  const matches = (when: { readonly source: string; readonly projection?: string }): boolean =>
-    temporal.source.kind === when.source
-    && (when.projection === undefined || temporal.projection?.kind === when.projection);
-  for (const declaration of declarations) {
-    const before = handles.length;
-    let relevant = false;
-    let unavailable: string | undefined;
-    for (const target of declaration.targets) {
-      if (target.kind === "semantic-source") {
-        if (temporal.source.kind !== target.source) continue;
-        relevant = true;
-        const id = temporal.source.id;
-        if (id === undefined) {
-          unavailable = `该 ${target.source} 投影没有公共作者身份。`;
-          continue;
-        }
-        if (target.source === "selection") {
-          const selection = semantic?.selections.find((candidate) => candidate.id === id);
-          if (selection === undefined) {
-            unavailable = `Selection ${id} 没有出现在当前语义 Candidate 中。`;
-            continue;
-          }
-          handles.push({
-            id: `timeline.adjust:${declaration.gesture}`,
-            operation: "timeline.adjust",
-            gesture: declaration.gesture,
-            enabled: true,
-            coordinate: "semantic-anchor",
-            ...(target.moveEffect === undefined ? {} : { moveEffect: target.moveEffect }),
-            snapTo: ["semantic-anchor"],
-            semantic: {
-              kind: "selection",
-              id: selection.id,
-              startAnchorId: selection.startAnchorId,
-              endAnchorId: selection.endAnchorId,
-            },
-          });
-        } else {
-          const moment = semantic?.moments.find((candidate) => candidate.id === id);
-          if (moment === undefined) {
-            unavailable = `Moment ${id} 没有出现在当前语义 Candidate 中。`;
-            continue;
-          }
-          handles.push({
-            id: `timeline.adjust:${declaration.gesture}`,
-            operation: "timeline.adjust",
-            gesture: declaration.gesture,
-            enabled: true,
-            coordinate: "semantic-anchor",
-            ...(target.moveEffect === undefined ? {} : { moveEffect: target.moveEffect }),
-            snapTo: ["semantic-anchor"],
-            semantic: { kind: "moment", id: moment.id, anchorId: moment.anchorId },
-          });
-        }
-        break;
-      }
-      if (!matches(target.when)) continue;
-      relevant = true;
-      if (target.kind === "disabled") {
-        handles.push(disabled(declaration.gesture, target.reason));
-        break;
-      }
-      const resolved = target.parameters.map(({ role, parameter }) => ({ role, parameter: byName.get(parameter) }));
-      if (resolved.some((item) => !absolute(item.parameter))) {
-        unavailable = `Companion 声明的源码参数不可用：${target.parameters.map((item) => item.parameter).join(", ")}。`;
+  if (temporal === undefined) return [];
+  const projection = temporal.projection;
+
+  const semanticTarget = (endpoints: readonly StudioTemporalInstantProjection[]) => {
+    const sources = endpoints.flatMap((endpoint) => endpoint.authority.kind === "semantic"
+      ? [endpoint.authority.source]
+      : []);
+    const first = sources[0];
+    if (first === undefined
+      || first.spaceId !== semantic?.spaceId
+      || first.narrativeId !== semantic.narrativeId
+      || !sources.every((candidate) => candidate.kind === first.kind
+        && candidate.id === first.id
+        && candidate.spaceId === first.spaceId
+        && candidate.narrativeId === first.narrativeId)) return undefined;
+    if (first.kind === "selection") {
+      const selection = semantic?.selections.find((candidate) => candidate.id === first.id);
+      return selection === undefined ? undefined : {
+        kind: "selection" as const,
+        narrativeId: first.narrativeId,
+        id: selection.id,
+        startAnchorId: selection.startAnchorId,
+        endAnchorId: selection.endAnchorId,
+      };
+    }
+    if (first.kind === "moment") {
+      const moment = semantic?.moments.find((candidate) => candidate.id === first.id);
+      return moment === undefined ? undefined : {
+        kind: "moment" as const,
+        narrativeId: first.narrativeId,
+        id: moment.id,
+        anchorId: moment.anchorId,
+      };
+    }
+    return undefined;
+  };
+
+  const handle = (
+    gesture: StudioTimelineGesture,
+    affected: readonly { readonly endpoint: StudioTemporalInstantProjection; readonly role: "start" | "end" }[],
+    moveEffect?: "translate-window" | "move-start",
+  ): StudioEditHandle => {
+    const unavailable = affected.find(({ endpoint }) => endpoint.authority.kind === "fixed");
+    if (unavailable !== undefined) return disabled(gesture, "该端点由 Program 或 Segment 结构固定，不能从组件时间线反写。");
+    const projected: ({ readonly missing: string } | StudioEditSource)[] = [];
+    for (const { endpoint, role } of affected) {
+      if (endpoint.authority.kind !== "parameter") continue;
+      const binding = byName.get(endpoint.authority.binding);
+      if (!writable(binding)) {
+        projected.push({ missing: endpoint.authority.binding });
         continue;
       }
-      handles.push({
-        id: `timeline.adjust:${declaration.gesture}`,
-        operation: "timeline.adjust",
-        gesture: declaration.gesture,
-        enabled: true,
-        coordinate: "program-frame",
-        snapTo: ["frame", "semantic-anchor", "item-edge"],
-        sources: resolved.map((item) => ({ role: item.role, source: item.parameter!.source })),
+      projected.push({
+        role: endpoint.authority.relation === "direct" ? role : "duration" as const,
+        source: binding.source,
       });
-      break;
     }
-    if (relevant && handles.length === before) {
-      handles.push(disabled(declaration.gesture, unavailable ?? "Companion 声明的作者逆变换在当前实体上不可用。"));
+    const missing = projected.find((item) => "missing" in item);
+    if (missing !== undefined && "missing" in missing) {
+      return disabled(gesture, `投影参数 ${missing.missing} 在当前作者源码中不可写。`);
     }
+    const semanticEndpoints = affected.filter(({ endpoint }) => endpoint.authority.kind === "semantic").map(({ endpoint }) => endpoint);
+    const target = semanticTarget(semanticEndpoints);
+    if (semanticEndpoints.length > 0 && target === undefined) {
+      return disabled(gesture, "语义端点在当前 Candidate 中没有可写的作者身份。");
+    }
+    const sources = projected.filter((item): item is StudioEditSource => "source" in item);
+    return {
+      id: `timeline.adjust:${gesture}`,
+      operation: "timeline.adjust",
+      gesture,
+      enabled: true,
+      coordinate: target === undefined ? "program-frame" : "semantic-anchor",
+      ...(moveEffect === undefined ? {} : { moveEffect }),
+      snapTo: target === undefined ? ["frame", "semantic-anchor", "item-edge"] : ["semantic-anchor"],
+      ...(sources.length === 0 ? {} : { sources }),
+      ...(target === undefined ? {} : { semantic: target }),
+      temporal: projection,
+    };
+  };
+
+  if (projection.kind === "instant") {
+    return [handle("move", [{ endpoint: projection, role: "start" }], "move-start")];
   }
-  return handles;
+  const start = { endpoint: projection.start, role: "start" as const };
+  const end = { endpoint: projection.end, role: "end" as const };
+  const move = projection.end.authority.kind === "parameter" && projection.end.authority.relation === "after-start"
+    ? [start]
+    : projection.start.authority.kind === "parameter" && projection.start.authority.relation === "before-end"
+      ? [end]
+      : [start, end];
+  const trimStart = projection.start.authority.kind === "parameter" && projection.start.authority.relation === "before-end"
+    ? [start]
+    : projection.end.authority.kind === "parameter" && projection.end.authority.relation === "after-start"
+      ? [start, end]
+      : [start];
+  const trimEnd = projection.end.authority.kind === "parameter" && projection.end.authority.relation === "after-start"
+    ? [end]
+    : projection.start.authority.kind === "parameter" && projection.start.authority.relation === "before-end"
+      ? [start, end]
+      : [end];
+  return [
+    handle("move", move, "translate-window"),
+    handle("trim-start", trimStart),
+    handle("trim-end", trimEnd),
+  ];
 }

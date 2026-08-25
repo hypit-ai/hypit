@@ -59,8 +59,8 @@ export type StudioTrackBinding = {
   /** Visual/audio facets from one authored element share this identity. */
   readonly groupId: string;
   readonly icon: StudioIcon;
-  /** Stable Studio-local adapter id; fallback adapters remain explicit too. */
-  readonly adapter: string;
+  /** Stable Studio-local Track Companion id; fallbacks remain explicit too. */
+  readonly companion: string;
   /** Studio-local partition key for an attached projection. */
   readonly attachmentId?: string;
   readonly lane: StudioLaneDescription;
@@ -125,7 +125,8 @@ export type Track = {
 };
 
 export type ScriptMap = {
-  readonly recordId: string;
+  readonly companion: string;
+  readonly narrativeId: string;
   readonly sourcePath: string;
   readonly range: Range;
   readonly content: Range;
@@ -279,18 +280,19 @@ export type StudioMutation =
       readonly gesture: StudioTimelineGesture;
       readonly target:
         | {
-            readonly kind: "selection";
-            readonly startAnchorId: string;
-            readonly endAnchorId: string;
-          }
-        | {
-            readonly kind: "moment";
-            readonly anchorId: string;
+            readonly kind: "instant";
+            readonly frame: number;
+            readonly semantic?:
+              | { readonly kind: "selection"; readonly startAnchorId: string; readonly endAnchorId: string }
+              | { readonly kind: "moment"; readonly anchorId: string };
           }
         | {
             readonly kind: "window";
             readonly startFrame: number;
             readonly endFrameExclusive: number;
+            readonly semantic?:
+              | { readonly kind: "selection"; readonly startAnchorId: string; readonly endAnchorId: string }
+              | { readonly kind: "moment"; readonly anchorId: string };
           };
     }
   | {

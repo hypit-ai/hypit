@@ -1,7 +1,8 @@
-import { depthStackMarkupSurfaces } from "@hypit/deck-track";
+import { depthStackMarkupSurfaces, depthStackModuleRef } from "@hypit/deck-track";
 import type { DepthStackProgram } from "@hypit/deck-track";
-import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft, StudioInspectorFieldDeclaration } from "@hypit/studio-adapter";
-import { projectedPointTimelineEdits, requiredSurfaceValue, temporalLineageFor } from "@hypit/studio-adapter";
+import { compositionTypes } from "@hypit/composition";
+import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioEntityDraft, StudioInspectorFieldDeclaration } from "@hypit/studio-adapter";
+import { requiredSurfaceValue, temporalLineageFor, temporalSemanticSource } from "@hypit/studio-adapter";
 
 const deckProperties = (depthStackMarkupSurfaces
   .find((surface) => surface.name === "track")?.vocabulary.attributes
@@ -75,7 +76,7 @@ function cardTitle(card: DepthStackProgram["cards"][number]): string {
   return text || card.id;
 }
 
-function projectDeck(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectDeck(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const program = requiredSurfaceValue(context, "program") as DepthStackProgram;
   if (context.placement === undefined) return context.generic();
   const children = new Map(context.placement.children.flatMap((child) =>
@@ -83,7 +84,7 @@ function projectDeck(context: StudioAdapterContext): readonly StudioEntityDraft[
   return program.cards.map((card, index): StudioEntityDraft => {
     const child = children.get(card.id);
     const temporal = temporalLineageFor(context, card.id, "activation");
-    const markerId = temporal?.source.id;
+    const markerId = temporalSemanticSource(temporal)?.id;
     const endFrameExclusive = program.cards[index + 1]?.activationFrame ?? program.terminalFrame;
     const renders = context.spans.filter((span) => span.id === card.id || span.subjectId === card.id);
     const render = renders[0];
@@ -106,12 +107,11 @@ function projectDeck(context: StudioAdapterContext): readonly StudioEntityDraft[
   });
 }
 
-export const deckTrackStudioAdapters: readonly StudioAdapter[] = [
+export const deckTrackStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "track", role: "track",
-    output: { type: "VisualTrack", surface: "track", modules: ["@hypit/deck-track"] },
+    output: { type: compositionTypes.visualTrack, surface: "track", modules: [depthStackModuleRef] },
     family: "deck", tone: "orange", icon: "layers", requiredValues: ["program"],
-    timelineEdits: projectedPointTimelineEdits(),
     bindings: [
       { name: "source" },
       { name: "extent" },

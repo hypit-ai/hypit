@@ -39,6 +39,7 @@ export type RunPlan = {
 export async function loadStudioRun(input: {
   readonly run: string;
   readonly domain: StudioDomain;
+  readonly registry: import("./studio-registry.js").StudioCompanionRegistry;
   readonly archive?: StudioArchive;
 }): Promise<RunPlan> {
   const fragments = new RunFragmentRegistry();
@@ -49,11 +50,7 @@ export async function loadStudioRun(input: {
       frontends.register(frontend);
     }
   }
-  const observer = createObserver(input.domain.surfaces, (request) => {
-    const found = input.domain.resolveModule(request.from);
-    if (found === undefined) throw new Error(`No selected Source package satisfies ${request.from}.`);
-    return found;
-  });
+  const observer = createObserver(input.domain.surfaces, input.registry);
   const compiler = new NodeRunCompiler({
     authorCompiler: input.domain.createCompiler(observer.surfaces),
     fragments,

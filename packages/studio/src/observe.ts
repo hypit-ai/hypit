@@ -11,10 +11,10 @@ import type {
   MarkupSurfaceRegistryLike, RegisteredSurface, StructuredElement, StructuredSurfaceInput, SurfaceDecodeOutput,
 } from "@hypit/markup";
 import type { ModuleRef } from "@hypit/protocol";
-import { parseScript } from "@hypit/script";
-import type { StudioObservedValue, StudioPlacement } from "@hypit/studio-adapter";
+import type { StudioObservedValue, StudioPlacement, StudioScriptSourceMap } from "@hypit/studio-adapter";
 
 import type { Range } from "./shared.js";
+import type { StudioCompanionRegistry } from "./studio-registry.js";
 
 export type ObservedValue = StudioObservedValue;
 
@@ -24,7 +24,7 @@ export type Placement = StudioPlacement;
 export type Observations = {
   readonly placements: readonly Placement[];
   /** Whatever the Surfaces mapped back onto the Source, such as a Script's markers. */
-  readonly sourceMaps: readonly Record<string, unknown>[];
+  readonly sourceMaps: readonly StudioScriptSourceMap[];
 };
 
 export type Observer = {
@@ -68,10 +68,10 @@ function referenceAttributes(element: StructuredElement): Record<string, string>
 
 export function createObserver(
   surfaces: MarkupSurfaceRegistryLike,
-  resolveModule: (request: { readonly from: string }) => ModuleRef,
+  registry: StudioCompanionRegistry,
 ): Observer {
   const placements: Placement[] = [];
-  const sourceMaps: Record<string, unknown>[] = [];
+  const sourceMaps: StudioScriptSourceMap[] = [];
 
   // A Frontend may reach a Surface by name or by walking a module's whole list,
   // so both ways in are wrapped: an unwatched Surface decodes silently and the
@@ -86,7 +86,15 @@ export function createObserver(
           ...found,
           async handler(input: RawInput) {
             const output = await raw(input);
-            harvestScript(input, sourceMaps);
+            const nextOffset = typeof output === "object" && output !== null
+              && Number.isInteger((output as { readonly nextOffset?: unknown }).nextOffset)
+              ? (output as { readonly nextOffset: number }).nextOffset
+              : undefined;
+            const sourceMap = registry.observeScript(module, found.surface, {
+              ...input,
+              ...(nextOffset === undefined ? {} : { nextOffset }),
+            });
+            if (sourceMap !== undefined) sourceMaps.push(sourceMap);
             return output;
           },
         } as RegisteredSurface;
@@ -192,51 +200,3 @@ type RawInput = {
   readonly contentStart: number;
   readonly attributes: Readonly<Record<string, unknown>>;
 };
-
-/**
- * Where a Script wrote its markers.
- *
- * The compiler carries no Source map, and a Script is a raw Surface that parses
- * its own body, so the same parser is asked again for the one thing the compile
- * discards: the offsets. Nothing is decoded here that the package does not
- * decode itself.
- */
-function harvestScript(input: RawInput, into: Record<string, unknown>[]): void {
-  if (input.tag.split(":").at(-1) !== "script") return;
-  const id = input.attributes.id;
-  if (typeof id !== "string") return;
-  const closing = `</${input.tag}>`;
-  const end = input.source.indexOf(closing, input.contentStart);
-  if (end < 0) return;
-  try {
-    const parsed = parseScript(
-      input.sourceName,
-      input.source.slice(input.contentStart, end),
-      input.contentStart,
-    );
-    into.push({
-      format: "hypit.script-source-map@1",
-      record: id,
-      sourcePath: input.sourceName,
-      range: { start: input.openingStart, end: end + closing.length },
-      content: { start: input.contentStart, end },
-      segments: parsed.segments.map((segment) => ({ id: segment.id, range: segment.range })),
-      selections: parsed.selections.map((selection) => ({
-        id: selection.id,
-        startAnchorId: selection.startAnchorId,
-        endAnchorId: selection.endAnchorId,
-        open: selection.open.range,
-        close: selection.close.range,
-      })),
-      moments: parsed.moments.map((moment) => ({
-        id: moment.id,
-        anchorId: moment.anchorId,
-        range: moment.range,
-      })),
-      tokens: parsed.tokens.map((token) => ({ id: token.id, range: token.range })),
-    });
-  } catch {
-    // A Script the parser refuses is a Source that will not compile either, and
-    // the compile is what should report it.
-  }
-}

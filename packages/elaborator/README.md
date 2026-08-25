@@ -30,6 +30,13 @@ edges remain covered. Every source asset actually requested during decode is als
 author-written locator and exact content-addressed `BlobRef`; raw bytes remain a Host transfer
 concern and never enter the parser-independent AuthorModule or Core BuildState.
 
+The same hygienic pass emits an ephemeral `hypit.author-provenance@1` sidecar. A Frontend may retain
+the structural ranges of author elements and inputs; Elaborator qualifies their Record, component,
+output and endpoint identities together with the graph. This is a compiler result, not a Source
+file, lock, digest inventory or editor database. It carries no domain or Studio presentation and
+lets any diagnostic/editor join a graph value back to the exact author endpoint without matching a
+local name after compilation.
+
 The orchestration ABI is asynchronous even when a local Text/SVS implementation is synchronous.
 This lets a browser, sandbox or remote repository provide SourceUnits without changing the
 compilation contract. The Host resolver is the authority for path canonicalization, workspace

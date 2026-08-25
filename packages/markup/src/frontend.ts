@@ -6,7 +6,9 @@ import type {
 } from "@hypit/protocol";
 import type {
   AuthorComponent,
+  AuthorElementProvenanceDraft,
   AuthorSourceExport,
+  AuthorSourceIdentity,
   AuthorValueRef,
   GraphFragment,
 } from "@hypit/elaborator";
@@ -32,6 +34,7 @@ import type {
   MarkupAuthorFrontend,
   MarkupAuthorFrontendOptions,
   MarkupImportRequest,
+  StructuredElement,
 } from "./types.js";
 export const markupAuthorFrontendId = "@hypit/markup@1";
 
@@ -174,6 +177,49 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
   const recordIds = new Set<string>();
   const componentIds = new Set<string>();
   const privateBindings = new Set<string>();
+  const identities: AuthorSourceIdentity[] = [];
+  const provenance: AuthorElementProvenanceDraft[] = [];
+  const sameRange = (
+    left: { readonly start: number; readonly end: number },
+    right: { readonly start: number; readonly end: number },
+  ): boolean => left.start === right.start && left.end === right.end;
+  const resolvedReference = (path: string): SurfaceResolvedReference | undefined => {
+    const imported = importedReferences.get(path);
+    if (imported !== undefined) return imported;
+    const record = recordsById.get(path);
+    if (record !== undefined) {
+      return { path, ref: { kind: "record", id: record.id }, type: record.type, record };
+    }
+    return componentReferences.get(path);
+  };
+  const retainElementProvenance = (element: StructuredElement, output: SurfaceDecodeOutput): void => {
+    const exactComponents = output.components.filter((draft) => sameRange(draft.range, element.range));
+    provenance.push({
+      range: { ...element.range },
+      records: output.records.filter((draft) => sameRange(draft.range, element.range)).map((draft) => draft.id),
+      components: exactComponents.map((draft) => draft.id),
+      outputs: exactComponents.flatMap((draft) => Object.entries(draft.outputs).map(([name, id]) => ({
+        component: draft.id,
+        name,
+        id,
+      }))),
+      inputs: Object.entries(element.attributes).flatMap(([name, value]): readonly import("@hypit/elaborator").AuthorInputProvenanceDraft[] => {
+        const range = element.attributeValueRanges?.[name];
+        if (range === undefined) return [];
+        if (typeof value === "string") return [{ name, range: { ...range }, kind: "literal" as const }];
+        const found = resolvedReference(value.path);
+        return [{
+          name,
+          range: { ...range },
+          kind: "reference" as const,
+          ...(found === undefined ? {} : { ref: found.ref }),
+        }];
+      }),
+    });
+    for (const child of element.children) {
+      if (child.kind === "element") retainElementProvenance(child, output);
+    }
+  };
   let cursor = discovery.bodyStart;
   let closed = false;
   while (cursor < source.text.length) {
@@ -194,6 +240,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
     if (!bound) fail(source, "MARKUP_UNKNOWN_SURFACE", `No imported module declares <${opening.name}>.`, cursor);
     const registered = bound.surface;
     let output: SurfaceDecodeOutput;
+    let structuredElement: StructuredElement | undefined;
     if (registered.mode === "raw") {
       if (opening.selfClosing) fail(source, "MARKUP_RAW_SELF_CLOSING", `Raw Surface <${opening.name}> cannot be self-closing.`, cursor);
       const rawOutput = await (registered.handler as RawSurfaceHandler)({
@@ -217,6 +264,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
       output = rawOutput;
     } else {
       const parsed = parseStructuredElement(source, cursor);
+      structuredElement = parsed.element;
       output = await (registered.handler as StructuredSurfaceHandler)({
         sourceName: source.name,
         element: parsed.element,
@@ -275,6 +323,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
       }
       for (const name of generated) if (!published.has(name)) privateBindings.add(name);
     }
+    identities.push(...(output.identities ?? []));
     for (const draft of output.records) {
       if (
         !Number.isInteger(draft.range.start)
@@ -368,6 +417,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
       for (const component of waitingComponents.get(fragment.id) ?? []) indexComponent(component, fragment);
       waitingComponents.delete(fragment.id);
     }
+    if (structuredElement !== undefined) retainElementProvenance(structuredElement, output);
   }
   if (!closed) {
     fail(source, "MARKUP_ROOT_UNCLOSED", "Document is missing </svml>.", source.text.length);
@@ -421,6 +471,8 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
     components: resolvedComponents,
     fragments: [...fragments.values()].sort((left, right) => left.id.localeCompare(right.id)),
     exports: exports.sort((left, right) => left.name.localeCompare(right.name)),
+    identities,
+    provenance,
   };
 }
 
@@ -458,6 +510,8 @@ export function createMarkupAuthorFrontend(options: MarkupAuthorFrontendOptions)
         components: result.components,
         fragments: result.fragments,
         exports: result.exports,
+        identities: result.identities,
+        provenance: result.provenance,
       };
     },
   };

@@ -1,7 +1,8 @@
 import type { HostFacet } from "@hypit/host";
-import type { CanonicalValue, ValueSchema } from "@hypit/protocol";
+import { sameType } from "@hypit/protocol";
+import type { CanonicalValue, ModuleRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
-export const studioAdapterHostAbi = "hypit.studio-adapter@1";
+export const studioCompanionHostAbi = "hypit.studio-adapter@1";
 
 /** UTF-16 offsets into the exact author source. */
 export type Range = { readonly start: number; readonly end: number };
@@ -35,25 +36,47 @@ export type StudioTimelinePresentation = {
 };
 
 export type StudioTemporalSource = {
-  readonly kind: "program" | "selection" | "segment" | "moment" | "parent-schedule";
-  readonly id?: string;
+  readonly spaceId: string;
+  readonly narrativeId: string;
+  readonly kind: "program" | "selection" | "segment" | "moment";
+  readonly id: string;
 };
 
-export type StudioTemporalPointProjection = {
-  readonly kind: "point";
+export type StudioTemporalAuthority =
+  | {
+      readonly kind: "semantic";
+      readonly source: StudioTemporalSource;
+      readonly boundary: "start" | "end" | "cue";
+    }
+  | {
+      readonly kind: "parameter";
+      readonly binding: string;
+      readonly relation: "direct" | "after-start" | "before-end";
+    }
+  | { readonly kind: "fixed" };
+
+export type StudioTemporalInstantProjection = {
+  readonly kind: "instant";
   readonly expression: string;
+  readonly reference:
+    | "program.start" | "program.end"
+    | "selection.start" | "selection.end"
+    | "segment.start" | "segment.end"
+    | "moment.cue" | "absolute";
   readonly frame: number;
+  readonly source: StudioTemporalSource;
+  readonly authority: StudioTemporalAuthority;
 };
 
 export type StudioTemporalWindowProjection = {
   readonly kind: "window";
-  readonly startExpression: string;
-  readonly endExpression: string;
+  readonly start: StudioTemporalInstantProjection;
+  readonly end: StudioTemporalInstantProjection;
   readonly startFrame: number;
   readonly endFrameExclusive: number;
 };
 
-export type StudioTemporalProjection = StudioTemporalPointProjection | StudioTemporalWindowProjection;
+export type StudioTemporalProjection = StudioTemporalInstantProjection | StudioTemporalWindowProjection;
 
 export type StudioTemporalPhase = {
   readonly id: string;
@@ -64,8 +87,7 @@ export type StudioTemporalPhase = {
 };
 
 export type StudioTemporalLineage = {
-  readonly source: StudioTemporalSource;
-  readonly projection?: StudioTemporalProjection;
+  readonly projection: StudioTemporalProjection;
   readonly phases: readonly StudioTemporalPhase[];
 };
 
@@ -80,21 +102,24 @@ export type StudioTemporalConsumer = {
   readonly step: string;
   readonly producer: { readonly module: { readonly name: string; readonly version: string }; readonly name: string };
   readonly input: string;
+  /** Projection plumbing is classified by Studio's graph reader, never by a Companion name guess. */
+  readonly role: "projection" | "domain";
   readonly inputs: readonly StudioTemporalConsumerInput[];
 };
 
-/** One executed Point/Window and the graph edges that consumed that exact record. */
+/** One executed Instant/Window and the graph edges that consumed that exact record. */
 export type StudioTemporalBinding = {
   readonly record: string;
-  readonly specRecord?: string;
-  readonly specId?: string;
+  readonly subjectId: string;
   readonly id: string;
-  readonly source: StudioTemporalSource;
   readonly projection: StudioTemporalProjection;
   readonly consumers: readonly StudioTemporalConsumer[];
 };
 
-export type StudioParameterControl = "text" | "number" | "boolean" | "select" | "color" | "list" | "record";
+export const studioParameterControls = [
+  "text", "number", "boolean", "select", "color", "list", "record",
+] as const;
+export type StudioParameterControl = typeof studioParameterControls[number];
 export type StudioParameterLanguage = "svml" | "svs" | "svrun";
 
 /** A real author endpoint. Its existence never implies Inspector visibility. */
@@ -110,6 +135,8 @@ export type StudioSourceBinding = {
   readonly language: StudioParameterLanguage;
   readonly writable: boolean;
   readonly source: {
+    /** Exact compilation-local author endpoint when the Frontend supplied one. */
+    readonly endpoint?: string;
     readonly path: string;
     readonly range: Range;
     readonly preimage: string;
@@ -157,7 +184,7 @@ export type StudioInspectorField = Omit<StudioInspectorFieldDeclaration, "contro
   readonly source: StudioSourceBinding["source"];
 };
 
-/** Adapter-owned source allowlist. It contains no editor presentation. */
+/** Companion-owned source allowlist. It contains no editor presentation. */
 export type StudioSourceBindingDeclaration = {
   readonly name: string;
   readonly writable?: boolean;
@@ -212,12 +239,14 @@ export type StudioEditSource = {
 export type StudioSemanticEditTarget =
   | {
       readonly kind: "selection";
+      readonly narrativeId: string;
       readonly id: string;
       readonly startAnchorId: string;
       readonly endAnchorId: string;
     }
   | {
       readonly kind: "moment";
+      readonly narrativeId: string;
       readonly id: string;
       readonly anchorId: string;
     };
@@ -237,42 +266,9 @@ export type StudioEditHandle = {
   readonly sources?: readonly StudioEditSource[];
   /** Shared Script identity adjusted by this rectangle; every consumer follows it. */
   readonly semantic?: StudioSemanticEditTarget;
+  /** Exact endpoint authority used to validate and execute this inverse. */
+  readonly temporal?: StudioTemporalProjection;
   readonly disabledReason?: string;
-};
-
-export type StudioTimelineEditParameter = {
-  readonly role: Extract<StudioEditSourceRole, "start" | "end" | "duration">;
-  /** Exact Companion-declared parameter vocabulary name. */
-  readonly parameter: string;
-};
-
-export type StudioTimelineEditTargetDeclaration =
-  | {
-      readonly kind: "semantic-source";
-      readonly source: "selection" | "moment";
-      readonly moveEffect?: "translate-window" | "move-start";
-    }
-  | {
-      readonly kind: "source-parameters";
-      readonly when: {
-        readonly source: StudioTemporalSource["kind"];
-        readonly projection?: StudioTemporalProjection["kind"];
-      };
-      readonly parameters: readonly StudioTimelineEditParameter[];
-    }
-  | {
-      readonly kind: "disabled";
-      readonly when: {
-        readonly source: StudioTemporalSource["kind"];
-        readonly projection?: StudioTemporalProjection["kind"];
-      };
-      readonly reason: string;
-    };
-
-/** Companion-owned inverse choices for one Studio timeline gesture. */
-export type StudioTimelineEditDeclaration = {
-  readonly gesture: StudioTimelineGesture;
-  readonly targets: readonly StudioTimelineEditTargetDeclaration[];
 };
 
 /** A source descriptor; Companion packages never depend on Studio's HTTP routes. */
@@ -329,9 +325,9 @@ export type StudioCandidateProvenance = {
 
 export type StudioSemanticAnchor = {
   readonly id: string;
-  readonly kind: "segment-start" | "segment-end" | "token-start" | "token-end";
+  readonly kind: "program-start" | "segment-start" | "segment-end" | "token-start" | "token-end" | "program-end";
   readonly frame: number;
-  readonly segmentId: string;
+  readonly segmentId?: string;
   readonly tokenId?: string;
 };
 
@@ -352,6 +348,8 @@ export type StudioSemanticToken = {
 };
 
 export type StudioSemanticTimeline = {
+  readonly spaceId: string;
+  readonly narrativeId: string;
   readonly presentation: {
     readonly family: StudioTrackFamily;
     readonly tone: StudioTimelineTone;
@@ -384,6 +382,9 @@ export type StudioObservedValue = {
 };
 
 export type StudioPlacementChild = {
+  /** Exact compilation-local author element identity from AuthorProvenance. */
+  readonly authorElement?: string;
+  readonly authorEndpoints?: Readonly<Record<string, string>>;
   readonly sourcePath: string;
   readonly tag: string;
   readonly id?: string;
@@ -392,11 +393,18 @@ export type StudioPlacementChild = {
   readonly attributeValueRanges: Readonly<Record<string, Range>>;
   readonly references: readonly string[];
   readonly referenceAttributes: Readonly<Record<string, string>>;
+  /** Resolved graph refs keyed by author input; raw written paths remain above. */
+  readonly resolvedReferenceAttributes?: Readonly<Record<string, string>>;
   readonly referenceTypes: Readonly<Record<string, string>>;
   readonly values: readonly StudioObservedValue[];
+  readonly records?: readonly string[];
+  readonly outputs?: readonly string[];
 };
 
 export type StudioPlacement = {
+  /** Exact compilation-local author element identity from AuthorProvenance. */
+  readonly authorElement?: string;
+  readonly authorEndpoints?: Readonly<Record<string, string>>;
   readonly sourcePath: string;
   readonly tag: string;
   readonly module: { readonly name: string; readonly version: string };
@@ -411,6 +419,8 @@ export type StudioPlacement = {
   readonly attributes: Readonly<Record<string, string>>;
   readonly attributeValueRanges: Readonly<Record<string, Range>>;
   readonly referenceAttributes: Readonly<Record<string, string>>;
+  /** Resolved graph refs keyed by author input; raw written paths remain above. */
+  readonly resolvedReferenceAttributes?: Readonly<Record<string, string>>;
   readonly referenceTypes: Readonly<Record<string, string>>;
   readonly references: readonly string[];
 };
@@ -418,29 +428,43 @@ export type StudioPlacement = {
 export type StudioTrackTrace = {
   readonly placement?: string;
   readonly surface?: string;
-  readonly module?: string;
+  readonly module?: ModuleRef;
   readonly authoredId?: string;
-  readonly outputPorts: readonly { readonly name: string; readonly ref: string; readonly type?: string }[];
-  readonly references: readonly { readonly name: string; readonly ref: string; readonly type: string }[];
+  readonly outputPorts: readonly {
+    readonly name: string;
+    readonly ref: string;
+    readonly type?: string;
+    readonly typeRef?: TypeRef;
+  }[];
+  readonly references: readonly {
+    /** Exact authored input attribute when this is a direct Surface reference. */
+    readonly input?: string;
+    readonly name: string;
+    readonly ref: string;
+    readonly type: string;
+    readonly typeRef: TypeRef;
+  }[];
 };
 
-/** Stable data view supplied to adapters; no Studio implementation object crosses the ABI. */
+/** Stable data view supplied to Companions; no Studio implementation object crosses the ABI. */
 export type StudioResolvedTrack = {
   readonly name: string;
+  /** Short display name retained for diagnostics and UI only. */
   readonly type: string;
+  /** Exact protocol identity used for every Companion decision. */
+  readonly typeRef: TypeRef;
   readonly outputRef: string;
   readonly candidateId?: string;
   readonly candidateOrigin: "run" | "source" | "none";
-  readonly role: StudioProjectionRole;
+  readonly role: StudioViewRole;
   readonly trace: StudioTrackTrace;
   readonly surfacePreview?: StudioMaterialPreview;
   readonly value: unknown;
 };
 
-export type StudioProjectionRole =
-  | "semantic-take"
+export type StudioViewRole =
   | "semantic-track"
-  | "realization"
+  | "supporting-value"
   | "track";
 
 export type StudioSpan = {
@@ -469,11 +493,9 @@ export type StudioEntityDraft = {
   readonly temporal?: StudioTemporalLineage;
   /** Studio-local lane partition; omitted means the root lane. */
   readonly lane?: string;
-  /** Optional per-entity override of the owning lane's declared inverses. */
-  readonly timelineEdits?: readonly StudioTimelineEditDeclaration[];
 };
 
-export type StudioAdapterContext = {
+export type StudioTrackCompanionContext = {
   readonly track: StudioResolvedTrack;
   readonly placement?: StudioPlacement;
   /** Package-owned Surface preview resolved by Studio from the selected domain. */
@@ -486,14 +508,14 @@ export type StudioAdapterContext = {
   readonly generic: () => readonly StudioEntityDraft[];
 };
 
-export type StudioAdapter = {
+export type StudioTrackCompanion = {
   readonly id: string;
-  readonly role: StudioProjectionRole;
+  readonly role: StudioViewRole;
   readonly output: {
-    readonly type: string;
+    readonly type: TypeRef;
     readonly surface?: string;
-    readonly modules?: readonly string[];
-    readonly siblingType?: string;
+    readonly modules?: readonly ModuleRef[];
+    readonly siblingType?: TypeRef;
   };
   readonly family?: StudioTrackFamily;
   /** Visual token selected from Studio's finite palette. */
@@ -510,51 +532,155 @@ export type StudioAdapter = {
   readonly bindings?: readonly StudioSourceBindingDeclaration[];
   /** Visible field table. Undeclared bindings remain invisible. */
   readonly inspector?: readonly StudioInspectorFieldDeclaration[];
-  /** Exact inverse choices this adapter understands for its entities. */
-  readonly timelineEdits?: readonly StudioTimelineEditDeclaration[];
-  readonly project?: (context: StudioAdapterContext) => readonly StudioEntityDraft[];
+  readonly project?: (context: StudioTrackCompanionContext) => readonly StudioEntityDraft[];
 };
 
-export type StudioAdapterContribution = {
-  readonly format: "hypit.studio-adapters@1";
-  readonly adapters: readonly StudioAdapter[];
+export type StudioCompanionContribution = {
+  readonly format: "hypit.studio-companions@1";
+  readonly tracks: readonly StudioTrackCompanion[];
+  readonly films?: readonly StudioFilmCompanion[];
+  readonly scripts?: readonly StudioScriptCompanion[];
 };
 
-export type StudioAdapterHostFacet = HostFacet & {
-  readonly abi: typeof studioAdapterHostAbi;
-  readonly implementation: StudioAdapterContribution;
+/** Declarative Film boundary. Studio follows only the references named here. */
+export type StudioFilmCompanion = {
+  readonly id: string;
+  readonly match: {
+    readonly module: ModuleRef;
+    readonly surface: string;
+    readonly outputType: TypeRef;
+  };
+  readonly semantic: { readonly attribute: string; readonly type: TypeRef };
+  readonly tracks: {
+    readonly childSurface: string;
+    readonly sourceAttribute: string;
+    readonly types: readonly TypeRef[];
+  };
 };
 
-export function createStudioAdapterHostFacet(adapters: readonly StudioAdapter[]): StudioAdapterHostFacet {
+export type StudioScriptSourceMap = {
+  readonly companion: string;
+  readonly narrativeId: string;
+  readonly sourcePath: string;
+  readonly range: Range;
+  readonly content: Range;
+  readonly segments: readonly { readonly id: string; readonly range: Range }[];
+  readonly selections: readonly {
+    readonly id: string;
+    readonly startAnchorId: string;
+    readonly endAnchorId: string;
+    readonly open: Range;
+    readonly close: Range;
+  }[];
+  readonly moments: readonly { readonly id: string; readonly anchorId: string; readonly range: Range }[];
+  readonly tokens: readonly { readonly id: string; readonly range: Range }[];
+};
+
+export type StudioScriptAdjustment =
+  | { readonly kind: "selection"; readonly id: string; readonly startAnchorId: string; readonly endAnchorId: string }
+  | { readonly kind: "moment"; readonly id: string; readonly anchorId: string };
+
+/** Script grammar companion. It owns source observation and semantic inverse edits. */
+export type StudioScriptCompanion = {
+  readonly id: string;
+  readonly match: { readonly module: ModuleRef; readonly surface: string };
+  readonly observe: (input: {
+    readonly sourceName: string;
+    readonly source: string;
+    readonly tag: string;
+    readonly openingStart: number;
+    readonly contentStart: number;
+    /** Authoritative end returned by the raw Surface after it parsed its own grammar. */
+    readonly nextOffset?: number;
+    readonly attributes: Readonly<Record<string, unknown>>;
+  }) => Omit<StudioScriptSourceMap, "companion"> | undefined;
+  readonly adjust: (input: {
+    readonly sourceName: string;
+    readonly source: string;
+    readonly adjustment: StudioScriptAdjustment;
+  }) => string;
+};
+
+export type StudioCompanionHostFacet = HostFacet & {
+  readonly abi: typeof studioCompanionHostAbi;
+  readonly implementation: StudioCompanionContribution;
+};
+
+export function createStudioTrackCompanionHostFacet(tracks: readonly StudioTrackCompanion[]): StudioCompanionHostFacet {
   return {
-    abi: studioAdapterHostAbi,
-    implementation: { format: "hypit.studio-adapters@1", adapters },
+    abi: studioCompanionHostAbi,
+    implementation: { format: "hypit.studio-companions@1", tracks },
   };
 }
 
-/**
- * Qualify package-local adapter names with identity established by the package loader.
- * The executable facet cannot choose or impersonate its physical owner.
- */
-export function studioAdaptersFromPackage(
+export function createStudioCompanionHostFacet(input: {
+  readonly tracks?: readonly StudioTrackCompanion[];
+  readonly films?: readonly StudioFilmCompanion[];
+  readonly scripts?: readonly StudioScriptCompanion[];
+}): StudioCompanionHostFacet {
+  return {
+    abi: studioCompanionHostAbi,
+    implementation: {
+      format: "hypit.studio-companions@1",
+      tracks: input.tracks ?? [],
+      ...(input.films === undefined ? {} : { films: input.films }),
+      ...(input.scripts === undefined ? {} : { scripts: input.scripts }),
+    },
+  };
+}
+
+export type StudioPackageContribution = {
+  readonly tracks: readonly StudioTrackCompanion[];
+  readonly films: readonly StudioFilmCompanion[];
+  readonly scripts: readonly StudioScriptCompanion[];
+};
+
+function qualify(owner: string, local: string, subject: string): string {
+  if (local.length === 0 || local.includes("#")) {
+    throw new Error(`${subject} ids are package-local names without '#': ${owner}#${local}`);
+  }
+  return `${owner}#${local}`;
+}
+
+export function studioContributionFromPackage(
   owner: string,
   facets: readonly HostFacet[],
-): readonly StudioAdapter[] {
-  if (owner.length === 0 || owner.includes("#")) throw new Error(`Invalid Studio adapter package identity: ${owner}`);
-  return facets.flatMap((facet) => {
-    if (facet.abi !== studioAdapterHostAbi) return [];
-    const contribution = facet.implementation as Partial<StudioAdapterContribution>;
-    if (contribution.format !== "hypit.studio-adapters@1" || !Array.isArray(contribution.adapters)) {
-      throw new Error(`Studio adapter facet from ${owner} has an invalid contribution`);
+): StudioPackageContribution {
+  if (owner.length === 0 || owner.includes("#")) throw new Error(`Invalid Studio companion package identity: ${owner}`);
+  const tracks: StudioTrackCompanion[] = [];
+  const films: StudioFilmCompanion[] = [];
+  const scripts: StudioScriptCompanion[] = [];
+  for (const facet of facets) {
+    if (facet.abi !== studioCompanionHostAbi) continue;
+    const contribution = facet.implementation as Partial<StudioCompanionContribution>;
+    if (contribution.format !== "hypit.studio-companions@1" || !Array.isArray(contribution.tracks)) {
+      throw new Error(`Studio companion facet from ${owner} has an invalid contribution`);
     }
-    return contribution.adapters.map((adapter) => {
-      if (adapter.id.length === 0 || adapter.id.includes("#")) {
-        throw new Error(`Studio adapter ids are package-local names without '#': ${owner}#${adapter.id}`);
-      }
-      // The Host, not executable package code, establishes the global identity.
-      return { ...adapter, id: `${owner}#${adapter.id}` };
-    });
-  });
+    tracks.push(...contribution.tracks.map((track) => ({
+      ...track,
+      id: qualify(owner, track.id, "Studio Track companion"),
+    })));
+    films.push(...(contribution.films ?? []).map((film) => ({
+      ...film,
+      id: qualify(owner, film.id, "Studio Film companion"),
+    })));
+    scripts.push(...(contribution.scripts ?? []).map((script) => ({
+      ...script,
+      id: qualify(owner, script.id, "Studio Script companion"),
+    })));
+  }
+  return { tracks, films, scripts };
+}
+
+/**
+ * Qualify package-local Companion names with identity established by the package loader.
+ * The executable facet cannot choose or impersonate its physical owner.
+ */
+export function studioTrackCompanionsFromPackage(
+  owner: string,
+  facets: readonly HostFacet[],
+): readonly StudioTrackCompanion[] {
+  return studioContributionFromPackage(owner, facets).tracks;
 }
 
 export type StudioLaneAttachment = {
@@ -567,92 +693,35 @@ export type StudioLaneAttachment = {
   readonly lane: StudioLaneDescription;
   readonly bindings?: readonly StudioSourceBindingDeclaration[];
   readonly inspector?: readonly StudioInspectorFieldDeclaration[];
-  readonly timelineEdits?: readonly StudioTimelineEditDeclaration[];
 };
 
-/**
- * Reusable declaration for a component that consumes an externalized Window.
- * The Companion still binds the component's exact author parameter names.
- */
-export function projectedWindowTimelineEdits(input: {
-  readonly start: string;
-  readonly end: string;
-  readonly duration?: string;
-}): readonly StudioTimelineEditDeclaration[] {
-  const programWindow = { source: "program" as const };
-  const momentWindow = { source: "moment" as const };
-  return [
-    {
-      gesture: "move",
-      targets: [
-        { kind: "semantic-source", source: "selection", moveEffect: "translate-window" },
-        { kind: "semantic-source", source: "moment", moveEffect: "translate-window" },
-        {
-          kind: "source-parameters", when: programWindow,
-          parameters: [{ role: "start", parameter: input.start }, { role: "end", parameter: input.end }],
-        },
-      ],
-    },
-    {
-      gesture: "trim-start",
-      targets: [
-        { kind: "semantic-source", source: "selection" },
-        { kind: "disabled", when: momentWindow, reason: "起点由 Moment 决定；移动实体可以改 Moment，但不能单独裁起点。" },
-        {
-          kind: "source-parameters", when: programWindow,
-          parameters: [{ role: "start", parameter: input.start }],
-        },
-      ],
-    },
-    {
-      gesture: "trim-end",
-      targets: [
-        { kind: "semantic-source", source: "selection" },
-        ...(input.duration === undefined ? [{
-          kind: "disabled" as const, when: momentWindow,
-          reason: "该 Moment 消费没有声明独立的 duration 参数。",
-        }] : [{
-          kind: "source-parameters" as const, when: momentWindow,
-          parameters: [{ role: "duration" as const, parameter: input.duration }],
-        }]),
-        {
-          kind: "source-parameters", when: programWindow,
-          parameters: [{ role: "end", parameter: input.end }],
-        },
-        ...(input.duration === undefined ? [] : [{
-          kind: "source-parameters" as const, when: programWindow,
-          parameters: [{ role: "duration" as const, parameter: input.duration }],
-        }]),
-      ],
-    },
-  ];
-}
-
-/** Reusable declaration for a component entity activated by an externalized Point. */
-export function projectedPointTimelineEdits(): readonly StudioTimelineEditDeclaration[] {
-  return [{
-    gesture: "move",
-    targets: [{ kind: "semantic-source", source: "moment", moveEffect: "move-start" }],
-  }];
-}
-
-/** A Window whose only reversible author source is an external Selection. */
-export function selectionWindowTimelineEdits(): readonly StudioTimelineEditDeclaration[] {
-  return (["move", "trim-start", "trim-end"] as const).map((gesture) => ({
-    gesture,
-    targets: [{ kind: "semantic-source", source: "selection" }],
-  }));
-}
-
-export function sameSurfaceValue(context: StudioAdapterContext, port: string): unknown {
+export function sameSurfaceValue(context: StudioTrackCompanionContext, port: string): unknown {
   const ref = context.track.trace.outputPorts.find((candidate) => candidate.name === port)?.ref;
   return ref === undefined ? undefined : context.values.get(ref);
 }
 
-export function requiredSurfaceValue(context: StudioAdapterContext, port: string): unknown {
+export function requiredSurfaceValue(context: StudioTrackCompanionContext, port: string): unknown {
   const value = sameSurfaceValue(context, port);
   if (value === undefined) {
     throw new Error(`Studio Companion ${context.track.type} requires same-Surface value port ${port}`);
+  }
+  return value;
+}
+
+/** Resolve one direct authored reference by input name and exact public TypeRef. */
+export function requiredReferencedValue(
+  context: StudioTrackCompanionContext,
+  input: string,
+  type: TypeRef,
+): unknown {
+  const found = context.track.trace.references.filter((reference) =>
+    reference.input === input && sameType(reference.typeRef, type));
+  if (found.length !== 1) {
+    throw new Error(`Studio Companion ${context.track.type} requires one ${input} reference of type ${type.module.name}@${type.module.version}#${type.name}`);
+  }
+  const value = context.values.get(found[0]!.ref);
+  if (value === undefined) {
+    throw new Error(`Studio Companion ${context.track.type} cannot resolve referenced value ${found[0]!.ref}`);
   }
   return value;
 }
@@ -676,37 +745,74 @@ export function textLayer(text: string): StudioDisplayLayer {
   return { kind: "text", role: "content", text };
 }
 
-function carriesIdentity(value: unknown, id: string): boolean {
-  return value !== null && typeof value === "object"
-    && !Array.isArray(value) && (value as { readonly id?: unknown }).id === id;
-}
-
-/** Find executed projections directly consumed beside a domain value with this identity. */
+/** Find the executed projection that explicitly names this domain entity as its subject. */
 export function temporalBindingsFor(
-  context: StudioAdapterContext,
+  context: StudioTrackCompanionContext,
   subjectId: string,
   input?: string,
 ): readonly StudioTemporalBinding[] {
-  return context.temporalBindings.filter((binding) => binding.consumers.some((consumer) =>
-    (input === undefined || consumer.input === input)
-    && consumer.inputs.some((candidate) => carriesIdentity(candidate.value, subjectId))));
+  return context.temporalBindings.filter((binding) =>
+    binding.subjectId === subjectId
+    && binding.consumers.some((consumer) =>
+      consumer.role === "domain"
+      && (input === undefined || consumer.input === input)));
+}
+
+/** Find the exact authored child whose typed public value owns a projected identity. */
+export function authoredChildFor(
+  context: StudioTrackCompanionContext,
+  authoredId: string,
+  types: readonly TypeRef[],
+): StudioPlacementChild | undefined {
+  const children = context.placement?.children ?? [];
+  const explicit = children.filter((child) => child.id === authoredId);
+  const typed = children.filter((child) => child.values.some((observed) =>
+    types.some((type) => sameType(observed.type, type))
+    && observed.value !== null
+    && typeof observed.value === "object"
+    && !Array.isArray(observed.value)
+    && (observed.value as { readonly id?: unknown }).id === authoredId));
+  const found = [...new Set([...explicit, ...typed])];
+  if (found.length > 1) throw new Error(`Studio authored child identity ${authoredId} is ambiguous.`);
+  return found[0];
 }
 
 export function temporalLineageFor(
-  context: StudioAdapterContext,
+  context: StudioTrackCompanionContext,
   subjectId: string,
   input?: string,
 ): StudioTemporalLineage | undefined {
-  const found = temporalBindingsFor(context, subjectId, input)[0];
-  return found === undefined ? undefined : {
-    source: found.source,
-    projection: found.projection,
+  const found = temporalBindingsFor(context, subjectId, input);
+  if (found.length > 1) {
+    throw new Error(`Studio Temporal lineage is ambiguous for ${subjectId}${input === undefined ? "" : ` at ${input}`}.`);
+  }
+  const binding = found[0];
+  return binding === undefined ? undefined : {
+    projection: binding.projection,
     phases: [],
   };
 }
 
+/** Unique semantic author identity carried by one projection, when there is one. */
+export function temporalSemanticSource(lineage: StudioTemporalLineage | undefined): StudioTemporalSource | undefined {
+  if (lineage === undefined) return undefined;
+  const projection = lineage.projection;
+  const endpoints = projection.kind === "instant" ? [projection] : [projection.start, projection.end];
+  const semantic = endpoints.flatMap((endpoint) => endpoint.authority.kind === "semantic"
+    ? [endpoint.authority.source]
+    : []);
+  const first = semantic[0];
+  if (first === undefined) return undefined;
+  return semantic.every((candidate) => candidate.kind === first.kind
+    && candidate.id === first.id
+    && candidate.spaceId === first.spaceId
+    && candidate.narrativeId === first.narrativeId)
+    ? first
+    : undefined;
+}
+
 export function childEntities(
-  context: StudioAdapterContext,
+  context: StudioTrackCompanionContext,
   items: readonly {
     /** Exact identity of the projected domain item consumed by Temporal/renderer bindings. */
     readonly id: string;
@@ -715,15 +821,15 @@ export function childEntities(
     readonly startFrame: number;
     readonly endFrameExclusive: number;
     readonly stackOrder: number;
+    /** Exact domain Spec types that may carry an omitted Source id. */
+    readonly sourceTypes?: readonly TypeRef[];
   }[],
   entity: StudioTimelinePresentation["entity"],
   chrome: StudioTimelinePresentation["chrome"],
 ): readonly StudioEntityDraft[] {
-  const children = new Map(context.placement?.children.flatMap((child) =>
-    child.id === undefined ? [] : [[child.id, child] as const]) ?? []);
   return items.map((item) => {
     const authoredId = item.subjectId ?? item.id;
-    const child = children.get(authoredId);
+    const child = authoredChildFor(context, authoredId, item.sourceTypes ?? []);
     // Both correspondences are exact public facts: the Program item identity
     // and the renderer's declared subject. No renderer naming convention is
     // interpreted here.

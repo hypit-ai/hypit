@@ -13,6 +13,8 @@ import type {
   AuthorFrontend,
   AuthorSourceAssetRequest,
   AuthorSourceExport,
+  AuthorSourceIdentity,
+  AuthorElementProvenanceDraft,
   AuthorValueRef,
   Awaitable,
   GraphFragment,
@@ -78,6 +80,8 @@ export type SurfaceDecodeOutput = {
   readonly records: readonly SurfaceRecordDraft[];
   readonly components: readonly SurfaceComponentDraft[];
   readonly fragments: readonly GraphFragment[];
+  /** Domain-owned public identities that must be unique in the Source closure. */
+  readonly identities?: readonly AuthorSourceIdentity[];
   /**
    * Public source bindings contributed by this Surface invocation. Omit to
    * publish every generated binding; use an explicit list to keep plumbing
@@ -224,6 +228,8 @@ export type MarkupDecodeResult = {
   readonly components: readonly AuthorComponent[];
   readonly fragments: readonly GraphFragment[];
   readonly exports: readonly AuthorSourceExport[];
+  readonly identities: readonly AuthorSourceIdentity[];
+  readonly provenance: readonly AuthorElementProvenanceDraft[];
 };
 
 export type MarkupAuthorFrontendOptions = {

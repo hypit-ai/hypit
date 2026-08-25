@@ -1,8 +1,10 @@
+import { audioTrackModuleRef, audioTrackTypes } from "@hypit/audio-track";
 import type { AudioTrackProgram } from "@hypit/audio-track";
-import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft } from "@hypit/studio-adapter";
-import { artifactPreview, childEntities, previewLayer, projectedWindowTimelineEdits, requiredSurfaceValue, temporalLineageFor } from "@hypit/studio-adapter";
+import { compositionTypes } from "@hypit/composition";
+import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioEntityDraft } from "@hypit/studio-adapter";
+import { artifactPreview, childEntities, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalSemanticSource } from "@hypit/studio-adapter";
 
-function projectAudio(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectAudio(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const program = requiredSurfaceValue(context, "program") as AudioTrackProgram;
   const items = program.items.map((item) => ({
     id: item.id,
@@ -10,33 +12,31 @@ function projectAudio(context: StudioAdapterContext): readonly StudioEntityDraft
     startFrame: item.window.startFrame,
     endFrameExclusive: item.window.endFrameExclusive,
     stackOrder: Number.MIN_SAFE_INTEGER,
+    sourceTypes: [audioTrackTypes.clipSpec],
     preview: artifactPreview("audio", item.source.artifact.digest),
   }));
   return childEntities(context, items, "audio-clip", "standard").map((entity, index) => {
     const item = items[index]!;
     const temporal = temporalLineageFor(context, item.id, "window");
+    const semanticSource = temporalSemanticSource(temporal);
     return {
       ...entity,
       display: { ...entity.display, layers: [previewLayer(item.preview, "waveform")] },
-      ...(temporal?.source.kind === "program" || temporal?.source.id === undefined
+      ...(semanticSource?.id === undefined
         ? {}
-        : { markerId: temporal.source.id }),
+        : { markerId: semanticSource.id }),
       ...(temporal === undefined ? {} : { temporal }),
     };
   });
 }
 
-export const audioTrackStudioAdapters: readonly StudioAdapter[] = [
+export const audioTrackStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "track", role: "track",
-    output: { type: "AudioTrack", surface: "track", modules: ["@hypit/audio-track"] },
+    output: { type: compositionTypes.audioTrack, surface: "track", modules: [audioTrackModuleRef] },
     family: "audio", tone: "green", icon: "waveform",
-    timelineEdits: projectedWindowTimelineEdits({ start: "start", end: "end", duration: "for" }),
     bindings: [
       { name: "source" },
-      { name: "start", writable: true },
-      { name: "end", writable: true },
-      { name: "for", writable: true },
       { name: "trim-start", writable: true },
       { name: "trim-end", writable: true },
       { name: "playback", writable: true },

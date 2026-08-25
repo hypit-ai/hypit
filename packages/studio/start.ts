@@ -6,7 +6,7 @@ import { findRuntimeProfile } from "@hypit/cli";
 import { videoCliDistribution } from "@hypit/video-cli";
 
 import { openStudioArchive } from "./src/archive.js";
-import { loadStudioAdapterRegistry } from "./src/adapter-profile.js";
+import { loadStudioCompanionRegistry } from "./src/companion-profile.js";
 import { loadStudioDomain } from "./src/domain.js";
 import { loadStudioRun } from "./src/run.js";
 import { studioPlugin } from "./src/server.js";
@@ -69,7 +69,7 @@ const port = Number(values.get("port") ?? "5179");
 if (!Number.isSafeInteger(port) || port <= 0) usage("--port must be a positive integer");
 
 const distributionPackageRoot = videoCliDistribution.packageRoot ?? resolve(here, "../..");
-const registry = await loadStudioAdapterRegistry({
+const registry = await loadStudioCompanionRegistry({
   workspaceRoot,
   packageRoot,
   distributionPackageRoot,
@@ -82,6 +82,7 @@ try {
   run = await loadStudioRun({
     run: runPath,
     domain,
+    registry,
     ...(archive === undefined ? {} : { archive }),
   });
 } catch (error) {

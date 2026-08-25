@@ -8,6 +8,7 @@
   "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@hypit/speech-track": "workspace:*",
+    "@hypit/composition": "workspace:*",
     "@hypit/studio-adapter": "workspace:*"
   }
 }

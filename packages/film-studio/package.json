@@ -1,0 +1,15 @@
+{
+  "name": "@hypit/film-studio",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "hypit": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@hypit/composition": "workspace:*",
+    "@hypit/film": "workspace:*",
+    "@hypit/semantic-track": "workspace:*",
+    "@hypit/studio-adapter": "workspace:*"
+  }
+}

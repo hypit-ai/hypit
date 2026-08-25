@@ -256,7 +256,6 @@ export function createTimeline(store: Store): Timeline {
     const semantic = edit.handle.semantic;
     const anchors = state.snapshot.semantic.anchors;
     if (semantic.kind === "moment") {
-      if (edit.handle.gesture !== "move") return undefined;
       const currentIndex = anchors.findIndex((anchor) => anchor.id === semantic.anchorId);
       const anchorIndex = nearestAnchorIndex(
         nextFrame,
@@ -279,6 +278,23 @@ export function createTimeline(store: Store): Timeline {
         index > startIndex && anchor.frame > anchors[startIndex]!.frame ? [index] : []);
       nextEnd = nearestAnchorIndex(nextFrame, allowed, endIndex) ?? endIndex;
     } else if (edit.handle.gesture === "move") {
+      const instantBoundary = edit.handle.temporal?.kind === "instant"
+        && edit.handle.temporal.authority.kind === "semantic"
+        && edit.handle.temporal.authority.source.kind === "selection"
+        ? edit.handle.temporal.authority.boundary
+        : undefined;
+      if (instantBoundary === "start") {
+        const allowed = anchors.flatMap((anchor, index) =>
+          index < endIndex && anchor.frame < anchors[endIndex]!.frame ? [index] : []);
+        nextStart = nearestAnchorIndex(nextFrame, allowed, startIndex) ?? startIndex;
+        return { kind: "selection", startAnchorId: anchors[nextStart]!.id, endAnchorId: anchors[nextEnd]!.id };
+      }
+      if (instantBoundary === "end") {
+        const allowed = anchors.flatMap((anchor, index) =>
+          index > startIndex && anchor.frame > anchors[startIndex]!.frame ? [index] : []);
+        nextEnd = nearestAnchorIndex(nextFrame, allowed, endIndex) ?? endIndex;
+        return { kind: "selection", startAnchorId: anchors[nextStart]!.id, endAnchorId: anchors[nextEnd]!.id };
+      }
       const pointerIndex = edit.pointerAnchorIndex ?? startIndex;
       const deltas = anchors.flatMap((_, index) => {
         const delta = index - pointerIndex;
@@ -343,6 +359,15 @@ export function createTimeline(store: Store): Timeline {
       const nextStart = state.snapshot.semantic.anchors.find((anchor) => anchor.id === target.startAnchorId)?.frame;
       const nextEnd = state.snapshot.semantic.anchors.find((anchor) => anchor.id === target.endAnchorId)?.frame;
       if (current === undefined || nextStart === undefined || nextEnd === undefined) return undefined;
+      const instantBoundary = edit.handle.temporal?.kind === "instant"
+        && edit.handle.temporal.authority.kind === "semantic"
+        && edit.handle.temporal.authority.source.kind === "selection"
+        ? edit.handle.temporal.authority.boundary
+        : undefined;
+      if (instantBoundary === "start" || instantBoundary === "end") {
+        const frame = instantBoundary === "start" ? nextStart : nextEnd;
+        return { startFrame: frame, endFrameExclusive: frame + 1 };
+      }
       return {
         startFrame: nextStart + edit.clip.startFrame - current.startFrame,
         endFrameExclusive: nextEnd + edit.clip.endFrameExclusive - current.endFrameExclusive,
@@ -353,11 +378,17 @@ export function createTimeline(store: Store): Timeline {
       const next = state.snapshot.semantic.anchors.find((anchor) => anchor.id === target.anchorId)?.frame;
       if (current === undefined || next === undefined) return undefined;
       const delta = next - current.frame;
+      if (edit.handle.gesture === "trim-start") {
+        return { startFrame: next, endFrameExclusive: edit.clip.endFrameExclusive };
+      }
+      if (edit.handle.gesture === "trim-end") {
+        return { startFrame: edit.clip.startFrame, endFrameExclusive: next };
+      }
       return edit.handle.moveEffect === "move-start"
         ? { startFrame: edit.clip.startFrame + delta, endFrameExclusive: edit.clip.endFrameExclusive }
         : { startFrame: edit.clip.startFrame + delta, endFrameExclusive: edit.clip.endFrameExclusive + delta };
     }
-    return edit.handle.sources === undefined ? undefined : absoluteWindowTarget(edit, nextFrame);
+    return edit.handle.temporal === undefined ? undefined : absoluteWindowTarget(edit, nextFrame);
   };
   lanes.addEventListener("pointerdown", (event) => {
     pointerDownOnItem = (event.target as HTMLElement).closest(
@@ -415,19 +446,36 @@ export function createTimeline(store: Store): Timeline {
       ? rawFrameAt(event.clientX)
       : frameAt(event.clientX);
     const resolvedSemanticTarget = semanticTarget(edit, nextFrame);
-    const windowTarget = { kind: "window" as const, ...absoluteWindowTarget(edit, nextFrame) };
-    const target = resolvedSemanticTarget ?? (edit.handle.sources === undefined ? undefined : windowTarget);
-    if (target === undefined) return;
-    if (target.kind === "selection"
+    const resolvedWindow = previewWindow(edit, nextFrame);
+    if (resolvedWindow === undefined || edit.handle.temporal === undefined) return;
+    const target = edit.handle.temporal.kind === "instant"
+      ? {
+          kind: "instant" as const,
+          frame: resolvedWindow.startFrame,
+          ...(resolvedSemanticTarget === undefined ? {} : { semantic: resolvedSemanticTarget }),
+        }
+      : {
+          kind: "window" as const,
+          ...resolvedWindow,
+          ...(resolvedSemanticTarget === undefined ? {} : { semantic: resolvedSemanticTarget }),
+        };
+    if (resolvedSemanticTarget?.kind === "selection"
       && edit.handle.semantic?.kind === "selection"
-      && target.startAnchorId === edit.handle.semantic.startAnchorId
-      && target.endAnchorId === edit.handle.semantic.endAnchorId) return;
-    if (target.kind === "moment"
+      && resolvedSemanticTarget.startAnchorId === edit.handle.semantic.startAnchorId
+      && resolvedSemanticTarget.endAnchorId === edit.handle.semantic.endAnchorId
+      && (target.kind === "instant"
+        ? target.frame === edit.clip.startFrame
+        : target.startFrame === edit.clip.startFrame && target.endFrameExclusive === edit.clip.endFrameExclusive)) return;
+    if (resolvedSemanticTarget?.kind === "moment"
       && edit.handle.semantic?.kind === "moment"
-      && target.anchorId === edit.handle.semantic.anchorId) return;
-    if (target.kind === "window"
-      && target.startFrame === edit.clip.startFrame
-      && target.endFrameExclusive === edit.clip.endFrameExclusive) return;
+      && resolvedSemanticTarget.anchorId === edit.handle.semantic.anchorId
+      && (target.kind === "instant"
+        ? target.frame === edit.clip.startFrame
+        : target.startFrame === edit.clip.startFrame && target.endFrameExclusive === edit.clip.endFrameExclusive)) return;
+    if (resolvedSemanticTarget === undefined
+      && (target.kind === "instant"
+        ? target.frame === edit.clip.startFrame
+        : target.startFrame === edit.clip.startFrame && target.endFrameExclusive === edit.clip.endFrameExclusive)) return;
     element.dispatchEvent(new CustomEvent("studio:write", { detail: { state: "saving" } }));
     void applyStudioMutation({
       type: "timeline.adjust",

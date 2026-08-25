@@ -1,12 +1,13 @@
+import { sameType } from "@hypit/protocol";
 import type { BuildState, ProducerStep, StoredValue, TypedRecord } from "@hypit/protocol";
+import { temporalModuleRef, temporalTypes } from "@hypit/temporal";
 import type {
   StudioTemporalBinding,
+  StudioTemporalAuthority,
+  StudioTemporalInstantProjection,
   StudioTemporalProjection,
   StudioTemporalSource,
 } from "@hypit/studio-adapter";
-
-const TEMPORAL_MODULE = "@hypit/temporal";
-const TEMPORAL_TYPES = new Set(["TemporalPoint", "TemporalWindow"]);
 
 type PointExpression = {
   readonly ref?: string;
@@ -51,50 +52,96 @@ function expression(value: unknown): string {
 }
 
 function source(value: unknown): StudioTemporalSource | undefined {
-  const held = value as { readonly kind?: unknown; readonly id?: unknown } | undefined;
+  const held = value as {
+    readonly spaceId?: unknown;
+    readonly narrativeId?: unknown;
+    readonly kind?: unknown;
+    readonly id?: unknown;
+  } | undefined;
   if (held?.kind !== "program" && held?.kind !== "selection"
     && held?.kind !== "segment" && held?.kind !== "moment") return undefined;
+  if (typeof held.spaceId !== "string" || typeof held.narrativeId !== "string" || typeof held.id !== "string") {
+    return undefined;
+  }
   return {
+    spaceId: held.spaceId,
+    narrativeId: held.narrativeId,
     kind: held.kind,
-    ...(typeof held.id === "string" ? { id: held.id } : {}),
+    id: held.id,
+  };
+}
+
+function instant(value: unknown): StudioTemporalInstantProjection | undefined {
+  const held = value as {
+    readonly source?: unknown;
+    readonly projection?: unknown;
+    readonly authority?: {
+      readonly kind?: unknown;
+      readonly boundary?: unknown;
+      readonly binding?: unknown;
+      readonly relation?: unknown;
+    };
+    readonly frame?: unknown;
+  } | undefined;
+  if (held === undefined) return undefined;
+  const temporalSource = source(held.source);
+  if (temporalSource === undefined || !Number.isSafeInteger(held.frame)) return undefined;
+  const point = held.projection as PointExpression | undefined;
+  const reference = point?.ref;
+  if (reference !== "program.start" && reference !== "program.end"
+    && reference !== "selection.start" && reference !== "selection.end"
+    && reference !== "segment.start" && reference !== "segment.end"
+    && reference !== "moment.cue" && reference !== "absolute") return undefined;
+  const authority = held?.authority;
+  let resolvedAuthority: StudioTemporalAuthority | undefined;
+  if (authority?.kind === "semantic"
+    && (authority.boundary === "start" || authority.boundary === "end" || authority.boundary === "cue")) {
+    resolvedAuthority = { kind: "semantic", source: temporalSource, boundary: authority.boundary };
+  } else if (authority?.kind === "parameter" && typeof authority.binding === "string"
+    && (authority.relation === "direct" || authority.relation === "after-start" || authority.relation === "before-end")) {
+    resolvedAuthority = { kind: "parameter", binding: authority.binding, relation: authority.relation };
+  } else if (authority?.kind === "fixed") {
+    resolvedAuthority = { kind: "fixed" };
+  }
+  if (resolvedAuthority === undefined) return undefined;
+  return {
+    kind: "instant",
+    expression: expression(held.projection),
+    reference,
+    frame: held.frame as number,
+    source: temporalSource,
+    authority: resolvedAuthority,
   };
 }
 
 function projection(record: TypedRecord): {
   readonly id: string;
-  readonly source: StudioTemporalSource;
+  readonly subjectId: string;
   readonly projection: StudioTemporalProjection;
 } | undefined {
   const held = inline(record.value) as {
     readonly id?: unknown;
-    readonly source?: unknown;
-    readonly projection?: unknown;
-    readonly frame?: unknown;
+    readonly subjectId?: unknown;
+    readonly start?: unknown;
+    readonly end?: unknown;
     readonly span?: { readonly startFrame?: unknown; readonly endFrameExclusive?: unknown };
   } | undefined;
-  const temporalSource = source(held?.source);
-  if (typeof held?.id !== "string" || temporalSource === undefined) return undefined;
-  if (record.type.name === "TemporalPoint") {
-    if (!Number.isSafeInteger(held.frame)) return undefined;
-    return {
-      id: held.id,
-      source: temporalSource,
-      projection: {
-        kind: "point",
-        expression: expression(held.projection),
-        frame: held.frame as number,
-      },
-    };
+  if (typeof held?.id !== "string" || typeof held.subjectId !== "string") return undefined;
+  if (sameType(record.type, temporalTypes.instant)) {
+    const projected = instant(inline(record.value));
+    return projected === undefined ? undefined : { id: held.id, subjectId: held.subjectId, projection: projected };
   }
-  const window = held.projection as { readonly start?: unknown; readonly end?: unknown } | undefined;
+  const start = instant(held.start);
+  const end = instant(held.end);
+  if (start === undefined || end === undefined) return undefined;
   if (!Number.isSafeInteger(held.span?.startFrame) || !Number.isSafeInteger(held.span?.endFrameExclusive)) return undefined;
   return {
     id: held.id,
-    source: temporalSource,
+    subjectId: held.subjectId,
     projection: {
       kind: "window",
-      startExpression: expression(window?.start),
-      endExpression: expression(window?.end),
+      start,
+      end,
       startFrame: held.span!.startFrame as number,
       endFrameExclusive: held.span!.endFrameExclusive as number,
     },
@@ -128,17 +175,6 @@ function closure(state: BuildState, output: string): ReadonlySet<string> {
   return steps;
 }
 
-function specOf(step: ProducerStep | undefined, records: ReadonlyMap<string, TypedRecord>): {
-  readonly record: string;
-  readonly id: string;
-} | undefined {
-  const id = step?.inputs.spec;
-  if (id === undefined) return undefined;
-  const value = records.get(id);
-  const spec = value === undefined ? undefined : inline(value.value) as { readonly id?: unknown } | undefined;
-  return typeof spec?.id === "string" ? { record: id, id: spec.id } : undefined;
-}
-
 /**
  * Read Temporal lineage from the exact executed dependency closure of one
  * logical output. Projection and consumption are graph facts; source markup is
@@ -153,17 +189,20 @@ export function executedTemporalBindings(
   const stepIds = closure(state, output);
   const steps = state.plan.steps.filter((step) => stepIds.has(step.id));
   return [...records.values()]
-    .filter((record) => record.type.module.name === TEMPORAL_MODULE && TEMPORAL_TYPES.has(record.type.name))
+    .filter((record) => sameType(record.type, temporalTypes.instant) || sameType(record.type, temporalTypes.window))
     .flatMap((record): readonly StudioTemporalBinding[] => {
       const projected = projection(record);
       if (projected === undefined) return [];
-      const spec = specOf(producers.get(record.id), records);
       const consumers = steps.flatMap((step) => Object.entries(step.inputs)
         .filter(([, input]) => input === record.id)
         .map(([input]) => ({
           step: step.id,
           producer: { module: { ...step.producer.module }, name: step.producer.name },
           input,
+          role: step.producer.module.name === temporalModuleRef.name
+            && step.producer.module.version === temporalModuleRef.version
+            ? "projection" as const
+            : "domain" as const,
           inputs: Object.entries(step.inputs).flatMap(([name, id]) => {
             const found = records.get(id);
             if (found === undefined) return [];
@@ -179,7 +218,6 @@ export function executedTemporalBindings(
       if (consumers.length === 0) return [];
       return [{
         record: record.id,
-        ...(spec === undefined ? {} : { specRecord: spec.record, specId: spec.id }),
         ...projected,
         consumers: consumers.sort((left, right) => left.step.localeCompare(right.step)
           || left.input.localeCompare(right.input)),

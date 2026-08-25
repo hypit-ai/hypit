@@ -25,6 +25,11 @@ export {
 export type { AuthorFrontendHostFacet } from "./frontend-facet.js";
 export type {
   AuthorFrontend,
+  AuthorElementProvenance,
+  AuthorElementProvenanceDraft,
+  AuthorInputProvenance,
+  AuthorInputProvenanceDraft,
+  AuthorProvenance,
   AuthorFrontendSourceUnit,
   AuthorFrontendRegistryLike,
   AuthorSourceDecodeContext,
@@ -32,6 +37,7 @@ export type {
   AuthorSourceAssetRequest,
   AuthorSourceAssetResolver,
   AuthorSourceExport,
+  AuthorSourceIdentity,
   AuthorSourceImport,
   AuthorSourceResolver,
   AuthorSourceUnit,

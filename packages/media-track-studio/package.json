@@ -8,6 +8,8 @@
   "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@hypit/media-track": "workspace:*",
+    "@hypit/composition": "workspace:*",
+    "@hypit/protocol": "workspace:*",
     "@hypit/studio-adapter": "workspace:*"
   }
 }

@@ -1,7 +1,7 @@
-import { createStudioAdapterHostFacet } from "@hypit/studio-adapter";
-import { commentStickerStudioAdapters } from "./index.js";
+import { createStudioTrackCompanionHostFacet } from "@hypit/studio-adapter";
+import { commentStickerStudioTrackCompanions } from "./index.js";
 
 export default {
   format: "hypit.node-package@1" as const,
-  hostFacets: [createStudioAdapterHostFacet(commentStickerStudioAdapters)],
+  hostFacets: [createStudioTrackCompanionHostFacet(commentStickerStudioTrackCompanions)],
 };
