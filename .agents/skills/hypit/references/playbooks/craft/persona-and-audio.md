@@ -21,7 +21,7 @@ Connect only the references a component actually needs.
 ## Author faces and voices explicitly
 
 - Use `gpt:Image` with ordered `gpt:Reference` children when a new character/scene image must preserve
-  supplied identity or product facts. Pass every generated image through `production-gates.md`.
+  supplied identity or product facts.
 - Use `mimo:Preset` for a selected built-in voice or `mimo:VoiceDesign` for an English voice
   description. Either one produces the sample, once per person.
 - That sample is a reference on every take the person appears in, and the take speaks the Segment.

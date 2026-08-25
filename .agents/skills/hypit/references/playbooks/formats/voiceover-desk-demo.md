@@ -34,12 +34,9 @@ screen, product, hand, or proof changes.
 5. Build each visual beat from supplied media or the vendored `broll-v1` Kit. Generated desk/screen
    shots use `seedance:FrameVideo` or `seedance:ReferenceVideo` with `generate-audio="false"`.
 6. Place visuals by the measured Script Selections/Moments.
-   The base is meant to stay hidden, so the covering Selections tile the Segment: its first word
-   opens one, its last word closes one, and nothing falls between. Join them with the Script's
-   absorbing markers — `../craft/generated-dependencies.md` holds the table. A gap shows the
-   speaker for half a second in a program that has none.
- One sentence may span several visual
-   cuts, and one visual may cover only part of a sentence.
+   The base is meant to stay hidden, so the covering Selections tile the Segment —
+   `../craft/generated-dependencies.md` states that rule and holds the marker table. One sentence
+   may span several visual cuts, and one visual may cover only part of a sentence.
 7. Add editorial explanation with `typo:Track`; add the complete Caption chain only when narration
    captions are wanted. Normalize only additional BGM/SFX before placing them on `audio:Track`.
 
@@ -69,5 +66,4 @@ screen, product, hand, or proof changes.
 Read `../craft/screen-demo.md`, `../craft/b-roll.md`, `../craft/seedance-directing.md`,
 `../craft/persona-and-audio.md`, `../craft/captions.md`, and `../craft/sfx.md`.
 
-That list is complete: `../index.md` does not repeat it, and the craft its required load
-order marks always-read is required regardless of format.
+That list is complete, and the always-read craft in `../index.md` applies regardless of format.

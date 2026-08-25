@@ -130,9 +130,10 @@ through one. Timing is not authored with it: each Cue is still timed from the al
 - Caption projects Selections/Roles to complete units before it sees any frame or audio measurement.
 - Each `whisperx:SemanticTake` measures one accepted normalized Segment take and packages its local
   timing; `speech:Track` assembles those Takes into the SemanticTrack used by `caption-fine:Track`.
-- Recompute the affected SemanticTake whenever the speech audio changes — `production-gates.md` Gate 3 states this for
-  every Track that is timed against it, not only for captions. A Style-only change does not prove that
-  a prior visual review is still valid.
+- Recompute the affected SemanticTake whenever the speech audio changes. This holds for every Track
+  timed against it — Caption, Media, Typography, Ranking, Deck, Comment, Screen, Audio — because each
+  one is otherwise measured against audio that no longer exists, and the drift is invisible in a
+  still frame.
 
 ## Design for readability
 

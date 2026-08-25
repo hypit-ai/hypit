@@ -23,8 +23,8 @@ only about the video: what it should say, who is in it, what it is for.
 - Naming the camera positions before generating anything, as `visual-continuity.md` already says,
   is what tells you how many images you need.
 
-Images therefore generate in rounds: the establishing image is accepted first, and the views derived
-from it are generated after. `production-gates.md` Gate 1 is one stage per round, not one stage.
+Images therefore generate in dependency order: the establishing image is produced before the views
+derived from it, and the reference edges the Source declares are what state that order.
 
 ## A split picture's parts all start from the same image
 
@@ -240,8 +240,6 @@ in the Script rather than the Recipe.
 A layer beneath makes a blend visible, so check the Items' entry and exit while you are here: `enter` and `exit`
 default to `none`, and a Recipe named for a cut that fades for a frame is one of the inherited edges
 `frame-coverage.md` describes.
-
-`production-gates.md` measures the delivery for these before it is reported as finished.
 
 ## A Selection carries two edges; a Moment carries one
 
