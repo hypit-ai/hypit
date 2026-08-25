@@ -598,9 +598,15 @@ export function renderTopThree(space: ProgramSpace, program: TopThreeProgram): V
       else elements.push(simpleText({ id: "rank", parent: root, order: 2, text: String(index + 1),
         typography: { ...style.text, color: rankColor(style.slotColors, index), sizePx: style.iconSizePx * 0.45 },
         x: 0, y: 0, width: style.iconSizePx, height: style.iconSizePx }));
+      // The label's box is one line box, and a line box is not the ink: accents reach above it and
+      // descenders below. It clips, so at a tight `line-height` the tops and tails were shaved. The
+      // box grows by one line box's worth of leading at each end and its top moves up by the same,
+      // so the text stays where it was painted and only the clip rectangle moves.
+      const labelSlack = style.text.sizePx * 0.25;
       elements.push(simpleText({ id: "label", parent: root, order: 3, text: item.label, typography: style.text,
-        x: -style.slotGapPx / 2, y: style.iconSizePx + style.labelGapPx,
-        width: style.iconSizePx + style.slotGapPx, height: style.text.sizePx * style.text.lineHeight }));
+        x: -style.slotGapPx / 2, y: style.iconSizePx + style.labelGapPx - labelSlack,
+        width: style.iconSizePx + style.slotGapPx,
+        height: style.text.sizePx * style.text.lineHeight + labelSlack * 2 }));
       return elements;
     };
     presents.push(present({
