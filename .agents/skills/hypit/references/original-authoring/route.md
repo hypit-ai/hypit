@@ -89,10 +89,17 @@ reused in the Run Source. `../runtime.md` — how to author a Profile.
 tracing. `../preview.md` proves the Run traces before a Provider is reached. Neither is bounded by any
 attempt ceiling: a graph that does not trace is work that is not done.
 
-### 9. Render every stretch of every element
+### 9. Ask the check what to render, then render it
 
-**Read now:** `../element-review.md` — the round unit, what a render has to include, and how many
-stretches to draw. `../preview.md` holds `render_element` itself.
+```bash
+hypit-reference-video-tools authoring_check projects/<name>/build.svrun
+```
+
+Its `plan` is the list: each entry an element and a word range, with the reason. Feed it to
+`render_element --batch` — the program is drawn once and every entry is cut out of those frames.
+
+**Read now:** `../element-review.md` — what the three rules are and why the list is what it is.
+`../preview.md` holds `render_element` itself.
 
 Render the whole set before reading any of it. Studio is also free and is for the author to look at;
 it is not the picture this round reads.

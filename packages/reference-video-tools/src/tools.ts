@@ -81,7 +81,9 @@ export type CompareReconstructionInput = {
   readonly shot_id?: string;
   readonly segment?: string;
   readonly selection?: string;
-  /** The Run whose Author SVML the words are read from. Required with `segment` or `selection`. */
+  /** A half-open token range, for a stretch the Script never named. See `StandInFocus`. */
+  readonly tokens?: readonly [number, number];
+  /** The Run whose Author SVML the words are read from. Required with a word range. */
   readonly run?: string;
   /** A rendered still. Exactly one of `image_path` and `video_path` is given. */
   readonly image_path?: string;
@@ -130,6 +132,8 @@ export type ReviewElementInput = {
   /** The window the render covers, named in words. Exactly one is given. */
   readonly segment?: string;
   readonly selection?: string;
+  /** A half-open token range, for a stretch the Script never named. See `StandInFocus`. */
+  readonly tokens?: readonly [number, number];
   /** The render. Exactly one of `image_path` and `video_path` is given. */
   readonly image_path?: string;
   readonly video_path?: string;
@@ -234,6 +238,8 @@ function stateRoot(reference: string): string {
 export type ComparedRange = {
   readonly segment?: string;
   readonly selection?: string;
+  /** The word range, when the caller gave one directly rather than naming a marked stretch. */
+  readonly tokens?: readonly [number, number];
   readonly words: string;
   readonly words_start_seconds: number;
   readonly words_end_seconds: number;
@@ -293,7 +299,7 @@ export type ReviewRecord = {
    * reference speaks those words and how the cut was snapped to its shot boundaries, and none of that
    * exists here. The gate reads the name and nothing else from either log.
    */
-  readonly range?: { readonly segment?: string; readonly selection?: string };
+  readonly range?: { readonly segment?: string; readonly selection?: string; readonly tokens?: readonly [number, number] };
   readonly image_path: string;
   readonly image_digest: string;
   readonly status: Observation["status"];
@@ -389,12 +395,19 @@ async function answeredAlready(
   return undefined;
 }
 
-/** What a look was made over, named the way it was asked for. */
+/**
+ * What a look was made over, in the form it was asked for.
+ *
+ * A word range is written as its own form because the finest thing worth looking at is not always a
+ * thing the Script named — a caption Cue is a run of words with no id — and a gate comparing a round
+ * against a plan has to be able to tell one of those from another.
+ */
 function comparedStretch(record: {
   readonly shot_id?: string;
-  readonly range?: { readonly segment?: string; readonly selection?: string };
+  readonly range?: { readonly segment?: string; readonly selection?: string; readonly tokens?: readonly [number, number] };
 }): string {
   return record.shot_id
+    ?? (record.range?.tokens === undefined ? undefined : `tokens:${record.range.tokens[0]}-${record.range.tokens[1]}`)
     ?? (record.range?.segment === undefined ? undefined : `segment:${record.range.segment}`)
     ?? (record.range?.selection === undefined ? undefined : `selection:${record.range.selection}`)
     ?? "";
@@ -849,6 +862,7 @@ async function cutWordRange(
     record: {
       ...(focus.segment === undefined ? {} : { segment: focus.segment }),
       ...(focus.selection === undefined ? {} : { selection: focus.selection }),
+      ...(focus.tokens === undefined ? {} : { tokens: focus.tokens }),
       words: `${range.first.text} … ${range.last.text}`,
       words_start_seconds: round(range.startSeconds),
       words_end_seconds: round(range.endSeconds),
@@ -1506,8 +1520,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       }
       const state = await loadState(input.reference_id);
       const root = stateRoot(state.reference_id);
-      const named = [input.shot_id, input.segment, input.selection].filter((value) => value !== undefined);
-      assert(named.length === 1, "name exactly one of shot_id, segment and selection");
+      const named = [input.shot_id, input.segment, input.selection, input.tokens].filter((value) => value !== undefined);
+      assert(named.length === 1, "name exactly one of shot_id, segment, selection and tokens");
       const supplied = [input.image_path, input.video_path].filter((value) => value !== undefined);
       assert(supplied.length === 1, "supply exactly one of image_path and video_path");
       const clip = input.video_path !== undefined;
@@ -1540,11 +1554,12 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         stretchSeconds = shot.duration_seconds;
       } else {
         assert(input.run !== undefined,
-          "run is required with segment or selection: the words are read from the Run's Author SVML");
+          "run is required with a word range: the words are read from the Run's Author SVML");
         const { path: svmlPath } = await authorSource(resolve(invokedFrom(), input.run));
         const focus: StandInFocus = {
           ...(input.segment === undefined ? {} : { segment: input.segment }),
           ...(input.selection === undefined ? {} : { selection: input.selection }),
+          ...(input.tokens === undefined ? {} : { tokens: input.tokens }),
         };
         const range = await spokenRange(svmlPath, focus, await referenceWords(state.reference_id));
         cut = await cutWordRange(state, root, focus, range, renderedPath, clip, slot);
@@ -1783,8 +1798,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
 
       const element = input.element?.trim() ?? "";
       assert(element.length > 0, "--element is required; a review with no element is credited to nothing");
-      const named = [input.segment, input.selection].filter((value) => value !== undefined);
-      assert(named.length === 1, "name exactly one of --segment or --selection: the window the render covers");
+      const named = [input.segment, input.selection, input.tokens].filter((value) => value !== undefined);
+      assert(named.length === 1, "name exactly one of --segment, --selection or --tokens: the window the render covers");
       const supplied = [input.image_path, input.video_path].filter((value) => value !== undefined);
       assert(supplied.length === 1, "supply exactly one of --image or --video");
 
@@ -1818,7 +1833,12 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       }
 
       const digest = await fileDigest(renderedPath);
-      const stretch = comparedStretch({ range: { ...(input.segment === undefined ? {} : { segment: input.segment }), ...(input.selection === undefined ? {} : { selection: input.selection }) } });
+      const range = {
+        ...(input.segment === undefined ? {} : { segment: input.segment }),
+        ...(input.selection === undefined ? {} : { selection: input.selection }),
+        ...(input.tokens === undefined ? {} : { tokens: input.tokens }),
+      };
+      const stretch = comparedStretch({ range });
       // Nothing about the picture or the question changed since this was last answered, so nothing new
       // can be said about it. Here this is what bounds the looking: a review costs no vendor money, so
       // without it a round could re-ask the same picture until it liked the answer.
@@ -1836,7 +1856,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const unit = asClip ? "grid of frames sampled evenly across the stretch, laid out in reading order: left to right, then top to bottom" : "still picture";
       const record: ReviewRecord = {
         at: startedAt, id: reviewId, element,
-        range: { ...(input.segment === undefined ? {} : { segment: input.segment }), ...(input.selection === undefined ? {} : { selection: input.selection }) },
+        range,
         image_path: renderedPath, image_digest: digest, status: "pending",
         ...(scope.length === 0 ? {} : { scope }), clip: asClip,
         ...(standIn === undefined ? {} : { stand_in: standIn }),
