@@ -35,8 +35,8 @@ is left, not for the whole one.
   images, not one image used twice.
 - A face, a mouth or a gesturing hand behind an opaque overlay is the failure this prevents, and it
   survives every structural check: the Source is legal, both tracks build, and the speaker is
-  headless. Check it at the image gate in `production-gates.md`, where overlay clearance is already
-  on the list.
+  headless. Place the overlay so the base picture's face, mouth and hands stay clear of it, and
+  author the base picture's framing to leave that clearance.
 
 ## Choose the native overlay surface
 

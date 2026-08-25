@@ -49,7 +49,7 @@ The author reads the observations, the sources and eventually the video. Which o
 evidence changes what those are worth, and it is not visible in any of them.
 
 This is the one question this route asks about how it runs. Everything else it decides:
-`index.md` still owns the working directory, the project location, the vocabulary and the generators.
+`route.md` still owns the working directory, the project location, the vocabulary and the generators.
 
 ## The protocol is one loop
 

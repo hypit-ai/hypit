@@ -6,9 +6,9 @@ needed for that craft or format.
 
 ## Required load order
 
-1. Always read `craft/production-gates.md`, `craft/frame-coverage.md`,
-   `craft/visual-continuity.md`, `craft/graphic-compositions.md`, and
-   `craft/generated-dependencies.md`.
+1. Always read `craft/frame-coverage.md`, `craft/visual-continuity.md`,
+   `craft/graphic-compositions.md`, and `craft/generated-dependencies.md`. Each route file names the
+   step that reads them.
 2. Read `craft/seedance-directing.md` whenever the Author Source invokes Seedance.
 3. Read the selected format file and only the additional craft files **its own footer** names.
    That footer is the complete list; this index does not repeat it, and a footer that is wrong is
@@ -18,7 +18,7 @@ needed for that craft or format.
 
 No document a whole job needs may be reachable only through a conditional file. Craft and format
 files are selected per job; a spine is walked by every job on its route, so anything every job needs
-is named by `../original-authoring/index.md` or `../reconstruction/index.md` rather than by a craft
+is named by `../original-authoring/route.md` or `../reconstruction/route.md` rather than by a craft
 file that some jobs never open.
 
 ## Shared SVML contract
@@ -61,7 +61,6 @@ file that some jobs never open.
 
 ## Craft
 
-- `craft/production-gates.md` — staged Targets, image review, paid generation, and explicit reuse.
 - `craft/visual-continuity.md` — identity, shot groups, reverse-view geometry, and prop invariants.
 - `craft/graphic-compositions.md` — what counts as a base picture, full-screen graphic compositions,
   and where missing material comes from.
@@ -95,5 +94,4 @@ file that some jobs never open.
 Each format file's own footer is the single authority for the additional craft that format needs.
 This table routes; it does not require. **An inventory may carry descriptions, and may not carry
 requirements.** A stale description misroutes and the first line of the file it opens corrects it; a
-stale requirement is silently unmet and nothing corrects it, which is what the craft column that used
-to sit here did in seven of these nine rows.
+stale requirement is silently unmet and nothing corrects it.

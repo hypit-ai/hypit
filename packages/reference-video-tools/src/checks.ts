@@ -456,12 +456,8 @@ function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
  * comparison is a comparison. What it says is which elements have had their behaviour over their
  * window looked at and which have only had their layout looked at.
  *
- * Where each Frame sits is decided from the Source alone and is reported rather than required. A
- * Frame with an edge outside 0%–100% of its Canvas puts that much of whatever is drawn into it off
- * the picture, and a comparison cannot see it: the render and the stand-in are drawn at the same
- * Canvas, so both put the element in the same place off the edge and agree. Reaching past the edge is
- * also how an element slides in from off-screen and how a full-bleed picture is cropped by a `fit`,
- * which look identical here, so `passed` does not depend on it.
+ * Where each Frame sits is decided from the Source alone and is reported rather than required.
+ * `framesPastTheCanvas` above says why an overhang cannot decide `passed`.
  *
  * Frame coverage is decided from the Source alone and is required: a word is either drawn over by
  * something bound to the whole picture or it is not. What covers is read from an element's own
@@ -946,7 +942,7 @@ export async function reconstructionCheck(
     ...(never.length === 0 ? {} : {
       never_compared: {
         ids: never.map((element) => element.id),
-        next: "Read .claude/skills/hypit/references/reconstruction/reconstruction-loop.md, then for each: "
+        next: "Read .agents/skills/hypit/references/reconstruction/reconstruction-loop.md, then for each: "
           + "render the element as the Source configures it, mock the layers a Build has not made, "
           + "and compare the whole stretch blind — one comparison per Segment or Selection it is drawn over.",
         commands: never.map((element) =>
@@ -1006,8 +1002,8 @@ export async function reconstructionCheck(
           + "Re-render each of these with render_element --reference-id "
           + `${reference} and compare again: the reference's own transcript times every Segment whose words `
           + "it carries, so each window runs for as long as the reference spends on it. What is left after "
-          + "that is alignment against the speech the Build synthesizes, which is measured at "
-          + "playbooks/craft/production-gates.md Gate 3.",
+          + "that is alignment against the speech the Build synthesizes, which is settled once that "
+          + "speech exists.",
         commands: untimed.map((element) =>
           `hypit-reference-video-tools render_element ${runPath} --element ${element.id} `
           + `--reference-id ${reference} --segment <the Segment the shot covers> --out <rendered clip>.mp4`),
