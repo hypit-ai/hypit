@@ -137,6 +137,24 @@ function powershellLiteral(value: string): string {
 }
 
 /**
+ * One command line, quoted the way the C runtime parses it back into `argv`.
+ *
+ * `Start-Process -ArgumentList` given an array joins its elements with a space and quotes none of
+ * them, so an argument holding a space arrives as several: `node -e '<script>' <path>` reaches node
+ * as `-e` followed by the first word of the script, and node exits on the syntax error. Given one
+ * string it passes that string through as the command line, which is what this builds.
+ */
+function windowsCommandLine(args: readonly string[]): string {
+  return args.map((value) => {
+    if (value !== "" && !/[\s"]/u.test(value)) return value;
+    // A quote is escaped by the backslashes before it, so those double; a trailing run doubles too,
+    // because the closing quote would otherwise escape itself against them.
+    const escaped = value.replace(/(\\*)"/gu, '$1$1\\"').replace(/(\\*)$/u, "$1$1");
+    return `"${escaped}"`;
+  }).join(" ");
+}
+
+/**
  * Windows: a console of its own, hidden, so the launching console's destruction does not take it.
  *
  * The script is fed on stdin rather than as a command-line argument, so no quoting of ours crosses a
@@ -144,13 +162,17 @@ function powershellLiteral(value: string): string {
  * its own beside the log; `-PassThru` reports the new process, which is the pid everything after this
  * waits on and stores.
  */
-async function startWithOwnConsole(start: ManagedProgramCommand, root: string, logPath: string): Promise<number | undefined> {
+async function startWithOwnConsole(
+  start: ManagedProgramCommand,
+  root: string,
+  logPath: string,
+): Promise<{ readonly pid?: number; readonly detail?: string }> {
   const errorPath = `${logPath.replace(/\.log$/u, "")}.err.log`;
   const environment = Object.entries(start.env ?? {})
     .map(([name, value]) => `$env:${name} = ${powershellLiteral(String(value))}`).join("\n");
   const argumentList = start.args.length === 0
     ? ""
-    : ` -ArgumentList @(${start.args.map(powershellLiteral).join(", ")})`;
+    : ` -ArgumentList ${powershellLiteral(windowsCommandLine(start.args))}`;
   const script = [
     "$ErrorActionPreference = 'Stop'",
     environment,
@@ -162,19 +184,24 @@ async function startWithOwnConsole(start: ManagedProgramCommand, root: string, l
     "[Console]::Out.Write($p.Id)",
   ].filter((line) => line.length > 0).join("\n");
 
-  const printed = await new Promise<string>((settle) => {
-    const shell = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "-"], {
+  const shell = await new Promise<{ readonly out: string; readonly err: string }>((settle) => {
+    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "-"], {
       windowsHide: true,
-      stdio: ["pipe", "pipe", "ignore"],
+      stdio: ["pipe", "pipe", "pipe"],
     });
-    let output = "";
-    shell.stdout.on("data", (chunk: Buffer) => { output += chunk.toString("utf8"); });
-    shell.on("error", () => settle(""));
-    shell.on("close", () => settle(output.trim()));
-    shell.stdin.end(script, "utf8");
+    let out = "";
+    let err = "";
+    child.stdout.on("data", (chunk: Buffer) => { out += chunk.toString("utf8"); });
+    child.stderr.on("data", (chunk: Buffer) => { err += chunk.toString("utf8"); });
+    child.on("error", (cause: Error) => settle({ out: "", err: cause.message }));
+    child.on("close", () => settle({ out: out.trim(), err: err.trim() }));
+    child.stdin.end(script, "utf8");
   });
-  const pid = Number(printed);
-  return Number.isSafeInteger(pid) && pid > 0 ? pid : undefined;
+  const pid = Number(shell.out);
+  if (Number.isSafeInteger(pid) && pid > 0) return { pid };
+  // `Start-Process` writes its refusal to the error stream and prints no id. Carrying it out is what
+  // separates a launch that was refused from one whose process died immediately after starting.
+  return { detail: shell.err === "" ? "Start-Process reported no process id" : shell.err.replaceAll(/\s+/gu, " ") };
 }
 
 async function waitForReady(program: ManagedProgram, pid: number, maxWaitMs: number): Promise<ManagedProgramState> {
@@ -252,13 +279,20 @@ async function bringUp(
     // which is no console at all, and then the first console grandchild — `uv` re-execing Python,
     // Python opening workers — allocates a fresh visible one. `Start-Process -WindowStyle Hidden`
     // creates a new console and hides it, which is the combination neither spawn option reaches.
-    const pid = process.platform === "win32"
+    const started = process.platform === "win32"
       ? await startWithOwnConsole(program.start, root, logPath)
-      : await startDetached(program.start, root, log.fd);
-    if (pid === undefined) {
-      return { ...base, action: "unchanged", state: initial, detail: `${program.start.command} did not start`, logPath };
+      : { pid: await startDetached(program.start, root, log.fd) };
+    if (started.pid === undefined) {
+      const refusal = "detail" in started && started.detail !== undefined ? `: ${started.detail}` : "";
+      return {
+        ...base,
+        action: "unchanged",
+        state: initial,
+        detail: `${program.start.command} did not start${refusal}`,
+        logPath,
+      };
     }
-    const child = { pid };
+    const child = { pid: started.pid };
     onProgress?.({ id: program.id, phase: "waiting" });
     const state = await waitForReady(program, child.pid, maxWaitMs);
     if (state.state === "ready") onProgress?.({ id: program.id, phase: "ready" });
@@ -275,7 +309,7 @@ async function bringUp(
       }),
     };
   } finally {
-    await log.close();
+    await log?.close();
   }
 }
 
