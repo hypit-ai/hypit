@@ -651,7 +651,13 @@ function cueElements(
       { name: "max-width", value: "100%" },
       ...(parameters.layout.maxLines === undefined ? [] : [{
         name: "max-height",
-        value: `${compactNumber(parameters.typography.fontSizePx * parameters.layout.lineHeight * parameters.layout.maxLines + parameters.cueBox.paddingYPx * 2)}px`,
+        // The line boxes, the padding, and the room the outline needs above the first and below the
+        // last. `max-lines` is accepted only with `overflow: clip`, so this height is enforced: left
+        // at the type metrics alone it cut the outline off the top and bottom rows, most visibly on a
+        // Cue of two lines, where both ends are an edge.
+        value: `${compactNumber(parameters.typography.fontSizePx * parameters.layout.lineHeight * parameters.layout.maxLines
+          + parameters.cueBox.paddingYPx * 2
+          + Math.max(parameters.basePaint.stroke.widthPx, parameters.activePaint.stroke.widthPx) * 2)}px`,
       }] as const),
       { name: "overflow", value: parameters.layout.overflow === "clip" ? "hidden" : "visible" },
       { name: "padding", value: `${compactNumber(parameters.cueBox.paddingYPx)}px ${compactNumber(parameters.cueBox.paddingXPx)}px` },
