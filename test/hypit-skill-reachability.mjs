@@ -68,7 +68,7 @@ function read(path, at) {
     if (at === undefined) return readFileSync(join(repositoryRoot, path), "utf8");
     // A path that does not exist at that commit is an answer, not an error: `--links` asks exactly
     // that question. `git show` says so on stderr, which would otherwise interleave with the report.
-    return execFileSync("git", ["show", `${at}:${path}`], { cwd: repositoryRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] });
+    return execFileSync("git", ["show", `${at}:${path}`], { cwd: repositoryRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"], windowsHide: true });
   } catch {
     return null;
   }
@@ -88,7 +88,7 @@ function everySkillFile(at) {
     visit(skillRoot);
     return found.sort();
   }
-  const listed = execFileSync("git", ["ls-tree", "-r", "--name-only", at, "--", skillRoot], { cwd: repositoryRoot, encoding: "utf8" });
+  const listed = execFileSync("git", ["ls-tree", "-r", "--name-only", at, "--", skillRoot], { cwd: repositoryRoot, encoding: "utf8", windowsHide: true });
   return listed.split("\n").filter((line) => line.endsWith(".md")).sort();
 }
 

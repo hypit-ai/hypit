@@ -76,6 +76,15 @@ export type ObservationTaskRequest = {
    */
   readonly transcript_ref?: string;
   readonly transcript_words?: string;
+  /**
+   * The command line that closes this task, ready to run.
+   *
+   * A sweep hands out four tasks per shot, so a reference of any length produces more of these than
+   * anyone will match against a usage string by hand. Carrying the command here is what keeps the
+   * choice of recording verb off the caller entirely: every task says how it is answered, the way a
+   * comparison and a review already do.
+   */
+  readonly record_with: string;
 };
 
 export type ReferenceState = {
