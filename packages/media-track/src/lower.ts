@@ -51,19 +51,27 @@ function paint(value: MediaPaint): string {
   return `radial-gradient(circle at ${value.center.x * 100}% ${value.center.y * 100}%,${value.stops.map(stop).join(",")})`;
 }
 
-function pathData(path: SpatialPath): string {
+/**
+ * A Path is drawn in Canvas pixels, and the element it clips is the Frame's own box — positioned at
+ * the Frame's origin, so its coordinates start there. Handed the Canvas numbers unchanged, the clip
+ * region lands one Frame origin down and to the right of where it was drawn, which for any Frame away
+ * from the corner is entirely outside the box: the Item renders blank.
+ */
+function pathData(path: SpatialPath, origin: SpatialFrame): string {
+  const x = (value: number): number => value - origin.xPx;
+  const y = (value: number): number => value - origin.yPx;
   return path.commands.map((command) => {
     switch (command.kind) {
-      case "move": return `M ${command.xPx} ${command.yPx}`;
-      case "line": return `L ${command.xPx} ${command.yPx}`;
-      case "quadratic": return `Q ${command.controlX} ${command.controlY} ${command.xPx} ${command.yPx}`;
-      case "cubic": return `C ${command.control1X} ${command.control1Y} ${command.control2X} ${command.control2Y} ${command.xPx} ${command.yPx}`;
+      case "move": return `M ${x(command.xPx)} ${y(command.yPx)}`;
+      case "line": return `L ${x(command.xPx)} ${y(command.yPx)}`;
+      case "quadratic": return `Q ${x(command.controlX)} ${y(command.controlY)} ${x(command.xPx)} ${y(command.yPx)}`;
+      case "cubic": return `C ${x(command.control1X)} ${y(command.control1Y)} ${x(command.control2X)} ${y(command.control2Y)} ${x(command.xPx)} ${y(command.yPx)}`;
       case "close": return "Z";
     }
   }).join(" ");
 }
 
-function frameStyles(value: MediaFramePresentation): VisualStyleDeclaration[] {
+function frameStyles(value: MediaFramePresentation, frame: SpatialFrame): VisualStyleDeclaration[] {
   const styles: VisualStyleDeclaration[] = [
     { name: "box-sizing", value: "border-box" },
     { name: "height", value: "100%" },
@@ -76,7 +84,7 @@ function frameStyles(value: MediaFramePresentation): VisualStyleDeclaration[] {
   else {
     styles.push({ name: "overflow", value: "hidden" });
     if (value.clip.kind === "rounded") styles.push({ name: "border-radius", value: px(value.clip.radiusPx) });
-    if (value.clip.kind === "path") styles.push({ name: "clip-path", value: `path("${pathData(value.clip.path)}")` });
+    if (value.clip.kind === "path") styles.push({ name: "clip-path", value: `path("${pathData(value.clip.path, frame)}")` });
   }
   if (value.border !== undefined) {
     styles.push({ name: "border", value: `${value.border.widthPx}px ${value.border.style} ${value.border.color}` });
@@ -91,13 +99,22 @@ function frameStyles(value: MediaFramePresentation): VisualStyleDeclaration[] {
   return styles;
 }
 
+/**
+ * The box a layer is fitted into: the Frame less its border and its padding.
+ *
+ * The border was left out, and it is drawn inward — `box-sizing: border-box` puts it inside the
+ * Frame's own rectangle — so a fitted picture was sized against a box wider and taller than the one
+ * it had to sit in. What that looks like is the picture offset by the border width down and to the
+ * right, with the same amount cut off its far edges, and a `contain` fit that no longer contains.
+ */
 function innerFrame(item: MediaItemProgram): SpatialFrame {
-  const { padding } = item.presentation;
+  const { border, padding } = item.presentation;
+  const edge = border?.widthPx ?? 0;
   return {
-    xPx: item.frame.xPx + padding.leftPx,
-    yPx: item.frame.yPx + padding.topPx,
-    widthPx: item.frame.widthPx - padding.leftPx - padding.rightPx,
-    heightPx: item.frame.heightPx - padding.topPx - padding.bottomPx,
+    xPx: item.frame.xPx + edge + padding.leftPx,
+    yPx: item.frame.yPx + edge + padding.topPx,
+    widthPx: item.frame.widthPx - edge * 2 - padding.leftPx - padding.rightPx,
+    heightPx: item.frame.heightPx - edge * 2 - padding.topPx - padding.bottomPx,
   };
 }
 
@@ -131,6 +148,11 @@ function sampleElements(
     { name: "transform-origin", value: "center center" },
     { name: "width", value: px(content.widthPx) },
   ];
+  // A blur reads across the box and paints past it — roughly twice its radius — so a `contain` fit
+  // that was letterboxed on purpose had its blurred copy spilling into the letterbox it was fitted
+  // away from. Clipping the wrapper ends the overscan at the fitted rectangle; the Gaussian still
+  // reads real content across the whole box, so only the spill goes.
+  if (layer.appearance.filter.blurPx > 0) wrapperStyle.push({ name: "overflow", value: "hidden" });
   const wrapperElement: VisualElement = {
     id: wrapper,
     parent,
@@ -297,7 +319,7 @@ export function lowerMediaItemElements(
     parent = handoff;
   }
   const frame = `${item.id}:frame`;
-  elements.push({ id: frame, parent, order: order.value++, kind: "box", style: frameStyles(item.presentation) });
+  elements.push({ id: frame, parent, order: order.value++, kind: "box", style: frameStyles(item.presentation, item.frame) });
   for (const layer of item.layers) {
     elements.push(...layerElements(
       layer,
