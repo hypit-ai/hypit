@@ -213,5 +213,5 @@ hypit doctor hypit.runtime.json
 | `provider-hyperframes-local` | 本地进程：Chrome 渲染，带 worker 并行与输出探测校验 |
 | `provider-hyperframes-aws-lambda` | 远程可恢复任务：确定性 Step Functions 提交、轮询与 S3 流式落库 |
 | `provider-image-opencv-local` | 本地 Python：有界的 OpenCV/NumPy，配合锁定的 Python 环境 |
-| `provider-media-aws-lambda` | 远程同步 Lambda：与本地媒体相同的八项能力 |
+| `provider-media-aws-lambda` | 远程同步 Lambda：与本地媒体相同的九项能力 |
 | `provider-xiaomi-mimo` | 远程即时 API：把精确 MiMo TTS 请求落成持久化音频 Artifact |

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/runtime-host-node": "workspace:*",
     "@hypit/runtime-kit": "workspace:*",

@@ -1,9 +1,8 @@
 import { spawn } from "node:child_process";
 import { createReadStream } from "node:fs";
-import { createRequire } from "node:module";
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { mediaTypes, sealRenderedVisual } from "@hypit/media";
 import type { RenderedVisual } from "@hypit/media";
 import { verifyCompositableSurfaceBytes } from "@hypit/media-execution";
@@ -13,6 +12,7 @@ import type { HyperframesDocument } from "@hypit/hyperframes";
 import { stageHyperframesProject } from "@hypit/hyperframes/project";
 import { renderHyperframesCapabilities } from "@hypit/render-hyperframes";
 import { canonicalize } from "@hypit/protocol";
+import { resolveNodePackageExecutable } from "@hypit/package-loader-node";
 import { isStreamingArtifactStore } from "@hypit/runtime";
 import type { BlobRef, CanonicalValue } from "@hypit/protocol";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
@@ -71,8 +71,7 @@ function positiveInteger(value: number, subject: string): number {
 }
 
 export function defaultHyperframesCliPath(): string {
-  const require = createRequire(import.meta.url);
-  return join(dirname(require.resolve("hyperframes/package.json")), "bin", "hyperframes.mjs");
+  return resolveNodePackageExecutable("hyperframes", "hyperframes", { from: import.meta.url });
 }
 
 function processEnvironment(): NodeJS.ProcessEnv {

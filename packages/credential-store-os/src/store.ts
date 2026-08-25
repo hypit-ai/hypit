@@ -34,7 +34,7 @@ function macosReader(service: string): OsCredentialReader {
 function macosWriter(service: string): OsCredentialWriter {
   return async (_service, account, secret) => await new Promise((resolve, reject) => {
     const child = spawn("/usr/bin/security", ["add-generic-password", "-U", "-s", service, "-a", account, "-w"], {
-      shell: false, windowsHide: true, stdio: ["pipe", "ignore", "ignore"],
+      detached: true, shell: false, windowsHide: true, stdio: ["pipe", "ignore", "ignore"],
     });
     const timeout = setTimeout(() => child.kill(), 10_000);
     child.on("error", (error) => { clearTimeout(timeout); reject(error); });
@@ -43,7 +43,7 @@ function macosWriter(service: string): OsCredentialWriter {
       if (code === 0) resolve();
       else reject(new Error(`OS credential write for ${account} failed`));
     });
-    child.stdin.end(`${secret}\n`);
+    child.stdin.end(`${secret}\n${secret}\n`);
   });
 }
 

@@ -83,6 +83,36 @@ test("Distribution requirements follow internal packages and return only exact u
   }
 });
 
+test("a Distribution package accepts an exact CLI-only dependency from the machine npm home", async () => {
+  const project = await mkdtemp(join(tmpdir(), "hypit-cli-only-project-"));
+  const distribution = await mkdtemp(join(tmpdir(), "hypit-cli-only-distribution-"));
+  const machine = await mkdtemp(join(tmpdir(), "hypit-cli-only-machine-"));
+  try {
+    await projectPackage(distribution, "@hypit/provider-example", `{
+      format: "hypit.node-package@1",
+      hostFacets: [{ abi: "example.provider@1", offers: ["example"] }]
+    }`, { "cli-only": "1.2.3" });
+    const cli = join(machine, "node_modules", "cli-only");
+    await mkdir(join(cli, "bin"), { recursive: true });
+    await writeFile(join(cli, "package.json"), JSON.stringify({
+      name: "cli-only",
+      version: "1.2.3",
+      type: "module",
+      bin: { "cli-only": "./bin/cli.mjs" },
+    }), "utf8");
+    await writeFile(join(cli, "bin", "cli.mjs"), "export {};\n", "utf8");
+    const loaded = await loadNodePackageSelection(["@hypit/provider-example"], project, {
+      fallbackRoots: [distribution],
+      externalRoots: [machine],
+    });
+    assert.deepEqual(loaded.map((item) => item.specifier), ["@hypit/provider-example"]);
+  } finally {
+    await rm(project, { recursive: true, force: true });
+    await rm(distribution, { recursive: true, force: true });
+    await rm(machine, { recursive: true, force: true });
+  }
+});
+
 test("resolves a logical request to its conventional installed package", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-package-selection-"));
   try {

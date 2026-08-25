@@ -46,4 +46,9 @@ export type NodePackageLoadOptions = {
    * the reserved @hypit namespace resolves only from these roots when they are present.
    */
   readonly fallbackRoots?: readonly string[];
+  /**
+   * Machine npm homes used only by Distribution-owned packages for their ordinary upstream
+   * dependencies. Defaults to the roots installed by the Hypit launcher.
+   */
+  readonly externalRoots?: readonly string[];
 };

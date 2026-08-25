@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { basename as fileName } from "node:path";
 
 import {
@@ -10,6 +9,7 @@ import {
 } from "@hypit/media";
 import type { FontArtifactRef, FontStackRef } from "@hypit/media";
 import type { StructuredElement, StructuredSurfaceHandler } from "@hypit/markup";
+import { resolveNodePackageResource } from "@hypit/package-loader-node";
 
 import {
   openFontFamilies,
@@ -21,11 +21,9 @@ import type {
   OpenFontStyle,
 } from "./catalog.js";
 
-const require = createRequire(import.meta.url);
-
 function resolveFontPackageFile(packageName: string, path: string): string {
   try {
-    return require.resolve(`${packageName}/${path}`);
+    return resolveNodePackageResource(packageName, path, { from: import.meta.url });
   } catch (error) {
     const version = packageName === "@infolektuell/noto-color-emoji" ? "0.2.0" : "5.3.0";
     throw new Error(

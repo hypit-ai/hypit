@@ -64,11 +64,11 @@ assert(Number.isSafeInteger(memorySizeMb) && memorySizeMb >= 2_048, "invalid Hyp
 function documentFixture(canaryId: string): HyperframesDocument {
   const frameRate = { numerator: 24, denominator: 1 } as const;
   const frameCount = 24;
-  const programSpace = sealProgramSpace({
+  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
     durationSec: 1,
     frameRate,
   });
-  const track = sealVisualTrack({
+  const track = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: `hyperframes-aws-canary-${canaryId}`,
     presents: [{
