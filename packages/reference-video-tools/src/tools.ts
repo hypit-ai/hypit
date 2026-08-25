@@ -226,6 +226,44 @@ async function appendComparison(root: string, record: ComparisonRecord): Promise
 }
 
 /**
+ * An answered comparison of the same two files, asked the same way.
+ *
+ * The render's digest is what makes this safe, because it is also the repair detector: change
+ * anything the element draws and the bytes change, so the pair is new and is asked again. Bytes that
+ * did not change mean the edit did not reach the picture, and putting the identical pair in front of
+ * the observer a second time buys a paraphrase of the first answer.
+ *
+ * The stretch and the scope are part of the key because they are the rest of the question. The same
+ * render against a different stretch is a different comparison — the reference side moved — and that
+ * is the case this must not swallow.
+ */
+async function answeredAlready(
+  root: string,
+  key: { readonly digest: string; readonly stretch: string; readonly scoped: boolean; readonly clip: boolean },
+): Promise<ComparisonRecord | undefined> {
+  const lines = (await readFile(join(root, "comparisons.jsonl"), "utf8").catch(() => "")).split("\n");
+  for (const line of lines.reverse()) {
+    if (line.trim().length === 0) continue;
+    let record: ComparisonRecord;
+    try { record = JSON.parse(line) as ComparisonRecord; } catch { continue; }
+    if (record.status !== "complete" || record.differences === undefined) continue;
+    if (record.image_digest !== key.digest) continue;
+    if (comparedStretch(record) !== key.stretch) continue;
+    if (record.scoped !== key.scoped || (record.clip ?? false) !== key.clip) continue;
+    return record;
+  }
+  return undefined;
+}
+
+/** What a comparison was put beside, named the way it was asked for. */
+function comparedStretch(record: Pick<ComparisonRecord, "shot_id" | "range">): string {
+  return record.shot_id
+    ?? (record.range?.segment === undefined ? undefined : `segment:${record.range.segment}`)
+    ?? (record.range?.selection === undefined ? undefined : `selection:${record.range.selection}`)
+    ?? "";
+}
+
+/**
  * Record the differences against the comparison that asked for them, and mark it answered.
  *
  * The log is append-only while a round runs, so closing an entry rewrites the file. That is a
@@ -1247,15 +1285,42 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const comparisonId = `${slot}-${createHash("sha256")
         .update(`${slot}|${input.segment ?? input.selection ?? input.shot_id ?? ""}|${startedAt}`)
         .digest("hex").slice(0, 6)}`;
+      // Nothing changed since this pair was last answered, so nothing new can be said about it.
+      const digest = await fileDigest(renderedPath);
+      const already = await answeredAlready(root, {
+        digest,
+        stretch: comparedStretch({ ...(shot === undefined ? {} : { shot_id: shot.shot_id }), ...(cut === undefined ? {} : { range: cut.record }) }),
+        scoped: scope.length > 0,
+        clip: asClip,
+      });
+      if (already !== undefined) {
+        return {
+          reference_id: state.reference_id,
+          observer,
+          ...(shot === undefined ? {} : { shot_id: shot.shot_id }),
+          ...(cut === undefined ? {} : { range: cut.record }),
+          compared: asClip ? "clip" : "still",
+          reused: {
+            answered_at: already.at,
+            comparison_id: already.id,
+            note: "the same render, against the same stretch, asked the same way. The render's bytes are "
+              + "identical to the ones already compared, so nothing drawn has changed since — and a "
+              + "second reading of one pair is a paraphrase, not evidence. Repair against the "
+              + "differences below, or render a change and compare that.",
+          },
+          differences: { status: "complete", text: already.differences! },
+          unresolved: [],
+          pending_observations: pending,
+        };
+      }
       const differences = await ask(`comparison:${comparisonId}`, {
         media: [referenceMedia, renderedMedia],
         instruction: `You compare two supplied ${unit} and describe their visible differences in natural language only. You are not told how either was made. Do not write code, markup, SVML, component names, or production advice.`,
         prompt: `Two ${unit} are supplied in order: one, then two. Call them one and two throughout your answer, and say which of the two each difference is in.${reading}${asClip ? cut?.incomplete ?? "" : ""}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${asClip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
       });
-      // The answer is deliberately not cached — every iteration is a fresh comparison. What is
-      // recorded is that a comparison happened, so a gate can tell an element that was looked at
-      // from one that never was. The loop is allowed to stop with differences remaining, so this
-      // records participation rather than convergence.
+      // What was compared, and what was seen. The record is what a gate reads to tell an element that
+      // was looked at from one that never was, and what an identical pair is answered from without
+      // asking again.
       await appendComparison(root, {
         at: startedAt,
         id: comparisonId,
@@ -1263,12 +1328,13 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         ...(cut === undefined ? {} : { range: cut.record }),
         ...(input.element === undefined ? {} : { element: input.element.trim() }),
         image_path: renderedPath,
-        image_digest: await fileDigest(renderedPath),
+        image_digest: digest,
         observer,
         status: differences.status,
         scoped: scope.length > 0,
         clip: asClip,
         ...(standIn === undefined ? {} : { stand_in: standIn }),
+        ...(differences.status === "complete" ? { differences: differences.text } : {}),
       });
       return {
         reference_id: state.reference_id,
