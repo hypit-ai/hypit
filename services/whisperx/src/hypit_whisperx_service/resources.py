@@ -25,8 +25,17 @@ def prepare_punkt_tab(root: Path) -> Path:
     import nltk
 
     root = root.expanduser().resolve()
+    target = root / "tokenizers" / "punkt_tab"
+    # Already installed is already done. `nltk.download` fetches its index before it looks at what is
+    # on disk, so preparing an installation that needs nothing still needed the network, and a machine
+    # without it failed at the step whose whole job is to make the machine ready offline.
+    try:
+        assert_punkt_tab(root)
+        return target
+    except RuntimeError:
+        pass
     root.mkdir(parents=True, exist_ok=True)
     if not nltk.download("punkt_tab", download_dir=str(root), quiet=False, raise_on_error=True):
         raise RuntimeError("NLTK could not install punkt_tab")
     assert_punkt_tab(root)
-    return root / "tokenizers" / "punkt_tab"
+    return target
