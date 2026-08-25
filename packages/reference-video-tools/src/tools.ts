@@ -10,6 +10,13 @@ import { loadNodePackageSelection } from "@hypit/package-loader-node";
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface, SurfaceVocabulary } from "@hypit/markup";
 import { exactModelHostAbi } from "@hypit/model-kit";
+import type { ValueSchema } from "@hypit/protocol";
+import {
+  visualPathCommandSchema, visualTextDocumentSchema, visualTextFlowSchema,
+  visualTextPaintSchema, visualTextTypographySchema, visualTrackSchema,
+} from "@hypit/composition";
+
+import { describeSchema } from "./contract.js";
 import { videoCliDistribution } from "@hypit/video-cli";
 
 import { authorSource, invokedFrom, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath } from "./authoring.js";
@@ -119,6 +126,8 @@ export type ReferenceVideoTools = {
   prepare_reference(input: PrepareReferenceInput): Promise<PrepareResult>;
   observe_reference(input: ObserveReferenceInput): Promise<Record<string, unknown>>;
   inspect_svml_vocabulary(input: InspectVocabularyInput): Promise<Record<string, unknown>>;
+  inspect_visual_contract(input: { readonly shape?: string }): Promise<Record<string, unknown>>;
+  paths(): Promise<Record<string, unknown>>;
   compare_reconstruction(input: CompareReconstructionInput): Promise<Record<string, unknown>>;
   record_observation(input: RecordObservationInput): Promise<Record<string, unknown>>;
   make_placeholder(input: MakePlaceholderInput): Promise<Record<string, unknown>>;
@@ -1211,6 +1220,56 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         }
       }
       return { packages: input.package_names, surfaces };
+    },
+
+    /**
+     * What a Producer that draws is allowed to return.
+     *
+     * `inspect_svml_vocabulary` answers what a Source may write; this answers what the package behind
+     * it may emit — the element kinds, the style names admitted on them, which of those take an enum,
+     * and how few keyframes an animation may carry. Every line is generated from `composition`'s own
+     * declared schema, so it cannot drift from what the seal will accept. Without it the only way to
+     * learn the shape was to open a package that already draws and copy its habits.
+     */
+    async inspect_visual_contract(input): Promise<Record<string, unknown>> {
+      const shapes: Record<string, ValueSchema> = {
+        "visual-track": visualTrackSchema,
+        "text-flow": visualTextFlowSchema,
+        "text-typography": visualTextTypographySchema,
+        "text-paint": visualTextPaintSchema,
+        "text-document": visualTextDocumentSchema,
+        "path-command": visualPathCommandSchema,
+      };
+      const asked = input.shape?.trim();
+      assert(asked === undefined || asked.length === 0 || Object.hasOwn(shapes, asked),
+        `shape must be one of ${Object.keys(shapes).join(", ")}`);
+      const chosen = asked === undefined || asked.length === 0 ? Object.keys(shapes) : [asked];
+      return {
+        shapes: chosen.map((name) => ({ shape: name, describes: describeSchema(shapes[name]!).join("\n") })),
+        // Each of these is refused somewhere, or follows from how the emitted CSS is written. None is
+        // a convention: a rule stated here that the code does not hold would be worse than silence.
+        rules: [
+          "A Present holds exactly one element with no `parent`; every other element names one, and it "
+            + "must be a box or a mask. (composition/src/track.ts)",
+          "`order` is unique across the whole Present, not among siblings. (composition/src/track.ts)",
+          "A child's position is measured from its parent's box, not from the Canvas, so a layout "
+            + "computed in Canvas pixels subtracts the parent's origin.",
+          "An animation carries at least two keyframes, and every keyframe of one animation declares "
+            + "the same properties: one that appears in some and not others is interpolated from the "
+            + "element's own value on the frames it is missing from.",
+        ],
+      };
+    },
+
+    /** Where this command reads and resolves from, so nothing has to describe it from outside. */
+    async paths(): Promise<Record<string, unknown>> {
+      return {
+        reference_state: referenceRoot(),
+        package_root: packageRoot,
+        working_directory: invokedFrom(),
+        references: (await readdir(referenceRoot(), { withFileTypes: true }).catch(() => []))
+          .filter((entry) => entry.isDirectory()).map((entry) => entry.name),
+      };
     },
 
     async compare_reconstruction(input): Promise<Record<string, unknown>> {

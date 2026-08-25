@@ -16,6 +16,8 @@ function usage(): string {
     "  hypit-reference-video-tools observe_reference --reference-id <id> --batch <questions.json>",
     "  hypit-reference-video-tools record_observation --reference-id <id> --key <key> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
+    "  hypit-reference-video-tools inspect_visual_contract [--shape visual-track|text-flow|text-typography|text-paint|text-document|path-command]",
+    "  hypit-reference-video-tools paths",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <build.svrun> --segment <id>|--selection <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch <comparisons.json>",
@@ -127,6 +129,14 @@ function usage(): string {
     "needs GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS_JSON. `agent` needs no credentials: it",
     "returns each observation as a task carrying its prompt and one tiled picture per shot, which the",
     "calling agent answers with record_observation.",
+    "",
+    "inspect_visual_contract answers what a Producer that draws may return: the element kinds, the style",
+    "names admitted on them, which take an enum, and how few keyframes an animation carries. Every line is",
+    "generated from the Composition schema, so it says what the seal will accept rather than what one",
+    "package happened to do. inspect_svml_vocabulary answers the other half — what a Source may write.",
+    "",
+    "paths reports where this command reads reference state and resolves packages from, and which",
+    "references are prepared. Use it when a check reports something it cannot see.",
     "",
     "--package-root <dir> is where the packages a Source imports are resolved from, and it is accepted by",
     "every command. It defaults to the working directory. A project that declares a vocabulary gap and",
@@ -295,6 +305,10 @@ async function main(): Promise<void> {
       ...(one(flags, "element") === undefined ? {} : { element: one(flags, "element") }),
     };
     result = await tools.compare_reconstruction(input as { reference_id: string; shot_id?: string; segment?: string; selection?: string; run?: string; image_path?: string; video_path?: string; question?: string; element?: string });
+  } else if (command === "inspect_visual_contract") {
+    result = await tools.inspect_visual_contract({ ...(one(flags, "shape") === undefined ? {} : { shape: one(flags, "shape")! }) });
+  } else if (command === "paths") {
+    result = await tools.paths();
   } else if (command === "inspect_svml_vocabulary") {
     const packages = many(flags, "package");
     const input = supplied ?? {

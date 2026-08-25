@@ -99,7 +99,10 @@ Run this skill-owned probe from the installed skill directory when diagnosing a 
 node scripts/check-environment.mjs
 ```
 
-`hypit` and Node are required. `ffmpeg` and `ffprobe` are required by local media and preview paths.
+`hypit` and Node are required. `ffmpeg` and `ffprobe` are required by local media and preview paths; a
+host package manager puts them on `PATH` on macOS and Linux, and the section below unpacks them by
+hand on Windows. Credentials load from a project's `.env` in the same shell that runs the commands:
+`set -a && . ./.env && set +a`.
 `uv` is required only when the selected Runtime Profile uses a managed Python program such as
 WhisperX or OpenCV. Install `uv` with the host package manager, then let `uv` install the pinned
 Python interpreter.
