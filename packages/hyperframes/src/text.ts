@@ -246,7 +246,8 @@ function glyphFilterDefinition(
   return `<filter id="${id}" x="-100%" y="-100%" width="300%" height="300%" color-interpolation-filters="sRGB">${spread}${blur}${offset}${flood}<feComposite in="paint" in2="shape" operator="in"/></filter>`;
 }
 
-function glyphFilterDefinitions(element: TerminalTextElement, context: TextRenderContext): string {
+/** Every glyph Paint the document reaches, from the element, its paragraphs and their runs. */
+function documentGlyphPaintLayers(element: TerminalTextElement): GlyphPaintLayer[] {
   const layers: GlyphPaintLayer[] = [];
   const append = (paints: readonly VisualTextPaintLayer[] | undefined): void => {
     layers.push(...glyphPaintLayers(paints ?? []));
@@ -256,6 +257,11 @@ function glyphFilterDefinitions(element: TerminalTextElement, context: TextRende
     append(paragraph.style?.paints);
     for (const inline of paragraph.inlines) if (inline.kind === "text") append(inline.style?.paints);
   }
+  return layers;
+}
+
+function glyphFilterDefinitions(element: TerminalTextElement, context: TextRenderContext): string {
+  const layers = documentGlyphPaintLayers(element);
   const filtered = layers.filter((paint): paint is Extract<GlyphPaintLayer, { kind: "stroke" | "shadow" | "glow" }> => paint.kind !== "fill");
   const definitions = [...new Map(filtered.map((paint) => [canonicalStringify(paint), paint])).values()]
     .map((paint) => glyphFilterDefinition(paint, context)).join("");
@@ -420,13 +426,25 @@ function tailHtml(
   }).join("");
 }
 
-function flowCss(element: VisualTextFlowElement): string[] {
+/**
+ * `reserve` is the room the outline needs outside the letterform.
+ *
+ * It goes on this element and nowhere else. This is the one box that carries both the clip — every
+ * overflow other than `visible` is `hidden` here — and the `max-content` sizing, so it is what a hug
+ * flow hugs and what a clamped flow is cut to, and both were measured from the advances and the line
+ * boxes alone. Padding the graphemes instead would put twice the width between every pair of letters.
+ *
+ * `box-sizing: border-box` with `max-content` grows the border box rather than shrinking the content,
+ * so a hug flow still hugs its ink and a fixed one wraps that much earlier with the same room.
+ */
+function flowCss(element: VisualTextFlowElement, reserve: number): string[] {
   const flow = element.flow;
   const overflow = flow.overflow === "visible" ? "visible" : "hidden";
   const align = flow.inlineAlign === "start" ? "start" : flow.inlineAlign === "end" ? "end" : flow.inlineAlign;
   return [
     "box-sizing:border-box",
-    `padding:${number(flow.paddingPx.blockStart)}px ${number(flow.paddingPx.inlineEnd)}px ${number(flow.paddingPx.blockEnd)}px ${number(flow.paddingPx.inlineStart)}px`,
+    `padding:${number(flow.paddingPx.blockStart + reserve)}px ${number(flow.paddingPx.inlineEnd + reserve)}px `
+      + `${number(flow.paddingPx.blockEnd + reserve)}px ${number(flow.paddingPx.inlineStart + reserve)}px`,
     `text-align:${align}`,
     `overflow:${overflow}`,
     `white-space:${flow.wrap === "none" ? "pre" : "pre-wrap"}`,
@@ -772,7 +790,7 @@ export function renderTerminalTextElement(element: TerminalTextElement, context:
   ];
   const contentStyle = [
     "position:relative",
-    ...flowCss(element),
+    ...flowCss(element, strokeReserve(documentGlyphPaintLayers(element))),
     ...typographyCss(element.typography, context.exactFontFamily),
     ...inheritedGlyphColor(element.paints),
     ...boxCss(element.paints, "content"),
