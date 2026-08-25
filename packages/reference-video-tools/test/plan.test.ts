@@ -50,3 +50,35 @@ test("two placements that declare different pictures are two looks, and two that
     .replace("media={b.media}", "media={c.media}"));
   assert.equal(mocked.length, 1, "an unbuilt picture is a grey rectangle whichever generation names it");
 });
+
+const CAPTIONS = `<?svml using="@hypit/markup@1"?>
+<svml version="1">
+  <import as="story" from="@hypit/script@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <script id="story">
+    <one><HOST>alpha bravo charlie delta echo.</one>
+    <two><HOST>foxtrot @punch golf hotel @/punch india.</two>
+  </script>
+  <caption-fine:Style id="plain" recipe={recipes.caption.plain}/>
+  <caption-fine:Style id="loud" recipe={recipes.caption.loud}/>
+  <caption:Program id="program" document={story.caption} narrative={story} default={plain}>
+    <caption:Use style={loud} selection={story.selection.punch}/>
+  </caption:Program>
+  <caption-fine:Track id="captions" document={story.caption} semantic={speech.semantic} program={program}/>
+</svml>
+`;
+
+// A caption Track is one tag with no window on it, so reading its placements the ordinary way finds
+// one design however many the Program hands out. An override is written inside the Program, and the
+// stretch it covers is a genuinely different picture that nothing on the Track mentions — so leaving
+// it out is a design nobody looks at while the gate reports full coverage.
+test("a caption Style override is its own look, over the stretch it covers", () => {
+  const plan = reviewPlan({
+    svml: CAPTIONS, svmlPath: "main.svml", scriptBody: scriptBody(CAPTIONS),
+    drawn: [{ id: "captions", tag: "Track", alias: "caption-fine", specifier: "@hypit/caption-fine" }],
+  });
+  const overridden = plan.find((entry) => entry.named === "selection punch");
+  assert.ok(overridden, `the overridden stretch is missing; got ${JSON.stringify(plan.map((e) => e.named))}`);
+  assert.ok(plan.length >= 2, "the default and the override are two designs, not one");
+});

@@ -577,6 +577,7 @@ export async function authoringCheck(
     return each.flat();
   });
   const drawingTags = new Set<string>();
+  const timeVaryingKeys = new Set<string>();
   for (const pack of loaded) {
     for (const facet of pack.contribution.hostFacets ?? []) {
       if (facet.abi !== markupSurfaceHostFacetAbi) continue;
@@ -584,6 +585,17 @@ export async function authoringCheck(
       const draws = surface.outputs.some((output) =>
         output.module.name === "@hypit/composition" && (output.name === "VisualTrack" || output.name === "AudioTrack"));
       if (draws) drawingTags.add(`${pack.specifier}#${surface.tag}`);
+      // Which Recipe properties the package itself calls time-varying.
+      //
+      // `caption-fine` sorts every property it declares into where / how / when, and `when` is
+      // exactly the question one of the planning rules asks: does this run for as long as the window
+      // does? Reading the package's own answer keeps that rule correct for properties added after
+      // this file was written, which a list maintained here would not be.
+      for (const attribute of surface.vocabulary?.attributes ?? []) {
+        for (const property of attribute.recipe ?? []) {
+          if (property.group === "when") timeVaryingKeys.add(property.name);
+        }
+      }
     }
   }
 
@@ -831,7 +843,7 @@ export async function authoringCheck(
     if (text === undefined) continue;
     for (const recipe of text.matchAll(/([A-Za-z0-9_.-]+)\s*\{([^}]*)\}/gu)) recipeBodies.set(recipe[1] ?? "", recipe[2] ?? "");
   }
-  const plan = reviewPlan({ svml, svmlPath, scriptBody: scriptBody(svml), drawn, recipes: recipeBodies });
+  const plan = reviewPlan({ svml, svmlPath, scriptBody: scriptBody(svml), drawn, recipes: recipeBodies, timeVaryingKeys });
   // The same parse the plan was built from, so a look recorded against a Segment can be resolved to
   // the words that Segment marks and compared with a plan entry on one axis.
   const plannedBody = scriptBody(svml);

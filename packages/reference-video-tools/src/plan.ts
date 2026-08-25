@@ -201,6 +201,55 @@ function openingOf(svml: string, alias: string, tag: string, id: string): string
 }
 
 /**
+ * The Styles a caption Program hands out, and the stretch each one covers.
+ *
+ * A caption Track is one tag with no window on it — it draws wherever the Script has words — so
+ * reading its placements the way every other element is read finds exactly one, and reports one
+ * design. That is wrong whenever the Program overrides a Style: `<caption:Use style=… selection=…>`
+ * is how one stretch is drawn differently from the rest, and it is written inside the Program rather
+ * than on the Track, so nothing on the Track says it happened.
+ *
+ * Each override is its own declaration over its own words. The default is a declaration too, over
+ * whatever the overrides did not claim, which is where the Track's single placement belongs.
+ */
+function captionStyles(svml: string, element: PlannedElement, parsed: ParsedNarrative): readonly Placement[] {
+  const opening = openingOf(svml, element.alias, element.tag, element.id);
+  const program = /\bprogram=\{([A-Za-z0-9_-]+)\}/u.exec(opening)?.[1];
+  if (program === undefined) return [];
+  const declaring = new RegExp(`<[a-z][a-z0-9-]*:Program\\b[^>]*?\\bid="${program}"[^>]*?(/?)>`, "su").exec(svml);
+  if (declaring === null) return [];
+
+  const body = declaring[1] === "/" ? "" : (() => {
+    const after = svml.slice(declaring.index + declaring[0].length);
+    const close = after.search(/<\/[a-z][a-z0-9-]*:Program>/u);
+    return close === -1 ? after : after.slice(0, close);
+  })();
+
+  const tag = `${element.alias}:${element.tag}`;
+  const found: Placement[] = [];
+  for (const use of body.matchAll(/<[a-z][a-z0-9-]*:Use\b([^>]*?)\/?>/gsu)) {
+    const attributes = attributesOf(use[0] ?? "");
+    // A Use names its stretch with `selection=`, not the `during=` every drawn element uses, because
+    // it is assigning a Style to a run of words rather than placing a picture over them.
+    const marked = /^\{story\.selection\.([A-Za-z0-9_-]+)\}$/u.exec(attributes.get("selection") ?? "")?.[1];
+    const selection = marked === undefined ? undefined : parsed.selections.find((item) => item.id === marked);
+    const stretch = selection === undefined
+      ? stretchOf(attributes, parsed)
+      : {
+        tokens: [selection.open.boundary.tokenIndex, selection.close.boundary.tokenIndex] as readonly [number, number],
+        named: `selection ${marked}`,
+      };
+    const style = attributes.get("style");
+    if (stretch === undefined || style === undefined) continue;
+    found.push({
+      element: element.id, tag: `${tag} (caption:Use)`,
+      key: `${tag}|style=${style}`, stretch, attributes,
+    });
+  }
+  return found;
+}
+
+/**
  * Every placement one drawing element makes.
  *
  * A Track holding forty Items draws nothing itself: the Items carry the windows and the Recipes, and
@@ -336,8 +385,9 @@ function fullestStretch(placements: readonly Placement[]): Stretch | undefined {
  * marked `when`, that is the authority. Everything else is matched against the list above, which is
  * the same judgement made by hand for the packages that do not publish one yet.
  */
-function scalesWithWindow(bodies: readonly string[]): boolean {
-  return bodies.some((body) => WHOLE_WINDOW_KEYS.some((key) => new RegExp(`\\b${key}\\s*:`, "u").test(body)));
+function scalesWithWindow(bodies: readonly string[], published: ReadonlySet<string>): boolean {
+  const keys = [...new Set([...published, ...WHOLE_WINDOW_KEYS])];
+  return bodies.some((body) => keys.some((key) => new RegExp(`\\b${key}\\s*:`, "u").test(body)));
 }
 
 /** The Recipe bodies one placement's declaration names, so rule 3 can read their keys. */
@@ -395,14 +445,27 @@ export function reviewPlan(input: {
   readonly drawn: readonly PlannedElement[];
   /** Recipe bodies by their sheet-local name, for rule 3. Absent means rule 3 nominates nothing. */
   readonly recipes?: ReadonlyMap<string, string>;
+  /**
+   * Property names the packages themselves marked time-varying, read from their own vocabulary.
+   *
+   * A package that classifies its properties is the authority on them, and it stays right as it adds
+   * more. The list in this file is the fallback for the packages that publish no classification.
+   */
+  readonly timeVaryingKeys?: ReadonlySet<string>;
 }): readonly PlanEntry[] {
   const parsed = parseScript(input.svmlPath, input.scriptBody.text, input.scriptBody.offset);
   const recipes = input.recipes ?? new Map<string, string>();
+  const published = input.timeVaryingKeys ?? new Set<string>();
   const styleBoundaries = captionStyleBoundaries(input.svml, parsed);
   const entries: PlanEntry[] = [];
 
   for (const element of input.drawn) {
-    const placements = placementsOf(input.svml, element, parsed);
+    // A caption Track's designs are declared inside its Program, not on the Track, so they are read
+    // separately and joined to whatever the ordinary placement scan found.
+    const placements = [
+      ...placementsOf(input.svml, element, parsed),
+      ...(element.specifier.includes("caption") ? captionStyles(input.svml, element, parsed) : []),
+    ];
     entries.push(...firstOfEachDeclaration(placements));
 
     // Rule 2. A caption's layout breaks on a Cue, and a list's breaks on how many items one stretch
@@ -418,7 +481,7 @@ export function reviewPlan(input: {
 
     // Rule 3. Only where something runs for as long as the window does, and only then are the
     // longest and the shortest two different questions rather than the same picture twice.
-    const animates = placements.some((placement) => scalesWithWindow(recipeBodiesOf(placement.attributes, recipes)));
+    const animates = placements.some((placement) => scalesWithWindow(recipeBodiesOf(placement.attributes, recipes), published));
     if (animates && placements.length > 1) {
       const byLength = [...placements].sort((one, other) =>
         (one.stretch.tokens[1] - one.stretch.tokens[0]) - (other.stretch.tokens[1] - other.stretch.tokens[0]));
