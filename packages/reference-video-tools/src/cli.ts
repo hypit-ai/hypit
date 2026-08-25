@@ -24,7 +24,7 @@ function usage(): string {
     "  hypit-reference-video-tools review_element --run <build.svrun> --element <id> --segment <id>|--selection <id> --video <path>|--image <path> --intent-file <path> [--question <scope>]",
     "  hypit-reference-video-tools review_element --run <build.svrun> --batch <reviews.json>",
     "  hypit-reference-video-tools record_review --run <build.svrun> --review-id <id> --text <text>|--text-file <path>",
-    "  hypit-reference-video-tools make-placeholder --out <path> --width <w> --height <h> [--color light|mid|dark|white|black|#RRGGBB] [--video] [--seconds <s>]",
+    "  hypit-reference-video-tools make_placeholder --out <path> --width <w> --height <h> [--color light|mid|dark|white|black|#RRGGBB] [--video] [--seconds <s>]",
     "  hypit-reference-video-tools render_element <build.svrun> --element <id> --out <path.png|path.mp4> [--segment <id>] [--selection <id>] [--reference-id <id>]",
     "  hypit-reference-video-tools render_element <build.svrun> --batch <renders.json> [--reference-id <id>]",
     "  hypit-reference-video-tools render_previews <package-dir> [...]",
@@ -54,7 +54,7 @@ function usage(): string {
     "",
     "render_element draws one element of a Source the way that Source configures it, without a Build",
     "and without a Provider: the Canvas, frame rate, Recipe values and bindings are read from the",
-    "Source, and the layers a Build has not made are mocked with make-placeholder at the Canvas's size.",
+    "Source, and the layers a Build has not made are mocked with make_placeholder at the Canvas's size.",
     "Name the stretch in words — --segment or --selection — so no reference timestamp is ever read",
     "across; without either, the whole program is drawn. An --out ending .mp4, .mov or .webm writes the",
     "stretch as a clip, and any other extension writes one still from the middle of it.",
@@ -108,7 +108,7 @@ function usage(): string {
     "`both_sides_still` says why. Both sides have to be still, because a render's base is a flat",
     "placeholder and is therefore still whatever the reference does.",
     "",
-    "make-placeholder writes a correctly-sized placeholder for a media slot the Source declares as a",
+    "make_placeholder writes a correctly-sized placeholder for a media slot the Source declares as a",
     "generation and a Build has not filled. It is deterministic and Provider-free: the comparison round",
     "uses its output to mock an empty slot, and the observer is told the slot is a placeholder so it is",
     "bypassed rather than reported as a difference. `--color` picks the fill from the named presets (the",
@@ -366,7 +366,7 @@ async function main(): Promise<void> {
       ...(flags.get("without-previews") === true ? { include_previews: false } : {}),
     };
     result = await tools.inspect_svml_vocabulary(input as { package_names: readonly string[]; tags?: readonly string[]; include_previews?: boolean });
-  } else if (command === "make-placeholder") {
+  } else if (command === "make_placeholder") {
     const input = supplied ?? {
       out: required(flags, "out"),
       width: Number(required(flags, "width")),

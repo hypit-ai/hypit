@@ -818,7 +818,7 @@ function timingReport(reference: string | undefined, segments: readonly StandInT
  *   Canvas and Frames, Recipe values, bindings   the Source
  *   which elements share a window, in what order  the Script's words, through their Selections
  *   how long each Segment runs                    the reference's own words, or `estimate:Speech`
- *   the layers a Build has not made               `make-placeholder`, sized from the Canvas
+ *   the layers a Build has not made               `make_placeholder`, sized from the Canvas
  *
  * The one thing missing before a Build is real speech, and `standInTakes` supplies a Segment
  * skeleton for it. Given `reference_id` it reads the seconds out of that reference's transcript, so
@@ -1012,7 +1012,7 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
     declarations.push(`  <value id="stand-in-${segmentId}" type="@hypit/speech@1#SemanticTake" from="./${segmentId}.json"/>`);
     satisfactions.push(`  <satisfy output="${output}.take" candidate="stand-in-${segmentId}"/>`);
   }
-  // The layers a Build has not made, as placeholders of the Canvas's own size. `make-placeholder` is
+  // The layers a Build has not made, as placeholders of the Canvas's own size. `make_placeholder` is
   // the route's one tool for this: deterministic, Provider-free, and the same mock the comparison is
   // told to bypass. A mock never enters the project's own Source — it is declared in the derived Run
   // and nowhere else.

@@ -614,6 +614,38 @@ type Request = {
 };
 type Asker = (key: string, request: Request) => Promise<Observation>;
 
+/**
+ * Attempt every entry of a `--batch` round, and keep one entry's failure to itself.
+ *
+ * Four commands take a batch and all four want the same thing from it: every entry attempted, the
+ * ones that threw reported beside the input that produced them, and the rest returned whole. Written
+ * out per command that was the same twenty lines four times, differing only in the noun.
+ *
+ * What stays at the call site is the result's own shape — `compared`/`comparisons`,
+ * `reviewed`/`reviews` — because that is the part a reader of the output is looking for, and a helper
+ * that also invented those names would need an argument per noun to say nothing extra.
+ */
+/** A round that reaches no Provider: bounded by the machine's cores rather than by anyone's quota. */
+const locallyPaced = (items: number) => ({ concurrency: Math.max(1, Math.min(cpus().length - 1, items)), gapMs: 0 });
+
+async function runBatch<T>(
+  items: readonly T[],
+  rate: { readonly concurrency: number; readonly gapMs: number },
+  run: (item: T) => Promise<Record<string, unknown>>,
+): Promise<{
+  readonly done: readonly Record<string, unknown>[];
+  readonly failures: readonly { readonly error: string; readonly input: T }[];
+}> {
+  const settled = await pacedMap(items, rate.concurrency, rate.gapMs, async (item) => {
+    try { return { ok: true as const, value: await run(item) }; }
+    catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : String(error), input: item }; }
+  });
+  return {
+    done: settled.flatMap((item) => item.ok ? [item.value] : []),
+    failures: settled.flatMap((item) => item.ok ? [] : [{ error: item.error, input: item.input }]),
+  };
+}
+
 async function pacedMap<T, R>(items: readonly T[], concurrency: number, gapMs: number, run: (item: T, index: number) => Promise<R>): Promise<readonly R[]> {
   const result = new Array<R>(items.length);
   let cursor = 0;
@@ -934,6 +966,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
             key, instruction, prompt: [...parts, prompt].join("\n\n"), image_refs: asPictures(media, state),
             ...(sound === true && words.length > 0 ? { transcript_ref: transcriptRef } : {}),
             ...(spoken.length === 0 ? {} : { transcript_words: spoken }),
+            record_with: `record_observation --reference-id ${state.reference_id} --key ${key} --text-file <the answer>`,
           });
           return observation("pending", "awaiting the agent observer");
         },
@@ -1132,24 +1165,18 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       if (input.questions !== undefined) {
         const round = input.questions;
         assert(round.length > 0, "questions is empty");
-        const batchRate = rateFor((await loadState(input.reference_id)).observer ?? "gemini", "listing", round.length);
-        const answers = await pacedMap(round, batchRate.concurrency, batchRate.gapMs, async (asked) => {
-          try {
-            return { ok: true as const, value: await tools.observe_reference({
-              reference_id: input.reference_id, shot_ids: asked.shot_ids, question: asked.question,
-            }) };
-          } catch (error) {
-            return { ok: false as const, error: error instanceof Error ? error.message : String(error), asked };
-          }
-        });
-        const done = answers.filter((item) => item.ok).map((item) => item.value!);
-        const failed = answers.filter((item) => !item.ok);
+        const rate = rateFor((await loadState(input.reference_id)).observer ?? "gemini", "listing", round.length);
+        const { done, failures } = await runBatch(round, rate, async (asked) => await tools.observe_reference({
+          reference_id: input.reference_id, shot_ids: asked.shot_ids, question: asked.question,
+        }));
         return {
           reference_id: input.reference_id,
           asked: done.length,
-          failed: failed.length,
+          failed: failures.length,
           answers: done,
-          ...(failed.length === 0 ? {} : { failures: failed.map((item) => ({ error: item.error, asked: item.asked })) }),
+          ...(failures.length === 0 ? {} : { failures }),
+          // The one thing gathered across the whole round: an observer that answers out of band owes
+          // one task per question, and they are answered together rather than call by call.
           pending_observations: done.flatMap((item) => (item["pending_observations"] ?? []) as readonly unknown[]),
         };
       }
@@ -1466,24 +1493,15 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         assert(batch.length > 0, "comparisons is empty");
         // Each entry cuts and tiles its own two sides, so on the observer that answers out of band
         // this round is ffmpeg work rather than a queue of requests.
-        const batchRate = rateFor((await loadState(input.reference_id)).observer ?? "gemini", "ffmpeg", batch.length);
-        const results = await pacedMap(batch, batchRate.concurrency, batchRate.gapMs, async (one) => {
-          const merged = { reference_id: input.reference_id, ...one };
-          // One comparison that throws — an unreadable render, a Selection the Script does not mark —
-          // takes only itself down. The rest of the list is what the caller came for.
-          try { return { ok: true as const, value: await tools.compare_reconstruction(merged) }; }
-          catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : String(error), input: merged }; }
-        });
-        const done = results.filter((item) => item.ok).map((item) => item.value!);
-        const failed = results.filter((item) => !item.ok);
+        const rate = rateFor((await loadState(input.reference_id)).observer ?? "gemini", "ffmpeg", batch.length);
+        const { done, failures } = await runBatch(batch, rate,
+          async (one) => await tools.compare_reconstruction({ reference_id: input.reference_id, ...one }));
         return {
           reference_id: input.reference_id,
           compared: done.length,
-          failed: failed.length,
+          failed: failures.length,
           comparisons: done,
-          ...(failed.length === 0 ? {} : {
-            failures: failed.map((item) => ({ error: item.error, input: item.input })),
-          }),
+          ...(failures.length === 0 ? {} : { failures }),
         };
       }
       const state = await loadState(input.reference_id);
@@ -1752,20 +1770,14 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         assert(batch.length > 0, "reviews is empty");
         // Local work throughout — a decode per entry and no request anywhere — so it is paced by the
         // machine, the way `render_element` is.
-        const atOnce = Math.max(1, Math.min(cpus().length - 1, batch.length));
-        const results = await pacedMap(batch, atOnce, 0, async (one) => {
-          const merged = { ...one, run: input.run };
-          try { return { ok: true as const, value: await tools.review_element(merged) }; }
-          catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : String(error), input: merged }; }
-        });
-        const done = results.filter((item) => item.ok).map((item) => item.value!);
-        const failed = results.filter((item) => !item.ok);
+        const { done, failures } = await runBatch(batch, locallyPaced(batch.length),
+          async (one) => await tools.review_element({ ...one, run: input.run }));
         return {
           run: runPath,
           reviewed: done.length,
-          failed: failed.length,
+          failed: failures.length,
           reviews: done,
-          ...(failed.length === 0 ? {} : { failures: failed.map((item) => ({ error: item.error, input: item.input })) }),
+          ...(failures.length === 0 ? {} : { failures }),
         };
       }
 
@@ -1907,19 +1919,15 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const round = input.renders;
         assert(round.length > 0, "renders is empty");
         // Local work rather than a quota, so it is paced by the machine and not by the launch gap.
-        const atOnce = Math.max(1, Math.min(cpus().length - 1, round.length));
-        const results = await pacedMap(round, atOnce, 0, async (one) => {
-          const merged = { ...one, run: one.run ?? input.run, ...(one.reference_id ?? input.reference_id === undefined ? {} : { reference_id: input.reference_id }) };
-          try { return { ok: true as const, value: await renderElement(merged as RenderElementInput) }; }
-          catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : String(error), input: merged }; }
-        });
-        const done = results.filter((item) => item.ok).map((item) => item.value!);
-        const failed = results.filter((item) => !item.ok);
+        const { done, failures } = await runBatch(round, locallyPaced(round.length), async (one) => await renderElement({
+          ...one, run: one.run ?? input.run,
+          ...(one.reference_id ?? input.reference_id === undefined ? {} : { reference_id: input.reference_id }),
+        } as RenderElementInput));
         return {
           rendered: done.length,
-          failed: failed.length,
+          failed: failures.length,
           renders: done,
-          ...(failed.length === 0 ? {} : { failures: failed.map((item) => ({ error: item.error, input: item.input })) }),
+          ...(failures.length === 0 ? {} : { failures }),
         };
       }
       return await renderElement(input);
