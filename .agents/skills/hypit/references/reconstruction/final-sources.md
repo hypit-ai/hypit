@@ -20,40 +20,25 @@ to author one.
 Do not author one source fragment per shot. Do not let check success substitute for unresolved
 semantic evidence; return to a narrow `observe_reference` question when necessary.
 
-## A Segment is a stretch the reference actually plays as one
+## Where the Segments fall, and how long each take runs
 
-Cut the Script into Segments the way the reference is *spoken*, not the way its shots are numbered:
-consecutive Segments carrying one unbroken voiceover are one Segment with Selections inside it.
-`../playbooks/craft/generated-dependencies.md` says why — a Segment is a generation boundary, and
-splitting a stretch the reference delivers unbroken invents a seam it does not have.
+`../script-time.md` decides both, and it decides them the same way for any program: a Segment is a
+stretch that is spoken as one, the seam goes at a sentence end, and each take's duration comes from
+`estimate:Speech` rather than from any clock.
 
-One thing does force a seam. The take that speaks a Segment generates that speech, so a Segment can
-be no longer than one generation. Where an unbroken passage runs past what the model will produce in
-one take, it becomes two Segments — and then the seam is yours to place rather than the ceiling's.
-Put it where the speaker would draw breath: at a sentence end, never mid-clause.
+The reference adds one thing to that, and it is a warning rather than a rule. The generated speech
+plays at its own pace, not the reference's: its measured word timings describe how the original
+speaker delivered the line, the reconstruction re-speaks it, and the generated take will not match
+that recording second for second. Reading the reference's span onto the take fixes a length that has
+nothing to do with how the generator speaks.
 
-## A take's duration is estimated, not read off the reference
-
-Every take is generated, and the generated speech plays at its own pace, not the reference's. So
-each take's duration comes from `estimate:Speech` — the prediction of how long the generated line
-will be. Write that estimate on the take.
-
-The reference's measured word timings describe how the original speaker delivered the line; the
-reconstruction re-speaks it, and the generated take will not match that recording second for
-second. Reading the reference's span onto the take fixes a length that has nothing to do with how
-the generator speaks.
-
-Nothing depends on the estimate being exact. Script Selections bind every placed element to the
-words, and the SemanticTrack places the words where the generated audio actually has them, so a
-take that comes back a little long or short moves the words, not the bindings. This is also what
-lets a reconstruction survive the author changing the lines: the estimate recomputes from the new
-words, where a literal read off the old reference would not. `estimate:Speech` takes
-`story.segment.NAME.speech`, so the duration follows the script it is asked to predict.
+The estimate is also what lets a reconstruction survive the author changing the lines at the end of the route,
+where a literal read off the old reference would not.
 
 Then check and wire, in that order. `../authoring.md` holds the check set — all four commands, not
 only the Author Source — and `../preview.md` holds the graph check that comes after it. A Source that
 passes every check can still declare a Run that does not trace, and neither gate is bounded by the
-loop's two-attempt ceiling: a graph that does not trace is not a difference to weigh, it is work that
+round's two-attempt ceiling: a graph that does not trace is not a difference to weigh, it is work that
 is not done.
 
 One thing to expect here rather than to debug: a route that declares its generation instead of
@@ -65,7 +50,7 @@ Fix package resolution and package implementation before repairing source use. C
 three files are accepted. Do not create `check_svml_project` or another wrapper.
 
 Accepted checks end the structural work, not the reconstruction. Every element you authored still has
-to be rendered and compared against the reference under `reconstruction-loop.md`, and that work ends
+to be rendered and compared against the reference under `comparison-round.md`, and that work ends
 on `reconstruction_check` (`route.md` holds the command), which refuses to pass while any drawing
 element has never been compared. It needs a prepared reference; when several are prepared it takes
 `--reference-id <id>`.

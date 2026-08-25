@@ -155,18 +155,26 @@ test("a second observation reuses the cache and only an explicit reobserve runs 
   assert.equal(forced.length, 4, "reobserve reruns the selected shot's picture, type and sound plus its one boundary, and nothing else");
 });
 
-test("a narrow question costs one call, answers from the named shots and never re-runs observations", async () => {
-  const { stateRoot } = await workspace(4);
+test("a narrow question costs one call, answers from the named shots and is answered once", async () => {
+  await workspace(4);
   const calls: Call[] = [];
-  const result = await tools(calls, "the caption sits above the lower edge")
-    .observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
+  const api = tools(calls, "the caption sits above the lower edge");
+  const result = await api.observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
 
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0]!.mimeTypes, ["video/mp4", "image/jpeg"]);
   assert.equal(calls[0]!.text, "How thick is the caption outline?");
   assert.deepEqual(result["shot_ids"], ["shot-003"]);
   assert.deepEqual(result["answer"], { status: "complete", text: "the caption sits above the lower edge" });
-  assert.equal(await readFile(join(stateRoot, "observations.json"), "utf8"), "{}\n");
+
+  // The key carries the question as well as the shots, so a second question over the same shot is a
+  // separate entry rather than the first one's answer handed back under a shared key.
+  const repeated = await api.observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
+  assert.equal(calls.length, 1, "asking the same question again reads the answer rather than paying for a paraphrase");
+  assert.equal(repeated["reused"], true);
+  const different = await api.observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "What colour is the background?" });
+  assert.equal(calls.length, 2, "a different question over the same shot is a different question");
+  assert.notEqual(different["observation_key"], repeated["observation_key"]);
 
   await assert.rejects(
     tools([]).observe_reference({ reference_id: REFERENCE, question: "which shot?" }),
@@ -174,6 +182,24 @@ test("a narrow question costs one call, answers from the named shots and never r
   await assert.rejects(
     tools([]).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-001", "shot-002", "shot-003", "shot-004"], question: "which shot?" }),
     /at most three shots/u);
+});
+
+test("the key a narrow question is handed out under is one record_observation accepts", async () => {
+  // A shot id is `shot-003`, and the key that names it was being matched by a pattern with no hyphen
+  // in its class — so every real narrow-question key was refused, and the observer that has to record
+  // its own answers had nowhere to put one.
+  await workspace(4);
+  const api = createReferenceVideoTools({ concurrency: 4, launchGapMs: 0, retryDelayMs: 0, generate: async () => "" });
+  const state = JSON.parse(await readFile(join(process.env["HYPIT_REPOSITORY"]!, ".hypit", "reference-video-tools", REFERENCE, "state.json"), "utf8")) as ReferenceState;
+  await writeFile(join(state.root, "state.json"), `${JSON.stringify({ ...state, observer: "agent" }, null, 2)}\n`, "utf8");
+
+  const asked = await api.observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
+  const key = (asked["pending_observations"] as readonly { readonly key: string }[])[0]!.key;
+  const stored = await api.record_observation({ reference_id: REFERENCE, key, text: "two pixels" });
+  assert.equal(stored["stored_in"], "observations");
+
+  const again = await api.observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
+  assert.deepEqual(again["answer"], { status: "complete", text: "two pixels" });
 });
 
 test("reconstruction comparison sends an unlabelled pair and accepts rendered PNG frames", async () => {

@@ -72,7 +72,7 @@ function resolvePlaceholderColor(value: string | undefined): PlaceholderPalette 
 
 /**
  * A correctly-sized placeholder image for a media slot the Source declares as a generation and a
- * Build has not filled. The comparison loop needs a still; the slot must be mocked, and the mock is
+ * Build has not filled. The comparison round needs a still; the slot must be mocked, and the mock is
  * this tool's output — deterministic, Provider-free, never a real generation and never a hand-rolled
  * script. A field with an inset frame reads as a slot waiting for content rather than a broken
  * image, so the observer can bypass the region instead of reporting it every round.

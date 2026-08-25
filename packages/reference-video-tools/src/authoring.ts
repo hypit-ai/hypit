@@ -806,7 +806,7 @@ function timingReport(reference: string | undefined, segments: readonly StandInT
  * Render one element of a Source the way that Source configures it, without a Build and without a
  * Provider.
  *
- * `reconstruction-loop.md` compares a reconstructed element against the reference. What it must
+ * `comparison-round.md` compares a reconstructed element against the reference. What it must
  * compare is the element as this video places it — the Recipe values the Source passes, the Script
  * text it feeds, the windows it binds — because a Source can fill those with values that collide
  * while a package's catalogue preview, drawn from sample values, stays perfect. Producing that
@@ -919,9 +919,14 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   if (focusedSegment !== undefined) {
     sliced = sliceSource(svml, focusedSegment);
     sourcePath = join(compareRoot, "sliced.svml");
-    // The fragment sits three directories below the Source it came from, so its own relative imports
+    // The fragment sits three directories below the Source it came from, so its own relative paths
     // have to reach back the same distance the derived Run's carried files do.
-    const repointed = sliced.text.replace(/(\s(?:source|from)=")\.\//gu, "$1../../../");
+    //
+    // `src` belongs in this list beside the import attributes. It is how the author's own supplied
+    // material is named — a presenter still, a voice sample — and left alone it resolved against the
+    // fragment's directory, where there is no `assets/`. Every Source carrying a `media:Image` with a
+    // relative path failed to render at all, on either route, the moment a window was named.
+    const repointed = sliced.text.replace(/(\s(?:source|from|src)=")\.\//gu, "$1../../../");
     await writeFile(sourcePath, repointed, "utf8");
     // Everything downstream reads the Source: which Takes to stand in for, which media to mock, which
     // outputs to satisfy. Left on the original it would declare mocks for elements the cut removed,
