@@ -131,6 +131,13 @@ export type SurfaceRecipePropertyVocabulary = {
   /** Optional package-owned subsection inside the page. */
   readonly section?: string;
   readonly values?: readonly string[];
+  /**
+   * The default as it is written in a Recipe, which is text even when it reads as a number: `"0"`,
+   * not `0`. A Recipe property's value arrives as written and each Style decodes its own, so what a
+   * fallback records is the source line an author would have typed. A number here is refused deep
+   * inside the surface declaration, where the complaint is about the whole vocabulary rather than
+   * about this field.
+   */
   readonly fallback?: string;
 };
 
