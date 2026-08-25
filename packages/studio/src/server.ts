@@ -1,16 +1,16 @@
 import { watch } from "node:fs";
 import type { FSWatcher } from "node:fs";
 import { existsSync } from "node:fs";
-import { readFile, rename, writeFile, unlink } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { readFile } from "node:fs/promises";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 import type { Plugin, ViteDevServer } from "vite";
-import { adjustScriptMoment, adjustScriptSelection, parseScript } from "@hypit/script";
+import type { StudioTemporalInstantProjection } from "@hypit/studio-adapter";
 
 import type { StudioArchive } from "./archive.js";
 import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
-import type { StudioAdapterRegistry } from "./studio-registry.js";
+import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { loadStudioRun } from "./run.js";
 import { serializeParameterValue, validateParameterValue } from "./parameter-values.js";
 import { readStudioSession } from "./session.js";
@@ -18,12 +18,13 @@ import type { Range, StudioFailure, StudioLibraryView, StudioMutation, StudioSna
 import { createStudioStoryboard } from "./storyboard.js";
 import type { StudioStoryboard } from "./storyboard.js";
 import { findSurfacePreview } from "./surface-preview.js";
+import { replaceSourceFiles } from "./source-transaction.js";
 
 export type StudioPluginOptions = {
   readonly source: string;
   readonly runPath: string;
   readonly domain: StudioDomain;
-  readonly registry: StudioAdapterRegistry;
+  readonly registry: StudioCompanionRegistry;
   readonly workspaceRoot: string;
   readonly archive?: StudioArchive;
 };
@@ -61,11 +62,13 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   let server: ViteDevServer | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let mutating = false;
+  let publishing = 0;
   let requestedRevision = 0;
   let currentSource = options.source;
   let library: StudioLibraryView | undefined;
   let allowedSourceFiles = new Set<string>();
   const watched = new Map<string, FSWatcher>();
+  const watchedFiles = new Set<string>();
   const storyboards = new Map<string, Promise<StudioStoryboard>>();
 
   const readLibrary = async (): Promise<StudioLibraryView> => {
@@ -79,9 +82,15 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   };
 
   const watchSource = (path: string): void => {
-    if (watched.has(path)) return;
+    const absolute = resolve(path);
+    watchedFiles.add(absolute);
+    const directory = dirname(absolute);
+    if (watched.has(directory)) return;
     try {
-      watched.set(path, watch(path, () => { if (!mutating) schedule(); }));
+      watched.set(directory, watch(directory, (_event, filename) => {
+        const changed = filename === null ? undefined : resolve(directory, filename.toString());
+        if (!mutating && (changed === undefined || watchedFiles.has(changed))) schedule();
+      }));
     } catch {
       // Some Hosts may report virtual Source ids. They are still recompiled
       // whenever a real Source revision is scheduled; they simply emit no file event.
@@ -89,6 +98,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   };
 
   const publish = async (attempt: number, notify = true): Promise<void> => {
+    publishing += 1;
     try {
       // SVML and SVRun form one Studio source of truth. Recompile both for
       // every revision so a new Author graph is never executed through an old
@@ -96,6 +106,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       const run = await loadStudioRun({
         run: options.runPath,
         domain: options.domain,
+        registry: options.registry,
         ...(options.archive === undefined ? {} : { archive: options.archive }),
       });
       currentSource = run.authorSource;
@@ -131,13 +142,18 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         ...(range === undefined ? {} : { range }),
       };
       if (notify) server?.ws.send({ type: "custom", event: "studio:error", data: failure });
+    } finally {
+      publishing -= 1;
     }
   };
 
   const schedule = (): void => {
     const attempt = ++requestedRevision;
     if (timer !== undefined) clearTimeout(timer);
-    timer = setTimeout(() => void publish(attempt), 80);
+    timer = setTimeout(() => {
+      timer = undefined;
+      void publish(attempt);
+    }, 80);
   };
 
   type Patch = {
@@ -147,27 +163,14 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     readonly preimage: string;
   };
 
-  const replaceFiles = async (files: ReadonlyMap<string, string>): Promise<void> => {
-    const temporaries: { readonly path: string; readonly temporary: string }[] = [];
-    try {
-      for (const [absolute, text] of files) {
-        const temporary = join(dirname(absolute), `.${basename(absolute)}.hypit-studio.tmp`);
-        await writeFile(temporary, text, "utf8");
-        temporaries.push({ path: absolute, temporary });
-      }
-      for (const item of temporaries) await rename(item.temporary, item.path);
-    } finally {
-      for (const item of temporaries) {
-        try { await unlink(item.temporary); } catch { /* already renamed */ }
-      }
-    }
-  };
-
   const applyTransaction = async (
     patches: readonly Patch[],
     expectedRevision: number,
   ): Promise<ReadonlyMap<string, string>> => {
-    if (snapshot !== undefined && expectedRevision !== snapshot.revision) {
+    const sourceRevision = failure !== undefined && (snapshot === undefined || failure.revision > snapshot.revision)
+      ? failure.revision
+      : snapshot?.revision;
+    if (sourceRevision !== undefined && expectedRevision !== sourceRevision) {
       throw new Error("The Source changed outside Studio.");
     }
     const grouped = new Map<string, Patch[]>();
@@ -208,7 +211,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       }
       if (next !== text) nextFiles.set(absolute, next);
     }
-    await replaceFiles(nextFiles);
+    await replaceSourceFiles(nextFiles);
     return new Map([...previousFiles].filter(([absolute]) => nextFiles.has(absolute)));
   };
 
@@ -228,23 +231,55 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       && candidate.enabled);
     if (handle === undefined) throw new Error(`Entity ${mutation.entityId} does not allow ${mutation.gesture}.`);
 
-    if (mutation.target.kind === "selection" || mutation.target.kind === "moment") {
-      const target = mutation.target;
-      if (handle.semantic?.kind !== target.kind) {
-        throw new Error(`Entity ${mutation.entityId} is not bound to a writable ${target.kind}.`);
+    const temporal = handle.temporal;
+    if (temporal === undefined) throw new Error("This timeline entity has no authoring authority.");
+    if (temporal.kind !== mutation.target.kind) {
+      throw new Error(`This timeline entity requires a ${temporal.kind} mutation target.`);
+    }
+    const startFrame = mutation.target.kind === "instant" ? mutation.target.frame : mutation.target.startFrame;
+    const endFrameExclusive = mutation.target.kind === "instant" ? mutation.target.frame + 1 : mutation.target.endFrameExclusive;
+    if (!Number.isInteger(startFrame) || startFrame < 0
+      || (mutation.target.kind === "window"
+        && (!Number.isInteger(endFrameExclusive) || endFrameExclusive <= startFrame))) {
+      throw new Error("A timeline target must use valid whole frames.");
+    }
+    if (temporal.kind === "window") {
+      if (mutation.gesture === "move"
+        && endFrameExclusive - startFrame !== clip.endFrameExclusive - clip.startFrame) {
+        throw new Error("Move must preserve the Window duration.");
+      }
+      if (mutation.gesture === "trim-start" && endFrameExclusive !== clip.endFrameExclusive) {
+        throw new Error("Trim start cannot change the Window end.");
+      }
+      if (mutation.gesture === "trim-end" && startFrame !== clip.startFrame) {
+        throw new Error("Trim end cannot change the Window start.");
+      }
+    } else if (mutation.gesture !== "move") {
+      throw new Error("An Instant only supports move.");
+    }
+
+    const patches: Patch[] = [];
+    const semanticTarget = mutation.target.semantic;
+    if (semanticTarget !== undefined) {
+      if (handle.semantic?.kind !== semanticTarget.kind) {
+        throw new Error(`Entity ${mutation.entityId} is not bound to a writable ${semanticTarget.kind}.`);
       }
       const current = snapshot;
       const script = current?.script;
       if (current === undefined || script === undefined) throw new Error("Studio has no writable Script source map.");
-      if (target.kind === "selection") {
-        const startIndex = current.semantic.anchors.findIndex((anchor) => anchor.id === target.startAnchorId);
-        const endIndex = current.semantic.anchors.findIndex((anchor) => anchor.id === target.endAnchorId);
+      if (handle.semantic.narrativeId !== current.semantic.narrativeId
+        || script.narrativeId !== current.semantic.narrativeId) {
+        throw new Error("The timeline entity and writable Script do not belong to the selected Narrative.");
+      }
+      if (semanticTarget.kind === "selection") {
+        const startIndex = current.semantic.anchors.findIndex((anchor) => anchor.id === semanticTarget.startAnchorId);
+        const endIndex = current.semantic.anchors.findIndex((anchor) => anchor.id === semanticTarget.endAnchorId);
         if (startIndex < 0 || endIndex < 0 || startIndex >= endIndex
           || current.semantic.anchors[startIndex]!.frame >= current.semantic.anchors[endIndex]!.frame) {
           throw new Error("A Selection must span two ordered semantic Anchors with positive time.");
         }
-      } else if (!current.semantic.anchors.some((anchor) => anchor.id === target.anchorId)) {
-        throw new Error(`Moment Anchor ${target.anchorId} does not exist in the current semantic Candidate.`);
+      } else if (!current.semantic.anchors.some((anchor) => anchor.id === semanticTarget.anchorId)) {
+        throw new Error(`Moment Anchor ${semanticTarget.anchorId} does not exist in the current semantic Candidate.`);
       }
       const absolute = resolve(options.workspaceRoot, script.sourcePath);
       const source = await readFile(absolute, "utf8");
@@ -252,64 +287,96 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         throw new Error("The current Script source range is invalid.");
       }
       const body = source.slice(script.content.start, script.content.end);
-      const parsed = parseScript(script.sourcePath, body);
-      const replacement = target.kind === "selection"
-        ? adjustScriptSelection({
-            sourceName: script.sourcePath,
-            source: body,
-            parsed,
-            adjustment: {
+      const replacement = options.registry.adjustScript({
+        companion: script.companion,
+        sourceName: script.sourcePath,
+        source: body,
+        adjustment: semanticTarget.kind === "selection"
+          ? {
+              kind: "selection",
               id: handle.semantic.id,
-              startAnchorId: target.startAnchorId,
-              endAnchorId: target.endAnchorId,
-            },
-          })
-        : adjustScriptMoment({
-            sourceName: script.sourcePath,
-            source: body,
-            parsed,
-            adjustment: { id: handle.semantic.id, anchorId: target.anchorId },
-          });
-      return replacement === body ? [] : [{
-        path: relative(options.workspaceRoot, absolute),
-        range: script.content,
-        replacement,
-        preimage: body,
-      }];
+              startAnchorId: semanticTarget.startAnchorId,
+              endAnchorId: semanticTarget.endAnchorId,
+            }
+          : { kind: "moment", id: handle.semantic.id, anchorId: semanticTarget.anchorId },
+      });
+      if (replacement !== body) patches.push({
+        path: relative(options.workspaceRoot, absolute), range: script.content, replacement, preimage: body,
+      });
     }
 
-    if (handle.sources === undefined) throw new Error("This timeline projection has no direct Window inverse.");
-    const { startFrame, endFrameExclusive } = mutation.target;
-    if (!Number.isInteger(startFrame) || !Number.isInteger(endFrameExclusive)
-      || startFrame < 0 || endFrameExclusive <= startFrame) {
-      throw new Error("A timeline Window must contain positive whole frames.");
-    }
-    if (mutation.gesture === "move"
-      && endFrameExclusive - startFrame !== clip.endFrameExclusive - clip.startFrame) {
-      throw new Error("Move must preserve the Window duration.");
-    }
-    if (mutation.gesture === "trim-start" && endFrameExclusive !== clip.endFrameExclusive) {
-      throw new Error("Trim start cannot change the Window end.");
-    }
-    if (mutation.gesture === "trim-end" && startFrame !== clip.startFrame) {
-      throw new Error("Trim end cannot change the Window start.");
-    }
     const source = (role: "start" | "end" | "duration") =>
       handle.sources?.find((candidate) => candidate.role === role)?.source;
     const frame = (value: number): string => `${value}f`;
-    const patches = mutation.gesture === "move"
-      ? [
-          source("start") === undefined ? undefined : { ...source("start")!, replacement: frame(startFrame) },
-          source("end") === undefined ? undefined : { ...source("end")!, replacement: frame(endFrameExclusive) },
-        ]
-      : mutation.gesture === "trim-start"
-        ? [source("start") === undefined ? undefined : { ...source("start")!, replacement: frame(startFrame) }]
-        : source("duration") !== undefined
-          ? [{ ...source("duration")!, replacement: frame(endFrameExclusive - startFrame) }]
-          : [source("end") === undefined ? undefined : { ...source("end")!, replacement: frame(endFrameExclusive) }];
-    const resolved = patches.filter((patch): patch is Patch => patch !== undefined);
-    if (resolved.length === 0) throw new Error(`No Source endpoint implements ${mutation.gesture}.`);
-    return resolved.filter((patch) => patch.replacement !== patch.preimage);
+    const semanticFrame = (endpoint: StudioTemporalInstantProjection): number | undefined => {
+      if (endpoint.authority.kind !== "semantic" || semanticTarget === undefined || handle.semantic === undefined) return undefined;
+      if (endpoint.source.kind === "selection" && semanticTarget.kind === "selection"
+        && endpoint.source.id === handle.semantic.id) {
+        const anchorId = endpoint.authority.boundary === "start"
+          ? semanticTarget.startAnchorId
+          : semanticTarget.endAnchorId;
+        return snapshot?.semantic.anchors.find((anchor) => anchor.id === anchorId)?.frame;
+      }
+      if (endpoint.source.kind === "moment" && semanticTarget.kind === "moment"
+        && endpoint.source.id === handle.semantic.id) {
+        return snapshot?.semantic.anchors.find((anchor) => anchor.id === semanticTarget.anchorId)?.frame;
+      }
+      return undefined;
+    };
+    const projectionBaseFrame = (endpoint: StudioTemporalInstantProjection): number | undefined => {
+      if (endpoint.reference === "absolute") return undefined;
+      if (endpoint.reference === "program.start") return 0;
+      if (endpoint.reference === "program.end") return snapshot?.space.frameCount;
+      const id = endpoint.source.id;
+      if (id === undefined) return undefined;
+      if (endpoint.reference === "selection.start" || endpoint.reference === "selection.end") {
+        const selection = snapshot?.semantic.selections.find((candidate) => candidate.id === id);
+        return endpoint.reference === "selection.start" ? selection?.startFrame : selection?.endFrameExclusive;
+      }
+      if (endpoint.reference === "segment.start" || endpoint.reference === "segment.end") {
+        const segment = snapshot?.semantic.segments.find((candidate) => candidate.id === id);
+        return endpoint.reference === "segment.start" ? segment?.startFrame : segment?.endFrameExclusive;
+      }
+      return snapshot?.semantic.moments.find((candidate) => candidate.id === id)?.frame;
+    };
+    const projectedPointValue = (endpoint: StudioTemporalInstantProjection, desired: number): string => {
+      if (endpoint.reference === "absolute") return frame(desired);
+      const base = projectionBaseFrame(endpoint);
+      if (base === undefined) throw new Error(`The ${endpoint.reference} projection base is unavailable.`);
+      const offset = desired - base;
+      return offset === 0 ? endpoint.reference : `${endpoint.reference}${offset > 0 ? "+" : ""}${offset}f`;
+    };
+    const writeEndpoint = (
+      endpoint: StudioTemporalInstantProjection,
+      desired: number,
+      role: "start" | "end",
+    ): void => {
+      if (desired === endpoint.frame) return;
+      if (endpoint.authority.kind === "fixed") throw new Error(`The ${role} endpoint is structurally fixed.`);
+      if (endpoint.authority.kind === "semantic") {
+        if (semanticFrame(endpoint) !== desired) throw new Error(`The ${role} endpoint does not match its semantic Anchor.`);
+        return;
+      }
+      if (endpoint.authority.relation !== "direct") return;
+      const author = source(role);
+      if (author === undefined) throw new Error(`The ${role} projection has no writable Source binding.`);
+      patches.push({ ...author, replacement: projectedPointValue(endpoint, desired) });
+    };
+    if (temporal.kind === "instant") {
+      writeEndpoint(temporal, startFrame, "start");
+    } else {
+      writeEndpoint(temporal.start, startFrame, "start");
+      writeEndpoint(temporal.end, endFrameExclusive, "end");
+      const derived = [temporal.start, temporal.end].find((endpoint) =>
+        endpoint.authority.kind === "parameter" && endpoint.authority.relation !== "direct");
+      if (derived !== undefined
+        && endFrameExclusive - startFrame !== temporal.endFrameExclusive - temporal.startFrame) {
+        const author = source("duration");
+        if (author === undefined) throw new Error("The projected duration has no writable Source binding.");
+        patches.push({ ...author, replacement: frame(endFrameExclusive - startFrame) });
+      }
+    }
+    return patches.filter((patch) => patch.replacement !== patch.preimage);
   };
 
   const mutationPatches = async (mutation: StudioMutation): Promise<readonly Patch[]> => {
@@ -342,7 +409,9 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
 
   const commitMutation = async (mutation: StudioMutation): Promise<number> => {
     if (mutating) throw new Error("A Studio author mutation is already in progress.");
-    if (snapshot === undefined || mutation.revision !== snapshot.revision) {
+    if (timer !== undefined || publishing > 0 || snapshot === undefined
+      || mutation.revision !== snapshot.revision || requestedRevision !== snapshot.revision
+      || (failure !== undefined && failure.revision >= snapshot.revision)) {
       throw new Error("The Source changed outside Studio.");
     }
     if (timer !== undefined) {
@@ -361,7 +430,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         return attempt;
       }
       const rejected = failure.error;
-      await replaceFiles(previous);
+      await replaceSourceFiles(previous);
       await publish(++requestedRevision, false);
       server?.ws.send({ type: "custom", event: "studio:snapshot", data: snapshot });
       throw new StudioMutationRejected(rejected);
@@ -380,8 +449,13 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         const url = new URL(request.url ?? "/", "http://studio.hypit.local");
         if (request.method === "PUT" && url.pathname === "/__studio/source") {
           void (async () => {
+            let acquired = false;
             try {
-              if (mutating) throw new Error("A Studio author mutation is already in progress.");
+              if (mutating || timer !== undefined || publishing > 0) {
+                throw new Error("A Studio author mutation is already in progress.");
+              }
+              mutating = true;
+              acquired = true;
               const chunks: Buffer[] = [];
               for await (const chunk of request) chunks.push(Buffer.from(chunk));
               const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {
@@ -394,7 +468,10 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
                 json(response, 400, { error: "Expected source path, text and revision." });
                 return;
               }
-              if (snapshot !== undefined && body.revision !== snapshot.revision) {
+              const sourceRevision = failure !== undefined && (snapshot === undefined || failure.revision > snapshot.revision)
+                ? failure.revision
+                : snapshot?.revision;
+              if (sourceRevision !== undefined && body.revision !== sourceRevision) {
                 json(response, 409, { error: "The Source changed outside Studio." });
                 return;
               }
@@ -410,11 +487,13 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
                 replacement: body.text,
                 preimage: current,
               }], body.revision);
-              schedule();
-              response.statusCode = 202;
-              response.end();
+              const attempt = ++requestedRevision;
+              await publish(attempt);
+              json(response, 202, { revision: attempt });
             } catch (error) {
               json(response, conflict(error) ? 409 : 500, { error: error instanceof Error ? error.message : String(error) });
+            } finally {
+              if (acquired) mutating = false;
             }
           })();
           return;

@@ -9,6 +9,9 @@
 import { relative } from "node:path";
 
 import type { MarkupSurfaceRegistryLike } from "@hypit/markup";
+import { compositionTypes } from "@hypit/composition";
+import { narrativeTypes } from "@hypit/narrative";
+import { sameModule, sameType } from "@hypit/protocol";
 
 import type {
   CandidateProvenance,
@@ -24,9 +27,9 @@ import type { Preview } from "./programme.js";
 import {
   sealStudioClip,
 } from "./studio-registry.js";
-import type { StudioAdapterRegistry } from "./studio-registry.js";
+import type { StudioCompanionRegistry } from "./studio-registry.js";
 import type { StudioEntityDraft } from "./studio-registry.js";
-import { inspectorFieldsForBindings, resolveTimelineEditHandles, sourceBindingsForDraft } from "./parameters.js";
+import { inspectorFieldsForBindings, resolveTimelineEditHandles, sourceBindingsForDraft, temporalBindingDeclarations } from "./parameters.js";
 import type { StudioSourceFile } from "./parameters.js";
 
 type Present = {
@@ -93,19 +96,29 @@ function authored(placements: readonly Placement[]): readonly Located[] {
 }
 
 function scriptMap(
-  maps: readonly Record<string, unknown>[],
+  maps: Preview["source"]["observations"]["sourceMaps"],
   built: Preview,
+  narrativeId: string,
 ): ScriptMap | undefined {
-  const found = maps.find((map) => map.format === "hypit.script-source-map@1");
+  const candidates = maps.filter((map, index) => map.narrativeId === narrativeId
+    && maps.findIndex((other) => other.narrativeId === map.narrativeId
+      && other.sourcePath === map.sourcePath
+      && other.range.start === map.range.start
+      && other.range.end === map.range.end) === index);
+  if (candidates.length > 1) {
+    throw new Error(`Studio Narrative id ${narrativeId} is declared by more than one Script in the Source closure.`);
+  }
+  const found = candidates[0];
   if (found === undefined) return undefined;
-  const selections = (found.selections ?? []) as ScriptMap["selections"];
-  const segments = (found.segments ?? []) as ScriptMap["segments"];
-  const moments = (found.moments ?? []) as ScriptMap["moments"];
+  const selections = found.selections;
+  const segments = found.segments;
+  const moments = found.moments;
   return {
-    recordId: String(found.record ?? ""),
-    sourcePath: String(found.sourcePath ?? ""),
-    range: (found.range ?? { start: 0, end: 0 }) as Range,
-    content: (found.content ?? { start: 0, end: 0 }) as Range,
+    companion: found.companion,
+    narrativeId: found.narrativeId,
+    sourcePath: found.sourcePath,
+    range: found.range,
+    content: found.content,
     // A Segment is the outermost range a Script declares; a Selection written
     // inside one is a level down, and one inside that another.
     segments: segments.map((segment) => ({ ...segment, depth: 0 })),
@@ -115,7 +128,7 @@ function scriptMap(
     })),
     moments,
     // A Script says where a word is written; the timings say when it is said.
-    tokens: ((found.tokens ?? []) as readonly { id: string; range: Range }[]).flatMap((token) => {
+    tokens: found.tokens.flatMap((token) => {
       const placed = built.tokens.find((item) => item.id === token.id);
       const startFrame = placed === undefined ? undefined : built.anchors.get(placed.startAnchorId);
       const endFrame = placed === undefined ? undefined : built.anchors.get(placed.endAnchorId);
@@ -126,6 +139,7 @@ function scriptMap(
 }
 
 type NarrativeValue = {
+  readonly id?: string;
   readonly segments?: readonly {
     readonly id: string;
     readonly startAnchorId: string;
@@ -150,22 +164,12 @@ type NarrativeValue = {
   readonly semanticIndex?: {
     readonly anchors?: readonly {
       readonly id: string;
-      readonly kind: "segment-start" | "segment-end" | "token-start" | "token-end";
-      readonly segmentId: string;
+      readonly kind: "program-start" | "segment-start" | "segment-end" | "token-start" | "token-end" | "program-end";
+      readonly segmentId?: string;
       readonly tokenId?: string;
     }[];
   };
 };
-
-function inlineRecord(compiled: unknown, id: string): unknown {
-  const records = (compiled as {
-    readonly program: {
-      readonly records: readonly { readonly id: string; readonly value: { readonly kind: string; readonly value?: unknown } }[];
-    };
-  }).program.records;
-  const found = records.find((record) => record.id === id);
-  return found?.value.kind === "inline" ? found.value.value : undefined;
-}
 
 /**
  * Project the compiled Narrative into the frame domain that the preview is
@@ -173,13 +177,21 @@ function inlineRecord(compiled: unknown, id: string): unknown {
  * from the built SemanticTrack, the corresponding item is simply not drawable yet.
  */
 function semanticTimeline(
-  registry: StudioAdapterRegistry,
+  registry: StudioCompanionRegistry,
   built: Preview,
   script: ScriptMap | undefined,
 ): SemanticTimeline {
-  const exported = built.source.exports.find((item) => item.type === "Narrative");
-  if (exported === undefined) throw new Error("Studio SemanticTrack has no traceable Narrative.");
-  const narrative = inlineRecord(built.source.compiled, exported.ref) as NarrativeValue | undefined;
+  const records = built.source.compiled.program.records.filter((item) =>
+    sameType(item.type, narrativeTypes.narrative)
+    && item.value.kind === "inline"
+    && (item.value.value as NarrativeValue).id === built.space.narrativeId);
+  if (records.length > 1) {
+    throw new Error(`Studio Narrative id ${built.space.narrativeId} resolves to more than one authored value.`);
+  }
+  const record = records[0];
+  const narrative = record?.value.kind === "inline"
+    ? record.value.value as NarrativeValue
+    : undefined;
   if (narrative === undefined) throw new Error("Studio Narrative is not an inline authored value.");
 
   const segmentRanges = new Map((script?.segments ?? []).map((item) => [item.id, item.range]));
@@ -217,7 +229,7 @@ function semanticTimeline(
       id: anchor.id,
       kind: anchor.kind,
       frame: at,
-      segmentId: anchor.segmentId,
+      ...(anchor.segmentId === undefined ? {} : { segmentId: anchor.segmentId }),
       ...(anchor.tokenId === undefined ? {} : { tokenId: anchor.tokenId }),
     }];
   });
@@ -247,12 +259,14 @@ function semanticTimeline(
     errors: [],
   };
   return {
+    spaceId: built.space.id,
+    narrativeId: built.space.narrativeId,
     // Semantic is a Studio lane with its own registered meaning. Do not copy
     // the authored Speech Track id into this label: it is the timebase, not a
     // second Speech output.
     presentation: registry.semanticTimelinePresentation(),
     // Narrative order is the semantic ruler. Frame ties are common and must
-    // not erase the discrete 2M+2N anchor ordering used by writeback.
+    // not erase the discrete 2M+2N+2 anchor ordering used by writeback.
     anchors,
     segments: segments.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
     tokens: tokens.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
@@ -264,8 +278,8 @@ function semanticTimeline(
 
 /** The element an output belongs to: `take-opening.video` is `take-opening`. */
 function depthOf(
-  selection: ScriptMap["selections"][number],
-  all: readonly ScriptMap["selections"][number][],
+  selection: Omit<ScriptMap["selections"][number], "depth">,
+  all: readonly Omit<ScriptMap["selections"][number], "depth">[],
 ): number {
   let depth = 1;
   for (const other of all) {
@@ -275,7 +289,7 @@ function depthOf(
   return depth;
 }
 
-export function snapshot(registry: StudioAdapterRegistry, built: Preview, input: {
+export function snapshot(registry: StudioCompanionRegistry, built: Preview, input: {
   readonly revision: number;
   readonly path: string;
   readonly text: string;
@@ -288,22 +302,23 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
   readonly surfaces: MarkupSurfaceRegistryLike;
 }): StudioSnapshot {
   const located = authored(built.source.observations.placements);
-  const script = scriptMap(built.source.observations.sourceMaps, built);
+  const script = scriptMap(built.source.observations.sourceMaps, built, built.space.narrativeId);
   const semantic = semanticTimeline(registry, built, script);
   const tracks: Track[] = [];
   for (const item of built.tracks) {
     const projectedSpans = spans(item.value, input.frameRate);
     const binding = registry.bindTrack(item);
-    const placement = built.source.observations.placements.find((candidate) =>
-      candidate.id === item.trace.authoredId
-      && candidate.module.name === item.trace.module
-      && candidate.surface === item.trace.surface);
+    const placement = item.trace.module === undefined ? undefined
+      : built.source.observations.placements.find((candidate) =>
+        candidate.id === item.trace.authoredId
+        && sameModule(candidate.module, item.trace.module!)
+        && candidate.surface === item.trace.surface);
     const generic = (): readonly StudioEntityDraft[] => projectedSpans.map((span) => {
       const identity = span.subjectId ?? span.id;
       const where = located.find((candidate) => candidate.id === identity);
       return {
         id: `${item.outputRef}:${span.id}`,
-        ...(item.type === "VisualTrack" ? { presentId: span.id } : {}),
+        ...(sameType(item.typeRef, compositionTypes.visualTrack) ? { presentId: span.id } : {}),
         authoredId: identity,
         display: { title: identity, layers: [] },
         startFrame: span.startFrame,
@@ -327,7 +342,10 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
         files: input.sourceFiles,
         placement,
         draft,
-        declarations: registry.bindingDeclarations(item, placement, draft.lane),
+        declarations: [
+          ...registry.bindingDeclarations(item, placement, draft.lane),
+          ...temporalBindingDeclarations(draft.temporal),
+        ],
         placements: built.source.observations.placements,
       });
       const inspector = inspectorFieldsForBindings(
@@ -337,7 +355,6 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
       );
       const editHandles = resolveTimelineEditHandles(
         bindings,
-        draft.timelineEdits ?? registry.timelineEdits(item, placement, draft.lane),
         draft.temporal,
         semantic,
       );

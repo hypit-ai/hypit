@@ -21,11 +21,9 @@ export function findSurfacePreview(
 /** A selected package resource descriptor; transport remains Studio-owned. */
 export function studioSurfacePreview(
   domain: StudioDomain,
-  moduleName: string,
+  module: { readonly name: string; readonly version: string },
   surface: string,
 ): StudioMaterialPreview | undefined {
-  const module = domain.resolveModule(moduleName);
-  if (module === undefined) return undefined;
   const preview = findSurfacePreview(domain, module, surface);
   if (preview === undefined) return undefined;
   const kind = kindOf(preview.mediaType);

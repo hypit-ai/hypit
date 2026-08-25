@@ -1,7 +1,8 @@
-import { rankingMarkupSurfaces } from "@hypit/ranking";
+import { rankingMarkupSurfaces, rankingModuleRef, rankingTypes } from "@hypit/ranking";
 import type { RankingProgram, RankingSchedule } from "@hypit/ranking";
-import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-adapter";
-import { artifactPreview, previewLayer, projectedPointTimelineEdits, requiredSurfaceValue, selectionWindowTimelineEdits, temporalLineageFor } from "@hypit/studio-adapter";
+import { compositionTypes } from "@hypit/composition";
+import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioEntityDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-adapter";
+import { artifactPreview, authoredChildFor, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalSemanticSource } from "@hypit/studio-adapter";
 
 const frameParameters: readonly StudioSourceBindingDeclaration[] = [
   { name: "within" },
@@ -34,6 +35,8 @@ const rankingInspectorPlacement = {
   "font-size": place("how", "Text", "Typography"),
   "font-weight": place("how", "Text", "Typography"),
   "text-color": place("how", "Text", "Typography"),
+  "label-text-color": place("how", "Labels", "Typography"),
+  "label-size": place("how", "Labels", "Typography"),
   "line-height": place("how", "Text", "Typography"),
   "board-background": place("how", "Board", "Board Paint"),
   "board-border-color": place("how", "Board", "Board Paint"),
@@ -54,6 +57,7 @@ const rankingInspectorPlacement = {
   "cell-gap": place("where", "Layout", "Rows"),
   "icon-size": place("where", "Layout", "Items"),
   "icon-radius": place("how", "Board", "Items"),
+  "icon-radius-ratio": place("how", "Board", "Items"),
   "icon-fit": place("how", "Board", "Items"),
   "stage-x": place("where", "Stage", "Position"),
   "stage-y": place("where", "Stage", "Position"),
@@ -95,17 +99,18 @@ function rankingStyle(surface: "column-style" | "tier-style" | "top-three-style"
   };
 }
 
-function projectRanking(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectRanking(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const placement = context.placement;
   const schedule = requiredSurfaceValue(context, "schedule") as RankingSchedule;
   const program = requiredSurfaceValue(context, "program") as RankingProgram;
   if (placement === undefined) return context.generic();
   const boardId = placement.id ?? context.track.outputRef;
   const outerTemporal = temporalLineageFor(context, boardId, "outer");
+  const outerSemanticSource = temporalSemanticSource(outerTemporal);
   const group: StudioEntityDraft = {
     id: `${context.track.outputRef}:entity:${boardId}`,
     authoredId: boardId,
-    ...(outerTemporal?.source.id === undefined ? {} : { markerId: outerTemporal.source.id }),
+    ...(outerSemanticSource?.id === undefined ? {} : { markerId: outerSemanticSource.id }),
     display: { title: boardId, layers: [] },
     startFrame: schedule.outer.startFrame,
     endFrameExclusive: schedule.outer.endFrameExclusive,
@@ -115,21 +120,20 @@ function projectRanking(context: StudioAdapterContext): readonly StudioEntityDra
     presentation: { entity: "ranking", chrome: "group" },
     ...(outerTemporal === undefined ? {} : { temporal: outerTemporal }),
   };
-  const children = new Map(placement.children.flatMap((child) =>
-    child.id === undefined ? [] : [[child.id, child] as const]));
   const programItems = new Map(program?.items.map((item) => [item.id, item] as const) ?? []);
   const reveals = schedule.entries.flatMap((entry): readonly StudioEntityDraft[] => {
     if ("mode" in entry && entry.mode !== "reveal") return [];
-    const child = children.get(entry.itemId);
+    const child = authoredChildFor(context, entry.itemId, [rankingTypes.itemSpec, rankingTypes.textItemShell]);
     const item = programItems.get(entry.itemId);
     const temporal = temporalLineageFor(context, entry.itemId, "mode" in entry ? "window" : "activation");
+    const semanticSource = temporalSemanticSource(temporal);
     const visible = "mode" in entry ? entry.window : entry.cumulative;
     const icon = item?.icon;
     const label = item !== undefined && "label" in item ? item.label : child?.attributes.label ?? entry.itemId;
     return [{
       id: `${context.track.outputRef}:entity:${entry.itemId}`,
       authoredId: entry.itemId,
-      ...(temporal?.source.id === undefined ? {} : { markerId: temporal.source.id }),
+      ...(semanticSource?.id === undefined ? {} : { markerId: semanticSource.id }),
       display: {
         title: label,
         layers: icon === undefined ? [] : [previewLayer(artifactPreview("image", icon.digest), "repeat-x")],
@@ -159,12 +163,11 @@ const frameInspector: readonly StudioInspectorFieldDeclaration[] = frameParamete
     page: { id: "frame", label: "Frame" }, section: { id: "frame", label: "Frame" }, control: "text",
   }));
 
-export const rankingStudioAdapters: readonly StudioAdapter[] = [
+export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "column", role: "track",
-    output: { type: "VisualTrack", surface: "column", modules: ["@hypit/ranking"] },
+    output: { type: compositionTypes.visualTrack, surface: "column", modules: [rankingModuleRef] },
     family: "ranking", tone: "orange", label: "Ranking", icon: "ranking", requiredValues: ["schedule", "program"],
-    timelineEdits: selectionWindowTimelineEdits(),
     bindings: [
       ...commonBindings,
       rankingStyle("column-style"),
@@ -181,62 +184,72 @@ export const rankingStudioAdapters: readonly StudioAdapter[] = [
         { name: "label", writable: true },
         { name: "icon" },
         { name: "rank", writable: true },
-        { name: "preset", writable: true },
         { name: "stack", writable: true },
       ],
       inspector: [
         { binding: "label", label: "Label", domain: "how", page: { id: "item", label: "Item" }, section: { id: "item", label: "Item" }, control: "text" },
         { binding: "rank", label: "Rank", domain: "how", page: { id: "item", label: "Item" }, section: { id: "item", label: "Item" }, control: "number" },
-        { binding: "preset", label: "Preset", domain: "how", page: { id: "item", label: "Item" }, section: { id: "item", label: "Item" }, control: "boolean" },
         { binding: "stack", label: "Stack", domain: "where", page: { id: "stacking", label: "Stacking" }, section: { id: "stacking", label: "Stacking" }, control: "number" },
       ],
-      timelineEdits: selectionWindowTimelineEdits(),
     }],
     project: projectRanking,
   },
-  ...([[
-    "tier", "tier", "Tier Board",
-  ], [
-    "top-three", "top-three", "Top Three",
-  ]] as const).map(([id, surface, label]): StudioAdapter => ({
-    id, role: "track",
-    output: { type: "VisualTrack", surface, modules: ["@hypit/ranking"] },
-    family: "ranking", tone: "orange", label, icon: "ranking", requiredValues: ["schedule", "program"],
-    timelineEdits: selectionWindowTimelineEdits(),
+  {
+    id: "tier", role: "track",
+    output: { type: compositionTypes.visualTrack, surface: "tier", modules: [rankingModuleRef] },
+    family: "ranking", tone: "orange", label: "Tier Board", icon: "ranking", requiredValues: ["schedule", "program"],
     bindings: [
       ...commonBindings,
-      rankingStyle(surface === "tier" ? "tier-style" : "top-three-style"),
-      { name: "terminal" },
+      rankingStyle("tier-style"),
     ],
     inspector: [
       ...frameInspector,
-      ...rankingInspector(surface === "tier" ? "tier-style" : "top-three-style"),
+      ...rankingInspector("tier-style"),
     ],
     poster: { source: "surface-preview" },
-    lane: { heightPx: 80, groupId: `${id}-activations` },
+    lane: { heightPx: 80, groupId: "tier-reveals" },
     attachments: [{
-      id: "activation", family: "ranking-reveal", tone: "orange-muted", label: "Activations", icon: "ranking", facet: "visual",
+      id: "reveal", family: "ranking-reveal", tone: "orange-muted", label: "Reveals", icon: "ranking", facet: "visual",
       lane: { heightPx: 40 },
-      bindings: id === "tier" ? [
+      bindings: [
         { name: "tier", writable: true },
         { name: "entry", writable: true },
         { name: "icon" },
         { name: "stack", writable: true },
-      ] : [
+      ],
+      inspector: [
+        { binding: "tier", label: "Tier", domain: "how", page: { id: "item", label: "Item" }, section: { id: "item", label: "Item" }, control: "text" },
+        { binding: "entry", label: "Entry", domain: "when", page: { id: "entrance", label: "Entrance" }, section: { id: "entrance", label: "Entrance" }, control: "select", options: ["direct", "drop"] },
+        { binding: "stack", label: "Stack", domain: "where", page: { id: "stacking", label: "Stacking" }, section: { id: "stacking", label: "Stacking" }, control: "number" },
+      ],
+    }],
+    project: projectRanking,
+  },
+  {
+    id: "top-three", role: "track",
+    output: { type: compositionTypes.visualTrack, surface: "top-three", modules: [rankingModuleRef] },
+    family: "ranking", tone: "orange", label: "Top Three", icon: "ranking", requiredValues: ["schedule", "program"],
+    bindings: [
+      ...commonBindings,
+      rankingStyle("top-three-style"),
+      { name: "terminal" },
+    ],
+    inspector: [...frameInspector, ...rankingInspector("top-three-style")],
+    poster: { source: "surface-preview" },
+    lane: { heightPx: 80, groupId: "top-three-activations" },
+    attachments: [{
+      id: "activation", family: "ranking-reveal", tone: "orange-muted", label: "Activations", icon: "ranking", facet: "visual",
+      lane: { heightPx: 40 },
+      bindings: [
         { name: "label", writable: true },
         { name: "icon" },
         { name: "stack", writable: true },
       ],
-      inspector: id === "tier" ? [
-        { binding: "tier", label: "Tier", domain: "how", page: { id: "item", label: "Item" }, section: { id: "item", label: "Item" }, control: "text" },
-        { binding: "entry", label: "Entry", domain: "when", page: { id: "activation", label: "Activation" }, section: { id: "activation", label: "Activation" }, control: "select", options: ["direct", "stage"] },
-        { binding: "stack", label: "Stack", domain: "where", page: { id: "stacking", label: "Stacking" }, section: { id: "stacking", label: "Stacking" }, control: "number" },
-      ] : [
+      inspector: [
         { binding: "label", label: "Label", domain: "how", page: { id: "item", label: "Item" }, section: { id: "item", label: "Item" }, control: "text" },
         { binding: "stack", label: "Stack", domain: "where", page: { id: "stacking", label: "Stacking" }, section: { id: "stacking", label: "Stacking" }, control: "number" },
       ],
-      timelineEdits: projectedPointTimelineEdits(),
     }],
     project: projectRanking,
-  })),
+  },
 ];

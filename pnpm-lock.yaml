@@ -66,6 +66,9 @@ importers:
       '@hypit/film':
         specifier: workspace:*
         version: link:packages/film
+      '@hypit/film-studio':
+        specifier: workspace:*
+        version: link:packages/film-studio
       '@hypit/fonts-open':
         specifier: workspace:*
         version: link:packages/fonts-open
@@ -174,6 +177,9 @@ importers:
       '@hypit/script':
         specifier: workspace:*
         version: link:packages/script
+      '@hypit/script-studio':
+        specifier: workspace:*
+        version: link:packages/script-studio
       '@hypit/seedance':
         specifier: workspace:*
         version: link:packages/seedance
@@ -183,6 +189,9 @@ importers:
       '@hypit/seedream':
         specifier: workspace:*
         version: link:packages/seedream
+      '@hypit/semantic-take-estimate':
+        specifier: workspace:*
+        version: link:packages/semantic-take-estimate
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:packages/semantic-track
@@ -216,6 +225,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:packages/temporal
+      '@hypit/temporal-markup':
+        specifier: workspace:*
+        version: link:packages/temporal-markup
       '@hypit/text':
         specifier: workspace:*
         version: link:packages/text
@@ -306,6 +318,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../temporal
+      '@hypit/temporal-markup':
+        specifier: workspace:*
+        version: link:../temporal-markup
     devDependencies:
       '@hypit/artifact':
         specifier: workspace:*
@@ -337,6 +352,9 @@ importers:
       '@hypit/audio-track':
         specifier: workspace:*
         version: link:../audio-track
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/studio-adapter':
         specifier: workspace:*
         version: link:../studio-adapter
@@ -441,6 +459,9 @@ importers:
       '@hypit/caption-fine':
         specifier: workspace:*
         version: link:../caption-fine
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/narrative':
         specifier: workspace:*
         version: link:../narrative
@@ -519,6 +540,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../temporal
+      '@hypit/temporal-markup':
+        specifier: workspace:*
+        version: link:../temporal-markup
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -532,6 +556,9 @@ importers:
       '@hypit/comment-sticker':
         specifier: workspace:*
         version: link:../comment-sticker
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/studio-adapter':
         specifier: workspace:*
         version: link:../studio-adapter
@@ -712,6 +739,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../temporal
+      '@hypit/temporal-markup':
+        specifier: workspace:*
+        version: link:../temporal-markup
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -725,6 +755,9 @@ importers:
 
   packages/deck-track-studio:
     dependencies:
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/deck-track':
         specifier: workspace:*
         version: link:../deck-track
@@ -856,6 +889,21 @@ importers:
         specifier: workspace:*
         version: link:../validation
 
+  packages/film-studio:
+    dependencies:
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@hypit/film':
+        specifier: workspace:*
+        version: link:../film
+      '@hypit/semantic-track':
+        specifier: workspace:*
+        version: link:../semantic-track
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
+
   packages/fonts-open:
     dependencies:
       '@hypit/markup':
@@ -864,6 +912,9 @@ importers:
       '@hypit/media':
         specifier: workspace:*
         version: link:../media
+      '@hypit/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1524,12 +1575,21 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../temporal
+      '@hypit/temporal-markup':
+        specifier: workspace:*
+        version: link:../temporal-markup
 
   packages/media-track-studio:
     dependencies:
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/media-track':
         specifier: workspace:*
         version: link:../media-track
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@hypit/studio-adapter':
         specifier: workspace:*
         version: link:../studio-adapter
@@ -1623,6 +1683,9 @@ importers:
 
   packages/narrative:
     dependencies:
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1707,6 +1770,9 @@ importers:
       '@hypit/media-execution':
         specifier: workspace:*
         version: link:../media-execution
+      '@hypit/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1747,6 +1813,9 @@ importers:
       '@hypit/image-opencv-runtime':
         specifier: workspace:*
         version: link:../../services/image-opencv
+      '@hypit/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1922,6 +1991,9 @@ importers:
       '@hypit/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
+      '@hypit/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2014,6 +2086,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../temporal
+      '@hypit/temporal-markup':
+        specifier: workspace:*
+        version: link:../temporal-markup
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -2024,6 +2099,9 @@ importers:
 
   packages/ranking-studio:
     dependencies:
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/ranking':
         specifier: workspace:*
         version: link:../ranking
@@ -2280,6 +2358,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../temporal
+      '@hypit/temporal-markup':
+        specifier: workspace:*
+        version: link:../temporal-markup
     devDependencies:
       '@hypit/artifact':
         specifier: workspace:*
@@ -2305,6 +2386,9 @@ importers:
 
   packages/screen-overlay-studio:
     dependencies:
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/screen-overlay':
         specifier: workspace:*
         version: link:../screen-overlay
@@ -2330,6 +2414,15 @@ importers:
       '@hypit/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/script-studio:
+    dependencies:
+      '@hypit/script':
+        specifier: workspace:*
+        version: link:../script
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
 
   packages/seedance:
     dependencies:
@@ -2388,6 +2481,37 @@ importers:
         specifier: workspace:*
         version: link:../text
 
+  packages/semantic-take-estimate:
+    dependencies:
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@hypit/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@hypit/estimate':
+        specifier: workspace:*
+        version: link:../estimate
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/media':
+        specifier: workspace:*
+        version: link:../media
+      '@hypit/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/speech':
+        specifier: workspace:*
+        version: link:../speech
+    devDependencies:
+      '@hypit/script':
+        specifier: workspace:*
+        version: link:../script
+
   packages/semantic-track:
     dependencies:
       '@hypit/component-kit':
@@ -2442,9 +2566,15 @@ importers:
 
   packages/speech:
     dependencies:
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@hypit/media':
         specifier: workspace:*
         version: link:../media
+      '@hypit/narrative':
+        specifier: workspace:*
+        version: link:../narrative
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2531,6 +2661,9 @@ importers:
 
   packages/speech-track-studio:
     dependencies:
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/speech-track':
         specifier: workspace:*
         version: link:../speech-track
@@ -2585,6 +2718,9 @@ importers:
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@hypit/film-studio':
+        specifier: workspace:*
+        version: link:../film-studio
       '@hypit/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes
@@ -2594,6 +2730,9 @@ importers:
       '@hypit/media-track-studio':
         specifier: workspace:*
         version: link:../media-track-studio
+      '@hypit/narrative':
+        specifier: workspace:*
+        version: link:../narrative
       '@hypit/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
@@ -2618,12 +2757,15 @@ importers:
       '@hypit/screen-overlay-studio':
         specifier: workspace:*
         version: link:../screen-overlay-studio
-      '@hypit/script':
+      '@hypit/script-studio':
         specifier: workspace:*
-        version: link:../script
+        version: link:../script-studio
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../semantic-track
+      '@hypit/speech':
+        specifier: workspace:*
+        version: link:../speech
       '@hypit/speech-track-studio':
         specifier: workspace:*
         version: link:../speech-track-studio
@@ -2633,6 +2775,9 @@ importers:
       '@hypit/svs':
         specifier: workspace:*
         version: link:../svs
+      '@hypit/temporal':
+        specifier: workspace:*
+        version: link:../temporal
       '@hypit/typography-track-studio':
         specifier: workspace:*
         version: link:../typography-track-studio
@@ -2694,6 +2839,24 @@ importers:
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../semantic-track
+
+  packages/temporal-markup:
+    dependencies:
+      '@hypit/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@hypit/semantic-track':
+        specifier: workspace:*
+        version: link:../semantic-track
+      '@hypit/temporal':
+        specifier: workspace:*
+        version: link:../temporal
 
   packages/text:
     dependencies:
@@ -2763,6 +2926,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../temporal
+      '@hypit/temporal-markup':
+        specifier: workspace:*
+        version: link:../temporal-markup
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -2779,6 +2945,9 @@ importers:
 
   packages/typography-track-studio:
     dependencies:
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/studio-adapter':
         specifier: workspace:*
         version: link:../studio-adapter

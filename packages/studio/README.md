@@ -24,14 +24,14 @@ work while Tasks and Artifacts stay explicitly unavailable.
 
 Studio is an application boundary. Core and domain packages do not import it or
 register UI metadata. The installed Distribution explicitly selects one independent
-Studio Companion per supported official domain. An external project may add companion Adapter packages
+Studio Companion per supported official domain. An external project may add Companion packages
 through `hypit.studio.json`; the application assembles one immutable registry for
 that project session.
 
 ```json
 {
   "format": "hypit.studio-profile@1",
-  "adapterPackages": ["@my-project/local-example-studio"]
+  "companionPackages": ["@my-project/local-example-studio"]
 }
 ```
 
@@ -53,7 +53,7 @@ source binding is never shown merely because Studio can reach it. Material layer
 Artifact digest or Surface identity, never a Studio HTTP URL. Studio always owns
 time formatting and transport resolution, so chrome and material cannot hide a
 title or its time.
-Studio owns session-wide behavior and chrome: adapter selection, collision and
+Studio owns session-wide behavior and chrome: Companion selection, collision and
 replacement rules, fallback defaults, selection treatment, playback, zoom,
 scrolling, the finite Inspector control set and source mutation transport. A
 companion cannot ship arbitrary DOM or CSS into the application.
@@ -71,10 +71,10 @@ the Studio menu and keyboard navigation. Values still commit only on an
 explicit change through the normal revisioned mutation path.
 
 Temporal lineage comes from the exact executed graph selected by the Run. Studio indexes the
-`TemporalPoint` and `TemporalWindow` records in each Track's dependency closure together with their
-projection Spec and direct consumer edge, then passes that stable data view to adapters. Adapters
-never infer a semantic source from SVML attribute names, Spec type names, runtime id prefixes or
-coincident frame spans. Point and Window remain distinct in the inspector.
+`TemporalInstant` and `TemporalWindow` records in each Track's dependency closure, including each
+endpoint's author authority and direct consumer edge. Common timeline inverses come from that
+authority rather than Companion declarations. Track Companions never infer semantic sources from SVML
+attribute names, runtime id prefixes or coincident frame spans.
 
 Opening Studio never invokes a Provider and never creates a Build. Every
 projection needed for display must already be supplied by the Run or be

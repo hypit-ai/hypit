@@ -142,6 +142,7 @@ export function createCodePane(): CodePane {
     if (savingPath === undefined) return;
     saveInFlight = true;
     let accepted = false;
+    let acceptedRevision = savingRevision;
     saveState.textContent = "Saving";
     saveState.className = "code-save-state saving";
     try {
@@ -154,7 +155,10 @@ export function createCodePane(): CodePane {
         const reason = await response.text();
         throw new Error(reason || `Save failed (${response.status})`);
       }
+      const result = await response.json() as { readonly revision?: unknown };
+      if (typeof result.revision === "number") acceptedRevision = result.revision;
       accepted = true;
+      if (activeSource?.path === savingPath) editingRevision = acceptedRevision;
       if (activeSource?.path === savingPath && editor.value === savingText) {
         sourceText = savingText;
         dirty = false;

@@ -1,11 +1,16 @@
 import type { ArtifactAttachment } from "@hypit/workspace";
 import type { BlobRef, Digest, StoredValue } from "@hypit/protocol";
+import { sameType } from "@hypit/protocol";
 import type { Composition } from "@hypit/composition";
+import { compositionTypes } from "@hypit/composition";
 import {
   projectSemanticProgramSpace,
+  semanticAnchorFrames,
   semanticTrackSpans,
 } from "@hypit/semantic-track";
 import type { SemanticTrack } from "@hypit/semantic-track";
+import { semanticTrackTypes } from "@hypit/semantic-track";
+import type { ProgramSpace } from "@hypit/program-space";
 import type { StudioResolvedTrack, StudioTemporalBinding } from "@hypit/studio-adapter";
 
 import type { StudioArchive } from "./archive.js";
@@ -13,19 +18,20 @@ import type { CompiledSource, ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import { executeDeterministic, MemoryArtifactStore } from "./execute.js";
 import type { RunPlan } from "./run.js";
-import type { StudioProjection } from "./studio-preflight.js";
+import type { StudioViewRequirement } from "./studio-preflight.js";
 import { studioSurfacePreview } from "./surface-preview.js";
 import { executedTemporalBindings } from "./temporal-graph.js";
 
-const PLAYABLE = new Set(["VisualTrack", "AudioTrack"]);
-const TIMING = "SemanticTrack";
+function playable(type: import("@hypit/protocol").TypeRef): boolean {
+  return sameType(type, compositionTypes.visualTrack) || sameType(type, compositionTypes.audioTrack);
+}
 
 export type BuiltTrack = StudioResolvedTrack;
 
 export type Preview = {
   readonly source: CompiledSource;
   readonly tracks: readonly BuiltTrack[];
-  /** Resolved adapter realizations keyed by exact graph output ref. */
+  /** Resolved Companion realizations keyed by exact graph output ref. */
   readonly values: ReadonlyMap<string, unknown>;
   readonly temporalBindings: ReadonlyMap<string, readonly StudioTemporalBinding[]>;
   readonly composition: Composition;
@@ -36,7 +42,7 @@ export type Preview = {
   readonly served: ReadonlyMap<string, ServedFile>;
   readonly canvas: { readonly width: number; readonly height: number; readonly clearColor: string };
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
-  readonly space: unknown;
+  readonly space: ProgramSpace;
   readonly anchors: ReadonlyMap<string, number>;
   readonly tokens: readonly {
     readonly id: string;
@@ -103,7 +109,7 @@ export async function preview(input: {
   readonly domain: StudioDomain;
   readonly outputRefs: readonly string[];
   readonly compositionRef: string;
-  readonly projections: readonly StudioProjection[];
+  readonly projections: readonly StudioViewRequirement[];
   readonly archive?: StudioArchive;
 }): Promise<Preview> {
   const exportsByRef = new Map(input.source.exports.map((item) => [item.ref, item] as const));
@@ -153,7 +159,7 @@ export async function preview(input: {
   const satisfactions = new Map(
     input.run.run.graph.satisfactions.map((item) => [item.output, item.candidate]),
   );
-  const timingOutput = targets.find((target) => target.type === TIMING);
+  const timingOutput = targets.find((target) => sameType(target.typeRef, semanticTrackTypes.track));
   const timingValue = timingOutput === undefined
     ? undefined
     : selectedValue(executed.state, timingOutput.ref);
@@ -162,8 +168,7 @@ export async function preview(input: {
   }
   const semantic = timingValue.value as unknown as SemanticTrack;
   const spans = semanticTrackSpans(semantic);
-  const anchors = new Map(spans.flatMap(({ item, startFrame }) =>
-    item.take.anchors.map((anchor) => [anchor.identity, startFrame + anchor.frame] as const)));
+  const anchors = semanticAnchorFrames(semantic);
   const space = projectSemanticProgramSpace(semantic);
   const rate = space.frameRate;
   const compositionValue = selectedValue(executed.state, input.compositionRef);
@@ -178,7 +183,7 @@ export async function preview(input: {
   }
   const projectionByRef = new Map(input.projections.map((projection) => [projection.ref, projection]));
   const tracks: BuiltTrack[] = targets.flatMap((target) => {
-    if (!PLAYABLE.has(target.type)) return [];
+    if (!playable(target.typeRef)) return [];
     const stored = selectedValue(executed.state, target.ref);
     const candidateId = satisfactions.get(target.ref);
     if (stored?.kind !== "inline") {
@@ -194,6 +199,7 @@ export async function preview(input: {
     return [{
       name: target.name,
       type: target.type,
+      typeRef: target.typeRef,
       outputRef: target.ref,
       ...(candidateId === undefined ? {} : { candidateId }),
       candidateOrigin: candidateId === undefined ? "source" as const : "run" as const,
@@ -213,7 +219,7 @@ export async function preview(input: {
     if (stored?.kind === "inline") values.set(target.ref, stored.value);
   }
   // Author Records are already deterministic inline values from this exact
-  // compilation. Studio adapters may need them to name a resolved projection
+  // compilation. Studio Track Companions may need them to name a resolved projection
   // (for example Caption cue text); exposing them here avoids recomputing the
   // domain value or turning a Record into a fake graph target.
   for (const placement of input.source.observations.placements) {

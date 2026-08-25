@@ -1,5 +1,6 @@
-import { speechTrackMarkupSurfaces } from "@hypit/speech-track";
-import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-adapter";
+import { speechTrackMarkupSurfaces, speechTrackModuleRef } from "@hypit/speech-track";
+import { compositionTypes } from "@hypit/composition";
+import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioEntityDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-adapter";
 import { artifactPreview, previewLayer } from "@hypit/studio-adapter";
 
 const frameParameters: readonly StudioSourceBindingDeclaration[] = [
@@ -56,7 +57,7 @@ type SpeechAudioTrack = {
   }[];
 };
 
-function projectSpeechVisual(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectSpeechVisual(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const presents = new Map(((context.track.value as SpeechVisualTrack).presents ?? [])
     .map((present) => [present.id, present] as const));
   return context.generic().map((entity) => {
@@ -78,7 +79,7 @@ function projectSpeechVisual(context: StudioAdapterContext): readonly StudioEnti
   });
 }
 
-function projectSpeechAudio(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectSpeechAudio(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const clips = new Map(((context.track.value as SpeechAudioTrack).clips ?? [])
     .map((clip) => [clip.id, clip] as const));
   return context.generic().map((entity) => {
@@ -97,10 +98,10 @@ function projectSpeechAudio(context: StudioAdapterContext): readonly StudioEntit
   });
 }
 
-export const speechTrackStudioAdapters: readonly StudioAdapter[] = [
+export const speechTrackStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "visual", role: "track",
-    output: { type: "VisualTrack", surface: "track", modules: ["@hypit/speech-track"] },
+    output: { type: compositionTypes.visualTrack, surface: "track", modules: [speechTrackModuleRef] },
     family: "speech-visual", tone: "blue", label: "Speech Visual", icon: "video",
     bindings: [
       { name: "visual-frame", referenced: frameParameters },
@@ -116,7 +117,7 @@ export const speechTrackStudioAdapters: readonly StudioAdapter[] = [
   },
   {
     id: "audio", role: "track",
-    output: { type: "AudioTrack", surface: "track", modules: ["@hypit/speech-track"] },
+    output: { type: compositionTypes.audioTrack, surface: "track", modules: [speechTrackModuleRef] },
     family: "speech-audio", tone: "green", label: "Speech Audio", icon: "waveform",
     bindings: [], inspector: [], project: projectSpeechAudio,
     lane: { heightPx: 48 },

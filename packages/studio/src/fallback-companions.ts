@@ -1,5 +1,7 @@
-import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft } from "@hypit/studio-adapter";
-import { artifactPreview, previewLayer, temporalLineageFor } from "@hypit/studio-adapter";
+import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioEntityDraft } from "@hypit/studio-adapter";
+import { artifactPreview, previewLayer, temporalLineageFor, temporalSemanticSource } from "@hypit/studio-adapter";
+import { compositionTypes } from "@hypit/composition";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 
 type TerminalVisualTrack = {
   readonly presents?: readonly {
@@ -21,28 +23,22 @@ type TerminalAudioTrack = {
 };
 
 function withTemporalLineage(
-  context: StudioAdapterContext,
+  context: StudioTrackCompanionContext,
   entity: StudioEntityDraft,
 ): StudioEntityDraft {
-  const identities = [
-    entity.authoredId,
-    entity.markerId,
-    entity.presentId,
-    ...(entity.renderIds ?? []),
-  ].filter((value): value is string => value !== undefined);
-  const temporal = identities.map((identity) => temporalLineageFor(context, identity))
-    .find((candidate) => candidate !== undefined);
+  const temporal = temporalLineageFor(context, entity.authoredId);
   if (temporal === undefined) return entity;
+  const semanticSource = temporalSemanticSource(temporal);
   return {
     ...entity,
-    ...(temporal.source.kind === "program" || temporal.source.id === undefined
+    ...(semanticSource?.id === undefined
       ? {}
-      : { markerId: temporal.source.id }),
+      : { markerId: semanticSource.id }),
     temporal,
   };
 }
 
-function projectTerminalVisual(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectTerminalVisual(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const presents = new Map(((context.track.value as TerminalVisualTrack).presents ?? [])
     .map((present) => [present.id, present] as const));
   return context.generic().map((entity) => {
@@ -62,7 +58,7 @@ function projectTerminalVisual(context: StudioAdapterContext): readonly StudioEn
   });
 }
 
-function projectTerminalAudio(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectTerminalAudio(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const clips = new Map(((context.track.value as TerminalAudioTrack).clips ?? [])
     .map((clip) => [clip.id, clip] as const));
   return context.generic().map((entity, index) => {
@@ -81,21 +77,20 @@ function projectTerminalAudio(context: StudioAdapterContext): readonly StudioEnt
 }
 
 /** Cross-domain terminal protocols understood even when no Companion is installed. */
-export const fallbackStudioAdapters: readonly StudioAdapter[] = [
-  { id: "@hypit/studio#semantic-take", role: "semantic-take", output: { type: "SemanticTake" } },
+export const fallbackStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
-    id: "@hypit/studio#semantic-track", role: "semantic-track", output: { type: "SemanticTrack" },
+    id: "@hypit/studio#semantic-track", role: "semantic-track", output: { type: semanticTrackTypes.track },
     family: "semantic", tone: "teal", label: "Semantic", icon: "brand",
     lane: { heightPx: 45 },
   },
   {
-    id: "@hypit/studio#audio-track", role: "track", output: { type: "AudioTrack" },
+    id: "@hypit/studio#audio-track", role: "track", output: { type: compositionTypes.audioTrack },
     family: "audio", tone: "green", icon: "waveform",
     project: projectTerminalAudio,
     lane: { heightPx: 48 },
   },
   {
-    id: "@hypit/studio#visual-track", role: "track", output: { type: "VisualTrack" },
+    id: "@hypit/studio#visual-track", role: "track", output: { type: compositionTypes.visualTrack },
     family: "media", tone: "blue", icon: "video",
     project: projectTerminalVisual,
     lane: { heightPx: 76 },

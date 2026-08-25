@@ -1,7 +1,8 @@
-import { typographyTrackMarkupSurfaces } from "@hypit/typography-track";
+import { typographyTrackMarkupSurfaces, typographyTrackModuleRef, typographyTrackTypes } from "@hypit/typography-track";
 import type { TypographyTrackProgram } from "@hypit/typography-track";
-import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft, StudioInspectorFieldDeclaration } from "@hypit/studio-adapter";
-import { childEntities, projectedWindowTimelineEdits, requiredSurfaceValue, temporalLineageFor, textLayer } from "@hypit/studio-adapter";
+import { compositionTypes } from "@hypit/composition";
+import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioEntityDraft, StudioInspectorFieldDeclaration } from "@hypit/studio-adapter";
+import { childEntities, requiredSurfaceValue, temporalLineageFor, temporalSemanticSource, textLayer } from "@hypit/studio-adapter";
 
 const typographyProperties = (typographyTrackMarkupSurfaces
   .find((surface) => surface.name === "style")?.vocabulary.attributes
@@ -68,42 +69,40 @@ function textOf(item: TypographyTrackProgram["items"][number]): string {
     .trim();
 }
 
-function projectTypography(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectTypography(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const program = requiredSurfaceValue(context, "program") as TypographyTrackProgram;
   const items = program.items.map((item) => ({
     id: item.id,
     startFrame: item.span.startFrame,
     endFrameExclusive: item.span.endFrameExclusive,
     stackOrder: item.style.stackingOrder,
+    sourceTypes: [typographyTrackTypes.itemSpec, typographyTrackTypes.plainItemSpec],
   }));
   return childEntities(context, items, "typography-item", "standard").map((entity, index) => {
     const item = program.items[index];
     if (item === undefined) return entity;
     const label = textOf(item);
     const temporal = temporalLineageFor(context, item.id, "window");
+    const semanticSource = temporalSemanticSource(temporal);
     return {
       ...entity,
       display: { ...entity.display, layers: label.length === 0 ? [] : [textLayer(label)] },
-      ...(temporal?.source.kind === "program" || temporal?.source.id === undefined
+      ...(semanticSource?.id === undefined
         ? {}
-        : { markerId: temporal.source.id }),
+        : { markerId: semanticSource.id }),
       ...(temporal === undefined ? {} : { temporal }),
     };
   });
 }
 
-export const typographyTrackStudioAdapters: readonly StudioAdapter[] = [
+export const typographyTrackStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "track", role: "track",
-    output: { type: "VisualTrack", surface: "track", modules: ["@hypit/typography-track"] },
+    output: { type: compositionTypes.visualTrack, surface: "track", modules: [typographyTrackModuleRef] },
     family: "text", tone: "violet", icon: "text",
-    timelineEdits: projectedWindowTimelineEdits({ start: "start", end: "end", duration: "for" }),
     bindings: [
       { name: "placement" },
       { name: "content" },
-      { name: "start", writable: true },
-      { name: "end", writable: true },
-      { name: "for", writable: true },
       {
         name: "style",
         recipe: { through: ["recipe"], bindings: typographyProperties.map(({ name }) => ({ name })) },

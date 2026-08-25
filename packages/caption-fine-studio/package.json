@@ -8,6 +8,7 @@
   "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@hypit/caption-fine": "workspace:*",
+    "@hypit/composition": "workspace:*",
     "@hypit/narrative": "workspace:*",
     "@hypit/studio-adapter": "workspace:*"
   }

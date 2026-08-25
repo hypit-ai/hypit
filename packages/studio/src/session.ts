@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { relative } from "node:path";
 
+import { markupAuthorFrontendId } from "@hypit/markup";
+import { svsFrontendId } from "@hypit/svs";
+
 import type { StudioArchive } from "./archive.js";
 import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
@@ -9,10 +12,10 @@ import { preview } from "./programme.js";
 import { renderPreview } from "./preview/render.js";
 import type { RunPlan } from "./run.js";
 import type { StudioSnapshot } from "./shared.js";
-import type { StudioAdapterRegistry } from "./studio-registry.js";
+import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { snapshot } from "./snapshot.js";
 import { inspectStudioRun } from "./studio-preflight.js";
-import type { StudioProjection } from "./studio-preflight.js";
+import type { StudioViewRequirement } from "./studio-preflight.js";
 import type { StudioSourceFile } from "./parameters.js";
 
 function sourceFiles(run: RunPlan): readonly StudioSourceFile[] {
@@ -20,8 +23,15 @@ function sourceFiles(run: RunPlan): readonly StudioSourceFile[] {
   return [...new Set(paths)].flatMap((path): StudioSourceFile[] => {
     if (!existsSync(path)) return [];
     try {
-      const language = path.endsWith(".svs") ? "svs" : path.endsWith(".svrun") ? "svrun" : "svml";
       const unit = run.source.compiled.closure.units.find((candidate) => candidate.id === path);
+      const language = path === run.runPath
+        ? "svrun" as const
+        : unit?.frontend === svsFrontendId
+          ? "svs" as const
+          : unit?.frontend === markupAuthorFrontendId
+            ? "svml" as const
+            : undefined;
+      if (language === undefined) return [];
       return [{
         path,
         text: readFileSync(path, "utf8"),
@@ -39,12 +49,12 @@ export type StudioSession = {
   readonly snapshot: StudioSnapshot;
   readonly material: ReadonlyMap<string, ServedFile>;
   readonly observations: Observations;
-  readonly projections: readonly StudioProjection[];
+  readonly projections: readonly StudioViewRequirement[];
 };
 
 export async function readStudioSession(input: {
   readonly domain: StudioDomain;
-  readonly registry: StudioAdapterRegistry;
+  readonly registry: StudioCompanionRegistry;
   readonly run: RunPlan;
   readonly archive?: StudioArchive;
   readonly revision: number;

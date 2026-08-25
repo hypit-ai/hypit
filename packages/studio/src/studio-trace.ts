@@ -1,14 +1,16 @@
 import type { CompiledSource } from "./compile.js";
 import type { Placement } from "./observe.js";
-import type { StudioAdapterRegistry } from "./studio-registry.js";
-import type { StudioProjectionRole, StudioTrackTrace } from "@hypit/studio-adapter";
+import type { StudioCompanionRegistry } from "./studio-registry.js";
+import type { StudioViewRole, StudioTrackTrace } from "@hypit/studio-adapter";
+import type { TypeRef } from "@hypit/protocol";
 
-export type { StudioProjectionRole } from "@hypit/studio-adapter";
+export type { StudioViewRole } from "@hypit/studio-adapter";
 
 export type StudioTraceDependency = {
   readonly name: string;
   readonly ref: string;
   readonly type: string;
+  readonly typeRef: TypeRef;
 };
 
 export type StudioTrace = StudioTrackTrace;
@@ -16,6 +18,7 @@ export type StudioTrace = StudioTrackTrace;
 export type StudioOutput = {
   readonly name: string;
   readonly type: string;
+  readonly typeRef: TypeRef;
   readonly ref: string;
 };
 
@@ -24,14 +27,11 @@ function lastTag(placement: Placement | undefined): string {
 }
 
 export function outputFor(source: CompiledSource, ref: string): StudioOutput | undefined {
-  return source.exports.find((item) => item.ref === ref || item.name === ref);
+  return source.exports.find((item) => item.ref === ref);
 }
 
 export function placementFor(source: CompiledSource, ref: string): Placement | undefined {
-  const output = outputFor(source, ref);
-  return source.observations.placements.find((item) =>
-    item.outputs.includes(ref) || (output !== undefined && item.outputs.includes(output.name))
-  );
+  return source.observations.placements.find((item) => item.outputs.includes(ref));
 }
 
 export function unique(values: readonly string[]): string[] {
@@ -43,34 +43,42 @@ export function lastPlacementTag(source: CompiledSource, ref: string): string {
 }
 
 export function roleFor(
-  registry: StudioAdapterRegistry,
+  registry: StudioCompanionRegistry,
   source: CompiledSource,
   ref: string,
-): StudioProjectionRole | undefined {
+): StudioViewRole | undefined {
   const output = outputFor(source, ref);
   if (output === undefined) return undefined;
   const placement = placementFor(source, ref);
   const placementTypes = placement?.outputs.flatMap((candidate) => {
     const found = outputFor(source, candidate);
-    return found === undefined ? [] : [found.type];
+    return found === undefined ? [] : [found.typeRef];
   }) ?? [];
-  return registry.classifyOutput(output.type, placement, placementTypes);
+  return registry.classifyOutput(output.typeRef, placement, placementTypes);
 }
 
 export function traceFor(source: CompiledSource, ref: string): StudioTrace {
   const placement = placementFor(source, ref);
   if (placement === undefined) return { outputPorts: [], references: [] };
-  const refs = unique([
-    ...placement.references,
-    ...placement.children.flatMap((child) => child.references),
-  ]).flatMap((dependency) => {
+  const direct: Array<{ readonly input?: string; readonly dependency: string }> =
+    Object.entries(placement.resolvedReferenceAttributes ?? {}).map(([input, dependency]) => ({ input, dependency }));
+  const nested: Array<{ readonly input?: string; readonly dependency: string }> =
+    placement.children.flatMap((child) => Object.values(child.resolvedReferenceAttributes ?? {})
+      .map((dependency) => ({ dependency })));
+  const dependencies = [...direct, ...nested].filter((candidate, index, all) =>
+    all.findIndex((other) => other.dependency === candidate.dependency
+      && other.input === candidate.input) === index);
+  const refs = dependencies.flatMap(({ input, dependency }) => {
     const output = outputFor(source, dependency);
-    return output === undefined ? [] : [{ name: output.name, ref: output.ref, type: output.type }];
+    return output === undefined ? [] : [{
+      ...(input === undefined ? {} : { input }),
+      name: output.name, ref: output.ref, type: output.type, typeRef: output.typeRef,
+    }];
   });
   return {
     placement: placement.tag,
     surface: placement.surface,
-    module: placement.module.name,
+    module: { ...placement.module },
     ...(placement.id === undefined ? {} : { authoredId: placement.id }),
     outputPorts: placement.outputPorts.map((port) => {
       const output = outputFor(source, port.ref);
@@ -78,6 +86,7 @@ export function traceFor(source: CompiledSource, ref: string): StudioTrace {
         name: port.name,
         ref: output?.ref ?? port.ref,
         ...(output?.type === undefined ? {} : { type: output.type }),
+        ...(output?.typeRef === undefined ? {} : { typeRef: output.typeRef }),
       };
     }),
     references: refs,
@@ -86,7 +95,7 @@ export function traceFor(source: CompiledSource, ref: string): StudioTrace {
 
 /** Additional same-Surface values a Companion requires beyond the terminal Track. */
 export function tracedStudioValues(
-  registry: StudioAdapterRegistry,
+  registry: StudioCompanionRegistry,
   source: CompiledSource,
   ref: string,
 ): readonly string[] {
@@ -95,9 +104,9 @@ export function tracedStudioValues(
   if (output === undefined || placement === undefined) return [];
   const siblingTypes = placement.outputPorts.flatMap((port) => {
     const found = outputFor(source, port.ref);
-    return found === undefined ? [] : [found.type];
+    return found === undefined ? [] : [found.typeRef];
   });
-  const ports = registry.requiredValuePorts(output.type, placement, siblingTypes);
+  const ports = registry.requiredValuePorts(output.typeRef, placement, siblingTypes);
   return ports.map((name) => {
     const port = placement.outputPorts.find((candidate) => candidate.name === name);
     if (port === undefined) {

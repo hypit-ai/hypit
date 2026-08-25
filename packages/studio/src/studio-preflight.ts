@@ -1,12 +1,14 @@
 import { plannedNeeds } from "@hypit/core";
 import type { Candidate } from "@hypit/protocol";
+import { sameType } from "@hypit/protocol";
+import type { StudioFilmCompanion } from "@hypit/studio-adapter";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 
 import type { CompiledSource } from "./compile.js";
 import type { Placement } from "./observe.js";
 import type { RunPlan } from "./run.js";
-import type { StudioAdapterRegistry } from "./studio-registry.js";
+import type { StudioCompanionRegistry } from "./studio-registry.js";
 import {
-  lastPlacementTag,
   outputFor,
   placementFor,
   roleFor,
@@ -14,13 +16,13 @@ import {
   tracedStudioValues,
   unique,
 } from "./studio-trace.js";
-import type { StudioProjectionRole, StudioTrace } from "./studio-trace.js";
+import type { StudioViewRole, StudioTrace } from "./studio-trace.js";
 
-export type StudioProjection = {
+export type StudioViewRequirement = {
   readonly name: string;
   readonly ref: string;
   readonly type: string;
-  readonly role: StudioProjectionRole;
+  readonly role: StudioViewRole;
   readonly candidateId?: string;
   readonly trace: StudioTrace;
   readonly candidatePolicy: "materialized-inline" | "deterministic-derived";
@@ -29,7 +31,7 @@ export type StudioProjection = {
 export type StudioInspection = {
   readonly renderTargets: readonly string[];
   readonly filmComposition: string;
-  readonly projections: readonly StudioProjection[];
+  readonly projections: readonly StudioViewRequirement[];
 };
 
 export class StudioPreflightError extends Error {
@@ -54,27 +56,33 @@ function plannedExternalNeeds(base: RunPlan, refs: readonly string[]): readonly 
   ));
 }
 
-function filmForTarget(source: CompiledSource, targetRef: string): {
+function localName(value: string): string {
+  return value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
+}
+
+function filmForTarget(registry: StudioCompanionRegistry, source: CompiledSource, targetRef: string): {
   readonly renderTarget: boolean;
   readonly compositionRef?: string;
   readonly placement?: Placement;
+  readonly companion?: StudioFilmCompanion;
 } {
   const targetPlacement = placementFor(source, targetRef);
   if (targetPlacement === undefined) return { renderTarget: false };
-  if (lastPlacementTag(source, targetRef) === "Film") {
-    return { renderTarget: true, compositionRef: targetRef, placement: targetPlacement };
-  }
-  if (lastPlacementTag(source, targetRef) !== "Video") return { renderTarget: false };
-  const composition = targetPlacement.references
-    .map((ref) => outputFor(source, ref))
-    .find((item) => item?.type === "Composition");
-  const compositionRef = composition?.ref;
-  const placement = compositionRef === undefined ? undefined : placementFor(source, compositionRef);
-  return {
-    renderTarget: true,
-    ...(compositionRef === undefined ? {} : { compositionRef }),
-    ...(placement === undefined ? {} : { placement }),
-  };
+  const candidates = unique([
+    targetRef,
+    ...Object.values(targetPlacement.resolvedReferenceAttributes ?? {}),
+    ...targetPlacement.children.flatMap((child) => Object.values(child.resolvedReferenceAttributes ?? {})),
+  ]).flatMap((ref) => {
+    const output = outputFor(source, ref);
+    const placement = placementFor(source, ref);
+    const companion = output === undefined ? undefined : registry.filmCompanionFor(output.typeRef, placement);
+    return output === undefined || placement === undefined || companion === undefined
+      ? []
+      : [{ compositionRef: output.ref, placement, companion }];
+  });
+  if (candidates.length > 1) throw new Error(`Run target ${targetRef} reaches more than one Studio Film.`);
+  const found = candidates[0];
+  return found === undefined ? { renderTarget: false } : { renderTarget: true, ...found };
 }
 
 /**
@@ -82,7 +90,7 @@ function filmForTarget(source: CompiledSource, targetRef: string): {
  * supplies the compiled graph and its exact BuildPlan/Need closure.
  */
 export function inspectStudioRun(
-  registry: StudioAdapterRegistry,
+  registry: StudioCompanionRegistry,
   source: CompiledSource,
   base: RunPlan,
 ): StudioInspection {
@@ -90,17 +98,23 @@ export function inspectStudioRun(
   if (base.targets.length === 0) issues.push("the Run Source has no target; Studio requires Film or Render");
 
   const targets = base.targets.flatMap((ref) => {
-    const found = filmForTarget(source, ref);
+    const found = filmForTarget(registry, source, ref);
     return found.renderTarget ? [{ ref, ...found }] : [];
   });
   if (targets.length === 0 && base.targets.length > 0) {
     issues.push("the Run target is not a Film or Render output from the current SVML");
   }
+  const filmCompositions = unique(targets.flatMap((target) =>
+    target.compositionRef === undefined ? [] : [target.compositionRef]));
+  if (filmCompositions.length > 1) {
+    issues.push(`the Run reaches multiple Film compositions (${filmCompositions.join(", ")}); Studio requires one explicit Film`);
+  }
   const chosen = targets.find((item) => item.compositionRef !== undefined && item.placement !== undefined);
-  if (chosen?.compositionRef === undefined || chosen.placement === undefined) {
+  if (chosen?.compositionRef === undefined || chosen.placement === undefined || chosen.companion === undefined) {
     issues.push("Film/Render target has no traceable Film composition");
     throw new StudioPreflightError(issues);
   }
+  const film = chosen.companion;
 
   const candidates = new Map(base.run.graph.candidates.map((item) => [item.id, item] as const));
   const satisfactions = new Map(base.run.graph.satisfactions.map((item) => [item.output, item.candidate] as const));
@@ -112,52 +126,41 @@ export function inspectStudioRun(
     }
   }
 
-  // Only authored <film:Track source={...}/> children define Film membership
-  // and Studio lane order. Film's canvas, semantic and appearance references
-  // are not Tracks, and sibling outputs of those references are not implied.
+  // The selected Film companion alone declares membership and semantic-axis vocabulary.
   const filmTrackRefs = unique(chosen.placement.children.flatMap((child) => {
-    const source = child.referenceAttributes.source;
+    if (localName(child.tag) !== film.tracks.childSurface) return [];
+    const source = child.resolvedReferenceAttributes?.[film.tracks.sourceAttribute];
     return source === undefined ? [] : [source];
   })).flatMap((ref) => {
     const output = outputFor(source, ref);
-    return output !== undefined && (output.type === "VisualTrack" || output.type === "AudioTrack")
+    return output !== undefined && film.tracks.types.some((type) => sameType(type, output.typeRef))
       ? [output.ref]
       : [];
   });
-  const semanticOutput = outputFor(source, chosen.placement.referenceAttributes.semantic ?? "");
-  if (semanticOutput?.type !== "SemanticTrack") {
+  const semanticOutput = outputFor(source,
+    chosen.placement.resolvedReferenceAttributes?.[film.semantic.attribute] ?? "");
+  if (semanticOutput === undefined || !sameType(semanticOutput.typeRef, film.semantic.type)) {
     issues.push("Film has no traceable SemanticTrack reference");
   }
-  const semanticPlacement = semanticOutput === undefined
-    ? undefined
-    : placementFor(source, semanticOutput.ref);
-  const semanticTakeRefs = unique(semanticPlacement === undefined ? [] : [
-    ...semanticPlacement.references,
-    ...semanticPlacement.children.flatMap((child) => child.references),
-  ]).flatMap((ref) => outputFor(source, ref)?.type === "SemanticTake"
-    ? [outputFor(source, ref)!.ref] : []);
-  if (semanticTakeRefs.length === 0) issues.push("Film has no traceable SemanticTake chain");
-
-  let adapterValueRefs: readonly string[] = [];
+  let companionValueRefs: readonly string[] = [];
   try {
-    adapterValueRefs = unique(filmTrackRefs.flatMap((ref) =>
+    companionValueRefs = unique(filmTrackRefs.flatMap((ref) =>
       tracedStudioValues(registry, source, ref)));
   } catch (error) {
     issues.push(error instanceof Error ? error.message : String(error));
   }
-  const adapterValueSet = new Set(adapterValueRefs);
+  const companionValueSet = new Set(companionValueRefs);
 
   const projectionRefs = unique([
     ...filmTrackRefs,
-    ...(semanticOutput?.type === "SemanticTrack" ? [semanticOutput.ref] : []),
-    ...semanticTakeRefs,
-    ...adapterValueRefs,
+    ...(semanticOutput !== undefined && sameType(semanticOutput.typeRef, semanticTrackTypes.track) ? [semanticOutput.ref] : []),
+    ...companionValueRefs,
   ]);
-  const projections: StudioProjection[] = [];
-  const derived: Omit<StudioProjection, "candidatePolicy">[] = [];
+  const projections: StudioViewRequirement[] = [];
+  const derived: Omit<StudioViewRequirement, "candidatePolicy">[] = [];
   for (const ref of projectionRefs) {
     const output = outputFor(source, ref);
-    const role = roleFor(registry, source, ref) ?? (adapterValueSet.has(ref) ? "realization" : undefined);
+    const role = roleFor(registry, source, ref) ?? (companionValueSet.has(ref) ? "supporting-value" : undefined);
     if (output === undefined || role === undefined) continue;
     const candidateId = satisfactions.get(ref);
     const candidate = candidateId === undefined ? undefined : candidates.get(candidateId);

@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { videoCliDistribution } from "@hypit/video-cli";
 
 import { openStudioArchive } from "./src/archive.js";
-import { loadStudioAdapterRegistry } from "./src/adapter-profile.js";
+import { loadStudioCompanionRegistry } from "./src/companion-profile.js";
 import { loadStudioDomain } from "./src/domain.js";
 import { loadStudioRun } from "./src/run.js";
 import { readStudioSession } from "./src/session.js";
@@ -24,7 +24,7 @@ if (runArgument === undefined) {
   const distributionPackageRoot = videoCliDistribution.packageRoot;
   if (distributionPackageRoot === undefined) throw new Error("active Hypit Distribution has no package root");
 
-  const registry = await loadStudioAdapterRegistry({ workspaceRoot, packageRoot, distributionPackageRoot });
+  const registry = await loadStudioCompanionRegistry({ workspaceRoot, packageRoot, distributionPackageRoot });
   const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
   const archive = await openStudioArchive(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
   const awaitingPrefix = "the Studio projection closure requires unresolved capabilities:";
@@ -36,6 +36,7 @@ if (runArgument === undefined) {
     const run = await loadStudioRun({
       run: runPath,
       domain,
+      registry,
       ...(archive === undefined ? {} : { archive }),
     });
     inspectStudioRun(registry, run.source, run);

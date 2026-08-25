@@ -1,8 +1,10 @@
+import { screenOverlayModuleRef, screenOverlayTypes } from "@hypit/screen-overlay";
 import type { ScreenOverlayProgram } from "@hypit/screen-overlay";
-import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft, StudioInspectorFieldDeclaration } from "@hypit/studio-adapter";
-import { childEntities, projectedWindowTimelineEdits, requiredSurfaceValue, temporalLineageFor } from "@hypit/studio-adapter";
+import { compositionTypes } from "@hypit/composition";
+import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioEntityDraft, StudioInspectorFieldDeclaration } from "@hypit/studio-adapter";
+import { childEntities, requiredSurfaceValue, temporalLineageFor, temporalSemanticSource } from "@hypit/studio-adapter";
 
-function projectOverlays(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectOverlays(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const program = requiredSurfaceValue(context, "program") as ScreenOverlayProgram;
   const items = program.items.map((item) => ({
     id: item.id,
@@ -10,17 +12,19 @@ function projectOverlays(context: StudioAdapterContext): readonly StudioEntityDr
     startFrame: item.span.startFrame,
     endFrameExclusive: item.span.endFrameExclusive,
     stackOrder: item.stacking.order,
+    sourceTypes: [screenOverlayTypes.itemSpec],
   }));
   return childEntities(context, items, "screen-overlay", "standard").map((entity, index) => {
     const item = program.items[index];
     if (item === undefined) return entity;
     const temporal = temporalLineageFor(context, item.id, "window");
+    const semanticSource = temporalSemanticSource(temporal);
     return {
       ...entity,
       display: { title: item.content.kind.replaceAll("-", " "), layers: [] },
-      ...(temporal?.source.kind === "program" || temporal?.source.id === undefined
+      ...(semanticSource?.id === undefined
         ? {}
-        : { markerId: temporal.source.id }),
+        : { markerId: semanticSource.id }),
       ...(temporal === undefined ? {} : { temporal }),
     };
   });
@@ -60,14 +64,12 @@ const overlayInspector: readonly StudioInspectorFieldDeclaration[] = overlayName
   };
 });
 
-export const screenOverlayStudioAdapters: readonly StudioAdapter[] = [
+export const screenOverlayStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "track", role: "track",
-    output: { type: "VisualTrack", surface: "track", modules: ["@hypit/screen-overlay"] },
+    output: { type: compositionTypes.visualTrack, surface: "track", modules: [screenOverlayModuleRef] },
     family: "screen-overlay", tone: "orange", icon: "component",
-    timelineEdits: projectedWindowTimelineEdits({ start: "start", end: "end", duration: "for" }),
     bindings: [
-      { name: "start", writable: true }, { name: "end", writable: true }, { name: "for", writable: true },
       ...overlayNames.map((name) => ({ name, writable: true })),
     ],
     inspector: overlayInspector,

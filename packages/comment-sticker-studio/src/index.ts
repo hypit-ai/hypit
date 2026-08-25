@@ -1,7 +1,8 @@
-import { commentStickerMarkupSurfaces } from "@hypit/comment-sticker";
+import { commentStickerMarkupSurfaces, commentStickerModuleRef, commentStickerTypes } from "@hypit/comment-sticker";
 import type { CommentStickerProgram } from "@hypit/comment-sticker";
-import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-adapter";
-import { artifactPreview, childEntities, previewLayer, projectedWindowTimelineEdits, requiredSurfaceValue, temporalLineageFor, textLayer } from "@hypit/studio-adapter";
+import { compositionTypes } from "@hypit/composition";
+import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioEntityDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-adapter";
+import { artifactPreview, childEntities, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalSemanticSource, textLayer } from "@hypit/studio-adapter";
 
 const frameParameters: readonly StudioSourceBindingDeclaration[] = [
   { name: "within" },
@@ -67,7 +68,7 @@ const commentInspector: readonly StudioInspectorFieldDeclaration[] = commentProp
   };
 });
 
-function projectComments(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectComments(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const program = requiredSurfaceValue(context, "program") as CommentStickerProgram;
   const items = program.items.map((item) => ({
     id: item.id,
@@ -75,11 +76,13 @@ function projectComments(context: StudioAdapterContext): readonly StudioEntityDr
     startFrame: item.span.startFrame,
     endFrameExclusive: item.span.endFrameExclusive,
     stackOrder: item.style.stackingOrder,
+    sourceTypes: [commentStickerTypes.itemSpec],
   }));
   return childEntities(context, items, "comment-sticker", "standard").map((entity, index) => {
     const item = program.items[index];
     if (item === undefined) return entity;
     const temporal = temporalLineageFor(context, item.id, "window");
+    const semanticSource = temporalSemanticSource(temporal);
     return {
       ...entity,
       display: {
@@ -89,20 +92,19 @@ function projectComments(context: StudioAdapterContext): readonly StudioEntityDr
           textLayer(item.content.comment),
         ],
       },
-      ...(temporal?.source.kind === "program" || temporal?.source.id === undefined
+      ...(semanticSource?.id === undefined
         ? {}
-        : { markerId: temporal.source.id }),
+        : { markerId: semanticSource.id }),
       ...(temporal === undefined ? {} : { temporal }),
     };
   });
 }
 
-export const commentStickerStudioAdapters: readonly StudioAdapter[] = [
+export const commentStickerStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "track", role: "track",
-    output: { type: "VisualTrack", surface: "track", modules: ["@hypit/comment-sticker"] },
+    output: { type: compositionTypes.visualTrack, surface: "track", modules: [commentStickerModuleRef] },
     family: "comment-sticker", tone: "orange", icon: "component",
-    timelineEdits: projectedWindowTimelineEdits({ start: "start", end: "end", duration: "for" }),
     bindings: [
       { name: "frame", referenced: frameParameters },
       {
@@ -111,7 +113,6 @@ export const commentStickerStudioAdapters: readonly StudioAdapter[] = [
       },
       ...["comment", "author", "header", "meta"].map((name) => ({ name, writable: true })),
       { name: "avatar" },
-      ...["start", "end", "for"].map((name) => ({ name, writable: true })),
     ],
     inspector: [
       ...frameParameters.filter(({ writable }) => writable === true).map(({ name }) => ({

@@ -1,14 +1,16 @@
-import { mediaTrackMarkupSurfaces } from "@hypit/media-track";
+import { mediaTrackMarkupSurfaces, mediaTrackModuleRef, mediaTrackTypes } from "@hypit/media-track";
 import type { MediaLayerProgram, MediaTrackProgram } from "@hypit/media-track";
+import { compositionTypes } from "@hypit/composition";
+import { sameType } from "@hypit/protocol";
 import type {
-  StudioAdapter,
-  StudioAdapterContext,
+  StudioTrackCompanion,
+  StudioTrackCompanionContext,
   StudioEntityDraft,
   StudioInspectorFieldDeclaration,
   StudioMaterialPreview,
   StudioSourceBindingDeclaration,
 } from "@hypit/studio-adapter";
-import { artifactPreview, childEntities, previewLayer, projectedWindowTimelineEdits, requiredSurfaceValue, temporalLineageFor } from "@hypit/studio-adapter";
+import { artifactPreview, childEntities, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalSemanticSource } from "@hypit/studio-adapter";
 
 const frameParameters: readonly StudioSourceBindingDeclaration[] = [
   { name: "within" },
@@ -111,9 +113,9 @@ function materialPreview(
   return artifactPreview(layer.source.kind === "still" ? "image" : "video", layer.source.artifact.digest);
 }
 
-function projectMedia(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+function projectMedia(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {
   const program = requiredSurfaceValue(context, "program") as MediaTrackProgram;
-  const facet = context.track.type === "AudioTrack" ? "audio" : "visual";
+  const facet = sameType(context.track.typeRef, compositionTypes.audioTrack) ? "audio" : "visual";
   const items = [
     ...program.items.map((item) => ({
       id: item.id,
@@ -123,6 +125,7 @@ function projectMedia(context: StudioAdapterContext): readonly StudioEntityDraft
       stackOrder: item.stacking.order,
       preview: materialPreview(item.layers, facet, item.sourceAudio?.fromLayer),
       temporalInput: "window",
+      sourceTypes: [mediaTrackTypes.itemSpec],
     })),
     ...program.sequences.map((sequence) => ({
       id: sequence.id,
@@ -134,6 +137,7 @@ function projectMedia(context: StudioAdapterContext): readonly StudioEntityDraft
         ? undefined
         : materialPreview(sequence.members[0].layers, facet, sequence.members[0].sourceAudio?.fromLayer),
       temporalInput: "terminal",
+      sourceTypes: [mediaTrackTypes.sequenceSpec],
     })),
   ];
   return childEntities(context, items, "media-item", "standard")
@@ -141,11 +145,12 @@ function projectMedia(context: StudioAdapterContext): readonly StudioEntityDraft
       const item = items[index];
       if (item === undefined) return entity;
       const temporal = temporalLineageFor(context, item.id, item.temporalInput);
+      const semanticSource = temporalSemanticSource(temporal);
       return {
         ...entity,
-        ...(temporal?.source.kind === "program" || temporal?.source.id === undefined
+        ...(semanticSource?.id === undefined
           ? {}
-          : { markerId: temporal.source.id }),
+          : { markerId: semanticSource.id }),
         ...(item.preview === undefined ? {} : {
           display: {
             ...entity.display,
@@ -158,9 +163,6 @@ function projectMedia(context: StudioAdapterContext): readonly StudioEntityDraft
 }
 
 const commonBindings: readonly StudioSourceBindingDeclaration[] = [
-  { name: "start", writable: true },
-  { name: "end", writable: true },
-  { name: "for", writable: true },
   { name: "source-audio", writable: true },
   { name: "audio-gain", writable: true },
   { name: "until" },
@@ -181,12 +183,11 @@ const commonInspector: readonly StudioInspectorFieldDeclaration[] = [
 
 const frameSizeParameters = new Set(["width", "height"]);
 
-export const mediaTrackStudioAdapters: readonly StudioAdapter[] = [
+export const mediaTrackStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "visual", role: "track",
-    output: { type: "VisualTrack", surface: "track", modules: ["@hypit/media-track"] },
+    output: { type: compositionTypes.visualTrack, surface: "track", modules: [mediaTrackModuleRef] },
     family: "media", tone: "blue", icon: "video",
-    timelineEdits: projectedWindowTimelineEdits({ start: "start", end: "end", duration: "for" }),
     bindings: [
       ...commonBindings,
       { name: "extent", referenced: extentParameters },
@@ -224,9 +225,8 @@ export const mediaTrackStudioAdapters: readonly StudioAdapter[] = [
   },
   {
     id: "audio", role: "track",
-    output: { type: "AudioTrack", surface: "track", modules: ["@hypit/media-track"] },
+    output: { type: compositionTypes.audioTrack, surface: "track", modules: [mediaTrackModuleRef] },
     family: "media-audio", tone: "green", icon: "waveform",
-    timelineEdits: projectedWindowTimelineEdits({ start: "start", end: "end", duration: "for" }),
     bindings: commonBindings,
     inspector: commonInspector,
     requiredValues: ["program"], project: projectMedia,

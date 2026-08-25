@@ -57,6 +57,36 @@ export type AuthorSourceExport = {
   readonly type: TypeRef;
 };
 
+/**
+ * One author-visible identity whose uniqueness is part of a domain's public
+ * contract. The Frontend only carries the declaration; the owning Surface
+ * chooses the Type namespace and the Source closure enforces it generically.
+ */
+export type AuthorSourceIdentity = {
+  readonly namespace: TypeRef;
+  readonly id: string;
+};
+
+/** One author input before Source-local graph identities are hygienized. */
+export type AuthorInputProvenanceDraft = {
+  readonly name: string;
+  readonly range: import("@hypit/protocol").SourceRange;
+  readonly kind: "literal" | "reference";
+  readonly ref?: AuthorValueRef;
+};
+
+/**
+ * Structural origin retained by a Frontend while it lowers author syntax.
+ * It contains no editor presentation and is never persisted beside the Source.
+ */
+export type AuthorElementProvenanceDraft = {
+  readonly range: import("@hypit/protocol").SourceRange;
+  readonly records: readonly string[];
+  readonly components: readonly string[];
+  readonly outputs: readonly { readonly component: string; readonly name: string; readonly id: string }[];
+  readonly inputs: readonly AuthorInputProvenanceDraft[];
+};
+
 export type ResolvedAuthorSourceImport = {
   readonly request: AuthorSourceImport;
   readonly source: string;
@@ -77,6 +107,8 @@ export type DecodedAuthorSource = {
   readonly components: readonly AuthorComponent[];
   readonly fragments: readonly GraphFragment[];
   readonly exports: readonly AuthorSourceExport[];
+  readonly identities?: readonly AuthorSourceIdentity[];
+  readonly provenance?: readonly AuthorElementProvenanceDraft[];
 };
 
 export type Awaitable<T> = T | Promise<T>;
@@ -119,11 +151,44 @@ export type AuthorRecordAdmitter = (
 
 export type SourceClosureUnit = {
   readonly id: string;
+  readonly name: string;
   readonly frontend: string;
   readonly imports: readonly {
     readonly alias: string;
     readonly source: string;
   }[];
+};
+
+export type AuthorInputProvenance = {
+  /** Compilation-local identity; authors never write or maintain it. */
+  readonly id: string;
+  readonly name: string;
+  readonly range: import("@hypit/protocol").SourceRange;
+  readonly kind: "literal" | "reference";
+  readonly ref?: AuthorValueRef;
+};
+
+export type AuthorElementProvenance = {
+  readonly id: string;
+  readonly source: string;
+  readonly sourceName: string;
+  readonly frontend: string;
+  readonly range: import("@hypit/protocol").SourceRange;
+  readonly records: readonly { readonly local: string; readonly id: string }[];
+  readonly components: readonly { readonly local: string; readonly id: string }[];
+  readonly outputs: readonly {
+    readonly component: string;
+    readonly name: string;
+    readonly local: string;
+    readonly id: string;
+  }[];
+  readonly inputs: readonly AuthorInputProvenance[];
+};
+
+/** Ephemeral Source-to-graph lineage emitted with one compilation. */
+export type AuthorProvenance = {
+  readonly format: "hypit.author-provenance@1";
+  readonly elements: readonly AuthorElementProvenance[];
 };
 
 export type SourceClosure = {
@@ -142,6 +207,7 @@ export type CompiledSourceClosure = {
   readonly program: LinkedProgram;
   readonly graph: CompiledGraph;
   readonly exports: readonly CompiledSourceExport[];
+  readonly provenance: AuthorProvenance;
 };
 
 export type CompileSourceClosureRequest = {
@@ -211,6 +277,8 @@ type HygienicSource = {
   readonly components: readonly AuthorComponent[];
   readonly fragments: readonly GraphFragment[];
   readonly exports: readonly AuthorSourceExport[];
+  readonly identities: readonly AuthorSourceIdentity[];
+  readonly provenance: readonly AuthorElementProvenance[];
 };
 
 function hygienicId(kind: string, unit: string, local: string): string {
@@ -304,6 +372,7 @@ function hygienizeSource(
   const exports = decoded.exports.map((item) => ({ ...item, ref: mapRef(item.ref) }));
   const unitContent = {
     id: source.id,
+    name: source.name,
     frontend: frontend.id,
     imports: imports
       .map((item) => ({
@@ -318,6 +387,29 @@ function hygienizeSource(
     components,
     fragments: decoded.fragments,
     exports,
+    identities: decoded.identities ?? [],
+    provenance: (decoded.provenance ?? []).map((element) => ({
+      id: hygienicId("element", source.id, `${element.range.start}:${element.range.end}`),
+      source: source.id,
+      sourceName: source.name,
+      frontend: frontend.id,
+      range: { ...element.range },
+      records: element.records.map((id) => ({ local: id, id: recordIds.get(id) ?? id })),
+      components: element.components.map((id) => ({ local: id, id: componentIds.get(id) ?? id })),
+      outputs: element.outputs.map((output) => ({
+        component: componentIds.get(output.component) ?? output.component,
+        name: output.name,
+        local: output.id,
+        id: outputIds.get(output.id) ?? output.id,
+      })),
+      inputs: element.inputs.map((input) => ({
+        id: hygienicId("endpoint", source.id, `${element.range.start}:${input.name}`),
+        name: input.name,
+        range: { ...input.range },
+        kind: input.kind,
+        ...(input.ref === undefined ? {} : { ref: mapRef(input.ref) }),
+      })),
+    })),
   };
 }
 
@@ -436,6 +528,21 @@ export async function compileSourceClosure(
   };
 
   const entry = await compile(request.entry);
+  const identities = new Map<string, { readonly source: string; readonly identity: AuthorSourceIdentity }>();
+  for (const unit of ordered) {
+    for (const identity of unit.identities) {
+      assert(identity.id.length > 0, "EMPTY_SOURCE_IDENTITY", `${unit.unit.id} declares an empty public identity`);
+      const key = `${typeName(identity.namespace)}\u0000${identity.id}`;
+      const existing = identities.get(key);
+      assert(
+        existing === undefined,
+        "DUPLICATE_SOURCE_IDENTITY",
+        `${typeName(identity.namespace)} identity ${identity.id} is declared by both ${existing?.source ?? unit.unit.id} and ${unit.unit.id}`,
+        identity.id,
+      );
+      identities.set(key, { source: unit.unit.id, identity });
+    }
+  }
   const records = ordered.flatMap((unit) => unit.records);
   const recordIds = new Set<string>();
   for (const record of records) {
@@ -466,6 +573,10 @@ export async function compileSourceClosure(
     closure: sourceClosure,
     program,
     graph,
+    provenance: {
+      format: "hypit.author-provenance@1",
+      elements: ordered.flatMap((unit) => unit.provenance),
+    },
     exports: entry.exports
       .map((item) => ({
         name: item.name,
