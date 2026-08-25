@@ -80,12 +80,17 @@ command appends the output suffix itself when it looks for the track, so `--elem
 matches nothing: it refuses with `the Source places no element named captions.track` and lists the
 bare ids that are placed.
 
-`--segment` and `--selection` take a Script name, never a timestamp. Without either, the whole program
-is drawn. An `--out` ending `.mp4`, `.mov` or `.webm` writes the stretch as a clip; any other extension
-writes one still from the middle of it.
+`--segment` and `--selection` take a Script name, never a timestamp. `--tokens from:to` takes a
+half-open range of the Script's own words, which is what a stretch nobody named is written as — a
+caption Cue ends at a speaker change, so it has a range and no id. Without any of the three, the whole
+program is drawn. An `--out` ending `.mp4`, `.mov` or `.webm` writes the stretch as a clip; any other
+extension writes one still from the middle of it.
 
-A whole round is one call: `--batch <renders.json>`, an array of `{element, segment|selection, out}`
-inheriting the Run. They run together, paced by the machine.
+A whole round is one call: `--batch <renders.json>`, an array of
+`{element, segment|selection|tokens, out}` inheriting the Run. **The program is drawn once for the
+whole round** and each entry is cut out of those frames, so asking for eight windows costs one render
+and eight cuts. The picture does not depend on `--element` — it is everything the Source places over
+those words — so two elements over one stretch share the render as well.
 
 Each Segment's length comes from the Source's own `estimate:Speech`, which is the only clock a program
 has before its speech is synthesized. The result's `timing` says what sized each Segment, and the same

@@ -25,9 +25,26 @@ the target that does not trace, the chain that is missing — so its repairs are
 names what is visibly wrong with the picture, in words, and a repair aims at something the round
 named. Neither gate expects you to guess; each one tells you what is wrong, and you repair that.
 
-## The round covers one element at a time, across every stretch it is drawn over
+## The round is named by the check, not chosen by you
 
-Loop over one authored element at a time — the new component, one caption system, one inserted card.
+`authoring_check` and `reconstruction_check` read the Source and return a `plan`: every stretch worth
+looking at, as an element and a half-open range of the Script's own words, with the reason it earned a
+place. Render that list and read that list. Nothing here asks you to decide which stretches matter.
+
+Three rules produce it, and all three are read off the Source. **A distinct declaration is a distinct
+picture**, so an element is looked at once per way it is declared, at the stretch where that way first
+appears — which is also the floor, since every placed element declares something. **Content that can
+break the layout earns its own look**, which is why a caption Style is read over its longest Cue rather
+than its shortest. **A window length earns one only when something scales with it** — an enter costs
+its frames at one edge whatever the window is, but a typewriter, a loop or a `stretch` playback runs
+for as long as the window does.
+
+A range rather than a name, because the answer is not always a name: a Cue ends at a speaker change, so
+it is a run of words the Script never marked. `--tokens from:to` is how every command takes one, and
+`--segment`/`--selection` remain for the ranges that do have names.
+
+The gate then holds the round to that list. An element looked at once used to pass; now every entry the
+plan names has to have been answered.
 
 ### Render what the Source configures, not what the catalogue shows
 
@@ -75,27 +92,16 @@ saves the mock coming back as a finding in the one round there is.
 A mock lives only in this render. It is never written into the Source, and no gate reads it: the
 `playback` check reads the Source's Recipes, so a mock cannot be mistaken for coverage.
 
-### The derived Run holds one Segment, not the whole Source
+### The derived Run carries the mocks, and nothing else changes
 
-The mocks are substituted into a Source that has already been cut to the window. `render_element`
-keeps the Segment the window names, drops the rest of the Script, and then drops every element that
-named a Segment, Selection or Moment that went with it — and every element naming one of those, to a
-fixed point, plus any container the cut left with no children. So an element bound to a Selection in
-another Segment is not in this render, and its absence says nothing about the Source.
+The mocks are substituted into a Run that names the project's own Source. The whole program is drawn
+and the window is cut out of the frames afterwards, so every element the Source places is present and
+drawn wherever the Source puts it — what is on screen over the words being looked at is what the
+delivery will put there.
 
-One name survives the cut rather than taking its element with it: a Moment in `until=` that is marked
-*after* the kept Segment. An element given the span it occupies and a Moment to close it is on screen
-for the whole of a stretch that ends before that word, so the cut removes the close and keeps the
-element. That is what makes an element bounded by a late Moment renderable over the earlier Segments
-it is drawn over, which is every stretch this round asks for it in.
-
-The cut Source is on disk at `<project>/.hypit/compare/sliced.svml`, byte-for-byte from the original
-except for what was removed, and the derived Run sits beside it. Open it whenever something you
-expected to see is not in the picture: an element that is not in the fragment was cut by the window,
-and one that is in the fragment and still not on screen is the package failing to draw it. Those two
-repair in opposite directions, and the fragment is what tells them apart.
-`packages/reference-video-tools/src/slice.ts` records the same thing as `SliceResult.dropped` — each
-dropped id and the name it could no longer reach — and explains what decides survival.
+That derived Run is on disk under `<project>/.hypit/compare/`, beside the frames it produced. Open it
+whenever something you expected to see is not in the picture: an element that is in the Source and
+still not on screen is the package failing to draw it.
 
 ### A caption Style is read once, where it first appears
 

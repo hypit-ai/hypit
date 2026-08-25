@@ -16,6 +16,7 @@ import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 
 import { aliasPattern, invokedFrom, nearestPackageRoot, referenceRoot, scriptBody } from "./authoring.js";
 import { assert, round } from "./media.js";
+import { reviewPlan } from "./plan.js";
 
 export type PreviewCheckInput = {
   readonly run: string;
@@ -576,6 +577,7 @@ export async function authoringCheck(
     return each.flat();
   });
   const drawingTags = new Set<string>();
+  const timeVaryingKeys = new Set<string>();
   for (const pack of loaded) {
     for (const facet of pack.contribution.hostFacets ?? []) {
       if (facet.abi !== markupSurfaceHostFacetAbi) continue;
@@ -583,6 +585,17 @@ export async function authoringCheck(
       const draws = surface.outputs.some((output) =>
         output.module.name === "@hypit/composition" && (output.name === "VisualTrack" || output.name === "AudioTrack"));
       if (draws) drawingTags.add(`${pack.specifier}#${surface.tag}`);
+      // Which Recipe properties the package itself calls time-varying.
+      //
+      // `caption-fine` sorts every property it declares into where / how / when, and `when` is
+      // exactly the question one of the planning rules asks: does this run for as long as the window
+      // does? Reading the package's own answer keeps that rule correct for properties added after
+      // this file was written, which a list maintained here would not be.
+      for (const attribute of surface.vocabulary?.attributes ?? []) {
+        for (const property of attribute.recipe ?? []) {
+          if (property.group === "when") timeVaryingKeys.add(property.name);
+        }
+      }
     }
   }
 
@@ -820,6 +833,22 @@ export async function authoringCheck(
     };
   }
 
+  // What a round has to look at, decided from the Source rather than left to whoever runs it.
+  //
+  // The Recipe bodies come along because one of the three rules asks whether an element's appearance
+  // runs for as long as its window does, and that is written in the Recipe rather than on the tag.
+  const recipeBodies = new Map<string, string>();
+  for (const sheet of svml.matchAll(/<import\s+as="[^"]+"\s+source="([^"]+\.svs)"/gu)) {
+    const text = await readFile(resolve(dirname(svmlPath), sheet[1] ?? ""), "utf8").catch(() => undefined);
+    if (text === undefined) continue;
+    for (const recipe of text.matchAll(/([A-Za-z0-9_.-]+)\s*\{([^}]*)\}/gu)) recipeBodies.set(recipe[1] ?? "", recipe[2] ?? "");
+  }
+  const plan = reviewPlan({ svml, svmlPath, scriptBody: scriptBody(svml), drawn, recipes: recipeBodies, timeVaryingKeys });
+  // The same parse the plan was built from, so a look recorded against a Segment can be resolved to
+  // the words that Segment marks and compared with a plan entry on one axis.
+  const plannedBody = scriptBody(svml);
+  const plannedScript = parseScript(svmlPath, plannedBody.text, plannedBody.offset);
+
   const coverage = coverageReport();
   const uncoveredWords = coverage.gaps.reduce((sum, gap) => sum + gap.word_count, 0);
 
@@ -847,7 +876,7 @@ export async function authoringCheck(
   type LoggedComparison = {
     readonly element?: string;
     readonly shot_id?: string;
-    readonly range?: { readonly segment?: string; readonly selection?: string };
+    readonly range?: { readonly segment?: string; readonly selection?: string; readonly tokens?: readonly [number, number] };
     readonly status: string;
     readonly id?: string;
     readonly image_path?: string;
@@ -921,6 +950,33 @@ export async function authoringCheck(
     return recorded.size === 1 ? [...recorded][0]! : "mixed";
   };
 
+  // Which of the plan's entries have been answered.
+  //
+  // A logged look and a planned one are compared as word ranges, because that is the one form both
+  // can always be put in: a look recorded against a Segment resolves to the words that Segment marks,
+  // and a look recorded against a Cue was never anything else. Comparing the names instead would let
+  // a Cue in the middle of a Segment match the Segment, and the coverage this gate claims would be
+  // wider than the coverage it has.
+  const asTokens = (entry: LoggedComparison): string | undefined => {
+    if (entry.range?.tokens !== undefined) return `${entry.range.tokens[0]}-${entry.range.tokens[1]}`;
+    const segment = entry.range?.segment === undefined
+      ? undefined
+      : plannedScript.segments.find((item) => item.id === entry.range!.segment);
+    if (segment !== undefined) return `${segment.tokenStart}-${segment.tokenEndExclusive}`;
+    const selection = entry.range?.selection === undefined
+      ? undefined
+      : plannedScript.selections.find((item) => item.id === entry.range!.selection);
+    if (selection !== undefined) return `${selection.open.boundary.tokenIndex}-${selection.close.boundary.tokenIndex}`;
+    // A shot names a cut in the reference's picture rather than a range of the Script's words, so it
+    // answers no plan entry. It still counts as having looked, which `rounds` already records.
+    return undefined;
+  };
+  const answered = new Set(log.flatMap((entry) => {
+    const tokens = asTokens(entry);
+    return entry.element === undefined || tokens === undefined ? [] : [`${entry.element} ${tokens}`];
+  }));
+  const owed = plan.filter((entry) => !answered.has(`${entry.element} ${entry.tokens[0]}-${entry.tokens[1]}`));
+
   const never = drawn.filter((element) => (rounds.get(element.id) ?? []).length === 0);
   const unlabelled = log.filter((entry) => entry.element === undefined).length;
   // A misspelled --element is otherwise silent: the comparison happens, the log grows, and the element
@@ -956,6 +1012,10 @@ export async function authoringCheck(
     summary.push(`every drawing element has been ${looked} (${elements.length}), and every timed picture fills its window.`);
   }
   if (never.length > 0) summary.push(`${never.length} of ${elements.length} elements have never been ${looked}.`);
+  if (owed.length > 0) {
+    summary.push(`${owed.length} of ${plan.length} stretch${plan.length === 1 ? "" : "es"} the Source asks for `
+      + `${owed.length === 1 ? "has" : "have"} not been ${looked}.`);
+  }
   if (running.length > 0) {
     summary.push(`${running.length} window${running.length === 1 ? "" : "s"} will empty before ${running.length === 1 ? "it ends" : "they end"}.`);
   }
@@ -996,14 +1056,30 @@ export async function authoringCheck(
   return {
     run: runPath,
     ...(reference === undefined ? {} : { reference_id: reference }),
+    plan,
     // Where this command actually read and resolved from. Said here, no document has to describe it
     // from the outside and go stale when it moves.
     roots: mode === "reconstruction"
       ? { reference: preparedRoot, packages: packageRoot }
       : { reviews: logPath, packages: packageRoot },
-    passed: never.length === 0 && running.length === 0 && coverage.gaps.length === 0 && unresolved.length === 0,
+    passed: owed.length === 0 && never.length === 0 && running.length === 0 && coverage.gaps.length === 0 && unresolved.length === 0,
     summary,
     elements,
+    ...(owed.length === 0 ? {} : {
+      owed: {
+        entries: owed,
+        note: `${owed.length} stretch${owed.length === 1 ? "" : "es"} the Source asks for ${owed.length === 1 ? "has" : "have"} `
+          + "not been looked at. Each one is an element over a range of the Script's own words, and the reason it is "
+          + "here is beside it — a declaration nobody has seen, the longest cue a caption Style has to hold, or a "
+          + "window long enough that an animation inside it behaves differently.",
+        commands: owed.map((entry) => mode === "reconstruction"
+          ? `hypit-reference-video-tools compare_reconstruction --reference-id ${reference} --run ${runPath} `
+            + `--tokens ${entry.tokens[0]}:${entry.tokens[1]} --video <rendered clip>.mp4 --element ${entry.element}`
+          : `hypit-reference-video-tools review_element --run ${runPath} `
+            + `--tokens ${entry.tokens[0]}:${entry.tokens[1]} --video <rendered clip>.mp4 --element ${entry.element} `
+            + `--intent-file <what ${entry.element} was asked to be>`),
+      },
+    }),
     ...(never.length === 0 ? {} : {
       never_compared: {
         ids: never.map((element) => element.id),
