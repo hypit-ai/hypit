@@ -432,6 +432,9 @@ importers:
       '@hypit/workspace':
         specifier: workspace:*
         version: link:../workspace
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 
   packages/comment-sticker:
     dependencies:
