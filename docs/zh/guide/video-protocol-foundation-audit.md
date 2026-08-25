@@ -33,7 +33,7 @@ Provider、不生成占位；未来若需要一张静止图片临时代替 B-rol
 
 1. **作者层**：SVML/SVS 能否完整、无歧义地表达作者意图；
 2. **选择层**：Selection、Moment、Segment 或 Program 是什么语义来源；
-3. **投影层**：语义来源怎样在组件外得到 TemporalWindow 或 TemporalPoint；
+3. **投影层**：语义来源怎样在组件外得到 TemporalWindow 或 TemporalInstant；
 4. **消费层**：组件怎样消费窗口、素材、空间和局部动画，不再偷偷重新选择或投影；
 5. **渲染层**：Visual IR、HyperFrames、音频或媒体执行是否准确实现该语义；
 6. **Studio 层**：真实作者对象是否可选择、可解释，并能回写全部声明为可调的参数。
@@ -234,7 +234,7 @@ Word importance、dual-font emphasis 等确实需要逐词/范围标注时，也
 
 ```text
 Selection / Moment / Segment / Program
-  -> TemporalWindow / TemporalPoint
+  -> TemporalWindow / TemporalInstant
   -> 领域组件消费
 ```
 
@@ -376,7 +376,7 @@ Media 又分别在一次很大的实现提交中同时完成新设计和旧迁�
 
 后续设计可以改变接口，但不得绕过以下原则：
 
-1. Selection/Moment、Point/Window 和组件消费继续分离；
+1. Selection/Moment、Instant/Window 和组件消费继续分离；
 2. 组件不得内部重新选择语义或偷找帧；
 3. Frame、内容采样和 Paint 外溢保持不同事实；
 4. Caption Placement 不应继续只是某个视觉 Style 的副作用；
@@ -568,7 +568,7 @@ Caption 和 Speech 基础；只有真实广告需求证明它值得时才进入�
 - `packages/caption/`：CaptionDocument、Selection 投影、Style 分配与 Cue 作者边界；
 - `packages/caption-fine/`：Fine Caption 参数、校验与 Visual IR lowering；
 - `packages/typography-track/`：共享文字布局、Paint、Font、Box 与 Motion；
-- `packages/temporal/`：Point/Window 的显式投影；
+- `packages/temporal/`：Instant/Window 的显式投影；
 - `packages/speech-track/`：受限 Speech Visual authority；
 - `packages/screen-overlay/`：自包含全画布 Overlay；
 - `packages/studio*`：实体投影、参数可达性、时间谱系和作者写回。

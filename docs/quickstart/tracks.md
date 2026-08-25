@@ -351,29 +351,34 @@ against the variant, so a Column recipe on a TierBoard is refused by name.
 | Attribute | Takes |
 |---|---|
 | `semantic` | the SemanticTrack the board is timed against |
-| `frame` | a `space:Frame` — for `Column`, the fixed ranking rail |
-| `during` | a Selection — the board is on screen for it |
+| `frame` | a `space:Frame` — the compact board itself for TierBoard/Column |
+| `during` | a Segment or Selection for TierBoard/Column; a Selection for TopThree |
 | `style` | the matching style record, and only that variant's |
 | `appear-sound`, `move-sound` | optional Synchronized Media |
-| `terminal` | the Moment where the completed board settles. `TierBoard` and `TopThree` only |
-| `canvas` | a `space:Canvas` — the reveal stage. `Column` only |
+| `terminal` | the Moment where the completed board settles. `TopThree` only |
+| `canvas` | a `space:Canvas` — the independent reveal stage. TierBoard/Column |
 
-`Column` separates placement from reveal time, so it takes no `terminal`: each
-item carries its own reveal window instead, and the Column resolves siblings into non-overlapping
-windows inside the container's `during` span.
+`TierBoard` and `Column` take no `terminal`: every non-preset item carries an explicit reveal
+Selection. Sibling windows must already be non-overlapping and inside the container's `during`
+span.
 
 `move-sound` is refused on `TopThree`, which has no move phase. On a `TierBoard` it needs at least
-one item with `entry="stage"` — a sound with nothing to sound on is an authoring mistake, not a
-silent no-op.
+one item with `entry="drop"`. A drop Item appears in place on the independent Canvas stage when its
+Selection starts, stays still while that Item is discussed, and only follows an eased curved glide
+into its tier during the final `move-frames` ending at the Selection boundary. The move sound starts
+with that final glide.
 
 ### The item tags
 
 Each variant takes its own, at least one, and ids must be unique within a board.
 
-- **`TierItem`** — `tier`, `icon` and item-owned Moment `at` are required; `entry="direct" | "stage"`
-  and `stack` are optional. Row labels come from the recipe, not the tag.
+- **`TierItem`** — `tier` and `icon` are required. A non-preset item owns a `during` Selection and
+  must choose `entry="direct" | "drop"`; `preset="true"` has neither. Presets occupy inner cells
+  first, then reveal-window order fills each tier outward. Both modes use a quick in-place overshoot;
+  direct appears in its final cell, while drop uses the independent stage for the complete
+  explanation window before settling. Row labels come from the recipe.
 - **`TopThreeItem`** — `label` and item-owned Moment `at` are required; `icon` and `stack` are optional.
-  At most three. TierBoard and TopThree reveal order comes from these Moments' actual frame order.
+  At most three. TopThree reveal order comes from these Moments' actual frame order.
 - **`ColumnItem`** — `label` (required) and `rank` (required, a positive integer that decides the
   numbered row and nothing else), optional `icon` and `stack`. Each item also owns its reveal time:
   `during` names a Selection whose projected window is when it prefers to appear, and

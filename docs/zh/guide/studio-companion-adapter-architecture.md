@@ -1,9 +1,9 @@
 ---
-title: Studio Companion Adapter 架构
+title: Studio Companion 架构
 description: 领域组件、Studio Companion 与 Studio 应用之间的三层边界、显式选择机制和实现约束。
 ---
 
-# Studio Companion Adapter 架构
+# Studio Companion 架构
 
 > 状态：已实施。本文记录当前稳定的职责边界、显式选择方式与验收原则；具体 Inspector token 和操作能力仍可在 ABI 内继续演进。
 
@@ -63,7 +63,11 @@ Companion 只能返回 Studio ABI 定义的数据，不得：
 - 根据 renderer id 前缀、字符串包含关系、相同帧区间或属性名猜领域语义；
 - 绕过 Studio 的 revision、事务、校验和 Source range 写回机制。
 
-Companion 与领域组件的兼容范围应由普通包版本关系表达。组件本身不反向依赖某个可执行 Adapter；是否采用该 Companion 是 Studio 分发或项目的选择。
+Companion 与领域组件的兼容范围应由普通包版本关系表达。组件本身不反向依赖某个可执行 Companion；是否采用它是 Studio 分发或项目的选择。
+
+这里的“输出 Type”是完整 `TypeRef`，包含 module、version 与 name。`VisualTrack` 之类的短名
+只用于显示和诊断，不能参与 Companion、Film、Semantic 或 fallback 的选择；第三方模块声明一个
+同名 Type 不会被官方 Companion 误认。
 
 ### Studio 应用与 ABI
 
@@ -71,7 +75,7 @@ Studio 提供受控的编辑器语言，而不是领域组件目录。它拥有�
 
 - session、preflight、snapshot、播放、seek、缩放、滚动和选择；
 - Source、Tasks、Artifacts 与 Preview；
-- Adapter 选择、身份限定、冲突检测和显式 replacement；
+- Companion 选择、身份限定、冲突检测和显式 replacement；
 - Source revision、最小修改、失败回退和重新编译；
 - 通用终端 Track 兜底和 Semantic 时间标尺；
 - 统一外观、Inspector 控件和操作执行器。
@@ -95,17 +99,17 @@ Pattern 和 material 可以复合：前者通常来自组件 Surface Preview，�
 
 ## 选择与安装
 
-Adapter 选择必须显式，不使用包名猜测或目录扫描：
+Companion 选择必须显式，不使用包名猜测或目录扫描：
 
 - 官方 Hypit Studio Distribution 显式选择它支持的官方 Companion；
 - 项目可以通过可选 Studio Profile 选择项目 Companion 或 replacement；
 - 其他 Studio Distribution 可以选择完全不同的 Companion；
 - Studio 不扫描 `node_modules`，不看到 `@scope/example-track` 就猜测存在 `@scope/example-track-studio`；
-- 打开 Studio 不联网搜索、静默安装或升级 Adapter。
+- 打开 Studio 不联网搜索、静默安装或升级 Companion。
 
 官方 Distribution 中的选择清单只表示“这个应用信任并支持哪些 Companion”，不得包含组件的实体投影、参数表或领域判断。普通用户无需为每个项目重复安装已经存在于机器级 Studio Distribution 中的 Companion。
 
-项目 Profile 是可选的编辑器能力选择，不是 Hypit 项目清单，也不规定 SVML、SVS、SVRun 或素材的目录结构。不得为 Adapter 再发明运行锁、摘要、哈希索引或第二份包管理数据库；安装与版本关系由现有包管理和 Distribution 负责。
+项目 Profile 是可选的编辑器能力选择，不是 Hypit 项目清单，也不规定 SVML、SVS、SVRun 或素材的目录结构。不得为 Companion 再发明运行锁、摘要、哈希索引或第二份包管理数据库；安装与版本关系由现有包管理和 Distribution 负责。
 
 ## 缺少 Companion 时
 
@@ -117,6 +121,9 @@ Studio 没有找到专用 Companion 时：
 - 界面不得猜它是 Caption、Ranking、Media 或其他领域对象；
 - 没有声明的 item 拆分、参数和操作保持不可用；
 - 需要丰富编辑能力时，明确说明缺少显式选择的适配包。
+
+通用兜底只用终端公共对象携带的准确 `subjectId` 接 Temporal 谱系。它不依次尝试 authoredId、
+markerId、presentId、renderId；同一 subject 出现多条候选谱系时直接报告歧义，不取第一条。
 
 通用兜底属于 Studio 基建。它可以理解跨领域稳定的终端协议，但不得出现官方组件模块名、Surface 名或参数全集。
 
@@ -150,19 +157,22 @@ Cue 正文不应从 VisualIR 的 `data-caption-word` 抓取，身份也不应由
 
 这些公共值不是 Studio metadata；任何诊断工具、另一种 Studio 或批量系统都可以消费它们。
 
-Companion 通过 `requiredValues` 声明投影 Track 所必需的同 Surface 输出，例如 Ranking 的 `schedule` 与 `program`。Studio preflight 必须把这些值纳入便宜、确定性的 projection closure；端口缺失、无法解析或值没有进入本次执行结果时直接拒绝打开，不允许专用 Companion 静默退回 generic。一个 Program 不需要为了被 Companion 读取而注册伪造的 `role: realization` Adapter。
+Companion 通过 `requiredValues` 声明投影 Track 所必需的同 Surface 输出，例如 Ranking 的 `schedule` 与 `program`。Studio preflight 必须把这些值纳入便宜、确定性的 projection closure；端口缺失、无法解析或值没有进入本次执行结果时直接拒绝打开，不允许专用 Companion 静默退回 generic。Program 只作为 `supporting-value` 进入投影闭包，不伪装成时间线实体。
 
 当公共 Program item 或终端 `VisualPresent` / `AudioClip` 实现某个作者领域对象时，可以携带通用 `subjectId`。投影对象的 `id` 回答“本次消费/渲染对象是谁”，`subjectId` 回答“它实现哪个作者对象”；这是 renderer provenance，不是 Hypit Studio metadata。Media、Audio、Comment Sticker、Screen Overlay 和 Speech 都用这条公开关系保留作者归属，其他 Studio 和诊断工具同样可以使用。没有 `subjectId` 的第三方终端 Track 仍然合法，Studio 不用 id 前缀或同帧区间补猜。
 
 ## 操作边界
 
-Companion 声明操作，Studio 执行操作：
+运行图声明时间 authority，Companion 声明组件界面，Studio 执行操作：
 
 ```text
+Temporal runtime lineage
+  -> 每个端点是 semantic / parameter / fixed
+  -> parameter 端点点名准确的 Source binding 与关系
+
 Companion
-  -> entity 支持哪些 gesture
-  -> gesture 对应哪些真实 Source 参数或 Semantic Anchor
-  -> 当前是否 enabled，为什么 disabled
+  -> entity 如何显示
+  -> 哪些作者 binding 进入 Inspector
 
 Studio
   -> 输入手势、吸附与坐标换算
@@ -173,13 +183,16 @@ Studio
 
 Companion 不获得文件写权限。没有唯一可逆 Source 映射的操作必须禁用，不能只因为画面上看起来可拖就生成写回。
 
-时间线声明不是 `move: true` 之类的布尔能力。Companion 的每个 `timelineEdits` 项必须同时声明 gesture 与按真实来源选择的 inverse target：Selection/Moment 指向 Semantic 作者身份，绝对 Window 指向组件自己的准确参数名，不能修改的来源给出禁用原因。Studio 再把这些声明与当前实体的真实 temporal lineage、Source range 合并成可执行 handle。
+Companion 不再声明通用时间逆函数。Studio 从实体实际执行得到的 `TemporalInstant` / `TemporalWindow`
+逐端点读取 authority：Selection/Moment 指向 Semantic 作者身份，parameter 指向运行记录点名的准确
+binding，fixed 禁止改变该端点的手势。这样新增 Track 只要消费公共时间对象，就不需要再抄一套
+`move / trim-start / trim-end` 声明。
 
 Inspector 与时间线可以依赖同一作者端点，但不能再共享一张含混的“参数表”。Companion 分别声明：
 
 - `bindings`：准确的作者端点及引用路径 `through`，只负责 Source 可达性；
 - `inspector`：从 binding 中选择真正允许用户调整的字段，并声明 `Where / How / When`、可选二级页、分组与控件；
-- `timelineEdits`：手势到 binding 或 Semantic Anchor 的精确逆变换。
+- temporal lineage：由公共投影运行图携带手势所需的 Semantic Anchor 或 parameter binding，不属于 Companion。
 
 Studio 只展示当前 Source 中确实存在、可写且被 `inspector` 选中的字段。它不会把隐藏的 traversal binding、时间线端点、只读引用或未声明属性顺手暴露出来，也不尝试依次猜 `recipe / style / appearance / motion / program`。
 
@@ -191,6 +204,8 @@ Studio 只展示当前 Source 中确实存在、可写且被 `inspector` 选中�
 
 官方 Distribution 显式选择以下独立 Companion：
 
+- `film-studio`：声明 Film 的 Composition、Semantic Track 与终端 Track 接线词汇；
+- `script-studio`：声明 Script Source map 与 Selection/Moment marker 的精确逆写；
 - `caption-fine-studio`；
 - `typography-track-studio`；
 - `media-track-studio`；
@@ -202,6 +217,10 @@ Studio 只展示当前 Source 中确实存在、可写且被 `inspector` 选中�
 - `screen-overlay-studio`。
 
 每个包只解释对应领域模块。Studio 中的官方列表是 Distribution 的显式选择，不是根据 `-studio` 后缀自动发现；项目 Profile 仍可显式增加项目 Companion 或 replacement。
+
+`film-studio` 与 `script-studio` 是边界 Companion，不投影普通时间线 item。前者避免 Studio
+中心代码认识 `<Film>` 的属性和子节点接法；后者避免 Studio 直接依赖 Script parser/editor。
+二者同样由 Distribution 显式选择，领域包仍不反向依赖它们。
 
 Studio 核心只保留跨领域终端协议的通用 VisualTrack、AudioTrack 兜底和 Semantic 标尺。它不包含上述模块名、Surface 名或模块参数表。Caption Companion 已直接消费公开 `FineCaptionSchedule` 与 `CaptionDocument`，Ranking、Media、Audio、Typography、Speech 和 Deck Companion 也分别消费本领域公开值，不再由一个中央包从最终画面统一反推。
 
@@ -219,14 +238,15 @@ Studio 核心只保留跨领域终端协议的通用 VisualTrack、AudioTrack �
 2. 一个官方 Companion 不适配多个互不相关的领域模块；
 3. Studio 核心与通用兜底不枚举官方组件名、Surface 名或组件参数；
 4. Companion 只使用公共 Program、Schedule、终端 `subjectId` 与时间谱系；
-5. Adapter 包通过显式 Distribution/Profile 选择，不扫描、不猜名、不静默安装；
+5. Companion 包通过显式 Distribution/Profile 选择，不扫描、不猜名、不静默安装；
 6. 删除 Companion 只损失丰富编辑能力，不影响检查、构建、复用和渲染；
 7. 删除 Studio 不影响领域组件及其用户项目；
-8. 另一个 Studio 可以为同一组件发布另一套 Adapter，无需 fork 组件；
+8. 另一个 Studio 可以为同一组件发布另一套 Companion，无需 fork 组件；
 9. Studio 的统一写回、失败处理和防抖不下沉到 Companion；
 10. 不为迁移增加自造 lock、哈希、摘要、缓存数据库或固定项目目录结构。
 11. 标题、时间与内容层是独立字段；任一 chrome 或素材层都不能隐式隐藏另外两者；
 12. Companion 不知道 Studio HTTP 路由，所需同 Surface 值必须经 `requiredValues` 进入 preflight closure。
+13. Script、SemanticTrack、ProgramSpace、TemporalSource 与终端 Track 的作者身份必须连续；不得用首项、同名或随机 id 补猜。
 
 ## 非目标
 

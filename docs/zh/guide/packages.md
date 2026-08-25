@@ -88,6 +88,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/speech                shared speech products
 @hypit/speech-evidence       acoustic evidence products
 @hypit/speech-alignment      speech alignment
+@hypit/semantic-take-estimate 显式的音节加权预览对齐
 @hypit/semantic-track        continuous semantic program skeleton
 @hypit/speech-track          ordered speech-take compilation
 @hypit/whisperx              WhisperX component
@@ -217,7 +218,7 @@ packages/example/
 | `compute` | 确定性 Producer、Type Validator | 纯计算 | 编译器 Host |
 | `endpoint` | 具备特权的外部能力 | 网络、文件系统、进程、凭据 | Runtime Profile |
 | `infrastructure` | Scheduler、Worker 与 Store 实现 | 持久化、调度 | Runtime Profile |
-| `application` | Studio adapter 等特定应用解释 | 仅该应用的 UI/操作 | 显式应用 profile |
+| `application` | Studio Track Companion 等特定应用解释 | 仅该应用的 UI/操作 | 显式应用 profile |
 
 源码中的 `<import>` 只会 activate author facet。它绝不授予网络、文件系统、进程、凭据或队列权限。
 
@@ -230,7 +231,7 @@ Hypit 不维护中央包注册表，也不维护自定义包锁。npm 或 pnpm �
 |---|---|
 | Source import | Frontend、Surface、Producer、Validator |
 | Runtime Profile 的 `use` | Runtime Host、基础设施与 Provider Endpoint |
-| Studio Profile 的 `adapterPackages` | 当前 Studio 会话显式选择的项目 companion adapter |
+| Studio Profile 的 `companionPackages` | 当前 Studio 会话显式选择的项目 Companion 包 |
 
 Source import 绝不授予网络、文件系统、进程、凭据或队列权限；这些权限只属于 Runtime
 Profile 显式选择的包。

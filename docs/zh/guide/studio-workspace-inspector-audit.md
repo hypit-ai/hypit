@@ -71,13 +71,15 @@ Studio 已经拥有实时画面和时间线，开始能够承担“先把一个�
 
 ### 3.2 右上声明能力已拆成 Source 与界面两层
 
-Studio adapter 现已把原先含混的一张参数表拆为三个正交声明：
+Studio Companion 现已把原先含混的一张参数表与时间谱系拆开：
 
 - `bindings` 只声明精确作者端点和引用路径，不产生界面；
 - `inspector` 从 binding 中选择真正可调整的字段，声明固定一级能力 `Where / How / When`、可选二级页、参数组、标签、顺序与有限控件；
-- `timelineEdits` 独立声明时间线手势的精确逆变换，可复用 binding，但不会因此把端点展示成表单。
+- 公共 Temporal 运行谱系逐端点携带 `semantic / projected / fixed` authority；Studio 据此推导时间线手势，Companion 不再复制逆变换。
 
-Studio 只显示当前 Source 中真实存在、可写、且被 Companion Inspector 表显式选中的字段。UI 不再按文件路径分组，不在参数下重复 Source，不展示只读常值；颜色由统一的取色器与精确色值复合控件呈现。Caption、Media 及其余官方 Companion 均已迁移，领域包没有因此依赖 Studio。
+Studio 只显示当前 Source 中真实存在、可写、且被 Companion Inspector 表显式选中的字段。UI 不再按文件路径分组，不在参数下重复 Source，不展示只读常值；颜色由统一的取色器与精确色值复合控件呈现。通用 `list` 与扁平 `record` 也已经落地：领域 Recipe vocabulary 声明 canonical schema，Companion 只选择展示位置，Studio 负责本地 draft、增删排序、校验和整值原子写回，SVS 负责解析与序列化。Ranking 颜色列表和 Tier 行列表已经沿这条链实现，没有增加 Ranking 专用控件或 codec。Caption、Media 及其余官方 Companion 均已迁移，领域包没有因此依赖 Studio。
+
+官方 Companion 中原先按属性名后缀猜 `Where / How / When`、控件或页面的启发式也已替换为显式封闭字段表。Studio 核心与通用 fallback 不枚举官方模块和参数；领域 vocabulary 新增字段而 Companion 未声明其位置时，装载阶段直接报错，不再静默生成一个貌似可编辑的错误控件。
 
 仍未被这次重构解决的是更深层的作者对象可达性：尚未写出的可选 SVS 属性没有可供最小替换的 Source range；Media Layer、Sampling Keyframe、Sequence Member/Handoff 等嵌套对象也仍需先拥有稳定的领域身份和选择上下文。这些不能靠 Inspector 猜测或偷偷插入默认值解决。
 
@@ -148,7 +150,7 @@ twinit 的完整 DAG 主要服务于编辑 workspace。Hypit 已由 Source 和 R
 
 ### 5.4 Inspector 内容由组件声明，视觉与事务由 Studio 统一
 
-组件及其 companion Studio adapter 应能声明自己需要展示的参数结构。Studio 仍统一拥有控件集合、布局纪律、主题、保存状态、并发 revision、错误呈现和写回事务。
+组件对应的 Studio Companion 应能声明自己需要展示的参数结构。Studio 仍统一拥有控件集合、布局纪律、主题、保存状态、并发 revision、错误呈现和写回事务。
 
 组件不能把任意 DOM、React、CSS 或执行回调注入 Studio。否则第三方组件虽然“灵活”，Studio 的视觉和行为却会立即失去一致性。
 

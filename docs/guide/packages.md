@@ -95,6 +95,7 @@ specific Provider deployment.
 @hypit/speech                shared speech products
 @hypit/speech-evidence       acoustic evidence products
 @hypit/speech-alignment      speech alignment
+@hypit/semantic-take-estimate explicit syllable-weighted preview alignment
 @hypit/semantic-track        continuous semantic program skeleton
 @hypit/speech-track          ordered speech-take compilation
 @hypit/whisperx              WhisperX component
@@ -235,7 +236,7 @@ A physical package may expose independently activated facets:
 | `compute` | deterministic Producer, Type Validator | pure computation | compiler Host |
 | `endpoint` | privileged external capability | network, filesystem, process, credentials | Runtime Profile |
 | `infrastructure` | Scheduler, Worker and Store implementation | persistence, scheduling | Runtime Profile |
-| `application` | Host-specific interpretation such as a Studio adapter | only that application's UI/operations | explicit application profile |
+| `application` | Host-specific interpretation such as a Studio Track Companion | only that application's UI/operations | explicit application profile |
 
 A source `<import>` activates only author facets. It never grants network, filesystem, process,
 credential or queue authority.
@@ -249,7 +250,7 @@ installs packages and owns their versions and integrity. Hypit has two explicit 
 |---|---|
 | Source imports | Frontends, Surfaces, Producers and Validators |
 | Runtime Profile `use` | Runtime Hosts, infrastructure and Provider Endpoints |
-| Studio Profile `adapterPackages` | project companion adapters selected for that Studio session |
+| Studio Profile `companionPackages` | project Companion packages selected for that Studio session |
 
 A Source import never grants network, filesystem, process, credential or queue authority. Those
 remain available only to packages explicitly selected by the Runtime Profile.

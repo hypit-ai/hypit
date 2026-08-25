@@ -1,101 +1,96 @@
 ---
 title: Studio Temporal Lineage
-description: How Hypit Studio reads authored, projected and consumed time without reconstructing it.
+description: How author choice becomes an Instant or Window and returns to its real source.
 ---
 
 # Studio Temporal Lineage
 
-> Status: executed Point/Window lineage is implemented. Writeback is enabled only when a gesture
-> has one explicit source preimage; cross-layer back-propagation remains forbidden. This does not
-> define a new Core protocol.
-
-A timeline item does not merely "have a start and end frame". Most authored Tracks begin with a
-named semantic source such as a Selection, Segment or Moment, project that source into frame space,
-and then consume the projected result as picture, sound, animation or an internal schedule. Studio
-must preserve those three stages instead of flattening them into one anonymous rectangle.
-
-## The three layers
-
-### 1. Selection window
-
-The selection window is the semantic source chosen by the author. It retains:
-
-- the source kind: Selection, Segment, Moment or Program;
-- the canonical source identity;
-- its anchors on the selected Semantic Track;
-- the source range of the author expression that refers to it.
-
-For a Moment this is a point rather than a duration. A Selection is exactly one contiguous interval,
-and a Moment is exactly one point. Equal frame coordinates do not make two semantic sources identical.
-
-A Selection preserves the author's directed pair of Anchors. Script does not sort, swap or clamp
-them. Anchor direction and the validity of a projected window are separate concerns: Temporal
-Projection rejects a reversed or zero-width raw window, then rejects an intersection with
-ProgramSpace that quantizes below one frame. A consumer of one Point can therefore retain the
-original author identity while duration consumers never receive an invalid Window.
-
-### 2. Projection point or window
-
-The projection window is the result of applying the Track's temporal expression to one source. For
-example, an item may use the complete Selection, begin three frames before a Moment, or run from
-`segment.start + 2s` to `segment.end`. Projection includes offset evaluation, clipping to Program
-Space and frame quantization.
-
-One authored binding produces one `TemporalPoint` or `TemporalWindow` when it resolves. Activation
-and terminal boundaries remain Points, including the exact `program.end` boundary; they are never
-encoded as one-frame Windows. A component can combine several projected values, such as computing
-disjoint reveal intervals. That relation belongs to the component's public programme or schedule,
-not to a Studio guess.
-
-### 3. Consumption window
-
-The consumption window describes what the realized Track actually uses. It may equal the projected
-window, but equality is not assumed. Examples include:
-
-- a Media Item whose picture lifetime equals its projected window;
-- a source-audio trim whose source samples differ from its target window;
-- a Media Sequence with logical member spans, visual spans and a handoff span;
-- a Ranking with one outer projected window and several reveal-consumption windows;
-- an enter or exit animation whose motion occupies part of the Track item's lifetime.
-
-Consumption is published by the domain programme, schedule, Visual Track or Audio Track. Studio
-must not reconstruct it from naming conventions or reimplement a package's scheduling algorithm.
-
-## Identity chain Studio must retain
-
-Studio eventually needs a lossless chain with explicit identities:
+Time has three layers:
 
 ```text
-author element
-  -> semantic binding (kind, source id, author range)
-  -> projection expression and projected Point/Window
-  -> consumed entity and consumed window(s)
-  -> terminal visual/audio realization
+semantic choice (Program / Selection / Segment / Moment)
+  -> projection (TemporalInstant / TemporalWindow)
+  -> domain consumption (Program / Schedule / Track)
 ```
 
-The links matter more than coincident frame numbers. Several Tracks may consume the same Selection;
-one projected window may feed several visual and audio facets; one component may expand one outer
-window into many internal windows. These are shared bindings and projections, not duplicate clips.
+Script's semantic ruler contains `2M + 2N + 2` ordered points: Token and Segment boundaries plus
+distinct Program start/end anchors. Program anchors resolve at frame `0` and `frameCount` in the
+SemanticTrack; they are author points and therefore never have to be forged inside a SemanticTake.
+This does not make `during="program"` writable: that projection remains structurally fixed.
 
-Studio builds this chain from the exact executed dependency closure of each selected Track. It
-indexes each Temporal record, its projection Spec, source identity and direct consumer edge, then
-passes that stable view to the adapter registry. Domain packages remain unaware of Studio. A
-required link that is absent stays unresolved; adapters do not infer it from attribute names, Spec
-type names, runtime id prefixes, labels or equal spans.
+`@hypit/temporal-markup` owns the SVML author forms and lowers them before a domain component runs.
+The compiler only composes records, components and fragments; it does not recognize `during`, `at`
+or any time grammar. The graph also projects `ProgramSpace` through the public Semantic Track producer,
+so domain components consume only ProgramSpace and projected time values and remain independent from
+both semantic lookup and Studio.
 
-## Timeline writeback
+## Runtime values
 
-Studio exposes two author mutations: `timeline.adjust` and `parameter.adjust`. Move and trim are
-gesture payloads of the former, not additional top-level operations. The concrete write target is
-resolved from the entity's executed lineage:
+A `TemporalInstant` contains the runtime source used to evaluate it, the exact point expression and
+resolved frame, and one author authority: `semantic`, `parameter` or `fixed`.
 
-- a Selection-backed rectangle moves or trims that shared Selection at Script's ordered semantic
-  Anchors, and every consumer follows it;
-- a Moment-backed entity moves the shared Moment point, while an independently authored duration
-  may still own its right edge;
-- direct absolute endpoints rewrite their exact Source ranges;
-- Segment, Program and component-derived schedule phases remain read-only without a declared inverse.
+The identity chain is author-visible rather than synthesized by Studio:
 
-This is an inverse over public identities, never an inference from equal frame spans. Component
-details such as Ranking reveals use attached lanes only when their Point/Window inputs were explicitly
-externalized. Invalid domain input is refused and the author mutation is rolled back.
+- `<script id="story">` becomes `Narrative.id = story`; every Selection, Moment, Segment excerpt
+  and CaptionDocument from that Script carries `narrativeId = story`;
+- the selected Semantic Track id becomes `ProgramSpace.id`; every terminal Track carries that exact
+  `programSpaceId`;
+- every projected Instant/Window carries both identities plus the consumer's public domain identity
+  (normally its SVML `id`) as `subjectId`.
+
+The projection record `id` may be qualified to stay unique inside an expanded graph; it is not the
+author identity. `subjectId` is kept separate and remains the exact board, card, item or sequence
+identity published by the component's public Program.
+
+These values are ordinary runtime provenance, not random hashes or Studio metadata. They let a
+consumer and its inverse reject a same-named Selection from another Script or a Track projected on
+another timeline. A Script id therefore names one Narrative across the active Source closure; if two
+distinct Scripts declare the same id, Studio refuses the ambiguous inverse instead of choosing one.
+
+A `TemporalWindow` contains two complete Instants and a non-empty half-open span. Its endpoints may
+have different sources and different authorities, so a Window never pretends to have one source.
+ProgramSpace boundaries are legal Instants; `program.end` is not disguised as a one-frame Window.
+Out-of-range Instants and reversed or empty Windows are rejected, not clipped or repaired.
+
+## Author forms
+
+| Form | Start authority | End authority | Timeline writeback |
+|---|---|---|---|
+| `during={Selection}` | semantic Selection start | semantic Selection end | Script markers |
+| `during={Segment}` / `during="program"` | fixed | fixed | read-only |
+| `at={Moment} for="…"` | semantic Moment cue | parameter `for` | Script and/or SVML atomically |
+| `until={Moment} for="…"` | parameter `for` | semantic Moment cue | Script and/or SVML atomically |
+| `start="…" end="…"` | parameter `start` | parameter `end` | SVML timing attributes |
+
+A point consumer uses `at={Moment}` (or a chosen Selection boundary) for semantic authority. The
+explicit fallback is `instant="…"`. Text such as `at="moment.cue+3f"` is rejected because it hides
+whether the author intended to move the Moment or the offset.
+
+## Studio inverse
+
+Studio indexes the actual executed `TemporalInstant` and `TemporalWindow` records plus their direct
+consumer edges. Endpoint authority, not a component name or Companion declaration, determines the
+inverse:
+
+- semantic authority writes the shared Script identity;
+- parameter authority names the author input selected by the runtime record;
+- fixed authority disables a gesture that would change it.
+
+For `at/for` and `until/for`, one gesture may touch both layers. For example, trimming the start of
+an `at/for` Window moves the Moment and changes `for` so the end stays fixed. Studio applies both
+source ranges as one revisioned transaction, recompiles, and rolls both back on failure.
+
+Companion packages still decide how an entity looks and which Inspector fields are visible. They do
+not declare common timeline inverse functions. A new component becomes time-editable by consuming
+the same public Instant/Window protocol and carrying its executed lineage to its Studio entity.
+
+Film and Script interpretation also remain outside Studio core. `film-studio` declares which Film
+reference is the semantic axis and which child references are terminal Tracks; `script-studio` owns
+Script source observation and marker relocation. Studio selects the Script source map whose
+`narrativeId` exactly matches the active ProgramSpace and delegates the edit back to that companion.
+
+The binding name is not used as a global address. Markup retains the exact author element and input
+range while decoding, Elaborator hygienizes that endpoint with its Source unit, and the compiled
+`AuthorProvenance` joins the executed authority to one author endpoint. Studio therefore never
+chooses the first same-named `start`, output or local id across imported Sources. The provenance is
+recomputed with the compilation and is not persisted as metadata, a lock or an index file.

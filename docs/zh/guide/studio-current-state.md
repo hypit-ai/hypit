@@ -5,7 +5,7 @@ description: Studio 的启动单元、四区职责、作者写回、时间谱系
 
 # Studio 当前架构边界
 
-> 本文只记录当前实现和稳定职责。领域组件、独立 Hypit Studio Companion 与 Studio 应用的三层边界，见 [Studio Companion Adapter 架构](./studio-companion-adapter-architecture.md)。右上 Inspector 与数据依赖可见性的下一阶段问题，见 [Studio Workspace 与 Inspector 信息架构审计](./studio-workspace-inspector-audit.md)；空间、字幕、时间消费和参数可达性所依赖的视频领域基础，见 [视频领域协议迁移与基建审计](./video-protocol-foundation-audit.md)。审计文档不是实施规格。
+> 本文只记录当前实现和稳定职责。领域组件、独立 Hypit Studio Companion 与 Studio 应用的三层边界，见 [Studio Companion 架构](./studio-companion-adapter-architecture.md)。右上 Inspector 与数据依赖可见性的下一阶段问题，见 [Studio Workspace 与 Inspector 信息架构审计](./studio-workspace-inspector-audit.md)；空间、字幕、时间消费和参数可达性所依赖的视频领域基础，见 [视频领域协议迁移与基建审计](./video-protocol-foundation-audit.md)。审计文档不是实施规格。
 
 ## 启动单元是 Run
 
@@ -41,7 +41,9 @@ Preview 使用当前 Run 的真实素材和同一套领域程序生成 HyperFram
 
 未选择实体时，Inspector 集中显示 Canvas、Author、Run、Source closure 与 Build intent。选择时间线实体后，顶栏替换为 `Where / How / When` 三个受控能力标签，并且只出现当前实体实际拥有内容的标签；下方可有 Companion 声明的二级页，再按参数组显示可调整字段。选中状态不再展示身份、时间谱系、Source 路径或其他只读常值。
 
-Companion 分开声明作者 `bindings` 与可见 `inspector` 字段：binding 只负责精确到达 SVML/SVS Source，也可供时间线逆变换使用；只有被 Inspector 表选中、当前真实存在且可写的 binding 才进入右侧。一级能力、控件外观、写回事务由 Studio 拥有；二级页、参数组、字段标签、顺序与 binding 映射由独立 Companion 拥有；领域组件 Manifest 不承担 Studio 页面语义。当前统一控件包括文字、数字、开关、下拉与“取色器 + 精确色值”。
+Companion 分开声明作者 `bindings` 与可见 `inspector` 字段：binding 只负责精确到达 SVML/SVS Source，也可供时间线逆变换使用；只有被 Inspector 表选中、当前真实存在且可写的 binding 才进入右侧。一级能力、控件外观、写回事务由 Studio 拥有；二级页、参数组、字段标签、顺序与 binding 映射由独立 Companion 拥有；领域组件 Manifest 不承担 Studio 页面语义。
+
+当前统一控件包括文字、数字、开关、下拉、“取色器 + 精确色值”，以及由这些原子控件组成的通用 `list` 和扁平 `record`。结构化字段先在浏览器中形成本地 draft，支持按 schema 增删、排序和编辑，只有显式 Apply 才把整个 canonical value 作为一次 `parameter.adjust` 原子写回。值的类型、颜色格式、枚举、数量和 record 字段来自领域 Recipe vocabulary；SVS 负责解析与序列化。Studio 和 Companion 都不包含 `rank-colors` 一类领域专用 codec。
 
 ### 下方：Timeline
 
@@ -52,7 +54,7 @@ Companion 分开声明作者 `bindings` 与可见 `inspector` 字段：binding �
 Studio 对结构化编辑只公开两类作者操作：
 
 - `timeline.adjust`：沿实体真实时间谱系调整共享 Selection/Moment Anchor 或显式 Window 端点；
-- `parameter.adjust`：修改 adapter 明确公开且带精确 Source range 的 SVML/SVS 参数。
+- `parameter.adjust`：修改 Companion 明确公开且带精确 Source range 的 SVML/SVS 参数。
 
 左上源码编辑器可以替换当前真实闭包中选中的 SVRun、SVML 或 SVS 全文。组件 Inspector 不修改 SVRun Candidate 或 Provider 事实，也不把引用偷偷替换成匿名字面量。
 
@@ -64,22 +66,44 @@ Studio 保留三层不同事实：
 
 ```text
 作者选择（Program / Selection / Segment / Moment）
-  -> 投影（TemporalPoint / TemporalWindow）
+  -> 投影（TemporalInstant / TemporalWindow）
   -> 组件消费与最终 Track 实体
 ```
 
-谱系来自本次 Run 实际执行闭包中的 Record、Spec 和消费者边，不根据属性名、运行时 id、renderer id 或相同帧区间猜测。缺失的链路保持 unresolved。详见 [Studio 时间谱系](./studio-temporal-windows.md)。
+谱系来自本次 Run 实际执行闭包中的 Temporal Record 与消费者边；作者 Source 端点来自同一次
+编译产生的 `AuthorProvenance`。Studio 不再按本地 output 名、raw id、文件后缀、运行时 id、
+renderer id 或相同帧区间重新猜测。缺失的链路保持 unresolved。详见
+[Studio 时间谱系](./studio-temporal-windows.md)。
 
 ## 包边界
 
-以下列表描述当前代码，并不取代 [Companion Adapter 架构](./studio-companion-adapter-architecture.md)：
+以下列表描述当前代码，并不取代 [Companion 架构](./studio-companion-adapter-architecture.md)：
 
 - `packages/studio`：会话、preflight、snapshot、统一 UI、操作事务和 Source transport；
 - `packages/studio-adapter`：官方和第三方 Companion 使用的稳定数据 ABI；
-- `packages/*-studio`：各官方领域分别拥有的 Track 匹配、实体投影、lane、Source binding、Inspector 字段与时间线逆变换声明；
+- `packages/*-studio`：各官方领域的 Track Companion 分别拥有 Track 匹配、实体投影、lane、Source binding 与 Inspector 字段；公共时间逆变换由 Temporal 运行谱系统一提供；
+- `packages/film-studio`：声明 Film 如何指向唯一 Semantic Track 与同行终端 Track，不把 Film 语法写进 Studio；
+- `packages/script-studio`：声明 Script Source map 与 Selection/Moment marker 逆写，不让 Studio 依赖 Script parser；
 - 领域包：继续只发布运行语义和确定性值，不依赖 Studio。
 
-Adapter 不能向应用注入任意 DOM、CSS 或前端状态。删除 Studio 后，Core、SVML、SVS、SVRun 和 Runtime 仍可独立工作。
+Companion 不能向应用注入任意 DOM、CSS 或前端状态。删除 Studio 后，Core、SVML、SVS、SVRun 和 Runtime 仍可独立工作。
+
+## 2026-08-25 实施断点
+
+这一轮已经完成并推送的 Studio 基建如下：
+
+- 官方领域已拆成各自独立的 `*-studio` Companion；官方组件和第三方组件遵循同一边界，领域包不依赖 Studio；
+- Studio 核心不按模块名、Surface 名或属性名猜实体外观、Inspector 字段与控件类型；官方 Companion 使用显式且封闭的字段表，领域新增属性没有对应声明时直接暴露错误；
+- Companion 用 `bindings` 与 `inspector` 分别声明作者端点和面板展示；时间线逆变换改由公共 Temporal 运行谱系的 endpoint authority 自动推导，不再让每个 Companion 重写；
+- `<script id>`、Semantic Track id、ProgramSpace id、Track `programSpaceId` 与 Temporal `subjectId` 已形成连续公开身份链；Studio 按当前 ProgramSpace 的 `narrativeId` 精确选择写回 Script，不再取第一份 Script 或按同名猜测；
+- SVS canonical value 已能直接表达和精确写回数组与对象；Studio ABI 已提供受控的 `list`、扁平 `record` 与 `color` 组合；
+- Ranking 的 `rank-colors`、固定三个的 `slot-colors` 和 Tier `rows` 已成为领域 vocabulary 中的有类型值，Studio 只渲染通用控件，不识别 Ranking；
+- Source、Tasks、Artifacts、Preview、Inspector 与 Timeline 的当前布局和职责已经落地；未选择实体时只显示会话级信息，选择实体后只显示真实可调字段；
+- `parameter.adjust` 继续使用精确 Source range、Snapshot revision、最小替换、重新编译和失败恢复；结构化值没有引入新的操作类别或第二份状态。
+
+这些能力已经沿 Companion 边界闭合；反向编辑的 Source 来源现由编译器 provenance 明确承载，
+不再依赖单文件内名字恰好相同。后续演进不得重新引入中央组件判断、属性名启发式、专用控件、
+项目数据库、运行锁或哈希清单。
 
 ## 尚未定案
 

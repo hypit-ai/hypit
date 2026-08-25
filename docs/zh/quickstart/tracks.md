@@ -291,21 +291,21 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 | 属性 | 取值 |
 |---|---|
 | `semantic` | 板据以计时的 SemanticTrack |
-| `frame` | 一个 `space:Frame`——对 `Column` 来说是固定的排名轨 |
-| `during` | 一个 Selection——板在此期间留在画面上 |
+| `frame` | 一个 `space:Frame`——TierBoard/Column 自己的紧凑板子 |
+| `during` | TierBoard/Column 接 Segment 或 Selection；TopThree 接 Selection |
 | `style` | 对应的样式记录，且只接受本变体的 |
-| `terminal` | 完整板定格的 Moment。仅 `TierBoard` 与 `TopThree` |
-| `canvas` | 一个 `space:Canvas`——揭示舞台。仅 `Column` |
+| `terminal` | 完整板定格的 Moment。仅 `TopThree` |
+| `canvas` | 一个 `space:Canvas`——独立揭示舞台。TierBoard/Column |
 | `appear-sound`、`move-sound` | 可选，Synchronized Media |
 
-`move-sound` 在 `TopThree` 上会被拒绝——它没有移动阶段。在 `TierBoard` 上它要求至少有一个 `entry="stage"` 的条目：声音没有可响之处是创作错误，而不是静默的空操作。
+TierBoard 与 Column 都不使用 `terminal`：每个非 preset item 直接消费一个 `during` Selection，所有窗口必须位于外层区间内且互不相交。`move-sound` 在 `TopThree` 上会被拒绝；在 `TierBoard` 上它要求至少有一个 `entry="drop"` 的条目。drop 条目会在 Selection 开始时原地弹入独立的 Canvas 舞台，整段讲解期间保持静止，只在窗口末尾的 `move-frames` 内沿缓动弧线滑入 tier；移动音效也从这里开始。
 
 ### 条目标签
 
 每个变体只接受自己的那一种，至少一个，且 id 在同一块板内不可重复。
 
-- **`TierItem`** —— `tier`、`icon` 与 item 自己的 `at={story.moment...}` 必填，可选 `entry="direct" | "stage"` 与 `stack`。行的文字来自 recipe，不写在标签上。
-- **`TopThreeItem`** —— `label` 与 item 自己的 `at={story.moment...}` 必填，可选 `icon` 与 `stack`，最多三条。TierBoard 与 TopThree 的揭示顺序由这些 Moment 的真实帧顺序决定。
+- **`TierItem`** —— `tier` 与 `icon` 必填。非 preset item 用自己的 `during` Selection，并必须显式选择 `entry="direct" | "drop"`；`preset="true"` 不写 `during` 和 `entry`。preset 先占内侧，随后严格按窗口顺序向外填充。两种模式都用快速的原地放大回弹入场；direct 在最终格出现，drop 在独立舞台讲解完整窗口后才归入 tier。行文字来自 recipe。
+- **`TopThreeItem`** —— `label` 与 item 自己的 `at={story.moment...}` 必填，可选 `icon` 与 `stack`，最多三条。揭示顺序由这些 Moment 的真实帧顺序决定。
 - **`ColumnItem`** —— `label` 与 `rank` 必填，可选 `icon` 与 `stack`。非 preset item 用自己的 `during` Selection；`preset="true"` 的 item 开场已在位且不写 `during`。
 
 ```svml
