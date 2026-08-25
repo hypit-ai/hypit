@@ -13,6 +13,11 @@ export type ModuleRef = {
   readonly version: string;
 };
 
+/**
+ * A Type is its owning Module and its name, and nothing else is compared. Two Types whose values
+ * carry identical shapes are distinct, so one is refused where the other is declared — there is no
+ * structural fallback to fall back to.
+ */
 export type TypeRef = {
   readonly module: ModuleRef;
   readonly name: string;

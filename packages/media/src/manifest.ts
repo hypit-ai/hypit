@@ -8,7 +8,9 @@ export const mediaTypes = {
   renderedVisual: { module: mediaModuleRef, name: "RenderedVisual" }, timelineAudio: { module: mediaModuleRef, name: "TimelineAudio" },
   muxed: { module: mediaModuleRef, name: "MuxedMedia" }, fontArtifact: { module: mediaModuleRef, name: "FontArtifactRef" },
   fontStack: { module: mediaModuleRef, name: "FontStackRef" },
-  compositableSurface: { module: mediaModuleRef, name: "CompositableSurfaceRef" }, blobArtifact: artifactTypes.blob,
+  compositableSurface: { module: mediaModuleRef, name: "CompositableSurfaceRef" },
+  /** Declared by `@hypit/artifact`. A Type is identified by the Module that owns it, not the one that re-exports it. */
+  blobArtifact: artifactTypes.blob,
 } satisfies Record<string, TypeRef>;
 
 export const mediaMarkupSurfaces = [

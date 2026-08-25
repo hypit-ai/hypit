@@ -1177,6 +1177,12 @@ function normalizeElement(element: VisualElement): VisualElement {
       } }),
     };
   }
+  // Spreading an absent artifact produced `{}`, which is not an artifact and is not nothing either:
+  // the field the author actually wrote was dropped without a word, and the refusal came one call
+  // later from the identity check, naming `.artifact` — a field they had not typed.
+  if (element.artifact === undefined) {
+    throw new Error(`${element.id} is a ${element.kind} element with no artifact.`);
+  }
   return {
     ...common,
     kind: element.kind,
