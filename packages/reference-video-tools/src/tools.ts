@@ -192,6 +192,8 @@ export type ComparisonRecord = {
   readonly observer: Observer;
   readonly status: Observation["status"];
   readonly scoped: boolean;
+  /** What the observer was told to limit itself to, when anything was. */
+  readonly scope?: string;
   /** Whether the whole shot was compared as a clip, or one frame of it as a still. */
   readonly clip?: boolean;
   /**
@@ -240,7 +242,11 @@ async function appendComparison(root: string, record: ComparisonRecord): Promise
  */
 async function answeredAlready(
   root: string,
-  key: { readonly digest: string; readonly stretch: string; readonly scoped: boolean; readonly clip: boolean },
+  key: {
+    readonly digest: string; readonly stretch: string; readonly clip: boolean;
+    /** Which element the answer was credited to, and what the observer was asked to limit itself to. */
+    readonly element: string; readonly scope: string;
+  },
 ): Promise<ComparisonRecord | undefined> {
   const lines = (await readFile(join(root, "comparisons.jsonl"), "utf8").catch(() => "")).split("\n");
   for (const line of lines.reverse()) {
@@ -250,7 +256,14 @@ async function answeredAlready(
     if (record.status !== "complete" || record.differences === undefined) continue;
     if (record.image_digest !== key.digest) continue;
     if (comparedStretch(record) !== key.stretch) continue;
-    if (record.scoped !== key.scoped || (record.clip ?? false) !== key.clip) continue;
+    if ((record.clip ?? false) !== key.clip) continue;
+    // The element and the scope are part of the question. `render_element` draws the whole stretch
+    // rather than the element alone, so two elements over one Segment can be byte-identical renders,
+    // and what separates their comparisons is which element the answer is credited to and what the
+    // observer was told to limit itself to. Keyed on the bytes alone, one element's answer would be
+    // handed back for another and counted as having looked at it.
+    if ((record.element ?? "") !== key.element) continue;
+    if ((record.scope ?? "") !== key.scope) continue;
     return record;
   }
   return undefined;
@@ -1321,8 +1334,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const already = await answeredAlready(root, {
         digest,
         stretch: comparedStretch({ ...(shot === undefined ? {} : { shot_id: shot.shot_id }), ...(cut === undefined ? {} : { range: cut.record }) }),
-        scoped: scope.length > 0,
         clip: asClip,
+        element: input.element?.trim() ?? "",
+        scope,
       });
       if (already !== undefined) {
         return {
@@ -1363,6 +1377,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         observer,
         status: differences.status,
         scoped: scope.length > 0,
+        ...(scope.length === 0 ? {} : { scope }),
         clip: asClip,
         ...(standIn === undefined ? {} : { stand_in: standIn }),
         ...(differences.status === "complete" ? { differences: differences.text } : {}),
