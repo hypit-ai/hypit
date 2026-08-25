@@ -18,6 +18,7 @@ import type { ProgramSpace } from "@hypit/program-space";
 
 import { assertFineCaptionParameters, FINE_CAPTION_FAMILY } from "./style.js";
 import { assertFineCaptionSchedule } from "./schedule.js";
+import { joinSurfaces, uniformGap, wordGapBetween, wordGaps } from "./spacing.js";
 import type {
   FineCaptionActiveUnderline,
   FineCaptionGlyphPaint,
@@ -593,6 +594,19 @@ function cueElements(
   const transform = anchorTransform(parameters);
   const cueMotion = cueAnimation(parameters, durationFrames);
   const cueLoop = parameters.motion.loopTarget === "cue" ? loopAnimation(parameters, durationFrames) : undefined;
+  const gapPx = `${compactNumber(parameters.layout.wordGapPx)}px`;
+  const atomSurfaces = atoms.map((atom) => atom.wordIds.map((wordId) => wordText.get(wordId) ?? ""));
+  // A Cue whose boundaries all agree carries one `column-gap`, which is also what keeps a row that
+  // wraps from opening on a margin. A Cue that mixes scripts spaces each element instead.
+  const atomGaps = atomSurfaces.map((surfaces, index) => {
+    const previous = atomSurfaces[index - 1];
+    return previous === undefined ? false : wordGapBetween(previous.at(-1) ?? "", surfaces[0] ?? "");
+  });
+  const cueGap = uniformGap(atomGaps);
+  // The Visual IR carries physical margins, so the leading edge follows the Cue's own direction.
+  const marginStart = parameters.layout.direction === "rtl" ? "margin-right" : "margin-left";
+  const spacedStyle = (spaced: boolean): readonly VisualStyleDeclaration[] =>
+    spaced ? [{ name: marginStart, value: gapPx }] : [];
   const fonts = parameters.typography.exactFonts;
   push({
     id: "placement",
@@ -642,7 +656,7 @@ function cueElements(
       { name: "border-radius", value: `${compactNumber(parameters.cueBox.radiusPx)}px` },
       { name: "border-style", value: "solid" },
       { name: "border-width", value: `${compactNumber(parameters.cueBox.borderWidthPx)}px` },
-      { name: "column-gap", value: `${compactNumber(parameters.layout.wordGapPx)}px` },
+      ...(cueGap === true ? [{ name: "column-gap", value: gapPx }] as const : []),
       { name: "direction", value: parameters.layout.direction },
       { name: "display", value: "flex" },
       { name: "flex-wrap", value: "wrap" },
@@ -675,12 +689,17 @@ function cueElements(
       const next = atoms[prefixIndex + 1];
       const nextStart = next === undefined ? durationFrames : atomFrames.get(next.id)?.start;
       if (nextStart === undefined) throw new Error("Fine Caption is missing timing for the next Atom");
-      const prefixText = atoms.slice(0, prefixIndex + 1).map((prefixAtom) => prefixAtom.wordIds
-        .map((wordId) => {
-          const text = wordText.get(wordId);
-          if (text === undefined) throw new Error(`Fine Caption Atom references unknown word ${wordId}`);
-          return text;
-        }).join("\u00A0")).join(" ");
+      // A no-break space inside an atom keeps its words on one row; the boundaries between atoms
+      // take an ordinary space. Both are spaced only where the surfaces meeting there call for one.
+      const prefixText = joinSurfaces(
+        atoms.slice(0, prefixIndex + 1).map((prefixAtom, index) => {
+          for (const wordId of prefixAtom.wordIds) {
+            if (!wordText.has(wordId)) throw new Error(`Fine Caption Atom references unknown word ${wordId}`);
+          }
+          return joinSurfaces(atomSurfaces[index] ?? [], "\u00A0");
+        }),
+        " ",
+      );
       const layerId = `joined-box-${prefixIndex + 1}`;
       push({
         id: layerId,
@@ -725,7 +744,12 @@ function cueElements(
     const timing = atomFrames.get(atom.id);
     if (timing === undefined) throw new Error(`Fine Caption is missing timing for Atom ${atom.id}`);
     const atomId = `atom-${atomIndex + 1}`;
-    const atomText = atom.wordIds.map((wordId) => wordText.get(wordId) ?? "").join(" ");
+    const surfaces = atomSurfaces[atomIndex] ?? [];
+    // The base glyphs and the activated copy stacked over them are laid out from this one list, so
+    // the karaoke wipe keeps sitting on the letterforms it reveals.
+    const gaps = wordGaps(surfaces);
+    const wordGap = uniformGap(gaps);
+    const atomText = joinSurfaces(surfaces, " ");
     const entryId = `${atomId}-entry`;
     const typewriterId = `${atomId}-typewriter`;
     const loopId = `${atomId}-loop`;
@@ -753,6 +777,8 @@ function cueElements(
       style: [
         { name: "display", value: "inline-flex" },
         { name: "min-width", value: "0" },
+        // A row that wraps opens at its own edge, so an atom that starts one carries no margin.
+        ...(cueGap === undefined && wordsOnLine > 0 ? spacedStyle(atomGaps[atomIndex] ?? false) : []),
         { name: "transform-origin", value: "center center" },
       ],
       ...(entryAnimation === undefined ? {} : { animation: entryAnimation }),
@@ -795,7 +821,7 @@ function cueElements(
       parent: responseId,
       kind: "box",
       style: [
-        { name: "column-gap", value: `${compactNumber(parameters.layout.wordGapPx)}px` },
+        ...(wordGap === true ? [{ name: "column-gap", value: gapPx }] as const : []),
         { name: "display", value: "inline-flex" },
         { name: "min-width", value: "0" },
         { name: "overflow-wrap", value: "anywhere" },
@@ -837,7 +863,10 @@ function cueElements(
         parent: atomId,
         kind: "text",
         text,
-        style: glyphStyle(parameters, parameters.basePaint, parameters.underline),
+        style: [
+          ...glyphStyle(parameters, parameters.basePaint, parameters.underline),
+          ...(wordGap === undefined ? spacedStyle(gaps[wordIndex] ?? false) : []),
+        ],
         ...glyphPaintFields(parameters.basePaint),
         fonts,
         attributes: [{ name: "data-caption-word", value: wordId }],
@@ -854,7 +883,7 @@ function cueElements(
         parent: atomId,
         kind: "box",
         style: [
-          { name: "column-gap", value: `${compactNumber(parameters.layout.wordGapPx)}px` },
+          ...(wordGap === true ? [{ name: "column-gap", value: gapPx }] as const : []),
           { name: "display", value: "inline-flex" },
           { name: "inset", value: "0" },
           // The wipe's own `clip-path` is what reveals this layer a word at a time, and it clips to the
@@ -874,9 +903,12 @@ function cueElements(
           parent: activeId,
           kind: "text",
           text,
-          style: kind === "glyph"
-            ? glyphStyle(parameters, parameters.activePaint)
-            : transparentGlyphStyle(parameters, parameters.activeUnderline),
+          style: [
+            ...(kind === "glyph"
+              ? glyphStyle(parameters, parameters.activePaint)
+              : transparentGlyphStyle(parameters, parameters.activeUnderline)),
+            ...(wordGap === undefined ? spacedStyle(gaps[wordIndex] ?? false) : []),
+          ],
           // The underline layer paints no glyph at all, so it declares no glyph Paint either.
           ...(kind === "glyph" ? glyphPaintFields(parameters.activePaint) : {}),
           fonts,
