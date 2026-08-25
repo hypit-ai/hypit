@@ -5,6 +5,21 @@ description: Produce a complete video program from a description — a ranking, 
 
 # Hypit
 
+**Run the route to the end without stopping.** There are exactly two things worth interrupting the
+author for, and everything else is yours to decide:
+
+- **Spending their money.** A Build generates, and generating is billed. Say what it will cost and
+  get a yes before submitting one.
+- **Which observer reads the reference, and the credentials it needs.** Vertex or the calling agent
+  is a decision about the author's account, and `references/credentials.md` says what each one wants.
+  Ask once, at the start.
+
+Everything else — the working directory, the project location, which packages to use, which generator
+draws a picture, how to name a Segment, what to do about a difference the comparison reported — is a
+choice between things that all work, and asking costs the author an interruption to answer a question
+the references already answer. Decide it and keep going. A run that stops half way with a question is
+a run the author has to restart.
+
 Use this file only to route the task. Read the selected reference completely before acting; when
 that reference names required child references, read those completely in the stated order.
 

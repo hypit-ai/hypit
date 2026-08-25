@@ -9,6 +9,7 @@ import { loadNodePackageSelection } from "@hypit/package-loader-node";
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface, SurfaceVocabulary } from "@hypit/markup";
 import { exactModelHostAbi } from "@hypit/model-kit";
+import { videoCliDistribution } from "@hypit/video-cli";
 
 import { authorSource, invokedFrom, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath } from "./authoring.js";
 import type { RenderElementInput, RenderPreviewsInput, SpokenRange, StandInFocus, StandInSidecar } from "./authoring.js";
@@ -778,14 +779,44 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     // answer was to read a guide and a directory listing by hand. The Build CLI deliberately never
     // scans a directory; this is a development tool, so it may.
     async list_svml_packages(): Promise<Record<string, unknown>> {
-      const scope = join(packageRoot, "node_modules", "@hypit");
-      const names = await readdir(scope).catch(() => [] as string[]);
-      assert(names.length > 0, `no installed @hypit packages under ${scope}`);
+      // Every scope, and the project's own directory, rather than `@hypit` alone. A project that
+      // declares a vocabulary gap and fills it publishes under its own scope, and a listing that
+      // cannot see those packages answers "which packages exist" with only half of them — including
+      // for the project asking.
+      // The installed packages a project does not carry are in the Distribution, and the ones it does
+      // are beside it. Reading only the root the project resolves from answers "which packages exist"
+      // with whichever half that root happens to hold.
+      const roots = [...new Set([join(packageRoot, "node_modules"),
+        ...(videoCliDistribution.packageRoot === undefined ? [] : [join(videoCliDistribution.packageRoot, "node_modules")])])];
+      const candidates: { readonly specifier: string; readonly directory: string }[] = [];
+      for (const modules of roots) {
+        const scopes = (await readdir(modules, { withFileTypes: true }).catch(() => []))
+          .filter((entry) => entry.isDirectory() && entry.name.startsWith("@"))
+          .map((entry) => entry.name);
+        for (const scope of scopes.sort()) {
+          const inside = await readdir(join(modules, scope)).catch(() => [] as string[]);
+          for (const name of inside.sort()) {
+            const specifier = `${scope}/${name}`;
+            if (!candidates.some((item) => item.specifier === specifier)) {
+              candidates.push({ specifier, directory: join(modules, scope, name) });
+            }
+          }
+        }
+      }
+      // A project's own packages are its `packages/<name>/`, which is where they are authored and
+      // where the loader finds them by name whether or not a package manager linked them.
+      for (const name of (await readdir(join(packageRoot, "packages")).catch(() => [] as string[])).sort()) {
+        const directory = join(packageRoot, "packages", name);
+        const own = await readJson<{ readonly name?: string }>(join(directory, "package.json"));
+        if (own?.name !== undefined && !candidates.some((item) => item.specifier === own.name)) {
+          candidates.push({ specifier: own.name, directory });
+        }
+      }
+      assert(candidates.length > 0, `no packages under ${roots.join(", ")} or ${join(packageRoot, "packages")}`);
       const packages: Record<string, unknown>[] = [];
-      for (const name of [...names].sort()) {
-        const specifier = `@hypit/${name}`;
+      for (const { specifier, directory } of candidates) {
         const manifest = await readJson<{ readonly hypit?: { readonly activation?: string }; readonly description?: string }>(
-          join(scope, name, "package.json"));
+          join(directory, "package.json"));
         if (manifest?.hypit?.activation === undefined) continue;
         // A package publishes several kinds of facet. Reading them all as one kind produced a null
         // for every facet that is not a Markup Surface, which is what an exact-model package mostly

@@ -89,13 +89,18 @@ test("installed packages can be listed, and one that will not load is reported r
 
   const result = await createReferenceVideoTools({ packageRoot: root, generate: async () => "" }).list_svml_packages();
   const packages = result["packages"] as readonly Record<string, unknown>[];
-  assert.deepEqual(packages.map((item) => item["package_name"]), ["@hypit/with-activation"],
+  const named = (name: string) => packages.find((item) => item["package_name"] === name);
+  // The listing also reaches the Distribution, since a project holds its own packages and not the
+  // installed ones, so this asks about the two written above rather than about the whole answer.
+  assert.equal(named("@hypit/plain-library"), undefined,
     "a package without an activation contributes no author vocabulary and is not vocabulary to discover");
-  assert.equal(packages[0]!["description"], "declares a Surface");
-  assert.equal(typeof packages[0]!["unreadable"], "string",
+  const declared = named("@hypit/with-activation");
+  assert.ok(declared, "a package that declares an activation is vocabulary to discover");
+  assert.equal(declared["description"], "declares a Surface");
+  assert.equal(typeof declared["unreadable"], "string",
     "a package that declares an activation it cannot load is named, not silently dropped");
-  assert.equal(packages[0]!["tags"] !== undefined
-    && (packages[0]!["tags"] as readonly unknown[]).includes(null), false,
+  assert.equal(declared["tags"] !== undefined
+    && (declared["tags"] as readonly unknown[]).includes(null), false,
     "a facet that is not a Markup Surface has no tag, and reading one out of it produced a null entry");
 });
 
