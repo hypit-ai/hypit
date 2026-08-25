@@ -14,7 +14,7 @@ hypit-reference-video-tools compare_reconstruction --reference-id <reference-id>
 
 `record_observation` is how the `agent` observer returns an answer; on the `gemini` observer the tool
 writes its own and the command is unused. A long answer arrives whole with `--text-file <path>`;
-`--text <text>` suits a short one. `make-placeholder` writes the mocks a comparison render needs;
+`--text <text>` suits a short one. `make_placeholder` writes the mocks a comparison render needs;
 `comparison-round.md` says when. `list_svml_packages` and `inspect_svml_vocabulary` read installed
 vocabulary and have nothing to do with a reference video — `../vocabulary.md` documents them.
 

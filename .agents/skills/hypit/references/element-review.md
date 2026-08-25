@@ -61,7 +61,7 @@ them out: a missing base is not a neutral background, it is black, and text that
 can be illegible on the picture that will replace it.
 
 `render_element` does this itself. It finds every generation the Source declares — the takes, the
-stills, the slot contents — calls `make-placeholder` for each at the Canvas's own size, and declares
+stills, the slot contents — calls `make_placeholder` for each at the Canvas's own size, and declares
 them in a derived Run under the project's `.hypit/`. Never `hypit image`, which pays for a generation
 the video will not reuse, and never a placeholder drawn by a script written for the occasion.
 
