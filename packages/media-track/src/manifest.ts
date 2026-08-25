@@ -308,7 +308,7 @@ const appearanceRecipeProperties = [
   { name: "radius", required: false, fallback: "0",
     summary: "Rounds the clipped corners by a pixel radius, and is read only for a `rounded` clip." },
   { name: "padding", required: false, fallback: "0",
-    summary: "Insets the picture from the Frame edges, written as one, two or four pixel numbers." },
+    summary: "Insets the picture from the Frame edges. It admits one, two or four values — all sides, then vertical and horizontal, then each side — which no single number can carry, so it is written as text: `padding: \"14\"` and `padding: \"8 12\"`. A bare number is refused." },
   { name: "border-width", required: false, fallback: "0",
     summary: "Draws a border of this pixel width, and draws none at `0`." },
   { name: "border-style", required: false, values: ["solid", "dashed", "dotted"], fallback: "solid",
