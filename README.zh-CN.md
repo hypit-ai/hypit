@@ -43,6 +43,14 @@ Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语�
 
 **说明一点：** 复刻视频是最快的入口，但不是唯一的入口。你可以直接从我们的模板开始，也可以直接描述你想要的视频，让 Agent 从零写出一份 workflow。生成模型同样不是必需的：字幕、动效、代码渲染的画面，不调用任何模型也能编译成一条成片——一条视频的成本可以是 0 元。
 
+## 只安装一次
+
+```bash
+npx skills add hypit-ai/hypit -g
+```
+
+## 示例
+
 ### 街头采访
 
 <table>
@@ -102,12 +110,6 @@ Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语�
     <td colspan="4">本地部署的 MiniMax H3；3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕、视觉特效在 headless chromium 中渲染。<b>总成本：$0.15。</b></td>
   </tr>
 </table>
-
-## 只安装一次
-
-```bash
-npx skills add hypit-ai/hypit -g
-```
 
 ## 使用 Hypit skill
 
