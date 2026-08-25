@@ -44,8 +44,20 @@ Then read:
 next one, and that is what a new package is built out of. Author every file yourself against them:
 the Manifest, the Types, the Surface and decoder, the Producers, the Fragment.
 
-Open a package's source when the docs genuinely do not settle a question — a role whose shape the
-guide leaves implicit, an export whose signature you need exactly. Use `hypit paths --json` to locate
+**What a Producer that draws may return is a command, not a package to read.**
+
+```
+hypit-reference-video-tools inspect_visual_contract
+```
+
+It answers the questions a component is written against — which element kinds exist, which style
+names are admitted on them, which of those take an enum, how few keyframes an animation carries, and
+the four rules the seal enforces about parents, `order` and interpolation. Every line is generated
+from the Composition schema, so it says what will be accepted rather than what one package happened
+to do. `inspect_svml_vocabulary` answers the other half: what a Source may write.
+
+Open a package's source only when neither command settles it — a role whose shape the guide leaves
+implicit, an export whose signature you need exactly. Use `hypit paths --json` to locate
 the installed Distribution and read **the one role you are stuck on**, not the package end to end.
 Find it by what it exports, since the filenames differ: `ranking` calls two of them `schedule.ts` and
 `render.ts`, `media-track` calls them `program.ts` and `lower.ts`, `comment-sticker` calls them
