@@ -280,11 +280,9 @@ WhisperX, for example, lives under `programs/whisperx/`; OpenCV under
 `programs/image-opencv/`. Service process records and logs live with the program. Project Build and
 Worker state remains under `<project>/.hypit/`.
 
-Reference-video state joins it there, at `.hypit/reference-video-tools/<reference-id>/`, resolved
-against the directory the command ran in rather than against a project boundary. Run every
-`hypit-reference-video-tools` command that touches a reference from the same directory: the clips,
-frames, transcript and observations one command writes are what the next one expects to find at that
-relative path.
+Reference-video state sits beside the Distribution, at `.hypit/reference-video-tools/<reference-id>/`,
+wherever the command is run from. It is keyed by the video, so two reconstructions of one file share
+the observations it cost money to make; each command reports the root it used.
 
 This split is why opening a second project cannot install WhisperX again, and why updating the npm
 Distribution does not overwrite a Python environment or a user's project-local component.
