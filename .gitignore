@@ -48,11 +48,15 @@ examples/**/output/
 examples/**/.svml/
 examples/**/evidence/generated/
 services/whisperx/.venv/
+services/whisperx/build/
 services/whisperx/**/__pycache__/
 services/whisperx/src/*.egg-info/
 services/image-opencv/.venv/
 services/image-opencv/**/__pycache__/
 services/media-lambda/build/
+
+# Local one-off preview documents are not repository sources.
+/launch-video-script-*.html
 
 # macOS Finder metadata
 .DS_Store
