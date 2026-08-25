@@ -15,7 +15,7 @@ hypit-reference-video-tools compare_reconstruction --reference-id <reference-id>
 `record_observation` is how the `agent` observer returns an answer; on the `gemini` observer the tool
 writes its own and the command is unused. A long answer arrives whole with `--text-file <path>`;
 `--text <text>` suits a short one. `make-placeholder` writes the mocks a comparison render needs;
-`reconstruction-loop.md` says when. `list_svml_packages` and `inspect_svml_vocabulary` read installed
+`comparison-round.md` says when. `list_svml_packages` and `inspect_svml_vocabulary` read installed
 vocabulary and have nothing to do with a reference video — `../vocabulary.md` documents them.
 
 A reference is found from the Distribution rather than from where you are standing, so these commands
@@ -43,7 +43,7 @@ and on the `agent` observer it is the only exact record of the sound. Read it wh
 depends on when a word is said — placing an on-screen text reveal against the line that triggers it,
 timing a caption, checking that a voice observation matches what was spoken, or judging a Segment's
 natural boundary. It does not set a take's duration: the take is generated and its length comes from
-`estimate:Speech`, as `final-sources.md` requires. Do not run WhisperX by hand and do not ask a model
+`estimate:Speech`, as `../script-time.md` requires. Do not run WhisperX by hand and do not ask a model
 to transcribe.
 
 `transcript` reports `status`, `transcript_ref` and `word_count`. Read the words from
@@ -117,21 +117,23 @@ The frames are on disk at `.hypit/reference-video-tools/<reference-id>/shots/NNN
 and the shot clips beside them. When evidence disagrees — one shot against the next, a shot against a
 whole-reference pass, or an observation against what the video plainly is — settle it with a narrow
 question over that shot, which puts the question to the reference's own observer. On the `gemini`
-observer that means you do not open the frame yourself; `reconstruction-loop.md` says which rule
+observer that means you do not open the frame yourself; `comparison-round.md` says which rule
 binds on which path.
 
 Be most suspicious of anything an observation asserts about change over time — something appearing,
 vanishing, being removed, being drawn in a single frame. A describer working from one pass infers
 those rather than seeing them, and infers them wrongly. A narrow question over the stretch is how
 such a claim is checked. A `compare_reconstruction` against a quick rendered probe works too, and is
-a probe rather than the element comparison `reconstruction-loop.md` runs — that one is rendered from
+a probe rather than the element comparison `comparison-round.md` runs — that one is rendered from
 the Source's own values and is credited with `--element`.
 
 ## Narrow questions
 
-`--question` is a separate path. It requires one to three `--shot-id` values, answers only that
-question from those shots' clips and frames in a single request, and neither reads nor writes the
-observation cache:
+`--question` is a separate path. It requires one to three `--shot-id` values and answers only that
+question from those shots' clips and frames. Its answer is cached like any other, under a key naming
+the shots it was asked over and the question itself, so asking the same question again returns what
+was already answered and reports `reused`. `--reobserve` is what asks again. A different question
+over the same shots gets its own key:
 
 ```bash
 hypit-reference-video-tools observe_reference --reference-id <id> --shot-id shot-007 \

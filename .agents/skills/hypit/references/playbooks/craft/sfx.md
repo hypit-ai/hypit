@@ -33,8 +33,8 @@ Declare the source, normalize it to audio-only `SynchronizedMedia`, and place it
 - Use `during={story.selection.NAME}` for a range, a Script Moment plus `for` for a point event, or
   explicit `start`/`end` timing in the SemanticTrack frame domain — the last only for a program
   with no speech to anchor to, the same gate `overlays.md` and `screen-demo.md` put on absolute
-  placement. Copying the reference's own seconds into an `start=`/`end=` is the same defect
-  `continuity.md` names for covering content.
+  placement. Copying a video's own seconds into a `start=`/`end=` is the same defect
+  `../../script-time.md` names for covering content.
 - Use `playback="once"` for a discrete effect, loop only for a genuinely repeating texture, and
   bounded pitch-preserving stretch only when the occupancy must fill an authored range.
 - Use explicit trim, gain, fade-in, and fade-out. The Audio Track preserves source level and does not

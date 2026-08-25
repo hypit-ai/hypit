@@ -39,7 +39,7 @@ Reference observation is part of the work and is expected to cost what it costs.
 The author gives one thing: the path to a video. The working directory, the project name, which
 packages to use and where the result goes are yours to decide. Ask the author about the video and
 nothing else — what it is for, who is in it, what it should say. Those answers describe the result
-they want; record them and apply them at step 24. Never interrupt to ask which generator, which
+they want; record them and apply them at step 23. Never interrupt to ask which generator, which
 package, which directory, or whether to proceed.
 
 The author often wants the result to differ from the reference: their presenter, their product,
@@ -96,26 +96,14 @@ exception: it selects an observer rather than blocking one, and step 5 owns it.
 observer, the credential decision table, the disclosure the author is owed, and the rule that one
 reference has one observer for its whole life.
 
-### 5. Probe for Vertex credentials
+### 5. Probe for Vertex credentials, then ask which observer reads
 
-```bash
-node .agents/skills/hypit/scripts/check-credentials.mjs GOOGLE_CLOUD_PROJECT GOOGLE_APPLICATION_CREDENTIALS_JSON
-```
-
-Report what this machine holds rather than asking the author to recall it. Both `set` means `gemini`
-is available and the author chooses. Either one `missing` means `agent` is the path that can run
-today.
-
-### 6. Ask which observer reads the reference
-
-Ask once. Name what each costs, and say that `agent` reads the reference a little less closely — a
-shot arrives as sampled frames rather than continuous video, so continuity across it is read rather
-than watched, and there is no sound, so a voice is attributed rather than heard. Say it once, take
-the answer, and run.
+`observers.md`'s "Choosing" section holds the command, what each answer means, and the disclosure the
+author is owed. Run it, put the question once, take the answer, and run.
 
 **This is the only question this route asks about how it runs.**
 
-### 7. Say which observer is reading
+### 6. Say which observer is reading
 
 One line, before any evidence starts.
 
@@ -123,7 +111,7 @@ One line, before any evidence starts.
 
 ## Phase 1 — Evidence, with reading alongside
 
-### 8. List installed vocabulary
+### 7. List installed vocabulary
 
 ```bash
 hypit-reference-video-tools list_svml_packages
@@ -133,7 +121,7 @@ It reads `node_modules/@hypit` relative to the working directory and refuses whe
 it from the repository root. Name the project with `--package-root` when the command is not run from
 inside it. This is instant and may run before or during the sweep.
 
-### 9. Prepare the reference
+### 8. Prepare the reference
 
 ```bash
 hypit-reference-video-tools prepare_reference --video-path <path> --observer gemini|agent
@@ -151,13 +139,13 @@ they come back as `pending_observations` for you to answer with `record_observat
 four first, because `observe_reference` quotes them into every shot's question and refuses to run
 until they exist.
 
-### 10. Run the full sweep, in the background
+### 9. Run the full sweep, in the background
 
 ```bash
 hypit-reference-video-tools observe_reference --reference-id <reference-id>
 ```
 
-**Start this before step 11 and read while it runs.** Its prompts are fixed and nothing in step 11
+**Start this before step 10 and read while it runs.** Its prompts are fixed and nothing in step 10
 changes what they ask. Reading first and observing afterwards makes the same run several minutes
 longer for nothing.
 
@@ -165,23 +153,19 @@ On the `agent` observer, give each task its own subagent where the harness has t
 together; that is what makes the sweep parallel. Answering everything one call listed is not the end
 of it — the sweep ends when `pending_observations` and `unresolved` are both empty.
 
-### 11. Read the route's craft, while the sweep runs
+### 10. Read the route's craft, while the sweep runs
 
 Read completely, in this order — a reconstruction needs to know what a picture *is* before what one
 generation owes another:
 
 1. `continuity.md` — shot, overlay, B-roll, speaker, product and persistent-system rules.
-2. `../playbooks/craft/graphic-compositions.md` — what may be a base picture, when a full screen is
-   one authored composition, and where a missing picture comes from.
-3. `../playbooks/craft/generated-dependencies.md` — what one generation owes another: the location,
-   the split picture, the voice, the first frame, and the stretch too short to be a take.
-4. `../playbooks/craft/frame-coverage.md` — what is on screen at every instant, and the edges nobody
-   chose.
-5. `../playbooks/craft/visual-continuity.md` — recurring anchors as explicit artifacts, one location
-   generated once, and the reverse-view geometry that must hold across takes.
-6. `../vocabulary.md` — how a package is chosen: enumerate every system before naming one, reuse
+2. Every craft file named in the first item of `../playbooks/index.md`'s required load order, in the
+   order it gives them. That page owns the list; restating it here is how a required file once became
+   reachable from one route and invisible to the other.
+3. `../script-time.md` — what a Segment is bound to, and why never a number of seconds.
+4. `../vocabulary.md` — how a package is chosen: enumerate every system before naming one, reuse
    before compose before declaring a gap, and what a real gap obliges.
-7. `vocabulary.md` — what the reference evidence adds to that: enumerating from the observations, and
+5. `vocabulary.md` — what the reference evidence adds to that: enumerating from the observations, and
    measuring an appearance value rather than choosing it.
 
 Do not skip one because the task looks like a familiar video format.
@@ -190,26 +174,21 @@ Do not skip one because the task looks like a familiar video format.
 
 ## Phase 2 — Interpret the evidence
 
-### 12. Collect the sweep and inspect what failed
+### 11. Collect the sweep and inspect what failed
 
 `unresolved` lists observations that failed outright. A complete observation that says "unclear" is
 still complete. Be most suspicious of anything an observation asserts about change over time.
 `evidence.md` says why and what to do.
 
-### 13. Settle conflicts with narrow questions
+### 12. Settle conflicts with narrow questions
 
-```bash
-hypit-reference-video-tools observe_reference --reference-id <id> --shot-id shot-007 \
-  --question "How thick is the outline on the caption words, relative to the stroke width of the letters?"
-```
-
-One to three shots per question; `--batch <questions.json>` sends several. Ask about visible
-attributes. Never ask which component to use. Do not re-observe a full shot to correct one.
+`evidence.md`'s "Narrow questions" section holds the command, what a question may ask, and why
+re-observing a whole shot to correct one is the wrong repair.
 
 **Done when:** every appearance value that changes what the viewer sees is measured rather than
 defaulted, and every conflict between observations is settled.
 
-### 14. Inspect candidate packages
+### 13. Inspect candidate packages
 
 ```bash
 hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/<name> [--package …]
@@ -218,7 +197,7 @@ hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/<name> [--p
 Enumerate the systems from the observations, then inspect a candidate for each. A system you never
 inspected is a system you are about to invent.
 
-### 15. Develop a project-local package, only for a proven gap
+### 14. Develop a project-local package, only for a proven gap
 
 **Read now:** `../local-author-package.md`, completely.
 
@@ -229,7 +208,7 @@ that loads is not yet a component that looks like the reference.
 
 ## Phase 3 — Author, check, wire
 
-### 16. Write the four files
+### 15. Write the four files
 
 `main.svml`, `recipes.svs`, `build.svrun`, `hypit.runtime.json`. The Runtime Profile is part of the
 deliverable even though this route runs nothing: without it the first thing the author meets is
@@ -243,81 +222,62 @@ deliverable even though this route runs nothing: without it the first thing the 
 - `../playbooks/craft/captions.md` — Cue breaks, the Recipe keys, and what recomputes when speech
   changes.
 - `../playbooks/craft/persona-and-audio.md` — one voice sample per person, and the identity anchors
-  that make step 24 cheap.
+  that make step 23 cheap.
 - `../playbooks/index.md` and the craft files it names for the systems this reference actually
   contains. Those conditions can only be evaluated now, with the evidence in.
 
 Do not author one source fragment per shot.
 
-### 17. Check all three sources
+### 16. Check every source
 
-```bash
-hypit check path/to/main.svml
-hypit check path/to/recipes.svs
-hypit check path/to/build.svrun
-```
+`../authoring.md` holds the check set — every command, not only the Author Source — and why no wrapper
+is written for it.
 
-Check all of them. Do not create a check wrapper.
-
-### 18. Prove the graph traces
+### 17. Prove the graph traces
 
 ```bash
 hypit-reference-video-tools preview_check /path/to/project/build.svrun
 ```
 
-**Read now:** `../preview.md`.
-
-`preview_check` reporting only `unresolved capabilities` and staying sound **is the pass**, and is
-the state every reconstruction is in when its sources are first written. Neither this gate nor step
-17 is bounded by the loop's attempt ceilings: a graph that does not trace is work that is not done.
+**Read now:** `../preview.md`, which says which refusal is the pass. A Source that declares its
+generations rather than performing them is the state every reconstruction is in when its sources are
+first written. Neither this gate nor step 16 is bounded by the round's attempt ceilings.
 
 ---
 
-## Phase 4 — The comparison loop
+## Phase 4 — The comparison round
 
-### 19. Read the loop
+### 18. Read the round
 
-**Read now:** `reconstruction-loop.md`, as soon as the sources place an element — that is the first
-moment the loop has something to render.
+**Read now:** `../element-review.md`, then `comparison-round.md`, as soon as the sources place an
+element — that is the first moment the round has something to render.
 
-### 20. Render every stretch of every authored element
+### 19. Render every stretch of every authored element
 
-```bash
-hypit-reference-video-tools render_element projects/<name>/build.svrun \
-  --element <id> --segment <id>|--selection <id> --reference-id <id> --out <path>.mp4
-```
+`../preview.md` holds `render_element`; `comparison-round.md` says to pass `--reference-id` every time
+so the stand-in runs on the reference's clock. Render the whole set before comparing any of it.
 
-A whole round is one call: `--batch <renders.json>`. `render_element` calls `make-placeholder` itself
-for the layers a Build has not made.
+### 20. Send every comparison for the element at once
 
-### 21. Send every comparison for the element at once
+`comparison-round.md` holds `compare_reconstruction` and its batch form. **Pass `--element <id>` every
+time**, or step 22 credits the comparison to nothing.
 
-```bash
-hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> \
-  --video <path>|--image <path> [--question <scope>] [--element <id>]
-```
+### 21. Repair against the differences that round returned
 
-**Pass `--element <id>` every time**, or step 23 credits the comparison to nothing. Send all of an
-element's comparisons before repairing anything.
+Within the two ceilings `../element-review.md` sets. Then return to step 19 for the next element.
 
-### 22. Repair against the differences that round returned
-
-Within the two ceilings `reconstruction-loop.md` sets. Then return to step 20 for the next element.
-
-### 23. Close the route on the check
+### 22. Close the route on the check
 
 ```bash
 hypit-reference-video-tools reconstruction_check projects/<name>/build.svrun
 ```
 
 It names each element that has never been compared and the command that compares it, and reports
-`"passed": false` until none are left. It asks for participation rather than convergence — the loop
+`"passed": false` until none are left. It asks for participation rather than convergence — the round
 is deliberately bounded and may stop with visible differences remaining — so an element compared once
-and stopped at its ceiling passes, and an element nobody looked at does not.
-
-It also reads each timed picture's appearance Recipe and refuses a `playback` left at its default,
-which draws generated material once and then draws nothing for the rest of the window.
-`../playbooks/craft/generated-dependencies.md` says what to set.
+and stopped at its ceiling passes, and an element nobody looked at does not. It also refuses a
+`playback` left at its default — `../playbooks/craft/generated-dependencies.md` says what to set — and
+an uncovered stretch of the Script, and reports every Frame reaching past the Canvas.
 
 How it picks a reference: exactly one prepared → it uses that one; several → it demands
 `--reference-id <id>` and refuses without it; none → it refuses and tells you to run
@@ -333,8 +293,8 @@ drawing element passes with nothing to require.
 
 ---
 
-### 24. Apply the author's requested change
+### 23. Apply the author's requested change
 
-Read what you wrote and change it to what they asked for at step 6. The identity of each recurring
+Read what you wrote and change it to what they asked for at the start. The identity of each recurring
 person and product is already a single anchor, because `../playbooks/craft/persona-and-audio.md` and
 `../playbooks/craft/visual-continuity.md` required that while you were writing.

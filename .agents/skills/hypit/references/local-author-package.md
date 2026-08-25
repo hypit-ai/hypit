@@ -4,20 +4,27 @@ Use this workflow only after proving that no legal composition of installed pack
 required behavior. A similar-looking tag is insufficient when its declared Types, timing or output
 behavior differs. Never write an unknown tag before its package exists.
 
-## Read the observation before deciding the package's shape
+## Know what the element has to look like before deciding the package's shape
 
-The observation is the contract, and it is read before the first line of the package — not assumed,
-not remembered, not rediscovered halfway. In the reconstruction route the evidence for the element
-this package owns lives in the shot observations (`type:` and `visual:` for its text and picture,
-`persistent_systems` for its whole-reference life) and the word-level transcript. Read them.
+Whatever settles that is the contract, and it is read before the first line of the package — not
+assumed, not remembered, not rediscovered halfway. Which document settles it depends on where the
+package came from:
 
-Then write out, one line each, every appearance property the observation states — the typeface
+- **From a reference video**, the evidence for the element this package owns lives in the shot
+  observations (`type:` and `visual:` for its text and picture, `persistent_systems` for its
+  whole-reference life) and the word-level transcript. Read them.
+- **From a description**, nothing external settles it, so it is settled by decision: the answers the
+  author froze and the appearance values written down before the sources were. `original-authoring/route.md`
+  requires both. A value nobody wrote down is one this package will be asked for later and will not
+  have.
+
+Then write out, one line each, every appearance property that contract states — the typeface
 character, the weights, the mix of faces, the colours, the stroke, the shadow, the motion, the
 timing. A package whose declared vocabulary cannot express one of those lines is wrong before it is
 written: widen the package until it carries every one of them. There is no acceptable shortfall —
-a property the observation states is either expressed by the package or the package is not done. A
-stated property silently dropped is how a reference whose title runs two typefaces ends up as a
-package that draws one font, and the loop cannot repair what the package cannot express.
+a stated property is either expressed by the package or the package is not done. A
+stated property silently dropped is how a title that runs two typefaces ends up as a
+package that draws one font, and the round cannot repair what the package cannot express.
 
 ## Write `package.json` and the activation first
 
@@ -241,7 +248,7 @@ hypit check path/to/build.svrun
 A package that cannot be *wired* is not done. `hypit check` proves the Source is legal, and nothing
 more; it will not tell you that the track a package produces cannot be traced to a Film at all. Run
 the preview check and repair until it passes — a graph failure is not a difference to weigh, it is
-work that is not finished, and it is not bounded by the loop's attempt ceiling:
+work that is not finished, and it is not bounded by the round's attempt ceiling:
 
 ```bash
 hypit-reference-video-tools preview_check path/to/build.svrun

@@ -58,15 +58,39 @@ What this proves is that the graph is **wired**, not that every track **draws**.
 refuses the media kind it is handed is not caught here, because nothing is handed to it until the
 Build runs.
 
-## Render one element to a still, locally
+## Render one element, locally
 
-One element — a new component, one caption system, one inserted card — can be rendered to an image
-without a paid Provider. A new package's visual Surface needs a preview image anyway. The repository's
-own visual test `packages/hyperframes/test/browser-visual.test.ts` shows the path end to end: build
-the Track, compile the HyperFrames document, and render it through the local HyperFrames Runtime.
+One element — a new component, one caption system, one inserted card — is drawn without a paid
+Provider by `render_element`. This is the picture to reach for whenever one element has to be looked
+at rather than the whole program, and rendering the delivery to inspect a single piece is the waste it
+exists to prevent. `element-review.md` says how many of these to draw and what to do with them; this
+section owns the command.
 
-This is the image to reach for whenever one element has to be looked at rather than the whole
-program. Rendering the delivery to inspect a single piece is the waste it exists to prevent.
+```bash
+hypit-reference-video-tools render_element /path/to/project/build.svrun \
+  --element <id> --segment <id>|--selection <id> --out <path>.mp4
+```
+
+It reads the Canvas, the frame rate, the Recipe values, the Script text and the bindings out of the
+Source, mocks every layer a Build has not made, and drives the package's Producer. Nothing about it is
+written per package.
+
+`--element` takes the element's bare id — `captions`, the `id=` the Source wrote on the element. The
+command appends the output suffix itself when it looks for the track, so `--element captions.track`
+matches nothing: it refuses with `the Source places no element named captions.track` and lists the
+bare ids that are placed.
+
+`--segment` and `--selection` take a Script name, never a timestamp. Without either, the whole program
+is drawn. An `--out` ending `.mp4`, `.mov` or `.webm` writes the stretch as a clip; any other extension
+writes one still from the middle of it.
+
+A whole round is one call: `--batch <renders.json>`, an array of `{element, segment|selection, out}`
+inheriting the Run. They run together, paced by the machine.
+
+Each Segment's length comes from the Source's own `estimate:Speech`, which is the only clock a program
+has before its speech is synthesized. The result's `timing` says what sized each Segment, and the same
+object is written to `<out>.stand-in.json`. A reconstruction can borrow the reference's clock instead
+with `--reference-id`; `reconstruction/comparison-round.md` says when that matters.
 
 ## Open the whole Run for a person
 

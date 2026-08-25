@@ -36,35 +36,19 @@ the Source as `start="3.25s" end="7.42s"` is the shortest path from the evidence
 produces a reconstruction that is wrong the moment it is built.
 
 Those seconds describe the reference's own clock, and nothing in the reconstruction runs on that
-clock. Every take is generated, comes back at whatever length the model returned, and the
-SemanticTrack is built from the words WhisperX finds inside it. An Item bound to 3.25 seconds points
-at whichever word happens to land there, which is not the word the number was copied from. One take
-returning half a second long moves every window after it.
-
-Bind covering content to a Script Selection over the words it covers — mark the range in the Script,
-pass `semantic={speech.semantic}` to the Track, and use `during={story.selection.NAME}` — and let the
-projection resolve the frames. The reference's seconds then decide *which words* a Selection spans,
-which is what they can honestly tell you, rather than which frame an Item starts on.
-
-Explicit `start`/`end` is for a program with no speech to anchor to. `../playbooks/craft/b-roll.md`
-states the same rule from the authoring side, and reads it as a deliberate choice rather than a
-transcription.
+clock. `../script-time.md` says what to bind to instead, and why an Item bound to 3.25 seconds points
+at whichever word happens to land there. The reference's seconds then decide *which words* a Selection
+spans, which is what they can honestly tell you, rather than which frame an Item starts on.
 
 ## A system that spans shots is authored once
 
-- A visual system that persists across cuts — captions, a running list that keeps its state, a
-  progress indicator, a persistent badge or logo, a recurring lower third — is one system: one
-  Program, one Track and one shared Style over its full observed lifetime, even when the visible
-  words, items or values change.
-- Do not recreate the system per shot, and do not create a second Style because a new shot begins. A
-  new shot is never itself evidence of a change in appearance.
-- Author an observed local difference as a scoped variation inside the one system, on exactly the
-  words, items or interval where it was observed.
-- Whether the system is one Program with per-item timing or separate instances is decided by the
-  declared vocabulary of the chosen package, never by shot count.
-- The `persistent_systems` observation from `prepare_reference` reports these systems for the whole
-  reference, including whether each one's appearance ever changes and where. Use it instead of
-  inferring lifetimes from per-shot prose.
+`../script-time.md` states the rule: one Program, one Track, one shared Style over the system's full
+lifetime, and a scoped variation rather than a second Style. A new shot is never itself evidence of a
+change in appearance.
+
+The reference supplies the lifetimes. The `persistent_systems` observation from `prepare_reference`
+reports these systems for the whole reference, including whether each one's appearance ever changes
+and where. Use it instead of inferring lifetimes from per-shot prose.
 
 ## Base pictures and designed fields
 
