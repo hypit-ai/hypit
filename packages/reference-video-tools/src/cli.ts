@@ -4,6 +4,22 @@ import { readFile } from "node:fs/promises";
 import { createReferenceVideoTools } from "./tools.js";
 import type { CompareReconstructionInput, ObserveReferenceInput, RenderElementInput, ReviewElementInput } from "./tools.js";
 
+/**
+ * A word range written on the command line as `from:to`, half-open.
+ *
+ * The planner emits ranges because the finest thing worth looking at is not always a thing the
+ * Script named. `--segment` and `--selection` remain for the ones that are.
+ */
+function tokenRange(value: string | undefined): readonly [number, number] | undefined {
+  if (value === undefined) return undefined;
+  const parts = /^(\d+):(\d+)$/u.exec(value.trim());
+  if (parts === null) throw new Error(`--tokens takes a half-open word range written from:to, like 118:131; got ${value}`);
+  const from = Number(parts[1]);
+  const to = Number(parts[2]);
+  if (to <= from) throw new Error(`--tokens ${value} ends at or before it starts`);
+  return [from, to];
+}
+
 type Flags = ReadonlyMap<string, string | readonly string[] | boolean>;
 
 function usage(): string {
@@ -18,14 +34,14 @@ function usage(): string {
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
     "  hypit-reference-video-tools inspect_visual_contract [--shape visual-track|text-flow|text-typography|text-paint|text-document|path-command] [--producers-of <package> ...]",
     "  hypit-reference-video-tools paths",
-    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <build.svrun> --segment <id>|--selection <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
+    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <build.svrun> --segment <id>|--selection <id>|--tokens <from:to> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch <comparisons.json>",
-    "  hypit-reference-video-tools review_element --run <build.svrun> --element <id> --segment <id>|--selection <id> --video <path>|--image <path> --intent-file <path> [--question <scope>]",
+    "  hypit-reference-video-tools review_element --run <build.svrun> --element <id> --segment <id>|--selection <id>|--tokens <from:to> --video <path>|--image <path> --intent-file <path> [--question <scope>]",
     "  hypit-reference-video-tools review_element --run <build.svrun> --batch <reviews.json>",
     "  hypit-reference-video-tools record_review --run <build.svrun> --review-id <id> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools make_placeholder --out <path> --width <w> --height <h> [--color light|mid|dark|white|black|#RRGGBB] [--video] [--seconds <s>]",
-    "  hypit-reference-video-tools render_element <build.svrun> --element <id> --out <path.png|path.mp4> [--segment <id>] [--selection <id>] [--reference-id <id>]",
+    "  hypit-reference-video-tools render_element <build.svrun> --element <id> --out <path.png|path.mp4> [--segment <id>] [--selection <id>] [--tokens <from:to>] [--reference-id <id>]",
     "  hypit-reference-video-tools render_element <build.svrun> --batch <renders.json> [--reference-id <id>]",
     "  hypit-reference-video-tools render_previews <package-dir> [...]",
     "  hypit-reference-video-tools preview_check <build.svrun> [<hypit.runtime.json>]",
@@ -302,6 +318,7 @@ async function main(): Promise<void> {
       element: required(flags, "element"),
       ...(one(flags, "segment") === undefined ? {} : { segment: one(flags, "segment") }),
       ...(one(flags, "selection") === undefined ? {} : { selection: one(flags, "selection") }),
+      ...(tokenRange(one(flags, "tokens")) === undefined ? {} : { tokens: tokenRange(one(flags, "tokens")) }),
       ...(one(flags, "image") === undefined ? {} : { image_path: one(flags, "image") }),
       ...(one(flags, "video") === undefined ? {} : { video_path: one(flags, "video") }),
       ...(one(flags, "intent-file") === undefined ? {} : { intent_file: one(flags, "intent-file") }),
@@ -336,12 +353,14 @@ async function main(): Promise<void> {
     const video = one(flags, "video");
     const segment = one(flags, "segment");
     const selection = one(flags, "selection");
-    const range = segment !== undefined || selection !== undefined;
+    const tokens = tokenRange(one(flags, "tokens"));
+    const range = segment !== undefined || selection !== undefined || tokens !== undefined;
     const input = supplied ?? {
       reference_id: required(flags, "reference-id"),
       ...(range
         ? {
           run: required(flags, "run"),
+          ...(tokens === undefined ? {} : { tokens }),
           ...(segment === undefined ? {} : { segment }),
           ...(selection === undefined ? {} : { selection }),
         }
@@ -398,9 +417,10 @@ async function main(): Promise<void> {
       out: required(flags, "out"),
       ...(one(flags, "segment") === undefined ? {} : { segment: one(flags, "segment") }),
       ...(one(flags, "selection") === undefined ? {} : { selection: one(flags, "selection") }),
+      ...(tokenRange(one(flags, "tokens")) === undefined ? {} : { tokens: tokenRange(one(flags, "tokens")) }),
       ...(one(flags, "reference-id") === undefined ? {} : { reference_id: one(flags, "reference-id") }),
     };
-    result = await tools.render_element(input as { run: string; element: string; out: string; segment?: string; selection?: string; reference_id?: string });
+    result = await tools.render_element(input as RenderElementInput);
   } else if (command === "render_previews") {
     if (supplied === undefined && operands.length === 0) throw new Error(`a <package-dir> is required\n\n${usage()}`);
     const input = supplied ?? { package_dirs: operands };

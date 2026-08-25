@@ -252,10 +252,14 @@ first written. Neither this gate nor step 16 is bounded by the round's attempt c
 **Read now:** `../element-review.md`, then `comparison-round.md`, as soon as the sources place an
 element — that is the first moment the round has something to render.
 
-### 19. Render every stretch of every authored element
+### 19. Ask the check what to render, then render it
+
+`reconstruction_check` returns a `plan`: each entry an element and a word range, with the reason it
+earned a look. That is the round — it is not yours to work out from the Source.
 
 `../preview.md` holds `render_element`; `comparison-round.md` says to pass `--reference-id` every time
-so the stand-in runs on the reference's clock. Render the whole set before comparing any of it.
+so the stand-in runs on the reference's clock. The program is drawn once and every entry is cut out of
+those frames, so render the whole list in one `--batch` call.
 
 ### 20. Send every comparison for the element at once
 
