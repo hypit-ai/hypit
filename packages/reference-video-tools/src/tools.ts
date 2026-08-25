@@ -126,7 +126,7 @@ export type ReferenceVideoTools = {
   prepare_reference(input: PrepareReferenceInput): Promise<PrepareResult>;
   observe_reference(input: ObserveReferenceInput): Promise<Record<string, unknown>>;
   inspect_svml_vocabulary(input: InspectVocabularyInput): Promise<Record<string, unknown>>;
-  inspect_visual_contract(input: { readonly shape?: string }): Promise<Record<string, unknown>>;
+  inspect_visual_contract(input: { readonly shape?: string; readonly producers?: readonly string[] }): Promise<Record<string, unknown>>;
   paths(): Promise<Record<string, unknown>>;
   compare_reconstruction(input: CompareReconstructionInput): Promise<Record<string, unknown>>;
   record_observation(input: RecordObservationInput): Promise<Record<string, unknown>>;
@@ -1244,8 +1244,22 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       assert(asked === undefined || asked.length === 0 || Object.hasOwn(shapes, asked),
         `shape must be one of ${Object.keys(shapes).join(", ")}`);
       const chosen = asked === undefined || asked.length === 0 ? Object.keys(shapes) : [asked];
+      // Which Producers a Fragment may call, read off the Modules the named packages carry. A
+      // component's Fragment names one per operation, and the names were reachable only by opening a
+      // package that already called them.
+      const wanted = input.producers ?? [];
+      const calls = wanted.length === 0 ? [] : (await loadNodePackageSelection(wanted, packageRoot).catch(() => []))
+        .flatMap((pack) => (pack.contribution.modules ?? []).flatMap((module) =>
+          module.manifest.producers.map((producer) => ({
+            module: `${module.manifest.name}@${module.manifest.version}`,
+            producer: producer.name,
+            inputs: producer.inputs.map((port) => port.name),
+            outputs: producer.outputs.map((port) => port.name),
+            ...(producer.needs.length === 0 ? {} : { needs: producer.needs.map((port) => port.name) }),
+          }))));
       return {
         shapes: chosen.map((name) => ({ shape: name, describes: describeSchema(shapes[name]!).join("\n") })),
+        ...(calls.length === 0 ? {} : { producers: calls }),
         // Each of these is refused somewhere, or follows from how the emitted CSS is written. None is
         // a convention: a rule stated here that the code does not hold would be worse than silence.
         rules: [
