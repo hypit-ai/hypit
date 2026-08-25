@@ -191,10 +191,20 @@ async function startWithOwnConsole(
     });
     let out = "";
     let err = "";
+    const done = (): void => {
+      settle({ out: out.trim(), err: err.trim() });
+      child.stdout.destroy();
+      child.stderr.destroy();
+    };
     child.stdout.on("data", (chunk: Buffer) => { out += chunk.toString("utf8"); });
     child.stderr.on("data", (chunk: Buffer) => { err += chunk.toString("utf8"); });
-    child.on("error", (cause: Error) => settle({ out: "", err: cause.message }));
-    child.on("close", () => settle({ out: out.trim(), err: err.trim() }));
+    child.on("error", (cause: Error) => { err = cause.message; done(); });
+    // `close` waits for the streams as well as the exit, and the process this shell launches can be
+    // holding an inherited copy of them: it outlives the shell by design, so those pipes stay open
+    // and `close` never arrives. The shell writes the id before it exits, so `exit` plus a moment
+    // for the pipe to drain is what settles this, and `close` still settles it first when it comes.
+    child.on("exit", () => { setTimeout(done, 250).unref(); });
+    child.on("close", done);
     child.stdin.end(script, "utf8");
   });
   const pid = Number(shell.out);
