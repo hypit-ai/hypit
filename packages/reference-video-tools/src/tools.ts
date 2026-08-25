@@ -1,6 +1,7 @@
 import type { Part } from "@google/genai";
 import { access, appendFile, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { cpus } from "node:os";
 import { createHash } from "node:crypto";
 import { deflateSync } from "node:zlib";
 import { basename, dirname, join, resolve } from "node:path";
@@ -44,6 +45,12 @@ export type ObserveReferenceInput = {
   readonly shot_ids?: readonly string[];
   readonly question?: string;
   readonly reobserve?: boolean;
+  /**
+   * A round of narrow questions, asked together. Each entry names its own shots and its own question
+   * and inherits `reference_id`. No narrow question's answer depends on another's, which is why the
+   * route asks them at once — and why asking them one process at a time was a shell loop.
+   */
+  readonly questions?: readonly { readonly shot_ids: readonly string[]; readonly question: string }[];
 };
 export type RecordObservationInput = {
   readonly reference_id: string;
@@ -964,6 +971,29 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async observe_reference(input): Promise<Record<string, unknown>> {
+      if (input.questions !== undefined) {
+        const round = input.questions;
+        assert(round.length > 0, "questions is empty");
+        const answers = await pacedMap(round, concurrency, gapMs, async (asked) => {
+          try {
+            return { ok: true as const, value: await tools.observe_reference({
+              reference_id: input.reference_id, shot_ids: asked.shot_ids, question: asked.question,
+            }) };
+          } catch (error) {
+            return { ok: false as const, error: error instanceof Error ? error.message : String(error), asked };
+          }
+        });
+        const done = answers.filter((item) => item.ok).map((item) => item.value!);
+        const failed = answers.filter((item) => !item.ok);
+        return {
+          reference_id: input.reference_id,
+          asked: done.length,
+          failed: failed.length,
+          answers: done,
+          ...(failed.length === 0 ? {} : { failures: failed.map((item) => ({ error: item.error, asked: item.asked })) }),
+          pending_observations: done.flatMap((item) => (item["pending_observations"] ?? []) as readonly unknown[]),
+        };
+      }
       const state = await loadState(input.reference_id);
       const selected = input.shot_ids === undefined ? state.shots : state.shots.filter((shot) => input.shot_ids!.includes(shot.shot_id));
       assert(selected.length > 0, "no requested shot ids exist");
@@ -1156,8 +1186,15 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       assert(input.package_names.length > 0, "package_names must not be empty");
       const loaded = await loadNodePackageSelection(input.package_names, packageRoot);
       const requested = input.tags === undefined ? undefined : new Set(input.tags);
+      // The answer is about the packages that were named. Loading one brings its dependencies with
+      // it, and every one of their Surfaces used to be returned as well — asking what `@hypit/ranking`
+      // offers answered with twenty Surfaces of which six were its own, sixty-four kilobytes for a
+      // question about six. The rest are reachable by naming them, which is what `list_svml_packages`
+      // is for.
+      const named = new Set(input.package_names);
       const surfaces: Record<string, unknown>[] = [];
       for (const pack of loaded) {
+        if (!named.has(pack.specifier)) continue;
         for (const facet of pack.contribution.hostFacets ?? []) {
           const implementation = facet.implementation as RegisteredSurface;
           if (requested !== undefined && !requested.has(implementation.tag) && !requested.has(implementation.surface)) continue;
@@ -1469,6 +1506,25 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async render_element(input): Promise<Record<string, unknown>> {
+      if (input.renders !== undefined) {
+        const round = input.renders;
+        assert(round.length > 0, "renders is empty");
+        // Local work rather than a quota, so it is paced by the machine and not by the launch gap.
+        const atOnce = Math.max(1, Math.min(cpus().length - 1, round.length));
+        const results = await pacedMap(round, atOnce, 0, async (one) => {
+          const merged = { ...one, run: one.run ?? input.run, ...(one.reference_id ?? input.reference_id === undefined ? {} : { reference_id: input.reference_id }) };
+          try { return { ok: true as const, value: await renderElement(merged as RenderElementInput) }; }
+          catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : String(error), input: merged }; }
+        });
+        const done = results.filter((item) => item.ok).map((item) => item.value!);
+        const failed = results.filter((item) => !item.ok);
+        return {
+          rendered: done.length,
+          failed: failed.length,
+          renders: done,
+          ...(failed.length === 0 ? {} : { failures: failed.map((item) => ({ error: item.error, input: item.input })) }),
+        };
+      }
       return await renderElement(input);
     },
 

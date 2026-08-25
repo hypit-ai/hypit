@@ -23,14 +23,9 @@ video. This route runs both, at the step the sequence names;
 `node_modules/@hypit` relative to the working directory and refuses when it is empty, so run it from
 the repository root.
 
-**Run every `hypit-reference-video-tools` command that touches a reference from the same directory.**
-`prepare_reference` writes the reference under `.hypit/reference-video-tools/<reference-id>` relative
-to the working directory, and `observe_reference`, `record_observation`, `compare_reconstruction`,
-`render_element` and `reconstruction_check` all read it back from that same relative path. Run one
-from the project and the next from its parent and the second looks in a directory the first never
-wrote to: it reports no prepared reference at all. Pick one directory at the start and stay in it for
-the whole route — the repository root, where `list_svml_packages` already has to run, is the one that
-costs nothing. The two vocabulary subcommands carry no reference state and are outside this.
+A reference is found from the Distribution rather than from where you are standing, so these commands
+may be run from anywhere. What does depend on where you are is which packages resolve: name the
+project with `--package-root` when the command is not run from inside it.
 
 Defaults are sufficient for normal use. Each also accepts `--input <json>`. Follow this sequence:
 
@@ -152,7 +147,7 @@ The frames are already on disk at
 them. When evidence disagrees — one shot against the next, a shot against a whole-reference pass, or
 an observation against what the video plainly is — settle it with a narrow
 `observe_reference --question` over that shot, which puts the question to the reference's own
-observer. On the `gemini` observer that means you do not open the frame yourself;
+observer; several at once is `--batch <questions.json>`, an array of `{shot_ids, question}`. On the `gemini` observer that means you do not open the frame yourself;
 `reconstruction-loop.md` says which rule binds on which path. Do not re-observe
 the full shot: that is paid, and at temperature `1.0` it returns a paraphrase rather than a
 correction.
