@@ -113,9 +113,41 @@ export function sliceSource(source: string, segment: string): SliceResult {
   const kept = new RegExp(`<${segment}\\b[^>]*>.*?</${segment}>`, "su").exec(body);
   if (kept === null) throw new Error(`the Script has no <${segment}> Segment`);
 
+  /**
+   * A Selection may open in one Segment and close in another — the Script says so and the parser
+   * records each end's own Segment. Cutting the Script to one Segment left the surviving end of such a
+   * Selection with no partner, and the fragment was refused outright with SCRIPT_SELECTION_UNCLOSED:
+   * not the element dropped, the whole render.
+   *
+   * The end that is missing is supplied at the fragment's own edge. What that expresses is exactly
+   * what the Selection covers inside this stretch — from its mark to the end of the Segment, or from
+   * the start of the Segment to its mark — which is what a render over this stretch has to show.
+   */
+  // The end of a name has to be asserted, not merely looked past: a lookahead alone backtracks, and
+  // `@title-out!` was read as an open called `title-ou` with a `t` after it.
+  const opened = new Set([...kept[0].matchAll(/(?<![\w/])@([a-z][a-z0-9-]*)(?![a-z0-9!-])/gu)].map((match) => match[1]!));
+  const closed = new Set([...kept[0].matchAll(/@\/([a-z][a-z0-9-]*)~?/gu)].map((match) => match[1]!));
+  const marked = new Set([...kept[0].matchAll(/@([a-z][a-z0-9-]*)!/gu)].map((match) => match[1]!));
+  let fragment = kept[0];
+  for (const id of opened) {
+    if (closed.has(id) || marked.has(id)) continue;
+    const end = fragment.lastIndexOf("</");
+    fragment = `${fragment.slice(0, end)} @/${id}\n    ${fragment.slice(end)}`;
+    closed.add(id);
+  }
+  for (const id of closed) {
+    if (opened.has(id)) continue;
+    // After the Segment's own opening tag and the speaker tag that follows it, which is where the
+    // Segment's first spoken word begins.
+    const speaker = /^<[^>]*>\s*<[^>]*>/su.exec(fragment);
+    const at = speaker === null ? fragment.indexOf(">") + 1 : speaker[0].length;
+    fragment = `${fragment.slice(0, at)} @${id}${fragment.slice(at)}`;
+    opened.add(id);
+  }
+
   // Which Script names survive: the Segment itself, and every Selection and Moment marked inside it.
   const alive = new Set<string>([`segment.${segment}`]);
-  for (const match of kept[0].matchAll(/@([a-z][a-z0-9-]*)\b/gu)) {
+  for (const match of fragment.matchAll(/@\/?([a-z][a-z0-9-]*)\b/gu)) {
     alive.add(`selection.${match[1]!}`);
     alive.add(`moment.${match[1]!}`);
   }
@@ -130,7 +162,7 @@ export function sliceSource(source: string, segment: string): SliceResult {
   // already, so this is the one case: a close that has not arrived yet, which the fragment reaches by
   // no longer closing.
   const later = new Set<string>();
-  for (const match of body.slice(kept.index + kept[0].length).matchAll(/@([a-z][a-z0-9-]*)\b/gu)) {
+  for (const match of body.slice(kept.index + kept[0].length).matchAll(/@\/?([a-z][a-z0-9-]*)\b/gu)) {
     later.add(`selection.${match[1]!}`);
     later.add(`moment.${match[1]!}`);
   }
@@ -247,7 +279,7 @@ export function sliceSource(source: string, segment: string): SliceResult {
   if (rebuiltOpen === null) throw new Error("the Script was removed by the cut");
   const rebuiltStart = rebuiltOpen.index + rebuiltOpen[0].length;
   const rebuiltEnd = text.indexOf("</script>", rebuiltStart);
-  text = `${text.slice(0, rebuiltStart)}\n    ${kept[0]}\n  ${text.slice(rebuiltEnd)}`;
+  text = `${text.slice(0, rebuiltStart)}\n    ${fragment}\n  ${text.slice(rebuiltEnd)}`;
 
   return {
     text,
