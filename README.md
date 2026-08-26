@@ -97,7 +97,7 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th>Reference</th>
     <td></td>
-    <td><video src="https://github.com/user-attachments/assets/9da7ac6d-c542-406f-9ccf-70c454fc23b6" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/85c49b53-a075-42ab-bf7f-ff3a4755abf9" controls muted></video></td>
     <td></td>
   </tr>
   <tr>
