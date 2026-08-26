@@ -30,6 +30,21 @@ export function outputFor(source: CompiledSource, ref: string): StudioOutput | u
   return source.exports.find((item) => item.ref === ref);
 }
 
+function referencedValueFor(source: CompiledSource, ref: string): StudioOutput | undefined {
+  const output = outputFor(source, ref);
+  if (output !== undefined) return output;
+  const record = source.compiled.program.records.find((item) => item.id === ref);
+  if (record === undefined) return undefined;
+  const name = source.compiled.provenance.elements.flatMap((element) => element.records)
+    .find((item) => item.id === ref)?.local ?? ref;
+  return {
+    name,
+    type: record.type.name,
+    typeRef: record.type,
+    ref: record.id,
+  };
+}
+
 export function placementFor(source: CompiledSource, ref: string): Placement | undefined {
   return source.observations.placements.find((item) => item.outputs.includes(ref));
 }
@@ -69,10 +84,10 @@ export function traceFor(source: CompiledSource, ref: string): StudioTrace {
     all.findIndex((other) => other.dependency === candidate.dependency
       && other.input === candidate.input) === index);
   const refs = dependencies.flatMap(({ input, dependency }) => {
-    const output = outputFor(source, dependency);
-    return output === undefined ? [] : [{
+    const value = referencedValueFor(source, dependency);
+    return value === undefined ? [] : [{
       ...(input === undefined ? {} : { input }),
-      name: output.name, ref: output.ref, type: output.type, typeRef: output.typeRef,
+      name: value.name, ref: value.ref, type: value.type, typeRef: value.typeRef,
     }];
   });
   return {
