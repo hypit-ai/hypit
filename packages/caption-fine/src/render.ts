@@ -68,10 +68,9 @@ function underlineStyle(underline: FineCaptionUnderline | FineCaptionActiveUnder
  * The glyph body and its outline, as ordered Paint.
  *
  * An outline belongs outside the letter. `-webkit-text-stroke` cannot put it there: it centres the
- * stroke on the glyph edge, so half the width is always inside, and the only choice left is which
- * half gets painted over. Declaring the Paint hands the placement to the renderer, which builds the
- * ring by dilating the glyph and subtracting it from itself — wholly outside, at the width asked
- * for rather than half of it.
+ * stroke on the glyph edge, so half the width is always inside. Declaring the Paint hands placement
+ * to the renderer, which keeps the authored width wholly outside while the body preserves the
+ * original letterform.
  *
  * A caption with no outline keeps its plain fill, which is one element and one paint rather than
  * two, and is what most captions are.
@@ -282,6 +281,11 @@ function easeOutElastic(value: number): number {
 
 const neutralMotion: MotionSnapshot = { opacity: 1, transform: "none", filter: "none", clipPath: "inset(0% 0% 0% 0%)" };
 
+/** A zero inset still clips Paint outside the box; only wipe motions need it. */
+function wipes(kind: FineCaptionOneShotMotion): boolean {
+  return kind === "wipe-left" || kind === "wipe-right" || kind === "wipe-up" || kind === "wipe-down";
+}
+
 function motionSnapshot(kind: FineCaptionOneShotMotion, progress: number, distancePx: number): MotionSnapshot {
   const value = clamp(progress, 0, 1);
   const eased = easeOut(value);
@@ -319,12 +323,12 @@ function motionSnapshot(kind: FineCaptionOneShotMotion, progress: number, distan
   return state(eased, transform);
 }
 
-function snapshotStyle(snapshot: MotionSnapshot): VisualStyleDeclaration[] {
+function snapshotStyle(snapshot: MotionSnapshot, clipped = true): VisualStyleDeclaration[] {
   return [
     { name: "opacity", value: snapshot.opacity },
     { name: "transform", value: snapshot.transform },
     { name: "filter", value: snapshot.filter },
-    { name: "clip-path", value: snapshot.clipPath },
+    ...(clipped ? [{ name: "clip-path", value: snapshot.clipPath }] : []),
   ];
 }
 
@@ -343,12 +347,13 @@ function cueAnimation(parameters: FineCaptionParameters, durationFrames: number)
     ...transitionOffsets(0, enterFrames, parameters.motion.cueEnter),
     ...transitionOffsets(durationFrames - exitFrames, exitFrames, parameters.motion.cueExit),
   ];
+  const clipped = wipes(parameters.motion.cueEnter) || wipes(parameters.motion.cueExit);
   return animationFrom(durationFrames, offsets, (frame) => {
     const enterProgress = enterFrames === 0 ? 1 : clamp(frame / enterFrames, 0, 1);
     const exitProgress = exitFrames === 0 ? 1 : clamp((durationFrames - frame) / exitFrames, 0, 1);
     const enter = motionSnapshot(parameters.motion.cueEnter, enterProgress, parameters.motion.slideDistancePx);
     const exit = motionSnapshot(parameters.motion.cueExit, exitProgress, parameters.motion.slideDistancePx);
-    return snapshotStyle(enterProgress < 1 ? enter : exit);
+    return snapshotStyle(enterProgress < 1 ? enter : exit, clipped);
   });
 }
 
@@ -369,15 +374,16 @@ function atomLifecycleAnimation(
     ...transitionOffsets(endFrame - exitFrames, exitFrames, parameters.motion.atomExit),
     ...stepOffsets(endFrame),
   ];
+  const clipped = wipes(parameters.motion.atomEnter) || wipes(parameters.motion.atomExit);
   return animationFrom(durationFrames, offsets, (frame) => {
-    if (frame < startFrame) return shouldWait ? [{ name: "opacity", value: 0 }] : snapshotStyle(neutralMotion);
+    if (frame < startFrame) return shouldWait ? [{ name: "opacity", value: 0 }] : snapshotStyle(neutralMotion, clipped);
     if (frame >= endFrame && parameters.motion.atomExit !== "none") {
-      return snapshotStyle(motionSnapshot(parameters.motion.atomExit, 0, parameters.motion.slideDistancePx));
+      return snapshotStyle(motionSnapshot(parameters.motion.atomExit, 0, parameters.motion.slideDistancePx), clipped);
     }
     const enterProgress = enterFrames === 0 ? 1 : clamp((frame - startFrame) / enterFrames, 0, 1);
     const exitProgress = exitFrames === 0 ? 1 : clamp((endFrame - frame) / exitFrames, 0, 1);
-    if (enterProgress < 1) return snapshotStyle(motionSnapshot(parameters.motion.atomEnter, enterProgress, parameters.motion.slideDistancePx));
-    return snapshotStyle(motionSnapshot(parameters.motion.atomExit, exitProgress, parameters.motion.slideDistancePx));
+    if (enterProgress < 1) return snapshotStyle(motionSnapshot(parameters.motion.atomEnter, enterProgress, parameters.motion.slideDistancePx), clipped);
+    return snapshotStyle(motionSnapshot(parameters.motion.atomExit, exitProgress, parameters.motion.slideDistancePx), clipped);
   });
 }
 
@@ -460,8 +466,9 @@ function activeResponseAnimation(
     });
   }
   const frames = Math.min(parameters.motion.activeResponseFrames, Math.max(1, endFrame - startFrame));
+  const clipped = wipes(response);
   return animationFrom(durationFrames, transitionOffsets(startFrame, frames, response), (frame) => {
-    if (frame < startFrame || frame > startFrame + frames) return snapshotStyle(neutralMotion);
+    if (frame < startFrame || frame > startFrame + frames) return snapshotStyle(neutralMotion, clipped);
     const progress = clamp((frame - startFrame) / frames, 0, 1);
     if (response === "pop" || response === "spring") {
       const amplitude = parameters.motion.activeScale - 1;
@@ -470,7 +477,7 @@ function activeResponseAnimation(
         : 1 + amplitude * Math.exp(-4 * progress) * Math.sin(12 * progress);
       return [{ name: "transform", value: `scale(${compactNumber(responseScale)})` }];
     }
-    return snapshotStyle(motionSnapshot(response, progress, parameters.motion.slideDistancePx));
+    return snapshotStyle(motionSnapshot(response, progress, parameters.motion.slideDistancePx), clipped);
   });
 }
 
@@ -542,7 +549,8 @@ function activeBoxAnimation(
     const enterProgress = enterFrames === 0 ? 1 : clamp((frame - startFrame) / enterFrames, 0, 1);
     const exitProgress = exitFrames === 0 ? 1 : clamp((logicalEnd - frame) / exitFrames, 0, 1);
     const kind = enterProgress < 1 ? box.enter : box.exit;
-    return snapshotStyle(motionSnapshot(kind, Math.min(enterProgress, exitProgress), parameters.motion.slideDistancePx));
+    return snapshotStyle(motionSnapshot(kind, Math.min(enterProgress, exitProgress), parameters.motion.slideDistancePx),
+      wipes(box.enter) || wipes(box.exit));
   }) ?? { keyframes: [
     { atFrame: 0, style: [{ name: "opacity", value: 1 }] },
     { atFrame: durationFrames, style: [{ name: "opacity", value: 1 }] },
@@ -553,6 +561,22 @@ function anchorTransform(parameters: FineCaptionParameters): string | undefined 
   const x = parameters.placement.anchorX === "left" ? 0 : parameters.placement.anchorX === "center" ? -50 : -100;
   const y = parameters.placement.anchorY === "top" ? 0 : parameters.placement.anchorY === "center" ? -50 : -100;
   return x === 0 && y === 0 ? undefined : `translate(${x}%,${y}%)`;
+}
+
+function structuralRowCount(
+  atoms: readonly CaptionAlignmentUnit[],
+  maxWordsPerLine: number,
+): number {
+  let rows = atoms.length === 0 ? 0 : 1;
+  let wordsOnRow = 0;
+  for (const atom of atoms) {
+    if (wordsOnRow > 0 && wordsOnRow + atom.wordIds.length > maxWordsPerLine) {
+      rows += 1;
+      wordsOnRow = 0;
+    }
+    wordsOnRow += atom.wordIds.length;
+  }
+  return rows;
 }
 
 function cueElements(
@@ -574,6 +598,12 @@ function cueElements(
   const cueMotion = cueAnimation(parameters, durationFrames);
   const cueLoop = parameters.motion.loopTarget === "cue" ? loopAnimation(parameters, durationFrames) : undefined;
   const fonts = parameters.typography.exactFonts;
+  if (parameters.layout.maxLines !== undefined) {
+    const rows = structuralRowCount(atoms, parameters.layout.maxWordsPerLine!);
+    if (rows > parameters.layout.maxLines) {
+      throw new Error(`Fine Caption Style ${styleId} constructs ${rows} rows for a Cue whose maximum is ${parameters.layout.maxLines}`);
+    }
+  }
   push({
     id: "placement",
     kind: "box",
@@ -629,11 +659,7 @@ function cueElements(
       { name: "justify-content", value: parameters.layout.textAlign === "left" ? "flex-start"
         : parameters.layout.textAlign === "right" ? "flex-end" : "center" },
       { name: "max-width", value: "100%" },
-      ...(parameters.layout.maxLines === undefined ? [] : [{
-        name: "max-height",
-        value: `${compactNumber(parameters.typography.fontSizePx * parameters.layout.lineHeight * parameters.layout.maxLines + parameters.cueBox.paddingYPx * 2)}px`,
-      }] as const),
-      { name: "overflow", value: parameters.layout.overflow === "clip" ? "hidden" : "visible" },
+      { name: "overflow", value: "visible" },
       { name: "padding", value: `${compactNumber(parameters.cueBox.paddingYPx)}px ${compactNumber(parameters.cueBox.paddingXPx)}px` },
       { name: "position", value: "relative" },
       { name: "text-align", value: parameters.layout.textAlign },
@@ -829,8 +855,6 @@ function cueElements(
           { name: "column-gap", value: `${compactNumber(parameters.layout.wordGapPx)}px` },
           { name: "display", value: "inline-flex" },
           { name: "inset", value: "0" },
-          ...(kind === "glyph" && parameters.karaoke.transition === "wipe"
-            ? [{ name: "overflow", value: "hidden" }] as const : []),
           { name: "position", value: "absolute" },
         ],
         animation: kind === "glyph" && parameters.karaoke.transition === "wipe"

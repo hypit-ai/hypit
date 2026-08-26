@@ -164,9 +164,15 @@ function mergedTypography(
 }
 
 type GlyphPaintLayer = Exclude<VisualTextPaintLayer, { readonly kind: "box" }>;
+type FilterGlyphPaint = Extract<GlyphPaintLayer, { kind: "stroke" | "shadow" | "glow" }>;
 
 function glyphPaintLayers(paints: readonly VisualTextPaintLayer[]): GlyphPaintLayer[] {
   return paints.filter((paint): paint is GlyphPaintLayer => paint.kind !== "box");
+}
+
+function usesGlyphFilter(paint: GlyphPaintLayer): paint is FilterGlyphPaint {
+  return paint.kind === "shadow" || paint.kind === "glow"
+    || (paint.kind === "stroke" && paint.placement !== "outside");
 }
 
 function inheritedGlyphColor(paints: readonly VisualTextPaintLayer[]): string[] {
@@ -231,7 +237,7 @@ function glyphFilterDefinitions(element: TerminalTextElement, context: TextRende
     append(paragraph.style?.paints);
     for (const inline of paragraph.inlines) if (inline.kind === "text") append(inline.style?.paints);
   }
-  const filtered = layers.filter((paint): paint is Extract<GlyphPaintLayer, { kind: "stroke" | "shadow" | "glow" }> => paint.kind !== "fill");
+  const filtered = layers.filter(usesGlyphFilter);
   const definitions = [...new Map(filtered.map((paint) => [canonicalStringify(paint), paint])).values()]
     .map((paint) => glyphFilterDefinition(paint, context)).join("");
   return definitions;
@@ -257,6 +263,22 @@ function glyphLayerCss(
       "-webkit-background-clip:text",
       "color:transparent",
       "-webkit-text-fill-color:transparent",
+    ];
+  }
+  if (paint.kind === "stroke" && paint.placement === "outside") {
+    // CSS centres a stroke on the glyph edge. Doubling the requested width and drawing the body
+    // again in the following fill layer covers the inner half, leaving exactly the authored width
+    // outside without passing the descender through an SVG filter input box first.
+    const color = solidPaint(paint.paint);
+    if (color === undefined) {
+      throw new Error("HyperFrames outside Text stroke requires solid color; materialize a gradient stroke as a Surface.");
+    }
+    return [
+      ...common,
+      `color:${color}`,
+      `-webkit-text-fill-color:${color}`,
+      `-webkit-text-stroke:${number(paint.widthPx * 2)}px ${color}`,
+      "paint-order:stroke fill",
     ];
   }
   return [
@@ -296,8 +318,7 @@ export function renderGlyphPaintedString(
 ): string {
   const layers = glyphPaintLayers(paints);
   if (layers.length === 0) return context.escape(value);
-  const shaped = layers.filter((paint): paint is Extract<GlyphPaintLayer, { kind: "stroke" | "shadow" | "glow" }> =>
-    paint.kind !== "fill");
+  const shaped = layers.filter(usesGlyphFilter);
   const written = context.emittedFilterIds;
   const definitions = [...new Map(shaped.map((paint) => [canonicalStringify(paint), paint])).values()]
     .filter((paint) => {
@@ -311,7 +332,8 @@ export function renderGlyphPaintedString(
   const defs = definitions.length === 0
     ? ""
     : `<svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden"><defs>${definitions}</defs></svg>`;
-  // The layers occupy one grid cell each so they stack in the order they were declared.
+  // Paint layers share one grid cell. The wrapper stacks them but does not absorb their ink into
+  // layout: outline, shadow and glow remain visible overflow around the measured letterform.
   return `${defs}<span style="position:relative;display:inline-grid">${renderGlyphPaint(value, paints, context)}</span>`;
 }
 

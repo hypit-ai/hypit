@@ -40,7 +40,7 @@ caption.primary {
   size: 58;
   line-height: 0.96; letter-spacing: -0.5; word-gap: 14;
   align: center; block-align: end; inline-size: fixed;
-  wrap: word; overflow: clip; max-lines: 2; max-words-per-line: 4;
+  wrap: word; max-lines: 2; max-words-per-line: 4;
   direction: ltr;
   fill: #FFFFFF; opacity: 1;
   stroke-color: #09090B; stroke-width: 2;
@@ -103,9 +103,10 @@ continuous on each real browser line. Thus trail-colored text with a current-onl
 Recipe—not a second renderer.
 
 With `wrap: word`, Fine wraps between complete Alignment Units and falls back inside a single
-over-wide display unit so it cannot escape the Region. `max-lines` is accepted only with the explicit
-`overflow: clip`; without that opt-in Fine does not silently discard author text. Cue boundaries come
-from Script segments, turns, Style changes and authored `||`.
+over-wide display unit so it cannot escape the Region. `max-words-per-line` constructs explicit rows;
+when `max-lines` is present, a Cue that would construct more rows is rejected instead of having its
+text or Paint clipped. Cue boundaries come from Script segments, turns, Style changes and authored
+`||`.
 
 Fine is the uniform-flow family: every token follows the same Recipe and may differ only by time,
 index or play state. A Cue with authored internal roles—different font/layout groups, full-frame

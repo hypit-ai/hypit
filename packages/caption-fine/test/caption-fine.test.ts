@@ -40,12 +40,12 @@ const recipe: SvsRecipe = {
     "block-align": "end",
     "inline-size": "fixed",
     wrap: "word",
-    overflow: "clip",
     "max-lines": 2,
     "max-words-per-line": 1,
     size: 56,
     "line-height": 1.05,
     fill: "#FFFFFF",
+    "stroke-width": 2,
     "shadow-color": "#000000",
     "shadow-opacity": 0.7,
     "shadow-blur": 8,
@@ -132,9 +132,28 @@ test("Fine Caption schedules visibility outside semantic Word timing and cuts on
     { startFrame: 36, endFrameExclusive: 62 },
   ]);
   assert.ok(track.presents[0]?.elements.some((element) => element.id === "line-break-1"));
+  const cue = track.presents[0]?.elements.find((element) => element.id === "cue");
+  assert.equal(cue?.style.find((declaration) => declaration.name === "overflow")?.value, "visible");
+  assert.equal(cue?.style.some((declaration) => declaration.name === "max-height"), false);
   const atom = track.presents[0]?.elements.find((element) => element.id === "atom-1");
   assert.equal(atom?.style.find((declaration) => declaration.name === "white-space")?.value, "normal");
   assert.equal(atom?.style.find((declaration) => declaration.name === "overflow-wrap")?.value, "anywhere");
+});
+
+test("Fine Caption rejects a Cue that exceeds its structural row budget instead of clipping Paint", () => {
+  const { document, program, projection } = fixture();
+  const constrained = fineCaptionStyle("plain", {
+    ...recipe,
+    properties: { ...recipe.properties, "max-lines": 1 },
+  }, [font]);
+  const constrainedProgram: CaptionProgram = { ...program, styles: [constrained] };
+  const schedule = scheduleFineCaption(projection, constrainedProgram, document);
+  assert.throws(
+    () => renderFineCaption(schedule, constrainedProgram, document,
+      sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3,
+        frameRate: { numerator: 30, denominator: 1 } })),
+    /constructs 2 rows.+maximum is 1/u,
+  );
 });
 
 test("Fine Caption applies authored mute before it schedules the visible envelope", () => {

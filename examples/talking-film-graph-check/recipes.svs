@@ -15,7 +15,7 @@
     stack-order: 70; x: 0.5; y: 0.88; width: 0.84; height: 0.22;
     anchor-x: center; anchor-y: bottom;
     size: 58; line-height: 1; align: center; block-align: end; inline-size: fixed;
-    wrap: word; overflow: clip; max-lines: 2; max-words-per-line: 4;
+    wrap: word; max-lines: 2; max-words-per-line: 4;
     fill: #FFFFFF; stroke-color: #09090B; stroke-width: 2;
     shadow-color: #000000; shadow-opacity: 0.72; shadow-x: 0; shadow-y: 3; shadow-blur: 8;
     glow-color: #FFFFFF; glow-opacity: 0.12; glow-blur: 8;
