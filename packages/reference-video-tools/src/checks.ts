@@ -1,4 +1,5 @@
 import { readFile, readdir } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import { dirname, join, resolve, sep } from "node:path";
 
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
@@ -15,8 +16,9 @@ import type { StudioSession } from "@hypit/studio/src/session.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 
 import { aliasPattern, invokedFrom, nearestPackageRoot, referenceRoot, scriptBody } from "./authoring.js";
-import { assert, round } from "./media.js";
+import { assert, readJson, round } from "./media.js";
 import { reviewPlan } from "./plan.js";
+import type { ReferenceState } from "./types.js";
 
 export type PreviewCheckInput = {
   readonly run: string;
@@ -24,6 +26,43 @@ export type PreviewCheckInput = {
 };
 
 const AWAITING = "the Studio projection closure requires unresolved capabilities:";
+
+/**
+ * Every Source the Run reaches, checked before anything is traced.
+ *
+ * One `hypit check` of the Run covers the closure: it compiles the Author the Run names, the Author's
+ * `<import>`ed Recipe sheets and kits along with it, and it typechecks the project's own author
+ * packages. A break in a kit is reported as `kits/street-interview-v1.svs:5993`, with the path the
+ * file has from the project — so one check reads more than a list of them would and says where in the
+ * same breath.
+ */
+async function checkedSources(runPath: string): Promise<{ readonly ok: boolean; readonly output: string }> {
+  // The CLI as it was launched, when this process was launched by it, and the Distribution's own
+  // otherwise — `hypit-reference-video-tools` does not set the launcher variable, and the Distribution
+  // root is where `bin/` sits in a checkout and in an install alike.
+  const launcher = process.env.HYPIT_CLI_LAUNCHER?.trim();
+  const distributionRoot = videoCliDistribution.packageRoot;
+  if ((launcher === undefined || launcher.length === 0) && distributionRoot === undefined) {
+    throw new Error("active Hypit Distribution has no package root");
+  }
+  const hypit = launcher !== undefined && launcher.length > 0
+    ? launcher
+    : join(distributionRoot!, "bin", "hypit.mjs");
+
+  // The project is the package root, the way `hypit check` finds it when it is run from there. A
+  // project inside a larger tree resolves none of its own `packages/local-*` without this.
+  const checked = spawnSync(process.execPath, [hypit, "check", runPath, "--package-root", dirname(runPath)], {
+    encoding: "utf8", windowsHide: true, timeout: 600_000,
+  });
+  // Node writes its own deprecation warnings to the same stream the refusal arrives on, and this
+  // output is read as the reason a check failed. Two lines about `module.register()` above the file
+  // and position are two lines between the reader and the thing they came for.
+  const output = `${checked.stdout ?? ""}${checked.stderr ?? ""}`
+    .split("\n")
+    .filter((line) => !/^\(node:\d+\)/u.test(line) && !line.startsWith("(Use `node --trace-"))
+    .join("\n").trim();
+  return { ok: checked.status === 0, output };
+}
 
 /**
  * Preview-check a reconstruction before it is delivered.
@@ -52,6 +91,12 @@ export async function previewCheck(
 ): Promise<Record<string, unknown>> {
   const cwd = invokedFrom();
   const runPath = resolve(cwd, input.run);
+
+  // The sources first, then whether the graph traces. A Source that does not check has nothing useful
+  // to say about tracing, and its refusal names the file and the position it is at; the same mistake
+  // met while tracing arrives as whatever the compiler happened to fail on afterwards.
+  const sources = await checkedSources(runPath);
+  if (!sources.ok) return { run: runPath, sound: false, sources, refused: sources.output };
   const runtimePath = input.runtime === undefined ? undefined : resolve(cwd, input.runtime);
   const packageRoot = nearestPackageRoot(dirname(runPath)) ?? roots.packageRoot;
   const workspaceRoot = dirname(runPath);
@@ -96,7 +141,7 @@ export async function previewCheck(
     await archive?.close();
   }
 
-  if (refusal !== undefined) return { run: runPath, sound: false, refused: refusal };
+  if (refusal !== undefined) return { run: runPath, sound: false, sources, refused: refusal };
 
   if (awaiting !== undefined) {
     // The graph traced all the way to a Film and a semantic spine; what is left is
@@ -106,7 +151,8 @@ export async function previewCheck(
     return {
       run: runPath,
       sound: true,
-      summary: `the graph is sound, waiting on ${awaiting.length} ${noun}.`,
+      sources,
+      summary: `every source checks; the graph is sound, waiting on ${awaiting.length} ${noun}.`,
       awaiting,
     };
   }
@@ -120,9 +166,15 @@ export async function previewCheck(
   }
 
   if (problems.length === 0) {
-    return { run: runPath, sound: true, summary: `every Track resolved (${tracks.length}).`, tracks: tracks.length };
+    return {
+      run: runPath,
+      sound: true,
+      sources,
+      summary: `every source checks; every Track resolved (${tracks.length}).`,
+      tracks: tracks.length,
+    };
   }
-  return { run: runPath, sound: false, problems };
+  return { run: runPath, sound: false, sources, problems };
 }
 
 export type ReconstructionCheckInput = {
@@ -838,7 +890,20 @@ export async function authoringCheck(
     if (text === undefined) continue;
     for (const recipe of text.matchAll(/([A-Za-z0-9_.-]+)\s*\{([^}]*)\}/gu)) recipeBodies.set(recipe[1] ?? "", recipe[2] ?? "");
   }
-  const plan = reviewPlan({ svml, svmlPath, scriptBody: scriptBody(svml), drawn, recipes: recipeBodies });
+  // Where each stretch's picture goes, named here rather than by whoever reads this.
+  //
+  // A round is three commands — this one, `render_element --batch`, `compare_reconstruction --batch` —
+  // and the middle one writes exactly what the last one reads. A path invented at the call site has to
+  // survive being written down twice and stay identical; a path named here survives by never being
+  // written down at all. `renders/` beside the Run is where a project already keeps them.
+  //
+  // Named for the range and not for `named`: the range is what identifies an entry, so two entries of
+  // one element always differ in it, while `named` is a sentence written to be read.
+  const plan = reviewPlan({ svml, svmlPath, scriptBody: scriptBody(svml), drawn, recipes: recipeBodies })
+    .map((entry) => ({
+      ...entry,
+      out: join(dirname(runPath), "renders", `${entry.element}-${entry.tokens[0]}-${entry.tokens[1]}.mp4`),
+    }));
   // The same parse the plan was built from, so a look recorded against a Segment can be resolved to
   // the words that Segment marks and compared with a plan entry on one axis.
   const plannedBody = scriptBody(svml);
@@ -866,6 +931,36 @@ export async function authoringCheck(
       reference = prepared[0]!;
     }
     assert(prepared.includes(reference), `reference ${reference} is not prepared under ${preparedRoot}`);
+  }
+
+  // The reference's shape against the Canvas's.
+  //
+  // The reference's own pixel dimensions size nothing on this route — a render is drawn at the
+  // Canvas's size — but their proportion has to agree. A Canvas of another shape puts two
+  // differently-proportioned pictures in front of the observer, and the differences it reports are
+  // the ones the Canvas made rather than the ones the element made. It is the precondition that
+  // fails quietly: every comparison in the round succeeds, and every one of them is about the wrong
+  // thing, which is why it is a refusal here rather than a note.
+  const aspect: { readonly canvas: string; readonly canvas_size: string; readonly reference_size: string }[] = [];
+  if (mode === "reconstruction" && reference !== undefined) {
+    const video = (await readJson<ReferenceState>(join(preparedRoot, reference, "state.json")))?.video;
+    if (video !== undefined && video.width > 0 && video.height > 0) {
+      const wanted = video.width / video.height;
+      for (const [id, box] of frameGeometry(svml).canvases) {
+        const width = box.right - box.left;
+        const height = box.bottom - box.top;
+        if (!(width > 0 && height > 0)) continue;
+        // One percent, so a Canvas that is the reference's shape at another size agrees: 1440x2560 and
+        // 1080x1920 are both 9:16, and a reference whose own dimensions are odd is within it. Nothing
+        // wider — 1080x1920 against 1080x1440 is the case this exists to catch.
+        if (Math.abs(width / height - wanted) <= wanted * 0.01) continue;
+        aspect.push({
+          canvas: id,
+          canvas_size: `${width}x${height}`,
+          reference_size: `${video.width}x${video.height}`,
+        });
+      }
+    }
   }
 
   type LoggedComparison = {
@@ -1052,14 +1147,42 @@ export async function authoringCheck(
     run: runPath,
     ...(reference === undefined ? {} : { reference_id: reference }),
     plan,
+    // The round as the two commands that run it already take it. `render_element --batch` reads
+    // `renders` out of the file it is given and `compare_reconstruction --batch` reads `comparisons`,
+    // so this command's own output is a batch file for both and the round is three commands with
+    // nothing written by hand in between. Both are the stretches still owed rather than the whole
+    // plan: what has already been looked at does not want rendering again.
+    ...(owed.length === 0 ? {} : {
+      renders: owed.map((entry) => ({ element: entry.element, tokens: entry.tokens, out: entry.out })),
+    }),
+    // Only where there is a reference to compare against. The description route's second command is
+    // `review_element`, whose entries carry an `intent_file` saying what the element was asked to be,
+    // and that is written rather than derived.
+    ...(owed.length === 0 || mode !== "reconstruction" ? {} : {
+      comparisons: owed.map((entry) => ({
+        run: runPath, tokens: entry.tokens, video_path: entry.out, element: entry.element,
+      })),
+    }),
     // Where this command actually read and resolved from. Said here, no document has to describe it
     // from the outside and go stale when it moves.
     roots: mode === "reconstruction"
       ? { reference: preparedRoot, packages: packageRoot }
       : { reviews: logPath, packages: packageRoot },
-    passed: owed.length === 0 && never.length === 0 && running.length === 0 && coverage.gaps.length === 0 && unresolved.length === 0,
+    passed: owed.length === 0 && never.length === 0 && running.length === 0 && coverage.gaps.length === 0
+      && unresolved.length === 0 && aspect.length === 0,
     summary,
     elements,
+    ...(aspect.length === 0 ? {} : {
+      canvas_aspect: {
+        entries: aspect,
+        note: "The reference and the Canvas are different shapes. Every comparison in a round puts the "
+          + "reference clip beside a render drawn at the Canvas's proportions, so the observer reads the "
+          + "difference between the two shapes and reports it as the element's — a caption that is the "
+          + "right size looks wrong, and a repair made against that reading moves it away from the "
+          + "reference. Change the Canvas to the reference's shape before comparing anything. The "
+          + "reference's own pixel dimensions are not the requirement; its proportion is.",
+      },
+    }),
     ...(owed.length === 0 ? {} : {
       owed: {
         entries: owed,
@@ -1069,9 +1192,9 @@ export async function authoringCheck(
           + "window long enough that an animation inside it behaves differently.",
         commands: owed.map((entry) => mode === "reconstruction"
           ? `hypit-reference-video-tools compare_reconstruction --reference-id ${reference} --run ${runPath} `
-            + `--tokens ${entry.tokens[0]}:${entry.tokens[1]} --video <rendered clip>.mp4 --element ${entry.element}`
+            + `--tokens ${entry.tokens[0]}:${entry.tokens[1]} --video ${entry.out} --element ${entry.element}`
           : `hypit-reference-video-tools review_element --run ${runPath} `
-            + `--tokens ${entry.tokens[0]}:${entry.tokens[1]} --video <rendered clip>.mp4 --element ${entry.element} `
+            + `--tokens ${entry.tokens[0]}:${entry.tokens[1]} --video ${entry.out} --element ${entry.element} `
             + `--intent-file <what ${entry.element} was asked to be>`),
       },
     }),
@@ -1088,13 +1211,16 @@ export async function authoringCheck(
             + "render the element as the Source configures it, mock the layers a Build has not made, "
             + "and have it read against what this element was asked to be — one review per Segment or "
             + "Selection it is drawn over.",
-        commands: never.map((element) => mode === "reconstruction"
-          ? `hypit-reference-video-tools compare_reconstruction --reference-id ${reference} --run ${runPath} `
-            + `--segment <each Segment ${element.id} is drawn over> `
-            + `--video <rendered clip>.mp4 --element ${element.id}`
-          : `hypit-reference-video-tools review_element --run ${runPath} `
-            + `--segment <each Segment ${element.id} is drawn over> `
-            + `--video <rendered clip>.mp4 --element ${element.id} --intent-file <what ${element.id} was asked to be>`),
+        // One command per stretch the plan gives this element, rather than one per element naming the
+        // Segments it is drawn over. The plan already decided which stretches this element earns and
+        // named a picture for each, so both of the things a reader used to fill in are here.
+        commands: never.flatMap((element) => plan.filter((entry) => entry.element === element.id)
+          .map((entry) => mode === "reconstruction"
+            ? `hypit-reference-video-tools compare_reconstruction --reference-id ${reference} --run ${runPath} `
+              + `--tokens ${entry.tokens[0]}:${entry.tokens[1]} --video ${entry.out} --element ${element.id}`
+            : `hypit-reference-video-tools review_element --run ${runPath} `
+              + `--tokens ${entry.tokens[0]}:${entry.tokens[1]} --video ${entry.out} --element ${element.id} `
+              + `--intent-file <what ${element.id} was asked to be>`)),
       },
     }),
     ...(awaiting.length === 0 ? {} : {
@@ -1159,9 +1285,10 @@ export async function authoringCheck(
           + "it carries, so each window runs for as long as the reference spends on it. What is left after "
           + "that is alignment against the speech the Build synthesizes, which is settled once that "
           + "speech exists.",
-        commands: untimed.map((element) =>
-          `hypit-reference-video-tools render_element ${runPath} --element ${element.id} `
-          + `--reference-id ${reference} --segment <the Segment the shot covers> --out <rendered clip>.mp4`),
+        commands: untimed.flatMap((element) => plan.filter((entry) => entry.element === element.id)
+          .map((entry) =>
+            `hypit-reference-video-tools render_element ${runPath} --element ${element.id} `
+            + `--reference-id ${reference} --tokens ${entry.tokens[0]}:${entry.tokens[1]} --out ${entry.out}`)),
       },
     }),
     uncovered: coverage.gaps,

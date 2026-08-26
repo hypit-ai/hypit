@@ -237,18 +237,11 @@ Repair in this order:
 5. implementation behavior;
 6. source usage.
 
-Use the installed checks:
-
-```bash
-hypit check path/to/main.svml
-hypit check path/to/recipes.svs
-hypit check path/to/build.svrun
-```
-
 A package that cannot be *wired* is not done. `hypit check` proves the Source is legal, and nothing
 more; it will not tell you that the track a package produces cannot be traced to a Film at all. Run
-the preview check and repair until it passes — a graph failure is not a difference to weigh, it is
-work that is not finished, and it is not bounded by the round's attempt ceiling:
+the preview check — it checks every Source the Run reaches, then proves the graph traces — and repair
+until it passes. A graph failure is not a difference to weigh, it is work that is not finished, and it
+is not bounded by the round's attempt ceiling:
 
 ```bash
 hypit-reference-video-tools preview_check path/to/build.svrun

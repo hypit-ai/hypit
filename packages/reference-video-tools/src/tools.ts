@@ -39,7 +39,7 @@ import {
   shotTile,
   writeJson,
 } from "./media.js";
-import { prepareTranscript } from "./transcript.js";
+import { prepareTranscript, whisperxHealth } from "./transcript.js";
 import type { Observation, ObservationTaskRequest, Observer, PrepareResult, ReferenceState, Shot, Transcript } from "./types.js";
 
 export type PrepareReferenceInput = {
@@ -61,8 +61,16 @@ export type ObserveReferenceInput = {
 };
 export type RecordObservationInput = {
   readonly reference_id: string;
-  readonly key: string;
-  readonly text: string;
+  readonly key?: string;
+  readonly text?: string;
+  /**
+   * A round of answers in one call.
+   *
+   * The `agent` observer answers everything by hand, and a reference of twenty shots owes an answer
+   * for each of three questions about it, plus the boundaries, plus the four about the reference
+   * itself. Handed out one call at a time that is seventy-odd invocations to close one sweep.
+   */
+  readonly answers?: readonly { readonly key: string; readonly text: string }[];
 };
 export type InspectVocabularyInput = {
   readonly package_names: readonly string[];
@@ -1136,6 +1144,13 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       }
       // WhisperX is local and slow and shares nothing with the observation requests, so it runs beside
       // them rather than ahead of them.
+      //
+      // The service is the one precondition this command can check itself. The route used to probe it
+      // by hand first; it reports rather than refuses — a machine without the service still prepares
+      // everything except the transcript, which stays recoverable — and points at the repair. A
+      // reference whose transcript is already complete and unchanged needs no probe.
+      const needsTranscript = !(state.transcript?.status === "complete" && !redoTranscript);
+      const whisperx = needsTranscript ? await whisperxHealth() : undefined;
       const transcribing = state.transcript?.status === "complete" && !redoTranscript
         ? Promise.resolve(state.transcript)
         : prepareTranscript(reference, videoPath, root, info.hasAudio, "en", redoTranscript);
@@ -1178,6 +1193,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         observer,
         ...(fetched === undefined ? {} : { source_url: fetched.url, downloaded: !fetched.cached }),
         pending_observations: pending,
+        ...(whisperx?.ok === false
+          ? { whisperx: `${whisperx.reason}. Read .agents/skills/hypit/references/host-setup.md for the failure branches.` }
+          : {}),
       };
     },
 
@@ -1737,8 +1755,30 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     // than through a return value. The four whole-reference observations live in the state and the
     // rest in the observation cache, which is where each one was already read from.
     async record_observation(input): Promise<Record<string, unknown>> {
+      if (input.answers !== undefined) {
+        const round = input.answers;
+        assert(round.length > 0, "answers is empty");
+        // Read once, before the round, so a reference that records its own answers refuses the call
+        // rather than every entry in it.
+        const reading = await loadState(input.reference_id);
+        assert(reading.observer === "agent", `reference ${input.reference_id} is read by the ${reading.observer ?? "gemini"} observer, which records its own answers`);
+        // One at a time. Every answer is a read-modify-write of one file, and `serially` below already
+        // holds them apart, so a round could run at once and be correct — it would only be a queue at
+        // a lock, for writes that take no time. Running them in the order they were written keeps the
+        // failures in that order too.
+        const { done, failures } = await runBatch(round, { concurrency: 1, gapMs: 0 }, async (one) =>
+          await tools.record_observation({ reference_id: input.reference_id, key: one.key, text: one.text }));
+        return {
+          recorded: done.length,
+          failed: failures.length,
+          records: done,
+          ...(failures.length === 0 ? {} : { failures }),
+        };
+      }
       const state = await loadState(input.reference_id);
       assert(state.observer === "agent", `reference ${input.reference_id} is read by the ${state.observer ?? "gemini"} observer, which records its own answers`);
+      assert(input.key !== undefined, "key is required");
+      assert(input.text !== undefined, "text is required");
       const key = input.key.trim();
       assert(key.length > 0, "key is required");
       const text = input.text.trim();

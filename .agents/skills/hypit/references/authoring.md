@@ -11,16 +11,16 @@ Never invent a
 component, attribute, child, port, Recipe property or literal value. Do not infer one package's
 syntax from a neighboring package.
 
-Install dependencies after package selections change. Validate with the existing commands:
+Install dependencies after package selections change. Validate with one command:
 
 ```bash
-hypit check path/to/main.svml
-hypit check path/to/recipes.svs
-hypit check path/to/build.svrun
+hypit-reference-video-tools preview_check path/to/project/build.svrun
 ```
 
-Check all of them, not only the Author Source: a Recipe the Author Source references and a Target the
-Run Source demands are just as able to be wrong. Do not create a check wrapper.
+It checks every Source the Run reaches before it proves the graph traces — the Run, the Author it
+names, and the Recipe sheets and kits the Author imports — then goes on to the wiring itself. One
+`hypit check` of the Run covers that same closure, but running it separately would only report the
+same failure twice.
 
 **A check that passes is not a graph that traces.** `hypit check` proves a Source is legal — its
 syntax, its references, its graph structure — and proves nothing about whether the tracks it declares
