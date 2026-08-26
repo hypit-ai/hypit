@@ -51,6 +51,26 @@ npx skills add hypit-ai/hypit -g
 
 ## 示例
 
+### UGC
+
+<table>
+  <tr>
+    <th width="16%">参考视频</th>
+    <td width="28%"></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/dbf07024-c561-48bf-89fb-a371d613253f" controls muted></video></td>
+    <td width="28%"></td>
+  </tr>
+  <tr>
+    <th width="16%">复刻视频</th>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/2022fca7-0a25-466a-956f-c6fcaae81d0c" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/12f42c08-c820-479d-9ac7-3636a0c77c0a" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
+  </tr>
+  <tr>
+    <td colspan="4"><p><b>“GOAT DEBATE”</b>——一条 20 秒的足球 Tier List：把 Ronaldo 放进 D 级、Messi 放进 S 级，由一位清楚知道你马上会有多生气的哥特女孩 AI 主持人负责解说。两段 Seedance 2 Mini 720p 嘲讽 A-roll、一张 2K GPT Image 2 哥特女孩肖像、十张 1K GPT Image 2 脑腐 B-roll、WhisperX 逐词对齐、音效同步排行榜、红色词盒卡拉 OK 字幕、抓耳的背景音乐，以及 30 fps HyperFrames 合成。</p><p>包含三个复刻版本：把解说员替换成香蕉猫；翻转排名，让 Ronaldo 成为 GOAT；或者把所有球员替换成科技企业家——同一套爆款结构，不同的爆款视频。</p><p>总成本：<b>$1.15</b>。</p></td>
+  </tr>
+</table>
+
 ### 街头采访
 
 <table>
@@ -88,26 +108,6 @@ npx skills add hypit-ai/hypit -g
   </tr>
   <tr>
     <td colspan="4">本地部署的 MiniMax H3；3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕、视觉特效在 headless chromium 中渲染。<b>总成本：$0.15。</b></td>
-  </tr>
-</table>
-
-### UGC
-
-<table>
-  <tr>
-    <th width="16%">参考视频</th>
-    <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/dbf07024-c561-48bf-89fb-a371d613253f" controls muted></video></td>
-    <td width="28%"></td>
-  </tr>
-  <tr>
-    <th width="16%">复刻视频</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/2022fca7-0a25-466a-956f-c6fcaae81d0c" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/12f42c08-c820-479d-9ac7-3636a0c77c0a" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
-  </tr>
-  <tr>
-    <td colspan="4"><p><b>“GOAT DEBATE”</b>——一条 20 秒的足球 Tier List：把 Ronaldo 放进 D 级、Messi 放进 S 级，由一位清楚知道你马上会有多生气的哥特女孩 AI 主持人负责解说。两段 Seedance 2 Mini 720p 嘲讽 A-roll、一张 2K GPT Image 2 哥特女孩肖像、十张 1K GPT Image 2 脑腐 B-roll、WhisperX 逐词对齐、音效同步排行榜、红色词盒卡拉 OK 字幕、抓耳的背景音乐，以及 30 fps HyperFrames 合成。</p><p>包含三个复刻版本：把解说员替换成香蕉猫；翻转排名，让 Ronaldo 成为 GOAT；或者把所有球员替换成科技企业家——同一套爆款结构，不同的爆款视频。</p><p>总成本：<b>$1.15</b>。</p></td>
   </tr>
 </table>
 
