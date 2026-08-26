@@ -39,9 +39,9 @@
 
 ## Hypit
 
-Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语言和系统。丢一条视频进来，Agent 把它克隆成一份完备的 workflow：画面、字幕、B-roll、特效，全部挂在词上，不钉在秒上。
+Hypit 为 AI Agent（Claude Code、Codex 等）提供了一套制作视频的语言和系统。给它一条视频，Agent 就能把它复刻成一份完整的 workflow：画面、字幕、B-roll、特效，全部锚定在词上，而不是秒上。
 
-**说明一点：** 复刻视频是最快的入口，但不是唯一的入口。你可以直接从我们的模板开始，也可以直接描述你想要的视频，让 Agent 从零写出一份 workflow。生成模型同样不是必需的：字幕、动效、代码渲染的画面，不调用任何模型也能编译成一条成片——一条视频的成本可以是 0 元。
+**需要说明的是：** 复刻视频是最快的入口，但不是唯一的入口。你可以从我们的模板开始，也可以描述你想要的视频，让 Agent 从零写出一份 workflow。生成模型同样不是必需的：字幕、动效和代码渲染的画面，不调用任何模型也能编译成一条成片，一条视频的成本可以正好是 $0。
 
 ## 只安装一次
 
@@ -67,7 +67,7 @@ npx skills add hypit-ai/hypit -g
     <td width="28%"><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4"><p><b>“GOAT DEBATE”</b>——一条 20 秒的足球 Tier List，把 Ronaldo 放进 D 级、Messi 放进 S 级。两段 Seedance 2 Mini 720p 嘲讽 A-roll，由 GPT Image 2 生成的一张 2K 哥特女孩肖像和十张 1K 脑腐 B-roll，WhisperX 逐词对齐、音效同步排行榜、红色词盒卡拉 OK 字幕、丝滑动画和抓耳的背景音乐，并由 64 个无头 Chromium 进程并发渲染。</p><p>包含三个复刻版本：把解说员替换成香蕉猫；翻转排名，让 Ronaldo 成为 GOAT；或者把所有球员替换成科技企业家——同一套爆款结构，不同的爆款视频。</p><p>总成本：<b>$1.15</b>。</p></td>
+    <td colspan="4"><p><b>“GOAT DEBATE”</b>——一条 20 秒的足球 Tier List，把 Ronaldo 排进 D 级，把 Messi 排进 S 级。A-roll 是两段 Seedance 2 Mini 生成的 720p 吐槽片段，B-roll 是 GPT Image 2 生成的一张 2K 哥特女孩肖像和十张 1K 脑腐图；WhisperX 负责逐词对齐，排行榜跟着音效逐条落位，再配上红色词盒卡拉 OK 字幕、丝滑的动画和抓耳的背景音乐，最后由 64 个无头 Chromium 进程并发渲染。</p><p>上面给出了三个复刻版本：把解说员换成香蕉猫；翻转排名，让 Ronaldo 成为 GOAT；把所有球员换成科技公司创始人。同一套爆款结构，可以产出完全不同的爆款视频。</p><p>总成本：<b>$1.15</b>。</p></td>
   </tr>
 </table>
 
@@ -87,7 +87,7 @@ npx skills add hypit-ai/hypit -g
     <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4">本地部署的 MiniMax H3；3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕、视觉特效在 headless chromium 中渲染。<b>总成本：$0.15。</b></td>
+    <td colspan="4">本地部署的 MiniMax H3，3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕和视觉特效由无头 Chromium 渲染。<b>总成本：$0.15。</b></td>
   </tr>
 </table>
 
@@ -107,26 +107,25 @@ npx skills add hypit-ai/hypit -g
     <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4">本地部署的 MiniMax H3；3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕、视觉特效在 headless chromium 中渲染。<b>总成本：$0.15。</b></td>
+    <td colspan="4">本地部署的 MiniMax H3，3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕和视觉特效由无头 Chromium 渲染。<b>总成本：$0.15。</b></td>
   </tr>
 </table>
 
 ## 使用 Hypit skill
 
-编程 Agent 可以直接使用 `/hypit` skill。在任何空目录或现有项目目录里开启会话，让 Agent
-为你创建视频：
+编程 Agent 可以直接使用 `/hypit` skill。在任意空目录或现有项目目录中开启会话，让 Agent 为你创建视频：
 
 ```text
-/hypit 把这条爆款视频复刻出来，展示预览，并带我批量生成多个变体。
+/hypit 复刻这条爆款视频，先给我看预览，再带我批量生成变体。
 ```
 
 也可以不提供参考视频，直接从描述开始：
 
 ```text
-/hypit 根据我的描述创建视频，优先使用模板和成本为 $0 的代码渲染画面。
+/hypit 根据我的描述创建视频，尽量使用模板和成本为 $0 的代码渲染画面。
 ```
 
-Agent 会检查环境，只索取视频实际需要的凭据，展示预览并执行构建。
+Agent 会检查环境，只索要这条视频需要的凭据，先给出预览，再执行构建。
 
 ## 许可证
 
