@@ -236,6 +236,8 @@ test("a derived entity follows its actual Style and Companion-owned Recipe prese
     module: string;
     surface: string;
     references: Readonly<Record<string, string>>;
+    resolvedReferences?: Readonly<Record<string, string>>;
+    outputs?: readonly string[];
   }): StudioPlacement => ({
     sourcePath: "main.svml",
     tag: input.surface,
@@ -243,13 +245,19 @@ test("a derived entity follows its actual Style and Companion-owned Recipe prese
     surface: input.surface,
     id: input.id,
     range: { start: 0, end: main.length },
-    records: [], values: [], outputs: [], outputPorts: [], children: [], attributes: {},
+    records: [], values: [], outputs: input.outputs ?? [], outputPorts: [], children: [], attributes: {},
     attributeValueRanges: {}, referenceAttributes: input.references, referenceTypes: {},
+    ...(input.resolvedReferences === undefined ? {} : { resolvedReferenceAttributes: input.resolvedReferences }),
     references: Object.values(input.references),
   });
   const track = placement({
     id: "captions", module: "@hypit/caption-fine", surface: "track",
     references: { program: "caption-program" },
+    resolvedReferences: { program: "main::record::caption-program" },
+  });
+  const program = placement({
+    id: "caption-program", module: "@hypit/caption", surface: "program",
+    references: {}, outputs: ["main::record::caption-program"],
   });
   const style = placement({
     id: "alternate-caption", module: "@hypit/caption-fine", surface: "style",
@@ -284,11 +292,11 @@ test("a derived entity follows its actual Style and Companion-owned Recipe prese
   const parameters = sourceBindingsForDraft({
     root: "/workspace",
     files: [
-      { path: "main.svml", text: main, language: "svml", imports: [{ alias: "recipes", source: "./recipes.svs" }] },
+      { path: "/workspace/main.svml", text: main, language: "svml", imports: [{ alias: "recipes", source: "./recipes.svs" }] },
       { path: "recipes.svs", text: sheet, language: "svs" },
     ],
     placement: track,
-    placements: [track, style],
+    placements: [track, program, style],
     draft,
     declarations: [{
       name: "program",

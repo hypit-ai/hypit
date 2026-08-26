@@ -147,7 +147,8 @@ function recipeParameters(input: {
   if (attribute !== undefined) {
     const local = authoredElements(input.placements).find((candidate) => input.referenceRef !== undefined
       ? candidate.records.includes(input.referenceRef) || candidate.outputs.includes(input.referenceRef)
-      : candidate.sourcePath === input.current.path && candidate.id === input.referencePath);
+      : sourceAbsolute(input.root, candidate.sourcePath) === sourceAbsolute(input.root, input.current.path)
+        && candidate.id === input.referencePath);
     if (local === undefined) return [];
     const referencePath = local.references[attribute];
     if (referencePath === undefined || referencePath === input.referencePath) return [];
@@ -266,6 +267,19 @@ function referencedParameters(input: {
   });
 }
 
+function parameterReference(
+  element: AuthorElement,
+  draft: StudioEntityDraft,
+  name: string,
+): { readonly path: string; readonly ref?: string } | undefined {
+  const projected = draft.parameterReferences?.[name];
+  if (projected !== undefined) return { path: projected };
+  const path = element.references[name];
+  if (path === undefined) return undefined;
+  const ref = element.resolvedReferences[name];
+  return ref === undefined ? { path } : { path, ref };
+}
+
 /**
  * Expose only attributes a package explicitly registered. The source range is
  * still discovered by the generic markup frontend, while the meaning and
@@ -317,9 +331,8 @@ export function sourceBindingsForDraft(input: {
     } satisfies StudioSourceBinding];
   });
   const recipes = input.declarations.flatMap((declaration) => {
-    const referencePath = input.draft.parameterReferences?.[declaration.name]
-      ?? element.references[declaration.name];
-    if (referencePath === undefined) return [];
+    const target = parameterReference(element, input.draft, declaration.name);
+    if (target === undefined) return [];
     const reference = declaration.referenced === undefined
       ? []
       : referencedParameters({
@@ -327,10 +340,8 @@ export function sourceBindingsForDraft(input: {
         files: input.files,
         draft: input.draft,
         referenceName: declaration.name,
-        referencePath,
-        ...(element.resolvedReferences[declaration.name] === undefined
-          ? {}
-          : { referenceRef: element.resolvedReferences[declaration.name] }),
+        referencePath: target.path,
+        ...(target.ref === undefined ? {} : { referenceRef: target.ref }),
         declarations: declaration.referenced,
         placements: input.placements ?? [],
       });
@@ -342,10 +353,8 @@ export function sourceBindingsForDraft(input: {
         current: file,
         draft: input.draft,
         referenceName: declaration.name,
-        referencePath,
-        ...(element.resolvedReferences[declaration.name] === undefined
-          ? {}
-          : { referenceRef: element.resolvedReferences[declaration.name] }),
+        referencePath: target.path,
+        ...(target.ref === undefined ? {} : { referenceRef: target.ref }),
         placements: input.placements ?? [],
         recipe: declaration.recipe,
         through: declaration.recipe.through ?? [],
