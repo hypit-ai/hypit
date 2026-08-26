@@ -5,8 +5,8 @@ secondary feed, or supporting image stays visible.
 
 ## Choose the source form
 
-- Use a normal rectangular `media-track:Item video={...}` for a live reaction, presenter feed, screen
-  recording, or secondary camera.
+- Use a normal rectangular `media-track:Item media={...}` for a live reaction, presenter feed, screen
+  recording, or secondary camera, normalizing the footage through `pipeline:Normalize` first.
 - Use `remove:Background` when a still portrait must become a transparent cutout. Place the resulting
   image with `image={cutout.image}` plus an explicit `space:Extent`.
 - Use `compose:Image` with ordered `compose:Layer` children when the PIP should be frozen into one
@@ -46,8 +46,8 @@ secondary feed, or supporting image stays visible.
 
 - A reaction PIP may remain visually alive through breathing, eye movement, and expression while
   silent. Do not imply that it speaks unless its real audio is explicitly authored.
-- For a video Item, add `audio="include"` only when that source should contribute sound; otherwise keep
-  it visual-only and put the intended audio on a separate Track.
+- Normalize a video Item's source with `audio="default"` only when it should contribute sound;
+  otherwise pass `audio="none"` and put the intended audio on a separate Track.
 - Only the active Script speaker moves their mouth in a dialogue format. A listener PIP reacts without
   invented words.
 - Preserve the same identity, wardrobe, crop, scale, and placement when a PIP persists across edits.

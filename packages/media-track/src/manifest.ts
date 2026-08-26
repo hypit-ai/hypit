@@ -391,16 +391,12 @@ export const mediaTrackMarkupSurfaces = [{
               summary: "Clips the Item to an authored Path." },
             { name: "image", kind: "reference", required: false, accepts: [artifactTypes.blob],
               summary: "Shows a durationless still image as the Item's direct source." },
-            { name: "video", kind: "reference", required: false, accepts: [artifactTypes.blob],
-              summary: "Shows a raw video the Track inspects, selects and normalizes against its `space`." },
             { name: "media", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
               summary: "Shows an explicitly prepared timed source." },
             { name: "surface", kind: "reference", required: false, accepts: [mediaTypes.compositableSurface],
               summary: "Shows an alpha-aware still or timed Surface." },
             { name: "extent", kind: "reference", required: false, accepts: [spatialTypes.extent],
               summary: "Gives the still image its authored pixel Extent. The `fit` scales this Extent into the Frame, so what it decides is the shape: its width-to-height ratio has to be the picture's, and the pixel numbers themselves only have to hold that ratio. A generated picture's own size is the generator's to choose and is not knowable when the Source is written, so write the ratio you asked that generator for." },
-            { name: "audio", kind: "literal", required: false, values: ["include", "omit"],
-              summary: "Decides whether a raw `video` source contributes its own audio; defaults to `omit`." },
             { name: "source-audio", kind: "literal", required: false,
               summary: "Names the layer whose source audio this Item emits." },
             { name: "audio-gain", kind: "literal", required: false,
@@ -437,15 +433,18 @@ export const mediaTrackMarkupSurfaces = [{
         { name: "audio", type: compositionTypes.audioTrack,
           summary: "The rendered sound, published only when a source audio selection or a Sound is authored." },
       ],
-      example: `<media-track:Track id="cutaways" semantic={speech.semantic} canvas={vertical}>
-  <media-track:Item id="bags" video={cutaway-bags.video} during={story.selection.bags}
+      example: `<pipeline:Normalize id="cutaway-bags" source={bags-take.video}
+  video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+
+<media-track:Track id="cutaways" semantic={speech.semantic} canvas={vertical}>
+  <media-track:Item id="bags" media={cutaway-bags.media} during={story.selection.bags}
     frame={full} appearance={recipes.media.cutaway} motion={recipes.motion.cut}/>
 </media-track:Track>`,
       notes: [
         "A Track requires at least one Item or Sequence and accepts no text content.",
         "An Item states exactly one window form: `during`, `at` with `for`, `until` with `for`, or `start` with `end`; `selection`, `segment` and `moment` bind a start/end window and cannot be written together.",
         "A point expression is `program.start`, `program.end`, `selection.start`, `selection.end`, `segment.start`, `segment.end` or `moment.cue`, each optionally offset by `+` or `-` and a duration, or a bare duration read as an absolute position.",
-        "A unit that names a direct source names exactly one of `image`, `video`, `media` or `surface`; `extent` is required with `image` and refused otherwise, and `audio` is only valid with `video`.",
+        "A unit that names a direct source names exactly one of `image`, `media` or `surface`; `extent` is required with `image` and refused otherwise.",
         "`audio-gain` is refused without selected source audio.",
         "`clip` is refused on an Item or Sequence whose Recipe already states a clip.",
         "An `appearance` or `motion` Recipe is refused when it carries a property outside its own set.",
@@ -463,11 +462,9 @@ export const mediaTrackMarkupSurfaces = [{
           "| `boundary` | literal (start, end) | with a Selection | Which edge of the activating Selection the Member starts on; refused for a Moment |",
           "| `appearance` | reference (@hypit/svs@1#Recipe) | no | This Member's own Recipe in place of the Sequence's |",
           "| `image` | reference (@hypit/artifact@1#Blob) | one source form | A durationless still image, which also requires `extent` |",
-          "| `video` | reference (@hypit/artifact@1#Blob) | one source form | A raw video the Track inspects, selects and normalizes against its `space` |",
           "| `media` | reference (@hypit/media@1#SynchronizedMedia) | one source form | An explicitly prepared timed source |",
           "| `surface` | reference (@hypit/media@1#CompositableSurfaceRef) | one source form | An alpha-aware still or timed Surface |",
           "| `extent` | reference (@hypit/spatial@1#IntrinsicExtent) | with `image` | The authored pixel extent of the still image |",
-          "| `audio` | literal (include, omit) | no | Whether a raw `video` source contributes its own audio; defaults to `omit` |",
           "| `source-audio` | literal | no | Names the layer whose source audio this Member emits |",
           "| `audio-gain` | literal | with selected source audio | Linear gain applied to the selected source audio; defaults to `1` |",
         ].join("\n"),
@@ -511,11 +508,9 @@ export const mediaTrackMarkupSurfaces = [{
           "|---|---|---|---|",
           "| `id` | identifier | no | Names this layer, which `source-audio` selects by; the Track derives one from the unit and the layer position otherwise |",
           "| `image` | reference (@hypit/artifact@1#Blob) | one source form | A durationless still image, which also requires `extent` |",
-          "| `video` | reference (@hypit/artifact@1#Blob) | one source form | A raw video the Track inspects, selects and normalizes against its `space` |",
           "| `media` | reference (@hypit/media@1#SynchronizedMedia) | one source form | An explicitly prepared timed source |",
           "| `surface` | reference (@hypit/media@1#CompositableSurfaceRef) | one source form | An alpha-aware still or timed Surface |",
           "| `extent` | reference (@hypit/spatial@1#IntrinsicExtent) | with `image` | The authored pixel extent of the still image |",
-          "| `audio` | literal (include, omit) | no | Whether a raw `video` source contributes its own audio; defaults to `omit` |",
           "| `appearance` | reference (@hypit/svs@1#Recipe) | no | This layer's own Recipe in place of the unit's |",
         ].join("\n"),
         "A Layer `appearance` Recipe carries the fit properties and the sample properties and nothing else, so a Layer states its own Recipe rather than inheriting the unit's, which requires `stack-order`.",
