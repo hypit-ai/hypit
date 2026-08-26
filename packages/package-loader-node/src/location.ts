@@ -84,7 +84,12 @@ function readPackage(root: string, expectedName: string): LocatedNodePackage | u
     throw new Error(`${path}.version must be a string`);
   }
   return {
-    root: realpathSync(root),
+    // `.native` because this is the physical path, and on Windows the JavaScript `realpathSync`
+    // resolves symlinks and junctions without expanding an 8.3 short name. A temporary directory
+    // under a service account arrives as `RUNNER~1\AppData\...`, so a root located here and the same
+    // root canonicalized through the asynchronous `realpath` — which does go through libuv — are two
+    // different strings for one directory, and every comparison between them fails.
+    root: realpathSync.native(root),
     manifest: {
       name: expectedName,
       ...(value.version === undefined ? {} : { version: value.version }),
