@@ -37,7 +37,7 @@ caption.primary {
   x: 0.5; y: 0.9; width: 0.84; height: 0.22;
   anchor-x: center; anchor-y: bottom;
   align: center; block-align: end; inline-size: fixed;
-  wrap: word; overflow: clip; max-lines: 2; max-words-per-line: 4;
+  wrap: word; max-lines: 2; max-words-per-line: 4;
   size: 58; line-height: 1; fill: #FFFFFF;
   background: #00000000; padding: 0; radius: 0;
   karaoke: current; active-fill: #FFD54A;

@@ -38,7 +38,7 @@ caption.primary {
   anchor-x: center; anchor-y: bottom;
   size: 58; line-height: 1;
   align: center; block-align: end; inline-size: fixed;
-  wrap: word; overflow: clip; max-lines: 2; max-words-per-line: 4;
+  wrap: word; max-lines: 2; max-words-per-line: 4;
   fill: #FFFFFF; stroke-color: #09090B; stroke-width: 2;
   background: #00000000; padding: 0; radius: 0;
   karaoke: trail; karaoke-transition: wipe; active-fill: #FFD54A;
@@ -69,7 +69,7 @@ Fine 不是一组互斥预设。基础/激活渐变、描边、阴影、长阴�
 
 包在 Surface 声明中把参数分成 **Where / How / When**，Studio 直接消费这份作者协议，无需再维护字幕专用参数全集。`lead-frames`、`tail-frames` 先产生显式可见 Schedule；`handoff: cut` 负责相邻 Cue 的交接，`overlap` 则保留双方包络。二者都不会修改 Karaoke 使用的原始词帧。
 
-`wrap: word` 优先在完整 Alignment Unit 之间换行；单个显示单元若比 Region 还宽，会继续在内部回退换行，不会逃出范围。只有显式同时写出 `max-lines` 与 `overflow: clip` 才允许裁掉超出的行；否则不会静默丢字。Cue 分界由 Script 的结构和 `||` 决定。
+`wrap: word` 优先在完整 Alignment Unit 之间换行；单个显示单元若比 Region 还宽，会继续在内部回退换行，不会逃出范围。`max-words-per-line` 直接构造真实行；声明 `max-lines` 后，超过行数预算的 Cue 会被拒绝，不会裁掉文字、描边、阴影或外发光。Cue 分界由 Script 的结构和 `||` 决定。
 
 Fine 是“统一文字流”字幕：同一 Cue 的每个 token 遵守同一 Recipe，只允许时间、顺序和播放状态驱动差异。若 Cue 内存在不同字体/布局角色、全屏反色、撕裂或前后语块之间的合成关系，就应新建另一个 Caption 包，而不是给 Fine 塞隐藏例外。
 

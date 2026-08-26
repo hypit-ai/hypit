@@ -49,7 +49,6 @@ const enums: Readonly<Record<string, readonly string[]>> = {
   "direction": ["ltr", "rtl"],
   "inline-size": ["hug", "fixed"],
   "wrap": ["word", "grapheme"],
-  "overflow": ["visible", "clip"],
   "kerning": ["auto", "normal", "none"],
   "caps": ["normal", "small-caps", "all-small-caps"],
   "text-transform": ["none", "uppercase", "lowercase", "capitalize"],
@@ -91,7 +90,7 @@ export const fineCaptionOptionalRecipeProperties = [
   "cue-enter-frames", "cue-exit", "cue-exit-frames", "direction", "glow-blur", "glow-color",
   "glow-opacity", "glow-spread", "gradient-angle", "gradient-from", "gradient-to", "height", "inline-size", "karaoke", "karaoke-transition", "kerning",
   "handoff", "lead-frames", "letter-spacing", "long-shadow-angle", "long-shadow-color", "long-shadow-distance", "long-shadow-opacity",
-  "loop", "loop-intensity", "loop-period-frames", "loop-target", "max-lines", "max-words-per-line", "opacity", "overflow", "shadow-blur", "shadow-color",
+  "loop", "loop-intensity", "loop-period-frames", "loop-target", "max-lines", "max-words-per-line", "opacity", "shadow-blur", "shadow-color",
   "shadow-opacity", "shadow-spread", "shadow-x", "shadow-y", "slide-distance", "stroke-color", "stroke-width", "text-transform",
   "tail-frames", "underline", "underline-color", "underline-offset", "underline-thickness", "word-gap", "wrap",
 ] as const;

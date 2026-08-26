@@ -102,7 +102,6 @@ export type FineCaptionParameters = {
     readonly direction: "ltr" | "rtl";
     readonly inlineSize: "hug" | "fixed";
     readonly wrap: "word" | "grapheme";
-    readonly overflow: "visible" | "clip";
     readonly maxLines?: number;
     readonly maxWordsPerLine?: number;
     readonly lineHeight: number;

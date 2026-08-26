@@ -63,7 +63,13 @@ function fixture() {
       stacking: { order: 20, tieBreak: "upper" },
       elements: [
         { id: "root", order: 0, kind: "box", style: [{ name: "position", value: "absolute" }] },
-        { id: "text", parent: "root", order: 1, kind: "text", text: "Hello <world>", fonts: [fixtureFont], style: [] },
+        { id: "text", parent: "root", order: 1, kind: "text", text: "Hello <world>", fonts: [fixtureFont], style: [],
+          paints: [
+            { kind: "stroke", placement: "outside", widthPx: 2,
+              paint: { kind: "solid", color: "#000000" } },
+            { kind: "fill", paint: { kind: "solid", color: "#ffffff" } },
+          ],
+        },
       ],
     }],
   });
@@ -102,6 +108,10 @@ test("HyperFrames flattens generic peer visual Track Presents without absorbing 
   assert.doesNotMatch(document.html, new RegExp(sound.digest, "u"));
   assert.doesNotMatch(document.html, /isolation:isolate|hypit-visual-track/u);
   assert.match(document.html, /Hello &lt;world&gt;/u);
+  assert.match(document.html, /display:inline-grid/u);
+  assert.doesNotMatch(document.html, /display:inline-grid;padding:/u);
+  assert.match(document.html, /-webkit-text-stroke:4px #000000/u);
+  assert.doesNotMatch(document.html, /<feMorphology/u);
   assert.doesNotMatch(document.html, /speech-visual-track|caption-track/u);
 });
 

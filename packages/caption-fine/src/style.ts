@@ -198,7 +198,6 @@ export function fineCaptionParameters(
       direction: choice(recipe, "direction", ["ltr", "rtl"] as const, "ltr"),
       inlineSize: choice(recipe, "inline-size", ["hug", "fixed"] as const, "hug"),
       wrap: choice(recipe, "wrap", ["word", "grapheme"] as const, "word"),
-      overflow: choice(recipe, "overflow", ["visible", "clip"] as const, "visible"),
       ...(Object.hasOwn(recipe.properties, "max-lines") ? { maxLines: integer(recipe, "max-lines") } : {}),
       ...(Object.hasOwn(recipe.properties, "max-words-per-line")
         ? { maxWordsPerLine: integer(recipe, "max-words-per-line") } : {}),
@@ -330,8 +329,8 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
     if (faces.has(identity)) throw new Error("Fine Caption exact Font stack contains a duplicate face");
     faces.add(identity);
   }
-  if (value.layout.maxLines !== undefined && value.layout.overflow !== "clip") {
-    throw new Error("Fine Caption max-lines requires overflow: clip");
+  if (value.layout.maxLines !== undefined && value.layout.maxWordsPerLine === undefined) {
+    throw new Error("Fine Caption max-lines requires max-words-per-line so its rows are structural");
   }
   assertColor(value.cueBox.background, "Fine Caption background");
   assertColor(value.cueBox.borderColor, "Fine Caption border color");

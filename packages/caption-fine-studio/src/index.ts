@@ -40,7 +40,7 @@ function placeCaption(names: readonly string[], domain: "where" | "how" | "when"
 
 placeCaption(["stack-order", "x", "y", "width", "height", "anchor-x", "anchor-y"], "where", "placement", "region");
 placeCaption([
-  "align", "block-align", "inline-size", "wrap", "overflow", "max-lines", "max-words-per-line", "direction",
+  "align", "block-align", "inline-size", "wrap", "max-lines", "max-words-per-line", "direction",
   "line-height", "letter-spacing", "word-gap",
 ], "where", "flow", "flow");
 placeCaption(["size", "kerning", "caps", "text-transform"], "how", "text", "typography");
