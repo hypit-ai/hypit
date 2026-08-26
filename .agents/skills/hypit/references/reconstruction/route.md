@@ -37,8 +37,8 @@ Reference observation is part of the work and is expected to cost what it costs.
 ## The video is the whole request
 
 The author gives one thing: a video, as a path to a file or as a link to one. A link — TikTok,
-YouTube, Instagram, Bilibili — is fetched by `prepare_reference` with `yt-dlp` before anything else
-runs, and every step after that reads the downloaded file without knowing it was ever a link. The
+YouTube, Instagram, Bilibili — is fetched by `prepare_reference` before anything else runs, with the
+`yt-dlp` pinned under `services/yt-dlp` and run through `uv`, and every step after that reads the downloaded file without knowing it was ever a link. The
 download is cached by the link, so a route restarted after an interruption reaches the same bytes and
 therefore the same reference rather than paying for its observations twice. The working directory, the project name, which
 packages to use and where the result goes are yours to decide. Ask the author about the video and
