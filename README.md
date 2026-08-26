@@ -51,6 +51,26 @@ npx skills add hypit-ai/hypit -g
 
 ## Examples
 
+### UGC
+
+<table>
+  <tr>
+    <th width="16%">Reference</th>
+    <td width="28%"></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/dbf07024-c561-48bf-89fb-a371d613253f" controls muted></video></td>
+    <td width="28%"></td>
+  </tr>
+  <tr>
+    <th width="16%">Clones</th>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/2022fca7-0a25-466a-956f-c6fcaae81d0c" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/12f42c08-c820-479d-9ac7-3636a0c77c0a" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
+  </tr>
+  <tr>
+    <td colspan="4"><p><b>"GOAT DEBATE"</b> — a 20-second football tier list that puts Ronaldo in D and Messi in S, narrated by an goth girl AI host who knows exactly how mad you're about to be. Two Seedance 2 Mini 720p trolling A-rolls, one 2K GPT Image 2 goth girl portrait, ten 1K GPT Image 2 brain-rot B-rolls, WhisperX word alignment, a sound-synced ranking board, red-box karaoke captions, catchy background music, and 30 fps HyperFrames composition.</p><p>Three clones included: swap the narrator to banana cat, flip the rankings and Ronaldo becomes GOAT, or replace all players with tech founders — same viral structure, different viral video.</p><p>Total cost: <b>$1.15</b>.</p></td>
+  </tr>
+</table>
+
 ### Street interview
 
 <table>
@@ -88,26 +108,6 @@ npx skills add hypit-ai/hypit -g
   </tr>
   <tr>
     <td colspan="4">Local-hosted MiniMax H3; 3 GPT Image 2 generations; Ranking board, TikTok-style captions, visual effects rendered in headless chromium. <b>Total cost: $0.15.</b></td>
-  </tr>
-</table>
-
-### UGC
-
-<table>
-  <tr>
-    <th width="16%">Reference</th>
-    <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/dbf07024-c561-48bf-89fb-a371d613253f" controls muted></video></td>
-    <td width="28%"></td>
-  </tr>
-  <tr>
-    <th width="16%">Clones</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/2022fca7-0a25-466a-956f-c6fcaae81d0c" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/12f42c08-c820-479d-9ac7-3636a0c77c0a" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
-  </tr>
-  <tr>
-    <td colspan="4"><p><b>"GOAT DEBATE"</b> — a 20-second football tier list that puts Ronaldo in D and Messi in S, narrated by an goth girl AI host who knows exactly how mad you're about to be. Two Seedance 2 Mini 720p trolling A-rolls, one 2K GPT Image 2 goth girl portrait, ten 1K GPT Image 2 brain-rot B-rolls, WhisperX word alignment, a sound-synced ranking board, red-box karaoke captions, catchy background music, and 30 fps HyperFrames composition.</p><p>Three clones included: swap the narrator to banana cat, flip the rankings and Ronaldo becomes GOAT, or replace all players with tech founders — same viral structure, different viral video.</p><p>Total cost: <b>$1.15</b>.</p></td>
   </tr>
 </table>
 
