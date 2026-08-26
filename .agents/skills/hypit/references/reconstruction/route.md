@@ -235,12 +235,11 @@ deliverable even though this route runs nothing: without it the first thing the 
 
 Do not author one source fragment per shot.
 
-### 16. Check every source
+### 16. Check every source, then prove the graph traces
 
-`../authoring.md` holds the check set — every command, not only the Author Source — and why no wrapper
-is written for it.
-
-### 17. Prove the graph traces
+One command does both: it checks every Source the Run reaches — the Run, the Author it names, the
+Recipe sheets and kits the Author imports — and then proves the graph traces. A Source that does not
+check is refused before tracing, with the file and position.
 
 ```bash
 hypit-reference-video-tools preview_check /path/to/project/build.svrun
@@ -248,7 +247,7 @@ hypit-reference-video-tools preview_check /path/to/project/build.svrun
 
 **Read now:** `../preview.md`, which says which refusal is the pass. A Source that declares its
 generations rather than performing them is the state every reconstruction is in when its sources are
-first written. Neither this gate nor step 16 is bounded by the round's attempt ceilings.
+first written. This gate is not bounded by the round's attempt ceilings.
 
 ---
 
@@ -262,16 +261,28 @@ element — that is the first moment the round has something to render.
 ### 19. Ask the check what to render, then render it
 
 `reconstruction_check` returns a `plan`: each entry an element and a word range, with the reason it
-earned a look. That is the round — it is not yours to work out from the Source.
+earned a look, and a picture path it will be rendered to. That is the round — it is not yours to work
+out from the Source.
 
-`../preview.md` holds `render_element`; `comparison-round.md` says to pass `--reference-id` every time
-so the stand-in runs on the reference's clock. The program is drawn once and every entry is cut out of
-those frames, so render the whole list in one `--batch` call.
+Its output is already a `render_element --batch` file: `renders` is in it. So:
 
-### 20. Send every comparison for the element at once
+```bash
+hypit-reference-video-tools reconstruction_check projects/<name>/build.svrun --reference-id <id> > round.json
+hypit-reference-video-tools render_element projects/<name>/build.svrun --batch round.json --reference-id <id>
+```
 
-`comparison-round.md` holds `compare_reconstruction` and its batch form. **Pass `--element <id>` every
-time**, or step 22 credits the comparison to nothing.
+`comparison-round.md` says to pass `--reference-id` every time so the stand-in runs on the
+reference's clock. The program is drawn once and every entry is cut out of those frames, so render
+the whole list in one `--batch` call.
+
+### 20. Send every comparison at once
+
+The same file is a `compare_reconstruction --batch` file too — `comparisons` is in it, and each entry
+carries `--element` already, so step 22 can credit it. Nothing is written between the two commands.
+
+```bash
+hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch round.json
+```
 
 ### 21. Repair against the differences that round returned
 
