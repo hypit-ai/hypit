@@ -33,6 +33,12 @@ export type LoadedPackage = {
   readonly contribution: NodePackageContribution;
 };
 
+/** Runtime Component implementations grouped by their physical package owner. */
+export type LoadedComponentPackage = {
+  readonly specifier: string;
+  readonly components: readonly ComponentPackage[];
+};
+
 export type NodePackageSelectionRequest = {
   /** Physical packages selected by Source discovery or a Runtime Profile. */
   readonly selected: readonly string[];

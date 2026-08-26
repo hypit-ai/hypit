@@ -1,5 +1,6 @@
 import type { Awaitable, ComponentPackage } from "@hypit/component-kit";
 import type { EndpointPackage } from "@hypit/endpoint-kit";
+import type { LoadedComponentPackage } from "@hypit/package-loader-node";
 import type {
   ArtifactStore,
   BuildCatalog,
@@ -26,8 +27,8 @@ export type CreateLocalRuntimeOptions = {
   readonly artifactStore: ArtifactStore;
   readonly credentialStore: CredentialStore;
   readonly components?: readonly ComponentPackage[];
-  /** Load the component packages named by a claimed Build. */
-  readonly loadComponentPackages?: (specifiers: readonly string[]) => Awaitable<readonly ComponentPackage[]>;
+  /** Load the complete physical package closure named by a claimed Build. */
+  readonly loadComponentPackages?: (specifiers: readonly string[]) => Awaitable<readonly LoadedComponentPackage[]>;
   readonly endpoints?: readonly EndpointPackage[];
   readonly close?: () => Awaitable<void>;
 };
