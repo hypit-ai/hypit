@@ -546,15 +546,20 @@ export async function spokenRange(
 
   const spans = wordSpans(parsed.tokens.length, pairs, reference);
 
-  // Where the range closes. A render gives each word the screen until the next one starts, so the
-  // pause the reference leaves between two words belongs to the word before it and a Take covers its
-  // Segment without holes — `standInTakes` says why. A Selection closing part-way through a Segment
-  // is therefore drawn up to the next word's start, and cutting the reference at the last word's end
-  // instead leaves the reference short of the render by that pause. The Segment's own last word has
-  // no next word inside it and closes on its own end, which is the length the take was given.
+  // Where the range closes, which has to be the second the render holds the last word until. A word
+  // keeps the screen until the next one starts, so the pause the reference leaves between two words
+  // belongs to the word before it — `standInTakes` says why, and sizes the takes so this holds
+  // across a Segment boundary as well as inside one. Cutting the reference at the last word's own
+  // end instead would leave it short of the render by that pause.
+  //
+  // The Script's last word has no next word to hold until, and closes on its own end. So does a word
+  // whose next Segment the transcript carries none of: that Segment runs at the estimator's length,
+  // the take before it was not sized to reach it, and the render closes where the words stop.
+  const opener = parsed.segments.find((item) => end >= item.tokenStart && end < item.tokenEndExclusive);
   const holder = parsed.segments.find((item) => end - 1 >= item.tokenStart && end - 1 < item.tokenEndExclusive);
-  const closesMidSegment = holder !== undefined && end < holder.tokenEndExclusive;
-  const endSeconds = closesMidSegment ? spans[end]!.start : spans[end - 1]!.end;
+  const holdsOn = end < parsed.tokens.length
+    && (opener === holder || (opener !== undefined && referenceTimed(opener, pairs)));
+  const endSeconds = holdsOn ? spans[end]!.start : spans[end - 1]!.end;
 
   const word = (index: number, until = spans[index]!.end): ReferenceWord => ({
     text: parsed.tokens[index]!.text,
@@ -613,20 +618,13 @@ export async function standInTakes(
       return pairs.size === 0 ? undefined : { pairs, spans: wordSpans(timed.tokens.length, pairs, reference) };
     })();
 
-  const takes: StandInTake[] = [];
-  const timing: StandInTiming[] = [];
-  // Global frame span of every word, in Script order, so a Selection can be turned into a frame
-  // range without going near a clock. This is the correspondence the route uses everywhere else:
-  // a stretch of the reference is found by its words, and its words are where the Script says.
-  const frameOfToken: { readonly frame: number; readonly end: number }[] = [];
-  let frameCursor = 0;
-  for (const segment of parsed.segments) {
-    const tokens = parsed.tokens.slice(segment.tokenStart, segment.tokenEndExclusive);
-    const text = tokens.map((token) => token.text).join(" ");
-
-    // A Segment is timed from the reference when the reference was heard saying some of its words.
-    // The decision is made per Segment: an ordinary transcription difference costs one Segment its
-    // reference clock and leaves the rest of the Script on it.
+  // A Segment is timed from the reference when the reference was heard saying some of its words.
+  // The decision is made per Segment: an ordinary transcription difference costs one Segment its
+  // reference clock and leaves the rest of the Script on it.
+  //
+  // Worked out for every Segment before any of them is sized, because a Segment runs until the next
+  // one opens and a single pass does not have the next one yet.
+  const heard = parsed.segments.map((segment) => {
     const whole = timed.segments.find((item) => item.id === segment.id);
     let matched = 0;
     if (words !== undefined && whole !== undefined) {
@@ -635,6 +633,20 @@ export async function standInTakes(
     const spoken = words === undefined || whole === undefined || matched === 0
       ? undefined
       : words.spans.slice(whole.tokenStart, whole.tokenEndExclusive);
+    return { matched, spoken };
+  });
+
+  const takes: StandInTake[] = [];
+  const timing: StandInTiming[] = [];
+  // Global frame span of every word, in Script order, so a Selection can be turned into a frame
+  // range without going near a clock. This is the correspondence the route uses everywhere else:
+  // a stretch of the reference is found by its words, and its words are where the Script says.
+  const frameOfToken: { readonly frame: number; readonly end: number }[] = [];
+  let frameCursor = 0;
+  for (const [order, segment] of parsed.segments.entries()) {
+    const tokens = parsed.tokens.slice(segment.tokenStart, segment.tokenEndExclusive);
+    const text = tokens.map((token) => token.text).join(" ");
+    const { spoken, matched } = heard[order]!;
 
     // How long the Segment runs. The reference's own words when it was heard saying them, the
     // estimator the Source already trusts when it was not.
@@ -642,7 +654,17 @@ export async function standInTakes(
     let basis: StandInTiming["basis"];
     let weights: readonly number[] | undefined;
     if (spoken !== undefined) {
-      seconds = Math.max(0, spoken.at(-1)!.end - spoken[0]!.start);
+      // Until the next Segment opens, not until this one's last word stops. The reference pauses
+      // between sentences, and a SemanticTrack puts each take at the sum of the lengths before it —
+      // so unless the pause is inside the take before it, there is nowhere for it to be, and every
+      // word after the first Segment is drawn earlier than the reference said it. On this reference
+      // that reached a full second by the last Segment, which is several words.
+      //
+      // The next Segment has to be on the reference's clock too. One the transcript carries none of
+      // runs at the estimator's length and sits nowhere on that clock, so there is no opening to
+      // reach for.
+      const opens = heard[order + 1]?.spoken?.[0]?.start;
+      seconds = Math.max(0, (opens ?? spoken.at(-1)!.end) - spoken[0]!.start);
       basis = "reference";
     } else {
       const policy = policies.get(segment.id) ?? shared;
@@ -729,6 +751,23 @@ export async function standInTakes(
     if (first.frame < last.end) selections.set(selection.id, { startFrame: first.frame, endFrameExclusive: last.end });
   }
   return { takes, selections, frameCount: frameCursor, timing, frameOfToken };
+}
+
+/**
+ * Whether the reference was heard saying any of a Segment's words.
+ *
+ * Both sides of a comparison ask this and have to get the same answer: it decides whether the take
+ * before a Segment boundary was sized to reach the next Segment, and so whether the reference is cut
+ * up to that Segment's first word or up to the last word's own end.
+ */
+function referenceTimed(
+  segment: { readonly tokenStart: number; readonly tokenEndExclusive: number },
+  pairs: ReadonlyMap<number, number>,
+): boolean {
+  for (let index = segment.tokenStart; index < segment.tokenEndExclusive; index += 1) {
+    if (pairs.has(index)) return true;
+  }
+  return false;
 }
 
 function blobRef(bytes: Uint8Array, mediaType: string): BlobRef {
