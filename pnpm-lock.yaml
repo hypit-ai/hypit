@@ -2183,6 +2183,9 @@ importers:
       '@hypit/whisperx':
         specifier: workspace:*
         version: link:../whisperx
+      '@hypit/yt-dlp':
+        specifier: workspace:*
+        version: link:../yt-dlp
       tsx:
         specifier: 4.21.0
         version: 4.21.0
@@ -3108,6 +3111,8 @@ importers:
       '@hypit/workspace':
         specifier: workspace:*
         version: link:../workspace
+
+  packages/yt-dlp: {}
 
   services/image-opencv: {}
 

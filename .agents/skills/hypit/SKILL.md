@@ -42,8 +42,10 @@ the boundary and launcher selection. Read it before the first command of any rou
 - Reference-video reconstruction, reverse engineering, shot/B-roll/overlay analysis, or recreating
   a video as Hypit source → read `references/reconstruction/route.md`. This is the route whatever
   the author calls it — reconstruct, reverse-engineer, recreate, replicate, clone, remake, copy,
-  rebuild, or the same idea in any language — and **a path to a video file, with or without words
-  around it, is this route** even when no verb is given at all. A video path with a change attached —
+  rebuild, or the same idea in any language — and **a video, with or without words around it, is
+  this route** even when no verb is given at all. A path to a file and a link to one — TikTok,
+  YouTube, Instagram, Bilibili — are the same request; a link is fetched with `yt-dlp` and everything
+  after that reads the file. A video with a change attached —
   this one but with our presenter, our product, our brand — is this route too, and the change is made
   on the finished reconstruction. The path is the whole request: the working directory, the project
   location and the vocabulary are yours to decide rather than to ask for.
@@ -51,7 +53,7 @@ the boundary and launcher selection. Read it before the first command of any rou
   read `references/original-authoring/route.md`. This is the route whatever shape the request takes —
   "make me a 45-second ranking video", "a talking-head explainer about X", an ad for a product, a
   written script to produce, a topic and a duration, a format named on its own, or the same idea in
-  any language — and **a description with no video path attached is this route** even when no verb is
+  any language — and **a description with no video attached is this route** even when no verb is
   given at all. What it is for, who is in it and what it says are the author's; the working
   directory, the project location, the packages and the generators are yours to decide rather than to
   ask for.

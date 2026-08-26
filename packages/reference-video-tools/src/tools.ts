@@ -21,6 +21,7 @@ import { videoCliDistribution } from "@hypit/video-cli";
 import { authorSource, invokedFrom, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath } from "./authoring.js";
 import type { RenderElementInput, RenderPreviewsInput, SpokenRange, StandInFocus, StandInSidecar } from "./authoring.js";
 import { writePlaceholder } from "./placeholder.js";
+import { downloadReferenceVideo, isReferenceUrl } from "@hypit/yt-dlp";
 import { authoringCheck, previewCheck, reviewLogPath } from "./checks.js";
 import type { AuthoringCheckInput, PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
 import {
@@ -1074,7 +1075,12 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
 
     async prepare_reference(input): Promise<PrepareResult> {
       assert(input.redo === undefined || input.redo === "media" || input.redo === "transcript" || input.redo === "people" || input.redo === "voices" || input.redo === "systems" || input.redo === "places" || input.redo === "all", "redo must be one of: media, transcript, people, voices, systems, places, all");
-      const videoPath = resolve(input.video_path);
+      // A reference given as a link becomes a file before anything else runs, and everything after
+      // this reads the file without learning where it came from.
+      const fetched = isReferenceUrl(input.video_path)
+        ? await downloadReferenceVideo(input.video_path.trim(), join(referenceRoot(), "downloads"))
+        : undefined;
+      const videoPath = fetched?.path ?? resolve(input.video_path);
       const file = await stat(videoPath).catch(() => undefined);
       assert(file?.isFile(), `video_path is not a file: ${videoPath}`);
       const reference = await referenceId(videoPath);
@@ -1170,6 +1176,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         persistent_systems: systems,
         places,
         observer,
+        ...(fetched === undefined ? {} : { source_url: fetched.url, downloaded: !fetched.cached }),
         pending_observations: pending,
       };
     },
