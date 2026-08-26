@@ -32,7 +32,7 @@ import { loadStudioRun } from "@hypit/studio/src/run.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 import type { SvsRecipe } from "@hypit/svs";
 
-import { assert, round } from "./media.js";
+import { assert, ensureDir, round } from "./media.js";
 import type { TranscriptFile } from "./types.js";
 
 /** A frame range of the stand-in program, half-open in the Script's own order. */
@@ -305,7 +305,6 @@ const SILENT_AUDIO: BlobRef = { kind: "blob", digest: `sha256:${"0".repeat(64)}`
  *
  * @param svmlPath  the Author SVML this Source is written in
  * @param frameRate the Program's frame rate, as a whole number of frames per second
- * @param focus     which Segment the render is looking at
  * @param reference the reference's per-word times, from `referenceWords`
  * @returns one `{ segmentId, take }` per Segment in Script order, and what timed each of them
  */
@@ -581,7 +580,6 @@ export async function spokenRange(
 export async function standInTakes(
   svmlPath: string,
   frameRate: number,
-  focus: StandInFocus = {},
   reference: readonly ReferenceWord[] = [],
   timingSource: string = svmlPath,
 ): Promise<StandInTakes> {
@@ -794,20 +792,21 @@ function silentWav(sampleFrames: number): Buffer {
 }
 
 /**
- * One browser render per Run and clock, within this process.
+ * Do `work` once per key within this process, and let every later caller await that one run.
  *
- * A round asks for several windows of one program, and each of them would otherwise draw the whole
- * program again to throw most of it away. Keyed by the same hash the working directory is, so two
- * entries that share a directory share the render that fills it. Between processes this holds
- * nothing, which is correct: a new process is the one case where the Source may have changed.
+ * A round asks for several windows of one program. Each entry is a whole call, so each would draw
+ * the program again to throw most of it away, and each would write the mocks and the derived Run
+ * again over the ones already there. Keyed by the same hash the working directory is, so entries
+ * that share a directory share the one run that fills it. Between processes this holds nothing,
+ * which is correct: a new process is the one case where the Source may have changed.
  */
-const programRenders = new Map<string, Promise<void>>();
-async function drawProgramOnce(key: string, draw: () => Promise<void>): Promise<void> {
-  const running = programRenders.get(key);
+const runningOnce = new Map<string, Promise<void>>();
+async function once(key: string, work: () => Promise<void>): Promise<void> {
+  const running = runningOnce.get(key);
   if (running !== undefined) return await running;
-  const started = draw();
-  programRenders.set(key, started);
-  try { await started; } catch (error) { programRenders.delete(key); throw error; }
+  const started = work();
+  runningOnce.set(key, started);
+  try { await started; } catch (error) { runningOnce.delete(key); throw error; }
 }
 
 /**
@@ -967,6 +966,12 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   // resolving against the tree instead would miss every package the project installed for itself.
   const packageRoot = nearestPackageRoot(projectRoot) ?? repositoryRoot();
   const outPath = resolve(cwd, out);
+  // The directory the caller named, made rather than required. `out` is resolved against the working
+  // directory the way `run` is, so a round whose entries name `renders/<element>.mp4` writes them
+  // beside wherever it was launched from — and if nothing has created that directory, ffmpeg is the
+  // one that reports it, as `Error opening output …: No such file or directory` against a path the
+  // caller never typed.
+  await ensureDir(dirname(outPath));
 
   const runSource = await readFile(runPath, "utf8").catch(() => undefined);
   assert(runSource !== undefined, `cannot read ${runPath}`);
@@ -1003,16 +1008,14 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const alreadySatisfied = new Set([...runSource.matchAll(/<satisfy\s+output="([^"]+)"/gu)].map((match) => match[1] ?? ""));
   const carried = [...runSource.matchAll(/^[ \t]*<(?:file|value|satisfy)\b[^>]*\/>[ \t]*$/gmu)].map((match) => (match[0] ?? "").trim());
 
-  // The window is resolved before the stand-ins are built, so the program is only as long as the
-  // stretch being looked at. Rendering the whole program to crop six seconds out of it is the
-  // difference between a few seconds and a few minutes.
+  // The window the picture is cut to. It is read here rather than where it is applied so a range that
+  // is not two whole numbers is refused before a minute of rendering: a `--batch` entry is JSON a
+  // caller wrote by hand, `compare_reconstruction` and `review_element` both put theirs through
+  // `tokenWindow`, and a range this end accepted and those two reject is a window the round cannot
+  // finish.
   const segmentArgument = input.segment;
   const selectionArgument = input.selection;
-  const tokensArgument = input.tokens;
-  const focus = {
-    ...(segmentArgument === undefined ? {} : { segment: segmentArgument }),
-    ...(selectionArgument === undefined ? {} : { selection: selectionArgument }),
-  };
+  const tokensArgument = input.tokens === undefined ? undefined : tokenWindow(input.tokens, "tokens");
 
   // The derived Run is written here, and so is the cut, so the directory comes first.
   // One directory per render, named for what this render is. Every call used to write one shared
@@ -1041,7 +1044,7 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const reference = input.reference_id?.trim();
   const spoken = reference === undefined || reference.length === 0 ? [] : await referenceWords(reference);
 
-  const { takes, selections, frameCount: programFrames, timing, frameOfToken } = await standInTakes(sourcePath, frameRate, focus, spoken, svmlPath);
+  const { takes, selections, frameCount: programFrames, timing, frameOfToken } = await standInTakes(sourcePath, frameRate, spoken, svmlPath);
   const framesBySegment = new Map(takes.map((item) => [item.segmentId, item.take.segment.endFrameExclusive]));
   // A Selection's window in frames, summed over the stand-in tokens it covers. This is the same word
   // span the Source binds to, carried into frames by the same clock that sized the Segment.
@@ -1096,100 +1099,108 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   };
 
   // A derived Run lives beside the project so the original's relative sources still resolve, and under
-  // `.hypit/` so it is never mistaken for something the author wrote. It is rewritten every run.
-  const declarations: string[] = [];
-  const satisfactions: string[] = [];
-  for (const { segmentId, take } of takes) {
-    const output = takeOutputs.get(segmentId);
-    if (output === undefined) continue;
-    // The take's own audio has to be servable, not a digest stub: Studio resolves every Artifact a
-    // projection references, and a preview that cannot serve one stops there.
-    const sampleFrames = Math.round(take.segment.endFrameExclusive / frameRate * 48_000);
-    const silence = silentWav(sampleFrames);
-    await writeFile(join(compareRoot, `${segmentId}-take.wav`), silence);
-    const spoken = { ...take, media: { ...take.media, audio: { artifact: blobRef(silence, "audio/wav"), sampleFrames } } };
-    const fixture = join(compareRoot, `${segmentId}.json`);
-    await writeFile(fixture, `${JSON.stringify({ kind: "inline", value: spoken }, null, 2)}\n`, "utf8");
-    declarations.push(`  <file id="stand-in-${segmentId}-audio" type="@hypit/artifact@1#BlobArtifact" from="./${segmentId}-take.wav" media-type="audio/wav"/>`);
-    declarations.push(`  <value id="stand-in-${segmentId}" type="@hypit/speech@1#SemanticTake" from="./${segmentId}.json"/>`);
-    satisfactions.push(`  <satisfy output="${output}.take" candidate="stand-in-${segmentId}"/>`);
-  }
-  // The layers a Build has not made, as placeholders of the Canvas's own size. `make_placeholder` is
-  // the route's one tool for this: deterministic, Provider-free, and the same mock the comparison is
-  // told to bypass. A mock never enters the project's own Source — it is declared in the derived Run
-  // and nowhere else.
-  // Every picture mock at once. Each one is a solid fill, so they do not contend for anything but
-  // ffmpeg, and drawn one after another they cost more than every frame they stand in for.
-  const mocks = [...mockedMedia()];
-  await Promise.all(mocks
-    .filter(([, { picture }]) => picture)
-    .map(async ([id, { frames }]) => await writePlaceholder({
-      out: join(compareRoot, `${id}.mp4`), ...mockExtent(svml, id, canvas),
-      video: true, seconds: Math.max(1, Math.ceil(frames / frameRate)), color: "mid",
-    })));
-  for (const [id, { frames, picture }] of mocks) {
-    const file = join(compareRoot, `${id}.mp4`);
-    // Every SynchronizedMedia carries audio, and it is validated as WAV, so the silence is written as
-    // one rather than pointed at the video. Both are declared: the picture is what gets drawn, the
-    // silence is what makes the value legal.
-    const wavPath = join(compareRoot, `${id}.wav`);
-    const wav = silentWav(Math.round(frames / frameRate * 48_000));
-    await writeFile(wavPath, wav);
-    const audioBlob = blobRef(wav, "audio/wav");
-    declarations.push(`  <file id="mock-${id}-audio" type="@hypit/artifact@1#BlobArtifact" from="./${id}.wav" media-type="audio/wav"/>`);
-    let visual: SynchronizedMedia["visual"];
-    if (picture) {
-      const bytes = await readFile(file);
-      visual = { artifact: blobRef(bytes, "video/mp4"), ...mockExtent(svml, id, canvas) };
-      declarations.push(`  <file id="mock-${id}" type="@hypit/artifact@1#BlobArtifact" from="./${id}.mp4" media-type="video/mp4"/>`);
-    }
-    const media: SynchronizedMedia = {
-      timeline: { frameRate: { numerator: frameRate, denominator: 1 }, frameCount: frames },
-      audio: { artifact: audioBlob },
-      ...(visual === undefined ? {} : { visual }),
-    };
-    await writeFile(join(compareRoot, `${id}.media.json`), `${JSON.stringify({ kind: "inline", value: media }, null, 2)}\n`, "utf8");
-    declarations.push(`  <value id="media-${id}" type="@hypit/media@1#SynchronizedMedia" from="./${id}.media.json"/>`);
-    satisfactions.push(`  <satisfy output="${id}.media" candidate="media-${id}"/>`);
-  }
-
-  // Still images the Source declares as generations. Same treatment, same tool, at the Canvas's size:
-  // a picture slot that is empty in the render is black, and black is not what will be there.
+  // `.hypit/` so it is never mistaken for something the author wrote.
+  //
+  // Written once for the whole round rather than once per entry. Every entry of a `--batch` is its own
+  // call, composes the identical mocks and the identical Run to the identical paths, and reads that Run
+  // straight after writing it. `writeFile` truncates before it writes, so one write per round is what
+  // keeps an entry from reading a file another entry is partway through. Nothing in here depends on the
+  // element or the window, which is why one run of it serves every entry.
+  const derivedRun = join(compareRoot, "compare.svrun");
   const imageIds = [...new Set([...svml.matchAll(/\{([a-z0-9-]+)\.image\}/gu)].map((match) => match[1] ?? ""))]
     .filter((id) => !alreadySatisfied.has(`${id}.image`));
-  await Promise.all(imageIds.map(async (id) => await writePlaceholder({
-    out: join(compareRoot, `${id}.png`), ...mockExtent(svml, id, canvas), color: "mid",
-  })));
-  for (const id of imageIds) {
-    declarations.push(`  <file id="mock-${id}" type="@hypit/artifact@1#BlobArtifact" from="./${id}.png" media-type="image/png"/>`);
-    satisfactions.push(`  <satisfy output="${id}.image" candidate="mock-${id}"/>`);
-  }
+  await once(`prepare:${renderKey}`, async () => {
+    const declarations: string[] = [];
+    const satisfactions: string[] = [];
+    for (const { segmentId, take } of takes) {
+      const output = takeOutputs.get(segmentId);
+      if (output === undefined) continue;
+      // The take's own audio has to be servable, not a digest stub: Studio resolves every Artifact a
+      // projection references, and a preview that cannot serve one stops there.
+      const sampleFrames = Math.round(take.segment.endFrameExclusive / frameRate * 48_000);
+      const silence = silentWav(sampleFrames);
+      await writeFile(join(compareRoot, `${segmentId}-take.wav`), silence);
+      const spoken = { ...take, media: { ...take.media, audio: { artifact: blobRef(silence, "audio/wav"), sampleFrames } } };
+      const fixture = join(compareRoot, `${segmentId}.json`);
+      await writeFile(fixture, `${JSON.stringify({ kind: "inline", value: spoken }, null, 2)}\n`, "utf8");
+      declarations.push(`  <file id="stand-in-${segmentId}-audio" type="@hypit/artifact@1#BlobArtifact" from="./${segmentId}-take.wav" media-type="audio/wav"/>`);
+      declarations.push(`  <value id="stand-in-${segmentId}" type="@hypit/speech@1#SemanticTake" from="./${segmentId}.json"/>`);
+      satisfactions.push(`  <satisfy output="${output}.take" candidate="stand-in-${segmentId}"/>`);
+    }
+    // The layers a Build has not made, as placeholders of the Canvas's own size. `make_placeholder` is
+    // the route's one tool for this: deterministic, Provider-free, and the same mock the comparison is
+    // told to bypass. A mock never enters the project's own Source — it is declared in the derived Run
+    // and nowhere else.
+    // Every picture mock at once. Each one is a solid fill, so they do not contend for anything but
+    // ffmpeg, and drawn one after another they cost more than every frame they stand in for.
+    const mocks = [...mockedMedia()];
+    await Promise.all(mocks
+      .filter(([, { picture }]) => picture)
+      .map(async ([id, { frames }]) => await writePlaceholder({
+        out: join(compareRoot, `${id}.mp4`), ...mockExtent(svml, id, canvas),
+        video: true, seconds: Math.max(1, Math.ceil(frames / frameRate)), color: "mid",
+      })));
+    for (const [id, { frames, picture }] of mocks) {
+      const file = join(compareRoot, `${id}.mp4`);
+      // Every SynchronizedMedia carries audio, and it is validated as WAV, so the silence is written as
+      // one rather than pointed at the video. Both are declared: the picture is what gets drawn, the
+      // silence is what makes the value legal.
+      const wavPath = join(compareRoot, `${id}.wav`);
+      const wav = silentWav(Math.round(frames / frameRate * 48_000));
+      await writeFile(wavPath, wav);
+      const audioBlob = blobRef(wav, "audio/wav");
+      declarations.push(`  <file id="mock-${id}-audio" type="@hypit/artifact@1#BlobArtifact" from="./${id}.wav" media-type="audio/wav"/>`);
+      let visual: SynchronizedMedia["visual"];
+      if (picture) {
+        const bytes = await readFile(file);
+        visual = { artifact: blobRef(bytes, "video/mp4"), ...mockExtent(svml, id, canvas) };
+        declarations.push(`  <file id="mock-${id}" type="@hypit/artifact@1#BlobArtifact" from="./${id}.mp4" media-type="video/mp4"/>`);
+      }
+      const media: SynchronizedMedia = {
+        timeline: { frameRate: { numerator: frameRate, denominator: 1 }, frameCount: frames },
+        audio: { artifact: audioBlob },
+        ...(visual === undefined ? {} : { visual }),
+      };
+      await writeFile(join(compareRoot, `${id}.media.json`), `${JSON.stringify({ kind: "inline", value: media }, null, 2)}\n`, "utf8");
+      declarations.push(`  <value id="media-${id}" type="@hypit/media@1#SynchronizedMedia" from="./${id}.media.json"/>`);
+      satisfactions.push(`  <satisfy output="${id}.media" candidate="media-${id}"/>`);
+    }
 
-  const derivedRun = join(compareRoot, "compare.svrun");
-  await writeFile(derivedRun, [
-    `<?svml using="@hypit/run-markup@1"?>`,
-    ``,
-    `<svrun version="1">`,
-    // The cut, when there was one: it sits beside this Run, and its own imports were repointed to
-    // reach the project from here.
-    // Three levels up: the derived Run sits at `.hypit/compare/<key>/`, and the Source it names is at
-    // the project root. This branch used to run only when no window was asked for, which is the one
-    // case nothing exercised, so it was short by one the whole time.
-    `  <author source="../../../${author.replace(/^\.\//u, "")}"/>`,
-    // Whatever the Run brought, repointed: the derived Run sits two directories deeper than the one
-    // that declared these paths.
-    ...carried.map((line) => `  ${line.replace(/from="\.\//gu, 'from="../../../')}`),
-    // Targeting the element's own output rather than the Film prunes the closure to what this one
-    // Track needs. Asking for the whole delivery would pull in every generation the Source declares
-    // and report each as unresolved, which is true and useless: none of them is what is being looked at.
-    `  <target output="final.video"/>`,
-    ``,
-    ...declarations,
-    ``,
-    ...satisfactions,
-    `</svrun>`,
-    ``,
-  ].join("\n"), "utf8");
+    // Still images the Source declares as generations. Same treatment, same tool, at the Canvas's size:
+    // a picture slot that is empty in the render is black, and black is not what will be there.
+    await Promise.all(imageIds.map(async (id) => await writePlaceholder({
+      out: join(compareRoot, `${id}.png`), ...mockExtent(svml, id, canvas), color: "mid",
+    })));
+    for (const id of imageIds) {
+      declarations.push(`  <file id="mock-${id}" type="@hypit/artifact@1#BlobArtifact" from="./${id}.png" media-type="image/png"/>`);
+      satisfactions.push(`  <satisfy output="${id}.image" candidate="mock-${id}"/>`);
+    }
+
+    await writeFile(derivedRun, [
+      `<?svml using="@hypit/run-markup@1"?>`,
+      ``,
+      `<svrun version="1">`,
+      // The cut, when there was one: it sits beside this Run, and its own imports were repointed to
+      // reach the project from here.
+      // Three levels up: the derived Run sits at `.hypit/compare/<key>/`, and the Source it names is at
+      // the project root. This branch used to run only when no window was asked for, which is the one
+      // case nothing exercised, so it was short by one the whole time.
+      `  <author source="../../../${author.replace(/^\.\//u, "")}"/>`,
+      // Whatever the Run brought, repointed: the derived Run sits two directories deeper than the one
+      // that declared these paths.
+      ...carried.map((line) => `  ${line.replace(/from="\.\//gu, 'from="../../../')}`),
+      // Targeting the element's own output rather than the Film prunes the closure to what this one
+      // Track needs. Asking for the whole delivery would pull in every generation the Source declares
+      // and report each as unresolved, which is true and useless: none of them is what is being looked at.
+      `  <target output="final.video"/>`,
+      ``,
+      ...declarations,
+      ``,
+      ...satisfactions,
+      `</svrun>`,
+      ``,
+    ].join("\n"), "utf8");
+  });
 
   const distributionPackageRoot = videoCliDistribution.packageRoot;
   if (distributionPackageRoot === undefined) throw new Error("active Hypit Distribution has no package root");
@@ -1257,32 +1268,38 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
     window = { startFrame: cursor, endFrameExclusive: cursor + take.take.segment.endFrameExclusive };
   }
 
-  // Compile once, materialize with the artifact bytes written beside the document, and let the
-  // HyperFrames runtime draw it. This is the path packages/hyperframes/test/browser-visual.test.ts
-  // takes; nothing here is a private renderer.
-  const document = compileHyperframesDocument(built.composition, built.space as ProgramSpace);
-  const stage = join(compareRoot, "stage");
-  await mkdir(stage, { recursive: true });
-  const names = new Map<string, string>();
-  for (const [digest, file] of built.served) {
-    const name = `${digest.replace(/[^a-z0-9]/giu, "")}`;
-    await writeFile(join(stage, name), file.bytes);
-    names.set(digest, name);
-  }
-  await writeFile(join(stage, "index.html"), materializeHyperframesHtml(document, (artifact) => {
-    const name = names.get(artifact.digest);
-    assert(name !== undefined, `the projection references Artifact ${artifact.digest}, which was not served`);
-    return `./${name}`;
-  }), "utf8");
-
   const clip = /\.(mp4|mov|webm)$/iu.test(outPath);
+  const stage = join(compareRoot, "stage");
   const frames = join(compareRoot, "frames");
-  // Drawn once per Run and clock, however many windows are asked for.
+  // Staged and drawn once per Run and clock, however many windows are asked for.
   //
   // The picture does not depend on the element or the window — the whole program is drawn and the
   // window is cut out of these frames — so a round of eight looks over one Source is one browser
   // render and eight ffmpeg cuts. Rendering per entry would draw the same program eight times.
-  await drawProgramOnce(renderKey, async () => {
+  //
+  // The staged document is written inside the same run for the same reason the derived Run is: every
+  // entry compiles the identical document to the identical path, `writeFile` truncates before it
+  // writes, and the runtime is reading that path. An entry staging `index.html` while the runtime
+  // loads it hands the runtime a file with no timeline in it, reported as
+  // `Composition has zero duration`.
+  await once(`draw:${renderKey}`, async () => {
+    // Compile once, materialize with the artifact bytes written beside the document, and let the
+    // HyperFrames runtime draw it. This is the path packages/hyperframes/test/browser-visual.test.ts
+    // takes; nothing here is a private renderer.
+    const document = compileHyperframesDocument(built.composition, built.space as ProgramSpace);
+    await mkdir(stage, { recursive: true });
+    const names = new Map<string, string>();
+    for (const [digest, file] of built.served) {
+      const name = `${digest.replace(/[^a-z0-9]/giu, "")}`;
+      await writeFile(join(stage, name), file.bytes);
+      names.set(digest, name);
+    }
+    await writeFile(join(stage, "index.html"), materializeHyperframesHtml(document, (artifact) => {
+      const name = names.get(artifact.digest);
+      assert(name !== undefined, `the projection references Artifact ${artifact.digest}, which was not served`);
+      return `./${name}`;
+    }), "utf8");
+
     await rm(frames, { recursive: true, force: true });
     await mkdir(frames, { recursive: true });
     // The runtime ships with the tree, not with the project. Resolving it against the package root
