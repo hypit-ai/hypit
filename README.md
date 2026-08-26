@@ -57,14 +57,14 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th width="16%">Reference</th>
     <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/24f8d669-c9db-48f4-8bc5-03b86f045bc4" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/646aa486-e8a4-4694-867e-d6ae7b65ec56" controls muted></video></td>
     <td width="28%"></td>
   </tr>
   <tr>
     <th width="16%">Clones</th>
     <td width="28%"><video src="https://github.com/user-attachments/assets/a2514f4e-1200-4c63-abde-3afb339f76be" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/24f8d669-c9db-48f4-8bc5-03b86f045bc4" controls muted></video></td>
     <td width="28%"><video src="https://github.com/user-attachments/assets/a354b2db-298c-49fb-a39e-e2fbe7ab74d0" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/646aa486-e8a4-4694-867e-d6ae7b65ec56" controls muted></video></td>
   </tr>
   <tr>
     <td colspan="4"><p><b>"GOAT DEBATE"</b> — a 20-second football tier list that puts Ronaldo in D and Messi in S. Two Seedance 2 Mini 720p trolling A-rolls, a 2K goth girl portrait and ten 1K brain-rot B-rolls by GPT Image 2, WhisperX word alignment, a sound-synced ranking board, red-box karaoke captions, buttery-smooth animation and catchy background music, concurrently rendered in 64 headless Chromium processes.</p><p>Three clones included: swap the narrator to banana cat, flip the rankings and Ronaldo becomes GOAT, or replace all players with tech founders — same viral structure, different viral video.</p><p>Total cost: <b>$1.15</b>.</p></td>
