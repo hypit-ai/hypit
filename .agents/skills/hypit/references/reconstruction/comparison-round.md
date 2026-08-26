@@ -85,9 +85,16 @@ objects the flags produce, minus `reference_id` — and hand the file over:
   {"run": "projects/<name>/build.svrun", "segment": "pro",
    "video_path": "projects/<name>/renders/board-pro.mp4", "element": "board"},
   {"run": "projects/<name>/build.svrun", "selection": "wait",
-   "video_path": "projects/<name>/renders/marks-wait.mp4", "element": "marks"}
+   "video_path": "projects/<name>/renders/marks-wait.mp4", "element": "marks"},
+  {"run": "projects/<name>/build.svrun", "tokens": [48, 52],
+   "video_path": "projects/<name>/renders/captions-48-52.mp4", "element": "captions"}
 ]
 ```
+
+`reconstruction_check`'s `plan` names its windows as `tokens`, so that is the form most of a round
+arrives in. It is two whole numbers, `[from, to)`, not the `"48:52"` the flag takes — a string is
+refused rather than read as its first two characters. Each entry carries its own `run`; only
+`--reference-id` is inherited from the flag.
 
 ```
 hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch comparisons.json
