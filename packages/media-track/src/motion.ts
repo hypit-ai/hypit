@@ -111,9 +111,21 @@ function translate(directionValue: MediaMotionDirection, amount: number): string
   return `translateY(${amount}px)`;
 }
 
-function style(state: MotionState): VisualStyleDeclaration[] {
+/**
+ * `clipping` is decided once per animation, not per keyframe.
+ *
+ * `inset(0% 0% 0% 0%)` reads as a no-op and is not one: it clips the element and its descendants to
+ * the border box, which removes the Frame's own drop shadows for the whole window. So an Item given
+ * any lifecycle at all — a plain fade among them — lost its shadows, while the same Item with no
+ * enter or exit kept them.
+ *
+ * Every keyframe of one animation has to declare the same properties, so a wipe cannot drop the
+ * property on the frames where it happens to be neutral: it would hold its last declared inset for
+ * ever. The question is whether this animation clips anywhere.
+ */
+function style(state: MotionState, clipping: boolean): VisualStyleDeclaration[] {
   return [
-    { name: "clip-path", value: state.clipPath },
+    ...(clipping ? [{ name: "clip-path", value: state.clipPath }] : []),
     { name: "filter", value: state.filter },
     { name: "opacity", value: state.opacity },
     { name: "transform", value: state.transform },
@@ -130,11 +142,13 @@ export function lifecycleAnimation(value: MediaLifecycleMotion, durationFrames: 
   if (value.exit !== undefined) {
     for (let frame = Math.max(0, durationFrames - value.exit.durationFrames); frame <= durationFrames; frame += 1) frames.add(frame);
   }
+  const ordered = [...frames].sort((left, right) => left - right);
+  const clipping = ordered.some((atFrame) => lifecycleStateAt(value, durationFrames, atFrame).clipPath !== neutral.clipPath);
   return {
-    keyframes: [...frames].sort((left, right) => left - right).map((atFrame) => ({
+    keyframes: ordered.map((atFrame) => ({
       atFrame,
       easing: "linear",
-      style: style(lifecycleStateAt(value, durationFrames, atFrame)),
+      style: style(lifecycleStateAt(value, durationFrames, atFrame), clipping),
     })),
   };
 }
@@ -339,11 +353,12 @@ export function lifecycleAnimationWindow(
     const next = lifecycleStateAt(value, outerDurationFrames, ordered[index + 1]!);
     return JSON.stringify(previous) !== JSON.stringify(current) || JSON.stringify(current) !== JSON.stringify(next);
   });
+  const clipping = compact.some((frame) => lifecycleStateAt(value, outerDurationFrames, frame).clipPath !== neutral.clipPath);
   return {
     keyframes: compact.map((frame) => ({
       atFrame: frame - startOffset,
       easing: "linear",
-      style: style(lifecycleStateAt(value, outerDurationFrames, frame)),
+      style: style(lifecycleStateAt(value, outerDurationFrames, frame), clipping),
     })),
   };
 }

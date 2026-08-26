@@ -540,6 +540,29 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     this.#database.prepare("DELETE FROM hypit_capacity WHERE build_id = ?").run(build);
   }
 
+  async reclaimAbandoned(now = Date.now()): Promise<readonly string[]> {
+    nonNegativeInteger(now, "Dispatch reclaim time");
+    return transaction(this.#database, () => {
+      const rows = this.#database.prepare(
+        "SELECT build_id FROM hypit_dispatches WHERE phase = 'running'",
+      ).all() as Row[];
+      const builds = rows.map((row) => {
+        assert(typeof row.build_id === "string", "SQLite running Dispatch has no Build id");
+        return row.build_id;
+      });
+      for (const build of builds) {
+        // The reservation outlived the process that would have released it, and the lane it holds
+        // is counted against every later Build. Drop it, then make the Dispatch claimable again so
+        // the work — or its cancellation — can actually be carried out.
+        this.#database.prepare("DELETE FROM hypit_capacity WHERE build_id = ?").run(build);
+        this.#database.prepare(
+          "UPDATE hypit_dispatches SET phase = 'queued', available_at = ? WHERE build_id = ?",
+        ).run(now, build);
+      }
+      return builds;
+    });
+  }
+
   async listCapacity(): Promise<readonly CapacityReservation[]> {
     return (this.#database.prepare(
       "SELECT * FROM hypit_capacity ORDER BY created_at ASC, build_id ASC, command_id ASC",

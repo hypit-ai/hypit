@@ -55,9 +55,3 @@ into separate prompts.
   `visual-continuity.md`.
 - Make before/after states visibly distinguishable through the authored condition, posture, setting,
   styling, or evidence while preserving the intended recurring identity and product facts.
-
-## Accept images before reuse
-
-Run the image gate in `production-gates.md`. When image viewing is available, inspect the actual
-output and reject identity drift, impossible anatomy/camera geometry, duplicate props, wrong text,
-same-background reverse views, watermarks, and unusable overlay clearance before downstream use.

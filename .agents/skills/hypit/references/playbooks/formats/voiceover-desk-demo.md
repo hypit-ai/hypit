@@ -6,14 +6,21 @@ screen, product, hand, or proof changes.
 ## Author the SVML program
 
 1. Write one narration Script Segment with Selections/Moments for every visual proof beat.
-2. Generate one continuous narration Blob with `mimo:Preset`, `mimo:VoiceDesign`, or
-   `mimo:VoiceClone`. Do not split TTS to match picture cuts.
-3. Put the audio directly into an audio-only Speech Take:
+2. Take the voice sample once, with `mimo:Preset` or `mimo:VoiceDesign`.
+3. The narration is spoken by a take, and that take is the base. It is under the whole Segment and
+   the B-roll covers it; the viewer sees the desk only where nothing is over it, and the speech and
+   the picture are one generation either way — `../craft/generated-dependencies.md` says why that
+   matters. Cut the Segment to fit one generation.
 
 ```svml
 <program:Clock id="clock" frame-rate="30"/>
-<pipeline:Normalize id="narration-media" source={narration.audio}
-  video="none" audio="default" span-authority="audio" clock={clock}/>
+<seedance:ReferenceVideo id="narration-take" model="mini" prompt={narration-prompt}
+  duration={narration-duration.duration} generate-audio="true">
+  <seedance:Reference image={desk.image}/>
+  <seedance:Reference audio={narration-voice.audio}/>
+</seedance:ReferenceVideo>
+<pipeline:Normalize id="narration-media" source={narration-take.video}
+  video="primary-moving" audio="default" span-authority="video" clock={clock}/>
 <whisperx:SemanticTake id="narration-semantic" narrative={story}
   segment={story.segment.narration} media={narration-media.media}/>
 <speech:Track id="speech"
@@ -26,8 +33,10 @@ screen, product, hand, or proof changes.
    `{speech.audio}` directly to `film:Film`.
 5. Build each visual beat from supplied media or the vendored `broll-v1` Kit. Generated desk/screen
    shots use `seedance:FrameVideo` or `seedance:ReferenceVideo` with `generate-audio="false"`.
-6. Place visuals by the measured Script Selections/Moments. One sentence may span several visual
-   cuts, and one visual may cover only part of a sentence.
+6. Place visuals by the measured Script Selections/Moments.
+   The base is meant to stay hidden, so the covering Selections tile the Segment —
+   `../craft/generated-dependencies.md` states that rule and holds the marker table. One sentence
+   may span several visual cuts, and one visual may cover only part of a sentence.
 7. Add editorial explanation with `typo:Track`; add the complete Caption chain only when narration
    captions are wanted. Normalize only additional BGM/SFX before placing them on `audio:Track`.
 
@@ -57,5 +66,4 @@ screen, product, hand, or proof changes.
 Read `../craft/screen-demo.md`, `../craft/b-roll.md`, `../craft/seedance-directing.md`,
 `../craft/persona-and-audio.md`, `../craft/captions.md`, and `../craft/sfx.md`.
 
-That list is complete: `../index.md` does not repeat it, and the craft its required load
-order marks always-read is required regardless of format.
+That list is complete, and the always-read craft in `../index.md` applies regardless of format.

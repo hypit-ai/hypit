@@ -1,6 +1,6 @@
 # Durable Runtime and Build lifecycle
 
-Read `https://narratage.hypit.ai/quickstart/run` as the authority for Run Source, Target, Candidate, Runtime Profile,
+Read `../../../../docs/quickstart/run.md` as the authority for Run Source, Target, Candidate, Runtime Profile,
 Build, retrieval, and reuse syntax. Use this file as the operational checklist.
 
 ## Author the Runtime Profile
@@ -17,6 +17,36 @@ through the store rather than writing any secret into the file.
 
 A capability whose credential this machine does not hold is still declared. Preflight names it before
 any Build is submitted, which is the correct place for the author to find out.
+
+### Give the picture and video models room to run
+
+The generation models are what a Build waits on, and they are the one place concurrency is worth
+setting deliberately. Give Seedance and the image model **10 each**.
+
+On a Provider with per-model lanes — `@hypit/provider-kie` is the usual one — that is a lane apiece
+inside a pool wide enough to hold both, so neither starves the other:
+
+```json
+"kie.<project>": {
+  "use": "@hypit/provider-kie",
+  "config": {
+    "apiKey": { "store": "env", "key": "KIE_API_KEY" },
+    "defaultConcurrency": 20,
+    "laneConcurrency": { "seedance-2-mini": 10, "gpt-image-2": 10 }
+  }
+}
+```
+
+`defaultConcurrency` is the total pool shared by every lane, so it has to be at least the sum of the
+lanes or the lane numbers are a ceiling nothing reaches. Name the lane by the exact capability the
+Source reaches — `seedance-2-mini` and `gpt-image-2` above — since a lane key that matches no
+capability is silently inert. Read the Provider's README for the lane names it admits.
+
+The local Providers stay small: `media`, `whisperx` and `hyperframes` are bounded by this machine's
+cores rather than by a remote queue, and raising them buys contention.
+
+Set this while writing the Profile. Changing it later needs a Worker restart, and the restart rule
+below makes that costly once a Build is in flight.
 
 ## Execute the lifecycle
 
@@ -93,6 +123,21 @@ Builds remain archived and neither command cancels remote Provider work.
   a change that costs nothing on an idle Runtime costs the whole Build on a busy one. Nothing is lost
   by waiting: accepted Records are durable, and the requests still in flight are the expensive ones.
 
+  **Check before every restart, and treat a running Build as a stop sign rather than a delay.** The
+  reading takes one command, and it is the same one whatever the reason for restarting:
+
+  ```bash
+  hypit runtime status   # proceed only on Queued 0 · Running 0
+  ```
+
+  What follows a restart taken during a Build is not only the lost generation. The Build is left
+  `running` and holding the lane it reserved, a Worker claims only `queued` and `waiting` Builds, and
+  cancelling happens on a claimed Build — so it holds that lane against every later Build, and
+  `hypit cancel` reports the request and changes nothing. A current Worker takes such a Build back at
+  startup; an older one does not, and the symptom there is a queue that never moves while
+  `Active Operations` stays `0`. Read that pair — a Build `running` with no active operation — as this,
+  and restarting again is the one thing that cannot help.
+
 ## Keep the Distribution and every project physically separate
 
 The Distribution reported by `hypit paths --json` is package-manager-owned and replaceable. Never
@@ -100,6 +145,21 @@ create an authored project, project-local package, generated asset or Build outp
 project is any independent directory such as `<home>/<name>/`, holding its Sources, assets and
 `packages/` directory in its own Git/workspace boundary. Published examples are read-only reference
 material, never a place to turn into the author's project.
+
+**Give the project directory its own `package.json`, before the first `check`.** Package discovery
+starts at the project and walks up until it finds one; without it the search runs past the project
+and settles on whichever directory above happens to have one, and every `packages/local-*` the
+project owns becomes unresolvable — `cannot resolve installed package @scope/local-name`. A minimal
+file is the whole fix, and it is what makes the directory a boundary rather than a place that
+happens to hold Sources:
+
+```json
+{ "name": "<project-name>", "version": "0.0.0", "private": true, "type": "module" }
+```
+
+`hypit paths --json` confirms it: `project` names the project directory rather than something above
+it. Passing `--package-root .` on each command papers over the same gap for one command at a time
+and leaves the Worker — which resolves packages on its own — still looking in the wrong place.
 
 Studio and the CLI resolve explicit project packages from the project root, then fall back to the
 read-only Hypit Distribution. The `@hypit/*` namespace is reserved for the active Distribution and
@@ -110,6 +170,10 @@ Relative Author Sources and assets stay inside the independently resolved Source
 
 - `--workspace` explicitly selects the Source Workspace boundary.
 - `--package-root` only changes where the Host locates installed packages. It does not widen Source
-  access.
+  access. Reach for it when a project you did not create has no `package.json` of its own: `check`,
+  `plan` and `build` walk up from the project until one appears, so a project without one resolves
+  its packages against an ancestor directory, and a project package resolves to nothing. Run those
+  commands with `--package-root .` from the project, or write the project the `package.json`
+  `environment.md` describes and drop the flag.
 - Do not symlink an external project into the Distribution. The external directory is the intended
   workspace, not an escape from one.

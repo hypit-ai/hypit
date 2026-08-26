@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+    # Documentation-only changes are covered by deploy-pages.yml, which builds the site and runs
+    # the same repository hygiene checks. Nothing under docs/ is in tsconfig's include or reachable
+    # from the test suite, so type checking and the full test suite would prove nothing here.
     paths-ignore:
       - "docs/**"
   pull_request:
@@ -16,11 +19,22 @@ concurrency:
 
 jobs:
   check:
+    # Windows-only breakage used to reach authors instead of this file — a render whose temporary
+    # paths ran past the length a Windows path may be, a transcriber that opened a console window
+    # per worker, a script that could not import itself, a file name that on one platform was the
+    # whole path. One matrix rather than two jobs, so a step added here cannot be added to only
+    # one of them.
+    #
+    # Neither runner image ships ffmpeg, so the media tests that probe for it skip on both legs
+    # alike. That gap is real and older than this matrix; closing it means adding ffmpeg to both,
+    # not to one, which would leave a red leg ambiguous between the two causes.
     runs-on: ${{ matrix.os }}
     strategy:
+      # Breakage on one platform is a different finding from breakage on the other, and cancelling
+      # the second leg would throw away the half of the answer nobody has yet.
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

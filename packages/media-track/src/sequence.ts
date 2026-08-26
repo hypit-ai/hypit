@@ -318,9 +318,9 @@ function outgoingState(handoff: MediaHandoffProgram): TransitionState {
   return neutral;
 }
 
-function styles(value: TransitionState): VisualStyleDeclaration[] {
+function styles(value: TransitionState, clipping: boolean): VisualStyleDeclaration[] {
   return [
-    { name: "clip-path", value: value.clipPath },
+    ...(clipping ? [{ name: "clip-path", value: value.clipPath }] : []),
     { name: "opacity", value: value.opacity },
     { name: "transform", value: value.transform },
   ];
@@ -350,10 +350,11 @@ export function sequenceMemberHandoffAnimation(
     add(outgoing.span.startFrame - member.visualSpan.startFrame, neutral, "ease-in-out");
     add(outgoing.span.endFrameExclusive - member.visualSpan.startFrame, outgoingState(outgoing));
   } else add(duration, neutral);
+  const clipping = [...states.values()].some((value) => value.state.clipPath !== neutral.clipPath);
   return { keyframes: [...states.entries()].sort(([left], [right]) => left - right).map(([atFrame, value]) => ({
     atFrame,
     ...(value.easing === undefined ? {} : { easing: value.easing }),
-    style: styles(value.state),
+    style: styles(value.state, clipping),
   })) };
 }
 

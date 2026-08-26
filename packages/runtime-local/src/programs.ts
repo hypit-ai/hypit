@@ -117,6 +117,103 @@ function run(root: string, command: ManagedProgramCommand): Promise<{ ok: boolea
  * weights; `mismatch` is not, and stops the wait — a program that is answering
  * with another identity will not become the right one by waiting.
  */
+/** POSIX: its own session, and stdio already pointed at the log. */
+async function startDetached(start: ManagedProgramCommand, root: string, logFd: number): Promise<number | undefined> {
+  const child = spawn(start.command, [...start.args], {
+    cwd: start.cwd ?? root,
+    env: { ...process.env, ...start.env },
+    shell: false,
+    detached: true,
+    windowsHide: true,
+    stdio: ["ignore", logFd, logFd],
+  });
+  child.unref();
+  return child.pid;
+}
+
+/** A PowerShell single-quoted literal, which escapes by doubling the quote and nothing else. */
+function powershellLiteral(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
+/**
+ * One command line, quoted the way the C runtime parses it back into `argv`.
+ *
+ * `Start-Process -ArgumentList` given an array joins its elements with a space and quotes none of
+ * them, so an argument holding a space arrives as several: `node -e '<script>' <path>` reaches node
+ * as `-e` followed by the first word of the script, and node exits on the syntax error. Given one
+ * string it passes that string through as the command line, which is what this builds.
+ */
+function windowsCommandLine(args: readonly string[]): string {
+  return args.map((value) => {
+    if (value !== "" && !/[\s"]/u.test(value)) return value;
+    // A quote is escaped by the backslashes before it, so those double; a trailing run doubles too,
+    // because the closing quote would otherwise escape itself against them.
+    const escaped = value.replace(/(\\*)"/gu, '$1$1\\"').replace(/(\\*)$/u, "$1$1");
+    return `"${escaped}"`;
+  }).join(" ");
+}
+
+/**
+ * Windows: a console of its own, hidden, so the launching console's destruction does not take it.
+ *
+ * The script is fed on stdin rather than as a command-line argument, so no quoting of ours crosses a
+ * shell boundary. `Start-Process` refuses to send both streams to one file, so the error stream gets
+ * its own beside the log; `-PassThru` reports the new process, which is the pid everything after this
+ * waits on and stores.
+ */
+async function startWithOwnConsole(
+  start: ManagedProgramCommand,
+  root: string,
+  logPath: string,
+): Promise<{ readonly pid?: number; readonly detail?: string }> {
+  const errorPath = `${logPath.replace(/\.log$/u, "")}.err.log`;
+  const environment = Object.entries(start.env ?? {})
+    .map(([name, value]) => `$env:${name} = ${powershellLiteral(String(value))}`).join("\n");
+  const argumentList = start.args.length === 0
+    ? ""
+    : ` -ArgumentList ${powershellLiteral(windowsCommandLine(start.args))}`;
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    environment,
+    `$p = Start-Process -FilePath ${powershellLiteral(start.command)}${argumentList}`
+      + ` -WorkingDirectory ${powershellLiteral(start.cwd ?? root)}`
+      + ` -RedirectStandardOutput ${powershellLiteral(logPath)}`
+      + ` -RedirectStandardError ${powershellLiteral(errorPath)}`
+      + " -WindowStyle Hidden -PassThru",
+    "[Console]::Out.Write($p.Id)",
+  ].filter((line) => line.length > 0).join("\n");
+
+  const shell = await new Promise<{ readonly out: string; readonly err: string }>((settle) => {
+    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "-"], {
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let out = "";
+    let err = "";
+    const done = (): void => {
+      settle({ out: out.trim(), err: err.trim() });
+      child.stdout.destroy();
+      child.stderr.destroy();
+    };
+    child.stdout.on("data", (chunk: Buffer) => { out += chunk.toString("utf8"); });
+    child.stderr.on("data", (chunk: Buffer) => { err += chunk.toString("utf8"); });
+    child.on("error", (cause: Error) => { err = cause.message; done(); });
+    // `close` waits for the streams as well as the exit, and the process this shell launches can be
+    // holding an inherited copy of them: it outlives the shell by design, so those pipes stay open
+    // and `close` never arrives. The shell writes the id before it exits, so `exit` plus a moment
+    // for the pipe to drain is what settles this, and `close` still settles it first when it comes.
+    child.on("exit", () => { setTimeout(done, 250).unref(); });
+    child.on("close", done);
+    child.stdin.end(script, "utf8");
+  });
+  const pid = Number(shell.out);
+  if (Number.isSafeInteger(pid) && pid > 0) return { pid };
+  // `Start-Process` writes its refusal to the error stream and prints no id. Carrying it out is what
+  // separates a launch that was refused from one whose process died immediately after starting.
+  return { detail: shell.err === "" ? "Start-Process reported no process id" : shell.err.replaceAll(/\s+/gu, " ") };
+}
+
 async function waitForReady(program: ManagedProgram, pid: number, maxWaitMs: number): Promise<ManagedProgramState> {
   const deadline = Date.now() + maxWaitMs;
   let state = await program.probe();
@@ -178,24 +275,34 @@ async function bringUp(
   await rotateLog(logPath);
   const log = await open(logPath, "a");
   try {
-    const child = spawn(program.start.command, [...program.start.args], {
-      cwd: program.start.cwd ?? root,
-      env: { ...process.env, ...program.start.env },
-      shell: false,
-      // Outliving this process is the point, and each platform grants that differently. POSIX
-      // wants its own session. Windows already gives an unreferenced child its own lifetime, and
-      // asking to detach there costs the console: a detached process has none, so every console
-      // grandchild it starts is handed a fresh visible window instead. That is what a transcribing
-      // program looks like when `uv` re-execs Python and Python opens a pool of workers. Taking
-      // the hidden console instead leaves one console for the whole tree, and no window at all.
-      detached: process.platform !== "win32",
-      windowsHide: true,
-      stdio: ["ignore", log.fd, log.fd],
-    });
-    child.unref();
-    if (child.pid === undefined) {
-      return { ...base, action: "unchanged", state: initial, detail: `${program.start.command} did not start`, logPath };
+    // Outliving this process is the point, and what grants it differs by platform.
+    //
+    // POSIX wants its own session, which `detached` gives.
+    //
+    // Windows ties a process's lifetime to the console it is attached to. A child spawned from here
+    // inherits this one, so when the launching `node` exits its console is destroyed and every
+    // process on it is sent CTRL_CLOSE_EVENT and terminated. `unref` does not change that — it
+    // removes an event-loop reference and nothing else — so the service reported ready, answered one
+    // health probe, and was gone by the next command, with no error anywhere to read.
+    //
+    // What it needs is a console of its own, hidden. `detached` on Windows means DETACHED_PROCESS,
+    // which is no console at all, and then the first console grandchild — `uv` re-execing Python,
+    // Python opening workers — allocates a fresh visible one. `Start-Process -WindowStyle Hidden`
+    // creates a new console and hides it, which is the combination neither spawn option reaches.
+    const started = process.platform === "win32"
+      ? await startWithOwnConsole(program.start, root, logPath)
+      : { pid: await startDetached(program.start, root, log.fd) };
+    if (started.pid === undefined) {
+      const refusal = "detail" in started && started.detail !== undefined ? `: ${started.detail}` : "";
+      return {
+        ...base,
+        action: "unchanged",
+        state: initial,
+        detail: `${program.start.command} did not start${refusal}`,
+        logPath,
+      };
     }
+    const child = { pid: started.pid };
     onProgress?.({ id: program.id, phase: "waiting" });
     const state = await waitForReady(program, child.pid, maxWaitMs);
     if (state.state === "ready") onProgress?.({ id: program.id, phase: "ready" });
@@ -212,7 +319,7 @@ async function bringUp(
       }),
     };
   } finally {
-    await log.close();
+    await log?.close();
   }
 }
 

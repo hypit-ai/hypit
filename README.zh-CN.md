@@ -9,11 +9,11 @@
 <p align="center">一条命令，100 个变体，1 亿播放量。</p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/zh/"><strong>Demo</strong></a>
+  <a href="https://hypit.ai"><strong>Demo</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://narratage.hypit.ai/zh/quickstart"><strong>快速开始</strong></a>
+  <a href="https://docs.hypit.ai/zh/quickstart"><strong>快速开始</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://narratage.hypit.ai/zh/guide/develop"><strong>开发指南</strong></a>
+  <a href="https://docs.hypit.ai/zh/guide/develop"><strong>开发指南</strong></a>
   &nbsp;&bull;&nbsp;
   <a href="./README.md"><strong>English</strong></a>
 </p>
@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/zh/"><img alt="Visit our website" src="https://img.shields.io/badge/Visit%20our%20website-000000?style=for-the-badge&logo=googlechrome&logoColor=white"></a>
+  <a href="https://hypit.ai"><img alt="Visit our website" src="https://img.shields.io/badge/Visit%20our%20website-DF3C68?style=for-the-badge&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjI1Ny4wMyAyODcuNDggNDg2Ljk0IDQyNi4wNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTczMy4wMDEsNDYyLjU5MmMtMTEuNDQtMTYuNTEtMzAuMjg1LTI2LjM0NC01MC4zNTMtMjYuMzQ0aC0xNzguNzA1Yy0yMy40OTMsMC00Ny42NzUsMTQuMjM0LTU2LjYyOCwzNS45NjdsLTU0LjA2NSwxNDUuMDUzYy04LjgsMjEuNTIzLTguNjg2LDQ2LjAxMSw0LjI0Nyw2NS4zNTIsMTIuOTksMTkuNDE4LDM3LjAzOCwzMC44OTcsNjAuMzk3LDMwLjg5N2gxNjQuNDljMjcuMDEzLDAsNTEuNDYzLTE2Ljk4OSw2MC45MTQtNDIuMjhsNTYuODAxLTE1Mi4yMjdjNy4wMjEtMTguODI1LDQuMzgxLTM5LjkwOC03LjA1OS01Ni4zOTl2LS4wMzhoLS4wMzh2LjAxOVpNNjMzLjk3OCw2NTIuODEzYy0xLjc5OCw0LjgyMS02LjQ4NSw4LjA3My0xMS42MzIsOC4wNzNoLTE1OS42NWMtOC4zMDMsMC0xMi43OC01LjM1Ny0xNC4zMjktNy42MzNzLTQuNzgzLTguNDc1LTEuNjA3LTE2LjE0N2w0NS42MjgtMTI2LjcyNWM0LjM4MS0xMi4xNDgsMTUuNDU4LTIwLjc5NiwyOC4zNTItMjEuNDY1LjYzMS0uMDM4LDEuMjgyLS4wMzgsMS45NTEtLjAzOGgxNDQuMjY5czIzLjkzMywyLjcxNywxNy43NzMsMjcuOTUxbC01MC43NTUsMTM2LjAwNGgwdi0uMDE5Wk0zNTYuMjUsNjIzLjEyMnMtNDIuNzc3LTIyLjE3My0zMy43ODYtNjIuNDgzbDU2Ljc2Mi0xNTcuMzE2YzkuMTQ1LTI1LjM0OSwzMy4yMTItNDIuMjYxLDYwLjE2OC00Mi4yNjFoMTgxLjc4NWMxMS45NTcsMCwyMy4xNDksNS43OTcsMzAuMDU1LDE1LjU3M2wyNi41NzMsMzcuNjVoLTIxNi4xMjVjLTE2LjY0NCwwLTMxLjU0NywxMC4zNS0zNy4zNDQsMjUuOTYxbC02OC4wODgsMTgyLjg5NWgwdi0uMDE5Wk0yOTIuMDY0LDU0OS41NDNzLTQyLjc5Ny0yMi4xNzMtMzMuNzg2LTYyLjQ4M2w1Ni43NjItMTU3LjMxNmM5LjE2NC0yNS4zNDksMzMuMjMxLTQyLjI2MSw2MC4xNjgtNDIuMjYxaDE3Mi4wMDljMTEuOTU3LDAsMjMuMTQ5LDUuNzk3LDMwLjA1NSwxNS41NzNsMjYuNTczLDM3LjY1aC0yMDYuMzExYy0xNi42NDQsMC0zMS41NDcsMTAuMzUtMzcuMzQ0LDI1Ljk2MWwtNjguMDg4LDE4Mi44OTVoLS4wMzh2LS4wMTlaIi8%2BPC9zdmc%2B"></a>
   <a href="https://discord.gg/85hnyQnxpn"><img alt="Join our Discord" src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
   <a href="https://t.me/hypit"><img alt="Join our Telegram" src="https://img.shields.io/badge/Join%20our%20Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white"></a>
   <a href="https://x.com/hypitai"><img alt="Follow @hypitai on X" src="https://img.shields.io/badge/Follow%20%40hypitai-000000?style=for-the-badge&logo=x&logoColor=white"></a>
@@ -46,12 +46,70 @@ Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语�
 ## 只安装一次
 
 ```bash
-npm install --global hypit
-npx skills add hypit-ai/hypit --global
+npx skills add hypit-ai/hypit -g
 ```
 
-npm 包是 Hypit Distribution，包含 CLI、Studio、官方组件和托管服务源码；全局 skill 能被以后
-任何项目里的 Agent 会话发现。这两个命令都不会把创作仓库克隆进项目目录。
+## 示例
+
+### 街头采访
+
+<table>
+  <tr>
+    <th>参考视频</th>
+    <td></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td></td>
+  </tr>
+  <tr>
+    <th>复刻视频</th>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+  </tr>
+  <tr>
+    <td colspan="4">本地部署的 MiniMax H3；3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕、视觉特效在 headless chromium 中渲染。<b>总成本：$0.15。</b></td>
+  </tr>
+</table>
+
+### 播客
+
+<table>
+  <tr>
+    <th>参考视频</th>
+    <td></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td></td>
+  </tr>
+  <tr>
+    <th>复刻视频</th>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+  </tr>
+  <tr>
+    <td colspan="4">本地部署的 MiniMax H3；3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕、视觉特效在 headless chromium 中渲染。<b>总成本：$0.15。</b></td>
+  </tr>
+</table>
+
+### UGC
+
+<table>
+  <tr>
+    <th>参考视频</th>
+    <td></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td></td>
+  </tr>
+  <tr>
+    <th>复刻视频</th>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+  </tr>
+  <tr>
+    <td colspan="4">本地部署的 MiniMax H3；3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕、视觉特效在 headless chromium 中渲染。<b>总成本：$0.15。</b></td>
+  </tr>
+</table>
 
 ## 使用 Hypit skill
 
@@ -69,15 +127,6 @@ npm 包是 Hypit Distribution，包含 CLI、Studio、官方组件和托管服�
 ```
 
 Agent 会检查环境，只索取视频实际需要的凭据，展示预览并执行构建。
-
-项目源码、生成文件和项目私有组件始终留在项目目录里。WhisperX 等机器程序按需安装到
-Hypit Program Home；Fontsource 单个字体、HyperFrames 等上游 npm 包也只在实际选择后安装
-到独立的机器共享目录。两者都会被所有项目复用，新开会话不会再装一遍。用 `hypit --version` 和
-`npm outdated --global hypit` 检查版本，需要更新时显式执行 `npm update --global hypit` 和
-`npx skills update --global`。
-
-桌面支持基线是 macOS 13+ 或 Windows 10/11 x64，以及 Node.js 22+。克隆仓库、pnpm 和
-Corepack 只属于贡献者工作流。
 
 ## 许可证
 

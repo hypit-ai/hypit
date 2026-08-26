@@ -12,13 +12,26 @@ a new package with a bad schedule, a target that is not an output, a Film with n
 composition. Find that now, not on the author's screen:
 
 ```bash
-hypit-preview-check /path/to/project/build.svrun
+hypit-reference-video-tools preview_check /path/to/project/build.svrun
 ```
 
 It takes the Run Source, not the Author SVML — Studio's unit of work is the Run, and it reads the
 `.svml` back out of it.
 
-It exits non-zero when the graph itself is wrong, and it names what refused — a target that is not a
+The same check is also a bin of its own:
+
+```bash
+hypit-preview-check /path/to/project/build.svrun
+```
+
+Prefer the subcommand. It takes `--package-root <dir>`, which is where the packages the Source
+imports are resolved from — a project's own `packages/local-<slug>/` are installed against the
+project root, so name it there and the check reaches them from wherever you are standing. Without
+the flag the working directory is used. The bare bin fixes the package root to the Run file's own
+directory and takes no flags, so reach for it when the Run sits at the project root and you want the
+prose summary rather than a JSON result.
+
+Either one refuses when the graph itself is wrong, and names what refused — a target that is not a
 Film or Render output of the current SVML, a Film with no traceable composition, a Film with no
 `SemanticTake` / Speech Track chain. This is not a guessing problem: the error says what is wrong, and
 you repair that. A graph that does not trace is not done, and **every failure it reports must be
@@ -29,7 +42,8 @@ rather than performing it leaves the closure waiting on Providers, and Studio re
 closure before it will open. That is the expected state of a Source nobody has built yet, not a defect
 in it. When every issue is `the Studio projection closure requires unresolved capabilities: …`, the
 graph traced all the way to a Film and a semantic spine, and what remains is work a Provider has to
-do — the script prints the waiting capabilities and exits zero:
+do. The subcommand returns `"sound": true` with the capabilities under `awaiting`; the bin prints
+them and exits zero:
 
 ```
 preview-check: the graph is sound, waiting on 6 capabilities.
@@ -44,15 +58,44 @@ What this proves is that the graph is **wired**, not that every track **draws**.
 refuses the media kind it is handed is not caught here, because nothing is handed to it until the
 Build runs.
 
-## Render one element to a still, locally
+## Render one element, locally
 
-One element — a new component, one caption system, one inserted card — can be rendered to an image
-without a paid Provider. A new package's visual Surface needs a preview image anyway. The repository's
-own visual test `packages/hyperframes/test/browser-visual.test.ts` shows the path end to end: build
-the Track, compile the HyperFrames document, and render it through the local HyperFrames Runtime.
+One element — a new component, one caption system, one inserted card — is drawn without a paid
+Provider by `render_element`. This is the picture to reach for whenever one element has to be looked
+at rather than the whole program, and rendering the delivery to inspect a single piece is the waste it
+exists to prevent. `element-review.md` says how many of these to draw and what to do with them; this
+section owns the command.
 
-This is the image to reach for whenever one element has to be looked at rather than the whole
-program. Rendering the delivery to inspect a single piece is the waste it exists to prevent.
+```bash
+hypit-reference-video-tools render_element /path/to/project/build.svrun \
+  --element <id> --segment <id>|--selection <id> --out <path>.mp4
+```
+
+It reads the Canvas, the frame rate, the Recipe values, the Script text and the bindings out of the
+Source, mocks every layer a Build has not made, and drives the package's Producer. Nothing about it is
+written per package.
+
+`--element` takes the element's bare id — `captions`, the `id=` the Source wrote on the element. The
+command appends the output suffix itself when it looks for the track, so `--element captions.track`
+matches nothing: it refuses with `the Source places no element named captions.track` and lists the
+bare ids that are placed.
+
+`--segment` and `--selection` take a Script name, never a timestamp. `--tokens from:to` takes a
+half-open range of the Script's own words, which is what a stretch nobody named is written as — a
+caption Cue ends at a speaker change, so it has a range and no id. Without any of the three, the whole
+program is drawn. An `--out` ending `.mp4`, `.mov` or `.webm` writes the stretch as a clip; any other
+extension writes one still from the middle of it.
+
+A whole round is one call: `--batch <renders.json>`, an array of
+`{element, segment|selection|tokens, out}` inheriting the Run. **The program is drawn once for the
+whole round** and each entry is cut out of those frames, so asking for eight windows costs one render
+and eight cuts. The picture does not depend on `--element` — it is everything the Source places over
+those words — so two elements over one stretch share the render as well.
+
+Each Segment's length comes from the Source's own `estimate:Speech`, which is the only clock a program
+has before its speech is synthesized. The result's `timing` says what sized each Segment, and the same
+object is written to `<out>.stand-in.json`. A reconstruction can borrow the reference's clock instead
+with `--reference-id`; `reconstruction/comparison-round.md` says when that matters.
 
 ## Open the whole Run for a person
 
@@ -89,7 +132,7 @@ Studio keeps three stages of an item's time apart, and reading one for another m
   one outer window alongside its reveal phases.
 
 A projection line connects a source to its realized window, and the projection view is read-only.
-`https://narratage.hypit.ai/guide/studio-temporal-windows` is authoritative for what each stage carries.
+`../../../../docs/guide/studio-temporal-windows.md` is authoritative for what each stage carries.
 
 When the executed lineage names a Selection or Moment, dragging the realized block may issue
 `timeline.adjust` against that shared semantic identity. Script owns the inverse from semantic Anchor
@@ -100,4 +143,4 @@ read-only.
 Studio is a browser preview **for a person to look at**. It is not a source of images for an
 automated comparison — that is what the local still render above is for.
 
-`https://narratage.hypit.ai/quickstart/preview` is authoritative.
+`../../../../docs/quickstart/preview.md` is authoritative.

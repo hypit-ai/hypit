@@ -54,5 +54,4 @@ camera selection, and identity. Pin accepted views and takes through `.svrun` `b
 Read `../craft/seedance-directing.md`, `../craft/persona-and-audio.md`, `../craft/captions.md`,
 and `../craft/b-roll.md`.
 
-That list is complete: `../index.md` does not repeat it, and the craft its required load
-order marks always-read is required regardless of format.
+That list is complete, and the always-read craft in `../index.md` applies regardless of format.

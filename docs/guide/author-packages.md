@@ -68,7 +68,6 @@ export const myComponentMarkupSurfaces = [{
   mode: "structured",
   outputs: [ /* Types this syntax may author */ ],
   vocabulary: { /* what this element is, and what it looks like — see step 5 */ },
-  implementation: { digest: "sha256:..." },
 }] as const;
 ```
 
@@ -246,3 +245,10 @@ authority.
 | `packages/media-track/` | Track with Item/Sequence, layer, motion and handoff behavior |
 | `packages/typography-track/` | Typography overlay Track |
 | `packages/film/` | Composition target that consumes peer Tracks |
+| `packages/ranking/` | A Program that lays out cells and fills media slots, with `schedule.ts` and `render.ts` as its role files |
+| `packages/comment-sticker/` | The same roles under different filenames — `program.ts` and `author.ts` |
+| `packages/screen-overlay/` | An overlay whose geometry is computed rather than authored |
+
+The filenames differ between packages: what `component-anatomy.md` calls the Value layer and the
+lowering is `schedule.ts`/`render.ts` in `ranking`, `program.ts`/`lower.ts` in `media-track`, and
+`program.ts`/`author.ts` in `comment-sticker`. Find a role by what it exports, not by its filename.

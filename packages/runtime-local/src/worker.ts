@@ -235,6 +235,9 @@ class DurableLocalWorker {
   async run(options: RuntimeWorkerRunOptions): Promise<void> {
     positive(options.idlePollMs, "Worker idlePollMs");
     const active = new Set<Promise<void>>();
+    // A Worker that went away mid-Dispatch left it `running` and holding its lane. This Worker owns
+    // the Runtime, so nothing else can be executing those: take them back before claiming anything.
+    await this.#options.stores.dispatch.reclaimAbandoned(Date.now());
     try {
       while (options.signal?.aborted !== true) {
         while (true) {

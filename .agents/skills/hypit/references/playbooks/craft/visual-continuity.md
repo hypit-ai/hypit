@@ -47,4 +47,3 @@ the device-facing reverse image shows what is behind the device. Writing only â€
   reaction without invented dialogue.
 - Keep supplied physical text attached to its product, screen, document, or sign; put editorial text
   on explicit Tracks.
-- Apply the image gate in `production-gates.md` before connecting any generated frame downstream.

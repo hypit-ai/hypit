@@ -10,12 +10,13 @@
   "dependencies": {
     "@hypit/compiler-node": "workspace:*",
     "@hypit/elaborator": "workspace:*",
-    "@hypit/workspace": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/run": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-host-node": "workspace:*",
-    "@hypit/source": "workspace:*"
+    "@hypit/source": "workspace:*",
+    "@hypit/workspace": "workspace:*",
+    "typescript": "5.9.3"
   }
 }

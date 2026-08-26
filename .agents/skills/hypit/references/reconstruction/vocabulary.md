@@ -31,7 +31,7 @@ measured rather than chosen:
 ## After the gap is filled
 
 Installing the package is not the end of the gap route. Read `final-sources.md` and write the three
-sources, then continue into `reconstruction-loop.md`: a component that loads is not yet a component
+sources, then continue into `comparison-round.md`: a component that loads is not yet a component
 that looks like the reference.
 
 The reference-video CLI remains limited to observation, vocabulary inspection and blind image

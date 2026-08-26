@@ -10,6 +10,20 @@
    `direction` slots through `copy:Set`.
 5. Feed the rendered Text to one explicit Seedance Surface and keep every reference edge visible.
 
+**A take with `generate-audio="true"` says whatever its prompt carries, so trace that prompt back to
+the words before authoring the take.** Follow the edge from the take's `prompt=` to the `copy:Render`
+that produced it, and confirm one of that Render's `copy:Set` slots carries the Segment's `dialogue`.
+A prompt bound straight to a `copy:Value` holding a performance direction reaches the model with no
+words in it: the model invents its own, and the take sounds fluent while saying nothing the Script
+holds.
+
+That state survives every structural check. `hypit check`, `preview_check` and `plan` all pass,
+because the graph is legal and complete — the prompt is a Text and the take consumes it.
+`whisperx:SemanticTake` then fits the Segment's words onto whatever audio arrived, so the Caption
+Track renders the Script over speech that shares none of it and every downstream measurement stays
+clean. Reading the Source is what finds it. `../../seedance-kits.md` names the slot the words travel
+through.
+
 Write every user-authored image/video generation instruction in English. Verbatim dialogue may retain
 the Script's authored language; do not translate or paraphrase quoted Script lines inside prompts.
 
@@ -38,9 +52,10 @@ than relying on an unstated assumption.
   of them are regenerated more than once, so the tier multiplies the whole bill for a difference that
   costs more to find than it is worth. Take an instruction to use a particular model literally when
   one is given, and otherwise never raise the tier and never stop to ask which to use.
-- The other values are `fast`, `standard` and `2.5`. `mini` and `fast` support only 480p/720p;
-  `standard` also supports 1080p/4k, which is the one reason to name it — a delivery that genuinely
-  requires 1080p, recorded as the deliberate choice it is.
+- The other values are `fast`, `standard` and `2.5`. `mini`, `fast` and `2.5` all render at 480p or
+  720p only; `standard` alone also supports 1080p/4k, which is the one reason to name it — a delivery
+  that genuinely requires 1080p, recorded as the deliberate choice it is. What `2.5` buys is
+  duration and reference capacity, not resolution.
 - Keep duration an integer inside the selected model's declared range, and read that range from the
   model rather than from memory: they differ, and one accepts far longer takes than the others.
   Invalid values fail closed.
@@ -66,6 +81,3 @@ than relying on an unstated assumption.
 - Keep faces readable and hands away from the face unless contact is the authored action.
 - Keep editorial subtitles, titles, cards, stickers, and floating text out of Seedance. Preserve only
   physical labels/UI already attached to referenced objects.
-
-Review every reference image through `production-gates.md` before calling Seedance, then review the
-resulting take before normalizing it into a Semantic Take or adding it to a Media Track.

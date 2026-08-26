@@ -14,6 +14,9 @@ const REFERENCE = "ref-fixture";
 
 async function workspace(shotCount: number): Promise<{ readonly root: string; readonly stateRoot: string }> {
   const root = await mkdtemp(join(tmpdir(), "reference-video-tools-"));
+  // Prepared state is read from the Hypit tree, which HYPIT_REPOSITORY names. A fixture puts the tree
+  // in a directory of its own so the state it writes is the state the tools read.
+  process.env["HYPIT_REPOSITORY"] = root;
   const stateRoot = join(root, ".hypit", "reference-video-tools", REFERENCE);
   const shots = join(stateRoot, "shots");
   await mkdir(shots, { recursive: true });
@@ -70,8 +73,8 @@ function recorder(calls: Call[], answer = "observed"): GenerateText {
   };
 }
 
-function tools(root: string, calls: Call[], answer?: string) {
-  return createReferenceVideoTools({ workspaceRoot: root, concurrency: 4, launchGapMs: 0, retryDelayMs: 0, generate: recorder(calls, answer) });
+function tools(calls: Call[], answer?: string) {
+  return createReferenceVideoTools({ concurrency: 4, launchGapMs: 0, retryDelayMs: 0, generate: recorder(calls, answer) });
 }
 
 test("installed packages can be listed, and one that will not load is reported rather than hidden", async () => {
@@ -86,20 +89,25 @@ test("installed packages can be listed, and one that will not load is reported r
 
   const result = await createReferenceVideoTools({ packageRoot: root, generate: async () => "" }).list_svml_packages();
   const packages = result["packages"] as readonly Record<string, unknown>[];
-  assert.deepEqual(packages.map((item) => item["package_name"]), ["@hypit/with-activation"],
+  const named = (name: string) => packages.find((item) => item["package_name"] === name);
+  // The listing also reaches the Distribution, since a project holds its own packages and not the
+  // installed ones, so this asks about the two written above rather than about the whole answer.
+  assert.equal(named("@hypit/plain-library"), undefined,
     "a package without an activation contributes no author vocabulary and is not vocabulary to discover");
-  assert.equal(packages[0]!["description"], "declares a Surface");
-  assert.equal(typeof packages[0]!["unreadable"], "string",
+  const declared = named("@hypit/with-activation");
+  assert.ok(declared, "a package that declares an activation is vocabulary to discover");
+  assert.equal(declared["description"], "declares a Surface");
+  assert.equal(typeof declared["unreadable"], "string",
     "a package that declares an activation it cannot load is named, not silently dropped");
-  assert.equal(packages[0]!["tags"] !== undefined
-    && (packages[0]!["tags"] as readonly unknown[]).includes(null), false,
+  assert.equal(declared["tags"] !== undefined
+    && (declared["tags"] as readonly unknown[]).includes(null), false,
     "a facet that is not a Markup Surface has no tag, and reading one out of it produced a null entry");
 });
 
 test("observation covers picture, drawn type and sound for every shot and caches every key", async () => {
-  const { root, stateRoot } = await workspace(2);
+  const { stateRoot } = await workspace(2);
   const calls: Call[] = [];
-  const result = await tools(root, calls).observe_reference({ reference_id: REFERENCE });
+  const result = await tools(calls).observe_reference({ reference_id: REFERENCE });
 
   const cache = JSON.parse(await readFile(join(stateRoot, "observations.json"), "utf8")) as Record<string, unknown>;
   assert.deepEqual(Object.keys(cache).sort(), [
@@ -129,43 +137,69 @@ test("observation covers picture, drawn type and sound for every shot and caches
 });
 
 test("a second observation reuses the cache and only an explicit reobserve runs the model again", async () => {
-  const { root } = await workspace(2);
+  await workspace(2);
   const first: Call[] = [];
-  await tools(root, first).observe_reference({ reference_id: REFERENCE });
+  await tools(first).observe_reference({ reference_id: REFERENCE });
   assert.equal(first.length, 7, "two shots: picture, type and sound each, plus one shared boundary");
 
   const second: Call[] = [];
-  await tools(root, second).observe_reference({ reference_id: REFERENCE });
+  await tools(second).observe_reference({ reference_id: REFERENCE });
   assert.deepEqual(second, []);
 
   const selected: Call[] = [];
-  await tools(root, selected).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-002"] });
+  await tools(selected).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-002"] });
   assert.deepEqual(selected, [], "naming a shot must not silently re-run its cached observations");
 
   const forced: Call[] = [];
-  await tools(root, forced).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-002"], reobserve: true });
+  await tools(forced).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-002"], reobserve: true });
   assert.equal(forced.length, 4, "reobserve reruns the selected shot's picture, type and sound plus its one boundary, and nothing else");
 });
 
-test("a narrow question costs one call, answers from the named shots and never re-runs observations", async () => {
-  const { root, stateRoot } = await workspace(4);
+test("a narrow question costs one call, answers from the named shots and is answered once", async () => {
+  await workspace(4);
   const calls: Call[] = [];
-  const result = await tools(root, calls, "the caption sits above the lower edge")
-    .observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
+  const api = tools(calls, "the caption sits above the lower edge");
+  const result = await api.observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
 
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0]!.mimeTypes, ["video/mp4", "image/jpeg"]);
   assert.equal(calls[0]!.text, "How thick is the caption outline?");
   assert.deepEqual(result["shot_ids"], ["shot-003"]);
   assert.deepEqual(result["answer"], { status: "complete", text: "the caption sits above the lower edge" });
-  assert.equal(await readFile(join(stateRoot, "observations.json"), "utf8"), "{}\n");
+
+  // The key carries the question as well as the shots, so a second question over the same shot is a
+  // separate entry rather than the first one's answer handed back under a shared key.
+  const repeated = await api.observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
+  assert.equal(calls.length, 1, "asking the same question again reads the answer rather than paying for a paraphrase");
+  assert.equal(repeated["reused"], true);
+  const different = await api.observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "What colour is the background?" });
+  assert.equal(calls.length, 2, "a different question over the same shot is a different question");
+  assert.notEqual(different["observation_key"], repeated["observation_key"]);
 
   await assert.rejects(
-    tools(root, []).observe_reference({ reference_id: REFERENCE, question: "which shot?" }),
+    tools([]).observe_reference({ reference_id: REFERENCE, question: "which shot?" }),
     /question requires at least one shot id/u);
   await assert.rejects(
-    tools(root, []).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-001", "shot-002", "shot-003", "shot-004"], question: "which shot?" }),
+    tools([]).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-001", "shot-002", "shot-003", "shot-004"], question: "which shot?" }),
     /at most three shots/u);
+});
+
+test("the key a narrow question is handed out under is one record_observation accepts", async () => {
+  // A shot id is `shot-003`, and the key that names it was being matched by a pattern with no hyphen
+  // in its class — so every real narrow-question key was refused, and the observer that has to record
+  // its own answers had nowhere to put one.
+  await workspace(4);
+  const api = createReferenceVideoTools({ concurrency: 4, launchGapMs: 0, retryDelayMs: 0, generate: async () => "" });
+  const state = JSON.parse(await readFile(join(process.env["HYPIT_REPOSITORY"]!, ".hypit", "reference-video-tools", REFERENCE, "state.json"), "utf8")) as ReferenceState;
+  await writeFile(join(state.root, "state.json"), `${JSON.stringify({ ...state, observer: "agent" }, null, 2)}\n`, "utf8");
+
+  const asked = await api.observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
+  const key = (asked["pending_observations"] as readonly { readonly key: string }[])[0]!.key;
+  const stored = await api.record_observation({ reference_id: REFERENCE, key, text: "two pixels" });
+  assert.equal(stored["stored_in"], "observations");
+
+  const again = await api.observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
+  assert.deepEqual(again["answer"], { status: "complete", text: "two pixels" });
 });
 
 test("reconstruction comparison sends an unlabelled pair and accepts rendered PNG frames", async () => {
@@ -173,20 +207,20 @@ test("reconstruction comparison sends an unlabelled pair and accepts rendered PN
   const rendered = join(root, "rendered.png");
   await writeFile(rendered, "rendered-bytes", "utf8");
   const calls: Call[] = [];
-  const result = await tools(root, calls, "the list starts lower in one image")
+  const result = await tools(calls, "the list starts lower in one image")
     .compare_reconstruction({ reference_id: REFERENCE, shot_id: "shot-001", image_path: rendered, question: "only the full-screen list area" });
 
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0]!.mimeTypes, ["image/jpeg", "image/png"]);
-  assert.match(calls[0]!.text, /image one, then image two/u);
+  assert.match(calls[0]!.text, /supplied in order: one, then two/u);
   assert.match(calls[0]!.text, /only the full-screen list area/u);
   assert.doesNotMatch(calls[0]!.text, /reconstruction|rendered|generated|authored|component|SVML/iu,
     "the comparison must never say which image was built or how");
-  assert.match(calls[0]!.instruction, /You are not told how either image was made/u);
+  assert.match(calls[0]!.instruction, /You are not told how either was made/u);
   assert.deepEqual(result["differences"], { status: "complete", text: "the list starts lower in one image" });
 
   await assert.rejects(
-    tools(root, []).compare_reconstruction({ reference_id: REFERENCE, shot_id: "shot-009", image_path: rendered }),
+    tools([]).compare_reconstruction({ reference_id: REFERENCE, shot_id: "shot-009", image_path: rendered }),
     /shot shot-009 does not exist/u);
 });
 
@@ -195,15 +229,14 @@ test("an unsupported media extension fails loudly instead of being sent as opaqu
   const rendered = join(root, "rendered.tiff");
   await writeFile(rendered, "rendered-bytes", "utf8");
   await assert.rejects(
-    tools(root, []).compare_reconstruction({ reference_id: REFERENCE, shot_id: "shot-001", image_path: rendered }),
+    tools([]).compare_reconstruction({ reference_id: REFERENCE, shot_id: "shot-001", image_path: rendered }),
     /unsupported media extension/u);
 });
 
 test("a rejected request fails once instead of being retried until the loop gives up", async () => {
-  const { root } = await workspace(1);
+  await workspace(1);
   let attempts = 0;
   const rejecting = createReferenceVideoTools({
-    workspaceRoot: root,
     concurrency: 4,
     launchGapMs: 0,
     retryDelayMs: 0,
@@ -218,9 +251,8 @@ test("a rejected request fails once instead of being retried until the loop give
 });
 
 test("a failed observation is reported as unresolved instead of an empty list", async () => {
-  const { root } = await workspace(1);
+  await workspace(1);
   const failing = createReferenceVideoTools({
-    workspaceRoot: root,
     concurrency: 4,
     launchGapMs: 0,
     retryDelayMs: 0,

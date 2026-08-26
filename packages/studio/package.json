@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./start": "./start.ts",
-    "./preview-check": "./preview-check.ts"
+    "./preview-check": "./preview-check.ts",
+    "./src/*": "./src/*"
   },
   "dependencies": {
     "@hypit/audio-track-studio": "workspace:*",

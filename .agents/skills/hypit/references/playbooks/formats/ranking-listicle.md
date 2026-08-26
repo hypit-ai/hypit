@@ -52,5 +52,4 @@ media through `.svrun` before the final ranking Build.
 
 Read `../craft/captions.md`, `../craft/overlays.md`, `../craft/b-roll.md`, and `../craft/sfx.md`.
 
-That list is complete: `../index.md` does not repeat it, and the craft its required load
-order marks always-read is required regardless of format.
+That list is complete, and the always-read craft in `../index.md` applies regardless of format.

@@ -340,6 +340,12 @@ export type VisualSurfaceElement = VisualElementBase & {
  *
  * Elements may reference only parents in the same Present. They have no selector,
  * script, sibling Track id or accumulated-composite input.
+ *
+ * A Present holds exactly one root; everything else names a `parent`, which has to be a box or a
+ * mask. **Position is measured from that parent, not from the Canvas.** A component that computes
+ * its layout in Canvas pixels and then nests its elements has to subtract the parent's own origin,
+ * or every child lands offset by it — which draws without complaint and is wrong by exactly the
+ * distance the parent sits from the corner.
  */
 export type VisualElement = VisualBoxElement | VisualMaskElement | VisualTextElement | VisualTextFlowElement | VisualPathTextElement | VisualMediaElement | VisualSurfaceElement;
 
@@ -1179,6 +1185,12 @@ function normalizeElement(element: VisualElement): VisualElement {
         })),
       } }),
     };
+  }
+  // Spreading an absent artifact produced `{}`, which is not an artifact and is not nothing either:
+  // the field the author actually wrote was dropped without a word, and the refusal came one call
+  // later from the identity check, naming `.artifact` — a field they had not typed.
+  if (element.artifact === undefined) {
+    throw new Error(`${element.id} is a ${element.kind} element with no artifact.`);
   }
   return {
     ...common,

@@ -49,7 +49,7 @@ The author reads the observations, the sources and eventually the video. Which o
 evidence changes what those are worth, and it is not visible in any of them.
 
 This is the one question this route asks about how it runs. Everything else it decides:
-`index.md` still owns the working directory, the project location, the vocabulary and the generators.
+`route.md` still owns the working directory, the project location, the vocabulary and the generators.
 
 ## The protocol is one loop
 
@@ -111,8 +111,8 @@ and do not put the gap to the author.
 
 - **The transcript says when.** WhisperX measures every word locally on both paths, so the words and
   their timings are exact whichever observer reads the pictures. That settles whether anyone is
-  speaking at a given moment, and `final-sources.md` still takes Segment durations from
-  `transcript_ref` as it always does.
+  speaking at a given moment, and where a word sits. It does not set a take's duration: the take is
+  generated and its length comes from `estimate:Speech`, as `../script-time.md` requires.
 - **The pictures say who.** Attribute speech to the person the frames show speaking during the words
   the transcript places there. A task that needs sound says so in its own prompt and asks for exactly
   this reading.
@@ -124,15 +124,21 @@ and do not put the gap to the author.
 `voices` and the sound half of each `boundary` are the observations this shapes. They are attributions
 read off pictures and word timings, and that is what a later reader should take them for.
 
-## Answer each task in its own subagent when you can
+## Each task is answered in its own subagent
 
-Every task is self-contained, and no task refers to another task's answer. So if the harness you are
-running in can spawn subagents — Claude Code and Codex can, and some cannot — give each task in a pass
-to its own, and run the pass together.
+Every task is self-contained, and no task refers to another task's answer. **Where the harness can
+spawn subagents — Claude Code and Codex can, and some cannot — one subagent per task is required, and
+a pass runs them together.** `../element-review.md` states the rule and why it is not a preference;
+this is what it means for a reference observation.
 
-Hand the subagent the `instruction`, the `prompt` verbatim and the `image_refs`, and nothing else.
-Not what you built, not which component drew anything, not what you expect it to find, and not another
-observation's answer. Take the returned text and record it yourself, so one writer owns the cache.
+Hand the subagent the `instruction`, the `prompt` verbatim, the `image_refs`, and `transcript_ref` and
+`transcript_words` when the task carries them — and nothing else. Not what you built, not which
+component drew anything, not what you expect it to find, and not another observation's answer. Take
+the returned text and record it yourself, so one writer owns the cache.
+
+**Do not open the pictures yourself.** That is the whole point: the observer that uploads is a
+separate request and cannot be you, and one task per subagent is what makes this path equal to it
+rather than merely faster.
 
 Two things follow from one task per subagent, and both of them are properties the `gemini` observer
 has for free:
@@ -144,22 +150,44 @@ has for free:
   does not know which is the reference, what was built or what you hoped to see. That is the same
   unlabelled pair the other observer gets.
 
-Answer the tasks in order yourself when the harness has no subagents. It is slower, and it is the
-fallback rather than the shape to aim for.
+Answer the tasks in order yourself only where the harness has no subagents. It is slower, it is the
+fallback rather than the shape to aim for, and the discipline below stands in for the blindness it
+cannot have.
+
+The comparison round arrives here in batches. One element is compared against every stretch it is drawn
+over before any repair, and `comparison-round.md` has the renders all made before the first
+comparison is sent, so they arrive together. Each is self-contained in the same way an observation
+task is: no comparison's question depends on another's answer.
+
+Dispatch one subagent per comparison and run them together. Where there are no subagents, answer them
+one after another rather than folding them into a single look — what the round is for is the set of
+differences across stretches, and one answered in the light of the previous answer stops being
+independent evidence of anything.
+
+A clip comparison reaches this observer as two frame tiles — the reference's own cut, and one built
+from the render against the same duration, both drawn at the same cell width. Read them as a pair of
+grids sampling the same stretch at the same rate.
+
+`comparison-round.md` states the order the pair is sent in and why the observer is not told it. Read
+the answer with that in hand.
+
+### Record the differences against the comparison that asked for them
+
+`compare_reconstruction` returns a `comparison_id`, and the answer goes back under it:
+
+```bash
+hypit-reference-video-tools record_observation --reference-id <id> \
+  --key comparison:<comparison_id> --text-file <the differences>
+```
+
+Until that lands, the comparison is a pair that was drawn, cut and handed over with nobody having said
+what it shows, and `reconstruction_check` lists it under `awaiting_answer` and credits the element
+nothing. The differences are what the round is for, so record every one — including the ones that read
+as equivalent, in the words the observer used.
 
 ## Comparing without subagents
 
-Answering the comparison yourself makes the report yours, and you know what you built, so the
-discipline that keeps it useful has to be explicit:
-
-- **Write the differences down before naming a cause.** List what is visibly different, in the words
-  you would use if you had never seen the source. Deciding what went wrong first, then looking, finds
-  what you expected.
-- **A difference you did not write down is not an attempt.** `reconstruction-loop.md`'s two-attempt
-  ceilings apply unchanged, and they count repairs aimed at differences the comparison named.
-- **Measure rather than iterate.** A stroke that is too thick, a shape that is too tall, a margin that
-  is too wide — read the number off the frame against the frame's own width and height, and change the
-  value once. `reconstruction-loop.md` says why an attempt is for differences that have no number.
-
-The same three hold when a subagent compares, and they cost nothing there; what a subagent adds is
+Answering the comparison yourself makes the report yours, and you know what you built.
+`../element-review.md` states the three rules that stand in for the blindness a harness without
+subagents cannot give you, and they apply here unchanged. What a subagent adds, and they cannot, is
 that the comparer is not the builder.

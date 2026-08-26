@@ -7,13 +7,20 @@ ordered reveals and interpretations.
 
 - Write one authoritative Script with Selections/Moments for the question, choice window, each reveal,
   and the close.
-- Use one continuous narration take whenever the reading is voiceover-led. Generate it with
-  `mimo:Preset`, `mimo:VoiceDesign`, or `mimo:VoiceClone`, then use an audio-only Speech Take:
+- Take the voice sample once with `mimo:Preset` or `mimo:VoiceDesign`. The reading is spoken by a
+  take, and that take is the base under the whole Segment — the cards and the spread cover it, and
+  the speech and the picture stay one generation. `../craft/generated-dependencies.md` says why.
+  Cut the Segment to fit one generation.
 
 ```svml
 <program:Clock id="clock" frame-rate="30"/>
-<pipeline:Normalize id="narration-media" source={narration.audio}
-  video="none" audio="default" span-authority="audio" clock={clock}/>
+<seedance:ReferenceVideo id="narration-take" model="mini" prompt={reading-prompt}
+  duration={reading-duration.duration} generate-audio="true">
+  <seedance:Reference image={reader.image}/>
+  <seedance:Reference audio={reading-voice.audio}/>
+</seedance:ReferenceVideo>
+<pipeline:Normalize id="narration-media" source={narration-take.video}
+  video="primary-moving" audio="default" span-authority="video" clock={clock}/>
 <whisperx:SemanticTake id="narration-semantic" narrative={story}
   segment={story.segment.reading} media={narration-media.media}/>
 <speech:Track id="speech"
@@ -64,5 +71,7 @@ through `.svrun` `build-record` and `satisfy`.
 Read `../craft/b-roll.md`, `../craft/captions.md`, `../craft/overlays.md`, and
 `../craft/persona-and-audio.md`.
 
-That list is complete: `../index.md` does not repeat it, and the craft its required load
-order marks always-read is required regardless of format.
+That list is complete, and the always-read craft in `../index.md` applies regardless of format.
+
+- The base is meant to stay hidden, so the covering Selections tile the Segment.
+  `../craft/generated-dependencies.md` states that rule and holds the marker table.

@@ -34,7 +34,7 @@ for both views is insufficient. Apply the complete gate in `visual-continuity.md
 - Use a real supplied screenshot or captured screen whenever exact wording, data, layout, logo, or
   interaction state matters. Do not ask an image or video generator to guarantee exact UI text.
 - When generating a contextual device image, connect the real UI screenshot as an explicit image
-  reference, describe its role in the English prompt, and pass the result through the image gate.
+  reference and describe its role in the English prompt.
 - Preserve device orientation, bezel, screen plane, user eye line, room geometry, and the interface
   state across the context/proof pair.
 
