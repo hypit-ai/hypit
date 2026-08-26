@@ -67,7 +67,7 @@ npx skills add hypit-ai/hypit -g
     <td width="28%"><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4"><p><b>“GOAT DEBATE”</b>——一条 20 秒的足球 Tier List：把 Ronaldo 放进 D 级、Messi 放进 S 级，由一位清楚知道你马上会有多生气的哥特女孩 AI 主持人负责解说。两段 Seedance 2 Mini 720p 嘲讽 A-roll、一张 2K GPT Image 2 哥特女孩肖像、十张 1K GPT Image 2 脑腐 B-roll、WhisperX 逐词对齐、音效同步排行榜、红色词盒卡拉 OK 字幕、抓耳的背景音乐，以及 30 fps HyperFrames 合成。</p><p>包含三个复刻版本：把解说员替换成香蕉猫；翻转排名，让 Ronaldo 成为 GOAT；或者把所有球员替换成科技企业家——同一套爆款结构，不同的爆款视频。</p><p>总成本：<b>$1.15</b>。</p></td>
+    <td colspan="4"><p><b>“GOAT DEBATE”</b>——一条 20 秒的足球 Tier List，把 Ronaldo 放进 D 级、Messi 放进 S 级。两段 Seedance 2 Mini 720p 嘲讽 A-roll，由 GPT Image 2 生成的一张 2K 哥特女孩肖像和十张 1K 脑腐 B-roll，WhisperX 逐词对齐、音效同步排行榜、红色词盒卡拉 OK 字幕、丝滑动画和抓耳的背景音乐，并由 64 个无头 Chromium 进程并发渲染。</p><p>包含三个复刻版本：把解说员替换成香蕉猫；翻转排名，让 Ronaldo 成为 GOAT；或者把所有球员替换成科技企业家——同一套爆款结构，不同的爆款视频。</p><p>总成本：<b>$1.15</b>。</p></td>
   </tr>
 </table>
 
