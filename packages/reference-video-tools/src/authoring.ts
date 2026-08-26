@@ -103,6 +103,22 @@ export type StandInFocus = {
 };
 
 /**
+ * A token window, read from whatever a caller supplied.
+ *
+ * The type says two numbers, and nothing but this checked that. A batch entry is JSON a caller wrote
+ * by hand, so `"79:86"` arrives as a string, and destructuring one yields its first two characters:
+ * `from` is `"7"` and `to` is `"9"`. Every guard downstream then compares strings — `"9" > "7"` holds,
+ * and so does `"9" <= 135` once it coerces — so the window passes as valid and words 7 to 9 render
+ * under the name of words 79 to 86. The call reports success, and the difference only shows up as a
+ * comparison that makes no sense against a picture nobody asked for.
+ */
+export function tokenWindow(value: unknown, subject: string): readonly [number, number] {
+  assert(Array.isArray(value) && value.length === 2 && value.every((item) => Number.isInteger(item)),
+    `${subject} must be two whole numbers, as [from, to) — received ${JSON.stringify(value)}`);
+  return [value[0] as number, value[1] as number];
+}
+
+/**
  * The Hypit tree this package is installed into.
  *
  * Studio's domain and the HyperFrames runtime are both found from it, and neither can be found from
@@ -499,7 +515,7 @@ export async function spokenRange(
   let from: number | undefined;
   let to: number | undefined;
   if (focus.tokens !== undefined) {
-    [from, to] = focus.tokens;
+    [from, to] = tokenWindow(focus.tokens, "the token window");
     assert(from >= 0 && to > from && to <= parsed.tokens.length,
       `token range [${from}, ${to}) is outside the Script's ${parsed.tokens.length} words`);
   } else if (focus.selection !== undefined) {

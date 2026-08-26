@@ -132,8 +132,11 @@ B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族�
 <space:Frame id="product-frame" within={vertical}
   left="8%" top="20%" right="92%" bottom="68%"/>
 
+<pipeline:Normalize id="product-media" source={product-motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+
 <media-track:Track id="product-broll" semantic={speech.semantic} canvas={vertical}>
-  <media-track:Item video={product-motion.video} frame={product-frame}
+  <media-track:Item media={product-media.media} frame={product-frame}
     during={story.selection.product-demo}
     appearance={recipes.media.product}
     motion={recipes.motion.product}/>
@@ -147,13 +150,10 @@ B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族�
 | 输入 | 值 | 含义 |
 |---|---|---|
 | `image={...}` + `extent={...}` | Blob + 作者声明的像素尺寸 | 没有自带时长的静态图 |
-| `video={...}` | 生成/原始视频 Blob | 自动检查、选流并按本 Track 的 `space` 规范化 |
 | `media={...}` | `SynchronizedMedia` | 直接连接显式准备好的含时素材 |
 | `surface={...}` | `CompositableSurfaceRef` | 直接连接带透明度语义的静态或含时 Surface |
 
-原始 `video=` 默认只取画面；需要它自己的声音时添加 `audio="include"`，并可继续用
-`audio-gain` 调节所选源音频。输入名必须显式，是为了绝不靠猜测把一个通用 Blob 当成图片或视频。简洁语法没有绕过图：`video=` 会展开为普通的绑定请求、检查、选流、规范化
-Operation。需要共享或特殊选流时仍可显式写 `<pipeline:Normalize>`，再把结果用 `media=` 接入。
+生成或导入的视频 Blob 经 `<pipeline:Normalize>` 进入 Track：它检查该 Blob、选出其中的流并放到同一个帧域上，输出的 `.media` 即 `media=` 所连接的值。`audio="none"` 只取画面，`audio="default"` 取源自带的声音，再由 `audio-gain` 调节。输入名必须显式，是为了绝不靠猜测把一个通用 Blob 当成图片或视频。
 
 **输出：**`{product-broll.visual}`；只有作者显式选择了源音频或 SFX 时才会出现
 `{product-broll.audio}`。
@@ -449,8 +449,10 @@ Track 接受 `id`、`canvas` 与 `semantic`。时长写作 `12f`、`250ms` 或 `
   left="10%" top="20%" right="90%" bottom="70%"/>
 
 <!-- Media：Selection 期间显示一个普通 Item -->
+<pipeline:Normalize id="card-media" source={motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
 <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
-  <media-track:Item video={motion.video} frame={card-frame}
+  <media-track:Item media={card-media.media} frame={card-frame}
     during={story.selection.demo} appearance={recipes.media.card} motion={recipes.motion.card}/>
 </media-track:Track>
 

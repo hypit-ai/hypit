@@ -522,6 +522,7 @@ export async function authoringCheck(
   // instead meant a Run named by a path resolved its packages somewhere else entirely, and the
   // project's own elements read as packages that do not exist.
   const packageRoot = nearestPackageRoot(dirname(runPath)) ?? roots.packageRoot;
+  const distributionPackageRoot = videoCliDistribution.packageRoot;
 
   const runSource = await readFile(runPath, "utf8").catch(() => undefined);
   assert(runSource !== undefined, `cannot read ${runPath}`);
@@ -569,9 +570,14 @@ export async function authoringCheck(
   // drawing nothing and the check passed on an empty answer. Fall back to loading them one at a time so
   // the ones that resolve still count, and keep the names of the ones that did not.
   const unresolved: string[] = [];
-  const loaded = await loadNodePackageSelection(specifiers, packageRoot).catch(async () => {
+  // A project installs its own packages against itself, and `@hypit/*` comes from the Distribution
+  // this command was launched from. Loading against the project root alone leaves the second kind
+  // with nowhere to resolve from, so a project whose Source imports the standard vocabulary reports
+  // every one of those imports as a package that does not exist.
+  const loading = { ...(distributionPackageRoot === undefined ? {} : { fallbackRoots: [distributionPackageRoot] }) };
+  const loaded = await loadNodePackageSelection(specifiers, packageRoot, loading).catch(async () => {
     const each = await Promise.all(specifiers.map(async (specifier) =>
-      await loadNodePackageSelection([specifier], packageRoot).catch(() => {
+      await loadNodePackageSelection([specifier], packageRoot, loading).catch(() => {
         unresolved.push(specifier);
         return [];
       })));
