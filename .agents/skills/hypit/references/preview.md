@@ -86,11 +86,12 @@ caption Cue ends at a speaker change, so it has a range and no id. Without any o
 program is drawn. An `--out` ending `.mp4`, `.mov` or `.webm` writes the stretch as a clip; any other
 extension writes one still from the middle of it.
 
-A whole round is one call: `--batch <renders.json>`, an array of
-`{element, segment|selection|tokens, out}` inheriting the Run. **The program is drawn once for the
-whole round** and each entry is cut out of those frames, so asking for eight windows costs one render
-and eight cuts. The picture does not depend on `--element` — it is everything the Source places over
-those words — so two elements over one stretch share the render as well.
+A whole round is one call: `--batch <renders.json>`, an array of `{element, segment|selection|tokens,
+out}` inheriting the Run, and the `renders` array `reconstruction_check` returns is exactly that.
+**The program is drawn once for the whole round** and each entry is cut out of those frames, so asking
+for eight windows costs one render and eight cuts. The picture does not depend on `--element` — it is
+everything the Source places over those words — so two elements over one stretch share the render as
+well.
 
 Each Segment's length comes from the Source's own `estimate:Speech`, which is the only clock a program
 has before its speech is synthesized. The result's `timing` says what sized each Segment, and the same

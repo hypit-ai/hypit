@@ -33,7 +33,8 @@ lengths, and only this clock puts the render on the reference's. It is also what
 appearance is a function of elapsed time — a progressive reveal, a typewriter, staggered rows — be
 compared at the speed it will be seen at.
 
-A `--batch <renders.json>` round inherits the reference along with the Run.
+A `--batch` round inherits the reference along with the Run, and `reconstruction_check`'s output is
+the batch file.
 
 The window is still named in words on both sides. A word range and a shot are different divisions of
 the same video — one Segment routinely runs across five shots — and what a render and the reference
@@ -43,7 +44,8 @@ One geometry has to agree before any of it means anything. The reference's own p
 stored under `video` in its `state.json`, and they size nothing here — but their **aspect** has to
 match the Canvas's. When it does not, every comparison puts two differently-shaped pictures side by
 side and the observer reports proportion differences that belong to the Canvas rather than to the
-element. Fix the Canvas before comparing.
+element. `reconstruction_check` refuses with a `canvas_aspect` entry and a false `passed` until the
+Canvas matches the reference's shape.
 
 ## Compare the whole stretch, against every stretch the element is drawn over
 
@@ -77,27 +79,17 @@ stretch per distinct Style, at its first occurrence.
 Where the reference shows a caption behaving differently somewhere, that is a stretch worth its own
 comparison; where it shows the same design drawn over different words, it is not.
 
-On the `gemini` observer the whole round is one call. Write the comparisons to a JSON file — the same
-objects the flags produce, minus `reference_id` — and hand the file over:
-
-```json
-[
-  {"run": "projects/<name>/build.svrun", "segment": "pro",
-   "video_path": "projects/<name>/renders/board-pro.mp4", "element": "board"},
-  {"run": "projects/<name>/build.svrun", "selection": "wait",
-   "video_path": "projects/<name>/renders/marks-wait.mp4", "element": "marks"},
-  {"run": "projects/<name>/build.svrun", "tokens": [48, 52],
-   "video_path": "projects/<name>/renders/captions-48-52.mp4", "element": "captions"}
-]
-```
-
-`reconstruction_check`'s `plan` names its windows as `tokens`, so that is the form most of a round
-arrives in. It is two whole numbers, `[from, to)`, not the `"48:52"` the flag takes — a string is
-refused rather than read as its first two characters. Each entry carries its own `run`; only
-`--reference-id` is inherited from the flag.
+On the `gemini` observer the whole round is one call. The comparisons arrive from the check, not from
+a file written by hand: `reconstruction_check`'s output carries a `comparisons` array — one entry per
+stretch still owed, each already holding `run`, `tokens`, `video_path` and `element` — and that
+output is the batch file. `plan` names its windows as `tokens`, which is the form the batch takes: two
+whole numbers, `[from, to)`, not the `"48:52"` the flag takes (a string is refused rather than read as
+its first two characters). Each entry carries its own `run`; only `--reference-id` is inherited from
+the flag.
 
 ```
-hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch comparisons.json
+hypit-reference-video-tools reconstruction_check projects/<name>/build.svrun --reference-id <id> > round.json
+hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch round.json
 ```
 
 It paces the requests itself, keeps each comparison's derived cuts apart, and returns them under
@@ -160,7 +152,7 @@ That spends the expensive half of the route — the renders and the observer —
 rather than on learning anything about the reference.
 
 So **a repair is not verified here**, and the honest place to say so is the report. Passing
-`pnpm check` and `hypit check` is the precondition for the round, not a result of it. The one thing
+`preview_check` is the precondition for the round, not a result of it. The one thing
 that is not bounded by the round is settling disagreeing evidence: a narrow
 `observe_reference --question` does that at any point, which is what `evidence.md` is for.
 

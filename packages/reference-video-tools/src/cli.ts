@@ -31,6 +31,7 @@ function usage(): string {
     "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> [--shot-id <id> ...] --question <text>",
     "  hypit-reference-video-tools observe_reference --reference-id <id> --batch <questions.json>",
     "  hypit-reference-video-tools record_observation --reference-id <id> --key <key> --text <text>|--text-file <path>",
+    "  hypit-reference-video-tools record_observation --reference-id <id> --batch <answers.json>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
     "  hypit-reference-video-tools inspect_visual_contract [--shape visual-track|text-flow|text-typography|text-paint|text-document|path-command] [--producers-of <package> ...]",
     "  hypit-reference-video-tools paths",
@@ -141,6 +142,12 @@ function usage(): string {
     "as it was handed out. A comparison's answer is written back onto its own line of the log, which is",
     "what makes it count toward coverage; until then reconstruction_check lists it under",
     "`awaiting_answer`.",
+    "",
+    "--batch records a whole sweep's answers at once. The file holds a JSON array — or an object with an",
+    "`answers` array — of `{key, text}`, or `{key, text_file}` where the answer was written to a file:",
+    "`[{\"key\": \"visual:shot-003\", \"text_file\": \"answers/shot-003.md\"}, …]`. Paths are read against the",
+    "working directory. They are applied in the order they are written, and one that fails takes only",
+    "itself down and arrives under `failures`; the rest are under `records`.",
     "",
     "review_element is the counterpart on the route with no reference: it reads one rendered element",
     "against what that element was asked to be, rather than against a video to copy. --intent-file",
@@ -299,15 +306,33 @@ async function main(): Promise<void> {
     };
     result = await tools.observe_reference(input as { reference_id: string; shot_ids?: readonly string[]; question?: string; reobserve?: boolean });
   } else if (command === "record_observation") {
-    // An observation is paragraphs of prose. --text keeps a short one on the command line; --text-file
-    // is how a long one arrives without the shell deciding where it ends.
-    const textFile = one(flags, "text-file");
-    const input = supplied ?? {
-      reference_id: required(flags, "reference-id"),
-      key: required(flags, "key"),
-      text: textFile === undefined ? required(flags, "text") : await readFile(textFile, "utf8"),
-    };
-    result = await tools.record_observation(input as { reference_id: string; key: string; text: string });
+    // A whole sweep's answers at once. Each entry carries its own text, either inline or as a file the
+    // answer was written to, which is read here the way --text-file is.
+    const answerFile = one(flags, "batch");
+    if (answerFile !== undefined) {
+      const parsed: unknown = JSON.parse(await readFile(answerFile, "utf8"));
+      const list = Array.isArray(parsed) ? parsed : (parsed as { answers?: unknown }).answers;
+      if (!Array.isArray(list)) throw new Error(`${answerFile} must hold a JSON array of answers, or an object with an "answers" array`);
+      const answers = await Promise.all((list as { key?: unknown; text?: unknown; text_file?: unknown }[]).map(async (entry) => {
+        if (typeof entry.key !== "string") throw new Error(`every answer needs a "key"; received ${JSON.stringify(entry)}`);
+        const file = entry.text_file;
+        // Against the working directory, the way every other batch entry's paths are.
+        if (typeof file === "string") return { key: entry.key, text: await readFile(file, "utf8") };
+        if (typeof entry.text !== "string") throw new Error(`answer ${entry.key} needs a "text" or a "text_file"`);
+        return { key: entry.key, text: entry.text };
+      }));
+      result = await tools.record_observation({ reference_id: required(flags, "reference-id"), answers });
+    } else {
+      // An observation is paragraphs of prose. --text keeps a short one on the command line; --text-file
+      // is how a long one arrives without the shell deciding where it ends.
+      const textFile = one(flags, "text-file");
+      const input = supplied ?? {
+        reference_id: required(flags, "reference-id"),
+        key: required(flags, "key"),
+        text: textFile === undefined ? required(flags, "text") : await readFile(textFile, "utf8"),
+      };
+      result = await tools.record_observation(input as { reference_id: string; key: string; text: string });
+    }
   } else if (command === "review_element") {
     const reviewFile = one(flags, "batch");
     if (reviewFile !== undefined) {

@@ -12,6 +12,30 @@ import type { WhisperXLanguage } from "@hypit/whisperx";
 import { assert, command, readBytes, round, writeJson } from "./media.js";
 import type { Transcript, TranscriptFile, TranscriptPassage, TranscriptWord } from "./types.js";
 
+/**
+ * Whether the local WhisperX service answers.
+ *
+ * The route used to probe the service by hand, as three commands, before `prepare_reference`. The
+ * service answers `/health`, which is the same call the Provider makes before transcribing — made
+ * early enough to be reported before the minutes a first start spends loading the model. It reports
+ * rather than refuses: a machine without the service still prepares everything except the transcript,
+ * which `prepareTranscript` leaves recoverable.
+ */
+export async function whisperxHealth(baseUrl = "http://127.0.0.1:8765"): Promise<{ readonly ok: boolean; readonly reason: string }> {
+  const normalized = baseUrl.replace(/\/+$/u, "");
+  try {
+    const response = await fetch(`${normalized}/health`, { signal: AbortSignal.timeout(5_000) });
+    if (!response.ok) return { ok: false, reason: `WhisperX answered ${response.status}` };
+    const body = await response.json().catch(() => undefined) as { readonly ok?: unknown } | null | undefined;
+    if (body === null || typeof body !== "object" || body.ok !== true) {
+      return { ok: false, reason: "WhisperX is up but not ready; a first start spends a few minutes loading the model" };
+    }
+    return { ok: true, reason: "" };
+  } catch {
+    return { ok: false, reason: `WhisperX is not reachable at ${normalized}` };
+  }
+}
+
 // WhisperX measures in samples of the canonical evidence rate and refuses audio of any other shape,
 // so this is both what the audio is extracted at and what its word times are divided by.
 const EVIDENCE_SAMPLE_RATE = 16_000;

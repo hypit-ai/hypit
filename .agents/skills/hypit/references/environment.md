@@ -87,15 +87,10 @@ Reconstructing a video given as a link rather than as a file needs `uv` too: `yt
 `services/yt-dlp` and run from there, so the version is the repository's rather than the machine's.
 `prepare_reference` names what is missing when a link is passed without it.
 
-When the Runtime Profile selects the local WhisperX Endpoint, verify that the service answered its
-health probe before `prepare_reference` or a Build, since a first start can spend several minutes
-loading the model:
-
-```powershell
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8765/health
-hypit programs status
-hypit doctor
-```
+When the Runtime Profile selects the local WhisperX Endpoint, `prepare_reference` probes the service's
+health itself before transcribing, because a first start can spend several minutes loading the model.
+A service that does not answer is reported in the command's result with a pointer to the repair rather
+than silently producing an empty transcript.
 
 `host-setup.md` holds the host toolchain installations and repairs, and is read when a command
 reports that a service or a binary is unavailable.
