@@ -57,14 +57,14 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th width="16%">参考视频</th>
     <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/dbf07024-c561-48bf-89fb-a371d613253f" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/646aa486-e8a4-4694-867e-d6ae7b65ec56" controls muted></video></td>
     <td width="28%"></td>
   </tr>
   <tr>
     <th width="16%">复刻视频</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/2022fca7-0a25-466a-956f-c6fcaae81d0c" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/12f42c08-c820-479d-9ac7-3636a0c77c0a" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/a2514f4e-1200-4c63-abde-3afb339f76be" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/24f8d669-c9db-48f4-8bc5-03b86f045bc4" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/a354b2db-298c-49fb-a39e-e2fbe7ab74d0" controls muted></video></td>
   </tr>
   <tr>
     <td colspan="4"><p><b>“GOAT DEBATE”</b>——一条 20 秒的足球 Tier List，把 Ronaldo 排进 D 级，把 Messi 排进 S 级。A-roll 是两段 Seedance 2 Mini 生成的 720p 吐槽片段，B-roll 是 GPT Image 2 生成的一张 2K 哥特女孩肖像和十张 1K 脑腐图；WhisperX 负责逐词对齐，排行榜跟着音效逐条落位，再配上红色词盒卡拉 OK 字幕、丝滑的动画和抓耳的背景音乐，最后由 64 个无头 Chromium 进程并发渲染。</p><p>上面给出了三个复刻版本：把解说员换成香蕉猫；翻转排名，让 Ronaldo 成为 GOAT；把所有球员换成科技公司创始人。同一套爆款结构，可以产出完全不同的爆款视频。</p><p>总成本：<b>$1.15</b>。</p></td>
