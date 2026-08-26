@@ -167,7 +167,10 @@ export async function cutClip(source: string, start: number, seconds: number, ta
 
 /** One frame of a video, at the second asked for. */
 export async function cutFrame(source: string, at: number, target: string): Promise<string> {
-  return await extract(source, ["-i", source, "-ss", String(round(at)), "-frames:v", "1", "-q:v", "3"], target);
+  // `-pix_fmt yuvj420p` because JPEG is a full-range format and the encoder refuses full-range YUV
+  // input without being told which one it is writing. Video from the web is routinely full-range, so
+  // leaving it out refuses the still with `Non full-range YUV is non-standard` and writes nothing.
+  return await extract(source, ["-i", source, "-ss", String(round(at)), "-frames:v", "1", "-pix_fmt", "yuvj420p", "-q:v", "3"], target);
 }
 
 /**
@@ -186,7 +189,7 @@ export async function shotTile(clip: string, duration: number, target: string, c
   await command("ffmpeg", [
     "-hide_banner", "-loglevel", "error", "-y", "-i", clip,
     "-vf", `fps=${rate},scale='min(${Math.round(cellWidth)},iw)':-2,tile=layout=${TILE_COLUMNS}x${rows}:padding=8:margin=8:color=black`,
-    "-frames:v", "1", "-q:v", "3", target,
+    "-frames:v", "1", "-pix_fmt", "yuvj420p", "-q:v", "3", target,
   ], 300_000);
   return target;
 }
@@ -208,8 +211,8 @@ export async function prepareMedia(videoPath: string, root: string, duration: nu
     // `-ss` goes after `-i`: seeking the output decodes from the start and lands on the frame asked
     // for, where seeking the input lands on the keyframe before it.
     await extract(videoPath, ["-i", videoPath, "-ss", String(bound.start), "-t", String(Math.max(0.1, bound.end - bound.start)), "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart"], clip);
-    await extract(videoPath, ["-i", videoPath, "-ss", String(bound.start + (bound.end - bound.start) / 2), "-frames:v", "1", "-vf", "scale='min(720,iw)':-2", "-q:v", "3"], join(shotDir, `${id}-representative.jpg`));
-    await extract(videoPath, ["-sseof", "-0.1", "-i", clip, "-update", "1", "-frames:v", "1", "-vf", "scale='min(720,iw)':-2", "-q:v", "3"], join(shotDir, `${id}-tail.jpg`));
+    await extract(videoPath, ["-i", videoPath, "-ss", String(bound.start + (bound.end - bound.start) / 2), "-frames:v", "1", "-vf", "scale='min(720,iw)':-2", "-pix_fmt", "yuvj420p", "-q:v", "3"], join(shotDir, `${id}-representative.jpg`));
+    await extract(videoPath, ["-sseof", "-0.1", "-i", clip, "-update", "1", "-frames:v", "1", "-vf", "scale='min(720,iw)':-2", "-pix_fmt", "yuvj420p", "-q:v", "3"], join(shotDir, `${id}-tail.jpg`));
     // Only the observer that reads pictures has anything to read them from, and building a tile per
     // shot is a decode per shot. The other observer is handed the clip itself.
     if (tiles) await shotTile(clip, bound.end - bound.start, join(shotDir, `${id}-frames.jpg`));

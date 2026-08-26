@@ -1,0 +1,13 @@
+[project]
+name = "hypit-yt-dlp"
+version = "0.1.0"
+description = "Pinned yt-dlp, for fetching a reference video that lives at a link"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+license = { text = "Hypit Open Source License (Apache-2.0 with additional conditions); see LICENSE at the repository root" }
+dependencies = [
+  "yt-dlp==2026.8.19",
+]
+
+[tool.uv]
+package = false
