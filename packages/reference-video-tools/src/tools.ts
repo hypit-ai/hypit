@@ -18,7 +18,7 @@ import {
 import { describeSchema } from "./contract.js";
 import { videoCliDistribution } from "@hypit/video-cli";
 
-import { authorSource, invokedFrom, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath } from "./authoring.js";
+import { authorSource, invokedFrom, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath, tokenWindow } from "./authoring.js";
 import type { RenderElementInput, RenderPreviewsInput, SpokenRange, StandInFocus, StandInSidecar } from "./authoring.js";
 import { writePlaceholder } from "./placeholder.js";
 import { downloadReferenceVideo, isReferenceUrl } from "@hypit/yt-dlp";
@@ -1528,6 +1528,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const root = stateRoot(state.reference_id);
       const named = [input.shot_id, input.segment, input.selection, input.tokens].filter((value) => value !== undefined);
       assert(named.length === 1, "name exactly one of shot_id, segment, selection and tokens");
+      if (input.tokens !== undefined) tokenWindow(input.tokens, "tokens");
       const supplied = [input.image_path, input.video_path].filter((value) => value !== undefined);
       assert(supplied.length === 1, "supply exactly one of image_path and video_path");
       const clip = input.video_path !== undefined;
@@ -1806,6 +1807,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       assert(element.length > 0, "--element is required; a review with no element is credited to nothing");
       const named = [input.segment, input.selection, input.tokens].filter((value) => value !== undefined);
       assert(named.length === 1, "name exactly one of --segment, --selection or --tokens: the window the render covers");
+      if (input.tokens !== undefined) tokenWindow(input.tokens, "tokens");
       const supplied = [input.image_path, input.video_path].filter((value) => value !== undefined);
       assert(supplied.length === 1, "supply exactly one of --image or --video");
 

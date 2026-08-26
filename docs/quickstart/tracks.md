@@ -178,8 +178,11 @@ Placement is an explicit Spatial Frame edge; appearance and motion remain reusab
 <space:Frame id="product-frame" within={vertical}
   left="8%" top="20%" right="92%" bottom="68%"/>
 
+<pipeline:Normalize id="product-media" source={product-motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+
 <media-track:Track id="product-broll" semantic={speech.semantic} canvas={vertical}>
-  <media-track:Item video={product-motion.video} frame={product-frame}
+  <media-track:Item media={product-media.media} frame={product-frame}
     during={story.selection.product-demo}
     appearance={recipes.media.product}
     motion={recipes.motion.product}/>
@@ -199,16 +202,14 @@ Every Item, Member or sample Layer declares exactly one visual input form:
 | Input | Value | Meaning |
 |---|---|---|
 | `image={...}` + `extent={...}` | Blob + authored pixel extent | A durationless still image |
-| `video={...}` | Generated/raw video Blob | Inspect, select and normalize to this Track's `space` automatically |
 | `media={...}` | `SynchronizedMedia` | Connect an explicitly prepared timed source directly |
 | `surface={...}` | `CompositableSurfaceRef` | Connect an alpha-aware still or timed surface directly |
 
-Raw `video=` is visual-only by default. Add `audio="include"` when its own audio should be
-normalized and emitted by the Track; `audio-gain` remains available for that selected source.
-These forms are explicit so a generic Blob is never guessed to be an image or video. The convenient
-surface syntax does not bypass the graph: `video=` expands to ordinary bind-request, inspect,
-select and normalize Operations. An explicit `<pipeline:Normalize>` remains available for shared
-or specially selected media, whose output then connects through `media=`.
+A generated or imported video Blob reaches a Track through `<pipeline:Normalize>`, which inspects it,
+selects its streams and puts them on one frame domain; its `.media` output is what `media=` connects
+to. `audio="none"` carries the picture alone, and `audio="default"` carries the source's own sound,
+which `audio-gain` then scales. These forms are explicit so a generic Blob is never guessed to be an
+image or a video.
 
 **Outputs:** `{product-broll.visual}` and, only when explicitly authored, `{product-broll.audio}`.
 
@@ -549,8 +550,10 @@ All four track families together in one source file:
   left="10%" top="20%" right="90%" bottom="70%"/>
 
 <!-- Media: one ordinary Item used editorially as B-roll -->
+<pipeline:Normalize id="card-media" source={motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
 <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
-  <media-track:Item video={motion.video} frame={card-frame}
+  <media-track:Item media={card-media.media} frame={card-frame}
     during={story.selection.demo} appearance={recipes.media.card} motion={recipes.motion.card}/>
 </media-track:Track>
 

@@ -68,7 +68,7 @@ as `SynchronizedMedia`, then place it with `audio:Track`:
 
 - Keep primary speech, music, ambience, and effects as independently inspectable contributions. Add
   Speech Track's audio projection and every selected Audio Track to `film:Film`.
-- Raw Media Track video is visual-only unless `audio="include"` is explicitly authored.
+- A Media Track carries picture alone unless the source was normalized with `audio="default"`.
 - Dialogue wins the mix. Use explicit gain and fades; do not assume automatic ducking, loudness
   normalization, or mastering.
 
