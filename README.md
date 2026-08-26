@@ -94,10 +94,16 @@ npx skills add hypit-ai/hypit -g
 ### UGC
 
 <table>
+  <colgroup>
+    <col width="16%">
+    <col width="28%">
+    <col width="28%">
+    <col width="28%">
+  </colgroup>
   <tr>
     <th>Reference</th>
     <td></td>
-    <td><video src="https://github.com/user-attachments/assets/85c49b53-a075-42ab-bf7f-ff3a4755abf9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/dbf07024-c561-48bf-89fb-a371d613253f" controls muted></video></td>
     <td></td>
   </tr>
   <tr>
@@ -107,7 +113,7 @@ npx skills add hypit-ai/hypit -g
     <td><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4"><p>A 20-second semantic UGC ranking video built from two 10-second 720p Seedance 2 Mini A-roll clips, one 2K GPT Image 2 hero image, ten 1K GPT Image 2 B-roll images, WhisperX word alignment, selection-timed B-roll, a sound-synced ranking board, red-box karaoke captions, background music, and 30 fps HyperFrames composition.</p><p>Three clones swap the host and voice, the Tier Board for a Ranking Column, or the entire football topic for tech founders while preserving the same production grammar.</p><p>Total cost: <b>$1.15</b>.</p></td>
+    <td colspan="4"><p><b>"GOAT DEBATE"</b> — a 20-second football tier list that puts Ronaldo in D and Messi in S, narrated by an goth girl AI host who knows exactly how mad you're about to be. Two Seedance 2 Mini 720p trolling A-rolls, one 2K GPT Image 2 goth girl portrait, ten 1K GPT Image 2 brain-rot B-rolls, WhisperX word alignment, a sound-synced ranking board, red-box karaoke captions, background music, and 30 fps HyperFrames composition.</p><p>Three clones included: swap the narrator to banana cat, flip the rankings and Ronaldo becomes GOAT, or replace all players with tech founders — same viral structure, different viral video.</p><p>Total cost: <b>$1.15</b>.</p></td>
   </tr>
 </table>
 

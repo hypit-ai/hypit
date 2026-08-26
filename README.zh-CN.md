@@ -94,10 +94,16 @@ npx skills add hypit-ai/hypit -g
 ### UGC
 
 <table>
+  <colgroup>
+    <col width="16%">
+    <col width="28%">
+    <col width="28%">
+    <col width="28%">
+  </colgroup>
   <tr>
     <th>参考视频</th>
     <td></td>
-    <td><video src="https://github.com/user-attachments/assets/85c49b53-a075-42ab-bf7f-ff3a4755abf9" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/dbf07024-c561-48bf-89fb-a371d613253f" controls muted></video></td>
     <td></td>
   </tr>
   <tr>
@@ -107,7 +113,7 @@ npx skills add hypit-ai/hypit -g
     <td><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4"><p>一条 20 秒的语义化 UGC 排行视频：两段 10 秒 720p Seedance 2 Mini A-roll、一张 2K GPT Image 2 主视觉图、十张 1K GPT Image 2 B-roll、WhisperX 逐词对齐、按 Selection 定时的 B-roll、同步音效的排行榜、红色词盒卡拉 OK 字幕、背景音乐，以及 30 fps HyperFrames 合成。</p><p>三个复刻版本分别替换主持人与声音、把 Tier Board 替换成 Ranking Column，或在保留同一套生产语法的情况下把整个足球主题替换成科技企业家。</p><p>总成本：<b>$1.15</b>。</p></td>
+    <td colspan="4"><p><b>“GOAT DEBATE”</b>——一条 20 秒的足球 Tier List：把 Ronaldo 放进 D 级、Messi 放进 S 级，由一位清楚知道你马上会有多生气的哥特女孩 AI 主持人负责解说。两段 Seedance 2 Mini 720p 嘲讽 A-roll、一张 2K GPT Image 2 哥特女孩肖像、十张 1K GPT Image 2 脑腐 B-roll、WhisperX 逐词对齐、音效同步排行榜、红色词盒卡拉 OK 字幕、背景音乐，以及 30 fps HyperFrames 合成。</p><p>包含三个复刻版本：把解说员替换成香蕉猫；翻转排名，让 Ronaldo 成为 GOAT；或者把所有球员替换成科技企业家——同一套爆款结构，不同的爆款视频。</p><p>总成本：<b>$1.15</b>。</p></td>
   </tr>
 </table>
 
