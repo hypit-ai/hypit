@@ -107,7 +107,7 @@ npx skills add hypit-ai/hypit -g
     <td width="28%"><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4"><p><b>"GOAT DEBATE"</b> — a 20-second football tier list that puts Ronaldo in D and Messi in S, narrated by an goth girl AI host who knows exactly how mad you're about to be. Two Seedance 2 Mini 720p trolling A-rolls, one 2K GPT Image 2 goth girl portrait, ten 1K GPT Image 2 brain-rot B-rolls, WhisperX word alignment, a sound-synced ranking board, red-box karaoke captions, background music, and 30 fps HyperFrames composition.</p><p>Three clones included: swap the narrator to banana cat, flip the rankings and Ronaldo becomes GOAT, or replace all players with tech founders — same viral structure, different viral video.</p><p>Total cost: <b>$1.15</b>.</p></td>
+    <td colspan="4"><p><b>"GOAT DEBATE"</b> — a 20-second football tier list that puts Ronaldo in D and Messi in S, narrated by an goth girl AI host who knows exactly how mad you're about to be. Two Seedance 2 Mini 720p trolling A-rolls, one 2K GPT Image 2 goth girl portrait, ten 1K GPT Image 2 brain-rot B-rolls, WhisperX word alignment, a sound-synced ranking board, red-box karaoke captions, catchy background music, and 30 fps HyperFrames composition.</p><p>Three clones included: swap the narrator to banana cat, flip the rankings and Ronaldo becomes GOAT, or replace all players with tech founders — same viral structure, different viral video.</p><p>Total cost: <b>$1.15</b>.</p></td>
   </tr>
 </table>
 
