@@ -2,7 +2,7 @@ import { readFile, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 import {
-  collectNodePackageComponents,
+  collectLoadedNodePackageComponents,
   distributionExternalPackageRequirements,
   loadNodePackageSelection,
 } from "@hypit/package-loader-node";
@@ -504,7 +504,7 @@ export async function createRuntimeFromConfig(
             ? {}
             : { fallbackRoots: [options.distributionPackageRoot] }),
         });
-        return collectNodePackageComponents(loaded.map((item) => item.contribution));
+        return collectLoadedNodePackageComponents(loaded);
       },
       endpoints,
       close: async () => {

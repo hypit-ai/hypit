@@ -110,5 +110,10 @@ Program 并启动本地 Worker。`build` 不做部署：它执行便宜只读预
 Worker 可用。`status`、`queue`、`cancel` 用来观察和控制耐久工作。终态 Build 不恢复；复用
 以前的结果必须在新的 `.svrun` 中显式写 Candidate。
 
+运行中的 Worker 会在 Build 第一次需要某个已安装 Component 包时加载它。后续 Build 可以在
+不重启 Worker 的情况下新增 Component 包；Worker 会沿完整依赖闭包只加载尚未见过的部分。
+已经加载的包代码不会热更新，因此修改包代码或更新 Distribution 后，仍需等 Worker 空闲再将
+其停止，然后提交下一次 Build。
+
 Runtime 包是本地可信部署代码，其安装版本由 npm 或 pnpm 管理。Hypit 只在显式 `runtime up` /
 `packages install` 边界选择精确依赖并调用 npm，不维护第二份包锁，也不会把元数据冒充成沙箱。

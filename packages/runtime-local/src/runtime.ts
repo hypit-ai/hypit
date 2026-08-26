@@ -69,12 +69,15 @@ export async function createLocalRuntime(
       if (missing.length === 0) return;
       assert(options.loadComponentPackages !== undefined,
         `Build requires component package ${missing[0]} but this Runtime cannot load installed packages`);
-      const components = await options.loadComponentPackages(missing);
-      for (const component of components) {
-        registerTypeValidatorFacets(validators, component.validators ?? []);
-        registerProducerFacets(producers, component.producers ?? []);
+      const loaded = await options.loadComponentPackages(missing);
+      const fresh = loaded.filter((item) => !loadedComponentPackages.has(item.specifier));
+      for (const item of fresh) {
+        for (const component of item.components) {
+          registerTypeValidatorFacets(validators, component.validators ?? []);
+          registerProducerFacets(producers, component.producers ?? []);
+        }
       }
-      for (const item of missing) loadedComponentPackages.add(item);
+      for (const item of fresh) loadedComponentPackages.add(item.specifier);
     });
     componentInstallation = task.then(() => undefined, () => undefined);
     await task;

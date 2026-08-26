@@ -1,6 +1,11 @@
 import type { ComponentPackage } from "@hypit/component-kit";
 
-import type { NodeModuleContribution, NodePackageContribution } from "./types.js";
+import type {
+  LoadedComponentPackage,
+  LoadedPackage,
+  NodeModuleContribution,
+  NodePackageContribution,
+} from "./types.js";
 
 function assertPackage(value: NodePackageContribution): void {
   if (value.format !== "hypit.node-package@1") {
@@ -78,4 +83,15 @@ export function collectNodePackageComponents(
     }
   }
   return components;
+}
+
+/** Validate a loaded selection while preserving the physical owner of every Component package. */
+export function collectLoadedNodePackageComponents(
+  packages: readonly LoadedPackage[],
+): readonly LoadedComponentPackage[] {
+  collectNodePackageComponents(packages.map((item) => item.contribution));
+  return packages.map((item) => ({
+    specifier: item.specifier,
+    components: item.contribution.components ?? [],
+  }));
 }

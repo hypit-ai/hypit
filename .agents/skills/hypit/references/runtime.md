@@ -66,6 +66,9 @@ Builds remain archived and neither command cancels remote Provider work.
   earlier Build; reuse across Builds exists only through explicit Run Source Candidates.
 - `inspect` reads durable Build state and accepted Records. `get` copies an archived Artifact to the
   requested destination.
+- A running Worker loads an installed Component package when a Build first names it and remembers
+  every physical package in that dependency closure. A later Build may add another installed
+  Component package without restarting the Worker; shared dependencies are not registered twice.
 - There is no implicit cache or Pin state. Reuse Records through a new `.svrun` containing
   `build-record` and `satisfy`; the Candidate supplies the exact nominal Type required by the
   current Logical Output.

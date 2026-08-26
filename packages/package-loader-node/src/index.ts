@@ -1,4 +1,5 @@
 export {
+  collectLoadedNodePackageComponents,
   collectNodePackageComponents,
 } from "./contribution.js";
 export {

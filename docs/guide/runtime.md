@@ -115,6 +115,12 @@ is available. `status`, `queue` and `cancel` observe or control durable work. A 
 resumed. Reusing an earlier result is an explicit Candidate in a new `.svrun`, not hidden Runtime
 behavior.
 
+A running Worker loads installed Component packages as Builds first require them. A later Build may
+name a new Component package without restarting the Worker; the Worker loads only packages it has
+not already seen from that package's complete dependency closure. Loaded package code is not hot
+reloaded, so editing a package or updating the Distribution still requires stopping an idle Worker
+before the next Build.
+
 Runtime packages are trusted local deployment code. npm or pnpm owns their installed versions;
 Hypit only selects exact requirements and invokes npm at the explicit `runtime up`/`packages install`
 boundary. It has no second package lock and does not claim that metadata is a sandbox.

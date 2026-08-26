@@ -19,7 +19,7 @@ import type { ComponentPackage } from "@hypit/component-kit";
 import { createLocalRuntime } from "@hypit/runtime-local";
 import { defineBuild } from "@hypit/core";
 import {
-  collectNodePackageComponents,
+  collectLoadedNodePackageComponents,
   loadNodePackageSelection,
 } from "@hypit/package-loader-node";
 import { credentialRef } from "@hypit/runtime";
@@ -387,7 +387,7 @@ test("project local runtime accepts components loaded from an installed package"
       ...projectRuntimeFixture(runtimeRoot),
       loadComponentPackages: async (specifiers) => {
         const loaded = await loadNodePackageSelection(specifiers, installedRoot);
-        return collectNodePackageComponents(loaded.map((item) => item.contribution));
+        return collectLoadedNodePackageComponents(loaded);
       },
     });
     const result = await runtime.build({
@@ -404,6 +404,71 @@ test("project local runtime accepts components loaded from an installed package"
       .some((record) => record.id === "document:root"), true);
     await runtime.close();
   } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("project local runtime remembers the complete package closure across incremental Builds", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-component-closure-"));
+  const loadedSelections: string[][] = [];
+  const sharedComponents: ComponentPackage = {
+    validators: [{ type: types.intent, handler() {} }],
+    producers: [
+      {
+        producer: producers.makePrompt,
+        handler({ inputs }) {
+          const intent = inputs.intent?.value;
+          assert.equal(intent?.kind, "inline");
+          const name = (intent.value as { readonly name: string }).name;
+          return { outputs: { prompt: { kind: "inline", value: `Greet ${name}` } }, needs: {} };
+        },
+      },
+      {
+        producer: producers.placeholderText,
+        handler() {
+          return { outputs: { generated: { kind: "inline", value: "Preview greeting" } }, needs: {} };
+        },
+      },
+      {
+        producer: producers.assemble,
+        handler({ inputs }) {
+          const generated = inputs.generated?.value;
+          assert.equal(generated?.kind, "inline");
+          return { outputs: { document: { kind: "inline", value: { text: generated.value } } }, needs: {} };
+        },
+      },
+    ],
+  };
+  const runtime = await createLocalRuntime({
+    ...projectRuntimeFixture(directory),
+    loadComponentPackages(specifiers) {
+      loadedSelections.push([...specifiers]);
+      return [
+        ...specifiers.map((specifier) => ({ specifier, components: [] })),
+        { specifier: "example-shared-components", components: [sharedComponents] },
+      ];
+    },
+  });
+  try {
+    for (const [id, specifier] of [
+      ["component-closure-a", "example-feature-a"],
+      ["component-closure-b", "example-feature-b"],
+      ["component-closure-shared", "example-shared-components"],
+    ] as const) {
+      await runtime.build({
+        id,
+        definition: definition(createGreetingBuild({ generationRealization: "placeholder" })),
+        componentPackages: [specifier],
+      });
+      const completed = await runtime.workOnce();
+      assert.equal(completed?.terminal, "complete");
+    }
+    assert.deepEqual(loadedSelections, [
+      ["example-feature-a"],
+      ["example-feature-b"],
+    ]);
+  } finally {
+    await runtime.close();
     await rm(directory, { recursive: true, force: true });
   }
 });
