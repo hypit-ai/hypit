@@ -34,9 +34,13 @@ person has to invent the prompt again. `media:Image` is for material the author 
 
 Reference observation is part of the work and is expected to cost what it costs.
 
-## The video path is the whole request
+## The video is the whole request
 
-The author gives one thing: the path to a video. The working directory, the project name, which
+The author gives one thing: a video, as a path to a file or as a link to one. A link — TikTok,
+YouTube, Instagram, Bilibili — is fetched by `prepare_reference` with `yt-dlp` before anything else
+runs, and every step after that reads the downloaded file without knowing it was ever a link. The
+download is cached by the link, so a route restarted after an interruption reaches the same bytes and
+therefore the same reference rather than paying for its observations twice. The working directory, the project name, which
 packages to use and where the result goes are yours to decide. Ask the author about the video and
 nothing else — what it is for, who is in it, what it should say. Those answers describe the result
 they want; record them and apply them at step 23. Never interrupt to ask which generator, which
@@ -124,8 +128,11 @@ inside it. This is instant and may run before or during the sweep.
 ### 8. Prepare the reference
 
 ```bash
-hypit-reference-video-tools prepare_reference --video-path <path> --observer gemini|agent
+hypit-reference-video-tools prepare_reference --video-path <path or link> --observer gemini|agent
 ```
+
+`--video-path` takes a link as readily as a path. The result names the link it fetched under
+`source_url`, which is the only record of which video was reconstructed once the bytes are on disk.
 
 Verify the WhisperX service answered its health probe before running this — a first start can spend
 several minutes loading the model. `../environment.md` says how; `../host-setup.md` covers the

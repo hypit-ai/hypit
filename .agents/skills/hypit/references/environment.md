@@ -83,6 +83,8 @@ on Windows. Credentials load from a project's `.env` in the same shell that runs
 `set -a && . ./.env && set +a`.
 `uv` is required only when the selected Runtime Profile uses a managed Python program such as
 WhisperX or OpenCV.
+`yt-dlp` is required only to reconstruct a video given as a link rather than as a file; a host package
+manager or `pipx` puts it on `PATH`. `prepare_reference` names it when a link is passed without it.
 
 When the Runtime Profile selects the local WhisperX Endpoint, verify that the service answered its
 health probe before `prepare_reference` or a Build, since a first start can spend several minutes
