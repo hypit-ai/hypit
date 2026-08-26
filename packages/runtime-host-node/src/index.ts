@@ -220,10 +220,14 @@ export function resolveRuntimeExecutable(root: string, value: string): string {
 async function executableExists(value: string): Promise<boolean> {
   const unavailable = (error: unknown) => error instanceof Error && "code" in error
     && ["ENOENT", "ENOTDIR", "EACCES"].includes(String(error.code));
-  const suffixes = process.platform === "win32" && !/\.[^\\/]+$/u.test(value)
+  const extensions = process.platform === "win32" && !/\.[^\\/]+$/u.test(value)
     ? (process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean)
-    : [""];
-  const candidates = (base: string) => suffixes.map((suffix) => `${base}${suffix}`);
+    : [];
+  // A configured path names one file, and on Windows this asks only whether that file is there, so
+  // it is tried as written before any PATHEXT extension. A bare command name is resolved the way a
+  // shell would resolve it, where an extensionless entry is not something Windows can run.
+  const candidates = (base: string, suffixes: readonly string[]) =>
+    (suffixes.length === 0 ? [""] : suffixes).map((suffix) => `${base}${suffix}`);
   const available = async (candidate: string): Promise<boolean> => {
     try {
       await access(candidate, process.platform === "win32" ? constants.F_OK : constants.X_OK);
@@ -234,11 +238,11 @@ async function executableExists(value: string): Promise<boolean> {
     }
   };
   if (pathLike(value)) {
-    for (const candidate of candidates(value)) if (await available(candidate)) return true;
+    for (const candidate of candidates(value, ["", ...extensions])) if (await available(candidate)) return true;
     return false;
   }
   for (const directory of (process.env.PATH ?? "").split(delimiter).filter(Boolean)) {
-    for (const candidate of candidates(resolve(directory, value))) {
+    for (const candidate of candidates(resolve(directory, value), extensions)) {
       if (await available(candidate)) return true;
     }
   }

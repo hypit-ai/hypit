@@ -10,7 +10,7 @@ First enumerate every system the program actually contains — base pictures, in
 full-screen graphic compositions, persistent overlays, captions, speech, music, sound effects — and
 inspect candidates for each one. **A system you never inspected is a system you are about to invent.**
 
-Then, for each: select candidate packages and run `inspect_svml_vocabulary`. Read each selected
+Then, for each: select candidate packages and run `hypit-reference-video-tools inspect_svml_vocabulary`. Read each selected
 package README as syntax authority. Compare what the element must be against declared inputs,
 outputs, attributes, children, ports, Recipe properties, timing behavior, appearance and examples.
 
@@ -47,14 +47,40 @@ hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/<name> [--p
 named packages is returned. The README remains the syntax authority; this reports what the loader
 will actually accept, which is what a mistaken attribute is checked against.
 
+Both commands print one JSON object to stdout. `list_svml_packages` is an array of
+`{ package_name, tags, models }`; `inspect_svml_vocabulary` returns `{ packages, surfaces }` where
+each Surface carries `package_name`, `module`, `surface`, `tag`, `mode`, `outputs`, `readme_path` and
+`vocabulary` — whose own keys are `summary`, `attributes`, `children`, `example` and `notes`. **The
+Recipe properties are inside the `recipe` attribute**, at `vocabulary.attributes[name=recipe].recipe`,
+one entry per property; there is no `recipe` key beside `attributes`. A Surface re-exported from
+another package carries no `vocabulary` at all — follow its `module` to the one that declares it. Read
+the `accepts` lists on attributes: that is the declared Type an element must satisfy, and a property
+with nowhere to land in those lists is the finding that makes a gap.
+
+**That output is the complete authoring contract. Author from it, and do not read a package's source
+code to learn an element's syntax.** Every recipe property carries its own `summary` and its admitted
+`values` — the parameter reference is in the inspect output, not in the package. The README is the
+example, and it is not a parameter reference: some READMEs are a single illustrative recipe, and a
+thin one is not missing documentation, it is a thin example next to a complete declaration. The
+source is implementation, and the loader refuses a mistaken attribute against the declaration, not
+against the source — so reading it neither teaches the contract nor matches how the element is
+validated.
+
 ## Reuse, compose, or declare a gap
 
 Use this decision order:
 
-1. Reuse one existing component when it fully expresses the requirement.
-2. Compose multiple existing components when their declared outputs and timing express it without
-   changing what the element is.
-3. Declare a real vocabulary gap only when neither option works.
+1. Reuse one existing component when its declared vocabulary expresses the element exactly — every
+   property that changes what the viewer sees lands somewhere the package declares.
+2. Compose multiple existing components when their declared outputs and timing express it to that
+   same standard, without changing what the element is.
+3. Declare a real vocabulary gap when neither option works.
+
+**Resemblance does not qualify a package.** A tag that draws the same kind of thing, or that carries
+every property except one, leaves that element unexpressed, and an element the installed vocabulary
+cannot express as stated is a gap. Steps 1 and 2 apply where the declared vocabulary already carries
+the element as the evidence states it; step 3 is the ordinary outcome everywhere else, and
+`local-author-package.md` is the route for it.
 
 Step 2 is not a way around step 3. Composition may express one element with several components; it
 may not move an element out of its role because some other tag happens to draw the same shape. What
@@ -92,7 +118,7 @@ it deliberately and writes it down.
 ## A real gap
 
 For a real gap, stop authoring sources and read `local-author-package.md` completely. Implement and
-install the new project-local package, then run `inspect_svml_vocabulary` against it before using its
+install the new project-local package, then run `hypit-reference-video-tools inspect_svml_vocabulary` against it before using its
 tag. That call is not redundant with having just written the package: it proves the specifier
 resolves, the activation contribution is wired, and the loader can decode the Surface. `pnpm check`
 proves none of those, because activation lookups fail at runtime rather than at compile time.

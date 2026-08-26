@@ -498,6 +498,9 @@ importers:
       '@hypit/workspace':
         specifier: workspace:*
         version: link:../workspace
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 
   packages/comment-sticker:
     dependencies:
@@ -2126,30 +2129,57 @@ importers:
       '@google/genai':
         specifier: 1.52.0
         version: 1.52.0
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@hypit/estimate':
+        specifier: workspace:*
+        version: link:../estimate
+      '@hypit/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
+      '@hypit/media':
+        specifier: workspace:*
+        version: link:../media
       '@hypit/model-kit':
         specifier: workspace:*
         version: link:../model-kit
       '@hypit/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
+      '@hypit/program-space':
+        specifier: workspace:*
+        version: link:../program-space
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@hypit/provider-whisperx-local':
         specifier: workspace:*
         version: link:../provider-whisperx-local
+      '@hypit/script':
+        specifier: workspace:*
+        version: link:../script
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
       '@hypit/speech-evidence':
         specifier: workspace:*
         version: link:../speech-evidence
+      '@hypit/studio':
+        specifier: workspace:*
+        version: link:../studio
+      '@hypit/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@hypit/video-cli':
+        specifier: workspace:*
+        version: link:../video-cli
       '@hypit/whisperx':
         specifier: workspace:*
         version: link:../whisperx

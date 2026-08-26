@@ -330,23 +330,28 @@ test("an Item keeps ordered Paint/sample layers, two-frame fit and frame present
   const media = elements.find((element) => element.id === "content");
   assert.equal(media?.kind, "image");
   const wrapper = elements.find((element) => element.id === "content:sampling");
+  // The fitting box is the Frame less its 2px border and its 10px padding. `box-sizing: border-box`
+  // draws the border inside the Frame, so the content starts 12px in and is 24px smaller each way.
   assert.deepEqual(wrapper?.style, [
-    { name: "height", value: "280px" },
-    { name: "left", value: "60px" },
+    { name: "height", value: "276px" },
+    { name: "left", value: "62px" },
     { name: "position", value: "absolute" },
-    { name: "top", value: "10px" },
+    { name: "top", value: "12px" },
     { name: "transform-origin", value: "center center" },
-    { name: "width", value: "280px" },
+    { name: "width", value: "276px" },
   ]);
 });
 
 test("an owned clip path is an explicit Media input and lowers only over the Item's pixels", () => {
+  // A Path is drawn in Canvas pixels, which is what `spatial` declares three times over. The Frame
+  // sits at 100,200, so a trapezoid filling it is written from there and arrives at the Frame's own
+  // box translated back to 0,0.
   const clipped = bindMediaItemClipPath(itemSpec(), {
     commands: [
-      { kind: "move", xPx: 0, yPx: 0 },
-      { kind: "line", xPx: 400, yPx: 0 },
-      { kind: "line", xPx: 360, yPx: 300 },
-      { kind: "line", xPx: 40, yPx: 300 },
+      { kind: "move", xPx: 100, yPx: 200 },
+      { kind: "line", xPx: 500, yPx: 200 },
+      { kind: "line", xPx: 460, yPx: 500 },
+      { kind: "line", xPx: 140, yPx: 500 },
       { kind: "close" },
     ],
   });

@@ -13,6 +13,11 @@ These invariants override superficial layer order and shot boundaries:
   presence. The `agent` observer has no audio evidence and reads these from the frames and the word
   timings instead, which `observers.md` describes: the transcript is what decides whether anyone is
   speaking at all, so it is what keeps a moving mouth in B-roll from becoming a speaker.
+- The same evidence decides which picture is the Segment's base: whichever one shows a person saying
+  the words the transcript carries there, however small it is and whatever is on screen over it. A
+  full-frame board with the speaker inset in a corner is a base the size of the corner, covered by
+  most of a board. `../playbooks/craft/generated-dependencies.md` holds the rule and what follows
+  from it for stack order.
 - One overlay that continues across a cut remains one visual track spanning its full observed
   lifetime. Do not recreate it once per shot.
 - Merge two or three incorrectly split clips only when continuity evidence confirms one camera shot
@@ -24,21 +29,26 @@ These invariants override superficial layer order and shot boundaries:
 Shot boundaries are observation windows, not authoring units. Never generate independent SVML per
 shot and concatenate it afterward.
 
+## Their seconds are not authoring units either
+
+The shot list arrives as a table of `start_seconds` and `end_seconds`, and copying those numbers into
+the Source as `start="3.25s" end="7.42s"` is the shortest path from the evidence to a placement. It
+produces a reconstruction that is wrong the moment it is built.
+
+Those seconds describe the reference's own clock, and nothing in the reconstruction runs on that
+clock. `../script-time.md` says what to bind to instead, and why an Item bound to 3.25 seconds points
+at whichever word happens to land there. The reference's seconds then decide *which words* a Selection
+spans, which is what they can honestly tell you, rather than which frame an Item starts on.
+
 ## A system that spans shots is authored once
 
-- A visual system that persists across cuts — captions, a running list that keeps its state, a
-  progress indicator, a persistent badge or logo, a recurring lower third — is one system: one
-  Program, one Track and one shared Style over its full observed lifetime, even when the visible
-  words, items or values change.
-- Do not recreate the system per shot, and do not create a second Style because a new shot begins. A
-  new shot is never itself evidence of a change in appearance.
-- Author an observed local difference as a scoped variation inside the one system, on exactly the
-  words, items or interval where it was observed.
-- Whether the system is one Program with per-item timing or separate instances is decided by the
-  declared vocabulary of the chosen package, never by shot count.
-- The `persistent_systems` observation from `prepare_reference` reports these systems for the whole
-  reference, including whether each one's appearance ever changes and where. Use it instead of
-  inferring lifetimes from per-shot prose.
+`../script-time.md` states the rule: one Program, one Track, one shared Style over the system's full
+lifetime, and a scoped variation rather than a second Style. A new shot is never itself evidence of a
+change in appearance.
+
+The reference supplies the lifetimes. The `persistent_systems` observation from `prepare_reference`
+reports these systems for the whole reference, including whether each one's appearance ever changes
+and where. Use it instead of inferring lifetimes from per-shot prose.
 
 ## Base pictures and designed fields
 

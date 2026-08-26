@@ -227,7 +227,8 @@ function glyphFilterDefinition(
   return `<filter id="${id}" x="-100%" y="-100%" width="300%" height="300%" color-interpolation-filters="sRGB">${spread}${blur}${offset}${flood}<feComposite in="paint" in2="shape" operator="in"/></filter>`;
 }
 
-function glyphFilterDefinitions(element: TerminalTextElement, context: TextRenderContext): string {
+/** Every glyph Paint the document reaches, from the element, its paragraphs and their runs. */
+function documentGlyphPaintLayers(element: TerminalTextElement): GlyphPaintLayer[] {
   const layers: GlyphPaintLayer[] = [];
   const append = (paints: readonly VisualTextPaintLayer[] | undefined): void => {
     layers.push(...glyphPaintLayers(paints ?? []));
@@ -237,6 +238,11 @@ function glyphFilterDefinitions(element: TerminalTextElement, context: TextRende
     append(paragraph.style?.paints);
     for (const inline of paragraph.inlines) if (inline.kind === "text") append(inline.style?.paints);
   }
+  return layers;
+}
+
+function glyphFilterDefinitions(element: TerminalTextElement, context: TextRenderContext): string {
+  const layers = documentGlyphPaintLayers(element);
   const filtered = layers.filter(usesGlyphFilter);
   const definitions = [...new Map(filtered.map((paint) => [canonicalStringify(paint), paint])).values()]
     .map((paint) => glyphFilterDefinition(paint, context)).join("");

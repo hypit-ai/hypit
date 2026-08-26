@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { dirname, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 
 import { videoCliDistribution } from "@hypit/video-cli";
 
@@ -10,17 +11,52 @@ import { loadStudioRun } from "./src/run.js";
 import { readStudioSession } from "./src/session.js";
 import { inspectStudioRun } from "./src/studio-preflight.js";
 
-const runArgument = process.argv[2];
+/**
+ * Where a Source's imports resolve from: the nearest directory at or above it holding a
+ * `package.json`. This is the walk `hypit check` makes, and it is why a project is given a
+ * `package.json` of its own — a project's `packages/local-*` are installed against the project, so a
+ * root taken from anywhere else resolves none of them.
+ *
+ * The Run's own directory is not that root whenever the Run sits in a subdirectory, which is how one
+ * command resolved a project's packages and this one did not.
+ */
+function nearestPackageRoot(start: string): string | undefined {
+  let directory = resolve(start);
+  while (true) {
+    if (existsSync(join(directory, "package.json"))) return directory;
+    const parent = dirname(directory);
+    if (parent === directory) return undefined;
+    directory = parent;
+  }
+}
+
+const flags = new Map<string, string>();
+const operands: string[] = [];
+for (let index = 2; index < process.argv.length; index += 1) {
+  const token = process.argv[index]!;
+  if (!token.startsWith("--")) { operands.push(token); continue; }
+  const [name, inline] = token.slice(2).split(/=(.*)/su);
+  const value = inline ?? process.argv[++index];
+  if (value === undefined) { process.stderr.write(`--${name} needs a value\n`); process.exit(2); }
+  flags.set(name!, value);
+}
+
+const runArgument = operands[0];
 if (runArgument === undefined) {
-  process.stderr.write("usage: hypit-preview-check <build.svrun> [<hypit.runtime.json>]\n");
+  process.stderr.write("usage: hypit-preview-check <build.svrun> [<hypit.runtime.json>]"
+    + " [--workspace <dir>] [--package-root <dir>]\n");
   process.exitCode = 2;
 } else {
-  const invokedFrom = process.env.INIT_CWD ?? process.cwd();
+  const invokedFrom = process.cwd();
   const runPath = resolve(invokedFrom, runArgument);
-  const runtimeArgument = process.argv[3];
+  const runtimeArgument = operands[1];
   const runtimePath = runtimeArgument === undefined ? undefined : resolve(invokedFrom, runtimeArgument);
-  const workspaceRoot = dirname(runPath);
-  const packageRoot = workspaceRoot;
+  const workspaceFlag = flags.get("workspace");
+  const packageRootFlag = flags.get("package-root");
+  const workspaceRoot = workspaceFlag === undefined ? dirname(runPath) : resolve(invokedFrom, workspaceFlag);
+  const packageRoot = packageRootFlag === undefined
+    ? nearestPackageRoot(dirname(runPath)) ?? workspaceRoot
+    : resolve(invokedFrom, packageRootFlag);
   const distributionPackageRoot = videoCliDistribution.packageRoot;
   if (distributionPackageRoot === undefined) throw new Error("active Hypit Distribution has no package root");
 

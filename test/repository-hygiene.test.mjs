@@ -324,3 +324,29 @@ test("every child process is started with its console window hidden", async () =
   }
   assert.deepEqual(failures, [], `child processes started with a visible console:\n${failures.join("\n")}`);
 });
+
+/**
+ * `pnpm-workspace.yaml` reaches into `projects/`, which `.gitignore` excludes, so a local install
+ * writes an importer for every project-local package into a file the repository commits. A clone has
+ * no such directory, so `pnpm install --frozen-lockfile` — what CI runs — refuses a lockfile carrying
+ * one.
+ *
+ * The failure that made this worth checking was not the importer itself. It was that the lockfile is
+ * dirty after every local install, so its diff stops being read, and a real dependency added to a
+ * package goes in without it. That shipped three times.
+ *
+ * `pnpm lockfile:refresh` writes a lockfile this accepts.
+ */
+test("the lockfile names no importer git does not track", async () => {
+  const lockfile = await readFile(new URL("./pnpm-lock.yaml", repositoryRoot), "utf8");
+  const ignored = (await readFile(new URL("./.gitignore", repositoryRoot), "utf8"))
+    .split("\n").map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#") && !line.startsWith("!"))
+    .map((line) => line.replace(/^\/+/u, "").replace(/\/+$/u, ""))
+    .filter((line) => !line.includes("*") && line.length > 0);
+  const importers = [...lockfile.matchAll(/^ {2}([^\s:][^:]*):$/gmu)].map((match) => match[1]);
+  const carried = importers.filter((importer) =>
+    ignored.some((entry) => importer === entry || importer.startsWith(`${entry}/`)));
+  assert.deepEqual(carried, [],
+    `the lockfile carries importers under a path git ignores:\n${carried.join("\n")}\n\nrun: pnpm lockfile:refresh`);
+});

@@ -60,6 +60,30 @@ Never bake drawn structure into generated material. A generated picture of text 
 re-read or corrected, and its wording drifts. A card, inset, phone, browser or screenshot element is
 not one picture: its inner picture is material, its frame and entry are structure.
 
+### A page scrolling inside a frame is a frame that does not move
+
+The frame and its inner picture are two things, so they move independently, and the one that is moving
+has to be named. A screen recording — a phone app being scrolled, a browser page running past, a
+document paged through — is **a frame sitting still while its contents travel**. The device stays
+exactly where it is: same position, same size, same corner radius, same edge, frame after frame.
+
+Read the wrong way round, this becomes an element that slides up and down the canvas, and that is the
+misreading to watch for: nothing in the reference translated, and the reconstruction has a phone
+sliding about the screen. The evidence separating them is the frame's own edge. Track the border,
+the corners and the outer rectangle across the stretch: if they hold their position, the frame is
+fixed and everything that moved was inside it.
+
+Author it that way. The frame is a fixed `space:Frame` at the position and size the reference holds it
+at, and the inner picture is **one still image** of the page, placed inside it. Do not generate a video
+of a scrolling page and do not animate the inner picture past the frame: a still of the page at the
+moment the reference dwells on is what the viewer reads, it is fully controlled, and it costs one
+image. `generated-dependencies.md` says the same thing from the take side — a stretch whose picture
+does not move is authored as a still rather than asked of a video model.
+
+What is worth reproducing is any state the reference shows and the still cannot: a selected row, a
+badge, a check mark. Those are drawn structure over the still, on the words where the reference shows
+them, rather than a reason to make the whole thing move.
+
 ## A component's own surface belongs to the component
 
 Depicted material divides again, and getting this wrong produces a component that cannot draw
@@ -117,5 +141,4 @@ that needs one of those documents in order to draw itself has inverted that rela
 - Generate one material per depicted thing, at the aspect ratio it will be used at, carrying only
   what it depicts. Keep captions, labels, arrows, badges and titles out of the prompt; the
   composition draws those.
-- Pass every generated image through the image gate in `production-gates.md` before connecting it
-  downstream, and pin accepted Records for reuse.
+- Pin accepted Records for reuse. `../../authoring.md` says how a Record is named in the Run Source.

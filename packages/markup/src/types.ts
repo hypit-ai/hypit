@@ -135,6 +135,7 @@ export type SurfaceRecipePropertyVocabulary = {
   /** The author value's public structure; it contains no editor presentation. */
   readonly schema?: ValueSchema;
   readonly values?: readonly string[];
+  /** Decoded author default; when a schema is present this value conforms to that public structure. */
   readonly fallback?: CanonicalValue;
 };
 

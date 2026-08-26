@@ -30,6 +30,12 @@ function signal(pid: number, force: boolean): ProcessStopResult {
   return "gone";
 }
 
+/**
+ * Windows has no SIGTERM, and a process without a message loop — every Node child Hypit starts —
+ * answers a courteous taskkill with "can only be terminated forcefully". The caller asked for the
+ * tree to stop, so a refused courteous call escalates to /F rather than being reported as a failure.
+ * Escalating on any refusal rather than on that sentence keeps this working on a localized Windows.
+ */
 function taskkill(pid: number, force: boolean): Promise<ProcessStopResult> {
   if (!processAlive(pid)) return Promise.resolve("gone");
   return new Promise((resolve, reject) => {
@@ -41,6 +47,7 @@ function taskkill(pid: number, force: boolean): Promise<ProcessStopResult> {
       if (error === null) resolve("sent");
       else if (!processAlive(pid)) resolve("sent");
       else if (errorCode(error) === "EACCES" || errorCode(error) === "EPERM") resolve("denied");
+      else if (!force) resolve(taskkill(pid, true));
       else reject(new Error(`taskkill could not stop process tree ${pid}: ${error.message}`));
     });
   });

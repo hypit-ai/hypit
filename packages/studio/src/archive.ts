@@ -1,4 +1,4 @@
-import { isAbsolute, relative, resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import type { BuildCatalogEntry } from "@hypit/runtime";
 import type { NodeRuntimeHost, RuntimeHostStatus } from "@hypit/runtime-host-node";
@@ -28,8 +28,14 @@ function isWithin(root: string, path: string): boolean {
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }
 
+/**
+ * A path inside the project reads the same on every platform, so the Studio library shows one Run
+ * under one name wherever it is opened. A path outside the project is the machine's own, and stays
+ * in that machine's form.
+ */
 function presentedPath(root: string, path: string): string {
-  return isWithin(root, path) ? relative(resolve(root), resolve(path)) || "." : resolve(path);
+  if (!isWithin(root, path)) return resolve(path);
+  return (relative(resolve(root), resolve(path)) || ".").split(sep).join("/");
 }
 
 function buildBelongsTo(root: string, entry: BuildCatalogEntry): boolean {
