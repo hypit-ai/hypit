@@ -97,17 +97,17 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th>Reference</th>
     <td></td>
-    <td><strong>Football Tier List</strong><br><video src="https://github.com/user-attachments/assets/13d116ce-cbdc-4343-a8e7-acb1ed74ec72" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/9da7ac6d-c542-406f-9ccf-70c454fc23b6" controls muted></video></td>
     <td></td>
   </tr>
   <tr>
     <th>Clones</th>
-    <td><strong>Host + Voice Swap</strong><br><video src="https://github.com/user-attachments/assets/ae47c8af-1199-4ea0-a108-33a50af7eb0a" controls muted></video></td>
-    <td><strong>Tier Board → Ranking Column</strong><br><video src="https://github.com/user-attachments/assets/775f9187-69dc-4eb0-ad4e-a99c6060db0b" controls muted></video></td>
-    <td><strong>Football → Tech Founders</strong><br><video src="https://github.com/user-attachments/assets/0c5f6309-d682-4f51-b240-25811ea8a876" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/2022fca7-0a25-466a-956f-c6fcaae81d0c" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/12f42c08-c820-479d-9ac7-3636a0c77c0a" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4">One 20-second semantic UGC ranking format, taken all the way from an authored two-segment Script with cue-level performance direction through two 10-second 720p Seedance 2 Mini A-roll Takes, one 2K GPT Image 2 hero image, ten 1K GPT Image 2 B-roll generations, local media normalization, WhisperX word alignment, Script Selections projected into exact B-roll windows, a Tier Board or ten-slot Ranking Column with preset casts, ordered reveals, drop animation and synchronized appear/move sound effects, word-timed red-box karaoke captions, spatial composition, z-ordering, background music, audio fades and final 30 fps HyperFrames rendering. The same production system is then cloned by replacing only the host and voice, replacing the ranking grammar while keeping the football theme, or carrying the entire format into a new tech-founder story with a new cast, Script and B-roll plan.<br><b>Total paid generation cost: approximately $1.15 per finished video.</b></td>
+    <td colspan="4"><p>A 20-second semantic UGC ranking video built from two 10-second 720p Seedance 2 Mini A-roll clips, one 2K GPT Image 2 hero image, ten 1K GPT Image 2 B-roll images, WhisperX word alignment, selection-timed B-roll, a sound-synced ranking board, red-box karaoke captions, background music, and 30 fps HyperFrames composition.</p><p>Three clones swap the host and voice, the Tier Board for a Ranking Column, or the entire football topic for tech founders while preserving the same production grammar.</p><p>Total cost: <b>$1.15</b>.</p></td>
   </tr>
 </table>
 
