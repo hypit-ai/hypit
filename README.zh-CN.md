@@ -97,17 +97,17 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th>参考视频</th>
     <td></td>
-    <td><strong>足球 Tier List</strong><br><video src="https://github.com/user-attachments/assets/13d116ce-cbdc-4343-a8e7-acb1ed74ec72" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/9da7ac6d-c542-406f-9ccf-70c454fc23b6" controls muted></video></td>
     <td></td>
   </tr>
   <tr>
     <th>复刻视频</th>
-    <td><strong>替换主持人与声音</strong><br><video src="https://github.com/user-attachments/assets/ae47c8af-1199-4ea0-a108-33a50af7eb0a" controls muted></video></td>
-    <td><strong>Tier Board → Ranking Column</strong><br><video src="https://github.com/user-attachments/assets/775f9187-69dc-4eb0-ad4e-a99c6060db0b" controls muted></video></td>
-    <td><strong>足球 → 科技企业家</strong><br><video src="https://github.com/user-attachments/assets/0c5f6309-d682-4f51-b240-25811ea8a876" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/2022fca7-0a25-466a-956f-c6fcaae81d0c" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/12f42c08-c820-479d-9ac7-3636a0c77c0a" controls muted></video></td>
+    <td><video src="https://github.com/user-attachments/assets/a76fdf5b-97dc-464e-9906-34d7b4d8204f" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4">一套 20 秒的语义化 UGC 排行视频，从包含两段内容和逐 Cue 表演指导的作者 Script 开始，依次完成两段 10 秒、720p 的 Seedance 2 Mini A-roll Take，生成一张 2K GPT Image 2 主视觉图和十张 1K GPT Image 2 B-roll，在本地完成媒体归一化和 WhisperX 逐词对齐，再把 Script 中的 Selection 投影为精确的 B-roll 时间窗口，驱动带预设人物、严格出现顺序、下落动画及入场/移动同步音效的 Tier Board 或十槽 Ranking Column，叠加逐词计时的红色词盒卡拉 OK 字幕，并继续完成空间排版、Z 轴编排、背景音乐、音频淡入淡出以及最终的 30 fps HyperFrames 渲染。同一套生产系统随后可以只替换主持人与声音，也可以保留足球主题但替换稿子与排行语法，还可以保留整套形式，把人物、Script 和 B-roll 计划完整迁移到科技企业家主题。<br><b>付费生成总成本：每条成片约 $1.15。</b></td>
+    <td colspan="4"><p>一条 20 秒的语义化 UGC 排行视频：两段 10 秒 720p Seedance 2 Mini A-roll、一张 2K GPT Image 2 主视觉图、十张 1K GPT Image 2 B-roll、WhisperX 逐词对齐、按 Selection 定时的 B-roll、同步音效的排行榜、红色词盒卡拉 OK 字幕、背景音乐，以及 30 fps HyperFrames 合成。</p><p>三个复刻版本分别替换主持人与声音、把 Tier Board 替换成 Ranking Column，或在保留同一套生产语法的情况下把整个足球主题替换成科技企业家。</p><p>总成本：<b>$1.15</b>。</p></td>
   </tr>
 </table>
 
