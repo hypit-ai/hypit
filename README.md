@@ -97,17 +97,17 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th>Reference</th>
     <td></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><strong>Football Tier List</strong><br><video src="https://github.com/user-attachments/assets/13d116ce-cbdc-4343-a8e7-acb1ed74ec72" controls muted></video></td>
     <td></td>
   </tr>
   <tr>
     <th>Clones</th>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><strong>Host + Voice Swap</strong><br><video src="https://github.com/user-attachments/assets/ae47c8af-1199-4ea0-a108-33a50af7eb0a" controls muted></video></td>
+    <td><strong>Tier Board → Ranking Column</strong><br><video src="https://github.com/user-attachments/assets/775f9187-69dc-4eb0-ad4e-a99c6060db0b" controls muted></video></td>
+    <td><strong>Football → Tech Founders</strong><br><video src="https://github.com/user-attachments/assets/0c5f6309-d682-4f51-b240-25811ea8a876" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4">Local-hosted MiniMax H3; 3 GPT Image 2 generations; Ranking board, TikTok-style captions, visual effects rendered in headless chromium. <b>Total cost: $0.15.</b></td>
+    <td colspan="4">One 20-second semantic UGC ranking format, taken all the way from an authored two-segment Script with cue-level performance direction through two 10-second 720p Seedance 2 Mini A-roll Takes, one 2K GPT Image 2 hero image, ten 1K GPT Image 2 B-roll generations, local media normalization, WhisperX word alignment, Script Selections projected into exact B-roll windows, a Tier Board or ten-slot Ranking Column with preset casts, ordered reveals, drop animation and synchronized appear/move sound effects, word-timed red-box karaoke captions, spatial composition, z-ordering, background music, audio fades and final 30 fps HyperFrames rendering. The same production system is then cloned by replacing only the host and voice, replacing the ranking grammar while keeping the football theme, or carrying the entire format into a new tech-founder story with a new cast, Script and B-roll plan.<br><b>Total paid generation cost: approximately $1.15 per finished video.</b></td>
   </tr>
 </table>
 

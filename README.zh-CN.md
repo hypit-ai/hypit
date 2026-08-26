@@ -97,17 +97,17 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th>参考视频</th>
     <td></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><strong>足球 Tier List</strong><br><video src="https://github.com/user-attachments/assets/13d116ce-cbdc-4343-a8e7-acb1ed74ec72" controls muted></video></td>
     <td></td>
   </tr>
   <tr>
     <th>复刻视频</th>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td><strong>替换主持人与声音</strong><br><video src="https://github.com/user-attachments/assets/ae47c8af-1199-4ea0-a108-33a50af7eb0a" controls muted></video></td>
+    <td><strong>Tier Board → Ranking Column</strong><br><video src="https://github.com/user-attachments/assets/775f9187-69dc-4eb0-ad4e-a99c6060db0b" controls muted></video></td>
+    <td><strong>足球 → 科技企业家</strong><br><video src="https://github.com/user-attachments/assets/0c5f6309-d682-4f51-b240-25811ea8a876" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4">本地部署的 MiniMax H3；3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕、视觉特效在 headless chromium 中渲染。<b>总成本：$0.15。</b></td>
+    <td colspan="4">一套 20 秒的语义化 UGC 排行视频，从包含两段内容和逐 Cue 表演指导的作者 Script 开始，依次完成两段 10 秒、720p 的 Seedance 2 Mini A-roll Take，生成一张 2K GPT Image 2 主视觉图和十张 1K GPT Image 2 B-roll，在本地完成媒体归一化和 WhisperX 逐词对齐，再把 Script 中的 Selection 投影为精确的 B-roll 时间窗口，驱动带预设人物、严格出现顺序、下落动画及入场/移动同步音效的 Tier Board 或十槽 Ranking Column，叠加逐词计时的红色词盒卡拉 OK 字幕，并继续完成空间排版、Z 轴编排、背景音乐、音频淡入淡出以及最终的 30 fps HyperFrames 渲染。同一套生产系统随后可以只替换主持人与声音，也可以保留足球主题但替换稿子与排行语法，还可以保留整套形式，把人物、Script 和 B-roll 计划完整迁移到科技企业家主题。<br><b>付费生成总成本：每条成片约 $1.15。</b></td>
   </tr>
 </table>
 
