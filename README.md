@@ -84,7 +84,7 @@ npx skills add hypit-ai/hypit -g
     <th width="16%">Clones</th>
     <td width="28%"><video src="https://github.com/user-attachments/assets/d4bcb8a3-9ed5-46a8-900d-13891a83e6a0" controls muted></video></td>
     <td width="28%"><video src="https://github.com/user-attachments/assets/75cca3aa-d392-49a6-b0cd-9b1c3aff8f01" controls muted></video></td>
-    <td width="28%"></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/2b04977e-665d-4d5f-8f82-c1ebdf567d2c" controls muted></video></td>
   </tr>
   <tr>
     <td colspan="4">Local-hosted MiniMax H3; 3 GPT Image 2 generations; Ranking board, TikTok-style captions, visual effects rendered in headless chromium. <b>Total cost: $0.15.</b></td>
