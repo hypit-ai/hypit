@@ -1692,7 +1692,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const differences = await ask(`comparison:${comparisonId}`, {
         media: [referenceMedia, renderedMedia],
         instruction: `You compare two supplied ${unit} and describe their visible differences in natural language only. You are not told how either was made. Do not write code, markup, SVML, component names, or production advice.`,
-        prompt: `Two ${unit} are supplied in order: one, then two. Call them one and two throughout your answer, and say which of the two each difference is in.${reading}${asClip ? cut?.incomplete ?? "" : ""}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${asClip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
+        prompt: `Two ${unit} are supplied in order: one, then two. Call them one and two throughout your answer, and say which of the two each difference is in.${reading}${asClip ? cut?.incomplete ?? "" : ""}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nStart with a geometry pass before style: identify the Canvas, the outer frame or background box, and the inner text/element. For every region that should be centred, compare inner and outer centres on both axes and report the direction and approximate offset. Check containment separately (inner content inside its outer frame; outer frame inside the Canvas), naming the overflowing edge and approximate amount. Check that the outer frame is wide and tall enough for the longest line or mark including padding, stroke, shadow and corner treatment. Distinguish intentional bleed, crop, or enter/exit motion from accidental overflow. Then describe every other visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${asClip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
       });
       // What was compared, and what was seen. The record is what a gate reads to tell an element that
       // was looked at from one that never was, and what an identical pair is answered from without
@@ -1924,11 +1924,16 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
             + "Matches the description: state which parts of the description the picture satisfies and which"
             + " it does not. Name anything the description asks for that is not there, and anything present"
             + " that the description does not mention.\n\n"
-            + "Visible defects: report each of these you can see, and say it is absent when you cannot."
-            + " Anything cut off by the edge of the frame or reaching past it. Anything overlapping or"
-            + " covering something else that is meant to be read. Anything whose position or alignment"
-            + " against the edges of the frame looks unintended. Text or marks too low in contrast against"
-            + " what is behind them to read."
+            + "Visible defects: begin with a geometry pass. Identify Canvas, outer frame/background, and"
+            + " inner text/element. For centred regions report the inner-to-outer centre offset and direction."
+            + " Check inner-content containment inside the outer frame, outer-frame containment inside the"
+            + " Canvas, and whether the frame has enough width/height for the longest content plus padding,"
+            + " stroke, shadow and corner treatment. Report each overflowing edge and approximate amount;"
+            + " distinguish intentional bleed/crop or enter/exit motion from accidental overflow. Then report"
+            + " each other defect you can see, and say it is absent when you cannot: anything cut off by the"
+            + " edge of the frame or reaching past it; anything overlapping or covering something else that"
+            + " is meant to be read; anything whose position or alignment against the edges of the frame"
+            + " looks unintended; and text or marks too low in contrast against what is behind them to read."
             + (asClip ? " Anything that appears, moves or leaves in a way the description does not account for." : "")
             + "\n\nMeasure what you can against the frame's own width and height rather than in pixels."
             + " Return natural language only.",

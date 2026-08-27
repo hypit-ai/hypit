@@ -91,6 +91,30 @@ Then tell the reader that those regions are preview mocks standing in for declar
 generations, and to read only what the element itself draws. Said plainly it costs one clause and
 saves the mock coming back as a finding in the one round there is.
 
+### Geometry first: Canvas, outer frame, content
+
+Every look starts with a geometry pass before style or polish. Identify the three nested levels:
+Canvas, the outer Frame/background that owns the region, and the inner text or element that must fit
+inside it. For each level, check the following explicitly:
+
+- **Centre:** when the design calls for centring, compare the content centre with the outer-frame
+  centre on both axes. Report the direction and approximate offset (for example, `12% too far
+  right` or `8% too high`), not just “misaligned”.
+- **Containment:** report whether every visible glyph/mark stays inside its intended outer Frame and
+  whether the Frame itself stays inside the Canvas. Name the offending edge and the estimated amount
+  outside. Distinguish intentional bleed, crop, or enter/exit motion from an accidental overflow.
+- **Capacity:** verify that the outer Frame is actually wide and tall enough for the text/element,
+  including padding, stroke, shadow, and the longest line. A centred item in an undersized box is still
+  a failure even when its centre is correct.
+- **Canvas safety:** check the final visible bounds against all four Canvas edges. Nothing should be
+  clipped unless the reference/intent clearly calls for it.
+
+`authoring_check` and `reconstruction_check` return a deterministic `layout_geometry` report with
+Canvas/Frame bounds, sizes, centres, parent/Canvas centre offsets, containment overflow, and bound
+element ids. Use those numbers as the mechanical findings and let the observer decide whether the
+alignment or overflow matches the reference/intent. The report cannot measure renderer-shaped glyph
+bounds or infer intent, so the visual pass must still confirm text and marks in the rendered image.
+
 A mock lives only in this render. It is never written into the Source, and no gate reads it: the
 `playback` check reads the Source's Recipes, so a mock cannot be mistaken for coverage.
 

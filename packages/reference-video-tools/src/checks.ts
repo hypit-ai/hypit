@@ -277,6 +277,36 @@ type OutOfBoundsFrame = {
   readonly outside_fraction: number;
 };
 
+/**
+ * Deterministic geometry facts handed to the observer alongside the human-readable round.
+ *
+ * This deliberately reports only what the Source can prove: Canvas/Frame rectangles, parent and
+ * Canvas containment, and centre offsets. Whether a particular box *ought* to be centred, or whether
+ * a child is intentionally clipped (for example during an enter animation), remains a visual and
+ * intent judgement. Text glyph bounds are renderer-dependent and therefore are not invented here.
+ */
+type LayoutGeometryEntry = {
+  readonly id: string;
+  readonly kind: "canvas" | "frame";
+  readonly within?: string;
+  readonly canvas?: string;
+  readonly bounds?: Box;
+  readonly size?: { readonly width: number; readonly height: number };
+  readonly center?: { readonly x: number; readonly y: number };
+  readonly center_offset_from_within?: { readonly x: number; readonly y: number };
+  readonly center_offset_from_canvas?: { readonly x: number; readonly y: number };
+  readonly outside_within?: { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number };
+  readonly outside_canvas?: { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number };
+  readonly bound_elements?: readonly string[];
+  readonly unresolved?: string;
+};
+
+type LayoutGeometryReport = {
+  readonly coordinate_system: "Canvas pixels, origin top-left, y increases downward";
+  readonly note: string;
+  readonly entries: readonly LayoutGeometryEntry[];
+};
+
 /** A rectangle in Canvas pixels. The origin is top-left and y increases downward. */
 type Box = { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number };
 
@@ -503,6 +533,66 @@ function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
   return report;
 }
 
+/** Build a machine-readable layout report for the agent/observer to interpret. */
+function layoutGeometry(svml: string): LayoutGeometryReport {
+  const geometry = frameGeometry(svml);
+  const bound = new Map<string, string[]>();
+  for (const match of svml.matchAll(/<([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)\/?\s*>/gsu)) {
+    const tag = match[1] ?? "";
+    const attributes = match[2] ?? "";
+    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1] ?? tag;
+    for (const reference of attributes.matchAll(/\b[a-z-]*frame=\{([A-Za-z0-9_-]+)\}/gu)) {
+      const frame = reference[1] ?? "";
+      const names = bound.get(frame) ?? [];
+      if (!names.includes(id)) names.push(id);
+      bound.set(frame, names);
+    }
+  }
+
+  const outside = (child: Box, parent: Box) => ({
+    left: round(Math.max(parent.left - child.left, 0)),
+    top: round(Math.max(parent.top - child.top, 0)),
+    right: round(Math.max(child.right - parent.right, 0)),
+    bottom: round(Math.max(child.bottom - parent.bottom, 0)),
+  });
+  const centre = (box: Box) => ({ x: round((box.left + box.right) / 2), y: round((box.top + box.bottom) / 2) });
+  const delta = (a: Box, b: Box) => ({ x: round((a.left + a.right - b.left - b.right) / 2), y: round((a.top + a.bottom - b.top - b.bottom) / 2) });
+  const entries: LayoutGeometryEntry[] = [];
+
+  for (const [id, canvas] of geometry.canvases) {
+    entries.push({
+      id, kind: "canvas", bounds: canvas,
+      size: { width: round(canvas.right - canvas.left), height: round(canvas.bottom - canvas.top) },
+      center: centre(canvas),
+    });
+  }
+  for (const [id, declaration] of geometry.declared) {
+    const box = geometry.resolve(id);
+    const canvasId = geometry.canvasOf(id);
+    const parent = geometry.resolve(declaration.within);
+    const canvas = canvasId === undefined ? undefined : geometry.canvases.get(canvasId);
+    if (box === undefined) {
+      entries.push({ id, kind: "frame", within: declaration.within, ...(canvasId === undefined ? {} : { canvas: canvasId }),
+        bound_elements: bound.get(id) ?? [], unresolved: "frame edges or its parent could not be resolved to Canvas pixels" });
+      continue;
+    }
+    entries.push({
+      id, kind: "frame", within: declaration.within,
+      ...(canvasId === undefined ? {} : { canvas: canvasId }), bounds: box,
+      size: { width: round(box.right - box.left), height: round(box.bottom - box.top) },
+      center: centre(box),
+      ...(parent === undefined ? {} : { center_offset_from_within: delta(box, parent), outside_within: outside(box, parent) }),
+      ...(canvas === undefined ? {} : { center_offset_from_canvas: delta(box, canvas), outside_canvas: outside(box, canvas) }),
+      bound_elements: bound.get(id) ?? [],
+    });
+  }
+  return {
+    coordinate_system: "Canvas pixels, origin top-left, y increases downward",
+    note: "Use these facts to decide whether centering and containment match the reference/intent. They do not measure rendered glyph bounds or decide whether an overhang is intentional.",
+    entries,
+  };
+}
+
 /**
  * Report what a route can still settle after the Source is written and before a Build runs: which
  * drawing elements nobody has looked at, which words of the Script nothing draws a full-frame
@@ -582,6 +672,8 @@ export async function authoringCheck(
 
   // Read from the Source alone, so every answer below carries it, including the ones that stop early.
   const overhang = framesPastTheCanvas(svml);
+  // Deterministic facts for a geometry-first visual review. The observer still decides intent.
+  const geometry = layoutGeometry(svml);
 
   // Every package this Source imports. The scope is whatever the Source wrote: a project that declares
   // a vocabulary gap and fills it publishes under its own scope, and those elements draw exactly as an
@@ -607,6 +699,7 @@ export async function authoringCheck(
       playback: [],
       uncovered: [],
       out_of_bounds: overhang,
+      layout_geometry: geometry,
     };
   }
 
@@ -864,6 +957,7 @@ export async function authoringCheck(
       playback: [],
       uncovered: [],
       out_of_bounds: overhang,
+      layout_geometry: geometry,
       ...(unresolved.length === 0 ? {} : {
         unresolved_packages: {
           names: unresolved,
@@ -1285,6 +1379,7 @@ export async function authoringCheck(
         + "unclaimed.",
     }),
     out_of_bounds: overhang,
+    layout_geometry: geometry,
     ...(overhang.length === 0 ? {} : {
       out_of_bounds_note: "Each Frame here places part of what is drawn into it off the picture, by the amount "
         + "beside each edge. `outside_fraction` is how much of the Frame's own area lands off the Canvas. This "
