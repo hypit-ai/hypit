@@ -77,14 +77,14 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th width="16%">Reference</th>
     <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/cc870099-9568-4c65-91b4-f0bbb65577a9" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/56054efe-d278-4189-b380-a05ddcef1d16" controls muted></video></td>
     <td width="28%"></td>
   </tr>
   <tr>
     <th width="16%">Clones</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/f04b4143-8fc9-4860-8493-4ab83f00a09d" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/d4bcb8a3-9ed5-46a8-900d-13891a83e6a0" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/a1feb123-3129-4880-87d2-897c42026fff" controls muted></video></td>
+    <td width="28%"></td>
   </tr>
   <tr>
     <td colspan="4">Local-hosted MiniMax H3; 3 GPT Image 2 generations; Ranking board, TikTok-style captions, visual effects rendered in headless chromium. <b>Total cost: $0.15.</b></td>
