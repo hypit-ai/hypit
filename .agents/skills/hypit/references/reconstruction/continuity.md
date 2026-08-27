@@ -47,8 +47,11 @@ lifetime, and a scoped variation rather than a second Style. A new shot is never
 change in appearance.
 
 The reference supplies the lifetimes. The `persistent_systems` observation from `prepare_reference`
-reports these systems for the whole reference, including whether each one's appearance ever changes
-and where. Use it instead of inferring lifetimes from per-shot prose.
+is an inventory and a first lifetime hypothesis for the whole reference, including whether each one's
+appearance appears to change. Do not treat its position, exact visible intervals or continuity as
+settled geometry: confirm those claims with the relevant shot-level visual observations or an
+exactly-one-shot narrow question. When the whole-reference inventory conflicts with a shot-specific
+observation, preserve the conflict and use the more specific shot evidence for the reconstruction.
 
 ## Base pictures and designed fields
 

@@ -36,6 +36,7 @@ import {
   ROUTE_STATE_STEPS,
 } from "./route-state.js";
 import type { RouteKind, RouteState } from "./route-state.js";
+import type { RouteStep } from "./route-state.js";
 import {
   checkpointRevisionState,
   readRevisionState,
@@ -74,8 +75,9 @@ export type ObserveReferenceInput = {
   readonly reobserve?: boolean;
   /**
    * A round of narrow questions, asked together. Each entry names its own shots and its own question
-   * and inherits `reference_id`. No narrow question's answer depends on another's, which is why the
-   * route asks them at once — and why asking them one process at a time was a shell loop.
+   * and inherits `reference_id`; each `shot_ids` array must contain exactly one shot. No narrow
+   * question's answer depends on another's, which is why the route asks them at once — and why asking
+   * them one process at a time was a shell loop.
    */
   readonly questions?: readonly { readonly shot_ids: readonly string[]; readonly question: string }[];
 };
@@ -194,7 +196,7 @@ export type RecordReviewInput = {
 export type RouteStateCommandInput =
   | ({ readonly action: "start"; readonly project_root: string; readonly route: RouteKind; readonly run?: string; readonly reference_id?: string })
   | ({ readonly action: "read" | "reconcile"; readonly project_root: string })
-  | ({ readonly action: "checkpoint"; readonly project_root: string; readonly route: RouteKind; readonly step: number; readonly status?: "in_progress" | "complete" | "blocked"; readonly run?: string; readonly reference_id?: string; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly decision?: string; readonly command?: string; readonly error?: string });
+  | ({ readonly action: "checkpoint"; readonly project_root: string; readonly route: RouteKind; readonly step: number | RouteStep; readonly status?: "in_progress" | "complete" | "blocked"; readonly run?: string; readonly reference_id?: string; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly decision?: string; readonly command?: string; readonly error?: string });
 
 export type RevisionStateCommandInput =
   | ({ readonly action: "start"; readonly project_root: string; readonly run?: string; readonly parent_route?: "reconstruction" | "description"; readonly parent_state_digest?: string; readonly request?: string })
@@ -1086,6 +1088,12 @@ function prepared(state: ReferenceState): boolean {
 }
 
 function publicPrepare(state: ReferenceState): PrepareResult {
+  const observations = {
+    people_and_product: state.people_and_product ?? observation("failed", "not analyzed"),
+    voices: state.voices ?? observation("failed", "not analyzed"),
+    persistent_systems: state.persistent_systems ?? observation("failed", "not analyzed"),
+    places: state.places ?? observation("failed", "not analyzed"),
+  } as const;
   return {
     reference_id: state.reference_id,
     status: prepared(state) ? "ready" : "partial",
@@ -1093,10 +1101,8 @@ function publicPrepare(state: ReferenceState): PrepareResult {
     shots: state.shots,
     storyboard_ref: state.storyboard_ref,
     transcript: state.transcript ?? unavailable("not transcribed"),
-    people_and_product: state.people_and_product ?? observation("failed", "not analyzed"),
-    voices: state.voices ?? observation("failed", "not analyzed"),
-    persistent_systems: state.persistent_systems ?? observation("failed", "not analyzed"),
-    places: state.places ?? observation("failed", "not analyzed"),
+    ...observations,
+    observations,
   };
 }
 
@@ -1469,6 +1475,12 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         voices,
         persistent_systems: systems,
         places,
+        observations: {
+          people_and_product: people,
+          voices,
+          persistent_systems: systems,
+          places,
+        },
         observer,
         ...(fetched === undefined ? {} : { source_url: fetched.url, downloaded: !fetched.cached }),
         pending_observations: pending,
@@ -1508,7 +1520,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const question = input.question?.trim() ?? "";
       if (question.length > 0) {
         assert(input.shot_ids !== undefined && input.shot_ids.length > 0, "question requires at least one shot id, so that it is answered from the shots it is about");
-        assert(selected.length <= 3, "question accepts at most three shots");
+        assert(selected.length === 1, "question accepts exactly one shot id; use the built-in boundary/window observations for cross-shot continuity");
         // Keyed by the shots it is asked over and by the question itself, so the observer that answers
         // out of band has a key it can record against and a second, different question over the same
         // shots gets its own. Keyed on the shots alone, the two would share an entry and the later one
@@ -1541,6 +1553,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           shot_ids: selected.map((shot) => shot.shot_id),
           question,
           observation_key: key,
+          result: answer,
+          // Compatibility alias for callers written before the canonical result envelope.
           answer,
           // Says the answer came back without asking anyone, so a reader knows they were not billed
           // for it and that `--reobserve` is what asks again.
@@ -2125,7 +2139,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         return { reference_id: state.reference_id, key, stored_in: "comparisons" };
       }
       const shotKeys = new Set(state.shots.flatMap((shot) => [`visual:${shot.shot_id}`, `type:${shot.shot_id}`, `audio:${shot.shot_id}`, `boundary:${shot.shot_id}`, `window:${shot.shot_id}`]));
-      // A narrow question is asked over one to three shots and keyed by them and by a digest of the
+      // A narrow question is asked over exactly one shot and keyed by it and by a digest of the
       // question, so its key is matched the same way `observe_reference` builds it rather than
       // enumerated here. A shot id is `shot-001`: the hyphen belongs in the class, and leaving it out
       // rejected every key this tool actually produces, so an answer to a narrow question had nowhere
@@ -2133,7 +2147,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const questionKey = /^question:([0-9a-z-]+(?:\+[0-9a-z-]+)*):[0-9a-f]{8}$/u.exec(key);
       const knownShots = new Set(state.shots.map((shot) => shot.shot_id));
       const askedOver = questionKey?.[1]!.split("+") ?? [];
-      const isQuestion = questionKey !== null && askedOver.length <= 3 && askedOver.every((id) => knownShots.has(id));
+      const isQuestion = questionKey !== null && askedOver.length === 1 && askedOver.every((id) => knownShots.has(id));
       assert(shotKeys.has(key) || isQuestion, `key ${key} is not an observation of reference ${input.reference_id}`);
       // A round of answers arrives as a round of calls, and each one is a read-modify-write of this
       // file. Two of them reading before either writes is how an answer disappears with no error.

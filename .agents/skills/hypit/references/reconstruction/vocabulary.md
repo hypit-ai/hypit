@@ -28,8 +28,8 @@ measured rather than chosen:
 
 - Each shot's `text_appearance` observation already describes drawn type in those terms. Read it
   before asking anything.
-- Resolve what remains with a narrow `observe_reference --question` over the one to three shots where
-  the element is most legible. Ask about visible attributes, never about components or syntax. A
+- Resolve what remains with a narrow `observe_reference --question` over the one shot where the
+  element is most legible. Ask about visible attributes, never about components or syntax. A
   question costs one request and does not disturb cached observations.
 - If the evidence came back inconclusive, ask again with a narrower question rather than accepting a
   default: a value the observer never saw is not evidence.

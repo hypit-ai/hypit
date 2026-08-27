@@ -3,6 +3,17 @@ import { dirname, join, resolve } from "node:path";
 
 export type RouteKind = "reconstruction" | "description";
 export type RouteStatus = "active" | "complete" | "blocked";
+export type ReconstructionRouteStep =
+  | "environment" | "reference-prepared" | "reference-observed" | "vocabulary-checked"
+  | "package-ready" | "script-checked" | "source-authored" | "graph-checked"
+  | "review-planned" | "preview-rendered" | "comparison-complete" | "repairs-complete"
+  | "final-checked" | "build-complete";
+export type DescriptionRouteStep =
+  | "environment" | "brief-frozen" | "vocabulary-checked" | "package-ready"
+  | "script-checked" | "source-authored" | "graph-checked" | "review-planned"
+  | "preview-rendered" | "review-complete" | "repairs-complete" | "final-checked"
+  | "build-complete";
+export type RouteStep = ReconstructionRouteStep | DescriptionRouteStep;
 
 export type RouteState = {
   readonly version: 2;
@@ -31,7 +42,7 @@ export type RouteStateInput = {
 };
 
 export type RouteCheckpointInput = RouteStateInput & {
-  readonly step: number;
+  readonly step: number | RouteStep;
   readonly status?: "in_progress" | "complete" | "blocked";
   readonly nextAction?: string;
   readonly artifacts?: Readonly<Record<string, string>>;
@@ -90,33 +101,47 @@ function migrateLegacyRouteState(value: unknown, path: string): RouteState | und
   if (value === null || typeof value !== "object" || (value as { version?: unknown }).version !== LEGACY_ROUTE_STATE_VERSION) return undefined;
   const legacy = value as Partial<RouteState>;
   if (legacy.route !== "reconstruction" && legacy.route !== "description") throw new Error(`route state at ${path} has an invalid route`);
+  const route = legacy.route;
   if (typeof legacy.project_root !== "string" || legacy.project_root.length === 0) throw new Error(`route state at ${path} has no project_root`);
-  const oldSteps = LEGACY_ROUTE_STATE_STEPS[legacy.route];
+  const oldSteps = LEGACY_ROUTE_STATE_STEPS[route];
   if (!Array.isArray(legacy.completed_steps) || legacy.completed_steps.some((step) => !Number.isSafeInteger(step) || step < 1 || step > oldSteps.length)) {
     throw new Error(`route state at ${path} has invalid legacy completed_steps`);
   }
   const completedNames = legacy.completed_steps.map((step) => oldSteps[step - 1]!).filter(Boolean);
-  const completed = completedNames.flatMap((name) => {
-    const index = ROUTE_STATE_STEPS[legacy.route!].indexOf(name);
+  let completed = completedNames.flatMap((name) => {
+    const index = ROUTE_STATE_STEPS[route].indexOf(name);
     return index < 0 ? [] : [index + 1];
   });
+  // A legacy snapshot could claim source-authored (and later gates) before the v2 vocabulary,
+  // package and Script gates existed. Re-open that point and everything after it; artifacts/checks
+  // will earn the new stages again instead of letting an old numeric cursor bless an unverified package.
+  const sourceStage = ROUTE_STATE_STEPS[route].indexOf("source-authored") + 1;
+  const requiredStages = ["vocabulary-checked", "package-ready", "script-checked"]
+    .map((name) => ROUTE_STATE_STEPS[route].indexOf(name) + 1);
+  if (completed.includes(sourceStage) && requiredStages.some((stage) => !completed.includes(stage))) {
+    completed = completed.filter((stage) => stage < sourceStage);
+  }
   // New gates are intentionally re-opened during migration. The first unmet predicate, not the
   // legacy numeric cursor, is the only safe recovery point.
-  const currentStep = nextUncompleted(legacy.route, completed);
+  const currentStep = nextUncompleted(route, completed);
   const now = new Date().toISOString();
   return {
     version: ROUTE_STATE_VERSION,
-    route: legacy.route,
+    route,
     project_root: legacy.project_root!,
     ...(legacy.run === undefined ? {} : { run: legacy.run }),
     ...(legacy.reference_id === undefined ? {} : { reference_id: legacy.reference_id }),
-    status: currentStep > ROUTE_STATE_STEPS[legacy.route].length ? "complete" : "active",
+    status: currentStep > ROUTE_STATE_STEPS[route].length ? "complete" : "active",
     current_step: currentStep,
     completed_steps: [...new Set(completed)].sort((a, b) => a - b),
-    in_progress: currentStep > ROUTE_STATE_STEPS[legacy.route].length ? null : { step: currentStep, started_at: now },
+    in_progress: currentStep > ROUTE_STATE_STEPS[route].length ? null : { step: currentStep, started_at: now },
     artifacts: legacy.artifacts ?? {},
     decisions: legacy.decisions ?? [],
-    next_action: legacy.next_action ?? `complete ${ROUTE_STATE_STEPS[legacy.route][currentStep - 1] ?? "route"}`,
+    // Legacy prose may point past the newly inserted gates; always derive the recovery action from
+    // the first unmet v2 stage instead of carrying that stale cursor forward.
+    next_action: currentStep > ROUTE_STATE_STEPS[route].length
+      ? "route complete"
+      : `complete ${ROUTE_STATE_STEPS[route][currentStep - 1]}`,
     ...(legacy.last_command === undefined ? {} : { last_command: legacy.last_command }),
     ...(legacy.last_error === undefined ? {} : { last_error: legacy.last_error }),
     updated_at: now,
@@ -165,6 +190,25 @@ function stageNumber(route: RouteKind, name: string): number {
   return index + 1;
 }
 
+function stepNumber(route: RouteKind, step: number | RouteStep): number {
+  if (typeof step === "number") {
+    if (!Number.isSafeInteger(step) || step < 1 || step > ROUTE_STATE_STEPS[route].length) {
+      throw new Error(`step ${step} is outside the ${route} route`);
+    }
+    return step;
+  }
+  return stageNumber(route, step);
+}
+
+function assertPriorStagesComplete(route: RouteKind, step: number, completed: ReadonlySet<number>): void {
+  const missing = Array.from({ length: step - 1 }, (_, index) => index + 1)
+    .filter((candidate) => !completed.has(candidate));
+  if (missing.length > 0) {
+    const names = missing.map((candidate) => ROUTE_STATE_STEPS[route][candidate - 1]).join(", ");
+    throw new Error(`cannot complete ${ROUTE_STATE_STEPS[route][step - 1]} before ${names}`);
+  }
+}
+
 /** Source cannot be accepted until vocabulary, package and Script gates are durable. */
 function assertSourcePrerequisites(route: RouteKind, step: number, completed: ReadonlySet<number>): void {
   if (step !== stageNumber(route, "source-authored")) return;
@@ -207,14 +251,19 @@ export async function checkpointRouteState(input: RouteCheckpointInput): Promise
   const existing = await readRouteState(projectRoot);
   if (existing === undefined) throw new Error(`no route state at ${routeStatePath(projectRoot)}; run route_state start first`);
   if (existing.route !== input.route) throw new Error(`route state is ${existing.route}, not ${input.route}`);
-  if (input.step < 1 || input.step > ROUTE_STATE_STEPS[input.route].length) throw new Error(`step ${input.step} is outside the ${input.route} route`);
+  const step = stepNumber(input.route, input.step);
   const completed = new Set(existing.completed_steps);
-  if (input.status === "complete") {
-    assertSourcePrerequisites(input.route, input.step, completed);
-    completed.add(input.step);
+  const status = input.status ?? "complete";
+  if (status === "complete") {
+    // Named checkpoints are explicit user assertions and must not jump over earlier stages. Numeric
+    // checkpoints remain compatible with route-aware automation, which may record a later durable
+    // artifact before an earlier manual checkpoint is written; reconcile still keeps that manual gap.
+    if (typeof input.step === "string") assertPriorStagesComplete(input.route, step, completed);
+    assertSourcePrerequisites(input.route, step, completed);
+    completed.add(step);
   }
   const completedSteps = [...completed].sort((a, b) => a - b);
-  const next = input.status === "complete" ? nextUncompleted(input.route, completedSteps) : input.step;
+  const next = status === "complete" ? nextUncompleted(input.route, completedSteps) : step;
   const now = new Date().toISOString();
   const decisions = input.decision === undefined || input.decision.trim().length === 0 || existing.decisions.includes(input.decision)
     ? existing.decisions
@@ -229,12 +278,12 @@ export async function checkpointRouteState(input: RouteCheckpointInput): Promise
     ...existing,
     ...(input.run === undefined ? {} : { run: resolve(projectRoot, input.run) }),
     ...(input.referenceId === undefined ? {} : { reference_id: input.referenceId }),
-    status: input.status === "blocked" ? "blocked" : next > ROUTE_STATE_STEPS[input.route].length ? "complete" : "active",
+    status: status === "blocked" ? "blocked" : next > ROUTE_STATE_STEPS[input.route].length ? "complete" : "active",
     current_step: next,
     completed_steps: completedSteps,
-    in_progress: input.status === "in_progress"
-      ? { step: input.step, started_at: now }
-      : input.status === "complete"
+    in_progress: status === "in_progress"
+      ? { step, started_at: now }
+      : status === "complete"
         ? (next > ROUTE_STATE_STEPS[input.route].length ? null : { step: next, started_at: now })
         : existing.in_progress,
     artifacts,

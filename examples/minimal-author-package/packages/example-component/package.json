@@ -1,0 +1,19 @@
+{
+  "name": "@example/example-component",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "hypit": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/composition": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/program-space": "workspace:*",
+    "@hypit/temporal": "workspace:*",
+    "@hypit/temporal-markup": "workspace:*",
+    "@hypit/visual-ir": "workspace:*"
+  }
+}

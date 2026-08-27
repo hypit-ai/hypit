@@ -165,7 +165,8 @@ test("a narrow question costs one call, answers from the named shots and is answ
   assert.deepEqual(calls[0]!.mimeTypes, ["video/mp4", "image/jpeg"]);
   assert.equal(calls[0]!.text, "How thick is the caption outline?");
   assert.deepEqual(result["shot_ids"], ["shot-003"]);
-  assert.deepEqual(result["answer"], { status: "complete", text: "the caption sits above the lower edge" });
+  assert.deepEqual(result["result"], { status: "complete", text: "the caption sits above the lower edge" });
+  assert.deepEqual(result["answer"], result["result"], "answer remains only as a compatibility alias");
 
   // The key carries the question as well as the shots, so a second question over the same shot is a
   // separate entry rather than the first one's answer handed back under a shared key.
@@ -180,8 +181,8 @@ test("a narrow question costs one call, answers from the named shots and is answ
     tools([]).observe_reference({ reference_id: REFERENCE, question: "which shot?" }),
     /question requires at least one shot id/u);
   await assert.rejects(
-    tools([]).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-001", "shot-002", "shot-003", "shot-004"], question: "which shot?" }),
-    /at most three shots/u);
+    tools([]).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-001", "shot-002"], question: "which shot?" }),
+    /exactly one shot id/u);
 });
 
 test("the key a narrow question is handed out under is one record_observation accepts", async () => {
@@ -199,7 +200,7 @@ test("the key a narrow question is handed out under is one record_observation ac
   assert.equal(stored["stored_in"], "observations");
 
   const again = await api.observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
-  assert.deepEqual(again["answer"], { status: "complete", text: "two pixels" });
+  assert.deepEqual(again["result"], { status: "complete", text: "two pixels" });
 });
 
 test("reconstruction comparison sends an unlabelled pair and accepts rendered PNG frames", async () => {
