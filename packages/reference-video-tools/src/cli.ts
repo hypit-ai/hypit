@@ -2,7 +2,7 @@
 import { readFile } from "node:fs/promises";
 
 import { createReferenceVideoTools } from "./tools.js";
-import type { CompareReconstructionInput, ObserveReferenceInput, RenderElementInput, ReviewElementInput } from "./tools.js";
+import type { CompareReconstructionInput, ObserveReferenceInput, RecordObservationInput, RenderElementInput, ReviewElementInput, RouteStateCommandInput } from "./tools.js";
 
 /**
  * A word range written on the command line as `from:to`, half-open.
@@ -26,12 +26,16 @@ function usage(): string {
   return [
     "Usage:",
     "  hypit-reference-video-tools list_svml_packages",
+    "  hypit-reference-video-tools route_state --action start|read|checkpoint|reconcile --project-root <dir> [options]",
+    "    start: --route reconstruction|description [--run <run>] [--reference-id <id>]",
+    "    checkpoint: --route <route> --step <n> [--status in_progress|complete|blocked] [--next-action <text>] [--artifacts <json>]",
+    "    read/reconcile: --project-root <dir>",
     "  hypit-reference-video-tools prepare_reference --video-path <path or link> [--observer gemini|agent] [--redo media|transcript|people|voices|systems|places|all]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> [--shot-id <id> ...] [--reobserve]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> [--shot-id <id> ...] --question <text>",
     "  hypit-reference-video-tools observe_reference --reference-id <id> --batch <questions.json>",
-    "  hypit-reference-video-tools record_observation --reference-id <id> --key <key> --text <text>|--text-file <path>",
-    "  hypit-reference-video-tools record_observation --reference-id <id> --batch <answers.json>",
+    "  hypit-reference-video-tools record_observation --reference-id <id> [--run <build.svrun>] --key <key> --text <text>|--text-file <path>",
+    "  hypit-reference-video-tools record_observation --reference-id <id> [--run <build.svrun>] --batch <answers.json>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
     "  hypit-reference-video-tools inspect_visual_contract [--shape visual-track|text-flow|text-typography|text-paint|text-document|path-command] [--producers-of <package> ...]",
     "  hypit-reference-video-tools paths",
@@ -268,6 +272,45 @@ async function main(): Promise<void> {
   let result: unknown;
   if (command === "list_svml_packages") {
     result = await tools.list_svml_packages();
+  } else if (command === "route_state") {
+    const action = typeof supplied?.action === "string" ? supplied.action : one(flags, "action");
+    if (action !== "start" && action !== "read" && action !== "checkpoint" && action !== "reconcile") {
+      throw new Error("--action must be start, read, checkpoint or reconcile");
+    }
+    const projectRoot = typeof supplied?.project_root === "string" ? supplied.project_root : required(flags, "project-root");
+    if (supplied !== undefined) {
+      result = await tools.route_state(supplied as RouteStateCommandInput);
+    } else if (action === "start") {
+      const route = one(flags, "route");
+      if (route !== "reconstruction" && route !== "description") throw new Error("--route must be reconstruction or description");
+      result = await tools.route_state({ action, project_root: projectRoot, route,
+        ...(one(flags, "run") === undefined ? {} : { run: one(flags, "run") }),
+        ...(one(flags, "reference-id") === undefined ? {} : { reference_id: one(flags, "reference-id") }) } as RouteStateCommandInput);
+    } else if (action === "read" || action === "reconcile") {
+      result = await tools.route_state({ action, project_root: projectRoot });
+    } else {
+      const route = one(flags, "route");
+      if (route !== "reconstruction" && route !== "description") throw new Error("--route must be reconstruction or description");
+      const step = Number(required(flags, "step"));
+      if (!Number.isSafeInteger(step) || step < 1) throw new Error("--step must be a positive integer");
+      const status = one(flags, "status");
+      if (status !== undefined && status !== "in_progress" && status !== "complete" && status !== "blocked") throw new Error("--status must be in_progress, complete or blocked");
+      const artifacts = one(flags, "artifacts");
+      let parsedArtifacts: Readonly<Record<string, string>> | undefined;
+      if (artifacts !== undefined) {
+        try { parsedArtifacts = JSON.parse(artifacts) as Readonly<Record<string, string>>; } catch (error) { throw new Error(`--artifacts is not valid JSON: ${error instanceof Error ? error.message : String(error)}`); }
+      }
+      result = await tools.route_state({ action, project_root: projectRoot, route, step,
+        ...(status === undefined ? {} : { status }),
+        ...(one(flags, "run") === undefined ? {} : { run: one(flags, "run") }),
+        ...(one(flags, "reference-id") === undefined ? {} : { reference_id: one(flags, "reference-id") }),
+        ...(one(flags, "next-action") === undefined ? {} : { next_action: one(flags, "next-action") }),
+        ...(parsedArtifacts === undefined ? {} : { artifacts: parsedArtifacts }),
+        ...(one(flags, "decision") === undefined ? {} : { decision: one(flags, "decision") }),
+        ...(one(flags, "command") === undefined ? {} : { command: one(flags, "command") }),
+        ...(one(flags, "error") === undefined ? {} : { error: one(flags, "error") }),
+      } as RouteStateCommandInput);
+    }
   } else if (command === "prepare_reference") {
     const observer = one(flags, "observer");
     if (observer !== undefined && observer !== "gemini" && observer !== "agent") throw new Error("--observer must be gemini or agent");
@@ -314,17 +357,18 @@ async function main(): Promise<void> {
         if (typeof entry.text !== "string") throw new Error(`answer ${entry.key} needs a "text" or a "text_file"`);
         return { key: entry.key, text: entry.text };
       }));
-      result = await tools.record_observation({ reference_id: required(flags, "reference-id"), answers });
+      result = await tools.record_observation({ reference_id: required(flags, "reference-id"), ...(one(flags, "run") === undefined ? {} : { run: one(flags, "run") }), answers } as RecordObservationInput);
     } else {
       // An observation is paragraphs of prose. --text keeps a short one on the command line; --text-file
       // is how a long one arrives without the shell deciding where it ends.
       const textFile = one(flags, "text-file");
       const input = supplied ?? {
         reference_id: required(flags, "reference-id"),
+        ...(one(flags, "run") === undefined ? {} : { run: one(flags, "run") }),
         key: required(flags, "key"),
         text: textFile === undefined ? required(flags, "text") : await readFile(textFile, "utf8"),
       };
-      result = await tools.record_observation(input as { reference_id: string; key: string; text: string });
+      result = await tools.record_observation(input as { reference_id: string; run?: string; key: string; text: string });
     }
   } else if (command === "review_element") {
     const reviewFile = one(flags, "batch");
