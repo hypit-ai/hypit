@@ -190,6 +190,13 @@ function stageNumber(route: RouteKind, name: string): number {
   return index + 1;
 }
 
+const SCALAR_ARTIFACT_KEYS = new Set(["observer", "timing_basis", "timingBasis", "mode", "status"]);
+function normalizeArtifact(projectRoot: string, key: string, value: string): string {
+  // Artifact maps historically accepted strings for both file references and tiny metadata values.
+  // Preserve the latter; resolving `observer: "gemini"` as a filesystem path corrupts the snapshot.
+  return SCALAR_ARTIFACT_KEYS.has(key) ? value : resolve(projectRoot, value);
+}
+
 function stepNumber(route: RouteKind, step: number | RouteStep): number {
   if (typeof step === "number") {
     if (!Number.isSafeInteger(step) || step < 1 || step > ROUTE_STATE_STEPS[route].length) {
@@ -271,7 +278,7 @@ export async function checkpointRouteState(input: RouteCheckpointInput): Promise
   const artifacts = input.artifacts === undefined ? existing.artifacts : {
     ...existing.artifacts,
     ...Object.fromEntries(
-      Object.entries(input.artifacts).map(([key, value]) => [key, resolve(projectRoot, value)]),
+      Object.entries(input.artifacts).map(([key, value]) => [key, normalizeArtifact(projectRoot, key, value)]),
     ),
   };
   const state: RouteState = {

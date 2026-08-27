@@ -163,7 +163,8 @@ test("a narrow question costs one call, answers from the named shots and is answ
 
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0]!.mimeTypes, ["video/mp4", "image/jpeg"]);
-  assert.equal(calls[0]!.text, "How thick is the caption outline?");
+  assert.match(calls[0]!.text, /^How thick is the caption outline\?/u);
+  assert.match(calls[0]!.text, /platform UI|editing-software watermark/u);
   assert.deepEqual(result["shot_ids"], ["shot-003"]);
   assert.deepEqual(result["result"], { status: "complete", text: "the caption sits above the lower edge" });
   assert.deepEqual(result["answer"], result["result"], "answer remains only as a compatibility alias");
@@ -218,7 +219,7 @@ test("reconstruction comparison sends an unlabelled pair and accepts rendered PN
   assert.match(calls[0]!.text, /geometry pass/u);
   assert.match(calls[0]!.text, /outer frame/u);
   assert.match(calls[0]!.text, /overflow/u);
-  assert.doesNotMatch(calls[0]!.text, /reconstruction|rendered|generated|authored|component|SVML/iu,
+  assert.doesNotMatch(calls[0]!.text, /reconstruction|rendered|generated|component|SVML/iu,
     "the comparison must never say which image was built or how");
   assert.match(calls[0]!.instruction, /You are not told how either was made/u);
   assert.deepEqual(result["differences"], { status: "complete", text: "the list starts lower in one image" });

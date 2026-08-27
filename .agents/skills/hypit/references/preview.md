@@ -131,7 +131,8 @@ hypit-studio --run .hypit/preview/<digest>/preview.svrun --runtime hypit.runtime
 If another Studio process is already using a different Run or startup parameters, stop that process
 before launching this command; otherwise reuse the existing process and let its Source watcher reload.
 
-Read the startup output for the chosen port. `--run` is required: Studio's unit of work is the Run
+Read the startup output for the chosen port and return the exact Studio URL to the author. `--run` is
+required: Studio's unit of work is the Run
 Source, and it reads the Author SVML back out of it. Pass `--runtime` only when the Author Source
 reuses accepted Build records. `--workspace` selects the Source Workspace and defaults to the Run's
 own directory, so pass it when the Run's relative Sources resolve against a different root.

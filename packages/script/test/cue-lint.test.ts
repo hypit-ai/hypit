@@ -20,3 +20,8 @@ test("Cue lint counts visible Dual Text words and respects authored breaks", () 
   const dual = validateCaptionCueLengths(parsed("<one><one two three four five | uno dos tres cuatro cinco></one>"));
   assert.equal(dual[0]?.wordCount, 5);
 });
+
+test("Segment boundaries are hard Cue boundaries", () => {
+  const violations = validateCaptionCueLengths(parsed("<one>one two three</one><two>four five</two>"));
+  assert.equal(violations.length, 0);
+});

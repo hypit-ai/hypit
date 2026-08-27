@@ -215,10 +215,10 @@ configured to empty its window.
 
 **Read now:** `../studio-confirmation.md`. Before the paid gate, call the preview-mock realizer and
 start Studio with its returned temporary `preview.svrun` (not the unresolved author Run). Show the
-complete estimate-timed mock, then obtain explicit acceptance and cost approval. If the author
-declines, enter `../revision.md` and do not submit a Build. After acceptance and paid Build
-submission, persist the accepted Build-Record Run, start Studio for that Run, and start the
-HyperFrames/final render concurrently.
+complete estimate-timed mock, return the exact URL printed by Studio, and obtain explicit acceptance
+and cost approval. If the author declines, enter `../revision.md` and do not submit a Build. After
+acceptance and paid Build submission, persist the accepted Build-Record Run, start Studio for that
+Run, return its exact URL, and start the HyperFrames/final render concurrently.
 
 Confirm credentials, the Runtime Profile, the installed packages, model limits, resolution and
 Endpoint prerequisites. Run `doctor`, `check` and `plan`.

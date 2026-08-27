@@ -236,12 +236,15 @@ Before Source can be considered authored, run:
 hypit-reference-video-tools validate_local_author_packages --run <path/to/build.svrun>
 ```
 
-Every project-owned package under `<project>/packages/` must expose a non-empty Manifest, at least one
-Markup Surface, at least one Producer and at least one Run Fragment with operations and exports. The
-Run's compiled Graph must contain an operation from that package, and the Author Source must import
-and use its Surface. An import without use, a marker-only package, or a package replaced by a similar
-official component fails with a machine-readable diagnostic. If no gap exists, do not leave an unused
-package in the project. `validate_local_author_packages` discovers these package directories from
+Every project-owned author package under `<project>/packages/` must expose a non-empty Manifest, at least one
+Markup Surface and at least one Producer. Its Surface decoder must expand to a real Graph Fragment with
+operations and exports, and every Fragment operation Producer must belong to the package's own Module.
+Run-fragment host facets are required only by packages that explicitly provide Run-side replacements such
+as preview mocks; an author package is not required to expose one. The Run's compiled Graph must contain
+an operation from that package, and the Author Source must import and use its Surface. An import without
+use, a marker-only package, or a package replaced by a similar official component fails with a
+machine-readable diagnostic. If no gap exists, do not leave an unused package in the project.
+`validate_local_author_packages` discovers these package directories from
 their manifests; the directory name is not a validation signal.
 
 The Host resolves the explicitly selected physical package name directly at

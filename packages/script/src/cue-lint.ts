@@ -26,6 +26,7 @@ export function validateCaptionCueLengths(
   let cueWords = 0;
   let cueStart = 0;
   let cueOrdinal = 1;
+  let cueSegment = document.units[0]?.segmentId;
   const flush = (endExclusive: number): void => {
     if (cueWords <= maxWords || document.units.length === 0) return;
     const first = document.units[cueStart];
@@ -47,6 +48,14 @@ export function validateCaptionCueLengths(
   };
   for (let index = 0; index < document.units.length; index += 1) {
     const unit = document.units[index]!;
+    if (cueSegment !== undefined && unit.segmentId !== cueSegment) {
+      // Segment close is an implicit hard boundary.  Diagnostics are numbered within the
+      // Segment that owns the Cue, rather than carrying an ordinal across independent takes.
+      cueWords = 0;
+      cueStart = index;
+      cueOrdinal = 1;
+      cueSegment = unit.segmentId;
+    }
     cueWords += unit.wordIds.length;
     if (breaks.has(unit.id)) {
       flush(index + 1);

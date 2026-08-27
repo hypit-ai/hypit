@@ -421,12 +421,14 @@ export type Composition = {
   readonly tracks: readonly Track[];
 };
 
-const ANIMATABLE_LOCAL_STYLES = new Set([
+/** The only local style properties accepted in element keyframes. */
+export const animatableLocalStyles = [
   "clip-path",
   "filter",
   "opacity",
   "transform",
-]);
+] as const;
+const ANIMATABLE_LOCAL_STYLES = new Set<string>(animatableLocalStyles);
 
 const ANIMATABLE_TEXT_UNIT_STYLES = new Set([
   "-webkit-text-fill-color",

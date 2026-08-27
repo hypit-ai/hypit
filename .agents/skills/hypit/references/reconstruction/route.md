@@ -173,9 +173,10 @@ One line, before any evidence starts.
 hypit-reference-video-tools list_svml_packages
 ```
 
-It reads `node_modules/@hypit` relative to the working directory and refuses when it is empty, so run
-it from the repository root. Name the project with `--package-root` when the command is not run from
-inside it. This is instant and may run before or during the sweep.
+It resolves project-owned packages from the working directory (or the directory named by
+`--package-root`) and resolves installed `@hypit/*` packages from the active Hypit Distribution
+fallback. `--package-root` never replaces that Distribution root, so no `npm link` or package self-link
+is needed. This is instant and may run before or during the sweep.
 
 ### 8. Prepare the reference
 
@@ -400,10 +401,10 @@ After any requested change (or when there was none), run `reconstruction_check` 
 
 **Read now:** `../studio-confirmation.md`. Realize the preview-mock Run first, then start Studio with
 the returned temporary `preview.svrun` (never the original unresolved Run), show the complete
-estimate-timed mock, and obtain explicit acceptance and cost approval. If the author declines, enter
+estimate-timed mock, return the exact URL printed by Studio, and obtain explicit acceptance and cost approval. If the author declines, enter
 `../revision.md` and do not Build. Once accepted, submit the paid Build and persist its accepted
-Build-Record Run; start Studio for that accepted Run while the HyperFrames/final render proceeds
-concurrently.
+Build-Record Run; start Studio for that accepted Run, return the exact URL printed by Studio, while
+the HyperFrames/final render proceeds concurrently.
 
 After acceptance, continue with `../runtime.md` for the approved paid Build and retrieval lifecycle.
 

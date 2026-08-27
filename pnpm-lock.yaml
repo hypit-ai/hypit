@@ -510,6 +510,9 @@ importers:
       '@hypit/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
+      '@hypit/estimate':
+        specifier: workspace:*
+        version: link:../estimate
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -703,6 +706,9 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
       '@hypit/speech-evidence':
         specifier: workspace:*
         version: link:../speech-evidence
