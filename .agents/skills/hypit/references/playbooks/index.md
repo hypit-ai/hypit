@@ -53,6 +53,9 @@ file that some jobs never open.
 
 - Write VLM instructions and image/video generation prompts in English. Keep original-language
   dialogue, transcript, pronunciation, and quoted copy verbatim.
+- Every photographic `gpt:Image` prompt begins with the invariant reality contract in
+  `craft/image-prompt-style.md`, including when ordered `gpt:Reference` children are present;
+  references constrain the shot but never replace that prefix.
 - Describe the desired visible state directly. Omit unwanted concrete objects instead of naming
   them inside negations or hypotheticals that a model may materialize.
 - Keep editorial captions, titles, stickers, cards, and callouts out of generation prompts. Author

@@ -37,10 +37,81 @@ Describe the final image directly. Do not write an edit-operation checklist, con
 or long negative inventories containing unwanted concrete objects. Split mutually exclusive states
 into separate prompts.
 
+## Keep the reality prefix on every photographic image
+
+The reality contract is an invariant prompt prefix, not a hint for the model. Every `gpt:Image`
+generation that depicts a photographic or photoreal scene must concatenate the exact prefix before
+its shot-specific body, including generations that also have one or more `gpt:Reference` children.
+References constrain identity, geometry, or continuity; they do not replace, shorten, or override the
+prefix. Keep the wording and order stable across a prompt family and change only the bracketed shot
+slot. A reference image with no prefix is a different visual contract and is not an acceptable
+shortcut. Non-photographic illustrations and deliberately graphic assets use their own plain visual
+contract instead of pretending to be iPhone footage.
+
+## A reusable description spine
+
+The strongest prompts turn adjectives into observable evidence and keep the same order every time:
+
+1. **Frame purpose and setting.** Name what the frame is doing (podcast, interview, product proof,
+   establishing view), where it is, and what part of the environment must remain visible.
+2. **Composition and camera geometry.** State shot size, subject position relative to the frame,
+   body lean, gaze direction, camera side and height, lens feel, and the background sectors or
+   landmarks that must be included. Relational instructions such as “subject slightly right,
+   leaning left, looking toward an unseen person on the left” are more reliable than three isolated
+   adjectives.
+3. **Identity and appearance anchors.** Establish the recurring person or product with concrete,
+   stable traits first (face shape, eyes, hair, skin, age presentation, distinctive marks), then
+   add body silhouette, wardrobe, accessories, and styling. For a male-presenting subject whose
+   physique matters, state a visible shoulder line — for example, “broad shoulders and a strong
+   upper-body silhouette” — and choose a half-body or wider frame that can actually show it. When
+   mixed Asian heritage is part of the intended identity, name the combination explicitly, such as
+   “Japanese-American mixed-race man” or “Korean-American mixed-race man”; do not leave a
+   reference-critical identity to the generic word “Asian.” Keep heritage as one stable identity
+   anchor, never as a bundle of stereotyped physical claims. Prefer a few renderable facts over a
+   stack of generic superlatives such as “extremely handsome.”
+4. **Action and physical relationships.** Give one readable starting action and posture. Say who the
+   subject is addressing, what supports their body, which hands are occupied, and how props contact
+   the scene. This explains a gaze, crossed legs, a microphone entering from frame left, or a person
+   leaning toward an off-screen interlocutor instead of leaving the model to invent the cause.
+5. **Props, branding, and scale.** Name object count, side of entry, relative size, and attachment to
+   the environment. Keep diegetic labels short and specify their placement; use supplied assets or
+   an explicit Track whenever lettering must be exact rather than trusting generated typography.
+6. **Light and material response.** Describe light source and direction, indoor/outdoor quality,
+   contrast, skin texture, surface texture, and the desired level of polish. “Natural indoor light,
+   fine skin texture, background still readable” gives the model physical evidence instead of only
+   saying “high quality.”
+7. **A small set of positive acceptance constraints.** Repeat only the few failure modes that matter
+   for this shot (for example, no depth-of-field blur, no broken/fragmented regions, background
+   visible). Avoid long negative inventories: they consume attention and often introduce the very
+   objects they name.
+8. **Reference roles.** For each ordered reference, say whether it locks identity, room geometry,
+   product shape, wardrobe, or UI. State what must remain stable and what the new shot is allowed to
+   change. Do not describe a reference-locked room a second time in prose as if it were a fresh set.
+
+For a prompt family, use this compact skeleton after the invariant prefix:
+
+```text
+Scene/purpose: …
+Composition/camera: …
+Subject/identity/wardrobe: …
+Action/posture/relationships: …
+Props/branding: …
+Lighting/material: …
+Acceptance constraints: …
+Reference roles: …
+```
+
+This is a writing order, not text to paste literally. Keep critical facts singular and unambiguous;
+use controlled repetition only for a fact that must survive across every view (identity, camera side,
+or lighting direction). Separate mutually exclusive poses, locations, or before/after states into
+different prompts rather than joining them with “or.”
+
 ## Keep people and cameras physically possible
 
 - Make the first generated identity anchor a clear complete face with both eyes visible. Vary face
   direction naturally only after that anchor exists.
+- If broad male shoulders are part of the design, keep both shoulder edges and enough upper torso in
+  the identity anchor; a tight face crop cannot establish that invariant for later references.
 - Respect hand occupancy. A person holding a phone or product cannot simultaneously have both hands
   free; assign only physically necessary tasks and avoid arbitrary left/right choreography.
 - For a selfie, specify one real camera topology: an arm-held front camera, a mirror/reflective-surface
