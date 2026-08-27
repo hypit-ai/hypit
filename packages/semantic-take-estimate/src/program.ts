@@ -105,7 +105,6 @@ export function materializeEstimatedSemanticTake(
   policy: SpeechEstimatePolicy,
 ): SemanticTake {
   verifySynchronizedMedia(media);
-  if (media.visual === undefined) throw new Error("Estimated SemanticTake requires normalized visual media.");
   return materializeSemanticTake(
     narrative,
     excerpt,

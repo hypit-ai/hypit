@@ -2,7 +2,6 @@ import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
-import { writePlaceholder } from "./placeholder.js";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { cpus } from "node:os";
@@ -10,81 +9,37 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { compileHyperframesDocument, materializeHyperframesHtml } from "@hypit/hyperframes";
-import {
-  countSpeechEstimateUnits,
-  estimateSpeechDuration,
-  resolveSpeechEstimateLanguage,
-  speechEstimatePolicyFromRecipe,
-} from "@hypit/estimate";
-import type { SpeechEstimatePolicy } from "@hypit/estimate";
-import type { SynchronizedMedia } from "@hypit/media";
 import type { ProgramSpace } from "@hypit/program-space";
-import type { BlobRef, Digest } from "@hypit/protocol";
+import type { CompiledGraph } from "@hypit/protocol";
 import { parseScript } from "@hypit/script";
-import type { SemanticTake, SemanticTakeToken } from "@hypit/speech";
 import { videoCliDistribution } from "@hypit/video-cli";
 import { loadStudioCompanionRegistry } from "@hypit/studio/src/companion-profile.js";
 import { openStudioArchive } from "@hypit/studio/src/archive.js";
 import { loadStudioDomain } from "@hypit/studio/src/domain.js";
 import type { Preview } from "@hypit/studio/src/programme.js";
 import { preview } from "@hypit/studio/src/programme.js";
+import { EndpointRegistry } from "@hypit/driver-node";
+import { createLocalMediaProvider } from "@hypit/provider-media-local";
 import { loadStudioRun } from "@hypit/studio/src/run.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
-import type { SvsRecipe } from "@hypit/svs";
+import { realizePreviewMock } from "@hypit/preview-mock";
 
-import { assert, ensureDir, round } from "./media.js";
+import { assert, ensureDir } from "./media.js";
 import type { TranscriptFile } from "./types.js";
 
-/** A frame range of the stand-in program, half-open in the Script's own order. */
+/** A frame range in the estimate-timed preview program, half-open in Script order. */
 export type AuthoringWindow = {
   readonly startFrame: number;
   readonly endFrameExclusive: number;
 };
 
-/**
- * A stand-in Take. Its `media.audio` carries the sample count beside the Artifact, which is the
- * shape the `<value>` fixture is written with.
- */
-export type StandInTakeValue = Omit<SemanticTake, "media"> & {
-  readonly media: Omit<SynchronizedMedia, "audio"> & {
-    readonly audio: { readonly artifact: BlobRef; readonly sampleFrames: number };
-  };
-};
-
-export type StandInTake = {
-  readonly segmentId: string;
-  readonly startFrame: number;
-  readonly take: StandInTakeValue;
-};
-
-/**
- * What timed one Segment's stand-in, and how long that clock said it runs.
- *
- * `seconds` is the clock's own answer. `frames` is what the Segment occupies in the program, which is
- * shorter for a Segment outside the window being drawn.
- */
 export type StandInTiming = {
   readonly segment: string;
   readonly basis: "reference" | "estimate";
   readonly seconds: number;
   readonly frames: number;
   readonly tokens: number;
-  /** Script words the reference's transcript matched. Zero on the estimate basis. */
   readonly matched: number;
-};
-
-export type StandInTakes = {
-  readonly takes: readonly StandInTake[];
-  readonly selections: ReadonlyMap<string, AuthoringWindow>;
-  readonly frameCount: number;
-  readonly timing: readonly StandInTiming[];
-  /**
-   * Where every Script word sits in the program, in order.
-   *
-   * A window named by a Segment or a Selection is looked up above; one named by index is read
-   * straight off this, which is the same table those two are built from.
-   */
-  readonly frameOfToken: readonly { readonly frame: number; readonly end: number }[];
 };
 
 /** Which Segment the render is looking at, named directly or through a Selection's words. */
@@ -116,6 +71,16 @@ export function tokenWindow(value: unknown, subject: string): readonly [number, 
   assert(Array.isArray(value) && value.length === 2 && value.every((item) => Number.isInteger(item)),
     `${subject} must be two whole numbers, as [from, to) — received ${JSON.stringify(value)}`);
   return [value[0] as number, value[1] as number];
+}
+
+function referenceTimed(
+  segment: { readonly tokenStart: number; readonly tokenEndExclusive: number },
+  pairs: ReadonlyMap<number, number>,
+): boolean {
+  for (let index = segment.tokenStart; index < segment.tokenEndExclusive; index += 1) {
+    if (pairs.has(index)) return true;
+  }
+  return false;
 }
 
 /**
@@ -186,7 +151,7 @@ export function invokedFrom(): string {
   return process.cwd();
 }
 
-/** The one active Script identity and body, which semantic stand-ins must preserve together. */
+/** The one active Script identity and body, preserved by preview realization. */
 export function scriptBody(svml: string): { readonly id: string; readonly text: string; readonly offset: number } {
   const open = /<script\b[^>]*>/u.exec(svml);
   if (open === null) throw new Error("the Source declares no <script>");
@@ -227,88 +192,6 @@ export function aliasPattern(svml: string, specifier: string, conventional: stri
 }
 
 /** Every Recipe body in every sheet the Source imports, keyed `alias.path`. */
-async function recipeSheets(svml: string, svmlPath: string): Promise<ReadonlyMap<string, SvsRecipe>> {
-  const sheets = new Map<string, SvsRecipe>();
-  for (const match of svml.matchAll(/<import\s+as="([^"]+)"\s+source="([^"]+\.svs)"/gu)) {
-    const alias = match[1] ?? "";
-    const source = match[2] ?? "";
-    const text = await readFile(resolve(dirname(svmlPath), source), "utf8").catch(() => undefined);
-    if (text === undefined) continue;
-    for (const recipe of text.matchAll(/([A-Za-z0-9_.-]+)\s*\{([^}]*)\}/gu)) {
-      const name = recipe[1] ?? "";
-      const body = recipe[2] ?? "";
-      const properties: Record<string, string | number> = {};
-      for (const property of body.matchAll(/([a-z][a-z0-9-]*)\s*:\s*([^;]+);/gu)) {
-        const key = property[1] ?? "";
-        const value = (property[2] ?? "").trim();
-        properties[key] = /^-?\d+(\.\d+)?$/u.test(value) ? Number(value) : value;
-      }
-      sheets.set(`${alias}.${name}`, { path: `${alias}.${name}`, properties });
-    }
-  }
-  return sheets;
-}
-
-/**
- * The policy each Segment's duration was estimated with. A Source names it once per Segment through
- * `<estimate:Speech source={story.segment.NAME.speech} policy={recipes.X}/>`, and reading it back is
- * what keeps this on the Source's own basis rather than a second one.
- */
-function policiesBySegment(svml: string, sheets: ReadonlyMap<string, SvsRecipe>): {
-  readonly policies: ReadonlyMap<string, SpeechEstimatePolicy>;
-  readonly shared: SpeechEstimatePolicy | undefined;
-  readonly policyCount: number;
-} {
-  const policies = new Map<string, SpeechEstimatePolicy>();
-  const named = new Set<string>();
-  const estimate = aliasPattern(svml, "@hypit/estimate", "estimate");
-  for (const match of svml.matchAll(new RegExp(`<(?:${estimate}):Speech\\b([^>]*?)/?>`, "gsu"))) {
-    const attributes = match[1] ?? "";
-    const segment = /\bsource=\{story\.segment\.([A-Za-z0-9_-]+)\.speech\}/u.exec(attributes)?.[1];
-    const recipe = /\bpolicy=\{([A-Za-z0-9_.-]+)\}/u.exec(attributes)?.[1];
-    if (segment === undefined || recipe === undefined) continue;
-    const sheet = sheets.get(recipe);
-    if (sheet === undefined) throw new Error(`policy Recipe ${recipe} is not in any imported sheet`);
-    named.add(recipe);
-    policies.set(segment, speechEstimatePolicyFromRecipe(sheet));
-  }
-  // A Segment whose take is shared with another Segment carries no estimate of its own, so it has no
-  // policy named against it. One policy across the Source settles those; several leaves no basis to
-  // pick from, and guessing would put a Segment on a pace the Source never chose for it.
-  const shared = named.size === 1 ? policies.get([...policies.keys()][0]!) : undefined;
-  return { policies, shared, policyCount: named.size };
-}
-
-const SILENT_AUDIO: BlobRef = { kind: "blob", digest: `sha256:${"0".repeat(64)}` as Digest, size: 1, mediaType: "audio/wav" };
-
-/**
- * Build a stand-in SemanticTake for every Segment a Source declares.
- *
- * A Track timed against speech cannot be projected before the speech exists, and on this route it
- * does not exist: the Build has not run. Two clocks can stand in for it, and each Segment is sized by
- * whichever one can speak for it.
- *
- * **The reference's own words.** For a reconstruction, the words have already been spoken once and
- * timed: the Script was transcribed from the reference video, and `prepare_reference` wrote the
- * seconds of every word of it. A Segment timed this way runs for exactly as long as the reference
- * spends on those words, and every window inside it does too, which is what a progressive reveal, a
- * typewriter, a staggered row or an enter animation is compared on.
- *
- * **`estimate:Speech` with a policy Recipe.** The estimator the Source already trusts to size its own
- * generations. Running it here produces the same numbers the Source used to order its takes, so it
- * introduces no third clock; it reads one already written down. This is what sizes a Segment the
- * reference has nothing to say about, and what sizes every Segment when no reference is given.
- *
- * Word ranges and Recipe values are exact on either clock, so which elements are on screen together,
- * where each sits, at what size and colour follow from the Source itself. Alignment against the
- * speech a Build synthesizes is settled once that speech exists.
- *
- * @param svmlPath  the Author SVML this Source is written in
- * @param frameRate the Program's frame rate, as a whole number of frames per second
- * @param reference the reference's per-word times, from `referenceWords`
- * @returns one `{ segmentId, take }` per Segment in Script order, and what timed each of them
- */
-
 /**
  * The Author SVML a Run declares, both as it is written and as a path.
  *
@@ -547,7 +430,7 @@ export async function spokenRange(
 
   // Where the range closes, which has to be the second the render holds the last word until. A word
   // keeps the screen until the next one starts, so the pause the reference leaves between two words
-  // belongs to the word before it — `standInTakes` says why, and sizes the takes so this holds
+  // belongs to the word before it; the estimate-timed SemanticTake preserves this same boundary
   // across a Segment boundary as well as inside one. Cutting the reference at the last word's own
   // end instead would leave it short of the render by that pause.
   //
@@ -577,220 +460,6 @@ export async function spokenRange(
   };
 }
 
-export async function standInTakes(
-  svmlPath: string,
-  frameRate: number,
-  reference: readonly ReferenceWord[] = [],
-  timingSource: string = svmlPath,
-): Promise<StandInTakes> {
-  const svml = await readFile(svmlPath, "utf8");
-  const body = scriptBody(svml);
-  const parsed = parseScript(svmlPath, body.text, body.offset);
-
-  // Which Script the reference is aligned against. A render is drawn from a fragment holding one
-  // Segment, and aligning that fragment's words against the whole transcript is not the same
-  // alignment the whole Script produces: a word that matched inside a longer run of context stops
-  // matching, and the unmatched runs at the fragment's own two ends are interpolated from the words
-  // just outside them rather than from the neighbouring Segments. The comparison reads the whole
-  // Source, so a render timed from the fragment covers seconds the comparison never cuts.
-  //
-  // So the alignment is made once, against the whole Source, and each Segment takes its own slice out
-  // of it by id. The fragment is a byte-for-byte cut, so a Segment holds the same words in both.
-  const timed = timingSource === svmlPath
-    ? parsed
-    : await (async () => {
-      const text = await readFile(timingSource, "utf8");
-      const whole = scriptBody(text);
-      return parseScript(timingSource, whole.text, whole.offset);
-    })();
-  const sheets = await recipeSheets(svml, svmlPath);
-  const { policies, shared, policyCount } = policiesBySegment(svml, sheets);
-
-  // Which Script word the reference speaks when. The Script was transcribed from that video, so the
-  // words are the same words in the same order, and a stand-in timed from them runs at the pace the
-  // reconstruction is being compared against.
-  const words = reference.length === 0
-    ? undefined
-    : (() => {
-      const pairs = alignWords(timed.tokens.map((token) => normalizeWord(token.text)), reference.map((word) => normalizeWord(word.text)));
-      return pairs.size === 0 ? undefined : { pairs, spans: wordSpans(timed.tokens.length, pairs, reference) };
-    })();
-
-  // A Segment is timed from the reference when the reference was heard saying some of its words.
-  // The decision is made per Segment: an ordinary transcription difference costs one Segment its
-  // reference clock and leaves the rest of the Script on it.
-  //
-  // Worked out for every Segment before any of them is sized, because a Segment runs until the next
-  // one opens and a single pass does not have the next one yet.
-  const heard = parsed.segments.map((segment) => {
-    const whole = timed.segments.find((item) => item.id === segment.id);
-    let matched = 0;
-    if (words !== undefined && whole !== undefined) {
-      for (let index = whole.tokenStart; index < whole.tokenEndExclusive; index += 1) if (words.pairs.has(index)) matched += 1;
-    }
-    const spoken = words === undefined || whole === undefined || matched === 0
-      ? undefined
-      : words.spans.slice(whole.tokenStart, whole.tokenEndExclusive);
-    return { matched, spoken };
-  });
-
-  const takes: StandInTake[] = [];
-  const timing: StandInTiming[] = [];
-  // Global frame span of every word, in Script order, so a Selection can be turned into a frame
-  // range without going near a clock. This is the correspondence the route uses everywhere else:
-  // a stretch of the reference is found by its words, and its words are where the Script says.
-  const frameOfToken: { readonly frame: number; readonly end: number }[] = [];
-  let frameCursor = 0;
-  for (const [order, segment] of parsed.segments.entries()) {
-    const tokens = parsed.tokens.slice(segment.tokenStart, segment.tokenEndExclusive);
-    const text = tokens.map((token) => token.text).join(" ");
-    const { spoken, matched } = heard[order]!;
-
-    // How long the Segment runs. The reference's own words when it was heard saying them, the
-    // estimator the Source already trusts when it was not.
-    let seconds: number;
-    let basis: StandInTiming["basis"];
-    let weights: readonly number[] | undefined;
-    if (spoken !== undefined) {
-      // Until the next Segment opens, not until this one's last word stops. The reference pauses
-      // between sentences, and a SemanticTrack puts each take at the sum of the lengths before it —
-      // so unless the pause is inside the take before it, there is nowhere for it to be, and every
-      // word after the first Segment is drawn earlier than the reference said it. On this reference
-      // that reached a full second by the last Segment, which is several words.
-      //
-      // The next Segment has to be on the reference's clock too. One the transcript carries none of
-      // runs at the estimator's length and sits nowhere on that clock, so there is no opening to
-      // reach for.
-      const opens = heard[order + 1]?.spoken?.[0]?.start;
-      seconds = Math.max(0, (opens ?? spoken.at(-1)!.end) - spoken[0]!.start);
-      basis = "reference";
-    } else {
-      const policy = policies.get(segment.id) ?? shared;
-      if (policy === undefined) {
-        throw new Error(`Segment ${segment.id} names no estimate:Speech policy, and the Source uses ${policyCount} policies, so there is no single one to fall back to`);
-      }
-      seconds = estimateSpeechDuration({ value: text }, policy);
-      basis = "estimate";
-      const language = resolveSpeechEstimateLanguage(text, policy.language);
-      weights = tokens.map((token) => Math.max(1, countSpeechEstimateUnits(token.text, language)));
-    }
-
-    // Every Segment at the length its clock gives it. The program is drawn once and a window is cut
-    // out of it by frame, so a Segment nobody is looking at costs nothing by being its true length —
-    // and the frame numbers then mean what they say instead of indexing a compressed timeline.
-    const frameCount = Math.max(tokens.length, Math.round(seconds * frameRate));
-    timing.push({ segment: segment.id, basis, seconds: round(seconds), frames: frameCount, tokens: tokens.length, matched });
-
-    // Where each word ends. On the reference clock a word holds the screen until the next one starts
-    // and the last holds until the reference stops saying it, so the small gaps the reference leaves
-    // between words go to the word before them and the Take covers its Segment without holes. On the
-    // estimate the share is the estimator's own unit count, so the word order and the relative widths
-    // both come from the same place the duration did.
-    const total = weights?.reduce((sum, weight) => sum + weight, 0) ?? 0;
-    const edge = spoken !== undefined
-      ? (index: number, start: number): number =>
-        Math.max(start + 1, Math.round((spoken[index + 1]!.start - spoken[0]!.start) * frameRate))
-      : (index: number, start: number): number =>
-        start + Math.max(1, Math.round(frameCount * weights![index]! / total));
-
-    const anchors: { readonly identity: string; readonly frame: number }[] = [
-      { identity: `segment:${segment.id}:start`, frame: 0 },
-      { identity: `segment:${segment.id}:end`, frame: frameCount },
-    ];
-    const placed: SemanticTakeToken[] = [];
-    let used = 0;
-    for (const [index, token] of tokens.entries()) {
-      const start = used;
-      // The last token closes the Segment exactly, so rounding never leaves a frame unclaimed, and
-      // every earlier one is held back far enough that the ones after it still get a frame each.
-      used = index === tokens.length - 1
-        ? frameCount
-        : Math.min(frameCount - (tokens.length - 1 - index), edge(index, start));
-      const id = `segment:${segment.id}:token:${index + 1}`;
-      placed.push({
-        tokenId: id, segmentId: segment.id, text: token.text,
-        startAnchorId: `${id}:start`, endAnchorId: `${id}:end`,
-        startFrame: start, endFrameExclusive: used,
-      });
-      anchors.push({ identity: `${id}:start`, frame: start }, { identity: `${id}:end`, frame: used });
-    }
-
-    frameOfToken.push(...placed.map((token) => ({ frame: frameCursor + token.startFrame, end: frameCursor + token.endFrameExclusive })));
-    takes.push({
-      segmentId: segment.id,
-      startFrame: frameCursor,
-      take: {
-        narrativeId: body.id,
-        media: {
-          timeline: { frameRate: { numerator: frameRate, denominator: 1 }, frameCount },
-          audio: { artifact: SILENT_AUDIO, sampleFrames: Math.round(frameCount / frameRate * 48_000) },
-        },
-        segment: {
-          segmentId: segment.id,
-          startAnchorId: `segment:${segment.id}:start`,
-          endAnchorId: `segment:${segment.id}:end`,
-          startFrame: 0,
-          endFrameExclusive: frameCount,
-        },
-        tokens: placed,
-        anchors,
-      },
-    });
-    frameCursor += frameCount;
-  }
-
-  // Every Selection the Script marks, as the frames its words occupy. Selections nest freely, so a
-  // window runs from the frame of its open anchor's word to the end of the word before its close.
-  const selections = new Map<string, AuthoringWindow>();
-  for (const selection of parsed.selections) {
-    const first = frameOfToken[selection.open.boundary.tokenIndex];
-    const last = frameOfToken[selection.close.boundary.tokenIndex - 1];
-    if (first === undefined || last === undefined) continue;
-    if (first.frame < last.end) selections.set(selection.id, { startFrame: first.frame, endFrameExclusive: last.end });
-  }
-  return { takes, selections, frameCount: frameCursor, timing, frameOfToken };
-}
-
-/**
- * Whether the reference was heard saying any of a Segment's words.
- *
- * Both sides of a comparison ask this and have to get the same answer: it decides whether the take
- * before a Segment boundary was sized to reach the next Segment, and so whether the reference is cut
- * up to that Segment's first word or up to the last word's own end.
- */
-function referenceTimed(
-  segment: { readonly tokenStart: number; readonly tokenEndExclusive: number },
-  pairs: ReadonlyMap<number, number>,
-): boolean {
-  for (let index = segment.tokenStart; index < segment.tokenEndExclusive; index += 1) {
-    if (pairs.has(index)) return true;
-  }
-  return false;
-}
-
-function blobRef(bytes: Uint8Array, mediaType: string): BlobRef {
-  return { kind: "blob", digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`, size: bytes.byteLength, mediaType };
-}
-
-/** 48 kHz mono PCM silence, written by hand so the mock needs no encoder and lands on exact bytes. */
-function silentWav(sampleFrames: number): Buffer {
-  const data = Math.max(2, sampleFrames * 2);
-  const buffer = Buffer.alloc(44 + data);
-  buffer.write("RIFF", 0);
-  buffer.writeUInt32LE(36 + data, 4);
-  buffer.write("WAVEfmt ", 8);
-  buffer.writeUInt32LE(16, 16);
-  buffer.writeUInt16LE(1, 20);
-  buffer.writeUInt16LE(1, 22);
-  buffer.writeUInt32LE(48_000, 24);
-  buffer.writeUInt32LE(48_000 * 2, 28);
-  buffer.writeUInt16LE(2, 32);
-  buffer.writeUInt16LE(16, 34);
-  buffer.write("data", 36);
-  buffer.writeUInt32LE(data, 40);
-  return buffer;
-}
-
 /**
  * Do `work` once per key within this process, and let every later caller await that one run.
  *
@@ -809,57 +478,6 @@ async function once(key: string, work: () => Promise<void>): Promise<void> {
   try { await started; } catch (error) { runningOnce.delete(key); throw error; }
 }
 
-/**
- * How big a mock for one declared generation should be.
- *
- * The shape matters and the pixel count does not. A mock is a flat fill, so nothing reads its
- * resolution — but a `fit: cover` crops a 4:5 source into a 9:16 Frame differently from a 9:16 one,
- * and a mock of the wrong shape makes the reader report a framing difference the real render will
- * not have, or miss one it will.
- *
- * The generation declares its own `aspect-ratio`, so that is what is read. Where it says `adaptive`
- * — seedance's "inherit from the input" — the shape comes from whatever it was handed, so the edge
- * is followed one hop to the upstream generation. Beyond one hop the returns fall away and a
- * malformed or circular graph starts to matter, so the Canvas is the answer from there.
- *
- * `resolution` is deliberately not read. It is a vendor token (`720p` naming a short side, `4K` a
- * long one) with no pixel mapping anywhere in this repository, and it decides only how large a
- * rectangle of flat colour would be.
- */
-function mockExtent(svml: string, id: string, canvas: { readonly width: number; readonly height: number }): {
-  readonly width: number;
-  readonly height: number;
-} {
-  const declaring = (target: string): string | undefined =>
-    new RegExp(`<[a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*\\b[^>]*?\\bid="${target}"[^>]*?/?>`, "su").exec(svml)?.[0];
-
-  const ratioOf = (target: string): string | undefined => {
-    const tag = declaring(target);
-    if (tag === undefined) return undefined;
-    const declared = /\baspect-ratio="([^"]+)"/u.exec(tag)?.[1];
-    if (declared !== undefined && declared !== "adaptive") return declared;
-    // One hop upstream. Two shapes need it: `adaptive`, which takes the shape of whatever it was
-    // handed, and a `pipeline:Normalize`, which is what a mock is actually keyed by — the Source
-    // names the normalized media, and the generation that declared the shape is behind its `source`.
-    const upstream = /\b(?:source|image|first-frame|reference-image)=\{([A-Za-z0-9_-]+)[.}]/u.exec(tag)?.[1];
-    if (upstream === undefined) return undefined;
-    const inherited = /\baspect-ratio="([^"]+)"/u.exec(declaring(upstream) ?? "")?.[1];
-    return inherited === "adaptive" ? undefined : inherited;
-  };
-
-  const ratio = ratioOf(id);
-  const parts = /^(\d+):(\d+)$/u.exec(ratio ?? "");
-  if (parts === null) return { width: canvas.width, height: canvas.height };
-  const wide = Number(parts[1]);
-  const tall = Number(parts[2]);
-  if (!(wide > 0 && tall > 0)) return { width: canvas.width, height: canvas.height };
-  // Scaled off the Canvas's short side, so a mock is never larger than the picture it sits in.
-  const short = Math.min(canvas.width, canvas.height);
-  return wide >= tall
-    ? { width: Math.round(short * wide / tall), height: short }
-    : { width: short, height: Math.round(short * tall / wide) };
-}
-
 export type RenderElementInput = {
   /**
    * A round of renders, run together. Each entry names its own element, stretch and output and
@@ -873,20 +491,19 @@ export type RenderElementInput = {
   readonly out?: string;
   readonly segment?: string;
   readonly selection?: string;
-  /** A half-open token range, for a stretch the Script never named. See `StandInFocus`. */
+  /** A half-open token range, for a stretch the Script never named. */
   readonly tokens?: readonly [number, number];
   /**
-   * A prepared reference to time the stand-in from. Its transcript holds the seconds each word was
-   * spoken at, and the Script was transcribed from that video, so the stand-in runs at the pace the
-   * render is compared against. Without one the Source's own `estimate:Speech` sizes each Segment.
+   * A reference used only for comparison evidence and reference window selection. It never changes
+   * preview timing, which is always the Source's own `estimate:Speech` policy.
    */
   readonly reference_id?: string;
 };
 
-/** What timed the stand-in behind one render, per Segment. */
+/** Timing metadata recorded beside one render, per Segment. */
 export type StandInTimingReport = {
   readonly reference_id: string | null;
-  /** `mixed` when some Segments were timed from the reference and others fell back to the estimate. */
+  /** Kept as a compatibility union; native preview realization always reports `estimate`. */
   readonly basis: "reference" | "estimate" | "mixed";
   readonly segments: readonly StandInTiming[];
 };
@@ -896,12 +513,12 @@ export type StandInTimingReport = {
  *
  * A comparison is made from a file, and the file alone says nothing about what timed the picture in
  * it. Writing that beside the output means `compare_reconstruction` can copy it into the comparison
- * log from the path it was handed, and the gate can report which comparisons were made at the
- * reference's pace without re-deriving anything.
+ * log without re-deriving preview timing.
  */
 export type StandInSidecar = {
   readonly element: string;
   readonly window: AuthoringWindow;
+  readonly timing_basis: "estimate";
   readonly timing: StandInTimingReport;
 };
 
@@ -911,44 +528,19 @@ export function standInSidecarPath(outPath: string): string {
 }
 
 function timingReport(reference: string | undefined, segments: readonly StandInTiming[]): StandInTimingReport {
-  const bases = new Set(segments.map((item) => item.basis));
   return {
     reference_id: reference ?? null,
-    basis: bases.size > 1 ? "mixed" : segments.some((item) => item.basis === "reference") ? "reference" : "estimate",
+    basis: "estimate",
     segments,
   };
 }
 
 /**
- * Render one element of a Source the way that Source configures it, without a Build and without a
- * Provider.
+ * Render one element through the native preview realization path.
  *
- * `comparison-round.md` compares a reconstructed element against the reference. What it must
- * compare is the element as this video places it — the Recipe values the Source passes, the Script
- * text it feeds, the windows it binds — because a Source can fill those with values that collide
- * while a package's catalogue preview, drawn from sample values, stays perfect. Producing that
- * picture by hand means transcribing values into a per-package harness, one line at a time, which is
- * how a caption system gets compared as a single line that has nothing to collide with.
- *
- * So this reads the values instead. Everything it needs is already written down:
- *
- *   Canvas and Frames, Recipe values, bindings   the Source
- *   which elements share a window, in what order  the Script's words, through their Selections
- *   how long each Segment runs                    the reference's own words, or `estimate:Speech`
- *   the layers a Build has not made               `make_placeholder`, sized from the Canvas
- *
- * The one thing missing before a Build is real speech, and `standInTakes` supplies a Segment
- * skeleton for it. Given `reference_id` it reads the seconds out of that reference's transcript, so
- * every window is as long as the reference spends on the words inside it; without one it reads the
- * estimator the Source already trusts, the same numbers it ordered its takes with. Those takes enter
- * through `<value>` and `<satisfy>`, the mechanism `examples/all-components-preview` uses to open in
- * Studio without spending anything, so nothing here is a private back door into the graph.
- *
- * What this settles: which elements are on screen together, where each sits, at what size, weight and
- * colour, and — on a reference-timed stand-in — how long each of them has to arrive in. What it does
- * not: alignment against the speech a Build synthesizes, which is settled once that speech
- * exists. `timing` in the result, and the sidecar written
- * beside the output, name which of the two clocks sized each Segment.
+ * The original Run is compiled once, its Author/Run Graph is handed to `@hypit/preview-mock`, and
+ * the resulting temporary Run is previewed by Studio with only the local mock-media Provider. The
+ * reference transcript remains comparison evidence; it never supplies preview timing.
  */
 export async function renderElement(input: RenderElementInput): Promise<Record<string, unknown>> {
   // A round carries these per entry; one render has to name all three itself.
@@ -981,256 +573,87 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   let svml = await readFile(svmlPath, "utf8").catch(() => undefined);
   assert(svml !== undefined, `cannot read ${svmlPath}`);
 
-  // The Program's frame rate and the Canvas the render composes at, both read rather than assumed. A
-  // harness that hard-codes either produces a picture at a geometry the reference never had.
-  const clock = /<[a-z-]*:?Clock\b[^>]*?\bframe-rate="(\d+)"/su.exec(svml)?.[1]
-    ?? /<time:Clock\b[^>]*?\bfps="(\d+)"/su.exec(svml)?.[1];
-  const frameRate = Number(clock ?? 30);
-  const space = aliasPattern(svml, "@hypit/spatial", "space");
-  const canvasMatch = new RegExp(`<(?:${space}):Canvas\\b[^>]*?\\bwidth="(\\d+)"[^>]*?\\bheight="(\\d+)"`, "su").exec(svml);
-  assert(canvasMatch !== null, `the Source declares no <${space.split("|")[0]}:Canvas width= height=/>`);
-  const canvas = { width: Number(canvasMatch[1]), height: Number(canvasMatch[2]) };
-
-  // Which SemanticTake output belongs to which Segment, so each stand-in lands on the right one.
-  const whisperx = aliasPattern(svml, "@hypit/whisperx", "whisperx");
-  const takeOutputs = new Map<string, string>();
-  for (const match of svml.matchAll(new RegExp(`<(?:${whisperx}):SemanticTake\\b([^>]*?)/?>`, "gsu"))) {
-    const attributes = match[1] ?? "";
-    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
-    const segment = /\bsegment=\{story\.segment\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
-    if (id !== undefined && segment !== undefined) takeOutputs.set(segment, id);
-  }
-  assert(takeOutputs.size > 0, `the Source declares no ${whisperx.split("|")[0]}:SemanticTake to stand in for`);
-
-  // What the Run already brings. A project Run declares nothing and everything is mocked; a package's
-  // preview Run ships its own sample pictures, and those are carried across untouched so the catalogue
-  // picture shows the component holding something rather than a placeholder.
-  const alreadySatisfied = new Set([...runSource.matchAll(/<satisfy\s+output="([^"]+)"/gu)].map((match) => match[1] ?? ""));
-  const carried = [...runSource.matchAll(/^[ \t]*<(?:file|value|satisfy)\b[^>]*\/>[ \t]*$/gmu)].map((match) => (match[0] ?? "").trim());
-
-  // The window the picture is cut to. It is read here rather than where it is applied so a range that
-  // is not two whole numbers is refused before a minute of rendering: a `--batch` entry is JSON a
-  // caller wrote by hand, `compare_reconstruction` and `review_element` both put theirs through
-  // `tokenWindow`, and a range this end accepted and those two reject is a window the round cannot
-  // finish.
+  // Preview is realized from the compiled Author + Run Graph. No reference transcript, placeholder
+  // files, or hand-written SemanticTake values participate in this path.
   const segmentArgument = input.segment;
   const selectionArgument = input.selection;
   const tokensArgument = input.tokens === undefined ? undefined : tokenWindow(input.tokens, "tokens");
-
-  // The derived Run is written here, and so is the cut, so the directory comes first.
-  // One directory per render, named for what this render is. Every call used to write one shared
-  // `.hypit/compare` and empty it on the way in, so two renders could not run at once — the second
-  // deleted the first one's sliced Source and mocks out from under it. The route asks for every
-  // element to be rendered before any is compared, which is a set of renders with nothing to say to
-  // each other, and they can now run together.
-  //
-  // The key is the Run and the clock, and deliberately not the element or the window: the picture
-  // does not depend on either. `render_element` draws the whole program and the window is cut out of
-  // the frames afterwards, so every render of one Run under one clock wants the identical directory,
-  // the identical mocks and the identical frames.
-  const renderKey = createHash("sha256")
-    .update(`${resolve(runPath)}\u0000${input.reference_id ?? ""}`)
-    .digest("hex").slice(0, 12);
-  const compareRoot = join(projectRoot, ".hypit", "compare", renderKey);
-  // Made, not remade. The frames inside are reused by every window cut out of this program, and the
-  // mocks beside them are written from ids that do not move, so emptying it would only throw away the
-  // render the next entry of the round is about to ask for.
-  await mkdir(compareRoot, { recursive: true });
-
-  const sourcePath = svmlPath;
-
-  // The reference's per-word times, when one was named. Read after the cut so a transcript that is
-  // missing is reported before a minute of rendering rather than after it.
-  const reference = input.reference_id?.trim();
-  const spoken = reference === undefined || reference.length === 0 ? [] : await referenceWords(reference);
-
-  const { takes, selections, frameCount: programFrames, timing, frameOfToken } = await standInTakes(sourcePath, frameRate, spoken, svmlPath);
-  const framesBySegment = new Map(takes.map((item) => [item.segmentId, item.take.segment.endFrameExclusive]));
-  // A Selection's window in frames, summed over the stand-in tokens it covers. This is the same word
-  // span the Source binds to, carried into frames by the same clock that sized the Segment.
-  const framesBySelection = new Map<string, number>();
-  for (const { segmentId, take } of takes) {
-    for (const token of take.tokens) framesBySelection.set(token.tokenId, token.endFrameExclusive - token.startFrame);
-    framesBySelection.set(`segment:${segmentId}`, take.segment.endFrameExclusive);
-  }
-
-  /**
-   * Every media a Build would have produced, and how long its window is. A speech take carries no
-   * picture and a base take fills a Segment; a cutaway fills whatever its `during=` binds. Each becomes
-   * a placeholder of the Canvas's own size, so the composite has the geometry the Source declares.
-   */
-  const mockedMedia = (): ReadonlyMap<string, { readonly frames: number; readonly picture: boolean }> => {
-    const windows = new Map<string, number>();
-    for (const match of svml.matchAll(new RegExp(`<(?:${whisperx}):SemanticTake\\b([^>]*?)/?>`, "gsu"))) {
-      const attributes = match[1] ?? "";
-      const media = /\bmedia=\{([A-Za-z0-9_-]+)\.media\}/u.exec(attributes)?.[1];
-      const segment = /\bsegment=\{story\.segment\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
-      if (media !== undefined && segment !== undefined) windows.set(media, framesBySegment.get(segment) ?? frameRate);
-    }
-    for (const match of svml.matchAll(/<[a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*\b([^>]*?)\/?>/gsu)) {
-      const attributes = match[1] ?? "";
-      const media = /\bmedia=\{([A-Za-z0-9_-]+)\.media\}/u.exec(attributes)?.[1];
-      if (media === undefined || windows.has(media)) continue;
-      const segment = /\bduring=\{story\.segment\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
-      if (segment !== undefined) { windows.set(media, framesBySegment.get(segment) ?? frameRate); continue; }
-      // A cutaway's window is the Selection it is bound to, which the stand-in already measured in
-      // frames. A mock shorter than its window runs out inside it, and with `playback` at its default
-      // the frames after that draw nothing — a gap the Source never wrote, appearing only in the
-      // comparison, in exactly the shape of the defect the comparison is looking for.
-      const selection = /\bduring=\{story\.selection\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
-      const window = selection === undefined ? undefined : selections.get(selection);
-      windows.set(media, window === undefined
-        ? frameRate
-        : window.endFrameExclusive - window.startFrame);
-    }
-    const carries = new Map<string, { readonly frames: number; readonly picture: boolean }>();
-    const pipeline = aliasPattern(svml, "@hypit/media-pipeline", "pipeline");
-    for (const match of svml.matchAll(new RegExp(`<(?:${pipeline}):Normalize\\b([^>]*?)/?>`, "gsu"))) {
-      const attributes = match[1] ?? "";
-      const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
-      const video = /\bvideo="([^"]+)"/u.exec(attributes)?.[1];
-      if (id === undefined || !windows.has(id)) continue;
-      // A Run that already satisfies this output brought its own material — a package's preview Source
-      // supplies sample pictures this way — and a mock over the top would hide what it came to show.
-      if (alreadySatisfied.has(`${id}.media`)) continue;
-      carries.set(id, { frames: windows.get(id)!, picture: video !== "none" });
-    }
-    return carries;
-  };
-
-  // A derived Run lives beside the project so the original's relative sources still resolve, and under
-  // `.hypit/` so it is never mistaken for something the author wrote.
-  //
-  // Written once for the whole round rather than once per entry. Every entry of a `--batch` is its own
-  // call, composes the identical mocks and the identical Run to the identical paths, and reads that Run
-  // straight after writing it. `writeFile` truncates before it writes, so one write per round is what
-  // keeps an entry from reading a file another entry is partway through. Nothing in here depends on the
-  // element or the window, which is why one run of it serves every entry.
-  const derivedRun = join(compareRoot, "compare.svrun");
-  const imageIds = [...new Set([...svml.matchAll(/\{([a-z0-9-]+)\.image\}/gu)].map((match) => match[1] ?? ""))]
-    .filter((id) => !alreadySatisfied.has(`${id}.image`));
-  await once(`prepare:${renderKey}`, async () => {
-    const declarations: string[] = [];
-    const satisfactions: string[] = [];
-    for (const { segmentId, take } of takes) {
-      const output = takeOutputs.get(segmentId);
-      if (output === undefined) continue;
-      // The take's own audio has to be servable, not a digest stub: Studio resolves every Artifact a
-      // projection references, and a preview that cannot serve one stops there.
-      const sampleFrames = Math.round(take.segment.endFrameExclusive / frameRate * 48_000);
-      const silence = silentWav(sampleFrames);
-      await writeFile(join(compareRoot, `${segmentId}-take.wav`), silence);
-      const spoken = { ...take, media: { ...take.media, audio: { artifact: blobRef(silence, "audio/wav"), sampleFrames } } };
-      const fixture = join(compareRoot, `${segmentId}.json`);
-      await writeFile(fixture, `${JSON.stringify({ kind: "inline", value: spoken }, null, 2)}\n`, "utf8");
-      declarations.push(`  <file id="stand-in-${segmentId}-audio" type="@hypit/artifact@1#BlobArtifact" from="./${segmentId}-take.wav" media-type="audio/wav"/>`);
-      declarations.push(`  <value id="stand-in-${segmentId}" type="@hypit/speech@1#SemanticTake" from="./${segmentId}.json"/>`);
-      satisfactions.push(`  <satisfy output="${output}.take" candidate="stand-in-${segmentId}"/>`);
-    }
-    // The layers a Build has not made, as placeholders of the Canvas's own size. `make_placeholder` is
-    // the route's one tool for this: deterministic, Provider-free, and the same mock the comparison is
-    // told to bypass. A mock never enters the project's own Source — it is declared in the derived Run
-    // and nowhere else.
-    // Every picture mock at once. Each one is a solid fill, so they do not contend for anything but
-    // ffmpeg, and drawn one after another they cost more than every frame they stand in for.
-    const mocks = [...mockedMedia()];
-    await Promise.all(mocks
-      .filter(([, { picture }]) => picture)
-      .map(async ([id, { frames }]) => await writePlaceholder({
-        out: join(compareRoot, `${id}.mp4`), ...mockExtent(svml, id, canvas),
-        video: true, seconds: Math.max(1, Math.ceil(frames / frameRate)), color: "mid",
-      })));
-    for (const [id, { frames, picture }] of mocks) {
-      const file = join(compareRoot, `${id}.mp4`);
-      // Every SynchronizedMedia carries audio, and it is validated as WAV, so the silence is written as
-      // one rather than pointed at the video. Both are declared: the picture is what gets drawn, the
-      // silence is what makes the value legal.
-      const wavPath = join(compareRoot, `${id}.wav`);
-      const wav = silentWav(Math.round(frames / frameRate * 48_000));
-      await writeFile(wavPath, wav);
-      const audioBlob = blobRef(wav, "audio/wav");
-      declarations.push(`  <file id="mock-${id}-audio" type="@hypit/artifact@1#BlobArtifact" from="./${id}.wav" media-type="audio/wav"/>`);
-      let visual: SynchronizedMedia["visual"];
-      if (picture) {
-        const bytes = await readFile(file);
-        visual = { artifact: blobRef(bytes, "video/mp4"), ...mockExtent(svml, id, canvas) };
-        declarations.push(`  <file id="mock-${id}" type="@hypit/artifact@1#BlobArtifact" from="./${id}.mp4" media-type="video/mp4"/>`);
-      }
-      const media: SynchronizedMedia = {
-        timeline: { frameRate: { numerator: frameRate, denominator: 1 }, frameCount: frames },
-        audio: { artifact: audioBlob },
-        ...(visual === undefined ? {} : { visual }),
-      };
-      await writeFile(join(compareRoot, `${id}.media.json`), `${JSON.stringify({ kind: "inline", value: media }, null, 2)}\n`, "utf8");
-      declarations.push(`  <value id="media-${id}" type="@hypit/media@1#SynchronizedMedia" from="./${id}.media.json"/>`);
-      satisfactions.push(`  <satisfy output="${id}.media" candidate="media-${id}"/>`);
-    }
-
-    // Still images the Source declares as generations. Same treatment, same tool, at the Canvas's size:
-    // a picture slot that is empty in the render is black, and black is not what will be there.
-    await Promise.all(imageIds.map(async (id) => await writePlaceholder({
-      out: join(compareRoot, `${id}.png`), ...mockExtent(svml, id, canvas), color: "mid",
-    })));
-    for (const id of imageIds) {
-      declarations.push(`  <file id="mock-${id}" type="@hypit/artifact@1#BlobArtifact" from="./${id}.png" media-type="image/png"/>`);
-      satisfactions.push(`  <satisfy output="${id}.image" candidate="mock-${id}"/>`);
-    }
-
-    await writeFile(derivedRun, [
-      `<?svml using="@hypit/run-markup@1"?>`,
-      ``,
-      `<svrun version="1">`,
-      // The cut, when there was one: it sits beside this Run, and its own imports were repointed to
-      // reach the project from here.
-      // Three levels up: the derived Run sits at `.hypit/compare/<key>/`, and the Source it names is at
-      // the project root. This branch used to run only when no window was asked for, which is the one
-      // case nothing exercised, so it was short by one the whole time.
-      `  <author source="../../../${author.replace(/^\.\//u, "")}"/>`,
-      // Whatever the Run brought, repointed: the derived Run sits two directories deeper than the one
-      // that declared these paths.
-      ...carried.map((line) => `  ${line.replace(/from="\.\//gu, 'from="../../../')}`),
-      // Targeting the element's own output rather than the Film prunes the closure to what this one
-      // Track needs. Asking for the whole delivery would pull in every generation the Source declares
-      // and report each as unresolved, which is true and useless: none of them is what is being looked at.
-      `  <target output="final.video"/>`,
-      ``,
-      ...declarations,
-      ``,
-      ...satisfactions,
-      `</svrun>`,
-      ``,
-    ].join("\n"), "utf8");
-  });
-
   const distributionPackageRoot = videoCliDistribution.packageRoot;
   if (distributionPackageRoot === undefined) throw new Error("active Hypit Distribution has no package root");
-
+  const renderKey = createHash("sha256").update(`${resolve(runPath)}\u0000${input.reference_id ?? ""}`).digest("hex").slice(0, 12);
   const registry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot, distributionPackageRoot });
-  const domain = await loadStudioDomain({ run: derivedRun, workspaceRoot: projectRoot, packageRoot });
+  const domain = await loadStudioDomain({ run: runPath, workspaceRoot: projectRoot, packageRoot });
   const archive = await openStudioArchive(undefined, packageRoot, projectRoot, distributionPackageRoot);
   let built: Preview;
+  let previewMock: Awaited<ReturnType<typeof realizePreviewMock>>;
+  let programFrames = 0;
+  let frameOfToken: readonly { readonly frame: number; readonly end: number }[] = [];
+  let selections = new Map<string, AuthoringWindow>();
+  let segmentTokenCounts = new Map<string, number>();
   try {
-    const run = await loadStudioRun({ run: derivedRun, domain, registry, ...(archive === undefined ? {} : { archive }) });
-    const inspection = inspectStudioRun(registry, run.source, run);
-    // Every Track, not only the one being looked at: the element is compared where it sits, over the
-    // mocked base rather than on its own, because text that is legible on black may not be on a picture.
+    const original = await loadStudioRun({ run: runPath, domain, registry, ...(archive === undefined ? {} : { archive }) });
+    const graph: CompiledGraph = {
+      format: "hypit.graph@1",
+      outputs: original.source.compiled.graph.outputs,
+      candidates: [...original.source.compiled.graph.candidates, ...original.run.graph.candidates],
+      operations: [...original.source.compiled.graph.operations, ...original.run.graph.operations],
+    };
+    const aliases = new Map(original.source.exports.map((item) => [item.ref, item.name] as const));
+    for (const record of original.source.compiled.program.records) {
+      const local = original.source.compiled.provenance.elements.flatMap((element) => element.records)
+        .find((item) => item.id === record.id)?.local
+        ?? record.id.split("::record::")[1];
+      if (local !== undefined) aliases.set(record.id, local);
+    }
+    previewMock = await realizePreviewMock({ run: runPath, graph, records: original.source.compiled.program.records, targets: original.targets, timing: "estimate", author, aliases });
+    const previewRegistry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot, distributionPackageRoot });
+    const previewDomain = await loadStudioDomain({ run: previewMock.previewRun, workspaceRoot: projectRoot, packageRoot });
+    const previewArchive = await openStudioArchive(undefined, packageRoot, projectRoot, distributionPackageRoot);
+    const loadedPreview = await loadStudioRun({ run: previewMock.previewRun, domain: previewDomain, registry: previewRegistry, ...(previewArchive === undefined ? {} : { archive: previewArchive }) });
+    const previewRun = { ...loadedPreview, attachments: [...loadedPreview.attachments, ...previewMock.attachments] };
+    const mockEndpoints = new EndpointRegistry();
+    await createLocalMediaProvider({}).install(mockEndpoints);
+    const inspection = inspectStudioRun(previewRegistry, previewRun.source, previewRun, new Set([
+      "@hypit/mock-media@1#render-mock-image",
+      "@hypit/mock-media@1#render-mock-video",
+      "@hypit/mock-media@1#render-mock-silence",
+      "@hypit/media-pipeline@1#inspect-media",
+      "@hypit/media-pipeline@1#normalize-media",
+    ]));
     built = await preview({
-      source: run.source,
-      run,
-      domain,
+      source: previewRun.source,
+      run: previewRun,
+      domain: previewDomain,
       outputRefs: [inspection.filmComposition, ...inspection.projections.map((item) => item.ref)],
       compositionRef: inspection.filmComposition,
       projections: inspection.projections,
-      ...(archive === undefined ? {} : { archive }),
+      ...(previewArchive === undefined ? {} : { archive: previewArchive }),
+      endpoints: mockEndpoints,
     });
+    programFrames = Math.max(1, ...built.anchors.values());
+    frameOfToken = built.tokens.map((token) => ({ frame: built.anchors.get(token.startAnchorId) ?? 0, end: built.anchors.get(token.endAnchorId) ?? 0 }));
+    const parsed = parseScript(svmlPath, scriptBody(svml).text, scriptBody(svml).offset);
+    const cursor = (from: number, to: number): AuthoringWindow => ({ startFrame: frameOfToken[from]?.frame ?? 0, endFrameExclusive: frameOfToken[to - 1]?.end ?? programFrames });
+    for (const segment of parsed.segments) {
+      const window = cursor(segment.tokenStart, segment.tokenEndExclusive);
+      selections.set(`segment:${segment.id}`, window);
+      segmentTokenCounts.set(segment.id, segment.tokenEndExclusive - segment.tokenStart);
+    }
+    for (const selection of parsed.selections) selections.set(selection.id, cursor(selection.open.boundary.tokenIndex, selection.close.boundary.tokenIndex));
   } catch (error) {
     const issues = (error as { readonly issues?: unknown } | null)?.issues;
-    if (Array.isArray(issues)) {
-      throw new Error(["the Source does not project yet.", ...issues.slice(0, 12).map((issue) => `  ${String(issue)}`)].join("\n"));
-    }
+    if (Array.isArray(issues)) throw new Error(["the Source does not project yet.", ...issues.slice(0, 12).map((issue) => `  ${String(issue)}`)].join("\n"));
     throw error instanceof Error ? error : new Error(String(error));
   }
-
+  const compareRoot = previewMock.root;
+  const canvas = built.canvas;
+  const frameRate = built.frameRate.numerator / built.frameRate.denominator;
+  const timing: StandInTiming[] = [...selections.entries()]
+    .filter(([id]) => id.startsWith("segment:"))
+    .map(([id, window]) => ({ segment: id.slice("segment:".length), basis: "estimate", seconds: (window.endFrameExclusive - window.startFrame) / frameRate, frames: window.endFrameExclusive - window.startFrame, tokens: segmentTokenCounts.get(id.slice("segment:".length)) ?? 0, matched: 0 }));
+  const mockedCount = previewMock.mocked.filter((item) => item.kind === "video" || item.kind === "audio").length;
+  const imageIds = previewMock.mocked.filter((item) => item.kind === "image");
+  const reference = undefined;
   const placed = built.tracks.find((track) => String(track.outputRef ?? "").endsWith(`::output::${element}.track`)
     || String(track.outputRef ?? "").includes(`::output::${element}.`));
   if (placed === undefined) {
@@ -1262,10 +685,9 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
     assert(marked !== undefined, `the Script marks no Selection ${selectionArgument}`);
     window = marked;
   } else if (segmentArgument !== undefined) {
-    let cursor = 0;
-    const take = takes.find((item) => { const hit = item.segmentId === segmentArgument; if (!hit) cursor += item.take.segment.endFrameExclusive; return hit; });
-    assert(take !== undefined, `the Script has no Segment ${segmentArgument}`);
-    window = { startFrame: cursor, endFrameExclusive: cursor + take.take.segment.endFrameExclusive };
+    const marked = selections.get(`segment:${segmentArgument}`);
+    assert(marked !== undefined, `the Script has no Segment ${segmentArgument}`);
+    window = marked;
   }
 
   const clip = /\.(mp4|mov|webm)$/iu.test(outPath);
@@ -1345,7 +767,7 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   // and nothing else, so this is how the comparison log comes to say whether the stretch it looked at
   // ran at the reference's pace or at an estimate of it.
   const report = timingReport(reference, timing);
-  const sidecar: StandInSidecar = { element, window, timing: report };
+  const sidecar: StandInSidecar = { element, window, timing_basis: "estimate", timing: report };
   await writeFile(standInSidecarPath(outPath), `${JSON.stringify(sidecar, null, 2)}\n`, "utf8");
 
   return {
@@ -1358,7 +780,8 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
     program_frames: programFrames,
     timing: report,
     stand_in_ref: standInSidecarPath(outPath),
-    mocked: { media: mockedMedia().size, images: imageIds.length },
+    mocked: { media: mockedCount, images: imageIds.length },
+    ...(previewMock === undefined ? {} : { preview_mock: previewMock }),
   };
 }
 

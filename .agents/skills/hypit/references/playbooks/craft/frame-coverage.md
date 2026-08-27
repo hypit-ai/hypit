@@ -58,7 +58,7 @@ looks finished while the same edges are still wrong. Nothing downstream catches 
 has no timeline, so it takes no `playback` and the pre-Build check does not apply to it, and Gate 4
 measures black, which a still removes.
 
-The placeholders the comparison round renders under an element never reach the Source. They exist in
+The preview mocks the comparison round renders under an element never reach the Source. They exist in
 that render and nowhere else — the Source never names them, and the checks that decide
 coverage read the Source's Recipes and bindings rather than any picture. A mock cannot quiet a hole
 it is structurally unable to reach.

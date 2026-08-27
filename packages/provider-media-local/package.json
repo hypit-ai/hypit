@@ -16,6 +16,7 @@
     "@hypit/media": "workspace:*",
     "@hypit/media-execution": "workspace:*",
     "@hypit/media-pipeline": "workspace:*",
+    "@hypit/mock-media": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-kit": "workspace:*",

@@ -77,15 +77,17 @@ it may be media slots the Source declares as generations. Render them as mocks r
 them out: a missing base is not a neutral background, it is black, and text that is legible on black
 can be illegible on the picture that will replace it.
 
-`render_element` does this itself. It finds every generation the Source declares — the takes, the
-stills, the slot contents — calls `make_placeholder` for each at the Canvas's own size, and declares
-them in a derived Run under the project's `.hypit/`. Never `hypit image`, which pays for a generation
+`render_element` delegates this to `@hypit/preview-mock`. The realizer finds every relevant logical
+output in the compiled Author/Run Graph — the takes, stills and slot contents — derives geometry from
+Graph inputs, and materializes them through `@hypit/mock-media` in a temporary Run under
+`.hypit/preview/<realization-digest>/`. Never `hypit image`, which pays for a generation
 the video will not reuse, and never a placeholder drawn by a script written for the occasion.
 
-The sizes come from the Source's `space:Canvas`, because the mock is composed inside the render and
-the render's geometry is the Canvas.
+Geometry follows the fixed Graph policy: Canvas width/height first, then generation aspect-ratio,
+then Canvas fallback; resolution labels such as `720p` and `2K` are not converted to pixels, and
+conflicting geometry fails.
 
-Then tell the reader that those regions are placeholders standing in for declared-but-unbuilt
+Then tell the reader that those regions are preview mocks standing in for declared-but-unbuilt
 generations, and to read only what the element itself draws. Said plainly it costs one clause and
 saves the mock coming back as a finding in the one round there is.
 
@@ -99,7 +101,8 @@ and the window is cut out of the frames afterwards, so every element the Source 
 drawn wherever the Source puts it — what is on screen over the words being looked at is what the
 delivery will put there.
 
-That derived Run is on disk under `<project>/.hypit/compare/`, beside the frames it produced. Open it
+That derived Run is on disk under `<project>/.hypit/preview/<realization-digest>/preview.svrun`, beside
+its materialized Artifact attachments. Open it
 whenever something you expected to see is not in the picture: an element that is in the Source and
 still not on screen is the package failing to draw it.
 
@@ -178,7 +181,7 @@ Two things follow, and they are the whole discipline:
 - **Every repair aims at something the round named.** Changing something it did not mention is
   thrashing, and it does not earn one of the attempts below.
 - **A finding caused by an input that does not exist yet is not a repair target.** The mocks above
-  stand in for a base take and for media slots a Build has not filled, and a reader told where they
+  are preview-mock regions for a base take and media slots a Build has not filled, and a reader told where they
   are should bypass them. One that reports a mock anyway is describing an absence, not a defect.
 
 Something nobody can close is not a failure to record as one. A typeface the generator cannot
@@ -237,12 +240,12 @@ and do not defer every look to a final delivery Build.
 
 Every element was looked at and every repair stopped. That is what "complete" means here, and it does
 not mean the video was watched: this round runs before the Build, so the pictures it read were renders
-with stand-ins under them. Report the difference rather than letting the word carry it.
+with preview-mock media under them. Report the difference rather than letting the word carry it.
 
 State plainly, in the completion report, that the following are unsettled:
 
 - **every generated picture and take** — the images and the shots a Provider has still to make;
-- **the timing of every Track** — this round reads each one against a stand-in SemanticTake, so how a
+- **the timing of every Track** — this round reads each one against an estimate-timed SemanticTake, so how a
   Caption, Media or Typography Track sits against the speech that is finally delivered is settled once
   that speech exists;
 - **whether the picture is continuous** — the frames nobody authored that

@@ -12,6 +12,14 @@ speech, music, sound effects. Work that list, and inspect candidates for each en
 you never inspected is a system you are about to invent, and here you would be inventing it against a
 video that already answers the question.
 
+**An observation's "base picture" is the full-frame underlying footage** — whatever fills the screen
+under any overlays. The authoring base that `continuity.md` defines is a separate thing: it is the
+picture showing the speaker saying the words, and `continuity.md` decides which picture that is. A shot observed as "the base picture is a classroom" is a full-frame
+classroom; where the speaker is cut away to silently in that classroom while their voice continues,
+the classroom is B-roll covering the base (see `../playbooks/craft/b-roll.md`), and the base remains
+with the speaker. Read the observation for what fills the frame; read `continuity.md` for which
+picture owns base.
+
 ## Where an appearance value comes from
 
 `../vocabulary.md` says every declared property that changes what the viewer sees must be resolved
