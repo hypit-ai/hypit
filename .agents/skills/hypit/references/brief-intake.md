@@ -30,6 +30,13 @@ for the high-impact decisions the request leaves unresolved. Never turn an examp
 a hard-coded type-specific questionnaire; an opening provocation is evidence of that author's Hook,
 not a rule for a purported format.
 
+After the intent comparison, use `../playbooks/index.md` to determine whether a format playbook
+matches the requested program. Read the matching format playbook completely, including its craft
+notes and footer, and then read every additional craft file that footer names. The match is based on
+the recovered intent and the user's goal, never on an example directory name, component count or a
+fixed list of video types. If no format playbook matches, keep the general craft guidance and intent
+analysis as the route's authority.
+
 ## General fallback when no example matches
 
 If `examples/` is absent, empty, or semantically unlike the request, do not start Source and do not
