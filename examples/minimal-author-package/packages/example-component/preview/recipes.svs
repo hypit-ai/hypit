@@ -1,0 +1,5 @@
+<?svml using="@hypit/svs@1"?>
+
+<sheet version="1">
+  example.default { background: #6b7280; }
+</sheet>

@@ -57,17 +57,22 @@ export const myComponentManifest: ModuleManifest = {
   name: myComponentModuleRef.name,
   version: myComponentModuleRef.version,
   dependencies: [],
-  types: [ /* your nominal Types */ ],
+  types: [{ name: "Widget" }, { name: "WidgetProgram" }],
   capabilities: [],
-  producers: [ /* your deterministic Producers */ ],
+  producers: [{
+    name: "render-widget",
+    inputs: [{ name: "space", type: { module: { name: "@hypit/program-space", version: "1" }, name: "ProgramSpace" } }],
+    outputs: [{ name: "track", type: { module: myComponentModuleRef, name: "WidgetTrack" } }],
+    needs: [],
+  }],
 };
 
 export const myComponentMarkupSurfaces = [{
   name: "widget",
   tag: "Widget",
   mode: "structured",
-  outputs: [ /* Types this syntax may author */ ],
-  vocabulary: { /* what this element is, and what it looks like — see step 5 */ },
+  outputs: [{ module: myComponentModuleRef, name: "Widget" }],
+  vocabulary: { /* see step 5 */ },
 }] as const;
 ```
 
@@ -82,21 +87,38 @@ The Surface handler decodes the Markup Frontend's XML elements into typed author
 // src/surface.ts
 import type { StructuredSurfaceHandler } from "@hypit/markup";
 
-export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) => {
-  // Read attributes and children from the XML element
-  // Validate inputs
-  // Emit typed Records and Operations into context
-  // Return authored graph declarations
+export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  const id = textAttribute(element, "id");
+  const space = resolveReference(referenceAttribute(element, "space"));
+  if (space === undefined) throw new Error("Widget.space cannot be resolved");
+  const record: SurfaceRecordDraft = {
+    id: `${id}.value`, type: widgetTypes.widget,
+    value: { kind: "inline", value: { id } }, range: element.range,
+  };
+  const fragment = sealGraphFragment({
+    inputs: [{ name: "space", type: programSpaceTypes.programSpace }],
+    operations: [{ id: "render-widget", producer: widgetProducers.render,
+      inputs: { space: { kind: "fragment-input", name: "space" } },
+      result: { kind: "output", name: "track" } }],
+    exports: [{ name: "track", type: compositionTypes.visualTrack,
+      root: { kind: "fragment-operation", operation: "render-widget" } }],
+  });
+  const component: SurfaceComponentDraft = {
+    id, fragment: fragment.id, inputs: { space: space.ref },
+    outputs: { track: `${id}.track` }, range: element.range,
+  };
+  return { records: [record], components: [component], fragments: [fragment], exports: [`${id}.value`, `${id}.track`] };
 };
 ```
 
 [Component Anatomy](./component-anatomy.md) names every role a component package fills and where to
 find each one in an existing package, since the filenames differ between packages.
 
-Look at existing Surface implementations for reference:
-- `packages/seedance/src/surface.ts` — Prompt, Speech and Video Surfaces
-- `packages/caption/src/surface.ts` — the common Program Surface; concrete Style/Track Surfaces live in Style-family packages
-- `packages/media-track/src/surface.ts` — Track, Item and Sequence Surfaces
+For a generic package, use the complete fixture at
+`examples/minimal-author-package/packages/example-component/` rather than copying an unrelated
+business package. A package whose vocabulary is structurally the same as an installed sibling may
+use that sibling's README and only the necessary role files as an implementation skeleton; create a
+new Module identity and do not edit the sibling.
 
 ## 5. Declare the Surface vocabulary and its preview
 
@@ -136,18 +158,17 @@ that only assembles a request.
 `appearance` and `preview` answer different questions and neither replaces the other. `appearance`
 says what the element draws in every case; the preview shows one honest instance of it.
 
-Study `packages/media-track/src/manifest.ts` for a complete vocabulary, and
-`packages/typography-track/`, `packages/caption-fine/`, `packages/deck-track/`,
-`packages/comment-sticker/`, `packages/screen-overlay/`, `packages/ranking/` and
-`packages/speech-track/` for their `preview/` directories.
+The fixture's manifest is the canonical small vocabulary example. For a close sibling, read that
+package's own README and vocabulary first, then only the role files needed for the changed behavior.
 
 ### Producing the preview image
 
 The preview is a real frame of your own component, rendered locally. Nothing generates it for you,
 and a mock-up drawn by hand is worse than no preview at all, because it claims to be output.
 
-Render one the way the repository's own visual tests do —
-`packages/hyperframes/test/browser-visual.test.ts` is the working example, and the sequence is:
+Render the fixture's preview Source with `hypit-reference-video-tools render_previews`. For a new
+package, use the same package-owned preview Source and keep one representative rendered frame. The
+sequence is:
 
 1. build the Track value with your package's own render function, over a sealed ProgramSpace;
 2. `sealComposition({ id, canvas, tracks })`, then `compileHyperframesDocument(composition, space)`
@@ -234,21 +255,40 @@ Manifest are loaded from its installed dependencies.
 The `<import>` activates only author vocabulary. It never grants network, filesystem or credential
 authority.
 
-## Existing examples to study
+The fixture deliberately uses explicit role filenames so a new author does not need to infer the
+architecture from a large production package.
 
-| Package | What it demonstrates |
-|---|---|
-| `packages/seedance/` | Model family with multiple Surfaces (Prompt, Speech, Video) |
-| `packages/seedance-speaker/` | Higher-level binding that composes Script, a Text Template and Seedance |
-| `packages/caption/` | common Program, Cue/field contracts and whole-Atom timing |
-| `packages/caption-fine/` | one field-free Style and Track Surface family |
-| `packages/media-track/` | Track with Item/Sequence, layer, motion and handoff behavior |
-| `packages/typography-track/` | Typography overlay Track |
-| `packages/film/` | Composition target that consumes peer Tracks |
-| `packages/ranking/` | A Program that lays out cells and fills media slots, with `schedule.ts` and `render.ts` as its role files |
-| `packages/comment-sticker/` | The same roles under different filenames — `program.ts` and `author.ts` |
-| `packages/screen-overlay/` | An overlay whose geometry is computed rather than authored |
+## The complete literal shapes
 
-The filenames differ between packages: what `component-anatomy.md` calls the Value layer and the
-lowering is `schedule.ts`/`render.ts` in `ranking`, `program.ts`/`lower.ts` in `media-track`, and
-`program.ts`/`author.ts` in `comment-sticker`. Find a role by what it exports, not by its filename.
+The fixture is the authoritative small example. These are the same object shapes in abbreviated
+form; there is no need to inspect a business package to discover them.
+
+```typescript
+const input = (name: string) => ({ kind: "fragment-input" as const, name });
+const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
+
+const fragment = sealGraphFragment({
+  inputs: [{ name: "space", type: programSpaceTypes.programSpace }],
+  operations: [{
+    id: "render-widget", producer: widgetProducers.render,
+    inputs: { space: input("space") },
+    result: { kind: "output", name: "track" },
+  }],
+  exports: [{ name: "track", type: compositionTypes.visualTrack, root: operation("render-widget") }],
+});
+
+// A structured Surface always returns these four collections. `exports` is optional.
+const decoded: SurfaceDecodeOutput = {
+  records: [{ id: "widget.value", type: widgetTypes.widget,
+    value: { kind: "inline", value: { id: "widget" } }, range: element.range }],
+  components: [{ id: "widget", fragment: fragment.id, inputs: { space: space.ref },
+    outputs: { track: "widget.track" }, range: element.range }],
+  fragments: [fragment],
+  exports: ["widget.value", "widget.track"],
+};
+```
+
+For temporal elements, the Surface side is `@hypit/temporal-markup`, not the graph-side
+`@hypit/temporal` module. Use `createTemporalWindowProjection` or
+`createTemporalInstantProjection` with the element, semantic reference and resolver, then append
+the returned `records`, `components` and `fragments` to the same `SurfaceDecodeOutput`.

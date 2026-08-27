@@ -26,10 +26,10 @@ thing to copy than its structure.
 | Fragment | The graph a Surface expands into: inputs, operations, outputs | `fragment.ts` |
 | Activation | The host facets a Host installs | `activation.ts` |
 
-Three packages worth comparing, because they name things differently and do the same work:
-`packages/ranking/` (`schedule.ts`, `style.ts`, `render.ts`), `packages/media-track/`
-(`program.ts`, `lower.ts`, `presentation.ts`) and `packages/comment-sticker/` (`program.ts`,
-`author.ts`).
+Use `examples/minimal-author-package/packages/example-component/` for the canonical role layout.
+Only when vocabulary inspection proves a close structural sibling should you inspect that sibling's
+README and the specific role files you must adapt; do not compare unrelated business packages to
+infer generic architecture.
 
 ## What each role must get right
 
@@ -40,12 +40,13 @@ needs no Core release.
 **The value layer is where authored data becomes trustworthy.** Every value that crosses a boundary
 gets an `assert…` that states what is wrong in the author's terms, and a `seal…` that canonicalises
 it. A Producer that receives an unsealed value has no way to tell a mistake from a shape it has not
-met. `assertMediaItemSpec` and `sealMediaItemSpec` in `packages/media-track/src/program.ts` are the
-pattern.
+met. The fixture's value layer is the minimal pattern; a close sibling may be used as a bounded
+implementation skeleton only after vocabulary inspection.
 
 **The Style decoder reads a Recipe, not a stylesheet.** It takes one `SvsRecipe` and the exact fonts,
 validates the keys it admits, and produces a Style value. Unknown keys fail; defaults are declared,
-not implied. See `decodeCommentStickerStyle` in `packages/comment-sticker/src/author.ts`.
+not implied. Use the fixture's decoder for the generic boundary, or the selected close sibling when
+the new package intentionally extends that sibling's domain contract.
 
 **The renderer turns a Program into elements and nothing else.** It resolves no timing of its own and
 reaches into no other Track. Timing arrives already projected; placement arrives as a Frame.
