@@ -103,6 +103,13 @@ single line and runs off both edges of the frame. That is the shape to recognise
 overflows is a Segment nobody broke, not a Style whose width or size is wrong, and widening the box
 or shrinking the type will not close it.
 
+Treat roughly **3–4 spoken words per Cue as the hard default** (fewer for long words, large type, or
+dense designs). A longer Cue is an explicit exception that must be justified by the reference and
+verified in the rendered bounds; it is never the result of forgetting `||`.
+
+The route's mechanical gate is stricter: `validate_script_cues --run <build.svrun>` rejects every Cue
+over four visible words, including Dual Text display words. Split it with `||` between complete units.
+
 Mark the breaks where the reference breaks. The observation for a shot says what is on screen at
 once, and that is the Cue.
 

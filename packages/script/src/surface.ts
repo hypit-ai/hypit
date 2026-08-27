@@ -17,6 +17,7 @@ import {
 } from "./manifest.js";
 import { textTypes } from "@hypit/text";
 import { parseScript } from "./parser.js";
+import { validateCaptionCueLengths } from "./cue-lint.js";
 import type { ScriptSurfaceInput, ScriptSurfaceOutput } from "./types.js";
 
 const RECORD_ID = /^[a-z][a-z0-9_-]{0,63}$/u;
@@ -73,6 +74,17 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
     input.source.slice(input.contentStart, close.start),
     input.contentStart,
   );
+  if (process.env.HYPIT_STRICT_SCRIPT_CUES === "1") {
+    const cueViolation = validateCaptionCueLengths(parsed)[0];
+    if (cueViolation !== undefined) {
+      throw new ScriptSyntaxError(
+        "SCRIPT_CUE_TOO_LONG",
+        `${cueViolation.message} Cue ${cueViolation.cue} in Segment ${cueViolation.segment} has ${cueViolation.wordCount} words (maximum ${cueViolation.maxWords}).`,
+        input.sourceName,
+        cueViolation.sourceRange.start,
+      );
+    }
+  }
   const captionId = `${rawId}.caption`;
   return {
     nextOffset: close.end,

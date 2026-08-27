@@ -18,11 +18,15 @@ import {
 import { describeSchema } from "./contract.js";
 import { videoCliDistribution } from "@hypit/video-cli";
 
-import { authorSource, invokedFrom, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath, tokenWindow } from "./authoring.js";
+import { authorSource, invokedFrom, nearestPackageRoot, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath, tokenWindow } from "./authoring.js";
 import type { RenderElementInput, RenderPreviewsInput, SpokenRange, StandInFocus, StandInSidecar } from "./authoring.js";
 import { downloadReferenceVideo, isReferenceUrl } from "@hypit/yt-dlp";
-import { authoringCheck, previewCheck, reviewLogPath } from "./checks.js";
-import type { AuthoringCheckInput, PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
+import { loadStudioCompanionRegistry } from "@hypit/studio/src/companion-profile.js";
+import { openStudioArchive } from "@hypit/studio/src/archive.js";
+import { loadStudioDomain } from "@hypit/studio/src/domain.js";
+import { loadStudioRun } from "@hypit/studio/src/run.js";
+import { authoringCheck, previewCheck, reviewLogPath, scriptCueCheck } from "./checks.js";
+import type { AuthoringCheckInput, PreviewCheckInput, ReconstructionCheckInput, ScriptCueCheckInput } from "./checks.js";
 import {
   checkpointRouteState,
   readRouteState,
@@ -86,6 +90,11 @@ export type InspectVocabularyInput = {
   readonly package_names: readonly string[];
   readonly tags?: readonly string[];
   readonly include_previews?: boolean;
+  readonly run?: string;
+};
+export type ValidateLocalAuthorPackagesInput = {
+  readonly run: string;
+  readonly expected_packages?: readonly string[];
 };
 export type CompareReconstructionInput = {
   readonly reference_id: string;
@@ -187,6 +196,8 @@ export type ReferenceVideoTools = {
   prepare_reference(input: PrepareReferenceInput): Promise<PrepareResult>;
   observe_reference(input: ObserveReferenceInput): Promise<Record<string, unknown>>;
   inspect_svml_vocabulary(input: InspectVocabularyInput): Promise<Record<string, unknown>>;
+  validate_local_author_packages(input: ValidateLocalAuthorPackagesInput): Promise<Record<string, unknown>>;
+  validate_script_cues(input: ScriptCueCheckInput): Promise<Record<string, unknown>>;
   inspect_visual_contract(input: { readonly shape?: string; readonly producers?: readonly string[] }): Promise<Record<string, unknown>>;
   paths(): Promise<Record<string, unknown>>;
   compare_reconstruction(input: CompareReconstructionInput): Promise<Record<string, unknown>>;
@@ -220,6 +231,12 @@ type ObservationTask = { readonly key: string; readonly request: Request };
 
 function routeStateResult(state: RouteState | undefined): Record<string, unknown> {
   return state === undefined ? { state: null } : { state, path: routeStatePath(state.project_root) };
+}
+
+function routeStepFor(route: RouteKind, name: string): number {
+  const index = ROUTE_STATE_STEPS[route].indexOf(name);
+  if (index < 0) throw new Error(`route ${route} has no ${name} stage`);
+  return index + 1;
 }
 
 async function runRouteStateCommand(input: RouteStateCommandInput): Promise<Record<string, unknown>> {
@@ -319,7 +336,7 @@ async function referenceObservationComplete(referenceId: string): Promise<boolea
 async function maybeCheckpointReferenceObservation(input: RecordObservationInput): Promise<void> {
   if (input.run === undefined || !(await referenceObservationComplete(input.reference_id))) return;
   const runPath = resolve(invokedFrom(), input.run);
-  await autoRouteCheckpoint(runPath, 3, { reference_observations: join(stateRoot(input.reference_id), "observations.json") }, "write or repair the reconstruction Source");
+  await autoRouteCheckpoint(runPath, routeStepFor("reconstruction", "reference-observed"), { reference_observations: join(stateRoot(input.reference_id), "observations.json") }, "inspect vocabulary and resolve any package gap");
 }
 
 async function persistRoutePlan(runPath: string, result: Record<string, unknown>): Promise<string> {
@@ -1036,6 +1053,99 @@ function publicPrepare(state: ReferenceState): PrepareResult {
 
 export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceVideoTools {
   const packageRoot = resolve(options.packageRoot ?? process.cwd());
+
+  async function validateLocalAuthorPackages(input: ValidateLocalAuthorPackagesInput): Promise<Record<string, unknown>> {
+    const runPath = resolve(invokedFrom(), input.run);
+    const projectRoot = nearestPackageRoot(dirname(runPath)) ?? packageRoot;
+    const packagesRoot = join(projectRoot, "packages");
+    const localDirectories = (await readdir(packagesRoot, { withFileTypes: true }).catch(() => []))
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith("local-"))
+      .map((entry) => join(packagesRoot, entry.name));
+    const expected = new Set(input.expected_packages ?? []);
+    const distributionPackageRoot = videoCliDistribution.packageRoot;
+    const loading = distributionPackageRoot === undefined ? {} : { fallbackRoots: [distributionPackageRoot] };
+    const runSource = await readFile(runPath, "utf8").catch(() => "");
+    const authorSourcePath = /<author\s+source="([^"]+)"/u.exec(runSource)?.[1];
+    const authorSource = authorSourcePath === undefined ? "" : await readFile(resolve(dirname(runPath), authorSourcePath), "utf8").catch(() => "");
+    const imported = new Set([
+      ...[...runSource.matchAll(/\bfrom="([^"]+)@\d+"/gu)].map((match) => match[1]!),
+      ...[...authorSource.matchAll(/\bfrom="([^"]+)@\d+"/gu)].map((match) => match[1]!),
+    ]);
+    let graphModules = new Set<string>();
+    try {
+      if (distributionPackageRoot !== undefined) {
+        const registry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot: projectRoot, distributionPackageRoot });
+        const domain = await loadStudioDomain({ run: runPath, workspaceRoot: projectRoot, packageRoot: projectRoot });
+        const archive = await openStudioArchive(undefined, projectRoot, projectRoot, distributionPackageRoot);
+        const loaded = await loadStudioRun({ run: runPath, domain, registry, ...(archive === undefined ? {} : { archive }) });
+        graphModules = new Set([
+          ...loaded.source.compiled.graph.operations.map((operation) => `${operation.producer.module.name}@${operation.producer.module.version}`),
+          ...loaded.run.graph.operations.map((operation) => `${operation.producer.module.name}@${operation.producer.module.version}`),
+        ]);
+      }
+    } catch {
+      // The normal check reports the compiler failure; package validation still returns precise
+      // structural diagnostics for every local package instead of hiding them behind one exception.
+    }
+    const results: Record<string, unknown>[] = [];
+    for (const directory of localDirectories) {
+      const manifestPath = join(directory, "package.json");
+      const manifest = await readJson<{ name?: string; hypit?: { activation?: string } }>(manifestPath);
+      const specifier = manifest?.name ?? basename(directory);
+      const errors: string[] = [];
+      if (manifest === undefined) errors.push("PACKAGE_MANIFEST_MISSING");
+      else if (manifest.hypit?.activation === undefined) errors.push("PACKAGE_ACTIVATION_MISSING");
+      let loaded: Awaited<ReturnType<typeof loadNodePackageSelection>> = [];
+      try { loaded = await loadNodePackageSelection([specifier], projectRoot, loading); }
+      catch { errors.push("PACKAGE_ACTIVATION_INVALID"); }
+      const contribution = loaded[0]?.contribution;
+      const modules = contribution?.modules ?? [];
+      const surfaces = (contribution?.hostFacets ?? []).filter((facet) => facet.abi === markupSurfaceHostFacetAbi);
+      const fragments = (contribution?.hostFacets ?? []).filter((facet) => facet.abi === "hypit.run-fragment-host@1");
+      const producers = modules.flatMap((module) => module.manifest.producers);
+      const fragmentValues = fragments.flatMap((facet) => Object.values((facet.implementation as { fragments?: Record<string, { operations?: readonly unknown[]; exports?: readonly unknown[] }> }).fragments ?? {}));
+      if (surfaces.length === 0) errors.push("PACKAGE_NO_SURFACE");
+      if (producers.length === 0) errors.push("PACKAGE_NO_PRODUCER");
+      if (fragments.length === 0 || fragmentValues.every((fragment) => (fragment.operations?.length ?? 0) === 0 || (fragment.exports?.length ?? 0) === 0)) errors.push("PACKAGE_NO_FRAGMENT");
+      const declaredProducers = new Set(modules.flatMap((module) => module.manifest.producers.map((producer) => `${module.manifest.name}@${module.manifest.version}#${producer.name}`)));
+      for (const fragment of fragmentValues) {
+        for (const operation of fragment.operations ?? []) {
+          const producer = (operation as { producer?: { module?: { name?: string; version?: string }; name?: string } }).producer;
+          const key = producer?.module?.name !== undefined && producer.module.version !== undefined && producer.name !== undefined
+            ? `${producer.module.name}@${producer.module.version}#${producer.name}`
+            : undefined;
+          if (key === undefined || !declaredProducers.has(key)) errors.push("PACKAGE_FRAGMENT_PRODUCER_UNDECLARED");
+        }
+      }
+      for (const facet of surfaces) {
+        const surface = (facet.implementation as Partial<RegisteredSurface>);
+        if (surface.module?.name === undefined || surface.module.version === undefined || surface.surface?.trim().length === 0
+          || surface.tag?.trim().length === 0 || !Array.isArray(surface.outputs) || surface.outputs.length === 0
+          || surface.outputs.some((output) => output?.module?.name === undefined || output.module.version === undefined || output.name?.trim().length === 0)) {
+          errors.push("PACKAGE_SURFACE_INVALID");
+        }
+      }
+      const sourceImported = imported.has(specifier);
+      const graphUsed = modules.some((module) => graphModules.has(`${module.manifest.name}@${module.manifest.version}`));
+      if (!sourceImported) errors.push("PACKAGE_NOT_IMPORTED");
+      else if (!graphUsed) errors.push("PACKAGE_IMPORTED_BUT_UNUSED");
+      results.push({ specifier, manifest: modules.length > 0, surfaces: surfaces.length, producers: producers.length, fragments: fragmentValues.length, source_imported: sourceImported, source_used: graphUsed, graph_used: graphUsed, status: errors.length === 0 ? "passed" : "failed", ...(errors.length === 0 ? {} : { errors }) });
+    }
+    for (const specifier of expected) {
+      if (!results.some((item) => item.specifier === specifier)) results.push({ specifier, status: "failed", errors: ["PACKAGE_EXPECTED_BUT_MISSING"] });
+    }
+    const vocabularyEvidence = await stat(join(projectRoot, ".hypit", "vocabulary.json")).then(() => true, () => false);
+    const passed = results.every((item) => item.status === "passed") && vocabularyEvidence;
+    return {
+      run: runPath,
+      package_root: projectRoot,
+      passed,
+      vocabulary_checked: vocabularyEvidence,
+      ...(vocabularyEvidence ? {} : { errors: ["VOCABULARY_NOT_CHECKED"] }),
+      packages: results,
+      ...(localDirectories.length === 0 && expected.size === 0 ? { note: "no project-local packages declared" } : {}),
+    };
+  }
   const model = options.model ?? process.env.GEMINI_MODEL?.trim() ?? "gemini-3.1-pro-preview";
   // Pacing is deployment policy, not author intent: it depends on the quota behind the credentials,
   // which the calling agent has no way to know. It is settable here and through the environment, and
@@ -1571,7 +1681,39 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           });
         }
       }
-      return { packages: input.package_names, surfaces };
+      const result = { packages: input.package_names, surfaces };
+      if (input.run !== undefined) {
+        const runPath = resolve(invokedFrom(), input.run);
+        const evidence = await persistRouteEvidence(runPath, "vocabulary.json", result);
+        const route = await readRouteState(dirname(runPath));
+        const step = route?.route === "description" ? 3 : 4;
+        await autoRouteCheckpoint(runPath, step, { vocabulary: evidence }, "validate_local_author_packages --run <build.svrun>");
+      }
+      return result;
+    },
+
+    async validate_local_author_packages(input): Promise<Record<string, unknown>> {
+      const result = await validateLocalAuthorPackages(input);
+      const runPath = resolve(invokedFrom(), input.run);
+      const evidence = await persistRouteEvidence(runPath, "package-ready.json", result);
+      if (result.passed === true) {
+        const route = await readRouteState(dirname(runPath));
+        const step = route?.route === "description" ? 4 : 5;
+        await autoRouteCheckpoint(runPath, step, { package_ready: evidence }, "validate_script_cues --run <build.svrun>");
+      } else await autoRouteError(runPath, "validate_local_author_packages", (result.packages as unknown[] ?? []));
+      return result;
+    },
+
+    async validate_script_cues(input): Promise<Record<string, unknown>> {
+      const result = await scriptCueCheck(input);
+      const runPath = resolve(invokedFrom(), input.run);
+      const evidence = await persistRouteEvidence(runPath, "script-cues.json", result);
+      if (result.passed === true) {
+        const route = await readRouteState(dirname(runPath));
+        const step = route?.route === "description" ? 5 : 6;
+        await autoRouteCheckpoint(runPath, step, { script_cues: evidence }, "write main.svml, recipes.svs and build.svrun");
+      } else await autoRouteError(runPath, "validate_script_cues", result.violations ?? result.errors ?? "cue validation failed");
+      return result;
     },
 
     /**
@@ -1800,7 +1942,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         scope,
       });
       if (already !== undefined) {
-        if (input.run !== undefined) await autoRouteCheckpoint(resolve(invokedFrom(), input.run), 8, { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
+        if (input.run !== undefined) await autoRouteCheckpoint(resolve(invokedFrom(), input.run), routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
         return {
           reference_id: state.reference_id,
           observer,
@@ -1846,7 +1988,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         ...(differences.status === "complete" ? { differences: differences.text } : {}),
       });
       if (differences.status === "complete" && input.run !== undefined) {
-        await autoRouteCheckpoint(resolve(invokedFrom(), input.run), 8, { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
+        await autoRouteCheckpoint(resolve(invokedFrom(), input.run), routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
       }
       return {
         reference_id: state.reference_id,
@@ -1926,7 +2068,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           .split("\n").filter((line) => line.trim().length > 0).flatMap((line) => {
             try { return [JSON.parse(line) as ComparisonRecord]; } catch { return []; }
           }).find((entry) => entry.id === comparisonId);
-        if (comparison?.run !== undefined) await autoRouteCheckpoint(comparison.run, 8, { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
+        if (comparison?.run !== undefined) await autoRouteCheckpoint(comparison.run, routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
         await maybeCheckpointReferenceObservation(input);
         return { reference_id: state.reference_id, key, stored_in: "comparisons" };
       }
@@ -2100,7 +2242,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       assert(text.length > 0, "text is required; a review that found nothing wrong says so in words");
       const closed = await closeLooked(reviewLog(root), id, text);
       assert(closed, `${id} names no open review of ${runPath}`);
-      await autoRouteCheckpoint(runPath, 8, { review_log: reviewLogPath(runPath) }, "repair findings, then rerun authoring_check");
+      await autoRouteCheckpoint(runPath, routeStepFor("description", "review-complete"), { review_log: reviewLogPath(runPath) }, "repair findings, then rerun authoring_check");
       return { run: runPath, review_id: id, stored_in: reviewLogPath(runPath) };
     },
 
@@ -2120,7 +2262,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           const first = done[0] as Record<string, unknown>;
           const evidence = await renderEvidence(first.out);
           if (Object.keys(evidence).length > 0) {
-            await autoRouteCheckpoint(run === undefined ? undefined : resolve(invokedFrom(), run), 7,
+            await autoRouteCheckpoint(run === undefined ? undefined : resolve(invokedFrom(), run), routeStepFor((await readRouteState(dirname(resolve(invokedFrom(), run ?? ""))))?.route ?? "reconstruction", "preview-rendered"),
               evidence, "compare_reconstruction or review_element");
           }
         } else if (failures.length > 0) {
@@ -2138,7 +2280,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const result = await renderElement(input);
         const evidence = await renderEvidence(result.out);
         if (Object.keys(evidence).length > 0) {
-          await autoRouteCheckpoint(input.run === undefined ? undefined : resolve(invokedFrom(), input.run), 7,
+          await autoRouteCheckpoint(input.run === undefined ? undefined : resolve(invokedFrom(), input.run), routeStepFor((await readRouteState(dirname(resolve(invokedFrom(), input.run ?? ""))))?.route ?? "reconstruction", "preview-rendered"),
             evidence, "compare_reconstruction or review_element");
         }
         return result;
@@ -2155,14 +2297,23 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     async preview_check(input): Promise<Record<string, unknown>> {
       const runPath = resolve(invokedFrom(), input.run);
       try {
+        const packageGate = await validateLocalAuthorPackages({ run: input.run });
+        const cueGate = await scriptCueCheck({ run: input.run });
+        if (packageGate.passed !== true || cueGate.passed !== true) {
+          const refused = { run: runPath, sound: false, package_gate: packageGate, script_cue_gate: cueGate, refused: "package or Script Cue gate failed" };
+          await persistRouteEvidence(runPath, "preview-check.json", refused);
+          await autoRouteError(runPath, "preview_check", refused.refused);
+          return refused;
+        }
         const result = await previewCheck(input, { packageRoot });
         const evidence = await persistRouteEvidence(runPath, "preview-check.json", result);
         if (result.sound === true) {
           const source = await authorSource(runPath).catch(() => undefined);
           const route = await readRouteState(dirname(runPath));
-          const sourceStep = route?.route === "description" ? 3 : 4;
+          const sourceStep = routeStepFor(route?.route ?? "reconstruction", "source-authored");
           await autoRouteCheckpoint(runPath, sourceStep, source === undefined ? {} : { author_source: source.path }, "run reconstruction_check or authoring_check");
-          await autoRouteCheckpoint(runPath, 5, { preview_check: evidence }, "run reconstruction_check or authoring_check");
+          const routeAfterSource = await readRouteState(dirname(runPath));
+          await autoRouteCheckpoint(runPath, routeStepFor(routeAfterSource?.route ?? "reconstruction", "graph-checked"), { preview_check: evidence }, "run reconstruction_check or authoring_check");
         } else await autoRouteError(runPath, "preview_check", result.refused ?? result.problems ?? "preview check failed");
         return result;
       } catch (error) {
@@ -2174,13 +2325,22 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     async reconstruction_check(input): Promise<Record<string, unknown>> {
       const runPath = resolve(invokedFrom(), input.run);
       try {
+        const packageGate = await validateLocalAuthorPackages({ run: input.run });
+        const cueGate = await scriptCueCheck({ run: input.run });
+        if (packageGate.passed !== true || cueGate.passed !== true) {
+          const refused = { run: runPath, passed: false, package_gate: packageGate, script_cue_gate: cueGate, issues: ["package or Script Cue gate failed"] };
+          await persistRouteEvidence(runPath, "final-check.json", refused);
+          await autoRouteError(runPath, "reconstruction_check", refused.issues);
+          return refused;
+        }
         const result = await authoringCheck({ ...input, mode: "reconstruction" }, { packageRoot });
         const evidence = await persistRouteEvidence(runPath, "final-check.json", result);
         if (Array.isArray(result.plan)) {
           const planPath = await persistRoutePlan(runPath, result);
-          await autoRouteCheckpoint(runPath, 6, { review_plan: planPath }, "render_element --batch <round.json>");
+          const route = await readRouteState(dirname(runPath));
+          await autoRouteCheckpoint(runPath, routeStepFor(route?.route ?? "reconstruction", "review-planned"), { review_plan: planPath }, "render_element --batch <round.json>");
         }
-        if (result.passed === true) await autoRouteCheckpoint(runPath, 10, { final_check: evidence }, "submit the approved Build");
+        if (result.passed === true) { const route = await readRouteState(dirname(runPath)); await autoRouteCheckpoint(runPath, routeStepFor(route?.route ?? "reconstruction", "final-checked"), { final_check: evidence }, "submit the approved Build"); }
         else await autoRouteError(runPath, "reconstruction_check", result.issues ?? result.unresolved ?? "reconstruction check failed");
         return result;
       } catch (error) {
@@ -2192,13 +2352,22 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     async authoring_check(input): Promise<Record<string, unknown>> {
       const runPath = resolve(invokedFrom(), input.run);
       try {
+        const packageGate = await validateLocalAuthorPackages({ run: input.run });
+        const cueGate = await scriptCueCheck({ run: input.run });
+        if (packageGate.passed !== true || cueGate.passed !== true) {
+          const refused = { run: runPath, passed: false, package_gate: packageGate, script_cue_gate: cueGate, issues: ["package or Script Cue gate failed"] };
+          await persistRouteEvidence(runPath, "final-check.json", refused);
+          await autoRouteError(runPath, "authoring_check", refused.issues);
+          return refused;
+        }
         const result = await authoringCheck({ ...input, mode: "description" }, { packageRoot });
         const evidence = await persistRouteEvidence(runPath, "final-check.json", result);
         if (Array.isArray(result.plan)) {
           const planPath = await persistRoutePlan(runPath, result);
-          await autoRouteCheckpoint(runPath, 6, { review_plan: planPath }, "render_element --batch <round.json>");
+          const route = await readRouteState(dirname(runPath));
+          await autoRouteCheckpoint(runPath, routeStepFor(route?.route ?? "description", "review-planned"), { review_plan: planPath }, "render_element --batch <round.json>");
         }
-        if (result.passed === true) await autoRouteCheckpoint(runPath, 10, { final_check: evidence }, "submit the approved Build");
+        if (result.passed === true) { const route = await readRouteState(dirname(runPath)); await autoRouteCheckpoint(runPath, routeStepFor(route?.route ?? "description", "final-checked"), { final_check: evidence }, "submit the approved Build"); }
         else await autoRouteError(runPath, "authoring_check", result.issues ?? result.unresolved ?? "authoring check failed");
         return result;
       } catch (error) {

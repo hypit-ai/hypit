@@ -17,6 +17,10 @@ Install dependencies after package selections change. Validate with one command:
 hypit-reference-video-tools preview_check path/to/project/build.svrun
 ```
 
+Before that command, persist vocabulary inspection and run `validate_local_author_packages --run`
+and `validate_script_cues --run`. Local packages must have real Surface/Producer/Fragment exports and
+be used by the compiled Graph; every caption Cue must be four or fewer visible words.
+
 It checks every Source the Run reaches before it proves the graph traces — the Run, the Author it
 names, and the Recipe sheets and kits the Author imports — then goes on to the wiring itself. One
 `hypit check` of the Run covers that same closure, but running it separately would only report the
