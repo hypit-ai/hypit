@@ -26,6 +26,11 @@ Use `--route description` for original-authoring and `--route reconstruction` fo
 work. A project has one active route; a route mismatch is an error rather than an invitation to merge
 two histories.
 
+For a completed project with a new natural-language change, use `.hypit/revision-state.json` and the
+`revision_state` commands described in `revision.md`. Reconcile both the parent route snapshot and
+the revision snapshot before editing. Revision does not call VLM/observer, render, or perform visual
+review; it stops after the requested deterministic gates and leaves Studio untouched.
+
 ## What the state means
 
 The state is a small snapshot, not a transcript. It records the current route step, completed steps,

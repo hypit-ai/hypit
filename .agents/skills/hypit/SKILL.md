@@ -76,6 +76,14 @@ the boundary and launcher selection. Read it before the first command of any rou
   given at all. What it is for, who is in it and what it says are the author's; the working
   directory, the project location, the packages and the generators are yours to decide rather than to
   ask for.
+- A sparse or ambiguous original request → read `references/brief-intake.md`. Discover complete
+  projects under the checkout's `examples/` directory and analyze their author intent when relevant;
+  otherwise use the document's general, open-ended fallback. Do not hard-code video types or skip
+  the brief-sufficiency gate.
+- A completed project followed by a natural-language change → read `references/revision.md` and use
+  the independent `revision_state` route. Restore the element's role in the frozen brief, edit only
+  Source/Recipe/Run, invalidate the affected graph closure, and rerun deterministic gates. Revision
+  never invokes VLM/observer visual inspection; leave visual inspection for a later Studio session.
 - A syntax question about one element, or a source that already exists → read
   `references/authoring.md`, then `references/quickstart.md` and the linked authoritative
   docs/package READMEs. A whole video is `references/original-authoring/route.md`, not this file.
