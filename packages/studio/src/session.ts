@@ -15,7 +15,7 @@ import type { RunPlan } from "./run.js";
 import type { StudioSnapshot } from "./shared.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { snapshot } from "./snapshot.js";
-import { inspectStudioRun } from "./studio-preflight.js";
+import { PREVIEW_LOCAL_MEDIA_CAPABILITIES, inspectStudioRun } from "./studio-preflight.js";
 import type { StudioViewRequirement } from "./studio-preflight.js";
 import type { StudioSourceFile } from "./parameters.js";
 
@@ -65,7 +65,10 @@ export async function readStudioSession(input: {
   readonly endpoints?: EndpointRegistry;
 }): Promise<StudioSession> {
   const source = input.run.source;
-  const inspection = inspectStudioRun(input.registry, source, input.run);
+  // The endpoints a preview Run carries are the local deterministic media ones, so the capabilities
+  // they serve are resolved for this session exactly as they are for the startup preflight.
+  const inspection = inspectStudioRun(input.registry, source, input.run,
+    input.endpoints === undefined ? undefined : PREVIEW_LOCAL_MEDIA_CAPABILITIES);
   const outputRefs = [
     inspection.filmComposition,
     ...inspection.projections.map((projection) => projection.ref),
