@@ -131,5 +131,7 @@ without a project document is on the wrong side of it.
 
 After inspection, persist the result with `inspect_svml_vocabulary --run <build.svrun>`. Before
 writing or checking Source, run `validate_local_author_packages --run <build.svrun>`. Every
-`packages/local-*` directory must expose a real Surface, Producer and Fragment and must be imported
-and used by the compiled Graph; otherwise the route stops with a machine-readable diagnostic.
+Every project-owned package directory under `packages/` must expose a real Surface, Producer and
+Fragment and must be imported and used by the compiled Graph; otherwise the route stops with a
+machine-readable diagnostic. Package directory names are descriptive slugs, not a required
+`local-` prefix.

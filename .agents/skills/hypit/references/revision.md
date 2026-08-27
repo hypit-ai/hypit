@@ -42,8 +42,9 @@ Studio session is running for the current Run, start Studio and show the author 
    package README/vocabulary. Recover the target element's role in the author's intent.
 2. Classify the request's impact: geometry/style, Script/semantic timing, graph structure, or paid
    generation. Record the affected Source files and the smallest invalidated graph closure.
-3. Map natural language to the authoritative field before editing. “字幕往上一点” is a
-   Frame/Placement/Recipe/Style change; a changed line is a Cue/SemanticTake/timing change; a new
+3. Map natural language to the authoritative field before editing. A request such as “move the
+   captions up slightly” maps to a Frame/Placement/Recipe/Style change; a changed line is a
+   Cue/SemanticTake/timing change; a new
    component is a vocabulary-gap and package change. A Hook or opening change also requires checking
    that later beats still fulfil its promise.
 4. Edit only Source, Recipe or Run. Re-run package/Cue gates, `hypit check`, `preview_check`, and the

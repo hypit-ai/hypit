@@ -153,8 +153,8 @@ material, never a place to turn into the author's project.
 
 **Give the project directory its own `package.json`, before the first `check`.** Package discovery
 starts at the project and walks up until it finds one; without it the search runs past the project
-and settles on whichever directory above happens to have one, and every `packages/local-*` the
-project owns becomes unresolvable — `cannot resolve installed package @scope/local-name`. A minimal
+and settles on whichever directory above happens to have one, leaving every package under the
+project's `packages/` unresolvable. A minimal
 file is the whole fix, and it is what makes the directory a boundary rather than a place that
 happens to hold Sources:
 

@@ -1,4 +1,4 @@
-# Develop a project-local author package
+# Develop an author package for the project
 
 Use this workflow only after proving that no legal composition of installed packages expresses the
 required behavior. A similar-looking tag is insufficient when its declared Types, timing or output
@@ -93,10 +93,15 @@ is, so read its `mediaType` off the Artifact rather than assuming what the slot'
 
 ## Package boundary
 
-Place the package at `<project>/packages/local-<slug>/`, named in the project's own scope such as
-`@my-project/local-<slug>`, with physical
+Place the package at `<project>/packages/<slug>/`, named in the project's own scope such as
+`@my-project/<slug>`, with physical
 version `0.0.0-dev` and logical Module version `1`. Only create a new package: do not
 edit, extend, delete or overwrite an existing Hypit package to fill the gap.
+
+The directory and package name may use any valid, descriptive slug; do not add a `local-` prefix
+just to identify where the package was created. The package README documents its public contract,
+syntax, inputs, outputs and preview. It does not need to say that the package is temporary,
+project-level or otherwise describe its provenance.
 
 The package it stands beside is untouched. A Style family that differs from `caption-fine` in its
 timing model, or a board that differs from `ranking` in its rows, installs as a sibling: its own
@@ -114,7 +119,7 @@ The project is never the Hypit Distribution. Do not move a local package into an
 automatically. After the result is accepted, offer promotion as a separate contribution.
 
 The component reaches Studio's generic Track fallback until its project adds a companion package,
-for example `@my-project/local-<slug>-studio`, to the project's `hypit.studio.json`. That companion owns
+for example `@my-project/<slug>-studio`, to the project's `hypit.studio.json`. That companion owns
 only Studio interpretation and operations through `hypit.studio-adapter@1`; it never edits
 `packages/studio`, and the author package never imports Studio. A generic block is valid while no
 special interpretation is needed.
@@ -162,7 +167,7 @@ nothing.
 
   ```bash
   hypit image --prompt "the surface this component draws on" \
-    --to <project>/packages/local-<slug>/assets/paper.png
+    --to <project>/packages/<slug>/assets/paper.png
   ```
 
   It writes a picture and nothing else — no Source, no Build, no Record, no Runtime Profile. A
@@ -227,12 +232,13 @@ Before Source can be considered authored, run:
 hypit-reference-video-tools validate_local_author_packages --run <path/to/build.svrun>
 ```
 
-Every project-local `packages/local-*` package must expose a non-empty Manifest, at least one
+Every project-owned package under `<project>/packages/` must expose a non-empty Manifest, at least one
 Markup Surface, at least one Producer and at least one Run Fragment with operations and exports. The
 Run's compiled Graph must contain an operation from that package, and the Author Source must import
 and use its Surface. An import without use, a marker-only package, or a package replaced by a similar
 official component fails with a machine-readable diagnostic. If no gap exists, do not leave an unused
-local package in the project.
+package in the project. `validate_local_author_packages` discovers these package directories from
+their manifests; the directory name is not a validation signal.
 
 The Host resolves the explicitly selected physical package name directly at
 `<project>/packages/<package-basename>/` and supplies official `@hypit/*` imports from the read-only
