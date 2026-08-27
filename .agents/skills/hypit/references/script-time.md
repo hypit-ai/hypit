@@ -8,6 +8,20 @@ Both routes reach this file. What differs is only where the temptation to use a 
 reference video hands you a table of seconds, and a brief hands you a duration — and the answer is the
 same either way.
 
+## Mandatory Cue breaks for readable captions
+
+Whenever a Segment will appear as captions or other spoken on-screen text, author explicit short Cues
+with `||` between complete Alignment Units. As the default, cut every roughly 3–4 spoken words (fewer
+for long words, large type, or dense designs); permit a longer Cue only when the reference clearly
+holds it and the rendered bounds prove it fits. This is a hard layout requirement, not an optional
+style preference: a Segment with no `||` becomes one Cue, and the entire long passage can render beyond
+the screen. Do not depend on automatic wrapping, a larger box, or a smaller font to fix it. Choose
+breaks at natural phrase or sentence boundaries, and never place `||` inside Dual Text or through an
+N:M Alignment Unit.
+
+The mechanical gate `validate_script_cues --run <build.svrun>` enforces a maximum of four visible
+words per Cue. Fix the Script before `hypit check` or preview.
+
 ## A Segment is a stretch that is spoken as one
 
 Cut the Script into Segments the way the program is *spoken*, not the way its pictures are numbered:

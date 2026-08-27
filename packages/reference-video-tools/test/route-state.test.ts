@@ -10,7 +10,20 @@ import {
   reconcileRouteState,
   routeStatePath,
   startRouteState,
+  ROUTE_STATE_STEPS,
 } from "../src/route-state.js";
+
+async function completeDescriptionSourceGates(root: string): Promise<void> {
+  const vocabulary = join(root, "vocabulary.json");
+  const packageReady = join(root, "package-ready.json");
+  const scriptCues = join(root, "script-cues.json");
+  await writeFile(vocabulary, JSON.stringify({ packages: [], surfaces: [] }), "utf8");
+  await writeFile(packageReady, JSON.stringify({ passed: true }), "utf8");
+  await writeFile(scriptCues, JSON.stringify({ passed: true }), "utf8");
+  await checkpointRouteState({ projectRoot: root, route: "description", step: 3, status: "complete", artifacts: { vocabulary } });
+  await checkpointRouteState({ projectRoot: root, route: "description", step: 4, status: "complete", artifacts: { package_ready: packageReady } });
+  await checkpointRouteState({ projectRoot: root, route: "description", step: 5, status: "complete", artifacts: { script_cues: scriptCues } });
+}
 
 test("route state starts once, checkpoints idempotently, and advances to the next step", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-route-state-"));
@@ -30,9 +43,10 @@ test("reconcile uses durable artifact pointers and preserves manual gaps", async
   const source = join(root, "main.svml");
   await writeFile(source, "source", "utf8");
   await startRouteState({ projectRoot: root, route: "description" });
-  await checkpointRouteState({ projectRoot: root, route: "description", step: 3, status: "complete", artifacts: { author_source: source } });
+  await completeDescriptionSourceGates(root);
+  await checkpointRouteState({ projectRoot: root, route: "description", step: 6, status: "complete", artifacts: { author_source: source } });
   const reconciled = await reconcileRouteState(root);
-  assert.equal(reconciled?.completed_steps.includes(3), true);
+  assert.equal(reconciled?.completed_steps.includes(6), true);
   assert.equal(reconciled?.current_step, 1, "manual earlier steps remain owed instead of being guessed from a later file");
 });
 
@@ -53,7 +67,7 @@ test("a project cannot switch an active route", async () => {
 test("a completed route no longer blocks a new route", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-route-state-"));
   await startRouteState({ projectRoot: root, route: "reconstruction" });
-  for (let step = 1; step <= 11; step += 1) {
+  for (let step = 1; step <= ROUTE_STATE_STEPS.reconstruction.length; step += 1) {
     await checkpointRouteState({ projectRoot: root, route: "reconstruction", step, status: "complete" });
   }
   assert.equal((await readRouteState(root))?.status, "complete");
@@ -69,16 +83,19 @@ test("checkpoint artifacts are merged and stale machine evidence is rolled back"
   await writeFile(source, "source", "utf8");
   await writeFile(check, JSON.stringify({ sound: true }), "utf8");
   await startRouteState({ projectRoot: root, route: "description" });
-  await checkpointRouteState({ projectRoot: root, route: "description", step: 3, status: "complete", artifacts: { author_source: source } });
-  await checkpointRouteState({ projectRoot: root, route: "description", step: 5, status: "complete", artifacts: { preview_check: check } });
-  assert.deepEqual((await readRouteState(root))?.artifacts, { author_source: source, preview_check: check });
+  await completeDescriptionSourceGates(root);
+  await checkpointRouteState({ projectRoot: root, route: "description", step: 6, status: "complete", artifacts: { author_source: source } });
+  await checkpointRouteState({ projectRoot: root, route: "description", step: 7, status: "complete", artifacts: { preview_check: check } });
+  const mergedArtifacts = (await readRouteState(root))?.artifacts ?? {};
+  assert.equal(mergedArtifacts.author_source, source);
+  assert.equal(mergedArtifacts.preview_check, check);
   await reconcileRouteState(root);
-  assert.equal((await readRouteState(root))?.completed_steps.includes(5), true);
+  assert.equal((await readRouteState(root))?.completed_steps.includes(7), true);
   await writeFile(check, JSON.stringify({ sound: false }), "utf8");
   const rolledBack = await reconcileRouteState(root);
-  assert.equal(rolledBack?.completed_steps.includes(5), false);
+  assert.equal(rolledBack?.completed_steps.includes(7), false);
   assert.equal(rolledBack?.current_step, 1);
-  assert.match(rolledBack?.conflicts?.[0] ?? "", /step 5.*preview_check/u);
+  assert.match(rolledBack?.conflicts?.[0] ?? "", /step 7.*preview_check/u);
 });
 
 test("description reconciliation uses brief and vocabulary evidence rather than reference artifacts", async () => {
@@ -86,14 +103,14 @@ test("description reconciliation uses brief and vocabulary evidence rather than 
   const brief = join(root, "brief.md");
   const vocabulary = join(root, "vocabulary.json");
   await writeFile(brief, "brief", "utf8");
-  await writeFile(vocabulary, "{}", "utf8");
+  await writeFile(vocabulary, JSON.stringify({ packages: [], surfaces: [] }), "utf8");
   await startRouteState({ projectRoot: root, route: "description" });
   await checkpointRouteState({ projectRoot: root, route: "description", step: 2, status: "complete", artifacts: { brief } });
-  await checkpointRouteState({ projectRoot: root, route: "description", step: 4, status: "complete", artifacts: { vocabulary } });
+  await checkpointRouteState({ projectRoot: root, route: "description", step: 3, status: "complete", artifacts: { vocabulary } });
   const state = await reconcileRouteState(root);
   assert.equal(state?.completed_steps.includes(2), true);
-  assert.equal(state?.completed_steps.includes(4), true);
-  assert.equal(state?.completed_steps.includes(3), false);
+  assert.equal(state?.completed_steps.includes(3), true);
+  assert.equal(state?.completed_steps.includes(6), false);
 });
 
 test("an interrupted in-progress step resumes at the first unmet step", async () => {
@@ -106,4 +123,36 @@ test("an interrupted in-progress step resumes at the first unmet step", async ()
   assert.equal(resumed?.current_step, 2);
   assert.equal(resumed?.in_progress?.step, 2);
   assert.equal(resumed?.next_action, "complete reference-prepared");
+});
+
+test("v1 route snapshots migrate by stage name and re-open new gates", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-route-state-"));
+  await mkdir(join(root, ".hypit"), { recursive: true });
+  await writeFile(routeStatePath(root), JSON.stringify({
+    version: 1, route: "reconstruction", project_root: root, status: "active", current_step: 4,
+    completed_steps: [1, 2, 3, 4], in_progress: { step: 4, started_at: new Date().toISOString() },
+    artifacts: {}, decisions: [], next_action: "write Source", updated_at: new Date().toISOString(),
+  }), "utf8");
+  const migrated = await readRouteState(root);
+  assert.equal(migrated?.version, 2);
+  assert.equal(migrated?.completed_steps.includes(3), true);
+  assert.equal(migrated?.completed_steps.includes(4), false, "new vocabulary gate is not guessed from old source state");
+  assert.equal(migrated?.current_step, 4);
+});
+
+test("source-authored cannot bypass vocabulary, package and Script gates", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-route-state-"));
+  await startRouteState({ projectRoot: root, route: "reconstruction" });
+  const sourceStep = ROUTE_STATE_STEPS.reconstruction.indexOf("source-authored") + 1;
+  await assert.rejects(
+    checkpointRouteState({ projectRoot: root, route: "reconstruction", step: sourceStep, status: "complete" }),
+    /source-authored cannot be completed before/u,
+  );
+  const statePath = routeStatePath(root);
+  const raw = JSON.parse(await readFile(statePath, "utf8")) as Record<string, unknown>;
+  raw.completed_steps = [4, 5, 6, sourceStep];
+  await writeFile(statePath, `${JSON.stringify(raw)}\n`, "utf8");
+  const reconciled = await reconcileRouteState(root);
+  assert.equal(reconciled?.completed_steps.includes(sourceStep), false);
+  assert.equal((reconciled?.conflicts?.length ?? 0) > 0, true);
 });

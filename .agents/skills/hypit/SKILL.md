@@ -28,11 +28,24 @@ names the files it needs; read those when you reach that step rather than all of
 Keep `.svml` Author Source, `.svs` Recipe Source, `.svrun` Run Source, and
 `hypit.runtime.json` Runtime Profile as separate languages and responsibilities.
 
+Non-negotiable Script rule: every captioned or on-screen spoken passage must be split into short,
+complete Cues with `||` in the Script. As the default, cut after roughly 3–4 spoken words (fewer when
+the words are long or visually dense); longer runs require an explicit visual reason. Never rely on
+renderer line wrapping or a wide Caption box to rescue a long Segment: a Segment without `||` is one
+Cue and will overflow the Canvas. Read
+`references/script-time.md` and the caption craft before writing Script text; put breaks between
+complete Alignment Units, never inside Dual Text.
+
 Every route is resumable. At the start of a route, create the project's
 `.hypit/route-state.json`; after any new turn, interruption, or context compaction, read
 `references/recovery.md`, inspect that snapshot and reconcile it against the artifacts and checks
 before continuing. Never resume from chat memory alone, and never repeat a completed or paid step
 without verifying its durable evidence.
+
+Before Source is accepted, every route must complete persisted vocabulary inspection,
+`validate_local_author_packages` for every `packages/local-*` package, and
+`validate_script_cues` (maximum four visible words per Cue). `preview_check` and the route's final
+check repeat these gates even if route-state claims they were completed.
 
 Do not create or hand-author SVG images anywhere in an author project or project-local package.
 This includes `.svg` assets, inline `<svg>` markup, and SVG data URLs.

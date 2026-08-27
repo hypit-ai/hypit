@@ -128,3 +128,8 @@ composition always shows — is committed inside the package as a file, never de
 Only pictures that differ between videos are edges the source supplies.
 `playbooks/craft/graphic-compositions.md` draws that line; a component that cannot draw itself
 without a project document is on the wrong side of it.
+
+After inspection, persist the result with `inspect_svml_vocabulary --run <build.svrun>`. Before
+writing or checking Source, run `validate_local_author_packages --run <build.svrun>`. Every
+`packages/local-*` directory must expose a real Surface, Producer and Fragment and must be imported
+and used by the compiled Graph; otherwise the route stops with a machine-readable diagnostic.

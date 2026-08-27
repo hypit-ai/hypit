@@ -4,6 +4,9 @@
 success predicates hold. After a new turn or interruption, read `../recovery.md`, reconcile the state,
 and resume from its `next_action`; do not rely on chat history.
 
+Before preview, the command repeats `validate_local_author_packages` and `validate_script_cues`; a
+failed package or Cue gate is a hard refusal and cannot be hidden by a passing Graph trace.
+
 Three ways to look at a Source before a Provider is ever reached: prove the graph traces, render one
 element to a still, and open the whole Run for a person. They answer different questions, and none of
 them costs a generation.
