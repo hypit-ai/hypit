@@ -7,15 +7,17 @@ The lifecycle is fixed:
 
 ```text
 build.svrun → compiler-node Author/Run Graph → preview-mock realization
-→ temporary .hypit/preview/<digest>/preview.svrun
-→ mock-media local Provider materialization → Studio deterministic preview
+→ mock.svrun + mock-media local Provider materialization
+→ persisted content-addressed Artifacts + temporary .hypit/preview/<digest>/preview.svrun
+→ Studio deterministic preview
 ```
 
 `realizePreviewMock({run, targets?, timing: "estimate"})` derives replacements from the compiled
 Graph. It must not parse SVML dimensions, read a reference transcript, write a user Source, or emit
-absolute-path `<file>` Candidates. The temporary Run uses the existing `<fragment>` and `<satisfy>`
-syntax and contains only Author references, mock imports/declarations, satisfactions, and explicitly
-carried Run Candidates.
+absolute-path `<file>` Candidates. The realizer first persists a native mock Run and then writes a
+second temporary Run whose relative `<file>` Candidates point at the content-addressed results;
+Studio can reopen that Run in a separate process without an in-memory attachment list or a
+mock-media Provider (only local deterministic media tools may be enabled).
 
 Mock mapping is ordinary graph substitution: image/video/audio BlobArtifact outputs use
 `mock:image`, `mock:video`, and `mock:silence`; WhisperX SemanticTake outputs use the

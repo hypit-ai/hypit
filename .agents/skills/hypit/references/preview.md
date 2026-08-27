@@ -83,8 +83,9 @@ hypit-reference-video-tools render_element /path/to/project/build.svrun \
 ```
 
 It compiles the Author/Run Graph once, delegates preview substitutions to `@hypit/preview-mock`,
-materializes ordinary mock Artifacts through `@hypit/mock-media`, and drives the package's deterministic
-Producers. No mock file or SemanticTake is hand-authored in the project.
+materializes ordinary mock Artifacts through `@hypit/mock-media` into the temporary preview Store, and
+drives the package's deterministic Producers from the generated `preview.svrun`. No mock file or
+SemanticTake is hand-authored in the project.
 
 `--element` takes the element's bare id — `captions`, the `id=` the Source wrote on the element. The
 command appends the output suffix itself when it looks for the track, so `--element captions.track`
@@ -123,7 +124,8 @@ restart merely because the same Run's SVML/SVS changed.
 
 ```bash
 cd /path/to/project
-hypit-studio --run build.svrun --runtime hypit.runtime.json &
+# Start Studio with the persisted previewRun returned by realizePreviewMock.
+hypit-studio --run .hypit/preview/<digest>/preview.svrun --runtime hypit.runtime.json &
 ```
 
 If another Studio process is already using a different Run or startup parameters, stop that process

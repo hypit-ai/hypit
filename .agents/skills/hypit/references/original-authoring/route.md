@@ -19,6 +19,8 @@ a reconstruction gets for free have to be decided deliberately: what the program
 If a completed project receives a natural-language change, use `../revision.md` instead of restarting
 this route. Revision is Source/Recipe/Run-only and deterministic; it does not invoke a VLM or visual
 observer.
+This remains true after a paid Build has produced the full video: start `revision_state` against the
+accepted-material Run, never edit the rendered file or resume the creation steps.
 
 ## Checkpoint and recovery
 
@@ -198,10 +200,12 @@ configured to empty its window.
 
 ### 13. The Build
 
-**Read now:** `../studio-confirmation.md`. Before the paid gate, start Studio for the complete
-preview-mock Run, show the author the mock, and obtain explicit acceptance and cost approval. If the
-author declines, enter `../revision.md` and do not submit a Build. After acceptance and paid Build
-submission, start Studio for the accepted Run while the HyperFrames/final render runs concurrently.
+**Read now:** `../studio-confirmation.md`. Before the paid gate, call the preview-mock realizer and
+start Studio with its returned temporary `preview.svrun` (not the unresolved author Run). Show the
+complete estimate-timed mock, then obtain explicit acceptance and cost approval. If the author
+declines, enter `../revision.md` and do not submit a Build. After acceptance and paid Build
+submission, persist the accepted Build-Record Run, start Studio for that Run, and start the
+HyperFrames/final render concurrently.
 
 Confirm credentials, the Runtime Profile, the installed packages, model limits, resolution and
 Endpoint prerequisites. Run `doctor`, `check` and `plan`.

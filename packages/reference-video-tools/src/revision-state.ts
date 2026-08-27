@@ -22,6 +22,11 @@ export const REVISION_STEPS: readonly RevisionStep[] = [
   "preview-rendered", "review-complete", "final-checked", "revision-complete", "build-complete",
 ];
 
+// Revision is intentionally source-and-gate only.  A preview render or VLM
+// review is never a prerequisite, and a paid Build is conditional on the
+// impact of the change and a fresh user approval.
+const REQUIRED_REVISION_STEPS = new Set<number>([1, 2, 3, 4, 5, 8, 9]);
+
 export type RevisionState = {
   readonly version: 1;
   readonly project_root: string;
@@ -70,7 +75,9 @@ export function revisionStatePath(projectRoot: string): string {
 
 function nextUncompleted(completed: readonly number[]): number {
   const done = new Set(completed);
-  for (let step = 1; step <= REVISION_STEPS.length; step += 1) if (!done.has(step)) return step;
+  for (let step = 1; step <= REVISION_STEPS.length; step += 1) {
+    if (REQUIRED_REVISION_STEPS.has(step) && !done.has(step)) return step;
+  }
   return REVISION_STEPS.length + 1;
 }
 

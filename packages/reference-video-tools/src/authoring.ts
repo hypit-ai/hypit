@@ -18,11 +18,11 @@ import { openStudioArchive } from "@hypit/studio/src/archive.js";
 import { loadStudioDomain } from "@hypit/studio/src/domain.js";
 import type { Preview } from "@hypit/studio/src/programme.js";
 import { preview } from "@hypit/studio/src/programme.js";
-import { EndpointRegistry } from "@hypit/driver-node";
-import { createLocalMediaProvider } from "@hypit/provider-media-local";
 import { loadStudioRun } from "@hypit/studio/src/run.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 import { realizePreviewMock } from "@hypit/preview-mock";
+import { EndpointRegistry } from "@hypit/driver-node";
+import { createLocalMediaProvider } from "@hypit/provider-media-local";
 
 import { assert, ensureDir } from "./media.js";
 import type { TranscriptFile } from "./types.js";
@@ -611,8 +611,6 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
     const previewArchive = await openStudioArchive(undefined, packageRoot, projectRoot, distributionPackageRoot);
     const loadedPreview = await loadStudioRun({ run: previewMock.previewRun, domain: previewDomain, registry: previewRegistry, ...(previewArchive === undefined ? {} : { archive: previewArchive }) });
     const previewRun = { ...loadedPreview, attachments: [...loadedPreview.attachments, ...previewMock.attachments] };
-    const mockEndpoints = new EndpointRegistry();
-    await createLocalMediaProvider({}).install(mockEndpoints);
     const inspection = inspectStudioRun(previewRegistry, previewRun.source, previewRun, new Set([
       "@hypit/mock-media@1#render-mock-image",
       "@hypit/mock-media@1#render-mock-video",
@@ -620,6 +618,8 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
       "@hypit/media-pipeline@1#inspect-media",
       "@hypit/media-pipeline@1#normalize-media",
     ]));
+    const deterministicEndpoints = new EndpointRegistry();
+    await createLocalMediaProvider({}).install(deterministicEndpoints);
     built = await preview({
       source: previewRun.source,
       run: previewRun,
@@ -628,7 +628,7 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
       compositionRef: inspection.filmComposition,
       projections: inspection.projections,
       ...(previewArchive === undefined ? {} : { archive: previewArchive }),
-      endpoints: mockEndpoints,
+      endpoints: deterministicEndpoints,
     });
     programFrames = Math.max(1, ...built.anchors.values());
     frameOfToken = built.tokens.map((token) => ({ frame: built.anchors.get(token.startAnchorId) ?? 0, end: built.anchors.get(token.endAnchorId) ?? 0 }));
