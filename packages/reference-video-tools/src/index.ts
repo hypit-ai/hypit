@@ -5,8 +5,10 @@ export type {
   ObserveReferenceInput,
   RecordObservationInput,
   InspectVocabularyInput,
+  ValidateLocalAuthorPackagesInput,
   RouteStateCommandInput,
 } from "./tools.js";
+export type { ScriptCueCheckInput } from "./checks.js";
 export {
   checkpointRouteState,
   readRouteState,

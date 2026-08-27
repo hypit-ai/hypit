@@ -75,13 +75,16 @@ of intent; files and check results remain the authority.
 | `environment` | explicit checkpoint after Distribution, project and credentials are selected | `hypit paths --json` |
 | `reference-prepared` | checkpoint after `prepare_reference` reports ready `state.json` | `prepare_reference` or `route_state reconcile` |
 | `reference-observed` | explicit observer checkpoint; all required observation answers are complete | `observe_reference` / `record_observation` |
+| `vocabulary-checked` | vocabulary inspection is persisted for the Run | `inspect_svml_vocabulary --run <run>` |
+| `package-ready` | every `packages/local-*` package has real Surface/Producer/Fragment and is used by the compiled Graph | `validate_local_author_packages --run <run>` |
+| `script-checked` | every caption Cue has at most four visible words | `validate_script_cues --run <run>` |
 | `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
-| `graph-checked` | `preview_check` returns `sound: true` | `preview_check <run>` |
+| `graph-checked` | `preview_check` returns `sound: true` after package and Cue gates | `preview_check <run>` |
 | `review-planned` | `reconstruction_check` writes a plan | `reconstruction_check <run>` |
 | `preview-rendered` | render output and timing sidecar both exist | `render_element --batch <round.json>` |
 | `comparison-complete` | comparison log contains a complete record for the planned element | `compare_reconstruction` / `record_observation` |
 | `repairs-complete` | explicit checkpoint after applying comparison findings | edit Source, then rerun the checks |
-| `final-checked` | final `reconstruction_check` returns `passed: true` | `reconstruction_check <run>` |
+| `final-checked` | final `reconstruction_check` returns `passed: true` after all gates | `reconstruction_check <run>` |
 | `build-complete` | explicit checkpoint after the durable Build record is accepted | `hypit build` (confirm cost first) |
 
 The numeric `current_step` is only a cursor; `reconcile` starts at the first unmet predicate. It never
@@ -232,18 +235,22 @@ defaulted, and every conflict between observations is settled.
 ### 13. Inspect candidate packages
 
 ```bash
-hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/<name> [--package …]
+hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/<name> [--package …] --run <build.svrun>
 ```
 
 Enumerate the systems from the observations, then inspect a candidate for each. A system you never
 inspected is a system you are about to invent.
+When the Run exists, persist this evidence with `inspect_svml_vocabulary --run <build.svrun>` before
+claiming a vocabulary gap or writing Source.
 
 ### 14. Develop a project-local package, only for a proven gap
 
 **Read now:** `../local-author-package.md`, completely.
 
-**Done when:** the package installs and `inspect_svml_vocabulary` reads its declaration. A component
-that loads is not yet a component that looks like the reference.
+**Done when:** the package has a real Manifest, Types, Producers, Validators, Surface, decoder,
+Fragment, activation, README and preview, and `validate_local_author_packages --run <build.svrun>`
+reports that the Source imports and compiled Graph uses it. A component that merely loads is not done.
+If no gap remains, remove unused `packages/local-*` directories.
 
 ---
 
@@ -258,6 +265,8 @@ deliverable even though this route runs nothing: without it the first thing the 
 **Read now:**
 
 - `final-sources.md` — Segment boundaries, the forced seam, and take durations from `estimate:Speech`.
+- `../script-time.md` and `../playbooks/craft/captions.md` — every captioned passage must be split
+  with `||`, normally every 3–4 spoken words; do not rely on renderer wrapping.
 - `../authoring.md` — never invent a component, attribute, child, port, Recipe property or literal
   value, and how an accepted Record is reused in the Run Source.
 - `../playbooks/craft/captions.md` — Cue breaks, the Recipe keys, and what recomputes when speech
@@ -268,6 +277,8 @@ deliverable even though this route runs nothing: without it the first thing the 
   contains. Those conditions can only be evaluated now, with the evidence in.
 
 Do not author one source fragment per shot.
+Before `hypit check`, run `validate_script_cues --run <build.svrun>`; every Cue must contain at most
+four visible words and use `||` between complete Alignment Units.
 
 ### 16. Check every source, then prove the graph traces
 

@@ -36,9 +36,11 @@ interruption or context compaction, read `../recovery.md`, run `route_state --ac
 | --- | --- | --- |
 | `environment` | explicit checkpoint after Distribution, project and credentials are selected | `hypit paths --json` |
 | `brief-frozen` | explicit checkpoint naming the frozen brief, audience, format and claims | return to the brief checkpoint |
+| `vocabulary-checked` | vocabulary inspection is persisted for the Run | `inspect_svml_vocabulary --run <run>` |
+| `package-ready` | every `packages/local-*` package has real Surface/Producer/Fragment and is used by the compiled Graph | `validate_local_author_packages --run <run>` |
+| `script-checked` | every caption Cue has at most four visible words | `validate_script_cues --run <run>` |
 | `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
-| `vocabulary-checked` | explicit checkpoint after package vocabulary is inspected and any gap is resolved | `inspect_svml_vocabulary` |
-| `graph-checked` | `preview_check` returns `sound: true` | `preview_check <run>` |
+| `graph-checked` | `preview_check` returns `sound: true` after package and Cue gates | `preview_check <run>` |
 | `review-planned` | `authoring_check` writes a plan | `authoring_check <run>` |
 | `preview-rendered` | render output and timing sidecar both exist | `render_element --batch <round.json>` |
 | `review-complete` | review log contains a complete record for the planned element | `review_element` / `record_review` |
@@ -95,6 +97,8 @@ and whether any is genuinely missing. That file states why a system nobody inspe
 about to invent, and this route is where that is easiest: there is no reference to contradict you.
 
 For a proven gap, read `../local-author-package.md` completely and build the package.
+Persist inspection with `inspect_svml_vocabulary --run <build.svrun>` and prove every local package
+with `validate_local_author_packages --run <build.svrun>` before writing Source.
 
 ### 6. Write the Script
 
@@ -105,8 +109,13 @@ seams fall.
 **Read now:** `../script-time.md` — where a Segment ends, where a forced seam goes, and why each
 take's duration comes from `estimate:Speech` rather than from the duration the author asked for.
 
+Hard layout gate: captioned speech must use `||` Cue breaks in the Script, normally every 3–4 spoken
+words. A long Segment without breaks is not acceptable; it becomes one overflowing Cue.
+
 Give every planned shot one job — hook, context, evidence, mechanism, reaction, payoff, transition,
 or CTA. Delete shots with no distinct job.
+Run `validate_script_cues --run <build.svrun>` before `hypit check`; split every Cue longer than four
+visible words with `||` between complete Alignment Units.
 
 ### 7. Write the four sources
 

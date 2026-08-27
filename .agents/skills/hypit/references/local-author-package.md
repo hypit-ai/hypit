@@ -219,6 +219,21 @@ is expensive to read.
 
 ## Install and validate
 
+### Mechanical completion gate
+
+Before Source can be considered authored, run:
+
+```bash
+hypit-reference-video-tools validate_local_author_packages --run <path/to/build.svrun>
+```
+
+Every project-local `packages/local-*` package must expose a non-empty Manifest, at least one
+Markup Surface, at least one Producer and at least one Run Fragment with operations and exports. The
+Run's compiled Graph must contain an operation from that package, and the Author Source must import
+and use its Surface. An import without use, a marker-only package, or a package replaced by a similar
+official component fails with a machine-readable diagnostic. If no gap exists, do not leave an unused
+local package in the project.
+
 The Host resolves the explicitly selected physical package name directly at
 `<project>/packages/<package-basename>/` and supplies official `@hypit/*` imports from the read-only
 tool Distribution. The `@hypit/*` namespace is reserved for that active Distribution; a project uses
