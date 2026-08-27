@@ -87,7 +87,7 @@ npx skills add hypit-ai/hypit -g
     <td width="28%"><video src="https://github.com/user-attachments/assets/2b04977e-665d-4d5f-8f82-c1ebdf567d2c" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4">Local-hosted MiniMax H3; 3 GPT Image 2 generations; Ranking board, TikTok-style captions, visual effects rendered in headless chromium. <b>Total cost: $0.15.</b></td>
+    <td colspan="4"><p><b>"DAILY CREATINE"</b> — an 18-second podcast clip where a muscle barbie forces creatine on a skinny college kid. Three confrontational A-rolls and an aspirational lifestyle B-roll by Seedance 2 Mini 720p, two 2K AI character portraits and three 1K montage panels by GPT Image 2, WhisperX word alignment, split-screen interview layout, speaker-aware karaoke captions, a product-handoff moment and background music, concurrently rendered in 64 headless Chromium processes.</p><p>Three clones included: swap both hosts to Pepe and Doge arguing about doggy arms, replace the creatine with retinol where a pretty boy roasts a tomboy's pores, or ditch the physical product for a CheatGPT app where a himbo jock out-GPAs a PhD student — same interview format, three ad verticals.</p><p>Total cost: <b>$1.07</b>.</p></td>
   </tr>
 </table>
 
