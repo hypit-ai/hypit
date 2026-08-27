@@ -111,8 +111,8 @@ export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element, re
 };
 ```
 
-[Component Anatomy](./component-anatomy.md) names every role a component package fills and where to
-find each one in an existing package, since the filenames differ between packages.
+[Component Anatomy](./component-anatomy.md) names every role a component package fills and points to
+the minimal fixture's corresponding role, so a new package does not need to inspect a business package.
 
 For a generic package, use the complete fixture at
 `examples/minimal-author-package/packages/example-component/` rather than copying an unrelated

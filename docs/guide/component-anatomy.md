@@ -1,12 +1,12 @@
 ---
 title: Component Anatomy
-description: The roles a component package fills, and how to find them in an existing package.
+description: The roles a component package fills, illustrated by the minimal author-package fixture.
 ---
 
 # Component Anatomy
 
-Every component package fills the same set of roles. The filenames differ from package to package, so
-find a role by what it exports, not by what its file is called. This page describes the roles;
+Every component package fills the same set of roles. This page describes the roles and their
+canonical fixture locations;
 [Adding an Author Package](./author-packages.md) is the step-by-step.
 
 Read this instead of reading a neighbouring package end to end. One package's specifics are a worse

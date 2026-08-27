@@ -129,10 +129,9 @@ only Studio interpretation and operations through `hypit.studio-adapter@1`; it n
 `packages/studio`, and the author package never imports Studio. A generic block is valid while no
 special interpretation is needed.
 
-Know what that fallback gives it, because it is enough for a lot of packages. The `visual-track` rule
-in `packages/studio-video-adapters/src/generic.ts` declares no module filter, and a rule that
-declares none matches whatever the module is, so a project-local Track producing a `VisualTrack`
-lands there and gets `role: "track"`. Studio draws it in a flat media lane and exposes five timing
+Know what that fallback gives it, because it is enough for a lot of packages. A project-local Track
+producing a `VisualTrack` lands in the generic `role: "track"` lane when no companion claims the
+Module. Studio draws it in a flat media lane and exposes five timing
 parameters — `start`, `end` and `for` writable, `during` and `at` read-only — over a read-only
 interaction: the block can be selected and seeked, not dragged or trimmed. A companion package is
 what buys anything past that: parameters named for what the component actually has, child entities,
