@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import type { ArtifactAttachment } from "@hypit/workspace";
 import type { CompiledGraph, TypedRecord } from "@hypit/protocol";
-import { findMockTargets } from "./graph.js";
+import { estimatedProgramDurationSeconds, findMockTargets } from "./graph.js";
 import { deriveGeometry } from "./geometry.js";
 import { previewRunSource } from "./run-source.js";
 import { materializeMockNeed } from "./materialize.js";
@@ -44,6 +44,7 @@ export async function realizePreviewMock(input: PreviewMockRequest): Promise<Pre
   }
   const alias = (ref: string): string => input.aliases?.get(ref) ?? ref;
   const rawTargets = findMockTargets(input.graph, input.targets, input.records);
+  const fallbackDurationSeconds = estimatedProgramDurationSeconds(input.graph, input.records);
   const targets = rawTargets.map((target) => ({
     ...target,
     output: alias(target.output),
@@ -95,11 +96,17 @@ export async function realizePreviewMock(input: PreviewMockRequest): Promise<Pre
     const constraints = target.kind === "image"
       ? { width: geometry.width, height: geometry.height, color: "#9AA0A6" }
       : target.kind === "video"
-        // A mock video needs enough frames for the estimate-timed SemanticTake
-        // to place every token.  The real duration remains owned by the graph;
-        // this conservative preview domain avoids squeezing long Scripts into
-        // the old 30-frame placeholder.
-        ? { width: geometry.width, height: geometry.height, frameRate: { numerator: 30, denominator: 1 }, frameCount: 300, color: "#9AA0A6", audio: "silence" }
+        // The mock video domain follows the deterministic SpeechDuration carried by this target.
+        // It must not invent a ten-second clock per Segment: SemanticTake owns the estimate timing
+        // and the generated preview material only needs enough frames for that estimate.
+        ? {
+            width: geometry.width,
+            height: geometry.height,
+            frameRate: { numerator: 30, denominator: 1 },
+            frameCount: Math.max(1, Math.ceil((target.durationSeconds ?? fallbackDurationSeconds ?? 1) * 30)),
+            color: "#9AA0A6",
+            audio: "silence",
+          }
         : { sampleRate: 48_000, channels: 2, sampleFrames: 48_000 };
     const materialized = await materializeMockNeed({ capability, constraints, artifacts: artifactStore });
     if (!attached.has(materialized.artifact.digest)) {

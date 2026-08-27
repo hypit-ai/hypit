@@ -4,7 +4,7 @@ import { dirname, join, resolve, sep } from "node:path";
 
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface } from "@hypit/markup";
-import { loadNodePackageSelection } from "@hypit/package-loader-node";
+import { loadNodePackageSelection, physicalPackageName } from "@hypit/package-loader-node";
 import { parseScript, validateCaptionCueLengths } from "@hypit/script";
 import { videoCliDistribution } from "@hypit/video-cli";
 import { loadStudioCompanionRegistry } from "@hypit/studio/src/companion-profile.js";
@@ -782,6 +782,11 @@ export async function authoringCheck(
   // Which of their Surfaces draw a Track. A Style Surface publishes a Style and draws nothing, so
   // requiring a comparison of it would be asking for a picture that does not exist.
   const specifiers = [...new Set(imports.map((item) => item.specifier))];
+  // Logical submodules (for example @hypit/gpt-image/clean) are aliases owned by the
+  // physical package (@hypit/gpt-image). Load the physical owner, but retain the logical
+  // spelling for Source diagnostics and map drawing tags back to that owner.
+  const physicalByLogical = new Map(specifiers.map((specifier) => [specifier, physicalPackageName(specifier)] as const));
+  const physicalSpecifiers = [...new Set(specifiers.map((specifier) => physicalByLogical.get(specifier)!))];
   // One unresolvable package used to take the rest with it: the whole selection loads or none of it
   // does, and a swallowed failure left `drawingTags` empty, so every element in the Source read as
   // drawing nothing and the check passed on an empty answer. Fall back to loading them one at a time so
@@ -792,10 +797,10 @@ export async function authoringCheck(
   // with nowhere to resolve from, so a project whose Source imports the standard vocabulary reports
   // every one of those imports as a package that does not exist.
   const loading = { ...(distributionPackageRoot === undefined ? {} : { fallbackRoots: [distributionPackageRoot] }) };
-  const loaded = await loadNodePackageSelection(specifiers, packageRoot, loading).catch(async () => {
-    const each = await Promise.all(specifiers.map(async (specifier) =>
+  const loaded = await loadNodePackageSelection(physicalSpecifiers, packageRoot, loading).catch(async () => {
+    const each = await Promise.all(physicalSpecifiers.map(async (specifier) =>
       await loadNodePackageSelection([specifier], packageRoot, loading).catch(() => {
-        unresolved.push(specifier);
+        unresolved.push(...specifiers.filter((logical) => physicalByLogical.get(logical) === specifier));
         return [];
       })));
     return each.flat();
@@ -814,11 +819,12 @@ export async function authoringCheck(
   // Every use of one of those tags, by the id the Source gave it.
   const drawn: { readonly id: string; readonly tag: string; readonly alias: string; readonly specifier: string }[] = [];
   for (const { alias, specifier } of imports) {
+    const physical = physicalByLogical.get(specifier) ?? specifier;
     const pattern = new RegExp(`<${alias}:([A-Za-z][A-Za-z0-9]*)\\b[^>]*?\\bid="([^"]+)"`, "gu");
     for (const match of svml.matchAll(pattern)) {
       const tag = match[1] ?? "";
       const id = match[2] ?? "";
-      if (!drawingTags.has(`${specifier}#${tag}`)) continue;
+      if (!drawingTags.has(`${physical}#${tag}`)) continue;
       if (!drawn.some((item) => item.id === id)) drawn.push({ id, tag, alias, specifier });
     }
   }
@@ -1325,7 +1331,11 @@ export async function authoringCheck(
     // and that is written rather than derived.
     ...(owed.length === 0 || mode !== "reconstruction" ? {} : {
       comparisons: owed.map((entry) => ({
-        run: runPath, tokens: entry.tokens, video_path: entry.out, element: entry.element,
+        run: runPath,
+        tokens: entry.tokens,
+        video_path: entry.out,
+        element: entry.element,
+        question: "Ignore flat preview-mock regions standing in for declared-but-unbuilt media; compare authored layout, typography, motion and timing only.",
       })),
     }),
     // Where this command actually read and resolved from. Said here, no document has to describe it
@@ -1475,7 +1485,7 @@ export async function authoringCheck(
     }),
     playback: running,
     ...(running.length === 0 ? {} : {
-      playback_next: "A generated take is ordered in whole seconds and its window is measured from speech the "
+      playback_next: "Only moving/generated media with a duration-bearing timeline needs playback. Still images have no timeline and must not be given playback. For a generated take, the take is ordered in whole seconds and its window is measured from speech the "
         + "Build has yet to synthesize, so the material is shorter than the window it fills more "
         + "often than not. Under a full-frame picture the remainder is the Film background, which "
         + "reads as a black gap; under a cutaway it is the layer beneath blinking through.\n\n"

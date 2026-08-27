@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { compositionTypes } from "@hypit/composition";
 import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 import { programSpaceTypes } from "@hypit/program-space";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { temporalTypes } from "@hypit/temporal";
 
 const previewImage = (file: string) => ({
@@ -27,6 +28,7 @@ export const exampleManifest: ModuleManifest = {
   dependencies: [
     { module: compositionTypes.visualTrack.module },
     { module: programSpaceTypes.programSpace.module },
+    { module: semanticTrackTypes.track.module },
     { module: temporalTypes.window.module },
   ],
   types: Object.values(exampleTypes).map(({ name }) => ({ name })),
@@ -42,10 +44,10 @@ export const exampleManifest: ModuleManifest = {
 const vocabulary = (summary: string, example: string) => ({
   summary,
   appearance: "A deterministic, self-contained example surface rendered on the supplied ProgramSpace.",
-  preview: previewImage("Example.png"),
+  preview: previewImage("Box.png"),
   attributes: [
     { name: "id", kind: "identifier" as const, required: true, summary: "Names this instance." },
-    { name: "space", kind: "reference" as const, required: true, accepts: [programSpaceTypes.programSpace], summary: "Selects the time space." },
+    { name: "semantic", kind: "reference" as const, required: true, accepts: [semanticTrackTypes.track], summary: "Selects the semantic timing track." },
   ],
   ports: [{ name: "track", type: compositionTypes.visualTrack, summary: "The terminal VisualTrack." }],
   example,
@@ -53,7 +55,7 @@ const vocabulary = (summary: string, example: string) => ({
 });
 
 export const exampleMarkupSurfaces = [
-  { name: "box", tag: "Box", mode: "structured", outputs: [exampleTypes.box, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A framed box surface.", "<example:Box id=\"box\" space={space.main}/>") , preview: previewImage("Example.png") } },
-  { name: "text", tag: "Text", mode: "structured", outputs: [exampleTypes.text, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A text-bearing surface.", "<example:Text id=\"title\" space={space.main}>Hello</example:Text>"), preview: previewImage("Example.png") } },
-  { name: "media-slot", tag: "MediaSlot", mode: "structured", outputs: [exampleTypes.mediaSlot, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A media slot whose content is a graph input.", "<example:MediaSlot id=\"shot\" space={space.main}/>") , preview: previewImage("Example.png") } },
+  { name: "box", tag: "Box", mode: "structured", outputs: [exampleTypes.box, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A framed box surface.", "<example:Box id=\"box\" semantic={speech.semantic}/>") , preview: previewImage("Box.png") } },
+  { name: "text", tag: "Text", mode: "structured", outputs: [exampleTypes.text, temporalTypes.instantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A text-bearing surface.", "<example:Text id=\"title\" semantic={speech.semantic}>Hello</example:Text>"), preview: previewImage("Box.png") } },
+  { name: "media-slot", tag: "MediaSlot", mode: "structured", outputs: [exampleTypes.mediaSlot, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A media slot whose content is a graph input.", "<example:MediaSlot id=\"shot\" semantic={speech.semantic}/>") , preview: previewImage("Box.png") } },
 ] as const;

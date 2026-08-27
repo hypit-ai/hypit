@@ -13,4 +13,5 @@ export {
   visualTrackSchema,
 } from "./schema.js";
 export { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity, sealAudioTrack, sealComposition, sealVisualTrack } from "./track.js";
+export { animatableLocalStyles } from "./track.js";
 export type * from "./track.js";

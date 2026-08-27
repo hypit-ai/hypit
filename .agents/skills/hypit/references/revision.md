@@ -34,7 +34,8 @@ deliberately not a VLM/observer step. Revision does not call
 `review_element`, `compare_reconstruction`, Vertex, WhisperX or any other visual observer. Mark that
 stage only as an explicit mechanical checkpoint when the requested source change has been covered by
 the deterministic checks. Revision itself performs no visual judgement; after it completes, if no
-Studio session is running for the current Run, start Studio and show the author the updated result.
+Studio session is running for the current Run, start Studio, capture the URL printed by the server,
+and give the author the exact URL with the updated result.
 
 ## Work sequence
 

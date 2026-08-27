@@ -119,6 +119,10 @@ element ids. Use those numbers as the mechanical findings and let the observer d
 alignment or overflow matches the reference/intent. The report cannot measure renderer-shaped glyph
 bounds or infer intent, so the visual pass must still confirm text and marks in the rendered image.
 
+Do not treat a clearly platform/player/export-tool watermark as authored content. Ignore it when its
+provenance is obvious; if it could be part of the design, record the uncertainty instead of inventing
+a repair.
+
 A mock lives only in this render. It is never written into the Source, and no gate reads it: the
 `playback` check reads the Source's Recipes, so a mock cannot be mistaken for coverage.
 

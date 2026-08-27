@@ -76,6 +76,9 @@ Canvas offsets, containment overflow, and bound element ids. Use it as the mecha
 the conformance decision from the rendered picture and intent. It cannot measure actual glyph bounds or
 infer intent, so those still require the reader.
 
+Clearly platform/player/export-tool watermarks are not authored content and should be ignored. If a mark
+could be intentional design, preserve the uncertainty and do not silently remove it.
+
 `--question` is available and means what it means on the other route: which region to read, never what
 to conclude.
 

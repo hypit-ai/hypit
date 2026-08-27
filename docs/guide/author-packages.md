@@ -166,22 +166,14 @@ package's own README and vocabulary first, then only the role files needed for t
 The preview is a real frame of your own component, rendered locally. Nothing generates it for you,
 and a mock-up drawn by hand is worse than no preview at all, because it claims to be output.
 
-Render the fixture's preview Source with `hypit-reference-video-tools render_previews`. For a new
-package, use the same package-owned preview Source and keep one representative rendered frame. The
-sequence is:
-
-1. build the Track value with your package's own render function, over a sealed ProgramSpace;
-2. `sealComposition({ id, canvas, tracks })`, then `compileHyperframesDocument(composition, space)`
-   from `@hypit/hyperframes`;
-3. `materializeHyperframesHtml(document, resolve)` into a temporary directory, where `resolve` maps
-   each declared Artifact — fonts, images — to a local file;
-4. run the pinned HyperFrames CLI's `render` on that directory with a PNG-sequence output, resolved
-   through `@hypit/provider-hyperframes-local`;
-5. keep one frame that shows the component in a representative state, and commit it under
-   `preview/`.
-
-The alternative is a narrow `.svrun` Target rendered by the local HyperFrames Provider, then one
-frame taken with `ffmpeg`. That is a Build; it needs a Runtime Profile, and it is the heavier route.
+Render the fixture's preview Source with
+`hypit-reference-video-tools render_previews <package-dir>`. For a new package, use the same
+package-owned `preview/preview.svml`, `preview/recipes.svs` and `preview/build.svrun` shape, then keep
+one representative frame under `preview/`. The command resolves the package from its explicit
+workspace/package root and the active Distribution fallback; it does not require a
+`packages/<slug>/node_modules` self-link or a manual `npm link`. It compiles the preview Run, lets the
+native preview-mock path satisfy undeclared media, renders the complete deterministic composition
+through the local HyperFrames Provider, and writes the promised image named by the Surface Manifest.
 
 Choose a frame mid-behaviour rather than at rest. A preview of an element that has not entered yet,
 or has already settled into a static end state, shows the least useful thing about it.
@@ -291,4 +283,14 @@ const decoded: SurfaceDecodeOutput = {
 For temporal elements, the Surface side is `@hypit/temporal-markup`, not the graph-side
 `@hypit/temporal` module. Use `createTemporalWindowProjection` or
 `createTemporalInstantProjection` with the element, semantic reference and resolver, then append
-the returned `records`, `components` and `fragments` to the same `SurfaceDecodeOutput`.
+the returned `records`, `components` and `fragments` to the same `SurfaceDecodeOutput`. Because those
+projections publish records that other Surface code may reference, the declaration's `outputs` must
+include every generated public type (`TemporalInstantSpec`, `TemporalWindowSpec`, `TemporalInstant`
+and `TemporalWindow`) in addition to the component's own records and terminal Track. The minimal
+fixture's temporal helper shows the two packages and the attribute vocabulary without requiring a
+business package source read.
+
+Producer ports are exact, not variadic: the keys supplied by a Fragment operation must match the
+Manifest's `inputs`, `outputs` and `needs` exactly. For a variable number of child items, emit one
+operation per item and feed those operations into an append/merge Producer with fixed named ports;
+do not invent an `items[]` port that the Manifest did not declare.

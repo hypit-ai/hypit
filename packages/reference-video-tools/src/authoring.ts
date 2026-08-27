@@ -498,6 +498,8 @@ export type RenderElementInput = {
    * preview timing, which is always the Source's own `estimate:Speech` policy.
    */
   readonly reference_id?: string;
+  /** Optional workspace root used by package-owned preview Sources. */
+  readonly package_root?: string;
 };
 
 /** Timing metadata recorded beside one render, per Segment. */
@@ -552,11 +554,14 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const run = input.run;
   const cwd = invokedFrom();
   const runPath = resolve(cwd, run);
-  const projectRoot = dirname(runPath);
+  const runRoot = dirname(runPath);
+  const projectRoot = input.package_root === undefined
+    ? (nearestPackageRoot(runRoot) ?? repositoryRoot())
+    : resolve(cwd, input.package_root);
   // Where installed packages are found, which is not where the Hypit tree is. A project carries its
   // own packages, so the search starts at the project and walks up the way the CLI's does —
   // resolving against the tree instead would miss every package the project installed for itself.
-  const packageRoot = nearestPackageRoot(projectRoot) ?? repositoryRoot();
+  const packageRoot = projectRoot;
   const outPath = resolve(cwd, out);
   // The directory the caller named, made rather than required. `out` is resolved against the working
   // directory the way `run` is, so a round whose entries name `renders/<element>.mp4` writes them
@@ -569,7 +574,7 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   assert(runSource !== undefined, `cannot read ${runPath}`);
   const author = /<author\s+source="([^"]+)"/u.exec(runSource)?.[1];
   assert(author !== undefined, `${run} declares no <author source="…"/>`);
-  const svmlPath = resolve(projectRoot, author);
+  const svmlPath = resolve(runRoot, author);
   let svml = await readFile(svmlPath, "utf8").catch(() => undefined);
   assert(svml !== undefined, `cannot read ${svmlPath}`);
 
@@ -706,8 +711,8 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   // `Composition has zero duration`.
   await once(`draw:${renderKey}`, async () => {
     // Compile once, materialize with the artifact bytes written beside the document, and let the
-    // HyperFrames runtime draw it. This is the path packages/hyperframes/test/browser-visual.test.ts
-    // takes; nothing here is a private renderer.
+    // HyperFrames runtime draw it. This remains the same public rendering path used by Studio;
+    // nothing here is a private renderer.
     const document = compileHyperframesDocument(built.composition, built.space as ProgramSpace);
     await mkdir(stage, { recursive: true });
     const names = new Map<string, string>();
@@ -851,7 +856,13 @@ export async function renderPreviews(input: RenderPreviewsInput): Promise<Record
         `${directory} promises ${picture} but its preview Source places no <${alias}:${tag}> to draw it from`);
       const out = join(previewDir, picture);
       try {
-        await renderElement({ run, element, out });
+        // Resolve the package from its workspace root rather than requiring a self-link under
+        // packages/<slug>/node_modules. The preview Run still lives inside the package directory;
+        // only dependency discovery needs the parent workspace.
+        // The resolver root is the project/workspace containing `packages/`, not that directory
+        // itself.  Keeping this explicit also lets the canonical fixture render without a
+        // package-manager self-link under the package it is previewing.
+        await renderElement({ run, element, out, package_root: dirname(dirname(packageDir)) });
       } catch (error) {
         throw new Error(`${directory} could not draw ${picture}: ${error instanceof Error ? error.message : String(error)}`);
       }

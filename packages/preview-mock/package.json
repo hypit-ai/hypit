@@ -10,6 +10,7 @@
     "@hypit/artifact": "workspace:*",
     "@hypit/artifact-store-fs": "workspace:*",
     "@hypit/compiler-node": "workspace:*",
+    "@hypit/estimate": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/mock-media": "workspace:*",
     "@hypit/provider-media-local": "workspace:*",
@@ -18,6 +19,7 @@
     "@hypit/media": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/speech": "workspace:*",
+    "@hypit/text": "workspace:*",
     "@hypit/semantic-take-estimate": "workspace:*",
     "@hypit/workspace": "workspace:*"
   }

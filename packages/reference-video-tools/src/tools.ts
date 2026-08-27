@@ -5,7 +5,7 @@ import { cpus } from "node:os";
 import { createHash } from "node:crypto";
 import { deflateSync } from "node:zlib";
 import { basename, dirname, join, resolve } from "node:path";
-import { loadNodePackageSelection, locateNodePackage } from "@hypit/package-loader-node";
+import { loadNodePackageSelection, locateNodePackage, physicalPackageName } from "@hypit/package-loader-node";
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface, SurfaceVocabulary } from "@hypit/markup";
 import { exactModelHostAbi } from "@hypit/model-kit";
@@ -13,6 +13,7 @@ import type { ValueSchema } from "@hypit/protocol";
 import {
   visualPathCommandSchema, visualTextDocumentSchema, visualTextFlowSchema,
   visualTextPaintSchema, visualTextTypographySchema, visualTrackSchema,
+  animatableLocalStyles,
 } from "@hypit/composition";
 
 import { describeSchema } from "./contract.js";
@@ -138,6 +139,8 @@ export type CompareReconstructionInput = {
    * elements have been compared and which have never been looked at.
    */
   readonly element?: string;
+  /** Maximum frame-domain difference tolerated when matching the two independently encoded cuts. */
+  readonly tolerance_frames?: number;
   /**
    * A whole round of comparisons, run together. Each entry names its own stretch, render and element
    * exactly as a single call does, and inherits `reference_id` from the outer input. The route renders
@@ -789,6 +792,7 @@ function asPictures(media: readonly string[], state: ReferenceState): readonly s
 const TILE_PREAMBLE = "Each supplied picture that shows a grid of frames is one shot, sampled evenly"
   + " across its duration and laid out in reading order: left to right, then top to bottom. Read the"
   + " grid as time passing. A single picture that is not a grid is one moment.";
+const WATERMARK_RULE = "If a visible mark is clearly a platform UI, player chrome, export-tool or editing-software watermark/overlay rather than authored video content, ignore it and do not report it as a difference or repair target. If its provenance is uncertain or it may be an authored design element, keep it as an uncertainty instead of silently ignoring it.";
 // There is no second source of sound to fall back to, so this says how to answer from what there is
 // rather than leaving the observation short. The transcript settles when speech happens; the picture
 // settles who is on screen while it does. Read together they carry the question far enough to answer.
@@ -978,6 +982,7 @@ async function cutWordRange(
   renderedPath: string,
   clip: boolean,
   slot: string,
+  toleranceFrames = 3,
 ): Promise<RangeCut> {
   const cuts = referenceCuts(state);
   const head = cuts.find((at) => at >= range.first.startSeconds && at < range.first.endSeconds);
@@ -1022,7 +1027,7 @@ async function cutWordRange(
     // rounded up to a whole audio frame — 1024 samples, so 21ms at 48kHz — which neither side's frame
     // grid divides. Three frames covers both; anything larger is the cut disagreeing with the render
     // about which words the stretch holds.
-    const slack = 3 / drawn.frameRate;
+    const slack = toleranceFrames / drawn.frameRate;
     assert(Math.abs(referenceSeconds - renderedSeconds) <= slack,
       `the cut reference runs ${round(referenceSeconds)}s and the trimmed render ${round(renderedSeconds)}s, `
       + `which is more than ${round(slack)}s apart; they must cover the same stretch`);
@@ -1108,6 +1113,12 @@ function publicPrepare(state: ReferenceState): PrepareResult {
 
 export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceVideoTools {
   const packageRoot = resolve(options.packageRoot ?? process.cwd());
+  // Project-owned packages and the active Distribution are separate roots.  A project may import
+  // @hypit modules without installing or linking them locally; every direct inspection path must
+  // therefore carry the same Distribution fallback used by the compiler/Studio loaders.
+  const packageLoading = () => videoCliDistribution.packageRoot === undefined
+    ? {}
+    : { fallbackRoots: [videoCliDistribution.packageRoot] };
 
   async function validateLocalAuthorPackages(input: ValidateLocalAuthorPackagesInput): Promise<Record<string, unknown>> {
     const runPath = resolve(invokedFrom(), input.run);
@@ -1124,11 +1135,28 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     const loading = distributionPackageRoot === undefined ? {} : { fallbackRoots: [distributionPackageRoot] };
     const runSource = await readFile(runPath, "utf8").catch(() => "");
     const authorSourcePath = /<author\s+source="([^"]+)"/u.exec(runSource)?.[1];
-    const authorSource = authorSourcePath === undefined ? "" : await readFile(resolve(dirname(runPath), authorSourcePath), "utf8").catch(() => "");
-    const imported = new Set([
-      ...[...runSource.matchAll(/\bfrom="([^"]+)@\d+"/gu)].map((match) => match[1]!),
-      ...[...authorSource.matchAll(/\bfrom="([^"]+)@\d+"/gu)].map((match) => match[1]!),
-    ]);
+    const authorFile = authorSourcePath === undefined ? undefined : resolve(dirname(runPath), authorSourcePath);
+    const imported = new Set<string>();
+    const visitedSources = new Set<string>();
+    const collectSourceClosure = async (file: string): Promise<void> => {
+      const absolute = resolve(file);
+      if (visitedSources.has(absolute)) return;
+      visitedSources.add(absolute);
+      const source = await readFile(absolute, "utf8").catch(() => "");
+      for (const match of source.matchAll(/\bfrom="([^"]+)@\d+"/gu)) {
+        const specifier = match[1]!;
+        if (specifier.startsWith("@")) imported.add(specifier);
+      }
+      // Author/Recipe/Run child Sources use `source=`, while package imports use `from=`. Walk only
+      // local files so package declarations remain data and cannot escape the project root.
+      for (const match of source.matchAll(/\bsource="([^"#]+)"/gu)) {
+        const child = match[1]!;
+        if (child.startsWith("@") || child.startsWith("http://") || child.startsWith("https://")) continue;
+        await collectSourceClosure(resolve(dirname(absolute), child));
+      }
+    };
+    await collectSourceClosure(runPath);
+    if (authorFile !== undefined) await collectSourceClosure(authorFile);
     let graphModules = new Set<string>();
     try {
       if (distributionPackageRoot !== undefined) {
@@ -1159,12 +1187,14 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const contribution = loaded[0]?.contribution;
       const modules = contribution?.modules ?? [];
       const surfaces = (contribution?.hostFacets ?? []).filter((facet) => facet.abi === markupSurfaceHostFacetAbi);
-      const fragments = (contribution?.hostFacets ?? []).filter((facet) => facet.abi === "hypit.run-fragment-host@1");
+      // Author packages expand Markup Surfaces into Graph Fragments; they do not need the separate
+      // run-fragment host facet used by preview/mock replacement packages.
+      const runFragmentFacets = (contribution?.hostFacets ?? []).filter((facet) => facet.abi === "hypit.run-fragment-host@1");
       const producers = modules.flatMap((module) => module.manifest.producers);
-      const fragmentValues = fragments.flatMap((facet) => Object.values((facet.implementation as { fragments?: Record<string, { operations?: readonly unknown[]; exports?: readonly unknown[] }> }).fragments ?? {}));
+      const fragmentValues = runFragmentFacets.flatMap((facet) => Object.values((facet.implementation as { fragments?: Record<string, { operations?: readonly unknown[]; exports?: readonly unknown[] }> }).fragments ?? {}));
       if (surfaces.length === 0) errors.push("PACKAGE_NO_SURFACE");
       if (producers.length === 0) errors.push("PACKAGE_NO_PRODUCER");
-      if (fragments.length === 0 || fragmentValues.every((fragment) => (fragment.operations?.length ?? 0) === 0 || (fragment.exports?.length ?? 0) === 0)) errors.push("PACKAGE_NO_FRAGMENT");
+      if (runFragmentFacets.length > 0 && fragmentValues.every((fragment) => (fragment.operations?.length ?? 0) === 0 || (fragment.exports?.length ?? 0) === 0)) errors.push("PACKAGE_NO_FRAGMENT");
       const declaredProducers = new Set(modules.flatMap((module) => module.manifest.producers.map((producer) => `${module.manifest.name}@${module.manifest.version}#${producer.name}`)));
       for (const fragment of fragmentValues) {
         for (const operation of fragment.operations ?? []) {
@@ -1183,11 +1213,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           errors.push("PACKAGE_SURFACE_INVALID");
         }
       }
-      const sourceImported = imported.has(specifier);
+      const sourceImported = imported.has(specifier) || [...imported].some((name) => physicalPackageName(name) === specifier);
       const graphUsed = modules.some((module) => graphModules.has(`${module.manifest.name}@${module.manifest.version}`));
       if (!sourceImported) errors.push("PACKAGE_NOT_IMPORTED");
       else if (!graphUsed) errors.push("PACKAGE_IMPORTED_BUT_UNUSED");
-      results.push({ specifier, manifest: modules.length > 0, surfaces: surfaces.length, producers: producers.length, fragments: fragmentValues.length, source_imported: sourceImported, source_used: graphUsed, graph_used: graphUsed, status: errors.length === 0 ? "passed" : "failed", ...(errors.length === 0 ? {} : { errors }) });
+      results.push({ specifier, manifest: modules.length > 0, surfaces: surfaces.length, producers: producers.length, fragments: fragmentValues.length, run_fragment_facets: runFragmentFacets.length, source_imported: sourceImported, source_used: graphUsed, graph_used: graphUsed, status: errors.length === 0 ? "passed" : "failed", ...(errors.length === 0 ? {} : { errors }) });
     }
     for (const specifier of expected) {
       if (!results.some((item) => item.specifier === specifier)) results.push({ specifier, status: "failed", errors: ["PACKAGE_EXPECTED_BUT_MISSING"] });
@@ -1270,7 +1300,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
             .filter((word) => shots.some((shot) => word.endSeconds > shot.start_seconds && word.startSeconds < shot.end_seconds))
             .map((word) => word.text).join(" ");
           pending.push({
-            key, instruction, prompt: [...parts, prompt].join("\n\n"), image_refs: asPictures(media, state),
+            key, instruction, prompt: [...parts, prompt, WATERMARK_RULE].join("\n\n"), image_refs: asPictures(media, state),
             ...(sound === true && words.length > 0 ? { transcript_ref: transcriptRef } : {}),
             ...(spoken.length === 0 ? {} : { transcript_words: spoken }),
             record_with: `record_observation --reference-id ${state.reference_id} --key ${key} --text-file <the answer>`,
@@ -1286,7 +1316,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       ask: async (_key, { media, prompt, instruction }) => {
         const parts: Part[] = [];
         for (const path of media) parts.push(await mediaPart(path));
-        parts.push({ text: prompt });
+        parts.push({ text: `${prompt}\n\n${WATERMARK_RULE}` });
         return await callSafely(retryDelayMs, generate, parts, instruction);
       },
     };
@@ -1343,7 +1373,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const models: string[] = [];
         let note: string | undefined;
         try {
-          for (const pack of await loadNodePackageSelection([specifier], packageRoot)) {
+          for (const pack of await loadNodePackageSelection([specifier], packageRoot, packageLoading())) {
             for (const facet of pack.contribution.hostFacets ?? []) {
               if (facet.abi === markupSurfaceHostFacetAbi) {
                 tags.push((facet.implementation as RegisteredSurface).tag);
@@ -1721,7 +1751,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
 
     async inspect_svml_vocabulary(input): Promise<Record<string, unknown>> {
       assert(input.package_names.length > 0, "package_names must not be empty");
-      const loaded = await loadNodePackageSelection(input.package_names, packageRoot);
+      const loaded = await loadNodePackageSelection(input.package_names, packageRoot, packageLoading());
       const requested = input.tags === undefined ? undefined : new Set(input.tags);
       // The answer is about the packages that were named. Loading one brings its dependencies with
       // it, and every one of their Surfaces used to be returned as well — asking what `@hypit/ranking`
@@ -1743,7 +1773,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
             mode: implementation.mode,
             outputs: implementation.outputs,
             vocabulary: vocabularyForResult(input.include_previews === false ? withoutPreview(implementation.vocabulary) : implementation.vocabulary),
-            readme_path: readmePath(pack.specifier, packageRoot),
+            readme_path: readmePath(pack.specifier, packageRoot, packageLoading()),
           });
         }
       }
@@ -1808,7 +1838,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       // component's Fragment names one per operation, and the names were reachable only by opening a
       // package that already called them.
       const wanted = input.producers ?? [];
-      const calls = wanted.length === 0 ? [] : (await loadNodePackageSelection(wanted, packageRoot).catch(() => []))
+      const calls = wanted.length === 0 ? [] : (await loadNodePackageSelection(wanted, packageRoot, packageLoading()).catch(() => []))
         .flatMap((pack) => (pack.contribution.modules ?? []).flatMap((module) =>
           module.manifest.producers.map((producer) => ({
             module: `${module.manifest.name}@${module.manifest.version}`,
@@ -1819,6 +1849,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           }))));
       return {
         shapes: chosen.map((name) => ({ shape: name, describes: describeSchema(shapes[name]!).join("\n") })),
+        animatable_local_styles: [...animatableLocalStyles],
         ...(calls.length === 0 ? {} : { producers: calls }),
         // Each of these is refused somewhere, or follows from how the emitted CSS is written. None is
         // a convention: a rule stated here that the code does not hold would be worse than silence.
@@ -1912,7 +1943,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           ...(input.tokens === undefined ? {} : { tokens: input.tokens }),
         };
         const range = await spokenRange(svmlPath, focus, await referenceWords(state.reference_id));
-        cut = await cutWordRange(state, root, focus, range, renderedPath, clip, slot);
+        const toleranceFrames = input.tolerance_frames ?? 3;
+        assert(Number.isSafeInteger(toleranceFrames) && toleranceFrames >= 0, "tolerance_frames must be a non-negative integer");
+        cut = await cutWordRange(state, root, focus, range, renderedPath, clip, slot, toleranceFrames);
         referenceMedia = cut.reference;
         renderedMedia = cut.rendered;
         stretchSeconds = cut.seconds;
@@ -1949,7 +1982,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       // `cutWordRange`; this is the path that had no check at all.
       if (asClip && shot !== undefined) {
         const drawn = await probe(renderedPath);
-        const slack = drawn.frameRate > 0 ? 3 / drawn.frameRate : 0.1;
+        const toleranceFrames = input.tolerance_frames ?? 3;
+        assert(Number.isSafeInteger(toleranceFrames) && toleranceFrames >= 0, "tolerance_frames must be a non-negative integer");
+        const slack = drawn.frameRate > 0 ? toleranceFrames / drawn.frameRate : 0.1;
         assert(Math.abs(drawn.duration - shot.duration_seconds) <= slack,
           `shot ${shot.shot_id} runs ${round(shot.duration_seconds)}s and the render ${round(drawn.duration)}s, `
           + `which is more than ${round(slack)}s apart; the two sides would cover different amounts of the video`);
@@ -2471,11 +2506,16 @@ function withoutPreview(value: SurfaceVocabulary | undefined): SurfaceVocabulary
   return rest;
 }
 
-function readmePath(specifier: string, root: string): string | undefined {
+function readmePath(
+  specifier: string,
+  root: string,
+  loading: Parameters<typeof loadNodePackageSelection>[2] = {},
+): string | undefined {
   try {
     const located = locateNodePackage(specifier, {
       from: join(root, "__hypit_reference_tools__.mjs"),
       workspaceRoots: [root],
+      ...(loading.fallbackRoots === undefined ? {} : { distributionRoots: loading.fallbackRoots }),
     });
     return join(located.root, "README.md");
   } catch { return undefined; }
