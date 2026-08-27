@@ -131,7 +131,7 @@ function repositoryRoot(): string {
  * Where installed packages are resolved from, found the way `hypit check` finds it: the nearest
  * directory at or above the project that holds a `package.json`.
  *
- * A project's own `packages/local-*` are installed against the project, so a root taken from
+ * A project's own packages are installed against the project, so a root taken from
  * anywhere else resolves none of them. This is the same walk `packages/cli/src/main.ts` performs,
  * and the reason a project is given a `package.json` of its own — without one the walk passes
  * through it and lands on the tree.
@@ -554,7 +554,7 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const runPath = resolve(cwd, run);
   const projectRoot = dirname(runPath);
   // Where installed packages are found, which is not where the Hypit tree is. A project carries its
-  // own `packages/local-*`, so the search starts at the project and walks up the way the CLI's does —
+  // own packages, so the search starts at the project and walks up the way the CLI's does —
   // resolving against the tree instead would miss every package the project installed for itself.
   const packageRoot = nearestPackageRoot(projectRoot) ?? repositoryRoot();
   const outPath = resolve(cwd, out);
