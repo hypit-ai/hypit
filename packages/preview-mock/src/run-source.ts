@@ -1,7 +1,20 @@
 import { relative, dirname } from "node:path";
 import type { MockTarget } from "./graph.js";
 
-export function previewRunSource(author: string, runFile: string, targets: readonly string[], geometry: { width: number; height: number }, mocks: readonly MockTarget[]): string {
+export type PreviewMockFile = {
+  readonly id: string;
+  readonly from: string;
+  readonly mediaType: string;
+};
+
+export function previewRunSource(
+  author: string,
+  runFile: string,
+  targets: readonly string[],
+  geometry: { width: number; height: number },
+  mocks: readonly MockTarget[],
+  files: ReadonlyMap<string, PreviewMockFile> = new Map(),
+): string {
   const authorRef = relative(dirname(runFile), author).replaceAll("\\", "/");
   const declarations: string[] = [];
   const satisfactions: string[] = [];
@@ -10,6 +23,12 @@ export function previewRunSource(author: string, runFile: string, targets: reado
     ? `  <import from="@hypit/semantic-take-estimate@1" as="estimate"/>\n`
     : "";
   for (const [index, mock] of mocks.entries()) {
+    const file = files.get(mock.output);
+    if (file !== undefined) {
+      declarations.push(`  <file id="${file.id}" type="@hypit/artifact@1#BlobArtifact" from="${file.from}" media-type="${file.mediaType}"/>`);
+      satisfactions.push(`  <satisfy output="${mock.output}" candidate="${file.id}"/>`);
+      continue;
+    }
     const fragment = mock.kind === "semantic-take" ? "estimate:semantic-take"
       : mock.kind === "image" ? "mock:image" : mock.kind === "video" ? "mock:video" : "mock:silence";
     const id = `mock-${index}`;

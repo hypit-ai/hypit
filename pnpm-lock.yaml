@@ -1743,6 +1743,9 @@ importers:
       '@hypit/artifact':
         specifier: workspace:*
         version: link:../artifact
+      '@hypit/artifact-store-fs':
+        specifier: workspace:*
+        version: link:../artifact-store-fs
       '@hypit/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
@@ -2862,6 +2865,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/provider-media-local':
+        specifier: workspace:*
+        version: link:../provider-media-local
       '@hypit/ranking-studio':
         specifier: workspace:*
         version: link:../ranking-studio
