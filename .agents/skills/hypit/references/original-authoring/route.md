@@ -43,7 +43,7 @@ interruption or context compaction, read `../recovery.md`, run `route_state --ac
 | `environment` | explicit checkpoint after Distribution, project and credentials are selected | `hypit paths --json` |
 | `brief-frozen` | explicit checkpoint naming the frozen brief, audience, format and claims | return to the brief checkpoint |
 | `vocabulary-checked` | vocabulary inspection is persisted for the Run | `inspect_svml_vocabulary --run <run>` |
-| `package-ready` | every `packages/local-*` package has real Surface/Producer/Fragment and is used by the compiled Graph | `validate_local_author_packages --run <run>` |
+| `package-ready` | every project-owned package under `packages/` has a real Surface/Producer/Fragment and is used by the compiled Graph | `validate_local_author_packages --run <run>` |
 | `script-checked` | every caption Cue has at most four visible words | `validate_script_cues --run <run>` |
 | `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
 | `graph-checked` | `preview_check` returns `sound: true` after package and Cue gates | `preview_check <run>` |
@@ -70,14 +70,24 @@ model tier and how many takes are **yours to decide rather than to ask for**.
 **Read now:** `../environment.md` — the three independent places, Distribution selection and the
 launcher substitution rule. `../runtime.md` — the hard boundary between a project and a Distribution.
 
-The project gets its own directory outside the installed Distribution, normally `<home>/<name>/`,
-named after the video, with a `package.json` carrying a name and `"private": true`.
+When working in this checkout, put the independent project at
+`<checkout-root>/projects/<video-name>/` (use a safe slug), with a `package.json` carrying a name and
+`"private": true`.
 
 ### 2. Load credentials
 
+Check `<checkout-root>/.env` first, then `<project-root>/.env` if present, and load each before
+credential probing (the project file overrides duplicate names):
+
 ```bash
-set -a && source .env && set +a
+set -a
+[ ! -f <checkout-root>/.env ] || . <checkout-root>/.env
+[ ! -f <project-root>/.env ] || . <project-root>/.env
+set +a
 ```
+
+If the loaded variables satisfy the selected Provider, continue without asking the author for them
+again. Ask only for a credential that is absent or invalid after both `.env` files are checked.
 
 **Read now:** `../credentials.md` — which variables each Provider needs.
 
@@ -147,7 +157,7 @@ hypit-reference-video-tools validate_local_author_packages --run build.svrun
 hypit-reference-video-tools validate_script_cues --run build.svrun
 ```
 
-`validate_local_author_packages` proves that every `packages/local-*` package has a real
+`validate_local_author_packages` proves that every project-owned package under `packages/` has a real
 Surface/Producer/Fragment and is used by the compiled Source Graph. `validate_script_cues` rejects
 any Cue over four visible words; split it with `||` before continuing.
 

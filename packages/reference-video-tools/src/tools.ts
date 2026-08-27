@@ -1107,8 +1107,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     const runPath = resolve(invokedFrom(), input.run);
     const projectRoot = nearestPackageRoot(dirname(runPath)) ?? packageRoot;
     const packagesRoot = join(projectRoot, "packages");
-    const localDirectories = (await readdir(packagesRoot, { withFileTypes: true }).catch(() => []))
-      .filter((entry) => entry.isDirectory() && entry.name.startsWith("local-"))
+    // Project package directories are discovered by their location and manifest, not by a
+    // naming convention. A package created for one video may use any valid descriptive slug;
+    // requiring a `local-` prefix would let other project-owned packages evade this gate.
+    const projectPackageDirectories = (await readdir(packagesRoot, { withFileTypes: true }).catch(() => []))
+      .filter((entry) => entry.isDirectory() && entry.name !== "node_modules" && !entry.name.startsWith("."))
       .map((entry) => join(packagesRoot, entry.name));
     const expected = new Set(input.expected_packages ?? []);
     const distributionPackageRoot = videoCliDistribution.packageRoot;
@@ -1137,7 +1140,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       // structural diagnostics for every local package instead of hiding them behind one exception.
     }
     const results: Record<string, unknown>[] = [];
-    for (const directory of localDirectories) {
+    for (const directory of projectPackageDirectories) {
       const manifestPath = join(directory, "package.json");
       const manifest = await readJson<{ name?: string; hypit?: { activation?: string } }>(manifestPath);
       const specifier = manifest?.name ?? basename(directory);
@@ -1192,7 +1195,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       vocabulary_checked: vocabularyEvidence,
       ...(vocabularyEvidence ? {} : { errors: ["VOCABULARY_NOT_CHECKED"] }),
       packages: results,
-      ...(localDirectories.length === 0 && expected.size === 0 ? { note: "no project-local packages declared" } : {}),
+      ...(projectPackageDirectories.length === 0 && expected.size === 0 ? { note: "no project-owned packages declared" } : {}),
     };
   }
   const model = options.model ?? process.env.GEMINI_MODEL?.trim() ?? "gemini-3.1-pro-preview";

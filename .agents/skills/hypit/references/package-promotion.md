@@ -25,14 +25,14 @@ If the author wants it promoted, these are the parts. Say up front that this is 
 than a path anyone has walked — no package under `packages/` began inside a project, so the first
 person to do it should correct what follows.
 
-- **The name is load-bearing in six places.** `@my-project/local-<slug>` becomes `@hypit/<slug>` in
+- **The name is load-bearing in six places.** `@my-project/<slug>` becomes `@hypit/<slug>` in
   `package.json`; in the Module ref in `src/manifest.ts`, where renaming it **renames every nominal
   Type and Producer in the Module at once**, because each is built from that one const; in every
-  Author Source that writes `import … from "@my-project/local-<slug>@1"`; in the root `package.json`
+  Author Source that writes `import … from "@my-project/<slug>@1"`; in the root `package.json`
   `devDependencies`; in the package's own test harness; and in **both** package catalogs,
   `docs/guide/packages.md` and `docs/zh/guide/packages.md`. An English-only catalog entry is a half
   promotion.
-- **Studio support is a companion.** A project-owned `@my-project/local-<slug>-studio` may already provide
+- **Studio support is a companion.** A project-owned `@my-project/<slug>-studio` may already provide
   rich interpretation. Promotion moves that companion into an official Studio adapter package; it
   never copies its code into `@hypit/studio` and never teaches the domain package about Studio.
 - **Its own chrome becomes repository content.** Project package assets already belong to the
