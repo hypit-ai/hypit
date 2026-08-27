@@ -71,40 +71,40 @@ npx skills add hypit-ai/hypit -g
   </tr>
 </table>
 
-### 街头采访
-
-<table>
-  <tr>
-    <th>参考视频</th>
-    <td></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td></td>
-  </tr>
-  <tr>
-    <th>复刻视频</th>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-  </tr>
-  <tr>
-    <td colspan="4">本地部署的 MiniMax H3，3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕和视觉特效由无头 Chromium 渲染。<b>总成本：$0.15。</b></td>
-  </tr>
-</table>
-
 ### 播客
 
 <table>
   <tr>
-    <th>参考视频</th>
-    <td></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td></td>
+    <th width="16%">参考视频</th>
+    <td width="28%"></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/a1feb123-3129-4880-87d2-897c42026fff" controls muted></video></td>
+    <td width="28%"></td>
   </tr>
   <tr>
-    <th>复刻视频</th>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <th width="16%">复刻视频</th>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/d4bcb8a3-9ed5-46a8-900d-13891a83e6a0" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/75cca3aa-d392-49a6-b0cd-9b1c3aff8f01" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/2b04977e-665d-4d5f-8f82-c1ebdf567d2c" controls muted></video></td>
+  </tr>
+  <tr>
+    <td colspan="4"><p><b>“DAILY CREATINE”</b>——一条 18 秒的播客片段，肌肉芭比向一个瘦弱的大学生强推肌酸。A-roll 是 Seedance 2 Mini 生成的三段 720p 对峙镜头，外加一段展示理想生活方式的 B-roll；图像是 GPT Image 2 生成的两张 2K AI 角色肖像和三张 1K 蒙太奇画面。WhisperX 负责逐词对齐，再配上分屏访谈版式、区分说话人的卡拉 OK 字幕、产品递出的瞬间和背景音乐，最后由 64 个无头 Chromium 进程并发渲染。</p><p>上面给出了三个复刻版本：把两位主播换成 Pepe 和 Doge，争论狗狗手臂；把肌酸换成视黄醇，让漂亮男孩吐槽假小子的毛孔；把实体产品换成 CheatGPT 应用，让头脑简单的体育生绩点碾压博士生。同一套访谈形式，三个广告垂类。</p><p>总成本：<b>$1.07</b>。</p></td>
+  </tr>
+</table>
+
+### 街头采访
+
+<table>
+  <tr>
+    <th width="16%">参考视频</th>
+    <td width="28%"></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"></td>
+  </tr>
+  <tr>
+    <th width="16%">复刻视频</th>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
   </tr>
   <tr>
     <td colspan="4">本地部署的 MiniMax H3，3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕和视觉特效由无头 Chromium 渲染。<b>总成本：$0.15。</b></td>
@@ -126,6 +126,17 @@ npx skills add hypit-ai/hypit -g
 ```
 
 Agent 会检查环境，只索要这条视频需要的凭据，先给出预览，再执行构建。
+
+## 贡献指南
+
+欢迎提交 Pull Request，文档、示例和翻译与代码同样重要。可以认领一个已有的 issue，也可以为你想做的事新开一个，我们会协助你把它合并进来。环境准备、CI 会跑的检查和 Pull Request 流程见 [CONTRIBUTING.zh-CN.md](./CONTRIBUTING.zh-CN.md)。
+
+[开发指南](https://docs.hypit.ai/zh/guide/develop)说明了前置条件、日常命令和仓库结构。[添加 Author 包](https://docs.hypit.ai/zh/guide/author-packages)和[添加 Provider](https://docs.hypit.ai/zh/guide/providers)覆盖了最常见的两类贡献，[代码规范](https://docs.hypit.ai/zh/guide/conventions)说明 Pull Request 需要遵循的要求。
+
+| 缺陷报告 | 功能请求 | 问题咨询 |
+| --- | --- | --- |
+| [提交 issue](https://github.com/hypit-ai/hypit/issues/new?labels=bug) | [提交 issue](https://github.com/hypit-ai/hypit/issues/new?labels=enhancement) | [Discord](https://discord.gg/85hnyQnxpn) 或 [Telegram](https://t.me/hypit) |
+| 行为与文档描述不一致 | 新能力或改进的想法 | 关于创作、包和 Provider 的提问 |
 
 ## 许可证
 
