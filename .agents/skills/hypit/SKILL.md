@@ -90,10 +90,10 @@ invalid. Never commit `.env` or copy its secret values into route state, Source,
   given at all. What it is for, who is in it and what it says are the author's; the working
   directory, the project location, the packages and the generators are yours to decide rather than to
   ask for.
-- A sparse or ambiguous original request → read `references/brief-intake.md`. Discover complete
-  projects under the checkout's `examples/` directory and analyze their author intent when relevant;
-  otherwise use the document's general, open-ended fallback. Do not hard-code video types or skip
-  the brief-sufficiency gate.
+- Every original-authoring request → read `references/brief-intake.md` and inspect complete projects
+  under the checkout's `examples/` directory when it exists. Analyze a semantically matching
+  project's author intent; otherwise use the document's general, open-ended fallback. Do not
+  hard-code video types or skip the brief-sufficiency gate.
 - A completed project followed by a natural-language change → read `references/revision.md` and use
   the independent `revision_state` route. Restore the element's role in the frozen brief, edit only
   Source/Recipe/Run, invalidate the affected graph closure, and rerun deterministic gates. Revision

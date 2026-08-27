@@ -93,9 +93,9 @@ again. Ask only for a credential that is absent or invalid after both `.env` fil
 
 ### 3. Make the brief sufficient before writing Source
 
-**Read now:** `../brief-intake.md`. If this is a sparse or ambiguous request, inspect complete
-projects under the checkout root's `examples/` directory and compare their recovered author intent,
-Hook and narrative to the request. If no example is semantically relevant, use the document's
+**Read now:** `../brief-intake.md`. Always inspect the checkout root's `examples/` directory when it
+exists, enumerate complete projects, and compare any semantically relevant project's recovered author
+intent, Hook and narrative to the request. If no example is semantically relevant, use the document's
 general fallback; absence of an example is not permission to guess or skip intake.
 
 Ask only for unresolved, high-impact creative decisions. Freeze a concise `.hypit/brief` recording
@@ -105,12 +105,15 @@ implementation details are yours; core facts, claims, Hook and audience promise 
 Do not enter `brief-frozen` or write paid-generation prompts until no unresolved answer can change the
 Graph, Script, visual semantics, timing or generation inputs.
 
-### 4. Read the craft this program needs
+### 4. Read the craft and format guidance this program needs
 
 1. Every craft file named in the first item of `../playbooks/index.md`'s required load order, in the
    order it gives them.
-2. The format. `../playbooks/index.md` lists them; read the one that fits and only the additional
-   craft files its own footer names.
+2. Determine the format from the frozen intent, not from an example's directory name or a fixed type
+   list. If `../playbooks/index.md` has a matching format playbook, read it completely, including its
+   notes and footer, then read every additional craft file that footer names. If no format playbook
+   matches, follow the shared craft guidance and the open-ended intent analysis; do not invent a
+   type-specific checklist.
 
 ### 5. Choose the packages
 
