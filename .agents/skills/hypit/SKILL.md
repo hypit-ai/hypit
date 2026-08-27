@@ -83,7 +83,8 @@ the boundary and launcher selection. Read it before the first command of any rou
 - A completed project followed by a natural-language change → read `references/revision.md` and use
   the independent `revision_state` route. Restore the element's role in the frozen brief, edit only
   Source/Recipe/Run, invalidate the affected graph closure, and rerun deterministic gates. Revision
-  never invokes VLM/observer visual inspection; leave visual inspection for a later Studio session.
+  never invokes VLM/observer visual inspection; after the change, start Studio only when the current
+  Run has no Studio session so the author can see the updated result.
 - A syntax question about one element, or a source that already exists → read
   `references/authoring.md`, then `references/quickstart.md` and the linked authoritative
   docs/package READMEs. A whole video is `references/original-authoring/route.md`, not this file.
@@ -97,6 +98,8 @@ the boundary and launcher selection. Read it before the first command of any rou
   other route step.
 - Preview-only media realization, temporary preview Runs, mock Artifact caching, or estimated
   SemanticTake timing → read `references/preview-mock.md`.
+- Paid-build handoff, pre-payment mock confirmation, post-build Studio display, or Studio behavior
+  after a revision → read `references/studio-confirmation.md`.
 - Runtime setup, plan/build/status/inspect/get/reuse → read `references/runtime.md`.
 - Environment diagnosis or credentials → read `references/environment.md` and
   `references/credentials.md`.

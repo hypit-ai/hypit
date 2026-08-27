@@ -198,6 +198,11 @@ configured to empty its window.
 
 ### 13. The Build
 
+**Read now:** `../studio-confirmation.md`. Before the paid gate, start Studio for the complete
+preview-mock Run, show the author the mock, and obtain explicit acceptance and cost approval. If the
+author declines, enter `../revision.md` and do not submit a Build. After acceptance and paid Build
+submission, start Studio for the accepted Run while the HyperFrames/final render runs concurrently.
+
 Confirm credentials, the Runtime Profile, the installed packages, model limits, resolution and
 Endpoint prerequisites. Run `doctor`, `check` and `plan`.
 

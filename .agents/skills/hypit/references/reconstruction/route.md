@@ -11,7 +11,8 @@ no Build is submitted, and no video generation, speech synthesis, alignment or f
 Those belong to the Build the author starts deliberately, after reading what was written.
 
 Seeing the reconstruction is what that Build is for. What is settled here is that the graph traces,
-which is the part a Build cannot repair.
+which is the part a Build cannot repair. The route then pauses at the Studio confirmation handoff
+before any paid Build; after explicit acceptance it may proceed with the Runtime Build lifecycle.
 
 If the project is already complete and the author asks for a natural-language change, stop following
 this creation route and read `../revision.md`. Revision edits Source/Recipe/Run and reruns deterministic
@@ -365,6 +366,15 @@ a project-local one does, and `render_element` stands in for the speech. A proje
 drawing element passes with nothing to require.
 
 **Done when:** `"passed": true`.
+
+### 24. Studio confirmation and paid handoff
+
+**Read now:** `../studio-confirmation.md`. Before any paid Build, start Studio for the complete
+preview-mock Run, show it to the author, and obtain explicit acceptance and cost approval. If the
+author declines, enter `../revision.md` and do not Build. After acceptance, start Studio for the
+accepted Run while the HyperFrames/final render proceeds concurrently.
+
+After acceptance, continue with `../runtime.md` for the approved paid Build and retrieval lifecycle.
 
 ---
 

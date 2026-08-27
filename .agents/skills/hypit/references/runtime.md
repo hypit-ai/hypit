@@ -66,6 +66,11 @@ hypit get <build-id> \
   --name final.video --to output/final.mp4
 ```
 
+The paid-build handoff is defined in `studio-confirmation.md`: show the complete preview-mock Run in
+Studio and obtain acceptance before `hypit build`; after acceptance, Studio for the accepted Run and
+the HyperFrames/final render may start concurrently. The render must not be blocked on the author's
+Studio viewing.
+
 Use `check` during authoring. `plan` works without a Runtime as a graph-only operation; with the
 project's selected Runtime it performs a cheap, read-only preflight over only unsatisfied Needs and
 returns non-zero when that slice is not ready. It never installs, starts or contacts a remote Store.
