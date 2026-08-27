@@ -625,12 +625,48 @@ function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
 
 type PlacementClaim = {
   readonly id: string;
+  /** The outer Source placement that owns this claim; nested Surface elements share it. */
+  readonly owner: string;
   readonly canvas: string;
   readonly box: Box;
   readonly start: number;
   readonly end: number;
   readonly scope: string;
 };
+
+/**
+ * Resolve the outer component placement for each namespaced opening tag.
+ *
+ * A structured Surface may contain its own placed children (for example an Image with several Layers).
+ * Those children are part of one component's internal layout and must not be compared as peer
+ * components. The owner is therefore the nearest ancestor that declares an id and a placement port;
+ * a top-level placement owns itself. This is Source structure only, not a guess based on rectangle size.
+ */
+function placementOwners(svml: string): ReadonlyMap<number, string> {
+  const owners = new Map<number, string>();
+  const stack: { readonly tag: string; readonly owner?: string }[] = [];
+  for (const match of svml.matchAll(/<\/?([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)>/gsu)) {
+    const full = match[0] ?? "";
+    const tag = match[1] ?? "";
+    if (full.startsWith("</")) {
+      for (let index = stack.length - 1; index >= 0; index -= 1) {
+        if (stack[index]!.tag === tag) {
+          stack.length = index;
+          break;
+        }
+      }
+      continue;
+    }
+    const attributes = match[2] ?? "";
+    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
+    const placement = /\b(?:frame|visual-frame|canvas)=\{([A-Za-z0-9_-]+)\}/u.test(attributes);
+    const inherited = [...stack].reverse().find((entry) => entry.owner !== undefined)?.owner;
+    const owner = inherited ?? (id !== undefined && placement ? id : undefined);
+    if (id !== undefined && placement && owner !== undefined) owners.set(match.index!, owner);
+    if (!/\/\s*>$/u.test(full)) stack.push({ tag, ...(owner === undefined ? {} : { owner }) });
+  }
+  return owners;
+}
 
 function overlapArea(left: Box, right: Box): Box | undefined {
   const intersection = {
@@ -684,6 +720,7 @@ function layoutOverlaps(svml: string, geometry: FrameGeometry): readonly LayoutO
   } catch {
     // Keep spatial findings useful while another check reports the malformed Script.
   }
+  const owners = placementOwners(svml);
   const claims: PlacementClaim[] = [];
   for (const match of svml.matchAll(/<([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)\/?\s*>/gsu)) {
     const tag = match[1] ?? "";
@@ -699,14 +736,14 @@ function layoutOverlaps(svml: string, geometry: FrameGeometry): readonly LayoutO
     if (canvas === undefined || box === undefined) continue;
     const timing = placementTiming(attributes, parsed);
     if (timing.end <= timing.start) continue;
-    claims.push({ id, canvas, box, ...timing });
+    claims.push({ id, owner: owners.get(match.index!) ?? id, canvas, box, ...timing });
   }
   const report: LayoutOverlap[] = [];
   for (let first = 0; first < claims.length; first += 1) {
     for (let second = first + 1; second < claims.length; second += 1) {
       const left = claims[first]!;
       const right = claims[second]!;
-      if (left.id === right.id || left.canvas !== right.canvas || left.end <= right.start || right.end <= left.start) continue;
+      if (left.owner === right.owner || left.canvas !== right.canvas || left.end <= right.start || right.end <= left.start) continue;
       const intersection = overlapArea(left.box, right.box);
       if (intersection === undefined || containsBox(left.box, right.box) || containsBox(right.box, left.box)) continue;
       report.push({

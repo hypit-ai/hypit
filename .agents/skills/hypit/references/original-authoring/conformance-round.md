@@ -74,9 +74,11 @@ overflow, and check the final visible bounds against all four Canvas edges.
 `authoring_check` returns `layout_geometry` with deterministic Canvas/Frame bounds, centres, parent and
 Canvas offsets, containment overflow, and bound element ids. Use it as the mechanical report and make
 the conformance decision from the rendered picture and intent. It also reports
-`layout_geometry.overlaps` for same-Canvas placements that are simultaneous and partially intersecting;
-full containment is omitted and the entries are advisory candidates, not automatic failures. It cannot
-measure actual glyph or package-internal bounds or infer intent, so those still require the reader.
+`layout_geometry.overlaps` for independent same-Canvas component placements that are simultaneous and
+partially intersecting; nested placements owned by one component are excluded and remain subject to
+component-local parent/Frame centring. Full containment is omitted and the entries are advisory
+candidates, not automatic failures. It cannot measure actual glyph or package-internal bounds or infer
+intent, so those still require the reader.
 
 Clearly platform/player/export-tool watermarks are not authored content and should be ignored. If a mark
 could be intentional design, preserve the uncertainty and do not silently remove it.
