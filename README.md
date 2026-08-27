@@ -82,7 +82,7 @@ npx skills add hypit-ai/hypit -g
   </tr>
   <tr>
     <th width="16%">Clones</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/f04b4143-8fc9-4860-8493-4ab83f00a09d" controls muted></video></td>
     <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
     <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
   </tr>
