@@ -275,6 +275,10 @@ hypit-reference-video-tools render_element projects/<name>/build.svrun --batch r
 The program is drawn once and every entry is cut out of those frames, so render
 the whole list in one `--batch` call.
 
+Keep the check JSON's `layout_geometry` beside the round. It gives the observer/agent deterministic
+Canvas and Frame centres, parent/Canvas offsets, overflow edges, and bound element ids to use when
+judging centring, frame capacity, and Canvas safety.
+
 ### 20. Send every comparison at once
 
 The same file is a `compare_reconstruction --batch` file too — `comparisons` is in it, and each entry
