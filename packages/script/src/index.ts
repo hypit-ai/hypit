@@ -16,5 +16,6 @@ export {
   serializeSpeech,
 } from "./narrative.js";
 export { parseScript } from "./parser.js";
+export { validateCaptionCueLengths } from "./cue-lint.js";
 export { decodeScriptSurface } from "./surface.js";
 export type * from "./types.js";

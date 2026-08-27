@@ -38,4 +38,6 @@ For execution, preserve the full lifecycle: select the Profile, inspect the froz
 accepted Records, retrieve Artifacts, and declare any reuse explicitly in a new Run Source.
 
 Both production routes persist progress in `.hypit/route-state.json`; after an interruption, follow
-`references/recovery.md` and reconcile before resuming.
+`references/recovery.md` and reconcile before resuming. Before `preview_check`, run
+`inspect_svml_vocabulary --run`, `validate_local_author_packages --run` and
+`validate_script_cues --run`; the preview and final checks repeat these gates.

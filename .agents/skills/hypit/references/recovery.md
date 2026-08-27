@@ -11,7 +11,8 @@ is the artifacts and checks it points to.
 3. Read `<project>/.hypit/route-state.json` with `route_state --action read`.
 4. Inspect `git status`, the recorded artifacts, and the last command.
 5. Run `route_state --action reconcile --project-root <project>` (and inspect its conflict report).
-6. Re-run the first unmet check or idempotent route command named by `next_action`.
+6. Re-run the first unmet check or idempotent route command named by `next_action`; package and Cue
+gates must be rerun before any preview or final check.
 7. Continue only after the state reports the next step explicitly.
 
 If the snapshot is missing, start one before continuing:

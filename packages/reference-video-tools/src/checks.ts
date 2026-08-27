@@ -5,7 +5,7 @@ import { dirname, join, resolve, sep } from "node:path";
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface } from "@hypit/markup";
 import { loadNodePackageSelection } from "@hypit/package-loader-node";
-import { parseScript } from "@hypit/script";
+import { parseScript, validateCaptionCueLengths } from "@hypit/script";
 import { videoCliDistribution } from "@hypit/video-cli";
 import { loadStudioCompanionRegistry } from "@hypit/studio/src/companion-profile.js";
 import { openStudioArchive } from "@hypit/studio/src/archive.js";
@@ -24,6 +24,81 @@ export type PreviewCheckInput = {
   readonly run: string;
   readonly runtime?: string;
 };
+
+export type ScriptCueCheckInput = { readonly run: string };
+
+type ScriptSource = { readonly path: string; readonly source: string };
+
+/** Read the Run's reachable Author Source closure without relying on compiler internals. */
+async function reachableAuthorSources(runPath: string): Promise<readonly ScriptSource[]> {
+  const runSource = await readFile(runPath, "utf8");
+  const author = /<author\s+source="([^"]+)"/u.exec(runSource)?.[1];
+  if (author === undefined) throw new Error("AUTHOR_NOT_DECLARED");
+  const queue = [resolve(dirname(runPath), author)];
+  const seen = new Set<string>();
+  const sources: ScriptSource[] = [];
+  while (queue.length > 0) {
+    const path = queue.shift()!;
+    if (seen.has(path)) continue;
+    seen.add(path);
+    const source = await readFile(path, "utf8").catch(() => undefined);
+    if (source === undefined) continue;
+    sources.push({ path, source });
+    for (const match of source.matchAll(/<import\s+[^>]*\bsource="([^"]+)"[^>]*\/?\s*>/gu)) {
+      queue.push(resolve(dirname(path), match[1]!));
+    }
+  }
+  return sources;
+}
+
+function scriptBodies(source: string): readonly { readonly text: string; readonly offset: number }[] {
+  const bodies: { text: string; offset: number }[] = [];
+  for (const opening of source.matchAll(/<script\b[^>]*>/gu)) {
+    const start = opening.index! + opening[0].length;
+    const end = source.indexOf("</script>", start);
+    if (end < 0) throw new Error("SCRIPT_NOT_CLOSED");
+    bodies.push({ text: source.slice(start, end), offset: start });
+  }
+  return bodies;
+}
+
+/** Validate every authored caption Cue before any preview or coverage work is attempted. */
+export async function scriptCueCheck(input: ScriptCueCheckInput): Promise<Record<string, unknown>> {
+  const runPath = resolve(invokedFrom(), input.run);
+  const runSource = await readFile(runPath, "utf8").catch(() => undefined);
+  if (runSource === undefined) return { run: runPath, passed: false, errors: [{ code: "RUN_NOT_FOUND" }] };
+  try {
+    const sources = await reachableAuthorSources(runPath);
+    if (sources.length === 0) {
+      const author = /<author\s+source="([^"]+)"/u.exec(runSource)?.[1];
+      return { run: runPath, passed: false, errors: [{ code: author === undefined ? "AUTHOR_NOT_DECLARED" : "AUTHOR_NOT_FOUND", ...(author === undefined ? {} : { path: resolve(dirname(runPath), author) }) }] };
+    }
+    const violations: Record<string, unknown>[] = [];
+    const errors: Record<string, unknown>[] = [];
+    const scriptSources: string[] = [];
+    for (const item of sources) {
+      let bodies: readonly { readonly text: string; readonly offset: number }[];
+      try { bodies = scriptBodies(item.source); }
+      catch (error) {
+        errors.push({ code: "SCRIPT_PARSE", path: item.path, message: error instanceof Error ? error.message : String(error) });
+        continue;
+      }
+      for (const body of bodies) {
+        scriptSources.push(item.path);
+        try {
+          const parsed = parseScript(item.path, body.text, body.offset);
+          violations.push(...validateCaptionCueLengths(parsed));
+        } catch (error) {
+          errors.push({ code: "SCRIPT_PARSE", path: item.path, message: error instanceof Error ? error.message : String(error) });
+        }
+      }
+    }
+    return { run: runPath, author: sources[0]!.path, sources: [...new Set(scriptSources)], passed: violations.length === 0 && errors.length === 0, max_words: 4, violations, ...(errors.length === 0 ? {} : { errors }) };
+  } catch (error) {
+    const code = error instanceof Error && error.message === "AUTHOR_NOT_DECLARED" ? "AUTHOR_NOT_DECLARED" : "AUTHOR_NOT_FOUND";
+    return { run: runPath, passed: false, errors: [{ code, message: error instanceof Error ? error.message : String(error) }] };
+  }
+}
 
 const AWAITING = "the Studio projection closure requires unresolved capabilities:";
 
@@ -53,6 +128,7 @@ async function checkedSources(runPath: string): Promise<{ readonly ok: boolean; 
   // project inside a larger tree resolves none of its own `packages/local-*` without this.
   const checked = spawnSync(process.execPath, [hypit, "check", runPath, "--package-root", dirname(runPath)], {
     encoding: "utf8", windowsHide: true, timeout: 600_000,
+    env: { ...process.env, HYPIT_STRICT_SCRIPT_CUES: "1" },
   });
   // Node writes its own deprecation warnings to the same stream the refusal arrives on, and this
   // output is read as the reason a check failed. Two lines about `module.register()` above the file
