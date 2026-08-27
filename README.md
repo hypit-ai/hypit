@@ -135,15 +135,13 @@ up an open issue or open one for what you want to work on, and we will help you 
 [CONTRIBUTING.md](./CONTRIBUTING.md) has the setup, the checks CI runs and the pull request flow.
 
 The [Development Guide](https://docs.hypit.ai/guide/develop) covers the prerequisites, the daily
-commands and the repository layout. [Adding an Author Package](https://docs.hypit.ai/guide/author-packages)
-and [Adding a Provider](https://docs.hypit.ai/guide/providers) walk through the two most common
-contributions, and [Conventions](https://docs.hypit.ai/guide/conventions) states what a pull request
-is expected to follow.
+commands and the repository layout.
 
-| Bug reports | Feature requests | Questions |
-| --- | --- | --- |
-| [Open an issue](https://github.com/hypit-ai/hypit/issues/new?labels=bug) | [Open an issue](https://github.com/hypit-ai/hypit/issues/new?labels=enhancement) | [Discord](https://discord.gg/85hnyQnxpn) or [Telegram](https://t.me/hypit) |
-| Something behaves differently than the docs describe | An idea for a new capability or an improvement | Ask about authoring, packages or providers |
+|  |  |
+| --- | --- |
+| Bug reports | [Open an issue](https://github.com/hypit-ai/hypit/issues/new?labels=bug) |
+| Feature requests | [Open an issue](https://github.com/hypit-ai/hypit/issues/new?labels=enhancement) |
+| Questions | [Discord](https://discord.gg/85hnyQnxpn) or [Telegram](https://t.me/hypit) |
 
 ## License
 

@@ -131,12 +131,13 @@ Agent 会检查环境，只索要这条视频需要的凭据，先给出预览�
 
 欢迎提交 Pull Request，文档、示例和翻译与代码同样重要。可以认领一个已有的 issue，也可以为你想做的事新开一个，我们会协助你把它合并进来。环境准备、CI 会跑的检查和 Pull Request 流程见 [CONTRIBUTING.zh-CN.md](./CONTRIBUTING.zh-CN.md)。
 
-[开发指南](https://docs.hypit.ai/zh/guide/develop)说明了前置条件、日常命令和仓库结构。[添加 Author 包](https://docs.hypit.ai/zh/guide/author-packages)和[添加 Provider](https://docs.hypit.ai/zh/guide/providers)覆盖了最常见的两类贡献，[代码规范](https://docs.hypit.ai/zh/guide/conventions)说明 Pull Request 需要遵循的要求。
+[开发指南](https://docs.hypit.ai/zh/guide/develop)说明了前置条件、日常命令和仓库结构。
 
-| 缺陷报告 | 功能请求 | 问题咨询 |
-| --- | --- | --- |
-| [提交 issue](https://github.com/hypit-ai/hypit/issues/new?labels=bug) | [提交 issue](https://github.com/hypit-ai/hypit/issues/new?labels=enhancement) | [Discord](https://discord.gg/85hnyQnxpn) 或 [Telegram](https://t.me/hypit) |
-| 行为与文档描述不一致 | 新能力或改进的想法 | 关于创作、包和 Provider 的提问 |
+|  |  |
+| --- | --- |
+| 缺陷报告 | [提交 issue](https://github.com/hypit-ai/hypit/issues/new?labels=bug) |
+| 功能请求 | [提交 issue](https://github.com/hypit-ai/hypit/issues/new?labels=enhancement) |
+| 问题咨询 | [Discord](https://discord.gg/85hnyQnxpn) 或 [Telegram](https://t.me/hypit) |
 
 ## 许可证
 
