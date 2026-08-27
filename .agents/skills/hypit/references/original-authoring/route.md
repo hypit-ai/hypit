@@ -97,8 +97,10 @@ and whether any is genuinely missing. That file states why a system nobody inspe
 about to invent, and this route is where that is easiest: there is no reference to contradict you.
 
 For a proven gap, read `../local-author-package.md` completely and build the package.
-Persist inspection with `inspect_svml_vocabulary --run <build.svrun>` and prove every local package
-with `validate_local_author_packages --run <build.svrun>` before writing Source.
+Inspect the candidate packages now with `inspect_svml_vocabulary --package …` (without `--run`;
+the Run is created in step 7). For a proven gap, build the package and keep it ready for the
+Run-scoped validation after all four source files exist. Do not treat an import or an empty package
+as proof that the vocabulary gap is solved.
 
 ### 6. Write the Script
 
@@ -114,8 +116,8 @@ words. A long Segment without breaks is not acceptable; it becomes one overflowi
 
 Give every planned shot one job — hook, context, evidence, mechanism, reaction, payoff, transition,
 or CTA. Delete shots with no distinct job.
-Run `validate_script_cues --run <build.svrun>` before `hypit check`; split every Cue longer than four
-visible words with `||` between complete Alignment Units.
+Draft every Cue with `||` between complete Alignment Units, normally every 3–4 visible words. The
+Run-scoped mechanical check happens after `build.svrun` is created in step 7.
 
 ### 7. Write the four sources
 
@@ -124,6 +126,18 @@ of them; the Runtime Profile is part of the deliverable.
 
 **Read now:** `../authoring.md` — the syntax authority, the check set, and how an accepted Record is
 reused in the Run Source. `../runtime.md` — how to author a Profile.
+
+Now run the persisted, Run-scoped gates before `hypit check`:
+
+```bash
+hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package …] --run build.svrun
+hypit-reference-video-tools validate_local_author_packages --run build.svrun
+hypit-reference-video-tools validate_script_cues --run build.svrun
+```
+
+`validate_local_author_packages` proves that every `packages/local-*` package has a real
+Surface/Producer/Fragment and is used by the compiled Source Graph. `validate_script_cues` rejects
+any Cue over four visible words; split it with `||` before continuing.
 
 ### 8. Check, then prove the graph traces
 
