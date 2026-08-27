@@ -1,5 +1,9 @@
 # Hypit source authoring
 
+For a post-completion natural-language change, use `revision.md`. That route edits Source/Recipe/Run
+and reruns deterministic gates only; this authoring page's visual review guidance does not apply to a
+revision.
+
 Read `quickstart.md`, then the authoritative published page it selects.
 Keep Author Source, Recipe Source and Run Source complete and internally consistent rather than
 assembling independent per-shot source fragments.

@@ -7,6 +7,7 @@ export type {
   InspectVocabularyInput,
   ValidateLocalAuthorPackagesInput,
   RouteStateCommandInput,
+  RevisionStateCommandInput,
 } from "./tools.js";
 export type { ScriptCueCheckInput } from "./checks.js";
 export {
@@ -19,3 +20,13 @@ export {
   ROUTE_STATE_VERSION,
 } from "./route-state.js";
 export type { RouteCheckpointInput, RouteKind, RouteState, RouteStateInput } from "./route-state.js";
+export {
+  checkpointRevisionState,
+  readRevisionState,
+  reconcileRevisionState,
+  revisionStatePath,
+  startRevisionState,
+  REVISION_STATE_VERSION,
+  REVISION_STEPS,
+} from "./revision-state.js";
+export type { RevisionCheckpointInput, RevisionState, RevisionStateInput, RevisionStatus, RevisionStep } from "./revision-state.js";
