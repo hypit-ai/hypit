@@ -89,7 +89,22 @@ function projectCaption(parsed: ParsedNarrative, id: string, narrativeId: string
     }
     return { afterUnitId: previous.id };
   });
-  return { narrativeId, id, units, words, cueBreaks };
+  // Segment close is a hard cue boundary.  A cue cannot carry words across two
+  // independent speech takes even when the author omitted an explicit `||`.
+  // Keep explicit breaks, but de-duplicate the boundary when `||` was placed
+  // immediately before `</segment>`.
+  const breaks = new Set(cueBreaks.map((item) => item.afterUnitId));
+  for (let index = 0; index < units.length - 1; index += 1) {
+    if (units[index]!.segmentId === units[index + 1]!.segmentId) continue;
+    breaks.add(units[index]!.id);
+  }
+  return {
+    narrativeId,
+    id,
+    units,
+    words,
+    cueBreaks: units.filter((unit) => breaks.has(unit.id)).map((unit) => ({ afterUnitId: unit.id })),
+  };
 }
 
 export function captionDocument(parsed: ParsedNarrative, id: string, narrativeId: string): CaptionDocument {

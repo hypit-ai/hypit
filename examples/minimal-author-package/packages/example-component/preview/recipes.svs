@@ -1,5 +1,8 @@
 <?svml using="@hypit/svs@1"?>
 
 <sheet version="1">
-  example.default { background: #6b7280; }
+  film.vertical { background: #09090B; }
+  speech.visual { fit: cover; }
+  speech.normal { language: en; pace: normal; min: 4; max: 30; rounding: round; }
+  media.aroll { video: primary-moving; audio: default; span-authority: video; }
 </sheet>

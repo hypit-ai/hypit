@@ -33,7 +33,10 @@ source edge is edited.
 `render_element` uses `@hypit/preview-mock` with the Source's `estimate:Speech` timing. `--reference-id`
 is reserved for selecting reference evidence and comparison windows, not for constructing mock tracks.
 The comparison still cuts both sides to the same words and refuses a pair whose two halves are different
-lengths. Animated elements are assessed against the deterministic estimate clock used by preview.
+lengths. Animated elements are assessed against the deterministic estimate clock used by preview. The
+container-duration allowance defaults to three frames and may be set explicitly with
+`tolerance_frames` (or CLI `--tolerance-frames`) when a known encoder/container boundary requires it;
+do not use a large tolerance to hide a wrong estimate or a missing segment.
 
 A `--batch` round inherits the reference along with the Run, and `reconstruction_check`'s output is
 the batch file.
@@ -151,6 +154,11 @@ Check that the outer Frame has enough width/height for the longest line or mark 
 shadow, and corner treatment. A box can be centred and still be too small. Treat intentional bleed,
 crop, and enter/exit motion as a separate possibility and only call it a defect when the reference
 does not show that intention.
+
+Ignore any mark that is clearly platform UI, player chrome, an export-tool or editing-software
+watermark/overlay; it is not authored video content and must not become a repair target. If its
+provenance is uncertain or it may be an authored design element, keep it as an uncertainty and ask
+for confirmation rather than silently discarding it.
 
 The `reconstruction_check` JSON includes `layout_geometry`, a mechanical report of Canvas/Frame bounds,
 centres, parent/Canvas offsets, containment overflow, and bound element ids. The agent should use those

@@ -126,3 +126,8 @@ invalid. Never commit `.env` or copy its secret values into route state, Source,
 Preserve unrelated changes. Keep credentials, generated media, runtime state, and logs out of
 commits. Installed package declarations and published docs remain authoritative; repository
 maintenance instructions apply only to contributors who deliberately cloned the repository.
+
+Studio URL handoff is mandatory: whenever a Studio process is started, capture the URL printed by
+the server and include the exact URL in the user-facing response. A statement that Studio started
+without the URL is incomplete; if the startup parameters change, stop the old process first and
+report the new URL after the replacement is listening.

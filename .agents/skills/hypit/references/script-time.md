@@ -17,7 +17,9 @@ holds it and the rendered bounds prove it fits. This is a hard layout requiremen
 style preference: a Segment with no `||` becomes one Cue, and the entire long passage can render beyond
 the screen. Do not depend on automatic wrapping, a larger box, or a smaller font to fix it. Choose
 breaks at natural phrase or sentence boundaries, and never place `||` inside Dual Text or through an
-N:M Alignment Unit.
+N:M Alignment Unit. A closing `</segment>` is also a hard Cue boundary: Cue counting and timing
+restart at the next Segment, so a trailing `||` is not required merely to prevent a Cue crossing
+Segments.
 
 The mechanical gate `validate_script_cues --run <build.svrun>` enforces a maximum of four visible
 words per Cue. Fix the Script before `hypit check` or preview.

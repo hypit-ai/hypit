@@ -42,8 +42,8 @@ function usage(): string {
     "  hypit-reference-video-tools validate_script_cues --run <build.svrun>",
     "  hypit-reference-video-tools inspect_visual_contract [--shape visual-track|text-flow|text-typography|text-paint|text-document|path-command] [--producers-of <package> ...]",
     "  hypit-reference-video-tools paths",
-    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <build.svrun> --segment <id>|--selection <id>|--tokens <from:to> --video <path>|--image <path> [--question <scope>] [--element <id>]",
-    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
+    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <build.svrun> --segment <id>|--selection <id>|--tokens <from:to> --video <path>|--image <path> [--question <scope>] [--element <id>] [--tolerance-frames <n>]",
+    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --video <path>|--image <path> [--question <scope>] [--element <id>] [--tolerance-frames <n>]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch <comparisons.json>",
     "  hypit-reference-video-tools review_element --run <build.svrun> --element <id> --segment <id>|--selection <id>|--tokens <from:to> --video <path>|--image <path> --intent-file <path> [--question <scope>]",
     "  hypit-reference-video-tools review_element --run <build.svrun> --batch <reviews.json>",
@@ -174,15 +174,17 @@ function usage(): string {
     "file — since that observer reads pictures and the words are the only record of when speech happens.",
     "",
     "inspect_visual_contract answers what a Producer that draws may return: the element kinds, the style",
-    "names admitted on them, which take an enum, and how few keyframes an animation carries. Every line is",
+    "names admitted on them, which take an enum, the only local styles allowed in keyframes",
+    "(clip-path, filter, opacity and transform), and how few keyframes an animation carries. Every line is",
     "generated from the Composition schema, so it says what the seal will accept rather than what one",
     "package happened to do. inspect_svml_vocabulary answers the other half — what a Source may write.",
     "",
     "paths reports where this command reads reference state and resolves packages from, and which",
     "references are prepared. Use it when a check reports something it cannot see.",
     "",
-    "--package-root <dir> is where the packages a Source imports are resolved from, and it is accepted by",
-    "every command. It defaults to the working directory. A project that declares a vocabulary gap and",
+    "--package-root <dir> is where the project packages a Source imports are resolved from, and it is",
+    "accepted by every command. It defaults to the working directory and never replaces the active",
+    "Hypit Distribution root, which remains an independent fallback for @hypit/* packages. A project that declares a vocabulary gap and",
     "fills it publishes those packages under its own scope and installs them against the project root, so",
     "run these commands from the project directory or name it here: resolved from anywhere else, the",
     "project's own packages are not found, and reconstruction_check reports them under",
@@ -280,7 +282,9 @@ async function main(): Promise<void> {
   // against the project root, so a root taken from anywhere else resolves none of them: --package-root
   // is how a command run from elsewhere reaches them. HYPIT_DISTRIBUTION_ROOT names an installed
   // Distribution and is the fallback for the installed packages a project does not carry.
-  const resolveFrom = one(flags, "package-root") ?? process.env.HYPIT_DISTRIBUTION_ROOT;
+  // --package-root selects only the project/source package root.  The active Distribution root is
+  // discovered independently by video-cli and is always supplied as a loader fallback.
+  const resolveFrom = one(flags, "package-root");
   const tools = createReferenceVideoTools({
     ...(resolveFrom === undefined ? {} : { packageRoot: resolveFrom }),
   });
@@ -509,8 +513,9 @@ async function main(): Promise<void> {
       ...(video === undefined ? { image_path: required(flags, "image") } : { video_path: video }),
       ...(one(flags, "question") === undefined ? {} : { question: one(flags, "question") }),
       ...(one(flags, "element") === undefined ? {} : { element: one(flags, "element") }),
+      ...(one(flags, "tolerance-frames") === undefined ? {} : { tolerance_frames: Number(one(flags, "tolerance-frames")) }),
     };
-    result = await tools.compare_reconstruction(input as { reference_id: string; shot_id?: string; segment?: string; selection?: string; run?: string; image_path?: string; video_path?: string; question?: string; element?: string });
+    result = await tools.compare_reconstruction(input as CompareReconstructionInput);
   } else if (command === "inspect_visual_contract") {
     result = await tools.inspect_visual_contract({
       ...(one(flags, "shape") === undefined ? {} : { shape: one(flags, "shape")! }),

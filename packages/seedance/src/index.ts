@@ -148,9 +148,22 @@ export function compileSeedanceDurationRequestDraft(
 ): GenerationRequestDraft {
   verifySeedanceDurationProgram(program);
   assertSpeechDurationIdentity(duration);
+  // Speech estimation and paid video generation have different clocks.  A short spoken Segment
+  // (including fractional seconds) must remain short for SemanticTake alignment, while the remote
+  // model still requires an integer duration inside its declared range.  Clamp only the generation
+  // request to that legal range; never rewrite the speech estimate itself.
+  const durationPort = seedancePorts[program.model].ports.find((port) => port.name === "duration");
+  const legalDuration = durationPort?.value.kind === "number"
+    ? Math.min(durationPort.value.maximum ?? Number.MAX_SAFE_INTEGER, Math.max(durationPort.value.minimum ?? 0, Math.ceil(duration)))
+    : durationPort?.value.kind === "enum"
+      ? (() => {
+          const allowed = durationPort.value.values.filter((value): value is number => typeof value === "number" && value >= 0);
+          return allowed.find((value) => value >= duration) ?? Math.max(...allowed);
+        })()
+      : Math.ceil(duration);
   return sealGenerationRequestDraft(seedancePorts[program.model], {
     ...program.ports,
-    duration: [duration],
+    duration: [Number.isFinite(legalDuration) ? legalDuration : Math.ceil(duration)],
   });
 }
 

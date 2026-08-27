@@ -10,5 +10,5 @@ Surface-side `@hypit/temporal-markup` Window/Moment projections; that package is
 graph-side `@hypit/temporal` Producers.
 
 The three Surfaces demonstrate a box, a text surface and a media slot. The slot is a graph input; it is
-not a file bundled by the package. `preview/Example.png` is a real catalogue frame supplied by the
+not a file bundled by the package. `preview/Box.png` is a real catalogue frame supplied by the
 package's vocabulary.
