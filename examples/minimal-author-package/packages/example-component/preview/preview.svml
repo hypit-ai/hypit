@@ -1,0 +1,8 @@
+<?svml using="@hypit/markup@1"?>
+
+<!-- Catalogue Source for the fixture. A host project supplies the ProgramSpace record named `space.main`.
+     The real catalogue frame is preview/Example.png; this file documents the smallest Surface call. -->
+<svml>
+  <import as="example" from="@example/example-component@1"/>
+  <example:Box id="box" space={space.main}/>
+</svml>

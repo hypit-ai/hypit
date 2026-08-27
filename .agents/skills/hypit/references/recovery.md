@@ -44,7 +44,7 @@ checkpoint:
 
 ```bash
 hypit-reference-video-tools route_state --action checkpoint \
-  --project-root <project> --route reconstruction --step 9 \
+  --project-root <project> --route reconstruction --state review-planned \
   --status complete --next-action 'run final reconstruction_check' \
   --decision 'caption box is intentionally centred'
 ```

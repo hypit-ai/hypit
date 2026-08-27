@@ -59,37 +59,42 @@ hypit-reference-video-tools inspect_visual_contract
 
 It answers the questions a component is written against — which element kinds exist, which style
 names are admitted on them, which of those take an enum, how few keyframes an animation carries, and
-the four rules the seal enforces about parents, `order` and interpolation. Add
+the rules the seal enforces about parents, `order` and interpolation. Add
 `--producers-of @hypit/temporal` for the Producers a Fragment calls to turn a Script name into a
-window, with their port names, and the same for any package whose Producers you chain. Every line is
-generated from the Composition schema and the Modules themselves, so it says what will be accepted
-rather than what one package happened to do. `inspect_svml_vocabulary` answers the other half: what a
-Source may write.
+window. `@hypit/temporal-markup` is different: it owns the Surface-side
+`createTemporalWindowProjection`, `createTemporalInstantProjection`, and the corresponding
+attribute vocabularies. Every line is generated from the Composition schema and the Modules
+themselves, so it says what will be accepted rather than what one package happened to do.
+`inspect_svml_vocabulary` answers the other half: what a Source may write.
 
-Open a package's source only when neither command settles it — a role whose shape the guide leaves
-implicit, an export whose signature you need exactly. Use `hypit paths --json` to locate
-the installed Distribution and read **the one role you are stuck on**, not the package end to end.
-Find it by what it exports, since the filenames differ: `ranking` calls two of them `schedule.ts` and
-`render.ts`, `media-track` calls them `program.ts` and `lower.ts`, `comment-sticker` calls them
-`program.ts` and `author.ts`.
+When `inspect_svml_vocabulary` finds no close structural sibling, write from these documents and the
+minimal fixture at `examples/minimal-author-package/packages/example-component/`. Do not read an
+unrelated business package to discover generic API shapes. If the public contract still leaves a
+required shape undefined, report a repository documentation defect instead of continuing package
+archaeology.
 
-Check every signature you take that way against the current package's exports before you rely on it.
-A call read out of any source that is not the installed Distribution — an older project in the same
-checkout, a snippet in an issue, something you remember — is a name that may no longer exist, and
-what it costs is a compile error at the end of a package rather than at the line that borrowed it.
+There is one deliberate exception. If vocabulary inspection proves that an installed package has the
+same input/output Types, timing contract, terminal Track and Surface ports, and only the Style,
+layout, Recipe or renderer policy differs, use the **close-sibling path**: read that package's README
+and only the role files needed for the change, copy the structure into the project package, and
+replace its Module identity, nominal Types, Producer names, activation and README. Never edit or
+reuse the sibling's identity. A new Caption family may follow this path from the closest Caption
+family while reusing the common `@hypit/caption` contract. Similar names or similar screenshots do
+not qualify.
 
-Four are needed by every component that draws and are stated nowhere in the guides, so they are here.
-Read the rest from source; these are the ones that stop a package before it starts:
+These four public signatures are a quick index. The complete object shapes, including literal
+Fragment and Manifest ports and the full Surface return value, are in the minimal fixture:
 
 | From | Signature |
 |---|---|
 | `@hypit/elaborator` | `sealGraphFragment(fragment: Omit<GraphFragment, "format" \| "id">): GraphFragment` |
 | `@hypit/composition` | `sealVisualTrack(value: Omit<VisualTrack, "kind">): VisualTrack` |
 | `@hypit/component-kit` | `ProducerHandlerContext` — `{ command: InvokeProducerCommand; producer: ProducerRef; inputs: Readonly<Record<string, TypedRecord>> }` |
+| `@hypit/markup` | `SurfaceDecodeOutput` — `{ records, components, fragments, exports? }`; `SurfaceResolvedReference` carries `path`, `ref`, `type` and an optional `record` |
 
-The fourth is the shape of a filled media slot, which the boundary rules below describe in words: a
-blob input arrives in `inputs` as the `BlobRef` itself, not wrapped inline the way an authored value
-is, so read its `mediaType` off the Artifact rather than assuming what the slot's name suggests.
+A filled media slot arrives in `inputs` as the `BlobRef` itself, not wrapped inline the way an
+authored value is, so read its `mediaType` off the Artifact rather than assuming what the slot's name
+suggests.
 
 ## Package boundary
 

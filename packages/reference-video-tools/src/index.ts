@@ -19,7 +19,7 @@ export {
   ROUTE_STATE_STEPS,
   ROUTE_STATE_VERSION,
 } from "./route-state.js";
-export type { RouteCheckpointInput, RouteKind, RouteState, RouteStateInput } from "./route-state.js";
+export type { DescriptionRouteStep, ReconstructionRouteStep, RouteCheckpointInput, RouteKind, RouteState, RouteStateInput, RouteStep } from "./route-state.js";
 export {
   checkpointRevisionState,
   readRevisionState,

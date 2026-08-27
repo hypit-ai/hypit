@@ -38,6 +38,17 @@ test("route state starts once, checkpoints idempotently, and advances to the nex
   assert.equal((await readRouteState(root))?.current_step, 2);
 });
 
+test("named checkpoints default to complete and cannot skip an earlier stage", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-route-state-"));
+  await startRouteState({ projectRoot: root, route: "reconstruction" });
+  const completed = await checkpointRouteState({ projectRoot: root, route: "reconstruction", step: "environment" });
+  assert.deepEqual(completed.completed_steps, [1]);
+  await assert.rejects(
+    checkpointRouteState({ projectRoot: root, route: "reconstruction", step: "reference-observed" }),
+    /cannot complete reference-observed before reference-prepared/u,
+  );
+});
+
 test("reconcile uses durable artifact pointers and preserves manual gaps", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-route-state-"));
   const source = join(root, "main.svml");

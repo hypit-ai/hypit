@@ -113,6 +113,13 @@ export type PrepareResult = {
   readonly shots: readonly Shot[];
   readonly storyboard_ref: string;
   readonly transcript: Transcript;
+  /** Canonical whole-reference observation envelope. Legacy direct fields remain for compatibility. */
+  readonly observations?: Readonly<{
+    readonly people_and_product: Observation;
+    readonly voices: Observation;
+    readonly persistent_systems: Observation;
+    readonly places: Observation;
+  }>;
   readonly people_and_product: Observation;
   readonly voices: Observation;
   readonly persistent_systems: Observation;
