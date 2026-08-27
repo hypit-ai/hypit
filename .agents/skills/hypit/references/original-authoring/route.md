@@ -13,8 +13,12 @@ between the two — what a picture is, what one generation owes another, which p
 **This route spends.** One Build generates the pictures, the takes, the speech and the render, and
 step 13 is where the author says yes to it. There is no reference to check against, so the two things
 a reconstruction gets for free have to be decided deliberately: what the program is *for*, and what
-every appearance value *is*. Neither has an evidence file to consult. Write them down rather than
-discovering them at render time.
+ every appearance value *is*. Neither has an evidence file to consult. Write them down rather than
+ discovering them at render time.
+
+If a completed project receives a natural-language change, use `../revision.md` instead of restarting
+this route. Revision is Source/Recipe/Run-only and deterministic; it does not invoke a VLM or visual
+observer.
 
 ## Checkpoint and recovery
 
@@ -75,13 +79,19 @@ set -a && source .env && set +a
 
 **Read now:** `../credentials.md` — which variables each Provider needs.
 
-### 3. Ask what the description leaves out
+### 3. Make the brief sufficient before writing Source
 
-What is missing from a description is usually the duration, the aspect ratio and the language. Ask
-those together, once. Ask about the video and nothing else.
+**Read now:** `../brief-intake.md`. If this is a sparse or ambiguous request, inspect complete
+projects under the checkout root's `examples/` directory and compare their recovered author intent,
+Hook and narrative to the request. If no example is semantically relevant, use the document's
+general fallback; absence of an example is not permission to guess or skip intake.
 
-Freeze the answers along with the Script's meaning, the format, the supplied assets and the factual
-claims before any prompt is written. Everything downstream is measured against them.
+Ask only for unresolved, high-impact creative decisions. Freeze a concise `.hypit/brief` recording
+the user's goal, audience, intent, Hook, narrative progression, visual/audio/text relationships,
+claims, confirmed decisions, unresolved questions, and expected SVML/SVS/SVRun consequences. Low-risk
+implementation details are yours; core facts, claims, Hook and audience promise require confirmation.
+Do not enter `brief-frozen` or write paid-generation prompts until no unresolved answer can change the
+Graph, Script, visual semantics, timing or generation inputs.
 
 ### 4. Read the craft this program needs
 

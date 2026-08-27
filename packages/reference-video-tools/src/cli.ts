@@ -2,7 +2,7 @@
 import { readFile } from "node:fs/promises";
 
 import { createReferenceVideoTools } from "./tools.js";
-import type { CompareReconstructionInput, ObserveReferenceInput, RecordObservationInput, RenderElementInput, ReviewElementInput, RouteStateCommandInput } from "./tools.js";
+import type { CompareReconstructionInput, ObserveReferenceInput, RecordObservationInput, RenderElementInput, ReviewElementInput, RouteStateCommandInput, RevisionStateCommandInput } from "./tools.js";
 
 /**
  * A word range written on the command line as `from:to`, half-open.
@@ -27,6 +27,7 @@ function usage(): string {
     "Usage:",
     "  hypit-reference-video-tools list_svml_packages",
     "  hypit-reference-video-tools route_state --action start|read|checkpoint|reconcile --project-root <dir> [options]",
+    "  hypit-reference-video-tools revision_state --action start|read|checkpoint|reconcile --project-root <dir> [options]",
     "    start: --route reconstruction|description [--run <run>] [--reference-id <id>]",
     "    checkpoint: --route <route> --step <n> [--status in_progress|complete|blocked] [--next-action <text>] [--artifacts <json>]",
     "    read/reconcile: --project-root <dir>",
@@ -312,6 +313,51 @@ async function main(): Promise<void> {
         ...(one(flags, "command") === undefined ? {} : { command: one(flags, "command") }),
         ...(one(flags, "error") === undefined ? {} : { error: one(flags, "error") }),
       } as RouteStateCommandInput);
+    }
+  } else if (command === "revision_state") {
+    const action = typeof supplied?.action === "string" ? supplied.action : one(flags, "action");
+    if (action !== "start" && action !== "read" && action !== "checkpoint" && action !== "reconcile") {
+      throw new Error("--action must be start, read, checkpoint or reconcile");
+    }
+    const projectRoot = typeof supplied?.project_root === "string" ? supplied.project_root : required(flags, "project-root");
+    if (supplied !== undefined) {
+      result = await tools.revision_state(supplied as RevisionStateCommandInput);
+    } else if (action === "start") {
+      const parentRoute = one(flags, "parent-route");
+      if (parentRoute !== undefined && parentRoute !== "reconstruction" && parentRoute !== "description") throw new Error("--parent-route must be reconstruction or description");
+      result = await tools.revision_state({ action, project_root: projectRoot,
+        ...(one(flags, "run") === undefined ? {} : { run: one(flags, "run") }),
+        ...(parentRoute === undefined ? {} : { parent_route: parentRoute }),
+        ...(one(flags, "parent-state-digest") === undefined ? {} : { parent_state_digest: one(flags, "parent-state-digest") }),
+        ...(one(flags, "request") === undefined ? {} : { request: one(flags, "request") }),
+      } as RevisionStateCommandInput);
+    } else if (action === "read" || action === "reconcile") {
+      result = await tools.revision_state({ action, project_root: projectRoot });
+    } else {
+      const stepRaw = required(flags, "step");
+      const numericStep = Number(stepRaw);
+      const step: number | string = Number.isSafeInteger(numericStep) && numericStep >= 1 ? numericStep : stepRaw;
+      const status = one(flags, "status");
+      if (status !== undefined && status !== "in_progress" && status !== "complete" && status !== "blocked") throw new Error("--status must be in_progress, complete or blocked");
+      let artifacts: Readonly<Record<string, string>> | undefined;
+      const artifactRaw = one(flags, "artifacts");
+      if (artifactRaw !== undefined) {
+        try { artifacts = JSON.parse(artifactRaw) as Readonly<Record<string, string>>; } catch (error) { throw new Error(`--artifacts is not valid JSON: ${error instanceof Error ? error.message : String(error)}`); }
+      }
+      result = await tools.revision_state({ action, project_root: projectRoot, step,
+        ...(status === undefined ? {} : { status }),
+        ...(one(flags, "run") === undefined ? {} : { run: one(flags, "run") }),
+        ...(one(flags, "parent-route") === undefined ? {} : { parent_route: one(flags, "parent-route") as "reconstruction" | "description" }),
+        ...(one(flags, "parent-state-digest") === undefined ? {} : { parent_state_digest: one(flags, "parent-state-digest") }),
+        ...(one(flags, "request") === undefined ? {} : { request: one(flags, "request") }),
+        ...(one(flags, "next-action") === undefined ? {} : { next_action: one(flags, "next-action") }),
+        ...(artifacts === undefined ? {} : { artifacts }),
+        ...(one(flags, "decision") === undefined ? {} : { decision: one(flags, "decision") }),
+        ...(one(flags, "command") === undefined ? {} : { command: one(flags, "command") }),
+        ...(one(flags, "error") === undefined ? {} : { error: one(flags, "error") }),
+        ...(many(flags, "impact").length === 0 ? {} : { impact: many(flags, "impact") }),
+        ...(many(flags, "affected-source").length === 0 ? {} : { affected_source: many(flags, "affected-source") }),
+      } as RevisionStateCommandInput);
     }
   } else if (command === "prepare_reference") {
     const observer = one(flags, "observer");

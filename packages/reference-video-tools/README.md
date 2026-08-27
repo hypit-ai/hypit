@@ -2,10 +2,15 @@
 
 CLI tools for reconstructing a reference video with Hypit.
 
-The package exposes six CLI subcommands: `list_svml_packages`, `prepare_reference`,
+The package exposes reference-observation, vocabulary/gate, rendering, review, route-state and
+revision-state CLI subcommands, including `list_svml_packages`, `prepare_reference`,
 `observe_reference`, `record_observation`, `inspect_svml_vocabulary`, and `compare_reconstruction`.
 Each command prints one JSON result to stdout. The final source files are authored by the calling
 agent and checked with the installed `hypit check` command.
+
+For a completed project change, `revision_state --action start|read|checkpoint|reconcile` stores a
+small atomic `.hypit/revision-state.json` snapshot. Revision edits Source/Recipe/Run and reruns
+deterministic gates; it does not invoke a VLM/observer or perform visual review.
 
 `--observer` on `prepare_reference` chooses who reads the reference, once per reference:
 

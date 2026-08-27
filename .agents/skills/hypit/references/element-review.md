@@ -1,5 +1,9 @@
 # Looking at what was built, before a Build runs
 
+This visual-review page is for the initial reconstruction/description routes. A post-completion
+revision does not use it, does not call a VLM/observer, and stops after deterministic gates; see
+`revision.md`.
+
 Structural checks prove that a source is legal. They prove nothing about whether it looks like what
 was wanted. A newly written package can resolve, activate, decode and pass every check while drawing
 something nobody asked for. Close that gap deliberately.

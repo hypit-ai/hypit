@@ -13,6 +13,10 @@ Those belong to the Build the author starts deliberately, after reading what was
 Seeing the reconstruction is what that Build is for. What is settled here is that the graph traces,
 which is the part a Build cannot repair.
 
+If the project is already complete and the author asks for a natural-language change, stop following
+this creation route and read `../revision.md`. Revision edits Source/Recipe/Run and reruns deterministic
+gates; it does not invoke a VLM or visual observer.
+
 One exception, because it is not a generation of the video: a component's own surface — the field its
 elements are drawn on — is produced while the package is authored, with `hypit image`, and committed
 inside the package. `../playbooks/craft/generated-dependencies.md` draws that line.
