@@ -53,7 +53,7 @@ const vocabulary = (summary: string, example: string) => ({
 });
 
 export const exampleMarkupSurfaces = [
-  { name: "box", tag: "Box", mode: "structured", outputs: [exampleTypes.box, compositionTypes.visualTrack], vocabulary: vocabulary("A framed box surface.", "<example:Box id=\"box\" space={space.main}/>") },
-  { name: "text", tag: "Text", mode: "structured", outputs: [exampleTypes.text, compositionTypes.visualTrack], vocabulary: vocabulary("A text-bearing surface.", "<example:Text id=\"title\" space={space.main}>Hello</example:Text>") },
-  { name: "media-slot", tag: "MediaSlot", mode: "structured", outputs: [exampleTypes.mediaSlot, compositionTypes.visualTrack], vocabulary: vocabulary("A media slot whose content is a graph input.", "<example:MediaSlot id=\"shot\" space={space.main}/>") },
+  { name: "box", tag: "Box", mode: "structured", outputs: [exampleTypes.box, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A framed box surface.", "<example:Box id=\"box\" space={space.main}/>") , preview: previewImage("Example.png") } },
+  { name: "text", tag: "Text", mode: "structured", outputs: [exampleTypes.text, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A text-bearing surface.", "<example:Text id=\"title\" space={space.main}>Hello</example:Text>"), preview: previewImage("Example.png") } },
+  { name: "media-slot", tag: "MediaSlot", mode: "structured", outputs: [exampleTypes.mediaSlot, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A media slot whose content is a graph input.", "<example:MediaSlot id=\"shot\" space={space.main}/>") , preview: previewImage("Example.png") } },
 ] as const;
