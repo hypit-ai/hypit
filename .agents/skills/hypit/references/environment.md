@@ -79,8 +79,11 @@ not run there. Do not claim compatibility that the platform dependencies cannot 
 
 `hypit` and Node are required. `ffmpeg` and `ffprobe` are required by local media and preview paths; a
 host package manager puts them on `PATH` on macOS and Linux, and a manual install puts them on `PATH`
-on Windows. Credentials load from a project's `.env` in the same shell that runs the commands:
-`set -a && . ./.env && set +a`.
+on Windows. Credentials load before any observer or Provider probe. In a checkout task, check the
+checkout root `.env` and then the project root `.env` (project values override duplicates) in the same
+shell:
+`set -a; [ ! -f <checkout-root>/.env ] || . <checkout-root>/.env; [ ! -f <project-root>/.env ] || . <project-root>/.env; set +a`.
+When these values satisfy the selected observer/Provider, do not ask the author for them again.
 `uv` is required only when the selected Runtime Profile uses a managed Python program such as
 WhisperX or OpenCV.
 Reconstructing a video given as a link rather than as a file needs `uv` too: `yt-dlp` is pinned under
@@ -125,12 +128,13 @@ changes an exact adapter dependency, the next explicit `runtime up` lets npm upd
 
 Only someone changing Hypit itself clones the repository. A task already running from that checkout
 may also use it as the Distribution when no installed CLI exists, as described above. Follow
-`docs/guide/develop.md` and use its pinned pnpm version and official `pnpm-lock.yaml`. Never place an
-author project or its local packages inside that checkout.
+`docs/guide/develop.md` and use its pinned pnpm version and official `pnpm-lock.yaml`. Video-production
+projects in this checkout live under `<checkout-root>/projects/<project-name>/`; they remain independent
+author projects and are not part of the repository workspace globs.
 
 A project directory carries its own `package.json` — a name and `"private": true` is the whole file,
 since nothing reads its fields. `hypit check`, `plan` and `build` locate the package root by walking
 up from the project until some `package.json` appears; the file is what stops that walk at the
-project, so `packages/local-<slug>/` resolves from there rather than from whichever ancestor
+project, so `packages/<slug>/` resolves from there rather than from whichever ancestor
 directory happened to hold one. It is matched by no `pnpm-workspace.yaml` glob and adds the project
 to no workspace.

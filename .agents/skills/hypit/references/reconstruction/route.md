@@ -83,7 +83,7 @@ of intent; files and check results remain the authority.
 | `reference-prepared` | checkpoint after `prepare_reference` reports ready `state.json` | `prepare_reference` or `route_state reconcile` |
 | `reference-observed` | explicit observer checkpoint; all required observation answers are complete | `observe_reference` / `record_observation` |
 | `vocabulary-checked` | vocabulary inspection is persisted for the Run | `inspect_svml_vocabulary --run <run>` |
-| `package-ready` | every `packages/local-*` package has real Surface/Producer/Fragment and is used by the compiled Graph | `validate_local_author_packages --run <run>` |
+| `package-ready` | every project-owned package under `packages/` has a real Surface/Producer/Fragment and is used by the compiled Graph | `validate_local_author_packages --run <run>` |
 | `script-checked` | every caption Cue has at most four visible words | `validate_script_cues --run <run>` |
 | `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
 | `graph-checked` | `preview_check` returns `sound: true` after package and Cue gates | `preview_check <run>` |
@@ -117,22 +117,30 @@ report that no runnable Hypit Distribution is present and stop.
 
 ### 2. Choose the project directory
 
-Its own directory outside the installed Distribution, normally `<home>/<something>-reverse/`, named
-after the video. Use a directory the author named only if they named one. Give it a `package.json`
+When working in this checkout, create the independent project at
+`<checkout-root>/projects/<video-name>-reverse/` (use a safe slug). Use a directory the author named
+only if they explicitly named one. Give it a `package.json`
 with a name and `"private": true`, and nothing else — no field in it is read. `hypit check`, `plan`
 and `build` find the package root by walking up from the project until a `package.json` appears, so
-this file is what stops that walk at the project and lets `packages/local-<slug>/` resolve. It
+this file is what stops that walk at the project and lets the project's `packages/<slug>/` resolve. It
 matches no `pnpm-workspace.yaml` glob, so it enrolls the directory in nothing.
 
 **Read now:** `../runtime.md` — the hard boundary between a project and a Distribution.
 
 ### 3. Load credentials
 
-A project that keeps credentials in `.env` does not load them automatically:
+Check `<checkout-root>/.env` first, then `<project-root>/.env` if present, and load each before
+credential probing (the project file overrides duplicate names):
 
 ```bash
-set -a && source .env && set +a
+set -a
+[ ! -f <checkout-root>/.env ] || . <checkout-root>/.env
+[ ! -f <project-root>/.env ] || . <project-root>/.env
+set +a
 ```
+
+If the loaded variables satisfy the selected observer/Provider, continue without asking the author
+for them again. Ask only for a credential that is absent or invalid after both `.env` files are checked.
 
 **Read now:** `../credentials.md` — which variables each Provider needs. A variable a Provider needs
 and this machine does not hold is named, and the route stops there. The Vertex pair is the one
@@ -257,7 +265,7 @@ claiming a vocabulary gap or writing Source.
 **Done when:** the package has a real Manifest, Types, Producers, Validators, Surface, decoder,
 Fragment, activation, README and preview, and `validate_local_author_packages --run <build.svrun>`
 reports that the Source imports and compiled Graph uses it. A component that merely loads is not done.
-If no gap remains, remove unused `packages/local-*` directories.
+If no gap remains, remove unused project-owned package directories.
 
 ---
 

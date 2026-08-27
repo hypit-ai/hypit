@@ -49,7 +49,8 @@ before continuing. Never resume from chat memory alone, and never repeat a compl
 without verifying its durable evidence.
 
 Before Source is accepted, every route must complete persisted vocabulary inspection,
-`validate_local_author_packages` for every `packages/local-*` package, and
+`validate_local_author_packages` for every project-owned package under the project's `packages/`
+directory, and
 `validate_script_cues` (maximum four visible words per Cue). `preview_check` and the route's final
 check repeat these gates even if route-state claims they were completed.
 
@@ -61,6 +62,13 @@ machine-wide CLI; when the task is running from a Hypit contributor checkout, us
 Node entrypoints instead. The npm package is not currently published, so absence of the `hypit`
 command is not permission to install it from the registry. `references/environment.md` establishes
 the boundary and launcher selection. Read it before the first command of any route.
+
+When running from a Hypit checkout, create new author projects under
+`<checkout-root>/projects/<project-name>/`. Before asking for credentials, check for `.env` at the
+checkout root and at the project root, load any present file into the command environment, and use
+the credentials it provides. If the loaded credentials satisfy the selected observer or Provider,
+do not ask the author to repeat them; ask only when a required credential is genuinely absent or
+invalid. Never commit `.env` or copy its secret values into route state, Source, logs or prompts.
 
 ## Route
 
