@@ -16,6 +16,39 @@ a reconstruction gets for free have to be decided deliberately: what the program
 every appearance value *is*. Neither has an evidence file to consult. Write them down rather than
 discovering them at render time.
 
+## Checkpoint and recovery
+
+Start the project snapshot after creating the project directory:
+
+```bash
+hypit-reference-video-tools route_state --action start --project-root <project> \
+  --route description
+```
+
+Route tools update machine-owned stages after successful checks, renders, and reviews. Record an
+explicit checkpoint after brief decisions, Source edits, repairs, and Build actions. After any
+interruption or context compaction, read `../recovery.md`, run `route_state --action reconcile
+--project-root <project>`, and continue only from its `next_action`.
+
+### Durable stage map
+
+| state | update / completion predicate | recovery entry |
+| --- | --- | --- |
+| `environment` | explicit checkpoint after Distribution, project and credentials are selected | `hypit paths --json` |
+| `brief-frozen` | explicit checkpoint naming the frozen brief, audience, format and claims | return to the brief checkpoint |
+| `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
+| `vocabulary-checked` | explicit checkpoint after package vocabulary is inspected and any gap is resolved | `inspect_svml_vocabulary` |
+| `graph-checked` | `preview_check` returns `sound: true` | `preview_check <run>` |
+| `review-planned` | `authoring_check` writes a plan | `authoring_check <run>` |
+| `preview-rendered` | render output and timing sidecar both exist | `render_element --batch <round.json>` |
+| `review-complete` | review log contains a complete record for the planned element | `review_element` / `record_review` |
+| `repairs-complete` | explicit checkpoint after applying review findings | edit Source, then rerun the checks |
+| `final-checked` | final `authoring_check` returns `passed: true` | `authoring_check <run>` |
+| `build-complete` | explicit checkpoint after the durable Build record is accepted | `hypit build` (confirm cost first) |
+
+The numeric `current_step` is only a cursor; `reconcile` starts at the first unmet predicate. It never
+infers a creative brief, conformance judgement or repair from file presence alone.
+
 ## A description is the whole request
 
 The author gives what the video should be — its subject, its length, its audience, who is in it, what

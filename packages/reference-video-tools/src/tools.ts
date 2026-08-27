@@ -24,6 +24,15 @@ import { downloadReferenceVideo, isReferenceUrl } from "@hypit/yt-dlp";
 import { authoringCheck, previewCheck, reviewLogPath } from "./checks.js";
 import type { AuthoringCheckInput, PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
 import {
+  checkpointRouteState,
+  readRouteState,
+  reconcileRouteState,
+  routeStatePath,
+  startRouteState,
+  ROUTE_STATE_STEPS,
+} from "./route-state.js";
+import type { RouteKind, RouteState } from "./route-state.js";
+import {
   assert,
   completelyStill,
   cutClip,
@@ -60,6 +69,8 @@ export type ObserveReferenceInput = {
 };
 export type RecordObservationInput = {
   readonly reference_id: string;
+  /** Optional Run used to persist reconstruction route progress after an out-of-band answer. */
+  readonly run?: string;
   readonly key?: string;
   readonly text?: string;
   /**
@@ -163,6 +174,11 @@ export type RecordReviewInput = {
   readonly text: string;
 };
 
+export type RouteStateCommandInput =
+  | ({ readonly action: "start"; readonly project_root: string; readonly route: RouteKind; readonly run?: string; readonly reference_id?: string })
+  | ({ readonly action: "read" | "reconcile"; readonly project_root: string })
+  | ({ readonly action: "checkpoint"; readonly project_root: string; readonly route: RouteKind; readonly step: number; readonly status?: "in_progress" | "complete" | "blocked"; readonly run?: string; readonly reference_id?: string; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly decision?: string; readonly command?: string; readonly error?: string });
+
 export type { RenderElementInput, RenderPreviewsInput } from "./authoring.js";
 export type { PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
 
@@ -188,6 +204,7 @@ export type ReferenceVideoTools = {
    * were unreachable to this route while the check began by demanding a reference.
    */
   authoring_check(input: Omit<AuthoringCheckInput, "mode" | "reference_id">): Promise<Record<string, unknown>>;
+  route_state(input: RouteStateCommandInput): Promise<Record<string, unknown>>;
 };
 
 type ToolOptions = {
@@ -200,6 +217,117 @@ type ToolOptions = {
 };
 export type GenerateText = (input: { readonly parts: readonly Part[]; readonly instruction: string }) => Promise<string>;
 type ObservationTask = { readonly key: string; readonly request: Request };
+
+function routeStateResult(state: RouteState | undefined): Record<string, unknown> {
+  return state === undefined ? { state: null } : { state, path: routeStatePath(state.project_root) };
+}
+
+async function runRouteStateCommand(input: RouteStateCommandInput): Promise<Record<string, unknown>> {
+  if (input.action === "start") {
+    const state = await startRouteState({ projectRoot: input.project_root, route: input.route, ...(input.run === undefined ? {} : { run: input.run }), ...(input.reference_id === undefined ? {} : { referenceId: input.reference_id }) });
+    return routeStateResult(state);
+  }
+  if (input.action === "read") return routeStateResult(await readRouteState(input.project_root));
+  if (input.action === "reconcile") return routeStateResult(await reconcileRouteState(input.project_root));
+  if (input.action !== "checkpoint") throw new Error(`unsupported route state action ${input.action}`);
+  const state = await checkpointRouteState({
+    projectRoot: input.project_root,
+    route: input.route,
+    step: input.step,
+    ...(input.status === undefined ? {} : { status: input.status }),
+    ...(input.run === undefined ? {} : { run: input.run }),
+    ...(input.reference_id === undefined ? {} : { referenceId: input.reference_id }),
+    ...(input.next_action === undefined ? {} : { nextAction: input.next_action }),
+    ...(input.artifacts === undefined ? {} : { artifacts: input.artifacts }),
+    ...(input.decision === undefined ? {} : { decision: input.decision }),
+    ...(input.command === undefined ? {} : { command: input.command }),
+    ...(input.error === undefined ? {} : { error: input.error }),
+  });
+  return routeStateResult(state);
+}
+
+async function autoRouteCheckpoint(
+  runPath: string | undefined,
+  step: number,
+  artifacts: Readonly<Record<string, string>> = {},
+  nextAction?: string,
+  command?: string,
+): Promise<void> {
+  if (runPath === undefined) return;
+  const projectRoot = dirname(resolve(runPath));
+  const state = await readRouteState(projectRoot);
+  if (state === undefined || state.status === "complete") return;
+  await checkpointRouteState({
+    projectRoot,
+    route: state.route,
+    step,
+    status: "complete",
+    run: runPath,
+    artifacts,
+    command: command ?? `route step ${step}`,
+    ...(nextAction === undefined ? {} : { nextAction }),
+  });
+}
+
+async function persistRouteEvidence(runPath: string, name: string, result: Record<string, unknown>): Promise<string> {
+  const path = join(dirname(resolve(runPath)), ".hypit", name);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify(result, null, 2)}\n`, "utf8");
+  return path;
+}
+
+async function autoRouteError(runPath: string | undefined, command: string, error: unknown): Promise<void> {
+  if (runPath === undefined) return;
+  const resolved = resolve(invokedFrom(), runPath);
+  const projectRoot = dirname(resolved);
+  const state = await readRouteState(projectRoot);
+  if (state === undefined || state.status === "complete") return;
+  await checkpointRouteState({
+    projectRoot,
+    route: state.route,
+    step: state.current_step <= ROUTE_STATE_STEPS[state.route].length ? state.current_step : ROUTE_STATE_STEPS[state.route].length,
+    status: "in_progress",
+    run: resolved,
+    command,
+    error: error instanceof Error ? error.message : String(error),
+  });
+}
+
+async function renderEvidence(output: unknown): Promise<Readonly<Record<string, string>>> {
+  if (typeof output !== "string") return {};
+  const rendered = resolve(invokedFrom(), output);
+  const sidecar = standInSidecarPath(rendered);
+  const [renderFile, sidecarFile] = await Promise.all([
+    stat(rendered).then((value) => value.isFile(), () => false),
+    stat(sidecar).then((value) => value.isFile(), () => false),
+  ]);
+  return renderFile && sidecarFile ? { preview_render: rendered, render_sidecar: sidecar } : {};
+}
+
+async function referenceObservationComplete(referenceId: string): Promise<boolean> {
+  const state = await readJson<ReferenceState>(join(stateRoot(referenceId), "state.json")).catch(() => undefined);
+  if (state === undefined || !prepared(state)) return false;
+  const observations = await readJson<Record<string, Observation>>(join(state.root, "observations.json")) ?? {};
+  const required = state.shots.flatMap((shot, index) => [
+    `visual:${shot.shot_id}`, `type:${shot.shot_id}`, `audio:${shot.shot_id}`,
+    ...(index === 0 ? [] : [`boundary:${shot.shot_id}`]),
+  ]);
+  return required.every((key) => observations[key]?.status === "complete")
+    && Object.values(observations).every((value) => value?.status === "complete");
+}
+
+async function maybeCheckpointReferenceObservation(input: RecordObservationInput): Promise<void> {
+  if (input.run === undefined || !(await referenceObservationComplete(input.reference_id))) return;
+  const runPath = resolve(invokedFrom(), input.run);
+  await autoRouteCheckpoint(runPath, 3, { reference_observations: join(stateRoot(input.reference_id), "observations.json") }, "write or repair the reconstruction Source");
+}
+
+async function persistRoutePlan(runPath: string, result: Record<string, unknown>): Promise<string> {
+  const path = join(dirname(resolve(runPath)), ".hypit", "route-plan.json");
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify({ plan: result.plan ?? [], generated_at: new Date().toISOString() }, null, 2)}\n`, "utf8");
+  return path;
+}
 
 function observation(status: Observation["status"], text: string): Observation { return { status, text }; }
 function unavailable(reason: string): Transcript { return { status: "unavailable", transcript_ref: null, word_count: 0, reason }; }
@@ -254,6 +382,8 @@ export type ComparisonRecord = {
    * crediting none of them.
    */
   readonly id: string;
+  /** The project Run, when this comparison was made over a word range. */
+  readonly run?: string;
   /** Which stretch was compared. A comparison names its shot or its word range, never both. */
   readonly shot_id?: string;
   readonly range?: ComparedRange;
@@ -1670,6 +1800,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         scope,
       });
       if (already !== undefined) {
+        if (input.run !== undefined) await autoRouteCheckpoint(resolve(invokedFrom(), input.run), 8, { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
         return {
           reference_id: state.reference_id,
           observer,
@@ -1700,6 +1831,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       await appendLooked(comparisonLog(root), {
         at: startedAt,
         id: comparisonId,
+        ...(input.run === undefined ? {} : { run: resolve(invokedFrom(), input.run) }),
         ...(shot === undefined ? {} : { shot_id: shot.shot_id }),
         ...(cut === undefined ? {} : { range: cut.record }),
         ...(input.element === undefined ? {} : { element: input.element.trim() }),
@@ -1713,6 +1845,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         ...(standIn === undefined ? {} : { stand_in: standIn }),
         ...(differences.status === "complete" ? { differences: differences.text } : {}),
       });
+      if (differences.status === "complete" && input.run !== undefined) {
+        await autoRouteCheckpoint(resolve(invokedFrom(), input.run), 8, { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
+      }
       return {
         reference_id: state.reference_id,
         observer,
@@ -1754,7 +1889,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         // a lock, for writes that take no time. Running them in the order they were written keeps the
         // failures in that order too.
         const { done, failures } = await runBatch(round, { concurrency: 1, gapMs: 0 }, async (one) =>
-          await tools.record_observation({ reference_id: input.reference_id, key: one.key, text: one.text }));
+          await tools.record_observation({ reference_id: input.reference_id, ...(input.run === undefined ? {} : { run: input.run }), key: one.key, text: one.text }));
         return {
           recorded: done.length,
           failed: failures.length,
@@ -1777,14 +1912,22 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           const current = await readJson<ReferenceState>(join(root, "state.json")) ?? state;
           await writeJson(join(root, "state.json"), { ...current, [field]: observation("complete", text) });
         });
+        await maybeCheckpointReferenceObservation(input);
         return { reference_id: state.reference_id, key, stored_in: "state" };
       }
       // A comparison is answered against the entry it opened in the log rather than against the
       // observation cache: the log is what a gate reads to tell an element that was looked at from one
       // that never was, and until this existed an agent-observer comparison could never leave `pending`.
       if (key.startsWith("comparison:")) {
-        const closed = await closeLooked(comparisonLog(root), key.slice("comparison:".length), text);
+        const comparisonId = key.slice("comparison:".length);
+        const closed = await closeLooked(comparisonLog(root), comparisonId, text);
         assert(closed, `${key} names no open comparison of reference ${input.reference_id}`);
+        const comparison = (await readFile(join(root, "comparisons.jsonl"), "utf8"))
+          .split("\n").filter((line) => line.trim().length > 0).flatMap((line) => {
+            try { return [JSON.parse(line) as ComparisonRecord]; } catch { return []; }
+          }).find((entry) => entry.id === comparisonId);
+        if (comparison?.run !== undefined) await autoRouteCheckpoint(comparison.run, 8, { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
+        await maybeCheckpointReferenceObservation(input);
         return { reference_id: state.reference_id, key, stored_in: "comparisons" };
       }
       const shotKeys = new Set(state.shots.flatMap((shot) => [`visual:${shot.shot_id}`, `type:${shot.shot_id}`, `audio:${shot.shot_id}`, `boundary:${shot.shot_id}`, `window:${shot.shot_id}`]));
@@ -1806,6 +1949,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         cache[key] = observation("complete", text);
         await writeJson(path, cache);
       });
+      await maybeCheckpointReferenceObservation(input);
       return { reference_id: state.reference_id, key, stored_in: "observations" };
     },
 
@@ -1956,6 +2100,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       assert(text.length > 0, "text is required; a review that found nothing wrong says so in words");
       const closed = await closeLooked(reviewLog(root), id, text);
       assert(closed, `${id} names no open review of ${runPath}`);
+      await autoRouteCheckpoint(runPath, 8, { review_log: reviewLogPath(runPath) }, "repair findings, then rerun authoring_check");
       return { run: runPath, review_id: id, stored_in: reviewLogPath(runPath) };
     },
 
@@ -1970,6 +2115,18 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           ...one, run: one.run ?? input.run,
           ...(one.reference_id ?? input.reference_id === undefined ? {} : { reference_id: input.reference_id }),
         } as RenderElementInput));
+        if (failures.length === 0 && done.length > 0) {
+          const run = round[0]?.run ?? input.run;
+          const first = done[0] as Record<string, unknown>;
+          const evidence = await renderEvidence(first.out);
+          if (Object.keys(evidence).length > 0) {
+            await autoRouteCheckpoint(run === undefined ? undefined : resolve(invokedFrom(), run), 7,
+              evidence, "compare_reconstruction or review_element");
+          }
+        } else if (failures.length > 0) {
+          const failedRun = round[0]?.run ?? input.run;
+          await autoRouteError(failedRun, "render_element", failures[0]?.error ?? "render failed");
+        }
         return {
           rendered: done.length,
           failed: failures.length,
@@ -1977,7 +2134,18 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           ...(failures.length === 0 ? {} : { failures }),
         };
       }
-      return await renderElement(input);
+      try {
+        const result = await renderElement(input);
+        const evidence = await renderEvidence(result.out);
+        if (Object.keys(evidence).length > 0) {
+          await autoRouteCheckpoint(input.run === undefined ? undefined : resolve(invokedFrom(), input.run), 7,
+            evidence, "compare_reconstruction or review_element");
+        }
+        return result;
+      } catch (error) {
+        await autoRouteError(input.run, "render_element", error);
+        throw error;
+      }
     },
 
     async render_previews(input): Promise<Record<string, unknown>> {
@@ -1985,15 +2153,62 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async preview_check(input): Promise<Record<string, unknown>> {
-      return await previewCheck(input, { packageRoot });
+      const runPath = resolve(invokedFrom(), input.run);
+      try {
+        const result = await previewCheck(input, { packageRoot });
+        const evidence = await persistRouteEvidence(runPath, "preview-check.json", result);
+        if (result.sound === true) {
+          const source = await authorSource(runPath).catch(() => undefined);
+          const route = await readRouteState(dirname(runPath));
+          const sourceStep = route?.route === "description" ? 3 : 4;
+          await autoRouteCheckpoint(runPath, sourceStep, source === undefined ? {} : { author_source: source.path }, "run reconstruction_check or authoring_check");
+          await autoRouteCheckpoint(runPath, 5, { preview_check: evidence }, "run reconstruction_check or authoring_check");
+        } else await autoRouteError(runPath, "preview_check", result.refused ?? result.problems ?? "preview check failed");
+        return result;
+      } catch (error) {
+        await autoRouteError(runPath, "preview_check", error);
+        throw error;
+      }
     },
 
     async reconstruction_check(input): Promise<Record<string, unknown>> {
-      return await authoringCheck({ ...input, mode: "reconstruction" }, { packageRoot });
+      const runPath = resolve(invokedFrom(), input.run);
+      try {
+        const result = await authoringCheck({ ...input, mode: "reconstruction" }, { packageRoot });
+        const evidence = await persistRouteEvidence(runPath, "final-check.json", result);
+        if (Array.isArray(result.plan)) {
+          const planPath = await persistRoutePlan(runPath, result);
+          await autoRouteCheckpoint(runPath, 6, { review_plan: planPath }, "render_element --batch <round.json>");
+        }
+        if (result.passed === true) await autoRouteCheckpoint(runPath, 10, { final_check: evidence }, "submit the approved Build");
+        else await autoRouteError(runPath, "reconstruction_check", result.issues ?? result.unresolved ?? "reconstruction check failed");
+        return result;
+      } catch (error) {
+        await autoRouteError(runPath, "reconstruction_check", error);
+        throw error;
+      }
     },
 
     async authoring_check(input): Promise<Record<string, unknown>> {
-      return await authoringCheck({ ...input, mode: "description" }, { packageRoot });
+      const runPath = resolve(invokedFrom(), input.run);
+      try {
+        const result = await authoringCheck({ ...input, mode: "description" }, { packageRoot });
+        const evidence = await persistRouteEvidence(runPath, "final-check.json", result);
+        if (Array.isArray(result.plan)) {
+          const planPath = await persistRoutePlan(runPath, result);
+          await autoRouteCheckpoint(runPath, 6, { review_plan: planPath }, "render_element --batch <round.json>");
+        }
+        if (result.passed === true) await autoRouteCheckpoint(runPath, 10, { final_check: evidence }, "submit the approved Build");
+        else await autoRouteError(runPath, "authoring_check", result.issues ?? result.unresolved ?? "authoring check failed");
+        return result;
+      } catch (error) {
+        await autoRouteError(runPath, "authoring_check", error);
+        throw error;
+      }
+    },
+
+    async route_state(input): Promise<Record<string, unknown>> {
+      return await runRouteStateCommand(input);
     },
   };
   return tools;

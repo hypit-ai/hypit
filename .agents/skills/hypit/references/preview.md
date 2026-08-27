@@ -1,5 +1,9 @@
 # See what you authored, without paying
 
+`preview_check` and `render_element` advance the project's `.hypit/route-state.json` only after their
+success predicates hold. After a new turn or interruption, read `../recovery.md`, reconcile the state,
+and resume from its `next_action`; do not rely on chat history.
+
 Three ways to look at a Source before a Provider is ever reached: prove the graph traces, render one
 element to a still, and open the whole Run for a person. They answer different questions, and none of
 them costs a generation.

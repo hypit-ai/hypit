@@ -28,6 +28,12 @@ names the files it needs; read those when you reach that step rather than all of
 Keep `.svml` Author Source, `.svs` Recipe Source, `.svrun` Run Source, and
 `hypit.runtime.json` Runtime Profile as separate languages and responsibilities.
 
+Every route is resumable. At the start of a route, create the project's
+`.hypit/route-state.json`; after any new turn, interruption, or context compaction, read
+`references/recovery.md`, inspect that snapshot and reconcile it against the artifacts and checks
+before continuing. Never resume from chat memory alone, and never repeat a completed or paid step
+without verifying its durable evidence.
+
 Do not create or hand-author SVG images anywhere in an author project or project-local package.
 This includes `.svg` assets, inline `<svg>` markup, and SVG data URLs.
 
@@ -66,6 +72,8 @@ the boundary and launcher selection. Read it before the first command of any rou
   at the step that proves a vocabulary gap.
 - Seeing what the sources produce, or proving the graph traces before any Build → read
   `references/preview.md`.
+- Recovering after interruption or context compaction → read `references/recovery.md` before any
+  other route step.
 - Preview-only media realization, temporary preview Runs, mock Artifact caching, or estimated
   SemanticTake timing → read `references/preview-mock.md`.
 - Runtime setup, plan/build/status/inspect/get/reuse → read `references/runtime.md`.
