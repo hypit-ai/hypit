@@ -37,6 +37,14 @@ import {
 } from "./route-state.js";
 import type { RouteKind, RouteState } from "./route-state.js";
 import {
+  checkpointRevisionState,
+  readRevisionState,
+  reconcileRevisionState,
+  revisionStatePath,
+  startRevisionState,
+} from "./revision-state.js";
+import type { RevisionState, RevisionStep } from "./revision-state.js";
+import {
   assert,
   completelyStill,
   cutClip,
@@ -188,6 +196,11 @@ export type RouteStateCommandInput =
   | ({ readonly action: "read" | "reconcile"; readonly project_root: string })
   | ({ readonly action: "checkpoint"; readonly project_root: string; readonly route: RouteKind; readonly step: number; readonly status?: "in_progress" | "complete" | "blocked"; readonly run?: string; readonly reference_id?: string; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly decision?: string; readonly command?: string; readonly error?: string });
 
+export type RevisionStateCommandInput =
+  | ({ readonly action: "start"; readonly project_root: string; readonly run?: string; readonly parent_route?: "reconstruction" | "description"; readonly parent_state_digest?: string; readonly request?: string })
+  | ({ readonly action: "read" | "reconcile"; readonly project_root: string })
+  | ({ readonly action: "checkpoint"; readonly project_root: string; readonly step: number | RevisionStep; readonly status?: "in_progress" | "complete" | "blocked"; readonly run?: string; readonly parent_route?: "reconstruction" | "description"; readonly parent_state_digest?: string; readonly request?: string; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly decision?: string; readonly command?: string; readonly error?: string; readonly impact?: readonly string[]; readonly affected_source?: readonly string[] });
+
 export type { RenderElementInput, RenderPreviewsInput } from "./authoring.js";
 export type { PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
 
@@ -216,6 +229,7 @@ export type ReferenceVideoTools = {
    */
   authoring_check(input: Omit<AuthoringCheckInput, "mode" | "reference_id">): Promise<Record<string, unknown>>;
   route_state(input: RouteStateCommandInput): Promise<Record<string, unknown>>;
+  revision_state(input: RevisionStateCommandInput): Promise<Record<string, unknown>>;
 };
 
 type ToolOptions = {
@@ -231,6 +245,10 @@ type ObservationTask = { readonly key: string; readonly request: Request };
 
 function routeStateResult(state: RouteState | undefined): Record<string, unknown> {
   return state === undefined ? { state: null } : { state, path: routeStatePath(state.project_root) };
+}
+
+function revisionStateResult(state: RevisionState | undefined): Record<string, unknown> {
+  return state === undefined ? { state: null } : { state, path: revisionStatePath(state.project_root) };
 }
 
 function routeStepFor(route: RouteKind, name: string): number {
@@ -261,6 +279,37 @@ async function runRouteStateCommand(input: RouteStateCommandInput): Promise<Reco
     ...(input.error === undefined ? {} : { error: input.error }),
   });
   return routeStateResult(state);
+}
+
+async function runRevisionStateCommand(input: RevisionStateCommandInput): Promise<Record<string, unknown>> {
+  if (input.action === "start") {
+    return revisionStateResult(await startRevisionState({
+      projectRoot: input.project_root,
+      ...(input.run === undefined ? {} : { run: input.run }),
+      ...(input.parent_route === undefined ? {} : { parentRoute: input.parent_route }),
+      ...(input.parent_state_digest === undefined ? {} : { parentStateDigest: input.parent_state_digest }),
+      ...(input.request === undefined ? {} : { request: input.request }),
+    }));
+  }
+  if (input.action === "read") return revisionStateResult(await readRevisionState(input.project_root));
+  if (input.action === "reconcile") return revisionStateResult(await reconcileRevisionState(input.project_root));
+  if (input.action !== "checkpoint") throw new Error(`unsupported revision state action ${input.action}`);
+  return revisionStateResult(await checkpointRevisionState({
+    projectRoot: input.project_root,
+    step: input.step,
+    ...(input.status === undefined ? {} : { status: input.status }),
+    ...(input.run === undefined ? {} : { run: input.run }),
+    ...(input.parent_route === undefined ? {} : { parentRoute: input.parent_route }),
+    ...(input.parent_state_digest === undefined ? {} : { parentStateDigest: input.parent_state_digest }),
+    ...(input.request === undefined ? {} : { request: input.request }),
+    ...(input.next_action === undefined ? {} : { nextAction: input.next_action }),
+    ...(input.artifacts === undefined ? {} : { artifacts: input.artifacts }),
+    ...(input.decision === undefined ? {} : { decision: input.decision }),
+    ...(input.command === undefined ? {} : { command: input.command }),
+    ...(input.error === undefined ? {} : { error: input.error }),
+    ...(input.impact === undefined ? {} : { impact: input.impact }),
+    ...(input.affected_source === undefined ? {} : { affectedSource: input.affected_source }),
+  }));
 }
 
 async function autoRouteCheckpoint(
@@ -2378,6 +2427,10 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
 
     async route_state(input): Promise<Record<string, unknown>> {
       return await runRouteStateCommand(input);
+    },
+
+    async revision_state(input): Promise<Record<string, unknown>> {
+      return await runRevisionStateCommand(input);
     },
   };
   return tools;
