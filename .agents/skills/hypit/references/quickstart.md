@@ -36,3 +36,6 @@ the SemanticTrack is the frame domain every `start`/`end` window resolves into â
 For execution, preserve the full lifecycle: select the Profile, inspect the frozen plan, run
 `runtime up` when preflight is not ready, submit a fresh automatically identified Build, inspect its
 accepted Records, retrieve Artifacts, and declare any reuse explicitly in a new Run Source.
+
+Both production routes persist progress in `.hypit/route-state.json`; after an interruption, follow
+`references/recovery.md` and reconcile before resuming.

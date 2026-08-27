@@ -1,5 +1,9 @@
 # Comparing what was built against the reference
 
+Completed comparisons are durable evidence in `comparisons.jsonl` and the route snapshot. After a
+context boundary, run `route_state --action reconcile` before comparing again; answered pairs are
+reused and are not sent to the observer twice.
+
 **Read `../element-review.md` first.** It owns the round this file sits inside: one element at a time,
 render what the Source configures, realize preview mocks for what a Build has not made, one round, two attempt ceilings,
 measure rather than guess, and the rule that the reader is not the builder. Everything below is what a

@@ -53,6 +53,40 @@ observations describe the reference and are cached, and `compare_reconstruction`
 element against it. Author the change in early and the evidence describes one video while the sources
 describe another.
 
+## Checkpoint and recovery
+
+Start the project snapshot before the first route decision:
+
+```bash
+hypit-reference-video-tools route_state --action start --project-root <project> \
+  --route reconstruction
+```
+
+The route tools update machine-owned stages after successful checks, renders, and comparisons. After
+reference/observer decisions, Source edits, repairs, or Build actions, write an explicit checkpoint.
+After any interruption or context compaction, read `../recovery.md`, run `route_state --action
+reconcile --project-root <project>`, and resume only from its `next_action`. The snapshot is evidence
+of intent; files and check results remain the authority.
+
+### Durable stage map
+
+| state | update / completion predicate | recovery entry |
+| --- | --- | --- |
+| `environment` | explicit checkpoint after Distribution, project and credentials are selected | `hypit paths --json` |
+| `reference-prepared` | checkpoint after `prepare_reference` reports ready `state.json` | `prepare_reference` or `route_state reconcile` |
+| `reference-observed` | explicit observer checkpoint; all required observation answers are complete | `observe_reference` / `record_observation` |
+| `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
+| `graph-checked` | `preview_check` returns `sound: true` | `preview_check <run>` |
+| `review-planned` | `reconstruction_check` writes a plan | `reconstruction_check <run>` |
+| `preview-rendered` | render output and timing sidecar both exist | `render_element --batch <round.json>` |
+| `comparison-complete` | comparison log contains a complete record for the planned element | `compare_reconstruction` / `record_observation` |
+| `repairs-complete` | explicit checkpoint after applying comparison findings | edit Source, then rerun the checks |
+| `final-checked` | final `reconstruction_check` returns `passed: true` | `reconstruction_check <run>` |
+| `build-complete` | explicit checkpoint after the durable Build record is accepted | `hypit build` (confirm cost first) |
+
+The numeric `current_step` is only a cursor; `reconcile` starts at the first unmet predicate. It never
+infers the observer's creative judgement or a repair from file presence alone.
+
 ---
 
 ## Phase 0 — Before any command
