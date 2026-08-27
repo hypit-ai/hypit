@@ -59,6 +59,19 @@ The preview-mock clause is in the prompt already: the reader is told that flat-f
 for generations that have not run and to read only what is drawn over them. Do not add it by hand, and
 do not add anything that says what you built or what you expect to be found.
 
+The visual pass is geometry-first. Read the hierarchy Canvas → outer Frame/background → inner text or
+element. When the intent calls for centring, compare the inner and outer centres on both axes and report
+the direction and approximate offset. Check containment at both boundaries (content inside its Frame,
+Frame inside Canvas), naming any overflowing edge. Confirm the outer Frame is wide and tall enough for
+the longest line/mark plus padding, stroke, shadow, and corner treatment; correct centring does not make
+an undersized box acceptable. Separate intentional bleed/crop or enter/exit motion from accidental
+overflow, and check the final visible bounds against all four Canvas edges.
+
+`authoring_check` returns `layout_geometry` with deterministic Canvas/Frame bounds, centres, parent and
+Canvas offsets, containment overflow, and bound element ids. Use it as the mechanical report and make
+the conformance decision from the rendered picture and intent. It cannot measure actual glyph bounds or
+infer intent, so those still require the reader.
+
 `--question` is available and means what it means on the other route: which region to read, never what
 to conclude.
 

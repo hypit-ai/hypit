@@ -96,6 +96,11 @@ well.
 Each Segment's length comes from the Source's own `estimate:Speech`; `--reference-id` selects reference
 evidence and comparison windows only. The sidecar records `"timing_basis": "estimate"`.
 
+Before reading the picture, run the route's `reconstruction_check` or `authoring_check` and keep its
+`layout_geometry` object with the render. It is the mechanical Canvas/Frame report used to check centre
+offsets, frame capacity, and Canvas containment; the observer still confirms rendered text bounds and
+whether any bleed is intentional.
+
 ## Open the whole Run for a person
 
 After a meaningful Author Source change, start Hypit Studio and give the author the actual URL.

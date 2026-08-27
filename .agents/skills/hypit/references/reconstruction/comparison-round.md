@@ -137,6 +137,22 @@ The pair is always sent in one order: **one is the reference, two is the render.
 told that and must not be; you need it, because a difference reported "in one" is a difference in the
 reference and one "in two" is something to repair.
 
+## Geometry is a first-class comparison
+
+Before comparing colour, typography, or motion, compare the layout hierarchy: Canvas → outer
+Frame/background → inner text or element. For every centred region, report the content-to-frame centre
+offset on both axes and its direction. Then report containment separately at each boundary: content
+inside outer Frame, outer Frame inside Canvas, naming the edge and approximate overflow when one fails.
+Check that the outer Frame has enough width/height for the longest line or mark plus padding, stroke,
+shadow, and corner treatment. A box can be centred and still be too small. Treat intentional bleed,
+crop, and enter/exit motion as a separate possibility and only call it a defect when the reference
+does not show that intention.
+
+The `reconstruction_check` JSON includes `layout_geometry`, a mechanical report of Canvas/Frame bounds,
+centres, parent/Canvas offsets, containment overflow, and bound element ids. The agent should use those
+facts alongside the comparison text. They are deterministic Source facts, not a decision: rendered
+glyph bounds and whether an overhang is intentional still require the observer.
+
 ## Measuring, on this route
 
 `../element-review.md` says to ask for a number rather than spend an attempt. Here that question is

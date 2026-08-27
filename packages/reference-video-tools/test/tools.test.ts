@@ -214,6 +214,9 @@ test("reconstruction comparison sends an unlabelled pair and accepts rendered PN
   assert.deepEqual(calls[0]!.mimeTypes, ["image/jpeg", "image/png"]);
   assert.match(calls[0]!.text, /supplied in order: one, then two/u);
   assert.match(calls[0]!.text, /only the full-screen list area/u);
+  assert.match(calls[0]!.text, /geometry pass/u);
+  assert.match(calls[0]!.text, /outer frame/u);
+  assert.match(calls[0]!.text, /overflow/u);
   assert.doesNotMatch(calls[0]!.text, /reconstruction|rendered|generated|authored|component|SVML/iu,
     "the comparison must never say which image was built or how");
   assert.match(calls[0]!.instruction, /You are not told how either was made/u);
