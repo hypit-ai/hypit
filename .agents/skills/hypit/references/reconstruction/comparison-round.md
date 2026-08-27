@@ -163,7 +163,11 @@ for confirmation rather than silently discarding it.
 The `reconstruction_check` JSON includes `layout_geometry`, a mechanical report of Canvas/Frame bounds,
 centres, parent/Canvas offsets, containment overflow, and bound element ids. The agent should use those
 facts alongside the comparison text. They are deterministic Source facts, not a decision: rendered
-glyph bounds and whether an overhang is intentional still require the observer.
+glyph bounds and whether an overhang is intentional still require the observer. Its
+`layout_geometry.overlaps` list is an advisory set of same-Canvas, temporally simultaneous partial
+rectangle intersections. Full containment is intentionally omitted; confirm each candidate against the
+rendered frame and intent, and do not treat it as an automatic gate failure. The list cannot detect
+overlap between package-internal glyphs or other bounds not exposed by Source placement.
 
 ## Measuring, on this route
 
