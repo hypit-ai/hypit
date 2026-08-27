@@ -71,40 +71,40 @@ npx skills add hypit-ai/hypit -g
   </tr>
 </table>
 
-### Street interview
+### Podcast
 
 <table>
   <tr>
-    <th>Reference</th>
-    <td></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td></td>
+    <th width="16%">Reference</th>
+    <td width="28%"></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/cc870099-9568-4c65-91b4-f0bbb65577a9" controls muted></video></td>
+    <td width="28%"></td>
   </tr>
   <tr>
-    <th>Clones</th>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <th width="16%">Clones</th>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
   </tr>
   <tr>
     <td colspan="4">Local-hosted MiniMax H3; 3 GPT Image 2 generations; Ranking board, TikTok-style captions, visual effects rendered in headless chromium. <b>Total cost: $0.15.</b></td>
   </tr>
 </table>
 
-### Podcast
+### Street interview
 
 <table>
   <tr>
-    <th>Reference</th>
-    <td></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td></td>
+    <th width="16%">Reference</th>
+    <td width="28%"></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"></td>
   </tr>
   <tr>
-    <th>Clones</th>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <th width="16%">Clones</th>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
   </tr>
   <tr>
     <td colspan="4">Local-hosted MiniMax H3; 3 GPT Image 2 generations; Ranking board, TikTok-style captions, visual effects rendered in headless chromium. <b>Total cost: $0.15.</b></td>
