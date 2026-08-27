@@ -269,7 +269,11 @@ Selection and Moment share one name namespace, so the same id cannot be both.
 ## A short stretch is not a short take
 
 An authored take stays inside the selected model's declared duration range — read the range from the
-model, since it differs between them and a literal in a document goes stale.
+model, since it differs between them and a literal in a document goes stale. `estimate:Speech` is a
+separate speech clock and may be shorter than a paid model's minimum: the generation request must use
+the model-valid floor (or a shared longer take), while the SemanticTake remains aligned to the speech
+estimate. Trim or hold the visual material as needed; never pad the SemanticTake or substitute reference
+timings for it.
 
 This too is about a generation that carries no speech. A Segment always has its own speaking take,
 however short its words are.

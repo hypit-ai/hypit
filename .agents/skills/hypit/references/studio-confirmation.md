@@ -11,7 +11,9 @@ After the route-specific final check passes, but before submitting any paid Buil
    durable `.hypit/preview/<digest>/mock.svrun` (the native mock materialization Run), its
    content-addressed Artifacts, and a second `preview.svrun` whose relative file Candidates point
    at those results.
-2. Start Hypit Studio with that returned `previewRun` path and give the author its URL. Studio can
+2. Start Hypit Studio with that returned `previewRun` path. Capture the URL printed by
+   `server.printUrls()` and give the author the exact URL (for example,
+   `http://localhost:5179/`) in the handoff. Studio can
    therefore be started as a separate process and reopen the same bytes; it does not depend on an
    in-memory attachment list or a mock-media endpoint (Studio may use the local FFmpeg endpoint for
    deterministic inspect/normalize operations).
@@ -43,7 +45,8 @@ reruns only the deterministic gates before the next Studio handoff or paid Build
 
 When a user-requested revision completes its deterministic gates, preserve a running Studio session
 and let its file watcher hot-reload the updated SVML/SVS/SVRun. If the current Run has no Studio
-session, start one for that Run and give the author the URL so they can see the change. Do not invoke a
+session, start one for that Run, capture the URL printed by the server, and give the author the exact
+URL so they can see the change. Do not invoke a
 VLM, comparison, observer or visual judgement as part of Revision. Do not restart an already-running
 Studio merely because Source changed. If the startup parameters change (for example a different Run,
 workspace or port), stop the previous Studio first so the new server cannot collide with its port.

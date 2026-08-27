@@ -12,6 +12,7 @@
     "@hypit/markup": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/program-space": "workspace:*",
+    "@hypit/semantic-track": "workspace:*",
     "@hypit/temporal": "workspace:*",
     "@hypit/temporal-markup": "workspace:*",
     "@hypit/visual-ir": "workspace:*"

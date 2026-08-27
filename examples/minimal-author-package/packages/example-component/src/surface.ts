@@ -17,12 +17,12 @@ function reference(element: StructuredElement, name: string, resolve: (path: str
 
 export const decodeExampleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   const id = text(element, "id");
-  const space = reference(element, "space", resolveReference);
+  const semantic = reference(element, "semantic", resolveReference);
   const surface = exampleMarkupSurfaces.find((item) => item.tag === element.name.split(":").at(-1));
   if (surface === undefined) throw new Error(`Unknown example surface ${element.name}`);
   const fragment = surface.name === "box" ? exampleBoxFragment : surface.name === "text" ? exampleTextFragment : exampleMediaFragment;
   const type = surface.name === "box" ? exampleTypes.box : surface.name === "text" ? exampleTypes.text : exampleTypes.mediaSlot;
   const record: SurfaceRecordDraft = { id: `${id}.value`, type, value: { kind: "inline", value: { id } }, range: element.range };
-  const component: SurfaceComponentDraft = { id, fragment: fragment.id, inputs: { space: space.ref }, outputs: { track: `${id}.track` }, range: element.range };
+  const component: SurfaceComponentDraft = { id, fragment: fragment.id, inputs: { semantic: semantic.ref }, outputs: { track: `${id}.track` }, range: element.range };
   return { records: [record], components: [component], fragments: [fragment], exports: [`${id}.value`, `${id}.track`] };
 };

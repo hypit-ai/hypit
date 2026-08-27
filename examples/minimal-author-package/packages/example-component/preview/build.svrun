@@ -2,5 +2,5 @@
 
 <svrun version="1">
   <author source="./preview.svml"/>
-  <target output="box.track"/>
+  <target output="final.video"/>
 </svrun>

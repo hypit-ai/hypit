@@ -58,6 +58,11 @@ typed records, and returns the graph declarations. It is the only place that kno
 operations run, and which outputs the element publishes. Producers do the work; the Fragment says how
 they are wired.
 
+An author package's Surface returns this Graph Fragment; it is not the `run-fragment-host` facet used
+by preview or other Run-side replacement packages. Every operation must use a Producer declared by
+the same Module. Producer port bindings are exact: variable-length collections require repeated
+operations followed by a fixed-port append/merge Producer rather than an undeclared variadic input.
+
 ## Assets a package ships
 
 A component's own chrome — its paper, board, panel, texture or default backdrop — is a file inside
