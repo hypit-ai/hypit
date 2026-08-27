@@ -377,10 +377,24 @@ type LayoutGeometryEntry = {
   readonly unresolved?: string;
 };
 
+/** A mechanically detected partial intersection between two Source-level placements. */
+type LayoutOverlap = {
+  readonly first: string;
+  readonly second: string;
+  readonly canvas: string;
+  readonly first_bounds: Box;
+  readonly second_bounds: Box;
+  readonly intersection: Box;
+  readonly scope: string;
+  readonly note: string;
+};
+
 type LayoutGeometryReport = {
   readonly coordinate_system: "Canvas pixels, origin top-left, y increases downward";
   readonly note: string;
   readonly entries: readonly LayoutGeometryEntry[];
+  /** Partial overlaps only; full containment is intentionally omitted. */
+  readonly overlaps: readonly LayoutOverlap[];
 };
 
 /** A rectangle in Canvas pixels. The origin is top-left and y increases downward. */
@@ -609,6 +623,107 @@ function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
   return report;
 }
 
+type PlacementClaim = {
+  readonly id: string;
+  readonly canvas: string;
+  readonly box: Box;
+  readonly start: number;
+  readonly end: number;
+  readonly scope: string;
+};
+
+function overlapArea(left: Box, right: Box): Box | undefined {
+  const intersection = {
+    left: Math.max(left.left, right.left),
+    top: Math.max(left.top, right.top),
+    right: Math.min(left.right, right.right),
+    bottom: Math.min(left.bottom, right.bottom),
+  };
+  return intersection.right > intersection.left && intersection.bottom > intersection.top ? intersection : undefined;
+}
+
+function containsBox(outer: Box, inner: Box): boolean {
+  return outer.left <= inner.left && outer.top <= inner.top
+    && outer.right >= inner.right && outer.bottom >= inner.bottom;
+}
+
+function placementTiming(attributes: string, parsed: ReturnType<typeof parseScript> | undefined): { start: number; end: number; scope: string } {
+  const total = parsed?.tokens.length ?? 1;
+  const during = /\bduring=\{story\.(segment|selection)\.([A-Za-z0-9_-]+)\}/u.exec(attributes);
+  let start = 0;
+  let end = total;
+  let scope = "program";
+  if (during !== null && parsed !== undefined) {
+    const collection = during[1] === "segment" ? parsed.segments : parsed.selections;
+    const found = collection.find((item) => item.id === during[2]);
+    if (found !== undefined) {
+      if ("tokenStart" in found) {
+        start = found.tokenStart;
+        end = found.tokenEndExclusive;
+      } else {
+        start = found.open.boundary.tokenIndex;
+        end = found.close.boundary.tokenIndex;
+      }
+    }
+    scope = `${during[1]}:${during[2]}`;
+  }
+  const until = /\buntil=\{story\.moment\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
+  if (until !== undefined && parsed !== undefined) {
+    const moment = parsed.moments.find((item) => item.id === until);
+    if (moment !== undefined) end = Math.min(end, moment.boundary.tokenIndex);
+    scope = `${scope} until ${until}`;
+  }
+  return { start, end, scope };
+}
+
+function layoutOverlaps(svml: string, geometry: FrameGeometry): readonly LayoutOverlap[] {
+  let parsed: ReturnType<typeof parseScript> | undefined;
+  try {
+    const body = scriptBody(svml);
+    parsed = parseScript("<layout-geometry>", body.text, body.offset);
+  } catch {
+    // Keep spatial findings useful while another check reports the malformed Script.
+  }
+  const claims: PlacementClaim[] = [];
+  for (const match of svml.matchAll(/<([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)\/?\s*>/gsu)) {
+    const tag = match[1] ?? "";
+    const attributes = match[2] ?? "";
+    if (/:(?:Canvas|Frame|Track|Film|Video|Clock|SemanticTake|Normalize|Take|Item)$/u.test(tag)) continue;
+    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
+    // `visual-frame` is the speech/media Track placement port. Do not treat `first-frame` or
+    // `last-frame` generation inputs as a placement claim.
+    const named = /\b(?:frame|visual-frame|canvas)=\{([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
+    if (id === undefined || named === undefined) continue;
+    const canvas = geometry.canvasOf(named);
+    const box = geometry.resolve(named);
+    if (canvas === undefined || box === undefined) continue;
+    const timing = placementTiming(attributes, parsed);
+    if (timing.end <= timing.start) continue;
+    claims.push({ id, canvas, box, ...timing });
+  }
+  const report: LayoutOverlap[] = [];
+  for (let first = 0; first < claims.length; first += 1) {
+    for (let second = first + 1; second < claims.length; second += 1) {
+      const left = claims[first]!;
+      const right = claims[second]!;
+      if (left.id === right.id || left.canvas !== right.canvas || left.end <= right.start || right.end <= left.start) continue;
+      const intersection = overlapArea(left.box, right.box);
+      if (intersection === undefined || containsBox(left.box, right.box) || containsBox(right.box, left.box)) continue;
+      report.push({
+        first: left.id,
+        second: right.id,
+        canvas: left.canvas,
+        first_bounds: left.box,
+        second_bounds: right.box,
+        intersection,
+        scope: left.scope === right.scope ? left.scope : `${left.scope} ∩ ${right.scope}`,
+        note: "Mechanical partial-overlap candidate. Confirm whether the overlap is intentional before editing Source.",
+      });
+    }
+  }
+  return report;
+}
+
 /** Build a machine-readable layout report for the agent/observer to interpret. */
 function layoutGeometry(svml: string): LayoutGeometryReport {
   const geometry = frameGeometry(svml);
@@ -666,6 +781,7 @@ function layoutGeometry(svml: string): LayoutGeometryReport {
     coordinate_system: "Canvas pixels, origin top-left, y increases downward",
     note: "Use these facts to decide whether centering and containment match the reference/intent. They do not measure rendered glyph bounds or decide whether an overhang is intentional.",
     entries,
+    overlaps: layoutOverlaps(svml, geometry),
   };
 }
 
