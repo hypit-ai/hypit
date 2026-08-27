@@ -279,6 +279,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../../../../packages/protocol
+      '@hypit/semantic-track':
+        specifier: workspace:*
+        version: link:../../../../packages/semantic-track
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../../../../packages/temporal
@@ -510,9 +513,6 @@ importers:
       '@hypit/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
-      '@hypit/estimate':
-        specifier: workspace:*
-        version: link:../estimate
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -706,9 +706,6 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
-      '@hypit/text':
-        specifier: workspace:*
-        version: link:../text
       '@hypit/speech-evidence':
         specifier: workspace:*
         version: link:../speech-evidence
@@ -1788,6 +1785,9 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@hypit/estimate':
+        specifier: workspace:*
+        version: link:../estimate
       '@hypit/media':
         specifier: workspace:*
         version: link:../media
@@ -1812,6 +1812,9 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
       '@hypit/workspace':
         specifier: workspace:*
         version: link:../workspace
