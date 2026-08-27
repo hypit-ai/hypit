@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { findRuntimeProfile } from "@hypit/cli";
 import { videoCliDistribution } from "@hypit/video-cli";
+import { EndpointRegistry } from "@hypit/driver-node";
+import { createLocalMediaProvider } from "@hypit/provider-media-local";
 
 import { openStudioArchive } from "./src/archive.js";
 import { loadStudioCompanionRegistry } from "./src/companion-profile.js";
@@ -47,6 +49,7 @@ const invokedFrom = process.env.INIT_CWD ?? process.cwd();
 const runArgument = values.get("run");
 if (runArgument === undefined || runArgument.trim().length === 0) usage("Missing --run");
 const runPath = resolve(invokedFrom, runArgument);
+const previewOnly = /[\\/]\.hypit[\\/]preview[\\/]/u.test(runPath);
 const packageRootArgument = values.get("package-root");
 const workspaceArgument = values.get("workspace");
 const requestedWorkspaceRoot = workspaceArgument === undefined
@@ -90,8 +93,20 @@ try {
   throw error;
 }
 const source = run.authorSource;
+// A preview Run has already persisted all mock media as relative file
+// Candidates, but deterministic inspect/normalize/render-media Producers still
+// need the local FFmpeg endpoint.  This is not a paid or external Provider and
+// is never installed for ordinary production Runs.
+const endpoints = previewOnly ? new EndpointRegistry() : undefined;
+if (endpoints !== undefined) await createLocalMediaProvider({}).install(endpoints);
 try {
-  inspectStudioRun(registry, run.source, run);
+  inspectStudioRun(registry, run.source, run, previewOnly ? new Set([
+    "@hypit/media-pipeline@1#inspect-media",
+    "@hypit/media-pipeline@1#normalize-media",
+    "@hypit/media-pipeline@1#extract-audio",
+    "@hypit/media-pipeline@1#render-audio",
+    "@hypit/media-pipeline@1#mux",
+  ]) : undefined);
 } catch (error) {
   await archive?.close();
   throw error;
@@ -114,6 +129,7 @@ const server = await createServer({
     domain,
     registry,
     ...(archive === undefined ? {} : { archive }),
+    ...(endpoints === undefined ? {} : { endpoints }),
   })],
 });
 await server.listen();
