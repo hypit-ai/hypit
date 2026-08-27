@@ -128,6 +128,23 @@ Or start without a reference video:
 
 Your agent can check the environment, request only the credentials the video needs, preview the result, and build it.
 
+## How to Contribute
+
+Pull requests are welcome, and documentation, examples and translations count as much as code. Pick
+up an open issue or open one for what you want to work on, and we will help you land it.
+[CONTRIBUTING.md](./CONTRIBUTING.md) has the setup, the checks CI runs and the pull request flow.
+
+The [Development Guide](https://docs.hypit.ai/guide/develop) covers the prerequisites, the daily
+commands and the repository layout. [Adding an Author Package](https://docs.hypit.ai/guide/author-packages)
+and [Adding a Provider](https://docs.hypit.ai/guide/providers) walk through the two most common
+contributions, and [Conventions](https://docs.hypit.ai/guide/conventions) states what a pull request
+is expected to follow.
+
+| Bug reports | Feature requests | Questions |
+| --- | --- | --- |
+| [Open an issue](https://github.com/hypit-ai/hypit/issues/new?labels=bug) | [Open an issue](https://github.com/hypit-ai/hypit/issues/new?labels=enhancement) | [Discord](https://discord.gg/85hnyQnxpn) or [Telegram](https://t.me/hypit) |
+| Something behaves differently than the docs describe | An idea for a new capability or an improvement | Ask about authoring, packages or providers |
+
 ## License
 
 Hypit is released under the [Hypit Open Source License](./LICENSE). The videos and other outputs you create belong to you; third-party models and services may have their own terms.
