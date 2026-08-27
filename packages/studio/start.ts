@@ -12,7 +12,7 @@ import { loadStudioCompanionRegistry } from "./src/companion-profile.js";
 import { loadStudioDomain } from "./src/domain.js";
 import { loadStudioRun } from "./src/run.js";
 import { studioPlugin } from "./src/server.js";
-import { inspectStudioRun } from "./src/studio-preflight.js";
+import { PREVIEW_LOCAL_MEDIA_CAPABILITIES, inspectStudioRun } from "./src/studio-preflight.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -100,13 +100,7 @@ const source = run.authorSource;
 const endpoints = previewOnly ? new EndpointRegistry() : undefined;
 if (endpoints !== undefined) await createLocalMediaProvider({}).install(endpoints);
 try {
-  inspectStudioRun(registry, run.source, run, previewOnly ? new Set([
-    "@hypit/media-pipeline@1#inspect-media",
-    "@hypit/media-pipeline@1#normalize-media",
-    "@hypit/media-pipeline@1#extract-audio",
-    "@hypit/media-pipeline@1#render-audio",
-    "@hypit/media-pipeline@1#mux",
-  ]) : undefined);
+  inspectStudioRun(registry, run.source, run, previewOnly ? PREVIEW_LOCAL_MEDIA_CAPABILITIES : undefined);
 } catch (error) {
   await archive?.close();
   throw error;

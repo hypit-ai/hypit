@@ -86,6 +86,19 @@ function filmForTarget(registry: StudioCompanionRegistry, source: CompiledSource
 }
 
 /**
+ * The deterministic media capabilities a preview Run still reaches after its mock media is
+ * persisted. They are served by the local FFmpeg endpoint Studio installs for a preview Run, never
+ * by a paid or external Provider, so a projection that needs one of them is not unresolved.
+ */
+export const PREVIEW_LOCAL_MEDIA_CAPABILITIES: ReadonlySet<string> = new Set([
+  "@hypit/media-pipeline@1#inspect-media",
+  "@hypit/media-pipeline@1#normalize-media",
+  "@hypit/media-pipeline@1#extract-audio",
+  "@hypit/media-pipeline@1#render-audio",
+  "@hypit/media-pipeline@1#mux",
+]);
+
+/**
  * Video-domain policy is centralized here, inside Studio. Core still only
  * supplies the compiled graph and its exact BuildPlan/Need closure.
  */

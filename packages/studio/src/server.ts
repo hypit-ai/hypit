@@ -125,6 +125,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         registry: options.registry,
         run,
         ...(options.archive === undefined ? {} : { archive: options.archive }),
+        ...(options.endpoints === undefined ? {} : { endpoints: options.endpoints }),
         revision: attempt,
         sourcePath: relative(options.workspaceRoot, run.authorSource),
         workspaceRoot: options.workspaceRoot,
