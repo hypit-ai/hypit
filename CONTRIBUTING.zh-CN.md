@@ -6,9 +6,7 @@
 
 ## 开始之前
 
-可以认领一个[已有的 issue](https://github.com/hypit-ai/hypit/issues)，也可以新开一个说明你想做的事。凡是会改动协议类型、包边界或 Provider 契约的改动，请先在 issue 里说明思路，这比重写一个 Pull Request 代价更低。
-
-提交贡献即表示你接受 [LICENSE](./LICENSE) 第 2 条：生产者可以调整该开源协议，你贡献的代码可用于商业用途，包括其云业务运营。
+可以认领一个[已有的 issue](https://github.com/hypit-ai/hypit/issues)，也可以新开一个说明你想做的事。凡是会改动协议类型、包边界或 Provider 契约的改动，请先在 issue 里说明思路。
 
 ## 环境准备
 
@@ -45,9 +43,7 @@ pnpm test:release  # 仓库卫生检查
 
 ## 提交 Pull Request
 
-分支名与提交信息使用同一套前缀：分支用 `feat/`、`fix/`、`docs/`，提交信息用 `feat:`、`fix:`、`docs:`。标题使用祈使句，正文说明改了什么以及为什么。
-
-所有改动都通过 Pull Request 进入 `main`。
+分支名与提交信息使用同一套前缀：分支用 `feat/`、`fix/`、`docs/`，提交信息用 `feat:`、`fix:`、`docs:`。
 
 ## 获取帮助
 

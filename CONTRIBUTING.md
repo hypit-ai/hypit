@@ -8,11 +8,7 @@ Pull requests are welcome. Documentation, examples and translations count as muc
 
 Pick up an [open issue](https://github.com/hypit-ai/hypit/issues) or open one describing what you
 want to work on. For anything that changes a protocol type, a package boundary or a Provider
-contract, describe the approach in the issue first — that discussion is cheaper than a rewritten
-pull request.
-
-By contributing you accept the terms in [LICENSE](./LICENSE) section 2: the producer may adjust the
-license, and contributed code may be used commercially, including in cloud business operations.
+contract, describe the approach in the issue first.
 
 ## Set up
 
@@ -53,10 +49,7 @@ pnpm test:release  # repository hygiene
 ## Open the pull request
 
 Branch names and commit subjects share the same prefix: `feat/`, `fix/`, `docs/` for branches and
-`feat:`, `fix:`, `docs:` for commits. Write the subject in the imperative, and describe in the body
-what changed and why.
-
-Every change reaches `main` through a pull request.
+`feat:`, `fix:`, `docs:` for commits.
 
 ## Getting help
 
