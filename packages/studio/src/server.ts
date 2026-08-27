@@ -6,6 +6,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 import type { Plugin, ViteDevServer } from "vite";
 import type { StudioTemporalInstantProjection } from "@hypit/studio-adapter";
+import type { EndpointRegistry } from "@hypit/driver-node";
 
 import type { StudioArchive } from "./archive.js";
 import type { ServedFile } from "./compile.js";
@@ -27,6 +28,7 @@ export type StudioPluginOptions = {
   readonly registry: StudioCompanionRegistry;
   readonly workspaceRoot: string;
   readonly archive?: StudioArchive;
+  readonly endpoints?: EndpointRegistry;
 };
 
 function json(response: import("node:http").ServerResponse, status: number, value: unknown): void {
@@ -108,6 +110,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         domain: options.domain,
         registry: options.registry,
         ...(options.archive === undefined ? {} : { archive: options.archive }),
+        ...(options.endpoints === undefined ? {} : { endpoints: options.endpoints }),
       });
       currentSource = run.authorSource;
       watchSource(options.runPath);

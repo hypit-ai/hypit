@@ -8,6 +8,7 @@
   "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@hypit/artifact": "workspace:*",
+    "@hypit/artifact-store-fs": "workspace:*",
     "@hypit/compiler-node": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/mock-media": "workspace:*",

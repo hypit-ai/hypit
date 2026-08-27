@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { relative } from "node:path";
+import type { EndpointRegistry } from "@hypit/driver-node";
 
 import { markupAuthorFrontendId } from "@hypit/markup";
 import { svsFrontendId } from "@hypit/svs";
@@ -60,6 +61,8 @@ export async function readStudioSession(input: {
   readonly revision: number;
   readonly sourcePath?: string;
   readonly workspaceRoot: string;
+  /** Preview-only local deterministic media endpoints (never paid/external Providers). */
+  readonly endpoints?: EndpointRegistry;
 }): Promise<StudioSession> {
   const source = input.run.source;
   const inspection = inspectStudioRun(input.registry, source, input.run);
@@ -75,6 +78,7 @@ export async function readStudioSession(input: {
     compositionRef: inspection.filmComposition,
     projections: inspection.projections,
     ...(input.archive === undefined ? {} : { archive: input.archive }),
+    ...(input.endpoints === undefined ? {} : { endpoints: input.endpoints }),
   });
   const rendered = renderPreview({
     composition: built.composition,

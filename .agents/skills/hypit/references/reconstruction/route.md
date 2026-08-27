@@ -13,6 +13,8 @@ Those belong to the Build the author starts deliberately, after reading what was
 Seeing the reconstruction is what that Build is for. What is settled here is that the graph traces,
 which is the part a Build cannot repair. The route then pauses at the Studio confirmation handoff
 before any paid Build; after explicit acceptance it may proceed with the Runtime Build lifecycle.
+Once the paid Build has produced the accepted full video, any new natural-language change starts
+`../revision.md` from that completed Run; never continue this creation route or edit the rendered file.
 
 If the project is already complete and the author asks for a natural-language change, stop following
 this creation route and read `../revision.md`. Revision edits Source/Recipe/Run and reruns deterministic
@@ -299,6 +301,11 @@ hypit-reference-video-tools preview_check /path/to/project/build.svrun
 generations rather than performing them is the state every reconstruction is in when its sources are
 first written. This gate is not bounded by the round's attempt ceilings.
 
+### 17. Create the comparison plan
+
+Run `reconstruction_check` once to persist the element/window plan. Do not invent a render list from
+the Source; the check's plan is the durable handoff to the comparison round.
+
 ---
 
 ## Phase 4 — The comparison round
@@ -367,19 +374,32 @@ drawing element passes with nothing to require.
 
 **Done when:** `"passed": true`.
 
-### 24. Studio confirmation and paid handoff
-
-**Read now:** `../studio-confirmation.md`. Before any paid Build, start Studio for the complete
-preview-mock Run, show it to the author, and obtain explicit acceptance and cost approval. If the
-author declines, enter `../revision.md` and do not Build. After acceptance, start Studio for the
-accepted Run while the HyperFrames/final render proceeds concurrently.
-
-After acceptance, continue with `../runtime.md` for the approved paid Build and retrieval lifecycle.
-
----
-
 ### 23. Apply the author's requested change
 
 Read what you wrote and change it to what they asked for at the start. The identity of each recurring
 person and product is already a single anchor, because `../playbooks/craft/persona-and-audio.md` and
 `../playbooks/craft/visual-continuity.md` required that while you were writing.
+
+If the author requests a change after seeing the preview, leave this route and follow
+`../revision.md`; do not pay or Build a source that has not passed the final deterministic gate.
+
+### 24. Re-run the final deterministic gate
+
+After any requested change (or when there was none), run `reconstruction_check` again and require
+`passed: true`. This is the last source/graph gate before the paid handoff.
+
+### 25. Studio confirmation and paid handoff
+
+**Read now:** `../studio-confirmation.md`. Realize the preview-mock Run first, then start Studio with
+the returned temporary `preview.svrun` (never the original unresolved Run), show the complete
+estimate-timed mock, and obtain explicit acceptance and cost approval. If the author declines, enter
+`../revision.md` and do not Build. Once accepted, submit the paid Build and persist its accepted
+Build-Record Run; start Studio for that accepted Run while the HyperFrames/final render proceeds
+concurrently.
+
+After acceptance, continue with `../runtime.md` for the approved paid Build and retrieval lifecycle.
+
+When the accepted full video is available, a later request such as moving an element or raising
+captions is a new revision request. Start `revision_state` against the accepted-material Run and
+follow `../revision.md`; after its deterministic gates, Studio may hot-reload (or be started for the
+Run if none is running), but Revision still performs no VLM/visual review.
