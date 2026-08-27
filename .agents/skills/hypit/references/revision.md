@@ -33,8 +33,8 @@ request-captured → impact-assessed → intent-mapped → source-updated
 deliberately not a VLM/observer step. Revision does not call
 `review_element`, `compare_reconstruction`, Vertex, WhisperX or any other visual observer. Mark that
 stage only as an explicit mechanical checkpoint when the requested source change has been covered by
-the deterministic checks. No visual acceptance work is implied here; leave Studio untouched unless
-the user later asks to open it.
+the deterministic checks. Revision itself performs no visual judgement; after it completes, if no
+Studio session is running for the current Run, start Studio and show the author the updated result.
 
 ## Work sequence
 
@@ -48,7 +48,8 @@ the user later asks to open it.
    that later beats still fulfil its promise.
 4. Edit only Source, Recipe or Run. Re-run package/Cue gates, `hypit check`, `preview_check`, and the
    route-specific final check. Do not render, compare, review or inspect any frame during revision;
-   existing unchanged artifacts may be reused by digest.
+   existing unchanged artifacts may be reused by digest. Once the gates pass, follow
+   `studio-confirmation.md`'s conditional Studio handoff.
 5. Check the final gate. Confirm cost again only when an image/video/voice generation input changed;
    geometry and layout revisions do not trigger a paid Build. Build only after explicit approval.
 

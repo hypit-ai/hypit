@@ -114,14 +114,20 @@ whether any bleed is intentional.
 
 ## Open the whole Run for a person
 
-After a meaningful Author Source change, start Hypit Studio and give the author the actual URL.
-Kill the previous server first so the user does not inspect a stale composition.
+After the route's final check, read `studio-confirmation.md`: before a paid Build, start Hypit Studio
+for the complete preview-mock Run and obtain the author's acceptance. After a revision, if Studio for
+that Run is not already running, start it and give the author the URL; an existing Studio session
+hot-reloads the changed Source. Stop the previous server before changing Studio startup parameters
+(for example, selecting a different `--run`, `--workspace` or port) to avoid port conflicts; do not
+restart merely because the same Run's SVML/SVS changed.
 
 ```bash
-pkill -f "hypit-studio" || true
 cd /path/to/project
 hypit-studio --run build.svrun --runtime hypit.runtime.json &
 ```
+
+If another Studio process is already using a different Run or startup parameters, stop that process
+before launching this command; otherwise reuse the existing process and let its Source watcher reload.
 
 Read the startup output for the chosen port. `--run` is required: Studio's unit of work is the Run
 Source, and it reads the Author SVML back out of it. Pass `--runtime` only when the Author Source
