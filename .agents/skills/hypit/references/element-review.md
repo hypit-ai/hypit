@@ -119,11 +119,13 @@ element ids. Use those numbers as the mechanical findings and let the observer d
 alignment or overflow matches the reference/intent. The report cannot measure renderer-shaped glyph
 bounds or infer intent, so the visual pass must still confirm text and marks in the rendered image.
 
-The same report includes `layout_geometry.overlaps`. It is an advisory list of Source-level placement
-pairs that are on the same Canvas, present during an overlapping timing scope, and have a positive-area
-rectangle intersection without either rectangle fully containing the other. Full containment is omitted
-because a background or parent Frame commonly covers its child intentionally. Treat each entry as a
-candidate finding: confirm it in the rendered frame and against the author intent before changing Source.
+The same report includes `layout_geometry.overlaps`. It is an advisory list of independent component
+placements that are on the same Canvas, present during an overlapping timing scope, and have a
+positive-area rectangle intersection without either rectangle fully containing the other. Nested
+placements owned by the same component are excluded; their internal layout is judged against that
+component's own parent/Frame. Full containment is omitted because a background or parent Frame commonly
+covers its child intentionally. Treat each entry as a candidate finding: confirm it in the rendered
+frame and against the author intent before changing Source.
 The check compares only declared Canvas/Frame placement bounds; it cannot see glyph-level or other
 package-internal bounds that a Producer does not expose.
 

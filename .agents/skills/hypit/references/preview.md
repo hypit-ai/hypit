@@ -112,10 +112,11 @@ Before reading the picture, run the route's `reconstruction_check` or `authoring
 `layout_geometry` object with the render. It is the mechanical Canvas/Frame report used to check centre
 offsets, frame capacity, and Canvas containment; the observer still confirms rendered text bounds and
 whether any bleed is intentional. Also inspect `layout_geometry.overlaps`: it lists only partial
-rectangle intersections between same-Canvas placements whose timing scopes overlap. Full containment is
-omitted as a likely intentional parent/background relationship. These are candidates, not automatic
-failures; verify them in the frame and remember that package-internal glyph bounds are not available to
-the mechanical check.
+rectangle intersections between independent same-Canvas component placements whose timing scopes
+overlap. Nested placements owned by one component are excluded so its internal centring is checked
+against its own parent/Frame. Full containment is omitted as a likely intentional parent/background
+relationship. These are candidates, not automatic failures; verify them in the frame and remember that
+package-internal glyph bounds are not available to the mechanical check.
 
 ## Open the whole Run for a person
 
