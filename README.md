@@ -117,13 +117,13 @@ The `/hypit` skill is available to coding agents. Start a session in any empty o
 directory and ask it to create videos for you:
 
 ```text
-/hypit Clone this viral video, show me a preview, and guide me through producing variants.
+/hypit Clone this video: /path/to/video
 ```
 
 Or start without a reference video:
 
 ```text
-/hypit Create a video from my description, using templates and $0 code-rendered visuals wherever possible.
+/hypit Make a ranking video that puts Hypit in S tier.
 ```
 
 Your agent can check the environment, request only the credentials the video needs, preview the result, and build it.
