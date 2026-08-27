@@ -41,7 +41,10 @@ test("source package selection follows Run and Author imports", async () => {
 });
 
 test("provider-free example plans from installed Source packages", async () => {
-  const fixture = join(process.cwd(), "examples", "talking-film-graph-check");
+  // The examples directory is intentionally kept empty; use the maintained package preview
+  // fixture instead. It is a real installed Source package and exercises the same provider-free
+  // planning path (semantic track, composition and mux projections).
+  const fixture = join(process.cwd(), "packages", "media-track", "preview");
   let output = "";
   await runCli([
     "plan",

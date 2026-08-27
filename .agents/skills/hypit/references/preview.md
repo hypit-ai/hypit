@@ -71,9 +71,9 @@ hypit-reference-video-tools render_element /path/to/project/build.svrun \
   --element <id> --segment <id>|--selection <id> --out <path>.mp4
 ```
 
-It reads the Canvas, the frame rate, the Recipe values, the Script text and the bindings out of the
-Source, mocks every layer a Build has not made, and drives the package's Producer. Nothing about it is
-written per package.
+It compiles the Author/Run Graph once, delegates preview substitutions to `@hypit/preview-mock`,
+materializes ordinary mock Artifacts through `@hypit/mock-media`, and drives the package's deterministic
+Producers. No mock file or SemanticTake is hand-authored in the project.
 
 `--element` takes the element's bare id — `captions`, the `id=` the Source wrote on the element. The
 command appends the output suffix itself when it looks for the track, so `--element captions.track`
@@ -93,10 +93,8 @@ for eight windows costs one render and eight cuts. The picture does not depend o
 everything the Source places over those words — so two elements over one stretch share the render as
 well.
 
-Each Segment's length comes from the Source's own `estimate:Speech`, which is the only clock a program
-has before its speech is synthesized. The result's `timing` says what sized each Segment, and the same
-object is written to `<out>.stand-in.json`. A reconstruction can borrow the reference's clock instead
-with `--reference-id`; `reconstruction/comparison-round.md` says when that matters.
+Each Segment's length comes from the Source's own `estimate:Speech`; `--reference-id` selects reference
+evidence and comparison windows only. The sidecar records `"timing_basis": "estimate"`.
 
 ## Open the whole Run for a person
 

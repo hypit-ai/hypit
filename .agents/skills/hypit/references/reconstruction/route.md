@@ -271,8 +271,8 @@ hypit-reference-video-tools reconstruction_check projects/<name>/build.svrun --r
 hypit-reference-video-tools render_element projects/<name>/build.svrun --batch round.json --reference-id <id>
 ```
 
-`comparison-round.md` says to pass `--reference-id` every time so the stand-in runs on the
-reference's clock. The program is drawn once and every entry is cut out of those frames, so render
+`comparison-round.md` uses preview-mock estimate timing; `--reference-id` selects comparison evidence, not mock timing.
+The program is drawn once and every entry is cut out of those frames, so render
 the whole list in one `--batch` call.
 
 ### 20. Send every comparison at once

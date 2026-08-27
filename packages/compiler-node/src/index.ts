@@ -18,3 +18,10 @@ export type {
   NodeRunCompilerOptions,
   PlannedBuild,
 } from "./run.js";
+export {
+  findCandidate,
+  findLogicalOutput,
+  findOperation,
+  findOperationsByProducer,
+  walkOperationInputs,
+} from "./graph-query.js";

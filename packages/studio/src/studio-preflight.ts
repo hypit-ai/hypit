@@ -49,11 +49,11 @@ function candidateIsMaterialized(candidate: Candidate | undefined): boolean {
     && candidate.root.value.value.kind === "inline";
 }
 
-function plannedExternalNeeds(base: RunPlan, refs: readonly string[]): readonly string[] {
+function plannedExternalNeeds(base: RunPlan, refs: readonly string[], resolved: ReadonlySet<string> = new Set()): readonly string[] {
   const planned = base.plan(base.run, refs);
   return unique(plannedNeeds(planned.state).map((need) =>
     `${need.capability.module.name}@${need.capability.module.version}#${need.capability.name}`,
-  ));
+  ).filter((name) => !resolved.has(name)));
 }
 
 function localName(value: string): string {
@@ -93,6 +93,7 @@ export function inspectStudioRun(
   registry: StudioCompanionRegistry,
   source: CompiledSource,
   base: RunPlan,
+  resolvedCapabilities: ReadonlySet<string> = new Set(),
 ): StudioInspection {
   const issues: string[] = [];
   if (base.targets.length === 0) issues.push("the Run Source has no target; Studio requires Film or Render");
@@ -187,7 +188,7 @@ export function inspectStudioRun(
   }
 
   if (derived.length > 0) {
-    const needs = plannedExternalNeeds(base, derived.map((projection) => projection.ref));
+    const needs = plannedExternalNeeds(base, derived.map((projection) => projection.ref), resolvedCapabilities);
     if (needs.length > 0) {
       issues.push(`the Studio projection closure requires unresolved capabilities: ${needs.join(", ")}`);
     } else {

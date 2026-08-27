@@ -5,6 +5,20 @@ B-roll is authored visual evidence, context, or emotional progression outside th
 take. Every insert must earn its place in the story and remain independent from editorial text and
 program audio.
 
+## Full-screen B-roll of the same speaker
+
+A reference may cover the whole frame with the same speaker in a second location while their voice
+continues: the picture cuts away to the person whose voice is heard, shown silent in another setting.
+This is B-roll, and the base stays the primary take. `continuity.md` owns the rule — the picture that
+shows the speaker saying the words is the base, whoever else fills the frame. Author the second
+location exactly like any other B-roll: vendor `broll-v1.svs`, one shot per beat, placed over the
+Script Selection with `during=`.
+
+The speaking kit's scene contract governs the base take, and applies only to it.
+`street-interview-v1`'s "SINGLE-SCENE CONTRACT" keeps both people in the same street scene; a covering
+cutaway in a classroom, an office or a product room is a separate picture and a separate kit. B-roll
+carries its own `duration` on the generation, so the speech take's length does not bound it.
+
 ## See it before you generate it
 
 Where a cutaway lands, how long it holds, and whether its Frame sits in the right part of the

@@ -16,11 +16,12 @@ export async function executeDeterministic(
   domain: StudioDomain,
   planned: BuildState,
   artifacts: ArtifactStore,
+  endpoints: EndpointRegistry = new EndpointRegistry(),
 ): Promise<Executed> {
   const result = await new NodeDriver({
     producers: domain.producers,
     validators: domain.validators,
-    endpoints: new EndpointRegistry(),
+    endpoints,
     artifacts,
   }).run(planned);
   const counts = new Map<string, number>();

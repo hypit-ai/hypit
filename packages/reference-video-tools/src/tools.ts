@@ -20,7 +20,6 @@ import { videoCliDistribution } from "@hypit/video-cli";
 
 import { authorSource, invokedFrom, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath, tokenWindow } from "./authoring.js";
 import type { RenderElementInput, RenderPreviewsInput, SpokenRange, StandInFocus, StandInSidecar } from "./authoring.js";
-import { writePlaceholder } from "./placeholder.js";
 import { downloadReferenceVideo, isReferenceUrl } from "@hypit/yt-dlp";
 import { authoringCheck, previewCheck, reviewLogPath } from "./checks.js";
 import type { AuthoringCheckInput, PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
@@ -164,17 +163,6 @@ export type RecordReviewInput = {
   readonly text: string;
 };
 
-export type MakePlaceholderInput = {
-  readonly out: string;
-  readonly width: number;
-  readonly height: number;
-  readonly color?: string;
-  /** Produce a video placeholder for a slot that only accepts video, instead of a PNG. */
-  readonly video?: boolean;
-  /** Video placeholder duration in seconds; defaults to 1. Ignored for a PNG. */
-  readonly seconds?: number;
-};
-
 export type { RenderElementInput, RenderPreviewsInput } from "./authoring.js";
 export type { PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
 
@@ -189,7 +177,6 @@ export type ReferenceVideoTools = {
   record_observation(input: RecordObservationInput): Promise<Record<string, unknown>>;
   review_element(input: ReviewElementInput): Promise<Record<string, unknown>>;
   record_review(input: RecordReviewInput): Promise<Record<string, unknown>>;
-  make_placeholder(input: MakePlaceholderInput): Promise<Record<string, unknown>>;
   render_element(input: RenderElementInput): Promise<Record<string, unknown>>;
   render_previews(input: RenderPreviewsInput): Promise<Record<string, unknown>>;
   preview_check(input: PreviewCheckInput): Promise<Record<string, unknown>>;
@@ -1596,7 +1583,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       // A stretch that holds one picture on both sides has one picture to compare, and a clip or a
       // grid of the same frame repeated says nothing the frame alone does not.
       //
-      // Both sides are measured, and both have to be still. The render's base is a flat placeholder
+      // Both sides are measured, and both have to be still. The render's base is a flat preview mock
       // and is therefore still whatever it covers, so a render measured on its own would carry every
       // pair down to a frame — including the pairs whose reference moves, where the difference
       // between a mock base and a real one would be doing the deciding.
@@ -1967,21 +1954,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       return { run: runPath, review_id: id, stored_in: reviewLogPath(runPath) };
     },
 
-    // A media slot that is declared as a generation is not fillable by this route, which never
-    // Builds. The comparison round still needs a still to compare, so the slot is mocked with a
-    // fixed, correctly-sized placeholder — the same tool on every run, never a real generation and
-    // never a script the agent writes by hand.
-    async make_placeholder(input): Promise<Record<string, unknown>> {
-      return await writePlaceholder({
-        out: String(input.out),
-        width: positiveInt(Number(input.width), "width"),
-        height: positiveInt(Number(input.height), "height"),
-        ...(input.color === undefined ? {} : { color: String(input.color) }),
-        ...(input.video === true ? { video: true } : {}),
-        ...(input.seconds === undefined ? {} : { seconds: positiveInt(Number(input.seconds), "seconds") }),
-      });
-    },
-
+    // A media slot declared as a generation is realized through the compiled preview-mock Graph path;
+    // no Build or hand-written media fixture is used here.
     async render_element(input): Promise<Record<string, unknown>> {
       if (input.renders !== undefined) {
         const round = input.renders;
