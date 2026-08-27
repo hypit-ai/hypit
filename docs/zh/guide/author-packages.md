@@ -87,10 +87,11 @@ export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) 
 };
 ```
 
-可以参考已有的 Surface 实现：
-- `packages/seedance/src/surface.ts` —— Prompt、Speech 和 Video Surface
-- `packages/caption/src/surface.ts` —— 公共 Program Surface；具体 Style/Track Surface 属于各样式族包
-- `packages/media-track/src/surface.ts` —— Track、Item 和 Sequence Surface
+通用包不要从业务包源码推断写法。使用仓库内的最小完整 fixture：
+`examples/minimal-author-package/packages/example-component/`。它包含完整的
+Surface 返回值、Fragment literal、Manifest ports、Producer 和 activation 形状。
+只有 `inspect_svml_vocabulary` 已证明存在高度相似的结构性 sibling 时，才允许读取该
+sibling 的 README 和实现所需的少数 role 文件，并将其复制为新的 Module；不得比较无关业务包。
 
 ## 5. 声明 Surface 词表与预览图
 
@@ -124,13 +125,16 @@ vocabulary: {
 
 `appearance` 和 `preview` 回答的是两个不同的问题，谁都替代不了谁：`appearance` 说的是这个元素在所有情况下都会画出什么，预览图给出的是其中一个诚实的实例。
 
-完整词表可研究 `packages/media-track/src/manifest.ts`；`preview/` 目录可参考 `packages/typography-track/`、`packages/caption-fine/`、`packages/deck-track/`、`packages/comment-sticker/`、`packages/screen-overlay/`、`packages/ranking/` 和 `packages/speech-track/`。
+完整词表和预览声明以最小 fixture 为权威示例。生产路线应使用
+`hypit-reference-video-tools inspect_svml_vocabulary` 读取已安装包的公开声明，
+而不是打开业务包源码。
 
 ### 预览图怎么产出
 
 预览图是你自己这个组件在本地渲染出来的真实一帧。没有任何工具会替你生成它，而手工画的示意图比没有预览图更糟，因为它冒充了真实产出。
 
-按仓库自身视觉测试的做法渲染即可 —— `packages/hyperframes/test/browser-visual.test.ts` 就是可运行的示例，步骤是：
+用 `hypit-reference-video-tools render_previews` 渲染 fixture 的 preview Source；新包沿用同一套
+package-owned preview Source，不需要阅读仓库的视觉测试源码。步骤是：
 
 1. 用你自己包的 render 函数，在一个封好的 ProgramSpace 上构造出 Track 值；
 2. `sealComposition({ id, canvas, tracks })`，再用 `@hypit/hyperframes` 的 `compileHyperframesDocument(composition, space)`；
@@ -204,14 +208,11 @@ pnpm install --frozen-lockfile
 
 `<import>` 只会 activate 作者词汇。它绝不授予网络、文件系统或凭据权限。
 
-## 可供研究的现有示例
+## 实现分流
 
-| 包 | 它展示了什么 |
-|---|---|
-| `packages/seedance/` | 带多个 Surface（Prompt、Speech、Video）的模型族 |
-| `packages/seedance-speaker/` | 组合 Script、Text Template 和 Seedance 的更高层绑定 |
-| `packages/caption/` | 公共 Program、Cue/字段合同和整 Atom 定时 |
-| `packages/caption-fine/` | 一种无字段的 Style 与 Track Surface 样式族 |
-| `packages/media-track/` | 带 Item/Sequence、图层、动效和交接行为的 Track |
-| `packages/typography-track/` | Typography 叠加 Track |
-| `packages/film/` | 消费同级 Track 的合成 target |
+没有高度相似 sibling 时，只读规范文档、已安装包的 vocabulary 输出和
+`examples/minimal-author-package/packages/example-component/` fixture。
+
+当 vocabulary 证明输入/输出 Type、timing contract、终端 Track 和 Surface ports 高度相似，
+才可走 close-sibling 路径：读取该 sibling 的 README 与必要 role 文件，复制结构，重建
+Module/Producer identity，并继续通过 package-ready、Source-use、preview 和最终 gate。

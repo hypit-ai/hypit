@@ -91,7 +91,7 @@ property, since the Style admits exactly the required keys plus the documented o
 
 A Recipe holds no rule for where one Cue ends and the next begins. **The Script does**, as a `||`
 between two complete Alignment Units — `docs/quickstart/script.md` is authoritative for it, and
-`packages/script/src/parser.ts` reads it into the breaks the Caption Document carries.
+the Script parser carries those breaks into the Caption Document.
 
 ```
 <PRESENTER> It's generally good || at a lot of || different things, ||
