@@ -18,6 +18,12 @@ writes its own and the command is unused. A long answer arrives whole with `--te
 `comparison-round.md` says when. `list_svml_packages` and `inspect_svml_vocabulary` read installed
 vocabulary and have nothing to do with a reference video — `../vocabulary.md` documents them.
 
+Use the canonical observation envelopes when consuming results: `prepare_reference` exposes the four
+whole-reference observations under `observations.people_and_product`, `observations.voices`,
+`observations.persistent_systems` and `observations.places`; a narrow single or batch answer is under
+`result` and has the shape `{ status, text }`. The older direct fields and `answer` alias remain only
+for compatibility. Do not mix `.text`, `.answer.text` and `.result.text` as competing conventions.
+
 A reference is found from the Distribution rather than from where you are standing, so these commands
 may be run from anywhere. What does depend on where you are is which packages resolve: name the
 project with `--package-root` when the command is not run from inside it. `paths` reports both roots
@@ -129,20 +135,28 @@ the Source's own values and is credited with `--element`.
 
 ## Narrow questions
 
-`--question` is a separate path. It requires one to three `--shot-id` values and answers only that
-question from those shots' clips and frames. Its answer is cached like any other, under a key naming
-the shots it was asked over and the question itself, so asking the same question again returns what
+`--question` is a separate path. It requires exactly one `--shot-id` and answers only that question
+from that shot's clip and frames. Keeping a measurement on one shot prevents descriptions from
+mixing different layouts or time ranges. Cross-shot continuity is handled by the built-in boundary
+and three-shot window observations, not by a narrow question. Its answer is cached like any other,
+under a key naming the shot and the question itself, so asking the same question again returns what
 was already answered and reports `reused`. `--reobserve` is what asks again. A different question
-over the same shots gets its own key:
+over the same shot gets its own key:
 
 ```bash
 hypit-reference-video-tools observe_reference --reference-id <id> --shot-id shot-007 \
   --question "How thick is the outline on the caption words, relative to the stroke width of the letters?"
 ```
 
-Several at once is `--batch <questions.json>`, an array of `{shot_ids, question}`. Ask about visible
-attributes. Never ask which component to use. Do not re-observe the full shot to correct one: that is
-paid, and at temperature `1.0` it returns a paraphrase rather than a correction.
+Several at once is `--batch <questions.json>`, an array of `{shot_ids, question}` where every
+`shot_ids` array contains exactly one id. Ask about visible attributes. Never ask which component to
+use. Do not re-observe the full shot to correct one: that is paid, and at temperature `1.0` it returns
+a paraphrase rather than a correction.
+
+The whole-reference `persistent_systems` pass is an inventory and a lifetime hypothesis, not a settled
+measurement. Confirm geometry, exact start/end frames and intermittent gaps with shot-level evidence or
+an exactly-one-shot narrow question. If they conflict, preserve both statements with provenance and use
+the more specific shot evidence; never silently rewrite the original whole-reference observation.
 
 ## Boundaries
 
@@ -153,7 +167,7 @@ built or what you expect to be found. An observation is evidence rather than the
 maker — which is a rule about what an observation may contain, so it binds when you are the one
 writing it.
 
-Inspect every failed or unresolved result. Follow up with one narrow question over one to three
-relevant shots rather than repeating the entire analysis. Preserve successful cached observations
+Inspect every failed or unresolved result. Follow up with one narrow question over one relevant shot
+rather than repeating the entire analysis. Preserve successful cached observations
 unless the selected shot or preparation stage must be refreshed. Do not pass model, concurrency,
 rate-limit or temperature settings; on the `gemini` observer temperature is fixed at `1.0`.

@@ -24,6 +24,10 @@ deterministic gates; it does not invoke a VLM/observer or perform visual review.
 Both observers produce the same observation keys in the same cache, so everything downstream reads one
 shape. Neither receives SVML syntax, and neither writes SVML.
 
+The canonical result envelope is `prepare_reference.observations` for the four whole-reference passes,
+and `result: { status, text }` for a single or batch narrow answer. Direct whole-reference fields and
+the `answer` alias are retained only for older callers.
+
 Run the CLI from the repository or an installed package:
 
 ```bash
@@ -89,9 +93,9 @@ defaulting to four at a time with a 1.5 second gap. They describe the quota behi
 rather than anything about the video, so they are environment settings and not flags. Lower them if a
 quota objects; the failure to expect is rate limiting, which backs off on its own before giving up.
 
-`--question` is a separate narrow path: it requires one to three `--shot-id` values, answers only
-that question from those shots' clips and frames in a single request, and neither reads nor writes
-the observation cache.
+`--question` is a separate narrow path: it requires exactly one `--shot-id`, answers only that
+question from that shot's clip and frames in a single request, and neither reads nor writes the
+observation cache. Cross-shot continuity uses the built-in boundary and three-shot window observations.
 
 `compare_reconstruction` sends the named shot's reference frame and a rendered image as an
 unlabelled pair and returns a description of their visible differences. It is never told which image

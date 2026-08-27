@@ -29,11 +29,11 @@ function usage(): string {
     "  hypit-reference-video-tools route_state --action start|read|checkpoint|reconcile --project-root <dir> [options]",
     "  hypit-reference-video-tools revision_state --action start|read|checkpoint|reconcile --project-root <dir> [options]",
     "    start: --route reconstruction|description [--run <run>] [--reference-id <id>]",
-    "    checkpoint: --route <route> --step <n> [--status in_progress|complete|blocked] [--next-action <text>] [--artifacts <json>]",
+    "    checkpoint: --route <route> (--state <stage> | --step <n>) [--status in_progress|complete|blocked] [--next-action <text>] [--artifacts <json>]",
     "    read/reconcile: --project-root <dir>",
     "  hypit-reference-video-tools prepare_reference --video-path <path or link> [--observer gemini|agent] [--redo media|transcript|people|voices|systems|places|all]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> [--shot-id <id> ...] [--reobserve]",
-    "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> [--shot-id <id> ...] --question <text>",
+    "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> --question <text>",
     "  hypit-reference-video-tools observe_reference --reference-id <id> --batch <questions.json>",
     "  hypit-reference-video-tools record_observation --reference-id <id> [--run <build.svrun>] --key <key> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools record_observation --reference-id <id> [--run <build.svrun>] --batch <answers.json>",
@@ -192,6 +192,19 @@ function usage(): string {
   ].join("\n");
 }
 
+function routeStateUsage(): string {
+  return [
+    "Usage:",
+    "  hypit-reference-video-tools route_state --action start --project-root <dir> --route reconstruction|description [--run <run>] [--reference-id <id>]",
+    "  hypit-reference-video-tools route_state --action read|reconcile --project-root <dir>",
+    "  hypit-reference-video-tools route_state --action checkpoint --project-root <dir> --route reconstruction|description (--state <stage> | --step <n>) [options]",
+    "",
+    "Use exactly one of --state and --step. --state is the durable stage name; --step is retained for compatibility.",
+    "",
+    "Stages depend on the selected route. Read route.md for the ordered stage list.",
+  ].join("\n");
+}
+
 // The authoring and check commands name what they act on positionally — a Run for `render_element`,
 // `preview_check` and `reconstruction_check`, one or more package directories for `render_previews` —
 // so a token that is not a flag is collected rather than refused. Every other command still refuses
@@ -276,11 +289,18 @@ async function main(): Promise<void> {
   if (command === "list_svml_packages") {
     result = await tools.list_svml_packages();
   } else if (command === "route_state") {
+    if (flags.has("help") || flags.has("h")) {
+      report(`${routeStateUsage()}\n`);
+      return;
+    }
+    const routeStateFlags = new Set(["action", "project-root", "route", "run", "reference-id", "step", "state", "status", "next-action", "artifacts", "decision", "command", "error", "package-root", "input"]);
+    for (const name of flags.keys()) if (!routeStateFlags.has(name)) throw new Error(`unknown route_state option --${name}\n\n${routeStateUsage()}`);
     const action = typeof supplied?.action === "string" ? supplied.action : one(flags, "action");
     if (action !== "start" && action !== "read" && action !== "checkpoint" && action !== "reconcile") {
-      throw new Error("--action must be start, read, checkpoint or reconcile");
+      throw new Error("--action must be start, read, checkpoint or reconcile\n\n" + routeStateUsage());
     }
-    const projectRoot = typeof supplied?.project_root === "string" ? supplied.project_root : required(flags, "project-root");
+    const projectRoot = typeof supplied?.project_root === "string" ? supplied.project_root : one(flags, "project-root");
+    if (projectRoot === undefined || projectRoot.trim().length === 0) throw new Error("--project-root is required\n\n" + routeStateUsage());
     if (supplied !== undefined) {
       result = await tools.route_state(supplied as RouteStateCommandInput);
     } else if (action === "start") {
@@ -294,9 +314,15 @@ async function main(): Promise<void> {
     } else {
       const route = one(flags, "route");
       if (route !== "reconstruction" && route !== "description") throw new Error("--route must be reconstruction or description");
-      const step = Number(required(flags, "step"));
-      if (!Number.isSafeInteger(step) || step < 1) throw new Error("--step must be a positive integer");
-      const status = one(flags, "status");
+      const stepFlag = one(flags, "step");
+      const stateFlag = one(flags, "state");
+      if ((stepFlag === undefined) === (stateFlag === undefined)) throw new Error("checkpoint requires exactly one of --state <stage> or --step <n>\n\n" + routeStateUsage());
+      const numericStep = stepFlag === undefined ? undefined : Number(stepFlag);
+      if (stepFlag !== undefined && (!Number.isSafeInteger(numericStep) || numericStep! < 1)) throw new Error("--step must be a positive integer");
+      const step: number | string = stateFlag ?? numericStep!;
+      // A checkpoint names a completed stage unless the caller explicitly marks it in progress or blocked.
+      // This keeps the concise `--state <stage>` form useful while preserving the API's explicit statuses.
+      const status = one(flags, "status") ?? "complete";
       if (status !== undefined && status !== "in_progress" && status !== "complete" && status !== "blocked") throw new Error("--status must be in_progress, complete or blocked");
       const artifacts = one(flags, "artifacts");
       let parsedArtifacts: Readonly<Record<string, string>> | undefined;
