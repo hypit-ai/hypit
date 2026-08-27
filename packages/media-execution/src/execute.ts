@@ -4,6 +4,7 @@ import { createReadStream } from "node:fs";
 import { mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { deflateSync } from "node:zlib";
 import { mediaTypes, sealMediaInspection, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
 import type { MediaAudioStream, MediaInspection, MediaRational, MediaStream, MediaStreamSelection, MediaTimestamp, MediaVideoStream, MuxedMedia, RenderedVisual, SynchronizedMedia, TimelineAudio } from "@hypit/media";
 import type { ProgramSpace } from "@hypit/program-space";
@@ -69,6 +70,27 @@ export type MediaExecutionEnvironment = {
 
 export type MediaOperationResult = {
   readonly value: StoredValue;
+};
+
+export type RenderMockImageRequest = {
+  readonly width: number;
+  readonly height: number;
+  readonly color: string;
+};
+
+export type RenderMockVideoRequest = {
+  readonly width: number;
+  readonly height: number;
+  readonly frameRate: MediaRational;
+  readonly frameCount: number;
+  readonly color: string;
+  readonly audio: "silence" | "none";
+};
+
+export type RenderMockSilenceRequest = {
+  readonly sampleRate: 48_000;
+  readonly channels: 2;
+  readonly sampleFrames: number;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -429,6 +451,133 @@ function inlineResult(value: CanonicalValue): MediaOperationResult {
 
 function artifactResult(value: BlobRef): MediaOperationResult {
   return { value };
+}
+
+function mockColor(value: string): [number, number, number] {
+  assert(/^#[0-9a-f]{6}$/iu.test(value), "Mock color must be a six-digit hex color");
+  return [parseInt(value.slice(1, 3), 16), parseInt(value.slice(3, 5), 16), parseInt(value.slice(5, 7), 16)];
+}
+
+function crc32(bytes: Uint8Array): number {
+  let crc = 0xFFFFFFFF;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function pngChunk(type: string, data: Uint8Array): Uint8Array {
+  const body = new Uint8Array(type.length + data.length);
+  for (let index = 0; index < type.length; index += 1) body[index] = type.charCodeAt(index);
+  body.set(data, type.length);
+  const result = new Uint8Array(12 + data.length);
+  const view = new DataView(result.buffer);
+  view.setUint32(0, data.length);
+  result.set(body, 4);
+  view.setUint32(8 + data.length, crc32(body));
+  return result;
+}
+
+function mockPng(width: number, height: number, color: string): Uint8Array {
+  positiveInteger(width, "Mock image width");
+  positiveInteger(height, "Mock image height");
+  const [red, green, blue] = mockColor(color);
+  const scanlines = Buffer.alloc(height * (1 + width * 3));
+  for (let row = 0; row < height; row += 1) {
+    const offset = row * (1 + width * 3);
+    scanlines[offset] = 0;
+    for (let column = 0; column < width; column += 1) {
+      const pixel = offset + 1 + column * 3;
+      scanlines[pixel] = red;
+      scanlines[pixel + 1] = green;
+      scanlines[pixel + 2] = blue;
+    }
+  }
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0); header.writeUInt32BE(height, 4);
+  header[8] = 8; header[9] = 2;
+  return Uint8Array.from(Buffer.concat([
+    Buffer.from("\x89PNG\r\n\x1a\n", "binary"),
+    Buffer.from(pngChunk("IHDR", header)),
+    Buffer.from(pngChunk("IDAT", deflateSync(scanlines))),
+    Buffer.from(pngChunk("IEND", new Uint8Array())),
+  ]));
+}
+
+function mockSilenceWav(sampleFrames: number): Uint8Array {
+  positiveInteger(sampleFrames, "Mock silence sampleFrames");
+  const dataBytes = sampleFrames * 2 * 2;
+  const wav = Buffer.alloc(44 + dataBytes);
+  wav.write("RIFF", 0); wav.writeUInt32LE(36 + dataBytes, 4); wav.write("WAVE", 8);
+  wav.write("fmt ", 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(2, 22); wav.writeUInt32LE(48_000, 24); wav.writeUInt32LE(48_000 * 4, 28);
+  wav.writeUInt16LE(4, 32); wav.writeUInt16LE(16, 34); wav.write("data", 36); wav.writeUInt32LE(dataBytes, 40);
+  return Uint8Array.from(wav);
+}
+
+function mockImageNeed(value: CanonicalValue): RenderMockImageRequest {
+  const item = object(value, "RenderMockImageRequest") as unknown as RenderMockImageRequest;
+  positiveInteger(item.width, "Mock image width"); positiveInteger(item.height, "Mock image height"); mockColor(item.color);
+  return item;
+}
+
+function mockVideoNeed(value: CanonicalValue): RenderMockVideoRequest {
+  const item = object(value, "RenderMockVideoRequest") as unknown as RenderMockVideoRequest;
+  positiveInteger(item.width, "Mock video width"); positiveInteger(item.height, "Mock video height");
+  positiveInteger(item.frameCount, "Mock video frameCount"); mockColor(item.color);
+  assert(item.audio === "silence" || item.audio === "none", "Mock video audio mode is invalid");
+  assert(Number.isSafeInteger(item.frameRate?.numerator) && item.frameRate.numerator > 0
+    && Number.isSafeInteger(item.frameRate?.denominator) && item.frameRate.denominator > 0,
+  "Mock video frameRate is invalid");
+  return item;
+}
+
+function mockSilenceNeed(value: CanonicalValue): RenderMockSilenceRequest {
+  const item = object(value, "RenderMockSilenceRequest") as unknown as RenderMockSilenceRequest;
+  assert(item.sampleRate === 48_000 && item.channels === 2, "Mock silence format must be 48kHz stereo");
+  positiveInteger(item.sampleFrames, "Mock silence sampleFrames");
+  return item;
+}
+
+export async function executeRenderMockImage(
+  env: MediaExecutionEnvironment,
+  constraints: CanonicalValue,
+): Promise<MediaOperationResult> {
+  return artifactResult(await env.artifacts.put(mockPng(mockImageNeed(constraints).width, mockImageNeed(constraints).height, mockImageNeed(constraints).color), "image/png"));
+}
+
+export async function executeRenderMockSilence(
+  env: MediaExecutionEnvironment,
+  constraints: CanonicalValue,
+): Promise<MediaOperationResult> {
+  const request = mockSilenceNeed(constraints);
+  return artifactResult(await env.artifacts.put(mockSilenceWav(request.sampleFrames), "audio/wav"));
+}
+
+export async function executeRenderMockVideo(
+  env: MediaExecutionEnvironment,
+  constraints: CanonicalValue,
+): Promise<MediaOperationResult> {
+  const request = mockVideoNeed(constraints);
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-mock-video-"));
+  try {
+    const output = join(work, "mock.mp4");
+    const rate = `${request.frameRate.numerator}/${request.frameRate.denominator}`;
+    const duration = request.frameCount * request.frameRate.denominator / request.frameRate.numerator;
+    const filter = `color=c=${request.color.slice(1)}:s=${request.width}x${request.height}:r=${rate}:d=${duration}`;
+    const argv = ["-y", "-v", "error", "-f", "lavfi", "-i", filter,
+      ...(request.audio === "silence" ? ["-f", "lavfi", "-i", `anullsrc=r=48000:cl=stereo`] : []),
+      "-frames:v", String(request.frameCount), ...(request.audio === "silence"
+        ? ["-map", "0:v:0", "-map", "1:a:0", "-c:a", "pcm_s16le", "-shortest"]
+        : ["-an"]), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", rate,
+      "-movflags", "+faststart", output];
+    await runProcess({ executable: env.ffmpegPath, argv, timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }) });
+    return artifactResult(await env.artifacts.putFile(output, "video/mp4"));
+  } finally {
+    await rm(work, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 function inspectNeed(value: CanonicalValue): InspectMediaNeed {

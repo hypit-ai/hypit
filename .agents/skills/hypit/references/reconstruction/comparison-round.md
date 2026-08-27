@@ -1,7 +1,7 @@
 # Comparing what was built against the reference
 
 **Read `../element-review.md` first.** It owns the round this file sits inside: one element at a time,
-render what the Source configures, mock what a Build has not made, one round, two attempt ceilings,
+render what the Source configures, realize preview mocks for what a Build has not made, one round, two attempt ceilings,
 measure rather than guess, and the rule that the reader is not the builder. Everything below is what a
 reference adds to that.
 
@@ -24,14 +24,12 @@ looked at, since opening it yourself is what the blindness rule below forbids.
 Everything else happens on the reconstruction side, which changes every time a package, Recipe or
 source edge is edited.
 
-## The render runs on the reference's clock
+## The render uses estimate timing
 
-`render_element` takes `--reference-id`, and it times the stand-in from that reference's own
-transcript, so each Segment runs for as long as the reference spends on its words. Pass it every time:
-the comparison cuts both sides to the same words and refuses a pair whose two halves are different
-lengths, and only this clock puts the render on the reference's. It is also what lets anything whose
-appearance is a function of elapsed time — a progressive reveal, a typewriter, staggered rows — be
-compared at the speed it will be seen at.
+`render_element` uses `@hypit/preview-mock` with the Source's `estimate:Speech` timing. `--reference-id`
+is reserved for selecting reference evidence and comparison windows, not for constructing mock tracks.
+The comparison still cuts both sides to the same words and refuses a pair whose two halves are different
+lengths. Animated elements are assessed against the deterministic estimate clock used by preview.
 
 A `--batch` round inherits the reference along with the Run, and `reconstruction_check`'s output is
 the batch file.
@@ -130,7 +128,7 @@ reads them: one subagent per comparison, dispatched together, and never you.
 - Never tell the observer which picture is the reconstruction, what was built, which component drew
   it, or what you expect to be wrong. An observer told what to confirm will confirm it.
 - `--question` carries what to look at, never what to conclude. Three things qualify: which region to
-  read, which regions to skip because they hold a placeholder standing in for a declared-but-unbuilt
+  read, which regions to skip because they hold a preview mock standing in for a declared-but-unbuilt
   generation, and one visible quantity to measure. None of them says which picture is the
   reconstruction, what was built, or what you expect to be wrong — and a question that hints at the
   answer, rather than naming what to look at, has stopped being scope.

@@ -66,6 +66,8 @@ the boundary and launcher selection. Read it before the first command of any rou
   at the step that proves a vocabulary gap.
 - Seeing what the sources produce, or proving the graph traces before any Build → read
   `references/preview.md`.
+- Preview-only media realization, temporary preview Runs, mock Artifact caching, or estimated
+  SemanticTake timing → read `references/preview-mock.md`.
 - Runtime setup, plan/build/status/inspect/get/reuse → read `references/runtime.md`.
 - Environment diagnosis or credentials → read `references/environment.md` and
   `references/credentials.md`.

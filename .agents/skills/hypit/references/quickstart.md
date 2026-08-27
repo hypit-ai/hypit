@@ -13,9 +13,13 @@ Published docs and installed package declarations are authoritative:
 | Film and rendering | `../../../../docs/quickstart/composition.md` |
 | Run Source, durable Runtime, Builds, retrieval, and reuse | `../../../../docs/quickstart/run.md` and `runtime.md` |
 
-Canonical path:
+Canonical production path:
 
 `Script → estimate:Speech/text → Seedance or supplied media → pipeline:Normalize → whisperx:SemanticTake → speech:Track → peer Caption/Media/Typography/Audio Tracks → Film → render:Video`.
+
+Preview path uses the same Graph with `@hypit/preview-mock`: image/video/audio outputs are replaced
+by ordinary mock Artifacts, and WhisperX `SemanticTake` is replaced by `semantic-take-estimate` using
+`estimate:Speech`. This preview substitution never enters Author Source and is not final timing evidence.
 
 Use explicit imports, exact fonts, Canvas/Frames, the SemanticTrack, Targets, and Runtime
 authority. There is no implicit cache; reuse is explicit with `build-record` + `satisfy`.

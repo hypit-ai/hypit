@@ -55,7 +55,7 @@ which observer reads the reference, that question belongs to the other route.
   looks unintended, and anything too low in contrast to read. Over a clip it also asks what appears,
   moves or leaves in a way the description does not account for.
 
-The placeholder clause is in the prompt already: the reader is told that flat-filled regions stand in
+The preview-mock clause is in the prompt already: the reader is told that flat-filled regions stand in
 for generations that have not run and to read only what is drawn over them. Do not add it by hand, and
 do not add anything that says what you built or what you expect to be found.
 

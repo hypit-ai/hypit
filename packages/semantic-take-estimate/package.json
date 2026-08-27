@@ -18,6 +18,7 @@
     "@hypit/media": "workspace:*",
     "@hypit/narrative": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/run": "workspace:*",
     "@hypit/speech": "workspace:*"
   },
   "devDependencies": {

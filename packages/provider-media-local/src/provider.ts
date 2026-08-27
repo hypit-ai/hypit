@@ -9,11 +9,14 @@ import {
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
   executeRenderStillVideo,
+  executeRenderMockImage,
+  executeRenderMockVideo,
+  executeRenderMockSilence,
   executeTransformMedia,
 } from "@hypit/media-execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-execution";
 import { mediaPipelineCapabilities } from "@hypit/media-pipeline";
-import { canonicalize } from "@hypit/protocol";
+import { mockMediaCapabilities } from "@hypit/mock-media";
 import { isStreamingArtifactStore } from "@hypit/runtime";
 import { speechTypes } from "@hypit/speech";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
@@ -118,6 +121,24 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
         capability: mediaPipelineCapabilities.renderStill,
         returns: artifactTypes.blob,
         handler: operation(executeRenderStillVideo),
+      },
+      {
+        lifecycle: "immediate" as const,
+        capability: mockMediaCapabilities.image,
+        returns: artifactTypes.blob,
+        handler: operation(executeRenderMockImage),
+      },
+      {
+        lifecycle: "immediate" as const,
+        capability: mockMediaCapabilities.video,
+        returns: artifactTypes.blob,
+        handler: operation(executeRenderMockVideo),
+      },
+      {
+        lifecycle: "immediate" as const,
+        capability: mockMediaCapabilities.silence,
+        returns: artifactTypes.blob,
+        handler: operation(executeRenderMockSilence),
       },
       {
         lifecycle: "immediate" as const,

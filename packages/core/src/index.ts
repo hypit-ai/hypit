@@ -10,6 +10,11 @@ export {
 export {
   sealBuildRequest,
   sealCompiledGraph,
+  resolveLogicalOutput,
+  resolveCandidate,
+  resolveOperation,
+  satisfiedCandidate,
+  operationResultRecord,
   verifyBuildRequest,
   verifyCompiledGraph,
 } from "./graph.js";

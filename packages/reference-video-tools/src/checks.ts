@@ -214,12 +214,8 @@ export function reviewLogPath(runPath: string): string {
 }
 
 /**
- * Which clock timed the stand-ins an element's comparisons were made over.
- *
- * `reference` is every recorded comparison drawn at the pace the reference speaks those words;
- * `estimate` is every one drawn at the pace `estimate:Speech` predicts; `mixed` is both among them.
- * `not recorded` is a comparison whose picture carried no `render_element` sidecar, so what timed it
- * is unknown.
+ * Which timing basis the preview sidecar recorded for an element comparison.
+ * Native preview realization records `estimate`; older or external pictures may be `not recorded`.
  */
 type TimingBasis = "reference" | "estimate" | "mixed" | "not recorded";
 
@@ -1019,9 +1015,8 @@ export async function authoringCheck(
   // stretch was the right one to compare against — it does not know what the element draws — so it
   // reports them and lets a reader notice a component compared against one that never showed it.
   const rounds = new Map<string, string[]>();
-  // What timed each comparison's stand-in. A picture drawn at the estimator's pace holds every
-  // element in the right place for the wrong length of time, so an element compared only that way has
-  // had its layout settled and its behaviour over the window left alone.
+  // What timing basis each comparison recorded. Native preview realization is deterministic estimate
+  // timing; a missing sidecar is the only unknown case.
   const bases = new Map<string, TimingBasis[]>();
   for (const entry of log) {
     if (entry.element === undefined) continue;
@@ -1033,7 +1028,7 @@ export async function authoringCheck(
     bases.set(entry.element, [...(bases.get(entry.element) ?? []), basis]);
   }
   // One answer per element, over every comparison it has. Agreement carries through; disagreement is
-  // `mixed`, which is the honest answer for an element compared once each way.
+  // `mixed` for compatibility with historical logs.
   const timingBasis = (id: string): TimingBasis => {
     const recorded = new Set(bases.get(id) ?? []);
     if (recorded.size === 0) return "not recorded";
@@ -1095,7 +1090,7 @@ export async function authoringCheck(
 
   // Elements whose comparisons say nothing about how they behave over their window: every recorded
   // comparison was drawn at the estimator's pace, or its picture carried no record of what timed it.
-  const untimed = elements.filter((element) => element.comparisons > 0 && element.timing_basis !== "reference");
+  const untimed = elements.filter((element) => element.comparisons > 0 && element.timing_basis === "not recorded");
 
   const summary: string[] = [];
   if (never.length === 0 && running.length === 0) {
@@ -1119,8 +1114,8 @@ export async function authoringCheck(
   const compared = elements.filter((element) => element.comparisons > 0).length;
   if (compared > 0 && mode === "reconstruction") {
     summary.push(untimed.length === 0
-      ? `every compared element was looked at over a reference-timed stand-in (${compared}).`
-      : `${untimed.length} of ${compared} compared elements have comparisons over a stand-in that was not reference-timed.`);
+      ? `every compared element was looked at over the deterministic estimate-timed preview (${compared}).`
+      : `${untimed.length} of ${compared} compared elements have no recorded preview timing basis.`);
   }
   // On the description route every stand-in is estimate-timed, because `estimate:Speech` is the only
   // clock there is until the Build synthesizes the speech. Reporting that as a shortfall would name
@@ -1268,23 +1263,12 @@ export async function authoringCheck(
         note: `${unlabelled} comparison${unlabelled === 1 ? " was" : "s were"} recorded without --element and cannot be credited to one.`,
       },
     }),
-    // Only where a reference-timed stand-in is reachable. On the description route every stand-in is
-    // estimate-timed by definition, so this would list every element and point at a `--reference-id`
-    // that does not exist; the summary states that fact once instead.
-    ...(untimed.length === 0 || mode === "description" ? {} : {
+    ...(untimed.length === 0 ? {} : {
       timing_next: {
         ids: untimed.map((element) => element.id),
-        note: "A stand-in sized by estimate:Speech puts every element where the Source puts it and gives it "
-          + "the wrong length of time to be there. Anything whose appearance is a function of elapsed time "
-          + "inside its window — a progressive reveal, a typewriter, staggered rows at a fixed rate, an "
-          + "enter animation scaled to the window — was therefore compared at a speed the reference never "
-          + "ran at, and is unverified. A comparison with no recorded basis says the same thing, because "
-          + "nothing on the record says otherwise.\n\n"
-          + "Re-render each of these with render_element --reference-id "
-          + `${reference} and compare again: the reference's own transcript times every Segment whose words `
-          + "it carries, so each window runs for as long as the reference spends on it. What is left after "
-          + "that is alignment against the speech the Build synthesizes, which is settled once that "
-          + "speech exists.",
+        note: "This comparison has no timing sidecar. Re-render it with render_element so the deterministic "
+          + "estimate basis is recorded. Reference timing is not used to construct mock SemanticTakes; final "
+          + "alignment against synthesized speech is settled after the Build.",
         commands: untimed.flatMap((element) => plan.filter((entry) => entry.element === element.id)
           .map((entry) =>
             `hypit-reference-video-tools render_element ${runPath} --element ${element.id} `
