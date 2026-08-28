@@ -46,7 +46,19 @@ export type SlateVariant = {
   readonly inject_packages?: readonly SlatePackageInjection[];
   readonly [key: string]: unknown;
 };
-export type VariantSlate = { readonly variants: readonly SlateVariant[]; readonly [key: string]: unknown };
+export type SlateDirection = Omit<SlateVariant, "id" | "slug"> & {
+  readonly id: string;
+  readonly slug: string;
+  readonly count: number;
+};
+/** The authored slate contains direction quotas; concrete variants are expanded at dispatch time. */
+export type VariantSlate = {
+  readonly count?: number;
+  readonly directions?: readonly SlateDirection[];
+  /** Legacy expanded form remains readable for already-created batches. */
+  readonly variants?: readonly SlateVariant[];
+  readonly [key: string]: unknown;
+};
 
 export type InitializedVariant = {
   readonly id: string;
@@ -206,9 +218,7 @@ function safeSlug(value: string): string {
   return slug.slice(0, 64);
 }
 
-function assertSlate(value: unknown, path: string): asserts value is VariantSlate {
-  if (value === null || typeof value !== "object" || !Array.isArray((value as { variants?: unknown }).variants)) throw new Error(`${path} must contain a variants array`);
-  const variants = (value as { variants: unknown[] }).variants;
+function validateVariantEntries(variants: readonly unknown[], path: string): asserts variants is readonly SlateVariant[] {
   if (variants.length === 0) throw new Error(`${path} must contain at least one variant`);
   const slugs = new Set<string>();
   const ids = new Set<string>();
@@ -278,6 +288,61 @@ function assertSlate(value: unknown, path: string): asserts value is VariantSlat
       }
     }
   }
+}
+
+function assertSlate(value: unknown, path: string): asserts value is VariantSlate {
+  if (value === null || typeof value !== "object") throw new Error(`${path} must contain directions`);
+  const slate = value as VariantSlate;
+  if (slate.count !== undefined && (!Number.isSafeInteger(slate.count) || slate.count <= 0)) {
+    throw new Error(`${path} count must be a positive integer`);
+  }
+  if (Array.isArray(slate.directions)) {
+    if (slate.directions.length === 0) throw new Error(`${path} must contain at least one direction`);
+    let total = 0;
+    const ids = new Set<string>();
+    const slugs = new Set<string>();
+    for (const [index, direction] of slate.directions.entries()) {
+      if (direction === null || typeof direction !== "object") throw new Error(`${path} directions[${index}] must be an object`);
+      if (typeof direction.id !== "string" || direction.id.trim().length === 0) throw new Error(`${path} directions[${index}] has no id`);
+      if (typeof direction.slug !== "string" || direction.slug.trim().length === 0) throw new Error(`${path} directions[${index}] has no slug`);
+      if (!Number.isSafeInteger(direction.count) || direction.count <= 0) throw new Error(`${path} directions[${index}] count must be a positive integer`);
+      const slug = safeSlug(direction.slug);
+      if (ids.has(direction.id.trim())) throw new Error(`${path} repeats direction id ${direction.id.trim()}`);
+      if (slugs.has(slug)) throw new Error(`${path} repeats direction slug ${slug}`);
+      ids.add(direction.id.trim()); slugs.add(slug); total += direction.count;
+      validateVariantEntries([{ ...direction, id: `${direction.id}-1`, slug: `${direction.slug}-1` }], `${path} directions[${index}]`);
+    }
+    if (slate.count !== undefined && slate.count !== total) throw new Error(`${path} count ${slate.count} does not equal direction quotas ${total}`);
+    return;
+  }
+  if (Array.isArray(slate.variants)) {
+    validateVariantEntries(slate.variants, path);
+    return;
+  }
+  throw new Error(`${path} must contain directions`);
+}
+
+export function expandVariantSlate(slate: VariantSlate, path = "slate.json"): readonly SlateVariant[] {
+  assertSlate(slate, path);
+  if (slate.directions === undefined) return slate.variants!;
+  const total = slate.directions.reduce((sum, direction) => sum + direction.count, 0);
+  const variants: SlateVariant[] = [];
+  for (const direction of slate.directions) {
+    const directionId = direction.id.trim();
+    const directionSlug = safeSlug(direction.slug);
+    for (let ordinal = 1; ordinal <= direction.count; ordinal += 1) {
+      const suffix = String(ordinal).padStart(Math.max(2, String(direction.count).length), "0");
+      const { count: _count, id: _directionId, slug: _directionSlug, ...template } = direction;
+      const brief = direction.brief !== undefined && direction.brief !== null && typeof direction.brief === "object"
+        ? { ...(direction.brief as Record<string, unknown>), direction_id: directionId, direction_index: ordinal }
+        : { direction: direction.brief ?? directionId, direction_id: directionId, direction_index: ordinal };
+      variants.push({ ...template, id: `${directionId}-${suffix}`, slug: `${directionSlug}-${suffix}`, brief } as SlateVariant);
+    }
+  }
+  const slugs = new Set(variants.map((variant) => safeSlug(variant.slug)));
+  if (slugs.size !== variants.length) throw new Error(`${path} direction quotas expand to duplicate variant slugs`);
+  if (slate.count !== undefined && slate.count !== variants.length) throw new Error(`${path} count ${slate.count} does not equal expanded variants ${variants.length}`);
+  return variants;
 }
 
 export async function writeVariantJson(path: string, value: unknown): Promise<void> {
@@ -365,11 +430,12 @@ export async function initializeVariantProjects(input: {
   catch (error) { throw new Error(`cannot read slate ${slatePath}: ${error instanceof Error ? error.message : String(error)}`); }
   assertSlate(slateValue, slatePath);
   const slate = slateValue;
-  if (input.expectedCount !== undefined && slate.variants.length !== input.expectedCount) {
-    throw new Error(`slate has ${slate.variants.length} variants, expected ${input.expectedCount}`);
+  const variantsInSlate = expandVariantSlate(slate, slatePath);
+  if (input.expectedCount !== undefined && variantsInSlate.length !== input.expectedCount) {
+    throw new Error(`slate expands to ${variantsInSlate.length} variants, expected ${input.expectedCount}`);
   }
   const approvedPackages = new Map((input.approvedPackages ?? []).map((pack) => [pack.id, pack]));
-  for (const variant of slate.variants) {
+  for (const variant of variantsInSlate) {
     for (const injection of variant.inject_packages ?? []) {
       if (!approvedPackages.has(injection.package_id)) throw new Error(`slate references package ${injection.package_id}, which is not ready and frozen in batch state`);
     }
@@ -379,7 +445,7 @@ export async function initializeVariantProjects(input: {
     throw new Error(`base project digest changed: expected ${input.expectedBaseDigest}, found ${base.digest}`);
   }
   await mkdir(outputRoot, { recursive: true });
-  const width = Math.max(3, String(slate.variants.length).length);
+  const width = Math.max(3, String(variantsInSlate.length).length);
   const currentRoute = await readFile(join(projectRoot, ".hypit", "route-state.json"), "utf8")
     .then((text) => JSON.parse(text) as { artifacts?: { vocabulary?: unknown } }, () => undefined)
     .catch(() => undefined);
@@ -388,7 +454,7 @@ export async function initializeVariantProjects(input: {
     : join(projectRoot, ".hypit", "vocabulary.json");
   const initialized: InitializedVariant[] = [];
   const assignedIds = new Set<string>();
-  for (const [index, variant] of slate.variants.entries()) {
+  for (const [index, variant] of variantsInSlate.entries()) {
     const number = String(index + 1).padStart(width, "0");
     const slug = safeSlug(variant.slug);
     const id = typeof variant.id === "string" && variant.id.trim().length > 0 ? variant.id.trim() : number;
