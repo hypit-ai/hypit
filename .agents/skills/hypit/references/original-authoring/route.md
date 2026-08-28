@@ -194,7 +194,7 @@ for vertical centre offsets, frame capacity, and containment; horizontal left/ri
 judged mechanically. The reader still decides whether visible text or marks fit the intent and whether
 any offset, overlap or bleed is deliberate.
 
-**Read now:** `../element-review.md` — what the three rules are and why the list is what it is.
+**Read now:** `../element-review.md` — why each distinct visual declaration is read where it first appears.
 `../preview.md` holds `render_element` itself.
 
 Render the whole set before reading any of it. Studio is also free and is for the author to look at;

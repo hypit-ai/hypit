@@ -188,6 +188,5 @@ as equivalent, in the words the observer used.
 ## Comparing without subagents
 
 Answering the comparison yourself makes the report yours, and you know what you built.
-`../element-review.md` states the three rules that stand in for the blindness a harness without
-subagents cannot give you, and they apply here unchanged. What a subagent adds, and they cannot, is
-that the comparer is not the builder.
+`../element-review.md` states the declaration-change rule that selects comparisons, and it applies
+here unchanged. What a subagent adds, and they cannot, is that the comparer is not the builder.
