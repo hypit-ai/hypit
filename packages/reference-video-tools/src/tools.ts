@@ -32,6 +32,7 @@ import {
   checkpointRouteState,
   readRouteState,
   reconcileRouteState,
+  routeExecutionStatePath,
   routeStatePath,
   startRouteState,
   ROUTE_STATE_STEPS,
@@ -42,10 +43,13 @@ import {
   checkpointRevisionState,
   readRevisionState,
   reconcileRevisionState,
+  revisionExecutionStatePath,
+  revisionRequestPath,
   revisionStatePath,
   startRevisionState,
 } from "./revision-state.js";
 import type { RevisionState, RevisionStep } from "./revision-state.js";
+import { persistEvidence } from "./state-files.js";
 import {
   checkpointVariantExpansion,
   discoverVariantExpansions,
@@ -286,11 +290,20 @@ export type GenerateText = (input: { readonly parts: readonly Part[]; readonly i
 type ObservationTask = { readonly key: string; readonly request: Request };
 
 function routeStateResult(state: RouteState | undefined): Record<string, unknown> {
-  return state === undefined ? { state: null } : { state, path: routeStatePath(state.project_root) };
+  return state === undefined ? { state: null } : {
+    state,
+    path: routeStatePath(state.project_root),
+    history_path: routeExecutionStatePath(state.project_root, state.route_id),
+  };
 }
 
 function revisionStateResult(state: RevisionState | undefined): Record<string, unknown> {
-  return state === undefined ? { state: null } : { state, path: revisionStatePath(state.project_root) };
+  return state === undefined ? { state: null } : {
+    state,
+    path: revisionStatePath(state.project_root),
+    history_path: revisionExecutionStatePath(state.project_root, state.revision_id),
+    request_path: revisionRequestPath(state.project_root, state.revision_id),
+  };
 }
 
 function variantStateResult(state: Awaited<ReturnType<typeof readVariantExpansionState>>): Record<string, unknown> {
@@ -427,10 +440,7 @@ async function autoRouteCheckpoint(
 }
 
 async function persistRouteEvidence(runPath: string, name: string, result: Record<string, unknown>): Promise<string> {
-  const path = join(dirname(resolve(runPath)), ".hypit", name);
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(result, null, 2)}\n`, "utf8");
-  return path;
+  return persistEvidence(dirname(resolve(runPath)), name, result);
 }
 
 async function autoRouteError(runPath: string | undefined, command: string, error: unknown): Promise<void> {
@@ -480,10 +490,7 @@ async function maybeCheckpointReferenceObservation(input: RecordObservationInput
 }
 
 async function persistRoutePlan(runPath: string, result: Record<string, unknown>): Promise<string> {
-  const path = join(dirname(resolve(runPath)), ".hypit", "route-plan.json");
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify({ plan: result.plan ?? [], generated_at: new Date().toISOString() }, null, 2)}\n`, "utf8");
-  return path;
+  return persistEvidence(dirname(resolve(runPath)), "route-plan.json", { plan: result.plan ?? [], generated_at: new Date().toISOString() });
 }
 
 function observation(status: Observation["status"], text: string): Observation { return { status, text }; }
@@ -1864,14 +1871,15 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         }
       }
       const result = { packages: input.package_names, surfaces };
+      let evidence: string | undefined;
       if (input.run !== undefined) {
         const runPath = resolve(invokedFrom(), input.run);
-        const evidence = await persistRouteEvidence(runPath, "vocabulary.json", result);
+        evidence = await persistRouteEvidence(runPath, "vocabulary.json", result);
         const route = await readRouteState(dirname(runPath));
         const step = routeStepFor(route?.route ?? "reconstruction", "vocabulary-checked");
         await autoRouteCheckpoint(runPath, step, { vocabulary: evidence }, "validate_local_author_packages --run <build.svrun>");
       }
-      return result;
+      return evidence === undefined ? result : { ...result, evidence };
     },
 
     async validate_local_author_packages(input): Promise<Record<string, unknown>> {
@@ -1885,7 +1893,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           : "validate_script_cues --run <build.svrun>";
         await autoRouteCheckpoint(runPath, step, { package_ready: evidence }, next);
       } else await autoRouteError(runPath, "validate_local_author_packages", (result.packages as unknown[] ?? []));
-      return result;
+      return { ...result, evidence };
     },
 
     async validate_script_cues(input): Promise<Record<string, unknown>> {
@@ -1897,7 +1905,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const step = routeStepFor(route?.route ?? "reconstruction", "script-checked");
         await autoRouteCheckpoint(runPath, step, { script_cues: evidence }, "write main.svml, recipes.svs and build.svrun");
       } else await autoRouteError(runPath, "validate_script_cues", result.violations ?? result.errors ?? "cue validation failed");
-      return result;
+      return { ...result, evidence };
     },
 
     /**
@@ -2490,9 +2498,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const cueGate = await scriptCueCheck({ run: input.run });
         if (packageGate.passed !== true || cueGate.passed !== true) {
           const refused = { run: runPath, sound: false, package_gate: packageGate, script_cue_gate: cueGate, refused: "package or Script Cue gate failed" };
-          await persistRouteEvidence(runPath, "preview-check.json", refused);
+          const evidence = await persistRouteEvidence(runPath, "preview-check.json", refused);
           await autoRouteError(runPath, "preview_check", refused.refused);
-          return refused;
+          return { ...refused, evidence };
         }
         const result = await previewCheck(input, { packageRoot });
         const evidence = await persistRouteEvidence(runPath, "preview-check.json", result);
@@ -2507,7 +2515,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           const routeAfterSource = await readRouteState(dirname(runPath));
           await autoRouteCheckpoint(runPath, routeStepFor(routeAfterSource?.route ?? "reconstruction", "graph-checked"), { preview_check: evidence }, next);
         } else await autoRouteError(runPath, "preview_check", result.refused ?? result.problems ?? "preview check failed");
-        return result;
+        return { ...result, evidence };
       } catch (error) {
         await autoRouteError(runPath, "preview_check", error);
         throw error;
@@ -2521,9 +2529,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const cueGate = await scriptCueCheck({ run: input.run });
         if (packageGate.passed !== true || cueGate.passed !== true) {
           const refused = { run: runPath, passed: false, package_gate: packageGate, script_cue_gate: cueGate, issues: ["package or Script Cue gate failed"] };
-          await persistRouteEvidence(runPath, "final-check.json", refused);
+          const evidence = await persistRouteEvidence(runPath, "final-check.json", refused);
           await autoRouteError(runPath, "reconstruction_check", refused.issues);
-          return refused;
+          return { ...refused, evidence };
         }
         const result = await authoringCheck({ ...input, mode: "reconstruction" }, { packageRoot });
         const evidence = await persistRouteEvidence(runPath, "final-check.json", result);
@@ -2534,7 +2542,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         }
         if (result.passed === true) { const route = await readRouteState(dirname(runPath)); await autoRouteCheckpoint(runPath, routeStepFor(route?.route ?? "reconstruction", "final-checked"), { final_check: evidence }, "submit the approved Build"); }
         else await autoRouteError(runPath, "reconstruction_check", result.issues ?? result.unresolved ?? "reconstruction check failed");
-        return result;
+        return { ...result, evidence };
       } catch (error) {
         await autoRouteError(runPath, "reconstruction_check", error);
         throw error;
@@ -2548,9 +2556,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const cueGate = await scriptCueCheck({ run: input.run });
         if (packageGate.passed !== true || cueGate.passed !== true) {
           const refused = { run: runPath, passed: false, package_gate: packageGate, script_cue_gate: cueGate, issues: ["package or Script Cue gate failed"] };
-          await persistRouteEvidence(runPath, "final-check.json", refused);
+          const evidence = await persistRouteEvidence(runPath, "final-check.json", refused);
           await autoRouteError(runPath, "authoring_check", refused.issues);
-          return refused;
+          return { ...refused, evidence };
         }
         const result = await authoringCheck({ ...input, mode: "description" }, { packageRoot });
         const evidence = await persistRouteEvidence(runPath, "final-check.json", result);
@@ -2561,7 +2569,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         }
         if (result.passed === true) { const route = await readRouteState(dirname(runPath)); await autoRouteCheckpoint(runPath, routeStepFor(route?.route ?? "description", "final-checked"), { final_check: evidence }, "submit the approved Build"); }
         else await autoRouteError(runPath, "authoring_check", result.issues ?? result.unresolved ?? "authoring check failed");
-        return result;
+        return { ...result, evidence };
       } catch (error) {
         await autoRouteError(runPath, "authoring_check", error);
         throw error;
@@ -2732,6 +2740,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const cueEvidence = await persistRouteEvidence(runPath, "script-cues.json", cueGate);
       const previewEvidence = await persistRouteEvidence(runPath, "preview-check.json", graphGate);
       const finalEvidence = await persistRouteEvidence(runPath, "variant-check.json", result);
+      result.evidence = finalEvidence;
       if (vocabularyPassed) await autoRouteCheckpoint(runPath, routeStepFor("variant", "vocabulary-checked"), { vocabulary: vocabularyPath });
       if (packageGate.passed === true) await autoRouteCheckpoint(runPath, routeStepFor("variant", "package-ready"), { package_ready: packageEvidence });
       if (cueGate.passed === true) await autoRouteCheckpoint(runPath, routeStepFor("variant", "script-checked"), { script_cues: cueEvidence });
@@ -2766,25 +2775,28 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           const currentRoute = await readRouteState(projectRoot);
           const outsideScope = Array.isArray((minimalDiff as { outside_allowed_changes?: unknown }).outside_allowed_changes)
             && ((minimalDiff as { outside_allowed_changes: unknown[] }).outside_allowed_changes.length > 0);
-          const variants = batch.variants.map((variant) => variant.project_root === projectRoot
-            ? { ...variant, status: currentRoute?.status === "complete" ? "complete" as const
+          const updatedVariant = batch.variants.find((variant) => variant.project_root === projectRoot);
+          const variantUpdate = updatedVariant === undefined ? undefined : {
+            ...updatedVariant, status: currentRoute?.status === "complete" ? "complete" as const
               : outsideScope ? "scope-expansion-required" as const : result.passed === true ? "dispatched" as const : "failed" as const,
-              ...(result.passed === true ? {} : { error: outsideScope ? "scope-expansion-required" : "variant_check failed" }) }
-            : variant);
+            ...(result.passed === true ? {} : { error: outsideScope ? "scope-expansion-required" : "variant_check failed" }),
+          };
           batch = await checkpointVariantExpansion({
             projectRoot: brief.base_project_root, outputRoot: brief.batch_root,
             step: batch.current_step <= VARIANT_EXPANSION_STEPS.length ? batch.current_step : VARIANT_EXPANSION_STEPS.length,
-            status: batch.status === "blocked" ? "blocked" : "in_progress", variants,
+            status: batch.status === "blocked" ? "blocked" : "in_progress",
+            ...(variantUpdate === undefined ? {} : { variantUpdates: [variantUpdate] }),
           });
+          const variants = batch.variants;
           const reports = await Promise.all(variants.map(async (variant) => {
-            const path = join(variant.project_root, ".hypit", "variant-check.json");
+            const childRoute = await readRouteState(variant.project_root);
+            const path = childRoute?.artifacts.variant_check ?? join(variant.project_root, ".hypit", "variant-check.json");
             let report: { passed?: unknown } | undefined;
             try { report = JSON.parse(await readFile(path, "utf8")) as { passed?: unknown }; } catch { report = undefined; }
-            return { id: variant.id, project_root: variant.project_root, route_complete: (await readRouteState(variant.project_root))?.status === "complete", passed: report?.passed === true, report: path };
+            return { id: variant.id, project_root: variant.project_root, route_complete: childRoute?.status === "complete", passed: report?.passed === true, report: path };
           }));
           const aggregate = { passed: reports.length > 0 && reports.every((item) => item.route_complete && item.passed), variants: reports, checked_at: new Date().toISOString() };
-          const aggregatePath = join(resolve(brief.batch_root), ".hypit", "aggregate-check.json");
-          await writeVariantJson(aggregatePath, aggregate);
+          const aggregatePath = await persistEvidence(brief.batch_root, "aggregate-check.json", aggregate);
           if (reports.every((item) => item.route_complete)) {
             await checkpointVariantExpansion({ projectRoot: brief.base_project_root, outputRoot: brief.batch_root, step: "variants-complete", status: "complete", variants });
           }

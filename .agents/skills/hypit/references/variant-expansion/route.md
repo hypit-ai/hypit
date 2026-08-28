@@ -24,6 +24,8 @@ At the start of a new turn or after context compaction:
 
 The base locator is `<base>/.hypit/variant-expansions/<batch-id>.json`; the canonical batch state is
 `<batch>/.hypit/variant-expansion-state.json`. Never recover a sibling batch path from chat memory.
+Batch state read-modify-write operations are serialized by a batch-local lock; variant agents update
+only their own variant record so concurrent completions cannot replace one another with stale arrays.
 
 ## Batch state
 

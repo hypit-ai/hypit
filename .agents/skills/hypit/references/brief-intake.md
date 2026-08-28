@@ -55,7 +55,8 @@ the brief unfrozen while any unresolved answer could change the program's intent
 
 ## Durable brief
 
-Persist a concise `.hypit/brief` file (JSON or Markdown; do not put it in Author Source) containing:
+Persist a concise JSON object at the one canonical path `.hypit/brief.json` (do not put it in Author
+Source) containing:
 
 - user goal and audience;
 - intent, Hook/attention strategy and narrative progression;
@@ -63,6 +64,12 @@ Persist a concise `.hypit/brief` file (JSON or Markdown; do not put it in Author
 - example project path and digest, or the general-analysis basis;
 - confirmed decisions and unresolved questions;
 - the expected SVML/SVS/SVRun structural consequences.
+
+Write it atomically. It may be refined before `brief-frozen`; after that checkpoint its recorded
+digest is immutable, and any mismatch is a recovery conflict rather than permission to overwrite
+the old intent. Do not create `.hypit/brief`, `.hypit/brief.md`, or a second route-specific base brief.
+Revision records its own request under `.hypit/revisions/<revision-id>/request.json` and never rewrites
+the base brief.
 
 Checkpoint `brief-frozen` only after unresolved questions no longer affect those consequences. An
 agent may select fonts, package details and model tier when they are genuinely low risk; it may not

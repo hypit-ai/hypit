@@ -8,8 +8,16 @@ revision-state and variant-expansion CLI subcommands, including `list_svml_packa
 Each command prints one JSON result to stdout. The final source files are authored by the calling
 agent and checked with the installed `hypit check` command.
 
+Route and revision current views remain at `.hypit/route-state.json` and
+`.hypit/revision-state.json` for compatibility. Every start also writes execution history under
+`.hypit/routes/<route-id>/state.json` or `.hypit/revisions/<revision-id>/state.json`; revision requests
+live beside their state as `request.json`. Machine check reports are immutable, content-addressed
+files under `.hypit/evidence/<digest>/`, while same-named root files are only latest-result views.
+Commands that persist a report return its immutable path as `evidence`; state checkpoints should use
+that path rather than reconstructing a root filename.
+
 For a completed project change, `revision_state --action start|read|checkpoint|reconcile` stores a
-small atomic `.hypit/revision-state.json` snapshot. Revision edits Source/Recipe/Run and reruns
+small atomic current snapshot plus revision-scoped history. Revision edits Source/Recipe/Run and reruns
 deterministic gates; it does not invoke a VLM/observer or perform visual review. The project may be
 handed in as an already completed directory: after its baseline gates pass, Revision can start
 without a parent reconstruction or description route state.

@@ -82,9 +82,12 @@ test("a completed route no longer blocks a new route", async () => {
     await checkpointRouteState({ projectRoot: root, route: "reconstruction", step, status: "complete" });
   }
   assert.equal((await readRouteState(root))?.status, "complete");
+  const completed = await readRouteState(root);
   const restarted = await startRouteState({ projectRoot: root, route: "description" });
   assert.equal(restarted.route, "description");
   assert.deepEqual(restarted.completed_steps, []);
+  assert.notEqual(restarted.route_id, completed?.route_id);
+  assert.equal(JSON.parse(await readFile(join(root, ".hypit", "routes", completed!.route_id, "state.json"), "utf8")).status, "complete");
 });
 
 test("checkpoint artifacts are merged and stale machine evidence is rolled back", async () => {
@@ -111,9 +114,10 @@ test("checkpoint artifacts are merged and stale machine evidence is rolled back"
 
 test("description reconciliation uses brief and vocabulary evidence rather than reference artifacts", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-route-state-"));
-  const brief = join(root, "brief.md");
+  const brief = join(root, ".hypit", "brief.json");
   const vocabulary = join(root, "vocabulary.json");
-  await writeFile(brief, "brief", "utf8");
+  await mkdir(join(root, ".hypit"), { recursive: true });
+  await writeFile(brief, JSON.stringify({ intent: "brief" }), "utf8");
   await writeFile(vocabulary, JSON.stringify({ packages: [], surfaces: [] }), "utf8");
   await startRouteState({ projectRoot: root, route: "description" });
   await checkpointRouteState({ projectRoot: root, route: "description", step: 2, status: "complete", artifacts: { brief } });
@@ -122,6 +126,9 @@ test("description reconciliation uses brief and vocabulary evidence rather than 
   assert.equal(state?.completed_steps.includes(2), true);
   assert.equal(state?.completed_steps.includes(3), true);
   assert.equal(state?.completed_steps.includes(6), false);
+  await writeFile(brief, JSON.stringify({ intent: "changed after freeze" }), "utf8");
+  const conflicted = await reconcileRouteState(root);
+  assert.match(conflicted?.conflicts?.join("\n") ?? "", /brief digest changed/u);
 });
 
 test("an interrupted in-progress step resumes at the first unmet step", async () => {
@@ -145,7 +152,7 @@ test("v1 route snapshots migrate by stage name and re-open new gates", async () 
     artifacts: {}, decisions: [], next_action: "write Source", updated_at: new Date().toISOString(),
   }), "utf8");
   const migrated = await readRouteState(root);
-  assert.equal(migrated?.version, 2);
+  assert.equal(migrated?.version, 3);
   assert.equal(migrated?.completed_steps.includes(3), true);
   assert.equal(migrated?.completed_steps.includes(4), false, "new vocabulary gate is not guessed from old source state");
   assert.equal(migrated?.current_step, 4);

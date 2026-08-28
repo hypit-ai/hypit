@@ -18,7 +18,8 @@ authoritative.
 
 ## Recovery and state
 
-Read `../../SKILL.md`, `../recovery.md`, the project's `.hypit/revision-state.json`, `git status`, and
+Read `../../SKILL.md`, `../recovery.md`, the project's current `.hypit/revision-state.json` view, its
+`.hypit/revisions/<revision-id>/state.json` history state and immutable `request.json`, `git status`, and
 the parent `.hypit/route-state.json` only when one exists. Start the state once.
 
 From a completed reconstruction or original-authoring route:
@@ -37,11 +38,15 @@ hypit-reference-video-tools revision_state --action start \
   --request 'raise the captions slightly'
 ```
 
-The snapshot is atomic and small. It records the parent route/state digest when one exists, request
-summary, impact and affected Source, durable artifact references, decisions, current stage and
+The current snapshot is atomic and small. Each start gets a new `revision_id`; its state and request
+are kept under `.hypit/revisions/<revision-id>/`, so a later revision cannot overwrite the earlier
+history. It records the execution-scoped parent route path/digest when one exists, request summary,
+impact and affected Source, durable artifact references, decisions, current stage and
 `next_action`. Use `revision_state read` and `revision_state reconcile` after interruption or context
 compaction; never resume from chat memory. Manual intent mapping and Source edits require an explicit
 checkpoint. Machine evidence may advance only when its file/check predicate is true.
+When a gate command returns `evidence`, checkpoint that immutable path; do not point revision history
+at a same-named latest-result view directly under `.hypit/`.
 
 Stages are:
 
