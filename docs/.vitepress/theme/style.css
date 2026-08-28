@@ -13,7 +13,7 @@
   --accent: #de3b67;
   --accent-hover: #c7325a;
   --accent-soft: rgba(222, 59, 103, .12);
-  --vp-font-family-base: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --vp-font-family-base: "Hanken Grotesk Variable", "Hanken Grotesk", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --vp-font-family-mono: "Google Sans Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --vp-c-brand-1: var(--accent);
   --vp-c-brand-2: var(--accent-hover);
@@ -60,54 +60,81 @@
   --vp-c-text-3: rgba(233, 229, 219, .5);
   --vp-c-divider: var(--line-soft);
   --vp-c-gutter: var(--line-soft);
-  --vp-sidebar-bg-color: var(--paper-alt);
-  --vp-nav-bg-color: rgba(20, 19, 18, .94);
+  --vp-sidebar-bg-color: var(--paper);
+  --vp-nav-bg-color: var(--paper);
   --vp-code-block-bg: var(--paper-alt);
 }
 
 html, body { background: var(--paper); color: var(--ink); }
-body { font-size: 16px; line-height: 1.75; }
+body { font-size: 16px; line-height: 1.5; }
+
+/* Hypihub's docs page is a two-column grid beneath the fixed 64px nav. The
+   stock VitePress layout puts the sidebar in normal flow, which pushes the
+   article down by the sidebar's content height. */
+#app .Layout:has(.VPSidebar) { display: grid !important; grid-template-columns: 272px minmax(0, 1fr) !important; grid-template-rows: 65px auto !important; align-items: start; }
+#app .Layout:has(.VPSidebar) > .VPNav { grid-column: 1 / -1; grid-row: 1; }
+#app .Layout:has(.VPSidebar) > .VPSidebar { grid-column: 1; grid-row: 2; }
+#app .Layout:has(.VPSidebar) > .VPContent { grid-column: 2; grid-row: 2; padding: 0 !important; }
+#app .Layout:has(.VPSidebar) .VPNavBar .container > .title { width: 128px; flex: 0 0 128px; padding: 0 32px; }
+#app .Layout:has(.VPSidebar) .VPNavBar .content { width: auto; flex: 1; padding: 0 32px 0 0; }
+#app .Layout:has(.VPSidebar) .VPNavBar .content-body { width: 100%; justify-content: flex-start !important; }
+#app .Layout:has(.VPSidebar) .VPNavBarSearch { flex: 0 0 428px; width: 428px; margin-left: 160px !important; margin-right: 23px !important; padding-left: 13px; }
 
 .VPNav { border-bottom: 1px solid var(--line-soft); background: var(--vp-nav-bg-color); backdrop-filter: blur(10px); }
 .VPNavBar { border-bottom: 0; }
 .VPNavBar .container { max-width: 1376px; }
-.VPNavBarTitle { min-width: 150px; }
+.VPNavBarTitle { min-width: 0; width: 66px; }
 .VPNavBarTitle .title { color: var(--ink); font-weight: 700; letter-spacing: -.03em; }
 .VPNavBarTitle .title > span { display: none; }
-.VPNavBarTitle img { display: block; width: 66px !important; height: 20px !important; max-width: none !important; max-height: none !important; object-fit: contain; }
-.VPNavBarMenuLink, .VPNavBarMenuGroup .text { color: var(--muted); font-size: 13px; font-weight: 600; }
+.VPNavBarTitle img { display: block; width: 65.4px !important; height: 20px !important; max-width: none !important; max-height: none !important; object-fit: contain; }
+.VPNavBarMenuLink, .VPNavBarMenuGroup .text { color: var(--muted); font-size: 15px !important; font-weight: 500; line-height: 15.36px !important; padding: 0 !important; }
 .VPNavBarMenuLink:hover, .VPNavBarMenuLink.active, .VPNavBarMenuGroup:hover .text { color: var(--accent); }
 .VPNavBarAppearance button, .VPNavBarMenuGroup .button { color: var(--muted); }
 .VPNavBarAppearance button:hover, .VPNavBarMenuGroup .button:hover { color: var(--accent); }
 .VPNavScreen { background: var(--paper); }
 
 .VPSidebar {
-  top: 64px;
+  position: sticky !important;
+  top: 65px !important;
+  max-height: calc(100vh - 64px);
+  overflow: auto;
   border-right: 1px solid var(--line-soft);
-  background: var(--paper);
-  padding: 24px 24px 40px max(32px, calc((100vw - 1440px) / 2 + 32px));
+  background: var(--paper) !important;
+  padding: 18px 24px 40px max(34px, calc((100vw - 1440px) / 2 + 34px)) !important;
+  scrollbar-width: none;
 }
+.VPSidebar::-webkit-scrollbar { width: 0; height: 0; }
+.VPSidebar .curtain { display: none; }
+.VPSidebar .group { width: 100%; padding-top: 0; }
 .VPSidebarItem .text { color: var(--muted); font-size: 14.5px; }
-.VPSidebarItem.level-0 > .item > .text { color: var(--ink); font-size: 14px; font-weight: 600; }
-.VPSidebarItem.is-link .link { padding: 7px 0; }
+.VPSidebarItem.level-0 { padding: 0 !important; }
+.VPSidebarItem.level-0 > .item { display: block; padding: 0 0 8px; }
+.VPSidebarItem.level-0 > .item > .text { display: block; margin: 0; padding: 0 !important; color: var(--ink); font-size: 14px; font-weight: 600; line-height: 21px; }
+.VPSidebarItem.is-link > .item { padding-left: 2px; }
+.VPSidebarItem.is-link .link { display: block; min-height: 38px; box-sizing: border-box; padding: 7px 0; line-height: 24px; }
+.VPSidebarItem.is-link .link > p { margin: 0; padding: 0 !important; color: var(--muted); font-size: 14.5px; font-weight: 400 !important; line-height: 21.75px; }
+.VPSidebarItem.is-link .link-text { color: inherit !important; font-size: 14.5px !important; font-weight: 400 !important; line-height: 21.75px !important; }
 .VPSidebarItem.is-active > .item .link-text,
-.VPSidebarItem.is-active > .item .text { color: var(--accent); }
-.VPSidebarItem.is-active > .item::before { background: var(--accent); }
+.VPSidebarItem.is-active > .item .text,
+.VPSidebarItem.is-active > .item .link > p { color: var(--accent); }
+.VPSidebarItem.is-active > .item::before { left: -17px; top: 4px; bottom: 4px; width: 2px; background: var(--accent); }
 
 .VPContent { background: var(--paper); }
-.VPDoc { padding: 40px 48px 96px; }
-.VPDoc .content-container { width: min(688px, 100%); margin: 0 auto; }
-.VPDocAside { padding-top: 56px; }
+.VPDoc { padding: 45px 96px 96px !important; }
+.VPDoc .container { display: block; width: 100%; max-width: 1280px; margin: 0; }
+.VPDoc .content { display: block; width: 100%; max-width: none; padding: 0; }
+.VPDoc .content-container { width: 688px; max-width: 100%; margin: 0 64px; }
+.VPDocAside { display: none; }
 .VPDocAsideOutline .outline-title { color: var(--ink); font-size: 15px; font-weight: 600; }
 .VPDocAsideOutline .outline-link { color: var(--muted); font-size: 14px; line-height: 30px; }
 .VPDocAsideOutline .outline-link:hover, .VPDocAsideOutline .outline-link.active { color: var(--accent); }
 
-.vp-doc { color: var(--ink); font-size: 16px; line-height: 1.75; }
+.vp-doc { color: var(--ink); font-size: 16px; line-height: 1.7; }
 .vp-doc h1, .vp-doc h2, .vp-doc h3, .vp-doc h4 { color: var(--ink); font-weight: 600; letter-spacing: -.025em; }
 .vp-doc h1 { margin: 0 0 16px; font-size: 40px; line-height: 1.2; letter-spacing: -.04em; }
 .vp-doc h2 { margin: 48px 0 16px; padding-top: 24px; border-top: 1px solid var(--line-soft); font-size: 26px; line-height: 1.25; }
 .vp-doc h3 { margin-top: 32px; font-size: 19px; line-height: 1.45; }
-.vp-doc p { margin: 16px 0; }
+.vp-doc p { margin: 16px 0; line-height: 28px; }
 .vp-doc a { color: var(--accent); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
 .vp-doc a:hover { color: var(--accent-hover); }
 .vp-doc strong { font-weight: 600; }
@@ -126,20 +153,23 @@ body { font-size: 16px; line-height: 1.75; }
 .VPFooter .message, .VPFooter .copyright { color: var(--muted); }
 
 @media (min-width: 1440px) {
-  .VPDoc { padding-inline: 112px; }
+  #app .Layout:has(.VPSidebar) { grid-template-columns: max(272px, calc(272px + (100vw - 1440px) / 2)) minmax(0, 1fr) !important; }
+  .VPDoc { padding: 33px 112px 96px !important; }
   .VPDoc .content-container { margin-left: 0; }
 }
 
 @media (max-width: 959px) {
   .VPSidebar { padding-left: 24px; }
-  .VPDoc { padding-inline: clamp(32px, 8vw, 96px); }
+  .VPDoc { padding-inline: clamp(32px, 8vw, 96px) !important; }
   .VPDoc .content-container { margin: 0 auto; }
+  #app .Layout:has(.VPSidebar) .VPNavBarSearch { margin-left: 32px !important; flex-basis: min(428px, calc(100vw - 220px)); width: auto; }
 }
 
 @media (max-width: 767px) {
+  #app .Layout:has(.VPSidebar) { display: block !important; }
   .VPNavBarTitle { min-width: 0; }
   .VPNavBarTitle img { width: 66px !important; height: 20px !important; }
-  .VPDoc { padding: 28px 24px 72px; }
+  .VPDoc { padding: 28px 24px 72px !important; }
   .vp-doc h1 { font-size: 34px; }
   .vp-doc h2 { margin-top: 40px; }
 }
