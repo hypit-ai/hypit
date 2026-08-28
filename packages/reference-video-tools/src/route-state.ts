@@ -7,25 +7,25 @@ export type RouteKind = "reconstruction" | "description" | "variant" | "variant-
 export type RouteStatus = "active" | "complete" | "blocked";
 export type ReconstructionRouteStep =
   | "environment" | "reference-prepared" | "reference-observed" | "vocabulary-checked"
-  | "package-ready" | "script-checked" | "source-authored" | "graph-checked"
+  | "package-ready" | "script-checked" | "source-authored" | "graph-checked" | "layout-checked"
   | "review-planned" | "preview-rendered" | "comparison-complete" | "repairs-complete"
   | "final-checked" | "build-complete";
 export type DescriptionRouteStep =
   | "environment" | "brief-frozen" | "vocabulary-checked" | "package-ready"
-  | "script-checked" | "source-authored" | "graph-checked" | "review-planned"
+  | "script-checked" | "source-authored" | "graph-checked" | "layout-checked" | "review-planned"
   | "preview-rendered" | "review-complete" | "repairs-complete" | "final-checked"
   | "build-complete";
 export type VariantRouteStep =
   | "baseline-copied" | "brief-frozen" | "change-scope-frozen" | "guidance-loaded"
   | "vocabulary-verified" | "package-ready" | "script-checked" | "source-updated"
-  | "graph-checked" | "final-checked" | "variant-complete";
+  | "graph-checked" | "layout-checked" | "final-checked" | "variant-complete";
 export type VariantPackageRouteStep =
   | "gap-confirmed" | "guidance-loaded" | "types-frozen" | "implemented"
-  | "vocabulary-inspected" | "package-validated" | "graph-checked" | "package-ready";
+  | "vocabulary-inspected" | "package-validated" | "graph-checked" | "layout-checked" | "package-ready";
 export type RouteStep = ReconstructionRouteStep | DescriptionRouteStep | VariantRouteStep | VariantPackageRouteStep;
 
 export type RouteState = {
-  readonly version: 3;
+  readonly version: 4;
   readonly route_id: string;
   readonly route: RouteKind;
   readonly project_root: string;
@@ -70,8 +70,9 @@ const COMPONENT_FIT_DECISIONS = new Set([
   "project-local-package",
 ]);
 
-export const ROUTE_STATE_VERSION = 3 as const;
-const PREVIOUS_ROUTE_STATE_VERSION = 2 as const;
+export const ROUTE_STATE_VERSION = 4 as const;
+const PREVIOUS_ROUTE_STATE_VERSION = 3 as const;
+const EARLIER_ROUTE_STATE_VERSION = 2 as const;
 const LEGACY_ROUTE_STATE_VERSION = 1 as const;
 const LEGACY_ROUTE_STATE_STEPS: Readonly<Record<RouteKind, readonly string[]>> = {
   reconstruction: [
@@ -89,21 +90,28 @@ const LEGACY_ROUTE_STATE_STEPS: Readonly<Record<RouteKind, readonly string[]>> =
 export const ROUTE_STATE_STEPS: Readonly<Record<RouteKind, readonly string[]>> = {
   reconstruction: [
     "environment", "reference-prepared", "reference-observed", "vocabulary-checked", "package-ready",
-    "script-checked", "source-authored", "graph-checked", "review-planned", "preview-rendered",
+    "script-checked", "source-authored", "graph-checked", "layout-checked", "review-planned", "preview-rendered",
     "comparison-complete", "repairs-complete", "final-checked", "build-complete",
   ],
   description: [
     "environment", "brief-frozen", "vocabulary-checked", "package-ready", "script-checked", "source-authored",
-    "graph-checked", "review-planned", "preview-rendered", "review-complete", "repairs-complete", "final-checked", "build-complete",
+    "graph-checked", "layout-checked", "review-planned", "preview-rendered", "review-complete", "repairs-complete", "final-checked", "build-complete",
   ],
   variant: [
     "baseline-copied", "brief-frozen", "change-scope-frozen", "guidance-loaded", "vocabulary-verified",
-    "package-ready", "script-checked", "source-updated", "graph-checked", "final-checked", "variant-complete",
+    "package-ready", "script-checked", "source-updated", "graph-checked", "layout-checked", "final-checked", "variant-complete",
   ],
   "variant-package": [
     "gap-confirmed", "guidance-loaded", "types-frozen", "implemented", "vocabulary-inspected",
-    "package-validated", "graph-checked", "package-ready",
+    "package-validated", "graph-checked", "layout-checked", "package-ready",
   ],
+};
+
+const PREVIOUS_ROUTE_STATE_STEPS: Readonly<Record<RouteKind, readonly string[]>> = {
+  reconstruction: ["environment", "reference-prepared", "reference-observed", "vocabulary-checked", "package-ready", "script-checked", "source-authored", "graph-checked", "review-planned", "preview-rendered", "comparison-complete", "repairs-complete", "final-checked", "build-complete"],
+  description: ["environment", "brief-frozen", "vocabulary-checked", "package-ready", "script-checked", "source-authored", "graph-checked", "review-planned", "preview-rendered", "review-complete", "repairs-complete", "final-checked", "build-complete"],
+  variant: ["baseline-copied", "brief-frozen", "change-scope-frozen", "guidance-loaded", "vocabulary-verified", "package-ready", "script-checked", "source-updated", "graph-checked", "final-checked", "variant-complete"],
+  "variant-package": ["gap-confirmed", "guidance-loaded", "types-frozen", "implemented", "vocabulary-inspected", "package-validated", "graph-checked", "package-ready"],
 };
 
 export function routeStatePath(projectRoot: string): string {
@@ -199,14 +207,55 @@ function migrateLegacyRouteState(value: unknown, path: string): RouteState | und
   if (value === null || typeof value !== "object") return undefined;
   const version = (value as { version?: unknown }).version;
   if (version === PREVIOUS_ROUTE_STATE_VERSION) {
-    const previous = value as Omit<RouteState, "version" | "route_id" | "artifact_digests" | "created_at"> & { readonly version: 2 };
+    const previous = value as Omit<RouteState, "version" | "completed_steps" | "current_step" | "in_progress"> & {
+      readonly version: 3;
+      readonly completed_steps: readonly number[];
+      readonly current_step: number;
+      readonly in_progress: { readonly step: number; readonly started_at: string } | null;
+    };
+    const names = previous.completed_steps.map((step) => PREVIOUS_ROUTE_STATE_STEPS[previous.route][step - 1]).filter((name): name is string => name !== undefined);
+    const completed = previous.status === "complete"
+      ? ROUTE_STATE_STEPS[previous.route].map((_name, index) => index + 1)
+      : names.flatMap((name) => {
+          const index = ROUTE_STATE_STEPS[previous.route].indexOf(name);
+          return index < 0 ? [] : [index + 1];
+        });
+    const currentStep = nextUncompleted(previous.route, completed);
+    return {
+      ...previous,
+      version: ROUTE_STATE_VERSION,
+      current_step: currentStep,
+      completed_steps: completed,
+      in_progress: currentStep > ROUTE_STATE_STEPS[previous.route].length ? null : { step: currentStep, started_at: previous.updated_at },
+      next_action: currentStep > ROUTE_STATE_STEPS[previous.route].length ? "route complete" : `complete ${ROUTE_STATE_STEPS[previous.route][currentStep - 1]}`,
+    };
+  }
+  if (version === EARLIER_ROUTE_STATE_VERSION) {
+    const previous = value as Omit<RouteState, "version" | "route_id" | "artifact_digests" | "created_at" | "completed_steps" | "current_step" | "in_progress"> & {
+      readonly version: 2;
+      readonly completed_steps: readonly number[];
+      readonly current_step: number;
+      readonly in_progress: { readonly step: number; readonly started_at: string } | null;
+    };
     const createdAt = typeof previous.updated_at === "string" ? previous.updated_at : new Date().toISOString();
+    const names = previous.completed_steps.map((step) => PREVIOUS_ROUTE_STATE_STEPS[previous.route][step - 1]).filter((name): name is string => name !== undefined);
+    const completed = previous.status === "complete"
+      ? ROUTE_STATE_STEPS[previous.route].map((_name, index) => index + 1)
+      : names.flatMap((name) => {
+          const index = ROUTE_STATE_STEPS[previous.route].indexOf(name);
+          return index < 0 ? [] : [index + 1];
+        });
+    const currentStep = nextUncompleted(previous.route, completed);
     return {
       ...previous,
       version: ROUTE_STATE_VERSION,
       route_id: executionId(previous.route ?? "route"),
       artifact_digests: {},
       created_at: createdAt,
+      current_step: currentStep,
+      completed_steps: completed,
+      in_progress: currentStep > ROUTE_STATE_STEPS[previous.route].length ? null : { step: currentStep, started_at: createdAt },
+      next_action: currentStep > ROUTE_STATE_STEPS[previous.route].length ? "route complete" : `complete ${ROUTE_STATE_STEPS[previous.route][currentStep - 1]}`,
     };
   }
   if (version !== LEGACY_ROUTE_STATE_VERSION) return undefined;
@@ -442,7 +491,7 @@ export async function checkpointRouteState(input: RouteCheckpointInput): Promise
     ? existing.decisions
     : [...existing.decisions, input.decision.trim()];
   const artifactDigests: Record<string, string> = { ...existing.artifact_digests };
-  const frozenKeys = new Set(["brief", "vocabulary", "component_fit", "baseline_manifest", "variant_brief", "allowed_changes", "guidance", "gap_plan", "types", "package_digest"]);
+  const frozenKeys = new Set(["brief", "vocabulary", "component_fit", "baseline_manifest", "variant_brief", "allowed_changes", "guidance", "gap_plan", "types", "package_digest", "layout_check", "layout_decisions"]);
   for (const [key, value] of Object.entries(artifacts)) {
     if (!frozenKeys.has(key) && !value.includes(`${sep}.hypit${sep}evidence${sep}`)) continue;
     if (key === "component_fit" && input.artifacts?.component_fit === undefined) continue;
@@ -507,6 +556,12 @@ async function evidenceSatisfied(key: string, path: string | undefined): Promise
       return value.passed === true;
     } catch { return false; }
   }
+  if (key === "layout_check") {
+    try {
+      const value = JSON.parse(await readFile(path, "utf8")) as { executed?: unknown; settled?: unknown };
+      return value.executed === true && value.settled === true;
+    } catch { return false; }
+  }
   if (key === "comparison_log" || key === "review_log") {
     try {
       const lines = (await readFile(path, "utf8")).split("\n").filter((line) => line.trim().length > 0);
@@ -534,6 +589,18 @@ async function evidenceSatisfied(key: string, path: string | undefined): Promise
   return true;
 }
 
+async function layoutEvidenceCurrent(path: string | undefined): Promise<boolean> {
+  if (path === undefined) return false;
+  try {
+    const report = JSON.parse(await readFile(path, "utf8")) as { executed?: unknown; settled?: unknown; input_digests?: Record<string, unknown> };
+    if (report.executed !== true || report.settled !== true || report.input_digests === undefined) return false;
+    for (const [file, expected] of Object.entries(report.input_digests)) {
+      if (typeof expected !== "string" || await digestPath(file) !== expected) return false;
+    }
+    return true;
+  } catch { return false; }
+}
+
 /** Reconcile a snapshot with the small, durable evidence pointers it records. */
 export async function reconcileRouteState(projectRoot: string): Promise<RouteState | undefined> {
   const existing = await readRouteState(projectRoot);
@@ -550,7 +617,8 @@ export async function reconcileRouteState(projectRoot: string): Promise<RouteSta
     const renderComplete = key === "preview_render"
       ? await evidenceSatisfied("render_sidecar", artifact("render_sidecar"))
       : true;
-    const satisfied = renderComplete && await evidenceSatisfied(key, artifact(key));
+    const satisfied = renderComplete && await evidenceSatisfied(key, artifact(key))
+      && (key !== "layout_check" || await layoutEvidenceCurrent(artifact(key)));
     if (satisfied) completed.add(step);
     else {
       if (completed.has(step)) conflicts.push(`step ${step} (${key}) was marked complete but its evidence is missing or failed`);
@@ -560,20 +628,20 @@ export async function reconcileRouteState(projectRoot: string): Promise<RouteSta
   const evidenceByStep: Readonly<Record<RouteKind, Readonly<Record<number, string>>>> = {
     reconstruction: {
       2: "reference_state", 3: "reference_observations", 4: "vocabulary", 5: "package_ready", 6: "script_cues",
-      7: "author_source", 8: "preview_check", 9: "review_plan", 10: "preview_render", 11: "comparison_log", 13: "final_check", 14: "build",
+      7: "author_source", 8: "preview_check", 9: "layout_check", 10: "review_plan", 11: "preview_render", 12: "comparison_log", 14: "final_check", 15: "build",
     },
     description: {
       2: "brief", 3: "vocabulary", 4: "package_ready", 5: "script_cues", 6: "author_source", 7: "preview_check",
-      8: "review_plan", 9: "preview_render", 10: "review_log", 12: "final_check", 13: "build",
+      8: "layout_check", 9: "review_plan", 10: "preview_render", 11: "review_log", 13: "final_check", 14: "build",
     },
     variant: {
       1: "baseline_manifest", 2: "variant_brief", 3: "allowed_changes", 4: "guidance",
       5: "vocabulary", 6: "package_ready", 7: "script_cues", 8: "author_source",
-      9: "preview_check", 10: "variant_check", 11: "variant_check",
+      9: "preview_check", 10: "layout_check", 11: "variant_check", 12: "variant_check",
     },
     "variant-package": {
       1: "gap_plan", 2: "guidance", 3: "types", 4: "package_source", 5: "vocabulary",
-      6: "package_ready", 7: "preview_check", 8: "package_digest",
+      6: "package_ready", 7: "preview_check", 8: "layout_check", 9: "package_digest",
     },
   };
   for (const [step, key] of Object.entries(evidenceByStep[existing.route])) {

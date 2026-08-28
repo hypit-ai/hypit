@@ -234,18 +234,25 @@ export async function checkpointRevisionState(input: RevisionCheckpointInput): P
   if (existing === undefined) throw new Error(`no revision state at ${revisionStatePath(projectRoot)}; run revision_state start first`);
   if (input.request !== undefined && input.request !== existing.request) throw new Error("a revision request is immutable after revision_state start; start a new revision instead");
   const step = stepNumber(input.step);
+  const artifacts = input.artifacts === undefined ? existing.artifacts : {
+    ...existing.artifacts,
+    ...Object.fromEntries(Object.entries(input.artifacts).map(([key, value]) => [key, resolve(projectRoot, value)])),
+  };
+  if (step === stepNumber("gates-checked") && input.status === "complete") {
+    const layout = artifacts.layout_check;
+    const value = layout === undefined ? undefined : await readFile(layout, "utf8").then((source) => JSON.parse(source) as { executed?: unknown; settled?: unknown }, () => undefined);
+    if (value?.executed !== true || value.settled !== true || !(await layoutEvidenceCurrent(layout))) {
+      throw new Error("gates-checked requires a successful layout_check whose candidates are repaired or explicitly accepted");
+    }
+  }
   const completed = new Set(existing.completed_steps);
   if (input.status === "complete") completed.add(step);
   const completedSteps = [...completed].sort((a, b) => a - b);
   const next = input.status === "complete" ? nextUncompleted(completedSteps) : step;
   const now = new Date().toISOString();
-  const artifacts = input.artifacts === undefined ? existing.artifacts : {
-    ...existing.artifacts,
-    ...Object.fromEntries(Object.entries(input.artifacts).map(([key, value]) => [key, resolve(projectRoot, value)])),
-  };
   const artifactDigests: Record<string, string> = { ...existing.artifact_digests };
   for (const [key, value] of Object.entries(artifacts)) {
-    if (key !== "revision_request" && !value.includes(`${sep}.hypit${sep}evidence${sep}`)) continue;
+    if (key !== "revision_request" && key !== "layout_check" && key !== "layout_decisions" && !value.includes(`${sep}.hypit${sep}evidence${sep}`)) continue;
     const digest = await digestPath(value);
     if (digest !== undefined) artifactDigests[key] = digest;
   }
@@ -274,6 +281,18 @@ async function fileExists(path: string | undefined): Promise<boolean> {
   return path !== undefined && await stat(path).then((value) => value.isFile(), () => false);
 }
 
+async function layoutEvidenceCurrent(path: string | undefined): Promise<boolean> {
+  if (path === undefined) return false;
+  try {
+    const report = JSON.parse(await readFile(path, "utf8")) as { executed?: unknown; settled?: unknown; input_digests?: Record<string, unknown> };
+    if (report.executed !== true || report.settled !== true || report.input_digests === undefined) return false;
+    for (const [file, expected] of Object.entries(report.input_digests)) {
+      if (typeof expected !== "string" || await digestPath(file) !== expected) return false;
+    }
+    return true;
+  } catch { return false; }
+}
+
 /** Reconcile only machine-verifiable revision stages; creative mapping and review stay explicit. */
 export async function reconcileRevisionState(projectRoot: string): Promise<RevisionState | undefined> {
   const existing = await readRevisionState(projectRoot);
@@ -299,7 +318,15 @@ export async function reconcileRevisionState(projectRoot: string): Promise<Revis
   for (const [rawStep, key] of Object.entries(checks)) {
     const step = Number(rawStep);
     const present = await fileExists(existing.artifacts[key]);
-    if (present) completed.add(step);
+    const layoutSatisfied = step !== 5 || existing.status === "complete" || await (async () => {
+      const path = existing.artifacts.layout_check;
+      if (path === undefined) return false;
+      try {
+        const value = JSON.parse(await readFile(path, "utf8")) as { executed?: unknown; settled?: unknown };
+        return value.executed === true && value.settled === true && await layoutEvidenceCurrent(path);
+      } catch { return false; }
+    })();
+    if (present && layoutSatisfied) completed.add(step);
     else if (completed.has(step)) { completed.delete(step); conflicts.push(`step ${step} (${key}) was marked complete but its evidence is missing`); }
   }
   // A later machine artifact cannot silently credit the manual intent/source stages.

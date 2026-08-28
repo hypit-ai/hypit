@@ -332,74 +332,6 @@ type CoverageReport = {
   readonly gaps: readonly CoverageGap[];
 };
 
-type Edge = "left" | "top" | "right" | "bottom";
-
-/** One edge of a Frame that lands outside the Canvas, and how far past it reaches. */
-type FrameEdge = {
-  readonly edge: Edge;
-  /** The value as the Source writes it. */
-  readonly declared: string;
-  /** How far past the Canvas edge it sits, as a share of the Canvas and in Canvas pixels. */
-  readonly outside_percent: number;
-  readonly outside_pixels: number;
-};
-
-/** One Frame that does not sit wholly inside its Canvas, and the elements drawn into it. */
-type OutOfBoundsFrame = {
-  readonly frame: string;
-  readonly canvas: string;
-  /** Every element that names this Frame, by its own id. */
-  readonly elements: readonly string[];
-  readonly edges: readonly FrameEdge[];
-  /** How much of the Frame's area lands off the Canvas, from 0 to 1. */
-  readonly outside_fraction: number;
-};
-
-/**
- * Deterministic geometry facts handed to the observer alongside the human-readable round.
- *
- * This deliberately reports only what the Source can prove: Canvas/Frame rectangles, parent and
- * Canvas containment, and vertical centre offsets. Whether a particular box *ought* to be centred, or whether
- * a child is intentionally clipped (for example during an enter animation), remains a visual and
- * intent judgement. Text glyph bounds are renderer-dependent and therefore are not invented here.
- */
-type LayoutGeometryEntry = {
-  readonly id: string;
-  readonly kind: "canvas" | "frame";
-  readonly within?: string;
-  readonly canvas?: string;
-  readonly bounds?: Box;
-  readonly size?: { readonly width: number; readonly height: number };
-  readonly center?: { readonly x: number; readonly y: number };
-  /** Signed vertical centre offset: positive means below the parent/Canvas centre. */
-  readonly vertical_center_offset_from_within?: number;
-  readonly vertical_center_offset_from_canvas?: number;
-  readonly outside_within?: { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number };
-  readonly outside_canvas?: { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number };
-  readonly bound_elements?: readonly string[];
-  readonly unresolved?: string;
-};
-
-/** A mechanically detected partial intersection between two Source-level placements. */
-type LayoutOverlap = {
-  readonly first: string;
-  readonly second: string;
-  readonly canvas: string;
-  readonly first_bounds: Box;
-  readonly second_bounds: Box;
-  readonly intersection: Box;
-  readonly scope: string;
-  readonly note: string;
-};
-
-type LayoutGeometryReport = {
-  readonly coordinate_system: "Canvas pixels, origin top-left, y increases downward";
-  readonly note: string;
-  readonly entries: readonly LayoutGeometryEntry[];
-  /** Partial overlaps only; full containment is intentionally omitted. */
-  readonly overlaps: readonly LayoutOverlap[];
-};
-
 /** A rectangle in Canvas pixels. The origin is top-left and y increases downward. */
 type Box = { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number };
 
@@ -451,7 +383,8 @@ function fillsACanvas(
   return false;
 }
 
-type FrameDeclaration ={ readonly within: string; readonly edges: Readonly<Record<Edge, string>> };
+type FrameEdgeName = "left" | "top" | "right" | "bottom";
+type FrameDeclaration ={ readonly within: string; readonly edges: Readonly<Record<FrameEdgeName, string>> };
 type FrameGeometry = {
   readonly canvases: ReadonlyMap<string, Box>;
   readonly declared: ReadonlyMap<string, FrameDeclaration>;
@@ -469,8 +402,9 @@ type FrameGeometry = {
  * Frame is resolved by resolving whatever it is written inside and measuring its own edges against
  * that rectangle, however deep the chain runs.
  *
- * Two readings need this: whether a Frame reaches outside its Canvas, and whether the Frames drawn
- * over a word add up to the whole picture.
+ * The remaining Source-level checks use this only to determine which declared placements cover the
+ * Canvas and whether the Canvas has the reference's aspect ratio. Layout quality is measured later
+ * from the realized Composition DOM.
  */
 function frameGeometry(svml: string): FrameGeometry {
   const space = aliasPattern(svml, "@hypit/spatial", "space");
@@ -490,7 +424,7 @@ function frameGeometry(svml: string): FrameGeometry {
     const attributes = match[1] ?? "";
     const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
     const within = /\bwithin=\{([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
-    const written = (name: Edge): string | undefined => new RegExp(`\\b${name}="([^"]+)"`, "u").exec(attributes)?.[1];
+    const written = (name: FrameEdgeName): string | undefined => new RegExp(`\\b${name}="([^"]+)"`, "u").exec(attributes)?.[1];
     const left = written("left");
     const top = written("top");
     const right = written("right");
@@ -551,283 +485,6 @@ function frameGeometry(svml: string): FrameGeometry {
 }
 
 /**
- * Every Frame that reaches past the Canvas it is measured inside.
- *
- * A Frame places its four edges against a Canvas, and an edge outside 0%–100% puts that much of
- * whatever is drawn into it off the picture. This is arithmetic on the Source: no threshold, no
- * measurement of a rendered frame, no observer.
- *
- * It is the one thing on this route a comparison cannot see. An element authored mostly below the
- * bottom edge is drawn at the Canvas the Source declares, and so is the stand-in it is compared
- * against, so the render and the reference both put it in the same place off the edge and agree with
- * each other. Both are wrong the same way, which reads as correct.
- *
- * Reaching past the edge is also how a great deal of correct authoring works: an element that slides
- * in from off-screen is outside at the start of its window, and a full-bleed picture is routinely
- * declared past the edge so a `fit` crops it rather than letterboxing it. The arithmetic is the same
- * either way, so what this produces is a list of candidates for a reader to answer one at a time. It
- * never decides `passed`: the Source cannot tell an intended overhang from an unintended one, and a
- * gate that ruled on it would be ruling on something it cannot see.
- */
-function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
-  const { canvases, declared, resolve, canvasOf } = frameGeometry(svml);
-
-  // Which elements draw into each Frame. A Track names it `frame=`, and a speech Track names the Frame
-  // it draws each Take into `visual-frame=`, so any attribute whose name ends in `frame` counts.
-  const bound = new Map<string, string[]>();
-  for (const match of svml.matchAll(/<([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)\/?>/gsu)) {
-    const tag = match[1] ?? "";
-    const attributes = match[2] ?? "";
-    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1] ?? tag;
-    for (const reference of attributes.matchAll(/\b[a-z-]*frame=\{([A-Za-z0-9_-]+)\}/gu)) {
-      const frame = reference[1] ?? "";
-      const named = bound.get(frame) ?? [];
-      if (!named.includes(id)) named.push(id);
-      bound.set(frame, named);
-    }
-  }
-
-  const report: OutOfBoundsFrame[] = [];
-  for (const [id, frame] of declared) {
-    const box = resolve(id);
-    const canvasId = canvasOf(id);
-    const canvas = canvasId === undefined ? undefined : canvases.get(canvasId);
-    if (box === undefined || canvas === undefined || canvasId === undefined) continue;
-    const width = canvas.right - canvas.left;
-    const height = canvas.bottom - canvas.top;
-    // An edge is outside when it is outside the Canvas at all, on either side. A Frame parked wholly
-    // off the left has both its x edges past the left edge, and naming only the one on its own side
-    // would report half of where it sits.
-    const outside = (value: number, low: number, high: number): number => Math.max(low - value, value - high, 0);
-    const past: readonly { readonly edge: Edge; readonly outside: number; readonly span: number }[] = [
-      { edge: "left", outside: outside(box.left, canvas.left, canvas.right), span: width },
-      { edge: "top", outside: outside(box.top, canvas.top, canvas.bottom), span: height },
-      { edge: "right", outside: outside(box.right, canvas.left, canvas.right), span: width },
-      { edge: "bottom", outside: outside(box.bottom, canvas.top, canvas.bottom), span: height },
-    ];
-    const edges = past.filter((item) => item.outside > 0).map((item) => ({
-      edge: item.edge,
-      declared: frame.edges[item.edge],
-      outside_percent: round(item.outside / item.span * 100),
-      outside_pixels: round(item.outside),
-    }));
-    if (edges.length === 0) continue;
-    const area = Math.max(0, box.right - box.left) * Math.max(0, box.bottom - box.top);
-    const inside = Math.max(0, Math.min(box.right, canvas.right) - Math.max(box.left, canvas.left))
-      * Math.max(0, Math.min(box.bottom, canvas.bottom) - Math.max(box.top, canvas.top));
-    report.push({
-      frame: id,
-      canvas: canvasId,
-      elements: bound.get(id) ?? [],
-      edges,
-      outside_fraction: round(area === 0 ? 1 : 1 - inside / area),
-    });
-  }
-  return report;
-}
-
-type PlacementClaim = {
-  readonly id: string;
-  /** The outer Source placement that owns this claim; nested Surface elements share it. */
-  readonly owner: string;
-  readonly canvas: string;
-  readonly box: Box;
-  readonly start: number;
-  readonly end: number;
-  readonly scope: string;
-};
-
-/**
- * Resolve the outer component placement for each namespaced opening tag.
- *
- * A structured Surface may contain its own placed children (for example an Image with several Layers).
- * Those children are part of one component's internal layout and must not be compared as peer
- * components. The owner is therefore the nearest ancestor that declares an id and a placement port;
- * a top-level placement owns itself. This is Source structure only, not a guess based on rectangle size.
- */
-function placementOwners(svml: string): ReadonlyMap<number, string> {
-  const owners = new Map<number, string>();
-  const stack: { readonly tag: string; readonly owner?: string }[] = [];
-  for (const match of svml.matchAll(/<\/?([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)>/gsu)) {
-    const full = match[0] ?? "";
-    const tag = match[1] ?? "";
-    if (full.startsWith("</")) {
-      for (let index = stack.length - 1; index >= 0; index -= 1) {
-        if (stack[index]!.tag === tag) {
-          stack.length = index;
-          break;
-        }
-      }
-      continue;
-    }
-    const attributes = match[2] ?? "";
-    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
-    const placement = /\b(?:frame|visual-frame|canvas)=\{([A-Za-z0-9_-]+)\}/u.test(attributes);
-    const inherited = [...stack].reverse().find((entry) => entry.owner !== undefined)?.owner;
-    const owner = inherited ?? (id !== undefined && placement ? id : undefined);
-    if (id !== undefined && placement && owner !== undefined) owners.set(match.index!, owner);
-    if (!/\/\s*>$/u.test(full)) stack.push({ tag, ...(owner === undefined ? {} : { owner }) });
-  }
-  return owners;
-}
-
-function overlapArea(left: Box, right: Box): Box | undefined {
-  const intersection = {
-    left: Math.max(left.left, right.left),
-    top: Math.max(left.top, right.top),
-    right: Math.min(left.right, right.right),
-    bottom: Math.min(left.bottom, right.bottom),
-  };
-  return intersection.right > intersection.left && intersection.bottom > intersection.top ? intersection : undefined;
-}
-
-function containsBox(outer: Box, inner: Box): boolean {
-  return outer.left <= inner.left && outer.top <= inner.top
-    && outer.right >= inner.right && outer.bottom >= inner.bottom;
-}
-
-function placementTiming(attributes: string, parsed: ReturnType<typeof parseScript> | undefined): { start: number; end: number; scope: string } {
-  const total = parsed?.tokens.length ?? 1;
-  const during = /\bduring=\{story\.(segment|selection)\.([A-Za-z0-9_-]+)\}/u.exec(attributes);
-  let start = 0;
-  let end = total;
-  let scope = "program";
-  if (during !== null && parsed !== undefined) {
-    const collection = during[1] === "segment" ? parsed.segments : parsed.selections;
-    const found = collection.find((item) => item.id === during[2]);
-    if (found !== undefined) {
-      if ("tokenStart" in found) {
-        start = found.tokenStart;
-        end = found.tokenEndExclusive;
-      } else {
-        start = found.open.boundary.tokenIndex;
-        end = found.close.boundary.tokenIndex;
-      }
-    }
-    scope = `${during[1]}:${during[2]}`;
-  }
-  const until = /\buntil=\{story\.moment\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
-  if (until !== undefined && parsed !== undefined) {
-    const moment = parsed.moments.find((item) => item.id === until);
-    if (moment !== undefined) end = Math.min(end, moment.boundary.tokenIndex);
-    scope = `${scope} until ${until}`;
-  }
-  return { start, end, scope };
-}
-
-function layoutOverlaps(svml: string, geometry: FrameGeometry): readonly LayoutOverlap[] {
-  let parsed: ReturnType<typeof parseScript> | undefined;
-  try {
-    const body = scriptBody(svml);
-    parsed = parseScript("<layout-geometry>", body.text, body.offset);
-  } catch {
-    // Keep spatial findings useful while another check reports the malformed Script.
-  }
-  const owners = placementOwners(svml);
-  const claims: PlacementClaim[] = [];
-  for (const match of svml.matchAll(/<([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)\/?\s*>/gsu)) {
-    const tag = match[1] ?? "";
-    const attributes = match[2] ?? "";
-    if (/:(?:Canvas|Frame|Track|Film|Video|Clock|SemanticTake|Normalize|Take|Item)$/u.test(tag)) continue;
-    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
-    // `visual-frame` is the speech/media Track placement port. Do not treat `first-frame` or
-    // `last-frame` generation inputs as a placement claim.
-    const named = /\b(?:frame|visual-frame|canvas)=\{([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
-    if (id === undefined || named === undefined) continue;
-    const canvas = geometry.canvasOf(named);
-    const box = geometry.resolve(named);
-    if (canvas === undefined || box === undefined) continue;
-    const timing = placementTiming(attributes, parsed);
-    if (timing.end <= timing.start) continue;
-    claims.push({ id, owner: owners.get(match.index!) ?? id, canvas, box, ...timing });
-  }
-  const report: LayoutOverlap[] = [];
-  for (let first = 0; first < claims.length; first += 1) {
-    for (let second = first + 1; second < claims.length; second += 1) {
-      const left = claims[first]!;
-      const right = claims[second]!;
-      if (left.owner === right.owner || left.canvas !== right.canvas || left.end <= right.start || right.end <= left.start) continue;
-      const intersection = overlapArea(left.box, right.box);
-      if (intersection === undefined || containsBox(left.box, right.box) || containsBox(right.box, left.box)) continue;
-      report.push({
-        first: left.id,
-        second: right.id,
-        canvas: left.canvas,
-        first_bounds: left.box,
-        second_bounds: right.box,
-        intersection,
-        scope: left.scope === right.scope ? left.scope : `${left.scope} ∩ ${right.scope}`,
-        note: "Mechanical partial-overlap candidate. Confirm whether the overlap is intentional before editing Source.",
-      });
-    }
-  }
-  return report;
-}
-
-/** Build a machine-readable layout report for the agent/observer to interpret. */
-function layoutGeometry(svml: string): LayoutGeometryReport {
-  const geometry = frameGeometry(svml);
-  const bound = new Map<string, string[]>();
-  for (const match of svml.matchAll(/<([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)\/?\s*>/gsu)) {
-    const tag = match[1] ?? "";
-    const attributes = match[2] ?? "";
-    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1] ?? tag;
-    for (const reference of attributes.matchAll(/\b[a-z-]*frame=\{([A-Za-z0-9_-]+)\}/gu)) {
-      const frame = reference[1] ?? "";
-      const names = bound.get(frame) ?? [];
-      if (!names.includes(id)) names.push(id);
-      bound.set(frame, names);
-    }
-  }
-
-  const outside = (child: Box, parent: Box) => ({
-    left: round(Math.max(parent.left - child.left, 0)),
-    top: round(Math.max(parent.top - child.top, 0)),
-    right: round(Math.max(child.right - parent.right, 0)),
-    bottom: round(Math.max(child.bottom - parent.bottom, 0)),
-  });
-  const centre = (box: Box) => ({ x: round((box.left + box.right) / 2), y: round((box.top + box.bottom) / 2) });
-  // Horizontal placement is often intentionally left- or right-biased (labels, rails, icons). Only
-  // report vertical centring mechanically; the visual/author intent remains the authority.
-  const verticalDelta = (a: Box, b: Box) => round((a.top + a.bottom - b.top - b.bottom) / 2);
-  const entries: LayoutGeometryEntry[] = [];
-
-  for (const [id, canvas] of geometry.canvases) {
-    entries.push({
-      id, kind: "canvas", bounds: canvas,
-      size: { width: round(canvas.right - canvas.left), height: round(canvas.bottom - canvas.top) },
-      center: centre(canvas),
-    });
-  }
-  for (const [id, declaration] of geometry.declared) {
-    const box = geometry.resolve(id);
-    const canvasId = geometry.canvasOf(id);
-    const parent = geometry.resolve(declaration.within);
-    const canvas = canvasId === undefined ? undefined : geometry.canvases.get(canvasId);
-    if (box === undefined) {
-      entries.push({ id, kind: "frame", within: declaration.within, ...(canvasId === undefined ? {} : { canvas: canvasId }),
-        bound_elements: bound.get(id) ?? [], unresolved: "frame edges or its parent could not be resolved to Canvas pixels" });
-      continue;
-    }
-    entries.push({
-      id, kind: "frame", within: declaration.within,
-      ...(canvasId === undefined ? {} : { canvas: canvasId }), bounds: box,
-      size: { width: round(box.right - box.left), height: round(box.bottom - box.top) },
-      center: centre(box),
-      ...(parent === undefined ? {} : { vertical_center_offset_from_within: verticalDelta(box, parent), outside_within: outside(box, parent) }),
-      ...(canvas === undefined ? {} : { vertical_center_offset_from_canvas: verticalDelta(box, canvas), outside_canvas: outside(box, canvas) }),
-      bound_elements: bound.get(id) ?? [],
-    });
-  }
-  return {
-    coordinate_system: "Canvas pixels, origin top-left, y increases downward",
-    note: "Use vertical centre offsets and containment as mechanical facts; horizontal left/right placement is not judged. Visual observation and author intent decide whether any offset or overlap is correct. The report does not measure rendered glyph bounds or decide whether an overhang is intentional.",
-    entries,
-    overlaps: layoutOverlaps(svml, geometry),
-  };
-}
-
-/**
  * Report what a route can still settle after the Source is written and before a Build runs: which
  * drawing elements nobody has looked at, which words of the Script nothing draws a full-frame
  * picture over, and which timed pictures are configured to stop before their window ends.
@@ -863,9 +520,6 @@ function layoutGeometry(svml: string): LayoutGeometryReport {
  * That is reported rather than required: participation is the rule here, and an estimate-timed
  * comparison is a comparison. What it says is which elements have had their behaviour over their
  * window looked at and which have only had their layout looked at.
- *
- * Where each Frame sits is decided from the Source alone and is reported rather than required.
- * `framesPastTheCanvas` above says why an overhang cannot decide `passed`.
  *
  * Frame coverage is decided from the Source alone and is required: a word is either drawn over by
  * something bound to the whole picture or it is not. What covers is read from an element's own
@@ -904,11 +558,6 @@ export async function authoringCheck(
   const svml = await readFile(svmlPath, "utf8").catch(() => undefined);
   assert(svml !== undefined, `cannot read ${svmlPath}`);
 
-  // Read from the Source alone, so every answer below carries it, including the ones that stop early.
-  const overhang = framesPastTheCanvas(svml);
-  // Deterministic facts for a geometry-first visual review. The observer still decides intent.
-  const geometry = layoutGeometry(svml);
-
   // Every package this Source imports. The scope is whatever the Source wrote: a project that declares
   // a vocabulary gap and fills it publishes under its own scope, and those elements draw exactly as an
   // installed one does.
@@ -932,8 +581,6 @@ export async function authoringCheck(
       elements: [],
       playback: [],
       uncovered: [],
-      out_of_bounds: overhang,
-      layout_geometry: geometry,
     };
   }
 
@@ -1196,8 +843,6 @@ export async function authoringCheck(
       elements: [],
       playback: [],
       uncovered: [],
-      out_of_bounds: overhang,
-      layout_geometry: geometry,
       ...(unresolved.length === 0 ? {} : {
         unresolved_packages: {
           names: unresolved,
@@ -1238,7 +883,7 @@ export async function authoringCheck(
   //
   // Only on the route that has a reference. A description-authored project has none, and resolving
   // one here is what used to stop this command before it reached the checks that have nothing to do
-  // with a reference — the `playback` refusal, frame coverage and the Canvas overhang are read from
+  // with a reference — the `playback` refusal and frame coverage are read from
   // the Source alone, and were unreachable to that route for no reason but this block.
   const preparedRoot = referenceRoot();
   let reference: string | undefined;
@@ -1432,10 +1077,6 @@ export async function authoringCheck(
   summary.push(uncoveredWords === 0
     ? `every word of the Script is drawn over by something that fills the frame (${coverage.words}).`
     : `${uncoveredWords} of ${coverage.words} words are drawn over by nothing that fills the frame.`);
-  if (overhang.length > 0) {
-    summary.push(`${overhang.length} Frame${overhang.length === 1 ? "" : "s"} `
-      + `${overhang.length === 1 ? "reaches" : "reach"} past the Canvas; read each one against the reference.`);
-  }
   const compared = elements.filter((element) => element.comparisons > 0).length;
   if (compared > 0 && mode === "reconstruction") {
     summary.push(untimed.length === 0
@@ -1612,25 +1253,6 @@ export async function authoringCheck(
         + "something beneath the stretch instead changes which wrong picture appears and leaves the stretch "
         + "unclaimed.",
     }),
-    out_of_bounds: overhang,
-    layout_geometry: geometry,
-    ...(overhang.length === 0 ? {} : {
-      out_of_bounds_note: "Each Frame here places part of what is drawn into it off the picture, by the amount "
-        + "beside each edge. `outside_fraction` is how much of the Frame's own area lands off the Canvas. This "
-        + "is read from the Source's own `space:Canvas` and `space:Frame` arithmetic — no rendered frame is "
-        + "measured and no observer is asked.\n\n"
-        + "Answer each one: is this overhang intended? Two shapes of it are, and both are visible in the "
-        + "Source. An element that travels in from off-screen is outside for part of its window, so its "
-        + "Recipe carries the movement — an `enter`, a fly-from origin, an animated offset — and the Frame is "
-        + "where it starts rather than where it stays. A full-bleed picture is declared past the edge on "
-        + "purpose so a `fit` crops it instead of letterboxing it, so its Recipe carries that `fit`. A Frame "
-        + "with neither, holding something the reference shows whole, is placed wrong: the part past the edge "
-        + "is the part nobody will see.\n\n"
-        + "This decides nothing on its own, because the Source cannot tell the two apart. It is here because "
-        + "comparison cannot see it at all: an element authored mostly off the picture is drawn at the Canvas "
-        + "the Source declares, and the stand-in it is compared against is drawn at that same Canvas, so both "
-        + "put it in the same place off the edge and agree with each other.",
-    }),
     playback: running,
     ...(running.length === 0 ? {} : {
       playback_next: "Only moving/generated media with a duration-bearing timeline needs playback. Still images have no timeline and must not be given playback. For a generated take, the take is ordered in whole seconds and its window is measured from speech the "
@@ -1648,8 +1270,8 @@ export async function authoringCheck(
  * Source-only delivery gate for variant expansion.
  *
  * It reuses the authoring check's graph-independent analysis but deliberately does not require a
- * render, comparison, review log or VLM judgement.  The returned geometry remains evidence for the
- * caller; only deterministic failures (unresolved vocabulary, uncovered Script words and timed
+ * render, comparison, review log or VLM judgement. Only deterministic failures (unresolved vocabulary,
+ * uncovered Script words and timed
  * pictures that empty their windows) decide `passed` here.
  */
 export async function mechanicalAuthoringCheck(
@@ -1670,8 +1292,6 @@ export async function mechanicalAuthoringCheck(
     summary,
     playback,
     uncovered,
-    out_of_bounds: result.out_of_bounds ?? [],
-    layout_geometry: result.layout_geometry,
     ...(unresolved === undefined ? {} : { unresolved_packages: unresolved }),
     note: "Mechanical variant gate only; no render, VLM comparison or visual review was performed.",
   };

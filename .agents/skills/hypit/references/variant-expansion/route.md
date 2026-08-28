@@ -173,12 +173,13 @@ craft documents, `../authoring.md` and `../preview.md`. Its route is:
 
 ```text
 gap-confirmed → guidance-loaded → types-frozen → implemented
-→ vocabulary-inspected → package-validated → graph-checked → package-ready
+→ vocabulary-inspected → package-validated → graph-checked → layout-checked → package-ready
 ```
 
 It must repeat `list_svml_packages` and `inspect_svml_vocabulary` to confirm the gap, freeze Types and
-Manifest before implementation, then run Run-scoped inspection, `validate_local_author_packages` and
-`preview_check`. If package assets require paid generation, obtain cost approval first.
+Manifest before implementation, then run Run-scoped inspection, `validate_local_author_packages`,
+`preview_check` and `layout_check`. Read `../layout-checks.md`; its candidates are judged, not blindly
+fixed. If package assets require paid generation, obtain cost approval first.
 
 When the route has passed through `graph-checked`, checkpoint the batch package entry with
 `status: "ready"` and name the package directory as `package_root` when it is below the staging
@@ -248,7 +249,7 @@ The variant route is:
 ```text
 baseline-copied → brief-frozen → change-scope-frozen → guidance-loaded
 → vocabulary-verified → package-ready → script-checked → source-updated
-→ graph-checked → final-checked → variant-complete
+→ graph-checked → layout-checked → final-checked → variant-complete
 ```
 
 Change only the files named by `allowed_changes`:
@@ -260,16 +261,17 @@ Change only the files named by `allowed_changes`:
 - confirmed component changes in imports, project packages or dependencies.
 
 Do not reformat, rename or rewrite unaffected files. Then run the package/Cue gates, `hypit check`,
-`preview_check`, and:
+`preview_check`, `layout_check --run <variant>/build.svrun`, settle every candidate by repair or an
+explicit acceptance reason, and then run:
 
 ```bash
 hypit-reference-video-tools variant_check --run <variant>/build.svrun
 ```
 
-`variant_check` is mechanical only. It verifies vocabulary evidence, package use, Cue lengths, source
+`variant_check` is mechanical only. It verifies settled layout evidence, vocabulary evidence, package use, Cue lengths, source
 legality, graph tracing, frame-coverage/playback facts, generated-result leakage and the digest diff
-against `allowed_changes`. It reports Frame/Canvas boundary and layout geometry facts without making
-a visual judgement. It never renders or invokes a VLM.
+against `allowed_changes`. Layout candidates remain evidence for the Agent, not mandatory edits. It
+never renders media or invokes a VLM.
 
 If the diff escapes `allowed_changes`, the route becomes blocked and the batch records
 `scope-expansion-required`. The main agent decides whether the requested brief genuinely requires the

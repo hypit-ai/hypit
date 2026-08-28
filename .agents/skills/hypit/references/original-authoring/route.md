@@ -51,6 +51,7 @@ interruption or context compaction, read `../recovery.md`, run `route_state --ac
 | `script-checked` | every caption Cue has at most four visible words | `validate_script_cues --run <run>` |
 | `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
 | `graph-checked` | `preview_check` returns `sound: true` after package and Cue gates | `preview_check <run>` |
+| `layout-checked` | `layout_check` executed and every candidate was repaired or explicitly accepted | `layout_check --run <run>` / `layout_accept` |
 | `review-planned` | `authoring_check` writes a plan | `authoring_check <run>` |
 | `preview-rendered` | render output and timing sidecar both exist | `render_element --batch <round.json>` |
 | `review-complete` | review log contains a complete record for the planned element | `review_element` / `record_review` |
@@ -182,6 +183,10 @@ attempt ceiling: a graph that does not trace is work that is not done.
 
 ### 9. Ask the check what to render, then render it
 
+First run `layout_check --run <run>` and settle its candidates. **Read now:** `../layout-checks.md`.
+The check is an assistant to judgement, not the source of truth: intentional crop, overlap or offset
+may be accepted with a reason. Then ask the authoring check for the visual review plan.
+
 ```bash
 hypit-reference-video-tools authoring_check projects/<name>/build.svrun
 ```
@@ -189,10 +194,8 @@ hypit-reference-video-tools authoring_check projects/<name>/build.svrun
 Its `plan` is the list: each entry an element and a word range, with the reason. Feed it to
 `render_element --batch` — the program is drawn once and every entry is cut out of those frames.
 
-Keep the check JSON's `layout_geometry` with the renders. It is the deterministic Canvas/Frame report
-for vertical centre offsets, frame capacity, and containment; horizontal left/right placement is not
-judged mechanically. The reader still decides whether visible text or marks fit the intent and whether
-any offset, overlap or bleed is deliberate.
+Keep `.hypit/layout-check.json` with the renders. The reader still decides whether visible text or
+marks fit the intent and whether any measured offset, overlap or bleed is deliberate.
 
 **Read now:** `../element-review.md` — why each distinct visual declaration is read where it first appears.
 `../preview.md` holds `render_element` itself.

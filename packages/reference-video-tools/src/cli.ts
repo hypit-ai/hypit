@@ -56,6 +56,8 @@ function usage(): string {
     "  hypit-reference-video-tools render_element <build.svrun> --batch <renders.json> [--reference-id <id>]",
     "  hypit-reference-video-tools render_previews <package-dir> [...]",
     "  hypit-reference-video-tools preview_check <build.svrun> [<hypit.runtime.json>]",
+    "  hypit-reference-video-tools layout_check --run <build.svrun>",
+    "  hypit-reference-video-tools layout_accept --run <build.svrun> --finding <id> --reason <text>",
     "  hypit-reference-video-tools reconstruction_check <build.svrun> [--reference-id <id>]",
     "  hypit-reference-video-tools authoring_check <build.svrun>",
     "",
@@ -73,18 +75,9 @@ function usage(): string {
     "not recorded — which says whether anything that changes with elapsed time inside its window has",
     "been looked at, or only its layout.",
     "",
-    "It also reports every Frame with an edge outside 0%-100% of its Canvas, which places part of what",
-    "is drawn into it off the picture. That is reported rather than required: an overhang is how an",
-    "element slides in from off-screen and how a full-bleed picture is cropped by a fit, and a mistake",
-    "looks the same. A comparison cannot answer it either way, because the render and reference are",
-    "drawn at the same Canvas and put the element in the same place off the edge.",
-    "Both checks also return layout_geometry: deterministic Canvas/Frame bounds, centres, parent and",
-    "Canvas vertical centre offsets, containment overflow and bound element ids. Use it as a mechanical",
-    "geometry report for vertical centring, frame capacity and Canvas safety; horizontal left/right placement",
-    "is not judged. layout_geometry.overlaps adds",
-    "advisory independent same-Canvas, simultaneous partial-intersection candidates; nested placements",
-    "owned by one component are excluded (full containment is omitted).",
-    "It does not measure rendered glyph bounds or decide whether an overhang or overlap is intentional.",
+    "layout_check performs a realized Composition/DOM stable-state pass without writing media or calling",
+    "paid Providers. Every result is candidate evidence only: the Agent decides whether it is a genuine",
+    "problem, repairs it, or records an intentional exception with layout_accept and a reason.",
     "",
     "render_element draws one element of a Source the way that Source configures it, without a Build.",
     "The Canvas, frame rate, Recipe values and bindings come from the compiled Graph; missing media is",
@@ -656,6 +649,12 @@ async function main(): Promise<void> {
       ...(operands[1] === undefined ? {} : { runtime: operands[1] }),
     };
     result = await tools.preview_check(input as { run: string; runtime?: string });
+  } else if (command === "layout_check") {
+    result = await tools.layout_check((supplied ?? { run: required(flags, "run") }) as { run: string });
+  } else if (command === "layout_accept") {
+    result = await tools.layout_accept((supplied ?? {
+      run: required(flags, "run"), finding: required(flags, "finding"), reason: required(flags, "reason"),
+    }) as { run: string; finding: string; reason: string });
   } else if (command === "reconstruction_check") {
     const run = operands[0];
     if (supplied === undefined && run === undefined) throw new Error(`a <build.svrun> is required\n\n${usage()}`);
