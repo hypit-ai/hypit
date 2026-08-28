@@ -1,12 +1,12 @@
 # Contributing to Hypit
 
+[简体中文](./CONTRIBUTING.zh-CN.md)
+
 Pull requests are welcome. Documentation, examples and translations count as much as code.
 
-When creating an original or reconstructed video, if a component seems reusable or especially good,
-you can ask your Agent to move it into the project's `packages/` folder, then submit it to us in a Pull
-Request.
-
-[简体中文](./CONTRIBUTING.zh-CN.md)
+When creating an original or reconstructed video, if a component has clear, high reuse value across
+unrelated videos, you can ask your Agent to move it into Hypit's `packages/` folder, then submit it to
+us in a Pull Request. Ordinary one-off components should remain project-local.
 
 ## Before you start
 

@@ -134,9 +134,9 @@ Pull requests are welcome, and documentation, examples and translations count as
 up an open issue or open one for what you want to work on, and we will help you land it.
 [CONTRIBUTING.md](./CONTRIBUTING.md) has the setup, the checks CI runs and the pull request flow.
 
-When creating an original or reconstructed video, if a component seems reusable or especially good,
-you can ask your Agent to move it into the project's `packages/` folder, then submit it to us in a Pull
-Request.
+When creating an original or reconstructed video, if a component has clear, high reuse value across
+unrelated videos, you can ask your Agent to move it into Hypit's `packages/` folder, then submit it to
+us in a Pull Request. Ordinary one-off components should remain project-local.
 
 The [Development Guide](https://docs.hypit.ai/guide/develop) covers the prerequisites, the daily
 commands and the repository layout.
