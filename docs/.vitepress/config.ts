@@ -125,8 +125,8 @@ const svsLanguage: Record<string, unknown> = {
 const sharedTheme = {
   siteTitle: "HYPIT",
   logo: {
-    light: "/logo-line-dark.svg",
-    dark: "/logo-line-light.svg",
+    light: "/hypit-logo-dark.svg",
+    dark: "/hypit-logo-light.svg",
     alt: "Hypit",
   },
   socialLinks: [
