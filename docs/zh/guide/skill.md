@@ -14,6 +14,28 @@ description: Hypit skill 如何把描述或参考视频变成可检查、可恢�
 - 工具决定项目是否合法、graph 是否接通、布局和证据是否稳定；
 - 视觉 observer 只报告差异，是否算问题由 agent 判断。
 
+## 两条必须先看懂的抽取规则
+
+这是 `original-authoring`（原创制作）和 `reconstruction`（复刻）共用的核心设计：
+
+| 检查 | 抽取什么 | 回答什么问题 | 为什么这样做 |
+|---|---|---|---|
+| 视觉检查 | 每种不同视觉声明/样式变化在首次出现处的一个**完整片段** | 画面和运动是否符合 brief（原创）或参考视频（复刻）？ | 完整片段能保留出现、移动、离开、瞬时重叠和外观变化。无需因为每句 caption 内容或每个时间点不同而重复检查。 |
+| 机械布局检查 | 每个 `Present` 的**最长稳定区间中的一帧** | 在真实渲染的稳定 DOM 中，内容和容器是否越界、偏移或重叠？ | 动画过程中的偏移是正常运动，不应被误报为布局问题；按 `Present` 分开取样可以分别测量不同 caption Cue/内容状态。 |
+
+这两条规则职责不同，不能互换。视觉计划不使用最长稳定帧，而是检查完整片段；`layout_check`
+不判断视觉相似度，只测量真实 composition 并把结果作为候选交给 Agent。内容极值和时间极值不再
+是额外的视觉选片规则：稳定状态下的越界由逐个 `Present` 的布局测量发现，瞬时运动问题或媒体
+内部的问题仍由完整片段的视觉检查负责。
+
+两条创作路径共用同一套抽取方式，只有判断依据不同：
+
+```text
+原创制作：视觉片段 → 对照 brief
+复刻：    视觉片段 → 对照参考视频
+两者：    Present 稳定帧 → 测量 DOM → Agent 判断候选是否真是问题
+```
+
 ## 用户请求如何变成完整视频
 
 ```text
@@ -136,7 +158,7 @@ hypit-reference-video-tools layout_check --run <run>
 
 ### 6. 创作路径的视觉检查与修复
 
-原创制作使用 `authoring_check`，复刻使用 `reconstruction_check`。命令读取 Source，按不同视觉声明的首次出现和最长稳定片段生成确定性检查计划，不让 agent 随意编一份 render 列表。
+原创制作使用 `authoring_check`，复刻使用 `reconstruction_check`。命令读取 Source，按每个不同视觉声明（包括样式/声明变化）的首次出现生成一个完整片段的视觉检查计划，不让 agent 随意编一份 render 列表。最长稳定区间取样只属于另外的隐藏浏览器 `layout_check`，不属于视觉检查。
 
 每个计划项按以下闭环执行：
 
@@ -176,7 +198,7 @@ environment → brief-frozen → examples/格式/craft 决策
 | 5. 写 Script | 把旁白切成 Segment/Take 和短 Cue；每个镜头只承担一个明确任务，时间保持语义化。 | `script-time.md`、`authoring.md` | `main.svml` 包含完整的说话/文字推进和确定性的 `estimate:Speech` 时长。 |
 | 6. 接通项目 | 编写 `main.svml`、`recipes.svs`、`build.svrun`、`hypit.runtime.json`；显式声明每个生成、Track、Candidate、satisfy 和 Target。 | `authoring.md`、`runtime.md` | Film graph 是完整、可复现的，不是一个提示词加上一堆互不相连的素材。 |
 | 7. 证明 Source 与 graph | 运行包、Cue、语法、graph tracing 和真实布局门禁。 | `validate_local_author_packages`、`validate_script_cues`、`hypit check`、`preview_check`、`layout_check` | 项目合法、每条 Track 都能到达 Film，并且在视觉检查前已经测过浏览器布局。 |
-| 8. 生成视觉检查计划 | 让路线检查找出每种不同视觉声明的首次出现和最长稳定区间。 | `authoring_check` | `.hypit/evidence/` 记录必须检查的内容；Agent 不会漏掉状态，也不用手写 render 列表。 |
+| 8. 生成视觉检查计划 | 让路线检查为每种不同视觉声明/样式变化在首次出现处生成一个完整片段。 | `authoring_check` | `.hypit/evidence/` 记录必须检查的内容；Agent 不会漏掉样式变化，也不用手写 render 列表。最长稳定区间由独立的 `layout_check` 取样。 |
 | 9. 渲染并检查 | 生成计划中的 preview/mock 片段，逐项对照冻结的 brief，记录发现。 | `render_element`、`review_element`、`record_review`、`element-review.md`、`conformance-round.md` | 每种视觉系统都有证据，覆盖文字适配、画面覆盖、对比度、运动和几何。 |
 | 10. 修复并收口 | 只修复确认的问题，重跑受影响门禁和检查项，再运行最终路线检查。 | 有意几何用 `layout_accept`；最终用 `authoring_check` | `final-checked` 表示视觉、graph、包、Cue、布局证据都没有过期。 |
 | 11. 交接 | 创建 estimate 时长的 preview-mock Run，打开 Studio，披露费用，获批准后才 Build。 | `preview-mock.md`、`studio-confirmation.md`、`hypit plan/build/status/inspect/get` | Studio 看到的是活的 Film graph；付费 Build 复用已检查的 Run，产出完整交付。 |
