@@ -1,8 +1,11 @@
 # Recovering a Hypit route after interruption or context compaction
 
 Treat every new turn as a possible context boundary. Do not continue from the chat transcript alone.
-The durable source of progress is the project's `.hypit/route-state.json`; the durable source of truth
-is the artifacts and checks it points to.
+The project's `.hypit/route-state.json` is the current route view. Its `route_id` binds it to the
+execution history at `.hypit/routes/<route-id>/state.json`; the durable source of truth is that
+execution state plus the artifacts and checks it points to. Check reports are content-addressed under
+`.hypit/evidence/<digest>/`; same-named files directly under `.hypit/` are compatibility/current views,
+not historical evidence.
 
 ## Recovery sequence
 
@@ -42,7 +45,10 @@ first unmet `next_action`. `variant_init` reuses matching initialized copies and
 destinations. A component/package digest change, missing inspection evidence or file outside
 `allowed_changes` is a conflict, not permission to overwrite it.
 
-For a completed project with a new natural-language change, use `.hypit/revision-state.json` and the
+For a completed project with a new natural-language change, use the current
+`.hypit/revision-state.json` view and the execution directory named by its `revision_id` under
+`.hypit/revisions/`. The immutable request is
+`.hypit/revisions/<revision-id>/request.json`. Use the
 `revision_state` commands described in `revision/route.md`. The project may be supplied directly and
 need not have a parent creation route. When a parent route snapshot exists, reconcile it together
 with the revision snapshot; otherwise validate the supplied Run as the baseline and start Revision
@@ -55,7 +61,7 @@ fold the batch into Revision.
 
 ## What the state means
 
-The state is a small snapshot, not a transcript. It records the current route step, completed steps,
+The current state file is a small view, not a transcript. It records the execution id, current route step, completed steps,
 manual decisions, a short next action, and pointers to files such as `state.json`, `round.json`, render
 outputs, comparison/review logs, and the final check result. Full prompts and observer prose remain in
 their existing logs and are never copied into the snapshot.

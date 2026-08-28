@@ -1,5 +1,7 @@
-import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { readFile, stat } from "node:fs/promises";
+import { join, resolve, sep } from "node:path";
+
+import { digestPath, executionId, persistExecutionState } from "./state-files.js";
 
 export type RouteKind = "reconstruction" | "description" | "variant" | "variant-package";
 export type RouteStatus = "active" | "complete" | "blocked";
@@ -23,7 +25,8 @@ export type VariantPackageRouteStep =
 export type RouteStep = ReconstructionRouteStep | DescriptionRouteStep | VariantRouteStep | VariantPackageRouteStep;
 
 export type RouteState = {
-  readonly version: 2;
+  readonly version: 3;
+  readonly route_id: string;
   readonly route: RouteKind;
   readonly project_root: string;
   readonly run?: string;
@@ -33,11 +36,13 @@ export type RouteState = {
   readonly completed_steps: readonly number[];
   readonly in_progress: { readonly step: number; readonly started_at: string } | null;
   readonly artifacts: Readonly<Record<string, string>>;
+  readonly artifact_digests: Readonly<Record<string, string>>;
   readonly decisions: readonly string[];
   readonly next_action: string;
   readonly last_command?: string;
   readonly last_error?: string;
   readonly conflicts?: readonly string[];
+  readonly created_at: string;
   readonly updated_at: string;
 };
 
@@ -58,7 +63,8 @@ export type RouteCheckpointInput = RouteStateInput & {
   readonly error?: string;
 };
 
-export const ROUTE_STATE_VERSION = 2 as const;
+export const ROUTE_STATE_VERSION = 3 as const;
+const PREVIOUS_ROUTE_STATE_VERSION = 2 as const;
 const LEGACY_ROUTE_STATE_VERSION = 1 as const;
 const LEGACY_ROUTE_STATE_STEPS: Readonly<Record<RouteKind, readonly string[]>> = {
   reconstruction: [
@@ -97,10 +103,15 @@ export function routeStatePath(projectRoot: string): string {
   return join(resolve(projectRoot), ".hypit", "route-state.json");
 }
 
+export function routeExecutionStatePath(projectRoot: string, routeId: string): string {
+  return join(resolve(projectRoot), ".hypit", "routes", routeId, "state.json");
+}
+
 function assertRouteState(value: unknown, path: string): asserts value is RouteState {
   if (value === null || typeof value !== "object") throw new Error(`route state at ${path} is not an object`);
   const state = value as Partial<RouteState>;
   if (state.version !== ROUTE_STATE_VERSION) throw new Error(`route state at ${path} has unsupported version`);
+  if (typeof state.route_id !== "string" || state.route_id.length === 0) throw new Error(`route state at ${path} has no route_id`);
   if (state.route !== "reconstruction" && state.route !== "description" && state.route !== "variant" && state.route !== "variant-package") throw new Error(`route state at ${path} has an invalid route`);
   if (typeof state.project_root !== "string" || state.project_root.length === 0) throw new Error(`route state at ${path} has no project_root`);
   if (typeof state.status !== "string" || !["active", "complete", "blocked"].includes(state.status)) throw new Error(`route state at ${path} has an invalid status`);
@@ -109,13 +120,27 @@ function assertRouteState(value: unknown, path: string): asserts value is RouteS
   if (!Array.isArray(state.completed_steps) || state.completed_steps.some((step) => !Number.isSafeInteger(step) || step < 1)) throw new Error(`route state at ${path} has invalid completed_steps`);
   if (state.in_progress !== null && (state.in_progress === undefined || typeof state.in_progress !== "object" || !Number.isSafeInteger(state.in_progress.step))) throw new Error(`route state at ${path} has invalid in_progress`);
   if (state.artifacts === null || typeof state.artifacts !== "object" || Array.isArray(state.artifacts)) throw new Error(`route state at ${path} has invalid artifacts`);
+  if (state.artifact_digests === null || typeof state.artifact_digests !== "object" || Array.isArray(state.artifact_digests)) throw new Error(`route state at ${path} has invalid artifact_digests`);
   if (!Array.isArray(state.decisions) || state.decisions.some((item) => typeof item !== "string")) throw new Error(`route state at ${path} has invalid decisions`);
   if (state.conflicts !== undefined && (!Array.isArray(state.conflicts) || state.conflicts.some((item) => typeof item !== "string"))) throw new Error(`route state at ${path} has invalid conflicts`);
-  if (typeof state.next_action !== "string" || typeof state.updated_at !== "string") throw new Error(`route state at ${path} is missing recovery fields`);
+  if (typeof state.next_action !== "string" || typeof state.created_at !== "string" || typeof state.updated_at !== "string") throw new Error(`route state at ${path} is missing recovery fields`);
 }
 
 function migrateLegacyRouteState(value: unknown, path: string): RouteState | undefined {
-  if (value === null || typeof value !== "object" || (value as { version?: unknown }).version !== LEGACY_ROUTE_STATE_VERSION) return undefined;
+  if (value === null || typeof value !== "object") return undefined;
+  const version = (value as { version?: unknown }).version;
+  if (version === PREVIOUS_ROUTE_STATE_VERSION) {
+    const previous = value as Omit<RouteState, "version" | "route_id" | "artifact_digests" | "created_at"> & { readonly version: 2 };
+    const createdAt = typeof previous.updated_at === "string" ? previous.updated_at : new Date().toISOString();
+    return {
+      ...previous,
+      version: ROUTE_STATE_VERSION,
+      route_id: executionId(previous.route ?? "route"),
+      artifact_digests: {},
+      created_at: createdAt,
+    };
+  }
+  if (version !== LEGACY_ROUTE_STATE_VERSION) return undefined;
   const legacy = value as Partial<RouteState>;
   if (legacy.route !== "reconstruction" && legacy.route !== "description") throw new Error(`route state at ${path} has an invalid route`);
   const route = legacy.route;
@@ -144,6 +169,7 @@ function migrateLegacyRouteState(value: unknown, path: string): RouteState | und
   const now = new Date().toISOString();
   return {
     version: ROUTE_STATE_VERSION,
+    route_id: executionId(route),
     route,
     project_root: legacy.project_root!,
     ...(legacy.run === undefined ? {} : { run: legacy.run }),
@@ -153,6 +179,7 @@ function migrateLegacyRouteState(value: unknown, path: string): RouteState | und
     completed_steps: [...new Set(completed)].sort((a, b) => a - b),
     in_progress: currentStep > ROUTE_STATE_STEPS[route].length ? null : { step: currentStep, started_at: now },
     artifacts: legacy.artifacts ?? {},
+    artifact_digests: {},
     decisions: legacy.decisions ?? [],
     // Legacy prose may point past the newly inserted gates; always derive the recovery action from
     // the first unmet v2 stage instead of carrying that stale cursor forward.
@@ -161,6 +188,7 @@ function migrateLegacyRouteState(value: unknown, path: string): RouteState | und
       : `complete ${ROUTE_STATE_STEPS[route][currentStep - 1]}`,
     ...(legacy.last_command === undefined ? {} : { last_command: legacy.last_command }),
     ...(legacy.last_error === undefined ? {} : { last_error: legacy.last_error }),
+    created_at: now,
     updated_at: now,
   };
 }
@@ -186,11 +214,7 @@ export async function readRouteState(projectRoot: string): Promise<RouteState | 
 }
 
 async function writeRouteState(state: RouteState): Promise<RouteState> {
-  const path = routeStatePath(state.project_root);
-  await mkdir(dirname(path), { recursive: true });
-  const temporary = `${path}.tmp-${process.pid}-${Date.now()}`;
-  await writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`, "utf8");
-  await rename(temporary, path);
+  await persistExecutionState(state.project_root, "route-state.json", "routes", state.route_id, state);
   return state;
 }
 
@@ -256,10 +280,11 @@ export async function startRouteState(input: RouteStateInput): Promise<RouteStat
   if (existing !== undefined && existing.status !== "complete" && (existing.route !== input.route || existing.project_root !== projectRoot)) {
     throw new Error(`project already has an active ${existing.route} route at ${routeStatePath(projectRoot)}`);
   }
-  if (existing !== undefined && existing.route === input.route) return existing;
+  if (existing !== undefined && existing.status !== "complete" && existing.route === input.route) return existing;
   const now = new Date().toISOString();
   return await writeRouteState({
     version: ROUTE_STATE_VERSION,
+    route_id: executionId(input.route),
     route: input.route,
     project_root: projectRoot,
     ...(input.run === undefined ? {} : { run: resolve(projectRoot, input.run) }),
@@ -268,9 +293,11 @@ export async function startRouteState(input: RouteStateInput): Promise<RouteStat
     current_step: 1,
     completed_steps: [],
     in_progress: { step: 1, started_at: now },
-    artifacts: {},
+    artifacts: existing?.artifacts.brief === undefined ? {} : { brief: existing.artifacts.brief },
+    artifact_digests: existing?.artifact_digests.brief === undefined ? {} : { brief: existing.artifact_digests.brief },
     decisions: [],
     next_action: `complete ${ROUTE_STATE_STEPS[input.route][0]}`,
+    created_at: now,
     updated_at: now,
   });
 }
@@ -280,9 +307,26 @@ export async function checkpointRouteState(input: RouteCheckpointInput): Promise
   const existing = await readRouteState(projectRoot);
   if (existing === undefined) throw new Error(`no route state at ${routeStatePath(projectRoot)}; run route_state start first`);
   if (existing.route !== input.route) throw new Error(`route state is ${existing.route}, not ${input.route}`);
+  if (existing.status === "complete") throw new Error(`route ${existing.route_id} is complete; start a new route instead of rewriting its history`);
   const step = stepNumber(input.route, input.step);
   const completed = new Set(existing.completed_steps);
   const status = input.status ?? "complete";
+  if (input.route === "description" && step === stageNumber("description", "brief-frozen") && status === "complete") {
+    const brief = input.artifacts?.brief ?? existing.artifacts.brief;
+    const canonical = join(projectRoot, ".hypit", "brief.json");
+    if (brief === undefined || resolve(projectRoot, brief) !== canonical) {
+      throw new Error(`brief-frozen requires the canonical brief at ${canonical}`);
+    }
+    let parsedBrief: unknown;
+    try { parsedBrief = JSON.parse(await readFile(canonical, "utf8")); }
+    catch (error) { throw new Error(`brief-frozen requires valid JSON at ${canonical}: ${error instanceof Error ? error.message : String(error)}`); }
+    if (parsedBrief === null || typeof parsedBrief !== "object" || Array.isArray(parsedBrief)) throw new Error(`brief-frozen requires a JSON object at ${canonical}`);
+    const actualDigest = await digestPath(canonical);
+    const frozenDigest = existing.artifact_digests.brief;
+    if (frozenDigest !== undefined && actualDigest !== frozenDigest) {
+      throw new Error(`the frozen base brief changed: expected ${frozenDigest}, found ${actualDigest ?? "missing"}; use Revision or a new project`);
+    }
+  }
   if (status === "complete") {
     // Named checkpoints are explicit user assertions and must not jump over earlier stages. Numeric
     // checkpoints remain compatible with route-aware automation, which may record a later durable
@@ -303,6 +347,13 @@ export async function checkpointRouteState(input: RouteCheckpointInput): Promise
       Object.entries(input.artifacts).map(([key, value]) => [key, normalizeArtifact(projectRoot, key, value)]),
     ),
   };
+  const artifactDigests: Record<string, string> = { ...existing.artifact_digests };
+  const frozenKeys = new Set(["brief", "vocabulary", "baseline_manifest", "variant_brief", "allowed_changes", "guidance", "gap_plan", "types", "package_digest"]);
+  for (const [key, value] of Object.entries(artifacts)) {
+    if (!frozenKeys.has(key) && !value.includes(`${sep}.hypit${sep}evidence${sep}`)) continue;
+    const digest = await digestPath(value);
+    if (digest !== undefined) artifactDigests[key] = digest;
+  }
   const state: RouteState = {
     ...existing,
     ...(input.run === undefined ? {} : { run: resolve(projectRoot, input.run) }),
@@ -316,6 +367,7 @@ export async function checkpointRouteState(input: RouteCheckpointInput): Promise
         ? (next > ROUTE_STATE_STEPS[input.route].length ? null : { step: next, started_at: now })
         : existing.in_progress,
     artifacts,
+    artifact_digests: artifactDigests,
     decisions,
     next_action: input.nextAction?.trim()
       || (next > ROUTE_STATE_STEPS[input.route].length ? "route complete" : `complete ${ROUTE_STATE_STEPS[input.route][next - 1]}`),
@@ -346,6 +398,12 @@ async function evidenceSatisfied(key: string, path: string | undefined): Promise
       const value = JSON.parse(await readFile(path, "utf8")) as { passed?: unknown; surfaces?: unknown[]; packages?: unknown[] };
       if (key === "vocabulary") return Array.isArray(value.surfaces) || Array.isArray(value.packages);
       return value.passed === true;
+    } catch { return false; }
+  }
+  if (key === "brief") {
+    try {
+      const value = JSON.parse(await readFile(path, "utf8"));
+      return value !== null && typeof value === "object" && !Array.isArray(value);
     } catch { return false; }
   }
   if (key === "final_check") {
@@ -387,6 +445,11 @@ export async function reconcileRouteState(projectRoot: string): Promise<RouteSta
   if (existing === undefined) return undefined;
   const completed = new Set(existing.completed_steps);
   const conflicts: string[] = [];
+  for (const [key, expected] of Object.entries(existing.artifact_digests)) {
+    const path = existing.artifacts[key];
+    const actual = path === undefined ? undefined : await digestPath(path);
+    if (actual !== expected) conflicts.push(`${key} digest changed: expected ${expected}, found ${actual ?? "missing"}`);
+  }
   const artifact = (name: string): string | undefined => existing.artifacts[name];
   const reconcileStep = async (step: number, key: string): Promise<void> => {
     const renderComplete = key === "preview_render"
@@ -446,5 +509,10 @@ export async function reconcileRouteState(projectRoot: string): Promise<RouteSta
     ...(conflicts.length === 0 ? {} : { conflicts }),
     updated_at: now,
   };
-  return await writeRouteState(state);
+  const unchanged = state.status === existing.status
+    && state.current_step === existing.current_step
+    && JSON.stringify(state.completed_steps) === JSON.stringify(existing.completed_steps)
+    && JSON.stringify(state.conflicts ?? []) === JSON.stringify(existing.conflicts ?? [])
+    && state.next_action === existing.next_action;
+  return unchanged ? existing : await writeRouteState(state);
 }

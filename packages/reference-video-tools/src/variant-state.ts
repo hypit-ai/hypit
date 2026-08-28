@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-import { checkpointRouteState, readRouteState, reconcileRouteState, routeStatePath } from "./route-state.js";
+import { checkpointRouteState, readRouteState, reconcileRouteState, routeExecutionStatePath, routeStatePath } from "./route-state.js";
+import { readRevisionState, revisionExecutionStatePath } from "./revision-state.js";
+import { persistEvidence } from "./state-files.js";
 import { inspectVariantDiff, snapshotProject } from "./variant-project.js";
 
 export type VariantExpansionStatus = "active" | "complete" | "blocked";
@@ -72,7 +74,9 @@ export type VariantExpansionState = {
   readonly baseline_digest: string;
   readonly parent_route?: "reconstruction" | "description";
   readonly parent_state_digest?: string;
+  readonly parent_state_path?: string;
   readonly revision_state_digest?: string;
+  readonly revision_state_path?: string;
   readonly request?: string;
   readonly count?: number;
   readonly delivery_mode: "source" | "build";
@@ -127,6 +131,7 @@ export type VariantExpansionCheckpointInput = {
   readonly workloadDisclosure?: VariantWorkloadDisclosure;
   readonly packages?: readonly VariantExpansionPackage[];
   readonly variants?: readonly VariantExpansionVariant[];
+  readonly variantUpdates?: readonly VariantExpansionVariant[];
   readonly decision?: string;
   readonly conflict?: string;
   readonly resolveConflict?: string;
@@ -152,6 +157,30 @@ async function atomicJson(path: string, value: unknown): Promise<void> {
   const temporary = `${path}.tmp-${process.pid}-${Date.now()}`;
   await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
   await rename(temporary, path);
+}
+
+async function withStateLock<T>(outputRoot: string, work: () => Promise<T>): Promise<T> {
+  const lockPath = join(resolve(outputRoot), ".hypit", "variant-expansion-state.lock");
+  await mkdir(dirname(lockPath), { recursive: true });
+  for (let attempt = 0; attempt < 3_000; attempt += 1) {
+    const handle = await open(lockPath, "wx").catch((error: unknown) => {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") return undefined;
+      throw error;
+    });
+    if (handle !== undefined) {
+      try {
+        await handle.writeFile(`${process.pid}\n`, "utf8");
+        return await work();
+      } finally {
+        await handle.close().catch(() => undefined);
+        await unlink(lockPath).catch(() => undefined);
+      }
+    }
+    const stale = await stat(lockPath).then((value) => Date.now() - value.mtimeMs > 300_000, () => false);
+    if (stale) await unlink(lockPath).catch(() => undefined);
+    await new Promise((resolveWait) => setTimeout(resolveWait, 10));
+  }
+  throw new Error(`timed out waiting for variant state lock at ${lockPath}`);
 }
 
 function assertLocator(value: unknown, path: string): asserts value is VariantExpansionLocator {
@@ -267,7 +296,7 @@ function requiredPriorSteps(step: number, deliveryMode: "source" | "build"): rea
   return Array.from({ length: step - 1 }, (_, index) => index + 1).filter((candidate) => !optional.has(candidate));
 }
 
-export async function startVariantExpansion(input: StartVariantExpansionInput): Promise<VariantExpansionState> {
+async function startVariantExpansionUnlocked(input: StartVariantExpansionInput): Promise<VariantExpansionState> {
   const projectRoot = resolve(input.projectRoot);
   const outputRoot = resolve(input.outputRoot);
   const outputRelative = relative(projectRoot, outputRoot);
@@ -285,12 +314,14 @@ export async function startVariantExpansion(input: StartVariantExpansionInput): 
     if (resolve(locatorAtId.output_root) !== outputRoot) throw new Error(`batch id ${batchId} already points to ${locatorAtId.output_root}`);
   }
   const baseline = await snapshotProject(projectRoot);
-  const parentStatePath = join(projectRoot, ".hypit", "route-state.json");
-  const revisionStatePath = join(projectRoot, ".hypit", "revision-state.json");
-  const parentStateBytes = await readFile(parentStatePath).catch(() => undefined);
+  const parentState = await readRouteState(projectRoot);
+  const revisionState = await readRevisionState(projectRoot);
+  const parentStatePath = parentState === undefined ? undefined : routeExecutionStatePath(projectRoot, parentState.route_id);
+  const revisionStatePath = revisionState === undefined ? undefined : revisionExecutionStatePath(projectRoot, revisionState.revision_id);
+  const parentStateBytes = parentStatePath === undefined ? undefined : await readFile(parentStatePath).catch(() => undefined);
   const parentStateDigest = input.parentStateDigest
     ?? (parentStateBytes === undefined ? undefined : `sha256:${createHash("sha256").update(parentStateBytes).digest("hex")}`);
-  const revisionStateDigest = input.revisionStateDigest ?? await digestFile(revisionStatePath);
+  const revisionStateDigest = input.revisionStateDigest ?? (revisionStatePath === undefined ? undefined : await digestFile(revisionStatePath));
   let parentRoute = input.parentRoute;
   if (parentRoute === undefined && parentStateBytes !== undefined) {
     try {
@@ -305,7 +336,9 @@ export async function startVariantExpansion(input: StartVariantExpansionInput): 
     baseline_digest: baseline.digest,
     ...(parentRoute === undefined ? {} : { parent_route: parentRoute }),
     ...(parentStateDigest === undefined ? {} : { parent_state_digest: parentStateDigest }),
+    ...(parentStatePath === undefined ? {} : { parent_state_path: parentStatePath }),
     ...(revisionStateDigest === undefined ? {} : { revision_state_digest: revisionStateDigest }),
+    ...(revisionStatePath === undefined ? {} : { revision_state_path: revisionStatePath }),
     ...(input.request === undefined ? {} : { request: input.request }),
     ...(input.count === undefined ? {} : { count: input.count }),
     delivery_mode: input.deliveryMode ?? "source", status: "active", current_step: 1, completed_steps: [],
@@ -314,7 +347,17 @@ export async function startVariantExpansion(input: StartVariantExpansionInput): 
   });
 }
 
-export async function checkpointVariantExpansion(input: VariantExpansionCheckpointInput): Promise<VariantExpansionState> {
+export async function startVariantExpansion(input: StartVariantExpansionInput): Promise<VariantExpansionState> {
+  const projectRoot = resolve(input.projectRoot);
+  const outputRoot = resolve(input.outputRoot);
+  const outputRelative = relative(projectRoot, outputRoot);
+  if (outputRelative.length === 0 || (!outputRelative.startsWith(`..${sep}`) && outputRelative !== ".." && !isAbsolute(outputRelative))) {
+    throw new Error("variant output root must not be inside the base project");
+  }
+  return withStateLock(outputRoot, async () => startVariantExpansionUnlocked(input));
+}
+
+async function checkpointVariantExpansionUnlocked(input: VariantExpansionCheckpointInput): Promise<VariantExpansionState> {
   const existing = await readVariantExpansionState(input.projectRoot, input.outputRoot, input.batchId);
   if (existing === undefined) throw new Error("no variant expansion state; run variant_state --action start first");
   const step = stepNumber(input.step);
@@ -362,11 +405,13 @@ export async function checkpointVariantExpansion(input: VariantExpansionCheckpoi
       throw new Error(`package ${pack.id} package_root must stay inside its staging project`);
     }
     const digest = (await snapshotProject(packageRoot, { preserveTopLevelOutputs: true })).digest;
-    const evidence = join(resolve(pack.staging_root), ".hypit", "package-digest.json");
-    await atomicJson(evidence, { package_id: pack.id, staging_root: stagingRoot, package_root: packageRoot, digest, frozen_at: now });
+    const evidence = await persistEvidence(pack.staging_root, "package-digest.json", { package_id: pack.id, staging_root: stagingRoot, package_root: packageRoot, digest, frozen_at: now });
     await checkpointRouteState({ projectRoot: pack.staging_root, route: "variant-package", step: "package-ready", status: "complete", artifacts: { package_digest: evidence } });
     return { ...pack, staging_root: stagingRoot, package_root: packageRoot, route_state: routeStatePath(pack.staging_root), digest };
   }));
+  const variants = input.variantUpdates === undefined
+    ? input.variants
+    : existing.variants.map((variant) => input.variantUpdates!.find((update) => update.id === variant.id) ?? variant);
   return writeState({
     ...existing,
     status: status === "blocked" ? "blocked" : next > VARIANT_EXPANSION_STEPS.length ? "complete" : "active",
@@ -375,12 +420,18 @@ export async function checkpointVariantExpansion(input: VariantExpansionCheckpoi
     artifacts, decisions, conflicts,
     ...(input.workloadDisclosure === undefined ? {} : { workload_disclosure: input.workloadDisclosure }),
     ...(packages === undefined ? {} : { packages }),
-    ...(input.variants === undefined ? {} : { variants: input.variants }),
+    ...(variants === undefined ? {} : { variants }),
     next_action: input.nextAction?.trim() || (next > VARIANT_EXPANSION_STEPS.length ? "variant expansion complete" : `complete ${VARIANT_EXPANSION_STEPS[next - 1]}`),
     ...(input.command === undefined ? {} : { last_command: input.command }),
     ...(input.error === undefined ? {} : { last_error: input.error }),
     updated_at: now,
   });
+}
+
+export async function checkpointVariantExpansion(input: VariantExpansionCheckpointInput): Promise<VariantExpansionState> {
+  const locator = await selectedLocator(input.projectRoot, input.outputRoot, input.batchId);
+  if (locator === undefined) throw new Error("no variant expansion state; run variant_state --action start first");
+  return withStateLock(locator.output_root, async () => checkpointVariantExpansionUnlocked({ ...input, outputRoot: locator.output_root }));
 }
 
 async function exists(path: string | undefined): Promise<boolean> {
@@ -393,7 +444,7 @@ async function validJson(path: string | undefined, predicate: (value: unknown) =
   catch { return false; }
 }
 
-export async function reconcileVariantExpansion(projectRoot: string, outputRoot?: string, batchId?: string): Promise<VariantExpansionState | undefined> {
+async function reconcileVariantExpansionUnlocked(projectRoot: string, outputRoot?: string, batchId?: string): Promise<VariantExpansionState | undefined> {
   const existing = await readVariantExpansionState(projectRoot, outputRoot, batchId);
   if (existing === undefined) return undefined;
   const completed = new Set(existing.completed_steps);
@@ -401,9 +452,9 @@ export async function reconcileVariantExpansion(projectRoot: string, outputRoot?
   const addConflict = (message: string): void => { if (!conflicts.includes(message)) conflicts.push(message); };
   const baseline = await snapshotProject(existing.project_root);
   if (baseline.digest !== existing.baseline_digest) addConflict(`[reconcile] base project digest changed: expected ${existing.baseline_digest}, found ${baseline.digest}`);
-  const parentDigest = await digestFile(join(existing.project_root, ".hypit", "route-state.json"));
+  const parentDigest = await digestFile(existing.parent_state_path ?? join(existing.project_root, ".hypit", "route-state.json"));
   if (existing.parent_state_digest !== undefined && parentDigest !== existing.parent_state_digest) addConflict(`[reconcile] parent route state digest changed: expected ${existing.parent_state_digest}, found ${parentDigest ?? "missing"}`);
-  const revisionDigest = await digestFile(join(existing.project_root, ".hypit", "revision-state.json"));
+  const revisionDigest = await digestFile(existing.revision_state_path ?? join(existing.project_root, ".hypit", "revision-state.json"));
   if (existing.revision_state_digest !== undefined && revisionDigest !== existing.revision_state_digest) addConflict(`[reconcile] revision state digest changed: expected ${existing.revision_state_digest}, found ${revisionDigest ?? "missing"}`);
 
   const packages: VariantExpansionPackage[] = [];
@@ -428,7 +479,7 @@ export async function reconcileVariantExpansion(projectRoot: string, outputRoot?
       const errors = Array.isArray(diff.errors) ? diff.errors.map(String).join(", ") : "variant baseline evidence failed";
       addConflict(`[reconcile] variant ${variant.id} scope evidence is invalid: ${errors}`);
     }
-    const check = await validJson(join(variant.project_root, ".hypit", "variant-check.json"), (value) => (value as { passed?: unknown })?.passed === true);
+    const check = await validJson(route?.artifacts.variant_check ?? join(variant.project_root, ".hypit", "variant-check.json"), (value) => (value as { passed?: unknown })?.passed === true);
     const { error: _oldError, ...variantWithoutError } = variant;
     variants.push({
       ...variantWithoutError,
@@ -499,4 +550,10 @@ export async function reconcileVariantExpansion(projectRoot: string, outputRoot?
     next_action: next > VARIANT_EXPANSION_STEPS.length ? "variant expansion complete" : `complete ${VARIANT_EXPANSION_STEPS[next - 1]}`,
     updated_at: now,
   });
+}
+
+export async function reconcileVariantExpansion(projectRoot: string, outputRoot?: string, batchId?: string): Promise<VariantExpansionState | undefined> {
+  const locator = await selectedLocator(projectRoot, outputRoot, batchId);
+  if (locator === undefined) return undefined;
+  return withStateLock(locator.output_root, async () => reconcileVariantExpansionUnlocked(projectRoot, locator.output_root, locator.batch_id));
 }
