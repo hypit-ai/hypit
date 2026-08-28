@@ -73,7 +73,8 @@ body { font-size: 16px; line-height: 1.75; }
 .VPNavBar .container { max-width: 1376px; }
 .VPNavBarTitle { min-width: 150px; }
 .VPNavBarTitle .title { color: var(--ink); font-weight: 700; letter-spacing: -.03em; }
-.VPNavBarTitle img { width: auto; max-width: 112px; max-height: 28px; }
+.VPNavBarTitle .title > span { display: none; }
+.VPNavBarTitle img { display: block; width: 66px !important; height: 20px !important; max-width: none !important; max-height: none !important; object-fit: contain; }
 .VPNavBarMenuLink, .VPNavBarMenuGroup .text { color: var(--muted); font-size: 13px; font-weight: 600; }
 .VPNavBarMenuLink:hover, .VPNavBarMenuLink.active, .VPNavBarMenuGroup:hover .text { color: var(--accent); }
 .VPNavBarAppearance button, .VPNavBarMenuGroup .button { color: var(--muted); }
@@ -137,7 +138,7 @@ body { font-size: 16px; line-height: 1.75; }
 
 @media (max-width: 767px) {
   .VPNavBarTitle { min-width: 0; }
-  .VPNavBarTitle img { max-width: 96px; }
+  .VPNavBarTitle img { width: 66px !important; height: 20px !important; }
   .VPDoc { padding: 28px 24px 72px; }
   .vp-doc h1 { font-size: 34px; }
   .vp-doc h2 { margin-top: 40px; }
