@@ -76,14 +76,15 @@ directory when it exists. Recover intent, Hook, narrative development and the re
 visuals, audio and text. README clone sets are useful evidence of the intended expansion pattern, but
 their Source, people, products, claims and assets are not templates.
 
-**Read now:** `../playbooks/index.md`. Select each variant's format from its intent. Read the matching
+**Read now:** `../playbooks/index.md`. Select each direction's format from its intent. Read the matching
 format file named by that index completely and the craft files its footer names. Keep the base format
 by default. A switch among ranking, street interview, podcast or another format is a high-change
-variant and must be explicit in the plan.
+direction and must be explicit in the plan.
 
-Persist `format-plan.json`. Each entry records the variant id, example basis and digest, playbook path,
-and frozen Format DNA: Hook, narrative progression, speaker/role grammar, layout system, timing model,
-caption/overlay behavior, audio relationship and what must remain invariant. Checkpoint
+Persist `format-plan.json`. Each direction entry records its id, quota, example basis and digest,
+playbook path, and frozen Format DNA: Hook, narrative progression, speaker/role grammar, layout system,
+timing model, caption/overlay behavior, audio relationship and what must remain invariant. The
+dispatch step carries that direction entry into each numbered child. Checkpoint
 `examples-inspected` and `format-plan-frozen`; file existence alone does not make either decision.
 
 ## 3. Draft the Slate
@@ -230,7 +231,8 @@ projects and refuses conflicting destinations.
 
 ## 8. Dispatch variant agents in bounded waves
 
-The main agent supplies each variant agent only its copied project and fixed plan entries. The main
+The main agent supplies each variant agent only its copied project and the fixed plan entry for its
+direction. The main
 agent, not the child, has already chosen examples, format, Format DNA, component strategy and scope.
 Checkpoint `variants-dispatched` only after the agents have actually been assigned; route-state files
 created by `variant_init` are not proof of dispatch.
@@ -238,7 +240,8 @@ created by `variant_init` are not proof of dispatch.
 Every variant agent reads:
 
 1. its copied project, `.hypit/variant-brief.json` and `.hypit/allowed-changes.json`;
-2. its `format-plan.json` and `component-plan.json` entry;
+2. its generated brief plus the matching direction entries from `format-plan.json` and
+   `component-plan.json`;
 3. the assigned format playbook and every craft document linked by its footer;
 4. `../authoring.md`, `../script-time.md` and `../preview.md`;
 5. the assigned package README and inspection evidence.
