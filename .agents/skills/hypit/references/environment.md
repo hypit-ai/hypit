@@ -132,8 +132,9 @@ may also use it as the Distribution when no installed CLI exists, as described a
 projects in this checkout live under `<checkout-root>/projects/<project-name>/`; they remain independent
 author projects and are not part of the repository workspace globs.
 
-A project directory carries its own `package.json` — a name and `"private": true` is the whole file,
-since nothing reads its fields. `hypit check`, `plan` and `build` locate the package root by walking
+A project directory carries its own `package.json` with the runtime-safe minimum
+`{ "name": "<project-name>", "version": "0.0.0", "private": true, "type": "module" }`.
+`hypit check`, `plan` and `build` locate the package root by walking
 up from the project until some `package.json` appears; the file is what stops that walk at the
 project, so `packages/<slug>/` resolves from there rather than from whichever ancestor
 directory happened to hold one. It is matched by no `pnpm-workspace.yaml` glob and adds the project

@@ -7,6 +7,9 @@ revision-state and variant-expansion CLI subcommands, including `list_svml_packa
 `observe_reference`, `record_observation`, `inspect_svml_vocabulary`, and `compare_reconstruction`.
 Each command prints one JSON result to stdout. The final source files are authored by the calling
 agent and checked with the installed `hypit check` command.
+Keep redirected reports outside a project's `.hypit/` directory (for example `> round.json`). That
+directory is reserved for the tools' atomic evidence and state files; redirecting stdout to one of
+those files can keep the destination open while it is being atomically replaced on some platforms.
 
 Route and revision current views remain at `.hypit/route-state.json` and
 `.hypit/revision-state.json` for compatibility. Every start also writes execution history under

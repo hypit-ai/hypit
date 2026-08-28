@@ -662,10 +662,18 @@ type LookLog = {
 };
 
 const comparisonLog = (root: string): LookLog => ({ root, file: "comparisons.jsonl", answer: "differences" });
+
+/** Comparisons are evidence for one reconstruction, not for the shared reference. */
+function comparisonLogForRun(run: string | undefined, referenceRootPath: string): LookLog {
+  return run === undefined
+    ? comparisonLog(referenceRootPath)
+    : comparisonLog(join(dirname(resolve(invokedFrom(), run)), ".hypit"));
+}
 const reviewLog = (root: string): LookLog => ({ root, file: "reviews.jsonl", answer: "findings" });
 
 async function appendLooked(log: LookLog, record: ComparisonRecord | ReviewRecord): Promise<void> {
   await serially(log.root, async () => {
+    await mkdir(log.root, { recursive: true });
     await appendFile(join(log.root, log.file), `${JSON.stringify(record)}\n`, "utf8");
   });
 }
@@ -1300,6 +1308,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const runFragmentFacets = (contribution?.hostFacets ?? []).filter((facet) => facet.abi === "hypit.run-fragment-host@1");
       const producers = modules.flatMap((module) => module.manifest.producers);
       const fragmentValues = runFragmentFacets.flatMap((facet) => Object.values((facet.implementation as { fragments?: Record<string, { operations?: readonly unknown[]; exports?: readonly unknown[] }> }).fragments ?? {}));
+      // Author Markup Surface handlers seal Graph Fragments while decoding Source; those
+      // fragments are intentionally not exposed as a package Host facet. Keep the diagnostic
+      // useful for author packages by reporting their declared Surfaces as the lower bound when
+      // no explicit Run Fragment facet exists.
+      const fragmentCount = fragmentValues.length > 0 ? fragmentValues.length : surfaces.length;
       if (surfaces.length === 0) errors.push("PACKAGE_NO_SURFACE");
       if (producers.length === 0) errors.push("PACKAGE_NO_PRODUCER");
       if (runFragmentFacets.length > 0 && fragmentValues.every((fragment) => (fragment.operations?.length ?? 0) === 0 || (fragment.exports?.length ?? 0) === 0)) errors.push("PACKAGE_NO_FRAGMENT");
@@ -1325,7 +1338,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const graphUsed = modules.some((module) => graphModules.has(`${module.manifest.name}@${module.manifest.version}`));
       if (!sourceImported) errors.push("PACKAGE_NOT_IMPORTED");
       else if (!graphUsed) errors.push("PACKAGE_IMPORTED_BUT_UNUSED");
-      results.push({ specifier, loaded_specifier: selected?.specifier, manifest: modules.length > 0, surfaces: surfaces.length, producers: producers.length, fragments: fragmentValues.length, run_fragment_facets: runFragmentFacets.length, source_imported: sourceImported, source_used: graphUsed, graph_used: graphUsed, status: errors.length === 0 ? "passed" : "failed", ...(errors.length === 0 ? {} : { errors }) });
+      results.push({ specifier, loaded_specifier: selected?.specifier, manifest: modules.length > 0, surfaces: surfaces.length, producers: producers.length, fragments: fragmentCount, run_fragment_facets: runFragmentFacets.length, source_imported: sourceImported, source_used: graphUsed, graph_used: graphUsed, status: errors.length === 0 ? "passed" : "failed", ...(errors.length === 0 ? {} : { errors }) });
     }
     for (const specifier of expected) {
       if (!results.some((item) => item.specifier === specifier)) results.push({ specifier, status: "failed", errors: ["PACKAGE_EXPECTED_BUT_MISSING"] });
@@ -1380,6 +1393,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
   const askerFor = async (
     observer: Observer,
     state: ReferenceState,
+    comparisonRun?: string,
   ): Promise<{ readonly ask: Asker; readonly pending: readonly ObservationTaskRequest[]; readonly paced?: boolean }> => {
     if (observer === "agent") {
       const pending: ObservationTaskRequest[] = [];
@@ -1411,7 +1425,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
             key, instruction, prompt: [...parts, prompt, WATERMARK_RULE].join("\n\n"), image_refs: asPictures(media, state),
             ...(sound === true && words.length > 0 ? { transcript_ref: transcriptRef } : {}),
             ...(spoken.length === 0 ? {} : { transcript_words: spoken }),
-            record_with: `record_observation --reference-id ${state.reference_id} --key ${key} --text-file <the answer>`,
+            record_with: `record_observation --reference-id ${state.reference_id} `
+              + `${comparisonRun === undefined ? "" : `--run ${comparisonRun} `}`
+              + `--key ${key} --text-file <the answer>`,
           });
           return observation("pending", "awaiting the agent observer");
         },
@@ -1993,8 +2009,10 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
             + "computed in Canvas pixels subtracts the parent's origin.",
           "An animation carries at least two keyframes, and every keyframe of one animation declares "
             + "the same properties: one that appears in some and not others is interpolated from the "
-            + "element's own value on the frames it is missing from.",
-          "A plain text element must provide exact ordered font artifacts and cannot combine them with raw font styles.",
+            + "element's own value on the frames it is missing from. `atFrame` is Present-relative; the "
+            + "document normalizes the animation domain to `max(presentDurationFrames, lastKeyframe.atFrame)`.",
+          "A plain text element must provide exact ordered font artifacts and cannot combine them with "
+            + "raw `font`, `font-family`, `font-style`, `font-synthesis` or `font-weight` styles.",
           "A text element using glyph Paint cannot also declare raw stroke or paint-order styles.",
           "A media element's artifact media type must match image/video, and still images cannot carry sampling.",
           "A Surface with still timing cannot carry sampling; frame-based Surface sampling must match its typed timing.",
@@ -2055,7 +2073,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         + createHash("sha256").update(renderedPath).digest("hex").slice(0, 8);
       const standIn = await standInBeside(renderedPath);
       const observer: Observer = state.observer ?? "gemini";
-      const { ask, pending } = await askerFor(observer, state);
+      const { ask, pending } = await askerFor(observer, state, input.run);
 
       // Which stretch of the reference the render is put beside. A render covers the words a Segment
       // or a Selection marks, so that is what the reference is cut to; a shot is a cut in the picture
@@ -2161,7 +2179,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         .digest("hex").slice(0, 6)}`;
       // Nothing changed since this pair was last answered, so nothing new can be said about it.
       const digest = await fileDigest(renderedPath);
-      const already = await answeredAlready(comparisonLog(root), {
+      const comparisonEvidence = comparisonLogForRun(input.run, root);
+      const already = await answeredAlready(comparisonEvidence, {
         digest,
         stretch: comparedStretch({ ...(shot === undefined ? {} : { shot_id: shot.shot_id }), ...(cut === undefined ? {} : { range: cut.record }) }),
         clip: asClip,
@@ -2169,7 +2188,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         scope,
       });
       if (already !== undefined) {
-        if (input.run !== undefined) await autoRouteCheckpoint(resolve(invokedFrom(), input.run), routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
+        if (input.run !== undefined) await autoRouteCheckpoint(resolve(invokedFrom(), input.run), routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(comparisonEvidence.root, comparisonEvidence.file) }, "repair differences, then rerun reconstruction_check");
         return {
           reference_id: state.reference_id,
           observer,
@@ -2197,7 +2216,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       // What was compared, and what was seen. The record is what a gate reads to tell an element that
       // was looked at from one that never was, and what an identical pair is answered from without
       // asking again.
-      await appendLooked(comparisonLog(root), {
+      await appendLooked(comparisonEvidence, {
         at: startedAt,
         id: comparisonId,
         ...(input.run === undefined ? {} : { run: resolve(invokedFrom(), input.run) }),
@@ -2215,7 +2234,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         ...(differences.status === "complete" ? { differences: differences.text } : {}),
       });
       if (differences.status === "complete" && input.run !== undefined) {
-        await autoRouteCheckpoint(resolve(invokedFrom(), input.run), routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
+        await autoRouteCheckpoint(resolve(invokedFrom(), input.run), routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(comparisonEvidence.root, comparisonEvidence.file) }, "repair differences, then rerun reconstruction_check");
       }
       return {
         reference_id: state.reference_id,
@@ -2289,13 +2308,14 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       // that never was, and until this existed an agent-observer comparison could never leave `pending`.
       if (key.startsWith("comparison:")) {
         const comparisonId = key.slice("comparison:".length);
-        const closed = await closeLooked(comparisonLog(root), comparisonId, text);
+        const comparisonEvidence = comparisonLogForRun(input.run, root);
+        const closed = await closeLooked(comparisonEvidence, comparisonId, text);
         assert(closed, `${key} names no open comparison of reference ${input.reference_id}`);
-        const comparison = (await readFile(join(root, "comparisons.jsonl"), "utf8"))
+        const comparison = (await readFile(join(comparisonEvidence.root, comparisonEvidence.file), "utf8"))
           .split("\n").filter((line) => line.trim().length > 0).flatMap((line) => {
             try { return [JSON.parse(line) as ComparisonRecord]; } catch { return []; }
           }).find((entry) => entry.id === comparisonId);
-        if (comparison?.run !== undefined) await autoRouteCheckpoint(comparison.run, routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(root, "comparisons.jsonl") }, "repair differences, then rerun reconstruction_check");
+        if (comparison?.run !== undefined) await autoRouteCheckpoint(comparison.run, routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(comparisonEvidence.root, comparisonEvidence.file) }, "repair differences, then rerun reconstruction_check");
         await maybeCheckpointReferenceObservation(input);
         return { reference_id: state.reference_id, key, stored_in: "comparisons" };
       }
@@ -2480,7 +2500,10 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const round = input.renders;
         assert(round.length > 0, "renders is empty");
         // Local work rather than a quota, so it is paced by the machine and not by the launch gap.
-        const { done, failures } = await runBatch(round, locallyPaced(round.length), async (one) => await renderElement({
+        // Every entry shares the same preview-mock stage and frame cache. Keep the realization
+        // serialized so one worker cannot read a half-written preview.svrun while another is staging it;
+        // `once` still makes the actual full-program draw happen only once for the round.
+        const { done, failures } = await runBatch(round, { concurrency: 1, gapMs: 0 }, async (one) => await renderElement({
           ...one, run: one.run ?? input.run,
           ...(one.reference_id ?? input.reference_id === undefined ? {} : { reference_id: input.reference_id }),
         } as RenderElementInput));

@@ -125,7 +125,8 @@ report that no runnable Hypit Distribution is present and stop.
 When working in this checkout, create the independent project at
 `<checkout-root>/projects/<video-name>-reverse/` (use a safe slug). Use a directory the author named
 only if they explicitly named one. Give it a `package.json`
-with a name and `"private": true`, and nothing else — no field in it is read. `hypit check`, `plan`
+with the runtime-safe minimum `{ "name": "<project-name>", "version": "0.0.0", "private": true, "type": "module" }`.
+`hypit check`, `plan`
 and `build` find the package root by walking up from the project until a `package.json` appears, so
 this file is what stops that walk at the project and lets the project's `packages/<slug>/` resolve. It
 matches no `pnpm-workspace.yaml` glob, so it enrolls the directory in nothing.
@@ -367,8 +368,8 @@ hypit-reference-video-tools render_element projects/<name>/build.svrun --batch r
 ```
 
 `comparison-round.md` uses preview-mock estimate timing; `--reference-id` selects comparison evidence, not mock timing.
-The program is drawn once and every entry is cut out of those frames, so render
-the whole list in one `--batch` call.
+The program is realized once into a shared preview frame cache and entries are cut serially, so render
+the whole list in one `--batch` call; the batch does not run concurrent preview staging workers.
 
 Keep `.hypit/layout-check.json` beside the round. Its realized stable-state measurements remain
 candidate evidence; the reference and observer/Agent intent judgement remain authoritative.

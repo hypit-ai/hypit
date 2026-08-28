@@ -58,6 +58,7 @@ function usage(): string {
     "  hypit-reference-video-tools preview_check <build.svrun> [<hypit.runtime.json>]",
     "  hypit-reference-video-tools layout_check --run <build.svrun>",
     "  hypit-reference-video-tools layout_accept --run <build.svrun> --finding <id> --reason <text>",
+    "  hypit-reference-video-tools layout_accept --run <build.svrun> --batch <acceptances.json>",
     "  hypit-reference-video-tools reconstruction_check <build.svrun> [--reference-id <id>]",
     "  hypit-reference-video-tools authoring_check <build.svrun>",
     "",
@@ -116,8 +117,8 @@ function usage(): string {
     "array — of the same objects a single call takes, minus reference_id, which comes from the flag:",
     "`[{\"run\": \"main.svrun\", \"segment\": \"pro\", \"video_path\": \"renders/board-pro.mp4\", \"element\": \"board\"}, …]`.",
     "Every render is finished before any comparison starts, so a round has no order to it; they are",
-    "paced by HYPIT_REFERENCE_CONCURRENCY and each one's derived cuts are kept apart, so nothing in the",
-    "round reads a file another is still writing. One comparison that fails takes only itself down and",
+    "staged serially from one shared preview frame cache; observer comparisons still use their normal",
+    "pacing and each one's derived cuts are kept apart, so nothing in the round reads a file another is still writing. One comparison that fails takes only itself down and",
     "arrives under `failures` with the input that produced it; the rest are under `comparisons`.",
     "",
     "--video compares the whole stretch instead of one frame of it, which is what removes the problem of",
@@ -652,9 +653,20 @@ async function main(): Promise<void> {
   } else if (command === "layout_check") {
     result = await tools.layout_check((supplied ?? { run: required(flags, "run") }) as { run: string });
   } else if (command === "layout_accept") {
-    result = await tools.layout_accept((supplied ?? {
-      run: required(flags, "run"), finding: required(flags, "finding"), reason: required(flags, "reason"),
-    }) as { run: string; finding: string; reason: string });
+    if (supplied !== undefined) result = await tools.layout_accept(supplied as never);
+    else {
+      const batch = one(flags, "batch");
+      if (batch === undefined) {
+        result = await tools.layout_accept({ run: required(flags, "run"), finding: required(flags, "finding"), reason: required(flags, "reason") });
+      } else {
+        const decoded = JSON.parse(await readFile(batch, "utf8")) as unknown;
+        const findings = Array.isArray(decoded) ? decoded : decoded !== null && typeof decoded === "object"
+          ? (decoded as { findings?: unknown }).findings
+          : undefined;
+        if (!Array.isArray(findings)) throw new Error("layout_accept --batch expects a JSON array or an object with a findings array");
+        result = await tools.layout_accept({ run: required(flags, "run"), findings });
+      }
+    }
   } else if (command === "reconstruction_check") {
     const run = operands[0];
     if (supplied === undefined && run === undefined) throw new Error(`a <build.svrun> is required\n\n${usage()}`);

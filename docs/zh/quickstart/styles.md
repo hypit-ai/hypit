@@ -154,7 +154,7 @@ media.product {
   frame-paint: #111116;
   clip: rounded;
   radius: 28;
-  padding: 0;
+  padding: "0";
   border-width: 1;
   border-style: solid;
   border-color: #FFFFFF20;

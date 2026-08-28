@@ -937,6 +937,7 @@ export async function authoringCheck(
   }
 
   type LoggedComparison = {
+    readonly run?: string;
     readonly element?: string;
     readonly shot_id?: string;
     readonly range?: { readonly segment?: string; readonly selection?: string; readonly tokens?: readonly [number, number] };
@@ -952,8 +953,11 @@ export async function authoringCheck(
     ?? (entry.range?.segment === undefined ? undefined : `segment ${entry.range.segment}`)
     ?? (entry.range?.selection === undefined ? undefined : `selection ${entry.range.selection}`)
     ?? "an unnamed stretch";
-  const logPath = mode === "reconstruction"
+  const legacyComparisonPath = mode === "reconstruction"
     ? join(preparedRoot, reference!, "comparisons.jsonl")
+    : undefined;
+  const logPath = mode === "reconstruction"
+    ? join(dirname(runPath), ".hypit", "comparisons.jsonl")
     : reviewLogPath(runPath);
   // A reference is keyed by the video, and rightly: its observations are about that video and cost
   // real money, so two reconstructions of one file share them. Its comparisons are not about the
@@ -969,13 +973,16 @@ export async function authoringCheck(
   // project's evidence and there is nothing to separate.
   const inThisProject = (entry: LoggedComparison): boolean => {
     if (mode === "description") return true;
+    if (entry.run !== undefined) return resolve(entry.run) === runPath;
     if (entry.image_path === undefined) return false;
     const at = resolve(entry.image_path);
     return at === packageRoot || at.startsWith(`${packageRoot}${sep}`);
   };
-  const everything = (await readFile(logPath, "utf8").catch(() => ""))
+  const logPaths = [logPath, legacyComparisonPath].filter((path, index, all): path is string => path !== undefined && all.indexOf(path) === index);
+  const everything = (await Promise.all(logPaths.map(async (path) => (await readFile(path, "utf8").catch(() => ""))
     .split("\n").filter((line) => line.trim().length > 0)
-    .flatMap((line) => { try { return [JSON.parse(line) as LoggedComparison]; } catch { return []; } });
+    .flatMap((line) => { try { return [JSON.parse(line) as LoggedComparison]; } catch { return []; } }))))
+    .flat();
   const elsewhere = everything.length - everything.filter(inThisProject).length;
   const logged = everything.filter(inThisProject);
   // A pair handed out and not yet reported on. Naming these separately is what keeps an element with

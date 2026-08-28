@@ -7,6 +7,12 @@ description: 添加新的作者层组件的分步指南。
 
 作者包用一个新组件扩展视频词汇。作者在自己的 `.svml` 源码里通过 `<import>` 和 XML 元素来使用它。无需改动 Core、CLI 或任何聚合包。
 
+## Style-like Surface 的公开 id
+
+如果 Surface 发布的是 Style-like 值，公开 Record 必须使用作者写下的裸 id（`${id}`），不能写成
+`${id}.style` 或 `${id}.value`。Author Source 也使用裸 id，例如 `style={board-style}`；只有真正
+独立的 Track 等输出才使用 `.track` 一类后缀。
+
 ## 1. 创建包
 
 ```bash

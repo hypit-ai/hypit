@@ -76,8 +76,8 @@ model tier and how many takes are **yours to decide rather than to ask for**.
 launcher substitution rule. `../runtime.md` — the hard boundary between a project and a Distribution.
 
 When working in this checkout, put the independent project at
-`<checkout-root>/projects/<video-name>/` (use a safe slug), with a `package.json` carrying a name and
-`"private": true`.
+`<checkout-root>/projects/<video-name>/` (use a safe slug), with a `package.json` carrying the runtime
+minimum: `name`, `version: "0.0.0"`, `private: true` and `type: "module"`.
 
 ### 2. Load credentials
 

@@ -83,7 +83,10 @@ hypit-reference-video-tools route_state --action checkpoint \
 ```
 
 Layout candidates use their dedicated persisted decision file instead of a prose route checkpoint:
-run `layout_accept --run <run> --finding <id> --reason <text>`, rerun `layout_check`, then reconcile.
+run `layout_accept --run <run> --finding <id> --reason <text>` (or `--batch <acceptances.json>`),
+rerun `layout_check`, then reconcile. Keep shell stdout reports outside `.hypit/`; the tools replace
+state and evidence there atomically, and a redirect that keeps the destination open can make that
+rename fail on some platforms.
 
 `reconcile` never guesses a creative decision. It can advance from durable files and passing checks,
 but leaves an unrecorded manual step as the next action. If a recorded artifact disappeared, the next
