@@ -147,8 +147,9 @@ reference and one "in two" is something to repair.
 ## Geometry is a first-class comparison
 
 Before comparing colour, typography, or motion, compare the layout hierarchy: Canvas → outer
-Frame/background → inner text or element. For every centred region, report the content-to-frame centre
-offset on both axes and its direction. Then report containment separately at each boundary: content
+Frame/background → inner text or element. For every region intended to be vertically centred, report
+the content-to-frame Y centre offset and whether it is too high or too low. Do not treat deliberate
+left/right bias as a defect. Then report containment separately at each boundary: content
 inside outer Frame, outer Frame inside Canvas, naming the edge and approximate overflow when one fails.
 Check that the outer Frame has enough width/height for the longest line or mark plus padding, stroke,
 shadow, and corner treatment. A box can be centred and still be too small. Treat intentional bleed,
@@ -161,14 +162,15 @@ provenance is uncertain or it may be an authored design element, keep it as an u
 for confirmation rather than silently discarding it.
 
 The `reconstruction_check` JSON includes `layout_geometry`, a mechanical report of Canvas/Frame bounds,
-centres, parent/Canvas offsets, containment overflow, and bound element ids. The agent should use those
-facts alongside the comparison text. They are deterministic Source facts, not a decision: rendered
+centres, parent/Canvas vertical centre offsets, containment overflow, and bound element ids. The agent
+should use those facts alongside the comparison text. They are deterministic Source facts, not a decision:
+horizontal left/right placement is not judged mechanically, and rendered
 glyph bounds and whether an overhang is intentional still require the observer. Its
 `layout_geometry.overlaps` list is an advisory set of independent same-Canvas component placements that
 are temporally simultaneous and partially intersecting. Nested placements owned by one component are
 excluded; their internal centring remains a component-local parent/Frame comparison. Full containment
 is intentionally omitted; confirm each candidate against the rendered frame and intent, and do not treat
-it as an automatic gate failure. The list cannot detect overlap between package-internal glyphs or other
+it as an automatic gate failure or a command to remove an intentional overlap. The list cannot detect overlap between package-internal glyphs or other
 bounds not exposed by Source placement.
 
 ## Measuring, on this route
