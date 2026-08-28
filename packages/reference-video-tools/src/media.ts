@@ -224,10 +224,16 @@ export async function cutFrame(source: string, at: number, target: string): Prom
  * before anyone looks at them. The caller picks the width the reference can actually supply, so
  * `min` here keeps a small source from being enlarged into the same number of pixels carrying less.
  */
-export async function shotTile(clip: string, duration: number, target: string, cellWidth = TILE_CELL_WIDTH): Promise<string> {
-  const frames = tileFrames(duration);
+export async function shotTile(
+  clip: string,
+  duration: number,
+  target: string,
+  cellWidth = TILE_CELL_WIDTH,
+  frameCount = tileFrames(duration),
+): Promise<string> {
+  const frames = Math.max(1, Math.round(frameCount));
   const rows = Math.ceil(frames / TILE_COLUMNS);
-  const rate = round(frames / Math.max(duration, 0.1));
+  const rate = frames / Math.max(duration, 0.1);
   await command("ffmpeg", [
     "-hide_banner", "-loglevel", "error", "-y", "-i", clip,
     "-vf", `fps=${rate},scale='min(${Math.round(cellWidth)},iw)':-2,tile=layout=${TILE_COLUMNS}x${rows}:padding=8:margin=8:color=black`,
