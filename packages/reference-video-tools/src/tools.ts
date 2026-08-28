@@ -2689,9 +2689,22 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         catch (error) { throw new Error(`cannot read ${key} at ${path}: ${error instanceof Error ? error.message : String(error)}`); }
       };
       const [formatPlan, componentPlan] = await Promise.all([readPlan("format_plan"), readPlan("component_plan")]);
-      const selectedPlan = (plan: unknown, id: string): unknown => {
+      const selectedPlan = async (plan: unknown, item: { readonly id: string; readonly brief: string }): Promise<unknown> => {
         if (plan !== null && typeof plan === "object" && Array.isArray((plan as { variants?: unknown }).variants)) {
-          const entry = ((plan as { variants: unknown[] }).variants).find((candidate) => candidate !== null && typeof candidate === "object" && (candidate as { id?: unknown }).id === id);
+          const entry = ((plan as { variants: unknown[] }).variants).find((candidate) => candidate !== null && typeof candidate === "object" && (candidate as { id?: unknown }).id === item.id);
+          if (entry !== undefined) return entry;
+        }
+        let directionId: string | undefined;
+        try {
+          const brief = JSON.parse(await readFile(item.brief, "utf8")) as {
+            direction_id?: unknown;
+            brief?: { direction_id?: unknown };
+          };
+          const value = brief.direction_id ?? brief.brief?.direction_id;
+          directionId = typeof value === "string" ? value : undefined;
+        } catch { directionId = undefined; }
+        if (directionId !== undefined && plan !== null && typeof plan === "object" && Array.isArray((plan as { directions?: unknown }).directions)) {
+          const entry = ((plan as { directions: unknown[] }).directions).find((candidate) => candidate !== null && typeof candidate === "object" && (candidate as { id?: unknown }).id === directionId);
           if (entry !== undefined) return entry;
         }
         return plan;
@@ -2700,8 +2713,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       for (const item of initialized.variants) {
         const formatPlanPath = join(item.project_root, ".hypit", "format-plan.json");
         const componentPlanPath = join(item.project_root, ".hypit", "component-plan.json");
-        await writeVariantJson(formatPlanPath, { variant_id: item.id, source: batch.artifacts.format_plan, plan: selectedPlan(formatPlan, item.id) });
-        await writeVariantJson(componentPlanPath, { variant_id: item.id, source: batch.artifacts.component_plan, plan: selectedPlan(componentPlan, item.id) });
+        await writeVariantJson(formatPlanPath, { variant_id: item.id, source: batch.artifacts.format_plan, plan: await selectedPlan(formatPlan, item) });
+        await writeVariantJson(componentPlanPath, { variant_id: item.id, source: batch.artifacts.component_plan, plan: await selectedPlan(componentPlan, item) });
         await startRouteState({ projectRoot: item.project_root, route: "variant", run: item.run });
         await checkpointRouteState({ projectRoot: item.project_root, route: "variant", step: 1, status: "complete", artifacts: { baseline_manifest: item.manifest } });
         await checkpointRouteState({ projectRoot: item.project_root, route: "variant", step: 2, status: "complete", artifacts: { variant_brief: item.brief } });
