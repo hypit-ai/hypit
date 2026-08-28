@@ -129,6 +129,7 @@ const sharedTheme = {
     dark: "/hypit-logo-light.svg",
     alt: "Hypit",
   },
+  logoLink: "https://hypit.ai",
   socialLinks: [
     { icon: "github" as const, link: "https://github.com/hypit-ai/hypit" },
   ],
