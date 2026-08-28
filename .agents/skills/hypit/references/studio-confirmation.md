@@ -31,10 +31,14 @@ judge the picture.
 
 Once the author has accepted and the paid Build is submitted/accepted, create/persist a derived Run
 that selects the accepted Build Records (the same `<build-record>`/`<satisfy>` mechanism documented in
-`runtime.md`), then start Studio for that accepted-material Run. Start the HyperFrames/final render at
-the same time; the render must not wait for the author to finish looking at Studio. Studio is a live,
-read-only presentation of the current Run while the render proceeds. Report render/build status and
-the Studio URL independently.
+`runtime.md`), but never satisfy a Run Target such as `final.video`: Studio needs that Target to remain
+connected to the current Film graph, not replaced by an opaque finished-media Candidate. Generate the
+markup with `hypit history --source <author.svml> --pin --exclude-targets`, persist it in a separate
+Studio Run, then start Studio for that accepted-material Run. The Build Run may retain the narrower set
+of paid upstream pins it needs for reuse; neither Run pins its own Target. Start the HyperFrames/final
+render at the same time; the render must not wait for the author to finish looking at Studio. Studio is
+a live, read-only presentation of the current Run while the render proceeds. Report render/build status
+and the Studio URL independently.
 
 After that full video is delivered, any new natural-language change is routed to
 `revision_state start --run <accepted-material-run>` and `revision/route.md`. It is not a second visual

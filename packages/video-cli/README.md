@@ -17,7 +17,7 @@ hypit plan build.svrun
 hypit build build.svrun --follow
 hypit status <build-id> --watch
 hypit builds
-hypit history [source-output-name] [--source ./main.svml]
+hypit history [source-output-name] [--source ./main.svml] [--pin] [--exclude-targets]
 hypit inspect <build-id>
 hypit get <build-id> --name final.video --to ./final.mp4
 hypit cancel <build-id>
