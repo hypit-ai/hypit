@@ -70,6 +70,13 @@ export type RunCheckOutput = {
     readonly build: string;
     readonly output: string;
   }[];
+  /** Provider-free estimate:Speech values available before any Build. */
+  readonly deterministic_durations?: readonly {
+    readonly operation: string;
+    readonly speech_record: string;
+    readonly policy_record: string;
+    readonly seconds: number;
+  }[];
 };
 
 export type PlanPreflight = {
@@ -85,6 +92,13 @@ export type PlanOutput = {
   readonly plan: BuildPlan;
   /** Generations the Source declares that these Targets do not reach and no Record supplies. */
   readonly unreached?: readonly { readonly name: string; readonly producer: string }[];
+  /** Provider-free estimate:Speech values used to size deterministic preview and paid takes. */
+  readonly deterministic_durations?: readonly {
+    readonly operation: string;
+    readonly speech_record: string;
+    readonly policy_record: string;
+    readonly seconds: number;
+  }[];
   readonly preflight?: PlanPreflight;
 };
 

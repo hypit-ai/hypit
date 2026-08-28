@@ -128,22 +128,43 @@ function estimateOperationDuration(graph: CompiledGraph, operation: ReturnType<t
   }
 }
 
-function durationForTarget(graph: CompiledGraph, operation: ReturnType<typeof findOperation>, inputs: Readonly<Record<string, string>>, records: readonly TypedRecord[]): number | undefined {
-  const durationId = inputs.duration;
-  if (durationId === undefined) return undefined;
-  const candidate = graph.candidates.find((item) => item.root.kind === "value" && item.root.value.id === durationId)
-    ?? graph.candidates.find((item) => graph.outputs.some((output) => output.id === durationId && output.primary === item.id));
-  if (candidate?.root.kind === "value") return inlineDuration(candidate.root.value.value);
-  // Some compilers retain the duration as an operation result candidate. Resolve the referenced
-  // operation's value when it was already evaluated deterministically; never consult reference media.
-  const operationId = operation?.inputs.duration?.kind === "operation-result" ? operation.inputs.duration.operation : undefined;
-  const estimated = operationId === undefined ? undefined : estimateOperationDuration(graph, findOperation(graph, operationId), records);
-  if (estimated !== undefined) return estimated;
-  for (const id of operationRecordRefs(graph, operation)) {
-    const duration = inlineDuration(recordValue(records, id));
-    if (duration !== undefined) return duration;
+/** Resolve the SpeechDuration belonging to one generation operation, without falling back to the
+ * first duration in the graph. Seedance's duration arrives through its internal DurationProgram, so
+ * the useful edge may be an operation result rather than a logical output. */
+function durationFromRef(
+  graph: CompiledGraph,
+  ref: GraphValueRef | undefined,
+  records: readonly TypedRecord[],
+  seen = new Set<string>(),
+): number | undefined {
+  if (ref === undefined) return undefined;
+  if (ref.kind === "record") return inlineDuration(recordValue(records, ref.id));
+  if (ref.kind === "logical-output") {
+    const candidate = findLogicalOutput(graph, ref.id);
+    if (candidate === undefined) return undefined;
+    const primary = findCandidate(graph, candidate.primary);
+    return primary?.root.kind === "value" ? inlineDuration(primary.root.value.value) : undefined;
   }
-  return undefined;
+  if (seen.has(ref.operation)) return undefined;
+  seen.add(ref.operation);
+  const operation = findOperation(graph, ref.operation);
+  if (operation === undefined) return undefined;
+  const estimated = estimateOperationDuration(graph, operation, records);
+  if (estimated !== undefined) return estimated;
+  return durationFromRef(graph, operation.inputs.duration, records, seen)
+    ?? durationFromRef(graph, operation.inputs.speech, records, seen);
+}
+
+function durationForTarget(graph: CompiledGraph, operation: ReturnType<typeof findOperation>, inputs: Readonly<Record<string, string>>, records: readonly TypedRecord[]): number | undefined {
+  const direct = durationFromRef(graph, operation?.inputs.duration, records);
+  if (direct !== undefined) return direct;
+  const durationId = inputs.duration;
+  if (durationId !== undefined) {
+    const candidate = graph.candidates.find((item) => item.root.kind === "value" && item.root.value.id === durationId)
+      ?? graph.candidates.find((item) => graph.outputs.some((output) => output.id === durationId && output.primary === item.id));
+    if (candidate?.root.kind === "value") return inlineDuration(candidate.root.value.value);
+  }
+  return operationRecordRefs(graph, operation).map((id) => inlineDuration(recordValue(records, id))).find((value): value is number => value !== undefined);
 }
 
 function mockInputs(graph: CompiledGraph, kind: MockKind, operation: ReturnType<typeof findOperation>, records: readonly TypedRecord[] = []): Readonly<Record<string, string>> {

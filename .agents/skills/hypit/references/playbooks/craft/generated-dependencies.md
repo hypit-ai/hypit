@@ -252,10 +252,11 @@ fix.
   last left off.
 - **One edge is spoken and the other is decided elsewhere.** `@id!` marks a Moment — a point, not a
   range, right-absorbing at the next word's start, `~@id!` left-absorbing at the previous word's end.
-  Give the element the span it actually occupies and let the Moment cut it: `during="program"
-  until={story.moment.X}` runs from the start of the program to that word, and `at={story.moment.X}`
-  places a single arrival there. A Deck that stacks cards as they are named and clears on a word
-  reads this way.
+  Give the element the span it actually occupies and let the Moment cut it. The accepted spelling for
+  a window from the program start to that Moment is `start="program.start" end="moment.cue"
+  moment={story.moment.X}`; `at={story.moment.X}` places a single arrival there. A Deck that stacks
+  cards as they are named and clears on a word reads this way. `during="program" until={...}` is not
+  a valid temporal projection.
 
 A Selection is free to open in one Segment and close in another. Each end records its own Segment,
 and nothing closes it at the boundary — the only refusal is `SCRIPT_SELECTION_UNCLOSED`, raised after

@@ -11,6 +11,7 @@ export {
   visualTextSequenceSchema,
   visualTextTypographySchema,
   visualTrackSchema,
+  visualBoxSchema, visualMaskSchema, visualTextSchema, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualElementSchema,
 } from "./schema.js";
 export { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity, sealAudioTrack, sealComposition, sealVisualTrack } from "./track.js";
 export { animatableLocalStyles } from "./track.js";

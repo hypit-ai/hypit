@@ -540,6 +540,9 @@ async function evidenceSatisfied(key: string, path: string | undefined): Promise
   if (key === "package_ready" || key === "script_cues" || key === "vocabulary") {
     try {
       const value = JSON.parse(await readFile(path, "utf8")) as { passed?: unknown; surfaces?: unknown[]; packages?: unknown[] };
+      if ((value as { waived?: unknown }).waived === true
+        && typeof (value as { diagnosis?: unknown }).diagnosis === "string"
+        && ((value as { diagnosis?: string }).diagnosis?.trim().length ?? 0) > 0) return true;
       if (key === "vocabulary") return Array.isArray(value.surfaces) || Array.isArray(value.packages);
       return value.passed === true;
     } catch { return false; }

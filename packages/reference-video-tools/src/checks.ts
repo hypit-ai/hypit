@@ -634,6 +634,20 @@ export async function authoringCheck(
     }
   }
 
+  // Recipe attributes are part of the authored declaration just like inline attributes. Keep a
+  // small source-side index so coverage does not mistake a generated video declared by
+  // `recipe={recipes.media.aroll}` for a voice merely because there is no `video=` attribute.
+  const recipeSheets = new Map<string, Map<string, string>>();
+  for (const match of svml.matchAll(/<import\s+as="([^"]+)"\s+source="([^"]+\.svs)"/gu)) {
+    const alias = match[1] ?? "";
+    const source = match[2] ?? "";
+    const text = await readFile(resolve(dirname(svmlPath), source), "utf8").catch(() => undefined);
+    if (text === undefined) continue;
+    const recipes = new Map<string, string>();
+    for (const recipe of text.matchAll(/([A-Za-z0-9_.-]+)\s*\{([^}]*)\}/gu)) recipes.set(recipe[1] ?? "", recipe[2] ?? "");
+    recipeSheets.set(alias, recipes);
+  }
+
   // Which Normalize ids carry a picture. A take normalized with `video="none"` is a voice: it has no
   // window to fill, and nothing it feeds puts anything on the Canvas.
   const moving = new Set<string>();
@@ -642,7 +656,12 @@ export async function authoringCheck(
     const attributes = match[1] ?? "";
     const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
     const video = /\bvideo="([^"]+)"/u.exec(attributes)?.[1];
-    if (id !== undefined && video !== undefined && video !== "none") moving.add(id);
+    const recipe = /\brecipe=\{([A-Za-z0-9_-]+)\.([A-Za-z0-9_.-]+)\}/u.exec(attributes);
+    const recipeVideo = recipe === null ? undefined
+      : /\bvideo\s*:\s*([^;\s]+)/u.exec(recipeSheets.get(recipe[1] ?? "")?.get(recipe[2] ?? "") ?? "")?.[1];
+    if (id !== undefined && ((video !== undefined && video !== "none") || (video === undefined && recipeVideo !== undefined && recipeVideo !== "none"))) {
+      moving.add(id);
+    }
   }
 
   // ---- Timed pictures that stop before their window ends ----
@@ -663,18 +682,6 @@ export async function authoringCheck(
   // ends rather than where the shot should" — in the one form the route can settle before a Build, from
   // the Source and its Recipe sheets alone.
   const playbackReport = async (): Promise<readonly PlaybackReport[]> => {
-    // Every Recipe body the Source can name, by the alias its sheet was imported under.
-    const sheets = new Map<string, Map<string, string>>();
-    for (const match of svml.matchAll(/<import\s+as="([^"]+)"\s+source="([^"]+\.svs)"/gu)) {
-      const alias = match[1] ?? "";
-      const source = match[2] ?? "";
-      const text = await readFile(resolve(dirname(svmlPath), source), "utf8").catch(() => undefined);
-      if (text === undefined) continue;
-      const recipes = new Map<string, string>();
-      for (const recipe of text.matchAll(/([A-Za-z0-9_.-]+)\s*\{([^}]*)\}/gu)) recipes.set(recipe[1] ?? "", recipe[2] ?? "");
-      sheets.set(alias, recipes);
-    }
-
     // Which aliases belong to a package that draws. Plenty of elements consume a normalized media
     // without placing it — `whisperx:SemanticTake` reads one to align speech against it and puts no
     // picture on the Canvas, so it has no window to fill and no occupancy to choose. Requiring the
@@ -694,7 +701,7 @@ export async function authoringCheck(
       const media = /\bmedia=\{([A-Za-z0-9_-]+)\.media\}/u.exec(attributes)?.[1];
       if (media === undefined || !moving.has(media)) continue;
       const appearance = /\bappearance=\{([A-Za-z0-9_-]+)\.([A-Za-z0-9_.-]+)\}/u.exec(attributes);
-      const body = appearance === null ? undefined : sheets.get(appearance[1] ?? "")?.get(appearance[2] ?? "");
+      const body = appearance === null ? undefined : recipeSheets.get(appearance[1] ?? "")?.get(appearance[2] ?? "");
       const playback = body === undefined ? undefined : /\bplayback\s*:\s*([A-Za-z-]+)/u.exec(body)?.[1];
       if (playback !== undefined && playback !== "once-start" && playback !== "once-end") continue;
       running.push({

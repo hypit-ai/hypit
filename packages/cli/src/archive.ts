@@ -229,6 +229,11 @@ export function inspectBuild(state: BuildState, catalog?: BuildCatalogEntry) {
       accepted: records.has(selection.record),
     })),
     records: state.records.map(summarizeRecord),
+    deterministic_durations: state.records.flatMap((record) =>
+      record.type.module.name === "@hypit/speech" && record.type.name === "SpeechDuration"
+        && record.value.kind === "inline" && typeof record.value.value === "number"
+        ? [{ record: record.id, seconds: record.value.value }]
+        : []),
     diagnostics: state.diagnostics,
     ...(catalog === undefined ? {} : {
       presentation: {

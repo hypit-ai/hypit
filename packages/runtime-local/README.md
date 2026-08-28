@@ -17,7 +17,7 @@ A Runtime Profile selects only the environmental parts that genuinely vary:
         "config": { "path": "artifacts" }
       },
       "credentials": {
-        "environment": { "use": "@hypit/credential-store-env" }
+        "env": { "use": "@hypit/credential-store-env" }
       },
       "endpoints": {}
     }
