@@ -35,17 +35,12 @@ named. Neither gate expects you to guess; each one tells you what is wrong, and 
 looking at, as an element and a half-open range of the Script's own words, with the reason it earned a
 place. Render that list and read that list. Nothing here asks you to decide which stretches matter.
 
-Three rules produce it, and all three are read off the Source. **A distinct declaration is a distinct
-picture**, so an element is looked at once per way it is declared, at the stretch where that way first
-appears — which is also the floor, since every placed element declares something. **Content that can
-break the layout earns its own look**, which is why a caption Style is read over its longest Cue rather
-than its shortest. **A window length earns one only when something scales with it** — an enter costs
-its frames at one edge whatever the window is, but a typewriter, a loop or a `stretch` playback runs
-for as long as the window does.
+One rule produces it, read off the Source: **a distinct declaration is a distinct picture**. An
+element is looked at once per way it is declared, at the stretch where that declaration first
+appears. This is also the floor, since every placed element declares something.
 
-A range rather than a name, because the answer is not always a name: a Cue ends at a speaker change, so
-it is a run of words the Script never marked. `--tokens from:to` is how every command takes one, and
-`--segment`/`--selection` remain for the ranges that do have names.
+A token range is the stable identity used by every command. `--segment` and `--selection` remain
+available for ranges that already have names.
 
 The gate then holds the round to that list. An element looked at once used to pass; now every entry the
 plan names has to have been answered.
@@ -164,9 +159,10 @@ one default Style and a `caption:Use` override for one Selection is two looks, w
 two first appear, not one per Segment. This is the same reading `script-time.md` applies to every
 other system that spans cuts: the system is authored once, so it is read once.
 
-What is not covered by that is anything a Style does not decide. A Cue that overflows the frame is a
-Segment nobody broke with `||` rather than a Style at the wrong width — `playbooks/craft/captions.md`
-says so — and it belongs to the stretch whose words are long, not to the Style.
+Source-level Canvas safety is checked separately. `authoring_check` and `reconstruction_check` resolve
+every declared Frame into Canvas coordinates and report the elements bound to any Frame that crosses
+a Canvas edge. Package-internal glyph or private layout bounds remain visible-review facts because
+the Source does not expose geometry that a mechanical check could measure.
 
 ### Render every stretch first, then send them all at once
 
