@@ -32,6 +32,7 @@ function usage(): string {
     "  hypit-reference-video-tools variant_init --project-root <base> --output-root <batch> --slate <slate.json>",
     "  hypit-reference-video-tools variant_check --run <variant>/build.svrun [--runtime <hypit.runtime.json>]",
     "    route_state start: --route reconstruction|description|variant|variant-package [--run <run>] [--reference-id <id>]",
+    "    revision_state start: [--run <run>] [--parent-route reconstruction|description] [--request <text>]",
     "    checkpoint: --route <route> (--state <stage> | --step <n>) [--status in_progress|complete|blocked] [--next-action <text>] [--artifacts <json>]",
     "    read/reconcile: --project-root <dir>",
     "  hypit-reference-video-tools prepare_reference --video-path <path or link> [--observer gemini|agent] [--redo media|transcript|people|voices|systems|places|all]",

@@ -43,8 +43,10 @@ destinations. A component/package digest change, missing inspection evidence or 
 `allowed_changes` is a conflict, not permission to overwrite it.
 
 For a completed project with a new natural-language change, use `.hypit/revision-state.json` and the
-`revision_state` commands described in `revision.md`. Reconcile both the parent route snapshot and
-the revision snapshot before editing. Revision does not call VLM/observer, render, or perform visual
+`revision_state` commands described in `revision/route.md`. The project may be supplied directly and
+need not have a parent creation route. When a parent route snapshot exists, reconcile it together
+with the revision snapshot; otherwise validate the supplied Run as the baseline and start Revision
+without inventing parent history. Revision does not call VLM/observer, render, or perform visual
 review; it stops after the requested deterministic gates and leaves Studio untouched.
 
 After a completed revision, a request for many derivatives starts a new variant-expansion batch from

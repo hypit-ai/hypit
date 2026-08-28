@@ -10,7 +10,9 @@ agent and checked with the installed `hypit check` command.
 
 For a completed project change, `revision_state --action start|read|checkpoint|reconcile` stores a
 small atomic `.hypit/revision-state.json` snapshot. Revision edits Source/Recipe/Run and reruns
-deterministic gates; it does not invoke a VLM/observer or perform visual review.
+deterministic gates; it does not invoke a VLM/observer or perform visual review. The project may be
+handed in as an already completed directory: after its baseline gates pass, Revision can start
+without a parent reconstruction or description route state.
 
 For a validated source project that needs independent derivatives, `variant_state` stores the atomic
 batch snapshot and base-project locator, `variant_init` copies the authored project without generated

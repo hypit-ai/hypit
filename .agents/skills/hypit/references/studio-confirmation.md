@@ -23,7 +23,7 @@ After the route-specific final check passes, but before submitting any paid Buil
    intended result are acceptable for paid generation.
 5. Do not submit `hypit build` until the author explicitly accepts and confirms the cost.
 
-If the author does not accept, do not Build. Capture the requested change and enter `revision.md`.
+If the author does not accept, do not Build. Capture the requested change and enter `revision/route.md`.
 Revision edits Source/Recipe/Run and reruns deterministic gates; it does not ask an agent or VLM to
 judge the picture.
 
@@ -37,7 +37,7 @@ read-only presentation of the current Run while the render proceeds. Report rend
 the Studio URL independently.
 
 After that full video is delivered, any new natural-language change is routed to
-`revision_state start --run <accepted-material-run>` and `revision.md`. It is not a second visual
+`revision_state start --run <accepted-material-run>` and `revision/route.md`. It is not a second visual
 review loop and it never edits the rendered artifact; the revision updates Source/Recipe/Run and
 reruns only the deterministic gates before the next Studio handoff or paid Build confirmation.
 
