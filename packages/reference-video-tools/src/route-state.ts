@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-export type RouteKind = "reconstruction" | "description";
+export type RouteKind = "reconstruction" | "description" | "variant" | "variant-package";
 export type RouteStatus = "active" | "complete" | "blocked";
 export type ReconstructionRouteStep =
   | "environment" | "reference-prepared" | "reference-observed" | "vocabulary-checked"
@@ -13,7 +13,14 @@ export type DescriptionRouteStep =
   | "script-checked" | "source-authored" | "graph-checked" | "review-planned"
   | "preview-rendered" | "review-complete" | "repairs-complete" | "final-checked"
   | "build-complete";
-export type RouteStep = ReconstructionRouteStep | DescriptionRouteStep;
+export type VariantRouteStep =
+  | "baseline-copied" | "brief-frozen" | "change-scope-frozen" | "guidance-loaded"
+  | "vocabulary-verified" | "package-ready" | "script-checked" | "source-updated"
+  | "graph-checked" | "final-checked" | "variant-complete";
+export type VariantPackageRouteStep =
+  | "gap-confirmed" | "guidance-loaded" | "types-frozen" | "implemented"
+  | "vocabulary-inspected" | "package-validated" | "graph-checked" | "package-ready";
+export type RouteStep = ReconstructionRouteStep | DescriptionRouteStep | VariantRouteStep | VariantPackageRouteStep;
 
 export type RouteState = {
   readonly version: 2;
@@ -62,6 +69,8 @@ const LEGACY_ROUTE_STATE_STEPS: Readonly<Record<RouteKind, readonly string[]>> =
     "environment", "brief-frozen", "source-authored", "vocabulary-checked", "graph-checked",
     "review-planned", "preview-rendered", "review-complete", "repairs-complete", "final-checked", "build-complete",
   ],
+  variant: [],
+  "variant-package": [],
 };
 
 export const ROUTE_STATE_STEPS: Readonly<Record<RouteKind, readonly string[]>> = {
@@ -74,6 +83,14 @@ export const ROUTE_STATE_STEPS: Readonly<Record<RouteKind, readonly string[]>> =
     "environment", "brief-frozen", "vocabulary-checked", "package-ready", "script-checked", "source-authored",
     "graph-checked", "review-planned", "preview-rendered", "review-complete", "repairs-complete", "final-checked", "build-complete",
   ],
+  variant: [
+    "baseline-copied", "brief-frozen", "change-scope-frozen", "guidance-loaded", "vocabulary-verified",
+    "package-ready", "script-checked", "source-updated", "graph-checked", "final-checked", "variant-complete",
+  ],
+  "variant-package": [
+    "gap-confirmed", "guidance-loaded", "types-frozen", "implemented", "vocabulary-inspected",
+    "package-validated", "graph-checked", "package-ready",
+  ],
 };
 
 export function routeStatePath(projectRoot: string): string {
@@ -84,7 +101,7 @@ function assertRouteState(value: unknown, path: string): asserts value is RouteS
   if (value === null || typeof value !== "object") throw new Error(`route state at ${path} is not an object`);
   const state = value as Partial<RouteState>;
   if (state.version !== ROUTE_STATE_VERSION) throw new Error(`route state at ${path} has unsupported version`);
-  if (state.route !== "reconstruction" && state.route !== "description") throw new Error(`route state at ${path} has an invalid route`);
+  if (state.route !== "reconstruction" && state.route !== "description" && state.route !== "variant" && state.route !== "variant-package") throw new Error(`route state at ${path} has an invalid route`);
   if (typeof state.project_root !== "string" || state.project_root.length === 0) throw new Error(`route state at ${path} has no project_root`);
   if (typeof state.status !== "string" || !["active", "complete", "blocked"].includes(state.status)) throw new Error(`route state at ${path} has an invalid status`);
   const currentStep = state.current_step;
@@ -218,13 +235,18 @@ function assertPriorStagesComplete(route: RouteKind, step: number, completed: Re
 
 /** Source cannot be accepted until vocabulary, package and Script gates are durable. */
 function assertSourcePrerequisites(route: RouteKind, step: number, completed: ReadonlySet<number>): void {
-  if (step !== stageNumber(route, "source-authored")) return;
-  const required = ["vocabulary-checked", "package-ready", "script-checked"]
+  const sourceStage = route === "variant" ? "source-updated"
+    : route === "variant-package" ? "implemented" : "source-authored";
+  if (step !== stageNumber(route, sourceStage)) return;
+  const required = route === "variant"
+    ? ["vocabulary-verified", "package-ready", "script-checked"]
+    : route === "variant-package" ? [] : ["vocabulary-checked", "package-ready", "script-checked"];
+  const requiredSteps = required
     .map((name) => stageNumber(route, name));
-  const missing = required.filter((item) => !completed.has(item));
+  const missing = requiredSteps.filter((item) => !completed.has(item));
   if (missing.length > 0) {
     const names = missing.map((item) => ROUTE_STATE_STEPS[route][item - 1]).join(", ");
-    throw new Error(`source-authored cannot be completed before ${names}`);
+    throw new Error(`${sourceStage} cannot be completed before ${names}`);
   }
 }
 
@@ -386,16 +408,29 @@ export async function reconcileRouteState(projectRoot: string): Promise<RouteSta
       2: "brief", 3: "vocabulary", 4: "package_ready", 5: "script_cues", 6: "author_source", 7: "preview_check",
       8: "review_plan", 9: "preview_render", 10: "review_log", 12: "final_check", 13: "build",
     },
+    variant: {
+      1: "baseline_manifest", 2: "variant_brief", 3: "allowed_changes", 4: "guidance",
+      5: "vocabulary", 6: "package_ready", 7: "script_cues", 8: "author_source",
+      9: "preview_check", 10: "variant_check", 11: "variant_check",
+    },
+    "variant-package": {
+      1: "gap_plan", 2: "guidance", 3: "types", 4: "package_source", 5: "vocabulary",
+      6: "package_ready", 7: "preview_check", 8: "package_digest",
+    },
   };
   for (const [step, key] of Object.entries(evidenceByStep[existing.route])) {
     await reconcileStep(Number(step), key);
   }
-  const sourceStep = stageNumber(existing.route, "source-authored");
-  const gateSteps = ["vocabulary-checked", "package-ready", "script-checked"]
-    .map((name) => stageNumber(existing.route, name));
-  if (completed.has(sourceStep) && gateSteps.some((step) => !completed.has(step))) {
-    conflicts.push(`step ${sourceStep} (source-authored) was marked complete before vocabulary/package/Script gates`);
-    completed.delete(sourceStep);
+  if (existing.route !== "variant-package") {
+    const sourceName = existing.route === "variant" ? "source-updated" : "source-authored";
+    const vocabularyName = existing.route === "variant" ? "vocabulary-verified" : "vocabulary-checked";
+    const sourceStep = stageNumber(existing.route, sourceName);
+    const gateSteps = [vocabularyName, "package-ready", "script-checked"]
+      .map((name) => stageNumber(existing.route, name));
+    if (completed.has(sourceStep) && gateSteps.some((step) => !completed.has(step))) {
+      conflicts.push(`step ${sourceStep} (${sourceName}) was marked complete before vocabulary/package/Script gates`);
+      completed.delete(sourceStep);
+    }
   }
   const completedSteps = [...completed].sort((a, b) => a - b);
   const next = nextUncompleted(existing.route, completedSteps);

@@ -58,3 +58,8 @@ and give the author the exact URL with the updated result.
 Revision never edits or regenerates mock media. If a later, explicit Studio session previews the
 updated Run, that session must continue using the existing SVRun-native preview-mock path; never
 revive `make_placeholder`, hand-written SemanticTracks, or absolute-path mock Candidates.
+
+If the author asks for many independent derivatives after this revision is complete, reconcile and
+finish `revision_state`, then start `variant-expansion/route.md` from the revised project. The batch
+is not another revision step: its main agent rechecks examples, format/component plans, package gaps
+and per-variant scopes before copying or dispatching work.

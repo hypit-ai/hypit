@@ -274,6 +274,8 @@ export type AuthoringCheckInput = ReconstructionCheckInput & {
   readonly mode?: AuthoringCheckMode;
 };
 
+export type MechanicalAuthoringCheckInput = { readonly run: string };
+
 /**
  * Where a description-authored project's reviews are logged.
  *
@@ -1649,5 +1651,38 @@ export async function authoringCheck(
         + "window, loop-start to repeat, or stretch to retime. Read playbooks/craft/frame-coverage.md "
         + "on inherited edges before choosing — lengthening the material instead leaves the same edge.",
     }),
+  };
+}
+
+/**
+ * Source-only delivery gate for variant expansion.
+ *
+ * It reuses the authoring check's graph-independent analysis but deliberately does not require a
+ * render, comparison, review log or VLM judgement.  The returned geometry remains evidence for the
+ * caller; only deterministic failures (unresolved vocabulary, uncovered Script words and timed
+ * pictures that empty their windows) decide `passed` here.
+ */
+export async function mechanicalAuthoringCheck(
+  input: MechanicalAuthoringCheckInput,
+  roots: { readonly packageRoot: string },
+): Promise<Record<string, unknown>> {
+  const result = await authoringCheck({ run: input.run, mode: "description" }, roots);
+  const playback = Array.isArray(result.playback) ? result.playback : [];
+  const uncovered = Array.isArray(result.uncovered) ? result.uncovered : [];
+  const unresolved = result.unresolved_packages;
+  const summary = Array.isArray(result.summary) ? result.summary.map(String) : [];
+  const unreadable = summary.some((line) => line.startsWith("no aliased package import could be read")
+    || line.startsWith("no package the Source imports publishes a Surface that draws"));
+  const passed = playback.length === 0 && uncovered.length === 0 && unresolved === undefined && !unreadable;
+  return {
+    run: result.run,
+    passed,
+    summary,
+    playback,
+    uncovered,
+    out_of_bounds: result.out_of_bounds ?? [],
+    layout_geometry: result.layout_geometry,
+    ...(unresolved === undefined ? {} : { unresolved_packages: unresolved }),
+    note: "Mechanical variant gate only; no render, VLM comparison or visual review was performed.",
   };
 }

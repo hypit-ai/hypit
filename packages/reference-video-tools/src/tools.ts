@@ -26,7 +26,7 @@ import { loadStudioCompanionRegistry } from "@hypit/studio/src/companion-profile
 import { openStudioArchive } from "@hypit/studio/src/archive.js";
 import { loadStudioDomain } from "@hypit/studio/src/domain.js";
 import { loadStudioRun } from "@hypit/studio/src/run.js";
-import { authoringCheck, previewCheck, reviewLogPath, scriptCueCheck } from "./checks.js";
+import { authoringCheck, mechanicalAuthoringCheck, previewCheck, reviewLogPath, scriptCueCheck } from "./checks.js";
 import type { AuthoringCheckInput, PreviewCheckInput, ReconstructionCheckInput, ScriptCueCheckInput } from "./checks.js";
 import {
   checkpointRouteState,
@@ -46,6 +46,31 @@ import {
   startRevisionState,
 } from "./revision-state.js";
 import type { RevisionState, RevisionStep } from "./revision-state.js";
+import {
+  checkpointVariantExpansion,
+  discoverVariantExpansions,
+  readVariantExpansionState,
+  reconcileVariantExpansion,
+  startVariantExpansion,
+  variantExpansionStatePath,
+  VARIANT_EXPANSION_STEPS,
+} from "./variant-state.js";
+import type {
+  VariantExpansionCheckpointInput,
+  VariantExpansionPackage,
+  VariantExpansionStep,
+  VariantExpansionVariant,
+  VariantWorkloadDisclosure,
+} from "./variant-state.js";
+import {
+  findGeneratedLeakage,
+  initializeVariantProjects,
+  inspectSourceVocabularyUsage,
+  inspectVariantDiff,
+  snapshotProject,
+  writeVariantJson,
+} from "./variant-project.js";
+import type { ApprovedVariantPackage, VariantProjectManifest } from "./variant-project.js";
 import {
   assert,
   completelyStill,
@@ -206,6 +231,15 @@ export type RevisionStateCommandInput =
   | ({ readonly action: "read" | "reconcile"; readonly project_root: string })
   | ({ readonly action: "checkpoint"; readonly project_root: string; readonly step: number | RevisionStep; readonly status?: "in_progress" | "complete" | "blocked"; readonly run?: string; readonly parent_route?: "reconstruction" | "description"; readonly parent_state_digest?: string; readonly request?: string; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly decision?: string; readonly command?: string; readonly error?: string; readonly impact?: readonly string[]; readonly affected_source?: readonly string[] });
 
+export type VariantStateCommandInput =
+  | ({ readonly action: "discover"; readonly project_root: string })
+  | ({ readonly action: "start"; readonly project_root: string; readonly output_root: string; readonly run?: string; readonly request?: string; readonly count?: number; readonly delivery_mode?: "source" | "build"; readonly parent_route?: "reconstruction" | "description"; readonly parent_state_digest?: string; readonly revision_state_digest?: string })
+  | ({ readonly action: "read" | "reconcile"; readonly project_root: string; readonly output_root?: string; readonly batch_id?: string })
+  | ({ readonly action: "checkpoint"; readonly project_root: string; readonly output_root?: string; readonly batch_id?: string; readonly step: number | VariantExpansionStep; readonly status?: "in_progress" | "complete" | "blocked"; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly workload_disclosure?: VariantWorkloadDisclosure; readonly packages?: readonly VariantExpansionPackage[]; readonly variants?: readonly VariantExpansionVariant[]; readonly decision?: string; readonly conflict?: string; readonly resolve_conflict?: string; readonly command?: string; readonly error?: string });
+
+export type VariantInitInput = { readonly project_root: string; readonly output_root: string; readonly slate: string };
+export type VariantCheckInput = { readonly run: string; readonly runtime?: string };
+
 export type { RenderElementInput, RenderPreviewsInput } from "./authoring.js";
 export type { PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
 
@@ -235,6 +269,9 @@ export type ReferenceVideoTools = {
   authoring_check(input: Omit<AuthoringCheckInput, "mode" | "reference_id">): Promise<Record<string, unknown>>;
   route_state(input: RouteStateCommandInput): Promise<Record<string, unknown>>;
   revision_state(input: RevisionStateCommandInput): Promise<Record<string, unknown>>;
+  variant_state(input: VariantStateCommandInput): Promise<Record<string, unknown>>;
+  variant_init(input: VariantInitInput): Promise<Record<string, unknown>>;
+  variant_check(input: VariantCheckInput): Promise<Record<string, unknown>>;
 };
 
 type ToolOptions = {
@@ -256,9 +293,19 @@ function revisionStateResult(state: RevisionState | undefined): Record<string, u
   return state === undefined ? { state: null } : { state, path: revisionStatePath(state.project_root) };
 }
 
-function routeStepFor(route: RouteKind, name: string): number {
-  const index = ROUTE_STATE_STEPS[route].indexOf(name);
-  if (index < 0) throw new Error(`route ${route} has no ${name} stage`);
+function variantStateResult(state: Awaited<ReturnType<typeof readVariantExpansionState>>): Record<string, unknown> {
+  return state === undefined ? { state: null } : { state, path: variantExpansionStatePath(state.output_root) };
+}
+
+function routeStepFor(route: RouteKind, name: string): number | undefined {
+  const aliases: Readonly<Record<string, string>> = route === "variant"
+    ? { "vocabulary-checked": "vocabulary-verified", "source-authored": "source-updated" }
+    : route === "variant-package"
+      ? { "vocabulary-checked": "vocabulary-inspected", "package-ready": "package-validated", "source-authored": "implemented" }
+      : {};
+  const stage = aliases[name] ?? name;
+  const index = ROUTE_STATE_STEPS[route].indexOf(stage);
+  if (index < 0) return undefined;
   return index + 1;
 }
 
@@ -317,14 +364,53 @@ async function runRevisionStateCommand(input: RevisionStateCommandInput): Promis
   }));
 }
 
+async function runVariantStateCommand(input: VariantStateCommandInput): Promise<Record<string, unknown>> {
+  if (input.action === "discover") {
+    const batches = await discoverVariantExpansions(input.project_root);
+    return { project_root: resolve(input.project_root), batches, active: batches.filter((batch) => batch.status !== "complete") };
+  }
+  if (input.action === "start") {
+    return variantStateResult(await startVariantExpansion({
+      projectRoot: input.project_root, outputRoot: input.output_root,
+      ...(input.run === undefined ? {} : { run: input.run }),
+      ...(input.request === undefined ? {} : { request: input.request }),
+      ...(input.count === undefined ? {} : { count: input.count }),
+      ...(input.delivery_mode === undefined ? {} : { deliveryMode: input.delivery_mode }),
+      ...(input.parent_route === undefined ? {} : { parentRoute: input.parent_route }),
+      ...(input.parent_state_digest === undefined ? {} : { parentStateDigest: input.parent_state_digest }),
+      ...(input.revision_state_digest === undefined ? {} : { revisionStateDigest: input.revision_state_digest }),
+    }));
+  }
+  if (input.action === "read") return variantStateResult(await readVariantExpansionState(input.project_root, input.output_root, input.batch_id));
+  if (input.action === "reconcile") return variantStateResult(await reconcileVariantExpansion(input.project_root, input.output_root, input.batch_id));
+  if (input.action !== "checkpoint") throw new Error(`unsupported variant state action ${(input as { action: string }).action}`);
+  const checkpoint: VariantExpansionCheckpointInput = {
+    projectRoot: input.project_root, step: input.step,
+    ...(input.output_root === undefined ? {} : { outputRoot: input.output_root }),
+    ...(input.batch_id === undefined ? {} : { batchId: input.batch_id }),
+    ...(input.status === undefined ? {} : { status: input.status }),
+    ...(input.next_action === undefined ? {} : { nextAction: input.next_action }),
+    ...(input.artifacts === undefined ? {} : { artifacts: input.artifacts }),
+    ...(input.workload_disclosure === undefined ? {} : { workloadDisclosure: input.workload_disclosure }),
+    ...(input.packages === undefined ? {} : { packages: input.packages }),
+    ...(input.variants === undefined ? {} : { variants: input.variants }),
+    ...(input.decision === undefined ? {} : { decision: input.decision }),
+    ...(input.conflict === undefined ? {} : { conflict: input.conflict }),
+    ...(input.resolve_conflict === undefined ? {} : { resolveConflict: input.resolve_conflict }),
+    ...(input.command === undefined ? {} : { command: input.command }),
+    ...(input.error === undefined ? {} : { error: input.error }),
+  };
+  return variantStateResult(await checkpointVariantExpansion(checkpoint));
+}
+
 async function autoRouteCheckpoint(
   runPath: string | undefined,
-  step: number,
+  step: number | undefined,
   artifacts: Readonly<Record<string, string>> = {},
   nextAction?: string,
   command?: string,
 ): Promise<void> {
-  if (runPath === undefined) return;
+  if (runPath === undefined || step === undefined) return;
   const projectRoot = dirname(resolve(runPath));
   const state = await readRouteState(projectRoot);
   if (state === undefined || state.status === "complete") return;
@@ -1782,7 +1868,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const runPath = resolve(invokedFrom(), input.run);
         const evidence = await persistRouteEvidence(runPath, "vocabulary.json", result);
         const route = await readRouteState(dirname(runPath));
-        const step = route?.route === "description" ? 3 : 4;
+        const step = routeStepFor(route?.route ?? "reconstruction", "vocabulary-checked");
         await autoRouteCheckpoint(runPath, step, { vocabulary: evidence }, "validate_local_author_packages --run <build.svrun>");
       }
       return result;
@@ -1794,8 +1880,10 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const evidence = await persistRouteEvidence(runPath, "package-ready.json", result);
       if (result.passed === true) {
         const route = await readRouteState(dirname(runPath));
-        const step = route?.route === "description" ? 4 : 5;
-        await autoRouteCheckpoint(runPath, step, { package_ready: evidence }, "validate_script_cues --run <build.svrun>");
+        const step = routeStepFor(route?.route ?? "reconstruction", "package-ready");
+        const next = route?.route === "variant-package" ? "run preview_check for the staging project"
+          : "validate_script_cues --run <build.svrun>";
+        await autoRouteCheckpoint(runPath, step, { package_ready: evidence }, next);
       } else await autoRouteError(runPath, "validate_local_author_packages", (result.packages as unknown[] ?? []));
       return result;
     },
@@ -1806,7 +1894,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const evidence = await persistRouteEvidence(runPath, "script-cues.json", result);
       if (result.passed === true) {
         const route = await readRouteState(dirname(runPath));
-        const step = route?.route === "description" ? 5 : 6;
+        const step = routeStepFor(route?.route ?? "reconstruction", "script-checked");
         await autoRouteCheckpoint(runPath, step, { script_cues: evidence }, "write main.svml, recipes.svs and build.svrun");
       } else await autoRouteError(runPath, "validate_script_cues", result.violations ?? result.errors ?? "cue validation failed");
       return result;
@@ -2412,9 +2500,12 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           const source = await authorSource(runPath).catch(() => undefined);
           const route = await readRouteState(dirname(runPath));
           const sourceStep = routeStepFor(route?.route ?? "reconstruction", "source-authored");
-          await autoRouteCheckpoint(runPath, sourceStep, source === undefined ? {} : { author_source: source.path }, "run reconstruction_check or authoring_check");
+          const next = route?.route === "variant" ? "run variant_check --run <build.svrun>"
+            : route?.route === "variant-package" ? "freeze the package digest and checkpoint package-ready"
+              : "run reconstruction_check or authoring_check";
+          await autoRouteCheckpoint(runPath, sourceStep, source === undefined ? {} : { author_source: source.path }, next);
           const routeAfterSource = await readRouteState(dirname(runPath));
-          await autoRouteCheckpoint(runPath, routeStepFor(routeAfterSource?.route ?? "reconstruction", "graph-checked"), { preview_check: evidence }, "run reconstruction_check or authoring_check");
+          await autoRouteCheckpoint(runPath, routeStepFor(routeAfterSource?.route ?? "reconstruction", "graph-checked"), { preview_check: evidence }, next);
         } else await autoRouteError(runPath, "preview_check", result.refused ?? result.problems ?? "preview check failed");
         return result;
       } catch (error) {
@@ -2483,6 +2574,226 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
 
     async revision_state(input): Promise<Record<string, unknown>> {
       return await runRevisionStateCommand(input);
+    },
+
+    async variant_state(input): Promise<Record<string, unknown>> {
+      return await runVariantStateCommand(input);
+    },
+
+    async variant_init(input): Promise<Record<string, unknown>> {
+      const batch = await reconcileVariantExpansion(input.project_root, input.output_root);
+      if (batch === undefined) throw new Error("no variant expansion state; run variant_state --action start first");
+      if (batch.conflicts.length > 0) throw new Error(`variant_init is blocked by unresolved conflicts: ${batch.conflicts.join("; ")}`);
+      const required = ["workload-disclosed", "package-gaps-resolved", "slate-frozen"]
+        .map((name) => VARIANT_EXPANSION_STEPS.indexOf(name as VariantExpansionStep) + 1);
+      const missing = required.filter((step) => !batch.completed_steps.includes(step));
+      if (missing.length > 0) throw new Error(`variant_init is blocked until ${missing.map((step) => VARIANT_EXPANSION_STEPS[step - 1]).join(", ")}`);
+      const initialized = await initializeVariantProjects({
+        projectRoot: input.project_root, outputRoot: input.output_root, slatePath: input.slate,
+        expectedBaseDigest: batch.baseline_digest,
+        ...(batch.count === undefined ? {} : { expectedCount: batch.count }),
+        approvedPackages: batch.packages.flatMap((pack): ApprovedVariantPackage[] => pack.status === "ready" && pack.digest !== undefined
+          ? [{ id: pack.id, package_root: pack.package_root ?? pack.staging_root, digest: pack.digest }] : []),
+      });
+      const readPlan = async (key: "format_plan" | "component_plan"): Promise<unknown> => {
+        const path = batch.artifacts[key];
+        if (path === undefined) throw new Error(`batch state has no ${key} artifact`);
+        try { return JSON.parse(await readFile(path, "utf8")); }
+        catch (error) { throw new Error(`cannot read ${key} at ${path}: ${error instanceof Error ? error.message : String(error)}`); }
+      };
+      const [formatPlan, componentPlan] = await Promise.all([readPlan("format_plan"), readPlan("component_plan")]);
+      const selectedPlan = (plan: unknown, id: string): unknown => {
+        if (plan !== null && typeof plan === "object" && Array.isArray((plan as { variants?: unknown }).variants)) {
+          const entry = ((plan as { variants: unknown[] }).variants).find((candidate) => candidate !== null && typeof candidate === "object" && (candidate as { id?: unknown }).id === id);
+          if (entry !== undefined) return entry;
+        }
+        return plan;
+      };
+      const variants: VariantExpansionVariant[] = [];
+      for (const item of initialized.variants) {
+        const formatPlanPath = join(item.project_root, ".hypit", "format-plan.json");
+        const componentPlanPath = join(item.project_root, ".hypit", "component-plan.json");
+        await writeVariantJson(formatPlanPath, { variant_id: item.id, source: batch.artifacts.format_plan, plan: selectedPlan(formatPlan, item.id) });
+        await writeVariantJson(componentPlanPath, { variant_id: item.id, source: batch.artifacts.component_plan, plan: selectedPlan(componentPlan, item.id) });
+        await startRouteState({ projectRoot: item.project_root, route: "variant", run: item.run });
+        await checkpointRouteState({ projectRoot: item.project_root, route: "variant", step: 1, status: "complete", artifacts: { baseline_manifest: item.manifest } });
+        await checkpointRouteState({ projectRoot: item.project_root, route: "variant", step: 2, status: "complete", artifacts: { variant_brief: item.brief } });
+        await checkpointRouteState({ projectRoot: item.project_root, route: "variant", step: 3, status: "complete", artifacts: { allowed_changes: item.allowed_changes } });
+        if (item.vocabulary_mode === "inherited") {
+          await checkpointRouteState({ projectRoot: item.project_root, route: "variant", step: 5, status: "complete", artifacts: { vocabulary: join(item.project_root, ".hypit", "vocabulary.json") } });
+        }
+        variants.push({ ...item, route_state: routeStatePath(item.project_root), format_plan: formatPlanPath, component_plan: componentPlanPath });
+      }
+      const copyManifest = join(resolve(input.output_root), ".hypit", "variant-copy-manifest.json");
+      await writeVariantJson(copyManifest, {
+        version: 1, project_root: resolve(input.project_root), output_root: resolve(input.output_root),
+        base_digest: initialized.base_digest, slate: resolve(input.slate), variants, created_at: new Date().toISOString(),
+      });
+      const state = await checkpointVariantExpansion({
+        projectRoot: input.project_root, outputRoot: input.output_root, step: "projects-copied", status: "complete",
+        artifacts: { copy_manifest: copyManifest, slate: resolve(input.slate) }, variants,
+        command: `variant_init --project-root ${resolve(input.project_root)} --output-root ${resolve(input.output_root)} --slate ${resolve(input.slate)}`,
+        nextAction: "dispatch only the variant routes whose package prerequisites are ready",
+      });
+      return { passed: true, state, copy_manifest: copyManifest, variants };
+    },
+
+    async variant_check(input): Promise<Record<string, unknown>> {
+      const runPath = resolve(invokedFrom(), input.run);
+      const projectRoot = dirname(runPath);
+      const route = await readRouteState(projectRoot);
+      if (route?.route !== "variant") throw new Error(`${projectRoot} has no active variant route`);
+      const briefPath = join(projectRoot, ".hypit", "variant-brief.json");
+      const brief = JSON.parse(await readFile(briefPath, "utf8")) as {
+        id?: string;
+        batch_root?: string;
+        base_project_root?: string;
+      };
+      const manifestPath = join(projectRoot, ".hypit", "variant-baseline-manifest.json");
+      let manifest: VariantProjectManifest | undefined;
+      try { manifest = JSON.parse(await readFile(manifestPath, "utf8")) as VariantProjectManifest; }
+      catch { manifest = undefined; }
+      const batch = brief.batch_root === undefined || brief.base_project_root === undefined
+        ? undefined : await readVariantExpansionState(brief.base_project_root, brief.batch_root);
+      const expectedVariant = batch?.variants.find((variant) => resolve(variant.project_root) === projectRoot && (brief.id === undefined || variant.id === brief.id));
+      const stateBindingPassed = manifest !== undefined && expectedVariant !== undefined
+        && JSON.stringify(manifest.allowed_changes) === JSON.stringify(expectedVariant.allowed_change_paths)
+        && manifest.vocabulary_mode === expectedVariant.vocabulary_mode
+        && JSON.stringify(manifest.vocabulary_packages) === JSON.stringify(expectedVariant.vocabulary_packages)
+        && manifest.vocabulary_digest === expectedVariant.vocabulary_digest
+        && JSON.stringify(manifest.package_injections) === JSON.stringify(expectedVariant.package_injections);
+      const vocabularyPath = join(projectRoot, ".hypit", "vocabulary.json");
+      let vocabulary: Record<string, unknown> | undefined;
+      try { vocabulary = JSON.parse(await readFile(vocabularyPath, "utf8")) as Record<string, unknown>; }
+      catch { vocabulary = undefined; }
+      const requiredPackages = manifest?.vocabulary_packages ?? [];
+      const vocabularyMode = manifest?.vocabulary_mode ?? "inspect";
+      const evidencePackages = Array.isArray(vocabulary?.packages) ? vocabulary.packages.filter((item): item is string => typeof item === "string") : [];
+      const evidenceSurfaces = Array.isArray(vocabulary?.surfaces)
+        ? vocabulary.surfaces.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object") : [];
+      const evidenceShapePassed = vocabulary !== undefined && Array.isArray(vocabulary.packages) && Array.isArray(vocabulary.surfaces);
+      const vocabularyBytes = await readFile(vocabularyPath).catch(() => undefined);
+      const vocabularyDigest = vocabularyBytes === undefined ? undefined : `sha256:${createHash("sha256").update(vocabularyBytes).digest("hex")}`;
+      const sourceUsage = await inspectSourceVocabularyUsage(runPath).catch(() => ({ imports: [] as readonly string[], tags: [] as readonly string[] }));
+      const baselineImports = manifest?.source_imports ?? [];
+      const addedImports = sourceUsage.imports.filter((name) => !baselineImports.includes(name));
+      const requiredImportedAndUsed = requiredPackages.every((name) => {
+        const imported = sourceUsage.imports.includes(name);
+        const tags = evidenceSurfaces.filter((surface) => surface.package_name === name)
+          .flatMap((surface) => typeof surface.tag === "string" ? [surface.tag] : []);
+        return imported && tags.length > 0 && tags.some((tag) => sourceUsage.tags.includes(tag));
+      });
+      const inheritedContractPassed = vocabularyMode === "inherited"
+        && manifest?.vocabulary_digest !== undefined && vocabularyDigest === manifest.vocabulary_digest
+        && JSON.stringify(sourceUsage.imports) === JSON.stringify(baselineImports)
+        && JSON.stringify(sourceUsage.tags) === JSON.stringify(manifest.source_tags);
+      const inspectedContractPassed = vocabularyMode === "inspect"
+        && requiredPackages.length > 0
+        && requiredPackages.every((name) => evidencePackages.includes(name))
+        && addedImports.every((name) => requiredPackages.includes(name))
+        && requiredImportedAndUsed;
+      const packageBindings = await Promise.all((manifest?.package_injections ?? []).map(async (injection) => ({
+        ...injection,
+        current_digest: await snapshotProject(join(projectRoot, injection.destination), { preserveTopLevelOutputs: true }).then((snapshot) => snapshot.digest, () => undefined),
+      })));
+      const packageBindingsPassed = packageBindings.every((binding) => binding.current_digest === binding.digest);
+      const vocabularyPassed = stateBindingPassed && evidenceShapePassed && packageBindingsPassed
+        && (inheritedContractPassed || inspectedContractPassed);
+      const packageGate = await validateLocalAuthorPackages({ run: runPath });
+      const cueGate = await scriptCueCheck({ run: runPath });
+      const graphGate = packageGate.passed === true && cueGate.passed === true
+        ? await previewCheck({ run: runPath, ...(input.runtime === undefined ? {} : { runtime: input.runtime }) }, { packageRoot })
+          .catch((error) => ({ run: runPath, sound: false, refused: error instanceof Error ? error.message : String(error) }))
+        : { run: runPath, sound: false, refused: "package or Script Cue gate failed" };
+      const mechanics = await mechanicalAuthoringCheck({ run: runPath }, { packageRoot })
+        .catch((error) => ({ run: runPath, passed: false, error: error instanceof Error ? error.message : String(error) }));
+      const minimalDiff = await inspectVariantDiff(projectRoot)
+        .catch((error) => ({ passed: false, error: error instanceof Error ? error.message : String(error) }));
+      const generatedLeakage = await findGeneratedLeakage(projectRoot, runPath)
+        .catch((error) => ({ passed: false, error: error instanceof Error ? error.message : String(error) }));
+      const result: Record<string, unknown> = {
+        run: runPath,
+        passed: vocabularyPassed && packageGate.passed === true && cueGate.passed === true
+          && graphGate.sound === true && mechanics.passed === true && minimalDiff.passed === true && generatedLeakage.passed === true,
+        vocabulary: {
+          passed: vocabularyPassed, mode: vocabularyMode, required_packages: requiredPackages, evidence: vocabularyPath,
+          evidence_digest: vocabularyDigest, baseline_digest: manifest?.vocabulary_digest,
+          state_binding: stateBindingPassed, evidence_shape: evidenceShapePassed,
+          baseline_imports: baselineImports, current_imports: sourceUsage.imports, added_imports: addedImports,
+          baseline_tags: manifest?.source_tags ?? [], current_tags: sourceUsage.tags,
+          required_packages_imported_and_used: requiredImportedAndUsed,
+          package_bindings: packageBindings,
+        },
+        package_gate: packageGate, script_cue_gate: cueGate, graph: graphGate, mechanics, minimal_diff: minimalDiff,
+        generated_result_leakage: generatedLeakage,
+        visual_review: "not performed",
+      };
+      const packageEvidence = await persistRouteEvidence(runPath, "package-ready.json", packageGate);
+      const cueEvidence = await persistRouteEvidence(runPath, "script-cues.json", cueGate);
+      const previewEvidence = await persistRouteEvidence(runPath, "preview-check.json", graphGate);
+      const finalEvidence = await persistRouteEvidence(runPath, "variant-check.json", result);
+      if (vocabularyPassed) await autoRouteCheckpoint(runPath, routeStepFor("variant", "vocabulary-checked"), { vocabulary: vocabularyPath });
+      if (packageGate.passed === true) await autoRouteCheckpoint(runPath, routeStepFor("variant", "package-ready"), { package_ready: packageEvidence });
+      if (cueGate.passed === true) await autoRouteCheckpoint(runPath, routeStepFor("variant", "script-checked"), { script_cues: cueEvidence });
+      if (graphGate.sound === true) {
+        const source = await authorSource(runPath).catch(() => undefined);
+        await autoRouteCheckpoint(runPath, routeStepFor("variant", "source-authored"), source === undefined ? {} : { author_source: source.path });
+        await autoRouteCheckpoint(runPath, routeStepFor("variant", "graph-checked"), { preview_check: previewEvidence });
+      }
+      if (result.passed === true) {
+        await autoRouteCheckpoint(runPath, routeStepFor("variant", "final-checked"), { variant_check: finalEvidence });
+        const readyToComplete = await readRouteState(projectRoot);
+        const completeStep = ROUTE_STATE_STEPS.variant.indexOf("variant-complete") + 1;
+        const allPrior = Array.from({ length: completeStep - 1 }, (_, index) => index + 1)
+          .every((step) => readyToComplete?.completed_steps.includes(step) === true);
+        if (allPrior) {
+          await checkpointRouteState({ projectRoot, route: "variant", step: "variant-complete", status: "complete", artifacts: { variant_check: finalEvidence } });
+        }
+      } else {
+        const outsideScope = Array.isArray((minimalDiff as { outside_allowed_changes?: unknown }).outside_allowed_changes)
+          && ((minimalDiff as { outside_allowed_changes: unknown[] }).outside_allowed_changes.length > 0);
+        if (outsideScope) {
+          await checkpointRouteState({ projectRoot, route: "variant", step: route.current_step, status: "blocked", run: runPath,
+            command: "variant_check", error: "scope-expansion-required" });
+        } else await autoRouteError(runPath, "variant_check", result);
+      }
+
+      result.route_state = await readRouteState(projectRoot);
+
+      if (brief.batch_root !== undefined && brief.base_project_root !== undefined) {
+        let batch = await reconcileVariantExpansion(brief.base_project_root, brief.batch_root);
+        if (batch !== undefined) {
+          const currentRoute = await readRouteState(projectRoot);
+          const outsideScope = Array.isArray((minimalDiff as { outside_allowed_changes?: unknown }).outside_allowed_changes)
+            && ((minimalDiff as { outside_allowed_changes: unknown[] }).outside_allowed_changes.length > 0);
+          const variants = batch.variants.map((variant) => variant.project_root === projectRoot
+            ? { ...variant, status: currentRoute?.status === "complete" ? "complete" as const
+              : outsideScope ? "scope-expansion-required" as const : result.passed === true ? "dispatched" as const : "failed" as const,
+              ...(result.passed === true ? {} : { error: outsideScope ? "scope-expansion-required" : "variant_check failed" }) }
+            : variant);
+          batch = await checkpointVariantExpansion({
+            projectRoot: brief.base_project_root, outputRoot: brief.batch_root,
+            step: batch.current_step <= VARIANT_EXPANSION_STEPS.length ? batch.current_step : VARIANT_EXPANSION_STEPS.length,
+            status: batch.status === "blocked" ? "blocked" : "in_progress", variants,
+          });
+          const reports = await Promise.all(variants.map(async (variant) => {
+            const path = join(variant.project_root, ".hypit", "variant-check.json");
+            let report: { passed?: unknown } | undefined;
+            try { report = JSON.parse(await readFile(path, "utf8")) as { passed?: unknown }; } catch { report = undefined; }
+            return { id: variant.id, project_root: variant.project_root, route_complete: (await readRouteState(variant.project_root))?.status === "complete", passed: report?.passed === true, report: path };
+          }));
+          const aggregate = { passed: reports.length > 0 && reports.every((item) => item.route_complete && item.passed), variants: reports, checked_at: new Date().toISOString() };
+          const aggregatePath = join(resolve(brief.batch_root), ".hypit", "aggregate-check.json");
+          await writeVariantJson(aggregatePath, aggregate);
+          if (reports.every((item) => item.route_complete)) {
+            await checkpointVariantExpansion({ projectRoot: brief.base_project_root, outputRoot: brief.batch_root, step: "variants-complete", status: "complete", variants });
+          }
+          if (aggregate.passed) {
+            await checkpointVariantExpansion({ projectRoot: brief.base_project_root, outputRoot: brief.batch_root, step: "aggregate-checked", status: "complete", artifacts: { aggregate_check: aggregatePath }, variants });
+          }
+        }
+      }
+      return result;
     },
   };
   return tools;

@@ -2,7 +2,7 @@
 import { readFile } from "node:fs/promises";
 
 import { createReferenceVideoTools } from "./tools.js";
-import type { CompareReconstructionInput, ObserveReferenceInput, RecordObservationInput, RenderElementInput, ReviewElementInput, RouteStateCommandInput, RevisionStateCommandInput } from "./tools.js";
+import type { CompareReconstructionInput, ObserveReferenceInput, RecordObservationInput, RenderElementInput, ReviewElementInput, RouteStateCommandInput, RevisionStateCommandInput, VariantStateCommandInput } from "./tools.js";
 
 /**
  * A word range written on the command line as `from:to`, half-open.
@@ -28,7 +28,10 @@ function usage(): string {
     "  hypit-reference-video-tools list_svml_packages",
     "  hypit-reference-video-tools route_state --action start|read|checkpoint|reconcile --project-root <dir> [options]",
     "  hypit-reference-video-tools revision_state --action start|read|checkpoint|reconcile --project-root <dir> [options]",
-    "    start: --route reconstruction|description [--run <run>] [--reference-id <id>]",
+    "  hypit-reference-video-tools variant_state --action discover|start|read|checkpoint|reconcile --project-root <dir> [options]",
+    "  hypit-reference-video-tools variant_init --project-root <base> --output-root <batch> --slate <slate.json>",
+    "  hypit-reference-video-tools variant_check --run <variant>/build.svrun [--runtime <hypit.runtime.json>]",
+    "    route_state start: --route reconstruction|description|variant|variant-package [--run <run>] [--reference-id <id>]",
     "    checkpoint: --route <route> (--state <stage> | --step <n>) [--status in_progress|complete|blocked] [--next-action <text>] [--artifacts <json>]",
     "    read/reconcile: --project-root <dir>",
     "  hypit-reference-video-tools prepare_reference --video-path <path or link> [--observer gemini|agent] [--redo media|transcript|people|voices|systems|places|all]",
@@ -200,9 +203,9 @@ function usage(): string {
 function routeStateUsage(): string {
   return [
     "Usage:",
-    "  hypit-reference-video-tools route_state --action start --project-root <dir> --route reconstruction|description [--run <run>] [--reference-id <id>]",
+    "  hypit-reference-video-tools route_state --action start --project-root <dir> --route reconstruction|description|variant|variant-package [--run <run>] [--reference-id <id>]",
     "  hypit-reference-video-tools route_state --action read|reconcile --project-root <dir>",
-    "  hypit-reference-video-tools route_state --action checkpoint --project-root <dir> --route reconstruction|description (--state <stage> | --step <n>) [options]",
+    "  hypit-reference-video-tools route_state --action checkpoint --project-root <dir> --route reconstruction|description|variant|variant-package (--state <stage> | --step <n>) [options]",
     "",
     "Use exactly one of --state and --step. --state is the durable stage name; --step is retained for compatibility.",
     "",
@@ -312,7 +315,7 @@ async function main(): Promise<void> {
       result = await tools.route_state(supplied as RouteStateCommandInput);
     } else if (action === "start") {
       const route = one(flags, "route");
-      if (route !== "reconstruction" && route !== "description") throw new Error("--route must be reconstruction or description");
+      if (route !== "reconstruction" && route !== "description" && route !== "variant" && route !== "variant-package") throw new Error("--route must be reconstruction, description, variant or variant-package");
       result = await tools.route_state({ action, project_root: projectRoot, route,
         ...(one(flags, "run") === undefined ? {} : { run: one(flags, "run") }),
         ...(one(flags, "reference-id") === undefined ? {} : { reference_id: one(flags, "reference-id") }) } as RouteStateCommandInput);
@@ -320,7 +323,7 @@ async function main(): Promise<void> {
       result = await tools.route_state({ action, project_root: projectRoot });
     } else {
       const route = one(flags, "route");
-      if (route !== "reconstruction" && route !== "description") throw new Error("--route must be reconstruction or description");
+      if (route !== "reconstruction" && route !== "description" && route !== "variant" && route !== "variant-package") throw new Error("--route must be reconstruction, description, variant or variant-package");
       const stepFlag = one(flags, "step");
       const stateFlag = one(flags, "state");
       if ((stepFlag === undefined) === (stateFlag === undefined)) throw new Error("checkpoint requires exactly one of --state <stage> or --step <n>\n\n" + routeStateUsage());
@@ -392,6 +395,77 @@ async function main(): Promise<void> {
         ...(many(flags, "affected-source").length === 0 ? {} : { affected_source: many(flags, "affected-source") }),
       } as RevisionStateCommandInput);
     }
+  } else if (command === "variant_state") {
+    const action = typeof supplied?.action === "string" ? supplied.action : one(flags, "action");
+    if (action !== "discover" && action !== "start" && action !== "read" && action !== "checkpoint" && action !== "reconcile") {
+      throw new Error("--action must be discover, start, read, checkpoint or reconcile");
+    }
+    const projectRoot = typeof supplied?.project_root === "string" ? supplied.project_root : required(flags, "project-root");
+    if (supplied !== undefined) {
+      result = await tools.variant_state(supplied as VariantStateCommandInput);
+    } else if (action === "discover") {
+      result = await tools.variant_state({ action, project_root: projectRoot });
+    } else if (action === "start") {
+      const deliveryMode = one(flags, "delivery-mode");
+      if (deliveryMode !== undefined && deliveryMode !== "source" && deliveryMode !== "build") throw new Error("--delivery-mode must be source or build");
+      const countRaw = one(flags, "count");
+      const count = countRaw === undefined ? undefined : Number(countRaw);
+      if (count !== undefined && (!Number.isSafeInteger(count) || count < 1)) throw new Error("--count must be a positive integer");
+      const parentRoute = one(flags, "parent-route");
+      if (parentRoute !== undefined && parentRoute !== "reconstruction" && parentRoute !== "description") throw new Error("--parent-route must be reconstruction or description");
+      result = await tools.variant_state({
+        action, project_root: projectRoot, output_root: required(flags, "output-root"),
+        ...(one(flags, "run") === undefined ? {} : { run: one(flags, "run") }),
+        ...(one(flags, "request") === undefined ? {} : { request: one(flags, "request") }),
+        ...(count === undefined ? {} : { count }),
+        ...(deliveryMode === undefined ? {} : { delivery_mode: deliveryMode }),
+        ...(parentRoute === undefined ? {} : { parent_route: parentRoute }),
+        ...(one(flags, "parent-state-digest") === undefined ? {} : { parent_state_digest: one(flags, "parent-state-digest") }),
+        ...(one(flags, "revision-state-digest") === undefined ? {} : { revision_state_digest: one(flags, "revision-state-digest") }),
+      } as VariantStateCommandInput);
+    } else if (action === "read" || action === "reconcile") {
+      const outputRoot = one(flags, "output-root");
+      const batchId = one(flags, "batch-id");
+      result = await tools.variant_state({
+        action, project_root: projectRoot,
+        ...(outputRoot === undefined ? {} : { output_root: outputRoot }),
+        ...(batchId === undefined ? {} : { batch_id: batchId }),
+      });
+    } else {
+      const stepRaw = required(flags, "step");
+      const numericStep = Number(stepRaw);
+      const step: number | string = Number.isSafeInteger(numericStep) && numericStep >= 1 ? numericStep : stepRaw;
+      const status = one(flags, "status") ?? "complete";
+      if (status !== "in_progress" && status !== "complete" && status !== "blocked") throw new Error("--status must be in_progress, complete or blocked");
+      const parseObject = <T>(name: string): T | undefined => {
+        const raw = one(flags, name);
+        if (raw === undefined) return undefined;
+        try { return JSON.parse(raw) as T; } catch (error) { throw new Error(`--${name} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`); }
+      };
+      result = await tools.variant_state({
+        action, project_root: projectRoot, step, status,
+        ...(one(flags, "output-root") === undefined ? {} : { output_root: one(flags, "output-root") }),
+        ...(one(flags, "batch-id") === undefined ? {} : { batch_id: one(flags, "batch-id") }),
+        ...(one(flags, "next-action") === undefined ? {} : { next_action: one(flags, "next-action") }),
+        ...(parseObject<Record<string, string>>("artifacts") === undefined ? {} : { artifacts: parseObject<Record<string, string>>("artifacts") }),
+        ...(parseObject<VariantStateCommandInput & object>("workload-disclosure") === undefined ? {} : { workload_disclosure: parseObject("workload-disclosure") }),
+        ...(parseObject<readonly unknown[]>("packages") === undefined ? {} : { packages: parseObject("packages") }),
+        ...(parseObject<readonly unknown[]>("variants") === undefined ? {} : { variants: parseObject("variants") }),
+        ...(one(flags, "decision") === undefined ? {} : { decision: one(flags, "decision") }),
+        ...(one(flags, "conflict") === undefined ? {} : { conflict: one(flags, "conflict") }),
+        ...(one(flags, "resolve-conflict") === undefined ? {} : { resolve_conflict: one(flags, "resolve-conflict") }),
+        ...(one(flags, "command") === undefined ? {} : { command: one(flags, "command") }),
+        ...(one(flags, "error") === undefined ? {} : { error: one(flags, "error") }),
+      } as VariantStateCommandInput);
+    }
+  } else if (command === "variant_init") {
+    result = await tools.variant_init((supplied ?? {
+      project_root: required(flags, "project-root"), output_root: required(flags, "output-root"), slate: required(flags, "slate"),
+    }) as { project_root: string; output_root: string; slate: string });
+  } else if (command === "variant_check") {
+    result = await tools.variant_check((supplied ?? {
+      run: required(flags, "run"), ...(one(flags, "runtime") === undefined ? {} : { runtime: one(flags, "runtime") }),
+    }) as { run: string; runtime?: string });
   } else if (command === "prepare_reference") {
     const observer = one(flags, "observer");
     if (observer !== undefined && observer !== "gemini" && observer !== "agent") throw new Error("--observer must be gemini or agent");
