@@ -165,17 +165,10 @@ watermark/overlay; it is not authored video content and must not become a repair
 provenance is uncertain or it may be an authored design element, keep it as an uncertainty and ask
 for confirmation rather than silently discarding it.
 
-The `reconstruction_check` JSON includes `layout_geometry`, a mechanical report of Canvas/Frame bounds,
-centres, parent/Canvas vertical centre offsets, containment overflow, and bound element ids. The agent
-should use those facts alongside the comparison text. They are deterministic Source facts, not a decision:
-horizontal left/right placement is not judged mechanically, and rendered
-glyph bounds and whether an overhang is intentional still require the observer. Its
-`layout_geometry.overlaps` list is an advisory set of independent same-Canvas component placements that
-are temporally simultaneous and partially intersecting. Nested placements owned by one component are
-excluded; their internal centring remains a component-local parent/Frame comparison. Full containment
-is intentionally omitted; confirm each candidate against the rendered frame and intent, and do not treat
-it as an automatic gate failure or a command to remove an intentional overlap. The list cannot detect overlap between package-internal glyphs or other
-bounds not exposed by Source placement.
+The settled `../layout-checks.md` report supplies realized stable-state measurements alongside the
+comparison. They are deterministic evidence, not a decision. Confirm each candidate against the
+reference and rendered clip; do not treat it as an automatic failure or a command to remove intentional
+overlap, crop, bleed, optical offset or enter/exit motion.
 
 ## Measuring, on this route
 

@@ -112,7 +112,7 @@ function nearestTree(start: string): string | undefined {
   }
 }
 
-function repositoryRoot(): string {
+export function repositoryRoot(): string {
   // An explicit override is taken as given. Re-deriving it would refuse a layout the caller can see
   // and this cannot, which leaves no way out of a wrong guess.
   const override = process.env.HYPIT_REPOSITORY?.trim();
@@ -537,6 +537,160 @@ function timingReport(reference: string | undefined, segments: readonly StandInT
   };
 }
 
+export type RealizedAuthoringPreview = {
+  readonly runPath: string;
+  readonly runRoot: string;
+  readonly projectRoot: string;
+  readonly packageRoot: string;
+  readonly svmlPath: string;
+  readonly svml: string;
+  readonly built: Preview;
+  readonly previewMock: Awaited<ReturnType<typeof realizePreviewMock>>;
+  readonly programFrames: number;
+  readonly frameOfToken: readonly { readonly frame: number; readonly end: number }[];
+  readonly selections: ReadonlyMap<string, AuthoringWindow>;
+  readonly segmentTokenCounts: ReadonlyMap<string, number>;
+};
+
+/**
+ * Realize the Author + Run graph with deterministic preview mocks, without drawing or encoding media.
+ * Layout inspection and render_element share this path so they inspect the same Producer output.
+ */
+export async function realizeAuthoringPreview(input: {
+  readonly run: string;
+  readonly package_root?: string;
+}): Promise<RealizedAuthoringPreview> {
+  const cwd = invokedFrom();
+  const runPath = resolve(cwd, input.run);
+  const runRoot = dirname(runPath);
+  const projectRoot = input.package_root === undefined
+    ? (nearestPackageRoot(runRoot) ?? repositoryRoot())
+    : resolve(cwd, input.package_root);
+  const packageRoot = projectRoot;
+  const runSource = await readFile(runPath, "utf8").catch(() => undefined);
+  assert(runSource !== undefined, `cannot read ${runPath}`);
+  const author = /<author\s+source="([^"]+)"/u.exec(runSource)?.[1];
+  assert(author !== undefined, `${input.run} declares no <author source="…"/>`);
+  const svmlPath = resolve(runRoot, author);
+  const svml = await readFile(svmlPath, "utf8").catch(() => undefined);
+  assert(svml !== undefined, `cannot read ${svmlPath}`);
+
+  const distributionPackageRoot = videoCliDistribution.packageRoot;
+  if (distributionPackageRoot === undefined) throw new Error("active Hypit Distribution has no package root");
+  const registry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot, distributionPackageRoot });
+  const domain = await loadStudioDomain({ run: runPath, workspaceRoot: projectRoot, packageRoot });
+  const archive = await openStudioArchive(undefined, packageRoot, projectRoot, distributionPackageRoot);
+  try {
+    const original = await loadStudioRun({ run: runPath, domain, registry, ...(archive === undefined ? {} : { archive }) });
+    const graph: CompiledGraph = {
+      format: "hypit.graph@1",
+      outputs: original.source.compiled.graph.outputs,
+      candidates: [...original.source.compiled.graph.candidates, ...original.run.graph.candidates],
+      operations: [...original.source.compiled.graph.operations, ...original.run.graph.operations],
+    };
+    const aliases = new Map(original.source.exports.map((item) => [item.ref, item.name] as const));
+    for (const record of original.source.compiled.program.records) {
+      const local = original.source.compiled.provenance.elements.flatMap((element) => element.records)
+        .find((item) => item.id === record.id)?.local ?? record.id.split("::record::")[1];
+      if (local !== undefined) aliases.set(record.id, local);
+    }
+    const previewMock = await realizePreviewMock({
+      run: runPath, graph, records: original.source.compiled.program.records,
+      targets: original.targets, timing: "estimate", author, aliases,
+    });
+    const previewRegistry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot, distributionPackageRoot });
+    const previewDomain = await loadStudioDomain({ run: previewMock.previewRun, workspaceRoot: projectRoot, packageRoot });
+    const previewArchive = await openStudioArchive(undefined, packageRoot, projectRoot, distributionPackageRoot);
+    try {
+      const loadedPreview = await loadStudioRun({
+        run: previewMock.previewRun, domain: previewDomain, registry: previewRegistry,
+        ...(previewArchive === undefined ? {} : { archive: previewArchive }),
+      });
+      const previewRun = { ...loadedPreview, attachments: [...loadedPreview.attachments, ...previewMock.attachments] };
+      const inspection = inspectStudioRun(previewRegistry, previewRun.source, previewRun, new Set([
+        "@hypit/mock-media@1#render-mock-image",
+        "@hypit/mock-media@1#render-mock-video",
+        "@hypit/mock-media@1#render-mock-silence",
+        "@hypit/media-pipeline@1#inspect-media",
+        "@hypit/media-pipeline@1#normalize-media",
+      ]));
+      const deterministicEndpoints = new EndpointRegistry();
+      await createLocalMediaProvider({}).install(deterministicEndpoints);
+      const built = await preview({
+        source: previewRun.source,
+        run: previewRun,
+        domain: previewDomain,
+        outputRefs: [inspection.filmComposition, ...inspection.projections.map((item) => item.ref)],
+        compositionRef: inspection.filmComposition,
+        projections: inspection.projections,
+        ...(previewArchive === undefined ? {} : { archive: previewArchive }),
+        endpoints: deterministicEndpoints,
+      });
+      const programFrames = Math.max(1, ...built.anchors.values());
+      const frameOfToken = built.tokens.map((token) => ({
+        frame: built.anchors.get(token.startAnchorId) ?? 0,
+        end: built.anchors.get(token.endAnchorId) ?? 0,
+      }));
+      const parsed = parseScript(svmlPath, scriptBody(svml).text, scriptBody(svml).offset);
+      const cursor = (from: number, to: number): AuthoringWindow => ({
+        startFrame: frameOfToken[from]?.frame ?? 0,
+        endFrameExclusive: frameOfToken[to - 1]?.end ?? programFrames,
+      });
+      const selections = new Map<string, AuthoringWindow>();
+      const segmentTokenCounts = new Map<string, number>();
+      for (const segment of parsed.segments) {
+        selections.set(`segment:${segment.id}`, cursor(segment.tokenStart, segment.tokenEndExclusive));
+        segmentTokenCounts.set(segment.id, segment.tokenEndExclusive - segment.tokenStart);
+      }
+      for (const selection of parsed.selections) {
+        selections.set(selection.id, cursor(selection.open.boundary.tokenIndex, selection.close.boundary.tokenIndex));
+      }
+      return {
+        runPath, runRoot, projectRoot, packageRoot, svmlPath, svml, built, previewMock,
+        programFrames, frameOfToken, selections, segmentTokenCounts,
+      };
+    } finally {
+      await previewArchive?.close();
+    }
+  } catch (error) {
+    const issues = (error as { readonly issues?: unknown } | null)?.issues;
+    if (Array.isArray(issues)) {
+      throw new Error(["the Source does not project yet.", ...issues.slice(0, 12).map((issue) => `  ${String(issue)}`)].join("\n"));
+    }
+    throw error instanceof Error ? error : new Error(String(error));
+  } finally {
+    await archive?.close();
+  }
+}
+
+/** Materialize a realized composition and its served artifacts without opening a browser. */
+export async function stageAuthoringPreview(realized: Pick<RealizedAuthoringPreview, "built" | "previewMock">): Promise<{
+  readonly stage: string;
+  readonly document: ReturnType<typeof compileHyperframesDocument>;
+  readonly mediaTypes: ReadonlyMap<string, string>;
+}> {
+  const stage = join(realized.previewMock.root, "stage");
+  const document = compileHyperframesDocument(realized.built.composition, realized.built.space as ProgramSpace);
+  await mkdir(stage, { recursive: true });
+  const names = new Map<string, string>();
+  const mediaTypes = new Map<string, string>();
+  for (const [digest, file] of realized.built.served) {
+    const extension = file.mediaType === "text/css" ? ".css"
+      : file.mediaType === "application/javascript" || file.mediaType === "text/javascript" ? ".js"
+        : "";
+    const name = `${digest.replace(/[^a-z0-9]/giu, "")}${extension}`;
+    await writeFile(join(stage, name), file.bytes);
+    names.set(digest, name);
+    mediaTypes.set(name, file.mediaType);
+  }
+  await writeFile(join(stage, "index.html"), materializeHyperframesHtml(document, (artifact) => {
+    const name = names.get(artifact.digest);
+    assert(name !== undefined, `the projection references Artifact ${artifact.digest}, which was not served`);
+    return `./${name}`;
+  }), "utf8");
+  return { stage, document, mediaTypes };
+}
+
 /**
  * Render one element through the native preview realization path.
  *
@@ -553,15 +707,6 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const out = input.out;
   const run = input.run;
   const cwd = invokedFrom();
-  const runPath = resolve(cwd, run);
-  const runRoot = dirname(runPath);
-  const projectRoot = input.package_root === undefined
-    ? (nearestPackageRoot(runRoot) ?? repositoryRoot())
-    : resolve(cwd, input.package_root);
-  // Where installed packages are found, which is not where the Hypit tree is. A project carries its
-  // own packages, so the search starts at the project and walks up the way the CLI's does —
-  // resolving against the tree instead would miss every package the project installed for itself.
-  const packageRoot = projectRoot;
   const outPath = resolve(cwd, out);
   // The directory the caller named, made rather than required. `out` is resolved against the working
   // directory the way `run` is, so a round whose entries name `renders/<element>.mp4` writes them
@@ -570,86 +715,19 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   // caller never typed.
   await ensureDir(dirname(outPath));
 
-  const runSource = await readFile(runPath, "utf8").catch(() => undefined);
-  assert(runSource !== undefined, `cannot read ${runPath}`);
-  const author = /<author\s+source="([^"]+)"/u.exec(runSource)?.[1];
-  assert(author !== undefined, `${run} declares no <author source="…"/>`);
-  const svmlPath = resolve(runRoot, author);
-  let svml = await readFile(svmlPath, "utf8").catch(() => undefined);
-  assert(svml !== undefined, `cannot read ${svmlPath}`);
-
   // Preview is realized from the compiled Author + Run Graph. No reference transcript, placeholder
   // files, or hand-written SemanticTake values participate in this path.
   const segmentArgument = input.segment;
   const selectionArgument = input.selection;
   const tokensArgument = input.tokens === undefined ? undefined : tokenWindow(input.tokens, "tokens");
-  const distributionPackageRoot = videoCliDistribution.packageRoot;
-  if (distributionPackageRoot === undefined) throw new Error("active Hypit Distribution has no package root");
+  const realized = await realizeAuthoringPreview({
+    run,
+    ...(input.package_root === undefined ? {} : { package_root: input.package_root }),
+  });
+  const {
+    runPath, built, previewMock, programFrames, frameOfToken, selections, segmentTokenCounts,
+  } = realized;
   const renderKey = createHash("sha256").update(`${resolve(runPath)}\u0000${input.reference_id ?? ""}`).digest("hex").slice(0, 12);
-  const registry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot, distributionPackageRoot });
-  const domain = await loadStudioDomain({ run: runPath, workspaceRoot: projectRoot, packageRoot });
-  const archive = await openStudioArchive(undefined, packageRoot, projectRoot, distributionPackageRoot);
-  let built: Preview;
-  let previewMock: Awaited<ReturnType<typeof realizePreviewMock>>;
-  let programFrames = 0;
-  let frameOfToken: readonly { readonly frame: number; readonly end: number }[] = [];
-  let selections = new Map<string, AuthoringWindow>();
-  let segmentTokenCounts = new Map<string, number>();
-  try {
-    const original = await loadStudioRun({ run: runPath, domain, registry, ...(archive === undefined ? {} : { archive }) });
-    const graph: CompiledGraph = {
-      format: "hypit.graph@1",
-      outputs: original.source.compiled.graph.outputs,
-      candidates: [...original.source.compiled.graph.candidates, ...original.run.graph.candidates],
-      operations: [...original.source.compiled.graph.operations, ...original.run.graph.operations],
-    };
-    const aliases = new Map(original.source.exports.map((item) => [item.ref, item.name] as const));
-    for (const record of original.source.compiled.program.records) {
-      const local = original.source.compiled.provenance.elements.flatMap((element) => element.records)
-        .find((item) => item.id === record.id)?.local
-        ?? record.id.split("::record::")[1];
-      if (local !== undefined) aliases.set(record.id, local);
-    }
-    previewMock = await realizePreviewMock({ run: runPath, graph, records: original.source.compiled.program.records, targets: original.targets, timing: "estimate", author, aliases });
-    const previewRegistry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot, distributionPackageRoot });
-    const previewDomain = await loadStudioDomain({ run: previewMock.previewRun, workspaceRoot: projectRoot, packageRoot });
-    const previewArchive = await openStudioArchive(undefined, packageRoot, projectRoot, distributionPackageRoot);
-    const loadedPreview = await loadStudioRun({ run: previewMock.previewRun, domain: previewDomain, registry: previewRegistry, ...(previewArchive === undefined ? {} : { archive: previewArchive }) });
-    const previewRun = { ...loadedPreview, attachments: [...loadedPreview.attachments, ...previewMock.attachments] };
-    const inspection = inspectStudioRun(previewRegistry, previewRun.source, previewRun, new Set([
-      "@hypit/mock-media@1#render-mock-image",
-      "@hypit/mock-media@1#render-mock-video",
-      "@hypit/mock-media@1#render-mock-silence",
-      "@hypit/media-pipeline@1#inspect-media",
-      "@hypit/media-pipeline@1#normalize-media",
-    ]));
-    const deterministicEndpoints = new EndpointRegistry();
-    await createLocalMediaProvider({}).install(deterministicEndpoints);
-    built = await preview({
-      source: previewRun.source,
-      run: previewRun,
-      domain: previewDomain,
-      outputRefs: [inspection.filmComposition, ...inspection.projections.map((item) => item.ref)],
-      compositionRef: inspection.filmComposition,
-      projections: inspection.projections,
-      ...(previewArchive === undefined ? {} : { archive: previewArchive }),
-      endpoints: deterministicEndpoints,
-    });
-    programFrames = Math.max(1, ...built.anchors.values());
-    frameOfToken = built.tokens.map((token) => ({ frame: built.anchors.get(token.startAnchorId) ?? 0, end: built.anchors.get(token.endAnchorId) ?? 0 }));
-    const parsed = parseScript(svmlPath, scriptBody(svml).text, scriptBody(svml).offset);
-    const cursor = (from: number, to: number): AuthoringWindow => ({ startFrame: frameOfToken[from]?.frame ?? 0, endFrameExclusive: frameOfToken[to - 1]?.end ?? programFrames });
-    for (const segment of parsed.segments) {
-      const window = cursor(segment.tokenStart, segment.tokenEndExclusive);
-      selections.set(`segment:${segment.id}`, window);
-      segmentTokenCounts.set(segment.id, segment.tokenEndExclusive - segment.tokenStart);
-    }
-    for (const selection of parsed.selections) selections.set(selection.id, cursor(selection.open.boundary.tokenIndex, selection.close.boundary.tokenIndex));
-  } catch (error) {
-    const issues = (error as { readonly issues?: unknown } | null)?.issues;
-    if (Array.isArray(issues)) throw new Error(["the Source does not project yet.", ...issues.slice(0, 12).map((issue) => `  ${String(issue)}`)].join("\n"));
-    throw error instanceof Error ? error : new Error(String(error));
-  }
   const compareRoot = previewMock.root;
   const canvas = built.canvas;
   const frameRate = built.frameRate.numerator / built.frameRate.denominator;
@@ -710,22 +788,8 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   // loads it hands the runtime a file with no timeline in it, reported as
   // `Composition has zero duration`.
   await once(`draw:${renderKey}`, async () => {
-    // Compile once, materialize with the artifact bytes written beside the document, and let the
-    // HyperFrames runtime draw it. This remains the same public rendering path used by Studio;
-    // nothing here is a private renderer.
-    const document = compileHyperframesDocument(built.composition, built.space as ProgramSpace);
-    await mkdir(stage, { recursive: true });
-    const names = new Map<string, string>();
-    for (const [digest, file] of built.served) {
-      const name = `${digest.replace(/[^a-z0-9]/giu, "")}`;
-      await writeFile(join(stage, name), file.bytes);
-      names.set(digest, name);
-    }
-    await writeFile(join(stage, "index.html"), materializeHyperframesHtml(document, (artifact) => {
-      const name = names.get(artifact.digest);
-      assert(name !== undefined, `the projection references Artifact ${artifact.digest}, which was not served`);
-      return `./${name}`;
-    }), "utf8");
+    // Compile and materialize through the same no-media staging helper used by layout_check.
+    await stageAuthoringPreview({ built, previewMock });
 
     await rm(frames, { recursive: true, force: true });
     await mkdir(frames, { recursive: true });

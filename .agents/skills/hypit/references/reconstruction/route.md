@@ -91,6 +91,7 @@ of intent; files and check results remain the authority.
 | `script-checked` | every caption Cue has at most four visible words | `validate_script_cues --run <run>` |
 | `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
 | `graph-checked` | `preview_check` returns `sound: true` after package and Cue gates | `preview_check <run>` |
+| `layout-checked` | `layout_check` executed and every candidate was repaired or explicitly accepted | `layout_check --run <run>` / `layout_accept` |
 | `review-planned` | `reconstruction_check` writes a plan | `reconstruction_check <run>` |
 | `preview-rendered` | render output and timing sidecar both exist | `render_element --batch <round.json>` |
 | `comparison-complete` | comparison log contains a complete record for the planned element | `compare_reconstruction` / `record_observation` |
@@ -325,7 +326,10 @@ first written. This gate is not bounded by the round's attempt ceilings.
 
 ### 17. Create the comparison plan
 
-Run `reconstruction_check` once to persist the element/window plan. Do not invent a render list from
+Run `layout_check --run <run>` first and settle its candidates. **Read now:** `../layout-checks.md`.
+Mechanical measurements only point the Agent toward relationships worth judging; the reference and
+design intent decide whether any crop, offset or overlap is a problem. Then run
+`reconstruction_check` once to persist the element/window plan. Do not invent a render list from
 the Source; the check's plan is the durable handoff to the comparison round.
 
 ---
@@ -354,10 +358,8 @@ hypit-reference-video-tools render_element projects/<name>/build.svrun --batch r
 The program is drawn once and every entry is cut out of those frames, so render
 the whole list in one `--batch` call.
 
-Keep the check JSON's `layout_geometry` beside the round. It gives the observer/agent deterministic
-Canvas and Frame centres, parent/Canvas vertical centre offsets, overflow edges, and bound element ids
-to use when judging vertical centring, frame capacity, and Canvas safety. Horizontal placement and
-overlap candidates remain subject to the reference and observer intent judgement.
+Keep `.hypit/layout-check.json` beside the round. Its realized stable-state measurements remain
+candidate evidence; the reference and observer/Agent intent judgement remain authoritative.
 
 ### 20. Send every comparison at once
 

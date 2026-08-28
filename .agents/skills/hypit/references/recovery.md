@@ -79,8 +79,11 @@ checkpoint:
 hypit-reference-video-tools route_state --action checkpoint \
   --project-root <project> --route reconstruction --state review-planned \
   --status complete --next-action 'run final reconstruction_check' \
-  --decision 'caption box is intentionally centred'
+  --decision 'visual review completed against the reference'
 ```
+
+Layout candidates use their dedicated persisted decision file instead of a prose route checkpoint:
+run `layout_accept --run <run> --finding <id> --reason <text>`, rerun `layout_check`, then reconcile.
 
 `reconcile` never guesses a creative decision. It can advance from durable files and passing checks,
 but leaves an unrecorded manual step as the next action. If a recorded artifact disappeared, the next
