@@ -20,7 +20,9 @@ For a completed project change, `revision_state --action start|read|checkpoint|r
 small atomic current snapshot plus revision-scoped history. Revision edits Source/Recipe/Run and reruns
 deterministic gates; it does not invoke a VLM/observer or perform visual review. The project may be
 handed in as an already completed directory: after its baseline gates pass, Revision can start
-without a parent reconstruction or description route state.
+without a parent reconstruction or description route state. A completed child from variant expansion
+starts Revision with `--parent-route variant`; its original batch `allowed_changes` and `variant_check`
+apply only to initial production, not to the later user-authorized edit.
 
 For a validated source project that needs independent derivatives, `variant_state` stores the atomic
 batch snapshot and base-project locator, `variant_init` copies the authored project without generated

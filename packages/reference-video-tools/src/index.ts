@@ -35,7 +35,7 @@ export {
   REVISION_STATE_VERSION,
   REVISION_STEPS,
 } from "./revision-state.js";
-export type { RevisionCheckpointInput, RevisionState, RevisionStateInput, RevisionStatus, RevisionStep } from "./revision-state.js";
+export type { RevisionCheckpointInput, RevisionParentRoute, RevisionState, RevisionStateInput, RevisionStatus, RevisionStep } from "./revision-state.js";
 export {
   checkpointVariantExpansion,
   discoverVariantExpansions,
