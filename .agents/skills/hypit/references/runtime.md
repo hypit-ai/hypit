@@ -10,10 +10,11 @@ first thing they meet is `RUNTIME_CAPABILITY_UNBOUND`, and the work of discoveri
 serves each model falls on them — work you have already done, since you chose every package in the
 Source.
 
-Copy the nearest existing `examples/*/hypit.runtime.json` and bind one Endpoint per capability your
-Sources actually reach: the picture and video models, speech, alignment, the media Provider and the
-local renderer. Read each Provider's README for the shape of its `config`, and reference credentials
-through the store rather than writing any secret into the file.
+Start from the Runtime Profile template in `docs/guide/runtime.md` (the repository does not ship a
+canonical `examples/*/hypit.runtime.json`). Bind one Endpoint per capability your Sources actually
+reach: the picture and video models, speech, alignment, the media Provider and the local renderer.
+Read each Provider's README for the shape of its `config`, and reference credentials through the store
+rather than writing any secret into the file.
 
 A capability whose credential this machine does not hold is still declared. Preflight names it before
 any Build is submitted, which is the correct place for the author to find out.
@@ -74,6 +75,10 @@ Studio viewing.
 Use `check` during authoring. `plan` works without a Runtime as a graph-only operation; with the
 project's selected Runtime it performs a cheap, read-only preflight over only unsatisfied Needs and
 returns non-zero when that slice is not ready. It never installs, starts or contacts a remote Store.
+`hypit check <run> --json` and `hypit plan <run> --json` expose Provider-free `estimate:Speech`
+values under `deterministic_durations`; after execution, `hypit inspect <build> --json` reports the
+accepted `SpeechDuration` Records. Read those seconds directly when reviewing generated take length
+or cost instead of probing a mock media file.
 
 After Runtime package selection changes, run `runtime up`: this is the explicit provisioning
 boundary for machine npm dependencies, Managed Programs and the detached Worker. Use `doctor` for

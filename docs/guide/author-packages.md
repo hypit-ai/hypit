@@ -294,3 +294,49 @@ Producer ports are exact, not variadic: the keys supplied by a Fragment operatio
 Manifest's `inputs`, `outputs` and `needs` exactly. For a variable number of child items, emit one
 operation per item and feed those operations into an append/merge Producer with fixed named ports;
 do not invent an `items[]` port that the Manifest did not declare.
+
+### Less-common literal shapes
+
+These details are part of the public vocabulary metadata and are easy to miss:
+
+```typescript
+children: [{ tag: "Row", cardinality: "many", summary: "Rows in display order." }];
+attributes: [{ name: "appearance", kind: "reference", required: true, summary: "Recipe sheet.",
+  recipe: [{ name: "accent", required: true, summary: "Colour for the active row.", values: ["red", "blue"] }] }];
+```
+
+`cardinality` and recipe-property `required` are mandatory. A validator receives the stored wrapper,
+so unwrap an inline value before inspecting it:
+
+```typescript
+handler: ({ value }) => {
+  if (value.kind !== "inline") throw new Error("Widget must be inline");
+  if (typeof value.value !== "object" || value.value === null) throw new Error("Widget is empty");
+}
+```
+
+When a component input refers to an authored Record, use `{ kind: "record", id: "record.id" }`;
+`space.ref` is a resolved reference, not the literal input shape. A temporal projection stores its
+resolved frame range at `window.span` (`startFrame` and `endFrameExclusive`), not beside the window.
+Media slots are Fragment inputs carrying a Blob Artifact; child elements and recipe properties belong
+in the Surface vocabulary, while deterministic rendering belongs in the Producer. Keep parent nesting
+and animation in the sealed `VisualElement` (`parent`, `order`, `animation.keyframes`) rather than
+inventing package-specific fields.
+
+```typescript
+// A child can be nested under a parent and animate an admitted local style.
+const panel = { id: "panel", kind: "box", order: 0, style: [] };
+const label = {
+  id: "label", parent: "panel", kind: "text", order: 1, style: [],
+  text: "A", fonts: [fontArtifact],
+  animation: { keyframes: [
+    { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
+    { atFrame: 12, style: [{ name: "opacity", value: 1 }] },
+  ] },
+};
+```
+
+The exact `fontArtifact` fields are shown by `inspect_visual_contract`; use a real Blob Artifact in
+`sources`, with an explicit weight and style. The important boundary is that parent links, child
+cardinality, recipe properties, slot inputs and animation are declared explicitly and validated by
+their owning layer.

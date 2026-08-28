@@ -275,6 +275,35 @@ is not bounded by the round's attempt ceiling:
 hypit-reference-video-tools preview_check path/to/build.svrun
 ```
 
+If a mandatory gate itself appears defective, do not read or modify Distribution source and do not
+silently continue. Record the exact command, complete error, project/package/run digest and the
+reason the failure is attributable to the gate in a durable waiver evidence file:
+
+```json
+{
+  "waived": true,
+  "gate": "package_ready",
+  "diagnosis": "validator selected a transitive package instead of the project package",
+  "command": "validate_local_author_packages --run build.svrun",
+  "error": "<complete error>",
+  "package_digest": "<sha256>",
+  "run_digest": "<sha256>"
+}
+```
+
+Checkpoint that evidence as a controlled waiver (or use `blocked` when no maintainer decision is
+available):
+
+```bash
+hypit-reference-video-tools route_state checkpoint --project-root <project> --route <route> \
+  --step package-ready --status complete --artifacts '{"package_ready":".hypit/evidence/gate-waiver.json"}' \
+  --error "<exact gate error>" --decision "gate waiver recorded with reproducible diagnosis"
+```
+
+The waiver is visible in route state and remains subject to maintainer review; it preserves the
+evidence without weakening package boundaries. Use `--status blocked` instead when continuation is
+not explicitly authorized, and resume only after the gate is fixed or a decision is recorded.
+
 It takes the Run Source, not the `.svml`. `preview.md` says why this spelling rather than the
 `hypit-preview-check` bin: the subcommand honours `--package-root`, which is what a project-local
 package needs when the Run is not at the project root. A pass here means the graph reaches a Film and

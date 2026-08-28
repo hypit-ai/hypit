@@ -41,15 +41,15 @@ const attribute = object({ name: { schema: string }, value: { schema: { kind: "s
 const keyframe = object({ atFrame: { schema: integer }, easing: { schema: { kind: "string", enum: ["linear", "ease-in", "ease-out", "ease-in-out"] }, optional: true }, style: { schema: { kind: "array", minItems: 1, items: styleDeclaration } } });
 const animation = object({ keyframes: { schema: { kind: "array", minItems: 2, items: keyframe } } });
 const base = { id: { schema: string }, parent: { schema: string, optional: true }, order: { schema: integer }, style: { schema: { kind: "array", items: styleDeclaration } }, attributes: { schema: { kind: "array", items: attribute }, optional: true }, animation: { schema: animation, optional: true } } as const;
-const box = object({ ...base, kind: { schema: { kind: "literal", value: "box" } } });
-const mask = object({
+export const visualBoxSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "box" } } });
+export const visualMaskSchema: ValueSchema = object({
   ...base,
   kind: { schema: { kind: "literal", value: "mask" } },
   mode: { schema: { kind: "string", enum: ["alpha", "luminance"] } },
   maskElement: { schema: string },
   contentElement: { schema: string },
 });
-const text = object({ ...base, kind: { schema: { kind: "literal", value: "text" } }, text: { schema: { kind: "string" } }, fonts: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } } });
+export const visualTextSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "text" } }, text: { schema: { kind: "string" } }, fonts: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } } });
 const finiteNumber = { kind: "number" } as const;
 const boolean = { kind: "boolean" } as const;
 const enumString = (values: readonly string[]): ValueSchema => ({ kind: "string", enum: values });
@@ -164,11 +164,12 @@ export const visualPathCommandSchema: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "close" } } }),
 ] };
 const pathTextElement = object({ ...base, kind: { schema: { kind: "literal", value: "path-text" } }, document: { schema: visualTextDocumentSchema }, typography: { schema: visualTextTypographySchema }, paints: { schema: { kind: "array", items: visualTextPaintSchema } }, path: { schema: { kind: "array", minItems: 2, items: visualPathCommandSchema } }, side: { schema: enumString(["left", "right"]) }, orientation: { schema: enumString(["follow", "upright"]) }, startMarginPx: { schema: number }, endMarginPx: { schema: number }, align: { schema: enumString(["start", "center", "end"]) }, reverse: { schema: boolean }, overflow: { schema: enumString(["visible", "clip"]) }, sequences: { schema: { kind: "array", items: visualTextSequenceSchema } }, marginAnimation: { schema: object({ keyframes: { schema: { kind: "array", minItems: 2, items: object({ atFrame: { schema: integer }, startMarginPx: { schema: number }, easing: { schema: enumString(["linear", "ease-in", "ease-out", "ease-in-out"]), optional: true } }) } } }), optional: true } });
-const media = (kind: "image" | "video") => object({ ...base, kind: { schema: { kind: "literal", value: kind } }, artifact: { schema: mediaBlobRef }, sampling: { schema: sampling, optional: true }, muted: { schema: { kind: "boolean" }, optional: true } });
-const surface = object({ ...base, kind: { schema: { kind: "literal", value: "surface" } }, surface: { schema: compositableSurfaceSchema }, sampling: { schema: sampling, optional: true } });
-const element: ValueSchema = { kind: "oneOf", variants: [box, mask, text, textFlowElement, pathTextElement, media("image"), media("video"), surface] };
+export const visualImageSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "image" } }, artifact: { schema: mediaBlobRef }, sampling: { schema: sampling, optional: true }, muted: { schema: { kind: "boolean" }, optional: true } });
+export const visualVideoSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "video" } }, artifact: { schema: mediaBlobRef }, sampling: { schema: sampling, optional: true }, muted: { schema: { kind: "boolean" }, optional: true } });
+export const visualSurfaceSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "surface" } }, surface: { schema: compositableSurfaceSchema }, sampling: { schema: sampling, optional: true } });
+export const visualElementSchema: ValueSchema = { kind: "oneOf", variants: [visualBoxSchema, visualMaskSchema, visualTextSchema, textFlowElement, pathTextElement, visualImageSchema, visualVideoSchema, visualSurfaceSchema] };
 const span = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: integer } });
-const present = object({ id: { schema: string }, span: { schema: span }, stacking: { schema: object({ order: { schema: signedInteger }, tieBreak: { schema: string } }) }, elements: { schema: { kind: "array", minItems: 1, items: element } } });
+const present = object({ id: { schema: string }, span: { schema: span }, stacking: { schema: object({ order: { schema: signedInteger }, tieBreak: { schema: string } }) }, elements: { schema: { kind: "array", minItems: 1, items: visualElementSchema } } });
 export const visualTrackSchema: ValueSchema = object({ kind: { schema: { kind: "literal", value: "visual" } }, programSpaceId: { schema: string }, visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } }, id: { schema: string }, presents: { schema: { kind: "array", items: present } } });
 const audioSampleSpan = object({ startSample: { schema: integer }, endSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } } });
 const audioClip = object({

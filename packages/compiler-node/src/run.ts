@@ -28,6 +28,9 @@ import type {
   RunSourceUnit,
 } from "@hypit/run";
 import type { LinkedProgram } from "@hypit/protocol";
+import { estimateSpeechDuration } from "@hypit/estimate";
+import type { SpeechEstimatePolicy } from "@hypit/estimate";
+import type { Text } from "@hypit/text";
 
 import type { NodeCompiledSourceClosure } from "./compiler.js";
 import { mergeAttachments, NodeCompiler } from "./compiler.js";
@@ -75,6 +78,40 @@ export type PlannedBuild = {
   /** Materialized plan/read view; durable Stores persist Definition + Facts instead. */
   readonly state: BuildState;
 };
+
+/** Provider-free values produced by estimate:Speech and therefore useful before a paid Build. */
+export function deterministicSpeechDurationsFromGraph(
+  graph: NodeCompiledRun["author"]["graph"],
+  records: NodeCompiledRun["author"]["program"]["records"],
+): readonly {
+  readonly operation: string;
+  readonly speech_record: string;
+  readonly policy_record: string;
+  readonly seconds: number;
+}[] {
+  const recordMap = new Map(records.map((record) => [record.id, record]));
+  const result: { operation: string; speech_record: string; policy_record: string; seconds: number }[] = [];
+  for (const operation of graph.operations) {
+    if (operation.producer.module.name !== "@hypit/estimate" || operation.producer.name !== "estimate-speech-duration") continue;
+    const speech = operation.inputs.speech;
+    const policy = operation.inputs.policy;
+    if (speech?.kind !== "record" || policy?.kind !== "record") continue;
+    const speechValue = recordMap.get(speech.id)?.value;
+    const policyValue = recordMap.get(policy.id)?.value;
+    if (speechValue?.kind !== "inline" || policyValue?.kind !== "inline") continue;
+    try {
+      const duration = estimateSpeechDuration(speechValue.value as unknown as Text, policyValue.value as unknown as SpeechEstimatePolicy);
+      result.push({ operation: operation.id, speech_record: speech.id, policy_record: policy.id, seconds: duration });
+    } catch {
+      // Invalid inputs are reported by the ordinary graph check; this read-only aid must not mask it.
+    }
+  }
+  return result;
+}
+
+export function deterministicSpeechDurations(compilation: NodeCompiledRun): ReturnType<typeof deterministicSpeechDurationsFromGraph> {
+  return deterministicSpeechDurationsFromGraph(compilation.author.graph, compilation.author.program.records);
+}
 
 function decodeStoredValue(bytes: Uint8Array, from: string): StoredValue {
   let parsed: unknown;

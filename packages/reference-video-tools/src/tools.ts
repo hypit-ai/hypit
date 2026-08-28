@@ -13,8 +13,11 @@ import type { ValueSchema } from "@hypit/protocol";
 import {
   visualPathCommandSchema, visualTextDocumentSchema, visualTextFlowSchema,
   visualTextPaintSchema, visualTextTypographySchema, visualTrackSchema,
+  visualBoxSchema, visualMaskSchema, visualTextSchema, visualImageSchema,
+  visualVideoSchema, visualSurfaceSchema, visualElementSchema,
   animatableLocalStyles,
 } from "@hypit/composition";
+import { VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@hypit/visual-ir";
 
 import { describeSchema } from "./contract.js";
 import { videoCliDistribution } from "@hypit/video-cli";
@@ -1300,7 +1303,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       let loaded: Awaited<ReturnType<typeof loadNodePackageSelection>> = [];
       try { loaded = await loadNodePackageSelection([specifier], projectRoot, loading); }
       catch { errors.push("PACKAGE_ACTIVATION_INVALID"); }
-      const contribution = loaded[0]?.contribution;
+      const selected = loaded.find((pack) => pack.specifier === specifier || physicalPackageName(pack.specifier) === physicalPackageName(specifier));
+      const contribution = selected?.contribution;
       const modules = contribution?.modules ?? [];
       const surfaces = (contribution?.hostFacets ?? []).filter((facet) => facet.abi === markupSurfaceHostFacetAbi);
       // Author packages expand Markup Surfaces into Graph Fragments; they do not need the separate
@@ -1333,7 +1337,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const graphUsed = modules.some((module) => graphModules.has(`${module.manifest.name}@${module.manifest.version}`));
       if (!sourceImported) errors.push("PACKAGE_NOT_IMPORTED");
       else if (!graphUsed) errors.push("PACKAGE_IMPORTED_BUT_UNUSED");
-      results.push({ specifier, manifest: modules.length > 0, surfaces: surfaces.length, producers: producers.length, fragments: fragmentValues.length, run_fragment_facets: runFragmentFacets.length, source_imported: sourceImported, source_used: graphUsed, graph_used: graphUsed, status: errors.length === 0 ? "passed" : "failed", ...(errors.length === 0 ? {} : { errors }) });
+      results.push({ specifier, loaded_specifier: selected?.specifier, manifest: modules.length > 0, surfaces: surfaces.length, producers: producers.length, fragments: fragmentValues.length, run_fragment_facets: runFragmentFacets.length, source_imported: sourceImported, source_used: graphUsed, graph_used: graphUsed, status: errors.length === 0 ? "passed" : "failed", ...(errors.length === 0 ? {} : { errors }) });
     }
     for (const specifier of expected) {
       if (!results.some((item) => item.specifier === specifier)) results.push({ specifier, status: "failed", errors: ["PACKAGE_EXPECTED_BUT_MISSING"] });
@@ -1955,6 +1959,13 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     async inspect_visual_contract(input): Promise<Record<string, unknown>> {
       const shapes: Record<string, ValueSchema> = {
         "visual-track": visualTrackSchema,
+        "visual-element": visualElementSchema,
+        box: visualBoxSchema,
+        mask: visualMaskSchema,
+        text: visualTextSchema,
+        image: visualImageSchema,
+        video: visualVideoSchema,
+        surface: visualSurfaceSchema,
         "text-flow": visualTextFlowSchema,
         "text-typography": visualTextTypographySchema,
         "text-paint": visualTextPaintSchema,
@@ -1981,6 +1992,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       return {
         shapes: chosen.map((name) => ({ shape: name, describes: describeSchema(shapes[name]!).join("\n") })),
         animatable_local_styles: [...animatableLocalStyles],
+        visual_style_names: [...VISUAL_STYLE_NAMES_V1],
+        visual_style_enum_values: VISUAL_STYLE_ENUM_VALUES_V1,
         ...(calls.length === 0 ? {} : { producers: calls }),
         // Each of these is refused somewhere, or follows from how the emitted CSS is written. None is
         // a convention: a rule stated here that the code does not hold would be worse than silence.
@@ -1993,6 +2006,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           "An animation carries at least two keyframes, and every keyframe of one animation declares "
             + "the same properties: one that appears in some and not others is interpolated from the "
             + "element's own value on the frames it is missing from.",
+          "A plain text element must provide exact ordered font artifacts and cannot combine them with raw font styles.",
+          "A text element using glyph Paint cannot also declare raw stroke or paint-order styles.",
+          "A media element's artifact media type must match image/video, and still images cannot carry sampling.",
+          "A Surface with still timing cannot carry sampling; frame-based Surface sampling must match its typed timing.",
+          "Mask roots must be direct children of one Present and both mask/content references must resolve to owned elements.",
         ],
       };
     },
