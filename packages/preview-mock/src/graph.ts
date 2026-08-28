@@ -95,22 +95,34 @@ function inlineDuration(value: unknown): number | undefined {
   return undefined;
 }
 
-function operationRecordRefs(graph: CompiledGraph, operation: ReturnType<typeof findOperation>): readonly string[] {
-  if (operation === undefined) return [];
-  const seen = new Set<string>();
-  const records = new Set<string>();
-  const visit = (operationId: string): void => {
-    if (seen.has(operationId)) return;
-    seen.add(operationId);
-    const current = findOperation(graph, operationId);
-    if (current === undefined) return;
-    for (const ref of Object.values(current.inputs)) {
-      if (ref.kind === "record") records.add(ref.id);
-      else if (ref.kind === "operation-result") visit(ref.operation);
-    }
-  };
-  visit(operation.id);
-  return [...records];
+function operationForRef(graph: CompiledGraph, ref: GraphValueRef): ReturnType<typeof findOperation> {
+  if (ref.kind === "operation-result") return findOperation(graph, ref.operation);
+  if (ref.kind !== "logical-output") return undefined;
+  const output = findLogicalOutput(graph, ref.id);
+  const candidate = output === undefined ? undefined : findCandidate(graph, output.primary);
+  return candidate?.root.kind === "operation" ? findOperation(graph, candidate.root.result.operation) : undefined;
+}
+
+/** Find a typed input reachable from one operation, without consulting unrelated graph branches. */
+function refOfTypeInOperation(
+  graph: CompiledGraph,
+  operation: ReturnType<typeof findOperation>,
+  type: { readonly module: string; readonly name: string },
+  records: readonly TypedRecord[],
+  seen = new Set<string>(),
+): GraphValueRef | undefined {
+  if (operation === undefined || seen.has(operation.id)) return undefined;
+  seen.add(operation.id);
+  const refs = Object.entries(operation.inputs).sort(([left], [right]) => {
+    const priority = (name: string) => name === "duration" ? 0 : name === "policy" ? 1 : name === "program" ? 2 : 3;
+    return priority(left) - priority(right);
+  });
+  for (const [, ref] of refs) {
+    if (sameType(refType(graph, ref, records), type.module, type.name)) return ref;
+    const nested = refOfTypeInOperation(graph, operationForRef(graph, ref), type, records, seen);
+    if (nested !== undefined) return nested;
+  }
+  return undefined;
 }
 
 function estimateOperationDuration(graph: CompiledGraph, operation: ReturnType<typeof findOperation>, records: readonly TypedRecord[]): number | undefined {
@@ -143,7 +155,9 @@ function durationFromRef(
     const candidate = findLogicalOutput(graph, ref.id);
     if (candidate === undefined) return undefined;
     const primary = findCandidate(graph, candidate.primary);
-    return primary?.root.kind === "value" ? inlineDuration(primary.root.value.value) : undefined;
+    if (primary?.root.kind === "value") return inlineDuration(primary.root.value.value);
+    if (primary?.root.kind === "operation") return durationFromRef(graph, primary.root.result, records, seen);
+    return undefined;
   }
   if (seen.has(ref.operation)) return undefined;
   seen.add(ref.operation);
@@ -151,12 +165,19 @@ function durationFromRef(
   if (operation === undefined) return undefined;
   const estimated = estimateOperationDuration(graph, operation, records);
   if (estimated !== undefined) return estimated;
-  return durationFromRef(graph, operation.inputs.duration, records, seen)
-    ?? durationFromRef(graph, operation.inputs.speech, records, seen);
+  for (const name of ["duration", "program", "request", "draft", "speech"]) {
+    const value = durationFromRef(graph, operation.inputs[name], records, seen);
+    if (value !== undefined) return value;
+  }
+  for (const ref of Object.values(operation.inputs)) {
+    const value = durationFromRef(graph, ref, records, seen);
+    if (value !== undefined) return value;
+  }
+  return undefined;
 }
 
 function durationForTarget(graph: CompiledGraph, operation: ReturnType<typeof findOperation>, inputs: Readonly<Record<string, string>>, records: readonly TypedRecord[]): number | undefined {
-  const direct = durationFromRef(graph, operation?.inputs.duration, records);
+  const direct = durationFromRef(graph, refOfTypeInOperation(graph, operation, { module: "@hypit/speech", name: "SpeechDuration" }, records) ?? operation?.inputs.duration, records);
   if (direct !== undefined) return direct;
   const durationId = inputs.duration;
   if (durationId !== undefined) {
@@ -164,7 +185,7 @@ function durationForTarget(graph: CompiledGraph, operation: ReturnType<typeof fi
       ?? graph.candidates.find((item) => graph.outputs.some((output) => output.id === durationId && output.primary === item.id));
     if (candidate?.root.kind === "value") return inlineDuration(candidate.root.value.value);
   }
-  return operationRecordRefs(graph, operation).map((id) => inlineDuration(recordValue(records, id))).find((value): value is number => value !== undefined);
+  return undefined;
 }
 
 function mockInputs(graph: CompiledGraph, kind: MockKind, operation: ReturnType<typeof findOperation>, records: readonly TypedRecord[] = []): Readonly<Record<string, string>> {
@@ -183,7 +204,8 @@ function mockInputs(graph: CompiledGraph, kind: MockKind, operation: ReturnType<
   }
   if (kind === "video") {
     const canvas = byName("canvas") ?? byType("@hypit/spatial", "CanvasSpace");
-    const duration = byName("duration") ?? byType("@hypit/speech", "SpeechDuration");
+    const duration = byName("duration")
+      ?? logicalId(graph, refOfTypeInOperation(graph, operation, { module: "@hypit/speech", name: "SpeechDuration" }, records));
     const clock = byName("clock") ?? byType("@hypit/program-space", "ProgramClock");
     return Object.fromEntries([["canvas", canvas], ["duration", duration], ["clock", clock]].filter((item): item is [string, string] => item[1] !== undefined));
   }
@@ -196,14 +218,7 @@ function mockInputs(graph: CompiledGraph, kind: MockKind, operation: ReturnType<
     const direct = byName(name);
     if (direct !== undefined) result[name] = direct;
   }
-  result.policy ??= (() => {
-    for (const item of graph.operations) {
-      const ref = item.inputs.policy;
-      const id = logicalId(graph, ref);
-      if (id !== undefined) return id;
-    }
-    return undefined;
-  })();
+  result.policy ??= logicalId(graph, refOfTypeInOperation(graph, operation, { module: "@hypit/estimate", name: "SpeechEstimatePolicy" }, records));
   result.narrative ??= byType("@hypit/narrative", "Narrative");
   result.segment ??= byType("@hypit/narrative", "NarrativeExcerpt");
   result.media ??= byType("@hypit/media", "SynchronizedMedia");
