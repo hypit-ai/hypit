@@ -42,8 +42,11 @@ Cue and will overflow the Canvas. Read
 `references/script-time.md` and the caption craft before writing Script text; put breaks between
 complete Alignment Units, never inside Dual Text.
 
-Every route is resumable. At the start of a route, create the project's
-`.hypit/route-state.json`; after any new turn, interruption, or context compaction, read
+Every route is resumable. At the start of a route, create the project's current
+`.hypit/route-state.json` view; the execution history lives at
+`.hypit/routes/<route-id>/state.json`. Revisions likewise keep the current
+`.hypit/revision-state.json` view and execution history under `.hypit/revisions/<revision-id>/`.
+After any new turn, interruption, or context compaction, read
 `references/recovery.md`, inspect that snapshot and reconcile it against the artifacts and checks
 before continuing. Never resume from chat memory alone, and never repeat a completed or paid step
 without verifying its durable evidence.

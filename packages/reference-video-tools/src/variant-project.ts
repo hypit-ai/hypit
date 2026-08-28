@@ -380,7 +380,12 @@ export async function initializeVariantProjects(input: {
   }
   await mkdir(outputRoot, { recursive: true });
   const width = Math.max(3, String(slate.variants.length).length);
-  const inheritedVocabulary = join(projectRoot, ".hypit", "vocabulary.json");
+  const currentRoute = await readFile(join(projectRoot, ".hypit", "route-state.json"), "utf8")
+    .then((text) => JSON.parse(text) as { artifacts?: { vocabulary?: unknown } }, () => undefined)
+    .catch(() => undefined);
+  const inheritedVocabulary = typeof currentRoute?.artifacts?.vocabulary === "string"
+    ? currentRoute.artifacts.vocabulary
+    : join(projectRoot, ".hypit", "vocabulary.json");
   const initialized: InitializedVariant[] = [];
   const assignedIds = new Set<string>();
   for (const [index, variant] of slate.variants.entries()) {
