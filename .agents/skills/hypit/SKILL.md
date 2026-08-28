@@ -114,6 +114,13 @@ invalid. Never commit `.env` or copy its secret values into route state, Source,
   agents. Initial presenter/product/brand adaptation attached to a reconstruction remains inside the
   reconstruction route; it is not Revision. Variant expansion defaults to mechanically checked
   Source and performs no visual review or paid Build unless the author explicitly requests outputs.
+- If original authoring or reconstruction created a project-local package, wait until that route is
+  complete, read `references/package-promotion.md`, and judge whether the component has clear, high
+  reuse value across unrelated videos. Only when that bar is met, ask the author whether they want the
+  Agent to move it into the Hypit repository's `packages/` folder and prepare a Pull Request for
+  Hypit. Do not interrupt the production route for this question, move or submit anything without
+  the author's answer, and do not suggest promotion for an ordinary component or one that only
+  contains this video's content.
 - A syntax question about one element, or a source that already exists → read
   `references/authoring.md`, then `references/quickstart.md` and the linked authoritative
   docs/package READMEs. A whole video is `references/original-authoring/route.md`, not this file.

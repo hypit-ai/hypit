@@ -6,16 +6,16 @@ built for, and what promoting it into the Hypit repository costs.
 ## When the result is accepted, decide whether the package should leave the project
 
 A delivery that shipped may have produced one or more project-local packages on the way. Before
-moving on, judge each one and put the question to the author. Not automatically, and not before the
-result is accepted — this is an offer, and promoting it is a separate contribution.
+moving on, judge each one and put the question to the author only when it clears a high bar. Not
+automatically, and not before the result is accepted — this is an offer, and promoting it is a
+separate contribution.
 
-**The judgement is one question: would a second, unrelated video want this vocabulary?** A component
-that is *this* video's content shaped as a component is not reusable however well it is written — a
-sheet whose steps are this product's onboarding, a board whose rows are this ranking. What travels is
-a *role* the installed packages do not cover: a Style family that differs from `caption-fine` in its
-timing model, a board that differs from `ranking` in the shape of its rows. If the slots are inputs
-and the chrome is the component's own, it is probably reusable; if the package would have to be
-rewritten for the next video, say so and keep it where it is.
+**The judgement is one question: would many unrelated videos want this vocabulary, with little or no
+rewriting?** A component that is *this* video's content shaped as a component is not reusable however
+well it is written — a sheet whose steps are this product's onboarding, a board whose rows are this
+ranking. Promote only a component with an unusually clear, broad role that the installed packages do
+not cover and that is strong enough to justify maintaining as an official package. If the package
+would need substantial adaptation for the next video, say so and keep it where it is.
 
 Say which it is either way. A local package nobody flagged is a local package nobody revisits.
 
