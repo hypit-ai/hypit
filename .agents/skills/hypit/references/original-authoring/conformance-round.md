@@ -76,15 +76,10 @@ the longest line/mark plus padding, stroke, shadow, and corner treatment; correc
 an undersized box acceptable. Separate intentional bleed/crop or enter/exit motion from accidental
 overflow, and check the final visible bounds against all four Canvas edges.
 
-`authoring_check` returns `layout_geometry` with deterministic Canvas/Frame bounds, centres, parent and
-Canvas offsets, containment overflow, and bound element ids. Use it as the mechanical report and make
-the conformance decision from the rendered picture and intent. It also reports
-`layout_geometry.overlaps` for independent same-Canvas component placements that are simultaneous and
-partially intersecting; nested placements owned by one component are excluded and remain subject to
-component-local parent/Frame centring. Full containment is omitted and the entries are advisory
-candidates, not automatic failures. Judge them against the user's brief and settled creative intent; do
-not force centring or remove an intentional overlap. It cannot measure actual glyph or package-internal
-bounds or infer intent, so those still require the reader.
+The settled `../layout-checks.md` report supplies realized stable-state measurements alongside this
+round. They are advisory candidates, not automatic failures. Make the conformance decision from the
+rendered picture and intent; do not force centring, remove an intentional overlap or undo a deliberate
+crop merely because the mechanical pass measured it.
 
 Clearly platform/player/export-tool watermarks are not authored content and should be ignored. If a mark
 could be intentional design, preserve the uncertainty and do not silently remove it.

@@ -6,7 +6,8 @@ over an already completed project directory directly. Revision does not require 
 have created the project and does not require a parent creation route to exist.
 
 For a directly supplied directory, first locate its canonical Run and Source/Recipe closure, then
-run `validate_local_author_packages`, `validate_script_cues`, `hypit check` and `preview_check` to
+run `validate_local_author_packages`, `validate_script_cues`, `hypit check`, `preview_check` and
+`layout_check` to
 confirm the existing project is a sound revision baseline. If `.hypit/route-state.json` exists, read
 and reconcile it; if it does not, do not invent a reconstruction or description history. Start
 `revision_state` without `--parent-route` and persist the baseline check evidence with the first
@@ -88,11 +89,14 @@ and give the author the exact URL with the updated result.
    Cue/SemanticTake/timing change; a new
    component is a vocabulary-gap and package change. A Hook or opening change also requires checking
    that later beats still fulfil its promise.
-4. Edit only Source, Recipe or Run. Re-run package/Cue gates, `hypit check` and `preview_check`, then
+4. Edit only Source, Recipe or Run. Re-run package/Cue gates, `hypit check`, `preview_check` and
+   `layout_check`, then
    checkpoint their immutable evidence as the Revision final gate. When the parent is `variant`, do
    **not** run `variant_check`: that command belongs only to initial batch production and would
    reapply the old `allowed_changes` to a new user-authorized request. Do not render, compare, review
-   or inspect any frame during revision;
+   or inspect any frame during revision. **Read now:** `../layout-checks.md`. Its browser measurements
+   are mechanical candidate evidence rather than visual judgement; repair genuine issues or persist a
+   reason for intentional geometry before completing `gates-checked`;
    existing unchanged artifacts may be reused by digest. Once the gates pass, follow
    `../studio-confirmation.md`'s conditional Studio handoff.
 5. Check the final gate. Confirm cost again only when an image/video/voice generation input changed;

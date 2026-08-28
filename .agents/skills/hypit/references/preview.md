@@ -108,17 +108,12 @@ well.
 Each Segment's length comes from the Source's own `estimate:Speech`; `--reference-id` selects reference
 evidence and comparison windows only. The sidecar records `"timing_basis": "estimate"`.
 
-Before reading the picture, run the route's `reconstruction_check` or `authoring_check` and keep its
-`layout_geometry` object with the render. It is the mechanical Canvas/Frame report used to check vertical
-centre offsets, frame capacity, and Canvas containment; horizontal left/right placement is not judged;
-the observer still confirms rendered text bounds and
-whether any bleed is intentional. Also inspect `layout_geometry.overlaps`: it lists only partial
-rectangle intersections between independent same-Canvas component placements whose timing scopes
-overlap. Nested placements owned by one component are excluded so its internal centring is checked
-against its own parent/Frame. Full containment is omitted as a likely intentional parent/background
-relationship. These are candidates, not automatic failures; verify them in the frame and against the
-reference or settled brief/intent. Do not fix a deliberate offset or overlap merely because it was
-reported. Package-internal glyph bounds are not available to the mechanical check.
+Before reading the picture, run and settle `layout_check` and keep `.hypit/layout-check.json` with the
+render. **Read now:** `layout-checks.md`. Its realized stable-state measurements are candidates for the
+Agent to interpret, not automatic failures or instructions to edit. `layout_check` creates and records
+the preview-mock Run and live Composition without encoding media; this later render reuses that same
+upstream. The observer still confirms the look and the Agent decides whether any crop, offset or overlap
+is intentional.
 
 ## Open the whole Run for a person
 

@@ -187,7 +187,7 @@ test("v1 route snapshots migrate by stage name and re-open new gates", async () 
     artifacts: {}, decisions: [], next_action: "write Source", updated_at: new Date().toISOString(),
   }), "utf8");
   const migrated = await readRouteState(root);
-  assert.equal(migrated?.version, 3);
+  assert.equal(migrated?.version, 4);
   assert.equal(migrated?.completed_steps.includes(3), true);
   assert.equal(migrated?.completed_steps.includes(4), false, "new vocabulary gate is not guessed from old source state");
   assert.equal(migrated?.current_step, 4);

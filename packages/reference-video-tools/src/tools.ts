@@ -52,6 +52,8 @@ import {
 } from "./revision-state.js";
 import type { RevisionParentRoute, RevisionState, RevisionStep } from "./revision-state.js";
 import { persistEvidence } from "./state-files.js";
+import { layoutAccept, layoutCheck } from "./layout.js";
+import type { LayoutAcceptInput, LayoutCheckInput } from "./layout.js";
 import {
   checkpointVariantExpansion,
   discoverVariantExpansions,
@@ -265,6 +267,8 @@ export type ReferenceVideoTools = {
   render_element(input: RenderElementInput): Promise<Record<string, unknown>>;
   render_previews(input: RenderPreviewsInput): Promise<Record<string, unknown>>;
   preview_check(input: PreviewCheckInput): Promise<Record<string, unknown>>;
+  layout_check(input: LayoutCheckInput): Promise<Record<string, unknown>>;
+  layout_accept(input: LayoutAcceptInput): Promise<Record<string, unknown>>;
   reconstruction_check(input: ReconstructionCheckInput): Promise<Record<string, unknown>>;
   /**
    * The same gate for a program authored from a description. It resolves no reference, credits an
@@ -443,6 +447,23 @@ async function autoRouteCheckpoint(
 
 async function persistRouteEvidence(runPath: string, name: string, result: Record<string, unknown>): Promise<string> {
   return persistEvidence(dirname(resolve(runPath)), name, result);
+}
+
+async function readSettledLayout(runPath: string): Promise<Record<string, unknown>> {
+  const path = join(dirname(resolve(runPath)), ".hypit", "layout-check.json");
+  try {
+    const value = JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>;
+    return {
+      passed: value.executed === true && value.settled === true,
+      evidence: path,
+      executed: value.executed === true,
+      settled: value.settled === true,
+      pending_count: value.pending_count,
+      semantics: value.semantics,
+    };
+  } catch {
+    return { passed: false, evidence: path, executed: false, settled: false, reason: "run layout_check first" };
+  }
 }
 
 async function autoRouteError(runPath: string | undefined, command: string, error: unknown): Promise<void> {
@@ -2522,9 +2543,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           const source = await authorSource(runPath).catch(() => undefined);
           const route = await readRouteState(dirname(runPath));
           const sourceStep = routeStepFor(route?.route ?? "reconstruction", "source-authored");
-          const next = route?.route === "variant" ? "run variant_check --run <build.svrun>"
-            : route?.route === "variant-package" ? "freeze the package digest and checkpoint package-ready"
-              : "run reconstruction_check or authoring_check";
+          const next = "run layout_check --run <build.svrun>";
           await autoRouteCheckpoint(runPath, sourceStep, source === undefined ? {} : { author_source: source.path }, next);
           const routeAfterSource = await readRouteState(dirname(runPath));
           await autoRouteCheckpoint(runPath, routeStepFor(routeAfterSource?.route ?? "reconstruction", "graph-checked"), { preview_check: evidence }, next);
@@ -2534,6 +2553,51 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         await autoRouteError(runPath, "preview_check", error);
         throw error;
       }
+    },
+
+    async layout_check(input): Promise<Record<string, unknown>> {
+      const runPath = resolve(invokedFrom(), input.run);
+      try {
+        const result = await layoutCheck(input);
+        const evidence = typeof result.evidence === "string" ? result.evidence : join(dirname(runPath), ".hypit", "layout-check.json");
+        const decisions = typeof result.decisions === "string" ? result.decisions : join(dirname(runPath), ".hypit", "layout-decisions.json");
+        const route = await readRouteState(dirname(runPath));
+        if (route !== undefined && route.status !== "complete") {
+          const step = routeStepFor(route.route, "layout-checked");
+          if (step !== undefined) {
+            if (result.settled === true) {
+              await autoRouteCheckpoint(runPath, step, { layout_check: evidence, layout_decisions: decisions },
+                route.route === "variant" ? "run variant_check --run <build.svrun>"
+                  : route.route === "variant-package" ? "freeze the package digest and checkpoint package-ready"
+                    : "plan the visual declaration review");
+            } else {
+              await checkpointRouteState({
+                projectRoot: dirname(runPath), route: route.route, step, status: "in_progress", run: runPath,
+                artifacts: { layout_check: evidence, layout_decisions: decisions }, command: "layout_check",
+                nextAction: "Agent reviews each layout candidate, repairs genuine issues or records intentional geometry with layout_accept, then reruns layout_check",
+              });
+            }
+          }
+        }
+        const revision = await readRevisionState(dirname(runPath));
+        if (revision !== undefined && revision.status !== "complete") {
+          await checkpointRevisionState({
+            projectRoot: dirname(runPath), step: "gates-checked", status: "in_progress", run: runPath,
+            artifacts: { layout_check: evidence, layout_decisions: decisions }, command: "layout_check",
+            nextAction: result.settled === true
+              ? "complete the remaining revision gates"
+              : "Agent reviews layout candidates; repair or accept them, then rerun layout_check",
+          });
+        }
+        return result;
+      } catch (error) {
+        await autoRouteError(runPath, "layout_check", error);
+        throw error;
+      }
+    },
+
+    async layout_accept(input): Promise<Record<string, unknown>> {
+      return await layoutAccept(input);
     },
 
     async reconstruction_check(input): Promise<Record<string, unknown>> {
@@ -2547,7 +2611,10 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           await autoRouteError(runPath, "reconstruction_check", refused.issues);
           return { ...refused, evidence };
         }
-        const result = await authoringCheck({ ...input, mode: "reconstruction" }, { packageRoot });
+        const authored = await authoringCheck({ ...input, mode: "reconstruction" }, { packageRoot });
+        const layout = await readSettledLayout(runPath);
+        const result: Record<string, unknown> = layout.passed === true ? { ...authored, layout }
+          : { ...authored, passed: false, layout, issues: [...(Array.isArray(authored.issues) ? authored.issues : []), "layout candidates are unresolved or layout_check has not run"] };
         const evidence = await persistRouteEvidence(runPath, "final-check.json", result);
         if (Array.isArray(result.plan)) {
           const planPath = await persistRoutePlan(runPath, result);
@@ -2574,7 +2641,10 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           await autoRouteError(runPath, "authoring_check", refused.issues);
           return { ...refused, evidence };
         }
-        const result = await authoringCheck({ ...input, mode: "description" }, { packageRoot });
+        const authored = await authoringCheck({ ...input, mode: "description" }, { packageRoot });
+        const layout = await readSettledLayout(runPath);
+        const result: Record<string, unknown> = layout.passed === true ? { ...authored, layout }
+          : { ...authored, passed: false, layout, issues: [...(Array.isArray(authored.issues) ? authored.issues : []), "layout candidates are unresolved or layout_check has not run"] };
         const evidence = await persistRouteEvidence(runPath, "final-check.json", result);
         if (Array.isArray(result.plan)) {
           const planPath = await persistRoutePlan(runPath, result);
@@ -2737,10 +2807,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         .catch((error) => ({ passed: false, error: error instanceof Error ? error.message : String(error) }));
       const generatedLeakage = await findGeneratedLeakage(projectRoot, runPath)
         .catch((error) => ({ passed: false, error: error instanceof Error ? error.message : String(error) }));
+      const layoutGate = await readSettledLayout(runPath);
       const result: Record<string, unknown> = {
         run: runPath,
         passed: vocabularyPassed && packageGate.passed === true && cueGate.passed === true
-          && graphGate.sound === true && mechanics.passed === true && minimalDiff.passed === true && generatedLeakage.passed === true,
+          && graphGate.sound === true && layoutGate.passed === true && mechanics.passed === true && minimalDiff.passed === true && generatedLeakage.passed === true,
         vocabulary: {
           passed: vocabularyPassed, mode: vocabularyMode, required_packages: requiredPackages, evidence: vocabularyPath,
           evidence_digest: vocabularyDigest, baseline_digest: manifest?.vocabulary_digest,
@@ -2750,7 +2821,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           required_packages_imported_and_used: requiredImportedAndUsed,
           package_bindings: packageBindings,
         },
-        package_gate: packageGate, script_cue_gate: cueGate, graph: graphGate, mechanics, minimal_diff: minimalDiff,
+        package_gate: packageGate, script_cue_gate: cueGate, graph: graphGate, layout: layoutGate, mechanics, minimal_diff: minimalDiff,
         generated_result_leakage: generatedLeakage,
         visual_review: "not performed",
       };
@@ -2766,6 +2837,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const source = await authorSource(runPath).catch(() => undefined);
         await autoRouteCheckpoint(runPath, routeStepFor("variant", "source-authored"), source === undefined ? {} : { author_source: source.path });
         await autoRouteCheckpoint(runPath, routeStepFor("variant", "graph-checked"), { preview_check: previewEvidence });
+      }
+      if (layoutGate.passed === true) {
+        await autoRouteCheckpoint(runPath, routeStepFor("variant", "layout-checked"), {
+          layout_check: String(layoutGate.evidence), layout_decisions: join(projectRoot, ".hypit", "layout-decisions.json"),
+        });
       }
       if (result.passed === true) {
         await autoRouteCheckpoint(runPath, routeStepFor("variant", "final-checked"), { variant_check: finalEvidence });

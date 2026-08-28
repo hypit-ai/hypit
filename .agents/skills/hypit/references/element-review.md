@@ -109,24 +109,11 @@ inside it. For each level, check the following explicitly:
 - **Canvas safety:** check the final visible bounds against all four Canvas edges. Nothing should be
   clipped unless the reference/intent clearly calls for it.
 
-`authoring_check` and `reconstruction_check` return a deterministic `layout_geometry` report with
-Canvas/Frame bounds, sizes, centres, parent/Canvas vertical centre offsets, containment overflow, and
-bound element ids. Use those numbers as mechanical facts and let the observer decide whether the
-alignment, offset or overflow matches the reference/intent. The report cannot measure renderer-shaped glyph
-bounds or infer intent, so the visual pass must still confirm text and marks in the rendered image.
-
-The same report includes `layout_geometry.overlaps`. It is an advisory list of independent component
-placements that are on the same Canvas, present during an overlapping timing scope, and have a
-positive-area rectangle intersection without either rectangle fully containing the other. Nested
-placements owned by the same component are excluded; their internal layout is judged against that
-component's own parent/Frame. Full containment is omitted because a background or parent Frame commonly
-covers its child intentionally. Treat each entry as a candidate finding: confirm it in the rendered
-frame and against the author intent before changing Source. For reconstruction, reference observation
-is authoritative; for original authoring, the user's brief and settled creative intent are authoritative.
-Never move an element merely to satisfy this report, and never remove an intentional overlap merely
-because it was listed.
-The check compares only declared Canvas/Frame placement bounds; it cannot see glyph-level or other
-package-internal bounds that a Producer does not expose.
+Run and settle `layout_check` before this visual round. **Read now:** `layout-checks.md`. Its realized
+Producer/DOM measurements accompany the render as candidate evidence only.
+They help locate a relationship worth inspecting but never decide that alignment, offset, crop or
+overlap is wrong. For reconstruction, reference observation is authoritative; for original authoring,
+the user's brief and settled creative intent are authoritative.
 
 Do not treat a clearly platform/player/export-tool watermark as authored content. Ignore it when its
 provenance is obvious; if it could be part of the design, record the uncertainty instead of inventing
@@ -159,10 +146,8 @@ one default Style and a `caption:Use` override for one Selection is two looks, w
 two first appear, not one per Segment. This is the same reading `script-time.md` applies to every
 other system that spans cuts: the system is authored once, so it is read once.
 
-Source-level Canvas safety is checked separately. `authoring_check` and `reconstruction_check` resolve
-every declared Frame into Canvas coordinates and report the elements bound to any Frame that crosses
-a Canvas edge. Package-internal glyph or private layout bounds remain visible-review facts because
-the Source does not expose geometry that a mechanical check could measure.
+Stable package-internal realized bounds are checked separately by `layout_check`; this visual selection
+remains one full clip per distinct declaration at first appearance and therefore covers motion as well.
 
 ### Render every stretch first, then send them all at once
 
