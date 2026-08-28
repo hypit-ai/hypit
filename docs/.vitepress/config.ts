@@ -159,6 +159,7 @@ const enTheme = {
         text: "Develop",
         items: [
           { text: "Overview", link: "/guide/develop" },
+          { text: "Hypit Skill Architecture", link: "/guide/skill" },
           { text: "Package Architecture", link: "/guide/packages" },
           { text: "Adding an Author Package", link: "/guide/author-packages" },
           { text: "Component Anatomy", link: "/guide/component-anatomy" },
@@ -205,6 +206,7 @@ const zhTheme = {
         text: "开发指南",
         items: [
           { text: "概览", link: "/zh/guide/develop" },
+          { text: "Hypit Skill 架构", link: "/zh/guide/skill" },
           { text: "包架构", link: "/zh/guide/packages" },
           { text: "添加 Author 包", link: "/zh/guide/author-packages" },
           { text: "添加 Provider", link: "/zh/guide/providers" },
