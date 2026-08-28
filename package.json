@@ -58,7 +58,6 @@
     "node": ">=22"
   },
   "devDependencies": {
-    "@fontsource-variable/hanken-grotesk": "5.3.0",
     "@hypit/artifact": "workspace:*",
     "@hypit/artifact-store-fs": "workspace:*",
     "@hypit/artifact-store-s3": "workspace:*",
