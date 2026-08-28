@@ -32,7 +32,7 @@ function usage(): string {
     "  hypit-reference-video-tools variant_init --project-root <base> --output-root <batch> --slate <slate.json>",
     "  hypit-reference-video-tools variant_check --run <variant>/build.svrun [--runtime <hypit.runtime.json>]",
     "    route_state start: --route reconstruction|description|variant|variant-package [--run <run>] [--reference-id <id>]",
-    "    revision_state start: [--run <run>] [--parent-route reconstruction|description] [--request <text>]",
+    "    revision_state start: [--run <run>] [--parent-route reconstruction|description|variant] [--request <text>]",
     "    checkpoint: --route <route> (--state <stage> | --step <n>) [--status in_progress|complete|blocked] [--next-action <text>] [--artifacts <json>]",
     "    read/reconcile: --project-root <dir>",
     "  hypit-reference-video-tools prepare_reference --video-path <path or link> [--observer gemini|agent] [--redo media|transcript|people|voices|systems|places|all]",
@@ -361,7 +361,7 @@ async function main(): Promise<void> {
       result = await tools.revision_state(supplied as RevisionStateCommandInput);
     } else if (action === "start") {
       const parentRoute = one(flags, "parent-route");
-      if (parentRoute !== undefined && parentRoute !== "reconstruction" && parentRoute !== "description") throw new Error("--parent-route must be reconstruction or description");
+      if (parentRoute !== undefined && parentRoute !== "reconstruction" && parentRoute !== "description" && parentRoute !== "variant") throw new Error("--parent-route must be reconstruction, description or variant");
       result = await tools.revision_state({ action, project_root: projectRoot,
         ...(one(flags, "run") === undefined ? {} : { run: one(flags, "run") }),
         ...(parentRoute === undefined ? {} : { parent_route: parentRoute }),
@@ -376,6 +376,8 @@ async function main(): Promise<void> {
       const step: number | string = Number.isSafeInteger(numericStep) && numericStep >= 1 ? numericStep : stepRaw;
       const status = one(flags, "status");
       if (status !== undefined && status !== "in_progress" && status !== "complete" && status !== "blocked") throw new Error("--status must be in_progress, complete or blocked");
+      const parentRoute = one(flags, "parent-route");
+      if (parentRoute !== undefined && parentRoute !== "reconstruction" && parentRoute !== "description" && parentRoute !== "variant") throw new Error("--parent-route must be reconstruction, description or variant");
       let artifacts: Readonly<Record<string, string>> | undefined;
       const artifactRaw = one(flags, "artifacts");
       if (artifactRaw !== undefined) {
@@ -384,7 +386,7 @@ async function main(): Promise<void> {
       result = await tools.revision_state({ action, project_root: projectRoot, step,
         ...(status === undefined ? {} : { status }),
         ...(one(flags, "run") === undefined ? {} : { run: one(flags, "run") }),
-        ...(one(flags, "parent-route") === undefined ? {} : { parent_route: one(flags, "parent-route") as "reconstruction" | "description" }),
+        ...(parentRoute === undefined ? {} : { parent_route: parentRoute }),
         ...(one(flags, "parent-state-digest") === undefined ? {} : { parent_state_digest: one(flags, "parent-state-digest") }),
         ...(one(flags, "request") === undefined ? {} : { request: one(flags, "request") }),
         ...(one(flags, "next-action") === undefined ? {} : { next_action: one(flags, "next-action") }),
@@ -413,7 +415,7 @@ async function main(): Promise<void> {
       const count = countRaw === undefined ? undefined : Number(countRaw);
       if (count !== undefined && (!Number.isSafeInteger(count) || count < 1)) throw new Error("--count must be a positive integer");
       const parentRoute = one(flags, "parent-route");
-      if (parentRoute !== undefined && parentRoute !== "reconstruction" && parentRoute !== "description") throw new Error("--parent-route must be reconstruction or description");
+      if (parentRoute !== undefined && parentRoute !== "reconstruction" && parentRoute !== "description" && parentRoute !== "variant") throw new Error("--parent-route must be reconstruction, description or variant");
       result = await tools.variant_state({
         action, project_root: projectRoot, output_root: required(flags, "output-root"),
         ...(one(flags, "run") === undefined ? {} : { run: one(flags, "run") }),

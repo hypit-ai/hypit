@@ -63,6 +63,12 @@ reference reconstruction and apply that product/person/brand adaptation inside r
 Variant expansion starts from that adapted, checked base. Revision is used only for a later natural-
 language change to an already completed project.
 
+After an individual variant reaches `variant-complete`, a later natural-language change to that child
+project leaves this route and starts `../revision/route.md` with `--parent-route variant`. The original
+`allowed_changes` remains batch-production history; it does not constrain that Revision. Do not run
+`variant_check` after Revision has started. Later batch reconciliation validates the immutable check
+that completed the original variant and does not reinterpret Revision edits as batch scope escape.
+
 ## 2. Inspect examples and freeze format decisions
 
 **Read now:** `../brief-intake.md`, then inspect complete projects under the checkout's `examples/`
