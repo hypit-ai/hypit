@@ -1,6 +1,6 @@
 # Hypit source authoring
 
-For a post-completion natural-language change, use `revision.md`. That route edits Source/Recipe/Run
+For a post-completion natural-language change, use `revision/route.md`. That route edits Source/Recipe/Run
 and reruns deterministic gates only; this authoring page's visual review guidance does not apply to a
 revision.
 

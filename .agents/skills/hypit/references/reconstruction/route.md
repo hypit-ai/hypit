@@ -14,10 +14,10 @@ Seeing the reconstruction is what that Build is for. What is settled here is tha
 which is the part a Build cannot repair. The route then pauses at the Studio confirmation handoff
 before any paid Build; after explicit acceptance it may proceed with the Runtime Build lifecycle.
 Once the paid Build has produced the accepted full video, any new natural-language change starts
-`../revision.md` from that completed Run; never continue this creation route or edit the rendered file.
+`../revision/route.md` from that completed Run; never continue this creation route or edit the rendered file.
 
 If the project is already complete and the author asks for a natural-language change, stop following
-this creation route and read `../revision.md`. Revision edits Source/Recipe/Run and reruns deterministic
+this creation route and read `../revision/route.md`. Revision edits Source/Recipe/Run and reruns deterministic
 gates; it does not invoke a VLM or visual observer.
 
 One exception, because it is not a generation of the video: a component's own surface — the field its
@@ -395,7 +395,7 @@ person and product is already a single anchor, because `../playbooks/craft/perso
 `../playbooks/craft/visual-continuity.md` required that while you were writing.
 
 If the author requests a change after seeing the preview, leave this route and follow
-`../revision.md`; do not pay or Build a source that has not passed the final deterministic gate.
+`../revision/route.md`; do not pay or Build a source that has not passed the final deterministic gate.
 
 ### 24. Re-run the final deterministic gate
 
@@ -411,7 +411,7 @@ unless the author explicitly requested it.
 **Read now:** `../studio-confirmation.md`. Realize the preview-mock Run first, then start Studio with
 the returned temporary `preview.svrun` (never the original unresolved Run), show the complete
 estimate-timed mock, return the exact URL printed by Studio, and obtain explicit acceptance and cost approval. If the author declines, enter
-`../revision.md` and do not Build. Once accepted, submit the paid Build and persist its accepted
+`../revision/route.md` and do not Build. Once accepted, submit the paid Build and persist its accepted
 Build-Record Run; start Studio for that accepted Run, return the exact URL printed by Studio, while
 the HyperFrames/final render proceeds concurrently.
 
@@ -419,5 +419,5 @@ After acceptance, continue with `../runtime.md` for the approved paid Build and 
 
 When the accepted full video is available, a later request such as moving an element or raising
 captions is a new revision request. Start `revision_state` against the accepted-material Run and
-follow `../revision.md`; after its deterministic gates, Studio may hot-reload (or be started for the
+follow `../revision/route.md`; after its deterministic gates, Studio may hot-reload (or be started for the
 Run if none is running), but Revision still performs no VLM/visual review.
