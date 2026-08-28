@@ -62,6 +62,8 @@ type ParsedArgs = {
   readonly follow: boolean;
   /** Emit the Run Source markup that reuses these Records instead of listing them. */
   readonly pin: boolean;
+  /** Omit this Build's requested Targets from history and generated pin markup. */
+  readonly excludeTargets: boolean;
   readonly maxWaitMs: number | undefined;
   readonly record: string | undefined;
   readonly output: string | undefined;
@@ -127,6 +129,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let runtime: string | undefined;
   let follow = false;
   let pin = false;
+  let excludeTargets = false;
   let maxWaitMs: number | undefined;
   let record: string | undefined;
   let output: string | undefined;
@@ -292,6 +295,10 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       pin = true;
       continue;
     }
+    if (item === "--exclude-targets") {
+      excludeTargets = true;
+      continue;
+    }
     if (item === "--max-wait-ms") {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--max-wait-ms requires milliseconds");
@@ -349,6 +356,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     runtime,
     follow,
     pin,
+    excludeTargets,
     maxWaitMs,
     record,
     output,
@@ -417,7 +425,7 @@ function assertCommandOptions(args: ParsedArgs): void {
     case "history":
     case "inspect":
       add("--runtime");
-      if (args.command === "history") add("--source", "--pin");
+      if (args.command === "history") add("--source", "--pin", "--exclude-targets");
       break;
     case "check":
     case "plan":
@@ -456,7 +464,7 @@ function usage(): string {
     "  hypit build <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow]",
     "  hypit status <build-id> [--runtime profile.json] [--watch]",
     "  hypit builds [--runtime profile.json]",
-    "  hypit history [source-output-name] [--runtime profile.json] [--source author.svml] [--pin]",
+    "  hypit history [source-output-name] [--runtime profile.json] [--source author.svml] [--pin] [--exclude-targets]",
     "  hypit inspect <build-id> [--runtime profile.json]",
     "  hypit get <build-id> [--runtime profile.json] [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
     "  hypit cancel <build-id> [--runtime profile.json] [--reason text]",
@@ -900,6 +908,9 @@ export async function runCli(
     throw new Error("history requires an output name or --source path");
   }
   assertCommandOptions(args);
+  if (args.excludeTargets && !args.pin) {
+    throw new Error("--exclude-targets requires history --pin");
+  }
   const runtimeController = async (profile: string, source?: string): Promise<CliRuntimeController> => {
     const workspaceRoot = args.workspaceRoot
       ?? selectedRuntimeProjectRoot
@@ -1338,24 +1349,37 @@ export async function runCli(
           }));
       } else if (args.command === "history") {
         const catalogs = await runtime.builds();
-        const entries = (await Promise.all(catalogs.map(async (catalog) => {
-          if (args.source !== undefined && catalog.source.path !== args.source) return [];
-          if (args.file !== undefined && !catalog.aliases.some((alias) => alias.name === args.file)) return [];
+        const history = await Promise.all(catalogs.map(async (catalog) => {
+          if (args.source !== undefined && catalog.source.path !== args.source) {
+            return { entries: [], targetNames: [] };
+          }
+          if (args.file !== undefined && !catalog.aliases.some((alias) => alias.name === args.file)) {
+            return { entries: [], targetNames: [] };
+          }
           const status = await runtime.status(catalog.build);
-          if (status.build === undefined) return [];
-          return acceptedArchivedOutputs(status.build.state, catalog)
-            .filter((output) => args.file === undefined || output.name === args.file)
-            .map((output) => ({
-              build: catalog.build,
-              createdAt: catalog.createdAt,
-              status: status.dispatch === undefined
-                ? status.build!.state.status
-                : submissionStatus(status.dispatch),
-              source: catalog.source,
-              ...(catalog.run === undefined ? {} : { run: catalog.run }),
-              output,
-            }));
-        }))).flat()
+          if (status.build === undefined) return { entries: [], targetNames: [] };
+          const targetOutputs = new Set(status.build.state.request.targets.map((target) => target.output));
+          return {
+            targetNames: catalog.aliases
+              .filter((alias) => alias.ref.kind === "logical-output" && targetOutputs.has(alias.ref.id))
+              .map((alias) => alias.name),
+            entries: acceptedArchivedOutputs(status.build.state, catalog)
+              .filter((output) => args.file === undefined || output.name === args.file)
+              .map((output) => ({
+                build: catalog.build,
+                createdAt: catalog.createdAt,
+                status: status.dispatch === undefined
+                  ? status.build!.state.status
+                  : submissionStatus(status.dispatch),
+                source: catalog.source,
+                ...(catalog.run === undefined ? {} : { run: catalog.run }),
+                output,
+              })),
+          };
+        }));
+        const targetNames = new Set(history.flatMap((item) => item.targetNames));
+        const entries = history.flatMap((item) => item.entries)
+          .filter((entry) => !args.excludeTargets || !targetNames.has(entry.output.name))
           .sort((left, right) => right.createdAt - left.createdAt
             || left.output.name.localeCompare(right.output.name)
             || left.build.localeCompare(right.build));

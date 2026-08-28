@@ -61,6 +61,11 @@ without pinning them buys the same bytes again. Run `--pin` against the failed B
 the cause. `hypit history --source <author.svml> --pin` emits the pairs for the newest accepted
 Record of each output; do not transcribe Build ids by hand.
 
+For a Run opened in Studio, add `--exclude-targets` and keep every declared Target unresolved. A
+Target satisfied by its accepted media Record is an opaque finished file, so Studio cannot trace it
+to the current Film graph. The accepted-material Studio handoff is defined in
+`studio-confirmation.md`.
+
 **Pin what a Provider was paid to make, and nothing the Source computes.** `--pin` emits a line for
 every accepted output, including the ones the Script's own structure produced: `speech.semantic`,
 `speech.visual`, `speech.audio`, and the Caption Track's deterministic projection. Those are
