@@ -2,8 +2,8 @@
 
 CLI tools for reconstructing a reference video with Hypit.
 
-The package exposes reference-observation, vocabulary/gate, rendering, review, route-state and
-revision-state CLI subcommands, including `list_svml_packages`, `prepare_reference`,
+The package exposes reference-observation, vocabulary/gate, rendering, review, route-state,
+revision-state and variant-expansion CLI subcommands, including `list_svml_packages`, `prepare_reference`,
 `observe_reference`, `record_observation`, `inspect_svml_vocabulary`, and `compare_reconstruction`.
 Each command prints one JSON result to stdout. The final source files are authored by the calling
 agent and checked with the installed `hypit check` command.
@@ -11,6 +11,12 @@ agent and checked with the installed `hypit check` command.
 For a completed project change, `revision_state --action start|read|checkpoint|reconcile` stores a
 small atomic `.hypit/revision-state.json` snapshot. Revision edits Source/Recipe/Run and reruns
 deterministic gates; it does not invoke a VLM/observer or perform visual review.
+
+For a validated source project that needs independent derivatives, `variant_state` stores the atomic
+batch snapshot and base-project locator, `variant_init` copies the authored project without generated
+results or secrets, and `variant_check` enforces the declared file scope plus the deterministic
+package, Cue, graph, coverage and playback gates. Variant checking performs no render or visual
+review. A paid Build remains a separate, explicitly approved action.
 
 `--observer` on `prepare_reference` chooses who reads the reference, once per reference:
 
@@ -41,6 +47,10 @@ hypit-reference-video-tools observe_reference --reference-id <reference-id> --sh
 hypit-reference-video-tools observe_reference --reference-id <reference-id> --shot-id shot-007 --reobserve
 hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/media-track --tag Track
 hypit-reference-video-tools compare_reconstruction --reference-id <reference-id> --shot-id shot-007 --image ./rendered.png
+hypit-reference-video-tools variant_state --action discover --project-root ./projects/base
+hypit-reference-video-tools variant_state --action start --project-root ./projects/base --output-root ./projects/base-variants/<batch-id> --count 100
+hypit-reference-video-tools variant_init --project-root ./projects/base --output-root ./projects/base-variants/<batch-id> --slate ./slate.json
+hypit-reference-video-tools variant_check --run ./projects/base-variants/<batch-id>/001-example/build.svrun
 ```
 
 For automation, every command also accepts `--input '{"...":"..."}'` with the complete JSON input

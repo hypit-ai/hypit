@@ -22,6 +22,10 @@ observer.
 This remains true after a paid Build has produced the full video: start `revision_state` against the
 accepted-material Run, never edit the rendered file or resume the creation steps.
 
+If the same request also asks for many independent derivatives, finish this route through the final
+deterministic gate, then enter `../variant-expansion/route.md`. The base project's format, examples,
+component choices and package gaps are decided globally there before any variant agent starts.
+
 ## Checkpoint and recovery
 
 Start the project snapshot after creating the project directory:
@@ -211,6 +215,10 @@ hypit-reference-video-tools authoring_check projects/<name>/build.svrun
 **Done when:** `"passed": true`. It refuses while any drawing element has never been looked at, while
 any stretch of the Script has nothing drawing a full frame over it, and while any timed picture is
 configured to empty its window.
+
+If the author requested batch variants, hand this checked Source to
+`../variant-expansion/route.md` now. Do not Build the base or any variant unless finished media was
+explicitly requested; the variant route owns its own aggregate and paid-build gates.
 
 ### 13. The Build
 

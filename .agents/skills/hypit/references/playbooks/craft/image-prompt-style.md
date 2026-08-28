@@ -11,7 +11,9 @@
 
 ## Write every generation prompt in English
 
-Use four ordered parts:
+Write the final prompt as continuous natural-language prose, with no section headings, category
+labels, slash-separated field names, or key-value formatting. Cover these four concerns in order,
+but never print their names into the prompt:
 
 1. **Reality contract:** open every photographic prompt with this sentence, verbatim, with only the
    bracketed shot replaced. It is concatenated in front of the rest, not paraphrased — a described
@@ -27,7 +29,9 @@ Use four ordered parts:
    asset such as a paper texture, a board or a panel is not a photograph, and this sentence would
    damage it; write those prompts plainly.
 2. **Visible story:** state the exact person/product, wardrobe, location, action, emotion, objects,
-   object count, and initial physical state that must be visible.
+   object count, and initial physical state that must be visible. When a person is the main subject,
+   make their face and identity the most specific part of the shot description rather than treating
+   them as a generic figure inside a detailed set.
 3. **Camera geometry:** state shot size, camera owner/placement, height, direction, lens relationship,
    reflection logic, and which requested objects must fit inside the frame.
 4. **Reference contract:** assign each reference a role and state which identity, product geometry,
@@ -59,16 +63,24 @@ The strongest prompts turn adjectives into observable evidence and keep the same
    landmarks that must be included. Relational instructions such as “subject slightly right,
    leaning left, looking toward an unseen person on the left” are more reliable than three isolated
    adjectives.
-3. **Identity and appearance anchors.** Establish the recurring person or product with concrete,
-   stable traits first (face shape, eyes, hair, skin, age presentation, distinctive marks), then
-   add body silhouette, wardrobe, accessories, and styling. For a male-presenting subject whose
-   physique matters, state a visible shoulder line — for example, “broad shoulders and a strong
-   upper-body silhouette” — and choose a half-body or wider frame that can actually show it. When
-   mixed Asian heritage is part of the intended identity, name the combination explicitly, such as
-   “Japanese-American mixed-race man” or “Korean-American mixed-race man”; do not leave a
-   reference-critical identity to the generic word “Asian.” Keep heritage as one stable identity
-   anchor, never as a bundle of stereotyped physical claims. Prefer a few renderable facts over a
-   stack of generic superlatives such as “extremely handsome.”
+3. **Identity and appearance anchors.** For any person-led image, make the identity description the
+   visual center of the prompt. Establish the recurring person with concrete, stable traits first:
+   age presentation; specifically intended ethnicity, nationality, or mixed heritage; face shape;
+   brow and eye shape and spacing; nose structure; lips, jaw, and chin; hairline, hair texture, and
+   hairstyle; skin tone and undertone; natural pores, fine lines, under-eye texture, small
+   asymmetries, and any distinctive marks. Then add body silhouette, wardrobe, accessories, and
+   styling. Use enough of these facts to make the person recognizable across generations instead of
+   writing a generic attractive face. For a male-presenting subject whose physique matters, state a
+   visible shoulder line — for example, “broad shoulders and a strong upper-body silhouette” — and
+   choose a half-body or wider frame that can actually show it. When mixed Asian heritage is part of
+   the intended identity, name the combination explicitly, such as “Japanese-American mixed-race
+   man” or “Korean-American mixed-race man”; do not leave a new, authored identity at the generic
+   word “Asian.” Keep heritage as one stable identity anchor, never as a bundle of stereotyped
+   physical claims. If a supplied reference owns an existing person's identity, do not guess a
+   sensitive background from appearance; describe observable facial traits and tell the model to
+   preserve that exact identity. Prefer specific, renderable human detail over generic superlatives
+   such as “extremely handsome,” “perfect face,” or “flawless skin,” which tend to produce synthetic,
+   interchangeable people.
 4. **Action and physical relationships.** Give one readable starting action and posture. Say who the
    subject is addressing, what supports their body, which hands are occupied, and how props contact
    the scene. This explains a gaze, crossed legs, a microphone entering from frame left, or a person
@@ -88,23 +100,35 @@ The strongest prompts turn adjectives into observable evidence and keep the same
    product shape, wardrobe, or UI. State what must remain stable and what the new shot is allowed to
    change. Do not describe a reference-locked room a second time in prose as if it were a fresh set.
 
-For a prompt family, use this compact skeleton after the invariant prefix:
+For a prompt family, preserve this order after the invariant prefix, but write the result as flowing
+natural-language prose. The numbered parts above are an authoring checklist, never headings, labels,
+field names, slash-separated categories, or a key-value outline in the generated prompt. In
+particular, do not emit openings such as `Scene/purpose:`, `Composition/camera:`, or
+`Subject/identity/wardrobe:`. A finished prompt should read like a concise description of the image,
+for example:
 
 ```text
-Scene/purpose: …
-Composition/camera: …
-Subject/identity/wardrobe: …
-Action/posture/relationships: …
-Props/branding: …
-Lighting/material: …
-Acceptance constraints: …
-Reference roles: …
+Set the frame in a compact neighborhood podcast studio, with the acoustic wall and the edge of the
+desk still clearly visible. Compose it as a seated medium close-up from the guest's eye level, with
+the subject slightly right of center, leaning toward an unseen host on the left. He is a
+Japanese-American mixed-race man in his early thirties with a broad square face, softly hooded
+dark-brown eyes beneath straight brows, a medium-width nose, a defined jaw, and a slightly uneven
+smile. His warm light-olive skin shows natural pores, faint under-eye creases, and subtle cheek
+asymmetry; his short coarse black hair has a believable, mildly uneven hairline. He has broad
+shoulders and wears a faded charcoal work jacket over a white T-shirt. He rests one forearm on the
+desk and holds a single matte-black microphone near his mouth while listening with a restrained
+smile. Natural window light enters from frame left and keeps skin, cloth, painted wall, and desk
+textures visible without glossy polish or background blur. Keep both shoulder edges, the microphone,
+and its contact with his hand intact inside the frame. Use the first reference to preserve his exact
+identity and wardrobe, while allowing the new posture and camera distance described here.
 ```
 
-This is a writing order, not text to paste literally. Keep critical facts singular and unambiguous;
-use controlled repetition only for a fact that must survive across every view (identity, camera side,
-or lighting direction). Separate mutually exclusive poses, locations, or before/after states into
-different prompts rather than joining them with “or.”
+This example demonstrates the prose shape, not wording to paste literally. One or several short
+paragraphs are acceptable, but every sentence must continue the image description rather than name
+a prompt section. Keep critical facts singular and unambiguous; use controlled repetition only for a
+fact that must survive across every view (identity, camera side, or lighting direction). Separate
+mutually exclusive poses, locations, or before/after states into different prompts rather than
+joining them with “or.”
 
 ## Keep people and cameras physically possible
 
