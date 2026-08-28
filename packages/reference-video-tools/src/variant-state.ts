@@ -5,7 +5,8 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { checkpointRouteState, readRouteState, reconcileRouteState, routeExecutionStatePath, routeStatePath } from "./route-state.js";
 import { readRevisionState, revisionExecutionStatePath } from "./revision-state.js";
 import { persistEvidence } from "./state-files.js";
-import { inspectVariantDiff, snapshotProject } from "./variant-project.js";
+import { expandVariantSlate, inspectVariantDiff, snapshotProject } from "./variant-project.js";
+import type { VariantSlate } from "./variant-project.js";
 
 export type VariantExpansionStatus = "active" | "complete" | "blocked";
 export type VariantExpansionStep =
@@ -503,16 +504,19 @@ async function reconcileVariantExpansionUnlocked(projectRoot: string, outputRoot
       || (await readRouteState(existing.project_root))?.status === "complete"],
     [2, async () => await validJson(artifact("examples"))],
     [3, async () => await validJson(artifact("format_plan"))],
-    [4, async () => await validJson(artifact("slate"), (value) => Array.isArray((value as { variants?: unknown })?.variants))],
+    [4, async () => await validJson(artifact("slate"), (value) => {
+      try { return expandVariantSlate(value as VariantSlate, artifact("slate") ?? "slate.json").length > 0; } catch { return false; }
+    })],
     [5, async () => await validJson(artifact("vocabulary"), (value) => Array.isArray((value as { packages?: unknown })?.packages) || Array.isArray((value as { surfaces?: unknown })?.surfaces))],
     [6, async () => await validJson(artifact("component_plan"))],
     [7, async () => await validJson(artifact("package_gaps"))],
     [9, async () => {
       const slatePath = artifact("slate");
       if (slatePath === undefined) return false;
-      let slate: { variants?: readonly { component_class?: unknown; inject_packages?: readonly { package_id?: unknown }[] }[] };
+      let slate: VariantSlate;
       try { slate = JSON.parse(await readFile(slatePath, "utf8")) as typeof slate; } catch { return false; }
-      const variantsInSlate = slate.variants ?? [];
+      let variantsInSlate: readonly { component_class?: unknown; inject_packages?: readonly { package_id?: unknown }[] }[];
+      try { variantsInSlate = expandVariantSlate(slate, slatePath); } catch { return false; }
       if (variantsInSlate.some((variant) => variant.component_class === "new-package" && (variant.inject_packages?.length ?? 0) === 0)) return false;
       const required = new Set(variantsInSlate.flatMap((variant) => variant.component_class === "new-package"
         ? (variant.inject_packages ?? []).flatMap((injection) => typeof injection.package_id === "string" ? [injection.package_id] : [])
@@ -521,8 +525,10 @@ async function reconcileVariantExpansionUnlocked(projectRoot: string, outputRoot
         && [...required].every((id) => packages.some((pack) => pack.id === id && pack.status === "ready" && pack.digest !== undefined));
     }],
     [10, async () => await validJson(artifact("slate"), (value) => {
-      const variants = (value as { variants?: unknown[] })?.variants;
-      return Array.isArray(variants) && (existing.count === undefined || variants.length === existing.count);
+      try {
+        const variants = expandVariantSlate(value as VariantSlate, artifact("slate") ?? "slate.json");
+        return existing.count === undefined || variants.length === existing.count;
+      } catch { return false; }
     })],
     [11, async () => variants.length > 0 && (await Promise.all(variants.map(async (variant) => await exists(variant.manifest) && await exists(variant.project_root)))).every(Boolean)],
     [12, async () => variants.length > 0 && (await Promise.all(variants.map(async (variant) => await exists(variant.route_state)))).every(Boolean)],
