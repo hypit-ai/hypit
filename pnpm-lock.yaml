@@ -641,6 +641,9 @@ importers:
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@hypit/estimate':
+        specifier: workspace:*
+        version: link:../estimate
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -650,6 +653,9 @@ importers:
       '@hypit/source':
         specifier: workspace:*
         version: link:../source
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
       '@hypit/validation':
         specifier: workspace:*
         version: link:../validation

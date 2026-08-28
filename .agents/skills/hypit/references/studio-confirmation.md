@@ -7,10 +7,13 @@ VLM review and it does not replace the route's mechanical checks.
 
 After the route-specific final check passes, but before submitting any paid Build:
 
-1. Run `realizePreviewMock({ run: "<project>/build.svrun", timing: "estimate" })`. It writes a
-   durable `.hypit/preview/<digest>/mock.svrun` (the native mock materialization Run), its
-   content-addressed Artifacts, and a second `preview.svrun` whose relative file Candidates point
-   at those results.
+1. Realize the preview through the native `reference-video-tools render_element` path (or the
+   repository API `realizePreviewMock({ run: "<project>/build.svrun", timing: "estimate" })`).
+   The tool writes a durable `.hypit/preview/<digest>/mock.svrun` (the native mock materialization
+   Run), its content-addressed Artifacts, and a second `preview.svrun` whose relative file Candidates
+   point at those results. The realization is keyed by the Author/Run/target/geometry/timing digest,
+   so repeating the command reopens the cached bytes instead of generating new media or spending
+   Provider quota.
 2. Start Hypit Studio with that returned `previewRun` path. Capture the URL printed by
    `server.printUrls()` and give the author the exact URL (for example,
    `http://localhost:5179/`) in the handoff. Studio can

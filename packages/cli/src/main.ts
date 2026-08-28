@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 
+import { deterministicSpeechDurations, deterministicSpeechDurationsFromGraph } from "@hypit/compiler-node";
 import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
 import {
@@ -1704,6 +1705,7 @@ export async function runCli(
           candidates: Object.fromEntries(loaded.document.candidates.map((item) => [item.id, item.kind])),
           satisfactions: loaded.document.satisfactions,
           unresolvedBuildRecords: loaded.unresolvedBuildRecords,
+          deterministic_durations: deterministicSpeechDurationsFromGraph(loaded.author.graph, loaded.author.program.records),
         } as const;
         writeCliOutput(io, args, {
           kind: "check-run",
@@ -1907,6 +1909,7 @@ export async function runCli(
         ok: preflight?.ok ?? true,
         plan: result.definition.plan,
         unreached: unreachedGenerations(result.compilation.author.graph, result.state, outputNames),
+        deterministic_durations: deterministicSpeechDurations(result.compilation),
         ...(preflight === undefined ? {} : { preflight }),
       },
       run: loaded.path,

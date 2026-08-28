@@ -44,7 +44,7 @@ function usage(): string {
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews] [--run <build.svrun>]",
     "  hypit-reference-video-tools validate_local_author_packages --run <build.svrun> [--expected-package <name> ...]",
     "  hypit-reference-video-tools validate_script_cues --run <build.svrun>",
-    "  hypit-reference-video-tools inspect_visual_contract [--shape visual-track|text-flow|text-typography|text-paint|text-document|path-command] [--producers-of <package> ...]",
+    "  hypit-reference-video-tools inspect_visual_contract [--shape visual-track|visual-element|box|mask|text|image|video|surface|text-flow|text-typography|text-paint|text-document|path-command] [--producers-of <package> ...]",
     "  hypit-reference-video-tools paths",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <build.svrun> --segment <id>|--selection <id>|--tokens <from:to> --video <path>|--image <path> [--question <scope>] [--element <id>] [--tolerance-frames <n>]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --video <path>|--image <path> [--question <scope>] [--element <id>] [--tolerance-frames <n>]",

@@ -151,6 +151,18 @@ for them again. Ask only for a credential that is absent or invalid after both `
 and this machine does not hold is named, and the route stops there. The Vertex pair is the one
 exception: it selects an observer rather than blocking one, and step 5 owns it.
 
+Create the project's `hypit.runtime.json` now with at least the local media and WhisperX endpoints,
+then select and start it before reference preparation:
+
+```bash
+hypit runtime use hypit.runtime.json
+hypit runtime up
+```
+
+Step 15 completes the same Profile with every capability reached by the authored Source; it does not
+create the first Profile after transcription has already needed one. Checkpoint `environment` only
+after this preliminary Profile and the selected credentials are ready.
+
 ### 4. Read the observer question
 
 **Read now:** `observers.md`, down to and including "Say which path is running" — the cost of each
@@ -278,11 +290,11 @@ If no gap remains, remove unused project-owned package directories.
 
 ## Phase 3 — Author, check, wire
 
-### 15. Write the four files
+### 15. Write the sources and complete the Runtime Profile
 
-`main.svml`, `recipes.svs`, `build.svrun`, `hypit.runtime.json`. The Runtime Profile is part of the
-deliverable even though this route runs nothing: without it the first thing the author meets is
-`RUNTIME_CAPABILITY_UNBOUND`.
+Write `main.svml`, `recipes.svs` and `build.svrun`, then extend the existing `hypit.runtime.json` with
+every capability those Sources reach. The Runtime Profile is part of the deliverable: without it the
+first thing the author meets is `RUNTIME_CAPABILITY_UNBOUND`.
 
 Now persist the Run-scoped half of the frozen vocabulary decision. This completes
 `vocabulary-checked` only when `.hypit/component-fit.json` remains valid:

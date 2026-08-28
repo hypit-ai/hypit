@@ -36,7 +36,7 @@ The Profile contains only environmental choices that genuinely vary:
         "config": { "path": "artifacts" }
       },
       "credentials": {
-        "environment": { "use": "@hypit/credential-store-env" }
+        "env": { "use": "@hypit/credential-store-env" }
       },
       "endpoints": {
         "media": { "use": "@hypit/provider-media-local" }

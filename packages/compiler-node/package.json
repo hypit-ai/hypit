@@ -10,10 +10,12 @@
   "dependencies": {
     "@hypit/core": "workspace:*",
     "@hypit/elaborator": "workspace:*",
+    "@hypit/estimate": "workspace:*",
     "@hypit/workspace": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/run": "workspace:*",
     "@hypit/source": "workspace:*",
+    "@hypit/text": "workspace:*",
     "@hypit/validation": "workspace:*"
   },
   "devDependencies": {
