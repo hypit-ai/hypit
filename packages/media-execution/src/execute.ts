@@ -458,6 +458,12 @@ function mockColor(value: string): [number, number, number] {
   return [parseInt(value.slice(1, 3), 16), parseInt(value.slice(3, 5), 16), parseInt(value.slice(5, 7), 16)];
 }
 
+// Keep preview media visibly identifiable without changing the requested mock fill. The bright
+// outline survives both still-image and video materialization, so an agent can distinguish mock
+// media from authored assets at a glance.
+const MOCK_BORDER_COLOR = "#d946ef";
+const MOCK_BORDER_WIDTH = 4;
+
 function crc32(bytes: Uint8Array): number {
   let crc = 0xFFFFFFFF;
   for (const byte of bytes) {
@@ -483,15 +489,18 @@ function mockPng(width: number, height: number, color: string): Uint8Array {
   positiveInteger(width, "Mock image width");
   positiveInteger(height, "Mock image height");
   const [red, green, blue] = mockColor(color);
+  const [borderRed, borderGreen, borderBlue] = mockColor(MOCK_BORDER_COLOR);
   const scanlines = Buffer.alloc(height * (1 + width * 3));
   for (let row = 0; row < height; row += 1) {
     const offset = row * (1 + width * 3);
     scanlines[offset] = 0;
     for (let column = 0; column < width; column += 1) {
       const pixel = offset + 1 + column * 3;
-      scanlines[pixel] = red;
-      scanlines[pixel + 1] = green;
-      scanlines[pixel + 2] = blue;
+      const border = row < MOCK_BORDER_WIDTH || row >= height - MOCK_BORDER_WIDTH
+        || column < MOCK_BORDER_WIDTH || column >= width - MOCK_BORDER_WIDTH;
+      scanlines[pixel] = border ? borderRed : red;
+      scanlines[pixel + 1] = border ? borderGreen : green;
+      scanlines[pixel + 2] = border ? borderBlue : blue;
     }
   }
   const header = Buffer.alloc(13);
@@ -565,7 +574,7 @@ export async function executeRenderMockVideo(
     const output = join(work, "mock.mp4");
     const rate = `${request.frameRate.numerator}/${request.frameRate.denominator}`;
     const duration = request.frameCount * request.frameRate.denominator / request.frameRate.numerator;
-    const filter = `color=c=${request.color.slice(1)}:s=${request.width}x${request.height}:r=${rate}:d=${duration}`;
+    const filter = `color=c=${request.color.slice(1)}:s=${request.width}x${request.height}:r=${rate}:d=${duration},drawbox=x=0:y=0:w=iw:h=ih:color=0x${MOCK_BORDER_COLOR.slice(1)}:t=${MOCK_BORDER_WIDTH}`;
     const argv = ["-y", "-v", "error", "-f", "lavfi", "-i", filter,
       ...(request.audio === "silence" ? ["-f", "lavfi", "-i", `anullsrc=r=48000:cl=stereo`] : []),
       "-frames:v", String(request.frameCount), ...(request.audio === "silence"
