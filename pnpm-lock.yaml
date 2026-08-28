@@ -2315,6 +2315,9 @@ importers:
       '@hypit/video-cli':
         specifier: workspace:*
         version: link:../video-cli
+      '@hypit/visual-ir':
+        specifier: workspace:*
+        version: link:../visual-ir
       '@hypit/whisperx':
         specifier: workspace:*
         version: link:../whisperx

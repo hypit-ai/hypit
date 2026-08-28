@@ -34,6 +34,7 @@
     "@hypit/studio": "workspace:*",
     "@hypit/svs": "workspace:*",
     "@hypit/video-cli": "workspace:*",
+    "@hypit/visual-ir": "workspace:*",
     "@hypit/whisperx": "workspace:*",
     "@hypit/yt-dlp": "workspace:*",
     "puppeteer-core": "25.5.0",
