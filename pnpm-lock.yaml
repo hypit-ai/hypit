@@ -2288,6 +2288,9 @@ importers:
       '@hypit/provider-whisperx-local':
         specifier: workspace:*
         version: link:../provider-whisperx-local
+      '@hypit/run-markup':
+        specifier: workspace:*
+        version: link:../run-markup
       '@hypit/script':
         specifier: workspace:*
         version: link:../script

@@ -25,6 +25,7 @@
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/run-markup": "workspace:*",
     "@hypit/provider-whisperx-local": "workspace:*",
     "@hypit/provider-media-local": "workspace:*",
     "@hypit/script": "workspace:*",
