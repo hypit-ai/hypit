@@ -15,6 +15,30 @@ The important distinction is:
 - tools decide whether the written project is legal, wired, covered, measurable and recoverable;
 - a visual observer reports differences, but the agent decides whether a report is a real defect.
 
+## Two extraction rules that keep the checks complementary
+
+This is a central design rule for both `original-authoring` and `reconstruction`:
+
+| Check | What it extracts | What it answers | Why this rule |
+|---|---|---|---|
+| Visual review | One **full clip** at the first appearance of each distinct visual declaration/style change | Does the complete look and motion match the brief (original) or the reference (reconstruction)? | A full clip preserves entrance, movement, exit, transient overlap and appearance changes. Rechecking every caption text or every timestamp would add repetition without adding a new visual declaration. |
+| Mechanical layout | One frame from the **longest stable interval of each `Present`** | In a settled, actually rendered DOM, do content and containers fit and align? | Sampling during motion would report normal animation as overflow or offset. Sampling per `Present` means separate caption Cues/content states are measured independently. |
+
+These rules are deliberately different and must not be swapped. The visual plan does not use the
+longest-stable frame; it reviews the whole clip. `layout_check` does not judge visual similarity; it
+measures the realized composition and returns candidates for the Agent to interpret. Content or time
+extremes are not additional visual-selection rules: a stable overflow is found by the per-`Present`
+layout measurement, while a transient or media-internal problem remains the responsibility of the
+full-clip visual review.
+
+The extraction is shared across the two creation routes. Only the judging basis changes:
+
+```text
+original-authoring:  visual clip → compare with brief
+reconstruction:      visual clip → compare with reference
+both routes:         Present stable frame → measure DOM → Agent judges the candidate
+```
+
 ## How a request becomes a video
 
 ```text
@@ -154,9 +178,10 @@ invalidates affected evidence.
 ### 6. Creation-route visual review and repair
 
 Original authoring calls `authoring_check`; reconstruction calls `reconstruction_check`. Each command
-reads Source and creates a deterministic review plan. It selects the first appearance of each distinct
-visual declaration and the relevant stable stretch, rather than asking an agent to invent an arbitrary
-render list.
+reads Source and creates a deterministic visual-review plan. It selects one full clip at the first
+appearance of each distinct visual declaration (including each style/declaration change), rather than
+asking an agent to invent an arbitrary render list. The longest-stable-interval sample belongs only to
+the separate hidden-browser `layout_check`, not to this visual review.
 
 For each plan entry:
 
@@ -204,7 +229,7 @@ edge needed by the Film. It has no reference video, so `brief.json` is the autho
 | 5. Write the Script | Split the narration into Segments/Takes and short Cues; assign each shot one job and keep timing semantic. | `script-time.md`, `authoring.md` | `main.svml` contains the complete spoken/text progression and deterministic `estimate:Speech` timing. |
 | 6. Wire the project | Author `main.svml`, `recipes.svs`, `build.svrun` and `hypit.runtime.json`; declare each generation, Track, Candidate, satisfaction and Target. | `authoring.md`, `runtime.md` | The Film graph is explicit and reproducible rather than a prompt plus disconnected assets. |
 | 7. Prove sources and graph | Run package, Cue, syntax, graph-trace and realized-layout gates. | `validate_local_author_packages`, `validate_script_cues`, `hypit check`, `preview_check`, `layout_check` | The project is legal, every Track reaches the Film, and browser geometry has been measured before visual review. |
-| 8. Plan the visual review | Ask the route check for the first appearance of each distinct visual declaration and its longest stable stretch. | `authoring_check` | `.hypit/evidence/` records exactly what must be reviewed; the agent does not omit later states or invent a render list. |
+| 8. Plan the visual review | Ask the route check for one full clip at the first appearance of each distinct visual declaration/style change. | `authoring_check` | `.hypit/evidence/` records exactly what must be reviewed; the agent does not omit a style change or invent a render list. The longest stable sample is produced separately by `layout_check`. |
 | 9. Render and review | Materialize the planned preview/mock clips, read every entry against the frozen brief, and record findings. | `render_element`, `review_element`, `record_review`, `element-review.md`, `conformance-round.md` | Each visual system has explicit evidence, including text fit, coverage, contrast, motion and geometry. |
 | 10. Repair and close | Repair only confirmed issues, rerun affected gates and review entries, then run the final route check. | `layout_accept` when geometry is intentional; `authoring_check` | `final-checked` means no required visual review, graph, package, Cue or layout evidence is stale. |
 | 11. Hand off | Create the estimate-timed preview-mock Run, show Studio, disclose cost and Build only after approval. | `preview-mock.md`, `studio-confirmation.md`, `hypit plan/build/status/inspect/get` | Studio sees the live Film graph; the paid Build reuses the checked Run and produces the complete delivery. |
