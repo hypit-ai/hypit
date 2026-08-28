@@ -99,7 +99,7 @@ invalid. Never commit `.env` or copy its secret values into route state, Source,
   hard-code video types or skip the brief-sufficiency gate.
 - A completed project followed by a natural-language change → read `references/revision/route.md`
   and use the independent `revision_state` route. The completed project may come from reconstruction,
-  original authoring or an earlier revision, or the author may supply an existing completed project
+  original authoring, a completed variant or an earlier revision, or the author may supply an existing completed project
   directory directly; it does not need to have been created in the current session. Restore the
   element's role in the frozen intent, edit only Source/Recipe/Run, invalidate the affected graph
   closure, and rerun deterministic gates. Revision never invokes VLM/observer visual inspection;

@@ -48,7 +48,7 @@ import {
   revisionStatePath,
   startRevisionState,
 } from "./revision-state.js";
-import type { RevisionState, RevisionStep } from "./revision-state.js";
+import type { RevisionParentRoute, RevisionState, RevisionStep } from "./revision-state.js";
 import { persistEvidence } from "./state-files.js";
 import {
   checkpointVariantExpansion,
@@ -231,13 +231,13 @@ export type RouteStateCommandInput =
   | ({ readonly action: "checkpoint"; readonly project_root: string; readonly route: RouteKind; readonly step: number | RouteStep; readonly status?: "in_progress" | "complete" | "blocked"; readonly run?: string; readonly reference_id?: string; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly decision?: string; readonly command?: string; readonly error?: string });
 
 export type RevisionStateCommandInput =
-  | ({ readonly action: "start"; readonly project_root: string; readonly run?: string; readonly parent_route?: "reconstruction" | "description"; readonly parent_state_digest?: string; readonly request?: string })
+  | ({ readonly action: "start"; readonly project_root: string; readonly run?: string; readonly parent_route?: RevisionParentRoute; readonly parent_state_digest?: string; readonly request?: string })
   | ({ readonly action: "read" | "reconcile"; readonly project_root: string })
-  | ({ readonly action: "checkpoint"; readonly project_root: string; readonly step: number | RevisionStep; readonly status?: "in_progress" | "complete" | "blocked"; readonly run?: string; readonly parent_route?: "reconstruction" | "description"; readonly parent_state_digest?: string; readonly request?: string; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly decision?: string; readonly command?: string; readonly error?: string; readonly impact?: readonly string[]; readonly affected_source?: readonly string[] });
+  | ({ readonly action: "checkpoint"; readonly project_root: string; readonly step: number | RevisionStep; readonly status?: "in_progress" | "complete" | "blocked"; readonly run?: string; readonly parent_route?: RevisionParentRoute; readonly parent_state_digest?: string; readonly request?: string; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly decision?: string; readonly command?: string; readonly error?: string; readonly impact?: readonly string[]; readonly affected_source?: readonly string[] });
 
 export type VariantStateCommandInput =
   | ({ readonly action: "discover"; readonly project_root: string })
-  | ({ readonly action: "start"; readonly project_root: string; readonly output_root: string; readonly run?: string; readonly request?: string; readonly count?: number; readonly delivery_mode?: "source" | "build"; readonly parent_route?: "reconstruction" | "description"; readonly parent_state_digest?: string; readonly revision_state_digest?: string })
+  | ({ readonly action: "start"; readonly project_root: string; readonly output_root: string; readonly run?: string; readonly request?: string; readonly count?: number; readonly delivery_mode?: "source" | "build"; readonly parent_route?: "reconstruction" | "description" | "variant"; readonly parent_state_digest?: string; readonly revision_state_digest?: string })
   | ({ readonly action: "read" | "reconcile"; readonly project_root: string; readonly output_root?: string; readonly batch_id?: string })
   | ({ readonly action: "checkpoint"; readonly project_root: string; readonly output_root?: string; readonly batch_id?: string; readonly step: number | VariantExpansionStep; readonly status?: "in_progress" | "complete" | "blocked"; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly workload_disclosure?: VariantWorkloadDisclosure; readonly packages?: readonly VariantExpansionPackage[]; readonly variants?: readonly VariantExpansionVariant[]; readonly decision?: string; readonly conflict?: string; readonly resolve_conflict?: string; readonly command?: string; readonly error?: string });
 
@@ -2651,6 +2651,10 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const projectRoot = dirname(runPath);
       const route = await readRouteState(projectRoot);
       if (route?.route !== "variant") throw new Error(`${projectRoot} has no active variant route`);
+      const revision = await readRevisionState(projectRoot);
+      if (revision?.parent_route === "variant") {
+        throw new Error(`${projectRoot} has entered post-completion Revision; variant_check cannot reapply the original batch allowed_changes`);
+      }
       const briefPath = join(projectRoot, ".hypit", "variant-brief.json");
       const brief = JSON.parse(await readFile(briefPath, "utf8")) as {
         id?: string;

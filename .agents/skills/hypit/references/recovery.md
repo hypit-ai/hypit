@@ -45,6 +45,11 @@ first unmet `next_action`. `variant_init` reuses matching initialized copies and
 destinations. A component/package digest change, missing inspection evidence or file outside
 `allowed_changes` is a conflict, not permission to overwrite it.
 
+That rule applies while the child is still in its initial `variant` route. Once a completed child has
+started a user-requested Revision with `parent_route: variant`, its original `allowed_changes` is
+historical evidence only. Reconcile the Revision independently; do not rerun `variant_check` or report
+the Revision's authorized Source edits as variant batch scope conflicts.
+
 For a completed project with a new natural-language change, use the current
 `.hypit/revision-state.json` view and the execution directory named by its `revision_id` under
 `.hypit/revisions/`. The immutable request is

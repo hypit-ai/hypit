@@ -1,7 +1,7 @@
 # Post-completion natural-language revision route
 
 Use this route whenever a natural-language change targets a completed Hypit project. The project may
-have just finished reconstruction, original authoring or an earlier revision, or the author may hand
+have just finished reconstruction, original authoring, variant expansion or an earlier revision, or the author may hand
 over an already completed project directory directly. Revision does not require the current agent to
 have created the project and does not require a parent creation route to exist.
 
@@ -28,6 +28,14 @@ From a completed reconstruction or original-authoring route:
 hypit-reference-video-tools revision_state --action start \
   --project-root <project> --run build.svrun --parent-route description \
   --request 'raise the captions slightly'
+```
+
+From one completed variant project, target that child directory rather than its base or batch root:
+
+```bash
+hypit-reference-video-tools revision_state --action start \
+  --project-root <batch>/023-example --run build.svrun --parent-route variant \
+  --request 'make the presenter framing tighter'
 ```
 
 From a directly supplied completed project with no parent route state:
@@ -69,7 +77,10 @@ and give the author the exact URL with the updated result.
 1. Read the current `main.svml`, `recipes.svs`, `build.svrun`, runtime profile, brief and the target
    package README/vocabulary. Recover the target element's role in the author's intent. For a
    directly supplied project, use its authored Source, project documentation and current graph as the
-   frozen intent evidence; do not force it through reconstruction or original authoring first.
+   frozen intent evidence; do not force it through reconstruction or original authoring first. For a
+   completed variant, read the parent variant route's `variant_brief`, `format_plan`, `component_plan`
+   and immutable final-check evidence. Its `allowed_changes` explains how the batch agent originally
+   produced that variant, but it is not an authorization boundary for the user's later Revision.
 2. Classify the request's impact: geometry/style, Script/semantic timing, graph structure, or paid
    generation. Record the affected Source files and the smallest invalidated graph closure.
 3. Map natural language to the authoritative field before editing. A request such as “move the
@@ -77,8 +88,11 @@ and give the author the exact URL with the updated result.
    Cue/SemanticTake/timing change; a new
    component is a vocabulary-gap and package change. A Hook or opening change also requires checking
    that later beats still fulfil its promise.
-4. Edit only Source, Recipe or Run. Re-run package/Cue gates, `hypit check`, `preview_check`, and the
-   route-specific final check. Do not render, compare, review or inspect any frame during revision;
+4. Edit only Source, Recipe or Run. Re-run package/Cue gates, `hypit check` and `preview_check`, then
+   checkpoint their immutable evidence as the Revision final gate. When the parent is `variant`, do
+   **not** run `variant_check`: that command belongs only to initial batch production and would
+   reapply the old `allowed_changes` to a new user-authorized request. Do not render, compare, review
+   or inspect any frame during revision;
    existing unchanged artifacts may be reused by digest. Once the gates pass, follow
    `../studio-confirmation.md`'s conditional Studio handoff.
 5. Check the final gate. Confirm cost again only when an image/video/voice generation input changed;

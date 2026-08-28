@@ -72,7 +72,7 @@ export type VariantExpansionState = {
   readonly output_root: string;
   readonly run?: string;
   readonly baseline_digest: string;
-  readonly parent_route?: "reconstruction" | "description";
+  readonly parent_route?: "reconstruction" | "description" | "variant";
   readonly parent_state_digest?: string;
   readonly parent_state_path?: string;
   readonly revision_state_digest?: string;
@@ -115,7 +115,7 @@ export type StartVariantExpansionInput = {
   readonly request?: string;
   readonly count?: number;
   readonly deliveryMode?: "source" | "build";
-  readonly parentRoute?: "reconstruction" | "description";
+  readonly parentRoute?: "reconstruction" | "description" | "variant";
   readonly parentStateDigest?: string;
   readonly revisionStateDigest?: string;
 };
@@ -326,7 +326,7 @@ async function startVariantExpansionUnlocked(input: StartVariantExpansionInput):
   if (parentRoute === undefined && parentStateBytes !== undefined) {
     try {
       const parsed = JSON.parse(parentStateBytes.toString()) as { route?: unknown };
-      if (parsed.route === "reconstruction" || parsed.route === "description") parentRoute = parsed.route;
+      if (parsed.route === "reconstruction" || parsed.route === "description" || parsed.route === "variant") parentRoute = parsed.route;
     } catch { /* corrupt parent state is reported by reconcile rather than hidden here */ }
   }
   const now = new Date().toISOString();
@@ -472,18 +472,25 @@ async function reconcileVariantExpansionUnlocked(projectRoot: string, outputRoot
   const variants: VariantExpansionVariant[] = [];
   for (const variant of existing.variants) {
     const route = await reconcileRouteState(variant.project_root);
-    const diff = await inspectVariantDiff(variant.project_root);
-    const outside = Array.isArray(diff.outside_allowed_changes) ? diff.outside_allowed_changes : [];
-    if (outside.length > 0) addConflict(`[reconcile] variant ${variant.id} changed outside allowed_changes: ${outside.join(", ")}`);
-    if (diff.passed !== true && outside.length === 0) {
-      const errors = Array.isArray(diff.errors) ? diff.errors.map(String).join(", ") : "variant baseline evidence failed";
-      addConflict(`[reconcile] variant ${variant.id} scope evidence is invalid: ${errors}`);
+    const revision = await readRevisionState(variant.project_root);
+    const revisedAfterVariant = route?.route === "variant" && revision?.parent_route === "variant"
+      && revision.parent_state_path === routeExecutionStatePath(variant.project_root, route.route_id);
+    let outside: readonly unknown[] = [];
+    if (!revisedAfterVariant) {
+      const diff = await inspectVariantDiff(variant.project_root);
+      outside = Array.isArray(diff.outside_allowed_changes) ? diff.outside_allowed_changes : [];
+      if (outside.length > 0) addConflict(`[reconcile] variant ${variant.id} changed outside allowed_changes: ${outside.join(", ")}`);
+      if (diff.passed !== true && outside.length === 0) {
+        const errors = Array.isArray(diff.errors) ? diff.errors.map(String).join(", ") : "variant baseline evidence failed";
+        addConflict(`[reconcile] variant ${variant.id} scope evidence is invalid: ${errors}`);
+      }
     }
     const check = await validJson(route?.artifacts.variant_check ?? join(variant.project_root, ".hypit", "variant-check.json"), (value) => (value as { passed?: unknown })?.passed === true);
     const { error: _oldError, ...variantWithoutError } = variant;
     variants.push({
       ...variantWithoutError,
-      status: outside.length > 0 ? "scope-expansion-required"
+      status: revisedAfterVariant && route?.status === "complete" && check ? "complete"
+        : outside.length > 0 ? "scope-expansion-required"
         : route?.status === "complete" && check ? "complete"
           : route?.status === "blocked" ? "failed" : route === undefined ? "failed" : variant.status === "ready" ? "ready" : "dispatched",
       ...(route === undefined ? { error: "route-state-missing" } : {}),

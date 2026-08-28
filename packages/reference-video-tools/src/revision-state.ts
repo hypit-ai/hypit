@@ -6,6 +6,7 @@ import { atomicJson, digestPath, executionId, persistExecutionState } from "./st
 
 /** A durable, small snapshot for a post-completion natural-language revision. */
 export type RevisionStatus = "active" | "complete" | "blocked";
+export type RevisionParentRoute = "reconstruction" | "description" | "variant";
 export type RevisionStep =
   | "request-captured"
   | "impact-assessed"
@@ -34,7 +35,7 @@ export type RevisionState = {
   readonly revision_id: string;
   readonly project_root: string;
   readonly run?: string;
-  readonly parent_route?: "reconstruction" | "description";
+  readonly parent_route?: RevisionParentRoute;
   readonly parent_state_digest?: string;
   readonly parent_state_path?: string;
   readonly parent_revision_id?: string;
@@ -62,7 +63,7 @@ export type RevisionState = {
 export type RevisionStateInput = {
   readonly projectRoot: string;
   readonly run?: string;
-  readonly parentRoute?: "reconstruction" | "description";
+  readonly parentRoute?: RevisionParentRoute;
   readonly parentStateDigest?: string;
   readonly request?: string;
 };
@@ -115,7 +116,7 @@ function assertState(value: unknown, path: string): asserts value is RevisionSta
   if (state.version !== REVISION_STATE_VERSION) throw new Error(`revision state at ${path} has unsupported version`);
   if (typeof state.revision_id !== "string" || state.revision_id.length === 0) throw new Error(`revision state at ${path} has no revision_id`);
   if (typeof state.project_root !== "string" || state.project_root.length === 0) throw new Error(`revision state at ${path} has no project_root`);
-  if (state.parent_route !== undefined && state.parent_route !== "reconstruction" && state.parent_route !== "description") throw new Error(`revision state at ${path} has invalid parent_route`);
+  if (state.parent_route !== undefined && state.parent_route !== "reconstruction" && state.parent_route !== "description" && state.parent_route !== "variant") throw new Error(`revision state at ${path} has invalid parent_route`);
   if (state.parent_revision_id !== undefined && typeof state.parent_revision_id !== "string") throw new Error(`revision state at ${path} has invalid parent_revision_id`);
   if (state.parent_revision_digest !== undefined && typeof state.parent_revision_digest !== "string") throw new Error(`revision state at ${path} has invalid parent_revision_digest`);
   if (state.parent_revision_path !== undefined && typeof state.parent_revision_path !== "string") throw new Error(`revision state at ${path} has invalid parent_revision_path`);
@@ -189,7 +190,7 @@ export async function startRevisionState(input: RevisionStateInput): Promise<Rev
   const parentStateDigest = input.parentStateDigest ?? (parentStatePath === undefined ? undefined : await digestPath(parentStatePath));
   const parentRevisionPath = existing === undefined ? undefined : revisionExecutionStatePath(projectRoot, existing.revision_id);
   const parentRevisionDigest = parentRevisionPath === undefined ? undefined : await digestPath(parentRevisionPath);
-  const parentRoute = input.parentRoute ?? (parentState?.route === "reconstruction" || parentState?.route === "description" ? parentState.route : undefined);
+  const parentRoute = input.parentRoute ?? (parentState?.route === "reconstruction" || parentState?.route === "description" || parentState?.route === "variant" ? parentState.route : undefined);
   const canonicalBrief = join(projectRoot, ".hypit", "brief.json");
   const briefExists = await stat(canonicalBrief).then((value) => value.isFile(), () => false);
   const intentBasis = parentRevisionPath ?? parentStatePath ?? (briefExists ? canonicalBrief : "supplied-project");
