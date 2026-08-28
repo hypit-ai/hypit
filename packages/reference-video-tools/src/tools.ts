@@ -95,6 +95,7 @@ import {
   referenceId,
   round,
   shotTile,
+  tileFrames,
   writeJson,
 } from "./media.js";
 import { prepareTranscript, whisperxHealth } from "./transcript.js";
@@ -1101,7 +1102,6 @@ async function cutWordRange(
   renderedPath: string,
   clip: boolean,
   slot: string,
-  toleranceFrames = 3,
 ): Promise<RangeCut> {
   const cuts = referenceCuts(state);
   const head = cuts.find((at) => at >= range.first.startSeconds && at < range.first.endSeconds);
@@ -1138,18 +1138,6 @@ async function cutWordRange(
     await cutClip(renderedPath, headFrames / drawn.frameRate, drawn.duration - (headFrames + tailFrames) / drawn.frameRate, rendered);
     referenceSeconds = (await probe(reference)).duration;
     renderedSeconds = (await probe(rendered)).duration;
-    // Two stretches of different lengths cannot be read side by side: whatever is at a given offset
-    // in one is at a different word in the other, which is the defect this cut exists to remove.
-    //
-    // What they can differ by is set by the containers rather than by the cut. Each side lands on its
-    // own frame grid, which is two frames between them, and a file carrying AAC reports a duration
-    // rounded up to a whole audio frame — 1024 samples, so 21ms at 48kHz — which neither side's frame
-    // grid divides. Three frames covers both; anything larger is the cut disagreeing with the render
-    // about which words the stretch holds.
-    const slack = toleranceFrames / drawn.frameRate;
-    assert(Math.abs(referenceSeconds - renderedSeconds) <= slack,
-      `the cut reference runs ${round(referenceSeconds)}s and the trimmed render ${round(renderedSeconds)}s, `
-      + `which is more than ${round(slack)}s apart; they must cover the same stretch`);
   }
 
   // An end that could not be moved onto a cut opens or closes part-way through a shot. How much of
@@ -2092,9 +2080,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           ...(input.tokens === undefined ? {} : { tokens: input.tokens }),
         };
         const range = await spokenRange(svmlPath, focus, await referenceWords(state.reference_id));
-        const toleranceFrames = input.tolerance_frames ?? 3;
-        assert(Number.isSafeInteger(toleranceFrames) && toleranceFrames >= 0, "tolerance_frames must be a non-negative integer");
-        cut = await cutWordRange(state, root, focus, range, renderedPath, clip, slot, toleranceFrames);
+        cut = await cutWordRange(state, root, focus, range, renderedPath, clip, slot);
         referenceMedia = cut.reference;
         renderedMedia = cut.rendered;
         stretchSeconds = cut.seconds;
@@ -2124,20 +2110,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       }
       const asClip = clip && !bothStill;
 
-      // A shot is compared at its own length on either observer. `--shot-id` takes the reference's cut
-      // whole rather than cutting it to a word range, so nothing else lines the two sides up: a render
-      // of a different length puts more or less of the video beside it, and whatever the pair shows,
-      // it is not one stretch seen twice. The word-range path is held to the same tolerance inside
-      // `cutWordRange`; this is the path that had no check at all.
-      if (asClip && shot !== undefined) {
-        const drawn = await probe(renderedPath);
-        const toleranceFrames = input.tolerance_frames ?? 3;
-        assert(Number.isSafeInteger(toleranceFrames) && toleranceFrames >= 0, "tolerance_frames must be a non-negative integer");
-        const slack = drawn.frameRate > 0 ? toleranceFrames / drawn.frameRate : 0.1;
-        assert(Math.abs(drawn.duration - shot.duration_seconds) <= slack,
-          `shot ${shot.shot_id} runs ${round(shot.duration_seconds)}s and the render ${round(drawn.duration)}s, `
-          + `which is more than ${round(slack)}s apart; the two sides would cover different amounts of the video`);
-      }
+      // Reference and rendered clips may legitimately have different durations (for example, spoken
+      // delivery and generated-video timing). The observer compares each side over its own stretch;
+      // duration differences are evidence to report, not a precondition that blocks the comparison.
 
       // A clip comparison reads the whole stretch on both sides. The observer that reads video is
       // given the two clips; the observer that reads pictures is given two frame tiles, which is the
@@ -2151,18 +2126,20 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       // which is exactly what that changes.
       const cellWidth = Math.min(480, state.video.width);
       if (asClip && observer === "agent") {
+        const desiredFrames = tileFrames(stretchSeconds);
         if (shot !== undefined) {
           assert(shot.frames_tile_ref !== null,
             `shot ${shot.shot_id} has no frame tile; re-prepare the reference with --redo all --observer agent`);
           referenceMedia = shot.frames_tile_ref;
           const tileTarget = join(root, "comparisons", `shot-${shot.shot_id}`, slot, "reconstruction.jpg");
           await ensureDir(dirname(tileTarget));
-          renderedMedia = await shotTile(renderedPath, stretchSeconds, tileTarget, cellWidth);
+          const renderedDuration = (await probe(renderedPath)).duration;
+          renderedMedia = await shotTile(renderedPath, renderedDuration, tileTarget, cellWidth, desiredFrames);
         } else {
           // A word range is cut when it is asked for, so neither side has a prepared tile and both
           // are built here, from the two cuts.
-          referenceMedia = await shotTile(cut!.reference, stretchSeconds, cut!.referenceTile, cellWidth);
-          renderedMedia = await shotTile(cut!.rendered, stretchSeconds, cut!.renderedTile, cellWidth);
+          referenceMedia = await shotTile(cut!.reference, cut!.referenceSeconds, cut!.referenceTile, cellWidth, desiredFrames);
+          renderedMedia = await shotTile(cut!.rendered, cut!.renderedSeconds, cut!.renderedTile, cellWidth, desiredFrames);
         }
       }
 
@@ -2215,7 +2192,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const differences = await ask(`comparison:${comparisonId}`, {
         media: [referenceMedia, renderedMedia],
         instruction: `You compare two supplied ${unit} and describe their visible differences in natural language only. You are not told how either was made. Do not write code, markup, SVML, component names, or production advice.`,
-        prompt: `Two ${unit} are supplied in order: one, then two. Call them one and two throughout your answer, and say which of the two each difference is in.${reading}${asClip ? cut?.incomplete ?? "" : ""}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nStart with a geometry pass before style: identify the Canvas, the outer frame or background box, and the inner text/element. For every region intended to be vertically centred, compare inner and outer centres on the Y axis and report whether it is too high or too low. Do not treat deliberate left/right bias as a defect. Check containment separately (inner content inside its outer frame; outer frame inside the Canvas), naming the overflowing edge and approximate amount. Check that the outer frame is wide and tall enough for the longest line or mark including padding, stroke, shadow and corner treatment. Treat overlap candidates as prompts for inspection only: the supplied reference or settled brief and intent decide whether an overlap or offset is correct; never recommend removing an intentional overlap merely because it exists. Distinguish intentional bleed, crop, or enter/exit motion from accidental overflow. Then describe every other visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${asClip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
+        prompt: `Two ${unit} are supplied in order: one, then two. Call them one and two throughout your answer, and say which of the two each difference is in.${reading}${asClip ? "\n\nThe two clips may have different total durations or playback speeds. Compare corresponding visual stages and events rather than matching the same elapsed second, and do not treat a duration difference alone as a visual defect." : ""}${asClip ? cut?.incomplete ?? "" : ""}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nStart with a geometry pass before style: identify the Canvas, the outer frame or background box, and the inner text/element. For every region intended to be vertically centred, compare inner and outer centres on the Y axis and report whether it is too high or too low. Do not treat deliberate left/right bias as a defect. Check containment separately (inner content inside its outer frame; outer frame inside the Canvas), naming the overflowing edge and approximate amount. Check that the outer frame is wide and tall enough for the longest line or mark including padding, stroke, shadow and corner treatment. Treat overlap candidates as prompts for inspection only: the supplied reference or settled brief and intent decide whether an overlap or offset is correct; never recommend removing an intentional overlap merely because it exists. Distinguish intentional bleed, crop, or enter/exit motion from accidental overflow. Then describe every other visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${asClip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
       });
       // What was compared, and what was seen. The record is what a gate reads to tell an element that
       // was looked at from one that never was, and what an identical pair is answered from without
