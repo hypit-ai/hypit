@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import {
   checkpointRouteState,
+  componentFitPath,
   readRouteState,
   reconcileRouteState,
   routeStatePath,
@@ -13,14 +14,34 @@ import {
   ROUTE_STATE_STEPS,
 } from "../src/route-state.js";
 
+async function writeComponentFit(root: string, route: "description" | "reconstruction"): Promise<string> {
+  const path = componentFitPath(root);
+  await mkdir(join(root, ".hypit"), { recursive: true });
+  await writeFile(path, JSON.stringify({
+    version: 1,
+    route,
+    basis: route === "description" ? ".hypit/brief.json" : "reference-test",
+    systems: [{
+      role: "test system",
+      inspected_candidates: ["@hypit/test"],
+      selected_package: "@hypit/test",
+      decision: "reuse-existing",
+      rationale: "sufficiently similar for the test",
+      accepted_variances: [],
+    }],
+  }), "utf8");
+  return path;
+}
+
 async function completeDescriptionSourceGates(root: string): Promise<void> {
   const vocabulary = join(root, "vocabulary.json");
+  const componentFit = await writeComponentFit(root, "description");
   const packageReady = join(root, "package-ready.json");
   const scriptCues = join(root, "script-cues.json");
   await writeFile(vocabulary, JSON.stringify({ packages: [], surfaces: [] }), "utf8");
   await writeFile(packageReady, JSON.stringify({ passed: true }), "utf8");
   await writeFile(scriptCues, JSON.stringify({ passed: true }), "utf8");
-  await checkpointRouteState({ projectRoot: root, route: "description", step: 3, status: "complete", artifacts: { vocabulary } });
+  await checkpointRouteState({ projectRoot: root, route: "description", step: 3, status: "complete", artifacts: { vocabulary, component_fit: componentFit } });
   await checkpointRouteState({ projectRoot: root, route: "description", step: 4, status: "complete", artifacts: { package_ready: packageReady } });
   await checkpointRouteState({ projectRoot: root, route: "description", step: 5, status: "complete", artifacts: { script_cues: scriptCues } });
 }
@@ -77,9 +98,18 @@ test("a project cannot switch an active route", async () => {
 
 test("a completed route no longer blocks a new route", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-route-state-"));
+  const vocabulary = join(root, "vocabulary.json");
+  const componentFit = await writeComponentFit(root, "reconstruction");
+  await writeFile(vocabulary, JSON.stringify({ packages: [], surfaces: [] }), "utf8");
   await startRouteState({ projectRoot: root, route: "reconstruction" });
   for (let step = 1; step <= ROUTE_STATE_STEPS.reconstruction.length; step += 1) {
-    await checkpointRouteState({ projectRoot: root, route: "reconstruction", step, status: "complete" });
+    await checkpointRouteState({
+      projectRoot: root,
+      route: "reconstruction",
+      step,
+      status: "complete",
+      ...(step === 4 ? { artifacts: { vocabulary, component_fit: componentFit } } : {}),
+    });
   }
   assert.equal((await readRouteState(root))?.status, "complete");
   const completed = await readRouteState(root);
@@ -116,19 +146,24 @@ test("description reconciliation uses brief and vocabulary evidence rather than 
   const root = await mkdtemp(join(tmpdir(), "hypit-route-state-"));
   const brief = join(root, ".hypit", "brief.json");
   const vocabulary = join(root, "vocabulary.json");
+  const componentFit = await writeComponentFit(root, "description");
   await mkdir(join(root, ".hypit"), { recursive: true });
   await writeFile(brief, JSON.stringify({ intent: "brief" }), "utf8");
   await writeFile(vocabulary, JSON.stringify({ packages: [], surfaces: [] }), "utf8");
   await startRouteState({ projectRoot: root, route: "description" });
   await checkpointRouteState({ projectRoot: root, route: "description", step: 2, status: "complete", artifacts: { brief } });
-  await checkpointRouteState({ projectRoot: root, route: "description", step: 3, status: "complete", artifacts: { vocabulary } });
+  await checkpointRouteState({ projectRoot: root, route: "description", step: 3, status: "complete", artifacts: { vocabulary, component_fit: componentFit } });
   const state = await reconcileRouteState(root);
   assert.equal(state?.completed_steps.includes(2), true);
   assert.equal(state?.completed_steps.includes(3), true);
   assert.equal(state?.completed_steps.includes(6), false);
   await writeFile(brief, JSON.stringify({ intent: "changed after freeze" }), "utf8");
+  await writeFile(componentFit, JSON.stringify({ changed: true }), "utf8");
   const conflicted = await reconcileRouteState(root);
-  assert.match(conflicted?.conflicts?.join("\n") ?? "", /brief digest changed/u);
+  const conflicts = conflicted?.conflicts?.join("\n") ?? "";
+  assert.match(conflicts, /brief digest changed/u);
+  assert.match(conflicts, /component_fit digest changed/u);
+  assert.equal(conflicted?.completed_steps.includes(3), false);
 });
 
 test("an interrupted in-progress step resumes at the first unmet step", async () => {

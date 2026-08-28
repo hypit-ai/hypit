@@ -66,60 +66,79 @@ source is implementation, and the loader refuses a mistaken attribute against th
 against the source — so reading it neither teaches the contract nor matches how the element is
 validated.
 
-## Reuse, compose, or declare a gap
+## Judge component fit before writing Source
 
-Use this decision order:
+List the installed vocabulary, inspect the packages that plausibly own each visual system, and make a
+short judgement. This is not a property-by-property score and it is not an exhaustive search through
+unrelated packages. The Agent decides whether a candidate is close enough for the job, records why,
+and chooses one of three outcomes:
 
-1. Reuse one existing component when its declared vocabulary expresses the element exactly — every
-   property that changes what the viewer sees lands somewhere the package declares.
-2. Compose multiple existing components when their declared outputs and timing express it to that
-   same standard, without changing what the element is.
-3. Declare a real vocabulary gap when neither option works.
+- `reuse-existing`: the package owns the right role and is sufficiently close to what the program
+  needs;
+- `reuse-with-accepted-variance`: it is sufficiently close, but SVS cannot express a few named,
+  unimportant appearance differences;
+- `project-local-package`: the difference materially changes the component's core look, function,
+  structure or behaviour.
 
-**Resemblance does not qualify a package.** A tag that draws the same kind of thing, or that carries
-every property except one, leaves that element unexpressed, and an element the installed vocabulary
-cannot express as stated is a gap. Steps 1 and 2 apply where the declared vocabulary already carries
-the element as the evidence states it; step 3 is the ordinary outcome everywhere else, and
-`local-author-package.md` is the route for it.
+Original authoring does not turn silence into a hidden specification. If the author asks for a
+ranking board without defining every icon, shadow or radius, those details remain the Agent's design
+space and an installed ranking component normally qualifies as `reuse-existing`. Reconstruction has
+a picture to compare against, but a package that clearly represents the same visual system may still
+qualify with a few low-impact skin differences recorded as accepted variance. A brand signature,
+visual Hook, hierarchy, legibility, geometry or motion difference is not a small variance.
+Original authoring records a variance only when the frozen brief or the author explicitly accepts
+that difference; an unspecified detail is design freedom, not a variance.
 
-Step 2 is not a way around step 3. Composition may express one element with several components; it
-may not move an element out of its role because some other tag happens to draw the same shape. What
-an element **is** decides which vocabulary owns it — words spoken aloud are captions, a full-screen
-designed field carrying content is one composition — and that answer does not change because the
-element is styled beautifully or because the owning vocabulary is missing one property. A package
-that owns the role but cannot express the required appearance is a gap, exactly as much as no package
-at all: `playbooks/craft/captions.md` works one such case through.
+Composition remains valid when several installed components genuinely express the requested system;
+it may not move an element into the wrong semantic role merely because another tag draws a similar
+shape. Never invent a component, attribute, child, port, Recipe property or literal value.
 
-**Do not force a similar-looking tag into a role it does not own, and never invent a component,
-attribute, child, port, Recipe property or literal value** — not even with the intention of
-implementing it later. A picture that `playbooks/craft/graphic-compositions.md` defines as one
-self-contained graphic composition may never be split across unrelated tags to make installed
-vocabulary fit.
+Installed packages are immutable dependencies. Do not modify them, copy or vendor their source into
+the project, or read implementation source to discover undeclared syntax. When the fit is not good
+enough, use the project-local package route and author it from the visible requirement, inspect
+contract, README and `local-author-package.md`.
 
-## Resolve every declared appearance property
+## Freeze the judgement
 
-Declared vocabulary tells you which properties exist. It never tells you their values; only evidence
-does.
+Before package development or Source authoring, write the decisions to the canonical
+`.hypit/component-fit.json`. Keep it concise and record only what affected the choice:
 
-Before accepting step 1 or step 2, name the appearance properties the element must have and say where
-each one lands in the declared vocabulary. A property with nowhere to land is the finding, and it
-makes the gap — there is no acceptable shortfall. The one thing that may not happen is quietly
-authoring something else that resembles it.
+```json
+{
+  "version": 1,
+  "route": "description",
+  "basis": ".hypit/brief.json and its frozen digest",
+  "systems": [{
+    "role": "ranking board",
+    "inspected_candidates": ["@hypit/ranking"],
+    "selected_package": "@hypit/ranking",
+    "decision": "reuse-existing",
+    "rationale": "same visual role and sufficiently similar presentation",
+    "accepted_variances": []
+  }]
+}
+```
 
-The properties to account for are the drawn structure that
-`playbooks/craft/graphic-compositions.md` enumerates — the type, the paint, the geometry, the stack
-order and the reveal. Work from that list rather than a second copy of it.
+`accepted_variances` contains short natural-language differences only for
+`reuse-with-accepted-variance`; it is empty for the other decisions. Checkpoint the file before
+developing a gap. For `project-local-package`, `selected_package` names the planned project specifier.
 
-**A default value is not a decision.** A value nobody established is not evidence, and there is no
-state where a guessed value is acceptable. Where the value comes from differs by route: a
-reconstruction measures it — `reconstruction/vocabulary.md` says how — and original authoring decides
-it deliberately and writes it down.
+```bash
+hypit-reference-video-tools route_state --action checkpoint --project-root <project> \
+  --route description|reconstruction --state vocabulary-checked --status in_progress \
+  --artifacts '{"component_fit":".hypit/component-fit.json"}'
+```
+
+The later Run-scoped `inspect_svml_vocabulary --run <run>` persists the vocabulary evidence and
+completes `vocabulary-checked` only while this frozen file is valid. After compaction, read it before
+resuming package work, Source authoring or visual repair.
 
 ## A real gap
 
 For a real gap, stop authoring sources and read `local-author-package.md` completely. Implement and
-install the new project-local package, then run `hypit-reference-video-tools inspect_svml_vocabulary` against it before using its
-tag. That call is not redundant with having just written the package: it proves the specifier
+install the new project-local package, then run
+`hypit-reference-video-tools inspect_svml_vocabulary` against it before using its tag. That call is
+not redundant with having just written the package: it proves the specifier
 resolves, the activation contribution is wired, and the loader can decode the Surface. `pnpm check`
 proves none of those, because activation lookups fail at runtime rather than at compile time.
 
@@ -131,7 +150,7 @@ without a project document is on the wrong side of it.
 
 After inspection, persist the result with `inspect_svml_vocabulary --run <build.svrun>`. Before
 writing or checking Source, run `validate_local_author_packages --run <build.svrun>`. Every
-Every project-owned package directory under `packages/` must expose a real Surface, Producer and
+project-owned package directory under `packages/` must expose a real Surface, Producer and
 Fragment and must be imported and used by the compiled Graph; otherwise the route stops with a
 machine-readable diagnostic. Package directory names are descriptive slugs, not a required
 `local-` prefix.

@@ -15,6 +15,8 @@ export type {
 export type { MechanicalAuthoringCheckInput, ScriptCueCheckInput } from "./checks.js";
 export {
   checkpointRouteState,
+  componentFitPath,
+  componentFitSatisfied,
   readRouteState,
   reconcileRouteState,
   routeExecutionStatePath,
@@ -22,6 +24,7 @@ export {
   startRouteState,
   ROUTE_STATE_STEPS,
   ROUTE_STATE_VERSION,
+  COMPONENT_FIT_VERSION,
 } from "./route-state.js";
 export type { DescriptionRouteStep, ReconstructionRouteStep, RouteCheckpointInput, RouteKind, RouteState, RouteStateInput, RouteStep, VariantPackageRouteStep, VariantRouteStep } from "./route-state.js";
 export {

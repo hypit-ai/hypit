@@ -86,7 +86,7 @@ of intent; files and check results remain the authority.
 | `environment` | explicit checkpoint after Distribution, project and credentials are selected | `hypit paths --json` |
 | `reference-prepared` | checkpoint after `prepare_reference` reports ready `state.json` | `prepare_reference` or `route_state reconcile` |
 | `reference-observed` | explicit observer checkpoint; all required observation answers are complete | `observe_reference` / `record_observation` |
-| `vocabulary-checked` | vocabulary inspection is persisted for the Run | `inspect_svml_vocabulary --run <run>` |
+| `vocabulary-checked` | Run-scoped vocabulary inspection and the frozen `.hypit/component-fit.json` are both persisted | `inspect_svml_vocabulary --run <run>` |
 | `package-ready` | every project-owned package under `packages/` has a real Surface/Producer/Fragment and is used by the compiled Graph | `validate_local_author_packages --run <run>` |
 | `script-checked` | every caption Cue has at most four visible words | `validate_script_cues --run <run>` |
 | `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
@@ -255,13 +255,14 @@ defaulted, and every conflict between observations is settled.
 ### 13. Inspect candidate packages
 
 ```bash
-hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/<name> [--package …] --run <build.svrun>
+hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/<name> [--package …]
 ```
 
 Enumerate the systems from the observations, then inspect a candidate for each. A system you never
-inspected is a system you are about to invent.
-When the Run exists, persist this evidence with `inspect_svml_vocabulary --run <build.svrun>` before
-claiming a vocabulary gap or writing Source.
+inspected is a system you are about to invent. Apply `../vocabulary.md`'s shared fit judgement, write
+the concise canonical `.hypit/component-fit.json`, and checkpoint `vocabulary-checked` as
+`in_progress` before developing any gap. A small accepted variance belongs in that file; it is not a
+reason to copy or modify an installed package.
 
 ### 14. Develop a project-local package, only for a proven gap
 
@@ -281,6 +282,14 @@ If no gap remains, remove unused project-owned package directories.
 `main.svml`, `recipes.svs`, `build.svrun`, `hypit.runtime.json`. The Runtime Profile is part of the
 deliverable even though this route runs nothing: without it the first thing the author meets is
 `RUNTIME_CAPABILITY_UNBOUND`.
+
+Now persist the Run-scoped half of the frozen vocabulary decision. This completes
+`vocabulary-checked` only when `.hypit/component-fit.json` remains valid:
+
+```bash
+hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/<name> [--package …] \
+  --run build.svrun
+```
 
 **Read now:**
 
