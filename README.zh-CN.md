@@ -131,6 +131,8 @@ Agent 会检查环境，只索要这条视频需要的凭据，先给出预览�
 
 欢迎提交 Pull Request，文档、示例和翻译与代码同样重要。可以认领一个已有的 issue，也可以为你想做的事新开一个，我们会协助你把它合并进来。环境准备、CI 会跑的检查和 Pull Request 流程见 [CONTRIBUTING.zh-CN.md](./CONTRIBUTING.zh-CN.md)。
 
+在原创或复刻视频时，如果你觉得 Agent 创作的某个组件有复用价值，或者它本身很出色，可以让 Agent 先把它移入项目的 `packages/` 文件夹，再提交给我们，发起一个 Pull Request。
+
 [开发指南](https://docs.hypit.ai/zh/guide/develop)说明了前置条件、日常命令和仓库结构。
 
 <table>

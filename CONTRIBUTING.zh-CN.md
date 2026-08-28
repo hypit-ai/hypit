@@ -2,6 +2,8 @@
 
 欢迎提交 Pull Request。文档、示例和翻译与代码同样重要。
 
+在原创或复刻视频时，如果你觉得 Agent 创作的某个组件有复用价值，或者它本身很出色，可以让 Agent 先把它移入项目的 `packages/` 文件夹，再提交给我们，发起一个 Pull Request。
+
 [English](./CONTRIBUTING.md)
 
 ## 开始之前

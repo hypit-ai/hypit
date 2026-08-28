@@ -2,6 +2,10 @@
 
 Pull requests are welcome. Documentation, examples and translations count as much as code.
 
+When creating an original or reconstructed video, if a component seems reusable or especially good,
+you can ask your Agent to move it into the project's `packages/` folder, then submit it to us in a Pull
+Request.
+
 [简体中文](./CONTRIBUTING.zh-CN.md)
 
 ## Before you start
