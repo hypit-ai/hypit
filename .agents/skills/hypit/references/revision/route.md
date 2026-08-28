@@ -1,13 +1,27 @@
 # Post-completion natural-language revision route
 
-When a completed reconstruction or description project receives a request such as “move this element
-right” or “raise the captions”, start a separate revision route. Do not edit the rendered MP4, PNG,
-WAV, preview mock or Artifact directly. The source remains authoritative.
+Use this route whenever a natural-language change targets a completed Hypit project. The project may
+have just finished reconstruction, original authoring or an earlier revision, or the author may hand
+over an already completed project directory directly. Revision does not require the current agent to
+have created the project and does not require a parent creation route to exist.
+
+For a directly supplied directory, first locate its canonical Run and Source/Recipe closure, then
+run `validate_local_author_packages`, `validate_script_cues`, `hypit check` and `preview_check` to
+confirm the existing project is a sound revision baseline. If `.hypit/route-state.json` exists, read
+and reconcile it; if it does not, do not invent a reconstruction or description history. Start
+`revision_state` without `--parent-route` and persist the baseline check evidence with the first
+checkpoint.
+
+Requests such as “move this element right” or “raise the captions” start a separate revision route.
+Do not edit the rendered MP4, PNG, WAV, preview mock or Artifact directly. The source remains
+authoritative.
 
 ## Recovery and state
 
-Read `SKILL.md`, `recovery.md`, the parent `.hypit/route-state.json`, the project's
-`.hypit/revision-state.json`, and `git status`. Start the state once:
+Read `../../SKILL.md`, `../recovery.md`, the project's `.hypit/revision-state.json`, `git status`, and
+the parent `.hypit/route-state.json` only when one exists. Start the state once.
+
+From a completed reconstruction or original-authoring route:
 
 ```bash
 hypit-reference-video-tools revision_state --action start \
@@ -15,11 +29,19 @@ hypit-reference-video-tools revision_state --action start \
   --request 'raise the captions slightly'
 ```
 
-The snapshot is atomic and small. It records the parent route/state digest, request summary, impact
-and affected Source, durable artifact references, decisions, current stage and `next_action`.
-Use `revision_state read` and `revision_state reconcile` after interruption or context compaction;
-never resume from chat memory. Manual intent mapping and Source edits require an explicit checkpoint.
-Machine evidence may advance only when its file/check predicate is true.
+From a directly supplied completed project with no parent route state:
+
+```bash
+hypit-reference-video-tools revision_state --action start \
+  --project-root <project> --run build.svrun \
+  --request 'raise the captions slightly'
+```
+
+The snapshot is atomic and small. It records the parent route/state digest when one exists, request
+summary, impact and affected Source, durable artifact references, decisions, current stage and
+`next_action`. Use `revision_state read` and `revision_state reconcile` after interruption or context
+compaction; never resume from chat memory. Manual intent mapping and Source edits require an explicit
+checkpoint. Machine evidence may advance only when its file/check predicate is true.
 
 Stages are:
 
@@ -40,7 +62,9 @@ and give the author the exact URL with the updated result.
 ## Work sequence
 
 1. Read the current `main.svml`, `recipes.svs`, `build.svrun`, runtime profile, brief and the target
-   package README/vocabulary. Recover the target element's role in the author's intent.
+   package README/vocabulary. Recover the target element's role in the author's intent. For a
+   directly supplied project, use its authored Source, project documentation and current graph as the
+   frozen intent evidence; do not force it through reconstruction or original authoring first.
 2. Classify the request's impact: geometry/style, Script/semantic timing, graph structure, or paid
    generation. Record the affected Source files and the smallest invalidated graph closure.
 3. Map natural language to the authoritative field before editing. A request such as “move the
@@ -51,7 +75,7 @@ and give the author the exact URL with the updated result.
 4. Edit only Source, Recipe or Run. Re-run package/Cue gates, `hypit check`, `preview_check`, and the
    route-specific final check. Do not render, compare, review or inspect any frame during revision;
    existing unchanged artifacts may be reused by digest. Once the gates pass, follow
-   `studio-confirmation.md`'s conditional Studio handoff.
+   `../studio-confirmation.md`'s conditional Studio handoff.
 5. Check the final gate. Confirm cost again only when an image/video/voice generation input changed;
    geometry and layout revisions do not trigger a paid Build. Build only after explicit approval.
 
@@ -60,6 +84,6 @@ updated Run, that session must continue using the existing SVRun-native preview-
 revive `make_placeholder`, hand-written SemanticTracks, or absolute-path mock Candidates.
 
 If the author asks for many independent derivatives after this revision is complete, reconcile and
-finish `revision_state`, then start `variant-expansion/route.md` from the revised project. The batch
-is not another revision step: its main agent rechecks examples, format/component plans, package gaps
-and per-variant scopes before copying or dispatching work.
+finish `revision_state`, then start `../variant-expansion/route.md` from the revised project. The
+batch is not another revision step: its main agent rechecks examples, format/component plans, package
+gaps and per-variant scopes before copying or dispatching work.

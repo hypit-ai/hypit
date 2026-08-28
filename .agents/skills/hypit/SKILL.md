@@ -94,13 +94,16 @@ invalid. Never commit `.env` or copy its secret values into route state, Source,
   under the checkout's `examples/` directory when it exists. Analyze a semantically matching
   project's author intent; otherwise use the document's general, open-ended fallback. Do not
   hard-code video types or skip the brief-sufficiency gate.
-- A completed project followed by a natural-language change → read `references/revision.md` and use
-  the independent `revision_state` route. Restore the element's role in the frozen brief, edit only
-  Source/Recipe/Run, invalidate the affected graph closure, and rerun deterministic gates. Revision
-  never invokes VLM/observer visual inspection; after the change, start Studio only when the current
-  Run has no Studio session so the author can see the updated result. This routing rule also applies
-  after a paid Build has produced the full video: revise the accepted-material Run, never the rendered
-  artifact and never by resuming either creation route.
+- A completed project followed by a natural-language change → read `references/revision/route.md`
+  and use the independent `revision_state` route. The completed project may come from reconstruction,
+  original authoring or an earlier revision, or the author may supply an existing completed project
+  directory directly; it does not need to have been created in the current session. Restore the
+  element's role in the frozen intent, edit only Source/Recipe/Run, invalidate the affected graph
+  closure, and rerun deterministic gates. Revision never invokes VLM/observer visual inspection;
+  after the change, start Studio only when the current Run has no Studio session so the author can
+  see the updated result. This routing rule also applies after a paid Build has produced the full
+  video: revise the accepted-material Run, never the rendered artifact and never by resuming either
+  creation route.
 - A request for many independent versions after reconstruction, original authoring or revision, or
   from a validated existing project → read `references/variant-expansion/route.md`. The main agent
   inspects examples, freezes format/Slate/component decisions, enumerates vocabulary, discloses the

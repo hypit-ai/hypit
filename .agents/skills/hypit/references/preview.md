@@ -2,7 +2,7 @@
 
 Revision work does not invoke the visual-review workflow described below. It may run deterministic
 preview checks (and optionally render for artifact integrity), but never calls a VLM/observer; read
-`revision.md` for that route.
+`revision/route.md` for that route.
 
 `preview_check` and `render_element` advance the project's `.hypit/route-state.json` only after their
 success predicates hold. After a new turn or interruption, read `../recovery.md`, reconcile the state,

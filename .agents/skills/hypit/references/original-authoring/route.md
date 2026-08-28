@@ -16,7 +16,7 @@ a reconstruction gets for free have to be decided deliberately: what the program
  every appearance value *is*. Neither has an evidence file to consult. Write them down rather than
  discovering them at render time.
 
-If a completed project receives a natural-language change, use `../revision.md` instead of restarting
+If a completed project receives a natural-language change, use `../revision/route.md` instead of restarting
 this route. Revision is Source/Recipe/Run-only and deterministic; it does not invoke a VLM or visual
 observer.
 This remains true after a paid Build has produced the full video: start `revision_state` against the
@@ -225,7 +225,7 @@ explicitly requested; the variant route owns its own aggregate and paid-build ga
 **Read now:** `../studio-confirmation.md`. Before the paid gate, call the preview-mock realizer and
 start Studio with its returned temporary `preview.svrun` (not the unresolved author Run). Show the
 complete estimate-timed mock, return the exact URL printed by Studio, and obtain explicit acceptance
-and cost approval. If the author declines, enter `../revision.md` and do not submit a Build. After
+and cost approval. If the author declines, enter `../revision/route.md` and do not submit a Build. After
 acceptance and paid Build submission, persist the accepted Build-Record Run, start Studio for that
 Run, return its exact URL, and start the HyperFrames/final render concurrently.
 
