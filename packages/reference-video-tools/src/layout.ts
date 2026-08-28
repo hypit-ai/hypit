@@ -12,7 +12,13 @@ import { authorSource, invokedFrom, realizeAuthoringPreview, repositoryRoot, sta
 import { atomicJson } from "./state-files.js";
 
 export type LayoutCheckInput = { readonly run: string; readonly package_root?: string };
-export type LayoutAcceptInput = { readonly run: string; readonly finding: string; readonly reason: string };
+export type LayoutAcceptance = { readonly finding: string; readonly reason: string };
+export type LayoutAcceptInput = {
+  readonly run: string;
+  readonly finding?: string;
+  readonly reason?: string;
+  readonly findings?: readonly LayoutAcceptance[];
+};
 const LAYOUT_CHECKER_VERSION = 3 as const;
 
 type Bounds = { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number; readonly width: number; readonly height: number };
@@ -487,17 +493,32 @@ export async function layoutCheck(input: LayoutCheckInput): Promise<Record<strin
 
 export async function layoutAccept(input: LayoutAcceptInput): Promise<Record<string, unknown>> {
   const runPath = resolve(invokedFrom(), input.run);
-  const reason = input.reason.trim();
-  if (reason.length === 0) throw new Error("layout_accept requires a non-empty reason explaining why the measured geometry is intentional");
+  const acceptances = input.findings ?? (input.finding === undefined || input.reason === undefined
+    ? []
+    : [{ finding: input.finding, reason: input.reason }]);
+  if (acceptances.length === 0) throw new Error("layout_accept requires --finding/--reason or a non-empty findings batch");
   const reportPath = layoutCheckPath(runPath);
   const report = JSON.parse(await readFile(reportPath, "utf8")) as { layout_digest?: unknown; findings?: unknown };
   if (typeof report.layout_digest !== "string" || !Array.isArray(report.findings)) throw new Error(`run layout_check first; ${reportPath} has no usable report`);
-  const finding = report.findings.find((item) => item !== null && typeof item === "object" && (item as { id?: unknown }).id === input.finding);
-  if (finding === undefined) throw new Error(`layout report contains no finding ${input.finding}`);
   const path = layoutDecisionsPath(runPath);
   const existing = await readDecisions(path);
-  const decision: LayoutDecision = { finding: input.finding, layout_digest: report.layout_digest, reason, accepted_at: new Date().toISOString() };
-  const decisions = [...existing.decisions.filter((item) => !(item.finding === decision.finding && item.layout_digest === decision.layout_digest)), decision];
+  const decisions = [...existing.decisions];
+  for (const acceptance of acceptances) {
+    const reason = acceptance.reason.trim();
+    if (reason.length === 0) throw new Error(`layout_accept requires a non-empty reason for ${acceptance.finding}`);
+    const finding = report.findings.find((item) => item !== null && typeof item === "object" && (item as { id?: unknown }).id === acceptance.finding);
+    if (finding === undefined) throw new Error(`layout report contains no finding ${acceptance.finding}`);
+    const decision: LayoutDecision = { finding: acceptance.finding, layout_digest: report.layout_digest, reason, accepted_at: new Date().toISOString() };
+    const index = decisions.findIndex((item) => item.finding === decision.finding && item.layout_digest === decision.layout_digest);
+    if (index >= 0) decisions.splice(index, 1);
+    decisions.push(decision);
+  }
   await atomicJson(path, { version: 1, decisions });
-  return { accepted: true, finding: input.finding, layout_digest: report.layout_digest, reason, decisions: path, next_action: `rerun layout_check --run ${runPath}` };
+  return {
+    accepted: true,
+    findings: acceptances.map((item) => item.finding),
+    layout_digest: report.layout_digest,
+    decisions: path,
+    next_action: `rerun layout_check --run ${runPath}`,
+  };
 }

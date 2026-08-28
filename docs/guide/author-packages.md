@@ -9,6 +9,13 @@ An author package extends the video vocabulary with a new component. Authors use
 `<import>` and XML elements in their `.svml` source. No change to Core, the CLI or any aggregate
 package is needed.
 
+## Public ids for Style-like Surfaces
+
+When a Surface publishes a Style-like value, its public record is the bare authored id (`${id}`),
+not `${id}.style` or `${id}.value`. Author Source then references it with the bare id, for example
+`style={board-style}`. Suffixes such as `.track` remain appropriate for separate Track outputs; they
+must not be added to the Style record merely to describe its role.
+
 ## 1. Create the package
 
 ```bash

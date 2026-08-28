@@ -33,6 +33,15 @@ hypit-reference-video-tools layout_accept --run <build.svrun> \
 hypit-reference-video-tools layout_check --run <build.svrun>
 ```
 
+Several candidates from the same report can be accepted atomically with a JSON array (or an object
+containing `findings`):
+
+```bash
+hypit-reference-video-tools layout_accept --run <build.svrun> --batch acceptances.json
+```
+
+Each entry is `{ "finding": "<id>", "reason": "<why this measured relationship is intentional>" }`.
+
 `layout-checked` means the browser/Producer pass executed and every candidate has been judged: repaired
 candidates disappeared and intentional candidates carry a persisted reason. It does **not** mean the
 mechanical checker reported zero candidates. A browser, font or Producer execution failure is a hard

@@ -481,8 +481,8 @@ async function once(key: string, work: () => Promise<void>): Promise<void> {
 export type RenderElementInput = {
   /**
    * A round of renders, run together. Each entry names its own element, stretch and output and
-   * inherits `run` and `reference_id`. The route renders every element before it compares any, and
-   * each render is now written under its own directory, so a round has nothing to serialise for.
+   * inherits `run` and `reference_id`. The full preview is realized and drawn once; entries then cut
+   * their own windows from that shared frame cache in order.
    */
   readonly renders?: readonly RenderElementInput[];
   /** Required for one render; a round carries them per entry and inherits `run` from the outer input. */

@@ -100,8 +100,10 @@ extension writes one still from the middle of it.
 
 A whole round is one call: `--batch <renders.json>`, an array of `{element, segment|selection|tokens,
 out}` inheriting the Run, and the `renders` array `reconstruction_check` returns is exactly that.
-**The program is drawn once for the whole round** and each entry is cut out of those frames, so asking
-for eight windows costs one render and eight cuts. The picture does not depend on `--element` — it is
+The program is realized once into a shared preview frame cache for the whole round, then the entries
+are processed serially and cut from those frames. Asking for eight windows therefore costs one full
+draw and eight cuts without concurrent workers racing over the shared `preview.svrun`. The picture
+does not depend on `--element` — it is
 everything the Source places over those words — so two elements over one stretch share the render as
 well.
 

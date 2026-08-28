@@ -33,6 +33,10 @@ project's package manager once; otherwise no install step is needed. Leaving act
 means discovering at the end that nothing is selected — a failure that looks like broken code and is
 not. Everything after them is specific to this component and cannot be copied from anywhere.
 
+If the package exposes a Style-like Surface, publish the Style record under the bare authored id
+(`id`) and have Source refer to that bare id. Do not invent `${id}.style` or `${id}.value` for the
+Style record; reserve suffixed ids for genuinely separate outputs such as Tracks.
+
 ## Required reading
 
 **Read this whole file first.** The rules that decide what the package is — read the observation

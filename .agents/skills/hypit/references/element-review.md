@@ -171,10 +171,13 @@ the `image_refs`, and — on a task that carries them — `transcript_ref` and `
 nothing else. Not what you built, not which component drew it, not what you expect it to find, not
 another look's answer. Take the returned text and record it yourself, so one writer owns the log.
 
-**Do not open the pictures yourself.** Whatever visual ability the model running this round has, using
-it makes the reader and the builder the same reader, and the round stops being evidence of anything.
-This is the same prohibition the `gemini` observer gets for free by sending its pictures to a separate
-request; one subagent per task is what makes the other paths equal to it rather than merely faster.
+**Do not open the reference pictures yourself before the blind answer is recorded.** Whatever visual
+ability the model running this round has, using the reference makes the reader and the builder the same
+reader, and the round stops being evidence of anything. After a comparison or review has been recorded,
+the Agent may open frames from its own render to diagnose an implementation defect; it must never use
+that debugging path to inspect the reference. This is the same prohibition the `gemini` observer gets
+for free by sending its pictures to a separate request; one subagent per task is what makes the other
+paths equal to it rather than merely faster.
 
 Answering inline is the fallback for a harness with no subagents, and only that. Read them one after
 another rather than merging them into a single look — what the round is for is the set of findings

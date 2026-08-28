@@ -118,9 +118,10 @@ wrote its observations.
 
 **On the `gemini` observer, that observer is not you.** The command sends the reference clip and the
 rendered clip as an unlabelled pair and returns the differences in words. Do not open the reference
-yourself and look at it, whatever visual ability the model running this round has, and do not look at
-the rendered reconstruction either. A second observer is a second opinion paid for with the very bias
-it claims to correct: it sees the reconstruction, knows what was built, and confirms what it expects.
+yourself and look at it before the blind answer is recorded. After the answer is recorded, you may
+inspect frames from your own render to diagnose an implementation defect; never inspect the reference
+through that debugging path. A second observer is a second opinion paid for with the very bias it
+claims to correct: it sees the reconstruction, knows what was built, and confirms what it expects.
 This is why a font that is wrong is caught — the comparison names it, and the package is repaired,
 rather than a font being chosen because it resembles what you remember.
 
