@@ -316,7 +316,7 @@ Tools and outputs are:
 
 1. `variant_state start` records the base, count, request and delivery mode.
 2. `brief-intake.md`, examples and playbooks produce `format-plan.json`.
-3. The main agent writes exactly N distinct entries in `slate.json`, each with an allowed file scope.
+3. The main agent writes distinct direction quotas in `slate.json`; their counts add up to N. Each direction carries a shared brief and allowed file scope. `variant_init` expands the quotas into numbered concrete variants when dispatching, so a 100-item batch does not require 100 hand-written briefs.
 4. `list_svml_packages` and `inspect_svml_vocabulary` produce global vocabulary evidence and
    `component-plan.json`.
 5. The workload disclosure tells the author how many variants are SVML-only, medium-scope or require
@@ -342,7 +342,7 @@ The batch is intentionally “copy first, then edit”:
 | Step | Main agent or child work | Tool or document | Durable result and reason |
 |---|---|---|---|
 | 1. Validate base | Confirm the parent creation/revision final gate and record its digest. | `route_state/revision_state reconcile`, `variant_state start` | Every child starts from the same known-good Film graph. |
-| 2. Decide the slate | Inspect examples, choose each format/Format DNA, draft exactly N distinct briefs and allowed scopes. | `brief-intake.md`, `playbooks/index.md`, `format-plan.json`, `slate.json` | Creative direction is decided once globally; children do not invent incompatible formats. |
+| 2. Decide the slate | Inspect examples, choose the expansion directions and quotas whose total is N, and freeze each direction's Format DNA and allowed scope. | `brief-intake.md`, `playbooks/index.md`, `format-plan.json`, `slate.json` | Creative directions are decided once globally; dispatch expands each quota into a unique numbered child brief. |
 | 3. Decide vocabulary/workload | Inspect packages and public vocabulary, choose reuse/composition/new package, then disclose fast/medium/new-package counts. | `list_svml_packages`, `inspect_svml_vocabulary`, `component-plan.json`, `variant_state checkpoint` | The author knows the cost/time impact before agents start; no child discovers a package gap halfway through. |
 | 4. Stage new packages | Develop each distinct local package once, validate it in staging, freeze its digest and mark it ready. | `route_state --route variant-package`, `local-author-package.md`, `validate_local_author_packages`, `preview_check`, `layout_check` | Shared package work is reused safely and cannot mutate installed packages. |
 | 5. Copy the base | Clone the project with copy-on-write where possible, retain authored assets/source, remove generated state/results and old Build bindings, inject only ready packages. | `variant_init` | Each child is independent, reproducible and free of stale paid/generated artifacts. |

@@ -69,4 +69,5 @@ export {
   removeGeneratedRunBindings,
   snapshotProject,
 } from "./variant-project.js";
-export type { ApprovedVariantPackage, InitializedVariant, SlatePackageInjection, SlateVariant, VariantProjectManifest, VariantSlate } from "./variant-project.js";
+export type { ApprovedVariantPackage, InitializedVariant, SlateDirection, SlatePackageInjection, SlateVariant, VariantProjectManifest, VariantSlate } from "./variant-project.js";
+export { expandVariantSlate } from "./variant-project.js";

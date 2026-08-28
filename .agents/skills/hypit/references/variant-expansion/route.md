@@ -88,18 +88,33 @@ caption/overlay behavior, audio relationship and what must remain invariant. Che
 
 ## 3. Draft the Slate
 
-Write `slate.json` with exactly N distinct, decision-complete entries. Each entry must provide at
-least:
+Write `slate.json` as a set of distinct direction quotas. Do not hand-write N full briefs when the
+request asks for a large batch. The quotas must add up to exactly N, and each direction provides the
+shared brief and allowed scope inherited by its concrete variants:
 
 ```json
 {
-  "slug": "short-unique-slug",
-  "brief": { "direction": "the complete variant decision" },
-  "component_class": "svml-only",
-  "allowed_changes": ["main.svml"],
-  "vocabulary": { "mode": "inherited", "packages": [] }
+  "count": 100,
+  "directions": [
+    {
+      "id": "ranking-host",
+      "slug": "ranking-host",
+      "count": 20,
+      "brief": { "direction": "vary the host-led ranking presentation" },
+      "component_class": "svml-only",
+      "allowed_changes": ["main.svml"],
+      "vocabulary": { "mode": "inherited", "packages": [] }
+    }
+  ]
 }
 ```
+
+The main agent chooses the directions from the examples and divides the requested count among them.
+`variant_init` expands each direction deterministically into numbered concrete variants (for example,
+`ranking-host-01` through `ranking-host-20`) and persists each generated brief in that child's
+`.hypit/variant-brief.json`. A child may make its concrete creative choice within the direction, but
+must keep the inherited scope and its unique direction/ordinal identity. The older expanded
+`variants` form remains readable for already-created batches.
 
 `component_class` is one of `svml-only`, `existing-component`, `composed-components` or
 `new-package`. Use `vocabulary.mode: "inspect"` and list the assigned packages whenever a variant
