@@ -35,8 +35,9 @@ syntax, its references, its graph structure — and proves nothing about whether
 can actually be built, nor that an uncertain requirement was understood correctly. `preview.md`
 proves the Run traces, before any Provider is reached.
 
-Route commands write durable evidence to `.hypit/route-state.json`. If context is compressed, read
-`recovery.md`, reconcile the project, and resume from the reported `next_action`.
+Route commands point `.hypit/route-state.json` at execution-scoped, content-addressed durable evidence.
+If context is compressed, read `recovery.md`, reconcile the project, and resume from the reported
+`next_action`.
 
 ## Reuse an accepted Record
 

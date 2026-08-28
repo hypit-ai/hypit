@@ -102,7 +102,7 @@ exists, enumerate complete projects, and compare any semantically relevant proje
 intent, Hook and narrative to the request. If no example is semantically relevant, use the document's
 general fallback; absence of an example is not permission to guess or skip intake.
 
-Ask only for unresolved, high-impact creative decisions. Freeze a concise `.hypit/brief` recording
+Ask only for unresolved, high-impact creative decisions. Freeze a concise `.hypit/brief.json` recording
 the user's goal, audience, intent, Hook, narrative progression, visual/audio/text relationships,
 claims, confirmed decisions, unresolved questions, and expected SVML/SVS/SVRun consequences. Low-risk
 implementation details are yours; core facts, claims, Hook and audience promise require confirmation.
