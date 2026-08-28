@@ -101,9 +101,10 @@ Every look starts with a geometry pass before style or polish. Identify the thre
 Canvas, the outer Frame/background that owns the region, and the inner text or element that must fit
 inside it. For each level, check the following explicitly:
 
-- **Centre:** when the design calls for centring, compare the content centre with the outer-frame
-  centre on both axes. Report the direction and approximate offset (for example, `12% too far
-  right` or `8% too high`), not just “misaligned”.
+- **Vertical centre:** when the design calls for vertical centring, compare the content centre with
+  the outer-frame centre on the Y axis. Report whether it is too high or too low and the approximate
+  offset. Do not treat a deliberate left/right bias as a defect; horizontal placement is decided by
+  the visual reference or the author's intent.
 - **Containment:** report whether every visible glyph/mark stays inside its intended outer Frame and
   whether the Frame itself stays inside the Canvas. Name the offending edge and the estimated amount
   outside. Distinguish intentional bleed, crop, or enter/exit motion from an accidental overflow.
@@ -114,9 +115,9 @@ inside it. For each level, check the following explicitly:
   clipped unless the reference/intent clearly calls for it.
 
 `authoring_check` and `reconstruction_check` return a deterministic `layout_geometry` report with
-Canvas/Frame bounds, sizes, centres, parent/Canvas centre offsets, containment overflow, and bound
-element ids. Use those numbers as the mechanical findings and let the observer decide whether the
-alignment or overflow matches the reference/intent. The report cannot measure renderer-shaped glyph
+Canvas/Frame bounds, sizes, centres, parent/Canvas vertical centre offsets, containment overflow, and
+bound element ids. Use those numbers as mechanical facts and let the observer decide whether the
+alignment, offset or overflow matches the reference/intent. The report cannot measure renderer-shaped glyph
 bounds or infer intent, so the visual pass must still confirm text and marks in the rendered image.
 
 The same report includes `layout_geometry.overlaps`. It is an advisory list of independent component
@@ -125,7 +126,10 @@ positive-area rectangle intersection without either rectangle fully containing t
 placements owned by the same component are excluded; their internal layout is judged against that
 component's own parent/Frame. Full containment is omitted because a background or parent Frame commonly
 covers its child intentionally. Treat each entry as a candidate finding: confirm it in the rendered
-frame and against the author intent before changing Source.
+frame and against the author intent before changing Source. For reconstruction, reference observation
+is authoritative; for original authoring, the user's brief and settled creative intent are authoritative.
+Never move an element merely to satisfy this report, and never remove an intentional overlap merely
+because it was listed.
 The check compares only declared Canvas/Frame placement bounds; it cannot see glyph-level or other
 package-internal bounds that a Producer does not expose.
 

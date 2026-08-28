@@ -180,8 +180,9 @@ Its `plan` is the list: each entry an element and a word range, with the reason.
 `render_element --batch` — the program is drawn once and every entry is cut out of those frames.
 
 Keep the check JSON's `layout_geometry` with the renders. It is the deterministic Canvas/Frame report
-for centre offsets, frame capacity, and containment; the reader still decides whether the visible text
-or marks fit the intent and whether any bleed is deliberate.
+for vertical centre offsets, frame capacity, and containment; horizontal left/right placement is not
+judged mechanically. The reader still decides whether visible text or marks fit the intent and whether
+any offset, overlap or bleed is deliberate.
 
 **Read now:** `../element-review.md` — what the three rules are and why the list is what it is.
 `../preview.md` holds `render_element` itself.

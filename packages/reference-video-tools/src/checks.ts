@@ -357,7 +357,7 @@ type OutOfBoundsFrame = {
  * Deterministic geometry facts handed to the observer alongside the human-readable round.
  *
  * This deliberately reports only what the Source can prove: Canvas/Frame rectangles, parent and
- * Canvas containment, and centre offsets. Whether a particular box *ought* to be centred, or whether
+ * Canvas containment, and vertical centre offsets. Whether a particular box *ought* to be centred, or whether
  * a child is intentionally clipped (for example during an enter animation), remains a visual and
  * intent judgement. Text glyph bounds are renderer-dependent and therefore are not invented here.
  */
@@ -369,8 +369,9 @@ type LayoutGeometryEntry = {
   readonly bounds?: Box;
   readonly size?: { readonly width: number; readonly height: number };
   readonly center?: { readonly x: number; readonly y: number };
-  readonly center_offset_from_within?: { readonly x: number; readonly y: number };
-  readonly center_offset_from_canvas?: { readonly x: number; readonly y: number };
+  /** Signed vertical centre offset: positive means below the parent/Canvas centre. */
+  readonly vertical_center_offset_from_within?: number;
+  readonly vertical_center_offset_from_canvas?: number;
   readonly outside_within?: { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number };
   readonly outside_canvas?: { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number };
   readonly bound_elements?: readonly string[];
@@ -784,7 +785,9 @@ function layoutGeometry(svml: string): LayoutGeometryReport {
     bottom: round(Math.max(child.bottom - parent.bottom, 0)),
   });
   const centre = (box: Box) => ({ x: round((box.left + box.right) / 2), y: round((box.top + box.bottom) / 2) });
-  const delta = (a: Box, b: Box) => ({ x: round((a.left + a.right - b.left - b.right) / 2), y: round((a.top + a.bottom - b.top - b.bottom) / 2) });
+  // Horizontal placement is often intentionally left- or right-biased (labels, rails, icons). Only
+  // report vertical centring mechanically; the visual/author intent remains the authority.
+  const verticalDelta = (a: Box, b: Box) => round((a.top + a.bottom - b.top - b.bottom) / 2);
   const entries: LayoutGeometryEntry[] = [];
 
   for (const [id, canvas] of geometry.canvases) {
@@ -809,14 +812,14 @@ function layoutGeometry(svml: string): LayoutGeometryReport {
       ...(canvasId === undefined ? {} : { canvas: canvasId }), bounds: box,
       size: { width: round(box.right - box.left), height: round(box.bottom - box.top) },
       center: centre(box),
-      ...(parent === undefined ? {} : { center_offset_from_within: delta(box, parent), outside_within: outside(box, parent) }),
-      ...(canvas === undefined ? {} : { center_offset_from_canvas: delta(box, canvas), outside_canvas: outside(box, canvas) }),
+      ...(parent === undefined ? {} : { vertical_center_offset_from_within: verticalDelta(box, parent), outside_within: outside(box, parent) }),
+      ...(canvas === undefined ? {} : { vertical_center_offset_from_canvas: verticalDelta(box, canvas), outside_canvas: outside(box, canvas) }),
       bound_elements: bound.get(id) ?? [],
     });
   }
   return {
     coordinate_system: "Canvas pixels, origin top-left, y increases downward",
-    note: "Use these facts to decide whether centering and containment match the reference/intent. They do not measure rendered glyph bounds or decide whether an overhang is intentional.",
+    note: "Use vertical centre offsets and containment as mechanical facts; horizontal left/right placement is not judged. Visual observation and author intent decide whether any offset or overlap is correct. The report does not measure rendered glyph bounds or decide whether an overhang is intentional.",
     entries,
     overlaps: layoutOverlaps(svml, geometry),
   };
