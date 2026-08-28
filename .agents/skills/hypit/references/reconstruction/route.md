@@ -342,8 +342,9 @@ The program is drawn once and every entry is cut out of those frames, so render
 the whole list in one `--batch` call.
 
 Keep the check JSON's `layout_geometry` beside the round. It gives the observer/agent deterministic
-Canvas and Frame centres, parent/Canvas offsets, overflow edges, and bound element ids to use when
-judging centring, frame capacity, and Canvas safety.
+Canvas and Frame centres, parent/Canvas vertical centre offsets, overflow edges, and bound element ids
+to use when judging vertical centring, frame capacity, and Canvas safety. Horizontal placement and
+overlap candidates remain subject to the reference and observer intent judgement.
 
 ### 20. Send every comparison at once
 
