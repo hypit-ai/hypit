@@ -1211,15 +1211,6 @@ export async function authoringCheck(
   }
 
   // What a round has to look at, decided from the Source rather than left to whoever runs it.
-  //
-  // The Recipe bodies come along because one of the three rules asks whether an element's appearance
-  // runs for as long as its window does, and that is written in the Recipe rather than on the tag.
-  const recipeBodies = new Map<string, string>();
-  for (const sheet of svml.matchAll(/<import\s+as="[^"]+"\s+source="([^"]+\.svs)"/gu)) {
-    const text = await readFile(resolve(dirname(svmlPath), sheet[1] ?? ""), "utf8").catch(() => undefined);
-    if (text === undefined) continue;
-    for (const recipe of text.matchAll(/([A-Za-z0-9_.-]+)\s*\{([^}]*)\}/gu)) recipeBodies.set(recipe[1] ?? "", recipe[2] ?? "");
-  }
   // Where each stretch's picture goes, named here rather than by whoever reads this.
   //
   // A round is three commands — this one, `render_element --batch`, `compare_reconstruction --batch` —
@@ -1229,7 +1220,7 @@ export async function authoringCheck(
   //
   // Named for the range and not for `named`: the range is what identifies an entry, so two entries of
   // one element always differ in it, while `named` is a sentence written to be read.
-  const plan = reviewPlan({ svml, svmlPath, scriptBody: scriptBody(svml), drawn, recipes: recipeBodies })
+  const plan = reviewPlan({ svml, svmlPath, scriptBody: scriptBody(svml), drawn })
     .map((entry) => ({
       ...entry,
       out: join(dirname(runPath), "renders", `${entry.element}-${entry.tokens[0]}-${entry.tokens[1]}.mp4`),
@@ -1521,8 +1512,7 @@ export async function authoringCheck(
         entries: owed,
         note: `${owed.length} stretch${owed.length === 1 ? "" : "es"} the Source asks for ${owed.length === 1 ? "has" : "have"} `
           + "not been looked at. Each one is an element over a range of the Script's own words, and the reason it is "
-          + "here is beside it — a declaration nobody has seen, the longest cue a caption Style has to hold, or a "
-          + "window long enough that an animation inside it behaves differently.",
+          + "here is beside it — the first appearance of a distinct visual declaration nobody has seen.",
         commands: owed.map((entry) => mode === "reconstruction"
           ? `hypit-reference-video-tools compare_reconstruction --reference-id ${reference} --run ${runPath} `
             + `--tokens ${entry.tokens[0]}:${entry.tokens[1]} --video ${entry.out} --element ${entry.element}`
