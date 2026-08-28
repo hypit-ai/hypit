@@ -15,30 +15,6 @@ The important distinction is:
 - tools decide whether the written project is legal, wired, covered, measurable and recoverable;
 - a visual observer reports differences, but the agent decides whether a report is a real defect.
 
-## Two extraction rules that keep the checks complementary
-
-This is a central design rule for both `original-authoring` and `reconstruction`:
-
-| Check | What it extracts | What it answers | Why this rule |
-|---|---|---|---|
-| Visual review | One **full clip** at the first appearance of each distinct visual declaration/style change | Does the complete look and motion match the brief (original) or the reference (reconstruction)? | A full clip preserves entrance, movement, exit, transient overlap and appearance changes. Rechecking every caption text or every timestamp would add repetition without adding a new visual declaration. |
-| Mechanical layout | One frame from the **longest stable interval of each `Present`** | In a settled, actually rendered DOM, do content and containers fit and align? | Sampling during motion would report normal animation as overflow or offset. Sampling per `Present` means separate caption Cues/content states are measured independently. |
-
-These rules are deliberately different and must not be swapped. The visual plan does not use the
-longest-stable frame; it reviews the whole clip. `layout_check` does not judge visual similarity; it
-measures the realized composition and returns candidates for the Agent to interpret. Content or time
-extremes are not additional visual-selection rules: a stable overflow is found by the per-`Present`
-layout measurement, while a transient or media-internal problem remains the responsibility of the
-full-clip visual review.
-
-The extraction is shared across the two creation routes. Only the judging basis changes:
-
-```text
-original-authoring:  visual clip → compare with brief
-reconstruction:      visual clip → compare with reference
-both routes:         Present stable frame → measure DOM → Agent judges the candidate
-```
-
 ## How a request becomes a video
 
 ```text
@@ -175,13 +151,23 @@ records an intentional geometry decision with `layout_accept`, then reruns `layo
 candidates are resolved or accepted. A relevant Source, Recipe, package, font or runtime change
 invalidates affected evidence.
 
+The two extraction rules used by both creation routes are:
+
+| Check | Extraction rule | Why |
+|---|---|---|
+| Visual review | For each distinct visual declaration/style change, take the **full clip at its first appearance**. | The full clip preserves entrance, movement, exit and transient visual differences. It avoids rechecking every caption text or timestamp when the visual declaration is unchanged. |
+| Mechanical layout | For each `Present`, take one frame from its **longest stable interval**. | A settled frame measures actual DOM geometry without mistaking normal animation for overflow or offset. |
+
+Do not swap these rules: visual review judges the complete clip against the brief or reference, while
+`layout_check` only measures realized layout and returns candidates for the Agent. Content/time extremes
+are not additional selection rules; stable overflow is found in the per-`Present` measurement, and
+transient or media-internal problems remain visible to the full-clip review.
+
 ### 6. Creation-route visual review and repair
 
 Original authoring calls `authoring_check`; reconstruction calls `reconstruction_check`. Each command
-reads Source and creates a deterministic visual-review plan. It selects one full clip at the first
-appearance of each distinct visual declaration (including each style/declaration change), rather than
-asking an agent to invent an arbitrary render list. The longest-stable-interval sample belongs only to
-the separate hidden-browser `layout_check`, not to this visual review.
+reads Source and creates the visual-review plan described above. The longest-stable-interval sample
+belongs only to the separate hidden-browser `layout_check`, not to this visual review.
 
 For each plan entry:
 
