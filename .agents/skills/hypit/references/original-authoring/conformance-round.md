@@ -64,8 +64,9 @@ for generations that have not run and to read only what is drawn over them. Do n
 do not add anything that says what you built or what you expect to be found.
 
 The visual pass is geometry-first. Read the hierarchy Canvas → outer Frame/background → inner text or
-element. When the intent calls for centring, compare the inner and outer centres on both axes and report
-the direction and approximate offset. Check containment at both boundaries (content inside its Frame,
+element. When the intent calls for vertical centring, compare the inner and outer centres on the Y axis
+and report whether it is too high or too low. Deliberate left/right bias is not a mechanical defect.
+Check containment at both boundaries (content inside its Frame,
 Frame inside Canvas), naming any overflowing edge. Confirm the outer Frame is wide and tall enough for
 the longest line/mark plus padding, stroke, shadow, and corner treatment; correct centring does not make
 an undersized box acceptable. Separate intentional bleed/crop or enter/exit motion from accidental
@@ -77,8 +78,9 @@ the conformance decision from the rendered picture and intent. It also reports
 `layout_geometry.overlaps` for independent same-Canvas component placements that are simultaneous and
 partially intersecting; nested placements owned by one component are excluded and remain subject to
 component-local parent/Frame centring. Full containment is omitted and the entries are advisory
-candidates, not automatic failures. It cannot measure actual glyph or package-internal bounds or infer
-intent, so those still require the reader.
+candidates, not automatic failures. Judge them against the user's brief and settled creative intent; do
+not force centring or remove an intentional overlap. It cannot measure actual glyph or package-internal
+bounds or infer intent, so those still require the reader.
 
 Clearly platform/player/export-tool watermarks are not authored content and should be ignored. If a mark
 could be intentional design, preserve the uncertainty and do not silently remove it.
