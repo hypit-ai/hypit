@@ -1,0 +1,144 @@
+/* Hypihub's documentation surface: warm paper, hairline rules and pink ink.
+   Keep this file limited to VitePress chrome and rendered Markdown so the
+   source documents remain framework-agnostic. */
+
+:root {
+  --paper: #fff;
+  --paper-alt: #faf9f7;
+  --surface: #f4f3f0;
+  --ink: #1b1a18;
+  --muted: #6b6963;
+  --line: #d1cdc7;
+  --line-soft: #e5e2dd;
+  --accent: #de3b67;
+  --accent-hover: #c7325a;
+  --accent-soft: rgba(222, 59, 103, .12);
+  --vp-font-family-base: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --vp-font-family-mono: "Google Sans Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --vp-c-brand-1: var(--accent);
+  --vp-c-brand-2: var(--accent-hover);
+  --vp-c-brand-3: #ad294d;
+  --vp-c-brand-soft: var(--accent-soft);
+  --vp-c-bg: var(--paper);
+  --vp-c-bg-alt: var(--paper-alt);
+  --vp-c-bg-elv: var(--paper);
+  --vp-c-bg-soft: var(--surface);
+  --vp-c-text-1: var(--ink);
+  --vp-c-text-2: var(--muted);
+  --vp-c-text-3: #8b8881;
+  --vp-c-divider: var(--line-soft);
+  --vp-c-gutter: var(--line-soft);
+  --vp-sidebar-bg-color: var(--paper);
+  --vp-nav-bg-color: rgba(255, 255, 255, .94);
+  --vp-code-block-bg: var(--paper-alt);
+  --vp-code-line-highlight-color: var(--accent-soft);
+  --vp-button-brand-bg: var(--accent);
+  --vp-button-brand-hover-bg: var(--accent-hover);
+  --vp-button-brand-active-bg: #ad294d;
+}
+
+.dark {
+  --paper: #141312;
+  --paper-alt: #1a1817;
+  --surface: #24211f;
+  --ink: #e9e5db;
+  --muted: rgba(233, 229, 219, .68);
+  --line: rgba(233, 229, 219, .2);
+  --line-soft: rgba(233, 229, 219, .11);
+  --accent: #f06b8d;
+  --accent-hover: #ff8eaa;
+  --accent-soft: rgba(240, 107, 141, .16);
+  --vp-c-brand-1: var(--accent);
+  --vp-c-brand-2: var(--accent-hover);
+  --vp-c-brand-3: #ffb3c5;
+  --vp-c-bg: var(--paper);
+  --vp-c-bg-alt: var(--paper-alt);
+  --vp-c-bg-elv: var(--paper-alt);
+  --vp-c-bg-soft: var(--surface);
+  --vp-c-text-1: var(--ink);
+  --vp-c-text-2: var(--muted);
+  --vp-c-text-3: rgba(233, 229, 219, .5);
+  --vp-c-divider: var(--line-soft);
+  --vp-c-gutter: var(--line-soft);
+  --vp-sidebar-bg-color: var(--paper-alt);
+  --vp-nav-bg-color: rgba(20, 19, 18, .94);
+  --vp-code-block-bg: var(--paper-alt);
+}
+
+html, body { background: var(--paper); color: var(--ink); }
+body { font-size: 16px; line-height: 1.75; }
+
+.VPNav { border-bottom: 1px solid var(--line-soft); background: var(--vp-nav-bg-color); backdrop-filter: blur(10px); }
+.VPNavBar { border-bottom: 0; }
+.VPNavBar .container { max-width: 1376px; }
+.VPNavBarTitle { min-width: 150px; }
+.VPNavBarTitle .title { color: var(--ink); font-weight: 700; letter-spacing: -.03em; }
+.VPNavBarTitle img { width: auto; max-width: 112px; max-height: 28px; }
+.VPNavBarMenuLink, .VPNavBarMenuGroup .text { color: var(--muted); font-size: 13px; font-weight: 600; }
+.VPNavBarMenuLink:hover, .VPNavBarMenuLink.active, .VPNavBarMenuGroup:hover .text { color: var(--accent); }
+.VPNavBarAppearance button, .VPNavBarMenuGroup .button { color: var(--muted); }
+.VPNavBarAppearance button:hover, .VPNavBarMenuGroup .button:hover { color: var(--accent); }
+.VPNavScreen { background: var(--paper); }
+
+.VPSidebar {
+  top: 64px;
+  border-right: 1px solid var(--line-soft);
+  background: var(--paper);
+  padding: 24px 24px 40px max(32px, calc((100vw - 1440px) / 2 + 32px));
+}
+.VPSidebarItem .text { color: var(--muted); font-size: 14.5px; }
+.VPSidebarItem.level-0 > .item > .text { color: var(--ink); font-size: 14px; font-weight: 600; }
+.VPSidebarItem.is-link .link { padding: 7px 0; }
+.VPSidebarItem.is-active > .item .link-text,
+.VPSidebarItem.is-active > .item .text { color: var(--accent); }
+.VPSidebarItem.is-active > .item::before { background: var(--accent); }
+
+.VPContent { background: var(--paper); }
+.VPDoc { padding: 40px 48px 96px; }
+.VPDoc .content-container { width: min(688px, 100%); margin: 0 auto; }
+.VPDocAside { padding-top: 56px; }
+.VPDocAsideOutline .outline-title { color: var(--ink); font-size: 15px; font-weight: 600; }
+.VPDocAsideOutline .outline-link { color: var(--muted); font-size: 14px; line-height: 30px; }
+.VPDocAsideOutline .outline-link:hover, .VPDocAsideOutline .outline-link.active { color: var(--accent); }
+
+.vp-doc { color: var(--ink); font-size: 16px; line-height: 1.75; }
+.vp-doc h1, .vp-doc h2, .vp-doc h3, .vp-doc h4 { color: var(--ink); font-weight: 600; letter-spacing: -.025em; }
+.vp-doc h1 { margin: 0 0 16px; font-size: 40px; line-height: 1.2; letter-spacing: -.04em; }
+.vp-doc h2 { margin: 48px 0 16px; padding-top: 24px; border-top: 1px solid var(--line-soft); font-size: 26px; line-height: 1.25; }
+.vp-doc h3 { margin-top: 32px; font-size: 19px; line-height: 1.45; }
+.vp-doc p { margin: 16px 0; }
+.vp-doc a { color: var(--accent); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+.vp-doc a:hover { color: var(--accent-hover); }
+.vp-doc strong { font-weight: 600; }
+.vp-doc li + li { margin-top: 8px; }
+.vp-doc blockquote { border-left: 2px solid var(--line); color: var(--muted); }
+.vp-doc table { display: block; overflow-x: auto; border-collapse: collapse; }
+.vp-doc th, .vp-doc td { border: 1px solid var(--line-soft); }
+.vp-doc th { background: var(--surface); }
+.vp-doc :not(pre) > code { border-radius: 5px; background: var(--surface); color: var(--accent); font-family: var(--vp-font-family-mono); }
+.vp-doc div[class*="language-"] { overflow: hidden; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--paper-alt); }
+.vp-doc div[class*="language-"] pre { margin: 0; padding: 22px 24px; background: var(--paper-alt) !important; font-size: 14px; line-height: 24px; }
+.vp-doc .copy-code { border: 1px solid var(--line-soft); background: var(--surface); color: var(--muted); }
+.vp-doc .copy-code:hover { color: var(--accent); }
+
+.VPFooter { border-top: 1px solid var(--line-soft); background: var(--paper); }
+.VPFooter .message, .VPFooter .copyright { color: var(--muted); }
+
+@media (min-width: 1440px) {
+  .VPDoc { padding-inline: 112px; }
+  .VPDoc .content-container { margin-left: 0; }
+}
+
+@media (max-width: 959px) {
+  .VPSidebar { padding-left: 24px; }
+  .VPDoc { padding-inline: clamp(32px, 8vw, 96px); }
+  .VPDoc .content-container { margin: 0 auto; }
+}
+
+@media (max-width: 767px) {
+  .VPNavBarTitle { min-width: 0; }
+  .VPNavBarTitle img { max-width: 96px; }
+  .VPDoc { padding: 28px 24px 72px; }
+  .vp-doc h1 { font-size: 34px; }
+  .vp-doc h2 { margin-top: 40px; }
+}

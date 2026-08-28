@@ -124,6 +124,11 @@ const svsLanguage: Record<string, unknown> = {
 
 const sharedTheme = {
   siteTitle: "HYPIT",
+  logo: {
+    light: "/logo-line-dark.svg",
+    dark: "/logo-line-light.svg",
+    alt: "Hypit",
+  },
   socialLinks: [
     { icon: "github" as const, link: "https://github.com/hypit-ai/hypit" },
   ],
