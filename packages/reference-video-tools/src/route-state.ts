@@ -63,6 +63,13 @@ export type RouteCheckpointInput = RouteStateInput & {
   readonly error?: string;
 };
 
+export const COMPONENT_FIT_VERSION = 1 as const;
+const COMPONENT_FIT_DECISIONS = new Set([
+  "reuse-existing",
+  "reuse-with-accepted-variance",
+  "project-local-package",
+]);
+
 export const ROUTE_STATE_VERSION = 3 as const;
 const PREVIOUS_ROUTE_STATE_VERSION = 2 as const;
 const LEGACY_ROUTE_STATE_VERSION = 1 as const;
@@ -103,8 +110,70 @@ export function routeStatePath(projectRoot: string): string {
   return join(resolve(projectRoot), ".hypit", "route-state.json");
 }
 
+export function componentFitPath(projectRoot: string): string {
+  return join(resolve(projectRoot), ".hypit", "component-fit.json");
+}
+
 export function routeExecutionStatePath(projectRoot: string, routeId: string): string {
   return join(resolve(projectRoot), ".hypit", "routes", routeId, "state.json");
+}
+
+function isCreationRoute(route: RouteKind): route is "description" | "reconstruction" {
+  return route === "description" || route === "reconstruction";
+}
+
+function assertComponentFit(value: unknown, path: string, route: "description" | "reconstruction"): void {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`component fit at ${path} is not an object`);
+  }
+  const fit = value as {
+    version?: unknown;
+    route?: unknown;
+    basis?: unknown;
+    systems?: unknown;
+  };
+  if (fit.version !== COMPONENT_FIT_VERSION) throw new Error(`component fit at ${path} has unsupported version`);
+  if (fit.route !== route) throw new Error(`component fit at ${path} is for ${String(fit.route)}, not ${route}`);
+  if (typeof fit.basis !== "string" || fit.basis.trim().length === 0) throw new Error(`component fit at ${path} has no basis`);
+  if (!Array.isArray(fit.systems) || fit.systems.length === 0) throw new Error(`component fit at ${path} has no visual systems`);
+  for (const [index, value] of fit.systems.entries()) {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error(`component fit at ${path} has an invalid system at index ${index}`);
+    }
+    const system = value as {
+      role?: unknown;
+      inspected_candidates?: unknown;
+      selected_package?: unknown;
+      decision?: unknown;
+      rationale?: unknown;
+      accepted_variances?: unknown;
+    };
+    if (typeof system.role !== "string" || system.role.trim().length === 0) throw new Error(`component fit at ${path} system ${index} has no role`);
+    if (!Array.isArray(system.inspected_candidates) || system.inspected_candidates.some((item) => typeof item !== "string")) {
+      throw new Error(`component fit at ${path} system ${index} has invalid inspected_candidates`);
+    }
+    if (typeof system.selected_package !== "string" || system.selected_package.trim().length === 0) throw new Error(`component fit at ${path} system ${index} has no selected_package`);
+    if (typeof system.decision !== "string" || !COMPONENT_FIT_DECISIONS.has(system.decision)) throw new Error(`component fit at ${path} system ${index} has an invalid decision`);
+    if (typeof system.rationale !== "string" || system.rationale.trim().length === 0) throw new Error(`component fit at ${path} system ${index} has no rationale`);
+    if (!Array.isArray(system.accepted_variances)) throw new Error(`component fit at ${path} system ${index} has invalid accepted_variances`);
+    if (system.decision === "reuse-with-accepted-variance" && system.accepted_variances.length === 0) {
+      throw new Error(`component fit at ${path} system ${index} accepts variance but names none`);
+    }
+    if (system.decision !== "reuse-with-accepted-variance" && system.accepted_variances.length > 0) {
+      throw new Error(`component fit at ${path} system ${index} names variance for ${system.decision}`);
+    }
+  }
+}
+
+export async function componentFitSatisfied(projectRoot: string, route: RouteKind): Promise<boolean> {
+  if (!isCreationRoute(route)) return false;
+  const path = componentFitPath(projectRoot);
+  try {
+    assertComponentFit(JSON.parse(await readFile(path, "utf8")), path, route);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function assertRouteState(value: unknown, path: string): asserts value is RouteState {
@@ -311,8 +380,18 @@ export async function checkpointRouteState(input: RouteCheckpointInput): Promise
   const step = stepNumber(input.route, input.step);
   const completed = new Set(existing.completed_steps);
   const status = input.status ?? "complete";
+  const artifacts = input.artifacts === undefined ? existing.artifacts : {
+    ...existing.artifacts,
+    ...Object.fromEntries(
+      Object.entries(input.artifacts).map(([key, value]) => [key, normalizeArtifact(projectRoot, key, value)]),
+    ),
+  };
+  if (input.artifacts?.component_fit !== undefined
+    && (!isCreationRoute(input.route) || step !== stageNumber(input.route, "vocabulary-checked"))) {
+    throw new Error("component_fit may be checkpointed only with vocabulary-checked on a creation route");
+  }
   if (input.route === "description" && step === stageNumber("description", "brief-frozen") && status === "complete") {
-    const brief = input.artifacts?.brief ?? existing.artifacts.brief;
+    const brief = artifacts.brief;
     const canonical = join(projectRoot, ".hypit", "brief.json");
     if (brief === undefined || resolve(projectRoot, brief) !== canonical) {
       throw new Error(`brief-frozen requires the canonical brief at ${canonical}`);
@@ -325,6 +404,27 @@ export async function checkpointRouteState(input: RouteCheckpointInput): Promise
     const frozenDigest = existing.artifact_digests.brief;
     if (frozenDigest !== undefined && actualDigest !== frozenDigest) {
       throw new Error(`the frozen base brief changed: expected ${frozenDigest}, found ${actualDigest ?? "missing"}; use Revision or a new project`);
+    }
+  }
+  if (isCreationRoute(input.route) && step === stageNumber(input.route, "vocabulary-checked")) {
+    const canonical = componentFitPath(projectRoot);
+    const fit = artifacts.component_fit;
+    if (fit !== undefined && fit !== canonical) throw new Error(`component fit must use the canonical path ${canonical}`);
+    if (fit !== undefined && !(await componentFitSatisfied(projectRoot, input.route))) {
+      throw new Error(`component fit at ${canonical} is missing or invalid`);
+    }
+    const frozenDigest = existing.artifact_digests.component_fit;
+    const actualDigest = fit === undefined ? undefined : await digestPath(canonical);
+    if (completed.has(step) && frozenDigest !== undefined && actualDigest !== frozenDigest) {
+      throw new Error("component fit changed after it was frozen; run route_state reconcile before reclassifying it");
+    }
+    if (status === "complete") {
+      if (!(await evidenceSatisfied("vocabulary", artifacts.vocabulary))) {
+        throw new Error("vocabulary-checked requires valid Run-scoped vocabulary evidence");
+      }
+      if (fit !== canonical || !(await componentFitSatisfied(projectRoot, input.route))) {
+        throw new Error(`vocabulary-checked requires the canonical component fit at ${canonical}`);
+      }
     }
   }
   if (status === "complete") {
@@ -341,16 +441,11 @@ export async function checkpointRouteState(input: RouteCheckpointInput): Promise
   const decisions = input.decision === undefined || input.decision.trim().length === 0 || existing.decisions.includes(input.decision)
     ? existing.decisions
     : [...existing.decisions, input.decision.trim()];
-  const artifacts = input.artifacts === undefined ? existing.artifacts : {
-    ...existing.artifacts,
-    ...Object.fromEntries(
-      Object.entries(input.artifacts).map(([key, value]) => [key, normalizeArtifact(projectRoot, key, value)]),
-    ),
-  };
   const artifactDigests: Record<string, string> = { ...existing.artifact_digests };
-  const frozenKeys = new Set(["brief", "vocabulary", "baseline_manifest", "variant_brief", "allowed_changes", "guidance", "gap_plan", "types", "package_digest"]);
+  const frozenKeys = new Set(["brief", "vocabulary", "component_fit", "baseline_manifest", "variant_brief", "allowed_changes", "guidance", "gap_plan", "types", "package_digest"]);
   for (const [key, value] of Object.entries(artifacts)) {
     if (!frozenKeys.has(key) && !value.includes(`${sep}.hypit${sep}evidence${sep}`)) continue;
+    if (key === "component_fit" && input.artifacts?.component_fit === undefined) continue;
     const digest = await digestPath(value);
     if (digest !== undefined) artifactDigests[key] = digest;
   }
@@ -483,6 +578,23 @@ export async function reconcileRouteState(projectRoot: string): Promise<RouteSta
   };
   for (const [step, key] of Object.entries(evidenceByStep[existing.route])) {
     await reconcileStep(Number(step), key);
+  }
+  if (existing.status !== "complete" && isCreationRoute(existing.route)) {
+    const vocabularyStep = stageNumber(existing.route, "vocabulary-checked");
+    const canonical = componentFitPath(existing.project_root);
+    const fitPath = artifact("component_fit");
+    const expectedDigest = existing.artifact_digests.component_fit;
+    const actualDigest = fitPath === undefined ? undefined : await digestPath(fitPath);
+    const fitSatisfied = fitPath === canonical
+      && await componentFitSatisfied(existing.project_root, existing.route)
+      && expectedDigest !== undefined
+      && actualDigest === expectedDigest;
+    if (!fitSatisfied) {
+      if (completed.has(vocabularyStep)) {
+        conflicts.push(`step ${vocabularyStep} (vocabulary-checked) has no valid frozen component fit`);
+      }
+      for (let step = vocabularyStep; step <= ROUTE_STATE_STEPS[existing.route].length; step += 1) completed.delete(step);
+    }
   }
   if (existing.route !== "variant-package") {
     const sourceName = existing.route === "variant" ? "source-updated" : "source-authored";

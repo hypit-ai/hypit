@@ -144,6 +144,10 @@ The pair is always sent in one order: **one is the reference, two is the render.
 told that and must not be; you need it, because a difference reported "in one" is a difference in the
 reference and one "in two" is something to repair.
 
+Only after the blind answer returns, read the frozen component fit. A reported difference that
+exactly matches one of its accepted variances is documented rather than repaired. The observer never
+receives the package name, fit rationale or variance list.
+
 ## Geometry is a first-class comparison
 
 Before comparing colour, typography, or motion, compare the layout hierarchy: Canvas → outer

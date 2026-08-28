@@ -26,6 +26,10 @@ Write the element's own share of both into a file and pass it as `--intent-file`
 required for a reason: a conformance question with nothing to conform to asks whether the picture
 looks acceptable, which it always does to whoever drew it.
 
+Do not put the selected package, rejected candidates or component-fit rationale into the intent.
+Details the author never specified and the brief never decided are not hidden requirements for the
+reader to invent. Apply any named accepted variance only after the independent answer returns.
+
 ## The round
 
 ```

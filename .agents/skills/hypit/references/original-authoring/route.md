@@ -46,7 +46,7 @@ interruption or context compaction, read `../recovery.md`, run `route_state --ac
 | --- | --- | --- |
 | `environment` | explicit checkpoint after Distribution, project and credentials are selected | `hypit paths --json` |
 | `brief-frozen` | explicit checkpoint naming the frozen brief, audience, format and claims | return to the brief checkpoint |
-| `vocabulary-checked` | vocabulary inspection is persisted for the Run | `inspect_svml_vocabulary --run <run>` |
+| `vocabulary-checked` | Run-scoped vocabulary inspection and the frozen `.hypit/component-fit.json` are both persisted | `inspect_svml_vocabulary --run <run>` |
 | `package-ready` | every project-owned package under `packages/` has a real Surface/Producer/Fragment and is used by the compiled Graph | `validate_local_author_packages --run <run>` |
 | `script-checked` | every caption Cue has at most four visible words | `validate_script_cues --run <run>` |
 | `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
@@ -127,7 +127,10 @@ about to invent, and this route is where that is easiest: there is no reference 
 
 For a proven gap, read `../local-author-package.md` completely and build the package.
 Inspect the candidate packages now with `inspect_svml_vocabulary --package …` (without `--run`;
-the Run is created in step 7). For a proven gap, build the package and keep it ready for the
+the Run is created in step 7). Apply the shared fit judgement, write the concise canonical
+`.hypit/component-fit.json`, and checkpoint `vocabulary-checked` as `in_progress` before package
+development. User-unspecified icon, shadow, radius and other micro-details are the Agent's design
+space, not automatic gaps. For a proven gap, build the package and keep it ready for the
 Run-scoped validation after all four source files exist. Do not treat an import or an empty package
 as proof that the vocabulary gap is solved.
 
@@ -163,6 +166,9 @@ hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package 
 hypit-reference-video-tools validate_local_author_packages --run build.svrun
 hypit-reference-video-tools validate_script_cues --run build.svrun
 ```
+
+The inspection completes `vocabulary-checked` only when the frozen component-fit file is still
+valid.
 
 `validate_local_author_packages` proves that every project-owned package under `packages/` has a real
 Surface/Producer/Fragment and is used by the compiled Source Graph. `validate_script_cues` rejects

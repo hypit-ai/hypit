@@ -234,13 +234,21 @@ Something nobody can close is not a failure to record as one. A typeface the gen
 reproduce, a texture it will not hold, a grain that is not available — write it into the report and
 leave it.
 
+Read the frozen `.hypit/component-fit.json` only after the independent reader has returned its
+findings. A difference that exactly matches a named accepted variance is recorded in the completion
+report, consumes no repair attempt and does not block the round. Do not tell the reader about that
+variance in advance. If a supposedly small difference instead changes the core look, role, structure
+or behaviour, return to the vocabulary decision; do not copy or widen the installed package.
+
 ### Two ceilings, and they never share attempts
 
-The first is over the *package*: something the package cannot express is a package defect, and fixing
-it means changing the package's structure. The second is over the *values*: once the package can
-express everything, tune the Recipe, the font, the placement and the motion.
+The first is over a *project-local package*: something that new package cannot express is its defect,
+and fixing it means changing that package's structure. Installed packages are immutable; a finding
+outside their accepted fit is a component-selection conflict, not permission to modify them. The
+second ceiling is over the values: tune the Recipe, font, placement and motion the selected component
+actually declares.
 
-**Write-and-remake the package: two attempts.** The first fixes what is obvious, the second fixes what
+**Write-and-remake a project-local package: two attempts.** The first fixes what is obvious, the second fixes what
 the first revealed. If it is still something the package cannot express — a typeface mix it has no
 port for, a motion it cannot draw — the package is wrong rather than the values, and tuning values
 is thrashing. Widen the package instead, which starts a fresh write-and-remake for the widened shape.

@@ -30,6 +30,8 @@ import { authoringCheck, mechanicalAuthoringCheck, previewCheck, reviewLogPath, 
 import type { AuthoringCheckInput, PreviewCheckInput, ReconstructionCheckInput, ScriptCueCheckInput } from "./checks.js";
 import {
   checkpointRouteState,
+  componentFitPath,
+  componentFitSatisfied,
   readRouteState,
   reconcileRouteState,
   routeExecutionStatePath,
@@ -1872,14 +1874,26 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       }
       const result = { packages: input.package_names, surfaces };
       let evidence: string | undefined;
+      let componentFitRequired: string | undefined;
       if (input.run !== undefined) {
         const runPath = resolve(invokedFrom(), input.run);
         evidence = await persistRouteEvidence(runPath, "vocabulary.json", result);
         const route = await readRouteState(dirname(runPath));
         const step = routeStepFor(route?.route ?? "reconstruction", "vocabulary-checked");
-        await autoRouteCheckpoint(runPath, step, { vocabulary: evidence }, "validate_local_author_packages --run <build.svrun>");
+        if (route?.route === "description" || route?.route === "reconstruction") {
+          const fit = componentFitPath(dirname(runPath));
+          if (await componentFitSatisfied(dirname(runPath), route.route)) {
+            await autoRouteCheckpoint(runPath, step, { vocabulary: evidence, component_fit: fit }, "validate_local_author_packages --run <build.svrun>");
+          } else componentFitRequired = fit;
+        } else {
+          await autoRouteCheckpoint(runPath, step, { vocabulary: evidence }, "validate_local_author_packages --run <build.svrun>");
+        }
       }
-      return evidence === undefined ? result : { ...result, evidence };
+      return evidence === undefined ? result : {
+        ...result,
+        evidence,
+        ...(componentFitRequired === undefined ? {} : { component_fit_required: componentFitRequired }),
+      };
     },
 
     async validate_local_author_packages(input): Promise<Record<string, unknown>> {

@@ -77,9 +77,9 @@ visuals, audio and text. README clone sets are useful evidence of the intended e
 their Source, people, products, claims and assets are not templates.
 
 **Read now:** `../playbooks/index.md`. Select each variant's format from its intent. Read the matching
-`formats/*.md` file completely and the craft files its footer names. Keep the base format by default.
-A switch among ranking, street interview, podcast or another format is a high-change variant and must
-be explicit in the plan.
+format file named by that index completely and the craft files its footer names. Keep the base format
+by default. A switch among ranking, street interview, podcast or another format is a high-change
+variant and must be explicit in the plan.
 
 Persist `format-plan.json`. Each entry records the variant id, example basis and digest, playbook path,
 and frozen Format DNA: Hook, narrative progression, speaker/role grammar, layout system, timing model,
@@ -122,6 +122,9 @@ Checkpoint `slate-drafted`, but do not freeze or dispatch it yet.
 ## 4. Enumerate vocabulary and decide package work globally
 
 **Read now:** `../vocabulary.md`.
+
+Use its shared fit judgement and immutable-package boundary; `component-plan.json` records the batch
+decision instead of creating a second copy of those rules.
 
 Before any package or variant agent starts, the main agent runs:
 
