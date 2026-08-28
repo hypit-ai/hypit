@@ -1,6 +1,6 @@
 ---
 name: hypit
-description: Produce a complete video program from a description — a ranking, a talking head, an explainer, a short — or reconstruct one from a reference video; author, check, preview, build, inspect and retrieve Hypit/SVML projects; configure runtimes and credentials; develop missing project-local author packages; and apply native video production playbooks. Use for video production with Hypit and SVML/SVS/SVRun authoring; this is not for developing the Hypit repository itself.
+description: Produce a complete video program from a description or reference video, revise a completed project, or batch-expand a validated project into independent variants; author, check, preview, build, inspect and retrieve Hypit/SVML projects; configure runtimes and credentials; develop missing project-local author packages; and apply native video production playbooks. Use for video production with Hypit and SVML/SVS/SVRun authoring; this is not for developing the Hypit repository itself.
 ---
 
 # Hypit
@@ -101,6 +101,13 @@ invalid. Never commit `.env` or copy its secret values into route state, Source,
   Run has no Studio session so the author can see the updated result. This routing rule also applies
   after a paid Build has produced the full video: revise the accepted-material Run, never the rendered
   artifact and never by resuming either creation route.
+- A request for many independent versions after reconstruction, original authoring or revision, or
+  from a validated existing project → read `references/variant-expansion/route.md`. The main agent
+  inspects examples, freezes format/Slate/component decisions, enumerates vocabulary, discloses the
+  fast/medium/new-package workload, and resolves package gaps before copying or dispatching variant
+  agents. Initial presenter/product/brand adaptation attached to a reconstruction remains inside the
+  reconstruction route; it is not Revision. Variant expansion defaults to mechanically checked
+  Source and performs no visual review or paid Build unless the author explicitly requests outputs.
 - A syntax question about one element, or a source that already exists → read
   `references/authoring.md`, then `references/quickstart.md` and the linked authoritative
   docs/package READMEs. A whole video is `references/original-authoring/route.md`, not this file.

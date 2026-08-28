@@ -60,6 +60,10 @@ observations describe the reference and are cached, and `compare_reconstruction`
 element against it. Author the change in early and the evidence describes one video while the sources
 describe another.
 
+If that same initial request also asks for many variants, step 23 still applies the requested
+presenter/product/brand adaptation inside reconstruction. After step 24 passes, hand the adapted base
+to `../variant-expansion/route.md`. Do not route the initial adaptation through Revision.
+
 ## Checkpoint and recovery
 
 Start the project snapshot before the first route decision:
@@ -397,6 +401,10 @@ If the author requests a change after seeing the preview, leave this route and f
 
 After any requested change (or when there was none), run `reconstruction_check` again and require
 `passed: true`. This is the last source/graph gate before the paid handoff.
+
+If the initial request includes batch variants, enter `../variant-expansion/route.md` from this
+checked, adapted base now. The variant route defaults to source delivery; do not Build the base first
+unless the author explicitly requested it.
 
 ### 25. Studio confirmation and paid handoff
 

@@ -19,17 +19,37 @@ If the snapshot is missing, start one before continuing:
 
 ```bash
 hypit-reference-video-tools route_state --action start \
-  --project-root <project> --route reconstruction|description --run <run>
+  --project-root <project> --route reconstruction|description|variant|variant-package --run <run>
 ```
 
 Use `--route description` for original-authoring and `--route reconstruction` for reference-video
 work. A project has one active route; a route mismatch is an error rather than an invitation to merge
 two histories.
+`variant_init` normally starts `variant`; the main agent starts `variant-package` explicitly for a
+staging project after a vocabulary gap has been proven.
+
+For batch variants, do not look for `.hypit/route-state.json` on the base and assume it names the
+batch. Read `variant-expansion/route.md`, then discover the sibling batch from the base locator:
+
+```bash
+hypit-reference-video-tools variant_state --action discover --project-root <base>
+hypit-reference-video-tools variant_state --action reconcile --project-root <base> --batch-id <id>
+```
+
+Read the returned canonical `<batch>/.hypit/variant-expansion-state.json`, reconcile every unfinished
+`variant-package` staging route and `variant` project route, inspect conflicts, and execute only the
+first unmet `next_action`. `variant_init` reuses matching initialized copies and refuses conflicting
+destinations. A component/package digest change, missing inspection evidence or file outside
+`allowed_changes` is a conflict, not permission to overwrite it.
 
 For a completed project with a new natural-language change, use `.hypit/revision-state.json` and the
 `revision_state` commands described in `revision.md`. Reconcile both the parent route snapshot and
 the revision snapshot before editing. Revision does not call VLM/observer, render, or perform visual
 review; it stops after the requested deterministic gates and leaves Studio untouched.
+
+After a completed revision, a request for many derivatives starts a new variant-expansion batch from
+the revised project. Reconcile the parent route and revision state before starting the batch; do not
+fold the batch into Revision.
 
 ## What the state means
 
