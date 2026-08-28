@@ -77,14 +77,14 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th width="16%">Reference</th>
     <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/a1feb123-3129-4880-87d2-897c42026fff" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/22df72b8-4831-4eb6-957d-676ae9b04f2d" controls muted></video></td>
     <td width="28%"></td>
   </tr>
   <tr>
     <th width="16%">Clones</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/d4bcb8a3-9ed5-46a8-900d-13891a83e6a0" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/75cca3aa-d392-49a6-b0cd-9b1c3aff8f01" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/2b04977e-665d-4d5f-8f82-c1ebdf567d2c" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/9c14c5ae-bd12-4961-9d57-a46d3a2154c6" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/f44c653b-f520-4715-9530-4c2f42114387" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/92f9bf8b-4f83-4d9b-a0e8-ca27fab2cc94" controls muted></video></td>
   </tr>
   <tr>
     <td colspan="4"><p><b>"DAILY CREATINE"</b> — an 18-second podcast clip where a muscle barbie forces creatine on a skinny college kid. Three confrontational A-rolls and an aspirational lifestyle B-roll by Seedance 2 Mini 720p, two 2K AI character portraits and three 1K montage panels by GPT Image 2, WhisperX word alignment, split-screen interview layout, speaker-aware karaoke captions, a product-handoff moment and background music, concurrently rendered in 64 headless Chromium processes.</p><p>Three clones included: swap both hosts to Pepe and Doge arguing about doggy arms, replace the creatine with retinol where a pretty boy roasts a tomboy's pores, or ditch the physical product for a CheatGPT app where a himbo jock out-GPAs a PhD student — same interview format, three ad verticals.</p><p>Total cost: <b>$1.07</b>.</p></td>
