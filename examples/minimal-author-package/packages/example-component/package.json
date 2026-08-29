@@ -9,10 +9,12 @@
     "@hypit/component-kit": "workspace:*",
     "@hypit/composition": "workspace:*",
     "@hypit/elaborator": "workspace:*",
+    "@hypit/media": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/semantic-track": "workspace:*",
+    "@hypit/svs": "workspace:*",
     "@hypit/temporal": "workspace:*",
     "@hypit/temporal-markup": "workspace:*",
     "@hypit/visual-ir": "workspace:*"
