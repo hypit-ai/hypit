@@ -108,9 +108,10 @@ record; only read an inline value after checking `record.value.kind === "inline"
 `record.value.value`. Never infer a value from the reference path.
 
 The temporal-markup helpers take one object `{ id, subjectId?, element, semantic, resolveReference }`
-and return `records`, `components` and `fragments` collections to append to the Surface result. The resulting
-`TemporalInstant` carries `frame`; a `TemporalWindow` carries `span` with `startFrame` and
-`endFrameExclusive`.
+and return `records`, `components`, `fragments` and a component-output `ref`. The resulting
+`TemporalInstant` has `{ id, subjectId, source, projection, authority, frame }`; a
+`TemporalWindow` has `{ id, subjectId, start, end, span }`, where each endpoint is a
+`TemporalInstant` and `span` has `startFrame` and `endFrameExclusive`.
 
 `SpatialFrame` uses `xPx`, `yPx`, `widthPx` and `heightPx`; `ProgramSpace` provides `id`,
 `narrativeId`, `durationSec` and `frameRate` (`numerator` and `denominator`). A `fonts:Stack` Surface publishes a
@@ -176,26 +177,14 @@ Choose raw versus structured Surface, timing dependencies, ProgramSpace, Frame, 
 Artifact, Recipe and output Types from the observed behavior and the anatomy the guide states. A
 declaration-only or Surface-only package is incomplete.
 
-For variable child counts, emit one Fragment operation per child and pass those fixed-port results
-to an append/merge Producer (for example `head`, `item`, `tail`). Do not add an undeclared
-`items[]` input or let a handler consume arbitrary children; every child must be represented by a
-sealed operation.
+For variable child counts, emit one child operation per child and chain those fixed-port results
+through an append Producer (`previous`, `item` → `set`). Do not add an undeclared `items[]` input or
+let a handler consume arbitrary children; every child must be represented by a sealed operation.
 
-```typescript
-const childOps = children.map((child, index) => ({
-  id: `child-${index}`, producer: childProducer,
-  inputs: { value: childInput(child) },
-  result: { kind: "output", name: `child-${index}` },
-}));
-const merge = {
-  id: "merge", producer: appendProducer,
-  inputs: { head: childOps[0]!, item: childOps[1]!, tail: childOps[2]! },
-  result: { kind: "output", name: "items" },
-};
-```
-
-The real implementation repeats the fixed operation shape for the actual child count and uses the
-package's documented empty/one/many merge forms; the handler never accepts undeclared variadic input.
+The fixture's `exampleAppendFragment` and `append-example-items` Producer are the runnable reference:
+each operation has exactly `previous` and `item` inputs and returns `set`, so the returned set can be
+fed into the next operation. The empty set is an ordinary typed Record. The handler never accepts
+undeclared variadic input.
 
 ## The package draws itself
 
@@ -261,15 +250,17 @@ nothing.
   not render a complete PNG sequence; when no interval is stable for two frames, it uses the middle
   frame of the longest Present.
 
-For a media slot, declare an Artifact Fragment input and read the BlobRef from `inputs`. Branch on
-its `mediaType` (`image/*` or `video/*`) when choosing the Visual IR element, and still draw the
-empty frame/cell when no material is supplied. `hypit image` uses the selected Runtime Profile's
-image endpoint and is billed; obtain approval before using it and reserve it for package-owned
-chrome, never video content or previews.
+For a media slot, declare an Artifact Fragment input. Producer inputs are `TypedRecord`s: inspect
+`inputs.media.value`; a filled slot is a BlobRef (`kind === "blob"`), while an authored structured
+value is under `kind === "inline"`. Branch on BlobRef `mediaType` (`image/*` or `video/*`) when
+choosing the Visual IR element, and still draw the empty frame/cell when no material is supplied.
+`hypit image` is a direct, billed KIE image-model call (default `@hypit/gpt-image`, credential
+`KIE_API_KEY`); it does not use a project Runtime Profile, Build or Run Source. Obtain approval
+before using it and reserve it for package-owned chrome.
 
 ```typescript
 handler: ({ inputs }) => {
-  const media = inputs.media?.kind === "blob" ? inputs.media : undefined;
+  const media = inputs.media?.value.kind === "blob" ? inputs.media.value : undefined;
   const kind = media?.mediaType.startsWith("video/") ? "video" : "image";
   return { outputs: { track: output(renderSlot(kind, media)) }, needs: {} };
 }

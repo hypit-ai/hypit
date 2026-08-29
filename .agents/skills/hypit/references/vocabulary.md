@@ -94,9 +94,11 @@ it may not move an element into the wrong semantic role merely because another t
 shape. Never invent a component, attribute, child, port, Recipe property or literal value.
 
 Installed packages are immutable dependencies. Do not modify them, copy or vendor their source into
-the project, or read implementation source to discover undeclared syntax. When the fit is not good
-enough, use the project-local package route and author it from the visible requirement, inspect
-contract, README and `local-author-package.md`.
+the project, or read implementation source to discover undeclared syntax. If the author explicitly
+chooses to copy a named package as a close structural sibling, that package's README and required
+role files may be read as the bounded implementation skeleton; this is the only source-reading
+exception. When the fit is not good enough, use the project-local package route and author it from
+the visible requirement, inspect contract, README and `local-author-package.md`.
 
 ## Freeze the judgement
 

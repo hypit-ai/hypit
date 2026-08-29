@@ -9,6 +9,7 @@ literal `fragment-input`, `fragment-operation` and `output` references. `src/tem
 Surface-side `@hypit/temporal-markup` Window/Moment projections; that package is distinct from the
 graph-side `@hypit/temporal` Producers.
 
-The three Surfaces demonstrate a box, a text surface and a media slot. The slot is a graph input; it is
-not a file bundled by the package. `preview/Box.png` is a real catalogue frame supplied by the
-package's vocabulary.
+The Surfaces demonstrate a box, a text surface, a media slot and a Style decoder. The slot is a graph
+input; it is not a file bundled by the package. `preview/Box.png` is a real catalogue frame supplied
+by the package's vocabulary. `exampleAppendFragment` and `append-example-items` show a fixed-port
+append that can be chained once per child.
