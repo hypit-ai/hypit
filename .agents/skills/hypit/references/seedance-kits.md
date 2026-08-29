@@ -11,7 +11,7 @@ slots carry shot-specific dialogue or action.
 | Silent B-roll | `broll-v1.svs` | `story` | one or more authored images |
 | Two-person podcast | `podcast-v1.svs` | `dialogue`; optional `action` | images 1/2 = A/B views, audio 1/2 = A/B voices |
 | Video call | `call-v1.svs` | `dialogue`; optional `action` | images 1/2 = reversed call layouts, audio 1/2 = A/B voices |
-| Street interview | `street-interview-v1.svs` | `dialogue`; optional `action` | image 1 = complete scene, audio 1/2 = interviewer/guest |
+| Street interview | `street-interview-v1.svs` | `dialogue`; optional `action` | images 1/2/3 = interviewer/guest/shared views, audio 1/2 = interviewer/guest |
 | Motion transfer | `motion-reference-v1.svs` | optional `direction` | image 1 = subject, video 1 = motion reference |
 | Camera transfer | `camera-reference-v1.svs` | optional `direction` | image 1 = subject, video 1 = camera reference |
 
@@ -32,7 +32,7 @@ Select these Recipe axes instead of rewriting their prompt blocks:
 | `speaker-v1` | `composition-stability`, `camera-motion`, `edit-rhythm`, `performance`, `gesture` |
 | `broll-v1` | `material-mode`, `story-shape`, `edit-language`, `camera-language`, `motion-intensity` |
 | `podcast-v1` / `call-v1` | `framing`, `edit-language`, `pacing`, `performance`, `reaction`, `gesture` |
-| `street-interview-v1` | `framing`, `edit-language`, `pacing`, `performance`, `reaction`, `gesture` |
+| `street-interview-v1` | `framing`, `pacing`, `performance`, `reaction`, `gesture` |
 
 Use a freeform English prompt only when none of the seven Kit contracts matches. Keep dialogue in
 its authored language when it must be spoken verbatim.

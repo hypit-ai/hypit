@@ -326,7 +326,6 @@ prompt prose. For example:
 ```svs
 interview.street {
   framing: soft-handheld;
-  edit-language: pause-trim;
   pacing: compact;
   performance: natural-street;
   reaction: active;
@@ -334,7 +333,8 @@ interview.street {
 }
 ```
 
-`street-interview-v1` reads those six axes. `podcast-v1` and `call-v1` read the corresponding
+`street-interview-v1` reads those five axes. Its per-take `action` carries camera changes in authored
+order. `podcast-v1` and `call-v1` read the corresponding
 `framing`, `edit-language`, `pacing`, `performance`, `reaction` and `gesture` axes with their own
 finite values. The selected Kit file is the authority for allowed values and defaults.
 

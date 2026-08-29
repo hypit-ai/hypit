@@ -4,27 +4,21 @@
   text-template.street-interview-v1 {
     separator: paragraph;
     default-framing: soft-handheld;
-    default-edit-language: pause-trim;
     default-pacing: compact;
     default-performance: natural-street;
     default-reaction: active;
     default-gesture: natural;
   }
-  text-template.street-interview-v1.block.base { kind: fixed; order: 10; text: "Create a realistic vertical street-interview clip from one final street-interview reference image."; }
-  text-template.street-interview-v1.block.reference { kind: fixed; order: 20; text: "REFERENCE CONTRACT: @image1 is the complete scene. Preserve both identities, outfits, street location, props, microphone, lighting, camera height, lens feel, and composition."; }
+  text-template.street-interview-v1.block.base { kind: fixed; order: 10; text: "Create a realistic vertical street-interview clip from three final reference views."; }
+  text-template.street-interview-v1.block.reference { kind: fixed; order: 20; text: "REFERENCE CONTRACT: @image1 is interviewer A's final camera setup, @image2 is guest B's final camera setup, and @image3 is their final shared two-person camera setup. These three supplied setups are a closed shot set, not loose subject references: every authored shot selects exactly one of them as its complete frame, and cuts go directly from one supplied setup to another. Never invent a fourth camera position or pass through an intermediate framing. Within each selected setup, obey the FRAMING direction below. Preserve both identities, outfits, street location, props, microphone, lighting, camera sides, and spatial relationship."; }
   text-template.street-interview-v1.block.roles { kind: fixed; order: 30; text: "ROLE MAP: A is the interviewer holding the microphone. B is the guest. Follow A: and B: exactly. A uses @audio1; B uses @audio2; only the current speaker moves their mouth."; }
   text-template.street-interview-v1.block.microphone { kind: fixed; order: 40; text: "MICROPHONE CONTRACT: A always holds the same microphone. On A: lines it stays near A's mouth; on B: lines A naturally extends it toward B with realistic wrist, hand, and arm adjustments."; }
-  text-template.street-interview-v1.block.scene { kind: fixed; order: 50; text: "SINGLE-SCENE CONTRACT: keep both people in the same street-interview spatial relationship and camera perspective throughout."; }
+  text-template.street-interview-v1.block.order { kind: fixed; order: 50; text: "Follow the authored ACTION DIRECTION in order for camera changes, performance, and physical interaction."; }
 
   text-template.street-interview-v1.block.framing { kind: axis; order: 60; parameter: framing; }
-  text-template.street-interview-v1.choice.framing.locked-scene { text: "FRAMING: preserve the reference composition, crop, scale, camera height, and lens feel."; }
-  text-template.street-interview-v1.choice.framing.soft-handheld { text: "FRAMING: realistic handheld drift, tiny sway, and operator breathing while preserving composition."; }
-  text-template.street-interview-v1.choice.framing.subject-push { text: "FRAMING: a modest handheld push toward the active speaker, then settle back."; }
-
-  text-template.street-interview-v1.block.edit { kind: axis; order: 70; parameter: edit-language; }
-  text-template.street-interview-v1.choice.edit.continuous { text: "EDITING: a continuous take with real-time reactions, breathing, and conversational timing."; }
-  text-template.street-interview-v1.choice.edit.pause-trim { text: "EDITING: trim silent gaps while preserving the same continuous street scene."; }
-  text-template.street-interview-v1.choice.edit.beat-cut { text: "EDITING: question, answer, reaction, and punchline land as short beats inside the same scene."; }
+  text-template.street-interview-v1.choice.framing.locked-scene { text: "FRAMING: locked camera. Hold the selected reference setup as the exact complete frame, preserving its composition, crop, scale, camera height, angle, and lens feel. No handheld drift, push, pan, tilt, zoom, reframe, orbit, or transitional camera movement."; }
+  text-template.street-interview-v1.choice.framing.soft-handheld { text: "FRAMING: realistic tiny handheld sway and operator breathing inside the selected camera setup while preserving its composition and camera side. Never turn that movement into a new crop, angle, camera position, or transition between setups."; }
+  text-template.street-interview-v1.choice.framing.subject-push { text: "FRAMING: make one modest push toward the active speaker inside the selected camera setup, then settle back to that same supplied composition. Never create another angle or camera position."; }
 
   text-template.street-interview-v1.block.pacing { kind: axis; order: 80; parameter: pacing; }
   text-template.street-interview-v1.choice.pacing.measured { text: "PACING: measured question and answer delivery with a natural beat between thoughts."; }

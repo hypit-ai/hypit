@@ -1,19 +1,20 @@
 # Street-interview format
 
-Use one complete two-person street scene, two explicit Script Roles, and a microphone handoff to
-make the active speaker readable without changing the location or camera topology.
+Use explicit interviewer, guest and shared street views, two Script Roles, and a microphone handoff.
+Write camera changes and performance together in each take's action, in the order they occur.
 
 ## Author the SVML program
 
 1. Write Script turns with explicit interviewer and guest Role Cues. Render the Kit dialogue so the
    interviewer is `A:` and the guest is `B:`.
-2. Prepare one accepted final scene image containing both people, their full spatial relationship,
-   the microphone, wardrobe, street context, camera height, and lens feel.
+2. Prepare three accepted final views in order: image 1 for interviewer A, image 2 for guest B, and
+   image 3 for their shared scene and full spatial relationship.
 3. Prepare two clean voice references in the same order: audio 1 for A, audio 2 for B.
-4. Vendor `street-interview-v1.svs`. Select `framing`, `edit-language`, `pacing`, `performance`,
-   `reaction`, and `gesture` in an SVS Recipe.
-5. For each Script Segment, use `copy:Render` with dialogue plus an optional English action slot,
-   then call `seedance:ReferenceVideo generate-audio="true"` with the scene image and both voices.
+4. Vendor `street-interview-v1.svs`. Select `framing`, `pacing`, `performance`, `reaction`, and
+   `gesture` in an SVS Recipe.
+5. For each Script Segment, use `copy:Render` with dialogue plus an English action that states the
+   camera and performance sequence directly, then call `seedance:ReferenceVideo
+   generate-audio="true"` with all three views and both voices.
 6. Normalize each accepted Segment take, produce its `whisperx:SemanticTake`, assemble the results
    with `speech:Track`, then add Caption, Media, Typography, and Audio Tracks as needed.
 7. Assemble peer Tracks in `film:Film`, render with `render:Video`, and use separate `.svrun`
@@ -21,8 +22,9 @@ make the active speaker readable without changing the location or camera topolog
 
 ## Preserve the street-interview grammar
 
-- Keep one locked or softly handheld two-person perspective. Small operator drift is natural; a new
-  camera side, reconstructed street, or unrelated reaction angle is not.
+- Select the shared, interviewer or guest reference directly in the action whenever the camera
+  changes. Preserve the authored camera side, background sector and spatial relationship of the
+  selected view.
 - Only the active Role moves their mouth. The listener remains alive through eye focus, breath,
   posture, nods, and an appropriate silent reaction.
 - A always holds the same microphone. On A lines it remains near A; on B lines A extends it toward B
@@ -42,10 +44,6 @@ make the active speaker readable without changing the location or camera topolog
   questions, or CTA copy.
 - Keep exact signs, product labels, and device UI as supplied physical media. Do not ask Seedance to
   add editorial cards or captions.
-
-The primary shared street shot does not need a reverse angle. If a device-facing or proof angle is
-added, its opposing camera position must show a different background sector and landmark set from
-the person-facing image.
 
 ## Review and reuse
 

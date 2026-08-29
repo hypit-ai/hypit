@@ -54,7 +54,7 @@ The seven templates are:
 - `broll-v1`: silent visual micro-story;
 - `podcast-v1`: two fixed podcast views with two voices;
 - `call-v1`: two live video-call reverse views;
-- `street-interview-v1`: one shared street scene, two voices and microphone handoff;
+- `street-interview-v1`: interviewer, guest and shared street views, two voices and microphone handoff;
 - `motion-reference-v1`: preserve the subject and transfer body motion only;
 - `camera-reference-v1`: preserve the subject and transfer camera language only.
 

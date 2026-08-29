@@ -221,7 +221,7 @@ Endpoint，不会改变作者图。
 | 无声 B-roll | `broll-v1` | `story` | 一张或多张作者声明图片 |
 | 双人 Podcast | `podcast-v1` | `dialogue`；可选 `action` | image 1/2 = A/B 视角；audio 1/2 = A/B 声音 |
 | 视频通话 | `call-v1` | `dialogue`；可选 `action` | image 1/2 = 相反通话布局；audio 1/2 = A/B 声音 |
-| 街访 | `street-interview-v1` | `dialogue`；可选 `action` | image 1 = 完整场景；audio 1/2 = 采访者/受访者 |
+| 街访 | `street-interview-v1` | `dialogue`；可选 `action` | image 1/2/3 = 采访者/受访者/双人视角；audio 1/2 = 采访者/受访者 |
 | 动作迁移 | `motion-reference-v1` | 可选 `direction` | image 1 = 主体；video 1 = 动作参考 |
 | 运镜迁移 | `camera-reference-v1` | 可选 `direction` | image 1 = 主体；video 1 = 运镜参考 |
 
@@ -229,7 +229,7 @@ Endpoint，不会改变作者图。
 
 ## 街访 Prompt 组装
 
-使用 `street-interview-v1` 复用场景、角色、麦克风、音色和无叠加文字契约。构图、剪辑、节奏、表演、反应与手势由 SVS Recipe 选择；动态输入只保留对白与可选的单段动作：
+使用 `street-interview-v1` 复用视角顺序、角色、麦克风、音色和无叠加文字契约。构图、节奏、表演、反应与手势由 SVS Recipe 选择；每段的镜头变化和表演按实际发生顺序直接写在 `action` 中：
 
 ```svml
 <import as="text" from="@hypit/text@1"/>
@@ -237,7 +237,8 @@ Endpoint，不会改变作者图。
 <import as="interview-kit" source="./kits/street-interview-v1.svs"/>
 
 <text:Value id="interview-action">
-  Let the guest pause briefly before the answer; keep the microphone handoff natural.
+  Begin with the shared view from @image3 while A asks the question.
+  Cut to B's view from @image2 as B pauses briefly, then answers.
 </text:Value>
 
 <text:Render id="interview-prompt"
@@ -250,7 +251,9 @@ Endpoint，不会改变作者图。
 <seedance:ReferenceVideo id="interview-take" model="mini"
   prompt={interview-prompt} duration={interview-duration.duration}
   resolution="720p" aspect-ratio="9:16" generate-audio="true">
-  <seedance:Reference image={interview-scene}/>
+  <seedance:Reference image={interviewer-view}/>
+  <seedance:Reference image={guest-view}/>
+  <seedance:Reference image={shared-view}/>
   <seedance:Reference audio={interviewer-voice}/>
   <seedance:Reference audio={guest-voice}/>
 </seedance:ReferenceVideo>
