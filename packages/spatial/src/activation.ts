@@ -8,6 +8,7 @@ import {
   decodeFrameSurface,
   decodePathSurface,
   decodePointSurface,
+  decodeRegionTimelineSurface,
 } from "./surface.js";
 import {
   spatialManifest,
@@ -29,6 +30,8 @@ export const hypitPackage = {
     declaration: spatialMarkupSurfaces.find((item) => item.name === "path")!, handler: decodePathSurface }),
     createMarkupSurfaceHostFacet({ module: spatialModuleRef,
     declaration: spatialMarkupSurfaces.find((item) => item.name === "extent")!, handler: decodeExtentSurface }),
+    createMarkupSurfaceHostFacet({ module: spatialModuleRef,
+    declaration: spatialMarkupSurfaces.find((item) => item.name === "region-timeline")!, handler: decodeRegionTimelineSurface }),
     createMarkupSurfaceHostFacet({ module: spatialModuleRef,
     declaration: spatialMarkupSurfaces.find((item) => item.name === "frame")!, handler: decodeFrameSurface }),
     createMarkupSurfaceHostFacet({ module: spatialModuleRef,

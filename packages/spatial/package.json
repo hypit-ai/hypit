@@ -14,7 +14,8 @@
     "@hypit/component-kit": "workspace:*",
     "@hypit/elaborator": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/markup": "workspace:*"
+    "@hypit/markup": "workspace:*",
+    "@hypit/svs": "workspace:*"
   },
   "devDependencies": {
     "@hypit/core": "workspace:*",

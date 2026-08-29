@@ -12,6 +12,7 @@ import type {
   SpatialLength,
   SpatialPath,
   SpatialPoint,
+  SpatialRegionTimeline,
 } from "./types.js";
 
 function finite(value: number, label: string): void {
@@ -42,6 +43,24 @@ export function assertSpatialFrame(value: SpatialFrame): void {
   finite(value.yPx, "SpatialFrame.yPx");
   positive(value.widthPx, "SpatialFrame.widthPx");
   positive(value.heightPx, "SpatialFrame.heightPx");
+}
+
+export function assertSpatialRegionTimeline(value: SpatialRegionTimeline): void {
+  assertCanvasSpace(value.canvas);
+  if (!Number.isSafeInteger(value.frameCount) || value.frameCount <= 0 || value.tracks.length === 0) {
+    throw new Error("SpatialRegionTimeline is empty or has an invalid Frame count.");
+  }
+  const ids = new Set<string>();
+  for (const track of value.tracks) {
+    if (!track.id.trim() || ids.has(track.id)) throw new Error(`SpatialRegionTimeline repeats or omits Track id ${track.id}.`);
+    ids.add(track.id);
+    if (track.frames.length !== value.frameCount) {
+      throw new Error(`SpatialRegionTimeline Track ${track.id} does not cover every Frame.`);
+    }
+    for (const frame of track.frames) {
+      if (frame !== null) assertSpatialFrame(frame);
+    }
+  }
 }
 
 export function assertIntrinsicExtent(value: IntrinsicExtent): void {
@@ -212,6 +231,7 @@ export function fitContent(frame: SpatialFrame, extent: IntrinsicExtent, fit: Co
 export function sealCanvasSpace(value: CanvasSpace): CanvasSpace { assertCanvasSpace(value); return structuredClone(value); }
 export function sealSpatialPoint(value: SpatialPoint): SpatialPoint { assertSpatialPoint(value); return structuredClone(value); }
 export function sealSpatialFrame(value: SpatialFrame): SpatialFrame { assertSpatialFrame(value); return structuredClone(value); }
+export function sealSpatialRegionTimeline(value: SpatialRegionTimeline): SpatialRegionTimeline { assertSpatialRegionTimeline(value); return structuredClone(value); }
 export function sealSpatialPath(value: SpatialPath): SpatialPath { assertSpatialPath(value); return structuredClone(value); }
 export function sealIntrinsicExtent(value: IntrinsicExtent): IntrinsicExtent { assertIntrinsicExtent(value); return structuredClone(value); }
 export function sealContentFit(value: ContentFit): ContentFit { assertContentFit(value); return structuredClone(value); }

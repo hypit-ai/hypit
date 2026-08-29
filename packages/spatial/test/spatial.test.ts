@@ -10,6 +10,7 @@ import {
   createMarkupAuthorFrontend,
 } from "@hypit/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
+import { svsFrontend, svsManifest } from "@hypit/svs";
 
 import {
   anchoredFrame,
@@ -20,6 +21,7 @@ import {
   decodeFrameSurface,
   decodePathSurface,
   decodePointSurface,
+  decodeRegionTimelineSurface,
   fitContent,
   frameFromEdges,
   sealSpatialPath,
@@ -30,7 +32,7 @@ import {
   spatialProducers,
   spatialTypes,
 } from "../src/index.js";
-import type { ContentFit, IntrinsicExtent, SpatialAnchor, SpatialFrame } from "../src/index.js";
+import type { ContentFit, IntrinsicExtent, SpatialAnchor, SpatialFrame, SpatialRegionTimeline } from "../src/index.js";
 
 const parent: SpatialFrame = { xPx: 100, yPx: 200, widthPx: 800, heightPx: 1200 };
 const portrait: IntrinsicExtent = { widthPx: 600, heightPx: 1000 };
@@ -193,8 +195,8 @@ function source(text: string): AuthorSourceUnit {
   return { id: "/project/main.svml", name: "main.svml", text: `<?svml using="@hypit/markup@1"?>\n${text}` };
 }
 
-test("self-described Spatial Surfaces produce an explicit Canvas edge and finite Frame graph", async () => {
-  const closure = createResolvedClosure([spatialManifest]);
+test("self-described Spatial Surfaces produce explicit static geometry and measured Region data", async () => {
+  const closure = createResolvedClosure([spatialManifest, svsManifest]);
   const surfaces = new MarkupSurfaceRegistry();
   const register = (name: string, handler: Parameters<MarkupSurfaceRegistry["registerStructured"]>[0]["handler"]) => {
     const declaration = spatialMarkupSurfaces.find((item) => item.name === name);
@@ -204,17 +206,21 @@ test("self-described Spatial Surfaces produce an explicit Canvas edge and finite
   register("canvas", decodeCanvasSurface);
   register("point", decodePointSurface);
   register("path", decodePathSurface);
+  register("region-timeline", decodeRegionTimelineSurface);
   register("frame", decodeFrameSurface);
   register("anchored-frame", decodeAnchoredFrameSurface);
   register("aspect-frame", decodeAspectFrameSurface);
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({ registry: surfaces, resolveModule: () => spatialModuleRef }));
+  frontends.register(svsFrontend);
   const validators = new TypeValidatorRegistry();
   registerTypeValidatorFacets(validators, spatialComponent.validators ?? []);
   const compiled = await compileSourceClosure({
     entry: source(`<svml>
       <import as="space" from="@hypit/spatial@1"/>
+      <import as="tracking" source="./tracking.svs"/>
       <space:Canvas id="vertical" width="1080" height="1920"/>
+      <space:RegionTimeline id="heads" within={vertical} recipe={tracking.heads.default}/>
       <space:Point id="headline-origin" x="120" y="280"/>
       <space:Path id="headline-path">
         <space:Move x="120" y="280"/>
@@ -227,11 +233,33 @@ test("self-described Spatial Surfaces produce an explicit Canvas edge and finite
     closure,
     frontends,
     admitRecord: createRecordAdmitter(validators),
-    resolveSource() { throw new Error("Spatial fixture has no source imports."); },
+    resolveSource(_importer, request) {
+      if (request.from !== "./tracking.svs") throw new Error(`unknown Spatial fixture source ${request.from}`);
+      return {
+        id: "/project/tracking.svs",
+        name: "tracking.svs",
+        text: `<?svml using="@hypit/svs@1"?>
+<sheet version="1">
+heads.default {
+  frame-count: 3;
+  tracks: [{"id":"BOY","regions":[[0.5,0.1,0.2,0.3],null,[0.52,0.11,0.2,0.3]]}];
+}
+</sheet>`,
+      };
+    },
   });
   assert.equal(resolveCompiledSourceExport(compiled, "vertical", spatialTypes.canvas).ref.kind, "record");
   assert.equal(resolveCompiledSourceExport(compiled, "headline-origin", spatialTypes.point).ref.kind, "record");
   assert.equal(resolveCompiledSourceExport(compiled, "headline-path", spatialTypes.path).ref.kind, "record");
+  const regions = resolveCompiledSourceExport(compiled, "heads", spatialTypes.regionTimeline);
+  assert.equal(regions.ref.kind, "record");
+  const regionRecord = compiled.program.records.find((record) =>
+    regions.ref.kind === "record" && record.id === regions.ref.id);
+  const timeline = regionRecord?.value.kind === "inline"
+    ? regionRecord.value.value as unknown as SpatialRegionTimeline
+    : undefined;
+  assert.deepEqual(timeline?.tracks[0]?.frames[0], { xPx: 540, yPx: 192, widthPx: 216, heightPx: 576 });
+  assert.equal(timeline?.tracks[0]?.frames[1], null);
   const sticker = resolveCompiledSourceExport(compiled, "sticker", spatialTypes.frame);
   assert.equal(sticker.ref.kind, "logical-output");
   const build = start(compiled.program, compiled.graph, sealBuildRequest({
