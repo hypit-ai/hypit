@@ -1,10 +1,10 @@
 # 为 Hypit 做贡献
 
+[English](./CONTRIBUTING.md)
+
 欢迎提交 Pull Request。文档、示例和翻译与代码同样重要。
 
 在原创或复刻视频时，只有当你认为 Agent 创作的某个组件在无关项目中也有明确且很高的复用价值时，才可以让 Agent 把它移入 Hypit 仓库的 `packages/` 文件夹，再提交给我们，发起一个 Pull Request。普通的一次性组件应留在项目内部。
-
-[English](./CONTRIBUTING.md)
 
 ## 开始之前
 
