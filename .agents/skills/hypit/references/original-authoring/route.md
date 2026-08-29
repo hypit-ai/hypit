@@ -120,6 +120,19 @@ Graph, Script, visual semantics, timing or generation inputs.
    matches, follow the shared craft guidance and the open-ended intent analysis; do not invent a
    type-specific checklist.
 
+### Continuity is part of original authoring
+
+This requirement applies even when there is no reference video. Before writing generation prompts,
+establish one authoritative identity for every recurring person and product, one voice reference per
+speaker, and one accepted image for each recurring location or physical setup. Reuse those references
+across every take and derive alternate views from the accepted location image. Keep each continuous
+shot group coherent in person, face, wardrobe, lighting, camera geometry, background, props and action
+state. Do not ask a generator to recreate these facts from prose independently for each shot.
+
+Use `../playbooks/craft/visual-continuity.md`, `../playbooks/craft/persona-and-audio.md` and
+`../playbooks/craft/generated-dependencies.md` as the authority. The brief may leave visual details
+unspecified; the Agent chooses them once and then treats the resulting anchors as fixed program facts.
+
 ### 5. Choose the packages
 
 **Read now:** `../vocabulary.md` — which installed packages own the systems this program contains,
