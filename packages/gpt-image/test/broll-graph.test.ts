@@ -41,6 +41,7 @@ import {
 } from "@hypit/seedance";
 import { speechManifest } from "@hypit/speech";
 import { spatialManifest } from "@hypit/spatial";
+import { svsManifest } from "@hypit/svs";
 import { textManifest } from "@hypit/text";
 
 const image = (name: string) => ({
@@ -63,6 +64,7 @@ function fixture() {
     mediaManifest,
     programSpaceManifest,
     spatialManifest,
+    svsManifest,
     speechManifest,
     seedanceManifest,
   ];

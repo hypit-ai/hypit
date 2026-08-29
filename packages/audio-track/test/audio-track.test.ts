@@ -37,6 +37,7 @@ import { temporalProducers } from "@hypit/temporal";
 import { speechEvidenceManifest } from "@hypit/speech-evidence";
 import { speechManifest } from "@hypit/speech";
 import { spatialManifest } from "@hypit/spatial";
+import { svsManifest } from "@hypit/svs";
 import { temporalManifest } from "@hypit/temporal";
 import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
@@ -278,6 +279,7 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     narrativeManifest,
     programSpaceManifest,
     speechManifest,
+    svsManifest,
     spatialManifest,
     speechEvidenceManifest,
     semanticTrackManifest,
