@@ -129,6 +129,8 @@ Agent 会检查环境，只索要这条视频需要的凭据，先给出预览�
 
 ## Stay Tuned with Us
 
+给我们点个 Star，即可第一时间收到 GitHub 的所有版本发布通知！
+
 ![Stay tuned with us](./docs/public/star.gif)
 
 ## 贡献指南
