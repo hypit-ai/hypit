@@ -5,6 +5,7 @@ import type { CaptionProgram, TimedCaptionProjection } from "@hypit/caption";
 import type { FontArtifactRef } from "@hypit/media";
 import { sealProgramSpace } from "@hypit/program-space";
 import { captionDocument, parseScript } from "@hypit/script";
+import type { SpatialRegionTimeline } from "@hypit/spatial";
 import type { SvsRecipe } from "@hypit/svs";
 
 import { fixtureDigest } from "../../../test/fixture-digest.js";
@@ -63,8 +64,8 @@ const recipe: SvsRecipe = {
   },
 };
 
-function fixture() {
-  const parsed = parseScript("caption-fine.svml", "<line>one two || three four</line>");
+function fixture(script = "<line>one two || three four</line>") {
+  const parsed = parseScript("caption-fine.svml", script);
   const document = captionDocument(parsed, "story.caption", "story");
   const style = fineCaptionStyle("plain", recipe, [font]);
   const program: CaptionProgram = {
@@ -140,6 +141,96 @@ test("Fine Caption schedules visibility outside semantic Word timing and cuts on
   assert.equal(atom?.style.find((declaration) => declaration.name === "overflow-wrap")?.value, "anywhere");
 });
 
+test("Fine Caption uniformly springs the whole Cue through exact scales", () => {
+  const { document, program, projection } = fixture();
+  const style = fineCaptionStyle("plain", {
+    ...recipe,
+    properties: {
+      ...recipe.properties,
+      "cue-enter": "spring",
+      "cue-enter-frames": 4,
+      "cue-enter-start-scale": 0.75,
+    },
+  }, [font]);
+  const animatedProgram: CaptionProgram = { ...program, styles: [style] };
+  const track = renderFineCaption(
+    scheduleFineCaption(projection, animatedProgram, document),
+    animatedProgram,
+    document,
+    sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3,
+      frameRate: { numerator: 30, denominator: 1 } }),
+  );
+  const cueMotion = track.presents[0]?.elements.find((element) => element.id === "cue-motion");
+  const cueLoop = track.presents[0]?.elements.find((element) => element.id === "cue-loop");
+  const cue = track.presents[0]?.elements.find((element) => element.id === "cue");
+  const declarationAt = (frame: number, name: string): string | number | undefined =>
+    cueMotion?.animation?.keyframes.find((keyframe) => keyframe.atFrame === frame)
+      ?.style.find((declaration) => declaration.name === name)?.value;
+  const scaleAt = (frame: number): number => {
+    const transform = declarationAt(frame, "transform");
+    assert.ok(typeof transform === "string");
+    const match = /^scale\(([^)]+)\)$/u.exec(transform);
+    assert.ok(match);
+    return Number(match[1]);
+  };
+
+  assert.equal(declarationAt(0, "opacity"), 1);
+  assert.equal(scaleAt(0), 0.75);
+  assert.equal(scaleAt(2), 1.05);
+  assert.equal(scaleAt(3), 0.95);
+  assert.equal(declarationAt(0, "filter"), "none");
+  assert.equal(cueLoop?.parent, cueMotion?.id);
+  assert.equal(cue?.parent, cueLoop?.id);
+  assert.equal(declarationAt(4, "transform"), "none");
+  assert.equal(declarationAt(4, "filter"), "none");
+});
+
+test("Fine Caption follows measured Role regions and hides null Frames", () => {
+  const { document, program, projection } = fixture(`<line>
+  <BOY>one two || three four
+</line>`);
+  const space = sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3,
+    frameRate: { numerator: 30, denominator: 1 } });
+  const regions: SpatialRegionTimeline = {
+    canvas: { widthPx: 1080, heightPx: 1920, origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square" },
+    frameCount: 90,
+    tracks: [{
+      id: "BOY",
+      frames: Array.from({ length: 90 }, (_, frame) => frame === 7 ? null : ({
+        xPx: 100 + frame, yPx: 300 + frame, widthPx: 200, heightPx: 240,
+      })),
+    }],
+  };
+  const track = renderFineCaption(scheduleFineCaption(projection, program, document), program, document, space, regions);
+  const placement = track.presents[0]?.elements.find((element) => element.id === "placement");
+  const declarationAt = (frame: number, name: string): string | number | undefined =>
+    placement?.animation?.keyframes[frame]?.style.find((declaration) => declaration.name === name)?.value;
+  assert.equal(placement?.style.find((declaration) => declaration.name === "left")?.value, "0px");
+  assert.equal(placement?.style.find((declaration) => declaration.name === "top")?.value, "0px");
+  assert.equal(declarationAt(0, "transform"), "translate(206px,306px) translate(-50%,-100%)");
+  assert.equal(declarationAt(0, "opacity"), 1);
+  assert.equal(declarationAt(1, "opacity"), 0);
+  assert.equal(declarationAt(2, "opacity"), 1);
+});
+
+test("Fine Caption keeps authored placement when a Cue Role has no measured track", () => {
+  const { document, program, projection } = fixture(`<line>
+  <BOY>one two || three four
+</line>`);
+  const space = sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3,
+    frameRate: { numerator: 30, denominator: 1 } });
+  const regions: SpatialRegionTimeline = {
+    canvas: { widthPx: 1080, heightPx: 1920, origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square" },
+    frameCount: 90,
+    tracks: [{ id: "WIFE", frames: Array.from({ length: 90 }, () => null) }],
+  };
+  const track = renderFineCaption(scheduleFineCaption(projection, program, document), program, document, space, regions);
+  const placement = track.presents[0]?.elements.find((element) => element.id === "placement");
+  assert.equal(placement?.style.find((declaration) => declaration.name === "left")?.value, "50%");
+  assert.equal(placement?.style.find((declaration) => declaration.name === "top")?.value, "90%");
+  assert.equal(placement?.animation, undefined);
+});
+
 test("Fine Caption rejects a Cue that exceeds its structural row budget instead of clipping Paint", () => {
   const { document, program, projection } = fixture();
   const constrained = fineCaptionStyle("plain", {
@@ -162,6 +253,41 @@ test("Fine Caption applies authored mute before it schedules the visible envelop
   const schedule = scheduleFineCaption(projection, muted, document);
   assert.deepEqual(schedule.cues[0]?.units, [projection.cues[0]!.units[1]]);
   assert.equal(schedule.cues[0]?.semanticStartFrame, projection.cues[0]!.units[1]!.startFrame);
+});
+
+test("Fine Caption gives overlapping acoustic Words one current Karaoke owner", () => {
+  const { document, program, projection } = fixture();
+  const style = fineCaptionStyle("plain", {
+    ...recipe,
+    properties: { ...recipe.properties, karaoke: "current", "karaoke-transition": "step" },
+  }, [font]);
+  const karaokeProgram: CaptionProgram = { ...program, styles: [style] };
+  const firstCue = projection.cues[0]!;
+  const overlapped: TimedCaptionProjection = {
+    ...projection,
+    cues: [{
+      ...firstCue,
+      units: [
+        { ...firstCue.units[0]!, endFrameExclusive: 21 },
+        firstCue.units[1]!,
+      ],
+    }, projection.cues[1]!],
+  };
+  const track = renderFineCaption(
+    scheduleFineCaption(overlapped, karaokeProgram, document),
+    karaokeProgram,
+    document,
+    sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3,
+      frameRate: { numerator: 30, denominator: 1 } }),
+  );
+  const firstActive = track.presents[0]?.elements.find((element) => element.id === "atom-1-active");
+  const secondActive = track.presents[0]?.elements.find((element) => element.id === "atom-2-active");
+  const opacityAt = (element: typeof firstActive, frame: number): string | number | undefined =>
+    element?.animation?.keyframes.find((keyframe) => keyframe.atFrame === frame)
+      ?.style.find((declaration) => declaration.name === "opacity")?.value;
+  // Cue visibility starts at Frame 6, so global handoff Frame 20 is local Frame 14.
+  assert.equal(opacityAt(firstActive, 14), 0);
+  assert.equal(opacityAt(secondActive, 14), 1);
 });
 
 test("Fine Caption rejects token-specific Style runs instead of disguising a structural caption", () => {

@@ -66,7 +66,9 @@ placeCaption([
   "active-box-border-width", "active-box-padding", "active-box-radius",
 ], "how", "decoration", "decoration");
 placeCaption(["lead-frames", "tail-frames", "handoff"], "when", "cue", "envelope");
-placeCaption(["cue-enter", "cue-enter-frames", "cue-exit", "cue-exit-frames"], "when", "cue", "cue");
+placeCaption([
+  "cue-enter", "cue-enter-frames", "cue-enter-start-scale", "cue-exit", "cue-exit-frames",
+], "when", "cue", "cue");
 placeCaption([
   "karaoke", "karaoke-transition", "active-underline", "active-box", "active-box-continuity", "active-box-enter",
   "active-box-exit", "active-box-transition-frames", "atom-enter", "atom-enter-frames", "atom-exit", "atom-exit-frames",

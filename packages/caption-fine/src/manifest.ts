@@ -7,6 +7,7 @@ import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
+import { spatialDependency, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 
 import { fineCaptionOneShotMotions } from "./recipe.js";
@@ -24,6 +25,7 @@ export const captionFineTypes = {
 export const captionFineProducers = {
   schedule: { module: captionFineModuleRef, name: "schedule-fine-caption" },
   render: { module: captionFineModuleRef, name: "render-fine-caption" },
+  renderWithRegions: { module: captionFineModuleRef, name: "render-fine-caption-with-regions" },
 } satisfies Record<string, ProducerRef>;
 
 export const captionFineMarkupSurfaces = [
@@ -229,6 +231,8 @@ export const captionFineMarkupSurfaces = [
                 summary: "Plays this motion as a Cue arrives." },
               { name: "cue-enter-frames", required: false, fallback: "0",
                 summary: "Sets how many Frames the Cue entrance runs for." },
+              { name: "cue-enter-start-scale", required: false,
+                summary: "Overrides the Cue entrance motion's initial uniform scale while preserving that motion's own curve; 0.55 begins at fifty-five percent size and settles at one." },
               { name: "cue-exit", required: false, values: fineCaptionOneShotMotions, fallback: "none",
                 summary: "Plays this motion as a Cue leaves." },
               { name: "cue-exit-frames", required: false, fallback: "0",
@@ -305,6 +309,8 @@ export const captionFineMarkupSurfaces = [
             summary: "Chooses the continuous SemanticTrack whose Word anchors give every Cue its time." },
           { name: "program", kind: "reference", required: true, accepts: [captionTypes.program],
             summary: "Chooses the Style assignment that decides which Style each run is rendered in." },
+          { name: "regions", kind: "reference", required: false, accepts: [spatialTypes.regionTimeline],
+            summary: "Optionally follows external, frame-exact regions whose ids equal Script Roles, placing a Cue at its measured speaker region's top center and hiding it on null Frames." },
         ],
         ports: [
           { name: "schedule", type: captionFineTypes.schedule,
@@ -316,6 +322,8 @@ export const captionFineMarkupSurfaces = [
         notes: [
           "The element is empty; it accepts no children and no text.",
           "One Track renders the Program's default Style and every ordered replacement together.",
+          "Without regions, Recipe x/y placement is unchanged. With regions, a measured region overrides x/y for that Frame; a null Frame on that Role track hides the Cue, while a missing Role track retains authored x/y.",
+          "The tracked point replaces Recipe x/y while width and the Recipe anchor still decide the Caption box geometry; anchor-x=center and anchor-y=bottom place the box immediately above the measured region.",
         ],
       },
     },
@@ -333,6 +341,7 @@ export const captionFineManifest: ModuleManifest = {
     narrativeDependency,
     programSpaceDependency,
     semanticTrackDependency,
+    spatialDependency,
   ],
   types: [{ name: captionFineTypes.schedule.name }],
   capabilities: [],
@@ -354,6 +363,18 @@ export const captionFineManifest: ModuleManifest = {
         { name: "program", type: captionTypes.program },
         { name: "document", type: narrativeTypes.captionDocument },
         { name: "space", type: programSpaceTypes.programSpace },
+      ],
+      outputs: [{ name: "track", type: compositionTypes.visualTrack }],
+      needs: [],
+    },
+    {
+      name: captionFineProducers.renderWithRegions.name,
+      inputs: [
+        { name: "schedule", type: captionFineTypes.schedule },
+        { name: "program", type: captionTypes.program },
+        { name: "document", type: narrativeTypes.captionDocument },
+        { name: "space", type: programSpaceTypes.programSpace },
+        { name: "regions", type: spatialTypes.regionTimeline },
       ],
       outputs: [{ name: "track", type: compositionTypes.visualTrack }],
       needs: [],

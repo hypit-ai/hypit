@@ -3,6 +3,7 @@ import { assertFontArtifactRef, assertFontStackRef, mediaTypes } from "@hypit/me
 import type { FontArtifactRef, FontStackRef } from "@hypit/media";
 import { narrativeTypes } from "@hypit/narrative";
 import { semanticTrackTypes } from "@hypit/semantic-track";
+import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
 import type {
@@ -12,7 +13,7 @@ import type {
   MarkupAttributeValue,
 } from "@hypit/markup";
 
-import { fineCaptionTrackFragment } from "./fragment.js";
+import { fineCaptionRegionTrackFragment, fineCaptionTrackFragment } from "./fragment.js";
 import { fineCaptionStyle } from "./style.js";
 
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
@@ -113,7 +114,7 @@ export const decodeFineCaptionStyleSurface: StructuredSurfaceHandler = ({ elemen
 };
 
 export const decodeFineCaptionTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "document", "semantic", "program"]);
+  attributes(element, ["id", "document", "semantic", "program"], ["regions"]);
   if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
     throw new Error(`${element.name} does not accept children`);
   }
@@ -121,6 +122,20 @@ export const decodeFineCaptionTrackSurface: StructuredSurfaceHandler = ({ elemen
   const document = reference(element, "document", narrativeTypes.captionDocument, resolveReference);
   const semantic = reference(element, "semantic", semanticTrackTypes.track, resolveReference);
   const program = reference(element, "program", captionTypes.program, resolveReference);
+  if (element.attributes.regions !== undefined) {
+    const regions = reference(element, "regions", spatialTypes.regionTimeline, resolveReference);
+    return {
+      records: [],
+      components: [{
+        id,
+        fragment: fineCaptionRegionTrackFragment.id,
+        inputs: { document: document.ref, semantic: semantic.ref, program: program.ref, regions: regions.ref },
+        outputs: { schedule: `${id}.schedule`, track: `${id}.track` },
+        range: element.range,
+      }],
+      fragments: [fineCaptionRegionTrackFragment],
+    };
+  }
   return {
     records: [],
     components: [{

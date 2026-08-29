@@ -4,6 +4,7 @@ import type { CaptionDocument } from "@hypit/narrative";
 import type { ProgramSpace } from "@hypit/program-space";
 import type { StoredValue } from "@hypit/protocol";
 import { canonicalize } from "@hypit/protocol";
+import type { SpatialRegionTimeline } from "@hypit/spatial";
 
 import { captionFineProducers } from "./manifest.js";
 import { renderFineCaption } from "./render.js";
@@ -36,6 +37,19 @@ export const captionFineComponent = {
           inline<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
           inline<CaptionDocument>(inputs.document?.value, "CaptionDocument"),
           inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+        )) } },
+        needs: {},
+      }),
+    },
+    {
+      producer: captionFineProducers.renderWithRegions,
+      handler: ({ inputs }) => ({
+        outputs: { track: { kind: "inline", value: canonicalize(renderFineCaption(
+          inline<FineCaptionSchedule>(inputs.schedule?.value, "FineCaptionSchedule"),
+          inline<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
+          inline<CaptionDocument>(inputs.document?.value, "CaptionDocument"),
+          inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+          inline<SpatialRegionTimeline>(inputs.regions?.value, "SpatialRegionTimeline"),
         )) } },
         needs: {},
       }),

@@ -145,6 +145,7 @@ export type FineCaptionParameters = {
     readonly cueExit: FineCaptionOneShotMotion;
     readonly cueEnterFrames: number;
     readonly cueExitFrames: number;
+    readonly cueEnterStartScale?: number;
     readonly atomEnter: FineCaptionOneShotMotion;
     readonly atomEnterFrames: number;
     readonly atomExit: FineCaptionOneShotMotion;

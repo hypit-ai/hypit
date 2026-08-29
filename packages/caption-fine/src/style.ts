@@ -181,6 +181,7 @@ export function fineCaptionParameters(
   const activeBoxPadding = padding(string(recipe, "active-box-padding", "0"));
   const fontSizePx = number(recipe, "size");
   const basePaint = glyphPaint(recipe, "");
+  const cueEnter = choice(recipe, "cue-enter", fineCaptionOneShotMotions, "none");
   const parameters: FineCaptionParameters = {
 
     stackingOrder: integer(recipe, "stack-order"),
@@ -260,10 +261,12 @@ export function fineCaptionParameters(
       transitionFrames: integer(recipe, "active-box-transition-frames", 0),
     },
     motion: {
-      cueEnter: choice(recipe, "cue-enter", fineCaptionOneShotMotions, "none"),
+      cueEnter,
       cueExit: choice(recipe, "cue-exit", fineCaptionOneShotMotions, "none"),
       cueEnterFrames: integer(recipe, "cue-enter-frames", 0),
       cueExitFrames: integer(recipe, "cue-exit-frames", 0),
+      ...(Object.hasOwn(recipe.properties, "cue-enter-start-scale")
+        ? { cueEnterStartScale: number(recipe, "cue-enter-start-scale") } : {}),
       atomEnter: choice(recipe, "atom-enter", fineCaptionOneShotMotions, "none"),
       atomEnterFrames: integer(recipe, "atom-enter-frames", 0),
       atomExit: choice(recipe, "atom-exit", fineCaptionOneShotMotions, "none"),
@@ -317,9 +320,15 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
     || !Number.isSafeInteger(value.timing.leadFrames) || !Number.isSafeInteger(value.timing.tailFrames)
     || (value.layout.maxLines !== undefined && (!Number.isSafeInteger(value.layout.maxLines) || value.layout.maxLines <= 0))
     || (value.layout.maxWordsPerLine !== undefined && (!Number.isSafeInteger(value.layout.maxWordsPerLine) || value.layout.maxWordsPerLine <= 0))
+    || (value.motion.cueEnterStartScale !== undefined
+      && (!Number.isFinite(value.motion.cueEnterStartScale) || value.motion.cueEnterStartScale < 0))
     || value.motion.activeScale <= 0
     || !Number.isFinite(value.motion.activeScale) || !Number.isFinite(value.layout.letterSpacingPx)) {
     throw new Error("Fine Caption parameters contain invalid numeric bounds");
+  }
+  if (value.motion.cueEnter === "none"
+    && value.motion.cueEnterStartScale !== undefined) {
+    throw new Error("Fine Caption Cue entrance modifiers require a Cue entrance motion");
   }
   if (value.typography.exactFonts.length === 0) throw new Error("Fine Caption exact Font stack is empty");
   const faces = new Set<string>();
