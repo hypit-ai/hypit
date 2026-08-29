@@ -130,6 +130,8 @@ Your agent can check the environment, request only the credentials the video nee
 
 ## Stay Tuned with Us
 
+Star us, and you will receive all release notifications from GitHub without any delay!
+
 ![Stay tuned with us](./docs/public/star.gif)
 
 ## How to Contribute
