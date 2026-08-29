@@ -560,6 +560,7 @@ export type RealizedAuthoringPreview = {
  */
 export async function realizeAuthoringPreview(input: {
   readonly run: string;
+  readonly runtime?: string;
   readonly package_root?: string;
 }): Promise<RealizedAuthoringPreview> {
   const cwd = invokedFrom();
@@ -581,7 +582,8 @@ export async function realizeAuthoringPreview(input: {
   if (distributionPackageRoot === undefined) throw new Error("active Hypit Distribution has no package root");
   const registry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot, distributionPackageRoot });
   const domain = await loadStudioDomain({ run: runPath, workspaceRoot: projectRoot, packageRoot });
-  const archive = await openStudioArchive(undefined, packageRoot, projectRoot, distributionPackageRoot);
+  const runtimePath = input.runtime === undefined ? undefined : resolve(cwd, input.runtime);
+  const archive = await openStudioArchive(runtimePath, packageRoot, projectRoot, distributionPackageRoot);
   try {
     const original = await loadStudioRun({ run: runPath, domain, registry, ...(archive === undefined ? {} : { archive }) });
     const graph: CompiledGraph = {
@@ -602,7 +604,7 @@ export async function realizeAuthoringPreview(input: {
     });
     const previewRegistry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot, distributionPackageRoot });
     const previewDomain = await loadStudioDomain({ run: previewMock.previewRun, workspaceRoot: projectRoot, packageRoot });
-    const previewArchive = await openStudioArchive(undefined, packageRoot, projectRoot, distributionPackageRoot);
+    const previewArchive = await openStudioArchive(runtimePath, packageRoot, projectRoot, distributionPackageRoot);
     try {
       const loadedPreview = await loadStudioRun({
         run: previewMock.previewRun, domain: previewDomain, registry: previewRegistry,

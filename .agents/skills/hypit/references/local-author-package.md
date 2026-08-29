@@ -284,8 +284,12 @@ is expensive to read.
 Before Source can be considered authored, run:
 
 ```bash
-hypit-reference-video-tools validate_local_author_packages --run <path/to/build.svrun>
+hypit-reference-video-tools validate_local_author_packages --run <path/to/build.svrun> [--runtime <hypit.runtime.json>]
 ```
+
+When the Run contains `build-record` pins, pass the same Runtime Profile used by the Build. The
+validator opens that profile read-only so it can resolve accepted Records while compiling the Run;
+otherwise a valid project package may be reported as imported but unused.
 
 Every project-owned author package under `<project>/packages/` must expose a non-empty Manifest, at least one
 Markup Surface and at least one Producer. Its Surface decoder must expand to a real Graph Fragment with

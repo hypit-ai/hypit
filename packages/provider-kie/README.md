@@ -28,6 +28,10 @@ routes rather than extra Capabilities.
 | `@hypit/seedream` | `seedream-5-lite` | `seedream/5-lite-{text,image}-to-image` |
 | `@hypit/background-removal` | `remove-background` | `recraft/remove-background` |
 
+KIE's GPT Image 2 endpoints do not accept `4:3`, `3:4` or `4:5`, even though those values are part
+of the model package's general vocabulary. The KIE route rejects those combinations before upload
+or paid submission; use `auto`, `1:1`, `3:2`, `2:3`, `16:9`, `9:16` or `21:9` for this Provider.
+
 There is deliberately no Grok image capability and no MiMo capability in this release. Seedream's
 `nsfwCheck` is explicit author request content; KIE cannot silently enable or disable it. A
 customer-specific “spicy” treatment belongs in a Recipe that selects and parameterizes exact model

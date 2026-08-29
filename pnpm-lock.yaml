@@ -261,6 +261,9 @@ importers:
 
   examples/minimal-author-package/packages/example-component:
     dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../../../../packages/artifact
       '@hypit/component-kit':
         specifier: workspace:*
         version: link:../../../../packages/component-kit
@@ -273,6 +276,9 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../../../../packages/markup
+      '@hypit/media':
+        specifier: workspace:*
+        version: link:../../../../packages/media
       '@hypit/program-space':
         specifier: workspace:*
         version: link:../../../../packages/program-space
@@ -282,6 +288,9 @@ importers:
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../../../../packages/semantic-track
+      '@hypit/svs':
+        specifier: workspace:*
+        version: link:../../../../packages/svs
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../../../../packages/temporal
