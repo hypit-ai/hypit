@@ -32,6 +32,7 @@ export const exampleProducers = {
 export const exampleManifest: ModuleManifest = {
   format: "hypit.module@1", name: exampleModuleRef.name, version: exampleModuleRef.version,
   dependencies: [
+    { module: artifactTypes.blob.module },
     { module: compositionTypes.visualTrack.module },
     { module: mediaTypes.fontStack.module },
     { module: programSpaceTypes.programSpace.module },
