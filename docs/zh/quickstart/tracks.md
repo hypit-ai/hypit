@@ -283,18 +283,18 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 ### 样式标签
 
-标签必须为空，三个属性全部必填：`id`、`recipe`（一份 SVS Recipe）与 `font`（Font Stack 或字体产物）。Recipe 承载这块板自己的键——行、配色、动效——并且会按变体校验，把 Column 的 recipe 给 TierBoard 会被指名拒绝。
+标签必须为空，三个属性全部必填：`id`、`recipe`（一份 SVS Recipe）与 `font`（Font Stack 或字体产物）。Recipe 由选中的组件变体定义，其他组件族的 Recipe 会被指名拒绝。
 
 ### 容器标签
 
 | 属性 | 取值 |
 |---|---|
 | `semantic` | 板据以计时的 SemanticTrack |
-| `frame` | 一个 `space:Frame`——TierBoard/Column 自己的紧凑板子 |
-| `during` | TierBoard/Column 接 Segment 或 Selection；TopThree 接 Selection |
+| `frame` | 一个 `space:Frame`——选中组件声明的板面位置 |
+| `during` | 选中组件声明的时间形式 |
 | `style` | 对应的样式记录，且只接受本变体的 |
 | `terminal` | 完整板定格的 Moment。仅 `TopThree` |
-| `canvas` | 一个 `space:Canvas`——独立揭示舞台。TierBoard/Column |
+| `canvas` | 选中组件可声明的 `space:Canvas` |
 | `appear-sound`、`move-sound` | 可选，Synchronized Media |
 
 只使用所选包明确声明的时间形式；不要从另一个组件族推断 terminal 或 reveal 规则。
@@ -303,7 +303,6 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 每个变体只接受自己的那一种，至少一个，且 id 在同一块板内不可重复。
 
-- **`TierItem`** —— `tier` 与 `icon` 必填。非 preset item 用自己的 `during` Selection，并必须显式选择 `entry="direct" | "drop"`；`preset="true"` 不写 `during` 和 `entry`。preset 先占内侧，随后严格按窗口顺序向外填充。两种模式都用快速的原地放大回弹入场；direct 在最终格出现，drop 在独立舞台讲解完整窗口后才归入 tier。行文字来自 recipe。
 - **`TopThreeItem`** —— `label` 与 item 自己的 `at={story.moment...}` 必填，可选 `icon` 与 `stack`，最多三条。揭示顺序由这些 Moment 的真实帧顺序决定。
 - **`ColumnItem`** —— `label` 与 `rank` 必填，可选 `icon` 与 `stack`。非 preset item 用自己的 `during` Selection；`preset="true"` 的 item 开场已在位且不写 `during`。
 
