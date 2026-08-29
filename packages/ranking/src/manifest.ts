@@ -244,7 +244,7 @@ const programDefinitions = [
   [rankingTypes.topThreeProgram, rankingTypes.topThreeStyle, rankingTypes.topThreeItems, rankingProducers.topThreeProgram, rankingProducers.topThreeEvents, rankingProducers.renderTopThree],
 ] as const;
 
-export const rankingMarkupSurfaces = [
+const allRankingMarkupSurfaces = [
     { name: "tier-style", tag: "TierBoardStyle", mode: "structured", outputs: [rankingTypes.tierStyle, rankingTypes.soundStyle],
       vocabulary: {
         summary: "Compiles one SVS Recipe and one exact font into the Style a TierBoard is drawn in, and the private sound Style it connects.",
@@ -688,8 +688,9 @@ export const rankingMarkupSurfaces = [
           "Authoring the appear sound also connects the Style's `.sound` output, so `style` must name a TopThreeStyle written in this Source.",
         ],
       } },
-  ] as const;
+] as const;
 
+export const rankingMarkupSurfaces = allRankingMarkupSurfaces.filter((surface) => surface.name !== "tier-style" && surface.name !== "tier");
 
 export const rankingManifest: ModuleManifest = {
   format: "hypit.module@1", name: rankingModuleRef.name, version: rankingModuleRef.version,
