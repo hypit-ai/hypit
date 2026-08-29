@@ -102,6 +102,11 @@ gap-confirmed → guidance-loaded → types-frozen → implemented
 包必须有 Manifest、Surface、Fragment、Producer、Validator、activation 和 preview，并且被项目
 Source 导入、被 graph 使用；`validate_local_author_packages` 是包门禁。
 
+原创或复刻路线完成后，可以考虑是否贡献项目本地包。阅读 Skill 参考文档 `references/package-promotion.md`，当组件在无关
+视频中也有明确且很高的复用价值时，再向用户提出贡献建议。用户同意后，将它移入 Hypit 仓库的
+`packages/` 文件夹并准备 Pull Request；普通的一次性组件留在项目内部。这是完成后的可选建议，
+不会打断制作流程，也不会自动修改仓库。
+
 ### 4. 编写四个项目源文件
 
 | 文件 | 职责 |

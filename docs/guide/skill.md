@@ -114,6 +114,13 @@ The package agent uses `local-author-package.md`, the public contract and the mi
 expose a Manifest, Surface, Fragment, Producer, Validator, activation and preview, and it must be
 imported and used by the project graph. `validate_local_author_packages` is the package gate.
 
+After an original-authoring or reconstruction route completes, a project-local package may be
+considered for contribution. Read the Skill reference `references/package-promotion.md` and ask the
+author about a promotion when the component has clear, high reuse value across unrelated videos. If
+the author agrees, move it into Hypit's `packages/` folder and prepare a Pull Request; ordinary
+one-off components remain in the
+project. This is a post-completion offer, not an interruption or an automatic repository change.
+
 ### 4. Author the four project sources
 
 | File | Responsibility |
