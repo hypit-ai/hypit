@@ -4,6 +4,7 @@ import test from "node:test";
 import { canonicalize } from "@hypit/protocol";
 import {
   assertCaptionProgramForDocument,
+  captionUnitsForRole,
   captionUnitsForSelection,
   resolveCaptionProgram,
   sealCaptionStyle,
@@ -22,6 +23,23 @@ test("Caption uses complete semantic selections and authored cue breaks", () => 
   const program = resolveCaptionProgram(document, narrative, "captions", style, [], []);
   assertCaptionProgramForDocument(program, document);
   assert.equal(document.cueBreaks.length, 1);
+});
+
+test("Caption styles one Role across non-contiguous authored Cues", () => {
+  const parsed = parseScript("caption-roles.svml", "<line><GUY>one || <GIRL>two || <GUY>three</line>");
+  const narrative = narrativeValue(parsed, "story") as unknown as Narrative;
+  const document = captionDocument(parsed, "story.caption", "story");
+  const plain = sealCaptionStyle({ id: "plain", rendering: { family: "test", parameters: canonicalize({}) } });
+  const guy = sealCaptionStyle({ id: "guy", rendering: { family: "test", parameters: canonicalize({}) } });
+  const program = resolveCaptionProgram(
+    document,
+    narrative,
+    "captions",
+    plain,
+    [{ id: "guy-role", unitIds: captionUnitsForRole(document, "GUY").unitIds, style: guy }],
+  );
+  assertCaptionProgramForDocument(program, document);
+  assert.deepEqual(program.runs.map((run) => run.styleId), ["guy", "plain", "guy"]);
 });
 
 test("Caption keeps Selection styles and adds flat word-attribute styles separately", () => {
