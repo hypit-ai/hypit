@@ -59,6 +59,9 @@ them as the selected launchers above. Do not globally link the checkout, use `np
 dependencies into an author project. Run reference-video-tool commands that share reference state
 from the same working directory, even though their launcher lives in the checkout.
 
+When a reference names `<skill-root>`, substitute the installed Hypit skill directory (the directory
+containing `SKILL.md` and `scripts/`); it is not relative to the author's project or checkout.
+
 If neither an installed CLI nor a contributor checkout is available, report that no runnable Hypit
 Distribution is present and stop. A registry install is not a recovery path.
 
@@ -109,8 +112,9 @@ WhisperX, for example, lives under `programs/whisperx/`; OpenCV under
 `programs/image-opencv/`. Service process records and logs live with the program. Project Build and
 Worker state remains under `<project>/.hypit/`.
 
-Reference-video state sits beside the Distribution, at `.hypit/reference-video-tools/<reference-id>/`,
-wherever the command is run from. It is keyed by the video, so two reconstructions of one file share
+Reference-video state sits beside the Distribution, at `.hypit/reference-video-tools/<reference-id>/`.
+Commands may run from any directory; the tool locates this canonical state from the selected
+Distribution. It is keyed by the video, so two reconstructions of one file share
 the observations it cost money to make; each command reports the root it used.
 
 This split is why opening a second project cannot install WhisperX again, and why updating the npm

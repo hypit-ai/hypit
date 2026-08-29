@@ -25,9 +25,9 @@ whole-reference observations under `observations.people_and_product`, `observati
 for compatibility. Do not mix `.text`, `.answer.text` and `.result.text` as competing conventions.
 
 A reference is found from the Distribution rather than from where you are standing, so these commands
-may be run from anywhere. What does depend on where you are is which packages resolve: name the
-project with `--package-root` when the command is not run from inside it. `paths` reports both roots
-and every prepared reference, which is what to run when a command reports something it cannot see.
+may be run from anywhere. `--package-root` only affects project package discovery when a project has
+no `package.json` of its own; it never changes the reference-state location. `paths` reports both
+roots and every prepared reference.
 
 Defaults are sufficient for normal use. Each also accepts `--input <json>`.
 

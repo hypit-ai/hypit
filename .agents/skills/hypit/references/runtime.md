@@ -180,10 +180,8 @@ Relative Author Sources and assets stay inside the independently resolved Source
 
 - `--workspace` explicitly selects the Source Workspace boundary.
 - `--package-root` only changes where the Host locates installed packages. It does not widen Source
-  access. Reach for it when a project you did not create has no `package.json` of its own: `check`,
-  `plan` and `build` walk up from the project until one appears, so a project without one resolves
-  its packages against an ancestor directory, and a project package resolves to nothing. Run those
-  commands with `--package-root .` from the project, or write the project the `package.json`
-  `environment.md` describes and drop the flag.
+  access. With a `package.json` at the project root, omit it. Use it when a project has no own
+  `package.json` or when explicitly selecting another package root; this never changes Source
+  Workspace resolution.
 - Do not symlink an external project into the Distribution. The external directory is the intended
   workspace, not an escape from one.
