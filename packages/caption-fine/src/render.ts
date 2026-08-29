@@ -15,6 +15,8 @@ import type {
 import type { CaptionAlignmentUnit, CaptionDocument } from "@hypit/narrative";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
+import { assertSpatialRegionTimeline } from "@hypit/spatial";
+import type { CanvasSpace, SpatialFrame, SpatialRegionTimeline } from "@hypit/spatial";
 
 import { assertFineCaptionParameters, FINE_CAPTION_FAMILY } from "./style.js";
 import { assertFineCaptionSchedule } from "./schedule.js";
@@ -298,41 +300,73 @@ function wipes(kind: FineCaptionOneShotMotion): boolean {
   return kind === "wipe-left" || kind === "wipe-right" || kind === "wipe-up" || kind === "wipe-down";
 }
 
-function motionSnapshot(kind: FineCaptionOneShotMotion, progress: number, distancePx: number): MotionSnapshot {
+function motionSnapshot(
+  kind: FineCaptionOneShotMotion,
+  progress: number,
+  distancePx: number,
+  startScale?: number,
+): MotionSnapshot {
   const value = clamp(progress, 0, 1);
   const eased = easeOut(value);
   const state = (opacity: number, transform = "none", filter = "none", clipPath = neutralMotion.clipPath): MotionSnapshot =>
     ({ opacity, transform, filter, clipPath });
+  const scaleFrom = (fallback: number, motionProgress: number): string =>
+    `scale(${compactNumber((startScale ?? fallback) + (1 - (startScale ?? fallback)) * motionProgress)})`;
+  const optionalScale = (): string => startScale === undefined ? "" : ` ${scaleFrom(1, eased)}`;
   if (kind === "none") return neutralMotion;
-  if (kind === "fade") return state(eased);
-  if (kind === "blur-in") return state(eased, `scale(${compactNumber(0.96 + 0.04 * eased)})`, `blur(${compactNumber((1 - eased) * 16)}px)`);
-  if (kind === "pop") return state(eased, `scale(${compactNumber(0.6 + 0.4 * easeOutBack(value))})`);
-  if (kind === "scale") return state(eased, `scale(${compactNumber(0.2 + 0.8 * eased)})`);
+  if (kind === "fade") return state(eased, startScale === undefined ? "none" : scaleFrom(1, eased));
+  if (kind === "blur-in") return state(eased, scaleFrom(0.96, eased), `blur(${compactNumber((1 - eased) * 16)}px)`);
+  if (kind === "pop") return state(eased, scaleFrom(0.6, easeOutBack(value)));
+  if (kind === "scale") return state(eased, scaleFrom(0.2, eased));
   if (kind === "spring") {
     const settled = value >= 1 ? 1 : 1 - Math.exp(-5 * value) * Math.cos(10 * value);
-    return state(eased, `scale(${compactNumber(0.72 + 0.28 * settled)})`);
+    return state(eased, scaleFrom(0.72, settled));
   }
-  if (kind === "bounce") return state(eased, `scale(${compactNumber(easeOutBounce(value))})`);
-  if (kind === "elastic") return state(eased, `scale(${compactNumber(easeOutElastic(value))})`);
-  if (kind === "stamp") return state(eased, `scale(${compactNumber(1.35 - 0.35 * easeOutBack(value))})`);
-  if (kind === "tilt") return state(eased, `rotate(${compactNumber((1 - eased) * -8)}deg) scale(${compactNumber(0.94 + 0.06 * eased)})`);
-  if (kind === "zoom-blur") return state(eased, `scale(${compactNumber(1.18 - 0.18 * eased)})`, `blur(${compactNumber((1 - eased) * 18)}px)`);
-  if (kind === "flip-x") return state(eased, `perspective(600px) rotateX(${compactNumber((1 - eased) * 88)}deg) scale(${compactNumber(0.92 + 0.08 * eased)})`);
-  if (kind === "flip-y") return state(eased, `perspective(600px) rotateY(${compactNumber((1 - eased) * -88)}deg) scale(${compactNumber(0.92 + 0.08 * eased)})`);
-  if (kind === "spin") return state(eased, `rotate(${compactNumber((1 - eased) * -180)}deg) scale(${compactNumber(0.55 + 0.45 * eased)})`);
-  if (kind === "squash") return state(eased, `scaleX(${compactNumber(1.28 - 0.28 * easeOutBack(value))}) scaleY(${compactNumber(0.48 + 0.52 * easeOutBack(value))})`);
-  if (kind === "stretch") return state(eased, `scaleX(${compactNumber(0.5 + 0.5 * easeOutBack(value))}) scaleY(${compactNumber(1.35 - 0.35 * easeOutBack(value))})`);
+  if (kind === "bounce") return state(eased, scaleFrom(0, easeOutBounce(value)));
+  if (kind === "elastic") return state(eased, scaleFrom(0, easeOutElastic(value)));
+  if (kind === "stamp") return state(eased, scaleFrom(1.35, easeOutBack(value)));
+  if (kind === "tilt") return state(eased, `rotate(${compactNumber((1 - eased) * -8)}deg) ${scaleFrom(0.94, eased)}`);
+  if (kind === "zoom-blur") return state(eased, scaleFrom(1.18, eased), `blur(${compactNumber((1 - eased) * 18)}px)`);
+  if (kind === "flip-x") return state(eased, `perspective(600px) rotateX(${compactNumber((1 - eased) * 88)}deg) ${scaleFrom(0.92, eased)}`);
+  if (kind === "flip-y") return state(eased, `perspective(600px) rotateY(${compactNumber((1 - eased) * -88)}deg) ${scaleFrom(0.92, eased)}`);
+  if (kind === "spin") return state(eased, `rotate(${compactNumber((1 - eased) * -180)}deg) ${scaleFrom(0.55, eased)}`);
+  if (kind === "squash") return state(eased, `scaleX(${compactNumber(1.28 - 0.28 * easeOutBack(value))}) scaleY(${compactNumber(0.48 + 0.52 * easeOutBack(value))})${optionalScale()}`);
+  if (kind === "stretch") return state(eased, `scaleX(${compactNumber(0.5 + 0.5 * easeOutBack(value))}) scaleY(${compactNumber(1.35 - 0.35 * easeOutBack(value))})${optionalScale()}`);
   const hidden = compactNumber((1 - eased) * 100);
-  if (kind === "wipe-left") return state(1, "none", "none", `inset(0% 0% 0% ${hidden}%)`);
-  if (kind === "wipe-right") return state(1, "none", "none", `inset(0% ${hidden}% 0% 0%)`);
-  if (kind === "wipe-up") return state(1, "none", "none", `inset(0% 0% ${hidden}% 0%)`);
-  if (kind === "wipe-down") return state(1, "none", "none", `inset(${hidden}% 0% 0% 0%)`);
+  const wipeTransform = startScale === undefined ? "none" : scaleFrom(1, eased);
+  if (kind === "wipe-left") return state(1, wipeTransform, "none", `inset(0% 0% 0% ${hidden}%)`);
+  if (kind === "wipe-right") return state(1, wipeTransform, "none", `inset(0% ${hidden}% 0% 0%)`);
+  if (kind === "wipe-up") return state(1, wipeTransform, "none", `inset(0% 0% ${hidden}% 0%)`);
+  if (kind === "wipe-down") return state(1, wipeTransform, "none", `inset(${hidden}% 0% 0% 0%)`);
   const remaining = compactNumber((1 - value) * distancePx);
   const transform = kind === "slide-left" ? `translateX(-${remaining}px)`
     : kind === "slide-right" ? `translateX(${remaining}px)`
       : kind === "slide-up" ? `translateY(-${remaining}px)`
         : `translateY(${remaining}px)`;
-  return state(eased, transform);
+  return state(eased, `${transform}${optionalScale()}`);
+}
+
+function cueEntranceSnapshot(
+  parameters: FineCaptionParameters,
+  progress: number,
+): MotionSnapshot {
+  const value = clamp(progress, 0, 1);
+  const authored = motionSnapshot(
+    parameters.motion.cueEnter,
+    value,
+    parameters.motion.slideDistancePx,
+    parameters.motion.cueEnterStartScale,
+  );
+  const snapshot = parameters.motion.cueEnter !== "spring" ? authored : (() => {
+    const start = parameters.motion.cueEnterStartScale ?? 0.72;
+    const scale = value <= 0.5
+      ? start + (1.05 - start) * value / 0.5
+      : value <= 0.75
+        ? 1.05 + (0.95 - 1.05) * (value - 0.5) / 0.25
+        : 0.95 + (1 - 0.95) * (value - 0.75) / 0.25;
+    return { ...authored, opacity: 1, transform: `scale(${compactNumber(scale)})` };
+  })();
+  return snapshot;
 }
 
 function snapshotStyle(snapshot: MotionSnapshot, clipped = true): VisualStyleDeclaration[] {
@@ -363,7 +397,7 @@ function cueAnimation(parameters: FineCaptionParameters, durationFrames: number)
   return animationFrom(durationFrames, offsets, (frame) => {
     const enterProgress = enterFrames === 0 ? 1 : clamp(frame / enterFrames, 0, 1);
     const exitProgress = exitFrames === 0 ? 1 : clamp((durationFrames - frame) / exitFrames, 0, 1);
-    const enter = motionSnapshot(parameters.motion.cueEnter, enterProgress, parameters.motion.slideDistancePx);
+    const enter = cueEntranceSnapshot(parameters, enterProgress);
     const exit = motionSnapshot(parameters.motion.cueExit, exitProgress, parameters.motion.slideDistancePx);
     return snapshotStyle(enterProgress < 1 ? enter : exit, clipped);
   });
@@ -470,7 +504,7 @@ function activeResponseAnimation(
   durationFrames: number,
 ): VisualAnimation | undefined {
   const response = parameters.motion.activeResponse;
-  if (response === "none") return undefined;
+  if (response === "none" || endFrame <= startFrame) return undefined;
   if (response === "scale") {
     return animationFrom(durationFrames, stepOffsets(startFrame, endFrame), (frame) => {
       const active = frame >= startFrame && (frame < endFrame || (endFrame === durationFrames && frame === durationFrames));
@@ -575,6 +609,35 @@ function anchorTransform(parameters: FineCaptionParameters): string | undefined 
   return x === 0 && y === 0 ? undefined : `translate(${x}%,${y}%)`;
 }
 
+function trackedPlacementAnimation(
+  parameters: FineCaptionParameters,
+  frames: readonly (SpatialFrame | null)[],
+  canvas: CanvasSpace,
+): VisualAnimation {
+  if (frames.length === 0) throw new Error("Fine Caption tracked placement has no Frames");
+  const anchor = anchorTransform(parameters);
+  const transform = (frame: SpatialFrame | null): string => {
+    const xPx = frame === null ? parameters.placement.x * canvas.widthPx : frame.xPx + frame.widthPx / 2;
+    const yPx = frame === null ? parameters.placement.y * canvas.heightPx : frame.yPx;
+    return `translate(${compactNumber(xPx)}px,${compactNumber(yPx)}px)${anchor === undefined ? "" : ` ${anchor}`}`;
+  };
+  const keyframes: VisualKeyframe[] = frames.map((frame, atFrame) => ({
+    atFrame,
+    style: [
+      { name: "transform", value: transform(frame) },
+      { name: "opacity", value: frame === null ? 0 : 1 },
+    ],
+  }));
+  keyframes.push({
+    atFrame: frames.length,
+    style: [
+      { name: "transform", value: transform(frames.at(-1)!) },
+      { name: "opacity", value: frames.at(-1) === null ? 0 : 1 },
+    ],
+  });
+  return { keyframes };
+}
+
 function structuralRowCount(
   atoms: readonly CaptionAlignmentUnit[],
   maxWordsPerLine: number,
@@ -591,6 +654,30 @@ function structuralRowCount(
   return rows;
 }
 
+/**
+ * Acoustic Word windows may overlap. Preserve those measurements in the
+ * SemanticTrack, but give every current-only visual state one unambiguous
+ * owner: as soon as the next authored unit starts, the previous one stops.
+ */
+function exclusiveActivationFrames(
+  atoms: readonly CaptionAlignmentUnit[],
+  atomFrames: ReadonlyMap<string, { readonly start: number; readonly end: number }>,
+): ReadonlyMap<string, { readonly start: number; readonly end: number }> {
+  return new Map(atoms.map((atom, index) => {
+    const timing = atomFrames.get(atom.id);
+    if (timing === undefined) throw new Error(`Fine Caption is missing timing for Atom ${atom.id}`);
+    const next = atoms[index + 1];
+    const nextStart = next === undefined ? undefined : atomFrames.get(next.id)?.start;
+    if (next !== undefined && nextStart === undefined) {
+      throw new Error(`Fine Caption is missing timing for Atom ${next.id}`);
+    }
+    return [atom.id, {
+      start: timing.start,
+      end: nextStart === undefined ? timing.end : Math.min(timing.end, nextStart),
+    }];
+  }));
+}
+
 function cueElements(
   atoms: readonly CaptionAlignmentUnit[],
   atomFrames: ReadonlyMap<string, { readonly start: number; readonly end: number }>,
@@ -598,6 +685,10 @@ function cueElements(
   wordText: ReadonlyMap<string, string>,
   durationFrames: number,
   styleId: string,
+  trackedPlacement?: {
+    readonly frames: readonly (SpatialFrame | null)[];
+    readonly canvas: CanvasSpace;
+  },
 ): VisualElement[] {
   type UnorderedVisualElement = Omit<VisualBoxElement, "order"> | Omit<VisualTextElement, "order">;
   const elements: VisualElement[] = [];
@@ -606,9 +697,19 @@ function cueElements(
     elements.push({ ...element, order } as VisualElement);
     order += 1;
   };
-  const transform = anchorTransform(parameters);
+  const placementAnimation = trackedPlacement === undefined
+    ? undefined
+    : trackedPlacementAnimation(parameters, trackedPlacement.frames, trackedPlacement.canvas);
+  const transform = placementAnimation === undefined
+    ? anchorTransform(parameters)
+    : (() => {
+        const value = placementAnimation.keyframes[0]?.style.find((declaration) => declaration.name === "transform")?.value;
+        if (typeof value !== "string") throw new Error("Fine Caption tracked placement has no initial transform");
+        return value;
+      })();
   const cueMotion = cueAnimation(parameters, durationFrames);
   const cueLoop = parameters.motion.loopTarget === "cue" ? loopAnimation(parameters, durationFrames) : undefined;
+  const activationFrames = exclusiveActivationFrames(atoms, atomFrames);
   const gapPx = `${compactNumber(parameters.layout.wordGapPx)}px`;
   const atomSurfaces = atoms.map((atom) => atom.wordIds.map((wordId) => wordText.get(wordId) ?? ""));
   // A Cue whose boundaries all agree carries one `column-gap`, which is also what keeps a row that
@@ -638,28 +739,33 @@ function cueElements(
       { name: "display", value: "flex" },
       { name: "justify-content", value: parameters.layout.textAlign === "left" ? "flex-start"
         : parameters.layout.textAlign === "right" ? "flex-end" : "center" },
-      { name: "left", value: `${compactNumber(parameters.placement.x * 100)}%` },
+      { name: "left", value: placementAnimation === undefined ? `${compactNumber(parameters.placement.x * 100)}%` : "0px" },
       { name: "position", value: "absolute" },
-      { name: "top", value: `${compactNumber(parameters.placement.y * 100)}%` },
+      { name: "top", value: placementAnimation === undefined ? `${compactNumber(parameters.placement.y * 100)}%` : "0px" },
       ...(parameters.placement.height === undefined ? [] : [
         { name: "height", value: `${compactNumber(parameters.placement.height * 100)}%` },
       ] as const),
       ...(transform === undefined ? [] : [{ name: "transform", value: transform }] as const),
       { name: "width", value: `${compactNumber(parameters.placement.width * 100)}%` },
     ],
+    ...(placementAnimation === undefined ? {} : { animation: placementAnimation }),
   });
   push({
     id: "cue-motion",
     parent: "placement",
     kind: "box",
-    style: [{ name: "display", value: "inline-flex" }, { name: "transform-origin", value: "center center" }],
+    style: [{ name: "display", value: "inline-grid" }, { name: "transform-origin", value: "center center" }],
     ...(cueMotion === undefined ? {} : { animation: cueMotion }),
   });
   push({
     id: "cue-loop",
     parent: "cue-motion",
     kind: "box",
-    style: [{ name: "display", value: "inline-flex" }, { name: "transform-origin", value: "center center" }],
+    style: [
+      { name: "display", value: "inline-flex" },
+      { name: "grid-area", value: "1 / 1" },
+      { name: "transform-origin", value: "center center" },
+    ],
     ...(cueLoop === undefined ? {} : { animation: cueLoop }),
   });
   push({
@@ -753,6 +859,8 @@ function cueElements(
   for (const [atomIndex, atom] of atoms.entries()) {
     const timing = atomFrames.get(atom.id);
     if (timing === undefined) throw new Error(`Fine Caption is missing timing for Atom ${atom.id}`);
+    const activationTiming = activationFrames.get(atom.id);
+    if (activationTiming === undefined) throw new Error(`Fine Caption is missing activation timing for Atom ${atom.id}`);
     const atomId = `atom-${atomIndex + 1}`;
     const surfaces = atomSurfaces[atomIndex] ?? [];
     // The base glyphs and the activated copy stacked over them are laid out from this one list, so
@@ -778,8 +886,13 @@ function cueElements(
     const entryAnimation = atomLifecycleAnimation(parameters, timing.start, timing.end, durationFrames);
     const writerAnimation = typewriterAnimation(atomText, parameters, timing.start, timing.end, durationFrames);
     const atomLoop = parameters.motion.loopTarget === "active-atom"
-      ? loopAnimation(parameters, durationFrames, timing) : undefined;
-    const responseAnimation = activeResponseAnimation(parameters, timing.start, timing.end, durationFrames);
+      ? loopAnimation(parameters, durationFrames, activationTiming) : undefined;
+    const responseAnimation = activeResponseAnimation(
+      parameters,
+      activationTiming.start,
+      activationTiming.end,
+      durationFrames,
+    );
     push({
       id: entryId,
       parent: "cue",
@@ -861,7 +974,12 @@ function cueElements(
           { name: "top", value: `${compactNumber(-parameters.activeBox.paddingYPx)}px` },
           { name: "transform-origin", value: "center center" },
         ],
-        animation: activeBoxAnimation(parameters, timing.start, timing.end, durationFrames),
+        animation: activeBoxAnimation(
+          parameters,
+          parameters.activeBox.mode === "current" ? activationTiming.start : timing.start,
+          parameters.activeBox.mode === "current" ? activationTiming.end : timing.end,
+          durationFrames,
+        ),
         attributes: [{ name: "data-caption-active-box", value: "isolated" }],
       });
     }
@@ -887,6 +1005,7 @@ function cueElements(
       kind: "glyph" | "underline",
     ): void => {
       const activeId = `${atomId}-${suffix}`;
+      const activeTiming = mode === "current" ? activationTiming : timing;
       push({
         id: activeId,
         parent: atomId,
@@ -901,8 +1020,8 @@ function cueElements(
           { name: "position", value: "absolute" },
         ],
         animation: kind === "glyph" && parameters.karaoke.transition === "wipe"
-          ? karaokeWipeAnimation(parameters, mode, timing.start, timing.end, durationFrames)
-          : activationStepAnimation(mode, timing.start, timing.end, durationFrames),
+          ? karaokeWipeAnimation(parameters, mode, activeTiming.start, activeTiming.end, durationFrames)
+          : activationStepAnimation(mode, activeTiming.start, activeTiming.end, durationFrames),
         attributes: [{ name: kind === "glyph" ? "data-caption-karaoke" : "data-caption-active-underline", value: mode }],
       });
       for (const [wordIndex, wordId] of atom.wordIds.entries()) {
@@ -939,6 +1058,7 @@ export function renderFineCaption(
   program: CaptionProgram,
   document: CaptionDocument,
   space: ProgramSpace,
+  regions?: SpatialRegionTimeline,
 ): VisualTrack {
   assertFineCaptionSchedule(schedule);
   assertCaptionProgramForDocument(program, document);
@@ -961,6 +1081,13 @@ export function renderFineCaption(
     assertFineCaptionParameters(style.rendering.parameters as unknown as FineCaptionParameters);
   }
   const totalFrames = programSpaceFrameCount(space);
+  const regionTracks = regions === undefined ? undefined : (() => {
+    assertSpatialRegionTimeline(regions);
+    if (regions.frameCount !== totalFrames) {
+      throw new Error(`Fine Caption regions cover ${regions.frameCount} Frames but ProgramSpace has ${totalFrames}`);
+    }
+    return new Map(regions.tracks.map((track) => [track.id, track]));
+  })();
   const presents = schedule.cues.flatMap((cue) => {
     const atoms = cue.units.map((timing) => atomById.get(timing.unitId));
     if (atoms.some((atom) => atom === undefined)) throw new Error(`Fine Caption Cue ${cue.id} references unknown Atom`);
@@ -973,6 +1100,18 @@ export function renderFineCaption(
     const endFrameExclusive = Math.min(totalFrames, Math.max(startFrame + 1, measuredEnd));
     if (startFrame >= totalFrames || endFrameExclusive <= startFrame) return [];
     const durationFrames = endFrameExclusive - startFrame;
+    const trackedPlacement = regionTracks === undefined ? undefined : (() => {
+      const role = resolvedAtoms[0]?.role;
+      if (role === undefined || resolvedAtoms.some((atom) => atom.role !== role)) {
+        throw new Error(`Fine Caption Cue ${cue.id} must contain exactly one Script Role to follow regions`);
+      }
+      const track = regionTracks.get(role);
+      if (track === undefined) return undefined;
+      return {
+        frames: track.frames.slice(startFrame, endFrameExclusive),
+        canvas: regions!.canvas,
+      };
+    })();
     const atomFrames = new Map(cue.units.map((atom) => [atom.unitId, {
       start: clamp(atom.startFrame - startFrame, 0, durationFrames),
       end: clamp(Math.max(atom.endFrameExclusive - startFrame, atom.startFrame - startFrame + 1), 0, durationFrames),
@@ -981,7 +1120,7 @@ export function renderFineCaption(
       id: cue.id,
       span: { startFrame, endFrameExclusive },
       stacking: { order: parameters.stackingOrder, tieBreak: `${program.id}:${cue.id}` },
-      elements: cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames, cue.styleId),
+      elements: cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames, cue.styleId, trackedPlacement),
     }];
   });
   const track = sealVisualTrack({

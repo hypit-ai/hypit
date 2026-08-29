@@ -58,7 +58,9 @@ caption.primary {
   active-box-background: #FFD54ACC; active-box-padding: 4 8; active-box-radius: 8;
   active-underline: current; active-underline-color: #FFFFFF;
   active-underline-thickness: 3; active-underline-offset: 5;
-  cue-enter: fade; cue-enter-frames: 4; cue-exit: fade; cue-exit-frames: 4;
+  cue-enter: spring; cue-enter-frames: 4;
+  cue-enter-start-scale: 0.75;
+  cue-exit: none; cue-exit-frames: 0;
   atom-reveal: all;
   active-response: pop; active-response-frames: 5; active-scale: 1.08;
   lead-frames: 4; tail-frames: 4; handoff: cut;

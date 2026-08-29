@@ -32,6 +32,7 @@ const integers = new Set([
 const numbers = new Set([
   "size", "radius", "line-height", "border-width", "letter-spacing", "loop-intensity",
   "cue-shadow-blur", "cue-shadow-spread", "cue-shadow-x", "cue-shadow-y",
+  "cue-enter-start-scale",
   "slide-distance", "word-gap", "active-box-border-width", "active-box-radius", "active-scale",
   "underline-offset", "underline-thickness", "active-underline-offset", "active-underline-thickness",
   ...paired("glow-blur", "glow-spread", "gradient-angle", "long-shadow-angle", "long-shadow-distance",
@@ -87,7 +88,7 @@ export const fineCaptionOptionalRecipeProperties = [
   "active-underline-color", "active-underline-offset", "active-underline-thickness", "anchor-x", "anchor-y",
   "atom-enter", "atom-enter-frames", "atom-exit", "atom-exit-frames", "atom-reveal", "block-align", "border-color", "border-width", "caps", "cue-enter",
   "cue-shadow-blur", "cue-shadow-color", "cue-shadow-opacity", "cue-shadow-spread", "cue-shadow-x", "cue-shadow-y",
-  "cue-enter-frames", "cue-exit", "cue-exit-frames", "direction", "glow-blur", "glow-color",
+  "cue-enter-frames", "cue-enter-start-scale", "cue-exit", "cue-exit-frames", "direction", "glow-blur", "glow-color",
   "glow-opacity", "glow-spread", "gradient-angle", "gradient-from", "gradient-to", "height", "inline-size", "karaoke", "karaoke-transition", "kerning",
   "handoff", "lead-frames", "letter-spacing", "long-shadow-angle", "long-shadow-color", "long-shadow-distance", "long-shadow-opacity",
   "loop", "loop-intensity", "loop-period-frames", "loop-target", "max-lines", "max-words-per-line", "opacity", "shadow-blur", "shadow-color",
