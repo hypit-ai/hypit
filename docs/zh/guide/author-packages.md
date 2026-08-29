@@ -145,12 +145,10 @@ package-owned preview Source，不需要阅读仓库的视觉测试源码。步�
 1. 用你自己包的 render 函数，在一个封好的 ProgramSpace 上构造出 Track 值；
 2. `sealComposition({ id, canvas, tracks })`，再用 `@hypit/hyperframes` 的 `compileHyperframesDocument(composition, space)`；
 3. `materializeHyperframesHtml(document, resolve)` 写进一个临时目录，其中 `resolve` 把声明的每个 Artifact（字体、图片）映射到本地文件；
-4. 用经由 `@hypit/provider-hyperframes-local` 解析出的、版本被钉住的 HyperFrames CLI 对该目录执行 `render`，输出 PNG 序列；
-5. 留下能代表该组件状态的一帧，提交到 `preview/` 下。
+4. 通过标准的 SVRun → preview-mock → Producer 路径得到真实 Composition；
+5. 找到目标 Present 最长的稳定区间，在固定版本的本地浏览器中 seek 到区间中间帧并截图，提交到 `preview/` 下。
 
-另一条路是写一个窄的 `.svrun` Target，交给本地 HyperFrames Provider 渲染，再用 `ffmpeg` 取一帧。那是一次 Build，需要 Runtime Profile，也更重。
-
-选帧要选行为进行中的那一刻，而不是静止的时刻。一个还没入场、或者已经落定成静态终态的预览图，展示的恰好是这个元素最没用的一面。
+不会为了这一张图生成完整 PNG 序列，也不修改 HyperFrames。若没有至少两帧的稳定区间，就使用该包最长 Present 的中间帧。
 
 ## 6. 编写 activation 描述符
 
