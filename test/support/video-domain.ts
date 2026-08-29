@@ -7,6 +7,7 @@ import { semanticTrackManifest } from "@hypit/semantic-track";
 import { spatialComponent, spatialManifest } from "@hypit/spatial";
 import { speechManifest } from "@hypit/speech";
 import { speechEvidenceManifest } from "@hypit/speech-evidence";
+import { svsManifest } from "@hypit/svs";
 import { temporalManifest } from "@hypit/temporal";
 import { visualIrManifest } from "@hypit/visual-ir";
 
@@ -18,6 +19,7 @@ export const videoContractManifests = [
   programSpaceManifest,
   speechManifest,
   speechEvidenceManifest,
+  svsManifest,
   semanticTrackManifest,
   spatialManifest,
   temporalManifest,

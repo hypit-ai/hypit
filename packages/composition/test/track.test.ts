@@ -15,6 +15,7 @@ import { programSpaceManifest, sealProgramSpace } from "@hypit/program-space";
 import { speechManifest } from "@hypit/speech";
 import { speechEvidenceManifest } from "@hypit/speech-evidence";
 import { spatialManifest } from "@hypit/spatial";
+import { svsManifest } from "@hypit/svs";
 import { VISUAL_IR_V1, visualIrManifest } from "@hypit/visual-ir";
 
 import {
@@ -30,7 +31,7 @@ import {
 import type { VisualTrack } from "../src/index.js";
 
 const videoContractManifests = [artifactManifest, narrativeManifest, mediaManifest, programSpaceManifest,
-  speechManifest, speechEvidenceManifest, spatialManifest, visualIrManifest, compositionManifest] as const;
+  speechManifest, speechEvidenceManifest, svsManifest, spatialManifest, visualIrManifest, compositionManifest] as const;
 
 const font: FontArtifactRef = {
   sources: [{ artifact: { kind: "blob", digest: fixtureDigest("track:test-font"), size: 1_024, mediaType: "font/woff2" } }],

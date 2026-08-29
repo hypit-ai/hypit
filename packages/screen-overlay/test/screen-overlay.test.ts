@@ -33,6 +33,7 @@ import { semanticTrackDependency, semanticTrackManifest, semanticTrackProducers,
 import { speechEvidenceManifest } from "@hypit/speech-evidence";
 import { speechManifest } from "@hypit/speech";
 import { sealCanvasSpace, spatialComponent, spatialDependency, spatialManifest, spatialTypes } from "@hypit/spatial";
+import { svsManifest } from "@hypit/svs";
 import { temporalManifest, temporalProducers } from "@hypit/temporal";
 import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
@@ -158,6 +159,7 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     speechEvidenceManifest,
     semanticTrackManifest,
     spatialManifest,
+    svsManifest,
     temporalManifest,
     visualIrManifest,
     compositionManifest,
