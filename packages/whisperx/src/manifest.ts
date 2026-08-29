@@ -38,8 +38,8 @@ export const whisperXMarkupSurfaces = [{
           accepts: [mediaTypes.synchronized],
           summary: "Selects the already normalized SynchronizedMedia measured by WhisperX." },
         { name: "language", kind: "literal", required: true,
-          values: ["en", "zh"],
-          summary: "Explicitly selects the English or Chinese WhisperX transcription and alignment models." },
+          values: ["en", "zh", "es"],
+          summary: "Explicitly selects the English, Chinese or Spanish WhisperX transcription and alignment models." },
       ],
       ports: [
         { name: "take", type: speechTypes.semanticTake,
@@ -49,7 +49,7 @@ export const whisperXMarkupSurfaces = [{
   segment={story.segment.opening} media={opening-media.media} language="en"/>`,
       notes: [
         "All five attributes are required; the element accepts no children and no text content.",
-        "Language is never detected from Script text or audio; each alignment call states en or zh explicitly.",
+        "Language is never detected from Script text or audio; each alignment call states en, zh or es explicitly.",
         "Importing this package is what selects the WhisperX model family; the Runtime separately binds the alignment Need to an Endpoint.",
       ],
     },

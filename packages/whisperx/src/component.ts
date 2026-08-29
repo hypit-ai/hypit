@@ -19,7 +19,9 @@ export const whisperXComponent = {
       handler: ({ inputs }) => {
         const evidence = inline(inputs.evidence!.value, "SpeechEvidenceAudio") as unknown as SpeechEvidenceAudio;
         const language = inline(inputs.language!.value, "WhisperXLanguage") as unknown as WhisperXLanguage;
-        if (language !== "en" && language !== "zh") throw new Error("WhisperXLanguage must be en or zh");
+        if (language !== "en" && language !== "zh" && language !== "es") {
+          throw new Error("WhisperXLanguage must be en, zh, or es");
+        }
         return {
           outputs: {},
           needs: { alignment: canonicalize(whisperXRequestForEvidenceAudio(evidence, { language })) },
