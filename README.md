@@ -128,6 +128,10 @@ Or start without a reference video:
 
 Your agent can check the environment, request only the credentials the video needs, preview the result, and build it.
 
+## Stay Tuned with Us
+
+![Stay tuned with us](./docs/public/star.gif)
+
 ## How to Contribute
 
 Pull requests are welcome, and documentation, examples and translations count as much as code. Pick
