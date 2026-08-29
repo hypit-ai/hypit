@@ -330,13 +330,11 @@ placement, timing, style and motion. Use inline `P`/`Span`/`Break` when the auth
 
 ## Ranking boards
 
-A board animates an ordered list against the Script: it enters on a Selection, moves on Moments, and
-settles on a Moment that ends it. Three variants share one shape — a container, its own item tag,
-and its own style tag.
+A ranking board animates an ordered list against the Script. The concrete container, item and Style
+vocabulary is package-owned; inspect the installed package before authoring it.
 
 | Container | Item | Style |
 |---|---|---|
-| `ranking:TierBoard` | `ranking:TierItem` | `ranking:TierBoardStyle` |
 | `ranking:Column` | `ranking:ColumnItem` | `ranking:ColumnStyle` |
 | `ranking:TopThree` | `ranking:TopThreeItem` | `ranking:TopThreeStyle` |
 
@@ -362,9 +360,8 @@ against the variant, so a Column recipe on a TierBoard is refused by name.
 | `terminal` | the Moment where the completed board settles. `TopThree` only |
 | `canvas` | a `space:Canvas` — the independent reveal stage. TierBoard/Column |
 
-`TierBoard` and `Column` take no `terminal`: every non-preset item carries an explicit reveal
-Selection. Sibling windows must already be non-overlapping and inside the container's `during`
-span.
+Use only the timing forms admitted by the selected package; do not infer a terminal or reveal model
+from another component family.
 
 `move-sound` is refused on `TopThree`, which has no move phase. On a `TierBoard` it needs at least
 one item with `entry="drop"`. A drop Item appears in place on the independent Canvas stage when its

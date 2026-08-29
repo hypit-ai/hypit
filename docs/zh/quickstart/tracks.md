@@ -270,11 +270,10 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 ## 榜单板
 
-榜单板让一份有序列表跟着 Script 动起来：在某个 Selection 期间出现，在 Moment 上移动，在另一个 Moment 上定格。三个变体共用同一套形状——一个容器、它专属的条目标签、以及它专属的样式标签。
+榜单板让一份有序列表跟着 Script 动起来。具体的容器、条目和 Style 词汇由包声明；写作前先检查已安装包的词汇。
 
 | 容器 | 条目 | 样式 |
 |---|---|---|
-| `ranking:TierBoard` | `ranking:TierItem` | `ranking:TierBoardStyle` |
 | `ranking:Column` | `ranking:ColumnItem` | `ranking:ColumnStyle` |
 | `ranking:TopThree` | `ranking:TopThreeItem` | `ranking:TopThreeStyle` |
 
@@ -298,7 +297,7 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 | `canvas` | 一个 `space:Canvas`——独立揭示舞台。TierBoard/Column |
 | `appear-sound`、`move-sound` | 可选，Synchronized Media |
 
-TierBoard 与 Column 都不使用 `terminal`：每个非 preset item 直接消费一个 `during` Selection，所有窗口必须位于外层区间内且互不相交。`move-sound` 在 `TopThree` 上会被拒绝；在 `TierBoard` 上它要求至少有一个 `entry="drop"` 的条目。drop 条目会在 Selection 开始时原地弹入独立的 Canvas 舞台，整段讲解期间保持静止，只在窗口末尾的 `move-frames` 内沿缓动弧线滑入 tier；移动音效也从这里开始。
+只使用所选包明确声明的时间形式；不要从另一个组件族推断 terminal 或 reveal 规则。
 
 ### 条目标签
 

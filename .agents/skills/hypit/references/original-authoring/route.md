@@ -47,9 +47,9 @@ interruption or context compaction, read `../recovery.md`, run `route_state --ac
 | `environment` | explicit checkpoint after Distribution, project and credentials are selected | `hypit paths --json` |
 | `brief-frozen` | explicit checkpoint naming the frozen brief, audience, format and claims | return to the brief checkpoint |
 | `vocabulary-checked` | Run-scoped vocabulary inspection and the frozen `.hypit/component-fit.json` are both persisted | `inspect_svml_vocabulary --run <run>` |
+| `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
 | `package-ready` | every project-owned package under `packages/` has a real Surface/Producer/Fragment and is used by the compiled Graph | `validate_local_author_packages --run <run>` |
 | `script-checked` | every caption Cue has at most four visible words | `validate_script_cues --run <run>` |
-| `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
 | `graph-checked` | `preview_check` returns `sound: true` after package and Cue gates | `preview_check <run>` |
 | `layout-checked` | `layout_check` executed and every candidate was repaired or explicitly accepted | `layout_check --run <run>` / `layout_accept` |
 | `review-planned` | `authoring_check` writes a plan | `authoring_check <run>` |
@@ -173,7 +173,9 @@ of them; the Runtime Profile is part of the deliverable.
 **Read now:** `../authoring.md` — the syntax authority, the check set, and how an accepted Record is
 reused in the Run Source. `../runtime.md` — how to author a Profile.
 
-Now run the persisted, Run-scoped gates before `hypit check`:
+Author the Source before validating project-local packages: `package-ready` can only be completed
+after `main.svml` and `build.svrun` compile a Graph that actually uses each package. Run the persisted,
+Run-scoped gates before `hypit check`:
 
 ```bash
 hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package …] --run build.svrun
