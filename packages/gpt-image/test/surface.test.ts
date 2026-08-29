@@ -36,7 +36,7 @@ async function decode(source: string, handler: StructuredSurfaceHandler) {
   });
 }
 
-const authored = `<gpt:Image id="holding" prompt={prompt} aspect-ratio="9:16" resolution="2K">
+const authored = `<gpt:Image id="holding" prompt={prompt} aspect-ratio="21:9" resolution="2K">
   <gpt:Reference image={person.image}/>
   <gpt:Reference image={product.image}/>
 </gpt:Image>`;
