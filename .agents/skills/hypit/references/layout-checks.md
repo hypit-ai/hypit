@@ -3,8 +3,12 @@
 Run this after `preview_check` whenever Source, SVS, runtime, fonts or a package can affect layout:
 
 ```bash
-hypit-reference-video-tools layout_check --run <build.svrun>
+hypit-reference-video-tools layout_check --run <build.svrun> [--runtime <hypit.runtime.json>]
 ```
+
+Pass the project's Runtime Profile when the Run contains `build-record` pins. The checker uses it
+read-only to resolve those accepted Records; without it a pinned Run can fail before any layout is
+measured.
 
 The command does not render media, call a visual observer or invoke a paid Provider. It first realizes
 the same preview-mock Run and Producer-generated Composition that the later visual render reuses, then
@@ -30,7 +34,7 @@ real problem or accept the intentional geometry:
 ```bash
 hypit-reference-video-tools layout_accept --run <build.svrun> \
   --finding <id> --reason '<why this measured relationship is correct here>'
-hypit-reference-video-tools layout_check --run <build.svrun>
+hypit-reference-video-tools layout_check --run <build.svrun> [--runtime <hypit.runtime.json>]
 ```
 
 Several candidates from the same report can be accepted atomically with a JSON array (or an object

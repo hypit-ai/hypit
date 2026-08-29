@@ -38,6 +38,24 @@ function capabilityKey(ref: CapabilityRef): string {
   return `${ref.module.name}@${ref.module.version}#${ref.name}`;
 }
 
+export function supportsKieGptImageRequest(request: GenerationRequest): boolean {
+  if (request.ports.aspectRatio === undefined) return true;
+  const ratio = request.ports.aspectRatio[0];
+  // KIE's GPT Image 2 endpoints reject these ratios even though the model
+  // vocabulary advertises them. Refuse before upload or paid submission.
+  if (ratio === "4:3" || ratio === "3:4" || ratio === "4:5") {
+    return false;
+  }
+  return true;
+}
+
+function validateKieGptImageRequest(request: GenerationRequest): void {
+  if (!supportsKieGptImageRequest(request)) {
+    const ratio = request.ports.aspectRatio?.[0];
+    throw new Error(`KIE GPT Image 2 does not accept aspect ratio ${String(ratio)}; use auto, 1:1, 3:2, 2:3, 16:9, 9:16 or 21:9`);
+  }
+}
+
 const kieGenerationMappings = kieModelCatalog.map((mapping) => {
   if (mapping.result === "audio") {
     throw new Error(`KIE route ${mapping.capability.name} declares unsupported audio output`);
@@ -51,11 +69,11 @@ const generationRoutes: readonly KieRoute[] = kieGenerationMappings.map((mapping
   returns: mapping.result === "image" ? generationTypes.imageSet : generationTypes.videoSet,
   media: mapping.result,
   maxResults: mapping.result === "image" ? 16 : 8,
-  compile: async (constraints, resolve) => await compileWireRequest(
-    mapping,
-    constraints as unknown as GenerationRequest,
-    resolve,
-  ),
+  compile: async (constraints, resolve) => {
+    const request = constraints as unknown as GenerationRequest;
+    if (mapping.capability.module.name === "@hypit/gpt-image") validateKieGptImageRequest(request);
+    return await compileWireRequest(mapping, request, resolve);
+  },
   packageResult: (artifacts) => ({
     kind: "inline",
     value: canonicalize(mapping.result === "image"

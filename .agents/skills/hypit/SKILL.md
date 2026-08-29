@@ -64,6 +64,9 @@ Before Source is accepted, every route must complete persisted vocabulary inspec
 directory, and
 `validate_script_cues` (maximum four visible words per Cue). `preview_check` and the route's final
 check repeat these gates even if route-state claims they were completed.
+When a Run contains accepted `build-record` pins, pass its Runtime Profile to
+`validate_local_author_packages`, `preview_check`, `layout_check` and the final check so the archive
+can resolve those Records before any graph or layout result is trusted.
 
 Agent-boundary constraint: do not read or rely on the memory of Codex, Claude Code, or any other
 coding agent.
