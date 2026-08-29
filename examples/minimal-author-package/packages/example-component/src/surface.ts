@@ -3,6 +3,7 @@ import { exampleBoxFragment, exampleMediaFragment, exampleTextFragment } from ".
 import { exampleMarkupSurfaces, exampleTypes } from "./manifest.js";
 import { mediaTypes } from "@hypit/media";
 import { svsRecipeType } from "@hypit/svs";
+import { artifactTypes } from "@hypit/artifact";
 
 function text(element: StructuredElement, name: string): string {
   const value = element.attributes[name];
@@ -33,6 +34,8 @@ export const decodeExampleSurface: StructuredSurfaceHandler = ({ element, resolv
   const fragment = surface.name === "box" ? exampleBoxFragment : surface.name === "text" ? exampleTextFragment : exampleMediaFragment;
   const type = surface.name === "box" ? exampleTypes.box : surface.name === "text" ? exampleTypes.text : exampleTypes.mediaSlot;
   const record: SurfaceRecordDraft = { id: `${id}.value`, type, value: { kind: "inline", value: { id } }, range: element.range };
-  const component: SurfaceComponentDraft = { id, fragment: fragment.id, inputs: { semantic: semantic.ref }, outputs: { track: `${id}.track` }, range: element.range };
+  const media = element.attributes.media === undefined ? undefined : reference(element, "media", resolveReference);
+  if (media !== undefined && (media.type.module.name !== artifactTypes.blob.module.name || media.type.name !== artifactTypes.blob.name)) throw new Error(`${element.name}.media must be a Blob Artifact.`);
+  const component: SurfaceComponentDraft = { id, fragment: fragment.id, inputs: { semantic: semantic.ref, ...(media === undefined ? {} : { media: media.ref }) }, outputs: { track: `${id}.track` }, range: element.range };
   return { records: [record], components: [component], fragments: [fragment], exports: [`${id}.value`, `${id}.track`] };
 };
