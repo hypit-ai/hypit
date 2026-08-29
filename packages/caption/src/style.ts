@@ -3,7 +3,6 @@ import { canonicalStringify, canonicalize } from "@hypit/protocol";
 
 import {
   assertCaptionDocument,
-  assertCaptionUnitSubset,
   captionUnitsForRole,
   type CaptionUnitSubset,
 } from "./display.js";
@@ -78,8 +77,15 @@ export function assertCaptionProgramForDocument(value: CaptionProgram, document:
     "Caption Program styles an unknown display word");
 }
 
-function subset(value: CaptionUnitSubset, document: CaptionDocument): string[] {
-  assertCaptionUnitSubset(value, document);
+function orderedSubset(value: CaptionUnitSubset, document: CaptionDocument): string[] {
+  assertCaptionDocument(document);
+  assert(value.documentId === document.id, "Caption unit subset belongs to another document");
+  const order = new Map(document.units.map((unit, index) => [unit.id, index]));
+  const indices = value.unitIds.map((id) => order.get(id));
+  assert(indices.length > 0 && indices.every((index) => index !== undefined),
+    "Caption unit subset contains an unknown unit");
+  assert(indices.every((index, position) => position === 0 || index! > indices[position - 1]!),
+    "Caption unit subset must be ordered and contain no repeated unit");
   return [...value.unitIds];
 }
 
@@ -98,7 +104,7 @@ export function resolveCaptionProgram(
   const selected = applications.map((application) => {
     assert(ID.test(application.id), "Caption Style Application identity is invalid");
     assertCaptionStyle(application.style);
-    const unitIds = subset({ documentId: document.id, unitIds: application.unitIds }, document);
+    const unitIds = orderedSubset({ documentId: document.id, unitIds: application.unitIds }, document);
     const previous = styles.get(application.style.id);
     assert(previous === undefined || canonicalStringify(previous) === canonicalStringify(application.style),
       `Caption Style ${application.style.id} has conflicting definitions`);
@@ -107,7 +113,7 @@ export function resolveCaptionProgram(
   });
   const muted = mutes.flatMap((application) => {
     assert(ID.test(application.id), "Caption Mute identity is invalid");
-    return subset({ documentId: document.id, unitIds: application.unitIds }, document);
+    return orderedSubset({ documentId: document.id, unitIds: application.unitIds }, document);
   });
   const wordChosen = new Map<string, string>();
   for (const application of wordApplications) {
