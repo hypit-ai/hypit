@@ -115,7 +115,7 @@ function contentType(path: string): string {
   return "application/octet-stream";
 }
 
-async function serve(directory: string, mediaTypes: ReadonlyMap<string, string>): Promise<{ readonly url: string; close(): Promise<void> }> {
+export async function serve(directory: string, mediaTypes: ReadonlyMap<string, string>): Promise<{ readonly url: string; close(): Promise<void> }> {
   const root = resolve(directory);
   const server = createServer(async (request, response) => {
     const pathname = decodeURIComponent(new URL(request.url ?? "/", "http://127.0.0.1").pathname);
@@ -139,7 +139,7 @@ async function serve(directory: string, mediaTypes: ReadonlyMap<string, string>)
   };
 }
 
-function browserPath(): string {
+export function browserPath(): string {
   const cli = createRequire(join(repositoryRoot(), "packages/provider-hyperframes-local/package.json"))
     .resolve("hyperframes/bin/hyperframes.mjs");
   const result = spawnSync(process.execPath, [cli, "browser", "path"], { encoding: "utf8", windowsHide: true, timeout: 60_000 });
@@ -149,14 +149,16 @@ function browserPath(): string {
   return path;
 }
 
-type StableSample = {
+export type StableSample = {
   readonly frame: number;
   readonly subjects: readonly { readonly track: string; readonly present: string }[];
   readonly overlap_subjects: readonly { readonly track: string; readonly present: string }[];
 };
 
-function framePlan(composition: Awaited<ReturnType<typeof realizeAuthoringPreview>>["built"]["composition"]): readonly StableSample[] {
-  const intervals: { readonly track: string; readonly present: string; readonly startFrame: number; readonly endFrameExclusive: number; readonly frame: number }[] = [];
+type StableInterval = { readonly track: string; readonly present: string; readonly startFrame: number; readonly endFrameExclusive: number; readonly frame: number };
+
+function stableIntervals(composition: Awaited<ReturnType<typeof realizeAuthoringPreview>>["built"]["composition"]): readonly StableInterval[] {
+  const intervals: StableInterval[] = [];
   for (const track of composition.tracks) {
     if (track.kind !== "visual") continue;
     for (const present of track.presents) {
@@ -214,6 +216,22 @@ function framePlan(composition: Awaited<ReturnType<typeof realizeAuthoringPrevie
       });
     }
   }
+  return intervals;
+}
+
+/** The middle frame of one Track's longest stable Present interval, with earliest interval winning ties. */
+export function stableFrameForTrack(
+  composition: Awaited<ReturnType<typeof realizeAuthoringPreview>>["built"]["composition"],
+  trackId: string,
+): number | undefined {
+  return stableIntervals(composition)
+    .filter((interval) => interval.track === trackId)
+    .sort((left, right) => (right.endFrameExclusive - right.startFrame) - (left.endFrameExclusive - left.startFrame)
+      || left.startFrame - right.startFrame || left.present.localeCompare(right.present))[0]?.frame;
+}
+
+export function framePlan(composition: Awaited<ReturnType<typeof realizeAuthoringPreview>>["built"]["composition"]): readonly StableSample[] {
+  const intervals = stableIntervals(composition);
   const byFrame = new Map<number, { readonly frame: number; readonly subjects: { track: string; present: string }[] }>();
   for (const interval of intervals) {
     const subject = { track: interval.track, present: interval.present };
