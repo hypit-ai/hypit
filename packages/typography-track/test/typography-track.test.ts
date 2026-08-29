@@ -341,7 +341,6 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
   };
   const closure = createResolvedClosure([
     ...videoContractManifests,
-    svsManifest,
     textManifest,
     typographyTrackManifest,
     fixtureManifest,
@@ -620,7 +619,7 @@ test("a paragraph's source indentation is not part of its words", async () => {
     types: [], capabilities: [], producers: [],
   };
   const closure = createResolvedClosure([
-    ...videoContractManifests, svsManifest, textManifest, typographyTrackManifest, fixtureManifest,
+    ...videoContractManifests, textManifest, typographyTrackManifest, fixtureManifest,
   ]);
   const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({

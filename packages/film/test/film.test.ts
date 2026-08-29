@@ -29,7 +29,6 @@ import {
 import { appendFilmAudioTrack, appendFilmVisualTrack, compileFilmComposition, createFilmAssemblyFragment, createFilmTrackSet, filmManifest, filmProducers, filmTypes, sealFilmProgram } from "@hypit/film";
 import { compileHyperframesDocument, hyperframesDocumentFragment, hyperframesManifest, hyperframesProducers, hyperframesTypes } from "@hypit/hyperframes";
 import type { CanonicalValue, CompiledGraph, StoredValue, TypedRecord } from "@hypit/protocol";
-import { svsManifest } from "@hypit/svs";
 import { textManifest } from "@hypit/text";
 import { renderTypographyTrack, sealTypographyTrackProgram, stillTextMotion, typographyTrackFragment, typographyTrackManifest, typographyTrackProducers, typographyTrackTypes } from "@hypit/typography-track";
 import type { TextStyle } from "@hypit/typography-track";
@@ -129,7 +128,6 @@ function stored(value: CanonicalValue): StoredValue {
 
 const closure = createResolvedClosure([
   ...videoContractManifests,
-  svsManifest,
   hyperframesManifest,
   textManifest,
   filmManifest,
