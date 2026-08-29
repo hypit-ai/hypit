@@ -102,11 +102,22 @@ It paces the requests itself, keeps each comparison's derived cuts apart, and re
 only itself down. Do not write a shell script to fan these out: the pacing, the per-comparison result
 and the isolation are what the batch is for, and a hand-rolled loop has none of them.
 
-`--image` is available for one case only: the reference's own `visual:` observation states in words
-that the element is completely still. The judgement comes from the reference's observation, never
-from looking at your own render and concluding it does not move — deciding that from the
-reconstruction is how the wrong frame got chosen in the first place. Where the observation does not
-say still, compare the clip.
+`--image` is available when the reference's own `visual:` observation states in words that the
+element is completely still. It is also the deterministic fallback for an observer-rejected short
+window: if a token range contains only one word or its derived stretch is under one second, do not
+retry the clip. Render a still for that exact range and compare it with the same `--tokens` range:
+
+```bash
+hypit-reference-video-tools render_element <run> --element <id> --tokens <from:to> --out <still>.png
+hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <run> \
+  --tokens <from:to> --image <still>.png --element <id>
+```
+
+This fallback compares the visible state at the range midpoint and does not claim anything about
+motion. The judgement for a normal window still comes from the reference observation, never from
+looking at your own render and deciding that it does not move. If a longer clip returns
+`INVALID_ARGUMENT`, record the complete error and treat it as a gate/provider defect rather than
+silently switching evidence modes.
 
 Pass `--element <id>` every time so the gate credits the comparison to that element.
 
