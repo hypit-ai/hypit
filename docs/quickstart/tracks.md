@@ -345,39 +345,30 @@ vocabulary is package-owned; inspect the installed package before authoring it.
 ### The style tag
 
 Empty, and all three attributes required: `id`, `recipe` (an SVS Recipe) and `font` (a Font Stack or
-Font artifact). The recipe carries the board's own keys — rows, colours, motion — and is validated
-against the variant, so a Column recipe on a TierBoard is refused by name.
+Font artifact). The recipe is validated against the selected component variant; a Recipe from another
+family is refused by name.
 
 ### The container tag
 
 | Attribute | Takes |
 |---|---|
 | `semantic` | the SemanticTrack the board is timed against |
-| `frame` | a `space:Frame` — the compact board itself for TierBoard/Column |
-| `during` | a Segment or Selection for TierBoard/Column; a Selection for TopThree |
+| `frame` | a `space:Frame` — the board's declared placement |
+| `during` | the timing form declared by the selected component |
 | `style` | the matching style record, and only that variant's |
 | `appear-sound`, `move-sound` | optional Synchronized Media |
 | `terminal` | the Moment where the completed board settles. `TopThree` only |
-| `canvas` | a `space:Canvas` — the independent reveal stage. TierBoard/Column |
+| `canvas` | an optional `space:Canvas` declared by the selected component |
 
 Use only the timing forms admitted by the selected package; do not infer a terminal or reveal model
 from another component family.
 
-`move-sound` is refused on `TopThree`, which has no move phase. On a `TierBoard` it needs at least
-one item with `entry="drop"`. A drop Item appears in place on the independent Canvas stage when its
-Selection starts, stays still while that Item is discussed, and only follows an eased curved glide
-into its tier during the final `move-frames` ending at the Selection boundary. The move sound starts
-with that final glide.
+Optional sounds and reveal phases are valid only when the selected package declares them.
 
 ### The item tags
 
 Each variant takes its own, at least one, and ids must be unique within a board.
 
-- **`TierItem`** — `tier` and `icon` are required. A non-preset item owns a `during` Selection and
-  must choose `entry="direct" | "drop"`; `preset="true"` has neither. Presets occupy inner cells
-  first, then reveal-window order fills each tier outward. Both modes use a quick in-place overshoot;
-  direct appears in its final cell, while drop uses the independent stage for the complete
-  explanation window before settling. Row labels come from the recipe.
 - **`TopThreeItem`** — `label` and item-owned Moment `at` are required; `icon` and `stack` are optional.
   At most three. TopThree reveal order comes from these Moments' actual frame order.
 - **`ColumnItem`** — `label` (required) and `rank` (required, a positive integer that decides the
