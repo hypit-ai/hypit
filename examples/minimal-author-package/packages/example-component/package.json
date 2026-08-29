@@ -6,6 +6,7 @@
   "exports": { ".": "./src/index.ts" },
   "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
+    "@hypit/artifact": "workspace:*",
     "@hypit/component-kit": "workspace:*",
     "@hypit/composition": "workspace:*",
     "@hypit/elaborator": "workspace:*",
