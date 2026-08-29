@@ -127,6 +127,10 @@ npx skills add hypit-ai/hypit -g
 
 Agent 会检查环境，只索要这条视频需要的凭据，先给出预览，再执行构建。
 
+## Stay Tuned with Us
+
+![Stay tuned with us](./docs/public/star.gif)
+
 ## 贡献指南
 
 欢迎提交 Pull Request，文档、示例和翻译与代码同样重要。可以认领一个已有的 issue，也可以为你想做的事新开一个，我们会协助你把它合并进来。环境准备、CI 会跑的检查和 Pull Request 流程见 [CONTRIBUTING.zh-CN.md](./CONTRIBUTING.zh-CN.md)。
