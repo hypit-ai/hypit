@@ -11,7 +11,11 @@ import puppeteer from "puppeteer-core";
 import { authorSource, invokedFrom, realizeAuthoringPreview, repositoryRoot, stageAuthoringPreview } from "./authoring.js";
 import { atomicJson } from "./state-files.js";
 
-export type LayoutCheckInput = { readonly run: string; readonly package_root?: string };
+export type LayoutCheckInput = {
+  readonly run: string;
+  readonly runtime?: string;
+  readonly package_root?: string;
+};
 export type LayoutAcceptance = { readonly finding: string; readonly reason: string };
 export type LayoutAcceptInput = {
   readonly run: string;

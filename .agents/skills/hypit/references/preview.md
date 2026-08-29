@@ -130,6 +130,9 @@ cd /path/to/project
 hypit-studio --run .hypit/preview/<digest>/preview.svrun --runtime hypit.runtime.json &
 ```
 
+`hypit-studio` is the standalone Studio launcher (`node <checkout>/bin/hypit-studio.mjs` in a
+contributor checkout), not a `studio` subcommand of `hypit`.
+
 If another Studio process is already using a different Run or startup parameters, stop that process
 before launching this command; otherwise reuse the existing process and let its Source watcher reload.
 

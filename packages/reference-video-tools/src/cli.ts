@@ -42,7 +42,7 @@ function usage(): string {
     "  hypit-reference-video-tools record_observation --reference-id <id> [--run <build.svrun>] --key <key> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools record_observation --reference-id <id> [--run <build.svrun>] --batch <answers.json>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews] [--run <build.svrun>]",
-    "  hypit-reference-video-tools validate_local_author_packages --run <build.svrun> [--expected-package <name> ...]",
+    "  hypit-reference-video-tools validate_local_author_packages --run <build.svrun> [--runtime <hypit.runtime.json>] [--expected-package <name> ...]",
     "  hypit-reference-video-tools validate_script_cues --run <build.svrun>",
     "  hypit-reference-video-tools inspect_visual_contract [--shape visual-track|visual-element|box|mask|text|image|video|surface|text-flow|text-typography|text-paint|text-document|path-command] [--producers-of <package> ...]",
     "  hypit-reference-video-tools paths",
@@ -56,11 +56,11 @@ function usage(): string {
     "  hypit-reference-video-tools render_element <build.svrun> --batch <renders.json> [--reference-id <id>]",
     "  hypit-reference-video-tools render_previews <package-dir> [...]",
     "  hypit-reference-video-tools preview_check <build.svrun> [<hypit.runtime.json>]",
-    "  hypit-reference-video-tools layout_check --run <build.svrun>",
+    "  hypit-reference-video-tools layout_check --run <build.svrun> [--runtime <hypit.runtime.json>]",
     "  hypit-reference-video-tools layout_accept --run <build.svrun> --finding <id> --reason <text>",
     "  hypit-reference-video-tools layout_accept --run <build.svrun> --batch <acceptances.json>",
-    "  hypit-reference-video-tools reconstruction_check <build.svrun> [--reference-id <id>]",
-    "  hypit-reference-video-tools authoring_check <build.svrun>",
+    "  hypit-reference-video-tools reconstruction_check <build.svrun> [--reference-id <id>] [--runtime <hypit.runtime.json>]",
+    "  hypit-reference-video-tools authoring_check <build.svrun> [--runtime <hypit.runtime.json>]",
     "",
     "preview_check opens the Run the way Studio does and reports whether the graph traces. `sound` is",
     "true when every Track resolved, and also when the only thing missing is capabilities a Provider has",
@@ -607,7 +607,12 @@ async function main(): Promise<void> {
     };
     result = await tools.inspect_svml_vocabulary(input as { package_names: readonly string[]; tags?: readonly string[]; include_previews?: boolean; run?: string });
   } else if (command === "validate_local_author_packages") {
-    result = await tools.validate_local_author_packages({ run: required(flags, "run"), ...(many(flags, "expected-package").length === 0 ? {} : { expected_packages: many(flags, "expected-package") }) });
+    const runtime = one(flags, "runtime");
+    result = await tools.validate_local_author_packages({
+      run: required(flags, "run"),
+      ...(runtime === undefined ? {} : { runtime }),
+      ...(many(flags, "expected-package").length === 0 ? {} : { expected_packages: many(flags, "expected-package") }),
+    });
   } else if (command === "validate_script_cues") {
     result = await tools.validate_script_cues({ run: required(flags, "run") });
   } else if (command === "render_element") {
@@ -651,7 +656,10 @@ async function main(): Promise<void> {
     };
     result = await tools.preview_check(input as { run: string; runtime?: string });
   } else if (command === "layout_check") {
-    result = await tools.layout_check((supplied ?? { run: required(flags, "run") }) as { run: string });
+    result = await tools.layout_check((supplied ?? {
+      run: required(flags, "run"),
+      ...(one(flags, "runtime") === undefined ? {} : { runtime: one(flags, "runtime") }),
+    }) as { run: string; runtime?: string });
   } else if (command === "layout_accept") {
     if (supplied !== undefined) result = await tools.layout_accept(supplied as never);
     else {
@@ -672,13 +680,17 @@ async function main(): Promise<void> {
     if (supplied === undefined && run === undefined) throw new Error(`a <build.svrun> is required\n\n${usage()}`);
     const input = supplied ?? {
       run,
+      ...(one(flags, "runtime") === undefined ? {} : { runtime: one(flags, "runtime") }),
       ...(one(flags, "reference-id") === undefined ? {} : { reference_id: one(flags, "reference-id") }),
     };
-    result = await tools.reconstruction_check(input as { run: string; reference_id?: string });
+    result = await tools.reconstruction_check(input as { run: string; reference_id?: string; runtime?: string });
   } else if (command === "authoring_check") {
     const run = operands[0];
     if (supplied === undefined && run === undefined) throw new Error(`a <build.svrun> is required\n\n${usage()}`);
-    result = await tools.authoring_check((supplied ?? { run }) as { run: string });
+    result = await tools.authoring_check((supplied ?? {
+      run,
+      ...(one(flags, "runtime") === undefined ? {} : { runtime: one(flags, "runtime") }),
+    }) as { run: string; runtime?: string });
   } else {
     throw new Error(`unknown command ${command}\n\n${usage()}`);
   }

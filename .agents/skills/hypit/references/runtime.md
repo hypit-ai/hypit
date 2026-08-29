@@ -43,6 +43,9 @@ lanes or the lane numbers are a ceiling nothing reaches. Name the lane by the ex
 Source reaches — `seedance-2-mini` and `gpt-image-2` above — since a lane key that matches no
 capability is silently inert. Read the Provider's README for the lane names it admits.
 
+Provider-specific input limits are also part of preflight. For the KIE GPT Image 2 route, do not
+submit `4:3`, `3:4` or `4:5`; the route rejects those aspect ratios before upload or paid submission.
+
 The local Providers stay small: `media`, `whisperx` and `hyperframes` are bounded by this machine's
 cores rather than by a remote queue, and raising them buys contention.
 

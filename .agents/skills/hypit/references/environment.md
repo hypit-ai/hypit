@@ -52,12 +52,27 @@ Then use the checkout entrypoints directly for the rest of the route:
 ```text
 node <checkout>/bin/hypit.mjs paths --json
 node <checkout>/packages/reference-video-tools/bin/reference-video-tools.mjs <subcommand> ...
+node <checkout>/bin/hypit-studio.mjs --run <run> [--runtime <hypit.runtime.json>]
+node <checkout>/bin/hypit-preview-check.mjs <run> [<hypit.runtime.json>]
 ```
 
-In every reference that abbreviates these as `hypit` and `hypit-reference-video-tools`, interpret
-them as the selected launchers above. Do not globally link the checkout, use `npx hypit`, or install
-dependencies into an author project. Run reference-video-tool commands that share reference state
-from the same working directory, even though their launcher lives in the checkout.
+In every reference that abbreviates these as `hypit`, `hypit-reference-video-tools`,
+`hypit-studio` or `hypit-preview-check`, interpret them as the selected launchers above:
+
+| Abbreviation | Contributor checkout launcher |
+|---|---|
+| `hypit` | `node <checkout>/bin/hypit.mjs` |
+| `hypit-reference-video-tools` | `node <checkout>/packages/reference-video-tools/bin/reference-video-tools.mjs` |
+| `hypit-studio` | `node <checkout>/bin/hypit-studio.mjs` |
+| `hypit-preview-check` | `node <checkout>/bin/hypit-preview-check.mjs` |
+
+Do not interpret `hypit-studio` as a `studio` subcommand of `hypit`: Studio is a separate entrypoint.
+Do not globally link the checkout, use `npx hypit`, or install dependencies into an author project.
+Run reference-video-tool commands that share reference state from the same working directory, even
+though their launcher lives in the checkout.
+
+When a reference names `<skill-root>`, substitute the installed Hypit skill directory (the directory
+containing `SKILL.md` and `scripts/`); it is not relative to the author's project or checkout.
 
 When a reference names `<skill-root>`, substitute the installed Hypit skill directory (the directory
 containing `SKILL.md` and `scripts/`); it is not relative to the author's project or checkout.

@@ -462,7 +462,8 @@ function mockColor(value: string): [number, number, number] {
 // outline survives both still-image and video materialization, so an agent can distinguish mock
 // media from authored assets at a glance.
 const MOCK_BORDER_COLOR = "#d946ef";
-const MOCK_BORDER_WIDTH = 4;
+// The border occupies pixels inside the mock bounds; it never expands or clips the media.
+const MOCK_BORDER_WIDTH = 8;
 
 function crc32(bytes: Uint8Array): number {
   let crc = 0xFFFFFFFF;
