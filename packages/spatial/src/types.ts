@@ -19,6 +19,19 @@ export type SpatialFrame = {
   readonly heightPx: number;
 };
 
+/** One named, frame-exact sequence of measured regions in one Canvas. */
+export type SpatialRegionTrack = {
+  readonly id: string;
+  readonly frames: readonly (SpatialFrame | null)[];
+};
+
+/** External spatial evidence indexed directly by ProgramSpace Frame. */
+export type SpatialRegionTimeline = {
+  readonly canvas: CanvasSpace;
+  readonly frameCount: number;
+  readonly tracks: readonly SpatialRegionTrack[];
+};
+
 export type SpatialPathCommand =
   | { readonly kind: "move"; readonly xPx: number; readonly yPx: number }
   | { readonly kind: "line"; readonly xPx: number; readonly yPx: number }

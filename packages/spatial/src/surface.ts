@@ -1,5 +1,7 @@
 import type { AuthorValueRef, GraphFragment } from "@hypit/elaborator";
 import type { CanonicalValue } from "@hypit/protocol";
+import { svsRecipeType } from "@hypit/svs";
+import type { SvsRecipe } from "@hypit/svs";
 import type {
   SurfaceComponentDraft,
   StructuredElement,
@@ -15,6 +17,7 @@ import {
   frameEdgesFragment,
 } from "./fragment.js";
 import { spatialTypes } from "./manifest.js";
+import { spatialRegionTimeline } from "./region-timeline.js";
 import { assertSpatialPath, sealCanvasSpace, sealIntrinsicExtent, sealSpatialPoint } from "./geometry.js";
 import type {
   AnchoredFrameProgram,
@@ -24,6 +27,7 @@ import type {
   SpatialLength,
   SpatialPath,
   SpatialPathCommand,
+  CanvasSpace,
 } from "./types.js";
 
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
@@ -86,6 +90,11 @@ function reference(
   const result = resolve(value.path);
   if (result === undefined) throw new Error(`${element.name}.${name} cannot resolve ${value.path}.`);
   return result;
+}
+
+function inline<T>(value: SurfaceResolvedReference, label: string): T {
+  if (value.record?.value.kind !== "inline") throw new Error(`${label} must reference an authored inline Record.`);
+  return value.record.value.value as unknown as T;
 }
 
 type ParentFrame = {
@@ -205,6 +214,23 @@ export const decodeExtentSurface: StructuredSurfaceHandler = ({ element }) => {
     heightPx: positiveInteger(element, "height"),
   });
   return { records: [{ id, type: spatialTypes.extent, value: { kind: "inline", value: extent as unknown as CanonicalValue }, range: element.range }], components: [], fragments: [] };
+};
+
+export const decodeRegionTimelineSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  exact(element, ["id", "within", "recipe"], ["id", "within", "recipe"]);
+  const id = text(element, "id");
+  const canvasReference = reference(element, "within", resolveReference);
+  if (!sameType(canvasReference.type, spatialTypes.canvas)) throw new Error(`${element.name}.within must reference CanvasSpace.`);
+  const recipeReference = reference(element, "recipe", resolveReference);
+  if (!sameType(recipeReference.type, svsRecipeType)) throw new Error(`${element.name}.recipe must reference an SVS Recipe.`);
+  const timeline = spatialRegionTimeline(
+    inline<SvsRecipe>(recipeReference, `${element.name}.recipe`),
+    inline<CanvasSpace>(canvasReference, `${element.name}.within`),
+  );
+  return {
+    records: [{ id, type: spatialTypes.regionTimeline, value: { kind: "inline", value: timeline as unknown as CanonicalValue }, range: element.range }],
+    components: [], fragments: [],
+  };
 };
 
 function frameSurface(

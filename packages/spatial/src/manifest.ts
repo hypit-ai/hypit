@@ -1,4 +1,5 @@
 import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
+import { svsRecipeType } from "@hypit/svs";
 import {
   anchoredFrameProgramSchema,
   aspectFrameProgramSchema,
@@ -10,6 +11,7 @@ import {
   spatialFrameSchema,
   spatialPathSchema,
   spatialPointSchema,
+  spatialRegionTimelineSchema,
 } from "./schema.js";
 
 export const spatialModuleRef = { name: "@hypit/spatial", version: "1" } as const;
@@ -17,6 +19,7 @@ export const spatialTypes = {
   canvas: { module: spatialModuleRef, name: "CanvasSpace" },
   point: { module: spatialModuleRef, name: "SpatialPoint" },
   frame: { module: spatialModuleRef, name: "SpatialFrame" },
+  regionTimeline: { module: spatialModuleRef, name: "SpatialRegionTimeline" },
   path: { module: spatialModuleRef, name: "SpatialPath" },
   extent: { module: spatialModuleRef, name: "IntrinsicExtent" },
   fit: { module: spatialModuleRef, name: "ContentFit" },
@@ -170,6 +173,33 @@ export const spatialMarkupSurfaces = [
       },
     },
     {
+      name: "region-timeline", tag: "RegionTimeline", mode: "structured", outputs: [spatialTypes.regionTimeline],
+      vocabulary: {
+        summary: "Resolves externally measured, normalized AABB sequences into one frame-exact set of named Canvas-space region tracks.",
+        attributes: [
+          { name: "id", kind: "identifier", required: true,
+            summary: "Names the SpatialRegionTimeline Record this element publishes." },
+          { name: "within", kind: "reference", required: true, accepts: [spatialTypes.canvas],
+            summary: "Chooses the Canvas that normalized regions are measured inside." },
+          { name: "recipe", kind: "reference", required: true, accepts: [svsRecipeType],
+            summary: "Chooses the external frame-indexed region data.",
+            recipe: [
+              { name: "frame-count", required: true,
+                summary: "States the exact number of ProgramSpace Frames covered by every named track." },
+              { name: "tracks", required: true,
+                summary: "Lists objects shaped as {id, regions}; each regions array contains frame-count normalized [x, y, width, height] AABBs or null when the region is absent." },
+            ] },
+        ],
+        example: `<space:RegionTimeline id="heads" within={vertical} recipe={tracking.heads.default}/>` ,
+        notes: [
+          emptyNote,
+          "The array index is the ProgramSpace Frame; the Surface performs no timestamp conversion, interpolation, smoothing or identity inference.",
+          "Each normalized AABB lies inside [0, 1] and is resolved into Canvas pixels during author compilation; null remains explicit absence.",
+          "Track ids are ordinary external labels; a consumer may interpret them as Script Roles without Spatial knowing what a Role is.",
+        ],
+      },
+    },
+    {
       name: "frame", tag: "Frame", mode: "structured", outputs: [spatialTypes.frame, spatialTypes.frameEdgesProgram],
       vocabulary: {
         summary: "Places one Frame by its four edges inside a Canvas or a parent Frame.",
@@ -284,11 +314,12 @@ export const spatialManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: spatialModuleRef.name,
   version: spatialModuleRef.version,
-  dependencies: [],
+  dependencies: [{ module: svsRecipeType.module }],
   types: [
     { name: spatialTypes.canvas.name },
     { name: spatialTypes.point.name },
     { name: spatialTypes.frame.name },
+    { name: spatialTypes.regionTimeline.name },
     { name: spatialTypes.path.name },
     { name: spatialTypes.extent.name },
     { name: spatialTypes.fit.name },

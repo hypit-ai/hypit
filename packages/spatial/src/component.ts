@@ -2,7 +2,7 @@ import type { ComponentPackage } from "@hypit/component-kit";
 import { canonicalize } from "@hypit/protocol";
 import type { StoredValue } from "@hypit/protocol";
 
-import { anchoredFrame, aspectFrame, assertCanvasSpace, assertContentFit, assertFittedContent, assertIntrinsicExtent, assertSpatialFrame, assertSpatialPath, assertSpatialPoint, canvasFrame, fitContent, frameFromEdges } from "./geometry.js";
+import { anchoredFrame, aspectFrame, assertCanvasSpace, assertContentFit, assertFittedContent, assertIntrinsicExtent, assertSpatialFrame, assertSpatialPath, assertSpatialPoint, assertSpatialRegionTimeline, canvasFrame, fitContent, frameFromEdges } from "./geometry.js";
 import { spatialProducers, spatialTypes } from "./manifest.js";
 import type {
   AnchoredFrameProgram,
@@ -15,6 +15,7 @@ import type {
   SpatialFrame,
   SpatialPath,
   SpatialPoint,
+  SpatialRegionTimeline,
 } from "./types.js";
 
 function inline<T>(value: StoredValue | undefined, label: string): T {
@@ -35,6 +36,7 @@ export const spatialComponent = {
     { type: spatialTypes.canvas, handler: ({ value }) => assertCanvasSpace(inline<CanvasSpace>(value, "CanvasSpace")) },
     { type: spatialTypes.point, handler: ({ value }) => assertSpatialPoint(inline<SpatialPoint>(value, "SpatialPoint")) },
     { type: spatialTypes.frame, handler: ({ value }) => assertSpatialFrame(inline<SpatialFrame>(value, "SpatialFrame")) },
+    { type: spatialTypes.regionTimeline, handler: ({ value }) => assertSpatialRegionTimeline(inline<SpatialRegionTimeline>(value, "SpatialRegionTimeline")) },
     { type: spatialTypes.path, handler: ({ value }) => assertSpatialPath(inline<SpatialPath>(value, "SpatialPath")) },
     { type: spatialTypes.extent, handler: ({ value }) => assertIntrinsicExtent(inline<IntrinsicExtent>(value, "IntrinsicExtent")) },
     { type: spatialTypes.fit, handler: ({ value }) => assertContentFit(inline<ContentFit>(value, "ContentFit")) },

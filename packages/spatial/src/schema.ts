@@ -16,6 +16,16 @@ export const canvasSpaceSchema = object({
 });
 export const spatialPointSchema = object({ xPx: { schema: number }, yPx: { schema: number } });
 export const spatialFrameSchema = object({ xPx: { schema: number }, yPx: { schema: number }, widthPx: { schema: number }, heightPx: { schema: number } });
+export const spatialRegionTimelineSchema = object({
+  canvas: { schema: canvasSpaceSchema },
+  frameCount: { schema: positiveInteger },
+  tracks: { schema: { kind: "array", minItems: 1, items: object({
+    id: { schema: { kind: "string", minLength: 1 } },
+    frames: { schema: { kind: "array", minItems: 1, items: {
+      kind: "oneOf", variants: [spatialFrameSchema, { kind: "null" }],
+    } } },
+  }) } },
+});
 const pathCommand: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "move" } }, xPx: { schema: number }, yPx: { schema: number } }),
   object({ kind: { schema: { kind: "literal", value: "line" } }, xPx: { schema: number }, yPx: { schema: number } }),

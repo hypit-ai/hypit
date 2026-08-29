@@ -19,6 +19,7 @@ export {
   contentFitSchema,
   intrinsicExtentSchema,
   spatialFrameSchema,
+  spatialRegionTimelineSchema,
   spatialPathSchema,
   spatialPointSchema,
 } from "./schema.js";
@@ -30,5 +31,7 @@ export {
   decodeFrameSurface,
   decodePathSurface,
   decodePointSurface,
+  decodeRegionTimelineSurface,
 } from "./surface.js";
+export { spatialRegionTimeline } from "./region-timeline.js";
 export type * from "./types.js";
