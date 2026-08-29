@@ -31,7 +31,7 @@ as a generation:
 
 ```svml
 <copy:Value id="meme-look">A screenshot of a vertical social-media post…</copy:Value>
-<gpt:Image id="meme-shot" prompt={meme-look} aspect-ratio="4:5" resolution="2K"/>
+<gpt:Image id="meme-shot" prompt={meme-look} aspect-ratio="9:16" resolution="2K"/>
 ```
 
 Writing `<media:Image src="./assets/meme.png"/>` instead spends money this route does not spend, and

@@ -256,6 +256,8 @@ export async function previewCheck(
 export type ReconstructionCheckInput = {
   readonly run: string;
   readonly reference_id?: string;
+  /** Runtime Profile used to resolve accepted Build Records in a pinned Run. */
+  readonly runtime?: string;
 };
 
 /**

@@ -8,6 +8,10 @@ then finalized into the only `GenerationRequest` a Provider can receive. The pac
 semantics but no API key, Provider selection, queue or network code. `@hypit/provider-kie` is
 one optional Runtime implementation.
 
+Provider limits are checked by the Provider before any paid operation. In particular, KIE's GPT
+Image 2 endpoints reject `4:3`, `3:4` and `4:5`; those values remain in this model contract because
+the model Surface is Provider-neutral, but a KIE Runtime must use one of its accepted ratios.
+
 The one physical package exposes two independently importable logical modules:
 
 - `@hypit/gpt-image@1`: the raw exact model;

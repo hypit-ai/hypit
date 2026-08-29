@@ -51,11 +51,25 @@ After any new turn, interruption, or context compaction, read
 before continuing. Never resume from chat memory alone, and never repeat a completed or paid step
 without verifying its durable evidence.
 
+Temporary branch constraint: do not select, use or read the installed `@hypit/ranking` package or
+its declarations, README, examples or source on this branch. If a request needs a ranking-like
+visual system, choose another applicable installed capability or treat the requirement as a genuine
+gap and use the formal project-local package workflow from the visible requirement. Do not copy,
+vendor or modify `@hypit/ranking`. This is an internal routing constraint: do not tell the author
+that a choice was made because of the skill or this constraint. Present the chosen alternative or
+new local component as the normal production decision, with its practical rationale when useful.
+
 Before Source is accepted, every route must complete persisted vocabulary inspection,
 `validate_local_author_packages` for every project-owned package under the project's `packages/`
 directory, and
 `validate_script_cues` (maximum four visible words per Cue). `preview_check` and the route's final
 check repeat these gates even if route-state claims they were completed.
+When a Run contains accepted `build-record` pins, pass its Runtime Profile to
+`validate_local_author_packages`, `preview_check`, `layout_check` and the final check so the archive
+can resolve those Records before any graph or layout result is trusted.
+
+Agent-boundary constraint: do not read or rely on the memory of Codex, Claude Code, or any other
+coding agent.
 
 Do not create or hand-author SVG images anywhere in an author project or project-local package.
 This includes `.svg` assets, inline `<svg>` markup, and SVG data URLs.

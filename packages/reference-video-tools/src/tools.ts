@@ -142,6 +142,8 @@ export type InspectVocabularyInput = {
 };
 export type ValidateLocalAuthorPackagesInput = {
   readonly run: string;
+  /** Runtime Profile used to resolve accepted Build Records in a pinned Run. */
+  readonly runtime?: string;
   readonly expected_packages?: readonly string[];
 };
 export type CompareReconstructionInput = {
@@ -1277,12 +1279,17 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       if (distributionPackageRoot !== undefined) {
         const registry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot: projectRoot, distributionPackageRoot });
         const domain = await loadStudioDomain({ run: runPath, workspaceRoot: projectRoot, packageRoot: projectRoot });
-        const archive = await openStudioArchive(undefined, projectRoot, projectRoot, distributionPackageRoot);
-        const loaded = await loadStudioRun({ run: runPath, domain, registry, ...(archive === undefined ? {} : { archive }) });
-        graphModules = new Set([
-          ...loaded.source.compiled.graph.operations.map((operation) => `${operation.producer.module.name}@${operation.producer.module.version}`),
-          ...loaded.run.graph.operations.map((operation) => `${operation.producer.module.name}@${operation.producer.module.version}`),
-        ]);
+        const runtimePath = input.runtime === undefined ? undefined : resolve(invokedFrom(), input.runtime);
+        const archive = await openStudioArchive(runtimePath, projectRoot, projectRoot, distributionPackageRoot);
+        try {
+          const loaded = await loadStudioRun({ run: runPath, domain, registry, ...(archive === undefined ? {} : { archive }) });
+          graphModules = new Set([
+            ...loaded.source.compiled.graph.operations.map((operation) => `${operation.producer.module.name}@${operation.producer.module.version}`),
+            ...loaded.run.graph.operations.map((operation) => `${operation.producer.module.name}@${operation.producer.module.version}`),
+          ]);
+        } finally {
+          await archive?.close();
+        }
       }
     } catch {
       // The normal check reports the compiler failure; package validation still returns precise
@@ -2547,7 +2554,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     async preview_check(input): Promise<Record<string, unknown>> {
       const runPath = resolve(invokedFrom(), input.run);
       try {
-        const packageGate = await validateLocalAuthorPackages({ run: input.run });
+        const packageGate = await validateLocalAuthorPackages({ run: input.run, ...(input.runtime === undefined ? {} : { runtime: input.runtime }) });
         const cueGate = await scriptCueCheck({ run: input.run });
         if (packageGate.passed !== true || cueGate.passed !== true) {
           const refused = { run: runPath, sound: false, package_gate: packageGate, script_cue_gate: cueGate, refused: "package or Script Cue gate failed" };
@@ -2621,7 +2628,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     async reconstruction_check(input): Promise<Record<string, unknown>> {
       const runPath = resolve(invokedFrom(), input.run);
       try {
-        const packageGate = await validateLocalAuthorPackages({ run: input.run });
+        const packageGate = await validateLocalAuthorPackages({ run: input.run, ...(input.runtime === undefined ? {} : { runtime: input.runtime }) });
         const cueGate = await scriptCueCheck({ run: input.run });
         if (packageGate.passed !== true || cueGate.passed !== true) {
           const refused = { run: runPath, passed: false, package_gate: packageGate, script_cue_gate: cueGate, issues: ["package or Script Cue gate failed"] };
@@ -2651,7 +2658,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     async authoring_check(input): Promise<Record<string, unknown>> {
       const runPath = resolve(invokedFrom(), input.run);
       try {
-        const packageGate = await validateLocalAuthorPackages({ run: input.run });
+        const packageGate = await validateLocalAuthorPackages({ run: input.run, ...(input.runtime === undefined ? {} : { runtime: input.runtime }) });
         const cueGate = await scriptCueCheck({ run: input.run });
         if (packageGate.passed !== true || cueGate.passed !== true) {
           const refused = { run: runPath, passed: false, package_gate: packageGate, script_cue_gate: cueGate, issues: ["package or Script Cue gate failed"] };
@@ -2826,7 +2833,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const packageBindingsPassed = packageBindings.every((binding) => binding.current_digest === binding.digest);
       const vocabularyPassed = stateBindingPassed && evidenceShapePassed && packageBindingsPassed
         && (inheritedContractPassed || inspectedContractPassed);
-      const packageGate = await validateLocalAuthorPackages({ run: runPath });
+      const packageGate = await validateLocalAuthorPackages({ run: runPath, ...(input.runtime === undefined ? {} : { runtime: input.runtime }) });
       const cueGate = await scriptCueCheck({ run: runPath });
       const graphGate = packageGate.passed === true && cueGate.passed === true
         ? await previewCheck({ run: runPath, ...(input.runtime === undefined ? {} : { runtime: input.runtime }) }, { packageRoot })
