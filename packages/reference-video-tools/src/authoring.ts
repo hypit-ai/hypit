@@ -8,6 +8,8 @@ import { cpus } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import puppeteer from "puppeteer-core";
+
 import { compileHyperframesDocument, materializeHyperframesHtml } from "@hypit/hyperframes";
 import type { ProgramSpace } from "@hypit/program-space";
 import type { CompiledGraph } from "@hypit/protocol";
@@ -854,6 +856,64 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   };
 }
 
+/**
+ * Capture one package preview frame through the already-realized SVRun composition.
+ *
+ * This deliberately does not use HyperFrames' encoder: the normal SVRun → preview-mock → Producer
+ * path has already produced the staged Composition, and a fixed local browser can seek that same
+ * document directly.  Package previews therefore cost one browser frame rather than a complete PNG
+ * sequence while retaining the exact runtime semantics.
+ */
+async function capturePreviewFrame(
+  realized: Awaited<ReturnType<typeof realizeAuthoringPreview>>,
+  frame: number,
+  outPath: string,
+): Promise<void> {
+  const { stage, mediaTypes } = await stageAuthoringPreview(realized);
+  const { serve, browserPath } = await import("./layout.js");
+  const local = await serve(stage, mediaTypes);
+  const browser = await puppeteer.launch({ executablePath: browserPath(), headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+  const page = await browser.newPage();
+  try {
+    await page.setViewport({ width: realized.built.canvas.width, height: realized.built.canvas.height, deviceScaleFactor: 1 });
+    await page.goto(local.url, { waitUntil: "load", timeout: 60_000 });
+    await page.evaluate(() => {
+      for (const root of Array.from(document.querySelectorAll("[data-composition-id][data-width][data-height]"))) {
+        const width = Number(root.getAttribute("data-width"));
+        const height = Number(root.getAttribute("data-height"));
+        if (root instanceof HTMLElement && Number.isFinite(width) && Number.isFinite(height)) {
+          root.style.width = `${width}px`;
+          root.style.height = `${height}px`;
+        }
+      }
+    });
+    await page.evaluate(async () => { await document.fonts.ready; });
+    const fps = realized.built.frameRate.numerator / realized.built.frameRate.denominator;
+    await page.evaluate(async ({ frame: at, fps: rate }) => {
+      const runtime = window as unknown as { __hf?: { seek?: (seconds: number) => unknown }; __player?: { renderSeek?: (seconds: number) => unknown } };
+      const seconds = at / rate;
+      const seek = runtime.__player?.renderSeek ?? runtime.__hf?.seek;
+      if (typeof seek === "function") await seek.call(runtime.__player ?? runtime.__hf, seconds);
+      else window.dispatchEvent(new CustomEvent("hf-seek", { detail: { time: seconds } }));
+      for (const clip of Array.from(document.querySelectorAll(".hypit-visual-present[data-start][data-duration]"))) {
+        const start = Number(clip.getAttribute("data-start"));
+        const duration = Number(clip.getAttribute("data-duration"));
+        (clip as HTMLElement).style.display = seconds >= start && seconds < start + duration ? "" : "none";
+      }
+      await new Promise<void>((accept) => requestAnimationFrame(() => requestAnimationFrame(() => accept())));
+    }, { frame, fps });
+    const clip = await page.$eval("[data-composition-id]", (element) => {
+      const rect = element.getBoundingClientRect();
+      return { x: Math.max(0, rect.left), y: Math.max(0, rect.top), width: rect.width, height: rect.height };
+    });
+    await page.screenshot({ path: outPath, type: "png", clip });
+  } finally {
+    await page.close().catch(() => undefined);
+    await browser.close().catch(() => undefined);
+    await local.close().catch(() => undefined);
+  }
+}
+
 export type RenderPreviewsInput = {
   readonly package_dirs: readonly string[];
 };
@@ -907,6 +967,7 @@ export async function renderPreviews(input: RenderPreviewsInput): Promise<Record
       .filter((name) => /\.(png|jpe?g|svg)$/iu.test(name));
     const promisedPictures = promised.length > 0 ? promised : existing;
     assert(promisedPictures.length > 0, `${directory} promises no preview picture; nothing to draw`);
+    let realized: Awaited<ReturnType<typeof realizeAuthoringPreview>> | undefined;
 
     for (const picture of promisedPictures) {
       if (/\.svg$/iu.test(picture)) {
@@ -923,10 +984,24 @@ export async function renderPreviews(input: RenderPreviewsInput): Promise<Record
         // Resolve the package from its workspace root rather than requiring a self-link under
         // packages/<slug>/node_modules. The preview Run still lives inside the package directory;
         // only dependency discovery needs the parent workspace.
-        // The resolver root is the project/workspace containing `packages/`, not that directory
-        // itself.  Keeping this explicit also lets the canonical fixture render without a
-        // package-manager self-link under the package it is previewing.
-        await renderElement({ run, element, out, package_root: dirname(dirname(packageDir)) });
+        realized ??= await realizeAuthoringPreview({ run, package_root: dirname(dirname(packageDir)) });
+        const placed = realized.built.tracks.find((track) => String(track.outputRef ?? "").endsWith(`::output::${element}.track`)
+          || String(track.outputRef ?? "").includes(`::output::${element}.`));
+        assert(placed !== undefined, `${directory} preview places no element named ${element}`);
+        const trackId = (placed.value as { readonly id?: unknown } | null)?.id;
+        assert(typeof trackId === "string", `${directory} preview element ${element} has no visual Track id`);
+        const { stableFrameForTrack } = await import("./layout.js");
+        const compositionTrack = realized.built.composition.tracks.find((track) => track.kind === "visual" && track.id === trackId);
+        assert(compositionTrack !== undefined && compositionTrack.kind === "visual" && compositionTrack.presents.length > 0,
+          `${directory} preview element ${element} has no visual Present`);
+        const fallback = [...compositionTrack.presents].sort((left, right) => {
+          const leftLength = left.span.endFrameExclusive - left.span.startFrame;
+          const rightLength = right.span.endFrameExclusive - right.span.startFrame;
+          return rightLength - leftLength || left.span.startFrame - right.span.startFrame || left.id.localeCompare(right.id);
+        })[0]!;
+        const frame = stableFrameForTrack(realized.built.composition, trackId)
+          ?? fallback.span.startFrame + Math.floor((fallback.span.endFrameExclusive - fallback.span.startFrame - 1) / 2);
+        await capturePreviewFrame(realized, frame, out);
       } catch (error) {
         throw new Error(`${directory} could not draw ${picture}: ${error instanceof Error ? error.message : String(error)}`);
       }

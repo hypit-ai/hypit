@@ -179,11 +179,13 @@ package-owned `preview/preview.svml`, `preview/recipes.svs` and `preview/build.s
 one representative frame under `preview/`. The command resolves the package from its explicit
 workspace/package root and the active Distribution fallback; it does not require a
 `packages/<slug>/node_modules` self-link or a manual `npm link`. It compiles the preview Run, lets the
-native preview-mock path satisfy undeclared media, renders the complete deterministic composition
-through the local HyperFrames Provider, and writes the promised image named by the Surface Manifest.
+native preview-mock path satisfy undeclared media, and runs the real Producers. It then finds the
+target Present's longest stable interval and seeks the middle frame in a fixed local browser before
+writing the promised image named by the Surface Manifest. It does not encode a complete PNG sequence,
+and it never changes HyperFrames itself.
 
-Choose a frame mid-behaviour rather than at rest. A preview of an element that has not entered yet,
-or has already settled into a static end state, shows the least useful thing about it.
+If no stable interval has at least two frames, the middle frame of the longest Present is used. This
+keeps the picture representative while avoiding a full render solely to obtain one catalogue image.
 
 ## 6. Write the activation descriptor
 

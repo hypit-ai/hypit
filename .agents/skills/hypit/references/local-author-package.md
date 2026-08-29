@@ -218,6 +218,11 @@ nothing.
   is most of its life.
 - A component that cannot render on its own cannot produce the preview image its Surface owes. Treat
   a missing preview as evidence of this mistake rather than a step to skip.
+- Produce that image with `hypit-reference-video-tools render_previews <package-dir>`. It keeps the
+  package-owned preview SVML, SVS and SVRun on the standard preview-mock/Producer path, then seeks the
+  middle frame of the target Present's longest stable interval in the fixed local browser. It does
+  not render a complete PNG sequence; when no interval is stable for two frames, it uses the middle
+  frame of the longest Present.
 
 ## Freeze the Types before writing in parallel
 
