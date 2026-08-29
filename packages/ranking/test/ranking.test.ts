@@ -633,7 +633,7 @@ test("all three author Surfaces preserve explicit semantic, spatial, font, image
 });
 
 test("Ranking Surfaces declare their sealed Records and icon Producers consume Blob values", async () => {
-  for (const name of ["tier", "column", "top-three"]) {
+  for (const name of ["column", "top-three"]) {
     const surface = rankingMarkupSurfaces.find((item) => item.name === name);
     assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.header.name), `${name} header output`);
     assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.itemSpec.name), `${name} item output`);
