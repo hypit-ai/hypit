@@ -72,7 +72,7 @@ function alignmentRequest(value: CanonicalValue): WhisperXAlignmentRequest {
     && item.audio.mediaType === "audio/wav"
     && Number.isSafeInteger(item.sampleFrames)
     && item.sampleFrames > 0
-    && (item.language === "en" || item.language === "zh"),
+    && (item.language === "en" || item.language === "zh" || item.language === "es"),
   "WhisperX alignment request is invalid");
   return item;
 }

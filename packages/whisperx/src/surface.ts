@@ -38,8 +38,8 @@ export const decodeWhisperXSemanticTakeSurface: StructuredSurfaceHandler = ({ el
   const segment = reference(element, "segment", narrativeTypes.excerpt, resolveReference);
   const media = reference(element, "media", mediaTypes.synchronized, resolveReference);
   const language = stringAttribute(element, "language");
-  if (language !== "en" && language !== "zh") {
-    throw new Error(`${element.name}.language must be en or zh`);
+  if (language !== "en" && language !== "zh" && language !== "es") {
+    throw new Error(`${element.name}.language must be en, zh, or es`);
   }
   const languageId = `${id}.language`;
   return {
