@@ -203,8 +203,8 @@ spending. `hypit build` is submitted only after explicit cost approval.
 
 ```text
 environment → brief-frozen → examples/format/craft decisions
-→ vocabulary/component-fit → package-ready → Script and four sources
-→ script-checked → source-authored → graph-checked → layout-checked
+→ vocabulary/component-fit → Script and four sources → source-authored
+→ package-ready → script-checked → graph-checked → layout-checked
 → review-planned → preview-rendered → review-complete → repairs-complete
 → final-checked → Studio confirmation → optional Build
 ```
@@ -231,8 +231,8 @@ edge needed by the Film. It has no reference video, so `brief.json` is the autho
 
 ```text
 environment → reference-prepared → reference-observed
-→ examples/format/craft decisions → vocabulary/component-fit → package-ready
-→ Script and four sources → script-checked → source-authored → graph-checked
+→ examples/format/craft decisions → vocabulary/component-fit
+→ Script and four sources → source-authored → package-ready → script-checked → graph-checked
 → layout-checked → review-planned → preview-rendered → comparison-complete
 → repairs-complete → final-checked → initial-adaptation → final check again
 → Studio confirmation → optional Build

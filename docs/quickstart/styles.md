@@ -103,7 +103,7 @@ For reproducible rendering, select an exact installed face in the `.svml` source
 Record to the Fine Style. Family, weight and style have one source of truth on this exact font edge:
 
 ```svml
-<fonts:Face id="caption-font" family="inter" weight="600" style="normal"/>
+<fonts:Stack id="caption-font" family="inter" weight="600" style="normal"/>
 <caption-fine:Style id="primary-caption" recipe={recipes.caption.dialogue}
   font={caption-font}/>
 ```
@@ -117,6 +117,8 @@ caption.alice {
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   size: 58;
+  line-height: 0.96;
+  align: center;
   fill: #73FBD3;
   background: #09090BCC;
   padding: 16 24; radius: 18;
@@ -126,6 +128,8 @@ caption.bob {
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   size: 58;
+  line-height: 0.96;
+  align: center;
   fill: #FFD166;
   background: #09090BCC;
   padding: 16 24; radius: 18;

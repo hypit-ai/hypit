@@ -87,9 +87,9 @@ of intent; files and check results remain the authority.
 | `reference-prepared` | checkpoint after `prepare_reference` reports ready `state.json` | `prepare_reference` or `route_state reconcile` |
 | `reference-observed` | explicit observer checkpoint; all required observation answers are complete | `observe_reference` / `record_observation` |
 | `vocabulary-checked` | Run-scoped vocabulary inspection and the frozen `.hypit/component-fit.json` are both persisted | `inspect_svml_vocabulary --run <run>` |
+| `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
 | `package-ready` | every project-owned package under `packages/` has a real Surface/Producer/Fragment and is used by the compiled Graph | `validate_local_author_packages --run <run>` |
 | `script-checked` | every caption Cue has at most four visible words | `validate_script_cues --run <run>` |
-| `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |
 | `graph-checked` | `preview_check` returns `sound: true` after package and Cue gates | `preview_check <run>` |
 | `layout-checked` | `layout_check` executed and every candidate was repaired or explicitly accepted | `layout_check --run <run>` / `layout_accept` |
 | `review-planned` | `reconstruction_check` writes a plan | `reconstruction_check <run>` |
@@ -297,7 +297,9 @@ Write `main.svml`, `recipes.svs` and `build.svrun`, then extend the existing `hy
 every capability those Sources reach. The Runtime Profile is part of the deliverable: without it the
 first thing the author meets is `RUNTIME_CAPABILITY_UNBOUND`.
 
-Now persist the Run-scoped half of the frozen vocabulary decision. This completes
+Author the Source before validating project-local packages: `package-ready` can only be completed
+after `main.svml` and `build.svrun` compile a Graph that actually uses each package. Now persist the
+Run-scoped half of the frozen vocabulary decision. This completes
 `vocabulary-checked` only when `.hypit/component-fit.json` remains valid:
 
 ```bash

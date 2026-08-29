@@ -100,6 +100,22 @@ A filled media slot arrives in `inputs` as the `BlobRef` itself, not wrapped inl
 authored value is, so read its `mediaType` off the Artifact rather than assuming what the slot's name
 suggests.
 
+## Decoder and runtime value shapes
+
+The Style decoder receives a decoded recipe as `{ path, properties }`: `path` is the authored recipe
+id and `properties` is the canonical property map. A resolved authored reference may expose its
+record; only read an inline value after checking `record.value.kind === "inline"`, then use
+`record.value.value`. Never infer a value from the reference path.
+
+The temporal-markup helpers take one object `{ id, subjectId?, element, semantic, resolveReference }`
+and return `records`, `components` and `fragments` collections to append to the Surface result. The resulting
+`TemporalInstant` carries `frame`; a `TemporalWindow` carries `span` with `startFrame` and
+`endFrameExclusive`.
+
+`SpatialFrame` uses `xPx`, `yPx`, `widthPx` and `heightPx`; `ProgramSpace` provides `id`,
+`narrativeId`, `durationSec` and `frameRate` (`numerator` and `denominator`). A `fonts:Stack` Surface publishes a
+`FontStackRef`; pass that same record to a Visual IR text element's `fonts` field.
+
 ## Package boundary
 
 Place the package at `<project>/packages/<slug>/`, named in the project's own scope such as
@@ -159,6 +175,11 @@ Implement the parts required by the behavior, including:
 Choose raw versus structured Surface, timing dependencies, ProgramSpace, Frame, SemanticTrack,
 Artifact, Recipe and output Types from the observed behavior and the anatomy the guide states. A
 declaration-only or Surface-only package is incomplete.
+
+For variable child counts, emit one Fragment operation per child and pass those fixed-port results
+to an append/merge Producer (for example `head`, `item`, `tail`). Do not add an undeclared
+`items[]` input or let a handler consume arbitrary children; every child must be represented by a
+sealed operation.
 
 ## The package draws itself
 
@@ -223,6 +244,12 @@ nothing.
   middle frame of the target Present's longest stable interval in the fixed local browser. It does
   not render a complete PNG sequence; when no interval is stable for two frames, it uses the middle
   frame of the longest Present.
+
+For a media slot, declare an Artifact Fragment input and read the BlobRef from `inputs`. Branch on
+its `mediaType` (`image/*` or `video/*`) when choosing the Visual IR element, and still draw the
+empty frame/cell when no material is supplied. `hypit image` uses the selected Runtime Profile's
+image endpoint and is billed; obtain approval before using it and reserve it for package-owned
+chrome, never video content or previews.
 
 ## Freeze the Types before writing in parallel
 
