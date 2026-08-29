@@ -181,6 +181,22 @@ to an append/merge Producer (for example `head`, `item`, `tail`). Do not add an 
 `items[]` input or let a handler consume arbitrary children; every child must be represented by a
 sealed operation.
 
+```typescript
+const childOps = children.map((child, index) => ({
+  id: `child-${index}`, producer: childProducer,
+  inputs: { value: childInput(child) },
+  result: { kind: "output", name: `child-${index}` },
+}));
+const merge = {
+  id: "merge", producer: appendProducer,
+  inputs: { head: childOps[0]!, item: childOps[1]!, tail: childOps[2]! },
+  result: { kind: "output", name: "items" },
+};
+```
+
+The real implementation repeats the fixed operation shape for the actual child count and uses the
+package's documented empty/one/many merge forms; the handler never accepts undeclared variadic input.
+
 ## The package draws itself
 
 A package is installed vocabulary. `.svml`, `.svs` and `.svrun` are documents that use it. A package
@@ -250,6 +266,14 @@ its `mediaType` (`image/*` or `video/*`) when choosing the Visual IR element, an
 empty frame/cell when no material is supplied. `hypit image` uses the selected Runtime Profile's
 image endpoint and is billed; obtain approval before using it and reserve it for package-owned
 chrome, never video content or previews.
+
+```typescript
+handler: ({ inputs }) => {
+  const media = inputs.media?.kind === "blob" ? inputs.media : undefined;
+  const kind = media?.mediaType.startsWith("video/") ? "video" : "image";
+  return { outputs: { track: output(renderSlot(kind, media)) }, needs: {} };
+}
+```
 
 ## Freeze the Types before writing in parallel
 
