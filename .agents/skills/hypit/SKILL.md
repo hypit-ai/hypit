@@ -51,6 +51,12 @@ After any new turn, interruption, or context compaction, read
 before continuing. Never resume from chat memory alone, and never repeat a completed or paid step
 without verifying its durable evidence.
 
+Temporary branch constraint: do not select, use or read the installed `@hypit/ranking` package or
+its declarations, README, examples or source on this branch. If a request needs a ranking-like
+visual system, choose another applicable installed capability or treat the requirement as a genuine
+gap and use the formal project-local package workflow from the visible requirement. Do not copy,
+vendor or modify `@hypit/ranking`.
+
 Before Source is accepted, every route must complete persisted vocabulary inspection,
 `validate_local_author_packages` for every project-owned package under the project's `packages/`
 directory, and
