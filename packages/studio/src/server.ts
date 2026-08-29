@@ -89,10 +89,15 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     const directory = dirname(absolute);
     if (watched.has(directory)) return;
     try {
-      watched.set(directory, watch(directory, (_event, filename) => {
+      const watcher = watch(directory, (_event, filename) => {
         const changed = filename === null ? undefined : resolve(directory, filename.toString());
         if (!mutating && (changed === undefined || watchedFiles.has(changed))) schedule();
-      }));
+      });
+      watcher.on("error", () => {
+        watcher.close();
+        if (watched.get(directory) === watcher) watched.delete(directory);
+      });
+      watched.set(directory, watcher);
     } catch {
       // Some Hosts may report virtual Source ids. They are still recompiled
       // whenever a real Source revision is scheduled; they simply emit no file event.
