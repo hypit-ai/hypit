@@ -80,6 +80,12 @@ and chooses one of three outcomes:
 - `project-local-package`: the difference materially changes the component's core look, function,
   structure or behaviour.
 
+Visual resemblance alone never qualifies a package for reuse. The candidate must also provide the
+required function and contract — its input/output Types, timing behavior, ports and role in the
+composition. A package that looks similar but performs a different job, exposes incompatible data,
+or has a different temporal contract is a `project-local-package`, even when its rendered shape is
+close. Do not force the Source through a visually similar tag just to avoid a package gap.
+
 Original authoring does not turn silence into a hidden specification. If the author asks for a
 ranking board without defining every icon, shadow or radius, those details remain the Agent's design
 space and an installed ranking component normally qualifies as `reuse-existing`. Reconstruction has
