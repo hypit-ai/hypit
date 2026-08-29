@@ -25,7 +25,7 @@ import {
   filmTypes,
 } from "@hypit/film";
 import type { ModuleManifest } from "@hypit/protocol";
-import { svsFrontend, svsManifest } from "@hypit/svs";
+import { svsFrontend } from "@hypit/svs";
 import {
   decodeCanvasSurface,
   spatialManifest,
@@ -74,7 +74,6 @@ const audio = sealAudioTrack({ programSpaceId: "test-space",
 
 const closure = createResolvedClosure([
   ...videoContractManifests,
-  svsManifest,
   fixtureManifest,
   filmManifest,
 ]);
