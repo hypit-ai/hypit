@@ -43,9 +43,9 @@ it. A Producer that receives an unsealed value has no way to tell a mistake from
 met. The fixture's value layer is the minimal pattern; a close sibling may be used as a bounded
 implementation skeleton only after vocabulary inspection.
 
-**The Style decoder reads a Recipe, not a stylesheet.** It takes one `SvsRecipe` and the exact fonts,
-validates the keys it admits, and produces a Style value. Unknown keys fail; defaults are declared,
-not implied. Use the fixture's decoder for the generic boundary, or the selected close sibling when
+**The Style decoder reads a Recipe, not a stylesheet.** It takes one decoded `SvsRecipe` shaped as
+`{ path, properties }` and the exact fonts, validates the keys it admits, and produces a Style value.
+Unknown keys fail; defaults are declared, not implied. Use the fixture's decoder for the generic boundary, or the selected close sibling when
 the new package intentionally extends that sibling's domain contract.
 
 **The renderer turns a Program into elements and nothing else.** It resolves no timing of its own and

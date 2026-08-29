@@ -19,7 +19,7 @@ must not be added to the Style record merely to describe its role.
 ## 1. Create the package
 
 ```bash
-mkdir -p packages/my-component/src packages/my-component/test
+mkdir -p packages/my-component/src
 ```
 
 ## 2. Write package.json

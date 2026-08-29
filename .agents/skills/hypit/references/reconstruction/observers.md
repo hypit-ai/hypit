@@ -26,7 +26,7 @@ Ask the author once, before `prepare_reference`. Report what this machine actual
 asking them to recall it:
 
 ```text
-node .agents/skills/hypit/scripts/check-credentials.mjs GOOGLE_CLOUD_PROJECT GOOGLE_APPLICATION_CREDENTIALS_JSON
+node <skill-root>/scripts/check-credentials.mjs GOOGLE_CLOUD_PROJECT GOOGLE_APPLICATION_CREDENTIALS_JSON
 ```
 
 Both variables `set` means `gemini` is available and the author chooses between the two. Either one

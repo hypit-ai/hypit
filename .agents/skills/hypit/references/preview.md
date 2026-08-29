@@ -35,12 +35,10 @@ The same check is also a bin of its own:
 hypit-preview-check /path/to/project/build.svrun
 ```
 
-Prefer the subcommand. It takes `--package-root <dir>`, which is where the packages the Source
-imports are resolved from — a project's own packages under `packages/<slug>/` are installed against the
-project root, so name it there and the check reaches them from wherever you are standing. Without
-the flag the working directory is used. The bare bin fixes the package root to the Run file's own
-directory and takes no flags, so reach for it when the Run sits at the project root and you want the
-prose summary rather than a JSON result.
+Prefer the subcommand. `--package-root <dir>` is needed only when the project has no `package.json`
+or when an explicit package root is desired; it changes Host package lookup, not Source Workspace.
+With a project-root `package.json`, omit it. The bare bin fixes the package root to the Run file's own
+directory and takes no flags.
 
 Either one refuses when the graph itself is wrong, and names what refused — a target that is not a
 Film or Render output of the current SVML, a Film with no traceable composition, a Film with no

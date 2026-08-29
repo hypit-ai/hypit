@@ -99,7 +99,7 @@ caption.dialogue {
 Style。字体家族、字重和字形只在这条精确字体边上声明一次：
 
 ```svml
-<fonts:Face id="caption-font" family="inter" weight="600" style="normal"/>
+<fonts:Stack id="caption-font" family="inter" weight="600" style="normal"/>
 <caption-fine:Style id="primary-caption" recipe={recipes.caption.dialogue}
   font={caption-font}/>
 ```
@@ -113,6 +113,8 @@ caption.alice {
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   size: 58;
+  line-height: 0.96;
+  align: center;
   fill: #73FBD3;
   background: #09090BCC;
   padding: 16 24; radius: 18;
@@ -122,6 +124,8 @@ caption.bob {
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   size: 58;
+  line-height: 0.96;
+  align: center;
   fill: #FFD166;
   background: #09090BCC;
   padding: 16 24; radius: 18;

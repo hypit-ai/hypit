@@ -4,6 +4,8 @@ import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 import { programSpaceTypes } from "@hypit/program-space";
 import { semanticTrackTypes } from "@hypit/semantic-track";
 import { temporalTypes } from "@hypit/temporal";
+import { mediaTypes } from "@hypit/media";
+import { svsRecipeType } from "@hypit/svs";
 
 const previewImage = (file: string) => ({
   mediaType: "image/png",
@@ -16,6 +18,7 @@ export const exampleTypes = {
   box: { module: exampleModuleRef, name: "ExampleBox" },
   text: { module: exampleModuleRef, name: "ExampleText" },
   mediaSlot: { module: exampleModuleRef, name: "ExampleMediaSlot" },
+  style: { module: exampleModuleRef, name: "ExampleStyle" },
 } satisfies Record<string, TypeRef>;
 export const exampleProducers = {
   renderBox: { module: exampleModuleRef, name: "render-example-box" },
@@ -58,4 +61,12 @@ export const exampleMarkupSurfaces = [
   { name: "box", tag: "Box", mode: "structured", outputs: [exampleTypes.box, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A framed box surface.", "<example:Box id=\"box\" semantic={speech.semantic}/>") , preview: previewImage("Box.png") } },
   { name: "text", tag: "Text", mode: "structured", outputs: [exampleTypes.text, temporalTypes.instantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A text-bearing surface.", "<example:Text id=\"title\" semantic={speech.semantic}>Hello</example:Text>"), preview: previewImage("Box.png") } },
   { name: "media-slot", tag: "MediaSlot", mode: "structured", outputs: [exampleTypes.mediaSlot, compositionTypes.visualTrack], vocabulary: { ...vocabulary("A media slot whose content is a graph input.", "<example:MediaSlot id=\"shot\" semantic={speech.semantic}/>") , preview: previewImage("Box.png") } },
+  { name: "style", tag: "Style", mode: "structured", outputs: [exampleTypes.style], vocabulary: {
+    summary: "Decodes one SVS Recipe and exact FontStackRef into a Style value.",
+    attributes: [
+      { name: "id", kind: "identifier", required: true, summary: "Names this Style." },
+      { name: "recipe", kind: "reference", required: true, accepts: [svsRecipeType], summary: "The decoded recipe with path and properties." },
+      { name: "font", kind: "reference", required: true, accepts: [mediaTypes.fontStack], summary: "An exact FontStackRef." },
+    ], example: "<example:Style id=\"card\" recipe={recipes.card} font={caption-font}/>",
+  } },
 ] as const;

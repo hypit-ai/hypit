@@ -83,9 +83,8 @@ Recipe padding must be a string* while `radius: 0` beside it is correct, and the
 and twelve horizontal — which no JSON number can carry, so it travels as text and is split on the
 space. A single value is still written as one: `padding: "0"`.
 
-`cue-min-words` and `cue-max-words` are not read. `docs/quickstart/styles.md` and
-`docs/quickstart/composition.md` still show them; a Recipe carrying either is refused as an unknown
-property, since the Style admits exactly the required keys plus the documented optional ones.
+`cue-min-words` and `cue-max-words` are not Recipe properties. Cue length belongs to Script `||`
+boundaries and the route's `validate_script_cues` gate.
 
 ## Cue boundaries are marked in the Script, with `||`
 

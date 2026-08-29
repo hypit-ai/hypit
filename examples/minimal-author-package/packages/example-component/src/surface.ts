@@ -1,6 +1,8 @@
 import type { StructuredElement, StructuredSurfaceHandler, SurfaceComponentDraft, SurfaceRecordDraft, SurfaceResolvedReference } from "@hypit/markup";
 import { exampleBoxFragment, exampleMediaFragment, exampleTextFragment } from "./fragment.js";
 import { exampleMarkupSurfaces, exampleTypes } from "./manifest.js";
+import { mediaTypes } from "@hypit/media";
+import { svsRecipeType } from "@hypit/svs";
 
 function text(element: StructuredElement, name: string): string {
   const value = element.attributes[name];
@@ -17,6 +19,14 @@ function reference(element: StructuredElement, name: string, resolve: (path: str
 
 export const decodeExampleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   const id = text(element, "id");
+  if (element.name.endsWith(":Style")) {
+    const recipe = reference(element, "recipe", resolveReference);
+    const font = reference(element, "font", resolveReference);
+    if (recipe.type.module.name !== svsRecipeType.module.name || recipe.type.name !== svsRecipeType.name) throw new Error("Style.recipe must be an SVS Recipe.");
+    if (font.type.module.name !== mediaTypes.fontStack.module.name || font.type.name !== mediaTypes.fontStack.name) throw new Error("Style.font must be a FontStackRef.");
+    if (recipe.record?.value.kind !== "inline" || font.record?.value.kind !== "inline") throw new Error("Style references must resolve to inline records.");
+    return { records: [{ id, type: exampleTypes.style, value: { kind: "inline", value: { recipe: recipe.record.value.value, fonts: font.record.value.value } }, range: element.range }], components: [], fragments: [], exports: [id] };
+  }
   const semantic = reference(element, "semantic", resolveReference);
   const surface = exampleMarkupSurfaces.find((item) => item.tag === element.name.split(":").at(-1));
   if (surface === undefined) throw new Error(`Unknown example surface ${element.name}`);
