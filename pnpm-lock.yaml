@@ -485,6 +485,9 @@ importers:
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../semantic-track
+      '@hypit/spatial':
+        specifier: workspace:*
+        version: link:../spatial
       '@hypit/svs':
         specifier: workspace:*
         version: link:../svs
@@ -2655,6 +2658,27 @@ importers:
         specifier: workspace:*
         version: link:../text
 
+  packages/semantic-take-adjust:
+    dependencies:
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@hypit/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/speech':
+        specifier: workspace:*
+        version: link:../speech
+
   packages/semantic-take-estimate:
     dependencies:
       '@hypit/component-kit':
@@ -2733,6 +2757,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/svs':
+        specifier: workspace:*
+        version: link:../svs
     devDependencies:
       '@hypit/core':
         specifier: workspace:*
