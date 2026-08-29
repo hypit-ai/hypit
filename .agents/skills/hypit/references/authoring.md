@@ -15,6 +15,12 @@ Never invent a
 component, attribute, child, port, Recipe property or literal value. Do not infer one package's
 syntax from a neighboring package.
 
+An admitted declaration value is not a promise that every Provider endpoint accepts it. Before a
+paid Build, run the Runtime preflight and read the selected Provider README for endpoint limits; a
+Provider may reject a value that the model-neutral package declares. For example, KIE's GPT Image 2
+endpoint rejects `4:3`, `3:4` and `4:5` even though the model contract admits those ratios. Resolve
+such a mismatch before submission, never after the first paid generation has completed.
+
 Install dependencies after package selections change. Validate with one command:
 
 ```bash
@@ -65,6 +71,14 @@ For a Run opened in Studio, add `--exclude-targets` and keep every declared Targ
 Target satisfied by its accepted media Record is an opaque finished file, so Studio cannot trace it
 to the current Film graph. The accepted-material Studio handoff is defined in
 `studio-confirmation.md`.
+
+Pinning accepted `build-record` Candidates does not invalidate the gates, but the archive must be
+opened with the Runtime Profile so those Records can be resolved. Pass the profile to every gate that
+supports it: `validate_local_author_packages --runtime <profile>`, `layout_check --runtime <profile>`,
+`reconstruction_check --runtime <profile>` and `authoring_check --runtime <profile>`; for
+`preview_check`, pass the profile as its optional second operand:
+`preview_check <run> <profile>`. Never remove accepted pins or rerun a paid Build just to make a gate
+read an archived Record.
 
 **Pin what a Provider was paid to make, and nothing the Source computes.** `--pin` emits a line for
 every accepted output, including the ones the Script's own structure produced: `speech.semantic`,
