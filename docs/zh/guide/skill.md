@@ -185,7 +185,7 @@ environment → brief-frozen → examples/格式/craft 决策
 |---|---|---|---|
 | 1. 启动 | 选择 Distribution、项目目录、runtime 和凭据，启动路线快照。 | `environment.md`、`runtime.md`、`route_state start`、`hypit paths`、`hypit runtime use/up` | 在写 Source 前就有可运行项目和恢复游标。 |
 | 2. 把描述变成可执行 brief | 确定受众、Hook、承诺、节拍、事实声明、人物以及视觉/音频/文字关系；检查完整语义 examples，但不复制其 Source。 | `brief-intake.md`、`examples/` | `.hypit/brief.json` 冻结“什么算正确”，后续检查不靠模糊的“看起来不错”。 |
-| 3. 冻结格式与 craft | 选择匹配的 playbook，并读取它要求的全部 craft 文档。 | `playbooks/index.md`、`formats/*.md`、链接的 `craft/*.md` | 得到明确的时间模型、镜头语法、字幕规则和视觉连续性规则。 |
+| 3. 冻结格式与 craft | 选择匹配的 playbook，并读取它要求的全部 craft 文档。原创时，在写生成提示词前先为反复出现的人物、产品、声音、地点、服装、灯光和道具建立锚点，再在各个 take 中复用。 | `playbooks/index.md`、`formats/*.md`、`craft/visual-continuity.md`、`craft/persona-and-audio.md`、`craft/generated-dependencies.md` | 即使没有参考视频，也能得到明确的时间模型、镜头语法、字幕规则，以及跨镜头的人物、场景和物品连续性。 |
 | 4. 适配组件 | 枚举候选包，检查公开词汇，决定复用、接受少量差异，或开发项目本地包。 | `list_svml_packages`、`inspect_svml_vocabulary`、`inspect_visual_contract`、`vocabulary.md`、`component-fit.json` | 每个视觉角色在写 Source 前就有合法的 Module/Tag/Recipe 契约；真实缺口通过 `local-author-package.md` 一次解决。 |
 | 5. 写 Script | 把旁白切成 Segment/Take 和短 Cue；每个镜头只承担一个明确任务，时间保持语义化。 | `script-time.md`、`authoring.md` | `main.svml` 包含完整的说话/文字推进和确定性的 `estimate:Speech` 时长。 |
 | 6. 接通项目 | 编写 `main.svml`、`recipes.svs`、`build.svrun`、`hypit.runtime.json`；显式声明每个生成、Track、Candidate、satisfy 和 Target。 | `authoring.md`、`runtime.md` | Film graph 是完整、可复现的，不是一个提示词加上一堆互不相连的素材。 |
