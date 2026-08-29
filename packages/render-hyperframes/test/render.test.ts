@@ -82,7 +82,6 @@ import {
   semanticTrackDependency,
   semanticTrackTypes,
 } from "@hypit/semantic-track";
-import { svsManifest } from "@hypit/svs";
 
 const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
   durationSec: 2,
@@ -107,7 +106,6 @@ const closure = createResolvedClosure([
   hyperframesManifest,
   mediaPipelineManifest,
   renderHyperframesManifest,
-  svsManifest,
 ]);
 const compositionRecord = await admitRecord(closure, sealRecord({
   id: "composition",
@@ -341,7 +339,6 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
     mediaPipelineManifest,
     renderHyperframesManifest,
     fixtureManifest,
-    svsManifest,
   ]);
   const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
