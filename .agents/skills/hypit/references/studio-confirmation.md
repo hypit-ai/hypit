@@ -58,6 +58,8 @@ VLM, comparison, observer or visual judgement as part of Revision. Do not restar
 Studio merely because Source changed. If the startup parameters change (for example a different Run,
 workspace or port), stop the previous Studio first so the new server cannot collide with its port.
 
-Use the existing `preview.md` startup command and `revision_state` snapshot. Studio startup is a
+Use the existing `preview.md` startup command and `revision_state` snapshot. In a contributor
+checkout, `hypit-studio` means `node <checkout>/bin/hypit-studio.mjs` and is a standalone entrypoint,
+not `hypit studio`. Studio startup is a
 display handoff, not permission to Build; a new paid generation still requires a fresh cost
 confirmation.

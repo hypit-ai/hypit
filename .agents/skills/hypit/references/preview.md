@@ -35,6 +35,10 @@ The same check is also a bin of its own:
 hypit-preview-check /path/to/project/build.svrun
 ```
 
+When running from a contributor checkout, the exact launcher is
+`node <checkout>/bin/hypit-preview-check.mjs /path/to/project/build.svrun`. The bare command above
+is only the documented abbreviation; it is not a subcommand of `hypit`.
+
 Prefer the subcommand. `--package-root <dir>` is needed only when the project has no `package.json`
 or when an explicit package root is desired; it changes Host package lookup, not Source Workspace.
 With a project-root `package.json`, omit it. The bare bin fixes the package root to the Run file's own

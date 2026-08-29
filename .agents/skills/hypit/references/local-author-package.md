@@ -74,8 +74,13 @@ themselves, so it says what will be accepted rather than what one package happen
 When `inspect_svml_vocabulary` finds no close structural sibling, write from these documents and the
 minimal fixture at `examples/minimal-author-package/packages/example-component/`. Do not read an
 unrelated business package to discover generic API shapes. If the public contract still leaves a
-required shape undefined, report a repository documentation defect instead of continuing package
-archaeology.
+required shape undefined, record the missing shape and its effect in route state, then continue with
+the closest bounded interpretation supported by the visible contract. Do not invent an undeclared
+binding or silently treat the gap as resolved. After the route has finished, report the
+Skill/documentation gap with the package/module and version, exact command and checkout commit,
+missing Type/Surface/Producer field, complete inspection output, expected authoring shape, and the
+smallest Source demonstrating the gap. A binding such as `<id>.audio` absent from both the README and
+inspection output is reported this way.
 
 There is one deliberate exception. If vocabulary inspection proves that an installed package has the
 same input/output Types, timing contract, terminal Track and Surface ports, and only the Style,
@@ -350,8 +355,8 @@ Checkpoint that evidence as a controlled waiver (or use `blocked` when no mainta
 available):
 
 ```bash
-hypit-reference-video-tools route_state checkpoint --project-root <project> --route <route> \
-  --step package-ready --status complete --artifacts '{"package_ready":".hypit/evidence/gate-waiver.json"}' \
+hypit-reference-video-tools route_state --action checkpoint --project-root <project> --route <route> \
+  --state package-ready --status complete --artifacts '{"package_ready":".hypit/evidence/gate-waiver.json"}' \
   --error "<exact gate error>" --decision "gate waiver recorded with reproducible diagnosis"
 ```
 
