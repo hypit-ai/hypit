@@ -253,7 +253,7 @@ Choose the Kit by format, then provide its declared dynamic slots and ordered re
 | Silent B-roll | `broll-v1` | `story` | one or more authored images |
 | Two-person podcast | `podcast-v1` | `dialogue`; optional `action` | images 1/2 = A/B views; audio 1/2 = A/B voices |
 | Video call | `call-v1` | `dialogue`; optional `action` | images 1/2 = reversed call layouts; audio 1/2 = A/B voices |
-| Street interview | `street-interview-v1` | `dialogue`; optional `action` | image 1 = complete scene; audio 1/2 = interviewer/guest |
+| Street interview | `street-interview-v1` | `dialogue`; optional `action` | images 1/2/3 = interviewer/guest/shared views; audio 1/2 = interviewer/guest |
 | Motion transfer | `motion-reference-v1` | optional `direction` | image 1 = subject; video 1 = motion reference |
 | Camera transfer | `camera-reference-v1` | optional `direction` | image 1 = subject; video 1 = camera reference |
 
@@ -262,9 +262,9 @@ order.
 
 ## Street-interview prompt assembly
 
-Use `street-interview-v1` for the stable scene, role, microphone, voice and no-overlay contracts.
-Select framing, edit, pacing, performance, reaction and gesture through an SVS Recipe; provide only
-the authored dialogue and optional per-take action as dynamic Text edges:
+Use `street-interview-v1` for the stable view order, role, microphone, voice and no-overlay contracts.
+Select framing, pacing, performance, reaction and gesture through an SVS Recipe. Put each take's
+camera changes and performance in its authored action, in the exact order they should happen:
 
 ```svml
 <import as="text" from="@hypit/text@1"/>
@@ -272,7 +272,8 @@ the authored dialogue and optional per-take action as dynamic Text edges:
 <import as="interview-kit" source="./kits/street-interview-v1.svs"/>
 
 <text:Value id="interview-action">
-  Let the guest pause briefly before the answer; keep the microphone handoff natural.
+  Begin with the shared view from @image3 while A asks the question.
+  Cut to B's view from @image2 as B pauses briefly, then answers.
 </text:Value>
 
 <text:Render id="interview-prompt"
@@ -285,7 +286,9 @@ the authored dialogue and optional per-take action as dynamic Text edges:
 <seedance:ReferenceVideo id="interview-take" model="mini"
   prompt={interview-prompt} duration={interview-duration.duration}
   resolution="720p" aspect-ratio="9:16" generate-audio="true">
-  <seedance:Reference image={interview-scene}/>
+  <seedance:Reference image={interviewer-view}/>
+  <seedance:Reference image={guest-view}/>
+  <seedance:Reference image={shared-view}/>
   <seedance:Reference audio={interviewer-voice}/>
   <seedance:Reference audio={guest-voice}/>
 </seedance:ReferenceVideo>

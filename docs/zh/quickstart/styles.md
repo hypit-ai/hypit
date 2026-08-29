@@ -313,7 +313,6 @@ Street Interview、Podcast 与 Call 使用同一套 Recipe 机制，不需要手
 ```svs
 interview.street {
   framing: soft-handheld;
-  edit-language: pause-trim;
   pacing: compact;
   performance: natural-street;
   reaction: active;
@@ -321,7 +320,7 @@ interview.street {
 }
 ```
 
-`street-interview-v1` 读取这六个轴。`podcast-v1` 与 `call-v1` 读取同名的 `framing`、
+`street-interview-v1` 读取这五个轴，每段的镜头变化按作者顺序直接写在 `action` 中。`podcast-v1` 与 `call-v1` 读取同名的 `framing`、
 `edit-language`、`pacing`、`performance`、`reaction` 和 `gesture` 轴，但使用各自的有限值。允许值和默认值以所选 Kit 文件为准。
 
 模型、分辨率、时长和参考媒体不是模板策略；它们继续存在于精确模型 Surface 与显式图边中。

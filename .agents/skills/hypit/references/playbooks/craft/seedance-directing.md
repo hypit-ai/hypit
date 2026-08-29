@@ -35,7 +35,7 @@ Choose the Kit by meaning:
 | silent B-roll | `broll-v1` | one or more authored images |
 | two-person podcast | `podcast-v1` | images 1/2 = final A/B views; audio 1/2 = A/B voices |
 | video call | `call-v1` | images 1/2 = reversed call layouts; audio 1/2 = A/B voices |
-| street interview | `street-interview-v1` | image 1 = complete scene; audio 1/2 = interviewer/guest |
+| street interview | `street-interview-v1` | images 1/2/3 = interviewer/guest/shared views; audio 1/2 = interviewer/guest |
 | body-motion transfer | `motion-reference-v1` | image 1 = subject; video 1 = motion reference |
 | camera-language transfer | `camera-reference-v1` | image 1 = subject; video 1 = camera reference |
 
