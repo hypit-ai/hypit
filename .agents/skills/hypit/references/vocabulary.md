@@ -137,8 +137,8 @@ resuming package work, Source authoring or visual repair.
 
 ## A real gap
 
-For a real gap, stop authoring sources and read `local-author-package.md` completely. Implement and
-install the new project-local package, then run
+For a real gap, read `local-author-package.md` completely. Implement and install the new
+project-local package, then run
 `hypit-reference-video-tools inspect_svml_vocabulary` against it before using its tag. That call is
 not redundant with having just written the package: it proves the specifier
 resolves, the activation contribution is wired, and the loader can decode the Surface. `pnpm check`

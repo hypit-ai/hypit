@@ -65,6 +65,32 @@ request-captured → impact-assessed → intent-mapped → source-updated
 → revision-complete → build-complete (only if paid generation changed)
 ```
 
+`revision_state` checkpoints use the numeric `--step` flag, not a stage name. The mapping is:
+
+| Step | Stage |
+|---:|---|
+| 1 | request-captured |
+| 2 | impact-assessed |
+| 3 | intent-mapped |
+| 4 | source-updated |
+| 5 | gates-checked |
+| 6 | preview-rendered |
+| 7 | review-complete |
+| 8 | final-checked |
+| 9 | revision-complete |
+| 10 | build-complete |
+
+For example, after editing Source, record step 4 with:
+
+```bash
+hypit-reference-video-tools revision_state --action checkpoint \
+  --project-root <project> --step 4 --status complete \
+  --decision "source update recorded"
+```
+
+Use the same numeric mapping for every later checkpoint; `--state` is not accepted by
+`revision_state`.
+
 `preview-rendered` and `review-complete` are not required work in this route. `review-complete` is
 deliberately not a VLM/observer step. Revision does not call
 `review_element`, `compare_reconstruction`, Vertex, WhisperX or any other visual observer. Mark that
