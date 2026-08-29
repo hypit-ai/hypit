@@ -65,6 +65,9 @@ directory, and
 `validate_script_cues` (maximum four visible words per Cue). `preview_check` and the route's final
 check repeat these gates even if route-state claims they were completed.
 
+Agent-boundary constraint: do not read or rely on the memory of Codex, Claude Code, or any other
+coding agent.
+
 Do not create or hand-author SVG images anywhere in an author project or project-local package.
 This includes `.svg` assets, inline `<svg>` markup, and SVG data URLs.
 
