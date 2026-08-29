@@ -21,10 +21,7 @@ export const gptImage2Ports: GenerationPortTable = sealGenerationPortTable({
       name: "aspectRatio",
       value: {
         kind: "enum",
-        // What the model produces. The wider shapes an image API will name in general — 2:1, 3:1,
-        // 21:9 and their inverses — this one refuses, and the refusal arrives from the Provider
-        // after the request was made rather than from validation before it.
-        values: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16"],
+        values: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16", "21:9"],
       },
       minItems: 1,
       maxItems: 1,
@@ -79,7 +76,7 @@ const gptImageAttributes: readonly SurfaceAttributeVocabulary[] = [
     kind: "literal",
     required: true,
     summary: "The shape of the generated picture.",
-    values: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16"],
+    values: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16", "21:9"],
   },
   {
     name: "resolution",
