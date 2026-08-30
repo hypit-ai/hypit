@@ -57,14 +57,14 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th width="16%">Reference</th>
     <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/e525a2d0-d871-492e-b29d-0b6763361078" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/f573bdac-62da-4b5d-825d-54d5880a7026" controls muted></video></td>
     <td width="28%"></td>
   </tr>
   <tr>
     <th width="16%">Clones</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/50699171-c370-45c5-979a-90f2e3ff6fa6" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/6d3ce2fe-d82e-4ee2-bcc2-d176ef5ebeae" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/3b18ebde-691d-458a-b6cd-8cc9a98f1511" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/3ffd9951-e423-4a48-ad8f-5c596627be69" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/eb62372d-2464-4a4b-83ee-41e227f99a8e" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/9ba050f6-355d-460c-b684-7344cf49c051" controls muted></video></td>
   </tr>
   <tr>
     <td colspan="4"><p><b>"GOAT DEBATE"</b> — a 20-second football tier list that puts Ronaldo in D and Messi in S. Two Seedance 2 Mini 720p trolling A-rolls, a 2K goth girl portrait and ten 1K brain-rot B-rolls by GPT Image 2, WhisperX word alignment, a sound-synced ranking board, color-box karaoke captions, buttery-smooth animation and catchy background music, concurrently rendered in 64 headless Chromium processes.</p><p>Three clones included: swap the narrator to banana cat, flip the rankings and Ronaldo becomes GOAT, or replace all players with tech founders — same viral structure, different viral video.</p><p>Total cost: <b>$1.15</b>.</p></td>
