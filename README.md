@@ -43,6 +43,12 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 
 **To be clear:** cloning a video is the fastest way in, not the only one. You can start from our templates, or just describe the video you want and your agent writes the workflow from scratch. Generation models are optional too: a workflow can compile captions, motion graphics and code-rendered visuals into a finished video without calling a single model, so a video can cost exactly $0.
 
+## Install once
+
+```bash
+npx skills add hypit-ai/hypit -g
+```
+
 ## Why Hypit
 
 - **Clone any video:** drop in a video, get the whole workflow — footage, captions, B-roll, effects. Not a script breakdown.
@@ -61,12 +67,6 @@ Drop in a video and your agent clones the whole workflow — or describe what yo
 - **Podcast and interview clips** — split-screen layouts, speaker-aware captions, reaction overlays.
 - **Code-rendered videos** — visuals driven entirely by front-end code. Compiled from source, zero API calls, 0 dollars a video.
 - **Localized versions** — the same video in ten languages. Rewrite a line and the timing re-flows itself.
-
-## Install once
-
-```bash
-npx skills add hypit-ai/hypit -g
-```
 
 ## Examples
 
