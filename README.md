@@ -43,6 +43,25 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 
 **To be clear:** cloning a video is the fastest way in, not the only one. You can start from our templates, or just describe the video you want and your agent writes the workflow from scratch. Generation models are optional too: a workflow can compile captions, motion graphics and code-rendered visuals into a finished video without calling a single model, so a video can cost exactly $0.
 
+## Why Hypit
+
+- **Clone any video:** drop in a video, get the whole workflow — footage, captions, B-roll, effects. Not a script breakdown.
+- **One workflow, 100 variants:** the second video costs almost nothing; the hundredth is a loop.
+- **Pluggable components:** swap the host without touching the captions. Use the library, fork it, or write your own.
+- **Open source, $0:** no seat pricing, no per-render fees, no watermark. Arcads charges $220/mo, Creatify $39, before you render anything — but Hypit is $0.
+
+## What Hypit Can Build
+
+Drop in a video and your agent clones the whole workflow — or describe what you want and it writes one from scratch. Either way you get an editable, re-runnable composition, not a one-off render.
+
+- **Paid social ads** — clone a winning ad from the Meta Ad Library, swap in your product, ship 50 hook variants the same day. When it fatigues in two weeks, re-run with fresh openings; the body never changes.
+- **Viral clones** — any TikTok, Reel, or Short becomes a template. Swap the host, the hook, the product, the language, the aspect ratio.
+- **TikTok Shop and affiliate videos** — one format that converts, a new SKU every day. Swap the product, the price, the CTA; the structure that worked stays untouched.
+- **AI UGC and talking heads** — narration, word-level captions, B-roll, comment stickers, beat-synced cuts, all wired automatically.
+- **Podcast and interview clips** — split-screen layouts, speaker-aware captions, reaction overlays.
+- **Code-rendered videos** — visuals driven entirely by front-end code. Compiled from source, zero API calls, 0 dollars a video.
+- **Localized versions** — the same video in ten languages. Rewrite a line and the timing re-flows itself.
+
 ## Install once
 
 ```bash
@@ -133,25 +152,6 @@ Your agent can check the environment, request only the credentials the video nee
 Star us, and you will receive all release notifications from GitHub without any delay!
 
 ![Stay tuned with us](./docs/public/star.gif)
-
-## Why Hypit
-
-- **Clone any video:** drop in a video, get the whole workflow — footage, captions, B-roll, effects. Not a script breakdown.
-- **One workflow, 100 variants:** the second video costs almost nothing; the hundredth is a loop.
-- **Pluggable components:** swap the host without touching the captions. Use the library, fork it, or write your own.
-- **Open source, $0:** no seat pricing, no per-render fees, no watermark. Arcads charges $220/mo, Creatify $39, before you render anything — but Hypit is $0.
-
-## What Hypit Can Build
-
-Drop in a video and your agent clones the whole workflow — or describe what you want and it writes one from scratch. Either way you get an editable, re-runnable composition, not a one-off render.
-
-- **Paid social ads** — clone a winning ad from the Meta Ad Library, swap in your product, ship 50 hook variants the same day. When it fatigues in two weeks, re-run with fresh openings; the body never changes.
-- **Viral clones** — any TikTok, Reel, or Short becomes a template. Swap the host, the hook, the product, the language, the aspect ratio.
-- **TikTok Shop and affiliate videos** — one format that converts, a new SKU every day. Swap the product, the price, the CTA; the structure that worked stays untouched.
-- **AI UGC and talking heads** — narration, word-level captions, B-roll, comment stickers, beat-synced cuts, all wired automatically.
-- **Podcast and interview clips** — split-screen layouts, speaker-aware captions, reaction overlays.
-- **Code-rendered videos** — visuals driven entirely by front-end code. Compiled from source, zero API calls, 0 dollars a video.
-- **Localized versions** — the same video in ten languages. Rewrite a line and the timing re-flows itself.
 
 ## How to Contribute
 
