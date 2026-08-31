@@ -4,6 +4,7 @@ import test from "node:test";
 import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
 import type { AsyncEndpoint } from "@hypit/endpoint-kit";
 import type { CanonicalValue, Need } from "@hypit/protocol";
+import { mimoTtsEndpoints } from "@hypit/mimo-tts";
 import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
 
 import { createHypiHubProvider } from "../src/provider.js";
@@ -26,6 +27,28 @@ async function endpointFor(request: Need, fetch: typeof globalThis.fetch): Promi
   assert.equal(resolution.registration.kind, "asynchronous");
   return resolution.registration.endpoint;
 }
+
+test("HypiHub keeps audio opt-in so official MiMo can own the default audio routes", async () => {
+  const registry = new EndpointRegistry();
+  await createHypiHubProvider({ fetch: async () => { throw new Error("audio must not call fetch"); } }).install(registry);
+  assert.equal(registry.resolve({
+    id: "need:hypihub-audio-default",
+    capability: mimoTtsEndpoints.preset.capability,
+    returns: mimoTtsEndpoints.preset.returns,
+    constraints: { ports: {} },
+    result: "record:hypihub-audio-default",
+  }).status, "missing");
+
+  const optedIn = new EndpointRegistry();
+  await createHypiHubProvider({ audio: true, fetch: async () => { throw new Error("not reached"); } }).install(optedIn);
+  assert.equal(optedIn.resolve({
+    id: "need:hypihub-audio-opt-in",
+    capability: mimoTtsEndpoints.preset.capability,
+    returns: mimoTtsEndpoints.preset.returns,
+    constraints: { ports: {} },
+    result: "record:hypihub-audio-opt-in",
+  }).status, "resolved");
+});
 
 test("HypiHub uploads referenced Artifacts once, submits their HTTPS URLs, and persists the result", async () => {
   const artifacts = new MemoryArtifactStore();

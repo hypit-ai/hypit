@@ -39,5 +39,7 @@ Artifacts are uploaded automatically through `POST /v1/files`, then their return
 URLs are used in image and video requests. Uploads are deduplicated by Artifact digest within one
 Runtime operation. Embedded callers may override that transport with `publicAssetUrl`.
 
-Set `audio: false` when official `@hypit/provider-xiaomi-mimo` should own MiMo audio capabilities;
-one Runtime can then use HypiHub for image/video and the official MiMo endpoint for audio.
+HypiHub audio capabilities are disabled by default because a HypiHub key may not include the MiMo
+audio models. Set `audio: true` only when that key explicitly has them enabled. The usual setup keeps
+official `@hypit/provider-xiaomi-mimo` as the audio endpoint, so one Runtime uses HypiHub for
+image/video and official MiMo for audio.
