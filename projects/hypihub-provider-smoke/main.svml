@@ -10,7 +10,6 @@
   <import as="h3" from="@hypit/minimax-h3@1"/>
   <import as="grok" from="@hypit/grok-imagine@1"/>
   <import as="mimo" from="@hypit/mimo-tts@1"/>
-  <import as="recipes" source="./recipes.svs"/>
 
   <text:Value id="prompt">A tiny red paper boat on a blue studio table, clean product photograph, no text.</text:Value>
   <text:Value id="edit-prompt">Keep the paper boat unchanged and make the studio background warm orange, no text.</text:Value>
