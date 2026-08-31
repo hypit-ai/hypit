@@ -5,10 +5,11 @@ paid generation and Gemini VLM requests; callers may keep their own Provider and
 when its key is configured.
 
 It maps the currently shipped image/video model capabilities to HypiHub, including image edits and
-image/video reference inputs, submits jobs, polls them, downloads the first-class assets and persists
-them in Hypit's configured ArtifactStore. References are sent as HypiHub-compatible `data:` URLs, so
-the adapter does not require a provider-specific public upload bucket. It also exports a small
-Gemini-native VLM generator for callers that previously used Vertex.
+image-to-video first-frame inputs, submits jobs, polls them, downloads the first-class assets and
+persists them in Hypit's configured ArtifactStore. Image references are sent as HypiHub-compatible
+`data:` URLs. Video-reference inputs require a public HTTPS URL and are rejected clearly when the
+configured ArtifactStore cannot provide one. It also exports a small Gemini-native VLM generator for
+callers that previously used Vertex.
 
 Runtime Profile example:
 

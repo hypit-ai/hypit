@@ -8,17 +8,16 @@ const NANO_BANANA: ModuleRef = { name: "@hypit/nano-banana", version: "1" };
 const SEEDREAM: ModuleRef = { name: "@hypit/seedream", version: "1" };
 const MINIMAX: ModuleRef = { name: "@hypit/minimax-h3", version: "1" };
 const GROK: ModuleRef = { name: "@hypit/grok-imagine", version: "1" };
-const MIMO: ModuleRef = { name: "@hypit/mimo-tts", version: "1" };
 
 const seedance = (name: string, model: string): GenerationWireMapping => ({
   capability: { module: SEEDANCE, name }, result: "video", routes: [{ model }],
   fields: {
     prompt: { as: "value", field: "prompt" },
-    referenceImage: { as: "urlArray", field: "reference_image_urls" },
-    referenceVideo: { as: "urlArray", field: "reference_videos" },
+      referenceImage: { as: "urlArray", field: "reference_image_urls" },
+      referenceVideo: { as: "urlArray", field: "reference_videos" },
     referenceAudio: { as: "urlArray", field: "reference_audios" },
-    firstFrame: { as: "url", field: "first_image_url" },
-    lastFrame: { as: "url", field: "last_image_url" },
+      firstFrame: { as: "url", field: "first_image_url" },
+      lastFrame: { as: "url", field: "last_image_url" },
     resolution: { as: "value", field: "resolution" },
     aspectRatio: { as: "value", field: "aspect_ratio" },
     duration: { as: "value", field: "seconds" },
@@ -41,7 +40,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
       prompt: { as: "value", field: "prompt" },
       aspectRatio: { as: "value", field: "aspect_ratio" },
       resolution: { as: "value", field: "size", whenAbsent: "1024x1024" },
-      images: { as: "urlArray", field: "images" },
+      images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
     },
   },
   ...(["nano-banana-2", "nano-banana-pro"] as const).map((model) => ({
@@ -79,11 +78,11 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     fields: {
       prompt: { as: "value", field: "prompt" }, duration: { as: "value", field: "seconds" },
       resolution: { as: "value", field: "resolution" }, aspectRatio: { as: "value", field: "aspect_ratio" },
-      referenceImage: { as: "urlArray", field: "reference_image_urls" },
-      referenceVideo: { as: "urlArray", field: "reference_videos" },
+    referenceImage: { as: "urlArray", field: "reference_image_urls" },
+    referenceVideo: { as: "urlArray", field: "reference_videos" },
       referenceAudio: { as: "urlArray", field: "reference_audios" },
-      firstFrame: { as: "url", field: "first_image_url" },
-      lastFrame: { as: "url", field: "last_image_url" },
+    firstFrame: { as: "url", field: "first_image_url" },
+    lastFrame: { as: "url", field: "last_image_url" },
     },
   },
   {
@@ -107,13 +106,6 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
       prompt: { as: "value", field: "prompt" }, duration: { as: "value", field: "seconds" },
       resolution: { as: "value", field: "resolution" }, aspectRatio: { as: "value", field: "aspect_ratio" },
       images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
-    },
-  },
-  {
-    capability: { module: MIMO, name: "mimo-v2.5-tts" }, result: "audio", routes: [{ model: "mimo-v2.5-tts" }],
-    fields: {
-      text: { as: "value", field: "input" }, voice: { as: "value", field: "voice" },
-      output: { as: "value", field: "output", whenAbsent: "binary" },
     },
   },
 ];
