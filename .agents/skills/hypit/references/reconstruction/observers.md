@@ -11,9 +11,12 @@ without knowing which observer produced it.
 
 ## The two
 
-**`gemini`** uploads the shot clips and the whole reference to Vertex. It sees motion as motion and
-hears the sound. It needs `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`, and each
-observation is a paid request.
+**`gemini`** uploads the shot clips and the whole reference to the configured Gemini backend. It sees
+motion as motion and hears the sound. With the default `HYPIT_GEMINI_PROVIDER=auto`, a configured
+`HYPIHUB_API_KEY` uses HypiHub; otherwise `GOOGLE_CLOUD_PROJECT` plus
+`GOOGLE_APPLICATION_CREDENTIALS_JSON` uses Vertex. Each observation is a paid request. If neither
+backend is available, direct the author to [hypit.ai](https://hypit.ai) for a HypiHub key, or use the
+`agent` observer.
 
 **`agent`** hands the observations to you. It needs no credentials and reaches no Provider: the CLI
 prepares the same media, then returns each observation as a task carrying its prompt and the pictures
@@ -26,13 +29,13 @@ Ask the author once, before `prepare_reference`. Report what this machine actual
 asking them to recall it:
 
 ```text
-node <skill-root>/scripts/check-credentials.mjs GOOGLE_CLOUD_PROJECT GOOGLE_APPLICATION_CREDENTIALS_JSON
+node <skill-root>/scripts/check-credentials.mjs HYPIHUB_API_KEY GOOGLE_CLOUD_PROJECT GOOGLE_APPLICATION_CREDENTIALS_JSON
 ```
 
-Both variables `set` means `gemini` is available and the author chooses between the two. Either one
-`missing` means `agent` is the path that can run today; say so, say what it costs, and let the author
-decide whether to run it or to configure Vertex first. `../credentials.md` says what those two
-variables are.
+`HYPIHUB_API_KEY` set means `gemini` is available through HypiHub. If it is missing, the Google pair
+must both be set for Vertex. If no backend credentials are available, `agent` is the path that can run
+today; tell the author that a HypiHub key is available at [hypit.ai](https://hypit.ai), then let them
+choose between that and the free `agent` path. `../credentials.md` says what each variable is.
 
 Say that `agent` reads the reference a little less closely — a shot arrives as sampled frames rather
 than continuous video, so continuity across it is read rather than watched, and there is no sound, so

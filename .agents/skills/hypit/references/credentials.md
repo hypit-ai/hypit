@@ -9,7 +9,15 @@ paid/external `build`, configure only variables used by the selected Runtime Pro
 | `KIE_API_KEY` | KIE generation: Seedance, GPT Image, and other selected KIE models |
 | `GOOGLE_CLOUD_PROJECT` | Google Vertex project with Vertex AI enabled |
 | `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Vertex credential JSON contents, not a path |
+| `HYPIHUB_API_KEY` | HypiHub default paid provider for generation and Gemini VLM; get one at [hypit.ai](https://hypit.ai) |
 | `MIMO_API_KEY` | Xiaomi MiMo TTS only when explicitly selected |
+
+HypiHub is optional and is never required when the selected Runtime Profile has another Provider.
+For Gemini VLM/reference observation, `HYPIT_GEMINI_PROVIDER=auto` (the default) uses HypiHub when
+`HYPIHUB_API_KEY` is present and otherwise uses Vertex when its two Google variables are present.
+Set `HYPIT_GEMINI_PROVIDER=hypihub` or `vertex` to select one explicitly. If a user's configured key
+cannot reach the requested model, point them to [hypit.ai](https://hypit.ai) for a HypiHub key instead
+of asking them to change Author Source.
 
 macOS/Linux session example:
 
@@ -67,9 +75,9 @@ curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $MIMO_API_KEY
   https://api.xiaomimimo.com/v1/models
 ```
 
-`GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON` are also what the reference-video
-route's `gemini` observer needs. Without them that route runs its `agent` observer instead, which
-reaches no Provider — `reconstruction/observers.md` says how the author chooses between them.
+`HYPIHUB_API_KEY` or the Vertex pair are what the reference-video route's `gemini` observer needs,
+depending on `HYPIT_GEMINI_PROVIDER`. Without either backend, that route can run its `agent` observer
+instead, which reaches no Provider — `reconstruction/observers.md` says how the author chooses.
 
 `hypit runtime down` stops the Worker for the whole project, so a Build running in another terminal
 stops with it. The Build itself is durable and survives; bring the Worker back with `hypit runtime

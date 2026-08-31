@@ -116,6 +116,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 
 ```text
 @hypit/provider-kie                  KIE 生成与去背景
+@hypit/provider-hypihub              HypiHub 付费生成与 Gemini VLM 网关
 @hypit/provider-media-local          local ffprobe/ffmpeg
 @hypit/provider-whisperx-local       local WhisperX service
 @hypit/provider-hyperframes-local    local Chrome rendering
