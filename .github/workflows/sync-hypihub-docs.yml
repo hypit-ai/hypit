@@ -15,26 +15,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Dispatch documentation sync
-        uses: actions/github-script@v7
         env:
-          HYPIHUB_SYNC_TOKEN: ${{ secrets.HYPIHUB_SYNC_TOKEN }}
-        with:
-          script: |
-            const token = process.env.HYPIHUB_SYNC_TOKEN;
-            if (!token) {
-              core.setFailed("HYPIHUB_SYNC_TOKEN is not configured");
-              return;
-            }
-
-            const { getOctokit } = require("@actions/github");
-            const client = getOctokit(token);
-            await client.rest.repos.createDispatchEvent({
-              owner: "hypit-ai",
-              repo: "hypihub",
-              event_type: "hypit-docs-updated",
-              client_payload: {
-                source_repo: `${context.repo.owner}/${context.repo.repo}`,
-                source_sha: context.sha,
-                source_ref: context.ref,
-              },
-            });
+          GH_TOKEN: ${{ secrets.HYPIHUB_SYNC_TOKEN }}
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_REF: ${{ github.ref }}
+        run: |
+          test -n "$GH_TOKEN"
+          payload=$(jq -n \
+            --arg event_type "hypit-docs-updated" \
+            --arg source_repo "$SOURCE_REPO" \
+            --arg source_sha "$SOURCE_SHA" \
+            --arg source_ref "$SOURCE_REF" \
+            '{event_type: $event_type, client_payload: {
+              source_repo: $source_repo,
+              source_sha: $source_sha,
+              source_ref: $source_ref
+            }}')
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            --data "$payload" \
+            "https://api.github.com/repos/hypit-ai/hypihub/dispatches"
