@@ -62,7 +62,6 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     fields: {
       prompt: { as: "value", field: "prompt" },
       aspectRatio: { as: "value", field: "aspect_ratio" },
-      resolution: { as: "value", field: "size", whenAbsent: "2048x2048" },
       images: { as: "urlArray", field: "reference_images" },
       quality: { as: "value", field: "quality" },
       outputFormat: { as: "value", field: "output_format" },
@@ -82,8 +81,8 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
       referenceImage: { as: "urlArray", field: "reference_image_urls" },
       referenceVideo: { as: "urlArray", field: "reference_videos" },
       referenceAudio: { as: "urlArray", field: "reference_audios" },
-    firstFrame: { as: "url", field: "first_image_url" },
-    lastFrame: { as: "url", field: "last_image_url" },
+      firstFrame: { as: "url", field: "first_image_url" },
+      lastFrame: { as: "url", field: "last_image_url" },
     },
   },
   {
