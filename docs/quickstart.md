@@ -13,7 +13,7 @@ Hypit turns that source into a visible execution graph. Before any model or exte
 runs, you can check the source, choose a Run, and inspect the exact work it would require. This
 page gets you to that first safe plan: it needs no API keys and makes no paid call.
 
-## Install Hypit
+## Install
 
 ```bash
 npm install --global hypit
