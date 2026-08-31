@@ -149,8 +149,8 @@ If the loaded variables satisfy the selected observer/Provider, continue without
 for them again. Ask only for a credential that is absent or invalid after both `.env` files are checked.
 
 **Read now:** `../credentials.md` — which variables each Provider needs. A variable a Provider needs
-and this machine does not hold is named, and the route stops there. The Vertex pair is the one
-exception: it selects an observer rather than blocking one, and step 5 owns it.
+and this machine does not hold is named. For the `gemini` observer, HypiHub or Vertex credentials are
+optional alternatives; if neither is present, guide the author to https://hypit.ai or use `agent`.
 
 Create the project's `hypit.runtime.json` now with at least the local media and WhisperX endpoints,
 then select and start it before reference preparation:
@@ -170,7 +170,7 @@ after this preliminary Profile and the selected credentials are ready.
 observer, the credential decision table, the disclosure the author is owed, and the rule that one
 reference has one observer for its whole life.
 
-### 5. Probe for Vertex credentials, then ask which observer reads
+### 5. Probe for Gemini credentials, then ask which observer reads
 
 `observers.md`'s "Choosing" section holds the command, what each answer means, and the disclosure the
 author is owed. Run it, put the question once, take the answer, and run.

@@ -35,8 +35,11 @@ review. A paid Build remains a separate, explicitly approved action.
 
 `--observer` on `prepare_reference` chooses who reads the reference, once per reference:
 
-- `gemini` uploads the shot clips and the whole video to Vertex at a fixed temperature of `1.0`. It
-  needs `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`, and it is the default.
+- `gemini` uploads the shot clips and the whole video to the configured Gemini backend at a fixed
+  temperature of `1.0`. With `HYPIT_GEMINI_PROVIDER=auto` (the default), it uses HypiHub when
+  `HYPIHUB_API_KEY` is set and otherwise uses Vertex with `GOOGLE_CLOUD_PROJECT` and
+  `GOOGLE_APPLICATION_CREDENTIALS_JSON`. If the configured key cannot reach the selected model,
+  get a HypiHub key at https://hypit.ai or use `agent`.
 - `agent` reaches no Provider. `prepare_reference` and `observe_reference` return each observation as
   a task carrying its prompt and the pictures to answer it from — one tile of evenly sampled frames
   per shot, the storyboard for the whole reference — and the calling agent answers them with
@@ -130,6 +133,8 @@ else. Results are not cached, because the rendered side changes on every iterati
 `unresolved` lists the keys of observations that failed. It is not a judgement about evidence
 quality: a complete observation that says "unclear" is still complete.
 
-Gemini uses the existing Vertex environment variables `GOOGLE_CLOUD_PROJECT` and
-`GOOGLE_APPLICATION_CREDENTIALS_JSON`; the location defaults to `global` and the model defaults to
-`gemini-3.1-pro-preview`.
+Gemini uses `HYPIT_GEMINI_PROVIDER=auto|hypihub|vertex` to select its backend. HypiHub uses
+`HYPIHUB_API_KEY` and optional `HYPIHUB_BASE_URL` (default `https://hypit.ai`); Vertex uses the
+existing `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS_JSON` and optional
+`GOOGLE_CLOUD_LOCATION`. The model defaults to `gemini-3.1-pro-preview`. A missing or insufficient
+user key should be resolved by obtaining a HypiHub key at https://hypit.ai, not by changing Source.

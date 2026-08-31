@@ -54,7 +54,7 @@ export type Shot = {
 };
 
 /**
- * Who reads the reference. `gemini` uploads video to Vertex; `agent` hands the main agent one tiled
+ * Who reads the reference. `gemini` uploads video to the configured Gemini backend; `agent` hands the main agent one tiled
  * picture per shot and takes the answer back. The two produce the same observation keys.
  */
 export type Observer = "gemini" | "agent";

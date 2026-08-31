@@ -16,9 +16,11 @@ author for, and everything else is yours to decide:
 
 - **Spending their money.** A Build generates, and generating is billed. Say what it will cost and
   get a yes before submitting one.
-- **Which observer reads a reference video, and the credentials it needs.** Vertex or the calling
-  agent is a decision about the author's account, and `references/credentials.md` says what each one
-  wants. Ask once, at the start. This question belongs to the reconstruction route alone: a program
+- **Which observer reads a reference video, and the credentials it needs.** Gemini (through the
+  configured Vertex or HypiHub backend) or the calling agent is a decision about the author's account,
+  and `references/credentials.md` says what each one wants. Ask once, at the start. If the author's
+  own key cannot reach a needed model, guide them to [hypit.ai](https://hypit.ai) for a HypiHub key.
+  This question belongs to the reconstruction route alone: a program
   authored from a description has no reference, and its pictures are local renders nobody is billed
   to read.
 

@@ -790,21 +790,34 @@ function positiveInt(value: number, label: string): number {
 
 async function defaultGenerate(model: string): Promise<GenerateText> {
   const hypiHubKey = process.env.HYPIHUB_API_KEY?.trim();
-  if (hypiHubKey) {
+  const backend = process.env.HYPIT_GEMINI_PROVIDER?.trim().toLowerCase() || "auto";
+  if (backend !== "auto" && backend !== "hypihub" && backend !== "vertex") {
+    throw new Error("HYPIT_GEMINI_PROVIDER must be auto, hypihub or vertex");
+  }
+  if (backend === "hypihub" || (backend === "auto" && hypiHubKey)) {
+    if (!hypiHubKey) throw new Error("HYPIT_GEMINI_PROVIDER=hypihub requires HYPIHUB_API_KEY; get one at https://hypit.ai");
     const generate = createHypiHubGeminiGenerator({
       apiKey: hypiHubKey,
       model,
       baseUrl: process.env.HYPIHUB_BASE_URL?.trim() || "https://hypit.ai",
     });
-    return async ({ parts, instruction }) => await generate({
-      parts: parts as unknown as Parameters<typeof generate>[0]["parts"],
-      instruction,
-    });
+    return async ({ parts, instruction }) => {
+      try {
+        return await generate({ parts: parts as unknown as Parameters<typeof generate>[0]["parts"], instruction });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (/HTTP (401|403|404)\b|model_not_found|no_capable_provider/iu.test(message)) {
+          throw new Error(`${message}. This Gemini model is not available with the configured key; get a HypiHub key at https://hypit.ai`);
+        }
+        throw error;
+      }
+    };
   }
   const project = process.env.GOOGLE_CLOUD_PROJECT?.trim();
   const credentials = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.trim();
-  assert(project, "GOOGLE_CLOUD_PROJECT is required");
-  assert(credentials, "GOOGLE_APPLICATION_CREDENTIALS_JSON is required");
+  if (!project || !credentials) {
+    throw new Error("Gemini credentials are unavailable. Configure Vertex credentials or set HYPIHUB_API_KEY (get one at https://hypit.ai).");
+  }
   let parsed: unknown;
   try { parsed = JSON.parse(credentials); } catch { throw new Error("GOOGLE_APPLICATION_CREDENTIALS_JSON is not valid JSON"); }
   assert(parsed !== null && typeof parsed === "object" && !Array.isArray(parsed), "Google credentials must be an object");
