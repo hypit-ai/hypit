@@ -73,30 +73,31 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
   const calls: string[] = [];
   const requests: Record<string, unknown>[] = [];
   const realFetch = globalThis.fetch;
-  const realKey = process.env.KIE_API_KEY;
+  const realKey = process.env.HYPIHUB_API_KEY;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     calls.push(url);
-    if (url.endsWith("/api/v1/jobs/createTask")) {
+    if (url.endsWith("/v1/models/gpt-image-2-text-to-image")) {
+      assert.equal((init?.headers as Record<string, string>).authorization, "Bearer test-image-key");
+      return Response.json({ id: "gpt-image-2-text-to-image", endpoints: ["images"] });
+    }
+    if (url.endsWith("/v1/images/generations")) {
       assert.equal((init?.headers as Record<string, string>).authorization, "Bearer test-image-key");
       requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-      return Response.json({ code: 200, msg: "success", data: { taskId: "task_image_test" } });
+      return Response.json({ id: "job_image_test", status: "queued" }, { status: 202 });
     }
-    if (url.includes("/api/v1/jobs/recordInfo")) {
-      return Response.json({ code: 200, data: {
-        taskId: "task_image_test", model: "gpt-image-2", state: "success",
-        resultJson: JSON.stringify({ resultUrls: ["https://tempfile.aiquickdraw.com/paper.png"] }),
-      } });
+    if (url.endsWith("/v1/jobs/job_image_test")) {
+      return Response.json({ id: "job_image_test", status: "succeeded" });
     }
-    if (url.endsWith("/api/v1/common/download-url")) {
-      return Response.json({ code: 200, data: "https://download.kie.test/paper.png" });
+    if (url.endsWith("/v1/jobs/job_image_test/assets")) {
+      return Response.json({ items: [{ url: "https://download.hypihub.test/paper.png" }] });
     }
-    if (url === "https://download.kie.test/paper.png") {
+    if (url === "https://download.hypihub.test/paper.png") {
       return new Response(pictureBytes, { status: 200, headers: { "content-type": "image/png" } });
     }
     throw new Error(`Unexpected URL ${url}`);
   }) as typeof globalThis.fetch;
-  process.env.KIE_API_KEY = "test-image-key";
+  process.env.HYPIHUB_API_KEY = "test-image-key";
   try {
     const promptFile = join(root, "paper.txt");
     await writeFile(promptFile, "A sheet of warm cream laid paper, even lighting, no text.\n", "utf8");
@@ -118,17 +119,15 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
     // The author gave one option; every other port took the model's own first value.
     assert.deepEqual(requests, [{
       model: "gpt-image-2-text-to-image",
-      input: {
-        prompt: "A sheet of warm cream laid paper, even lighting, no text.",
-        aspect_ratio: "1:1",
-        resolution: "1K",
-      },
+      prompt: "A sheet of warm cream laid paper, even lighting, no text.",
+      aspect_ratio: "1:1",
+      size: "1024x1024",
     }]);
-    assert.equal(calls.filter((item) => item.endsWith("/api/v1/jobs/createTask")).length, 1);
+    assert.equal(calls.filter((item) => item.endsWith("/v1/images/generations")).length, 1);
   } finally {
     globalThis.fetch = realFetch;
-    if (realKey === undefined) delete process.env.KIE_API_KEY;
-    else process.env.KIE_API_KEY = realKey;
+    if (realKey === undefined) delete process.env.HYPIHUB_API_KEY;
+    else process.env.HYPIHUB_API_KEY = realKey;
     await rm(root, { recursive: true, force: true });
   }
 });

@@ -9,7 +9,7 @@ import { exactModelsFromHostFacets } from "@hypit/model-kit";
 import type { ExactModelEndpoint } from "@hypit/model-kit";
 import { loadNodePackageSelection } from "@hypit/package-loader-node";
 import type { BlobRef, CanonicalValue, Need } from "@hypit/protocol";
-import { createKieProvider } from "@hypit/provider-kie";
+import { createHypiHubProvider } from "@hypit/provider-hypihub";
 
 /**
  * The exact model family this Distribution reaches for when the author names none.
@@ -99,7 +99,9 @@ async function resolveCredentials(
   for (const [slot, ref] of Object.entries(registration.credentials ?? {})) {
     const value = await store.resolve(ref);
     assert(value !== undefined, ref.store === "env"
-      ? `credential ${slot} is unavailable; set ${ref.key} in the environment`
+      ? ref.key === "HYPIHUB_API_KEY"
+        ? `credential ${slot} is unavailable; set ${ref.key} in the environment (get a HypiHub key at https://hypit.ai)`
+        : `credential ${slot} is unavailable; set ${ref.key} in the environment`
       : `credential ${slot} lives in CredentialStore ${ref.store}, which hypit image cannot open`);
     resolved[slot] = value;
   }
@@ -143,7 +145,7 @@ export async function generateVideoCliPicture(request: CliPictureRequest): Promi
     result: "record:hypit-image",
   };
   const registry = new EndpointRegistry();
-  await createKieProvider({}).install(registry);
+  await createHypiHubProvider({}).install(registry);
   const resolution = registry.resolve(need);
   assert(resolution.status === "resolved",
     `no Provider in this Distribution fulfils ${model.ports.model}`);

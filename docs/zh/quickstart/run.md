@@ -185,12 +185,15 @@ hypit paths
 
 | 变量 | Provider / 用途 |
 |---|---|
-| `KIE_API_KEY` | KIE 模型，包括 Seedance 与 GPT Image |
+| `HYPIHUB_API_KEY` | HypiHub 付费生成与 Gemini VLM；前往 https://hypit.ai 获取 |
+| `KIE_API_KEY` | 仅在显式选择 KIE Provider 时使用 |
 | `MIMO_API_KEY` | Xiaomi MiMo TTS；只有选择该 Endpoint 时才需要 |
 
 只执行 Profile 中所选 Endpoint 对应的行。在 macOS/Linux Shell 中：
 
 ```bash
+read -r -s HYPIHUB_API_KEY
+export HYPIHUB_API_KEY
 read -r -s KIE_API_KEY
 export KIE_API_KEY
 read -r -s MIMO_API_KEY
@@ -200,6 +203,7 @@ export MIMO_API_KEY
 在 Windows PowerShell 中：
 
 ```powershell
+$env:HYPIHUB_API_KEY = "your-key"
 $env:KIE_API_KEY = "your-key"
 $env:MIMO_API_KEY = "your-key"
 ```

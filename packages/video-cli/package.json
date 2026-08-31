@@ -20,7 +20,7 @@
     "@hypit/model-kit": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/provider-kie": "workspace:*",
+    "@hypit/provider-hypihub": "workspace:*",
     "@hypit/runtime-host-node": "workspace:*",
     "@hypit/runtime-local": "workspace:*",
     "@hypit/workspace-fs-node": "workspace:*"

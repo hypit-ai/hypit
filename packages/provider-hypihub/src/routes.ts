@@ -53,8 +53,17 @@ function normalizeHypiHubRequest(
   }
 
   // Audio mappings already use HypiHub's public /audio/speech vocabulary.
-  // They must not fall through the video reference normalizer below.
-  if (mapping.result === "audio") return { model: request.model, input: canonicalize(input) };
+  // MiMo voice-clone is the one exception: its upstream adaptor expects the
+  // sample as bare base64 in `audio.voice`, while the provider's artifact
+  // resolver quite correctly returns a data URL. Strip only that transport
+  // prefix here so the provider stays decoupled from the upstream wire shape.
+  if (mapping.result === "audio") {
+    if (mapping.capability.name === "mimo-v2.5-tts-voiceclone" && typeof input.voice === "string") {
+      const match = /^data:[^;,]+(?:;[^;,]+)*;base64,(.*)$/su.exec(input.voice);
+      if (match !== null) input.voice = match[1];
+    }
+    return { model: request.model, input: canonicalize(input) };
+  }
 
   if (typeof input.resolution === "string") input.resolution = input.resolution.toLowerCase();
 
