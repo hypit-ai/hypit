@@ -3,7 +3,7 @@
   "runtime": {
     "use": "@hypit/runtime-local",
     "config": {
-      "dataRoot": ".hypit/runtimes/local-v2",
+      "dataRoot": ".hypit/runtimes/local-v3",
       "artifacts": { "use": "@hypit/artifact-store-fs", "config": { "path": "artifacts" } },
       "credentials": { "env": { "use": "@hypit/credential-store-env" } },
       "endpoints": {
