@@ -9,7 +9,7 @@
       "endpoints": {
         "hypihub.smoke": {
           "use": "@hypit/provider-hypihub",
-          "pool": "hypihub.smoke",
+          "pool": "hypihub.smoke-v4",
           "config": {
             "baseUrl": "https://hypit.ai/v1",
             "apiKey": { "store": "env", "key": "HYPIHUB_API_KEY" },
