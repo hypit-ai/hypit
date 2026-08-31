@@ -5,10 +5,6 @@ description: 安装 Hypit，编译第一张完整的 SVML 视频图，并准备�
 
 # 快速开始
 
-**Hypit** 这个名字来自 1933 年《*New York Times*》对电影《*The Power and the
-Glory*》的一篇影评。那位影评人造出这个词，用来描述当时的一种新兴电影手法：
-**Narration + Montage** —— 旁白的声音推动故事前进，同时画面组接出与之呼应的蒙太奇。
-
 这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、
 文字与音频组装成一部完成的影片。Author Source 使用 SVML（Semantic Video Markup Language）编写，
 扩展名为 `.svml`。
