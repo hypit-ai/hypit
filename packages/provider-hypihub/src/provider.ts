@@ -17,6 +17,8 @@ export type CreateHypiHubProviderOptions = {
   readonly pollIntervalMs?: number;
   readonly requestTimeoutMs?: number;
   readonly fetch?: typeof globalThis.fetch;
+  /** Uploads a Runtime artifact to a public URL for video/audio references. */
+  readonly publicAssetUrl?: (artifact: BlobRef, artifacts: ArtifactStore) => Promise<string>;
 };
 
 type Handle = { readonly contract: "hypit.hypihub-operation@1"; readonly jobId: string; readonly route: string; readonly startedAt: number };
@@ -41,7 +43,7 @@ function jobId(value: Record<string, unknown>): string {
   return id;
 }
 
-async function verifyModelRoute(client: HypiHubClient, apiKey: string, model: string, operation: "images" | "image_edits" | "videos"): Promise<void> {
+async function verifyModelRoute(client: HypiHubClient, apiKey: string, model: string, operation: "images" | "image_edits" | "videos" | "audio_speech"): Promise<void> {
   const card = await client.json(`/models/${encodeURIComponent(model)}`, apiKey);
   const endpoints = card.endpoints;
   assert(Array.isArray(endpoints) && endpoints.includes(operation),
@@ -52,7 +54,20 @@ function dataUrl(bytes: Uint8Array, mediaType: string): string {
   return `data:${mediaType};base64,${Buffer.from(bytes).toString("base64")}`;
 }
 
-async function resolveArtifactAsDataUrl(artifacts: ArtifactStore, artifact: BlobRef): Promise<string> {
+async function resolveArtifactAsDataUrl(
+  artifacts: ArtifactStore,
+  artifact: BlobRef,
+  publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"],
+  allowBinaryInline: boolean,
+): Promise<string> {
+  if (!allowBinaryInline && /^(?:video|audio)\//u.test(artifact.mediaType)) {
+    if (publicAssetUrl !== undefined) {
+      const url = (await publicAssetUrl(artifact, artifacts)).trim();
+      assert(/^https:\/\//iu.test(url), "publicAssetUrl must return an https URL for HypiHub references");
+      return url;
+    }
+    throw new Error("HypiHub video/audio references require a public HTTPS URL; configure publicAssetUrl on the provider");
+  }
   const bytes = await artifacts.get(artifact.digest);
   assert(bytes !== undefined, `HypiHub reference artifact ${artifact.digest} is unavailable`);
   return dataUrl(bytes, artifact.mediaType);
@@ -93,24 +108,25 @@ async function complete(client: HypiHubClient, apiKey: string, route: (typeof hy
   return { status: "completed", result: { value: route.packageResult(blobs) } };
 }
 
-async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocationContext): Promise<EndpointFulfillment> {
+async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocationContext, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]): Promise<EndpointFulfillment> {
   const route = hypiHubRouteForCapability(context.need.capability);
   assert(route !== undefined && route.media === "audio", "HypiHub does not implement this exact capability");
   const compiled = await route.compile(context.need.constraints,
-    (artifact) => resolveArtifactAsDataUrl(context.artifacts, artifact));
+    (artifact) => resolveArtifactAsDataUrl(context.artifacts, artifact, publicAssetUrl, true));
+  await verifyModelRoute(client, credential(context), compiled.model, "audio_speech");
   const audio = await client.binary("/audio/speech", credential(context), { model: compiled.model, ...(compiled.input as Record<string, unknown>) });
   const artifact = await context.artifacts.put(audio.bytes, audio.mediaType);
   return { value: route.packageResult([artifact]) };
 }
 
-function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs: number): AsyncEndpoint {
+function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs: number, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]): AsyncEndpoint {
   return {
     async start(context: EndpointStartContext) {
       try {
         const route = hypiHubRouteForCapability(context.need.capability);
         assert(route !== undefined, "HypiHub does not implement this exact capability"); const apiKey = credential(context);
         const compiled = await route.compile(context.need.constraints,
-          (artifact) => resolveArtifactAsDataUrl(context.artifacts, artifact));
+          (artifact) => resolveArtifactAsDataUrl(context.artifacts, artifact, publicAssetUrl, false));
         assert(route.media !== "audio", "HypiHub audio capabilities use an immediate endpoint");
         const input = compiled.input as Record<string, unknown>;
         const hasReferences = Object.entries(input).some(([key, value]) => {
@@ -145,8 +161,8 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
 
 export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}) {
   const client = new HypiHubClient({ baseUrl: options.baseUrl ?? "https://hypit.ai/v1", timeout: options.requestTimeoutMs ?? 30_000, fetcher: options.fetch ?? globalThis.fetch });
-  const asyncEndpoint = endpoint(client, options.pollIntervalMs ?? 5_000, 20 * 60_000);
-  const audioEndpoint: ImmediateEndpointHandler = (context) => synthesizeAudio(client, context);
+  const asyncEndpoint = endpoint(client, options.pollIntervalMs ?? 5_000, 20 * 60_000, options.publicAssetUrl);
+  const audioEndpoint: ImmediateEndpointHandler = (context) => synthesizeAudio(client, context, options.publicAssetUrl);
   return defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
     credentials: { apiKey: options.apiKey ?? credentialRef("env", "HYPIHUB_API_KEY") }, credentialInputs: { apiKey: { label: "HypiHub API key" } }, defaultConcurrency: options.defaultConcurrency ?? 4,
