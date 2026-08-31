@@ -147,6 +147,9 @@ importers:
       '@hypit/provider-media-local':
         specifier: workspace:*
         version: link:packages/provider-media-local
+      '@hypit/provider-vertex':
+        specifier: workspace:*
+        version: link:packages/provider-vertex
       '@hypit/provider-whisperx-local':
         specifier: workspace:*
         version: link:packages/provider-whisperx-local
@@ -2145,6 +2148,12 @@ importers:
         specifier: workspace:*
         version: link:../driver-node
 
+  packages/provider-vertex:
+    dependencies:
+      '@google/genai':
+        specifier: 1.52.0
+        version: 1.52.0
+
   packages/provider-whisperx-local:
     dependencies:
       '@hypit/endpoint-kit':
@@ -2282,9 +2291,6 @@ importers:
 
   packages/reference-video-tools:
     dependencies:
-      '@google/genai':
-        specifier: 1.52.0
-        version: 1.52.0
       '@hypit/composition':
         specifier: workspace:*
         version: link:../composition
@@ -2327,6 +2333,9 @@ importers:
       '@hypit/provider-media-local':
         specifier: workspace:*
         version: link:../provider-media-local
+      '@hypit/provider-vertex':
+        specifier: workspace:*
+        version: link:../provider-vertex
       '@hypit/provider-whisperx-local':
         specifier: workspace:*
         version: link:../provider-whisperx-local

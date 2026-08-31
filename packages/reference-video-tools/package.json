@@ -12,7 +12,6 @@
     "./cli": "./src/cli.ts"
   },
   "dependencies": {
-    "@google/genai": "1.52.0",
     "@hypit/composition": "workspace:*",
     "@hypit/core": "workspace:*",
     "@hypit/driver-node": "workspace:*",
@@ -29,6 +28,7 @@
     "@hypit/provider-whisperx-local": "workspace:*",
     "@hypit/provider-media-local": "workspace:*",
     "@hypit/provider-hypihub": "workspace:*",
+    "@hypit/provider-vertex": "workspace:*",
     "@hypit/script": "workspace:*",
     "@hypit/speech": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",

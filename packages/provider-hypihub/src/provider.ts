@@ -41,6 +41,16 @@ function jobId(value: Record<string, unknown>): string {
   return id;
 }
 
+function dataUrl(bytes: Uint8Array, mediaType: string): string {
+  return `data:${mediaType};base64,${Buffer.from(bytes).toString("base64")}`;
+}
+
+async function resolveArtifactAsDataUrl(artifacts: ArtifactStore, artifact: BlobRef): Promise<string> {
+  const bytes = await artifacts.get(artifact.digest);
+  assert(bytes !== undefined, `HypiHub reference artifact ${artifact.digest} is unavailable`);
+  return dataUrl(bytes, artifact.mediaType);
+}
+
 class HypiHubClient {
   readonly baseUrl: string;
   readonly timeout: number;
@@ -79,9 +89,8 @@ async function complete(client: HypiHubClient, apiKey: string, route: (typeof hy
 async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocationContext): Promise<EndpointFulfillment> {
   const route = hypiHubRouteForCapability(context.need.capability);
   assert(route !== undefined && route.media === "audio", "HypiHub does not implement this exact capability");
-  const compiled = await route.compile(context.need.constraints, async () => {
-    throw new Error("HypiHub reference media is not supported yet");
-  });
+  const compiled = await route.compile(context.need.constraints,
+    (artifact) => resolveArtifactAsDataUrl(context.artifacts, artifact));
   const audio = await client.binary("/audio/speech", credential(context), { model: compiled.model, ...(compiled.input as Record<string, unknown>) });
   const artifact = await context.artifacts.put(audio.bytes, audio.mediaType);
   return { value: route.packageResult([artifact]) };
@@ -93,9 +102,18 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
       try {
         const route = hypiHubRouteForCapability(context.need.capability);
         assert(route !== undefined, "HypiHub does not implement this exact capability"); const apiKey = credential(context);
-        const compiled = await route.compile(context.need.constraints, async () => { throw new Error("HypiHub reference media is not supported yet"); });
+        const compiled = await route.compile(context.need.constraints,
+          (artifact) => resolveArtifactAsDataUrl(context.artifacts, artifact));
         assert(route.media !== "audio", "HypiHub audio capabilities use an immediate endpoint");
-        const response = await client.json(route.media === "image" ? "/images/generations" : "/videos", apiKey, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": context.operation }, body: JSON.stringify({ model: compiled.model, ...(compiled.input as Record<string, unknown>) }) });
+        const input = compiled.input as Record<string, unknown>;
+        const hasReferences = Object.entries(input).some(([key, value]) => {
+          if (!["images", "reference_images", "reference_image_urls", "reference_videos", "reference_audios", "first_image_url", "last_image_url"].includes(key)) return false;
+          return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value.length > 0;
+        });
+        const path = route.media === "image"
+          ? (hasReferences ? "/images/edits" : "/images/generations")
+          : "/videos";
+        const response = await client.json(path, apiKey, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": context.operation }, body: JSON.stringify({ model: compiled.model, ...input }) });
         const status = response.status; if (status === "succeeded" || status === "completed") return await complete(client, apiKey, route, jobId(response), context.artifacts);
         const handle: Handle = { contract: "hypit.hypihub-operation@1", jobId: jobId(response), route: capabilityKey(route.capability), startedAt: Date.now() };
         return wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "submitted" });
