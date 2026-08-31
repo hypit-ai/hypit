@@ -1,4 +1,3 @@
-import type { Part } from "@google/genai";
 import { access, appendFile, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { cpus } from "node:os";
@@ -22,6 +21,8 @@ import { VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@hypit/visua
 import { describeSchema } from "./contract.js";
 import { videoCliDistribution } from "@hypit/video-cli";
 import { createHypiHubGeminiGenerator } from "@hypit/provider-hypihub";
+import { createVertexGeminiGenerator } from "@hypit/provider-vertex";
+import type { VertexGeminiPart } from "@hypit/provider-vertex";
 
 import { authorSource, invokedFrom, nearestPackageRoot, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath, tokenWindow } from "./authoring.js";
 import type { RenderElementInput, RenderPreviewsInput, SpokenRange, StandInFocus, StandInSidecar } from "./authoring.js";
@@ -299,7 +300,7 @@ type ToolOptions = {
   readonly retryDelayMs?: number;
   readonly generate?: GenerateText;
 };
-export type GenerateText = (input: { readonly parts: readonly Part[]; readonly instruction: string }) => Promise<string>;
+export type GenerateText = (input: { readonly parts: readonly VertexGeminiPart[]; readonly instruction: string }) => Promise<string>;
 type ObservationTask = { readonly key: string; readonly request: Request };
 
 function routeStateResult(state: RouteState | undefined): Record<string, unknown> {
@@ -818,34 +819,13 @@ async function defaultGenerate(model: string): Promise<GenerateText> {
   if (!project || !credentials) {
     throw new Error("Gemini credentials are unavailable. Configure Vertex credentials or set HYPIHUB_API_KEY (get one at https://hypit.ai).");
   }
-  let parsed: unknown;
-  try { parsed = JSON.parse(credentials); } catch { throw new Error("GOOGLE_APPLICATION_CREDENTIALS_JSON is not valid JSON"); }
-  assert(parsed !== null && typeof parsed === "object" && !Array.isArray(parsed), "Google credentials must be an object");
-  let GoogleGenAI: typeof import("@google/genai")["GoogleGenAI"];
-  try {
-    ({ GoogleGenAI } = await import("@google/genai"));
-  } catch (error) {
-    throw new Error(
-      "Gemini observation requires @google/genai. Install it once with: hypit packages install @google/genai@1.52.0",
-      { cause: error },
-    );
-  }
-  const client = new GoogleGenAI({
-    vertexai: true,
+  const generate = createVertexGeminiGenerator({
     project,
+    credentials,
+    model,
     location: process.env.GOOGLE_CLOUD_LOCATION?.trim() || "global",
-    googleAuthOptions: { credentials: parsed as Record<string, unknown>, scopes: ["https://www.googleapis.com/auth/cloud-platform"] },
   });
-  return async ({ parts, instruction }) => {
-    const result = await client.models.generateContent({
-      model,
-      contents: [{ role: "user", parts: [...parts] }],
-      config: { systemInstruction: instruction, temperature: 1.0, responseMimeType: "text/plain" },
-    });
-    const text = result.text?.trim() ?? "";
-    assert(text.length > 0, "Gemini returned an empty response");
-    return text;
-  };
+  return async ({ parts, instruction }) => generate({ parts, instruction });
 }
 
 const MIME_TYPES: Readonly<Record<string, string>> = {
@@ -860,12 +840,12 @@ const MIME_TYPES: Readonly<Record<string, string>> = {
 // The Vertex path cannot upload a file and reference it later, so the bytes travel with every
 // request. One shot's clip is asked about by its own picture, type and sound observations and by the
 // boundary on each side, so reading and encoding it once per invocation is worth the memory.
-function mediaParts(): (path: string) => Promise<Part> {
-  const encoded = new Map<string, Promise<Part>>();
+function mediaParts(): (path: string) => Promise<VertexGeminiPart> {
+  const encoded = new Map<string, Promise<VertexGeminiPart>>();
   return (path) => {
     const held = encoded.get(path);
     if (held !== undefined) return held;
-    const part = (async (): Promise<Part> => {
+    const part = (async (): Promise<VertexGeminiPart> => {
       const bytes = await readBytes(path);
       const extension = path.toLowerCase().split(".").pop() ?? "";
       const mimeType = MIME_TYPES[extension];
@@ -891,7 +871,7 @@ function permanent(error: unknown): boolean {
   return /invalid[_ ]argument|permission[_ ]denied|unauthenticated|not[_ ]found|failed[_ ]precondition/iu.test(message(error));
 }
 
-async function callSafely(retryDelayMs: number, generate: GenerateText, parts: readonly Part[], instruction: string): Promise<Observation> {
+async function callSafely(retryDelayMs: number, generate: GenerateText, parts: readonly VertexGeminiPart[], instruction: string): Promise<Observation> {
   let last: unknown;
   for (let attempt = 1; attempt <= 6; attempt += 1) {
     try { return observation("complete", await generate({ parts, instruction })); }
@@ -1471,7 +1451,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     return {
       pending: [],
       ask: async (_key, { media, prompt, instruction }) => {
-        const parts: Part[] = [];
+        const parts: VertexGeminiPart[] = [];
         for (const path of media) parts.push(await mediaPart(path));
         parts.push({ text: `${prompt}\n\n${WATERMARK_RULE}` });
         return await callSafely(retryDelayMs, generate, parts, instruction);

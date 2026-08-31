@@ -133,7 +133,8 @@ else. Results are not cached, because the rendered side changes on every iterati
 `unresolved` lists the keys of observations that failed. It is not a judgement about evidence
 quality: a complete observation that says "unclear" is still complete.
 
-Gemini uses `HYPIT_GEMINI_PROVIDER=auto|hypihub|vertex` to select its backend. HypiHub uses
+Gemini uses `HYPIT_GEMINI_PROVIDER=auto|hypihub|vertex` to select its backend. The backends are
+provided by `@hypit/provider-hypihub` and `@hypit/provider-vertex`. HypiHub uses
 `HYPIHUB_API_KEY` and optional `HYPIHUB_BASE_URL` (default `https://hypit.ai`); Vertex uses the
 existing `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS_JSON` and optional
 `GOOGLE_CLOUD_LOCATION`. The model defaults to `gemini-3.1-pro-preview`. A missing or insufficient

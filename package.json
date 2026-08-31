@@ -100,6 +100,7 @@
     "@hypit/provider-image-opencv-local": "workspace:*",
     "@hypit/provider-hypihub": "workspace:*",
     "@hypit/provider-kie": "workspace:*",
+    "@hypit/provider-vertex": "workspace:*",
     "@hypit/provider-media-aws-lambda": "workspace:*",
     "@hypit/provider-media-local": "workspace:*",
     "@hypit/preview-mock": "workspace:*",
