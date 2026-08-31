@@ -1960,6 +1960,13 @@ importers:
       '@hypit/runtime-kit':
         specifier: workspace:*
         version: link:../runtime-kit
+    devDependencies:
+      '@hypit/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@hypit/seedance':
+        specifier: workspace:*
+        version: link:../seedance
 
   packages/provider-image-opencv-local:
     dependencies:

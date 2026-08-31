@@ -17,7 +17,7 @@ export type CreateHypiHubProviderOptions = {
   readonly pollIntervalMs?: number;
   readonly requestTimeoutMs?: number;
   readonly fetch?: typeof globalThis.fetch;
-  /** Uploads a Runtime artifact to a public URL for video/audio references. */
+  /** Overrides the default POST /v1/files upload for referenced artifacts. */
   readonly publicAssetUrl?: (artifact: BlobRef, artifacts: ArtifactStore) => Promise<string>;
 };
 
@@ -67,23 +67,19 @@ function dataUrl(bytes: Uint8Array, mediaType: string): string {
   return `data:${mediaType};base64,${Buffer.from(bytes).toString("base64")}`;
 }
 
-async function resolveArtifactAsDataUrl(
-  artifacts: ArtifactStore,
-  artifact: BlobRef,
-  publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"],
-  allowBinaryInline: boolean,
-): Promise<string> {
-  if (!allowBinaryInline && /^(?:video|audio)\//u.test(artifact.mediaType)) {
-    if (publicAssetUrl !== undefined) {
-      const url = (await publicAssetUrl(artifact, artifacts)).trim();
-      assert(/^https:\/\//iu.test(url), "publicAssetUrl must return an https URL for HypiHub references");
-      return url;
-    }
-    throw new Error("HypiHub video/audio references require a public HTTPS URL; configure publicAssetUrl on the provider");
-  }
+async function resolveArtifactInline(artifacts: ArtifactStore, artifact: BlobRef): Promise<string> {
   const bytes = await artifacts.get(artifact.digest);
   assert(bytes !== undefined, `HypiHub reference artifact ${artifact.digest} is unavailable`);
   return dataUrl(bytes, artifact.mediaType);
+}
+
+function mediaExtension(mediaType: string): string {
+  const known: Readonly<Record<string, string>> = {
+    "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp",
+    "video/mp4": "mp4", "video/quicktime": "mov",
+    "audio/mpeg": "mp3", "audio/wav": "wav", "audio/x-wav": "wav", "audio/mp4": "m4a",
+  };
+  return known[mediaType] ?? "bin";
 }
 
 class HypiHubClient {
@@ -104,8 +100,33 @@ class HypiHubClient {
     } finally { clearTimeout(timer); }
   }
   async download(url: string): Promise<{ readonly bytes: Uint8Array; readonly mediaType: string }> {
-    const response = await this.fetcher(url); if (!response.ok) throw new Error(`HypiHub asset returned HTTP ${response.status}`);
-    return { bytes: new Uint8Array(await response.arrayBuffer()), mediaType: response.headers.get("content-type")?.split(";", 1)[0] ?? "application/octet-stream" };
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const response = await this.fetcher(url);
+        if (!response.ok) throw new Error(`HypiHub asset returned HTTP ${response.status}`);
+        return { bytes: new Uint8Array(await response.arrayBuffer()), mediaType: response.headers.get("content-type")?.split(";", 1)[0] ?? "application/octet-stream" };
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
+  }
+  async upload(artifact: BlobRef, artifacts: ArtifactStore, apiKey: string): Promise<string> {
+    const bytes = await artifacts.get(artifact.digest);
+    assert(bytes !== undefined, `HypiHub reference artifact ${artifact.digest} is unavailable`);
+    assert(bytes.byteLength === artifact.size, `HypiHub reference artifact ${artifact.digest} size differs`);
+    const form = new FormData();
+    const copy = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(copy).set(bytes);
+    form.append("file", new Blob([copy], { type: artifact.mediaType }),
+      `${artifact.digest.slice("sha256:".length)}.${mediaExtension(artifact.mediaType)}`);
+    form.append("purpose", "reference");
+    const response = await this.json("/files", apiKey, { method: "POST", body: form });
+    assert(typeof response.url === "string" && /^https:\/\//iu.test(response.url),
+      "HypiHub file upload returned no HTTPS URL");
+    return response.url;
   }
   async binary(path: string, apiKey: string, body: Record<string, unknown>): Promise<{ readonly bytes: Uint8Array; readonly mediaType: string }> {
     const response = await this.fetcher(`${this.baseUrl}${path}`, { method: "POST", headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -124,8 +145,9 @@ async function complete(client: HypiHubClient, apiKey: string, route: (typeof hy
 async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocationContext, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]): Promise<EndpointFulfillment> {
   const route = hypiHubRouteForCapability(context.need.capability);
   assert(route !== undefined && route.media === "audio", "HypiHub does not implement this exact capability");
-  const compiled = await route.compile(context.need.constraints,
-    (artifact) => resolveArtifactAsDataUrl(context.artifacts, artifact, publicAssetUrl, true));
+  const compiled = await route.compile(context.need.constraints, async (artifact) => publicAssetUrl === undefined
+    ? await resolveArtifactInline(context.artifacts, artifact)
+    : await publicAssetUrl(artifact, context.artifacts));
   await verifyModelRoute(client, credential(context), compiled.model, "audio_speech");
   const audio = await client.binary("/audio/speech", credential(context), { model: compiled.model, ...(compiled.input as Record<string, unknown>) });
   const artifact = await context.artifacts.put(audio.bytes, audio.mediaType);
@@ -138,8 +160,17 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
       try {
         const route = hypiHubRouteForCapability(context.need.capability);
         assert(route !== undefined, "HypiHub does not implement this exact capability"); const apiKey = credential(context);
-        const compiled = await route.compile(context.need.constraints,
-          (artifact) => resolveArtifactAsDataUrl(context.artifacts, artifact, publicAssetUrl, false));
+        const uploaded = new Map<string, Promise<string>>();
+        const resolve = (artifact: BlobRef): Promise<string> => {
+          const existing = uploaded.get(artifact.digest);
+          if (existing !== undefined) return existing;
+          const promise = publicAssetUrl === undefined
+            ? client.upload(artifact, context.artifacts, apiKey)
+            : publicAssetUrl(artifact, context.artifacts);
+          uploaded.set(artifact.digest, promise);
+          return promise;
+        };
+        const compiled = await route.compile(context.need.constraints, resolve);
         assert(route.media !== "audio", "HypiHub audio capabilities use an immediate endpoint");
         const input = compiled.input as Record<string, unknown>;
         const hasReferences = Object.entries(input).some(([key, value]) => {
@@ -164,7 +195,11 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
         if (Date.now() - handle.startedAt > maxOperationMs) throw new Error("HypiHub operation timed out");
         const job = await client.json(`/jobs/${encodeURIComponent(handle.jobId)}`, credential(context)); const status = job.status;
         if (status === "queued" || status === "running" || status === "in_progress") return wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: String(status) });
-        if (status === "failed" || status === "queue_expired") throw new Error(`HypiHub job ${status}`);
+        if (status === "failed" || status === "queue_expired") {
+          const detail = [job.error, job.message, job.reason, job.detail]
+            .find((value) => typeof value === "string" && value.length > 0);
+          throw new Error(`HypiHub job ${status}${typeof detail === "string" ? `: ${detail}` : ""}`);
+        }
         if (status !== "succeeded" && status !== "completed") throw new Error(`HypiHub returned unknown job status ${String(status)}`);
         return await complete(client, credential(context), route, handle.jobId, context.artifacts);
       } catch (error) { return failure(error); }
