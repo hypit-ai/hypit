@@ -3,4 +3,6 @@
 <svrun version="1">
   <author source="./main.svml"/>
   <target output="mimo-voice.audio"/>
+  <target output="mimo-preset.audio"/>
+  <target output="mimo-clone.audio"/>
 </svrun>

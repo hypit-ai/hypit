@@ -6,6 +6,8 @@
   <target output="gpt-edit.image"/>
   <target output="nano-text.image"/>
   <target output="nano-edit.image"/>
+  <target output="nano2-text.image"/>
+  <target output="nano2-edit.image"/>
   <target output="seedream-text.image"/>
   <target output="seedream-edit.image"/>
 </svrun>

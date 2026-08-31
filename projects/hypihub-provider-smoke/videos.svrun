@@ -4,6 +4,9 @@
   <author source="./main.svml"/>
   <target output="seedance-text.video"/>
   <target output="seedance-image-audio.video"/>
+  <target output="seedance-standard-text.video"/>
+  <target output="seedance-fast-text.video"/>
+  <target output="seedance-v25-text.video"/>
   <target output="minimax-text.video"/>
   <target output="minimax-reference.video"/>
   <target output="grok-text.video"/>
