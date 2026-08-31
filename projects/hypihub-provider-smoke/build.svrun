@@ -2,6 +2,7 @@
 
 <svrun version="1">
   <author source="./main.svml"/>
+  <recipe source="./recipes.svs"/>
   <target output="gpt-text.image"/>
   <target output="gpt-edit.image"/>
   <target output="nano-text.image"/>
