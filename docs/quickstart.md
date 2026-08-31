@@ -5,8 +5,8 @@ description: Install Hypit, compile a complete SVML video graph, and prepare a r
 
 # Quickstart
 
-That is exactly what this system does. The author writes a narrated Script with semantic anchors,
-and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
+The author writes a narrated Script with semantic anchors, and the compiler assembles generated
+video, captions, B-roll, text and audio into a finished film.
 Author Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml` extension.
 
 Hypit turns that source into a visible execution graph. Before any model or external service

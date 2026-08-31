@@ -5,8 +5,8 @@ description: 安装 Hypit，编译第一张完整的 SVML 视频图，并准备�
 
 # 快速开始
 
-这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、
-文字与音频组装成一部完成的影片。Author Source 使用 SVML（Semantic Video Markup Language）编写，
+作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、文字与音频组装成一部完成的影片。
+Author Source 使用 SVML（Semantic Video Markup Language）编写，
 扩展名为 `.svml`。
 
 Hypit 把这份源码编译成一张可见的执行图。在任何模型或外部服务开始工作之前，你可以先检查源码、
