@@ -26,7 +26,8 @@ jobs:
               return;
             }
 
-            const client = github.getOctokit(token);
+            const { getOctokit } = require("@actions/github");
+            const client = getOctokit(token);
             await client.rest.repos.createDispatchEvent({
               owner: "hypit-ai",
               repo: "hypihub",
