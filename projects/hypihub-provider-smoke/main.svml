@@ -1,0 +1,53 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
+  <import as="nano" from="@hypit/nano-banana@1"/>
+  <import as="seedream" from="@hypit/seedream@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="h3" from="@hypit/minimax-h3@1"/>
+  <import as="grok" from="@hypit/grok-imagine@1"/>
+  <import as="mimo" from="@hypit/mimo-tts@1"/>
+
+  <text:Value id="prompt">A tiny red paper boat on a blue studio table, clean product photograph, no text.</text:Value>
+  <text:Value id="edit-prompt">Keep the paper boat unchanged and make the studio background warm orange, no text.</text:Value>
+  <text:Value id="motion-prompt">The paper boat glides slowly across the blue table in one continuous locked-camera shot.</text:Value>
+  <text:Value id="speech">The red paper boat moves across the blue table.</text:Value>
+  <asset:Image id="reference-image" src="./assets/reference.png"/>
+  <asset:Audio id="reference-audio" src="./assets/reference.wav"/>
+
+  <gpt:Image id="gpt-text" prompt={prompt} aspect-ratio="1:1" resolution="1K"/>
+  <gpt:Image id="gpt-edit" prompt={edit-prompt} aspect-ratio="1:1" resolution="1K">
+    <gpt:Reference image={reference-image}/>
+  </gpt:Image>
+
+  <nano:ProImage id="nano-text" prompt={prompt} aspect-ratio="1:1" resolution="1K" output-format="png"/>
+  <nano:ProImage id="nano-edit" prompt={edit-prompt} aspect-ratio="1:1" resolution="1K" output-format="png">
+    <nano:Reference image={reference-image}/>
+  </nano:ProImage>
+
+  <seedream:TextImage id="seedream-text" prompt={prompt} aspect-ratio="1:1" quality="basic" output-format="png" nsfw-check="true"/>
+  <seedream:ReferenceImage id="seedream-edit" prompt={edit-prompt} aspect-ratio="1:1" quality="basic" output-format="png" nsfw-check="true">
+    <seedream:Reference image={reference-image}/>
+  </seedream:ReferenceImage>
+
+  <seedance:TextVideo id="seedance-text" model="mini" prompt={motion-prompt} duration="5" resolution="480p" aspect-ratio="16:9" generate-audio="false"/>
+  <seedance:ReferenceVideo id="seedance-image-audio" model="mini" prompt={motion-prompt} duration="5" resolution="480p" aspect-ratio="16:9" generate-audio="true">
+    <seedance:Reference image={reference-image}/>
+    <seedance:Reference audio={reference-audio}/>
+  </seedance:ReferenceVideo>
+
+  <h3:TextVideo id="minimax-text" prompt={motion-prompt} duration="6" resolution="768P" aspect-ratio="16:9"/>
+  <h3:ReferenceVideo id="minimax-reference" prompt={motion-prompt} duration="6" resolution="768P" aspect-ratio="16:9">
+    <h3:Reference image={reference-image}/>
+  </h3:ReferenceVideo>
+
+  <grok:PreviewVideo id="grok-text" prompt={motion-prompt} duration="6" aspect-ratio="16:9" resolution="480p"/>
+  <grok:Video id="grok-image" prompt={motion-prompt} duration="6" aspect-ratio="16:9" resolution="480p">
+    <grok:Reference image={reference-image}/>
+  </grok:Video>
+
+  <mimo:VoiceDesign id="mimo-voice" speech={speech}>A clear, warm narrator with a lightly playful delivery.</mimo:VoiceDesign>
+</svml>

@@ -7,8 +7,9 @@ when its key is configured.
 It maps the currently shipped image/video model capabilities to HypiHub, including image edits and
 image-to-video first-frame inputs, submits jobs, polls them, downloads the first-class assets and
 persists them in Hypit's configured ArtifactStore. Image references use HypiHub's documented
-`reference_images` object shape (`[{ "url": "…" }]`); video reference arrays use the documented `extra` passthrough so HypiHub can hand them to its
-selected upstream adaptor. First/last-frame images use `input_reference` and `last_frame`. It also
+`reference_images` object shape (`[{ "url": "…" }]`); video references use the public
+`reference_image_urls`, `reference_videos`, and `reference_audios` fields (with `ref_video_url`
+for one video). First/last-frame images use `first_frame` and `last_frame`. It also
 exports a small Gemini-native VLM generator for callers that previously used Vertex.
 
 Runtime Profile example:
@@ -37,3 +38,6 @@ credentials should be resolved at [hypit.ai](https://hypit.ai). Referenced image
 Artifacts are uploaded automatically through `POST /v1/files`, then their returned HTTPS capability
 URLs are used in image and video requests. Uploads are deduplicated by Artifact digest within one
 Runtime operation. Embedded callers may override that transport with `publicAssetUrl`.
+
+Set `audio: false` when official `@hypit/provider-xiaomi-mimo` should own MiMo audio capabilities;
+one Runtime can then use HypiHub for image/video and the official MiMo endpoint for audio.
