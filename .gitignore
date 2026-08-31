@@ -70,3 +70,5 @@ examples/**/.svml/
 /projects/*
 !/projects/hypihub-provider-smoke/
 !/projects/hypihub-provider-smoke/**
+/projects/hypihub-provider-smoke/.hypit/
+/projects/hypihub-provider-smoke/.DS_Store
