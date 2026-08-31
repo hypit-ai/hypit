@@ -57,17 +57,17 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th width="16%">参考视频</th>
     <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/646aa486-e8a4-4694-867e-d6ae7b65ec56" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/f573bdac-62da-4b5d-825d-54d5880a7026" controls muted></video></td>
     <td width="28%"></td>
   </tr>
   <tr>
     <th width="16%">复刻视频</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/a2514f4e-1200-4c63-abde-3afb339f76be" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/24f8d669-c9db-48f4-8bc5-03b86f045bc4" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/a354b2db-298c-49fb-a39e-e2fbe7ab74d0" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/3ffd9951-e423-4a48-ad8f-5c596627be69" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/eb62372d-2464-4a4b-83ee-41e227f99a8e" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/9ba050f6-355d-460c-b684-7344cf49c051" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4"><p><b>“GOAT DEBATE”</b>——一条 20 秒的足球 Tier List，把 Ronaldo 排进 D 级，把 Messi 排进 S 级。A-roll 是两段 Seedance 2 Mini 生成的 720p 吐槽片段，B-roll 是 GPT Image 2 生成的一张 2K 哥特女孩肖像和十张 1K 脑腐图；WhisperX 负责逐词对齐，排行榜跟着音效逐条落位，再配上红色词盒卡拉 OK 字幕、丝滑的动画和抓耳的背景音乐，最后由 64 个无头 Chromium 进程并发渲染。</p><p>上面给出了三个复刻版本：把解说员换成香蕉猫；翻转排名，让 Ronaldo 成为 GOAT；把所有球员换成科技公司创始人。同一套爆款结构，可以产出完全不同的爆款视频。</p><p>总成本：<b>$1.15</b>。</p></td>
+    <td colspan="4"><p><b>“GOAT DEBATE”</b>——一条 20 秒的足球 Tier List，把 Ronaldo 排进 D 级，把 Messi 排进 S 级。A-roll 是两段 Seedance 2 Mini 生成的 720p 吐槽片段，B-roll 是 GPT Image 2 生成的一张 2K 哥特女孩肖像和十张 1K 脑腐图；WhisperX 负责逐词对齐，排行榜跟着音效逐条落位，再配上彩色词盒卡拉 OK 字幕、丝滑的动画和抓耳的背景音乐，最后由 64 个无头 Chromium 进程并发渲染。</p><p>上面给出了三个复刻版本：把解说员换成香蕉猫；翻转排名，让 Ronaldo 成为 GOAT；把所有球员换成科技公司创始人。同一套爆款结构，可以产出完全不同的爆款视频。</p><p>总成本：<b>$1.15</b>。</p></td>
   </tr>
 </table>
 
@@ -77,17 +77,17 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th width="16%">参考视频</th>
     <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/a1feb123-3129-4880-87d2-897c42026fff" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/22df72b8-4831-4eb6-957d-676ae9b04f2d" controls muted></video></td>
     <td width="28%"></td>
   </tr>
   <tr>
     <th width="16%">复刻视频</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/d4bcb8a3-9ed5-46a8-900d-13891a83e6a0" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/75cca3aa-d392-49a6-b0cd-9b1c3aff8f01" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/2b04977e-665d-4d5f-8f82-c1ebdf567d2c" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/9c14c5ae-bd12-4961-9d57-a46d3a2154c6" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/f44c653b-f520-4715-9530-4c2f42114387" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/92f9bf8b-4f83-4d9b-a0e8-ca27fab2cc94" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4"><p><b>“DAILY CREATINE”</b>——一条 18 秒的播客片段，肌肉芭比向一个瘦弱的大学生强推肌酸。A-roll 是 Seedance 2 Mini 生成的三段 720p 对峙镜头，外加一段展示理想生活方式的 B-roll；图像是 GPT Image 2 生成的两张 2K AI 角色肖像和三张 1K 蒙太奇画面。WhisperX 负责逐词对齐，再配上分屏访谈版式、区分说话人的卡拉 OK 字幕、产品递出的瞬间和背景音乐，最后由 64 个无头 Chromium 进程并发渲染。</p><p>上面给出了三个复刻版本：把两位主播换成 Pepe 和 Doge，争论狗狗手臂；把肌酸换成视黄醇，让漂亮男孩吐槽假小子的毛孔；把实体产品换成 CheatGPT 应用，让头脑简单的体育生绩点碾压博士生。同一套访谈形式，三个广告垂类。</p><p>总成本：<b>$1.07</b>。</p></td>
+    <td colspan="4"><p><b>“DAILY CREATINE”</b>——一条 18 秒的播客片段，肌肉芭比向一个瘦弱的大学生强推肌酸。A-roll 是 Seedance 2 Mini 生成的三段 720p 对峙镜头，外加一段展示理想生活方式的 B-roll；图像是 GPT Image 2 生成的两张 2K AI 角色肖像和三张 1K 蒙太奇画面。WhisperX 负责逐词对齐，再配上分屏访谈版式、区分说话人的卡拉 OK 字幕、产品递出的瞬间和背景音乐，最后由 64 个无头 Chromium 进程并发渲染。</p><p>上面给出了三个复刻版本：把两位主播换成 Pepe 和 Doge，争论狗狗手臂；把肌酸换成视黄醇，让漂亮男孩吐槽假小子的毛孔；把实体产品换成 CheatGPT 应用，让头脑简单的体育生绩点碾压博士生。同一套播客形式，三个广告垂类。</p><p>总成本：<b>$1.07</b>。</p></td>
   </tr>
 </table>
 
@@ -97,17 +97,17 @@ npx skills add hypit-ai/hypit -g
   <tr>
     <th width="16%">参考视频</th>
     <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/666ad535-3231-44fb-b9bc-271817ae79de" controls muted></video></td>
     <td width="28%"></td>
   </tr>
   <tr>
     <th width="16%">复刻视频</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/c39a0425-2dcb-4709-b894-6a9423d351e3" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/8f71552c-0ad1-4d29-8c4e-3b937ab7c887" controls muted></video></td>
+    <td width="28%"><video src="https://github.com/user-attachments/assets/d9cab2e7-e08b-48ef-8d25-bc28ca9efc17" controls muted></video></td>
   </tr>
   <tr>
-    <td colspan="4">本地部署的 MiniMax H3，3 次 GPT Image 2 生成；排行榜、TikTok 风格字幕和视觉特效由无头 Chromium 渲染。<b>总成本：$0.15。</b></td>
+    <td colspan="4"><p><b>“NICE RIDE”</b>——一条 26 秒的街头采访，黑帮太太分享赚到第一个一百万的三条规则。三段由 Seedance 2 Mini 生成的 720p A-roll，一张由 GPT Image 2 生成的 2K AI 角色肖像；WhisperX 负责逐词对齐，再利用 Google Video Intelligence 和 YOLOv8 AnimeFace 提供的人脸边界框，驱动跟随人脸的说话人专属彩色字幕；配合跟音效同步的表情符号揭示板、彩色闪烁、揭示音效和背景音乐，最后由 64 个无头 Chromium 进程并发渲染。</p><p>上面给出了三个复刻版本：把主播换成 Wojak 和 Chad；把所有内容翻译成西班牙语，同时保持完全相同的 punchline；或者把兰博基尼换成 F1 赛车，让 Ada 向 Leon 解释自己如何因为开 Uber 意外赢得大奖赛。同样的三阶段揭示结构，三种不同的街头采访混剪。</p><p>总成本：<b>$1.09</b>。</p></td>
   </tr>
 </table>
 
