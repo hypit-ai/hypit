@@ -132,6 +132,9 @@ importers:
       '@hypit/provider-hyperframes-local':
         specifier: workspace:*
         version: link:packages/provider-hyperframes-local
+      '@hypit/provider-hypihub':
+        specifier: workspace:*
+        version: link:packages/provider-hypihub
       '@hypit/provider-image-opencv-local':
         specifier: workspace:*
         version: link:packages/provider-image-opencv-local
@@ -1936,6 +1939,24 @@ importers:
       '@hypit/program-space':
         specifier: workspace:*
         version: link:../program-space
+
+  packages/provider-hypihub:
+    dependencies:
+      '@hypit/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/runtime-kit':
+        specifier: workspace:*
+        version: link:../runtime-kit
 
   packages/provider-image-opencv-local:
     dependencies:
