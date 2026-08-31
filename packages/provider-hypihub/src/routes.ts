@@ -67,6 +67,12 @@ function normalizeHypiHubRequest(
   if (Array.isArray(videoRefs) && videoRefs.length > 0) {
     throw new Error("HypiHub video reference inputs require a public HTTPS URL; the Runtime ArtifactStore cannot expose one");
   }
+  if (Array.isArray(imageRefs) && imageRefs.length > 1) {
+    throw new Error("HypiHub unified video API accepts one input_reference image; multiple reference images are not supported");
+  }
+  if (Array.isArray(genericImageRefs) && genericImageRefs.length > 1) {
+    throw new Error("HypiHub unified video API accepts one input_reference image; multiple reference images are not supported");
+  }
   if (typeof sourceTaskId === "string" && sourceTaskId.length > 0) {
     throw new Error("HypiHub unified video API does not support video continuation sourceTaskId");
   }
