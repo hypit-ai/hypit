@@ -1,8 +1,9 @@
 # `@hypit/provider-vertex`
 
-Vertex Gemini backend for callers that need text, image or video inline-data input. The package owns
-the Google GenAI client and credential parsing; callers only select the model and provide a generator
-input.
+Vertex Gemini Runtime Provider and embedded backend for callers that need text, image or video input.
+It fulfills the same provider-neutral `@hypit/gemini` capabilities as HypiHub, so Runtime Profiles
+choose the backend without changing Author Source. The package owns the Google GenAI client and
+credential parsing.
 
 ```ts
 import { createVertexGeminiGenerator } from "@hypit/provider-vertex";

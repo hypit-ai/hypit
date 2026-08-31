@@ -3,8 +3,10 @@ import test from "node:test";
 
 import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
 import type { AsyncEndpoint } from "@hypit/endpoint-kit";
+import { geminiCapabilities, sealGeminiRequest } from "@hypit/gemini";
 import type { CanonicalValue, Need } from "@hypit/protocol";
 import { mimoTtsEndpoints } from "@hypit/mimo-tts";
+import { textTypes } from "@hypit/text";
 import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
 
 import { createHypiHubProvider } from "../src/provider.js";
@@ -113,4 +115,52 @@ test("HypiHub uploads referenced Artifacts once, submits their HTTPS URLs, and p
   const completed = await endpoint.poll({ ...common, handle: started.handle });
   assert.equal(completed.status, "completed");
   assert.equal(calls.length, 6);
+});
+
+test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every media Artifact", async () => {
+  const artifacts = new MemoryArtifactStore();
+  const image = await artifacts.put(new Uint8Array([1, 2, 3]), "image/png");
+  const video = await artifacts.put(new Uint8Array([4, 5, 6]), "video/mp4");
+  const request: Need = {
+    id: "need:hypihub-gemini",
+    capability: geminiCapabilities["gemini-3.7-flash"],
+    returns: textTypes.text,
+    constraints: sealGeminiRequest({
+      instruction: "Answer briefly.", prompt: "Inspect both references.",
+      media: [{ artifact: image }, { artifact: video }],
+    }) as unknown as CanonicalValue,
+    result: "record:hypihub-gemini",
+  };
+  const uploads: string[] = [];
+  let generationBody: Record<string, unknown> | undefined;
+  const registry = new EndpointRegistry();
+  await createHypiHubProvider({ fetch: async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/v1/files")) {
+      assert.ok(init?.body instanceof FormData);
+      const file = init.body.get("file");
+      assert.ok(file instanceof File);
+      uploads.push(file.type);
+      return Response.json({ url: `https://hypit.ai/files/${uploads.length}` });
+    }
+    if (url.includes(":generateContent")) {
+      generationBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return Response.json({ candidates: [{ content: { parts: [{ text: "provider works" }] } }] });
+    }
+    throw new Error(`Unexpected URL ${url}`);
+  } }).install(registry);
+  const resolution = registry.resolve(request);
+  assert.equal(resolution.status, "resolved");
+  assert.equal(resolution.registration.kind, "immediate");
+  const result = await resolution.registration.handler({
+    command: { kind: "fulfill-need", id: "command:hypihub-gemini", need: request },
+    need: request, artifacts, credentials: { apiKey: { secret: "test-key" } },
+  });
+  assert.deepEqual(result.value, { kind: "inline", value: { value: "provider works" } });
+  assert.deepEqual(uploads, ["image/png", "video/mp4"]);
+  assert.deepEqual((generationBody?.contents as readonly unknown[]), [{ role: "user", parts: [
+    { text: "Inspect both references." },
+    { fileData: { mimeType: "image/png", fileUri: "https://hypit.ai/files/1" } },
+    { fileData: { mimeType: "video/mp4", fileUri: "https://hypit.ai/files/2" } },
+  ] }]);
 });

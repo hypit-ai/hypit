@@ -1,5 +1,5 @@
 {
-  "name": "@hypit/provider-vertex",
+  "name": "@hypit/gemini",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,15 +7,11 @@
   "exports": { ".": "./src/index.ts" },
   "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@google/genai": "1.52.0",
-    "@hypit/endpoint-kit": "workspace:*",
-    "@hypit/gemini": "workspace:*",
+    "@hypit/artifact": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/markup": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/runtime": "workspace:*",
-    "@hypit/runtime-kit": "workspace:*",
     "@hypit/text": "workspace:*"
-  },
-  "devDependencies": {
-    "@hypit/driver-node": "workspace:*"
   }
 }

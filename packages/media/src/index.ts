@@ -2,6 +2,7 @@ export {
   decodeMediaAudioSurface,
   decodeMediaFontSurface,
   decodeMediaImageSurface,
+  decodeMediaVideoSurface,
 } from "./surface.js";
 export { mediaComponent } from "./component.js";
 export { sealMediaInspection, sealMediaStreamSelection, sealMuxedMedia, sealRenderedVisual, sealSynchronizedMedia, sealTimelineAudio, synchronizedMediaSampleFrames, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "./identity.js";

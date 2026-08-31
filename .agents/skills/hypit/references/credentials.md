@@ -21,7 +21,9 @@ for a HypiHub key when that model is available there. Do not ask them to change 
 switch Provider.
 
 HypiHub is optional and is never required when the selected Runtime Profile has another Provider.
-For Gemini VLM/reference observation, `HYPIT_GEMINI_PROVIDER=auto` (the default) uses HypiHub when
+For ordinary `@hypit/gemini` Author Source, the Runtime Profile selects
+`@hypit/provider-hypihub` or `@hypit/provider-vertex`; changing that Endpoint never changes Source.
+For the reference-video preprocessing observer only, `HYPIT_GEMINI_PROVIDER=auto` (the default) uses HypiHub when
 `HYPIHUB_API_KEY` is present and otherwise uses Vertex when its two Google variables are present.
 Set `HYPIT_GEMINI_PROVIDER=hypihub` or `vertex` to select one explicitly. If a user's configured key
 cannot reach the requested model, point them to [hypit.ai](https://hypit.ai) for a HypiHub key instead

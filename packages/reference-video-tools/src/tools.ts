@@ -22,7 +22,7 @@ import { describeSchema } from "./contract.js";
 import { videoCliDistribution } from "@hypit/video-cli";
 import { createHypiHubGeminiGenerator } from "@hypit/provider-hypihub";
 import { createVertexGeminiGenerator } from "@hypit/provider-vertex";
-import type { VertexGeminiPart } from "@hypit/provider-vertex";
+import type { GeminiInlinePart } from "@hypit/gemini";
 
 import { authorSource, invokedFrom, nearestPackageRoot, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath, tokenWindow } from "./authoring.js";
 import type { RenderElementInput, RenderPreviewsInput, SpokenRange, StandInFocus, StandInSidecar } from "./authoring.js";
@@ -300,7 +300,7 @@ type ToolOptions = {
   readonly retryDelayMs?: number;
   readonly generate?: GenerateText;
 };
-export type GenerateText = (input: { readonly parts: readonly VertexGeminiPart[]; readonly instruction: string }) => Promise<string>;
+export type GenerateText = (input: { readonly parts: readonly GeminiInlinePart[]; readonly instruction: string }) => Promise<string>;
 type ObservationTask = { readonly key: string; readonly request: Request };
 
 function routeStateResult(state: RouteState | undefined): Record<string, unknown> {
@@ -850,12 +850,12 @@ const MIME_TYPES: Readonly<Record<string, string>> = {
 // The Vertex path cannot upload a file and reference it later, so the bytes travel with every
 // request. One shot's clip is asked about by its own picture, type and sound observations and by the
 // boundary on each side, so reading and encoding it once per invocation is worth the memory.
-function mediaParts(): (path: string) => Promise<VertexGeminiPart> {
-  const encoded = new Map<string, Promise<VertexGeminiPart>>();
+function mediaParts(): (path: string) => Promise<GeminiInlinePart> {
+  const encoded = new Map<string, Promise<GeminiInlinePart>>();
   return (path) => {
     const held = encoded.get(path);
     if (held !== undefined) return held;
-    const part = (async (): Promise<VertexGeminiPart> => {
+    const part = (async (): Promise<GeminiInlinePart> => {
       const bytes = await readBytes(path);
       const extension = path.toLowerCase().split(".").pop() ?? "";
       const mimeType = MIME_TYPES[extension];
@@ -881,7 +881,7 @@ function permanent(error: unknown): boolean {
   return /invalid[_ ]argument|permission[_ ]denied|unauthenticated|not[_ ]found|failed[_ ]precondition/iu.test(message(error));
 }
 
-async function callSafely(retryDelayMs: number, generate: GenerateText, parts: readonly VertexGeminiPart[], instruction: string): Promise<Observation> {
+async function callSafely(retryDelayMs: number, generate: GenerateText, parts: readonly GeminiInlinePart[], instruction: string): Promise<Observation> {
   let last: unknown;
   for (let attempt = 1; attempt <= 6; attempt += 1) {
     try { return observation("complete", await generate({ parts, instruction })); }
@@ -1461,7 +1461,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     return {
       pending: [],
       ask: async (_key, { media, prompt, instruction }) => {
-        const parts: VertexGeminiPart[] = [];
+        const parts: GeminiInlinePart[] = [];
         for (const path of media) parts.push(await mediaPart(path));
         parts.push({ text: `${prompt}\n\n${WATERMARK_RULE}` });
         return await callSafely(retryDelayMs, generate, parts, instruction);

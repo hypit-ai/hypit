@@ -1,14 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 import type { Content } from "@google/genai";
+import type { GeminiGenerateInput, GeminiInlinePart } from "@hypit/gemini";
 
-export type VertexGeminiPart =
-  | { readonly text?: string; readonly inlineData?: never }
-  | { readonly inlineData?: { readonly mimeType: string; readonly data: string }; readonly text?: never };
-
-export type VertexGeminiGenerateInput = {
-  readonly parts: readonly VertexGeminiPart[];
-  readonly instruction: string;
-};
+export type VertexGeminiPart = GeminiInlinePart;
+export type VertexGeminiGenerateInput = GeminiGenerateInput;
 
 export type VertexGeminiGeneratorOptions = {
   readonly project: string;

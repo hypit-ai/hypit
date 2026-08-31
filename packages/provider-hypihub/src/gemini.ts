@@ -1,6 +1,6 @@
-export type HypiHubGeminiPart =
-  | { readonly text: string }
-  | { readonly inlineData: { readonly mimeType: string; readonly data: string } }
+import type { GeminiInlinePart } from "@hypit/gemini";
+
+export type HypiHubGeminiPart = GeminiInlinePart
   | { readonly fileData: { readonly mimeType?: string; readonly fileUri: string } };
 
 export type HypiHubGeminiGeneratorOptions = {
@@ -8,6 +8,8 @@ export type HypiHubGeminiGeneratorOptions = {
   readonly model?: string;
   readonly baseUrl?: string;
   readonly requestTimeoutMs?: number;
+  readonly maxRateLimitRetries?: number;
+  readonly rateLimitRetryDelayMs?: number;
   readonly fetch?: typeof globalThis.fetch;
 };
 
@@ -18,6 +20,22 @@ export type HypiHubGeminiGenerateInput = {
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
+}
+
+function positiveInteger(value: number, subject: string): number {
+  assert(Number.isSafeInteger(value) && value > 0, `${subject} must be a positive integer`);
+  return value;
+}
+
+function retryDelay(response: Response, fallback: number, attempt: number): number {
+  const retryAfter = response.headers.get("retry-after")?.trim();
+  if (retryAfter !== undefined && retryAfter !== "") {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.max(250, Math.round(seconds * 1_000));
+    const date = Date.parse(retryAfter);
+    if (Number.isFinite(date)) return Math.max(250, date - Date.now());
+  }
+  return fallback * (attempt + 1);
 }
 
 function partValue(part: HypiHubGeminiPart, uploaded: Map<string, Promise<string>>,
@@ -54,6 +72,11 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
     .replace(/\/$/u, "");
   const model = options.model?.trim() || "gemini-3.1-pro-preview";
   const timeout = options.requestTimeoutMs ?? 120_000;
+  const maxRateLimitRetries = options.maxRateLimitRetries ?? 3;
+  assert(Number.isSafeInteger(maxRateLimitRetries) && maxRateLimitRetries >= 0,
+    "HypiHub Gemini maxRateLimitRetries must be a non-negative integer");
+  const rateLimitRetryDelayMs = positiveInteger(options.rateLimitRetryDelayMs ?? 2_000,
+    "HypiHub Gemini rateLimitRetryDelayMs");
   const fetcher = options.fetch ?? globalThis.fetch;
 
   return async (input: HypiHubGeminiGenerateInput): Promise<string> => {
@@ -84,17 +107,24 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
         return url;
       };
       const parts = await Promise.all(input.parts.map((part) => partValue(part, uploaded, upload)));
-      const response = await fetcher(`${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: input.instruction }] },
-          contents: [{ role: "user", parts }],
-          generationConfig: { temperature: 1, responseMimeType: "text/plain" },
-        }),
-      });
-      const text = await response.text();
+      let response: Response | undefined;
+      let text = "";
+      for (let attempt = 0; attempt <= maxRateLimitRetries; attempt += 1) {
+        response = await fetcher(`${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: input.instruction }] },
+            contents: [{ role: "user", parts }],
+            generationConfig: { temperature: 1, responseMimeType: "text/plain" },
+          }),
+        });
+        text = await response.text();
+        if (response.status !== 429 || attempt === maxRateLimitRetries) break;
+        await new Promise((resolve) => setTimeout(resolve, retryDelay(response!, rateLimitRetryDelayMs, attempt)));
+      }
+      assert(response !== undefined, "HypiHub Gemini made no request");
       if (!response.ok) {
         const message = `HypiHub Gemini returned HTTP ${response.status}: ${text.slice(0, 300)}`;
         if (response.status === 401 || response.status === 403 || response.status === 404) {

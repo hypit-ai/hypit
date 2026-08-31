@@ -1,0 +1,7 @@
+<?svml using="@hypit/run-markup@1"?>
+
+<svrun version="1">
+  <author source="./main.svml"/>
+  <target output="nano2-text.image"/>
+  <target output="nano2-edit.image"/>
+</svrun>

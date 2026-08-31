@@ -79,6 +79,7 @@
     "@hypit/film-studio": "workspace:*",
     "@hypit/fonts-open": "workspace:*",
     "@hypit/generation": "workspace:*",
+    "@hypit/gemini": "workspace:*",
     "@hypit/gpt-image": "workspace:*",
     "@hypit/grok-imagine": "workspace:*",
     "@hypit/hyperframes": "workspace:*",

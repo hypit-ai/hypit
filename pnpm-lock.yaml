@@ -72,6 +72,9 @@ importers:
       '@hypit/fonts-open':
         specifier: workspace:*
         version: link:packages/fonts-open
+      '@hypit/gemini':
+        specifier: workspace:*
+        version: link:packages/gemini
       '@hypit/generation':
         specifier: workspace:*
         version: link:packages/generation
@@ -1313,6 +1316,27 @@ importers:
         specifier: 0.2.0
         version: 0.2.0
 
+  packages/gemini:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@hypit/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/generation:
     dependencies:
       '@hypit/artifact':
@@ -1948,6 +1972,9 @@ importers:
       '@hypit/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
+      '@hypit/gemini':
+        specifier: workspace:*
+        version: link:../gemini
       '@hypit/generation':
         specifier: workspace:*
         version: link:../generation
@@ -1960,6 +1987,9 @@ importers:
       '@hypit/runtime-kit':
         specifier: workspace:*
         version: link:../runtime-kit
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
     devDependencies:
       '@hypit/driver-node':
         specifier: workspace:*
@@ -2163,6 +2193,28 @@ importers:
       '@google/genai':
         specifier: 1.52.0
         version: 1.52.0
+      '@hypit/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@hypit/gemini':
+        specifier: workspace:*
+        version: link:../gemini
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/runtime-kit':
+        specifier: workspace:*
+        version: link:../runtime-kit
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@hypit/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
 
   packages/provider-whisperx-local:
     dependencies:
@@ -2313,6 +2365,9 @@ importers:
       '@hypit/estimate':
         specifier: workspace:*
         version: link:../estimate
+      '@hypit/gemini':
+        specifier: workspace:*
+        version: link:../gemini
       '@hypit/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes

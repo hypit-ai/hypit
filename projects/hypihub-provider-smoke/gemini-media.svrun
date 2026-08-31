@@ -1,0 +1,9 @@
+<?svml using="@hypit/run-markup@1"?>
+
+<svrun version="1">
+  <author source="./main.svml"/>
+  <target output="gemini-flash-image.text"/>
+  <target output="gemini-flash-video.text"/>
+  <target output="gemini-pro-image.text"/>
+  <target output="gemini-pro-video.text"/>
+</svrun>
