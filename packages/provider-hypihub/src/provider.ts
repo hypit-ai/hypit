@@ -41,6 +41,13 @@ function jobId(value: Record<string, unknown>): string {
   return id;
 }
 
+async function verifyModelRoute(client: HypiHubClient, apiKey: string, model: string, operation: "images" | "image_edits" | "videos"): Promise<void> {
+  const card = await client.json(`/models/${encodeURIComponent(model)}`, apiKey);
+  const endpoints = card.endpoints;
+  assert(Array.isArray(endpoints) && endpoints.includes(operation),
+    `HypiHub model ${model} is not enabled for ${operation} with this API key`);
+}
+
 function dataUrl(bytes: Uint8Array, mediaType: string): string {
   return `data:${mediaType};base64,${Buffer.from(bytes).toString("base64")}`;
 }
@@ -113,6 +120,8 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
         const path = route.media === "image"
           ? (hasReferences ? "/images/edits" : "/images/generations")
           : "/videos";
+        await verifyModelRoute(client, apiKey, compiled.model,
+          path === "/images/edits" ? "image_edits" : path === "/images/generations" ? "images" : "videos");
         const response = await client.json(path, apiKey, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": context.operation }, body: JSON.stringify({ model: compiled.model, ...input }) });
         const status = response.status; if (status === "succeeded" || status === "completed") return await complete(client, apiKey, route, jobId(response), context.artifacts);
         const handle: Handle = { contract: "hypit.hypihub-operation@1", jobId: jobId(response), route: capabilityKey(route.capability), startedAt: Date.now() };
