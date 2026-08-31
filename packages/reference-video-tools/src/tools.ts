@@ -807,7 +807,7 @@ async function defaultGenerate(model: string): Promise<GenerateText> {
         return await generate({ parts: parts as unknown as Parameters<typeof generate>[0]["parts"], instruction });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        if (/HTTP (401|403|404)\b|model_not_found|no_capable_provider/iu.test(message)) {
+        if (!/hypit\.ai/iu.test(message) && /HTTP (401|403|404)\b|model_not_found|no_capable_provider/iu.test(message)) {
           throw new Error(`${message}. This Gemini model is not available with the configured key; get a HypiHub key at https://hypit.ai`);
         }
         throw error;
@@ -825,7 +825,17 @@ async function defaultGenerate(model: string): Promise<GenerateText> {
     model,
     location: process.env.GOOGLE_CLOUD_LOCATION?.trim() || "global",
   });
-  return async ({ parts, instruction }) => generate({ parts, instruction });
+  return async ({ parts, instruction }) => {
+    try {
+      return await generate({ parts, instruction });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/hypit\.ai/iu.test(message) && /\b(?:401|403|404)\b|permission denied|unauthenticated|not found|failed precondition/iu.test(message)) {
+        throw new Error(`${message}. This Gemini model or Vertex credential is unavailable; get a HypiHub key at https://hypit.ai`);
+      }
+      throw error;
+    }
+  };
 }
 
 const MIME_TYPES: Readonly<Record<string, string>> = {

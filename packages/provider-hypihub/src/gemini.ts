@@ -33,7 +33,12 @@ function partValue(part: HypiHubGeminiPart): Record<string, unknown> {
 export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOptions) {
   const apiKey = options.apiKey.trim();
   assert(apiKey.length > 0, "HypiHub API key is empty");
-  const baseUrl = (options.baseUrl ?? "https://hypit.ai").replace(/\/$/u, "");
+  // The native Gemini endpoint lives at /v1beta while the paid image/video
+  // client lives at /v1. Accept either commonly configured HypiHub base URL
+  // and strip only the version suffix before adding /v1beta below.
+  const baseUrl = (options.baseUrl ?? "https://hypit.ai")
+    .replace(/\/(?:v1beta|v1)\/?$/iu, "")
+    .replace(/\/$/u, "");
   const model = options.model?.trim() || "gemini-3.1-pro-preview";
   const timeout = options.requestTimeoutMs ?? 120_000;
   const fetcher = options.fetch ?? globalThis.fetch;
@@ -53,7 +58,13 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
         }),
       });
       const text = await response.text();
-      if (!response.ok) throw new Error(`HypiHub Gemini returned HTTP ${response.status}: ${text.slice(0, 300)}`);
+      if (!response.ok) {
+        const message = `HypiHub Gemini returned HTTP ${response.status}: ${text.slice(0, 300)}`;
+        if (response.status === 401 || response.status === 403 || response.status === 404) {
+          throw new Error(`${message}. Get a HypiHub key with this model enabled at https://hypit.ai`);
+        }
+        throw new Error(message);
+      }
       let body: unknown;
       try { body = JSON.parse(text); } catch { throw new Error("HypiHub Gemini returned invalid JSON"); }
       const candidates = (body as { readonly candidates?: readonly { readonly content?: { readonly parts?: readonly { readonly text?: unknown }[] } }[] }).candidates;
