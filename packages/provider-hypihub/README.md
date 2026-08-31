@@ -33,5 +33,7 @@ Gemini VLM callers can use the exported `createHypiHubGeminiGenerator` without c
 provider-facing code. Set `HYPIHUB_API_KEY` (and optionally `HYPIHUB_BASE_URL`; either the origin or
 an existing `/v1`/`/v1beta` base is accepted) only when choosing HypiHub. The Runtime Provider also
 accepts the origin or either versioned base and normalizes it to `/v1`; missing or insufficient user
-credentials should be resolved at [hypit.ai](https://hypit.ai). Video/audio reference artifacts need
-an operator-supplied `publicAssetUrl` callback because HypiHub must fetch those references over HTTPS.
+credentials should be resolved at [hypit.ai](https://hypit.ai). Referenced image, audio and video
+Artifacts are uploaded automatically through `POST /v1/files`, then their returned HTTPS capability
+URLs are used in image and video requests. Uploads are deduplicated by Artifact digest within one
+Runtime operation. Embedded callers may override that transport with `publicAssetUrl`.

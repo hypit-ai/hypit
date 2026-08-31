@@ -12,5 +12,9 @@
     "@hypit/protocol": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-kit": "workspace:*"
+  },
+  "devDependencies": {
+    "@hypit/driver-node": "workspace:*",
+    "@hypit/seedance": "workspace:*"
   }
 }
