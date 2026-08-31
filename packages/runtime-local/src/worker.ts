@@ -75,6 +75,19 @@ class CapacityExecutor implements RuntimeCommandExecutor {
     if (resources.length === 0) {
       return await this.#delegate.executeCommand(state, descriptor, context);
     }
+    // An asynchronous command keeps its capacity reservation while it is
+    // being polled. Do not count that same build/command against itself on a
+    // later dispatch turn; the reservation is intentionally retained until
+    // the Operation reaches a terminal state.
+    const reservation = (await this.#options.stores.dispatch.listCapacity())
+      .find((item) => item.build === context.build && item.command === descriptor.command.id);
+    if (reservation !== undefined) {
+      const result = await this.#delegate.executeCommand(state, descriptor, context);
+      if (result.status !== "pending") {
+        await this.#options.stores.dispatch.releaseCapacity(context.build, descriptor.command.id);
+      }
+      return result;
+    }
     const acquired = await this.#options.stores.dispatch.acquireCapacity({
       build: context.build,
       command: descriptor.command.id,
