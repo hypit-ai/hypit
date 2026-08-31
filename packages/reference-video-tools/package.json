@@ -28,6 +28,7 @@
     "@hypit/run-markup": "workspace:*",
     "@hypit/provider-whisperx-local": "workspace:*",
     "@hypit/provider-media-local": "workspace:*",
+    "@hypit/provider-hypihub": "workspace:*",
     "@hypit/script": "workspace:*",
     "@hypit/speech": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",

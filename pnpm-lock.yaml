@@ -2321,6 +2321,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/provider-hypihub':
+        specifier: workspace:*
+        version: link:../provider-hypihub
       '@hypit/provider-media-local':
         specifier: workspace:*
         version: link:../provider-media-local

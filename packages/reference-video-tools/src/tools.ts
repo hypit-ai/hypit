@@ -21,6 +21,7 @@ import { VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@hypit/visua
 
 import { describeSchema } from "./contract.js";
 import { videoCliDistribution } from "@hypit/video-cli";
+import { createHypiHubGeminiGenerator } from "@hypit/provider-hypihub";
 
 import { authorSource, invokedFrom, nearestPackageRoot, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath, tokenWindow } from "./authoring.js";
 import type { RenderElementInput, RenderPreviewsInput, SpokenRange, StandInFocus, StandInSidecar } from "./authoring.js";
@@ -788,6 +789,18 @@ function positiveInt(value: number, label: string): number {
 }
 
 async function defaultGenerate(model: string): Promise<GenerateText> {
+  const hypiHubKey = process.env.HYPIHUB_API_KEY?.trim();
+  if (hypiHubKey) {
+    const generate = createHypiHubGeminiGenerator({
+      apiKey: hypiHubKey,
+      model,
+      baseUrl: process.env.HYPIHUB_BASE_URL?.trim() || "https://hypit.ai",
+    });
+    return async ({ parts, instruction }) => await generate({
+      parts: parts as unknown as Parameters<typeof generate>[0]["parts"],
+      instruction,
+    });
+  }
   const project = process.env.GOOGLE_CLOUD_PROJECT?.trim();
   const credentials = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.trim();
   assert(project, "GOOGLE_CLOUD_PROJECT is required");
