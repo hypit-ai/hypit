@@ -25,6 +25,10 @@
   </gpt:Image>
 
   <nano:ProImage id="nano-text" prompt={prompt} aspect-ratio="1:1" resolution="1K" output-format="png"/>
+  <nano:Image id="nano2-text" prompt={prompt} aspect-ratio="1:1" resolution="1K" output-format="png"/>
+  <nano:Image id="nano2-edit" prompt={edit-prompt} aspect-ratio="1:1" resolution="1K" output-format="png">
+    <nano:Reference image={reference-image}/>
+  </nano:Image>
   <nano:ProImage id="nano-edit" prompt={edit-prompt} aspect-ratio="1:1" resolution="1K" output-format="png">
     <nano:Reference image={reference-image}/>
   </nano:ProImage>
@@ -39,6 +43,9 @@
     <seedance:Reference image={reference-image}/>
     <seedance:Reference audio={reference-audio}/>
   </seedance:ReferenceVideo>
+  <seedance:TextVideo id="seedance-standard-text" model="standard" prompt={motion-prompt} duration="5" resolution="480p" aspect-ratio="16:9" generate-audio="false"/>
+  <seedance:TextVideo id="seedance-fast-text" model="fast" prompt={motion-prompt} duration="5" resolution="480p" aspect-ratio="16:9" generate-audio="false"/>
+  <seedance:TextVideo id="seedance-v25-text" model="2.5" prompt={motion-prompt} duration="5" resolution="720p" aspect-ratio="16:9" generate-audio="false"/>
 
   <h3:TextVideo id="minimax-text" prompt={motion-prompt} duration="6" resolution="768P" aspect-ratio="16:9"/>
   <h3:ReferenceVideo id="minimax-reference" prompt={motion-prompt} duration="6" resolution="768P" aspect-ratio="16:9">
@@ -51,4 +58,6 @@
   </grok:Video>
 
   <mimo:VoiceDesign id="mimo-voice" speech={speech}>A clear, warm narrator with a lightly playful delivery.</mimo:VoiceDesign>
+  <mimo:Preset id="mimo-preset" speech={speech} voice="Chloe"/>
+  <mimo:VoiceClone id="mimo-clone" speech={speech} sample={reference-audio}/>
 </svml>
