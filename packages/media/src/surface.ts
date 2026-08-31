@@ -27,6 +27,13 @@ const AUDIO_MEDIA_TYPES = new Map([
   [".wav", "audio/wav"],
 ]);
 
+const VIDEO_MEDIA_TYPES = new Map([
+  [".m4v", "video/x-m4v"],
+  [".mov", "video/quicktime"],
+  [".mp4", "video/mp4"],
+  [".webm", "video/webm"],
+]);
+
 const FONT_MEDIA_TYPES = new Map([
   [".otf", "font/otf"],
   [".ttf", "font/ttf"],
@@ -51,7 +58,7 @@ function assertChildrenEmpty(element: StructuredElement): void {
 function mediaTypeFor(
   element: StructuredElement,
   source: string,
-  kind: "image" | "audio" | "font",
+  kind: "image" | "audio" | "video" | "font",
   known: ReadonlyMap<string, string>,
 ): string {
   const explicit = element.attributes["media-type"];
@@ -74,7 +81,7 @@ function mediaTypeFor(
 async function decodeMediaAssetSurface(
   element: StructuredElement,
   resolveAsset: Parameters<StructuredSurfaceHandler>[0]["resolveAsset"],
-  kind: "image" | "audio",
+  kind: "image" | "audio" | "video",
   known: ReadonlyMap<string, string>,
 ) {
   const names = Object.keys(element.attributes).sort();
@@ -106,6 +113,9 @@ export const decodeMediaImageSurface: StructuredSurfaceHandler = async ({ elemen
 
 export const decodeMediaAudioSurface: StructuredSurfaceHandler = async ({ element, resolveAsset }) =>
   await decodeMediaAssetSurface(element, resolveAsset, "audio", AUDIO_MEDIA_TYPES);
+
+export const decodeMediaVideoSurface: StructuredSurfaceHandler = async ({ element, resolveAsset }) =>
+  await decodeMediaAssetSurface(element, resolveAsset, "video", VIDEO_MEDIA_TYPES);
 
 export const decodeMediaFontSurface: StructuredSurfaceHandler = async ({ element, resolveAsset }) => {
   const names = Object.keys(element.attributes).sort();

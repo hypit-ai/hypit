@@ -1,7 +1,7 @@
 import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 
 import {
-  decodeMediaAudioSurface, decodeMediaFontSurface, decodeMediaImageSurface, mediaComponent,
+  decodeMediaAudioSurface, decodeMediaFontSurface, decodeMediaImageSurface, decodeMediaVideoSurface, mediaComponent,
   mediaManifest,
   mediaModuleRef,
   mediaMarkupSurfaces,
@@ -21,6 +21,11 @@ export const hypitPackage = {
       module: mediaModuleRef,
     declaration: mediaMarkupSurfaces.find((item) => item.name === "audio")!,
       handler: decodeMediaAudioSurface,
+    }),
+    createMarkupSurfaceHostFacet({
+      module: mediaModuleRef,
+    declaration: mediaMarkupSurfaces.find((item) => item.name === "video")!,
+      handler: decodeMediaVideoSurface,
     }),
     createMarkupSurfaceHostFacet({
       module: mediaModuleRef,

@@ -3,17 +3,17 @@
   "runtime": {
     "use": "@hypit/runtime-local",
     "config": {
-      "dataRoot": ".hypit/runtimes/local-v4",
+      "dataRoot": ".hypit/runtimes/local",
       "artifacts": { "use": "@hypit/artifact-store-fs", "config": { "path": "artifacts" } },
       "credentials": { "env": { "use": "@hypit/credential-store-env" } },
       "endpoints": {
         "hypihub.smoke": {
           "use": "@hypit/provider-hypihub",
-          "pool": "hypihub.smoke-v4",
+          "pool": "hypihub.smoke",
           "config": {
             "baseUrl": "https://hypit.ai/v1",
             "apiKey": { "store": "env", "key": "HYPIHUB_API_KEY" },
-            "defaultConcurrency": 1,
+            "defaultConcurrency": 8,
             "pollIntervalMs": 5000,
             "requestTimeoutMs": 120000,
             "audio": false

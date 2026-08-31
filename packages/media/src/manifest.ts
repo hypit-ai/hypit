@@ -57,6 +57,27 @@ export const mediaMarkupSurfaces = [
       },
     },
     {
+      name: "video", tag: "Video", mode: "structured", outputs: [artifactTypes.blob],
+      vocabulary: {
+        summary: "Requests one authored video file from the Host and publishes it as a content-addressed Artifact.",
+        attributes: [
+          { name: "id", kind: "identifier", required: true,
+            summary: "Names the Artifact Record this element publishes." },
+          { name: "src", kind: "literal", required: true,
+            summary: "Points at the video file, resolved by the Host against the source that declares it." },
+          { name: "media-type", kind: "literal", required: false,
+            summary: "States the video media type when the src extension does not name one." },
+        ],
+        example: `<media:Video id="reference" src="./assets/reference.mp4"/>`,
+        notes: [
+          "The element is empty; it accepts no children and no text.",
+          "`.m4v`, `.mov`, `.mp4` and `.webm` name their own media type; any other file needs `media-type`.",
+          "A written `media-type` must begin with `video/`, and the resolved bytes must arrive as a video Artifact.",
+          "The Artifact is published under the bare `id`, and the consuming package decides what the video means.",
+        ],
+      },
+    },
+    {
       name: "font", tag: "Font", mode: "structured", outputs: [mediaTypes.fontArtifact],
       vocabulary: {
         summary: "Requests one authored font file from the Host and publishes it with its exact weight and style as a one-source FontArtifact.",

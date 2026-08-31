@@ -1,0 +1,9 @@
+<?svml using="@hypit/run-markup@1"?>
+
+<svrun version="1">
+  <author source="./main.svml"/>
+  <target output="seedance-frame.video"/>
+  <target output="seedance-video-reference.video"/>
+  <target output="minimax-frame.video"/>
+  <target output="minimax-video-reference.video"/>
+</svrun>

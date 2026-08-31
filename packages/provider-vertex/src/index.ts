@@ -4,3 +4,5 @@ export type {
   VertexGeminiGeneratorOptions,
   VertexGeminiPart,
 } from "./gemini.js";
+export { createVertexProvider, vertexProviderModuleRef } from "./provider.js";
+export type { CreateVertexProviderOptions } from "./provider.js";

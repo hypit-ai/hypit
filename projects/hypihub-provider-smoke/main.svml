@@ -9,6 +9,7 @@
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="h3" from="@hypit/minimax-h3@1"/>
   <import as="grok" from="@hypit/grok-imagine@1"/>
+  <import as="gemini" from="@hypit/gemini@1"/>
   <import as="mimo" from="@hypit/mimo-tts@1"/>
   <import as="recipes" source="./recipes.svs"/>
 
@@ -16,7 +17,12 @@
   <text:Value id="edit-prompt">Keep the paper boat unchanged and make the studio background warm orange, no text.</text:Value>
   <text:Value id="motion-prompt">The paper boat glides slowly across the blue table in one continuous locked-camera shot.</text:Value>
   <text:Value id="speech">The red paper boat moves across the blue table.</text:Value>
+  <text:Value id="gemini-instruction">Answer with a single short factual sentence.</text:Value>
+  <text:Value id="gemini-text-prompt">Reply with exactly: provider text works</text:Value>
+  <text:Value id="gemini-image-prompt">Name the main object and its color in this image.</text:Value>
+  <text:Value id="gemini-video-prompt">Briefly describe the visible motion in this video.</text:Value>
   <asset:Image id="reference-image" src="./assets/reference.png"/>
+  <asset:Video id="reference-video" src="./assets/reference.mp4"/>
   <asset:Audio id="reference-audio" src="./assets/reference.wav"/>
 
   <gpt:Image id="gpt-text" prompt={prompt} aspect-ratio="1:1" resolution="1K"/>
@@ -43,6 +49,10 @@
     <seedance:Reference image={reference-image}/>
     <seedance:Reference audio={reference-audio}/>
   </seedance:ReferenceVideo>
+  <seedance:FrameVideo id="seedance-frame" model="mini" prompt={motion-prompt} duration="5" resolution="480p" aspect-ratio="16:9" generate-audio="false" first-frame={reference-image}/>
+  <seedance:ReferenceVideo id="seedance-video-reference" model="mini" prompt={motion-prompt} duration="5" resolution="480p" aspect-ratio="16:9" generate-audio="false">
+    <seedance:Reference video={reference-video}/>
+  </seedance:ReferenceVideo>
   <seedance:TextVideo id="seedance-standard-text" model="standard" prompt={motion-prompt} duration="5" resolution="480p" aspect-ratio="16:9" generate-audio="false"/>
   <seedance:TextVideo id="seedance-fast-text" model="fast" prompt={motion-prompt} duration="5" resolution="480p" aspect-ratio="16:9" generate-audio="false"/>
   <seedance:TextVideo id="seedance-v25-text" model="2.5" prompt={motion-prompt} duration="5" resolution="720p" aspect-ratio="16:9" generate-audio="false"/>
@@ -51,11 +61,30 @@
   <h3:ReferenceVideo id="minimax-reference" prompt={motion-prompt} duration="6" resolution="768P" aspect-ratio="16:9">
     <h3:Reference image={reference-image}/>
   </h3:ReferenceVideo>
+  <h3:FrameVideo id="minimax-frame" prompt={motion-prompt} duration="6" resolution="768P" first-frame={reference-image}/>
+  <h3:ReferenceVideo id="minimax-video-reference" prompt={motion-prompt} duration="6" resolution="768P" aspect-ratio="16:9">
+    <h3:Reference video={reference-video}/>
+  </h3:ReferenceVideo>
 
   <grok:PreviewVideo id="grok-text" prompt={motion-prompt} duration="6" aspect-ratio="16:9" resolution="480p"/>
   <grok:Video id="grok-image" prompt={motion-prompt} duration="6" aspect-ratio="16:9" resolution="480p">
     <grok:Reference image={reference-image}/>
   </grok:Video>
+
+  <gemini:Generate id="gemini-flash-text" model="gemini-3.7-flash" instruction={gemini-instruction} prompt={gemini-text-prompt}/>
+  <gemini:Generate id="gemini-flash-image" model="gemini-3.7-flash" instruction={gemini-instruction} prompt={gemini-image-prompt}>
+    <gemini:Reference media={reference-image}/>
+  </gemini:Generate>
+  <gemini:Generate id="gemini-flash-video" model="gemini-3.7-flash" instruction={gemini-instruction} prompt={gemini-video-prompt}>
+    <gemini:Reference media={reference-video}/>
+  </gemini:Generate>
+  <gemini:Generate id="gemini-pro-text" model="gemini-3.1-pro-preview" instruction={gemini-instruction} prompt={gemini-text-prompt}/>
+  <gemini:Generate id="gemini-pro-image" model="gemini-3.1-pro-preview" instruction={gemini-instruction} prompt={gemini-image-prompt}>
+    <gemini:Reference media={reference-image}/>
+  </gemini:Generate>
+  <gemini:Generate id="gemini-pro-video" model="gemini-3.1-pro-preview" instruction={gemini-instruction} prompt={gemini-video-prompt}>
+    <gemini:Reference media={reference-video}/>
+  </gemini:Generate>
 
   <mimo:VoiceDesign id="mimo-voice" speech={speech}>A clear, warm narrator with a lightly playful delivery.</mimo:VoiceDesign>
   <mimo:Preset id="mimo-preset" speech={speech} voice="Chloe"/>

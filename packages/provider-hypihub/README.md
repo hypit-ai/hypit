@@ -30,8 +30,9 @@ Runtime Profile example:
 }
 ```
 
-Gemini VLM callers can use the exported `createHypiHubGeminiGenerator` without changing their
-provider-facing code. Set `HYPIHUB_API_KEY` (and optionally `HYPIHUB_BASE_URL`; either the origin or
+Gemini VLM is also exposed as the provider-neutral `@hypit/gemini` Runtime capability, so an Author
+Source can select the exact model while the Runtime chooses HypiHub or Vertex. Existing embedded
+callers can still use the exported `createHypiHubGeminiGenerator`. Set `HYPIHUB_API_KEY` (and optionally `HYPIHUB_BASE_URL`; either the origin or
 an existing `/v1`/`/v1beta` base is accepted) only when choosing HypiHub. The Runtime Provider also
 accepts the origin or either versioned base and normalizes it to `/v1`; missing or insufficient user
 credentials should be resolved at [hypit.ai](https://hypit.ai). Referenced image, audio and video

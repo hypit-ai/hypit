@@ -8,10 +8,12 @@
   "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/gemini": "workspace:*",
     "@hypit/generation": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/runtime": "workspace:*",
-    "@hypit/runtime-kit": "workspace:*"
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/text": "workspace:*"
   },
   "devDependencies": {
     "@hypit/driver-node": "workspace:*",

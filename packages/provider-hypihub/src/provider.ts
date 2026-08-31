@@ -1,9 +1,14 @@
 import type { AsyncEndpoint, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
 import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
+import { geminiCapabilities, geminiModels, verifyGeminiRequest } from "@hypit/gemini";
+import type { GeminiRequest } from "@hypit/gemini";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CapabilityRef } from "@hypit/protocol";
 import { credentialRef } from "@hypit/runtime";
 import type { CredentialRef, ArtifactStore } from "@hypit/runtime";
+import { sealText } from "@hypit/text";
+import { textTypes } from "@hypit/text";
+import { createHypiHubGeminiGenerator } from "./gemini.js";
 import { hypiHubRouteForCapability, hypiHubRoutes } from "./routes.js";
 
 export const hypiHubProviderModuleRef = { name: "@hypit/provider-hypihub", version: "1" } as const;
@@ -51,6 +56,12 @@ function guidedMessage(error: unknown): string {
 function failure(error: unknown): EndpointOutcome {
   const message = guidedMessage(error);
   return { status: "failed", failure: { code: "HYPIHUB_ERROR", message } };
+}
+
+function inlineGeminiRequest(context: EndpointInvocationContext): GeminiRequest {
+  const request = context.need.constraints as unknown;
+  verifyGeminiRequest(request);
+  return request;
 }
 function jobId(value: Record<string, unknown>): string {
   const id = value.id ?? value.job_id;
@@ -219,10 +230,31 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       throw new Error(guidedMessage(error), { cause: error });
     }
   };
+  const geminiEndpoint: ImmediateEndpointHandler = async (context) => {
+    const request = inlineGeminiRequest(context);
+    const generate = createHypiHubGeminiGenerator({
+      apiKey: credential(context),
+      model: context.need.capability.name,
+      ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
+      ...(options.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: options.requestTimeoutMs }),
+      ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
+      maxRateLimitRetries: 5,
+      rateLimitRetryDelayMs: 3_000,
+    });
+    const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: request.prompt }];
+    for (const item of request.media) {
+      const bytes = await context.artifacts.get(item.artifact.digest);
+      assert(bytes !== undefined, `HypiHub Gemini reference artifact ${item.artifact.digest} is unavailable`);
+      parts.push({ inlineData: { mimeType: item.artifact.mediaType, data: Buffer.from(bytes).toString("base64") } });
+    }
+    const value = await generate({ parts, instruction: request.instruction });
+    return { value: { kind: "inline", value: canonicalize(sealText(value)) } };
+  };
   return defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
     credentials: { apiKey: options.apiKey ?? credentialRef("env", "HYPIHUB_API_KEY") }, credentialInputs: { apiKey: { label: "HypiHub API key" } }, defaultConcurrency: options.defaultConcurrency ?? 4,
-    capabilities: hypiHubRoutes
+    capabilities: [
+      ...hypiHubRoutes
       // HypiHub keys do not necessarily include the MiMo audio models. Keep
       // official Xiaomi MiMo as the safe default; opting into HypiHub audio is
       // an explicit Runtime decision for a key that actually has those models.
@@ -230,5 +262,14 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       .map((route) => route.media === "audio"
         ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, lane: route.capability.name }
         : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, lane: route.capability.name }),
+      ...geminiModels.map((model) => ({
+        capability: geminiCapabilities[model],
+        returns: textTypes.text,
+        lifecycle: "immediate" as const,
+        handler: geminiEndpoint,
+        lane: "gemini",
+        maxConcurrency: 1,
+      })),
+    ],
   });
 }
