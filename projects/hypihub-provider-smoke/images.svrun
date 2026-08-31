@@ -1,0 +1,11 @@
+<?svml using="@hypit/run-markup@1"?>
+
+<svrun version="1">
+  <author source="./main.svml"/>
+  <target output="gpt-text.image"/>
+  <target output="gpt-edit.image"/>
+  <target output="nano-text.image"/>
+  <target output="nano-edit.image"/>
+  <target output="seedream-text.image"/>
+  <target output="seedream-edit.image"/>
+</svrun>
