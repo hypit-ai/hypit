@@ -16,7 +16,7 @@ Runtime Profile example:
       "use": "@hypit/provider-hypihub",
       "pool": "hypihub.default",
       "config": {
-        "baseUrl": "https://apihub.hypit.ai/v1",
+        "baseUrl": "https://hypit.ai/v1",
         "apiKey": { "store": "env", "key": "HYPIHUB_API_KEY" },
         "defaultConcurrency": 4
       }
