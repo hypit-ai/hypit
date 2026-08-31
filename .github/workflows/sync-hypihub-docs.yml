@@ -1,0 +1,39 @@
+name: Notify HypiHub of documentation updates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch documentation sync
+        uses: actions/github-script@v7
+        env:
+          HYPIHUB_SYNC_TOKEN: ${{ secrets.HYPIHUB_SYNC_TOKEN }}
+        with:
+          script: |
+            const token = process.env.HYPIHUB_SYNC_TOKEN;
+            if (!token) {
+              core.setFailed("HYPIHUB_SYNC_TOKEN is not configured");
+              return;
+            }
+
+            const client = github.getOctokit(token);
+            await client.rest.repos.createDispatchEvent({
+              owner: "hypit-ai",
+              repo: "hypihub",
+              event_type: "hypit-docs-updated",
+              client_payload: {
+                source_repo: `${context.repo.owner}/${context.repo.repo}`,
+                source_sha: context.sha,
+                source_ref: context.ref,
+              },
+            });
