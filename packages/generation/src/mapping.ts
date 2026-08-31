@@ -172,9 +172,14 @@ export function assertMappingCoversPorts(
       }
       assert(media.accepts.length === 1,
         `${subject} accepts ${media.accepts.join(", ")}; declare one port per media role so each maps to one wire field`);
-      assert(field.as === "url" || field.as === "urlArray", `${subject} must resolve media to a URL`);
+      assert(field.as === "url" || field.as === "urlArray" || field.as === "itemObject",
+        `${subject} must resolve media to a URL`);
       if (field.as === "url") {
         assert(port.maxItems === 1, `${subject} uses url but the port accepts up to ${port.maxItems} items`);
+      }
+      if (field.as === "itemObject") {
+        assert(field.fieldKeys !== undefined && Object.keys(field.fieldKeys).length === 0,
+          `${subject} itemObject must not map undeclared item fields`);
       }
       continue;
     }

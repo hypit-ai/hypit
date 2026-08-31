@@ -211,12 +211,15 @@ variables referenced by the selected Runtime Profile:
 
 | Variable | Provider/use |
 |---|---|
-| `KIE_API_KEY` | KIE models, including Seedance and GPT Image |
+| `HYPIHUB_API_KEY` | HypiHub paid generation and Gemini VLM; get one at https://hypit.ai |
+| `KIE_API_KEY` | Explicit KIE Provider only |
 | `MIMO_API_KEY` | Xiaomi MiMo TTS, only when that Endpoint is selected |
 
 Run only the lines for the Endpoints in your Profile. In macOS/Linux shells:
 
 ```bash
+read -r -s HYPIHUB_API_KEY
+export HYPIHUB_API_KEY
 read -r -s KIE_API_KEY
 export KIE_API_KEY
 read -r -s MIMO_API_KEY
@@ -226,6 +229,7 @@ export MIMO_API_KEY
 In Windows PowerShell:
 
 ```powershell
+$env:HYPIHUB_API_KEY = "your-key"
 $env:KIE_API_KEY = "your-key"
 $env:MIMO_API_KEY = "your-key"
 ```

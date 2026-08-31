@@ -3251,9 +3251,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/provider-kie':
+      '@hypit/provider-hypihub':
         specifier: workspace:*
-        version: link:../provider-kie
+        version: link:../provider-hypihub
       '@hypit/runtime-host-node':
         specifier: workspace:*
         version: link:../runtime-host-node

@@ -41,7 +41,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
       prompt: { as: "value", field: "prompt" },
       aspectRatio: { as: "value", field: "aspect_ratio" },
       resolution: { as: "value", field: "size", whenAbsent: "1024x1024" },
-      images: { as: "urlArray", field: "reference_images" },
+      images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
     },
   },
   ...(["nano-banana-2", "nano-banana-pro"] as const).map((model) => ({
@@ -50,7 +50,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
       prompt: { as: "value" as const, field: "prompt" },
       aspectRatio: { as: "value" as const, field: "aspect_ratio" },
       resolution: { as: "value" as const, field: "size", whenAbsent: "1024x1024" },
-      images: { as: "urlArray" as const, field: "reference_images" },
+      images: { as: "itemObject" as const, field: "reference_images", urlKey: "url", fieldKeys: {} },
       outputFormat: { as: "value" as const, field: "output_format" },
     },
   })),
@@ -62,7 +62,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     fields: {
       prompt: { as: "value", field: "prompt" },
       aspectRatio: { as: "value", field: "aspect_ratio" },
-      images: { as: "urlArray", field: "reference_images" },
+      images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
       quality: { as: "value", field: "quality" },
       outputFormat: { as: "value", field: "output_format" },
       nsfwCheck: { as: "value", field: "nsfw_checker" },
@@ -93,7 +93,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     fields: {
       prompt: { as: "value", field: "prompt" }, duration: { as: "value", field: "seconds" },
       resolution: { as: "value", field: "resolution" }, aspectRatio: { as: "value", field: "aspect_ratio" },
-      images: { as: "urlArray", field: "reference_images" },
+      images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
       sourceTaskId: { as: "value", field: "source_task_id" },
     },
   },
@@ -105,7 +105,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     fields: {
       prompt: { as: "value", field: "prompt" }, duration: { as: "value", field: "seconds" },
       resolution: { as: "value", field: "resolution" }, aspectRatio: { as: "value", field: "aspect_ratio" },
-      images: { as: "urlArray", field: "reference_images" },
+      images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
     },
   },
   {
