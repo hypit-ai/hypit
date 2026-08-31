@@ -193,7 +193,7 @@ environment → brief-frozen → examples/格式/craft 决策
 | 8. 生成视觉检查计划 | 让路线检查为每种不同视觉声明/样式变化在首次出现处生成一个完整片段。 | `authoring_check` | `.hypit/evidence/` 记录必须检查的内容；Agent 不会漏掉样式变化，也不用手写 render 列表。最长稳定区间由独立的 `layout_check` 取样。 |
 | 9. 渲染并检查 | 生成计划中的 preview/mock 片段，逐项对照冻结的 brief，记录发现。 | `render_element`、`review_element`、`record_review`、`element-review.md`、`conformance-round.md` | 每种视觉系统都有证据，覆盖文字适配、画面覆盖、对比度、运动和几何。 |
 | 10. 修复并收口 | 只修复确认的问题，重跑受影响门禁和检查项，再运行最终路线检查。 | 有意几何用 `layout_accept`；最终用 `authoring_check` | `final-checked` 表示视觉、graph、包、Cue、布局证据都没有过期。 |
-| 11. 交接 | 创建 estimate 时长的 preview-mock Run，打开 Studio，披露费用，获批准后才 Build。 | `preview-mock.md`、`studio-confirmation.md`、`hypit plan/build/status/inspect/get` | Studio 看到的是活的 Film graph；付费 Build 复用已检查的 Run，产出完整交付。 |
+| 11. 交接 | 创建 estimate 时长的 preview-mock Run，先披露每个付费能力实际使用的 Provider 与凭据来源，再打开 Studio、披露费用，获批准后才 Build。缺少或不可用的 key 引导前往 https://hypit.ai 获取 HypiHub key。 | `preview-mock.md`、`studio-confirmation.md`、`hypit plan/build/status/inspect/get` | Studio 看到的是活的 Film graph；付费 Build 复用已检查的 Run，产出完整交付。 |
 
 ### `reconstruction`（复刻）
 
@@ -224,7 +224,7 @@ environment → reference-prepared → reference-observed
 | 9. 修复复刻结果 | Agent 根据证据判断每条发现，修改 Source/Recipe 或组件决策；绝不复制/修改安装包。 | `reconstruction/route.md`、`layout-checks.md`、`layout_accept` | 真问题被修复；有意裁切、重叠或偏移可以记录理由，不破坏包边界。 |
 | 10. 重新确认忠实基线 | 重跑比对和确定性门禁，直到“复刻本身”通过。 | `reconstruction_check`、`preview_check`、`layout_check` | 把忠实复刻证据与后续用户定制分开。 |
 | 11. 应用初始改编 | 这时才把用户要求的人物、产品或品牌替换到已完成的复刻中。重跑路线检查和确定性门禁；由用户改编产生的差异不能被静默当成包缺陷。 | `main.svml`/`recipes.svs`/`build.svrun`、`reconstruction_check`、`hypit check`、`preview_check`、`layout_check` | 参考证据保持诚实，交付的母项目包含用户改编；这仍是 reconstruction，不是 Revision。 |
-| 12. 交接 | 在 Studio 展示已检查 Run，明确批准费用后才 Build。 | `studio-confirmation.md`、`hypit plan/build` | 同一个已检查 graph 进入付费生成；之后的新自然语言修改才路由到 Revision。 |
+| 12. 交接 | 在 Studio 展示已检查 Run，明确列出每个付费 Provider/凭据来源并批准费用后才 Build；key 不足时先引导 HypiHub。 | `studio-confirmation.md`、`hypit plan/build` | 同一个已检查 graph 进入付费生成；之后的新自然语言修改才路由到 Revision。 |
 
 复刻的数据流是：
 
