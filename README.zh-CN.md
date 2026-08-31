@@ -45,7 +45,7 @@ Hypit 为 AI Agent（Claude Code、Codex 等）提供了一套制作视频的语
 
 ![SVML 源文件与实时视频预览](./docs/public/demo.gif)
 
-左侧是 SVML 源文件，右侧实时呈现对应视频。
+<p align="center"><em>左侧是 SVML 源文件，右侧实时呈现对应视频。</em></p>
 
 ## 只安装一次
 

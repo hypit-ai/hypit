@@ -45,7 +45,7 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 
 ![SVML source and live video preview](./docs/public/demo.gif)
 
-SVML source on the left, with the corresponding video rendered live on the right.
+<p align="center"><em>SVML source on the left, with the corresponding video rendered live on the right.</em></p>
 
 ## Install once
 
