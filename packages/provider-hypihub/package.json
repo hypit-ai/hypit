@@ -1,0 +1,16 @@
+{
+  "name": "@hypit/provider-hypihub",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "hypit": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/generation": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*"
+  }
+}
