@@ -29,13 +29,26 @@ function object(value: unknown, subject: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 function capabilityKey(capability: CapabilityRef): string { return `${capability.module.name}@${capability.module.version}#${capability.name}`; }
+function apiBaseUrl(value: string): string {
+  const trimmed = value.trim().replace(/\/+$/u, "");
+  assert(trimmed.length > 0, "HypiHub base URL is empty");
+  const origin = trimmed.replace(/\/(?:v1beta|v1)$/iu, "");
+  return `${origin}/v1`;
+}
 function credential(context: EndpointInvocationContext): string {
   const value = context.credentials.apiKey?.secret;
   assert(typeof value === "string" && value.length > 0, "HypiHub API key is unavailable");
   return value;
 }
+function guidedMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return /API key is unavailable|HTTP (?:401|403|404)\b|not enabled for|model_not_found|no_capable_provider/iu.test(message)
+    ? `${message}. Get a HypiHub key with this model enabled at https://hypit.ai`
+    : message;
+}
 function failure(error: unknown): EndpointOutcome {
-  return { status: "failed", failure: { code: "HYPIHUB_ERROR", message: error instanceof Error ? error.message : String(error) } };
+  const message = guidedMessage(error);
+  return { status: "failed", failure: { code: "HYPIHUB_ERROR", message } };
 }
 function jobId(value: Record<string, unknown>): string {
   const id = value.id ?? value.job_id;
@@ -160,9 +173,15 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
 }
 
 export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}) {
-  const client = new HypiHubClient({ baseUrl: options.baseUrl ?? "https://hypit.ai/v1", timeout: options.requestTimeoutMs ?? 30_000, fetcher: options.fetch ?? globalThis.fetch });
+  const client = new HypiHubClient({ baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"), timeout: options.requestTimeoutMs ?? 30_000, fetcher: options.fetch ?? globalThis.fetch });
   const asyncEndpoint = endpoint(client, options.pollIntervalMs ?? 5_000, 20 * 60_000, options.publicAssetUrl);
-  const audioEndpoint: ImmediateEndpointHandler = (context) => synthesizeAudio(client, context, options.publicAssetUrl);
+  const audioEndpoint: ImmediateEndpointHandler = async (context) => {
+    try {
+      return await synthesizeAudio(client, context, options.publicAssetUrl);
+    } catch (error) {
+      throw new Error(guidedMessage(error), { cause: error });
+    }
+  };
   return defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
     credentials: { apiKey: options.apiKey ?? credentialRef("env", "HYPIHUB_API_KEY") }, credentialInputs: { apiKey: { label: "HypiHub API key" } }, defaultConcurrency: options.defaultConcurrency ?? 4,

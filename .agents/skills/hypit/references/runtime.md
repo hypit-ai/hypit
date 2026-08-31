@@ -37,26 +37,23 @@ Source change. Continue only after the author has a usable credential and the su
 ### Give the picture and video models room to run
 
 The generation models are what a Build waits on, and they are the one place concurrency is worth
-setting deliberately. Give Seedance and the image model **10 each**.
-
-On a Provider with per-model lanes — `@hypit/provider-kie` is the usual one — that is a lane apiece
-inside a pool wide enough to hold both, so neither starves the other:
+setting deliberately. Give Seedance and the image model room to run. HypiHub is the default paid
+gateway, so a typical profile looks like this:
 
 ```json
-"kie.<project>": {
-  "use": "@hypit/provider-kie",
+"hypihub.<project>": {
+  "use": "@hypit/provider-hypihub",
   "config": {
-    "apiKey": { "store": "env", "key": "KIE_API_KEY" },
-    "defaultConcurrency": 20,
-    "laneConcurrency": { "seedance-2-mini": 10, "gpt-image-2": 10 }
+    "apiKey": { "store": "env", "key": "HYPIHUB_API_KEY" },
+    "defaultConcurrency": 20
   }
 }
 ```
 
-`defaultConcurrency` is the total pool shared by every lane, so it has to be at least the sum of the
-lanes or the lane numbers are a ceiling nothing reaches. Name the lane by the exact capability the
-Source reaches — `seedance-2-mini` and `gpt-image-2` above — since a lane key that matches no
-capability is silently inert. Read the Provider's README for the lane names it admits.
+`defaultConcurrency` is the total HypiHub pool shared by its model capabilities. Tune it to the
+quota behind the key; the Provider keeps each exact capability in its own lane. An explicit KIE
+profile remains valid when a project deliberately chooses `@hypit/provider-kie`, but it is not the
+default route.
 
 Provider-specific input limits are also part of preflight. For the KIE GPT Image 2 route, do not
 submit `4:3`, `3:4` or `4:5`; the route rejects those aspect ratios before upload or paid submission.

@@ -1,6 +1,6 @@
 # `@hypit/provider-hypihub`
 
-Thin Hypit Runtime Provider for a HypiHub `/v1` deployment. It is an optional default gateway for
+Thin Hypit Runtime Provider for a HypiHub deployment. It is an optional default gateway for
 paid generation and Gemini VLM requests; callers may keep their own Provider and select HypiHub only
 when its key is configured.
 
@@ -20,7 +20,7 @@ Runtime Profile example:
       "use": "@hypit/provider-hypihub",
       "pool": "hypihub.default",
       "config": {
-        "baseUrl": "https://hypit.ai/v1",
+        "baseUrl": "https://hypit.ai",
         "apiKey": { "store": "env", "key": "HYPIHUB_API_KEY" },
         "defaultConcurrency": 4
       }
@@ -30,5 +30,8 @@ Runtime Profile example:
 ```
 
 Gemini VLM callers can use the exported `createHypiHubGeminiGenerator` without changing their
-provider-facing code. Set `HYPIHUB_API_KEY` (and optionally `HYPIHUB_BASE_URL`) only when choosing
-HypiHub; missing or insufficient user credentials should be resolved at [hypit.ai](https://hypit.ai).
+provider-facing code. Set `HYPIHUB_API_KEY` (and optionally `HYPIHUB_BASE_URL`; either the origin or
+an existing `/v1`/`/v1beta` base is accepted) only when choosing HypiHub. The Runtime Provider also
+accepts the origin or either versioned base and normalizes it to `/v1`; missing or insufficient user
+credentials should be resolved at [hypit.ai](https://hypit.ai). Video/audio reference artifacts need
+an operator-supplied `publicAssetUrl` callback because HypiHub must fetch those references over HTTPS.
