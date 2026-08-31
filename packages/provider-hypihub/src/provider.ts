@@ -223,7 +223,10 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
     credentials: { apiKey: options.apiKey ?? credentialRef("env", "HYPIHUB_API_KEY") }, credentialInputs: { apiKey: { label: "HypiHub API key" } }, defaultConcurrency: options.defaultConcurrency ?? 4,
     capabilities: hypiHubRoutes
-      .filter((route) => options.audio !== false || route.media !== "audio")
+      // HypiHub keys do not necessarily include the MiMo audio models. Keep
+      // official Xiaomi MiMo as the safe default; opting into HypiHub audio is
+      // an explicit Runtime decision for a key that actually has those models.
+      .filter((route) => options.audio === true || route.media !== "audio")
       .map((route) => route.media === "audio"
         ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, lane: route.capability.name }
         : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, lane: route.capability.name }),
