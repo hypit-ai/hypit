@@ -12,6 +12,14 @@ paid/external `build`, configure only variables used by the selected Runtime Pro
 | `HYPIHUB_API_KEY` | HypiHub default paid provider for generation and Gemini VLM; get one at [hypit.ai](https://hypit.ai) |
 | `MIMO_API_KEY` | Xiaomi MiMo TTS only when explicitly selected |
 
+Before any paid Build, report the selected Provider and credential source for every paid capability in
+the Runtime Profile. Say the variable/store and endpoint (for example, `@hypit/provider-kie` using
+`KIE_API_KEY` from env, or `@hypit/provider-hypihub` using `HYPIHUB_API_KEY` from env); never print a
+secret or a full credential JSON. If a required key is missing, invalid, returns 401/403, or cannot
+reach the requested model, stop before payment and guide the author to [hypit.ai](https://hypit.ai)
+for a HypiHub key when that model is available there. Do not ask them to change Author Source just to
+switch Provider.
+
 HypiHub is optional and is never required when the selected Runtime Profile has another Provider.
 For Gemini VLM/reference observation, `HYPIT_GEMINI_PROVIDER=auto` (the default) uses HypiHub when
 `HYPIHUB_API_KEY` is present and otherwise uses Vertex when its two Google variables are present.
@@ -34,6 +42,8 @@ Otherwise export them for the session:
 ```bash
 read -r -s KIE_API_KEY
 export KIE_API_KEY
+read -r -s HYPIHUB_API_KEY
+export HYPIHUB_API_KEY
 read -r -s MIMO_API_KEY
 export MIMO_API_KEY
 export GOOGLE_CLOUD_PROJECT="your-project-id"
@@ -44,6 +54,7 @@ Windows PowerShell session example:
 
 ```powershell
 $env:KIE_API_KEY = "your-key"
+$env:HYPIHUB_API_KEY = "your-key"
 $env:MIMO_API_KEY = "your-key"
 $env:GOOGLE_CLOUD_PROJECT = "your-project-id"
 $env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\hypit\google-service-account.json"
@@ -51,7 +62,7 @@ $env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\hypit
 
 Keep keys outside Author/Run/Runtime source and committed files. Verify presence without printing
 values with, for example,
-`node <skill-root>/scripts/check-credentials.mjs KIE_API_KEY MIMO_API_KEY`, then run
+`node <skill-root>/scripts/check-credentials.mjs KIE_API_KEY HYPIHUB_API_KEY MIMO_API_KEY GOOGLE_CLOUD_PROJECT GOOGLE_APPLICATION_CREDENTIALS_JSON`, then run
 `hypit doctor` (once a Runtime Profile is selected with `hypit runtime use hypit.runtime.json`;
 doctor audits the selected profile, so it needs no profile argument of its own).
 

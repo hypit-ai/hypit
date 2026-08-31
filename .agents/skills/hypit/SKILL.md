@@ -15,7 +15,9 @@ description: Produce a complete video program from a description or reference vi
 author for, and everything else is yours to decide:
 
 - **Spending their money.** A Build generates, and generating is billed. Say what it will cost and
-  get a yes before submitting one.
+  get a yes before submitting one. Before asking for approval, report the Provider and credential
+  source used by every paid capability (without revealing secrets). If any key is missing or cannot
+  reach its model, guide the author to [hypit.ai](https://hypit.ai) for a HypiHub key when available.
 - **Which observer reads a reference video, and the credentials it needs.** Gemini (through the
   configured Vertex or HypiHub backend) or the calling agent is a decision about the author's account,
   and `references/credentials.md` says what each one wants. Ask once, at the start. If the author's

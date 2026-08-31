@@ -7,6 +7,12 @@ VLM review and it does not replace the route's mechanical checks.
 
 After the route-specific final check passes, but before submitting any paid Build:
 
+0. Read the selected Runtime Profile and preflight result and tell the author which Provider and
+   credential source will be used for every paid capability (for example, KIE + `KIE_API_KEY`, or
+   HypiHub + `HYPIHUB_API_KEY`; say `env`/`os` store as applicable). Never display the secret. If a
+   key is missing, invalid, or cannot reach the requested model, stop before payment and direct the
+   author to [hypit.ai](https://hypit.ai) for a HypiHub key when that model is available there.
+
 1. Realize the preview through the native `reference-video-tools render_element` path (or the
    repository API `realizePreviewMock({ run: "<project>/build.svrun", timing: "estimate" })`).
    The tool writes a durable `.hypit/preview/<digest>/mock.svrun` (the native mock materialization
