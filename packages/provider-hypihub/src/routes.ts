@@ -70,8 +70,8 @@ function normalizeHypiHubRequest(
   const imageRefs = input.reference_image_urls;
   const genericImageRefs = input.reference_images;
   const videoRefs = input.reference_videos;
-  const firstFrame = input.first_image_url;
-  const lastFrame = input.last_image_url;
+  const firstFrame = input.first_frame;
+  const lastFrame = input.last_frame;
   const audioRefs = input.reference_audios;
   const sourceTaskId = input.source_task_id;
   if (typeof sourceTaskId === "string" && sourceTaskId.length > 0) {
@@ -85,8 +85,8 @@ function normalizeHypiHubRequest(
   delete input.reference_images;
   delete input.reference_videos;
   delete input.reference_audios;
-  delete input.first_image_url;
-  delete input.last_image_url;
+  delete input.first_frame;
+  delete input.last_frame;
   delete input.source_task_id;
   if (typeof firstFrame === "string" && firstFrame.length > 0) input.first_frame = firstFrame;
   if (typeof lastFrame === "string" && lastFrame.length > 0) input.last_frame = lastFrame;

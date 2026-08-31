@@ -16,6 +16,8 @@ export type CreateHypiHubProviderOptions = {
   readonly defaultConcurrency?: number;
   readonly pollIntervalMs?: number;
   readonly requestTimeoutMs?: number;
+  /** Expose HypiHub's MiMo audio capabilities. Disable when official MiMo owns audio. */
+  readonly audio?: boolean;
   readonly fetch?: typeof globalThis.fetch;
   /** Overrides the default POST /v1/files upload for referenced artifacts. */
   readonly publicAssetUrl?: (artifact: BlobRef, artifacts: ArtifactStore) => Promise<string>;
@@ -174,7 +176,7 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
         assert(route.media !== "audio", "HypiHub audio capabilities use an immediate endpoint");
         const input = compiled.input as Record<string, unknown>;
         const hasReferences = Object.entries(input).some(([key, value]) => {
-          if (!["images", "reference_images", "reference_image_urls", "reference_videos", "reference_audios", "first_image_url", "last_image_url"].includes(key)) return false;
+          if (!["images", "reference_images", "reference_image_urls", "reference_videos", "reference_audios", "first_frame", "last_frame"].includes(key)) return false;
           return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value.length > 0;
         });
         const path = route.media === "image"
@@ -220,8 +222,10 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   return defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
     credentials: { apiKey: options.apiKey ?? credentialRef("env", "HYPIHUB_API_KEY") }, credentialInputs: { apiKey: { label: "HypiHub API key" } }, defaultConcurrency: options.defaultConcurrency ?? 4,
-    capabilities: hypiHubRoutes.map((route) => route.media === "audio"
-      ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, lane: route.capability.name }
-      : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, lane: route.capability.name }),
+    capabilities: hypiHubRoutes
+      .filter((route) => options.audio !== false || route.media !== "audio")
+      .map((route) => route.media === "audio"
+        ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, lane: route.capability.name }
+        : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, lane: route.capability.name }),
   });
 }

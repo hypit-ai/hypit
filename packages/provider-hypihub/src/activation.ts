@@ -2,6 +2,7 @@ import {
   createRuntimeEndpointAdapterFacet,
   runtimeConfigCredentialRef,
   runtimeConfigExact,
+  runtimeConfigBoolean,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
@@ -14,7 +15,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
   activate(context) {
     if (context.pool === undefined) throw new Error("HypiHub Provider Pool is required");
     const config = runtimeConfigObject(context.config, "HypiHub");
-    runtimeConfigExact(config, ["baseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs", "requestTimeoutMs"], "HypiHub");
+    runtimeConfigExact(config, ["baseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs", "requestTimeoutMs", "audio"], "HypiHub");
     const baseUrl = runtimeConfigString(config.baseUrl, "HypiHub baseUrl");
     if (baseUrl !== undefined) {
       const url = new URL(baseUrl);
@@ -27,6 +28,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "HypiHub defaultConcurrency");
     const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "HypiHub pollIntervalMs");
     const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "HypiHub requestTimeoutMs");
+    const audio = runtimeConfigBoolean(config.audio, "HypiHub audio");
     return {
       endpoint: createHypiHubProvider({
         instance: context.instance,
@@ -36,6 +38,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
         ...(pollIntervalMs === undefined ? {} : { pollIntervalMs }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
+        ...(audio === undefined ? {} : { audio }),
       }),
     };
   },
