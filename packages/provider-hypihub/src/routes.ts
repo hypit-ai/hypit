@@ -52,6 +52,10 @@ function normalizeHypiHubRequest(
     return { model: request.model, input: canonicalize(input) };
   }
 
+  // Audio mappings already use HypiHub's public /audio/speech vocabulary.
+  // They must not fall through the video reference normalizer below.
+  if (mapping.result === "audio") return { model: request.model, input: canonicalize(input) };
+
   if (typeof input.resolution === "string") input.resolution = input.resolution.toLowerCase();
 
   const imageRefs = input.reference_image_urls;
@@ -61,21 +65,24 @@ function normalizeHypiHubRequest(
   const lastFrame = input.last_image_url;
   const audioRefs = input.reference_audios;
   const sourceTaskId = input.source_task_id;
-  if (Array.isArray(audioRefs) && audioRefs.length > 0) {
-    throw new Error("HypiHub unified video API does not support reference audio inputs");
-  }
-  if (Array.isArray(videoRefs) && videoRefs.length > 0) {
-    throw new Error("HypiHub video reference inputs require a public HTTPS URL; the Runtime ArtifactStore cannot expose one");
-  }
-  if (Array.isArray(imageRefs) && imageRefs.length > 1) {
-    throw new Error("HypiHub unified video API accepts one input_reference image; multiple reference images are not supported");
-  }
-  if (Array.isArray(genericImageRefs) && genericImageRefs.length > 1) {
-    throw new Error("HypiHub unified video API accepts one input_reference image; multiple reference images are not supported");
-  }
   if (typeof sourceTaskId === "string" && sourceTaskId.length > 0) {
     throw new Error("HypiHub unified video API does not support video continuation sourceTaskId");
   }
+
+  // HypiHub's upstream relay exposes vendor-specific reference arrays through
+  // its documented `extra` passthrough. Unknown top-level fields are ignored
+  // by the public JSON decoder, while `extra` is handed to the selected
+  // upstream adaptor and becomes its provider-neutral reference vocabulary.
+  const extra = input.extra !== null && typeof input.extra === "object" && !Array.isArray(input.extra)
+    ? { ...(input.extra as Record<string, unknown>) } : {};
+  if (Array.isArray(imageRefs) && imageRefs.length > 0) extra.reference_image_urls = imageRefs;
+  if (Array.isArray(genericImageRefs) && genericImageRefs.length > 0) {
+    const urls = genericImageRefs.map((item) => item !== null && typeof item === "object"
+      ? (item as Record<string, unknown>).url : item).filter((item): item is string => typeof item === "string" && item.length > 0);
+    if (urls.length > 0) extra.reference_image_urls = urls;
+  }
+  if (Array.isArray(videoRefs) && videoRefs.length > 0) extra.reference_videos = videoRefs;
+  if (Array.isArray(audioRefs) && audioRefs.length > 0) extra.reference_audios = audioRefs;
   delete input.reference_image_urls;
   delete input.reference_images;
   delete input.reference_videos;
@@ -83,15 +90,10 @@ function normalizeHypiHubRequest(
   delete input.first_image_url;
   delete input.last_image_url;
   delete input.source_task_id;
+  delete input.extra;
   if (typeof firstFrame === "string" && firstFrame.length > 0) input.input_reference = firstFrame;
-  else if (Array.isArray(imageRefs) && imageRefs.length > 0) input.input_reference = imageRefs[0];
-  else if (Array.isArray(genericImageRefs) && genericImageRefs.length > 0) {
-    const first = genericImageRefs[0];
-    if (first !== null && typeof first === "object" && typeof (first as Record<string, unknown>).url === "string") {
-      input.input_reference = (first as Record<string, unknown>).url;
-    }
-  }
   if (typeof lastFrame === "string" && lastFrame.length > 0) input.last_frame = lastFrame;
+  if (Object.keys(extra).length > 0) input.extra = extra;
   return { model: request.model, input: canonicalize(input) };
 }
 

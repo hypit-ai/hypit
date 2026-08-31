@@ -6,10 +6,10 @@ when its key is configured.
 
 It maps the currently shipped image/video model capabilities to HypiHub, including image edits and
 image-to-video first-frame inputs, submits jobs, polls them, downloads the first-class assets and
-persists them in Hypit's configured ArtifactStore. Image references are sent as HypiHub-compatible
-`data:` URLs. Video-reference inputs require a public HTTPS URL and are rejected clearly when the
-configured ArtifactStore cannot provide one. It also exports a small Gemini-native VLM generator for
-callers that previously used Vertex.
+persists them in Hypit's configured ArtifactStore. Image references use HypiHub's `reference_images`
+shape; video reference arrays use the documented `extra` passthrough so HypiHub can hand them to its
+selected upstream adaptor. First/last-frame images use `input_reference` and `last_frame`. It also
+exports a small Gemini-native VLM generator for callers that previously used Vertex.
 
 Runtime Profile example:
 
