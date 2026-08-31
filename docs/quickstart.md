@@ -5,11 +5,6 @@ description: Install Hypit, compile a complete SVML video graph, and prepare a r
 
 # Quickstart
 
-The name **Hypit** comes from a 1933 *New York Times* review of the film *The Power and the
-Glory*. The critic coined the word to describe a then-new cinematic technique:
-**Narration + Montage** — a narrator's voice carries the story forward while the screen assembles
-a montage of scenes to match.
-
 That is exactly what this system does. The author writes a narrated Script with semantic anchors,
 and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
 Author Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml` extension.
