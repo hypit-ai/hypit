@@ -96,6 +96,10 @@ type ParsedArgs = {
 
 const HYPIHUB_OAUTH_CLIENT_ID = "hyc_d5d5e8e7131b0c877756e66c";
 
+// Keep the callback page independent from a network request, but use the same
+// mark shipped by hypit.ai (rather than a hand-drawn approximation).
+const HYPIHUB_MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="158.2 -39.5 415.6 415.6" aria-hidden="true"><defs><linearGradient id="hypit-callback-mark" x1="246.21386109" y1="324.13157352" x2="485.13742708" y2="22.56333286" gradientTransform="translate(0 337.46521538) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e83f5f"/><stop offset=".14" stop-color="#e94765"/><stop offset=".33" stop-color="#ec5774"/><stop offset=".56" stop-color="#f1738c"/><stop offset=".8" stop-color="#f599af"/><stop offset=".88" stop-color="#f6a9bd"/></linearGradient></defs><path d="M549.67231627,138.36559516c-9.03995973-13.04594537-23.93013015-20.81603972-39.78785439-20.81603972h-141.20754521c-18.56362718,0-37.6714659,11.24702323-44.746216,28.41986963l-42.72053713,114.61681504c-6.9538001,17.00658197-6.86310202,36.35627455,3.35595582,51.63954686,10.26440688,15.34370695,29.26643886,24.41388399,47.72425931,24.41388399h129.97565371c21.3451426,0,40.66461787-13.42386941,48.13240067-33.40849469l44.88226312-120.28567569c5.54794526-14.87508482,3.46179716-31.53396006-5.57816258-44.56481984v-.03021732h-.03021732v.01513172ZM471.42693057,288.67353473c-1.42099809,3.80945775-5.12464911,6.3793597-9.19111551,6.3793597h-126.15104116c-6.56075586,0-10.09811937-4.23273084-11.32261265-6.03165297s-3.77924044-6.69680298-1.26981925-12.7587194l36.05396299-100.13473985c3.46177409-9.59927994,12.21450786-16.43213004,22.40334838-16.96123293.49886251-.03021732,1.01283367-.03021732,1.54193656-.03021732h113.996991s18.91133391,2.14662887,14.04367038,22.08585897l-40.10529767,107.46647552h0l-.00002307-.01513172ZM251.97398813,265.21202671s-33.80152739-17.52055313-26.69654845-49.3720026l44.85202273-124.30679305c7.22590587-20.02997431,26.24304651-33.39336296,47.54284008-33.39336296h143.64135391c9.44810109,0,18.29153294,4.58043756,23.74873399,12.30520594l20.99748201,29.75019271h-170.7763187c-13.15175211,0-24.92787822,8.17828184-29.50831579,20.51372816l-53.80126132,144.51816352h0l.00001153-.01513172ZM201.25658839,207.07215861s-33.81664758-17.52055313-26.69655421-49.3720026l44.8520285-124.30679305C226.65308874,13.36338865,245.67022938,0,266.95491429,0h135.9166086c9.44810109,0,18.29153294,4.58043756,23.74875705,12.30520594l20.99745894,29.75019271h-163.02130994c-13.15130994,0-24.92786669,8.17828184-29.50831579,20.51372816l-53.80126132,144.51816352h-.03022885l-.0000346-.01513172Z" fill="url(#hypit-callback-mark)"/></svg>`;
+
 function base64url(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64").replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
 }
@@ -107,6 +111,13 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
   const server = createServer();
   const callback = new Promise<string>((resolveCode, reject) => {
     let settled = false;
+    let closeRequested = false;
+    const closeServer = (): void => {
+      if (closeRequested) return;
+      closeRequested = true;
+      server.close();
+      server.closeIdleConnections?.();
+    };
     server.on("request", (request, response) => {
       // Browsers commonly fetch /favicon.ico after rendering the callback.
       // The old one-shot listener left that second connection unanswered,
@@ -143,8 +154,11 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
         settled = true;
         reject(error);
       } finally {
-        server.close();
-        server.closeIdleConnections?.();
+        // Resolve the OAuth operation immediately; a browser may keep the
+        // callback connection around for its favicon request. The server is
+        // closed and unref'ed so that request cannot keep the CLI alive.
+        closeServer();
+        server.unref();
       }
     });
     server.once("error", reject);
@@ -175,6 +189,7 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
   const tokenResponse = await fetch("https://hypit.ai/oauth/token", {
     method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri, client_id: HYPIHUB_OAUTH_CLIENT_ID, code_verifier: verifier }),
+    signal: AbortSignal.timeout(15_000),
   });
   const body = await tokenResponse.text();
   if (!tokenResponse.ok) throw new Error(`HypiHub OAuth token exchange failed (${tokenResponse.status}): ${body.slice(0, 200)}`);
@@ -196,35 +211,46 @@ function oauthCallbackPage(success: boolean): string {
     ? "Your HypiHub session is ready. You can close this window."
     : "The sign-in could not be completed. You can close this window and try again.";
   const tone = success ? "success" : "error";
+  const favicon = `data:image/svg+xml,${encodeURIComponent(HYPIHUB_MARK_SVG)}`;
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="dark">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23ed98b9' d='M7.6 3.8h7l-2 3.4H5.6zM4.1 10.4h12.5L18.7 7h11.7l-2.5 4.1H16.1l-2 3.1H1.8zM19.1 14.1h4l-3.8 6.6h-3.9z'/%3E%3C/svg%3E">
+    <meta name="color-scheme" content="light dark">
+    <link rel="icon" href="${favicon}">
     <title>${title}</title>
     <style>
-      :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       * { box-sizing: border-box; }
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center; color: #f7f2f4; background: #111114; }
-      main { width: min(100% - 40px, 460px); padding: 42px 38px 36px; border: 1px solid #3a3036; background: #19171b; box-shadow: 0 24px 70px rgba(0,0,0,.36); }
-      .brand { display: inline-flex; align-items: center; gap: 11px; color: #ed98b9; font-weight: 700; letter-spacing: .02em; }
-      .brand svg { width: 30px; height: 30px; }
-      .mark { width: 58px; height: 58px; margin: 34px 0 24px; display: grid; place-items: center; border: 1px solid #5b3d4b; background: #281d24; color: #ed98b9; }
-      .mark.success { color: #ed98b9; }
-      .mark.error { color: #f08d86; border-color: #6b3f40; background: #291d1e; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; color: #18181b; background: #f7f6f3; }
+      main { width: min(100% - 48px, 560px); padding: 48px 0 52px; }
+      .brand { display: inline-flex; align-items: center; gap: 10px; color: #18181b; font-size: 18px; font-weight: 650; letter-spacing: -.04em; }
+      .brand svg { width: 28px; height: 28px; }
+      .wordmark { background: linear-gradient(110deg, #e83f5f, #f6a9bd); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .mark { width: 58px; height: 58px; margin: 72px 0 28px; display: grid; place-items: center; border: 1px solid #ddd9d5; background: #fff; color: #e83f5f; }
+      .mark.success { color: #e83f5f; }
+      .mark.error { color: #c73d45; border-color: #e2c9c9; background: #fffafa; }
       h1 { margin: 0; font-size: clamp(26px, 7vw, 34px); line-height: 1.08; letter-spacing: -.035em; }
-      p { margin: 14px 0 0; color: #bdb3b8; font-size: 15px; line-height: 1.6; }
-      .rule { height: 1px; margin: 30px 0 18px; background: #332c31; }
-      .hint { margin: 0; color: #81767d; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+      p { margin: 14px 0 0; color: #66636a; font-size: 15px; line-height: 1.6; }
+      .rule { height: 1px; margin: 30px 0 18px; background: #e4e1dd; }
+      .hint { margin: 0; color: #8b878d; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+      @media (prefers-color-scheme: dark) {
+        body { color: #f7f2f4; background: #111114; }
+        .brand { color: #f7f2f4; }
+        .mark { border-color: #3a3036; background: #19171b; }
+        .mark.error { border-color: #6b3f40; background: #291d1e; }
+        p { color: #bdb3b8; }
+        .rule { background: #332c31; }
+        .hint { color: #81767d; }
+      }
     </style>
   </head>
   <body>
     <main>
       <div class="brand" aria-label="Hypit">
-        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M7.6 3.8H14.6L12.6 7.2H5.6L7.6 3.8Z" fill="currentColor"/><path d="M4.1 10.4H16.6L18.7 7H30.4L27.9 11.1H16.1L14.1 14.2H1.8L4.1 10.4Z" fill="currentColor"/><path d="M19.1 14.1H23.1L19.3 20.7H15.4L19.1 14.1Z" fill="currentColor"/></svg>
-        <span>HYPIT</span>
+        ${HYPIHUB_MARK_SVG}
+        <span class="wordmark">hypit</span>
       </div>
       <div class="mark ${tone}" aria-hidden="true">
         ${success ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="m5 12 4 4L19 6"/></svg>' : '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M6 6 18 18M18 6 6 18"/></svg>'}
