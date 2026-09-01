@@ -23,7 +23,7 @@ Runtime Profile example:
       "config": {
         "baseUrl": "https://hypit.ai",
         "apiKey": { "store": "os", "key": "hypihub.oauth" },
-        "defaultConcurrency": 4
+        "defaultConcurrency": 10
       }
     }
   }
