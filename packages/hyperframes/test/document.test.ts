@@ -115,6 +115,111 @@ test("HyperFrames flattens generic peer visual Track Presents without absorbing 
   assert.doesNotMatch(document.html, /speech-visual-track|caption-track/u);
 });
 
+test("Text shrink preserves authored hug sizing and trims metrics inside the content box", () => {
+  const programSpace = sealProgramSpace({
+    id: "text-space",
+    narrativeId: "text-narrative",
+    durationSec: 1,
+    frameRate: { numerator: 30, denominator: 1 },
+  });
+  const track = sealVisualTrack({
+    programSpaceId: programSpace.id,
+    visualIr: "hypit.visual-ir@1",
+    id: "text",
+    presents: [{
+      id: "title",
+      span: { startFrame: 0, endFrameExclusive: 30 },
+      stacking: { order: 1, tieBreak: "title" },
+      elements: [
+        { id: "root", order: 0, kind: "box", style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }] },
+        {
+          id: "flow",
+          parent: "root",
+          order: 1,
+          kind: "text-flow",
+          style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
+          document: { paragraphs: [{
+            id: "title",
+            inlines: [
+              { kind: "text", id: "first", text: "RANKING THE BEST" },
+              { kind: "break", id: "break" },
+              { kind: "text", id: "second", text: "FOOTBALLERS" },
+            ],
+          }] },
+          typography: {
+            fonts: [fixtureFont],
+            sizePx: 44,
+            weight: 700,
+            style: "normal",
+            axes: [],
+            features: [],
+            synthesis: "none",
+            kerning: "auto",
+            trackingPx: 0,
+            wordSpacingPx: 0,
+            lineHeight: 1,
+            direction: "auto",
+            writingMode: "horizontal-tb",
+            baselineShiftPx: 0,
+            tabSize: 4,
+            indentationPx: 0,
+            paragraphBeforePx: 0,
+            paragraphAfterPx: 0,
+            transform: "none",
+            variantCaps: "normal",
+            verticalAlign: "baseline",
+            decorations: [],
+            cjk: { textSpacing: "normal", punctuationTrim: "none" },
+          },
+          paints: [
+            { kind: "fill", paint: { kind: "solid", color: "#090a0f" } },
+            {
+              kind: "box",
+              target: "content",
+              continuity: "isolated",
+              decoration: {
+                fill: { kind: "solid", color: "#f1eee6" },
+                paddingPx: { top: 4, right: 0, bottom: 4, left: 0 },
+                radiiPx: { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 },
+                shadows: [],
+              },
+            },
+          ],
+          flow: {
+            form: { kind: "area" },
+            inlineSize: "fixed",
+            blockSize: "hug",
+            paddingPx: { inlineStart: 0, inlineEnd: 0, blockStart: 0, blockEnd: 0 },
+            inlineAlign: "center",
+            blockAlign: "center",
+            wrap: "none",
+            overflow: "shrink",
+            maxLines: 2,
+            minimumScale: 0.9,
+            clipToFrame: false,
+            columns: 1,
+            columnGapPx: 0,
+            metricEdge: "cap-height",
+          },
+          sequences: [],
+        },
+      ],
+    }],
+  });
+  const document = compileHyperframesDocument(sealComposition({
+    id: "text-boxes",
+    canvas: { width: 720, height: 1280, clearColor: "#000000" },
+    tracks: [track],
+  }), programSpace);
+
+  assert.match(document.html, /data-hypit-text-flow data-hypit-text-overflow="shrink" data-hypit-text-inline-size="fixed" data-hypit-text-block-size="hug"/u);
+  assert.match(document.html, /flex-shrink:0/u);
+  assert.match(document.html, /height:max-content/u);
+  assert.match(document.html, /data-hypit-text-metrics style="display:block;text-box-trim:trim-both;text-box-edge:cap alphabetic"/u);
+  assert.match(document.html, /flow\.style\.height = blockSize === 'fixed' \? String\(100 \/ scale\) \+ '%' : 'max-content'/u);
+  assert.doesNotMatch(document.html, /flow\.style\.height = String\(100 \/ scale\) \+ '%'/u);
+});
+
 test("visual Artifact placeholders are materialized only by the Runtime boundary", () => {
   const { composition, picture, sound, programSpace } = fixture();
   const document = compileHyperframesDocument(composition, programSpace);

@@ -424,6 +424,7 @@ function flowCss(element: VisualTextFlowElement): string[] {
   const align = flow.inlineAlign === "start" ? "start" : flow.inlineAlign === "end" ? "end" : flow.inlineAlign;
   return [
     "box-sizing:border-box",
+    "flex-shrink:0",
     `padding:${number(flow.paddingPx.blockStart)}px ${number(flow.paddingPx.inlineEnd)}px ${number(flow.paddingPx.blockEnd)}px ${number(flow.paddingPx.inlineStart)}px`,
     `text-align:${align}`,
     `overflow:${overflow}`,
@@ -440,10 +441,17 @@ function flowCss(element: VisualTextFlowElement): string[] {
       ...(flow.maxLines === undefined ? [] : [`-webkit-line-clamp:${flow.maxLines}`]),
     ]),
     ...(flow.overflow === "ellipsis" && flow.wrap === "none" ? ["text-overflow:ellipsis"] : []),
-    ...(flow.metricEdge === "line-box" ? [] : [
-      "text-box-trim:trim-both",
-      `text-box-edge:${flow.metricEdge === "cap-height" ? "cap alphabetic" : "text alphabetic"}`,
-    ]),
+  ];
+}
+
+function metricEdgeCss(
+  edge: VisualTextFlowElement["flow"]["metricEdge"],
+  trim: "trim-start" | "trim-end" | "trim-both",
+): string[] {
+  if (edge === "line-box") return [];
+  return [
+    `text-box-trim:${trim}`,
+    `text-box-edge:${edge === "cap-height" ? "cap alphabetic" : "text alphabetic"}`,
   ];
 }
 
@@ -508,7 +516,7 @@ function assertTextUnitRanges(element: TerminalTextElement): void {
 
 function renderDocument(
   document: VisualTextDocument,
-  element: TerminalTextElement,
+  element: VisualTextFlowElement,
   context: TextRenderContext,
 ): string {
   const indices: UnitIndices = { paragraph: 0, run: 0, word: 0, grapheme: 0 };
@@ -522,7 +530,7 @@ function renderDocument(
     ];
     return `<span data-hypit-text-unit-grapheme="${graphemeIndex}"${styleAttribute(styles, context.escape)}>${tailHtml(paints, "grapheme", context, "isolated")}${renderGlyphPaint(value, paints, context)}</span>`;
   };
-  return document.paragraphs.map((paragraph) => {
+  return document.paragraphs.map((paragraph, paragraphPosition) => {
     const paragraphIndex = indices.paragraph++;
     const paragraphTypography = mergedTypography(element.typography, paragraph.style);
     const paragraphPaints = paragraph.style?.paints ?? element.paints;
@@ -562,12 +570,24 @@ function renderDocument(
       ...boxCss(paragraphPaints, "paragraph"),
       ...unitAnimationCss(element, "paragraph", paragraphIndex, context),
     ];
-    return `<div data-hypit-text-paragraph="${context.escape(paragraph.id)}" data-hypit-text-unit-paragraph="${paragraphIndex}" ${textLanguageAttributes(paragraphTypography, context.escape)}${styleAttribute(paragraphStyle, context.escape)}>${tailHtml(paragraphPaints, "paragraph", context)}<span data-hypit-text-line-fragments${styleAttribute([
+    const isFirstParagraph = paragraphPosition === 0;
+    const isLastParagraph = paragraphPosition === document.paragraphs.length - 1;
+    const metricTrim = isFirstParagraph && isLastParagraph
+      ? "trim-both"
+      : isFirstParagraph ? "trim-start" : isLastParagraph ? "trim-end" : undefined;
+    const lineFragments = `<span data-hypit-text-line-fragments${styleAttribute([
       "position:relative",
       "box-decoration-break:clone",
       "-webkit-box-decoration-break:clone",
       ...boxCss(paragraphPaints, "line"),
-    ], context.escape)}>${tailHtml(paragraphPaints, "line", context)}${content}</span></div>`;
+    ], context.escape)}>${tailHtml(paragraphPaints, "line", context)}${content}</span>`;
+    const measuredText = element.flow.metricEdge === "line-box" || metricTrim === undefined
+      ? lineFragments
+      : `<span data-hypit-text-metrics${styleAttribute([
+        "display:block",
+        ...metricEdgeCss(element.flow.metricEdge, metricTrim),
+      ], context.escape)}>${lineFragments}</span>`;
+    return `<div data-hypit-text-paragraph="${context.escape(paragraph.id)}" data-hypit-text-unit-paragraph="${paragraphIndex}" ${textLanguageAttributes(paragraphTypography, context.escape)}${styleAttribute(paragraphStyle, context.escape)}>${tailHtml(paragraphPaints, "paragraph", context)}${measuredText}</div>`;
   }).join("");
 }
 
@@ -778,6 +798,10 @@ export function renderTerminalTextElement(element: TerminalTextElement, context:
   const lineSequences = element.sequences.filter((sequence) => sequence.unit === "line");
   const layoutData = [
     `data-hypit-text-overflow="${element.flow.overflow}"`,
+    `data-hypit-text-inline-size="${element.flow.inlineSize}"`,
+    `data-hypit-text-block-size="${element.flow.blockSize}"`,
+    `data-hypit-text-inline-align="${element.flow.inlineAlign}"`,
+    `data-hypit-text-block-align="${element.flow.blockAlign}"`,
     `data-hypit-text-writing-mode="${element.typography.writingMode}"`,
     ...(element.flow.minimumScale === undefined ? [] : [`data-hypit-text-minimum-scale="${number(element.flow.minimumScale)}"`]),
     ...(element.flow.maxLines === undefined ? [] : [`data-hypit-text-max-lines="${element.flow.maxLines}"`]),
@@ -1038,19 +1062,27 @@ const svmlTextLayoutReady = document.fonts.ready.then(() => {
   for (const flow of document.querySelectorAll('[data-hypit-text-flow][data-hypit-text-overflow="shrink"]')) {
     const minimum = Number(flow.getAttribute('data-hypit-text-minimum-scale'));
     const maximumLines = Number(flow.getAttribute('data-hypit-text-max-lines') || '0');
+    const inlineSize = flow.getAttribute('data-hypit-text-inline-size');
+    const blockSize = flow.getAttribute('data-hypit-text-block-size');
+    const inlineAlign = flow.getAttribute('data-hypit-text-inline-align');
+    const blockAlign = flow.getAttribute('data-hypit-text-block-align');
     const parent = flow.parentElement;
-    if (!parent || !Number.isFinite(minimum) || minimum <= 0 || minimum > 1) throw new Error('Invalid bounded Text shrink request.');
+    if (!parent || !Number.isFinite(minimum) || minimum <= 0 || minimum > 1
+      || (inlineSize !== 'fixed' && inlineSize !== 'hug')
+      || (blockSize !== 'fixed' && blockSize !== 'hug')) throw new Error('Invalid bounded Text shrink request.');
     const availableWidth = parent.clientWidth;
     const availableHeight = parent.clientHeight;
     const apply = (scale) => {
-      flow.style.position = 'absolute';
-      flow.style.left = '0';
-      flow.style.top = '0';
+      flow.style.position = 'relative';
+      flow.style.left = '';
+      flow.style.top = '';
       flow.style.zoom = '';
-      flow.style.transformOrigin = 'top left';
+      const inlineOrigin = inlineAlign === 'start' ? 'left' : inlineAlign === 'end' ? 'right' : 'center';
+      const blockOrigin = blockAlign === 'start' ? 'top' : blockAlign === 'end' ? 'bottom' : 'center';
+      flow.style.transformOrigin = inlineOrigin + ' ' + blockOrigin;
       flow.style.transform = 'scale(' + scale + ')';
-      flow.style.width = String(100 / scale) + '%';
-      flow.style.height = String(100 / scale) + '%';
+      flow.style.width = inlineSize === 'fixed' ? String(100 / scale) + '%' : 'max-content';
+      flow.style.height = blockSize === 'fixed' ? String(100 / scale) + '%' : 'max-content';
     };
     const measure = (scale) => {
       apply(scale);
@@ -1079,6 +1111,12 @@ const svmlTextLayoutReady = document.fonts.ready.then(() => {
         },
       };
     };
+    const fullSizeMeasurement = measure(1);
+    if (fullSizeMeasurement.fits) {
+      apply(1);
+      flow.setAttribute('data-hypit-text-shrink-scale', '1.00000000');
+      continue;
+    }
     const minimumMeasurement = measure(minimum);
     if (!minimumMeasurement.fits) throw new Error('Text cannot fit at its authored minimum scale: '
       + minimumMeasurement.width.toFixed(2) + 'x' + minimumMeasurement.height.toFixed(2)
