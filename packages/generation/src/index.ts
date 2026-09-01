@@ -70,7 +70,7 @@ export {
   generatedAudioSetSchema,
   generatedVideoSetSchema,
   generationBlobRefSchema,
-  generationDigestSchema,
+  generationResourceSchema,
   generationObjectSchema,
   generationPromptSchema,
 } from "./schema.js";

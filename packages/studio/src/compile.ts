@@ -35,7 +35,7 @@ export async function observedCompiledSource(
 ): Promise<CompiledSource> {
   const served = new Map<string, ServedFile>();
   for (const attachment of compiled.attachments) {
-    served.set(attachment.artifact.digest, {
+    served.set(attachment.artifact.resource, {
       mediaType: attachment.artifact.mediaType,
       bytes: await bytesOf(attachment),
     });

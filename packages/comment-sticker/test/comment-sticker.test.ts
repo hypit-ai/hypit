@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 import { projectProgramWindow } from "../../../test/temporal-fixture.js";
 
@@ -36,7 +36,7 @@ import {
 } from "../src/index.js";
 
 const font: FontArtifactRef = {
-  sources: [{ artifact: { kind: "blob", digest: fixtureDigest("comment-sticker-font"), size: 1_024, mediaType: "font/woff2" } }],
+  sources: [{ artifact: { kind: "blob", resource: fixtureResource("comment-sticker-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 800,
   style: "normal",
 };
@@ -167,7 +167,7 @@ test("Style Surface consumes an explicit SVS Recipe and exact Font Stack", async
 });
 
 test("Track Surface lowers mixed program and semantic Stickers to a finite explicit graph", async () => {
-  const blob = { kind: "blob" as const, digest: fixtureDigest("comment-avatar"), size: 128, mediaType: "image/png" };
+  const blob = { kind: "blob" as const, resource: fixtureResource("comment-avatar"), size: 128, mediaType: "image/png" };
   const refs = new Map<string, SurfaceResolvedReference>([
     ["video.canvas", authored("video.canvas", spatialTypes.canvas, canvas)],
     ["video.semantic", authored("video.semantic", semanticTrackTypes.track, semantic)],

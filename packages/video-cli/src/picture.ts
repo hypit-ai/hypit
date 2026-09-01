@@ -1,7 +1,7 @@
 import type { CliPicture, CliPictureRequest } from "@hypit/cli";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { OsCredentialStore } from "@hypit/credential-store-os";
-import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
+import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
 import type { EndpointRegistration } from "@hypit/driver-node";
 import type { EndpointOutcome } from "@hypit/endpoint-kit";
 import { sealGenerationPortRequest, verifyGeneratedImageSet } from "@hypit/generation";
@@ -121,15 +121,15 @@ function delay(milliseconds: number): Promise<void> {
 /** Read the single picture out of the completed generation, then out of the Store. */
 async function readPicture(
   outcome: Extract<EndpointOutcome, { readonly status: "completed" }>,
-  artifacts: MemoryArtifactStore,
+  resources: MemoryResourceStore,
 ): Promise<{ readonly bytes: Uint8Array; readonly mediaType: string }> {
   const value = outcome.result.value;
   assert(value.kind === "inline", "the model returned no inline image set");
   verifyGeneratedImageSet(value.value);
   const [image] = (value.value as unknown as { readonly images: readonly BlobRef[] }).images;
   assert(image !== undefined, "the model returned no picture");
-  const bytes = await artifacts.get(image.digest);
-  assert(bytes !== undefined, `generated Artifact ${image.digest} was not stored`);
+  const bytes = await resources.get(image.resource);
+  assert(bytes !== undefined, `generated Artifact ${image.resource} was not stored`);
   return { bytes, mediaType: image.mediaType };
 }
 
@@ -137,7 +137,7 @@ async function readPicture(
  * Generate one picture with no Core graph.
  *
  * A package asset is authoring input, so nothing here is durable: the Need, the
- * ArtifactStore and the Provider all live for the length of this one call, and no
+ * ResourceStore and the Provider all live for the length of this one call, and no
  * Build, Record or Runtime Profile observes any of it.
  */
 export async function generateVideoCliPicture(request: CliPictureRequest): Promise<CliPicture> {
@@ -158,11 +158,11 @@ export async function generateVideoCliPicture(request: CliPictureRequest): Promi
   const registration = resolution.registration;
   assert(registration.kind === "asynchronous",
     `${model.ports.model} is fulfilled by an Endpoint hypit image cannot drive`);
-  const artifacts = new MemoryArtifactStore();
+  const resources = new MemoryResourceStore();
   const common = {
     command: { kind: "fulfill-need" as const, id: "command:hypit-image", need },
     need,
-    artifacts,
+    resources,
     credentials: await resolveCredentials(registration),
     operation: "operation:hypit-image",
   };
@@ -175,7 +175,7 @@ export async function generateVideoCliPicture(request: CliPictureRequest): Promi
   assert(outcome.status === "completed", outcome.status === "failed"
     ? `${model.ports.model} failed: ${outcome.failure.code} — ${outcome.failure.message}`
     : `${model.ports.model} returned no picture`);
-  const picture = await readPicture(outcome, artifacts);
+  const picture = await readPicture(outcome, resources);
   return {
     package: specifier,
     model: model.ports.model,

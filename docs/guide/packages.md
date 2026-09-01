@@ -57,7 +57,7 @@ Reusable values and deterministic building blocks. They support video authoring 
 film's creative structure or call an external service.
 
 ```text
-@hypit/artifact              content-addressed bytes
+@hypit/artifact              Runtime-referenced byte values
 @hypit/component-kit         Producer and validator registration
 @hypit/text                  graph-native text templates
 @hypit/media                 media values
@@ -149,8 +149,8 @@ project Build Result repository are the intentional package-selected boundaries.
 @hypit/runtime-host-node     Node Runtime Host ABI
 @hypit/runtime-local         local Worker and assembly
 @hypit/store-sqlite          SQLite state
-@hypit/artifact-store-fs     internal filesystem working Artifacts
-@hypit/artifact-store-s3     library for Runtime implementations needing S3 working Artifacts
+@hypit/resource-store-fs     internal filesystem working Resources
+@hypit/resource-store-s3     library for Runtime implementations needing S3 working Resources
 @hypit/build-result          storage-neutral project Result model
 @hypit/build-result-kit      Build Result repository package ABI
 @hypit/build-result-fs       default project Result repository

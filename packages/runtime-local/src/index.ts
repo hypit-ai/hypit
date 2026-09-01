@@ -1,6 +1,6 @@
 export {
   createLocalRuntimeArchiveControl,
-  createLocalRuntimeArtifactAccess,
+  createLocalRuntimeResourceAccess,
 } from "./control.js";
 export { createLocalCredentialControl } from "./credentials.js";
 export {
@@ -10,7 +10,7 @@ export { openLocalRuntimeHost } from "./host.js";
 export {
   createRuntimeFromConfig,
   createRuntimeArchiveFromConfig,
-  createRuntimeArtifactAccessFromConfig,
+  createRuntimeResourceAccessFromConfig,
   createRuntimeCredentialsFromConfig,
   openBuildResultRepositoryFromConfig,
   declaredManagedPrograms,

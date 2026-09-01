@@ -82,13 +82,13 @@ export type BuildResultSeed = {
   readonly startedAt?: number;
 };
 
-export type BuildResultArtifactSource = {
+export type BuildResultResourceSource = {
   open(artifact: BlobRef): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
 export type BuildResultSync = {
   readonly state: BuildState;
-  readonly artifacts: BuildResultArtifactSource;
+  readonly resources: BuildResultResourceSource;
 };
 
 export type BuildResultFinish = {

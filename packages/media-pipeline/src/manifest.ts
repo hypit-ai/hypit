@@ -175,7 +175,7 @@ const blobRefSchema: ValueSchema = {
   kind: "object",
   fields: {
     kind: { schema: { kind: "literal", value: "blob" } },
-    digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
+    resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
     size: { schema: { kind: "number", integer: true, minimum: 0 } },
     mediaType: { schema: { kind: "literal", value: "audio/wav" } },
   },

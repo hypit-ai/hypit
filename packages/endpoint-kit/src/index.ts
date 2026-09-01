@@ -8,7 +8,7 @@ import type {
   TypeRef,
 } from "@hypit/protocol";
 import type {
-  ArtifactStore,
+  ResourceStore,
   CredentialRef,
   CredentialValue,
   OperationFailure,
@@ -25,7 +25,7 @@ export type EndpointFulfillment = {
 export type EndpointInvocationContext = {
   readonly command: FulfillNeedCommand;
   readonly need: Need;
-  readonly artifacts: ArtifactStore;
+  readonly resources: ResourceStore;
   /** Only slots explicitly declared by this configured Endpoint instance are present. */
   readonly credentials: Readonly<Record<string, CredentialValue>>;
 };

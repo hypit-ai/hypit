@@ -53,7 +53,7 @@ const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; 
 const enumString = (values: readonly string[]): ValueSchema => ({ kind: "string", enum: values });
 const blobRef = object({
   kind: { schema: { kind: "literal", value: "blob" } },
-  digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
+  resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
   size: { schema: unsignedInteger },
   mediaType: { schema: string },
 });

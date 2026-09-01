@@ -138,7 +138,7 @@ export type AudioProgramClip = {
   readonly fadeOutSamples: number;
 };
 
-/** Pure, content-addressed plan. Executing it is always a Provider Need. */
+/** Pure media plan. Executing it is always a Provider Need. */
 export type AudioProgramPlan = {
   readonly frameRate: MediaRational;
   readonly frameCount: number;

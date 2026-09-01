@@ -5,7 +5,7 @@ import type { GeminiRequest } from "@hypit/gemini";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CapabilityRef } from "@hypit/protocol";
 import { credentialRef } from "@hypit/runtime";
-import type { CredentialRef, ArtifactStore } from "@hypit/runtime";
+import type { CredentialRef, ResourceStore } from "@hypit/runtime";
 import { sealText } from "@hypit/text";
 import { textTypes } from "@hypit/text";
 import { createHypiHubGeminiGenerator } from "./gemini.js";
@@ -25,7 +25,7 @@ export type CreateHypiHubProviderOptions = {
   readonly audio?: boolean;
   readonly fetch?: typeof globalThis.fetch;
   /** Overrides the default POST /v1/files upload for referenced artifacts. */
-  readonly publicAssetUrl?: (artifact: BlobRef, artifacts: ArtifactStore) => Promise<string>;
+  readonly publicAssetUrl?: (artifact: BlobRef, artifacts: ResourceStore) => Promise<string>;
 };
 
 type Handle = { readonly contract: "hypit.hypihub-operation@1"; readonly jobId: string; readonly route: string; readonly startedAt: number };
@@ -80,9 +80,9 @@ function dataUrl(bytes: Uint8Array, mediaType: string): string {
   return `data:${mediaType};base64,${Buffer.from(bytes).toString("base64")}`;
 }
 
-async function resolveArtifactInline(artifacts: ArtifactStore, artifact: BlobRef): Promise<string> {
-  const bytes = await artifacts.get(artifact.digest);
-  assert(bytes !== undefined, `HypiHub reference artifact ${artifact.digest} is unavailable`);
+async function resolveArtifactInline(artifacts: ResourceStore, artifact: BlobRef): Promise<string> {
+  const bytes = await artifacts.get(artifact.resource);
+  assert(bytes !== undefined, `HypiHub reference artifact ${artifact.resource} is unavailable`);
   return dataUrl(bytes, artifact.mediaType);
 }
 
@@ -126,15 +126,15 @@ class HypiHubClient {
     }
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
-  async upload(artifact: BlobRef, artifacts: ArtifactStore, apiKey: string): Promise<string> {
-    const bytes = await artifacts.get(artifact.digest);
-    assert(bytes !== undefined, `HypiHub reference artifact ${artifact.digest} is unavailable`);
-    assert(bytes.byteLength === artifact.size, `HypiHub reference artifact ${artifact.digest} size differs`);
+  async upload(artifact: BlobRef, resources: ResourceStore, apiKey: string): Promise<string> {
+    const bytes = await resources.get(artifact.resource);
+    assert(bytes !== undefined, `HypiHub reference artifact ${artifact.resource} is unavailable`);
+    assert(bytes.byteLength === artifact.size, `HypiHub reference artifact ${artifact.resource} size differs`);
     const form = new FormData();
     const copy = new ArrayBuffer(bytes.byteLength);
     new Uint8Array(copy).set(bytes);
     form.append("file", new Blob([copy], { type: artifact.mediaType }),
-      `${artifact.digest.slice("sha256:".length)}.${mediaExtension(artifact.mediaType)}`);
+      `${artifact.resource}.${mediaExtension(artifact.mediaType)}`);
     form.append("purpose", "reference");
     const response = await this.json("/files", apiKey, { method: "POST", body: form });
     assert(typeof response.url === "string" && /^https:\/\//iu.test(response.url),
@@ -148,7 +148,7 @@ class HypiHubClient {
   }
 }
 
-async function complete(client: HypiHubClient, apiKey: string, route: (typeof hypiHubRoutes)[number], id: string, artifacts: ArtifactStore): Promise<EndpointOutcome> {
+async function complete(client: HypiHubClient, apiKey: string, route: (typeof hypiHubRoutes)[number], id: string, artifacts: ResourceStore): Promise<EndpointOutcome> {
   const response = await client.json(`/jobs/${encodeURIComponent(id)}/assets`, apiKey); const items = response.items;
   assert(Array.isArray(items) && items.length > 0, "HypiHub job has no assets"); const blobs: BlobRef[] = [];
   for (const item of items) { const asset = object(item, "HypiHub asset"); assert(typeof asset.url === "string", "HypiHub asset has no URL"); const downloaded = await client.download(asset.url); blobs.push(await artifacts.put(downloaded.bytes, downloaded.mediaType)); }
@@ -159,11 +159,11 @@ async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocatio
   const route = hypiHubRouteForCapability(context.need.capability);
   assert(route !== undefined && route.media === "audio", "HypiHub does not implement this exact capability");
   const compiled = await route.compile(context.need.constraints, async (artifact) => publicAssetUrl === undefined
-    ? await resolveArtifactInline(context.artifacts, artifact)
-    : await publicAssetUrl(artifact, context.artifacts));
+    ? await resolveArtifactInline(context.resources, artifact)
+    : await publicAssetUrl(artifact, context.resources));
   await verifyModelRoute(client, credential(context), compiled.model, "audio_speech");
   const audio = await client.binary("/audio/speech", credential(context), { model: compiled.model, ...(compiled.input as Record<string, unknown>) });
-  const artifact = await context.artifacts.put(audio.bytes, audio.mediaType);
+  const artifact = await context.resources.put(audio.bytes, audio.mediaType);
   return { value: route.packageResult([artifact]) };
 }
 
@@ -175,12 +175,12 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
         assert(route !== undefined, "HypiHub does not implement this exact capability"); const apiKey = credential(context);
         const uploaded = new Map<string, Promise<string>>();
         const resolve = (artifact: BlobRef): Promise<string> => {
-          const existing = uploaded.get(artifact.digest);
+          const existing = uploaded.get(artifact.resource);
           if (existing !== undefined) return existing;
           const promise = publicAssetUrl === undefined
-            ? client.upload(artifact, context.artifacts, apiKey)
-            : publicAssetUrl(artifact, context.artifacts);
-          uploaded.set(artifact.digest, promise);
+            ? client.upload(artifact, context.resources, apiKey)
+            : publicAssetUrl(artifact, context.resources);
+          uploaded.set(artifact.resource, promise);
           return promise;
         };
         const compiled = await route.compile(context.need.constraints, resolve);
@@ -196,7 +196,7 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
         await verifyModelRoute(client, apiKey, compiled.model,
           path === "/images/edits" ? "image_edits" : path === "/images/generations" ? "images" : "videos");
         const response = await client.json(path, apiKey, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": context.operation }, body: JSON.stringify({ model: compiled.model, ...input }) });
-        const status = response.status; if (status === "succeeded" || status === "completed") return await complete(client, apiKey, route, jobId(response), context.artifacts);
+        const status = response.status; if (status === "succeeded" || status === "completed") return await complete(client, apiKey, route, jobId(response), context.resources);
         const handle: Handle = { contract: "hypit.hypihub-operation@1", jobId: jobId(response), route: capabilityKey(route.capability), startedAt: Date.now() };
         return wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "submitted" });
       } catch (error) { return failure(error); }
@@ -214,7 +214,7 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
           throw new Error(`HypiHub job ${status}${typeof detail === "string" ? `: ${detail}` : ""}`);
         }
         if (status !== "succeeded" && status !== "completed") throw new Error(`HypiHub returned unknown job status ${String(status)}`);
-        return await complete(client, credential(context), route, handle.jobId, context.artifacts);
+        return await complete(client, credential(context), route, handle.jobId, context.resources);
       } catch (error) { return failure(error); }
     },
   };
@@ -243,8 +243,8 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     });
     const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: request.prompt }];
     for (const item of request.media) {
-      const bytes = await context.artifacts.get(item.artifact.digest);
-      assert(bytes !== undefined, `HypiHub Gemini reference artifact ${item.artifact.digest} is unavailable`);
+      const bytes = await context.resources.get(item.artifact.resource);
+      assert(bytes !== undefined, `HypiHub Gemini reference artifact ${item.artifact.resource} is unavailable`);
       parts.push({ inlineData: { mimeType: item.artifact.mediaType, data: Buffer.from(bytes).toString("base64") } });
     }
     const value = await generate({ parts, instruction: request.instruction });

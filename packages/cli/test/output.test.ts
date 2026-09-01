@@ -6,7 +6,7 @@ import type { BuildPlan } from "@hypit/protocol";
 import { renderCliError, writeCliHelp, writeCliOutput } from "../src/output.js";
 import type { PlanPreflight } from "../src/output.js";
 
-const digest = `sha256:${"1".repeat(64)}` as const;
+const resource = "res_cli-output" as const;
 
 function capture(
   options: Parameters<typeof writeCliOutput>[1],
@@ -33,7 +33,7 @@ test("author check renders a compact human summary without dumping identity", ()
       sourceKind: "author",
       ok: true,
       units: 2,
-      sourceAssets: [{ digest }],
+      sourceAssets: [{ resource }],
       modules: ["@hypit/script@1"],
       exports: [{
         name: "story",
@@ -45,7 +45,7 @@ test("author check renders a compact human summary without dumping identity", ()
   assert.match(output, /✓ Source is valid/u);
   assert.match(output, /Frontend\s+@hypit\/markup@1/u);
   assert.match(output, /story\s+@hypit\/narrative@1\/Narrative/u);
-  assert.doesNotMatch(output, /sha256:/u);
+  assert.doesNotMatch(output, /res_cli-output/u);
   assert.doesNotMatch(output, /\u001b\[/u);
 });
 

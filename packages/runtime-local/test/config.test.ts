@@ -17,7 +17,7 @@ import { FileBuildResultRepository } from "@hypit/build-result";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 import {
   createRuntimeArchiveFromConfig,
-  createRuntimeArtifactAccessFromConfig,
+  createRuntimeResourceAccessFromConfig,
   doctorRuntimeConfig,
   openBuildResultRepositoryFromConfig,
   parseRuntimeConfig,
@@ -121,7 +121,7 @@ test("Runtime Profile rejects source ownership fields", () => {
   assert.throws(() => parseRuntimeConfig({ ...profile(), root: "." }), /does not accept root/u);
 });
 
-test("archive inspection and working Artifact access require no selected ArtifactStore", async () => {
+test("archive inspection and working Resource access require no selected ResourceStore", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-slice-"));
   const path = join(root, "hypit.runtime.json");
   await writeFile(path, JSON.stringify(profile({ dataRoot: "." })));
@@ -132,8 +132,8 @@ test("archive inspection and working Artifact access require no selected Artifac
     const archive = await createRuntimeArchiveFromConfig(path, { registry, readOnly: true });
     assert.equal((await archive.status("missing")).build, undefined);
     await archive.close();
-    const artifacts = await createRuntimeArtifactAccessFromConfig(path, { registry });
-    assert.equal(await artifacts.readArtifact("sha256:0000000000000000000000000000000000000000000000000000000000000000"), undefined);
+    const artifacts = await createRuntimeResourceAccessFromConfig(path, { registry });
+    assert.equal(await artifacts.readResource("res_missing"), undefined);
     await artifacts.close();
   } finally {
     await rm(root, { recursive: true, force: true });

@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -136,21 +135,21 @@ test("materializeRecord copies an archived Artifact without rerunning a Build", 
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-get-"));
   try {
     const bytes = Buffer.from("final-video-bytes");
-    const artifactDigest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    const artifactResource = "res_archived-final-video";
     const output = join(root, "final.mp4");
     const runtime = {
-      async openArtifact(digest: string) {
-        return digest === artifactDigest ? (async function* () { yield bytes; })() : undefined;
+      async openResource(resource: string) {
+        return resource === artifactResource ? (async function* () { yield bytes; })() : undefined;
       },
     } as Parameters<typeof materializeRecord>[0];
     const record = {
       id: "final.video",
-      value: { kind: "inline", value: { digest: artifactDigest, size: bytes.byteLength, mediaType: "video/mp4" } },
+      value: { kind: "inline", value: { resource: artifactResource, size: bytes.byteLength, mediaType: "video/mp4" } },
     } as unknown as Parameters<typeof materializeRecord>[1];
     const result = await materializeRecord(runtime, record, output);
     assert.deepEqual(result, {
       kind: "artifact",
-      digest: artifactDigest,
+      resource: artifactResource,
       mediaType: "video/mp4",
       size: bytes.byteLength,
       path: output,

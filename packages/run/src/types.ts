@@ -38,7 +38,7 @@ export type RunProvidedValue = {
   readonly from: string;
 };
 
-/** Ordinary source file admitted as one content-addressed Candidate of an explicitly named blob Type. */
+/** Ordinary source file admitted as one Resource Candidate of an explicitly named blob Type. */
 export type RunProvidedFile = {
   readonly kind: "file";
   readonly id: string;

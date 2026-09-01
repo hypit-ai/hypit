@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import type { StructuredElement, SurfaceResolvedReference } from "@hypit/markup";
 import type { SemanticTake } from "@hypit/speech";
@@ -14,12 +14,12 @@ const take: SemanticTake = {
   media: {
     timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 30 },
     visual: {
-      artifact: { kind: "blob", digest: fixtureDigest("track:take:video"), size: 1, mediaType: "video/mp4" },
+      artifact: { kind: "blob", resource: fixtureResource("track:take:video"), size: 1, mediaType: "video/mp4" },
       width: 720,
       height: 1280,
     },
     audio: {
-      artifact: { kind: "blob", digest: fixtureDigest("track:take:audio"), size: 1, mediaType: "audio/wav" },
+      artifact: { kind: "blob", resource: fixtureResource("track:take:audio"), size: 1, mediaType: "audio/wav" },
     },
   },
   segment: {

@@ -1,15 +1,15 @@
 import {
-  isStreamingArtifactStore,
+  isStreamingResourceStore,
 } from "@hypit/runtime";
 
 import type {
   CreateLocalRuntimeArchiveControlOptions,
-  CreateLocalRuntimeArtifactAccessOptions,
+  CreateLocalRuntimeResourceAccessOptions,
   LocalRuntimeArchiveControl,
-  LocalRuntimeArtifactAccess,
+  LocalRuntimeResourceAccess,
 } from "./types.js";
 
-/** Durable execution-state control that never opens or depends on an ArtifactStore. */
+/** Durable execution-state control that never opens or depends on a ResourceStore. */
 export function createLocalRuntimeArchiveControl(
   options: CreateLocalRuntimeArchiveControlOptions,
 ): LocalRuntimeArchiveControl {
@@ -62,17 +62,17 @@ export function createLocalRuntimeArchiveControl(
   };
 }
 
-/** Explicit Artifact byte access with no dependency on execution-state Stores. */
-export function createLocalRuntimeArtifactAccess(
-  options: CreateLocalRuntimeArtifactAccessOptions,
-): LocalRuntimeArtifactAccess {
+/** Explicit active-resource byte access with no dependency on execution-state Stores. */
+export function createLocalRuntimeResourceAccess(
+  options: CreateLocalRuntimeResourceAccessOptions,
+): LocalRuntimeResourceAccess {
   return {
-    async readArtifact(digest) {
-      return await options.artifactStore.get(digest);
+    async readResource(resource) {
+      return await options.resourceStore.get(resource);
     },
-    async openArtifact(digest) {
-      if (isStreamingArtifactStore(options.artifactStore)) return await options.artifactStore.open(digest);
-      const bytes = await options.artifactStore.get(digest);
+    async openResource(resource) {
+      if (isStreamingResourceStore(options.resourceStore)) return await options.resourceStore.open(resource);
+      const bytes = await options.resourceStore.get(resource);
       return bytes === undefined ? undefined : (async function* () { yield bytes; })();
     },
     close() {

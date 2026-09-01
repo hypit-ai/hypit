@@ -4,7 +4,7 @@ import test from "node:test";
 import { sealSpeechEstimatePolicy } from "@hypit/estimate";
 import { sealSynchronizedMedia } from "@hypit/media";
 import type { Narrative } from "@hypit/narrative";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   estimateSemanticTakeTiming,
@@ -46,7 +46,7 @@ const excerpt = { narrativeId: narrative.id, kind: "segment" as const, id: "open
 const media = sealSynchronizedMedia({
   timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 120 },
   visual: {
-    artifact: { kind: "blob", digest: fixtureDigest("estimated-take-video"), size: 1_024, mediaType: "video/mp4" },
+    artifact: { kind: "blob", resource: fixtureResource("estimated-take-video"), size: 1_024, mediaType: "video/mp4" },
     width: 1_080,
     height: 1_920,
   },

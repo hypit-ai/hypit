@@ -21,7 +21,7 @@ Every component shown here must be imported by its package specifier before use:
 
 ## media:Image
 
-Declares a content-addressed image asset from a local file.
+Declares an image Resource from a local file.
 
 ```svml
 <media:Image id="presenter" src="./assets/presenter.png"/>
@@ -37,7 +37,7 @@ The image is referenced downstream via `{presenter}` — for example, as a chara
 
 ## media:Audio
 
-Declares a content-addressed audio asset from a local file.
+Declares an audio Resource from a local file.
 
 ```svml
 <media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>

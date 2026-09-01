@@ -12,6 +12,6 @@ export type * from "./dispatch.js";
 export type * from "./operations.js";
 export { LocalBuildScheduler } from "./scheduler.js";
 export {
-  isStreamingArtifactStore,
+  isStreamingResourceStore,
 } from "./types.js";
 export type * from "./types.js";

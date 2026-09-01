@@ -32,7 +32,7 @@ completed output is never rolled back.
 
 `results` is optional. Without it, Hypit uses the project's `.hypit/results` directory with no cloud
 account or service. It may instead select `@hypit/build-result-s3` for a shared project repository.
-Runtime working Artifacts remain internal and Build-local; there is no ArtifactStore selector. After
+Runtime working Resources remain internal and Build-local; there is no ResourceStore selector. After
 a Result is terminal, history is read from the selected repository, not Runtime SQLite.
 
 Source imports select author packages. Runtime Profile entries select only code allowed to access files,

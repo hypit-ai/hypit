@@ -17,4 +17,4 @@ misleading. An Endpoint may invoke a coordinator Lambda synchronously; that coor
 long work and return a checkpoint which the Endpoint later polls through another synchronous call.
 
 AWS authentication uses the SDK credential chain or an injected trusted client. Large media belongs
-in ArtifactStore; JSON payloads are bounded by Lambda's synchronous payload limit.
+in ResourceStore; JSON payloads are bounded by Lambda's synchronous payload limit.

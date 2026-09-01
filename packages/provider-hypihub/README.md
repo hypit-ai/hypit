@@ -38,7 +38,7 @@ an existing `/v1`/`/v1beta` base is accepted) only when choosing HypiHub. The Ru
 accepts the origin or either versioned base and normalizes it to `/v1`; missing or insufficient user
 credentials should be resolved at [hypit.ai](https://hypit.ai). Referenced image, audio and video
 Artifacts are uploaded automatically through `POST /v1/files`, then their returned HTTPS capability
-URLs are used in image and video requests. Uploads are deduplicated by Artifact digest within one
+URLs are used in image and video requests. One referenced Resource is uploaded once within one
 Runtime operation. Embedded callers may override that transport with `publicAssetUrl`.
 
 HypiHub exposes MiMo VoiceDesign by default. Set `audio: false` only when the user explicitly selects

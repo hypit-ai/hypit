@@ -11,7 +11,7 @@
     "./worker-process": "./src/worker-process.ts"
   },
   "dependencies": {
-    "@hypit/artifact-store-fs": "workspace:*",
+    "@hypit/resource-store-fs": "workspace:*",
     "@hypit/build-result": "workspace:*",
     "@hypit/build-result-fs": "workspace:*",
     "@hypit/build-result-kit": "workspace:*",

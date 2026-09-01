@@ -1,4 +1,4 @@
-export { MemoryArtifactStore } from "./artifacts.js";
+export { MemoryResourceStore } from "./resources.js";
 export { NodeDriver } from "./driver.js";
 export {
   ProducerRegistry,

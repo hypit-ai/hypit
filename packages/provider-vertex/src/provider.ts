@@ -41,8 +41,8 @@ export function createVertexProvider(options: CreateVertexProviderOptions) {
     });
     const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: typed.prompt }];
     for (const item of typed.media) {
-      const bytes = await context.artifacts.get(item.artifact.digest);
-      if (bytes === undefined) throw new Error(`Vertex Gemini reference artifact ${item.artifact.digest} is unavailable`);
+      const bytes = await context.resources.get(item.artifact.resource);
+      if (bytes === undefined) throw new Error(`Vertex Gemini reference artifact ${item.artifact.resource} is unavailable`);
       parts.push({ inlineData: { mimeType: item.artifact.mediaType, data: Buffer.from(bytes).toString("base64") } });
     }
     const value = await generate({ parts, instruction: typed.instruction });

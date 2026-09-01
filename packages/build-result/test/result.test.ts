@@ -34,7 +34,6 @@ test("one same-Build resource backs a public video and a SemanticTake payload", 
   const video: BlobRef = {
     kind: "blob",
     resource: "res_same-build-video",
-    digest: `sha256:${"1".repeat(64)}`,
     size: bytes.byteLength,
     mediaType: "video/mp4",
   };
@@ -66,7 +65,7 @@ test("one same-Build resource backs a public video and a SemanticTake payload", 
           { output: "logical:unused", candidate: "candidate:unused", record: "record:unused" },
         ],
       }),
-      artifacts: {
+      resources: {
         async open(artifact) {
           assert.equal(artifact.resource, video.resource);
           return (async function* () { yield bytes; })();
@@ -117,14 +116,14 @@ test("an explicitly reused public output is a forward reference and copies no by
           type: videoType,
           value: {
             kind: "blob",
-            digest: `sha256:${"2".repeat(64)}`,
+            resource: "res_prior_video",
             size: 10,
             mediaType: "video/mp4",
           },
         }],
         selections: [{ output: "logical:shot-video", candidate: "candidate:prior", record: "record:prior" }],
       }),
-      artifacts: {
+      resources: {
         async open() {
           throw new Error("a forwarded output must not copy its historical bytes");
         },

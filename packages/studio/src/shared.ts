@@ -203,16 +203,17 @@ export type StudioTaskView = {
 };
 
 export type StudioArtifactView = {
-  /** Build-qualified identity. The same digest in two Builds remains two historical results. */
+  /** Build-qualified identity derived from the public Output and its value path. */
   readonly id: string;
   readonly build: string;
   readonly createdAt: number;
-  readonly digest: string;
+  readonly output: string;
+  readonly valuePath: string;
+  readonly ownerBuild: string;
+  readonly ownerOutput: string;
+  readonly filePath: string;
   readonly size: number;
   readonly mediaType: string;
-  readonly records: readonly string[];
-  readonly outputs: readonly string[];
-  readonly paths: readonly string[];
   readonly source: string;
   readonly run?: string;
 };

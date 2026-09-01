@@ -182,7 +182,7 @@ twinit 的完整 DAG 主要服务于编辑 workspace。Hypit 已由 Source 和 R
 
 - Source：当前 Run 涉及的 Author、Recipe 与 Run Source；
 - Tasks：当前环境 Runtime 中由 Catalog 证明属于该边界的 Build 和活动状态；
-- Artifacts：这些 Build 的 accepted Record 所引用的 ArtifactStore 对象。
+- Artifacts：这些 Build 的项目 Build Result 中公开的文件。
 
 三者共用一级标签。Source 内按精确文件切换；Tasks 与 Artifacts 保持只读。这个决定不引入业务目录语义，也不阻止后续为大量历史增加分页或筛选。
 

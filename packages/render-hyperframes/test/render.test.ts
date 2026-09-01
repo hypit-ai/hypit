@@ -10,7 +10,7 @@ import { compositionDependency, compositionTypes, sealComposition } from "@hypit
 import type { Composition } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import {
@@ -178,19 +178,19 @@ test("HyperFrames rendering is an explicit exact Need after ordinary document co
 test("separate visual, audio and mux Endpoints complete one author-visible render", async () => {
   const visualArtifact = {
     kind: "blob" as const,
-    digest: fixtureDigest("render-hyperframes:visual"),
+    resource: fixtureResource("render-hyperframes:visual"),
     size: 12_345,
     mediaType: "video/mp4",
   };
   const audioArtifact = {
     kind: "blob" as const,
-    digest: fixtureDigest("render-hyperframes:audio"),
+    resource: fixtureResource("render-hyperframes:audio"),
     size: 4_096,
     mediaType: "audio/wav",
   };
   const finalArtifact = {
     kind: "blob" as const,
-    digest: fixtureDigest("render-hyperframes:final-video"),
+    resource: fixtureResource("render-hyperframes:final-video"),
     size: 16_441,
     mediaType: "video/mp4",
   };
@@ -254,7 +254,7 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     record.type.module.name === artifactTypes.blob.module.name
     && record.type.name === artifactTypes.blob.name
     && record.value.kind === "blob"
-    && record.value.digest === finalArtifact.digest);
+    && record.value.resource === finalArtifact.resource);
   assert(video, "missing final BlobArtifact");
   assert.deepEqual(video.value, finalArtifact);
 });
@@ -273,7 +273,7 @@ test("a render Product with another frame domain is rejected by the explicit dow
         canvas: document.canvas,
         artifact: {
           kind: "blob",
-          digest: fixtureDigest("render-hyperframes:wrong-domain"),
+          resource: fixtureResource("render-hyperframes:wrong-domain"),
           size: 1,
           mediaType: "video/mp4",
           },
@@ -290,7 +290,7 @@ test("a render Product with another frame domain is rejected by the explicit dow
         value: stored(sealTimelineAudio({
           artifact: {
             kind: "blob",
-            digest: fixtureDigest("render-hyperframes:domain-check-audio"),
+            resource: fixtureResource("render-hyperframes:domain-check-audio"),
             size: 1,
             mediaType: "audio/wav",
           },
@@ -309,7 +309,7 @@ test("a render Product with another frame domain is rejected by the explicit dow
 });
 
 const fixtureModule = { name: "example.composition-fixture", version: "1" } as const;
-const fixtureSurfaceDigest = fixtureDigest("example.composition-fixture/surface@1");
+const fixtureSurfaceDigest = fixtureResource("example.composition-fixture/surface@1");
 const fixtureSurface = {
   name: "composition", tag: "Composition", mode: "structured",
   outputs: [compositionTypes.composition, semanticTrackTypes.track],

@@ -18,7 +18,7 @@ One Run Source is self-described and names one Author Source explicitly:
 
 The Author Source's own Header—not this file and not its suffix—selects its Author Frontend.
 
-`<value>` declares a typed zero-input `StoredValue`. `<file>` content-addresses ordinary source
+`<value>` declares a typed zero-input `StoredValue`. `<file>` admits ordinary source
 bytes as the explicitly named blob Type; Run itself does not assume an Artifact module.
 `<build-record>` exposes a verified prior Build Record as a zero-input Candidate. `<fragment>`
 instantiates a trusted package Fragment and may

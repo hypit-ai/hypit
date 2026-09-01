@@ -1,4 +1,4 @@
-import { isDigest } from "@hypit/protocol";
+import { isResourceId } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 
 const FONT_MEDIA_TYPES = new Set([
@@ -50,7 +50,7 @@ export type CompositableSurfaceRef = {
 function assertBlobRef(value: BlobRef, label: string): void {
   if (
     value.kind !== "blob"
-    || !isDigest(value.digest)
+    || !isResourceId(value.resource)
     || !Number.isSafeInteger(value.size)
     || value.size < 0
     || !value.mediaType
@@ -67,8 +67,8 @@ export function assertFontArtifactRef(value: FontArtifactRef, label = "FontArtif
     if (!FONT_MEDIA_TYPES.has(source.artifact.mediaType)) {
       throw new Error(`${label}.sources.${index} Artifact must use a supported font media type.`);
     }
-    if (artifacts.has(source.artifact.digest)) throw new Error(`${label} repeats a source Artifact.`);
-    artifacts.add(source.artifact.digest);
+    if (artifacts.has(source.artifact.resource)) throw new Error(`${label} repeats a source Artifact.`);
+    artifacts.add(source.artifact.resource);
     if (source.unicodeRange !== undefined
       && !/^U\+[0-9a-f?]{1,6}(?:-[0-9a-f]{1,6})?(?:,U\+[0-9a-f?]{1,6}(?:-[0-9a-f]{1,6})?)*$/iu.test(source.unicodeRange)) {
       throw new Error(`${label}.sources.${index} Unicode range is invalid.`);
@@ -88,7 +88,7 @@ export function assertFontStackRef(value: FontStackRef, label = "FontStackRef"):
   for (const [index, face] of value.faces.entries()) {
     assertFontArtifactRef(face, `${label}.faces.${index}`);
     const identity = JSON.stringify({
-      sources: face.sources.map((source) => [source.artifact.digest, source.unicodeRange ?? null]),
+      sources: face.sources.map((source) => [source.artifact.resource, source.unicodeRange ?? null]),
       weight: face.weight,
       style: face.style,
     });

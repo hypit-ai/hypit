@@ -17,7 +17,7 @@ import {
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-execution";
 import { mediaPipelineCapabilities } from "@hypit/media-pipeline";
 import { mockMediaCapabilities } from "@hypit/mock-media";
-import { isStreamingArtifactStore } from "@hypit/runtime";
+import { isStreamingResourceStore } from "@hypit/runtime";
 import { speechTypes } from "@hypit/speech";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { EndpointFulfillment, EndpointInvocationContext } from "@hypit/endpoint-kit";
@@ -48,7 +48,7 @@ function fulfillment(result: MediaOperationResult): EndpointFulfillment {
 }
 
 /**
- * The Build's own ArtifactStore, and whatever ffmpeg this machine has. The
+ * The Build's own ResourceStore, and whatever ffmpeg this machine has. The
  * operations themselves live in `@hypit/media-execution`, shared with the
  * AWS Provider so one Need cannot mean two different transforms.
  */
@@ -62,16 +62,16 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
   const environment = (context: EndpointInvocationContext): MediaExecutionEnvironment => ({
     ...common,
     artifacts: {
-      get: async (source) => await context.artifacts.get(source.digest),
-      open: async (source) => isStreamingArtifactStore(context.artifacts)
-        ? await context.artifacts.open(source.digest)
-        : await context.artifacts.get(source.digest).then((bytes) => bytes === undefined
+      get: async (source) => await context.resources.get(source.resource),
+      open: async (source) => isStreamingResourceStore(context.resources)
+        ? await context.resources.open(source.resource)
+        : await context.resources.get(source.resource).then((bytes) => bytes === undefined
           ? undefined
           : (async function* () { yield bytes; })()),
-      put: async (bytes, mediaType) => await context.artifacts.put(bytes, mediaType),
-      putFile: async (path, mediaType) => isStreamingArtifactStore(context.artifacts)
-        ? await context.artifacts.putStream(createReadStream(path), mediaType)
-        : await context.artifacts.put(await readFile(path), mediaType),
+      put: async (bytes, mediaType) => await context.resources.put(bytes, mediaType),
+      putFile: async (path, mediaType) => isStreamingResourceStore(context.resources)
+        ? await context.resources.putStream(createReadStream(path), mediaType)
+        : await context.resources.put(await readFile(path), mediaType),
     },
   });
   const operation = (

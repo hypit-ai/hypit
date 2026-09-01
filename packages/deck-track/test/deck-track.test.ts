@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { videoContractManifests } from "../../../test/support/video-domain.js";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import { compositionDependency, compositionTypes } from "@hypit/composition";
@@ -77,13 +77,13 @@ const frame = sealSpatialFrame({
 
 const image = (name: string) => ({
   kind: "blob" as const,
-  digest: fixtureDigest(`deck-image:${name}`),
+  resource: fixtureResource(`deck-image:${name}`),
   size: 16,
   mediaType: "image/png",
 });
 const video = (name: string) => ({
   kind: "blob" as const,
-  digest: fixtureDigest(`deck-video:${name}`),
+  resource: fixtureResource(`deck-video:${name}`),
   size: 32,
   mediaType: "video/mp4",
 });
@@ -365,7 +365,7 @@ test("continue uses one explicit loop-start clock and past hide removes the reta
 });
 
 const font: FontArtifactRef = {
-  sources: [{ artifact: { kind: "blob", digest: fixtureDigest("deck-font"), size: 64, mediaType: "font/woff2" } }],
+  sources: [{ artifact: { kind: "blob", resource: fixtureResource("deck-font"), size: 64, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
 };
@@ -397,7 +397,7 @@ test("optional labels preserve exact fonts and remain inside the Card-owned pose
   const label = element(track, "card-1:stage:1", (value) => value.kind === "text-flow");
   assert.equal(label.kind, "text-flow");
   assert.equal(label.parent, "deck-material:frame");
-  assert.equal(label.typography.fonts?.[0]?.sources[0]?.artifact.digest, font.sources[0]!.artifact.digest);
+  assert.equal(label.typography.fonts?.[0]?.sources[0]?.artifact.resource, font.sources[0]!.artifact.resource);
   const authored = exactLabel();
   assert.equal(authored.kind, "text");
   assert.throws(() => sealDepthStackCardLabel({

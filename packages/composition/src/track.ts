@@ -1,4 +1,4 @@
-import { canonicalStringify, isDigest } from "@hypit/protocol";
+import { canonicalStringify, isResourceId } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 
 import {
@@ -459,7 +459,7 @@ function assertFrameSpan(span: FrameSpan, totalFrames: number, label: string): v
 function assertMediaArtifact(artifact: BlobRef, label: string): void {
   if (
     artifact.kind !== "blob"
-    || !isDigest(artifact.digest)
+    || !isResourceId(artifact.resource)
     || !Number.isSafeInteger(artifact.size)
     || artifact.size < 0
     || !artifact.mediaType
@@ -527,7 +527,7 @@ function assertSampling(value: VisualTimedSampling, durationFrames: number, labe
 function assertAudioArtifact(artifact: BlobRef, label: string): void {
   if (
     artifact.kind !== "blob"
-    || !isDigest(artifact.digest)
+    || !isResourceId(artifact.resource)
     || !Number.isSafeInteger(artifact.size)
     || artifact.size < 0
     || artifact.mediaType !== "audio/wav"

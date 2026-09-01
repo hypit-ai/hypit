@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hypit/audio-track-studio": "workspace:*",
+    "@hypit/build-result": "workspace:*",
     "@hypit/caption-fine-studio": "workspace:*",
     "@hypit/cli": "workspace:*",
     "@hypit/compiler-node": "workspace:*",

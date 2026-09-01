@@ -71,7 +71,6 @@ export const myComponentMarkupSurfaces = [{
   mode: "structured",
   outputs: [ /* 这段语法可以创作的 Type */ ],
   vocabulary: { /* 这个元素是什么、长什么样 —— 见第 5 步 */ },
-  implementation: { digest: "sha256:..." },
 }] as const;
 ```
 

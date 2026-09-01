@@ -1,4 +1,4 @@
-import { isDigest } from "@hypit/protocol";
+import { isResourceId } from "@hypit/protocol";
 import { verifySynchronizedMedia } from "@hypit/media";
 import type { SemanticTake, SpeechDuration, SpeechEvidenceAudio } from "./types.js";
 export function sealSpeechDuration(value: SpeechDuration): SpeechDuration { return value; }
@@ -65,7 +65,7 @@ export function assertSemanticTakeIdentity(take: SemanticTake): void {
   }
 }
 export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): void {
-  if (value.artifact.kind !== "blob" || !isDigest(value.artifact.digest)
+  if (value.artifact.kind !== "blob" || !isResourceId(value.artifact.resource)
     || !Number.isSafeInteger(value.artifact.size) || value.artifact.size < 0 || value.artifact.mediaType !== "audio/wav"
     || !Number.isSafeInteger(value.sampleFrames) || value.sampleFrames < 1) {
     throw new Error("SpeechEvidenceAudio media identity is invalid.");

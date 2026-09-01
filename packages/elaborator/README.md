@@ -27,7 +27,7 @@ duplicate aliases, decodes dependencies first, hygienically qualifies private Re
 identities and binds only declared public exports into importer namespaces. Host filesystem paths
 are excluded from Source Closure identity; source contents, Frontend digests and written import
 edges remain covered. Every source asset actually requested during decode is also covered by its
-author-written locator and exact content-addressed `BlobRef`; raw bytes remain a Host transfer
+author-written locator and exact Resource `BlobRef`; raw bytes remain a Host transfer
 concern and never enter the parser-independent AuthorModule or Core BuildState.
 
 The same hygienic pass emits an ephemeral `hypit.author-provenance@1` sidecar. A Frontend may retain

@@ -19,7 +19,7 @@ import {
 } from "@hypit/composition";
 import {
   EndpointRegistry,
-  MemoryArtifactStore,
+  MemoryResourceStore,
 } from "@hypit/driver-node";
 import type {
   EndpointOutcome,
@@ -153,13 +153,13 @@ async function main(): Promise<void> {
   const document = documentFixture(canaryId);
   const need = requestNeed(document, canaryId);
   const endpoint = await endpointFor(need);
-  const artifacts = new MemoryArtifactStore();
+  const resources = new MemoryResourceStore();
   const commandId = `command:hyperframes-aws-canary:${canaryId}`;
   const operation = `operation:hyperframes-aws-canary:${canaryId}`;
   const context = {
     command: { kind: "fulfill-need", id: commandId, need } as const,
     need,
-    artifacts,
+    resources,
     credentials: {},
     operation,
   };
@@ -181,7 +181,7 @@ async function main(): Promise<void> {
     assert.equal(outcome.result.value.kind, "inline");
     const visual = outcome.result.value.value as unknown as RenderedVisual;
     verifyRenderedVisual(visual);
-    const bytes = await artifacts.get(visual.artifact.digest);
+    const bytes = await resources.get(visual.artifact.resource);
     assert(bytes !== undefined && bytes.byteLength === visual.artifact.size);
 
     const output = join(work, "visual.mp4");

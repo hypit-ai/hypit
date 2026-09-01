@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import { artifactManifest, artifactTypes } from "@hypit/artifact";
 import {
@@ -30,7 +30,7 @@ import { exactModelMediaInputNames } from "@hypit/model-kit";
 import { mediaManifest } from "@hypit/media";
 import { narrativeManifest } from "@hypit/narrative";
 import { programSpaceManifest } from "@hypit/program-space";
-import type { CanonicalValue, Digest, ModuleManifest, StoredValue, TypeRef } from "@hypit/protocol";
+import type { CanonicalValue, ResourceId, ModuleManifest, StoredValue, TypeRef } from "@hypit/protocol";
 import { rasterManifest } from "@hypit/raster";
 import { createProvidedCandidate } from "@hypit/run";
 import {
@@ -46,7 +46,7 @@ import { textManifest } from "@hypit/text";
 
 const image = (name: string) => ({
   kind: "blob" as const,
-  digest: fixtureDigest(`image:${name}`),
+  resource: fixtureResource(`image:${name}`),
   size: 100,
   mediaType: "image/png",
 });

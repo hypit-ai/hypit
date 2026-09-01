@@ -156,7 +156,7 @@ async function storedValueFromWorkspace(
   from: string,
 ): Promise<StoredValue> {
   const resolved = await workspace.resolveAsset(source, { from, mediaType: "application/json" });
-  const attachment = (await workspace.attachments()).find((item) => item.artifact.digest === resolved.artifact.digest);
+  const attachment = (await workspace.attachments()).find((item) => item.artifact.resource === resolved.artifact.resource);
   if (attachment === undefined) throw new Error(`Workspace did not retain bytes for ${from}`);
   return decodeStoredValue(await attachmentBytes(attachment), from);
 }

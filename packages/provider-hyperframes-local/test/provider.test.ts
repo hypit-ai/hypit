@@ -5,7 +5,7 @@ import type { CompositableSurfaceRef, RenderedVisual } from "@hypit/media";
 import { sealProgramSpace } from "@hypit/program-space";
 import { sealComposition, sealVisualTrack } from "@hypit/composition";
 import assert from "node:assert/strict";
-import { MemoryArtifactStore, EndpointRegistry } from "@hypit/driver-node";
+import { MemoryResourceStore, EndpointRegistry } from "@hypit/driver-node";
 import type { EndpointRegistration } from "@hypit/driver-node";
 import type { ImmediateEndpointHandler } from "@hypit/endpoint-kit";
 import { compileHyperframesDocument } from "@hypit/hyperframes";
@@ -119,12 +119,12 @@ test("the selected HyperFrames Provider owns one idempotent browser installation
 test("local HyperFrames Provider really renders a silent frame-exact MP4 with parallel workers", {
   skip: !liveEnabled || !hasFfprobe,
 }, async () => {
-  const artifacts = new MemoryArtifactStore();
+  const resources = new MemoryResourceStore();
   const png = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
     "base64",
   );
-  const surfaceArtifact = await artifacts.put(png, "image/png");
+  const surfaceArtifact = await resources.put(png, "image/png");
   const surface: CompositableSurfaceRef = {
     artifact: surfaceArtifact,
     width: 1,
@@ -138,7 +138,7 @@ test("local HyperFrames Provider really renders a silent frame-exact MP4 with pa
   const output = await handler({
     command: { kind: "fulfill-need", id: "command:local-hyperframes-fixture", need: request },
     need: request,
-    artifacts,
+    resources,
     credentials: {},
   });
   assert.equal(output.value.kind, "inline");
@@ -147,5 +147,5 @@ test("local HyperFrames Provider really renders a silent frame-exact MP4 with pa
   const visual = value as unknown as RenderedVisual;
   assert.equal(visual.frameCount, 12);
   assert.deepEqual(visual.canvas, { width: 160, height: 96 });
-  assert.equal(await artifacts.has(visual.artifact.digest), true);
+  assert.equal(await resources.has(visual.artifact.resource), true);
 });

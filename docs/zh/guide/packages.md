@@ -140,8 +140,8 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/runtime-host-node     Node Runtime Host ABI
 @hypit/runtime-local         本地 Worker 与组装
 @hypit/store-sqlite          SQLite 状态
-@hypit/artifact-store-fs     Runtime 内部文件系统临时 Artifact
-@hypit/artifact-store-s3     供需要 S3 临时 Artifact 的 Runtime 实现使用的库
+@hypit/resource-store-fs     Runtime 内部文件系统临时 Resource
+@hypit/resource-store-s3     供需要 S3 临时 Resource 的 Runtime 实现使用的库
 @hypit/build-result          存储无关的项目 Result 模型
 @hypit/build-result-kit      Build Result 仓库包 ABI
 @hypit/build-result-fs       默认项目 Result 仓库

@@ -3,7 +3,7 @@
 Immediate Runtime Endpoint for Xiaomi's official MiMo V2.5 VoiceDesign API.
 
 This package owns the `chat/completions` wire shape, `api-key` credential, timeout, response bounds,
-and ArtifactStore ingestion. It does not import `@hypit/mimo-tts`: the VoiceDesign capability and
+and ResourceStore ingestion. It does not import `@hypit/mimo-tts`: the VoiceDesign capability and
 port names are bound as versioned data, keeping the exact model contract independent from this service.
 
 Runtime Profile example:

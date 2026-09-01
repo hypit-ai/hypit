@@ -42,7 +42,7 @@ async function fixture(root: string): Promise<void> {
   });
   await result.sync({
     state: completedState(),
-    artifacts: { async open() { throw new Error("inline Result has no files"); } },
+    resources: { async open() { throw new Error("inline Result has no files"); } },
   });
 }
 
@@ -182,15 +182,14 @@ test("build-record reads one exact result file and preserves its historical orig
           type: videoType,
           value: {
             kind: "blob",
-            resource: "resource:prior-video",
-            digest: "runtime-address:prior-video",
+            resource: "res_prior_video",
             size: bytes.byteLength,
             mediaType: "video/mp4",
           },
         }],
         plan: { selections: [{ output: "logical:video", candidate: "candidate:video", record: "record:video" }] },
       } as unknown as BuildState,
-      artifacts: {
+      resources: {
         async open() {
           return (async function* () { yield bytes; })();
         },
@@ -213,12 +212,19 @@ test("build-record reads one exact result file and preserves its historical orig
 </svrun>`, "utf8");
 
     const workspace = await authorCompiler.openFile(runFile);
+    const repository = new FileBuildResultRepository(resultsRoot);
+    let opens = 0;
+    const countedRepository: FileBuildResultRepository = Object.create(repository) as FileBuildResultRepository;
+    countedRepository.openFile = async (build, file) => {
+      opens += 1;
+      return await repository.openFile(build, file);
+    };
     const loaded = await loadRunFile({
       workspace,
       authorCompiler,
       frontends: [runMarkupFrontend],
       packageContributions: [],
-      results: new FileBuildResultRepository(resultsRoot),
+      results: countedRepository,
     });
     const candidate = loaded.run.graph.candidates[0];
     assert.equal(candidate?.root.kind, "value");
@@ -230,6 +236,11 @@ test("build-record reads one exact result file and preserves its historical orig
       path: "files/shot.video.mp4",
     });
     assert.equal(loaded.attachments.length, 1);
+    assert.equal(opens, 0, "compilation does not read or summarize historical bytes");
+    const reused: number[] = [];
+    for await (const chunk of await loaded.attachments[0]!.open()) reused.push(...chunk);
+    assert.deepEqual(Uint8Array.from(reused), bytes);
+    assert.equal(opens, 1, "Runtime staging opens the historical Result exactly once");
     assert.equal(loaded.compiler.planCompilation(loaded).state.plan.steps.length, 0);
   } finally {
     await rm(root, { recursive: true, force: true });

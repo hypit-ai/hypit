@@ -1,4 +1,5 @@
-export type Digest = `sha256:${string}`;
+/** Opaque identity for one admitted byte resource. Equal bytes may have different identities. */
+export type ResourceId = `res_${string}`;
 
 export type RecordId = string;
 export type LogicalOutputId = string;

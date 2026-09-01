@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import { decodeGeminiGenerateSurface, geminiCapabilities } from "@hypit/gemini";
 import { artifactTypes } from "@hypit/artifact";
@@ -25,7 +25,7 @@ test("Gemini Surface builds one provider-neutral need with ordered media edges",
     resolveReference: (path) => path === "video" ? {
       path, ref: { kind: "record", id: "video" }, type: artifactTypes.blob,
       record: { id: "video", type: artifactTypes.blob, value: {
-        kind: "blob", digest: fixtureDigest("gemini-video"), size: 10, mediaType: "video/mp4",
+        kind: "blob", resource: fixtureResource("gemini-video"), size: 10, mediaType: "video/mp4",
       } },
     } : {
       path, ref: { kind: "record", id: path }, type: textTypes.text,

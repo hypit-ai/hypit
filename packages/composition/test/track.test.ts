@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import { registerTypeValidatorFacets } from "@hypit/component-kit";
 import { createResolvedClosure } from "@hypit/core";
@@ -34,13 +34,13 @@ const videoContractManifests = [artifactManifest, narrativeManifest, mediaManife
   speechManifest, speechEvidenceManifest, svsManifest, spatialManifest, visualIrManifest, compositionManifest] as const;
 
 const font: FontArtifactRef = {
-  sources: [{ artifact: { kind: "blob", digest: fixtureDigest("track:test-font"), size: 1_024, mediaType: "font/woff2" } }],
+  sources: [{ artifact: { kind: "blob", resource: fixtureResource("track:test-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
 };
 const audio: BlobRef = {
   kind: "blob",
-  digest: fixtureDigest("audio"),
+  resource: fixtureResource("audio"),
   size: 24,
   mediaType: "audio/wav",
 };

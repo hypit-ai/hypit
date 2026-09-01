@@ -16,7 +16,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { BlobRef, BuildState, StoredValue, TypedRecord } from "@hypit/protocol";
 
 import type {
-  BuildResultArtifactSource,
+  BuildResultResourceSource,
   BuildResultFileRef,
   BuildResultFinish,
   BuildResultJsonValue,
@@ -63,7 +63,7 @@ function isBlobRef(value: unknown): value is BlobRef {
   if (value === null || Array.isArray(value) || typeof value !== "object") return false;
   const item = value as Readonly<Record<string, unknown>>;
   return item.kind === "blob"
-    && typeof item.digest === "string"
+    && typeof item.resource === "string"
     && typeof item.size === "number"
     && Number.isSafeInteger(item.size)
     && item.size >= 0
@@ -98,7 +98,7 @@ async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
 }
 
 async function copyArtifactAtomic(
-  source: BuildResultArtifactSource,
+  source: BuildResultResourceSource,
   artifact: BlobRef,
   destination: string,
 ): Promise<void> {
@@ -388,7 +388,7 @@ export class FileBuildResult {
         relativePath = candidate;
         resources.set(identity, relativePath);
       }
-      await copyArtifactAtomic(input.artifacts, artifact, join(this.directory, relativePath));
+      await copyArtifactAtomic(input.resources, artifact, join(this.directory, relativePath));
       return { kind: "build-file", path: relativePath, size: artifact.size, mediaType: artifact.mediaType };
     };
     const convert = async (value: unknown, preferredName: string): Promise<BuildResultJsonValue> => {

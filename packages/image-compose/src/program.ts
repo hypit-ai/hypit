@@ -1,5 +1,5 @@
 import { assertSpatialFrame } from "@hypit/spatial";
-import { canonicalize, isDigest } from "@hypit/protocol";
+import { canonicalize, isResourceId } from "@hypit/protocol";
 
 import type {
   ImageComposeLayer,
@@ -39,7 +39,7 @@ export function sealImageComposeLayerSpec(value: ImageComposeLayerSpec): ImageCo
 }
 
 function assertLayer(value: ImageComposeLayer, label: string): void {
-  assert(value.source.kind === "blob" && isDigest(value.source.digest)
+  assert(value.source.kind === "blob" && isResourceId(value.source.resource)
     && Number.isSafeInteger(value.source.size) && value.source.size >= 0
     && value.source.mediaType.startsWith("image/"), `${label}.source must be an image BlobArtifact.`);
   assertSpatialFrame(value.frame);

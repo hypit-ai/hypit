@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 import { projectMomentWindow, projectProgramWindow, projectSelectionWindow } from "../../../test/temporal-fixture.js";
 import type { TemporalWindowProjection } from "../../../test/temporal-fixture.js";
@@ -61,7 +61,7 @@ function media(id: string, sampleFrames: number): SynchronizedMedia {
       frameCount: Math.max(1, Math.round(sampleFrames / 1_600)),
     },
     audio: {
-      artifact: { kind: "blob", digest: fixtureDigest(`audio:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
+      artifact: { kind: "blob", resource: fixtureResource(`audio:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
     },
   };
 }
@@ -259,7 +259,7 @@ test("dynamic Fragment keeps every material and temporal dependency as an explic
 
 test("the self-described Audio Surface parses into the same finite Producer graph", async () => {
   const fixtureModule = { name: "example.audio-inputs", version: "1" } as const;
-  const fixtureSurfaceDigest = fixtureDigest("example.audio-inputs/surface@1");
+  const fixtureSurfaceDigest = fixtureResource("example.audio-inputs/surface@1");
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
     outputs: [mediaTypes.synchronized, semanticTrackTypes.track],

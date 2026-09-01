@@ -50,17 +50,15 @@
     "test:image-opencv": "node test/run.mjs image-opencv",
     "smoke:kie": "node --import tsx packages/provider-kie/test/live-smoke.ts",
     "hypit": "node bin/hypit.mjs",
-    "studio": "pnpm --filter @hypit/studio exec node --import tsx start.ts",
-    "build:media-lambda": "pnpm --filter @hypit/media-lambda build",
-    "build:media-lambda-layer": "pnpm --filter @hypit/media-lambda build:layer"
+    "studio": "pnpm --filter @hypit/studio exec node --import tsx start.ts"
   },
   "engines": {
     "node": ">=22"
   },
   "devDependencies": {
     "@hypit/artifact": "workspace:*",
-    "@hypit/artifact-store-fs": "workspace:*",
-    "@hypit/artifact-store-s3": "workspace:*",
+    "@hypit/resource-store-fs": "workspace:*",
+    "@hypit/resource-store-s3": "workspace:*",
     "@hypit/build-result": "workspace:*",
     "@hypit/build-result-fs": "workspace:*",
     "@hypit/build-result-kit": "workspace:*",
@@ -107,7 +105,6 @@
     "@hypit/provider-hypihub": "workspace:*",
     "@hypit/provider-kie": "workspace:*",
     "@hypit/provider-vertex": "workspace:*",
-    "@hypit/provider-media-aws-lambda": "workspace:*",
     "@hypit/provider-media-local": "workspace:*",
     "@hypit/preview-mock": "workspace:*",
     "@hypit/provider-whisperx-local": "workspace:*",

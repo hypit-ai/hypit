@@ -8,7 +8,7 @@ import { resolve } from "node:path";
 
 import {
   createRuntimeArchiveFromConfig,
-  createRuntimeArtifactAccessFromConfig,
+  createRuntimeResourceAccessFromConfig,
   createRuntimeCredentialsFromConfig,
   createRuntimeFromConfig,
   doctorRuntimeConfig,
@@ -105,7 +105,7 @@ export async function openLocalRuntimeHost(
       ...distribution,
       ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
     }),
-    openArtifacts: async () => await createRuntimeArtifactAccessFromConfig(profile, {
+    openResources: async () => await createRuntimeResourceAccessFromConfig(profile, {
       packageRoot: basePackageRoot,
       ...distribution,
     }),

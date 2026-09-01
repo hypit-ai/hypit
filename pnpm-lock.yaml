@@ -15,12 +15,6 @@ importers:
       '@hypit/artifact':
         specifier: workspace:*
         version: link:packages/artifact
-      '@hypit/artifact-store-fs':
-        specifier: workspace:*
-        version: link:packages/artifact-store-fs
-      '@hypit/artifact-store-s3':
-        specifier: workspace:*
-        version: link:packages/artifact-store-s3
       '@hypit/audio-track':
         specifier: workspace:*
         version: link:packages/audio-track
@@ -159,9 +153,6 @@ importers:
       '@hypit/provider-kie':
         specifier: workspace:*
         version: link:packages/provider-kie
-      '@hypit/provider-media-aws-lambda':
-        specifier: workspace:*
-        version: link:packages/provider-media-aws-lambda
       '@hypit/provider-media-local':
         specifier: workspace:*
         version: link:packages/provider-media-local
@@ -186,6 +177,12 @@ importers:
       '@hypit/render-hyperframes':
         specifier: workspace:*
         version: link:packages/render-hyperframes
+      '@hypit/resource-store-fs':
+        specifier: workspace:*
+        version: link:packages/resource-store-fs
+      '@hypit/resource-store-s3':
+        specifier: workspace:*
+        version: link:packages/resource-store-s3
       '@hypit/run-markup':
         specifier: workspace:*
         version: link:packages/run-markup
@@ -330,27 +327,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-
-  packages/artifact-store-fs:
-    dependencies:
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-
-  packages/artifact-store-s3:
-    dependencies:
-      '@aws-sdk/client-s3':
-        specifier: 3.1103.0
-        version: 3.1103.0
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
 
   packages/audio-track:
     dependencies:
@@ -1930,9 +1906,6 @@ importers:
       '@hypit/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@hypit/artifact-store-fs':
-        specifier: workspace:*
-        version: link:../artifact-store-fs
       '@hypit/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
@@ -1957,6 +1930,9 @@ importers:
       '@hypit/provider-media-local':
         specifier: workspace:*
         version: link:../provider-media-local
+      '@hypit/resource-store-fs':
+        specifier: workspace:*
+        version: link:../resource-store-fs
       '@hypit/semantic-take-estimate':
         specifier: workspace:*
         version: link:../semantic-take-estimate
@@ -2165,9 +2141,6 @@ importers:
         specifier: workspace:*
         version: link:../runtime-kit
     devDependencies:
-      '@hypit/artifact-store-fs':
-        specifier: workspace:*
-        version: link:../artifact-store-fs
       '@hypit/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -2204,6 +2177,9 @@ importers:
       '@hypit/narrative':
         specifier: workspace:*
         version: link:../narrative
+      '@hypit/resource-store-fs':
+        specifier: workspace:*
+        version: link:../resource-store-fs
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
@@ -2222,37 +2198,6 @@ importers:
       '@hypit/validation':
         specifier: workspace:*
         version: link:../validation
-
-  packages/provider-media-aws-lambda:
-    dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@hypit/endpoint-kit':
-        specifier: workspace:*
-        version: link:../endpoint-kit
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../media
-      '@hypit/media-pipeline':
-        specifier: workspace:*
-        version: link:../media-pipeline
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/runtime-kit':
-        specifier: workspace:*
-        version: link:../runtime-kit
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@hypit/transport-aws-lambda':
-        specifier: workspace:*
-        version: link:../transport-aws-lambda
-    devDependencies:
-      '@hypit/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
 
   packages/provider-media-local:
     dependencies:
@@ -2600,6 +2545,27 @@ importers:
         specifier: workspace:*
         version: link:../validation
 
+  packages/resource-store-fs:
+    dependencies:
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+
+  packages/resource-store-s3:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: 3.1103.0
+        version: 3.1103.0
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+
   packages/run:
     dependencies:
       '@hypit/elaborator':
@@ -2684,9 +2650,6 @@ importers:
 
   packages/runtime-local:
     dependencies:
-      '@hypit/artifact-store-fs':
-        specifier: workspace:*
-        version: link:../artifact-store-fs
       '@hypit/build-result':
         specifier: workspace:*
         version: link:../build-result
@@ -2711,6 +2674,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/resource-store-fs':
+        specifier: workspace:*
+        version: link:../resource-store-fs
       '@hypit/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -3123,6 +3089,9 @@ importers:
       '@hypit/audio-track-studio':
         specifier: workspace:*
         version: link:../audio-track-studio
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
       '@hypit/caption-fine-studio':
         specifier: workspace:*
         version: link:../caption-fine-studio
@@ -3520,37 +3489,6 @@ importers:
   packages/yt-dlp: {}
 
   services/image-opencv: {}
-
-  services/media-lambda:
-    dependencies:
-      '@hypit/artifact-store-s3':
-        specifier: workspace:*
-        version: link:../../packages/artifact-store-s3
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../../packages/media
-      '@hypit/media-execution':
-        specifier: workspace:*
-        version: link:../../packages/media-execution
-      '@hypit/media-pipeline':
-        specifier: workspace:*
-        version: link:../../packages/media-pipeline
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../../packages/protocol
-      '@hypit/provider-media-aws-lambda':
-        specifier: workspace:*
-        version: link:../../packages/provider-media-aws-lambda
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../../packages/speech
-      '@hypit/transport-aws-lambda':
-        specifier: workspace:*
-        version: link:../../packages/transport-aws-lambda
-    devDependencies:
-      esbuild:
-        specifier: ^0.25.0
-        version: 0.25.12
 
   services/whisperx: {}
 

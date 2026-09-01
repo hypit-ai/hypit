@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { canonicalize, canonicalStringify, isDigest } from "@hypit/protocol";
+import { canonicalize, canonicalStringify, isResourceId } from "@hypit/protocol";
 
 test("canonical values have stable key order and preserve array order", () => {
   assert.equal(canonicalStringify({ b: 1, a: 2 }), '{"a":2,"b":1}');
@@ -19,8 +19,8 @@ test("values without one JSON meaning are refused", () => {
   assert.throws(() => canonicalize({ a: undefined }), /is undefined/u);
 });
 
-test("Blob digests retain their narrow byte-address syntax", () => {
-  assert.equal(isDigest(`sha256:${"a".repeat(64)}`), true);
-  assert.equal(isDigest("sha256:"), false);
-  assert.equal(isDigest("md5:abc"), false);
+test("Resource ids retain their narrow execution-reference syntax", () => {
+  assert.equal(isResourceId("res_fixture-resource"), true);
+  assert.equal(isResourceId("fixture-resource"), false);
+  assert.equal(isResourceId("md5:abc"), false);
 });

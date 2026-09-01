@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 import {
   compileSourceClosure,
@@ -30,7 +30,7 @@ type DiscoveredUnit = {
 };
 
 function attachmentKey(artifact: BlobRef): string {
-  return `${artifact.digest}\u0000${artifact.mediaType}`;
+  return `${artifact.resource}\u0000${artifact.mediaType}`;
 }
 
 export function mergeAttachments(groups: readonly (readonly ArtifactAttachment[])[]): readonly ArtifactAttachment[] {
@@ -42,8 +42,8 @@ export function mergeAttachments(groups: readonly (readonly ArtifactAttachment[]
       if (existing.artifact.size !== item.artifact.size) {
         throw new NodeCompilerError(
           "SOURCE_ATTACHMENT_CONFLICT",
-          `Artifact attachment ${item.artifact.digest} carries conflicting sizes`,
-          item.artifact.digest,
+          `Artifact attachment ${item.artifact.resource} carries conflicting sizes`,
+          item.artifact.resource,
         );
       }
       continue;
@@ -163,7 +163,6 @@ export class NodeCompiler {
         const artifact: BlobRef = {
           kind: "blob",
           resource: `res_${randomUUID()}`,
-          digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
           size: bytes.byteLength,
           mediaType: request.mediaType,
         };
@@ -172,7 +171,7 @@ export class NodeCompiler {
         if (existing !== undefined && existing.artifact.size !== bytes.byteLength) {
           throw new NodeCompilerError(
             "SOURCE_ATTACHMENT_CONFLICT",
-            `Embedded asset ${request.from} conflicts with ${artifact.digest}`,
+            `Embedded asset ${request.from} conflicts with ${artifact.resource}`,
             request.from,
           );
         }

@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import { validateDistributedRenderConfig } from "@hyperframes/aws-lambda/sdk";
-import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
+import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
 import type { EndpointRegistration } from "@hypit/driver-node";
 import type { AsyncEndpoint } from "@hypit/endpoint-kit";
 import type { HyperframesDocument } from "@hypit/hyperframes";
@@ -28,7 +28,7 @@ import {
   hyperframesVisualRequest,
   renderHyperframesCapabilities,
 } from "@hypit/render-hyperframes";
-import type { ArtifactStore, StreamingArtifactStore } from "@hypit/runtime";
+import type { ResourceStore, StreamingResourceStore } from "@hypit/runtime";
 
 import { hypitPackage as awsLambdaActivation } from "../src/activation.js";
 
@@ -199,11 +199,11 @@ async function endpointFor(
   return { endpoint: resolution.registration.endpoint, registration: resolution.registration };
 }
 
-function context(request: Need, artifacts: ArtifactStore) {
+function context(request: Need, resources: ResourceStore) {
   return {
     command: { kind: "fulfill-need", id: "command:hyperframes-lambda-test", need: request } as const,
     need: request,
-    artifacts,
+    resources,
     credentials: {},
     operation: operation(request),
   };
@@ -221,7 +221,7 @@ test("the Lambda Endpoint declines frame domains and requirements it cannot pres
   })), false, "an unsupported hardware requirement must fall through to another Endpoint");
   const artifact = {
     kind: "blob" as const,
-    digest: fixtureDigest("lambda-surface-without-verifier"),
+    resource: fixtureResource("lambda-surface-without-verifier"),
     size: 100,
     mediaType: "image/png",
   };
@@ -236,7 +236,7 @@ test("the Lambda Endpoint declines frame domains and requirements it cannot pres
       alphaMode: "straight",
       timing: { kind: "still" },
     }],
-    html: `<!doctype html><img data-hypit-surface-artifact="${artifact.digest}" src="hypit-artifact://sha256/${artifact.digest.slice("sha256:".length)}"/>`,
+    html: `<!doctype html><img data-hypit-surface-resource="${artifact.resource}" src="hypit-resource://${artifact.resource}"/>`,
   };
   assert.equal(supportsAwsLambdaHyperframes(hyperframesVisualRequest(withSurface)), false,
     "a deployment without a Surface verifier must fail closed");
@@ -258,19 +258,20 @@ test("the Runtime adapter refuses a hardware-GPU deployment wish instead of igno
   }), /does not accept browserGpu/u);
 });
 
-test("one submission is polled and streams the output into the ArtifactStore", async () => {
+test("one submission is polled and streams the output into the ResourceStore", async () => {
   const request = requestNeed();
   const { client, state } = fakeClient();
   const { endpoint, registration } = await endpointFor(request, client);
   assert.equal(registration.scheduling?.resources.find((item) =>
     item.id.startsWith("pool:"))?.maxActive, 2);
 
-  const memory = new MemoryArtifactStore();
+  const memory = new MemoryResourceStore();
   let streamed = 0;
-  const artifacts: StreamingArtifactStore = {
+  const resources: StreamingResourceStore = {
     put: (bytes, mediaType) => memory.put(bytes, mediaType),
-    get: (digest) => memory.get(digest),
-    has: (digest) => memory.has(digest),
+    write: (resource, bytes) => memory.write(resource, bytes),
+    get: (resource) => memory.get(resource),
+    has: (resource) => memory.has(resource),
     async putStream(chunks, mediaType) {
       const values: number[] = [];
       for await (const chunk of chunks) {
@@ -279,13 +280,18 @@ test("one submission is polled and streams the output into the ArtifactStore", a
       }
       return await memory.put(Uint8Array.from(values), mediaType);
     },
-    async open(digest) {
-      const bytes = await memory.get(digest);
+    async writeStream(resource, chunks) {
+      const values: number[] = [];
+      for await (const chunk of chunks) values.push(...chunk);
+      await memory.write(resource, Uint8Array.from(values));
+    },
+    async open(resource) {
+      const bytes = await memory.get(resource);
       if (bytes === undefined) return undefined;
       return (async function* () { yield bytes; })();
     },
   };
-  const common = context(request, artifacts);
+  const common = context(request, resources);
   const started = await endpoint.start(common);
   assert.equal(started.status, "pending");
   if (started.status !== "pending") return;
@@ -304,14 +310,14 @@ test("one submission is polled and streams the output into the ArtifactStore", a
     handle: started.handle,
   });
   assert.equal(completed.status, "completed", JSON.stringify(completed));
-  assert.equal(streamed, 2, "the remote object should use the streaming ArtifactStore facet");
+  assert.equal(streamed, 2, "the remote object should use the streaming ResourceStore facet");
   assert.equal(state.opened.length, 1);
   if (completed.status !== "completed" || completed.result.value.kind !== "inline") return;
   verifyRenderedVisual(completed.result.value.value);
   const visual = completed.result.value.value as unknown as RenderedVisual;
   assert.equal(visual.frameCount, 60);
-  assert.equal(await artifacts.has(visual.artifact.digest), true);
-  assert.deepEqual(await artifacts.get(visual.artifact.digest), new Uint8Array([1, 2, 3, 4, 5]));
+  assert.equal(await resources.has(visual.artifact.resource), true);
+  assert.deepEqual(await resources.get(visual.artifact.resource), new Uint8Array([1, 2, 3, 4, 5]));
 });
 
 test("running render progress is projected without exposing the private handle", async () => {
@@ -329,7 +335,7 @@ test("running render progress is projected without exposing the private handle",
     },
   });
   const { endpoint } = await endpointFor(request, client);
-  const common = context(request, new MemoryArtifactStore());
+  const common = context(request, new MemoryResourceStore());
   const started = await endpoint.start(common);
   if (started.status !== "pending") return;
   const running = await endpoint.poll({
@@ -348,7 +354,7 @@ test("cancellation stops the submitted execution", async () => {
   const { client, state } = fakeClient();
   const { endpoint } = await endpointFor(request, client);
   assert.ok(endpoint.cancel);
-  const common = context(request, new MemoryArtifactStore());
+  const common = context(request, new MemoryResourceStore());
   const started = await endpoint.start(common);
   assert.equal(started.status, "pending");
   if (started.status !== "pending") return;

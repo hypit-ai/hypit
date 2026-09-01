@@ -241,9 +241,9 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
       returns: speechEvidenceTypes.alignedTranscript,
       handler: async (context: EndpointInvocationContext) => {
         const request = alignmentRequest(context.need.constraints);
-        const audio = await context.artifacts.get(request.audio.digest);
+        const audio = await context.resources.get(request.audio.resource);
         assert(audio !== undefined && audio.byteLength === request.audio.size,
-          `WhisperX evidence Artifact ${request.audio.digest} is unavailable or has changed`);
+          `WhisperX evidence Artifact ${request.audio.resource} is unavailable or has changed`);
         assertCanonicalEvidenceWav(audio, request.sampleFrames);
         const work = await mkdtemp(join(tmpdir(), "hypit-whisperx-local-"));
         try {

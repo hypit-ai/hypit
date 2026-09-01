@@ -19,7 +19,7 @@ import { assertSpeechDurationIdentity, speechDependency, speechTypes } from "@hy
 import type { SpeechDuration } from "@hypit/speech";
 import { textTypes } from "@hypit/text";
 import { canonicalize } from "@hypit/protocol";
-import type { Digest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import type { ResourceId, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
 export const seedanceModuleRef = { name: "@hypit/seedance", version: "1" } as const;
 export const seedanceModels = ["seedance-2", "seedance-2-fast", "seedance-2-mini", "seedance-2.5"] as const;

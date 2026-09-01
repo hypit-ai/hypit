@@ -8,7 +8,7 @@ import {
   programSpaceFrameCount,
 } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
-import { canonicalize, isDigest } from "@hypit/protocol";
+import { canonicalize, isResourceId } from "@hypit/protocol";
 import { verifyText } from "@hypit/text";
 import type { Text } from "@hypit/text";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
@@ -96,8 +96,8 @@ function stacking(value: number, label: string): void {
   assert(Number.isSafeInteger(value), `${label} must be an integer.`);
 }
 
-function assertBlobImage(value: { readonly digest: string; readonly size: number; readonly mediaType: string }, label: string): void {
-  assert(isDigest(value.digest) && Number.isSafeInteger(value.size) && value.size >= 0
+function assertBlobImage(value: { readonly resource: string; readonly size: number; readonly mediaType: string }, label: string): void {
+  assert(isResourceId(value.resource) && Number.isSafeInteger(value.size) && value.size >= 0
     && /^image\//u.test(value.mediaType), `${label} must be an image Artifact.`);
 }
 

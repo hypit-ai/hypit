@@ -209,7 +209,7 @@ export async function verifyCompositableSurfaceBytes(options: {
 }): Promise<void> {
   assertCompositableSurfaceRef(options.surface);
   assert(options.bytes.byteLength === options.surface.artifact.size,
-    `Surface ${options.surface.artifact.digest} byte size differs`);
+    `Surface ${options.surface.artifact.resource} byte size differs`);
   const ffprobePath = options.ffprobePath ?? "ffprobe";
   const timeoutMs = options.processTimeoutMs ?? 120_000;
   const maxOutputBytes = options.maxProbeOutputBytes ?? 8 * 1024 * 1024;

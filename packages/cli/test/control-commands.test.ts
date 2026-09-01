@@ -58,7 +58,7 @@ test("queue opens durable control without constructing execution Providers", asy
 test("status --watch reattaches to one durable Build until it becomes terminal", async () => {
   const calls: string[] = [];
   const state = {
-    id: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    id: "build-watch-state",
     status: "active",
     diagnostics: [],
   };

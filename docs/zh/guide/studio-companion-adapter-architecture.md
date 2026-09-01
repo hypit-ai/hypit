@@ -85,7 +85,7 @@ Studio ABI 提供有限、稳定、可组合的外观全集：
 - `presentation.chrome` 只选择 `standard / group / point` 这类 Studio 外壳，不决定标题、时间或正文是否存在；
 - `display.title` 是第一行标题，时间由 Studio 根据 Window/Point 统一计算并紧随标题显示；
 - `display.layers` 是有序的正文层，可组合 `text` 与 `preview`，并区分 `decoration / content`；
-- preview 只携带 Artifact digest 或 Surface 身份，布局只能选择 `repeat-x / cover / contain / storyboard / waveform`；
+- preview 只携带 Resource id 或 Surface 身份，布局只能选择 `repeat-x / cover / contain / storyboard / waveform`；
 - 视觉 tone、图标 token、lane 与附属 lane；
 - Inspector 一级能力固定为 `Where / How / When`；Companion 可在实际需要时声明二级页、参数组和标准控件；
 - 带精确逆变换声明的时间线手势；选择、seek 等基础交互由 Studio 对所有实体统一提供；

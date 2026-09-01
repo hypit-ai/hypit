@@ -1,6 +1,6 @@
 import { access } from "node:fs/promises";
 import { join } from "node:path";
-import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
+import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
 import type { Need } from "@hypit/protocol";
 import { createLocalWhisperXProvider } from "@hypit/provider-whisperx-local";
 import { sealSpeechEvidenceAudio } from "@hypit/speech";
@@ -75,8 +75,8 @@ export async function transcribeSpeechAudio(
   language: WhisperXLanguage,
 ): Promise<readonly TranscriptPassage[]> {
   const bytes = await readBytes(audioPath);
-  const artifacts = new MemoryArtifactStore();
-  const artifact = await artifacts.put(bytes, "audio/wav");
+  const resources = new MemoryResourceStore();
+  const artifact = await resources.put(bytes, "audio/wav");
   const evidence = sealSpeechEvidenceAudio({ artifact, sampleFrames: sampleFrames(bytes) });
   const need: Need = {
     id: "need:reference-video-transcript",
@@ -93,7 +93,7 @@ export async function transcribeSpeechAudio(
   const fulfillment = await resolved.registration.handler({
     command: { kind: "fulfill-need", id: "command:reference-video-transcript", need },
     need,
-    artifacts,
+    resources,
     credentials: {},
   });
   assert(fulfillment.value.kind === "inline", "WhisperX returned alignment evidence by reference");

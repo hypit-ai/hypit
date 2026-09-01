@@ -29,7 +29,7 @@ Run 决定读取哪份 Author Source、选择哪些 Candidate，以及哪些已�
 
 - Source：当前 Run、Author 与编译闭包中真实引用的 SVML/SVS；每个文件都可切换查看，并只写回被选中的精确 Source；
 - Tasks：当前环境的 Runtime Build Catalog、Build State、Dispatch 与 Operation 的只读投影；
-- Artifacts：上述 Build 中 accepted Record 真实引用的 ArtifactStore 对象，不扫描输出目录。
+- Artifacts：项目 Build Result 中公开输出实际包含的文件；不读取已清理的 Runtime 工作区。
 
 Studio 不推断 campaign、方向或 variant 文件夹，不维护项目清单、历史摘要、运行锁或第二份数据库。任务和产物视图不会创建、取消、重试或恢复 Build。
 
@@ -47,7 +47,7 @@ Companion 分开声明作者 `bindings` 与可见 `inspector` 字段：binding �
 
 ### 下方：Timeline
 
-时间线显示 Semantic Segment、Word、Selection、Moment，以及 Companion 从真实 Track 投影出的媒体、音频、文字、字幕和组件实体。lane、附属关系、family、有限 chrome、标题与有序内容层由 Companion 声明；时间文本、选择、播放、缩放、吸附、滚动和统一渲染由 Studio 负责。作者对象与投影/渲染对象身份不同时由公共 `subjectId` 明示，Studio 不拆 renderer id。Companion 只传 Artifact digest 或 Surface 身份，不知道 Studio 的 HTTP 路由。
+时间线显示 Semantic Segment、Word、Selection、Moment，以及 Companion 从真实 Track 投影出的媒体、音频、文字、字幕和组件实体。lane、附属关系、family、有限 chrome、标题与有序内容层由 Companion 声明；时间文本、选择、播放、缩放、吸附、滚动和统一渲染由 Studio 负责。作者对象与投影/渲染对象身份不同时由公共 `subjectId` 明示，Studio 不拆 renderer id。Companion 只传 Resource id 或 Surface 身份，不知道 Studio 的 HTTP 路由。
 
 ## 作者写回
 

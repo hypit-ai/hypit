@@ -88,7 +88,7 @@ function projectComments(context: StudioTrackCompanionContext): readonly StudioE
       display: {
         title: entity.display.title,
         layers: [
-          ...(item.avatar === undefined ? [] : [previewLayer(artifactPreview("image", item.avatar.digest), "contain", "decoration")]),
+          ...(item.avatar === undefined ? [] : [previewLayer(artifactPreview("image", item.avatar.resource), "contain", "decoration")]),
           textLayer(item.content.comment),
         ],
       },

@@ -16,7 +16,7 @@ boundary. The upper-left library is intentionally not a filesystem browser:
 
 - Source is the exact Run + Author closure and writes back only the selected file;
 - Tasks are read-only Build Catalog/Archive/Dispatch/Operation views;
-- Artifacts are ArtifactStore objects referenced by accepted Records.
+- Artifacts are public files exposed by project Build Results.
 
 No project manifest, Studio database, output-directory scan or inferred campaign
 folder structure is involved. With no selected Runtime, Source and Preview still
@@ -50,7 +50,7 @@ source bindings, Inspector fields and exact timeline inverses. Inspector fields
 select real writable bindings and organize them under the Studio-owned
 `Where / How / When` domains, optional companion-owned pages and sections. A
 source binding is never shown merely because Studio can reach it. Material layers carry an
-Artifact digest or Surface identity, never a Studio HTTP URL. Studio always owns
+Resource id or Surface identity, never a Studio HTTP URL. Studio always owns
 time formatting and transport resolution, so chrome and material cannot hide a
 title or its time.
 Studio owns session-wide behavior and chrome: Companion selection, collision and

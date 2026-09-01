@@ -368,7 +368,7 @@ import the private pre-release catalog and select only the faces the Author Grap
 The catalog contains 109 open families across handwriting, script, display, sans, serif,
 monospace, CJK, world-script and Emoji categories. Fontsource dependencies are pinned to `5.3.0`;
 the Chromium-compatible COLRv1 Emoji package is pinned separately. The compiler hashes installed
-bytes into content-addressed font values. It performs no download during a build, and the Runtime
+bytes into Resource-backed font values. It performs no download during a build, and the Runtime
 never guesses a font:
 
 ```svml

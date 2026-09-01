@@ -4,7 +4,7 @@ import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { createResolvedClosure } from "@hypit/core";
 
 import { verifyGraphFragment } from "@hypit/elaborator";
-import { MemoryArtifactStore } from "@hypit/driver-node";
+import { MemoryResourceStore } from "@hypit/driver-node";
 import {
   assertMappingCoversPorts,
   compileWireRequest,
@@ -56,7 +56,7 @@ function capabilityKey(ref: CapabilityRef): string {
   return `${ref.module.name}@${ref.module.version}#${ref.name}`;
 }
 
-const upload = async (artifact: { readonly digest: string }) => `https://upload.test/${artifact.digest}`;
+const upload = async (artifact: { readonly resource: string }) => `https://upload.test/${artifact.resource}`;
 
 test("the selected KIE release is six exact model families and no Grok image capability", () => {
   assert.equal(kieModelCatalog.length, 11);
@@ -146,7 +146,7 @@ test("Seedream safety policy remains explicit author content", () => {
 });
 
 test("all eleven exact capabilities route to their documented KIE model slug", async () => {
-  const store = new MemoryArtifactStore();
+  const store = new MemoryResourceStore();
   const image = await store.put(new Uint8Array([1]), "image/png");
   const video = await store.put(new Uint8Array([2]), "video/mp4");
   const audio = await store.put(new Uint8Array([3]), "audio/wav");
@@ -265,7 +265,7 @@ test("Seedance 2.5 maps its exact request without leaking KIE envelope controls 
 });
 
 test("one model reaching a service that splits it keeps the reference roles intact", async () => {
-  const store = new MemoryArtifactStore();
+  const store = new MemoryResourceStore();
   const image = await store.put(new Uint8Array([1]), "image/png");
   const audio = await store.put(new Uint8Array([3]), "audio/wav");
   const request = sealSeedanceRequest("seedance-2-mini", {
@@ -283,8 +283,8 @@ test("one model reaching a service that splits it keeps the reference roles inta
   const task = await compileWireRequest(mapping, request, upload);
   assert.deepEqual(task.input, {
     prompt: "A presenter speaks.",
-    reference_image_urls: [`https://upload.test/${image.digest}`],
-    reference_audio_urls: [`https://upload.test/${audio.digest}`],
+    reference_image_urls: [`https://upload.test/${image.resource}`],
+    reference_audio_urls: [`https://upload.test/${audio.resource}`],
     resolution: "720p",
     aspect_ratio: "9:16",
     duration: 5,

@@ -11,7 +11,7 @@ export const fontsOpenMarkupSurfaces = [{
     mode: "structured",
     outputs: [mediaTypes.fontArtifact],
     vocabulary: {
-      summary: "Materializes one exact catalog face as a content-addressed FontArtifact.",
+      summary: "Materializes one exact catalog face as a FontArtifact Resource.",
       attributes: [
         { name: "id", kind: "identifier", required: true,
           summary: "Names the FontArtifact Record this element publishes." },

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   assertCompositableSurfaceRef,
@@ -23,7 +23,7 @@ const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative"
 const font: FontArtifactRef = {
   sources: [{ artifact: {
     kind: "blob",
-    digest: fixtureDigest("font:inter-bold"),
+    resource: fixtureResource("font:inter-bold"),
     size: 1_024,
     mediaType: "font/woff2",
   } }],
@@ -34,7 +34,7 @@ const font: FontArtifactRef = {
 const animatedSurface: CompositableSurfaceRef = {
   artifact: {
     kind: "blob",
-    digest: fixtureDigest("surface:alpha-webm"),
+    resource: fixtureResource("surface:alpha-webm"),
     size: 2_048,
     mediaType: "video/webm",
   },
@@ -49,7 +49,7 @@ const animatedSurface: CompositableSurfaceRef = {
   },
 };
 
-test("FontArtifactRef binds one exact font face to a content-addressed Blob", () => {
+test("FontArtifactRef binds one exact font face to a Resource Blob", () => {
   assert.doesNotThrow(() => assertFontArtifactRef(font));
   assert.throws(
     () => assertFontArtifactRef({

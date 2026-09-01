@@ -75,7 +75,7 @@ function assertStoredValue(value: unknown, subject: string): asserts value is St
   const item = value as Record<string, unknown>;
   if (item.kind === "inline" && Object.hasOwn(item, "value")) return;
   if (item.kind === "blob"
-    && typeof item.digest === "string"
+    && typeof item.resource === "string"
     && Number.isSafeInteger(item.size)
     && typeof item.mediaType === "string") return;
   throw new Error(`${subject} is not an inline or blob StoredValue`);

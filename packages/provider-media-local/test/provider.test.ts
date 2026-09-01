@@ -10,7 +10,7 @@ import { assertSpeechEvidenceAudioIdentity, speechTypes } from "@hypit/speech";
 import type { SpeechEvidenceAudio } from "@hypit/speech";
 import assert from "node:assert/strict";
 import {
-  MemoryArtifactStore,
+  MemoryResourceStore,
   EndpointRegistry,
 } from "@hypit/driver-node";
 import type { EndpointRegistration } from "@hypit/driver-node";
@@ -163,12 +163,12 @@ function need(
   };
 }
 
-async function fulfillInline(artifacts: MemoryArtifactStore, request: Need): Promise<CanonicalValue> {
+async function fulfillInline(resources: MemoryResourceStore, request: Need): Promise<CanonicalValue> {
   const provider = await handlerFor(request);
   const result = await provider.handler({
     command: { kind: "fulfill-need", id: `command:${request.id}`, need: request },
     need: request,
-    artifacts,
+    resources,
     credentials: {},
   });
   assert.equal(result.value.kind, "inline");
@@ -184,7 +184,7 @@ async function handlerFor(request: Need): Promise<{ handler: ImmediateEndpointHa
   return { handler: resolution.registration.handler, registration: resolution.registration };
 }
 
-async function inspectArtifact(artifacts: MemoryArtifactStore, source: Awaited<ReturnType<MemoryArtifactStore["put"]>>) {
+async function inspectArtifact(resources: MemoryResourceStore, source: Awaited<ReturnType<MemoryResourceStore["put"]>>) {
   const constraints = canonicalize({ source });
   const request = need("need:media-inspect", mediaPipelineCapabilities.inspect,
     mediaTypes.inspection, constraints);
@@ -192,7 +192,7 @@ async function inspectArtifact(artifacts: MemoryArtifactStore, source: Awaited<R
   const result = await provider.handler({
     command: { kind: "fulfill-need", id: "command:media-inspect", need: request },
     need: request,
-    artifacts,
+    resources,
     credentials: {},
   });
   assert.equal(result.value.kind, "inline");
@@ -202,8 +202,8 @@ async function inspectArtifact(artifacts: MemoryArtifactStore, source: Awaited<R
 }
 
 async function normalizeArtifact(args: {
-  artifacts: MemoryArtifactStore;
-  source: Awaited<ReturnType<MemoryArtifactStore["put"]>>;
+  resources: MemoryResourceStore;
+  source: Awaited<ReturnType<MemoryResourceStore["put"]>>;
   inspection: MediaInspection;
   selection: ReturnType<typeof selectMediaStreams>;
   frameRate: { readonly numerator: number; readonly denominator: number };
@@ -221,7 +221,7 @@ async function normalizeArtifact(args: {
   const result = await provider.handler({
     command: { kind: "fulfill-need", id: "command:media-normalize", need: request },
     need: request,
-    artifacts: args.artifacts,
+    resources: args.resources,
     credentials: {},
   });
   assert.equal(result.value.kind, "inline");
@@ -236,9 +236,9 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
   const root = await mkdtemp(join(tmpdir(), "hypit-provider-media-local-"));
   try {
     const sourcePath = await fixture(root);
-    const artifacts = new MemoryArtifactStore();
-    const source = await artifacts.put(await readFile(sourcePath), "video/mp4");
-    const typedInspection = await inspectArtifact(artifacts, source);
+    const resources = new MemoryResourceStore();
+    const source = await resources.put(await readFile(sourcePath), "video/mp4");
+    const typedInspection = await inspectArtifact(resources, source);
     assert.deepEqual(typedInspection.streams.map((stream) => [stream.index, stream.kind,
       stream.kind === "video" ? stream.role : stream.codecName]), [
       [0, "video", "moving"],
@@ -257,16 +257,16 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
     const selection = selectMediaStreams(typedInspection, selectionRequest);
     assert.equal(selection.videoStreamIndex, 0);
     assert.equal(selection.audioStreamIndex, 1);
-    const typed = await normalizeArtifact({ artifacts, source, inspection: typedInspection,
+    const typed = await normalizeArtifact({ resources, source, inspection: typedInspection,
       selection, frameRate: selectionRequest.frameRate });
     assert.equal(typed.timeline.frameCount, 30);
     assert.equal(synchronizedMediaSampleFrames(typed), 48_000);
-    assert.equal("basisDigest" in typed, false);
+    assert.equal("basisResourceId" in typed, false);
     assert.equal("narrativeDigest" in typed, false);
-    assert.equal(await artifacts.has(typed.visual!.artifact.digest), true);
-    assert.equal(await artifacts.has(typed.audio!.artifact.digest), true);
+    assert.equal(await resources.has(typed.visual!.artifact.resource), true);
+    assert.equal(await resources.has(typed.audio!.artifact.resource), true);
 
-    const visualBytes = await artifacts.get(typed.visual!.artifact.digest);
+    const visualBytes = await resources.get(typed.visual!.artifact.resource);
     assert(visualBytes !== undefined);
     const visualPath = join(root, "normalized-visual.mp4");
     await writeFile(visualPath, visualBytes);
@@ -294,7 +294,7 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
     };
     assert.deepEqual(outputProbe.streams.map((stream) => stream.codec_type), ["video"]);
     assert.equal(outputProbe.streams[0]?.nb_frames, "30");
-    const audioOutput = await inspectArtifact(artifacts, typed.audio!.artifact);
+    const audioOutput = await inspectArtifact(resources, typed.audio!.artifact);
     const normalizedAudio = audioOutput.streams.find((stream) => stream.kind === "audio");
     assert.equal(normalizedAudio?.kind === "audio" && normalizedAudio.sampleRate, 48_000);
     assert.equal(normalizedAudio?.kind === "audio" && normalizedAudio.channels, 2);
@@ -318,9 +318,9 @@ test("local media normalization materializes rotation and sample aspect before S
     await run("ffmpeg", [
       "-v", "error", "-y", "-display_rotation", "90", "-i", base, "-c", "copy", sourcePath,
     ]);
-    const artifacts = new MemoryArtifactStore();
-    const source = await artifacts.put(await readFile(sourcePath), "video/mp4");
-    const inspection = await inspectArtifact(artifacts, source);
+    const resources = new MemoryResourceStore();
+    const source = await resources.put(await readFile(sourcePath), "video/mp4");
+    const inspection = await inspectArtifact(resources, source);
     const inputVideo = inspection.streams.find((stream) => stream.kind === "video");
     assert.equal(inputVideo?.kind, "video");
     if (inputVideo?.kind !== "video") return;
@@ -331,10 +331,10 @@ test("local media normalization materializes rotation and sample aspect before S
       spanAuthority: "video", frameRate: { numerator: 4, denominator: 1 },
     });
     const selection = selectMediaStreams(inspection, request);
-    const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
+    const normalized = await normalizeArtifact({ resources, source, inspection, selection, frameRate: request.frameRate });
     assert.equal(normalized.visual?.width, 96);
     assert.equal(normalized.visual?.height, 320);
-    const output = await inspectArtifact(artifacts, normalized.visual!.artifact);
+    const output = await inspectArtifact(resources, normalized.visual!.artifact);
     const outputVideo = output.streams.find((stream) => stream.kind === "video");
     assert.equal(outputVideo?.kind, "video");
     if (outputVideo?.kind !== "video") return;
@@ -348,9 +348,9 @@ test("local media normalization materializes rotation and sample aspect before S
 test("animated WebP keeps its authored frame timing before fixed-rate normalization", {
   skip: !hasMediaBinaries,
 }, async () => {
-  const artifacts = new MemoryArtifactStore();
-  const source = await artifacts.put(animatedWebp, "image/webp");
-  const inspection = await inspectArtifact(artifacts, source);
+  const resources = new MemoryResourceStore();
+  const source = await resources.put(animatedWebp, "image/webp");
+  const inspection = await inspectArtifact(resources, source);
   assert.deepEqual(inspection.container.formatNames, ["webp", "webp-animation"]);
   assert.deepEqual(inspection.streams.map((stream) => [stream.kind, stream.kind === "video" ? stream.role : undefined,
     stream.decodedUnitCount]), [["video", "moving", 5]]);
@@ -365,11 +365,11 @@ test("animated WebP keeps its authored frame timing before fixed-rate normalizat
     frameRate: { numerator: 20, denominator: 1 },
   });
   const selection = selectMediaStreams(inspection, request);
-  const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
+  const normalized = await normalizeArtifact({ resources, source, inspection, selection, frameRate: request.frameRate });
   assert.equal(normalized.timeline.frameCount, 10);
   assert.equal(normalized.visual?.width, 64);
   assert.equal(normalized.visual?.height, 48);
-  const output = await inspectArtifact(artifacts, normalized.visual!.artifact);
+  const output = await inspectArtifact(resources, normalized.visual!.artifact);
   assert.equal(output.streams[0]?.decodedUnitCount, 10);
 });
 
@@ -383,9 +383,9 @@ test("animated GIF keeps its authored frame timing before fixed-rate normalizati
       "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=64x48:r=10:d=0.5",
       "-frames:v", "5", path,
     ]);
-    const artifacts = new MemoryArtifactStore();
-    const source = await artifacts.put(await readFile(path), "image/gif");
-    const inspection = await inspectArtifact(artifacts, source);
+    const resources = new MemoryResourceStore();
+    const source = await resources.put(await readFile(path), "image/gif");
+    const inspection = await inspectArtifact(resources, source);
     assert.deepEqual(inspection.streams.map((stream) => [stream.kind, stream.kind === "video" ? stream.role : undefined,
       stream.decodedUnitCount]), [["video", "moving", 5]]);
     const request = sealMediaSelectionRequest({
@@ -395,9 +395,9 @@ test("animated GIF keeps its authored frame timing before fixed-rate normalizati
       frameRate: { numerator: 20, denominator: 1 },
     });
     const selection = selectMediaStreams(inspection, request);
-    const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
+    const normalized = await normalizeArtifact({ resources, source, inspection, selection, frameRate: request.frameRate });
     assert.equal(normalized.timeline.frameCount, 10);
-    const output = await inspectArtifact(artifacts, normalized.visual!.artifact);
+    const output = await inspectArtifact(resources, normalized.visual!.artifact);
     assert.equal(output.streams[0]?.decodedUnitCount, 10);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -416,8 +416,8 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
       "-af", "atrim=start_sample=0:end_sample=48001,asetpts=N/SR/TB,aformat=sample_rates=48000:channel_layouts=stereo",
       "-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", sourcePath,
     ]);
-    const artifacts = new MemoryArtifactStore();
-    const source = await artifacts.put(await readFile(sourcePath), "audio/wav");
+    const resources = new MemoryResourceStore();
+    const source = await resources.put(await readFile(sourcePath), "audio/wav");
     const constraints = canonicalize({
       source,
       sourceSampleFrames: 48_001,
@@ -429,11 +429,11 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
       speechTypes.evidenceAudio,
       constraints,
     );
-    const value = await fulfillInline(artifacts, request);
+    const value = await fulfillInline(resources, request);
     assertSpeechEvidenceAudioIdentity(value as unknown as SpeechEvidenceAudio);
     const evidence = value as unknown as SpeechEvidenceAudio;
     assert.equal(evidence.sampleFrames, 16_000);
-    const inspected = await inspectArtifact(artifacts, evidence.artifact);
+    const inspected = await inspectArtifact(resources, evidence.artifact);
     const audio = inspected.streams.find((stream) => stream.kind === "audio");
     assert.equal(audio?.kind, "audio");
     assert.equal(audio?.kind === "audio" && audio.codecName, "pcm_s16le");
@@ -461,9 +461,9 @@ test("local media Provider preserves one source A/V origin when audio starts lat
       "-c:a", "pcm_s16le", "-avoid_negative_ts", "disabled",
       sourcePath,
     ]);
-    const artifacts = new MemoryArtifactStore();
-    const source = await artifacts.put(await readFile(sourcePath), "video/x-matroska");
-    const inspection = await inspectArtifact(artifacts, source);
+    const resources = new MemoryResourceStore();
+    const source = await resources.put(await readFile(sourcePath), "video/x-matroska");
+    const inspection = await inspectArtifact(resources, source);
     const request = sealMediaSelectionRequest({
       video: { mode: "primary-moving" },
       audio: { mode: "default" },
@@ -471,7 +471,7 @@ test("local media Provider preserves one source A/V origin when audio starts lat
       frameRate: { numerator: 30, denominator: 1 },
     });
     const selection = selectMediaStreams(inspection, request);
-    const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
+    const normalized = await normalizeArtifact({ resources, source, inspection, selection, frameRate: request.frameRate });
     const video = inspection.streams.find((stream) => stream.kind === "video" && stream.index === selection.videoStreamIndex)!;
     const audio = inspection.streams.find((stream) => stream.kind === "audio" && stream.index === selection.audioStreamIndex)!;
     assert(video.startPts !== undefined && audio.startPts !== undefined && audio.endPts !== undefined);
@@ -481,7 +481,7 @@ test("local media Provider preserves one source A/V origin when audio starts lat
     const expectedEnd = Math.round((seconds(audio.endPts) - seconds(video.startPts)) * 48_000);
     const expectedTail = 48_000 - Math.min(48_000, expectedEnd);
     assert.equal(normalized.timeline.frameCount, 30);
-    const bytes = await artifacts.get(normalized.audio!.artifact.digest);
+    const bytes = await resources.get(normalized.audio!.artifact.resource);
     assert(bytes !== undefined);
     const audible = pcm16StereoAudibleSpan(bytes);
     assert.equal(audible.sampleFrames, 48_000);
@@ -504,9 +504,9 @@ test("a silent generated MP4 remains a visual-only product and cannot satisfy a 
       "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=160x96:r=24:d=0.5",
       "-frames:v", "12", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", sourcePath,
     ]);
-    const artifacts = new MemoryArtifactStore();
-    const source = await artifacts.put(await readFile(sourcePath), "video/mp4");
-    const inspection = await inspectArtifact(artifacts, source);
+    const resources = new MemoryResourceStore();
+    const source = await resources.put(await readFile(sourcePath), "video/mp4");
+    const inspection = await inspectArtifact(resources, source);
     const request = sealMediaSelectionRequest({
       video: { mode: "primary-moving" },
       audio: { mode: "none" },
@@ -514,7 +514,7 @@ test("a silent generated MP4 remains a visual-only product and cannot satisfy a 
       frameRate: { numerator: 30, denominator: 1 },
     });
     const selection = selectMediaStreams(inspection, request);
-    const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
+    const normalized = await normalizeArtifact({ resources, source, inspection, selection, frameRate: request.frameRate });
     assert.equal(normalized.timeline.frameCount, 15);
     assert.ok(normalized.visual);
     assert.equal(normalized.audio, undefined);
@@ -537,9 +537,9 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
   const root = await mkdtemp(join(tmpdir(), "hypit-provider-media-ordinary-ops-"));
   try {
     const sourcePath = await fixture(root);
-    const artifacts = new MemoryArtifactStore();
-    const source = await artifacts.put(await readFile(sourcePath), "video/mp4");
-    const inspection = await inspectArtifact(artifacts, source);
+    const resources = new MemoryResourceStore();
+    const source = await resources.put(await readFile(sourcePath), "video/mp4");
+    const inspection = await inspectArtifact(resources, source);
     const selectionRequest = sealMediaSelectionRequest({
       video: { mode: "primary-moving" },
       audio: { mode: "default" },
@@ -548,14 +548,14 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
     });
     const selection = selectMediaStreams(inspection, selectionRequest);
     const normalized = await normalizeArtifact({
-      artifacts, source, inspection, selection, frameRate: selectionRequest.frameRate,
+      resources, source, inspection, selection, frameRate: selectionRequest.frameRate,
     });
     const executeArtifact = async (request: Need) => {
       const provider = await handlerFor(request);
       const result = await provider.handler({
         command: { kind: "fulfill-need", id: `command:${request.id}`, need: request },
         need: request,
-        artifacts,
+        resources,
         credentials: {},
       });
       assert.equal(result.value.kind, "blob");
@@ -576,7 +576,7 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
         },
       }),
     ));
-    const transformedInspection = await inspectArtifact(artifacts, transformed);
+    const transformedInspection = await inspectArtifact(resources, transformed);
     assert.equal(transformedInspection.streams.find((item) => item.kind === "video")?.decodedUnitCount, 12);
 
     const audioIndex = inspection.streams.find((item) => item.kind === "audio")!.index;
@@ -591,7 +591,7 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
       }),
     ));
     assert.equal(extractedAudio.mediaType, "audio/wav");
-    const audioInspection = await inspectArtifact(artifacts, extractedAudio);
+    const audioInspection = await inspectArtifact(resources, extractedAudio);
     const audio = audioInspection.streams.find((item) => item.kind === "audio");
     assert.ok(audio?.kind === "audio" && audio.sampleRate === 48_000 && audio.channels === 2);
 
@@ -609,7 +609,7 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
       }),
     ));
     assert.equal(extractedFrame.mediaType, "image/png");
-    const frameInspection = await inspectArtifact(artifacts, extractedFrame);
+    const frameInspection = await inspectArtifact(resources, extractedFrame);
     assert.equal(frameInspection.streams.find((item) => item.kind === "video")?.decodedUnitCount, 1);
 
     const stillVideo = await executeArtifact(need(
@@ -626,7 +626,7 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
       }),
     ));
     assert.equal(stillVideo.mediaType, "video/mp4");
-    const stillInspection = await inspectArtifact(artifacts, stillVideo);
+    const stillInspection = await inspectArtifact(resources, stillVideo);
     assert.equal(stillInspection.streams.length, 1);
     assert.equal(stillInspection.streams[0]?.kind, "video");
     assert.equal(stillInspection.streams[0]?.decodedUnitCount, 15);
@@ -637,7 +637,7 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
       frameRate: { numerator: 30, denominator: 1 },
     }));
     const stillNormalized = await normalizeArtifact({
-      artifacts,
+      resources,
       source: stillVideo,
       inspection: stillInspection,
       selection: stillSelection,
@@ -675,11 +675,11 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
       ]),
     ]);
 
-    const artifacts = new MemoryArtifactStore();
+    const resources = new MemoryResourceStore();
     const [first, second, visualArtifact] = await Promise.all([
-      artifacts.put(await readFile(firstPath), "audio/wav"),
-      artifacts.put(await readFile(secondPath), "audio/wav"),
-      artifacts.put(await readFile(visualPath), "video/mp4"),
+      resources.put(await readFile(firstPath), "audio/wav"),
+      resources.put(await readFile(secondPath), "audio/wav"),
+      resources.put(await readFile(visualPath), "video/mp4"),
     ]);
     const plan = sealAudioProgramPlan({
       frameRate: { numerator: 30, denominator: 1 },
@@ -728,11 +728,11 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
       mediaTypes.timelineAudio,
       canonicalize({ plan }),
     );
-    const audioValue = await fulfillInline(artifacts, audioRequest);
+    const audioValue = await fulfillInline(resources, audioRequest);
     verifyTimelineAudio(audioValue);
     const audio = audioValue as unknown as TimelineAudio;
     assert.equal(audio.sampleFrames, 48_000);
-    assert.equal(await artifacts.has(audio.artifact.digest), true);
+    assert.equal(await resources.has(audio.artifact.resource), true);
 
     const visual = sealRenderedVisual({
       frameRate: { numerator: 30, denominator: 1 },
@@ -746,13 +746,13 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
       mediaTypes.muxed,
       canonicalize({ visual, audio }),
     );
-    const muxValue = await fulfillInline(artifacts, muxRequest);
+    const muxValue = await fulfillInline(resources, muxRequest);
     verifyMuxedMedia(muxValue);
     const muxed = muxValue as unknown as MuxedMedia;
     assert.equal(muxed.presentationSampleFrames, 48_000);
-    assert.equal(await artifacts.has(muxed.artifact.digest), true);
+    assert.equal(await resources.has(muxed.artifact.resource), true);
 
-    const inspection = await inspectArtifact(artifacts, muxed.artifact);
+    const inspection = await inspectArtifact(resources, muxed.artifact);
     const videos = inspection.streams.filter((stream) => stream.kind === "video");
     const audios = inspection.streams.filter((stream) => stream.kind === "audio");
     assert.equal(inspection.streams.length, 2);
@@ -775,8 +775,8 @@ test("local media Provider executes an end-aligned loop from the exact authored 
 }, async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-provider-media-loop-"));
   try {
-    const artifacts = new MemoryArtifactStore();
-    const source = await artifacts.put(rampWav(100), "audio/wav");
+    const resources = new MemoryResourceStore();
+    const source = await resources.put(rampWav(100), "audio/wav");
     const plan = sealAudioProgramPlan({
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
@@ -800,7 +800,7 @@ test("local media Provider executes an end-aligned loop from the exact authored 
       }],
       mix: { normalize: false, limiter: "none" },
     });
-    const value = await fulfillInline(artifacts, need(
+    const value = await fulfillInline(resources, need(
       "need:render-loop-audio",
       mediaPipelineCapabilities.renderAudio,
       mediaTypes.timelineAudio,
@@ -809,7 +809,7 @@ test("local media Provider executes an end-aligned loop from the exact authored 
     verifyTimelineAudio(value);
     const audio = value as unknown as TimelineAudio;
     assert.equal(audio.sampleFrames, 48_000);
-    const wav = await artifacts.get(audio.artifact.digest);
+    const wav = await resources.get(audio.artifact.resource);
     assert(wav);
     const wavPath = join(root, "loop.wav");
     const rawPath = join(root, "loop.raw");
