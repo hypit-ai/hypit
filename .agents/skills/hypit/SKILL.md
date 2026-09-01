@@ -32,6 +32,17 @@ choice between things that all work, and asking costs the author an interruption
 the references already answer. Decide it and keep going. A run that stops half way with a question is
 a run the author has to restart.
 
+## Login-only fast path
+
+If the request is only to sign in or authenticate HypiHub (for example, `login to hypit`), treat it as
+credential setup, not video production. Do not read or enter the reconstruction, original-authoring,
+observer, playbook, vocabulary, preview, or recovery routes; do not inspect media, create a project,
+start a Worker, or ask which observer to use. Use the currently selected Runtime Profile (or the
+explicit profile the author names), check only the HypiHub Endpoint credential status, and follow the
+HypiHub login instructions below. Before opening the browser, explain that no usable credential is
+configured, that OAuth avoids copying an API key, that an account without an active subscription can
+purchase one at hypit.ai after signing in, and that opening login does not submit a paid generation.
+
 ## Credentials: run HypiHub login for the author
 
 When a selected HypiHub Endpoint is missing its OS credential, first tell the author why you are opening the login: no usable credential is configured, and the browser sign-in is needed to let Hypit use HypiHub without asking them to copy or paste an API key. If the account has no active Hypit subscription, they can purchase one on hypit.ai after signing in. The session is stored in the OS credential store, and opening login does not itself submit a paid generation. Then run `hypit auth login <endpoint> --runtime <profile>` yourself. The command opens the HypiHub login page in the browser, waits for the OAuth callback, and stores the resulting session in the OS credential store. Do not tell the author to copy a key or run the command manually. Continue only after login succeeds; if it is cancelled or fails, stop before any paid request.
