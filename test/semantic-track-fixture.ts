@@ -13,7 +13,7 @@ type FixtureAnchor = {
 
 const audioArtifact = {
   kind: "blob" as const,
-  digest: `sha256:${"0".repeat(64)}` as const,
+  resource: "res_semantic-track-fixture" as const,
   size: 1,
   mediaType: "audio/wav",
 };

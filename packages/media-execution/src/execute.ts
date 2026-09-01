@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, open, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
@@ -46,7 +46,7 @@ import type { AnimatedWebp } from "./webp.js";
  * Where the bytes live and which binaries transform them.
  *
  * These byte operations are the whole of Hypit's media execution, and they
- * are written once. A local Provider supplies the Build's own ArtifactStore and
+ * are written once. A local Provider supplies the Build's own ResourceStore and
  * the ffmpeg on its PATH; a Lambda Provider supplies an S3-backed gateway and
  * the ffmpeg carried by its deployment. Nothing below knows which it is, so the two
  * deployments cannot drift into computing different media from one Need.
@@ -169,8 +169,8 @@ async function version(executable: string, timeoutMs: number, sharedLibraryPath?
 
 async function sourceBytes(env: MediaExecutionEnvironment, source: BlobRef): Promise<Uint8Array> {
   const bytes = await env.artifacts.get(source);
-  assert(bytes !== undefined, `Media source ${source.digest} is unavailable`);
-  assert(bytes.byteLength === source.size, `Media source ${source.digest} size differs`);
+  assert(bytes !== undefined, `Media source ${source.resource} is unavailable`);
+  assert(bytes.byteLength === source.size, `Media source ${source.resource} size differs`);
   return bytes;
 }
 
@@ -180,7 +180,7 @@ async function stageArtifact(
   path: string,
 ): Promise<void> {
   const chunks = await env.artifacts.open(source);
-  assert(chunks !== undefined, `Media source ${source.digest} is unavailable`);
+  assert(chunks !== undefined, `Media source ${source.resource} is unavailable`);
   const file = await open(path, "w");
   let size = 0;
   try {
@@ -191,7 +191,7 @@ async function stageArtifact(
   } finally {
     await file.close();
   }
-  assert(size === source.size, `Media source ${source.digest} size differs`);
+  assert(size === source.size, `Media source ${source.resource} size differs`);
 }
 
 function timestampFraction(value: MediaTimestamp): { numerator: bigint; denominator: bigint } {
@@ -428,15 +428,10 @@ async function outputInspection(args: {
   readonly maxProbeOutputBytes: number;
   readonly sharedLibraryPath?: string;
 }): Promise<MediaInspection> {
-  const hash = createHash("sha256");
-  let size = 0;
-  for await (const chunk of createReadStream(args.path)) {
-    hash.update(chunk);
-    size += chunk.byteLength;
-  }
+  const size = (await stat(args.path)).size;
   const source: BlobRef = {
     kind: "blob",
-    digest: `sha256:${hash.digest("hex")}` as BlobRef["digest"],
+    resource: `res_${randomUUID()}`,
     size,
     mediaType: args.mediaType,
   };
@@ -1231,10 +1226,10 @@ export async function executeRenderTimelineAudio(
   try {
     const artifacts = new Map<string, { source: BlobRef; path: string; inputIndex: number; sampleFrames: number }>();
     for (const clip of plan.clips) {
-      const existing = artifacts.get(clip.artifact.digest);
+      const existing = artifacts.get(clip.artifact.resource);
       if (existing !== undefined) {
         assert(existing.sampleFrames === clip.sourceSampleFrames,
-          `Audio input ${clip.artifact.digest} has conflicting sample counts in one plan`);
+          `Audio input ${clip.artifact.resource} has conflicting sample counts in one plan`);
         continue;
       }
       const inputIndex = artifacts.size;
@@ -1249,8 +1244,8 @@ export async function executeRenderTimelineAudio(
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       });
       assert(audio.decodedSampleFrames === clip.sourceSampleFrames,
-        `Audio input ${clip.artifact.digest} sample count differs from its plan`);
-      artifacts.set(clip.artifact.digest, {
+        `Audio input ${clip.artifact.resource} sample count differs from its plan`);
+      artifacts.set(clip.artifact.resource, {
         source: clip.artifact,
         path,
         inputIndex,
@@ -1268,7 +1263,7 @@ export async function executeRenderTimelineAudio(
       );
     } else {
       const chains = plan.clips.map((clip, index) => {
-        const inputIndex = artifacts.get(clip.artifact.digest)!.inputIndex;
+        const inputIndex = artifacts.get(clip.artifact.resource)!.inputIndex;
         return audioClipFilter(clip, inputIndex, index);
       });
       const labels = plan.clips.map((_clip, index) => `[clip${index}]`).join("");

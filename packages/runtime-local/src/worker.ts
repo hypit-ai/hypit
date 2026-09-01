@@ -1,7 +1,7 @@
 import type { BuildState } from "@hypit/protocol";
 import type { BuildResultWriter } from "@hypit/build-result";
 import type {
-  ArtifactStore,
+  ResourceStore,
   BuildDispatchSnapshot,
   RuntimeCommandExecutor,
   RuntimeExecutionResult,
@@ -10,7 +10,7 @@ import type {
   ScheduledBuildResult,
   RuntimeWorkerRunOptions,
 } from "@hypit/runtime";
-import { isStreamingArtifactStore, LocalBuildScheduler } from "@hypit/runtime";
+import { isStreamingResourceStore, LocalBuildScheduler } from "@hypit/runtime";
 
 type LocalWorkerOptions = {
   readonly stores: {
@@ -19,9 +19,9 @@ type LocalWorkerOptions = {
     readonly operations: import("@hypit/runtime").OperationStore;
     readonly dispatch: import("@hypit/runtime").BuildDispatchStore;
   };
-  readonly artifactStore: ArtifactStore;
-  readonly artifactStoreForBuild?: (build: string) => ArtifactStore;
-  readonly clearBuildArtifacts?: (build: string) => Promise<void> | void;
+  readonly resourceStore: ResourceStore;
+  readonly resourceStoreForBuild?: (build: string) => ResourceStore;
+  readonly clearBuildResources?: (build: string) => Promise<void> | void;
   readonly openBuildResultRepository: NonNullable<import("./types.js").CreateLocalRuntimeOptions["openBuildResultRepository"]>;
   readonly installComponentPackages: (specifiers: readonly string[]) => Promise<void>;
 };
@@ -172,15 +172,15 @@ class DurableLocalWorker {
     const result = await this.#openResult(dispatch);
     if (result === undefined) return;
     try {
-      const artifactStore = this.#options.artifactStoreForBuild?.(dispatch.build) ?? this.#options.artifactStore;
+      const resourceStore = this.#options.resourceStoreForBuild?.(dispatch.build) ?? this.#options.resourceStore;
       await result.writer.sync({
         state,
-        artifacts: {
+        resources: {
           open: async (artifact) => {
-            if (isStreamingArtifactStore(artifactStore)) {
-              return await artifactStore.open(artifact.digest);
+            if (isStreamingResourceStore(resourceStore)) {
+              return await resourceStore.open(artifact.resource);
             }
-            const bytes = await artifactStore.get(artifact.digest);
+            const bytes = await resourceStore.get(artifact.resource);
             return bytes === undefined ? undefined : (async function* () { yield bytes; })();
           },
         },
@@ -207,7 +207,7 @@ class DurableLocalWorker {
 
   async #retireExecution(build: string): Promise<void> {
     await Promise.allSettled([
-      this.#options.clearBuildArtifacts?.(build),
+      this.#options.clearBuildResources?.(build),
       this.#options.stores.operations.removeBuild?.(build),
       this.#options.stores.builds.remove?.(build),
       this.#options.stores.catalog?.remove?.(build),

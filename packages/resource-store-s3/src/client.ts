@@ -1,9 +1,7 @@
 import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
-  CopyObjectCommand,
   CreateMultipartUploadCommand,
-  DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
@@ -13,9 +11,7 @@ import {
 import type {
   AbortMultipartUploadCommandInput,
   CompleteMultipartUploadCommandInput,
-  CopyObjectCommandInput,
   CreateMultipartUploadCommandInput,
-  DeleteObjectCommandInput,
   GetObjectCommandInput,
   PutObjectCommandInput,
   S3ClientConfig,
@@ -24,7 +20,7 @@ import type {
 
 /**
  * `put` and `get` are the whole port. The rest are optional: a client that
- * omits them leaves the store implementing only the three-method ArtifactStore,
+ * omits them leaves the store implementing only the three-method ResourceStore,
  * which is exactly what the optional Streaming facet means.
  */
 export type S3ObjectClient = {
@@ -42,8 +38,6 @@ export type S3ObjectClient = {
   uploadPart?(input: UploadPartCommandInput): Promise<{ readonly etag: string }>;
   completeMultipart?(input: CompleteMultipartUploadCommandInput): Promise<void>;
   abortMultipart?(input: AbortMultipartUploadCommandInput): Promise<void>;
-  copy?(input: CopyObjectCommandInput): Promise<void>;
-  delete?(input: DeleteObjectCommandInput): Promise<void>;
 };
 
 function statusCode(error: unknown): number | undefined {
@@ -131,14 +125,6 @@ export class AwsS3ObjectClient implements S3ObjectClient {
 
   async abortMultipart(input: AbortMultipartUploadCommandInput): Promise<void> {
     await this.#client.send(new AbortMultipartUploadCommand(input));
-  }
-
-  async copy(input: CopyObjectCommandInput): Promise<void> {
-    await this.#client.send(new CopyObjectCommand(input));
-  }
-
-  async delete(input: DeleteObjectCommandInput): Promise<void> {
-    await this.#client.send(new DeleteObjectCommand(input));
   }
 
 }

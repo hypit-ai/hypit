@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   createResolvedClosure,
@@ -204,7 +204,7 @@ test("a source file is an ordinary BlobArtifact Candidate", async () => {
     readFile(from, mediaType) {
       assert.equal(from, "./approved.mp4");
       assert.equal(mediaType, "video/mp4");
-      return { kind: "blob", digest: fixtureDigest("approved video"), size: 14, mediaType };
+      return { kind: "blob", resource: fixtureResource("approved video"), size: 14, mediaType };
     },
     resolveBuildRecord() { throw new Error("not used"); },
   });

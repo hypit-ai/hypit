@@ -8,11 +8,11 @@ import {
   EndpointRegistry,
 } from "@hypit/driver-node";
 import {
-  isStreamingArtifactStore,
+  isStreamingResourceStore,
 } from "@hypit/runtime";
 import { TypeValidatorRegistry } from "@hypit/validation";
 
-import { createLocalRuntimeArchiveControl, createLocalRuntimeArtifactAccess } from "./control.js";
+import { createLocalRuntimeArchiveControl, createLocalRuntimeResourceAccess } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
 import { createDurableLocalWorker } from "./worker.js";
 import type {
@@ -86,8 +86,8 @@ export async function createLocalRuntime(
   const driver = new NodeDriver({
     producers,
     endpoints,
-    artifacts: options.artifactStore,
-    ...(options.artifactStoreForBuild === undefined ? {} : { artifactsForBuild: options.artifactStoreForBuild }),
+    resources: options.resourceStore,
+    ...(options.resourceStoreForBuild === undefined ? {} : { resourcesForBuild: options.resourceStoreForBuild }),
     credentials: options.credentialStore,
     operations: options.operationStore,
     validators,
@@ -99,9 +99,9 @@ export async function createLocalRuntime(
       operations: options.operationStore,
       dispatch: options.dispatchStore,
     },
-    artifactStore: options.artifactStore,
-    ...(options.artifactStoreForBuild === undefined ? {} : { artifactStoreForBuild: options.artifactStoreForBuild }),
-    ...(options.clearBuildArtifacts === undefined ? {} : { clearBuildArtifacts: options.clearBuildArtifacts }),
+    resourceStore: options.resourceStore,
+    ...(options.resourceStoreForBuild === undefined ? {} : { resourceStoreForBuild: options.resourceStoreForBuild }),
+    ...(options.clearBuildResources === undefined ? {} : { clearBuildResources: options.clearBuildResources }),
     openBuildResultRepository: async (location) => {
       assert(openBuildResultRepository !== undefined, "this Runtime cannot open Build Result Repositories");
       return await openBuildResultRepository(location);
@@ -118,17 +118,18 @@ export async function createLocalRuntime(
     operationStore: options.operationStore,
     dispatchStore: options.dispatchStore,
   });
-  const artifacts = createLocalRuntimeArtifactAccess({
-    artifactStore: options.artifactStore,
+  const resources = createLocalRuntimeResourceAccess({
+    resourceStore: options.resourceStore,
   });
   const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
-    const artifactStore = options.artifactStoreForBuild?.(request.id) ?? options.artifactStore;
+    const resourceStore = options.resourceStoreForBuild?.(request.id) ?? options.resourceStore;
     for (const item of request.attachments ?? []) {
-      if (await artifactStore.has(item.artifact.digest)) continue;
+      if (await resourceStore.has(item.artifact.resource)) continue;
       const stream = await item.open();
-      const stored = isStreamingArtifactStore(artifactStore)
-        ? await artifactStore.putStream(stream, item.artifact.mediaType)
-        : await artifactStore.put(await (async () => {
+      if (isStreamingResourceStore(resourceStore)) {
+        await resourceStore.writeStream(item.artifact, stream);
+      } else {
+        await resourceStore.write(item.artifact, await (async () => {
             const chunks: Uint8Array[] = [];
             let size = 0;
             for await (const chunk of stream) {
@@ -142,13 +143,8 @@ export async function createLocalRuntime(
               offset += chunk.byteLength;
             }
             return bytes;
-          })(), item.artifact.mediaType);
-      assert(
-        stored.digest === item.artifact.digest
-          && stored.size === item.artifact.size
-          && stored.mediaType === item.artifact.mediaType,
-        `Source Artifact ${item.artifact.digest} does not match its staged bytes`,
-      );
+          })());
+      }
     }
   };
   const presentation = async (build: string, previousState?: LocalBuildSubmission["state"]): Promise<LocalBuildSubmission> => {
@@ -226,7 +222,7 @@ export async function createLocalRuntime(
   };
   return {
     ...archive,
-    ...artifacts,
+    ...resources,
     ...credentialControl,
     build: runBuild,
     async workOnce() {

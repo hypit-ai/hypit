@@ -105,26 +105,26 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
       returns: artifactTypes.blob,
       handler: async (context): Promise<EndpointFulfillment> => {
         const need = request(context.need.constraints);
-        const sources = [...new Map(rasterSources(need).map((source) => [source.digest, source])).values()];
+        const sources = [...new Map(rasterSources(need).map((source) => [source.resource, source])).values()];
         const totalInputBytes = sources.reduce((sum, source) => sum + source.size, 0);
         assert(totalInputBytes <= maxInputBytes, "Raster inputs exceed their configured byte limit");
         const work = await mkdtemp(join(tmpdir(), "hypit-raster-opencv-"));
         try {
           const paths = new Map<string, string>();
           for (const [index, source] of sources.entries()) {
-            const bytes = await context.artifacts.get(source.digest);
-            assert(bytes !== undefined, `Raster source Artifact ${source.digest} is unavailable`);
+            const bytes = await context.resources.get(source.resource);
+            assert(bytes !== undefined, `Raster source Artifact ${source.resource} is unavailable`);
             assert(bytes.byteLength === source.size, "Raster source size differs from its BlobRef");
             const path = join(work, `source-${String(index + 1).padStart(4, "0")}.bin`);
             await writeFile(path, bytes);
-            paths.set(source.digest, path);
+            paths.set(source.resource, path);
           }
           const runtimeRequest = need.kind === "transform"
-            ? { kind: "transform", source: paths.get(need.source.digest), operations: need.operations }
+            ? { kind: "transform", source: paths.get(need.source.resource), operations: need.operations }
             : {
                 kind: "compose", canvas: need.canvas, background: need.background,
                 layers: need.layers.map((layer) => ({
-                  source: paths.get(layer.source.digest), frame: layer.frame, fit: layer.fit,
+                  source: paths.get(layer.source.resource), frame: layer.frame, fit: layer.fit,
                   interpolation: layer.interpolation, opacity: layer.opacity,
                 })),
               };
@@ -141,7 +141,7 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
           assert(info.isFile() && info.size > 0 && info.size <= maxOutputBytes,
             "OpenCV raster execution produced an invalid output size");
           const mediaType = rasterOutputMediaType(need);
-          const artifact = await context.artifacts.put(await readFile(output), mediaType);
+          const artifact = await context.resources.put(await readFile(output), mediaType);
           return {
             value: artifact,
           };

@@ -15,7 +15,7 @@ const storyboards = new Map<string, Promise<Storyboard | undefined>>();
 const resolvedStoryboards = new Map<string, Storyboard | undefined>();
 
 function previewUrl(preview: StudioMaterialPreview): string {
-  if (preview.source.kind === "artifact") return `/__studio/material/${preview.source.digest}`;
+  if (preview.source.kind === "artifact") return `/__studio/material/${preview.source.resource}`;
   const query = new URLSearchParams({
     module: preview.source.module,
     version: preview.source.version,

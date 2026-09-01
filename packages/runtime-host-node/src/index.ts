@@ -6,7 +6,7 @@ import type { ArtifactAttachment } from "@hypit/workspace";
 import type { BuildResultReuse } from "@hypit/build-result";
 import type { BuildResultRepository } from "@hypit/build-result";
 import type { BuildResultRepositoryLocation } from "@hypit/build-result-kit";
-import type { BuildDefinition, BuildState, CapabilityRef, Digest } from "@hypit/protocol";
+import type { BuildDefinition, BuildState, CapabilityRef, ResourceId } from "@hypit/protocol";
 import type {
   BuildCatalogDescriptor,
   BuildCatalogEntry,
@@ -59,9 +59,9 @@ export type RuntimeHostArchive = {
   close(): void | Promise<void>;
 };
 
-export type RuntimeHostArtifactAccess = {
-  readArtifact(digest: Digest): Promise<Uint8Array | undefined>;
-  openArtifact(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
+export type RuntimeHostResourceAccess = {
+  readResource(resource: ResourceId): Promise<Uint8Array | undefined>;
+  openResource(resource: ResourceId): Promise<AsyncIterable<Uint8Array> | undefined>;
   close(): void | Promise<void>;
 };
 
@@ -75,7 +75,7 @@ export type RuntimeHostCredentialControl = {
   close(): void | Promise<void>;
 };
 
-export type RuntimeHostExecution = RuntimeHostArchive & RuntimeHostArtifactAccess & RuntimeHostCredentialControl & {
+export type RuntimeHostExecution = RuntimeHostArchive & RuntimeHostResourceAccess & RuntimeHostCredentialControl & {
   build(request: {
     readonly id: string;
     readonly definition: BuildDefinition;
@@ -164,7 +164,7 @@ export type NodeRuntimeHost = {
   }): Promise<RuntimeController>;
   createRuntime(): Promise<RuntimeHostExecution>;
   openArchive(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostArchive>;
-  openArtifacts(): Promise<RuntimeHostArtifactAccess>;
+  openResources(): Promise<RuntimeHostResourceAccess>;
   openCredentials(endpoint: string): Promise<RuntimeHostCredentialControl>;
   /** Open the project Repository selected by this Profile, or the supplied zero-config file default. */
   openResults?(defaultRoot: string): Promise<{

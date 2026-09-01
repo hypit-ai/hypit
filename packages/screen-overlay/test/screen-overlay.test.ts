@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 import { projectProgramWindow } from "../../../test/temporal-fixture.js";
 
@@ -136,7 +136,7 @@ test("the package has no lower-composite, sibling Track, backdrop-filter or hidd
 
 test("the self-described Screen Surface parses into a finite peer-Track graph", async () => {
   const fixtureModule = { name: "example.screen-inputs", version: "1" } as const;
-  const fixtureSurfaceDigest = fixtureDigest("example.screen-inputs/surface@1");
+  const fixtureSurfaceDigest = fixtureResource("example.screen-inputs/surface@1");
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
     outputs: [spatialTypes.canvas, semanticTrackTypes.track],

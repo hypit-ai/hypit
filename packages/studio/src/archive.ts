@@ -1,10 +1,17 @@
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import type { BuildCatalogEntry } from "@hypit/runtime";
 import type { NodeRuntimeHost, RuntimeHostStatus } from "@hypit/runtime-host-node";
-import type { Digest, StoredValue, TypeRef } from "@hypit/protocol";
+import type { StoredValue, TypeRef } from "@hypit/protocol";
+import { FileBuildResultRepository } from "@hypit/build-result";
+import type {
+  BuildResultFileRef,
+  BuildResultJsonValue,
+  BuildResultRepository,
+  RepositoryBuildResultOutput,
+} from "@hypit/build-result";
 
-import { collectArtifacts, selectArchivedRecord } from "@hypit/cli";
+import { resolveBuildResultRecord } from "@hypit/cli";
 import { videoCliDistribution } from "@hypit/video-cli";
 
 import type { StudioArtifactView, StudioLibraryView, StudioTaskView } from "./shared.js";
@@ -12,14 +19,22 @@ import type { StudioArtifactView, StudioLibraryView, StudioTaskView } from "./sh
 type RuntimeArchive = Awaited<ReturnType<NodeRuntimeHost["openArchive"]>>;
 
 export type StudioArchive = {
-  readonly profile: string;
-  readonly runtime: Pick<RuntimeArchive, "status">;
+  readonly profile?: string;
+  readonly runtime?: Pick<RuntimeArchive, "status">;
   readonly library: () => Promise<StudioLibraryView>;
   readonly resolveBuildRecord: (
     build: string,
     output: string,
-  ) => Promise<{ readonly type: TypeRef; readonly value: StoredValue } | undefined>;
-  readonly read: (digest: Digest) => Promise<Uint8Array | undefined>;
+  ) => Promise<{
+    readonly type: TypeRef;
+    readonly value: StoredValue;
+    readonly attachments?: readonly import("@hypit/workspace").ArtifactAttachment[];
+  } | undefined>;
+  readonly openArtifact: (
+    build: string,
+    output: string,
+    valuePath: string,
+  ) => Promise<{ readonly mediaType: string; readonly bytes: Uint8Array } | undefined>;
   readonly close: () => Promise<void>;
 };
 
@@ -80,83 +95,87 @@ function taskView(root: string, entry: BuildCatalogEntry, status: RuntimeHostSta
   };
 }
 
-function artifactsForBuild(
-  root: string,
-  entry: BuildCatalogEntry,
-  status: RuntimeHostStatus,
-): readonly StudioArtifactView[] {
-  const state = status.build?.state;
-  if (state === undefined) return [];
-  const outputsByRecord = new Map<string, Set<string>>();
-  const recordForOutput = new Map(state.plan.selections.map((selection) => [selection.output, selection.record]));
-  for (const alias of entry.aliases) {
-    const record = alias.ref.kind === "record" ? alias.ref.id : recordForOutput.get(alias.ref.id);
-    if (record === undefined) continue;
-    const names = outputsByRecord.get(record) ?? new Set<string>();
-    names.add(alias.name);
-    outputsByRecord.set(record, names);
-  }
-
-  type Held = {
-    readonly digest: Digest;
-    readonly size: number;
-    readonly mediaType: string;
-    readonly records: Set<string>;
-    readonly outputs: Set<string>;
-    readonly paths: Set<string>;
-  };
-  const found = new Map<Digest, Held>();
-  for (const record of state.records) {
-    const value = record.value.kind === "blob" ? record.value : record.value.value;
-    for (const artifact of collectArtifacts(value)) {
-      const held = found.get(artifact.digest) ?? {
-        digest: artifact.digest,
-        size: artifact.size,
-        mediaType: artifact.mediaType,
-        records: new Set<string>(),
-        outputs: new Set<string>(),
-        paths: new Set<string>(),
-      };
-      held.records.add(record.id);
-      for (const output of outputsByRecord.get(record.id) ?? []) held.outputs.add(output);
-      held.paths.add(`${record.id}${artifact.path === "$" ? "" : artifact.path.slice(1)}`);
-      found.set(artifact.digest, held);
-    }
-  }
-  return [...found.values()].map((artifact) => ({
-    id: `${entry.build}:${artifact.digest}`,
-    build: entry.build,
-    createdAt: entry.createdAt,
-    digest: artifact.digest,
-    size: artifact.size,
-    mediaType: artifact.mediaType,
-    records: [...artifact.records],
-    outputs: [...artifact.outputs],
-    paths: [...artifact.paths],
-    source: presentedPath(root, entry.source.path),
-    ...(entry.run === undefined ? {} : { run: presentedPath(root, entry.run.path) }),
-  })).sort((left, right) =>
-    (left.outputs[0] ?? left.records[0] ?? left.digest)
-      .localeCompare(right.outputs[0] ?? right.records[0] ?? right.digest));
+function isResultFile(value: BuildResultJsonValue): value is BuildResultFileRef {
+  if (value === null || Array.isArray(value) || typeof value !== "object") return false;
+  const item = value as Readonly<Record<string, unknown>>;
+  return item.kind === "build-file" && typeof item.path === "string"
+    && typeof item.size === "number" && typeof item.mediaType === "string";
 }
 
-/** Build the Studio library from the existing Catalog, Archive and Artifact references. */
+function filesInResultValue(
+  value: BuildResultJsonValue,
+  valuePath = "$",
+): readonly { readonly valuePath: string; readonly file: BuildResultFileRef }[] {
+  if (isResultFile(value)) {
+    return [{ valuePath, file: value }];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => filesInResultValue(item, `${valuePath}[${index}]`));
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.entries(value).flatMap(([key, item]) => filesInResultValue(item, `${valuePath}.${key}`));
+  }
+  return [];
+}
+
+function filesInResolvedOutput(resolved: RepositoryBuildResultOutput): readonly {
+  readonly valuePath: string;
+  readonly file: BuildResultFileRef;
+}[] {
+  if (resolved.value.kind === "build-file") return [{ valuePath: "$", file: resolved.value }];
+  if (resolved.value.kind === "json") return filesInResultValue(resolved.value.value);
+  return [];
+}
+
+async function artifactsForResults(
+  root: string,
+  repository: BuildResultRepository,
+): Promise<readonly StudioArtifactView[]> {
+  const manifests = (await repository.list()).filter((manifest) =>
+    isWithin(root, manifest.run?.path ?? manifest.source.path) || isWithin(root, manifest.source.path));
+  const nested = await Promise.all(manifests.flatMap((manifest) =>
+    Object.keys(manifest.outputs).map(async (output) => {
+      const resolved = await repository.resolve(manifest.id, output);
+      if (resolved === undefined) return [];
+      return filesInResolvedOutput(resolved).map(({ valuePath, file }) => ({
+        id: `${manifest.id}:${output}:${valuePath}`,
+        build: manifest.id,
+        createdAt: manifest.startedAt,
+        output,
+        valuePath,
+        ownerBuild: file.build ?? resolved.build,
+        ownerOutput: resolved.output,
+        filePath: file.path,
+        size: file.size,
+        mediaType: file.mediaType,
+        source: presentedPath(root, manifest.source.path),
+        ...(manifest.run === undefined ? {} : { run: presentedPath(root, manifest.run.path) }),
+      }));
+    })));
+  return nested.flat().sort((left, right) =>
+    right.createdAt - left.createdAt
+      || left.output.localeCompare(right.output)
+      || left.valuePath.localeCompare(right.valuePath));
+}
+
+/** Build the Studio library from execution status and project-owned Build Results. */
 export async function readStudioLibrary(input: {
-  readonly profile: string;
+  readonly profile?: string;
   readonly workspaceRoot: string;
-  readonly runtime: Pick<RuntimeArchive, "builds" | "status">;
+  readonly runtime?: Pick<RuntimeArchive, "builds" | "status">;
+  readonly results: BuildResultRepository;
 }): Promise<StudioLibraryView> {
-  const entries = (await input.runtime.builds())
+  const entries = (await input.runtime?.builds() ?? [])
     .filter((entry) => buildBelongsTo(input.workspaceRoot, entry));
   const statuses = await Promise.all(entries.map(async (entry) => ({
     entry,
-    status: await input.runtime.status(entry.build),
+    status: await input.runtime!.status(entry.build),
   })));
   return {
     environment: resolve(input.workspaceRoot),
-    runtime: resolve(input.profile),
+    ...(input.profile === undefined ? {} : { runtime: resolve(input.profile) }),
     tasks: statuses.map(({ entry, status }) => taskView(input.workspaceRoot, entry, status)),
-    artifacts: statuses.flatMap(({ entry, status }) => artifactsForBuild(input.workspaceRoot, entry, status)),
+    artifacts: await artifactsForResults(input.workspaceRoot, input.results),
   };
 }
 
@@ -167,40 +186,58 @@ export async function openStudioArchive(
   workspaceRoot: string,
   distributionPackageRoot?: string,
 ): Promise<StudioArchive | undefined> {
-  if (profile === undefined) return undefined;
-  const resolvedProfile = resolve(profile);
-  const host = await videoCliDistribution.openRuntimeHost(resolvedProfile, {
-    packageRoot,
-    ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
-  });
-  const runtime = await host.openArchive({ readOnly: true });
-  const artifacts = await host.openArtifacts();
+  const resolvedProfile = profile === undefined ? undefined : resolve(profile);
+  const host = resolvedProfile === undefined
+    ? undefined
+    : await videoCliDistribution.openRuntimeHost(resolvedProfile, {
+        packageRoot,
+        ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
+      });
+  const runtime = await host?.openArchive({ readOnly: true });
+  const defaultResultRoot = join(workspaceRoot, ".hypit", "results");
+  const openedResults = host?.openResults === undefined
+    ? undefined
+    : await host.openResults(defaultResultRoot);
+  const results = openedResults?.repository ?? new FileBuildResultRepository(defaultResultRoot);
   return {
-    profile: resolvedProfile,
-    runtime,
+    ...(resolvedProfile === undefined ? {} : { profile: resolvedProfile }),
+    ...(runtime === undefined ? {} : { runtime }),
     async library() {
-      return await readStudioLibrary({ profile: resolvedProfile, workspaceRoot, runtime });
+      return await readStudioLibrary({
+        ...(resolvedProfile === undefined ? {} : { profile: resolvedProfile }),
+        workspaceRoot,
+        ...(runtime === undefined ? {} : { runtime }),
+        results,
+      });
     },
     async resolveBuildRecord(build, output) {
-      const held = await runtime.status(build);
-      const state = held.build?.state;
-      if (state === undefined) return undefined;
-      const alias = held.catalog?.aliases.find((item) => item.name === output);
-      if (alias !== undefined && alias.ref.kind !== "logical-output") {
-        throw new Error(`Build ${build} alias ${output} is an authored Record, not a Logical Output`);
-      }
-      const record = alias === undefined
-        ? selectArchivedRecord(state, { output })
-        : selectArchivedRecord(state, {
-            name: output,
-            catalog: held.catalog as NonNullable<typeof held.catalog>,
-          });
-      return { type: record.type, value: record.value };
+      return await resolveBuildResultRecord(results, build, output);
     },
-    async read(digest) { return await artifacts.readArtifact(digest) ?? undefined; },
+    async openArtifact(build, output, valuePath) {
+      const resolved = await results.resolve(build, output);
+      if (resolved === undefined) return undefined;
+      const match = filesInResolvedOutput(resolved).find((item) => item.valuePath === valuePath);
+      if (match === undefined) return undefined;
+      const stream = await results.openFile(resolved.build, match.file);
+      if (stream === undefined) return undefined;
+      const chunks: Uint8Array[] = [];
+      let size = 0;
+      for await (const chunk of stream) {
+        const copy = Uint8Array.from(chunk);
+        chunks.push(copy);
+        size += copy.byteLength;
+      }
+      const bytes = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      return { mediaType: match.file.mediaType, bytes };
+    },
     async close() {
-      await artifacts.close();
-      await runtime.close();
+      await openedResults?.close();
+      await runtime?.close();
     },
   };
 }

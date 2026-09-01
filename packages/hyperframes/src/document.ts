@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { assertCompositableSurfaceRef } from "@hypit/media";
 import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
 import { programSpaceFrameCount } from "@hypit/program-space";
@@ -17,12 +15,12 @@ import type {
   VisualStyleDeclaration,
   VisualTrack,
 } from "@hypit/composition";
-import { canonicalStringify, isDigest } from "@hypit/protocol";
-import type { BlobRef, Digest } from "@hypit/protocol";
+import { canonicalStringify, isResourceId } from "@hypit/protocol";
+import type { BlobRef, ResourceId } from "@hypit/protocol";
 import { VISUAL_IR_V1 } from "@hypit/visual-ir";
 
 import type {
-  ArtifactUrlResolver,
+  ResourceUrlResolver,
   HyperframesDocument,
   HyperframesFrameSpan,
 } from "./types.js";
@@ -34,8 +32,8 @@ import {
 } from "./text.js";
 
 const NANOSECONDS = 1_000_000_000n;
-const ARTIFACT_URI = /hypit-artifact:\/\/sha256\/([0-9a-f]{64})/gu;
-const SURFACE_ARTIFACT = /data-hypit-surface-artifact="(sha256:[0-9a-f]{64})"/gu;
+const RESOURCE_URI = /hypit-resource:\/\/(res_[a-zA-Z0-9._:-]+)/gu;
+const SURFACE_RESOURCE = /data-hypit-surface-resource="(res_[a-zA-Z0-9._:-]+)"/gu;
 
 function escapeHtml(value: string): string {
   return value
@@ -178,9 +176,9 @@ function percentage(frame: number, totalFrames: number): string {
   return `${whole}.${String(remainder).padStart(9, "0").replace(/0+$/u, "")}%`;
 }
 
-export function hyperframesArtifactUri(digest: Digest): string {
-  if (!isDigest(digest)) throw new Error("HyperFrames Artifact digest is invalid.");
-  return `hypit-artifact://sha256/${digest.slice("sha256:".length)}`;
+export function hyperframesResourceUri(resource: ResourceId): string {
+  if (!isResourceId(resource)) throw new Error("HyperFrames Resource id is invalid.");
+  return `hypit-resource://${resource}`;
 }
 
 function css(style: readonly VisualStyleDeclaration[]): string {
@@ -200,34 +198,30 @@ function attributes(values: readonly VisualAttribute[] | undefined): string {
   return (values ?? []).map(({ name, value }) => ` ${name}="${escapeHtml(value)}"`).join("");
 }
 
-/**
- * Name a DOM node after what it is, in a fixed number of characters.
- *
- * HyperFrames reads the `<video>` element's id back out of the document and spends it as a
- * directory name for that video's extracted frames. On Windows those frames live under
- * `%TEMP%\hf-render-…`, which leaves around 150 characters before the path stops being one. An
- * identity that carried its parts verbatim did not fit: a Track spanning five takes names all
- * five, the Present and the layer each repeat the Track's name, and encoding the three of them
- * multiplied the result again. A single take was already within five characters of the limit.
- *
- * A digest is the same identity at a length that does not depend on how much was said. It is
- * still stable, so the document still renders the same bytes for the same composition and the
- * frame cache still hits. Nothing reads the parts back: `data-hypit-element-id` and
- * `data-hypit-track-id` carry them, spelled the way an author wrote them.
- */
-function stableDomId(parts: readonly string[]): string {
-  return `hypit-${createHash("sha256").update(JSON.stringify(parts)).digest("hex").slice(0, 24)}`;
+type StableDomId = (parts: readonly string[]) => string;
+
+/** Allocate short document-local names in first-use order; authored ids stay in data attributes. */
+function createStableDomId(): StableDomId {
+  const ids = new Map<string, string>();
+  return (parts) => {
+    const key = canonicalStringify(parts);
+    const existing = ids.get(key);
+    if (existing !== undefined) return existing;
+    const id = `hypit-${ids.size + 1}`;
+    ids.set(key, id);
+    return id;
+  };
 }
 
-function exactFontFamily(font: FontArtifactRef): string {
-  return stableDomId(["font", canonicalStringify(font)]);
+function exactFontFamily(font: FontArtifactRef, stableId: StableDomId): string {
+  return stableId(["font", canonicalStringify(font)]);
 }
 
-function exactFontStyle(element: VisualElement): string[] {
+function exactFontStyle(element: VisualElement, stableId: StableDomId): string[] {
   if (element.kind !== "text") return [];
   const first = element.fonts[0]!;
   return [
-    `font-family:${element.fonts.map(exactFontFamily).join(",")}`,
+    `font-family:${element.fonts.map((font) => exactFontFamily(font, stableId)).join(",")}`,
     `font-weight:${first.weight}`,
     `font-style:${first.style}`,
     "font-synthesis:none",
@@ -248,12 +242,13 @@ function renderElement(
     readonly programDenominator: number;
     readonly stackIndex: number;
     readonly emittedFilterIds: Set<string>;
+    readonly stableId: StableDomId;
   },
 ): string {
-  const id = stableDomId([context.trackId, context.presentId, element.id]);
+  const id = context.stableId([context.trackId, context.presentId, element.id]);
   const animationName = element.animation === undefined
     ? undefined
-    : stableDomId(["animation", context.trackId, context.presentId, element.id]);
+    : context.stableId(["animation", context.trackId, context.presentId, element.id]);
   const animationProperties = element.animation === undefined
     ? []
     : [...new Set(element.animation.keyframes.flatMap((keyframe) => keyframe.style.map((declaration) => declaration.name)))].sort();
@@ -263,7 +258,7 @@ function renderElement(
   const animationDuration = frameSeconds(animationDurationFrames, context.programNumerator, context.programDenominator);
   const inlineStyle = [
     css(element.style),
-    ...exactFontStyle(element),
+    ...exactFontStyle(element, context.stableId),
     ...(animationName === undefined ? [] : [
       `animation-name:${animationName}`,
       `animation-duration:${animationDuration}s`,
@@ -288,7 +283,7 @@ function renderElement(
     if (maskRoot === undefined || contentRoot === undefined || direct.length !== 2) {
       throw new Error(`Local mask ${element.id} is missing its declared owned roots.`);
     }
-    const maskId = stableDomId([context.trackId, context.presentId, element.id, "mask"]);
+    const maskId = context.stableId([context.trackId, context.presentId, element.id, "mask"]);
     const maskWidth = pixelDimension(element.style, "width");
     const maskHeight = pixelDimension(element.style, "height");
     const viewport = maskWidth === undefined || maskHeight === undefined
@@ -314,17 +309,17 @@ function renderElement(
           ? blockAlignment === "flex-start" ? "0" : blockAlignment === "flex-end" ? "100%" : "50%"
           : String(blockAlignment === "flex-start" ? paddingTop : blockAlignment === "flex-end" ? maskHeight - paddingBottom : (paddingTop + maskHeight - paddingBottom) / 2);
         const baseline = blockAlignment === "flex-start" ? "text-before-edge" : blockAlignment === "flex-end" ? "text-after-edge" : "central";
-        const textStyle = [css(maskRoot.style), ...exactFontStyle(maskRoot), "fill:currentColor"].filter(Boolean).join(";");
+        const textStyle = [css(maskRoot.style), ...exactFontStyle(maskRoot, context.stableId), "fill:currentColor"].filter(Boolean).join(";");
         return `<text${attributes(maskRoot.attributes)} x="${x}" y="${y}" text-anchor="${anchor}" dominant-baseline="${baseline}" style="${escapeHtml(textStyle)}">${escapeHtml(maskRoot.text)}</text>`;
       }
       if (maskRoot.kind === "text-flow" || maskRoot.kind === "path-text") {
         return `<foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:100%;height:100%">${renderOwned(maskRoot)}</div></foreignObject>`;
       }
       if (maskRoot.kind === "image") {
-        return `<image x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
+        return `<image x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesResourceUri(maskRoot.artifact.resource))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
       }
       if (maskRoot.kind === "surface" && maskRoot.surface.timing.kind === "still") {
-        return `<image data-hypit-surface-artifact="${maskRoot.surface.artifact.digest}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.surface.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
+        return `<image data-hypit-surface-resource="${maskRoot.surface.artifact.resource}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesResourceUri(maskRoot.surface.artifact.resource))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
       }
       throw new Error(`Local mask ${element.id} requires a terminal owned text, image or still Surface mask source.`);
     })();
@@ -343,8 +338,8 @@ function renderElement(
     programNumerator: context.programNumerator,
     programDenominator: context.programDenominator,
     escape: escapeHtml,
-    stableId: stableDomId,
-    exactFontFamily,
+    stableId: context.stableId,
+    exactFontFamily: (font: FontArtifactRef) => exactFontFamily(font, context.stableId),
     baseStyle: inlineStyle,
     commonAttributes,
     emittedFilterIds: context.emittedFilterIds,
@@ -360,7 +355,7 @@ function renderElement(
   }
   if ((element.kind === "video" || element.kind === "surface") && element.sampling !== undefined) {
     const artifact = element.kind === "surface" ? element.surface.artifact : element.artifact;
-    const source = escapeHtml(hyperframesArtifactUri(artifact.digest));
+    const source = escapeHtml(hyperframesResourceUri(artifact.resource));
     let part = 0;
     return element.sampling.segments.flatMap((segment) => samplingRuns(segment).map((run) => {
       part += 1;
@@ -383,7 +378,7 @@ function renderElement(
         "muted",
         "playsinline",
         ...(element.kind === "surface" ? [
-          `data-hypit-surface-artifact="${element.surface.artifact.digest}"`,
+          `data-hypit-surface-resource="${element.surface.artifact.resource}"`,
           `data-hypit-alpha-mode="${element.surface.alphaMode}"`,
           `data-hypit-color-space="${element.surface.colorSpace}"`,
           `width="${element.surface.width}"`,
@@ -394,9 +389,9 @@ function renderElement(
     })).join("");
   }
   if (element.kind === "surface") {
-    const source = escapeHtml(hyperframesArtifactUri(element.surface.artifact.digest));
+    const source = escapeHtml(hyperframesResourceUri(element.surface.artifact.resource));
     const surface = [
-      `data-hypit-surface-artifact="${element.surface.artifact.digest}"`,
+      `data-hypit-surface-resource="${element.surface.artifact.resource}"`,
       `data-start="${context.presentStart}"`,
       `data-duration="${context.presentDuration}"`,
       `data-track-index="${context.stackIndex}"`,
@@ -416,7 +411,7 @@ function renderElement(
     element.kind === "video" && element.muted !== false ? "muted" : "",
     element.kind === "video" ? "playsinline" : "",
   ].filter(Boolean).join(" ");
-  const source = escapeHtml(hyperframesArtifactUri(element.artifact.digest));
+  const source = escapeHtml(hyperframesResourceUri(element.artifact.resource));
   if (element.kind === "image") return `<img ${common} ${media} src="${source}"/>`;
   return `<video ${common} ${media} src="${source}">${descendants}</video>`;
 }
@@ -428,6 +423,7 @@ function renderVisualPresent(
   numerator: number,
   denominator: number,
   emittedFilterIds: Set<string>,
+  stableId: StableDomId,
 ): string {
   const start = frameSeconds(present.span.startFrame, numerator, denominator);
   const duration = frameSeconds(present.span.endFrameExclusive - present.span.startFrame, numerator, denominator);
@@ -451,16 +447,17 @@ function renderVisualPresent(
     programDenominator: denominator,
     stackIndex,
     emittedFilterIds,
+    stableId,
   });
   return `<div class="clip hypit-visual-present" data-hypit-track-id="${escapeHtml(track.id)}" data-hypit-present-id="${escapeHtml(present.id)}" data-hypit-stack-order="${present.stacking.order}" data-hypit-stack-tie="${escapeHtml(present.stacking.tieBreak)}" data-track-index="${stackIndex}" data-start="${start}" data-duration="${duration}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${contents}</div>`;
 }
 
-function renderAnimationRules(track: VisualTrack, present: VisualPresent): string[] {
+function renderAnimationRules(track: VisualTrack, present: VisualPresent, stableId: StableDomId): string[] {
   const presentDurationFrames = present.span.endFrameExclusive - present.span.startFrame;
   return present.elements.flatMap((element) => {
     if (element.animation === undefined) return [];
     const durationFrames = Math.max(presentDurationFrames, element.animation.keyframes.at(-1)?.atFrame ?? 0);
-    const name = stableDomId(["animation", track.id, present.id, element.id]);
+    const name = stableId(["animation", track.id, present.id, element.id]);
     const keyframes: VisualAnimation["keyframes"] = element.animation.keyframes.at(-1)?.atFrame === durationFrames
       ? element.animation.keyframes
       : [...element.animation.keyframes, {
@@ -487,19 +484,19 @@ function orderedVisualPresents(tracks: readonly Track[]): Array<{ readonly track
 }
 
 function collectArtifacts(composition: Composition): BlobRef[] {
-  const artifacts = new Map<Digest, BlobRef>();
-  const add = (artifact: Pick<BlobRef, "digest" | "size" | "mediaType">): void => {
+  const artifacts = new Map<ResourceId, BlobRef>();
+  const add = (artifact: Pick<BlobRef, "resource" | "size" | "mediaType">): void => {
     const next: BlobRef = {
       kind: "blob",
-      digest: artifact.digest,
+      resource: artifact.resource,
       size: artifact.size,
       mediaType: artifact.mediaType,
     };
-    const existing = artifacts.get(artifact.digest);
+    const existing = artifacts.get(artifact.resource);
     if (existing !== undefined && (existing.size !== next.size || existing.mediaType !== next.mediaType)) {
-      throw new Error(`HyperFrames Artifact ${artifact.digest} has conflicting metadata.`);
+      throw new Error(`HyperFrames Artifact ${artifact.resource} has conflicting metadata.`);
     }
-    artifacts.set(artifact.digest, next);
+    artifacts.set(artifact.resource, next);
   };
   for (const track of composition.tracks) {
     if (track.kind === "audio") continue;
@@ -520,27 +517,27 @@ function collectArtifacts(composition: Composition): BlobRef[] {
       }
     }
   }
-  return [...artifacts.values()].sort((left, right) => left.digest.localeCompare(right.digest));
+  return [...artifacts.values()].sort((left, right) => left.resource.localeCompare(right.resource));
 }
 
 function collectSurfaces(composition: Composition): CompositableSurfaceRef[] {
-  const surfaces = new Map<Digest, CompositableSurfaceRef>();
+  const surfaces = new Map<ResourceId, CompositableSurfaceRef>();
   for (const track of composition.tracks) {
     if (track.kind !== "visual") continue;
     for (const present of track.presents) {
       for (const element of present.elements) {
         if (element.kind !== "surface") continue;
         const surface = structuredClone(element.surface);
-        const existing = surfaces.get(surface.artifact.digest);
+        const existing = surfaces.get(surface.artifact.resource);
         if (existing !== undefined && canonicalStringify(existing) !== canonicalStringify(surface)) {
-          throw new Error(`HyperFrames Surface ${surface.artifact.digest} has conflicting declarations.`);
+          throw new Error(`HyperFrames Surface ${surface.artifact.resource} has conflicting declarations.`);
         }
-        surfaces.set(surface.artifact.digest, surface);
+        surfaces.set(surface.artifact.resource, surface);
       }
     }
   }
   return [...surfaces.values()].sort((left, right) =>
-    left.artifact.digest.localeCompare(right.artifact.digest));
+    left.artifact.resource.localeCompare(right.artifact.resource));
 }
 
 function collectFonts(composition: Composition): FontArtifactRef[] {
@@ -573,11 +570,11 @@ function fontFormat(mediaType: string): string {
   return "truetype";
 }
 
-function renderFontFaces(composition: Composition): string {
+function renderFontFaces(composition: Composition, stableId: StableDomId): string {
   return collectFonts(composition).flatMap((font) => font.sources.map((source) => [
       "@font-face{",
-      `font-family:${exactFontFamily(font)};`,
-      `src:url(\"${hyperframesArtifactUri(source.artifact.digest)}\") format(\"${fontFormat(source.artifact.mediaType)}\");`,
+      `font-family:${exactFontFamily(font, stableId)};`,
+      `src:url(\"${hyperframesResourceUri(source.artifact.resource)}\") format(\"${fontFormat(source.artifact.mediaType)}\");`,
       `font-weight:${font.weight};`,
       `font-style:${font.style};`,
       "font-display:block;",
@@ -645,9 +642,10 @@ function emitHtml(composition: Composition, programSpace: ProgramSpace): string 
   // One document, one set of glyph filter definitions: every Present writes only what is not
   // already there, and references resolve across the document regardless of where they landed.
   const emittedFilterIds = new Set<string>();
-  const visualHtml = visuals.map(({ track, present }, index) => renderVisualPresent(track, present, index, numerator, denominator, emittedFilterIds)).join("\n    ");
-  const animationCss = visuals.flatMap(({ track, present }) => renderAnimationRules(track, present)).join("\n    ");
-  const fontCss = renderFontFaces(composition);
+  const stableId = createStableDomId();
+  const visualHtml = visuals.map(({ track, present }, index) => renderVisualPresent(track, present, index, numerator, denominator, emittedFilterIds, stableId)).join("\n    ");
+  const animationCss = visuals.flatMap(({ track, present }) => renderAnimationRules(track, present, stableId)).join("\n    ");
+  const fontCss = renderFontFaces(composition, stableId);
   const duration = frameSeconds(programSpaceFrameCount(programSpace), numerator, denominator);
   const fps = fpsRational(numerator, denominator);
   const frameCount = programSpaceFrameCount(programSpace);
@@ -687,10 +685,10 @@ function normalizedDocument(value: HyperframesDocument): HyperframesDocument {
     canvas: { ...value.canvas },
     artifacts: [...value.artifacts]
       .map((artifact) => ({ ...artifact }))
-      .sort((left, right) => left.digest.localeCompare(right.digest)),
+      .sort((left, right) => left.resource.localeCompare(right.resource)),
     surfaces: [...value.surfaces]
       .map((surface) => structuredClone(surface))
-      .sort((left, right) => left.artifact.digest.localeCompare(right.artifact.digest)),
+      .sort((left, right) => left.artifact.resource.localeCompare(right.artifact.resource)),
     html: value.html,
   };
 }
@@ -730,25 +728,25 @@ export function assertHyperframesDocument(document: HyperframesDocument): void {
   }
   if (!document.html.startsWith("<!doctype html>")) throw new Error("HyperframesDocument HTML is invalid.");
   const declared = [...document.artifacts];
-  if (declared.some((item) => item.kind !== "blob" || !isDigest(item.digest)
+  if (declared.some((item) => item.kind !== "blob" || !isResourceId(item.resource)
     || !Number.isSafeInteger(item.size) || item.size < 0 || item.mediaType.length === 0)
-    || new Set(declared.map((item) => item.digest)).size !== declared.length) {
+    || new Set(declared.map((item) => item.resource)).size !== declared.length) {
     throw new Error("HyperframesDocument Artifact set is invalid.");
   }
-  const referenced = [...document.html.matchAll(ARTIFACT_URI)].map((match) => `sha256:${match[1]}` as Digest);
+  const referenced = [...document.html.matchAll(RESOURCE_URI)].map((match) => match[1] as ResourceId);
   const actual = [...new Set(referenced)].sort();
-  if (JSON.stringify(actual) !== JSON.stringify(declared.map((item) => item.digest).sort())) {
+  if (JSON.stringify(actual) !== JSON.stringify(declared.map((item) => item.resource).sort())) {
     throw new Error("HyperframesDocument Artifact placeholders do not match its declared dependencies.");
   }
   if (!Array.isArray(document.surfaces)) throw new Error("HyperframesDocument Surface set is invalid.");
   const surfaceArtifacts = new Set<string>();
   for (const [index, surface] of document.surfaces.entries()) {
     assertCompositableSurfaceRef(surface, `HyperframesDocument.surfaces.${index}`);
-    if (surfaceArtifacts.has(surface.artifact.digest)) {
+    if (surfaceArtifacts.has(surface.artifact.resource)) {
       throw new Error("HyperframesDocument Surface set repeats an Artifact.");
     }
-    surfaceArtifacts.add(surface.artifact.digest);
-    const artifact = declared.find((item) => item.digest === surface.artifact.digest);
+    surfaceArtifacts.add(surface.artifact.resource);
+    const artifact = declared.find((item) => item.resource === surface.artifact.resource);
     if (artifact === undefined
       || artifact.size !== surface.artifact.size
       || artifact.mediaType !== surface.artifact.mediaType) {
@@ -756,7 +754,7 @@ export function assertHyperframesDocument(document: HyperframesDocument): void {
     }
   }
   const referencedSurfaces = [...new Set(
-    [...document.html.matchAll(SURFACE_ARTIFACT)].map((match) => match[1]!),
+    [...document.html.matchAll(SURFACE_RESOURCE)].map((match) => match[1]!),
   )].sort();
   if (JSON.stringify(referencedSurfaces) !== JSON.stringify([...surfaceArtifacts].sort())) {
     throw new Error("HyperframesDocument Surface markers do not match its typed dependencies.");
@@ -793,14 +791,13 @@ export function assertHyperframesFrameSpan(
 /** Runtime-only URL materialization. The returned HTML is intentionally not a new compiled Record. */
 export function materializeHyperframesHtml(
   document: HyperframesDocument,
-  resolve: ArtifactUrlResolver,
+  resolve: ResourceUrlResolver,
 ): string {
   assertHyperframesDocument(document);
-  const artifacts = new Map(document.artifacts.map((artifact) => [artifact.digest, artifact]));
-  return document.html.replace(ARTIFACT_URI, (_uri, hash: string) => {
-    const digest = `sha256:${hash}` as Digest;
-    const artifact = artifacts.get(digest);
-    if (artifact === undefined) throw new Error(`HyperFrames Artifact ${digest} is undeclared.`);
+  const artifacts = new Map(document.artifacts.map((artifact) => [artifact.resource, artifact]));
+  return document.html.replace(RESOURCE_URI, (_uri, resource: ResourceId) => {
+    const artifact = artifacts.get(resource);
+    if (artifact === undefined) throw new Error(`HyperFrames Resource ${resource} is undeclared.`);
     return escapeHtml(resolve(artifact));
   });
 }

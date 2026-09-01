@@ -17,7 +17,7 @@ export const mediaMarkupSurfaces = [
     {
       name: "image", tag: "Image", mode: "structured", outputs: [artifactTypes.blob],
       vocabulary: {
-        summary: "Requests one authored image file from the Host and publishes it as a content-addressed Artifact.",
+        summary: "Requests one authored image file from the Host and publishes it as a byte Artifact.",
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names the Artifact Record this element publishes." },
@@ -38,7 +38,7 @@ export const mediaMarkupSurfaces = [
     {
       name: "audio", tag: "Audio", mode: "structured", outputs: [artifactTypes.blob],
       vocabulary: {
-        summary: "Requests one authored audio file from the Host and publishes it as a content-addressed Artifact.",
+        summary: "Requests one authored audio file from the Host and publishes it as a byte Artifact.",
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names the Artifact Record this element publishes." },
@@ -59,7 +59,7 @@ export const mediaMarkupSurfaces = [
     {
       name: "video", tag: "Video", mode: "structured", outputs: [artifactTypes.blob],
       vocabulary: {
-        summary: "Requests one authored video file from the Host and publishes it as a content-addressed Artifact.",
+        summary: "Requests one authored video file from the Host and publishes it as a byte Artifact.",
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names the Artifact Record this element publishes." },

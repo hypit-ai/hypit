@@ -6,7 +6,7 @@ import { compositionDependency, compositionTypes, sealAudioTrack, sealVisualTrac
 import type { Track } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import { createResolvedClosure, sealBuildRequest, start } from "@hypit/core";
@@ -39,7 +39,7 @@ import {
 import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
 
 const fixtureModule = { name: "example.film-fixture", version: "1" } as const;
-const fixtureSurfaceDigest = fixtureDigest("example.film-fixture/inputs-surface@1");
+const fixtureSurfaceDigest = fixtureResource("example.film-fixture/inputs-surface@1");
 const fixtureSurface = {
   name: "inputs", tag: "Inputs", mode: "structured",
   outputs: [semanticTrackTypes.track, compositionTypes.visualTrack, compositionTypes.audioTrack],

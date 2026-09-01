@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { mkdir, open, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -8,7 +7,7 @@ import type { BlobRef } from "@hypit/protocol";
 import { assertHyperframesDocument, materializeHyperframesHtml } from "./document.js";
 import type { HyperframesDocument } from "./types.js";
 
-/** Reads one content-addressed dependency. Whose store it comes from is the caller's business. */
+/** Reads one execution resource. Whose store it comes from is the caller's business. */
 export type HyperframesArtifactReader = (
   artifact: BlobRef,
 ) => Promise<Uint8Array | AsyncIterable<Uint8Array>>;
@@ -40,11 +39,8 @@ function extension(mediaType: string): string {
  *
  * The same layout serves a local render and a distributed one: the local
  * Provider points the CLI at it, and the AWS Provider tars it into a site. If
- * the two laid it out differently, one Need would name two different projects
- * and the content-addressed site id would stop meaning anything.
- *
- * Dependencies are named by digest, so a directory built twice from one
- * document is byte-identical and an unchanged tree re-uploads as a no-op.
+ * the two laid it out differently, one Need would name two different projects.
+ * Resource names are local to this staged project and carry no content claim.
  */
 export async function stageHyperframesProject(options: {
   readonly document: HyperframesDocument;
@@ -60,22 +56,20 @@ export async function stageHyperframesProject(options: {
   const artifactDirectory = join(directory, "artifacts");
   await mkdir(artifactDirectory, { recursive: true });
   const paths = new Map<string, string>();
-  const surfaces = new Map(document.surfaces.map((surface) => [surface.artifact.digest, surface]));
+  const surfaces = new Map(document.surfaces.map((surface) => [surface.artifact.resource, surface]));
   await Promise.all(document.artifacts.map(async (artifact) => {
-    const name = `${artifact.digest.slice("sha256:".length)}${extension(artifact.mediaType)}`;
+    const name = `${artifact.resource}${extension(artifact.mediaType)}`;
     const opened = await read(artifact);
     const chunks = opened instanceof Uint8Array
       ? (async function* () { yield opened; })()
       : opened;
-    const hash = createHash("sha256");
-    const surface = surfaces.get(artifact.digest);
+    const surface = surfaces.get(artifact.resource);
     const retained: Uint8Array[] = [];
     let size = 0;
     const target = await open(join(artifactDirectory, name), "w");
     try {
       for await (const chunk of chunks) {
         await target.write(chunk);
-        hash.update(chunk);
         size += chunk.byteLength;
         if (surface !== undefined) retained.push(Uint8Array.from(chunk));
       }
@@ -83,11 +77,7 @@ export async function stageHyperframesProject(options: {
       await target.close();
     }
     if (size !== artifact.size) {
-      throw new Error(`HyperFrames Artifact ${artifact.digest} size differs`);
-    }
-    const digest = `sha256:${hash.digest("hex")}`;
-    if (digest !== artifact.digest) {
-      throw new Error(`HyperFrames Artifact ${artifact.digest} bytes differ`);
+      throw new Error(`HyperFrames Artifact ${artifact.resource} size differs`);
     }
     const bytes = surface === undefined ? undefined : (() => {
       const value = new Uint8Array(size);
@@ -101,11 +91,11 @@ export async function stageHyperframesProject(options: {
     if (surface !== undefined) {
       await options.validateSurface!(structuredClone(surface), bytes!.slice());
     }
-    paths.set(artifact.digest, `./artifacts/${name}`);
+    paths.set(artifact.resource, `./artifacts/${name}`);
   }));
   const html = materializeHyperframesHtml(document, (artifact) => {
-    const path = paths.get(artifact.digest);
-    if (path === undefined) throw new Error(`HyperFrames Artifact ${artifact.digest} was not staged`);
+    const path = paths.get(artifact.resource);
+    if (path === undefined) throw new Error(`HyperFrames Artifact ${artifact.resource} was not staged`);
     return path;
   });
   await writeFile(join(directory, "index.html"), html, "utf8");

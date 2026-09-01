@@ -6,9 +6,9 @@ import { sealSpeechEvidenceAudio } from "@hypit/speech";
 import type { SpeechEvidenceAudio } from "@hypit/speech";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
-import type { Digest, ProducerRef } from "@hypit/protocol";
+import type { ResourceId, ProducerRef } from "@hypit/protocol";
 import {
   whisperXComponent,
   whisperXProducers,
@@ -19,7 +19,7 @@ function evidenceAudio(): SpeechEvidenceAudio {
   return sealSpeechEvidenceAudio({
     artifact: {
       kind: "blob",
-      digest: fixtureDigest("whisperx-test:evidence-audio"),
+      resource: fixtureResource("whisperx-test:evidence-audio"),
       size: 32_044,
       mediaType: "audio/wav",
     },
@@ -30,7 +30,7 @@ function evidenceAudio(): SpeechEvidenceAudio {
 test("WhisperX receives normalized bytes without authored Segment truth", () => {
   const valid = evidenceAudio();
   const request = whisperXRequestForEvidenceAudio(valid, { language: "es" });
-  assert.equal(request.audio.digest, valid.artifact.digest);
+  assert.equal(request.audio.resource, valid.artifact.resource);
   assert.equal("segments" in request, false);
   assert.equal(request.sampleFrames, 16_000);
   assert.equal(request.language, "es");

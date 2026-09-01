@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { S3ArtifactStore } from "@hypit/artifact-store-s3";
-import type { S3ObjectClient } from "@hypit/artifact-store-s3";
-import { isStreamingArtifactStore } from "@hypit/runtime";
+import { S3ResourceStore } from "@hypit/resource-store-s3";
+import type { S3ObjectClient } from "@hypit/resource-store-s3";
+import { isStreamingResourceStore } from "@hypit/runtime";
 
 class FakeS3 implements S3ObjectClient {
   readonly values = new Map<string, Uint8Array>();
@@ -22,15 +22,15 @@ class FakeS3 implements S3ObjectClient {
   }
 }
 
-test("S3 artifacts use deterministic content-addressed keys", async () => {
+test("S3 resources use independent execution-local keys", async () => {
   const client = new FakeS3();
-  const store = new S3ArtifactStore({ client, bucket: "fixture", prefix: "projects/acme" });
+  const store = new S3ResourceStore({ client, bucket: "fixture", prefix: "projects/acme" });
   const bytes = new TextEncoder().encode("one immutable remote artifact");
   const first = await store.put(bytes, "video/mp4");
   const second = await store.put(bytes, "video/mp4");
-  assert.equal(first.digest, second.digest);
-  assert.match(store.key(first.digest), /^projects\/acme\/sha256\//u);
-  assert.deepEqual(await store.get(first.digest), bytes);
+  assert.notEqual(first.resource, second.resource);
+  assert.match(store.key(first.resource), /^projects\/acme\/resources\/res_/u);
+  assert.deepEqual(await store.get(first.resource), bytes);
 });
 
 /** A client that can do everything, backed by an in-memory bucket. */
@@ -81,64 +81,51 @@ class FullFakeS3 extends FakeS3 {
 
   async abortMultipart() {}
 
-  async copy(input: Parameters<NonNullable<S3ObjectClient["copy"]>>[0]) {
-    const source = input.CopySource!.slice(input.CopySource!.indexOf("/") + 1);
-    const value = this.values.get(source);
-    if (value === undefined) throw new Error(`copy source ${source} is absent`);
-    this.values.set(input.Key!, Uint8Array.from(value));
-  }
-
-  async delete(input: Parameters<NonNullable<S3ObjectClient["delete"]>>[0]) {
-    this.values.delete(input.Key!);
-  }
-
 }
 
 test("streaming is exposed only when the client supports it", () => {
-  const store = new S3ArtifactStore({ client: new FakeS3(), bucket: "fixture" });
-  assert.equal(isStreamingArtifactStore(store), false);
-  const full = new S3ArtifactStore({ client: new FullFakeS3(), bucket: "fixture" });
-  assert.equal(isStreamingArtifactStore(full), true);
+  const store = new S3ResourceStore({ client: new FakeS3(), bucket: "fixture" });
+  assert.equal(isStreamingResourceStore(store), false);
+  const full = new S3ResourceStore({ client: new FullFakeS3(), bucket: "fixture" });
+  assert.equal(isStreamingResourceStore(full), true);
 });
 
-test("a streamed Artifact reaches the content-addressed key it earned by being hashed", async () => {
+test("a streamed Resource reaches its declared resource key", async () => {
   const client = new FullFakeS3();
-  const store = new S3ArtifactStore({ client, bucket: "fixture", prefix: "svml" });
+  const store = new S3ResourceStore({ client, bucket: "fixture", prefix: "svml" });
   const parts = ["first ", "second ", "third"].map((text) => new TextEncoder().encode(text));
   const ref = await store.putStream!((async function* () { yield* parts; })(), "video/mp4");
 
   const whole = new TextEncoder().encode("first second third");
   assert.equal(ref.size, whole.byteLength);
-  assert.deepEqual(await store.get(ref.digest), whole);
-  assert.match(store.key(ref.digest), /^svml\/sha256\//u);
-  // The staging key is gone, so it is not mistaken for an Artifact.
-  assert.deepEqual([...client.values.keys()].filter((key) => key.includes(".incoming")), []);
+  assert.deepEqual(await store.get(ref.resource), whole);
+  assert.match(store.key(ref.resource), /^svml\/resources\/res_/u);
 });
 
-test("an empty Artifact is a legitimate one, and S3 will not accept a partless upload", async () => {
-  const store = new S3ArtifactStore({ client: new FullFakeS3(), bucket: "fixture" });
+test("an empty Resource is legitimate even though S3 will not accept a partless upload", async () => {
+  const store = new S3ResourceStore({ client: new FullFakeS3(), bucket: "fixture" });
   const ref = await store.putStream!((async function* () {})(), "application/octet-stream");
   assert.equal(ref.size, 0);
-  assert.deepEqual(await store.get(ref.digest), new Uint8Array(0));
+  assert.deepEqual(await store.get(ref.resource), new Uint8Array(0));
 });
 
 test("a streamed read hands back bytes as they arrive", async () => {
   const client = new FullFakeS3();
-  const store = new S3ArtifactStore({ client, bucket: "fixture" });
+  const store = new S3ResourceStore({ client, bucket: "fixture" });
   const bytes = new TextEncoder().encode("streamed artifact bytes");
   const ref = await store.put(bytes, "text/plain");
 
   const chunks: Uint8Array[] = [];
-  for await (const chunk of (await store.open!(ref.digest))!) chunks.push(chunk);
+  for await (const chunk of (await store.open!(ref.resource))!) chunks.push(chunk);
   assert.equal(chunks.length, 2, "the stream was not assembled on the caller's behalf");
 });
 
 test("presence uses object metadata without downloading bytes", async () => {
   const client = new FullFakeS3();
-  const store = new S3ArtifactStore({ client, bucket: "fixture" });
+  const store = new S3ResourceStore({ client, bucket: "fixture" });
   const ref = await store.put(new TextEncoder().encode("present"), "text/plain");
   const gets = client.gets;
-  assert.equal(await store.has(ref.digest), true);
+  assert.equal(await store.has(ref.resource), true);
   assert.equal(client.heads, 1);
   assert.equal(client.gets, gets, "has did not download the object");
 });

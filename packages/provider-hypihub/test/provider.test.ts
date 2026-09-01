@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
+import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
 import type { AsyncEndpoint } from "@hypit/endpoint-kit";
 import { geminiCapabilities, sealGeminiRequest } from "@hypit/gemini";
 import type { CanonicalValue, Need } from "@hypit/protocol";
@@ -53,8 +53,8 @@ test("HypiHub exposes VoiceDesign by default and permits an explicit alternate a
 });
 
 test("HypiHub uploads referenced Artifacts once, submits their HTTPS URLs, and persists the result", async () => {
-  const artifacts = new MemoryArtifactStore();
-  const reference = await artifacts.put(new Uint8Array([1, 2, 3]), "image/png");
+  const resources = new MemoryResourceStore();
+  const reference = await resources.put(new Uint8Array([1, 2, 3]), "image/png");
   const request = need(sealSeedanceRequest("seedance-2-mini", {
     prompt: ["A presenter turns toward camera."],
     referenceImage: [
@@ -105,7 +105,7 @@ test("HypiHub uploads referenced Artifacts once, submits their HTTPS URLs, and p
   const endpoint = await endpointFor(request, fakeFetch);
   const common = {
     command: { kind: "fulfill-need", id: "command:hypihub-test", need: request } as const,
-    need: request, artifacts, credentials: { apiKey: { secret: "test-key" } },
+    need: request, resources, credentials: { apiKey: { secret: "test-key" } },
     operation: "operation:hypihub-test",
   };
   const started = await endpoint.start(common);
@@ -118,9 +118,9 @@ test("HypiHub uploads referenced Artifacts once, submits their HTTPS URLs, and p
 });
 
 test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every media Artifact", async () => {
-  const artifacts = new MemoryArtifactStore();
-  const image = await artifacts.put(new Uint8Array([1, 2, 3]), "image/png");
-  const video = await artifacts.put(new Uint8Array([4, 5, 6]), "video/mp4");
+  const resources = new MemoryResourceStore();
+  const image = await resources.put(new Uint8Array([1, 2, 3]), "image/png");
+  const video = await resources.put(new Uint8Array([4, 5, 6]), "video/mp4");
   const request: Need = {
     id: "need:hypihub-gemini",
     capability: geminiCapabilities["gemini-3.7-flash"],
@@ -154,7 +154,7 @@ test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every med
   assert.equal(resolution.registration.kind, "immediate");
   const result = await resolution.registration.handler({
     command: { kind: "fulfill-need", id: "command:hypihub-gemini", need: request },
-    need: request, artifacts, credentials: { apiKey: { secret: "test-key" } },
+    need: request, resources, credentials: { apiKey: { secret: "test-key" } },
   });
   assert.deepEqual(result.value, { kind: "inline", value: { value: "provider works" } });
   assert.deepEqual(uploads, ["image/png", "video/mp4"]);

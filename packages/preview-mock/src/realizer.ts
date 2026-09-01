@@ -1,6 +1,5 @@
-import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import type { ArtifactAttachment } from "@hypit/workspace";
 import type { CompiledGraph, TypedRecord } from "@hypit/protocol";
 import { estimatedProgramDurationSeconds, findMockTargets } from "./graph.js";
@@ -8,7 +7,7 @@ import { deriveGeometry } from "./geometry.js";
 import { previewRunSource } from "./run-source.js";
 import { materializeMockNeed } from "./materialize.js";
 import { mockMediaCapabilities } from "@hypit/mock-media";
-import { FileArtifactStore } from "@hypit/artifact-store-fs";
+import { FileResourceStore } from "@hypit/resource-store-fs";
 
 export type PreviewMockTiming = "estimate";
 export type PreviewMockRequest = { readonly run: string; readonly targets?: readonly string[]; readonly timing?: PreviewMockTiming; readonly cacheRoot?: string; readonly graph?: CompiledGraph; readonly records?: readonly TypedRecord[]; readonly author?: string; readonly aliases?: ReadonlyMap<string, string> };
@@ -24,8 +23,13 @@ export type PreviewMockResult = {
   readonly timingBasis: "estimate";
 };
 
-function artifactRelativePath(root: string, digest: string): string {
-  return `./artifacts/sha256/${digest.split(":")[1]!.slice(0, 2)}/${digest.split(":")[1]!}`;
+function artifactRelativePath(root: string, resource: string): string {
+  return `./artifacts/resources/${resource}`;
+}
+
+function previewDirectoryName(run: string): string {
+  const name = basename(run).replace(/[^a-zA-Z0-9._-]+/gu, "-");
+  return name.length === 0 ? "run" : name;
 }
 
 export async function realizePreviewMock(input: PreviewMockRequest): Promise<PreviewMockResult> {
@@ -34,7 +38,7 @@ export async function realizePreviewMock(input: PreviewMockRequest): Promise<Pre
   const author = input.author ?? /<author\s+source="([^"]+)"/u.exec(source)?.[1];
   if (author === undefined) throw new Error(`${input.run} declares no author source`);
   if (input.graph === undefined) {
-  const root = input.cacheRoot ?? join(dirname(run), ".hypit", "preview", createHash("sha256").update(source).digest("hex").slice(0, 16));
+    const root = input.cacheRoot ?? join(dirname(run), ".hypit", "preview", previewDirectoryName(run));
     await mkdir(root, { recursive: true });
     const previewRun = join(root, "preview.svrun");
     const mockRun = join(root, "mock.svrun");
@@ -53,19 +57,12 @@ export async function realizePreviewMock(input: PreviewMockRequest): Promise<Pre
   const selectedTargets = (input.targets ?? input.graph.outputs.map((item) => item.id)).map(alias);
   const geometry = deriveGeometry(input.graph, rawTargets.map((item) => item.output));
   const authorPath = resolve(dirname(run), author);
-  const authorSource = await readFile(authorPath, "utf8");
-  const root = input.cacheRoot ?? join(dirname(run), ".hypit", "preview", createHash("sha256")
-    .update(JSON.stringify({
-      authorDigest: createHash("sha256").update(authorSource).digest("hex"),
-      runDigest: createHash("sha256").update(source).digest("hex"),
-      targets: rawTargets.map((item) => item.output).sort(),
-      geometry,
-      timing: input.timing ?? "estimate",
-    })).digest("hex").slice(0, 16));
+  await readFile(authorPath, "utf8");
+  const root = input.cacheRoot ?? join(dirname(run), ".hypit", "preview", previewDirectoryName(run));
   await mkdir(root, { recursive: true });
   const previewRun = join(root, "preview.svrun");
   const mockRun = join(root, "mock.svrun");
-  const artifactStore = new FileArtifactStore(join(root, "artifacts"));
+  const resourceStore = new FileResourceStore(join(root, "artifacts"));
   const preserved = [...source.matchAll(/^\s*<(?:file|value|build-record)\b[^>]*\/?>(?:\s*)$/gmu)]
     .map((match) => (match[0] ?? "").trim())
     .map((line) => line.replace(/\bfrom="([^"]+)"/u, (_whole, from: string) => {
@@ -78,7 +75,7 @@ export async function realizePreviewMock(input: PreviewMockRequest): Promise<Pre
     }));
   // Keep the native mock Run as a durable audit/debug artifact.  Its Needs are
   // fulfilled by the local mock Provider below; Studio then opens the second
-  // Run, whose relative file Candidates point at those content-addressed
+  // Run, whose relative file Candidates point at those persisted
   // results and therefore require no Provider endpoint.
   const generatedMock = previewRunSource(resolve(dirname(run), author), mockRun, selectedTargets, geometry, targets);
   await writeFile(mockRun, generatedMock, "utf8");
@@ -108,15 +105,15 @@ export async function realizePreviewMock(input: PreviewMockRequest): Promise<Pre
             audio: "silence",
           }
         : { sampleRate: 48_000, channels: 2, sampleFrames: 48_000 };
-    const materialized = await materializeMockNeed({ capability, constraints, artifacts: artifactStore });
-    if (!attached.has(materialized.artifact.digest)) {
-      attached.add(materialized.artifact.digest);
+    const materialized = await materializeMockNeed({ capability, constraints, resources: resourceStore });
+    if (!attached.has(materialized.artifact.resource)) {
+      attached.add(materialized.artifact.resource);
       attachments.push(materialized.attachment);
     }
     const candidateId = `mock-file-${files.size}`;
     files.set(target.output, {
       id: candidateId,
-      from: artifactRelativePath(root, materialized.artifact.digest),
+      from: artifactRelativePath(root, materialized.artifact.resource),
       mediaType: materialized.artifact.mediaType,
     });
   }

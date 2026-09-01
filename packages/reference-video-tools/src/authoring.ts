@@ -2,7 +2,6 @@ import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
-import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { cpus } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -678,18 +677,18 @@ export async function stageAuthoringPreview(realized: Pick<RealizedAuthoringPrev
   await mkdir(stage, { recursive: true });
   const names = new Map<string, string>();
   const mediaTypes = new Map<string, string>();
-  for (const [digest, file] of realized.built.served) {
+  for (const [resource, file] of realized.built.served) {
     const extension = file.mediaType === "text/css" ? ".css"
       : file.mediaType === "application/javascript" || file.mediaType === "text/javascript" ? ".js"
         : "";
-    const name = `${digest.replace(/[^a-z0-9]/giu, "")}${extension}`;
+    const name = `${resource.replace(/[^a-z0-9]/giu, "")}${extension}`;
     await writeFile(join(stage, name), file.bytes);
-    names.set(digest, name);
+    names.set(resource, name);
     mediaTypes.set(name, file.mediaType);
   }
   await writeFile(join(stage, "index.html"), materializeHyperframesHtml(document, (artifact) => {
-    const name = names.get(artifact.digest);
-    assert(name !== undefined, `the projection references Artifact ${artifact.digest}, which was not served`);
+    const name = names.get(artifact.resource);
+    assert(name !== undefined, `the projection references Artifact ${artifact.resource}, which was not served`);
     return `./${name}`;
   }), "utf8");
   return { stage, document, mediaTypes };
@@ -731,7 +730,7 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const {
     runPath, built, previewMock, programFrames, frameOfToken, selections, segmentTokenCounts,
   } = realized;
-  const renderKey = createHash("sha256").update(`${resolve(runPath)}\u0000${input.reference_id ?? ""}`).digest("hex").slice(0, 12);
+  const renderKey = `${resolve(runPath)}:${input.reference_id ?? "default"}`;
   const compareRoot = previewMock.root;
   const canvas = built.canvas;
   const frameRate = built.frameRate.numerator / built.frameRate.denominator;

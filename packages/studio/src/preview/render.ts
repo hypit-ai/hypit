@@ -7,7 +7,7 @@ import { injectRuntimeShim } from "./runtime-shim.js";
 export type RenderInput = {
   readonly composition: Composition;
   readonly space: ProgramSpace;
-  /** Digests Studio can serve for material selected by the Run. */
+  /** Resources Studio can serve for material selected by the Run. */
   readonly served?: ReadonlySet<string>;
 };
 
@@ -24,20 +24,20 @@ export function renderPreview(input: RenderInput): string {
     // The only Artifacts a preview can reference are files the author already
     // has. Anything else would be a Provider's output, which does not exist yet,
     // and failing loudly beats serving a picture with holes in it.
-    if (input.served?.has(artifact.digest) !== true) {
-      throw new Error(`Preview composition references Artifact ${artifact.digest}, which it cannot serve.`);
+    if (input.served?.has(artifact.resource) !== true) {
+      throw new Error(`Preview composition references Artifact ${artifact.resource}, which it cannot serve.`);
     }
-    return `/__studio/material/${artifact.digest}`;
+    return `/__studio/material/${artifact.resource}`;
   });
   const audio = input.composition.tracks
     .filter((track): track is AudioTrack => track.kind === "audio")
     .flatMap((track) => track.clips)
     .map((clip) => {
-      if (input.served?.has(clip.artifact.digest) !== true) {
-        throw new Error(`Preview audio references Artifact ${clip.artifact.digest}, which it cannot serve.`);
+      if (input.served?.has(clip.artifact.resource) !== true) {
+        throw new Error(`Preview audio references Artifact ${clip.artifact.resource}, which it cannot serve.`);
       }
       return `<audio class="hypit-studio-audio" preload="auto"
-      src="/__studio/material/${clip.artifact.digest}"
+      src="/__studio/material/${clip.artifact.resource}"
       data-start="${clip.target.startSample / 48_000}"
       data-duration="${(clip.target.endSampleExclusive - clip.target.startSample) / 48_000}"
       data-media-start="${clip.source.startSample / 48_000}"

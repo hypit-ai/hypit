@@ -3,7 +3,7 @@ export type {
   ManagedProgramReport as CliManagedProgramReport,
   RuntimeController as CliRuntimeController,
   RuntimeHostArchive as CliRuntimeArchiveControl,
-  RuntimeHostArtifactAccess as CliRuntimeArtifactAccess,
+  RuntimeHostResourceAccess as CliRuntimeResourceAccess,
   RuntimeHostBuildSubmission as CliBuildSubmission,
   RuntimeHostCredentialControl as CliCredentialControl,
   RuntimeHostCredentialStatus as CliCredentialStatus,

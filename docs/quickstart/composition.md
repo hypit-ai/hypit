@@ -99,7 +99,7 @@ The renderer:
 4. Mixes the audio Tracks
 5. Muxes video + audio into the final MP4
 
-**Output:** `{final.video}` — the finished video as an ordinary content-addressed `BlobArtifact`.
+**Output:** `{final.video}` — the finished video as an ordinary Resource-backed `BlobArtifact`.
 This is the most common Build Target, and it can also be connected directly to later Blob consumers
 such as media trimming, audio/frame extraction or a model reference input.
 

@@ -84,7 +84,7 @@ function scalar(value: unknown): value is null | boolean | number | string {
 function isBlobRef(value: unknown): value is BlobRef {
   if (value === null || Array.isArray(value) || typeof value !== "object") return false;
   const item = value as Readonly<Record<string, unknown>>;
-  return item.kind === "blob" && typeof item.digest === "string" && typeof item.size === "number" && typeof item.mediaType === "string";
+  return item.kind === "blob" && typeof item.resource === "string" && typeof item.size === "number" && typeof item.mediaType === "string";
 }
 
 function resourceIdentity(artifact: BlobRef): string {
@@ -158,7 +158,7 @@ class S3BuildResultWriter implements BuildResultWriter {
         }
         path = candidate;
         resources.set(identity, path);
-        const chunks = await input.artifacts.open(artifact);
+        const chunks = await input.resources.open(artifact);
         if (chunks === undefined) throw new Error(`Build resource ${identity} is unavailable`);
         await this.#repository.writeFile(this.#build, path, chunks, artifact.mediaType);
       }

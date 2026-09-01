@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
+import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
 import { generationTypes } from "@hypit/generation";
 import { mimoTtsEndpoints, sealMimoTtsRequest } from "@hypit/mimo-tts";
 import type { CanonicalValue, Need } from "@hypit/protocol";
@@ -18,7 +18,7 @@ function need(constraints: CanonicalValue): Need {
 }
 
 test("the official Provider maps only the VoiceDesign contract", async () => {
-  const artifacts = new MemoryArtifactStore();
+  const resources = new MemoryResourceStore();
   const provider = createXiaomiMimoProvider({
     fetch: async (input, init) => {
       assert.equal(String(input), "https://api.xiaomimimo.com/v1/chat/completions");
@@ -45,14 +45,14 @@ test("the official Provider maps only the VoiceDesign contract", async () => {
   const result = await resolution.registration.handler({
     command: { kind: "fulfill-need", id: "command:mimo-voicedesign", need: request },
     need: request,
-    artifacts,
+    resources,
     credentials: { apiKey: { secret: "test-key" } },
   });
   assert.equal(result.value.kind, "inline");
   const set = result.value.kind === "inline" ? result.value.value as Record<string, unknown> : {};
-  const audios = set.audios as Array<{ mediaType: string; digest: string }>;
+  const audios = set.audios as Array<{ mediaType: string; resource: string }>;
   assert.equal(audios[0]?.mediaType, "audio/wav");
-  assert.equal(await artifacts.has(audios[0]!.digest as `sha256:${string}`), true);
+  assert.equal(await resources.has(audios[0]!.resource as `res_${string}`), true);
 });
 
 test("Provider configuration owns credentials and queue policy, not model semantics", () => {

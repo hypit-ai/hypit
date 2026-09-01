@@ -12,7 +12,7 @@ import {
   programSpaceSampleFrames,
 } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
-import { canonicalize, isDigest } from "@hypit/protocol";
+import { canonicalize, isResourceId } from "@hypit/protocol";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
 import { assertSpatialPath } from "@hypit/spatial";
@@ -82,7 +82,7 @@ function finite(value: number, label: string): void {
 }
 
 function assertSound(value: MediaSoundSource, label: string): void {
-  assert(value.artifact.kind === "blob" && isDigest(value.artifact.digest)
+  assert(value.artifact.kind === "blob" && isResourceId(value.artifact.resource)
     && value.artifact.mediaType.startsWith("audio/")
     && Number.isSafeInteger(value.artifact.size) && value.artifact.size >= 0
     && Number.isSafeInteger(value.sampleFrames) && value.sampleFrames > 0, `${label} is invalid.`);

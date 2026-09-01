@@ -2,13 +2,13 @@ import { randomUUID } from "node:crypto";
 import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import type { CliRuntimeArtifactAccess } from "./runtime-port.js";
-import { isDigest } from "@hypit/protocol";
-import type { BuildState, Digest, TypedRecord, TypeRef } from "@hypit/protocol";
+import type { CliRuntimeResourceAccess } from "./runtime-port.js";
+import { isResourceId } from "@hypit/protocol";
+import type { BuildState, ResourceId, TypedRecord, TypeRef } from "@hypit/protocol";
 import type { BuildCatalogEntry } from "@hypit/runtime";
 
 type ArtifactIdentity = {
-  readonly digest: Digest;
+  readonly resource: ResourceId;
   readonly size: number;
   readonly mediaType: string;
 };
@@ -29,10 +29,10 @@ export type ArchivedLogicalOutput = {
 function artifactIdentity(value: unknown): ArtifactIdentity | undefined {
   if (value === null || Array.isArray(value) || typeof value !== "object") return undefined;
   const candidate = value as Readonly<Record<string, unknown>>;
-  if (typeof candidate.digest !== "string" || !isDigest(candidate.digest)
+  if (typeof candidate.resource !== "string" || !isResourceId(candidate.resource)
     || typeof candidate.size !== "number" || !Number.isSafeInteger(candidate.size) || candidate.size < 0
     || typeof candidate.mediaType !== "string" || candidate.mediaType.trim().length === 0) return undefined;
-  return { digest: candidate.digest, size: candidate.size, mediaType: candidate.mediaType };
+  return { resource: candidate.resource, size: candidate.size, mediaType: candidate.mediaType };
 }
 
 function recordArtifact(record: TypedRecord): ArtifactIdentity | undefined {
@@ -41,11 +41,11 @@ function recordArtifact(record: TypedRecord): ArtifactIdentity | undefined {
 }
 
 export async function materializeRecord(
-  runtime: Pick<CliRuntimeArtifactAccess, "openArtifact">,
+  runtime: Pick<CliRuntimeResourceAccess, "openResource">,
   record: TypedRecord,
   destination: string,
 ): Promise<
-  | { readonly kind: "artifact"; readonly path: string; readonly digest: string; readonly size: number; readonly mediaType: string }
+  | { readonly kind: "artifact"; readonly path: string; readonly resource: string; readonly size: number; readonly mediaType: string }
   | { readonly kind: "json"; readonly path: string; readonly size: number }
 > {
   await mkdir(dirname(destination), { recursive: true });
@@ -60,14 +60,14 @@ export async function materializeRecord(
 }
 
 export async function materializeArtifact(
-  runtime: Pick<CliRuntimeArtifactAccess, "openArtifact">,
+  runtime: Pick<CliRuntimeResourceAccess, "openResource">,
   artifact: ArtifactIdentity,
   destination: string,
   subject = "Build archive",
-): Promise<{ readonly kind: "artifact"; readonly path: string; readonly digest: string; readonly size: number; readonly mediaType: string }> {
+): Promise<{ readonly kind: "artifact"; readonly path: string; readonly resource: string; readonly size: number; readonly mediaType: string }> {
   await mkdir(dirname(destination), { recursive: true });
-  const source = await runtime.openArtifact(artifact.digest);
-  if (source === undefined) throw new Error(`Artifact ${artifact.digest} is absent from the selected ArtifactStore`);
+  const source = await runtime.openResource(artifact.resource);
+  if (source === undefined) throw new Error(`Artifact ${artifact.resource} is absent from the selected ResourceStore`);
   const temporary = `${destination}.hypit-${randomUUID()}.part`;
   const output = await open(temporary, "wx");
   let size = 0;
@@ -77,7 +77,7 @@ export async function materializeArtifact(
       await output.write(chunk);
     }
     await output.close();
-    if (size !== artifact.size) throw new Error(`Artifact ${artifact.digest} size differs from ${subject}`);
+    if (size !== artifact.size) throw new Error(`Artifact ${artifact.resource} size differs from ${subject}`);
     // Replace an explicitly selected destination only after the stream completes.
     await rename(temporary, destination);
   } catch (error) {
@@ -94,7 +94,7 @@ export function collectArtifacts(
   found: { path: string; artifact: ArtifactIdentity }[] = [],
 ): readonly {
   readonly path: string;
-  readonly digest: Digest;
+  readonly resource: ResourceId;
   readonly size: number;
   readonly mediaType: string;
 }[] {
@@ -108,12 +108,12 @@ export function collectArtifacts(
   return found.map((item) => ({ path: item.path, ...item.artifact }));
 }
 
-export function findArchivedArtifact(state: BuildState, digest: string): readonly ArchivedArtifactReference[] {
-  if (!isDigest(digest)) throw new Error(`--artifact requires a valid sha256 digest, received ${digest}`);
+export function findArchivedArtifact(state: BuildState, resource: string): readonly ArchivedArtifactReference[] {
+  if (!isResourceId(resource)) throw new Error(`--artifact requires a valid resource id, received ${resource}`);
   return state.records.flatMap((record) => {
     const value = record.value.kind === "blob" ? record.value : record.value.value;
     return collectArtifacts(value)
-      .filter((artifact) => artifact.digest === digest)
+      .filter((artifact) => artifact.resource === resource)
       .map((artifact) => ({ record: record.id, ...artifact }));
   });
 }

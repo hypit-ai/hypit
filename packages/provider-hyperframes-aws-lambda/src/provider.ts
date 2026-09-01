@@ -31,7 +31,7 @@ import type {
   CanonicalValue,
 } from "@hypit/protocol";
 import { renderHyperframesCapabilities } from "@hypit/render-hyperframes";
-import { isStreamingArtifactStore } from "@hypit/runtime";
+import { isStreamingResourceStore } from "@hypit/runtime";
 
 import {
   createHyperframesAwsLambdaClient,
@@ -163,14 +163,14 @@ async function artifactBytes(
   context: EndpointStartContext,
   artifact: BlobRef,
 ): Promise<Uint8Array | AsyncIterable<Uint8Array>> {
-  if (isStreamingArtifactStore(context.artifacts)) {
-    const chunks = await context.artifacts.open(artifact.digest);
-    assert(chunks !== undefined, `HyperFrames Artifact ${artifact.digest} is unavailable`);
+  if (isStreamingResourceStore(context.resources)) {
+    const chunks = await context.resources.open(artifact.resource);
+    assert(chunks !== undefined, `HyperFrames Artifact ${artifact.resource} is unavailable`);
     return chunks;
   }
-  const bytes = await context.artifacts.get(artifact.digest);
-  assert(bytes !== undefined, `HyperFrames Artifact ${artifact.digest} is unavailable`);
-  assert(bytes.byteLength === artifact.size, `HyperFrames Artifact ${artifact.digest} size differs`);
+  const bytes = await context.resources.get(artifact.resource);
+  assert(bytes !== undefined, `HyperFrames Artifact ${artifact.resource} is unavailable`);
+  assert(bytes.byteLength === artifact.size, `HyperFrames Artifact ${artifact.resource} size differs`);
   return bytes;
 }
 
@@ -179,7 +179,7 @@ function verifySite(site: HyperframesLambdaSite, bucketName: string): void {
   assert(site.bucketName === bucketName, "HyperFrames site was deployed to another bucket");
   const target = parseS3Uri(site.projectS3Uri);
   assert(target.bucket === bucketName && target.key === `sites/${site.siteId}/project.tar.gz`,
-    "HyperFrames site URI does not name its content-addressed project");
+    "HyperFrames site URI does not name its deployed project");
   positiveInteger(site.bytes, "HyperFrames site bytes");
   assert(Number.isFinite(Date.parse(site.uploadedAt)), "HyperFrames site upload timestamp is invalid");
   assert(typeof site.uploaded === "boolean", "HyperFrames site upload state is invalid");
@@ -241,8 +241,8 @@ async function storeOutput(
     "HyperFrames output exceeded the configured byte limit");
   const count = { value: 0 };
   const bounded = boundedChunks(source.chunks, maxRenderedBytes, expected, count);
-  if (isStreamingArtifactStore(context.artifacts)) {
-    return await context.artifacts.putStream(bounded, "video/mp4");
+  if (isStreamingResourceStore(context.resources)) {
+    return await context.resources.putStream(bounded, "video/mp4");
   }
   const buffers: Uint8Array[] = [];
   for await (const chunk of bounded) buffers.push(chunk);
@@ -252,7 +252,7 @@ async function storeOutput(
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  return await context.artifacts.put(bytes, "video/mp4");
+  return await context.resources.put(bytes, "video/mp4");
 }
 
 function fulfillment(

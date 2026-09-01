@@ -9,7 +9,7 @@ export type { PinnedRecord } from "./archive.js";
 export { runCli } from "./main.js";
 export { discoverSourcePackages } from "./source-discovery.js";
 export { loadDiscoveredSourcePackages } from "./source-packages.js";
-export { collectRunFrontends, loadRunFile } from "./run-file.js";
+export { collectRunFrontends, loadRunFile, resolveBuildResultRecord } from "./run-file.js";
 export type { LoadedRunFile } from "./run-file.js";
 export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
 export { findRuntimeProfile } from "./runtime-selection.js";

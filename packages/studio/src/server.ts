@@ -589,20 +589,20 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           });
           return;
         }
-        const storyboardDigest = /^\/__studio\/storyboard\/(sha256:[a-f0-9]{64})$/u.exec(url.pathname)?.[1];
-        if (storyboardDigest !== undefined) {
+        const storyboardResource = /^\/__studio\/storyboard\/(res_[a-zA-Z0-9._:-]+)$/u.exec(url.pathname)?.[1];
+        if (storyboardResource !== undefined) {
           void (async () => {
-            const file = material.get(storyboardDigest);
+            const file = material.get(storyboardResource);
             if (file === undefined || !file.mediaType.startsWith("video/")) {
               response.statusCode = 404;
               response.end();
               return;
             }
             try {
-              let pending = storyboards.get(storyboardDigest);
+              let pending = storyboards.get(storyboardResource);
               if (pending === undefined) {
                 pending = createStudioStoryboard(file);
-                storyboards.set(storyboardDigest, pending);
+                storyboards.set(storyboardResource, pending);
               }
               const storyboard = await pending;
               response.statusCode = 200;
@@ -617,15 +617,15 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               if (request.method === "HEAD") response.end();
               else response.end(Buffer.from(storyboard.bytes));
             } catch (error) {
-              storyboards.delete(storyboardDigest);
+              storyboards.delete(storyboardResource);
               json(response, 500, { error: error instanceof Error ? error.message : String(error) });
             }
           })();
           return;
         }
-        const digest = /^\/__studio\/material\/(sha256:[a-f0-9]{64})$/u.exec(url.pathname)?.[1];
-        if (digest !== undefined) {
-          const file = material.get(digest);
+        const materialResource = /^\/__studio\/material\/(res_[a-zA-Z0-9._:-]+)$/u.exec(url.pathname)?.[1];
+        if (materialResource !== undefined) {
+          const file = material.get(materialResource);
           if (file === undefined) {
             response.statusCode = 404;
             response.end();
@@ -639,28 +639,28 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           else response.end(Buffer.from(file.bytes));
           return;
         }
-        const artifactDigest = /^\/__studio\/artifact\/(sha256:[a-f0-9]{64})$/u.exec(url.pathname)?.[1];
-        if (artifactDigest !== undefined) {
+        if (url.pathname === "/__studio/artifact") {
           void (async () => {
-            const view = library ?? await readLibrary();
-            const artifact = view.artifacts.find((item) => item.digest === artifactDigest);
-            if (artifact === undefined || options.archive === undefined) {
+            const build = url.searchParams.get("build");
+            const output = url.searchParams.get("output");
+            const valuePath = url.searchParams.get("path");
+            if (build === null || output === null || valuePath === null || options.archive === undefined) {
               response.statusCode = 404;
               response.end();
               return;
             }
-            const bytes = await options.archive.read(artifactDigest as import("@hypit/protocol").Digest);
-            if (bytes === undefined) {
+            const artifact = await options.archive.openArtifact(build, output, valuePath);
+            if (artifact === undefined) {
               response.statusCode = 404;
               response.end();
               return;
             }
             response.statusCode = 200;
             response.setHeader("content-type", artifact.mediaType);
-            response.setHeader("content-length", String(bytes.byteLength));
-            response.setHeader("cache-control", "private, max-age=31536000, immutable");
+            response.setHeader("content-length", String(artifact.bytes.byteLength));
+            response.setHeader("cache-control", "private, no-store");
             if (request.method === "HEAD") response.end();
-            else response.end(Buffer.from(bytes));
+            else response.end(Buffer.from(artifact.bytes));
           })().catch((error) => {
             json(response, 500, { error: error instanceof Error ? error.message : String(error) });
           });

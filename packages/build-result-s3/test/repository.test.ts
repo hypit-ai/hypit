@@ -83,7 +83,6 @@ test("S3 keeps the same Build Result model as the filesystem repository", async 
   const video: BlobRef = {
     kind: "blob",
     resource: "res_same_build_video",
-    digest: `sha256:${"1".repeat(64)}`,
     size: bytes.byteLength,
     mediaType: "video/mp4",
   };
@@ -124,7 +123,7 @@ test("S3 keeps the same Build Result model as the filesystem repository", async 
         },
       ],
     }),
-    artifacts: {
+    resources: {
       async open() {
         return (async function* () {
           yield bytes;
@@ -181,7 +180,6 @@ test("S3 forwarding can cross several Builds without copying the historical file
           value: {
             kind: "blob",
             resource: "res_original",
-            digest: `sha256:${"2".repeat(64)}`,
             size: bytes.byteLength,
             mediaType: "video/mp4",
           },
@@ -195,7 +193,7 @@ test("S3 forwarding can cross several Builds without copying the historical file
         },
       ],
     }),
-    artifacts: {
+    resources: {
       async open() {
         return (async function* () {
           yield bytes;
@@ -221,7 +219,7 @@ test("S3 forwarding can cross several Builds without copying the historical file
             type: videoType,
             value: {
               kind: "blob",
-              digest: `sha256:${"3".repeat(64)}`,
+              resource: "res_reused",
               size: bytes.byteLength,
               mediaType: "video/mp4",
             },
@@ -235,7 +233,7 @@ test("S3 forwarding can cross several Builds without copying the historical file
           },
         ],
       }),
-      artifacts: {
+      resources: {
         async open() {
           throw new Error("forwarded bytes must not be copied");
         },

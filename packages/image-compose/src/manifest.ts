@@ -20,7 +20,7 @@ const number = { kind: "number" } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const blob = object({
   kind: { schema: { kind: "literal", value: "blob" } },
-  digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
+  resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
   size: { schema: { kind: "number", integer: true, minimum: 0 } },
   mediaType: { schema: string },
 });

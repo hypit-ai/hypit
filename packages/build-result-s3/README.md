@@ -31,7 +31,7 @@ Objects keep the same visible shape as the filesystem repository:
     values/...
 ```
 
-There is no global Build table or content-addressed Result namespace. A reused historical Output is a
+There is no global Build table or shared Result namespace. A reused historical Output is a
 small forward reference to its producing Build and Output; following several such references still
 reads the original file and does not upload another copy. While a Build is running, a private writer
 file records only the state needed to continue publishing completed public Outputs and is removed when

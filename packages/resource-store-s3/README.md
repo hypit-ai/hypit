@@ -1,4 +1,4 @@
-# `@hypit/artifact-store-s3`
+# `@hypit/resource-store-s3`
 
 S3 implementation of the Runtime's internal byte port. It is a library for a Runtime implementation
 that deliberately embeds it; the local Runtime does not expose it as a Runtime Profile choice.

@@ -4,9 +4,9 @@ Explicit author and capability boundary for final HyperFrames video rendering.
 
 The package owns `<render:Video composition={...}/>` and lowers it to six ordinary Operations:
 
-1. compile the referenced `Composition` into a content-addressed `HyperframesDocument`;
+1. compile the referenced `Composition` into a `HyperframesDocument`;
 2. request a silent, frame-exact `RenderedVisual`;
-3. compile every peer `AudioTrack` into one content-addressed `AudioProgramPlan`;
+3. compile every peer `AudioTrack` into one `AudioProgramPlan`;
 4. request an exact 48 kHz `TimelineAudio`;
 5. request one `MuxedMedia` from those two independently verified Products;
 6. expose the verified mux Artifact unchanged as a domain-neutral `BlobArtifact`.
@@ -17,7 +17,7 @@ Provider for the exact visual capability. Media Providers independently realize 
 mux. None parses SVML or decides which Composition to render. Every result is bound to the same
 ProgramSpace and exact frame/sample domain before it can become a final video Record.
 
-The output does not carry copied duration or lineage metadata. It is an ordinary content-addressed
+The output does not carry copied duration or lineage metadata. It is an ordinary Resource-backed
 Blob and can therefore be connected directly to any later component that accepts Blob bytes. A
 consumer that needs stream or duration facts must request explicit media inspection.
 

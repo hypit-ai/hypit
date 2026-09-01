@@ -19,9 +19,8 @@
  * is the same shape WhisperX and OpenCV already use for their Python programs.
  */
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readdir } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -68,9 +67,23 @@ function serviceProject(): string {
   }
 }
 
-/** Where one link's download lives, keyed by the link so a second run finds the first one's bytes. */
-function cacheDirectory(root: string, url: string): string {
-  return join(root, createHash("sha256").update(url).digest("hex").slice(0, 16));
+/** Find or allocate one readable cache directory whose `source.url` records the original locator. */
+async function cacheDirectory(root: string, url: string): Promise<string> {
+  await mkdir(root, { recursive: true });
+  const entries = await readdir(root, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !/^reference-[1-9][0-9]*$/u.test(entry.name)) continue;
+    const directory = join(root, entry.name);
+    if (await readFile(join(directory, "source.url"), "utf8").catch(() => undefined) === url) return directory;
+  }
+  const numbers = entries.flatMap((entry) => {
+    const match = /^reference-([1-9][0-9]*)$/u.exec(entry.name);
+    return match === null ? [] : [Number(match[1])];
+  });
+  const directory = join(root, `reference-${Math.max(0, ...numbers) + 1}`);
+  await mkdir(directory, { recursive: false });
+  await writeFile(join(directory, "source.url"), url, "utf8");
+  return directory;
 }
 
 async function existingDownload(directory: string): Promise<string | undefined> {
@@ -89,8 +102,7 @@ async function existingDownload(directory: string): Promise<string | undefined> 
  * happens to sit inside a playlist from fetching the playlist.
  */
 export async function downloadReferenceVideo(url: string, root: string): Promise<DownloadedReference> {
-  const directory = cacheDirectory(root, url);
-  await mkdir(directory, { recursive: true });
+  const directory = await cacheDirectory(root, url);
 
   const held = await existingDownload(directory);
   if (held !== undefined) return { path: held, url, cached: true };

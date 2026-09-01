@@ -13,10 +13,10 @@ import type { Track } from "@hypit/composition";
 import { VISUAL_IR_V1 } from "@hypit/visual-ir";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 const fixtureFont: FontArtifactRef = {
-  sources: [{ artifact: { kind: "blob", digest: fixtureDigest("hyperframes:fixture-font"), size: 1_024, mediaType: "font/woff2" } }],
+  sources: [{ artifact: { kind: "blob", resource: fixtureResource("hyperframes:fixture-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
 };
@@ -28,13 +28,13 @@ function fixture() {
   });
   const picture = {
     kind: "blob" as const,
-    digest: fixtureDigest("hyperframes:picture"),
+    resource: fixtureResource("hyperframes:picture"),
     size: 10,
     mediaType: "image/png",
   };
   const sound = {
     kind: "blob" as const,
-    digest: fixtureDigest("hyperframes:sound"),
+    resource: fixtureResource("hyperframes:sound"),
     size: 20,
     mediaType: "audio/wav",
   };
@@ -100,12 +100,12 @@ test("HyperFrames flattens generic peer visual Track Presents without absorbing 
   const document = compileHyperframesDocument(composition, programSpace);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
   assert.equal(document.visualIr, VISUAL_IR_V1);
-  assert.deepEqual(new Set(document.artifacts.map((artifact) => artifact.digest)),
-    new Set([picture.digest, fixtureFont.sources[0]!.artifact.digest]));
+  assert.deepEqual(new Set(document.artifacts.map((artifact) => artifact.resource)),
+    new Set([picture.resource, fixtureFont.sources[0]!.artifact.resource]));
   assert.ok(document.html.indexOf('data-hypit-track-id="lower"') < document.html.indexOf('data-hypit-track-id="upper"'));
   assert.equal((document.html.match(/class="clip hypit-visual-present"/gu) ?? []).length, 2);
   assert.doesNotMatch(document.html, /<audio/u);
-  assert.doesNotMatch(document.html, new RegExp(sound.digest, "u"));
+  assert.doesNotMatch(document.html, new RegExp(sound.resource, "u"));
   assert.doesNotMatch(document.html, /isolation:isolate|hypit-visual-track/u);
   assert.match(document.html, /Hello &lt;world&gt;/u);
   assert.match(document.html, /display:inline-grid/u);
@@ -223,12 +223,12 @@ test("Text shrink preserves authored hug sizing and trims metrics inside the con
 test("visual Artifact placeholders are materialized only by the Runtime boundary", () => {
   const { composition, picture, sound, programSpace } = fixture();
   const document = compileHyperframesDocument(composition, programSpace);
-  assert.match(document.html, /hypit-artifact:\/\/sha256\//u);
+  assert.match(document.html, /hypit-resource:\/\/res_/u);
   const resolved = materializeHyperframesHtml(document,
-    (artifact) => `https://assets.example/${artifact.digest}?x=1&y=2`);
-  assert.doesNotMatch(resolved, /hypit-artifact:\/\//u);
-  assert.match(resolved, new RegExp(`https://assets\\.example/${picture.digest}\\?x=1&amp;y=2`, "u"));
-  assert.doesNotMatch(resolved, new RegExp(sound.digest, "u"));
+    (artifact) => `https://assets.example/${artifact.resource}?x=1&y=2`);
+  assert.doesNotMatch(resolved, /hypit-resource:\/\//u);
+  assert.match(resolved, new RegExp(`https://assets\\.example/${picture.resource}\\?x=1&amp;y=2`, "u"));
+  assert.doesNotMatch(resolved, new RegExp(sound.resource, "u"));
   assert.equal(document.html.includes("assets.example"), false, "materialization must not mutate the compiled document");
 });
 
@@ -332,14 +332,14 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   const font: FontArtifactRef = {
     sources: [{ artifact: {
       kind: "blob",
-      digest: fixtureDigest("hyperframes:font"),
+      resource: fixtureResource("hyperframes:font"),
       size: 1_024,
       mediaType: "font/woff2",
     } }],
     weight: 700,
     style: "normal",
   };
-  const surfaceDigest = fixtureDigest("hyperframes:alpha-surface");
+  const surfaceDigest = fixtureResource("hyperframes:alpha-surface");
   const track = sealVisualTrack({ programSpaceId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "bound-render-dependencies",
@@ -364,7 +364,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
           order: 2,
           kind: "surface",
           surface: {
-            artifact: { kind: "blob", digest: surfaceDigest, size: 2_048, mediaType: "video/webm" },
+            artifact: { kind: "blob", resource: surfaceDigest, size: 2_048, mediaType: "video/webm" },
             width: 1080,
             height: 1920,
             colorSpace: "srgb",
@@ -386,16 +386,16 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
     tracks: [track],
   }), space);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
-  assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [font.sources[0]!.artifact.digest, surfaceDigest].sort());
+  assert.deepEqual(document.artifacts.map((artifact) => artifact.resource), [font.sources[0]!.artifact.resource, surfaceDigest].sort());
   assert.match(document.html, /@font-face\{/u);
   assert.match(document.html, /format\("woff2"\)/u);
   assert.match(document.html, /font-synthesis:none/u);
   assert.match(document.html, /data-hypit-alpha-mode="straight"/u);
   assert.match(document.html, /data-hypit-color-space="srgb"/u);
   const materialized = materializeHyperframesHtml(document,
-    (artifact) => `https://assets.example/${artifact.digest}?token=1&part=2`);
-  assert.doesNotMatch(materialized, /hypit-artifact:\/\//u);
-  assert.match(materialized, new RegExp(font.sources[0]!.artifact.digest, "u"));
+    (artifact) => `https://assets.example/${artifact.resource}?token=1&part=2`);
+  assert.doesNotMatch(materialized, /hypit-resource:\/\//u);
+  assert.match(materialized, new RegExp(font.sources[0]!.artifact.resource, "u"));
   assert.match(materialized, new RegExp(surfaceDigest, "u"));
 });
 
@@ -406,7 +406,7 @@ test("exact timed sampling lowers loop boundaries and held frames without zero-r
   });
   const artifact = {
     kind: "blob" as const,
-    digest: fixtureDigest("hyperframes:sampled-video"),
+    resource: fixtureResource("hyperframes:sampled-video"),
     size: 1_000,
     mediaType: "video/mp4",
   };
@@ -482,7 +482,7 @@ test("a Track naming five takes still lowers to DOM identities a Windows path ca
         kind: "video",
         artifact: {
           kind: "blob" as const,
-          digest: fixtureDigest("hyperframes:long-identity-video"),
+          resource: fixtureResource("hyperframes:long-identity-video"),
           size: 1_000,
           mediaType: "video/mp4",
         },

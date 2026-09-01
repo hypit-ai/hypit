@@ -113,7 +113,7 @@ function validateDraftVocabulary(companion: StudioTrackCompanion, draft: StudioE
     }
     const source = layer.preview.source;
     if (source.kind === "artifact") {
-      if (typeof source.digest !== "string" || source.digest.length === 0) {
+      if (typeof source.resource !== "string" || source.resource.length === 0) {
         throw new Error(`Studio Track Companion ${companion.id} entity ${draft.id} has invalid Artifact source`);
       }
     } else if (source.kind !== "surface-preview"

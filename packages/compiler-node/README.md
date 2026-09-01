@@ -17,7 +17,7 @@ The compiler has no suffix table and no entry-Frontend default. A recursively im
 select another Frontend without the importer choosing on its behalf.
 
 `ModulePackageRegistry` maps author import spellings to exact, already trusted manifests and closes
-their digest-bound dependencies. It does not install npm packages or execute module code. An
+their declared Resource dependencies. It does not install npm packages or execute module code. An
 embedding application must register the manifests and matching Frontend/Surface implementations it
 has chosen to trust.
 
@@ -31,8 +31,8 @@ The Workspace session owns a separate Source Asset capability. A Frontend/Surfac
 asset and assign its exact media type, but it never receives a path, filesystem handle or ambient
 read authority. The Workspace returns a `BlobRef`, the compiler binds that reference into the
 requesting SourceUnit, and the session exposes defensive generic `ArtifactAttachment`s on the Node
-compilation result. `check` and `plan` perform no ArtifactStore write. `build` passes the attachments
-to the selected Runtime for digest-checked staging.
+compilation result. `check` and `plan` perform no ResourceStore write. `build` passes the attachments
+to the selected Runtime for size-checked staging.
 
 SourceUnit recursion and Source Asset resolution are intentionally different capabilities: an
 asset cannot import syntax, and a source import does not silently make arbitrary neighboring bytes

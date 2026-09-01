@@ -10,7 +10,7 @@ import {
 import type {
   BlobRef,
   CanonicalValue,
-  Digest,
+  ResourceId,
   Need,
 } from "@hypit/protocol";
 import type { GenerationRequest } from "@hypit/generation";
@@ -18,8 +18,8 @@ import {
   defineEndpointPackage,
   wakeAfter,
 } from "@hypit/endpoint-kit";
-import { credentialRef, isStreamingArtifactStore } from "@hypit/runtime";
-import type { ArtifactStore, CredentialRef } from "@hypit/runtime";
+import { credentialRef, isStreamingResourceStore } from "@hypit/runtime";
+import type { ResourceStore, CredentialRef } from "@hypit/runtime";
 
 import {
   kieRouteForCapability,
@@ -214,46 +214,43 @@ class KieClient {
     }
   }
 
-  async upload(artifact: BlobRef, artifacts: ArtifactStore, apiKey: string): Promise<string> {
+  async upload(artifact: BlobRef, resources: ResourceStore, apiKey: string): Promise<string> {
     if (artifact.size > this.#options.maxArtifactBytes) {
-      throw new KieError("KIE_ARTIFACT_TOO_LARGE", `Artifact ${artifact.digest} exceeds the configured KIE upload limit`);
+      throw new KieError("KIE_ARTIFACT_TOO_LARGE", `Artifact ${artifact.resource} exceeds the configured KIE upload limit`);
     }
-    const hex = artifact.digest.slice("sha256:".length);
-    const fileName = `${hex}.${mediaExtension(artifact.mediaType)}`;
-    const boundary = `hypit-${hex}`;
+    const fileName = `${artifact.resource}.${mediaExtension(artifact.mediaType)}`;
+    const boundary = `hypit-${artifact.resource}`;
     const encode = (value: string) => new TextEncoder().encode(value);
     const fileHead = encode(
       `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${fileName}"\r\n`
       + `Content-Type: ${artifact.mediaType}\r\n\r\n`,
     );
     const fields = encode(
-      `\r\n--${boundary}\r\nContent-Disposition: form-data; name="uploadPath"\r\n\r\nsvml/${hex.slice(0, 2)}`
+      `\r\n--${boundary}\r\nContent-Disposition: form-data; name="uploadPath"\r\n\r\nsvml/resources`
       + `\r\n--${boundary}\r\nContent-Disposition: form-data; name="fileName"\r\n\r\n${fileName}`
       + `\r\n--${boundary}--\r\n`,
     );
-    const source = isStreamingArtifactStore(artifacts)
-      ? await artifacts.open(artifact.digest)
-      : await artifacts.get(artifact.digest).then((bytes) => bytes === undefined
+    const source = isStreamingResourceStore(resources)
+      ? await resources.open(artifact.resource)
+      : await resources.get(artifact.resource).then((bytes) => bytes === undefined
         ? undefined
         : (async function* () { yield bytes; })());
     if (source === undefined) {
-      throw new KieError("KIE_ARTIFACT_MISSING", `Artifact ${artifact.digest} is unavailable`);
+      throw new KieError("KIE_ARTIFACT_MISSING", `Artifact ${artifact.resource} is unavailable`);
     }
     const maximum = this.#options.maxArtifactBytes;
     const multipart = (async function* () {
       yield fileHead;
-      const hash = createHash("sha256");
       let size = 0;
       for await (const chunk of source) {
         size += chunk.byteLength;
         if (size > artifact.size || size > maximum) {
-          throw new KieError("KIE_ARTIFACT_SIZE_MISMATCH", `Artifact ${artifact.digest} size differs`);
+          throw new KieError("KIE_ARTIFACT_SIZE_MISMATCH", `Artifact ${artifact.resource} size differs`);
         }
-        hash.update(chunk);
         yield chunk;
       }
-      if (size !== artifact.size || `sha256:${hash.digest("hex")}` !== artifact.digest) {
-        throw new KieError("KIE_ARTIFACT_SIZE_MISMATCH", `Artifact ${artifact.digest} bytes differ`);
+      if (size !== artifact.size) {
+        throw new KieError("KIE_ARTIFACT_SIZE_MISMATCH", `Artifact ${artifact.resource} size differs`);
       }
       yield fields;
     })();
@@ -455,12 +452,12 @@ function endpoint(options: {
         const route = kieRouteForCapability(context.need.capability);
         if (route === undefined) throw new KieError("KIE_UNSUPPORTED_CAPABILITY", "KIE does not implement this exact capability");
         const key = secret(context);
-        const uploaded = new Map<Digest, Promise<string>>();
+        const uploaded = new Map<ResourceId, Promise<string>>();
         const resolve = (artifact: BlobRef): Promise<string> => {
-          const existing = uploaded.get(artifact.digest);
+          const existing = uploaded.get(artifact.resource);
           if (existing !== undefined) return existing;
-          const promise = options.client.upload(artifact, context.artifacts, key);
-          uploaded.set(artifact.digest, promise);
+          const promise = options.client.upload(artifact, context.resources, key);
+          uploaded.set(artifact.resource, promise);
           return promise;
         };
         const task = await route.compile(context.need.constraints, resolve);
@@ -516,8 +513,8 @@ function endpoint(options: {
         const artifacts: BlobRef[] = [];
         for (const url of urls) {
           const downloaded = await options.client.download(url, route.media, key);
-          if (isStreamingArtifactStore(context.artifacts)) {
-            artifacts.push(await context.artifacts.putStream(downloaded.chunks, downloaded.mediaType));
+          if (isStreamingResourceStore(context.resources)) {
+            artifacts.push(await context.resources.putStream(downloaded.chunks, downloaded.mediaType));
           } else {
             const chunks: Uint8Array[] = [];
             let size = 0;
@@ -531,7 +528,7 @@ function endpoint(options: {
               bytes.set(chunk, offset);
               offset += chunk.byteLength;
             }
-            artifacts.push(await context.artifacts.put(bytes, downloaded.mediaType));
+            artifacts.push(await context.resources.put(bytes, downloaded.mediaType));
           }
         }
         const result = route.packageResult(artifacts);
@@ -598,4 +595,3 @@ export function createKieProvider(config: CreateKieProviderOptions) {
     })),
   });
 }
-import { createHash } from "node:crypto";

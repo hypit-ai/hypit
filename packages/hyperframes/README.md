@@ -18,12 +18,12 @@ It deliberately ignores `AudioTrack`. HyperFrames produces a silent visual fact;
 compiles and renders program audio separately, then an explicit mux Provider joins the two. Changing
 audio can therefore never be implemented by secretly changing HyperFrames HTML or its renderer.
 
-Media remains content addressed in the compiled HTML as `hypit-artifact://` placeholders. The
-document separately carries each dependency's complete `BlobRef` (digest, byte count and MIME), so
+Media remains resource-referenced in compiled HTML as `hypit-resource://` placeholders. The
+document separately carries each dependency's complete `BlobRef` (Resource id, byte count and MIME), so
 a Provider can verify and name staged bytes without guessing from the hash. A local or hosted
 render Runtime calls `materializeHyperframesHtml()` with its own Artifact URL resolver before
 handing the HTML to HyperFrames. That environment-specific materialization is not a new compiled
-Record and does not change the document digest.
+Record and does not change the compiled document.
 
 The document exposes its render domain directly rather than asking an Endpoint to scrape HTML:
 exact rational `frameRate`, integer `frameCount`, and canvas dimensions are explicit document

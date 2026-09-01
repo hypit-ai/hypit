@@ -3,7 +3,7 @@ import type { EndpointPackage } from "@hypit/endpoint-kit";
 import type { LoadedComponentPackage } from "@hypit/package-loader-node";
 import type { BuildResultRepositoryLocation, BuildResultRepositoryOpened } from "@hypit/build-result-kit";
 import type {
-  ArtifactStore,
+  ResourceStore,
   BuildCatalog,
   BuildStore,
   BuildDispatchStore,
@@ -13,7 +13,7 @@ import type {
 } from "@hypit/runtime";
 import type {
   RuntimeHostArchive,
-  RuntimeHostArtifactAccess,
+  RuntimeHostResourceAccess,
   RuntimeHostBuildSubmission,
   RuntimeHostCredentialControl,
   RuntimeHostExecution,
@@ -25,11 +25,11 @@ export type CreateLocalRuntimeOptions = {
   readonly buildCatalog?: BuildCatalog;
   readonly operationStore: OperationStore;
   readonly dispatchStore: import("@hypit/runtime").BuildDispatchStore;
-  readonly artifactStore: ArtifactStore;
+  readonly resourceStore: ResourceStore;
   /** Optional Build-local transient byte area used by Provider execution and Result writing. */
-  readonly artifactStoreForBuild?: (build: string) => ArtifactStore;
+  readonly resourceStoreForBuild?: (build: string) => ResourceStore;
   /** Called only after a terminal Build Result has accepted every public Output completed so far. */
-  readonly clearBuildArtifacts?: (build: string) => Awaitable<void>;
+  readonly clearBuildResources?: (build: string) => Awaitable<void>;
   readonly openBuildResultRepository?: (location: BuildResultRepositoryLocation) => Awaitable<BuildResultRepositoryOpened>;
   readonly credentialStore: CredentialStore;
   readonly components?: readonly ComponentPackage[];
@@ -48,8 +48,8 @@ export type CreateLocalRuntimeArchiveControlOptions = {
   readonly close?: () => Awaitable<void>;
 };
 
-export type CreateLocalRuntimeArtifactAccessOptions = {
-  readonly artifactStore: ArtifactStore;
+export type CreateLocalRuntimeResourceAccessOptions = {
+  readonly resourceStore: ResourceStore;
   /** Optional owner supplied by the Runtime assembly. */
   readonly close?: () => Awaitable<void>;
 };
@@ -68,11 +68,11 @@ export type LocalRuntime = RuntimeHostExecution & {
   workOnce(): Promise<BuildDispatchSnapshot | undefined>;
 };
 
-/** Durable execution-state archive that never opens the selected ArtifactStore. */
+/** Durable execution-state archive that never opens the selected ResourceStore. */
 export type LocalRuntimeArchiveControl = RuntimeHostArchive;
 
 /** Explicit Artifact byte access that never opens Build, Operation or Dispatch state. */
-export type LocalRuntimeArtifactAccess = RuntimeHostArtifactAccess;
+export type LocalRuntimeResourceAccess = RuntimeHostResourceAccess;
 
 /** Credential control for one or more exact Endpoint declarations; no execution state is opened. */
 export type LocalCredentialControl = RuntimeHostCredentialControl;

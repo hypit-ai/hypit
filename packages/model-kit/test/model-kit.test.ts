@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   sealGenerationMediaBinding,
@@ -42,7 +42,7 @@ test("one exact model definition owns draft, media binding, finalization and gen
 
   const artifact = {
     kind: "blob" as const,
-    digest: fixtureDigest("graph-native-image"),
+    resource: fixtureResource("graph-native-image"),
     size: 4,
     mediaType: "image/png",
   };

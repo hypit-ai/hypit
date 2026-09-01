@@ -1,6 +1,6 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { readFile, realpath } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 
 import type {
@@ -27,8 +27,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
   readonly #assetRoots: readonly string[];
   readonly #sourceCache = new Map<string, SourceUnit>();
   readonly #assetIdentity = new Map<string, {
-    readonly resource: string;
-    readonly digest: BlobRef["digest"];
+    readonly resource: BlobRef["resource"];
     readonly size: number;
   }>();
   readonly #attachments = new Map<string, ArtifactAttachment>();
@@ -124,23 +123,17 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     }
     let identity = this.#assetIdentity.get(canonical);
     if (identity === undefined) {
-      const hash = createHash("sha256");
-      let size = 0;
-      for await (const chunk of createReadStream(canonical)) {
-        hash.update(chunk);
-        size += chunk.byteLength;
-      }
-      identity = { resource: `res_${randomUUID()}`, digest: `sha256:${hash.digest("hex")}`, size };
+      const size = (await stat(canonical)).size;
+      identity = { resource: `res_${randomUUID()}`, size };
       this.#assetIdentity.set(canonical, identity);
     }
     const artifact: BlobRef = {
       kind: "blob",
       resource: identity.resource,
-      digest: identity.digest,
       size: identity.size,
       mediaType: request.mediaType,
     };
-    const attachmentKey = `${artifact.digest}\u0000${artifact.mediaType}`;
+    const attachmentKey = `${artifact.resource}\u0000${artifact.mediaType}`;
     if (!this.#attachments.has(attachmentKey)) {
       this.#attachments.set(attachmentKey, {
         artifact: { ...artifact },
@@ -153,8 +146,8 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
   attachments(): readonly ArtifactAttachment[] {
     return [...this.#attachments.values()]
       .sort((left, right) => {
-        const byDigest = left.artifact.digest.localeCompare(right.artifact.digest);
-        return byDigest === 0 ? left.artifact.mediaType.localeCompare(right.artifact.mediaType) : byDigest;
+        const byResource = left.artifact.resource.localeCompare(right.artifact.resource);
+        return byResource === 0 ? left.artifact.mediaType.localeCompare(right.artifact.mediaType) : byResource;
       })
       .map((item) => ({ artifact: { ...item.artifact }, open: item.open }));
   }

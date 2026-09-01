@@ -13,7 +13,7 @@ import {
   CompositeCredentialStore,
 } from "@hypit/runtime";
 import type { CredentialStore } from "@hypit/runtime";
-import { FileArtifactStore } from "@hypit/artifact-store-fs";
+import { FileResourceStore } from "@hypit/resource-store-fs";
 import {
   buildResultRepositoryHostAbi,
   BuildResultRepositoryRegistry,
@@ -48,14 +48,14 @@ import { SqliteRuntimeState } from "@hypit/store-sqlite";
 import { createLocalRuntime } from "./runtime.js";
 import {
   createLocalRuntimeArchiveControl,
-  createLocalRuntimeArtifactAccess,
+  createLocalRuntimeResourceAccess,
 } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
 import type {
   LocalCredentialControl,
   LocalRuntime,
   LocalRuntimeArchiveControl,
-  LocalRuntimeArtifactAccess,
+  LocalRuntimeResourceAccess,
 } from "./types.js";
 
 export type RuntimeConfigEntry = {
@@ -583,9 +583,9 @@ export async function createRuntimeFromConfig(
       buildCatalog: state.catalog,
       operationStore: state.operations,
       dispatchStore: state.dispatch,
-      artifactStore: new FileArtifactStore(resolve(root, "artifacts")),
-      artifactStoreForBuild: (build) => new FileArtifactStore(buildWorkPath(root, build)),
-      clearBuildArtifacts: async (build) => {
+      resourceStore: new FileResourceStore(resolve(root, "resources")),
+      resourceStoreForBuild: (build) => new FileResourceStore(buildWorkPath(root, build)),
+      clearBuildResources: async (build) => {
         await rm(buildWorkPath(root, build), { recursive: true, force: true });
       },
       openBuildResultRepository: async (location) => await openBuildResultLocation(location, options, packageRoot, resultRegistry),
@@ -626,13 +626,13 @@ export async function createRuntimeArchiveFromConfig(
   });
 }
 
-export async function createRuntimeArtifactAccessFromConfig(
+export async function createRuntimeResourceAccessFromConfig(
   path: string,
   options: LoadRuntimeConfigOptions = {},
-): Promise<LocalRuntimeArtifactAccess> {
+): Promise<LocalRuntimeResourceAccess> {
   const { root } = await openRuntimeConfig(path, options.packageRoot);
-  return createLocalRuntimeArtifactAccess({
-    artifactStore: new FileArtifactStore(resolve(root, "artifacts")),
+  return createLocalRuntimeResourceAccess({
+    resourceStore: new FileResourceStore(resolve(root, "resources")),
   });
 }
 

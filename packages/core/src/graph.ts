@@ -57,9 +57,8 @@ function normalizedStoredValue(value: StoredValue): StoredValue {
   if (value.kind === "inline") return { kind: "inline", value: canonicalize(value.value) };
   return {
     kind: "blob",
-    ...(value.resource === undefined ? {} : { resource: value.resource }),
     ...(value.origin === undefined ? {} : { origin: { ...value.origin } }),
-    digest: value.digest,
+    resource: value.resource,
     size: value.size,
     mediaType: value.mediaType,
   };

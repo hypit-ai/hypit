@@ -20,7 +20,7 @@
     "@hypit/runtime-kit": "workspace:*"
   },
   "devDependencies": {
-    "@hypit/artifact-store-fs": "workspace:*",
+    "@hypit/resource-store-fs": "workspace:*",
     "@hypit/component-kit": "workspace:*",
     "@hypit/core": "workspace:*",
     "@hypit/credential-store-env": "workspace:*",

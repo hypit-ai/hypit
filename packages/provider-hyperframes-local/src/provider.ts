@@ -13,7 +13,7 @@ import { stageHyperframesProject } from "@hypit/hyperframes/project";
 import { renderHyperframesCapabilities } from "@hypit/render-hyperframes";
 import { canonicalize } from "@hypit/protocol";
 import { resolveNodePackageExecutable } from "@hypit/package-loader-node";
-import { isStreamingArtifactStore } from "@hypit/runtime";
+import { isStreamingResourceStore } from "@hypit/runtime";
 import type { BlobRef, CanonicalValue } from "@hypit/protocol";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 
@@ -143,14 +143,14 @@ async function artifactBytes(
   context: EndpointInvocationContext,
   artifact: BlobRef,
 ): Promise<Uint8Array | AsyncIterable<Uint8Array>> {
-  if (isStreamingArtifactStore(context.artifacts)) {
-    const chunks = await context.artifacts.open(artifact.digest);
-    assert(chunks !== undefined, `HyperFrames Artifact ${artifact.digest} is unavailable`);
+  if (isStreamingResourceStore(context.resources)) {
+    const chunks = await context.resources.open(artifact.resource);
+    assert(chunks !== undefined, `HyperFrames Artifact ${artifact.resource} is unavailable`);
     return chunks;
   }
-  const bytes = await context.artifacts.get(artifact.digest);
-  assert(bytes !== undefined, `HyperFrames Artifact ${artifact.digest} is unavailable`);
-  assert(bytes.byteLength === artifact.size, `HyperFrames Artifact ${artifact.digest} size differs`);
+  const bytes = await context.resources.get(artifact.resource);
+  assert(bytes !== undefined, `HyperFrames Artifact ${artifact.resource} is unavailable`);
+  assert(bytes.byteLength === artifact.size, `HyperFrames Artifact ${artifact.resource} size differs`);
   return bytes;
 }
 
@@ -316,9 +316,9 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
             timeoutMs: processTimeoutMs,
             maxOutputBytes: maxProcessOutputBytes,
           });
-          const artifact = isStreamingArtifactStore(context.artifacts)
-            ? await context.artifacts.putStream(createReadStream(output), "video/mp4")
-            : await context.artifacts.put(await readFile(output), "video/mp4");
+          const artifact = isStreamingResourceStore(context.resources)
+            ? await context.resources.putStream(createReadStream(output), "video/mp4")
+            : await context.resources.put(await readFile(output), "video/mp4");
           const value: RenderedVisual = sealRenderedVisual({
             frameRate: document.frameRate,
             frameCount: document.frameCount,

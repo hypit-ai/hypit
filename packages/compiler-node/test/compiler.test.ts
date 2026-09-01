@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import {
   mkdtemp,
   mkdir,
@@ -288,7 +287,6 @@ function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Workspace 
           const artifact: BlobRef = {
             kind: "blob",
             resource: "res_memory-reference",
-            digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
             size: bytes.byteLength,
             mediaType: request.mediaType,
           };
@@ -463,10 +461,10 @@ test("source assets become graph values and a Host transfer bundle without closu
   const attachment = first.attachments[0];
   assert.deepEqual(await readAttachment(attachment), new Uint8Array([1, 2, 3, 4]));
   assert.equal(first.program.records[0]?.value.kind, "blob");
-  assert.equal(first.program.records[0]?.value.kind === "blob" ? first.program.records[0].value.digest : undefined, attachment?.artifact.digest);
+  assert.equal(first.program.records[0]?.value.kind === "blob" ? first.program.records[0].value.resource : undefined, attachment?.artifact.resource);
   await writeFile(asset, new Uint8Array([9, 8, 7]));
   const second = await assetCompiler({ root }).compileFile(file);
-  assert.notEqual(second.attachments[0]?.artifact.digest, attachment?.artifact.digest);
+  assert.notEqual(second.attachments[0]?.artifact.resource, attachment?.artifact.resource);
 });
 
 test("an installed package Surface can contribute embedded bytes without an author file or network", async () => {
@@ -483,8 +481,8 @@ test("an installed package Surface can contribute embedded bytes without an auth
   assert.deepEqual(await readAttachment(attachment), new Uint8Array([8, 6, 7, 5, 3, 0, 9]));
   assert.equal(compiled.program.records[0]?.value.kind, "blob");
   assert.equal(compiled.program.records[0]?.value.kind === "blob"
-    ? compiled.program.records[0].value.digest
-    : undefined, attachment?.artifact.digest);
+    ? compiled.program.records[0].value.resource
+    : undefined, attachment?.artifact.resource);
 });
 
 test("Run compilation retains embedded Author attachments for later Runtime staging", async () => {
@@ -548,7 +546,7 @@ test("filesystem Workspace captures source text and asset identity once", async 
   const detached = await workspace.attachments();
   assert.deepEqual(await readAttachment(detached[0]), new Uint8Array([4, 5, 6, 7]),
     "attachment bytes are opened lazily; Runtime rejects them if they no longer match the captured identity");
-  assert.equal((await workspace.attachments())[0]?.artifact.digest, firstAsset.artifact.digest);
+  assert.equal((await workspace.attachments())[0]?.artifact.resource, firstAsset.artifact.resource);
   await assert.rejects(
     async () => await workspace.resolveSource(entry, {
       from: "./escaped.svs",
@@ -610,8 +608,8 @@ test("filesystem and in-memory Workspaces load identical asset bytes", async () 
   assert.notEqual(memoryArtifact.resource, filesystemArtifact.resource,
     "separate admissions keep separate resource identities even for equal bytes");
   assert.deepEqual(
-    { digest: memoryArtifact.digest, size: memoryArtifact.size, mediaType: memoryArtifact.mediaType },
-    { digest: filesystemArtifact.digest, size: filesystemArtifact.size, mediaType: filesystemArtifact.mediaType },
+    { size: memoryArtifact.size, mediaType: memoryArtifact.mediaType },
+    { size: filesystemArtifact.size, mediaType: filesystemArtifact.mediaType },
   );
   assert.deepEqual(await readAttachment(memory.attachments[0]),
     await readAttachment(filesystem.attachments[0]));

@@ -44,7 +44,7 @@ type SpeechVisualTrack = {
     readonly subjectId?: string;
     readonly elements?: readonly {
       readonly kind?: string;
-      readonly artifact?: { readonly digest?: string };
+      readonly artifact?: { readonly resource?: string };
     }[];
   }[];
 };
@@ -53,7 +53,7 @@ type SpeechAudioTrack = {
   readonly clips?: readonly {
     readonly id: string;
     readonly subjectId?: string;
-    readonly artifact?: { readonly digest?: string };
+    readonly artifact?: { readonly resource?: string };
   }[];
 };
 
@@ -65,14 +65,14 @@ function projectSpeechVisual(context: StudioTrackCompanionContext): readonly Stu
     const present = presents.get(id);
     const subjectId = present?.subjectId;
     const artifact = present?.elements?.find((element) =>
-      (element.kind === "image" || element.kind === "video") && element.artifact?.digest !== undefined)?.artifact;
+      (element.kind === "image" || element.kind === "video") && element.artifact?.resource !== undefined)?.artifact;
     return {
       ...entity,
       authoredId: subjectId ?? id,
       ...(context.placement === undefined ? {} : { elementRange: context.placement.range }),
       display: {
         title: subjectId ?? "Speech",
-        layers: artifact?.digest === undefined ? [] : [previewLayer(artifactPreview("video", artifact.digest), "storyboard")],
+        layers: artifact?.resource === undefined ? [] : [previewLayer(artifactPreview("video", artifact.resource), "storyboard")],
       },
       presentation: { entity: "media-item", chrome: "standard" },
     };
@@ -91,7 +91,7 @@ function projectSpeechAudio(context: StudioTrackCompanionContext): readonly Stud
       authoredId: subjectId ?? id,
       display: {
         title: subjectId ?? entity.authoredId,
-        layers: clip?.artifact?.digest === undefined ? [] : [previewLayer(artifactPreview("audio", clip.artifact.digest), "waveform")],
+        layers: clip?.artifact?.resource === undefined ? [] : [previewLayer(artifactPreview("audio", clip.artifact.resource), "waveform")],
       },
       presentation: { entity: "audio-clip", chrome: "standard" },
     };

@@ -5,7 +5,7 @@ import type {
   BuildState,
   CommandResult,
   CoreCommand,
-  Digest,
+  ResourceId,
 } from "@hypit/protocol";
 import type { OperationSnapshot } from "./operations.js";
 
@@ -70,25 +70,29 @@ export type RuntimeCommandExecutor = {
   ): Promise<OperationSnapshot>;
 };
 
-/** Content-addressed bytes. Location, retention and remote transport are adapter policy. */
-export type ArtifactStore = {
-  /** Admit bytes and compute their identity in the same pass. */
+/** Build-local byte resources. Location, retention and transport are Runtime policy. */
+export type ResourceStore = {
+  /** Store one new resource instance. Equal bytes remain independent resources. */
   put(bytes: Uint8Array, mediaType: string): Promise<BlobRef>;
-  /** Read bytes previously admitted under this digest. */
-  get(digest: Digest): Promise<Uint8Array | undefined>;
+  /** Write bytes for an already-declared source or historical resource. */
+  write(resource: BlobRef, bytes: Uint8Array): Promise<void>;
+  /** Read bytes previously stored under this execution identity. */
+  get(resource: ResourceId): Promise<Uint8Array | undefined>;
   /** Cheap presence query. */
-  has(digest: Digest): Promise<boolean>;
+  has(resource: ResourceId): Promise<boolean>;
 };
 
 /** Optional transfer capability. Core and components never require storage to expose it. */
-export type StreamingArtifactStore = ArtifactStore & {
+export type StreamingResourceStore = ResourceStore & {
   putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string): Promise<BlobRef>;
-  /** Stream bytes previously admitted under this digest. */
-  open(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
+  writeStream(resource: BlobRef, chunks: AsyncIterable<Uint8Array>): Promise<void>;
+  /** Stream bytes previously stored under this resource identity. */
+  open(resource: ResourceId): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
-export function isStreamingArtifactStore(value: ArtifactStore): value is StreamingArtifactStore {
+export function isStreamingResourceStore(value: ResourceStore): value is StreamingResourceStore {
   return "putStream" in value && typeof value.putStream === "function"
+    && "writeStream" in value && typeof value.writeStream === "function"
     && "open" in value && typeof value.open === "function";
 }
 

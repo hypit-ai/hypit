@@ -104,10 +104,15 @@ function artifactCard(artifact: StudioArtifactView): HTMLElement {
   const kind = artifactKind(artifact.mediaType);
   const link = document.createElement("a");
   link.className = `artifact-card artifact-${kind.label.toLowerCase()}`;
-  link.href = `/__studio/artifact/${artifact.digest}`;
+  const query = new URLSearchParams({
+    build: artifact.build,
+    output: artifact.output,
+    path: artifact.valuePath,
+  });
+  link.href = `/__studio/artifact?${query.toString()}`;
   link.target = "_blank";
   link.rel = "noreferrer";
-  const title = artifact.outputs[0] ?? artifact.records[0] ?? kind.label;
+  const title = artifact.valuePath === "$" ? artifact.output : `${artifact.output} ${artifact.valuePath}`;
   link.innerHTML = `
     <div class="artifact-preview">
       <span class="artifact-glyph">${icon(kind.icon)}</span>
@@ -127,7 +132,12 @@ function artifactCard(artifact: StudioArtifactView): HTMLElement {
     image.loading = "lazy";
     link.querySelector<HTMLElement>(".artifact-preview")!.prepend(image);
   }
-  link.title = [title, artifact.mediaType, artifact.digest, artifact.run ?? artifact.source].join("\n");
+  link.title = [
+    title,
+    artifact.mediaType,
+    `${artifact.ownerBuild}/${artifact.ownerOutput}/${artifact.filePath}`,
+    artifact.run ?? artifact.source,
+  ].join("\n");
   return link;
 }
 
@@ -237,7 +247,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
 
   const renderArtifacts = (): void => {
     const artifacts = library?.artifacts ?? [];
-    element.querySelector<HTMLElement>("[data-artifact-count]")!.textContent = `${artifacts.length} stored object${artifacts.length === 1 ? "" : "s"}`;
+    element.querySelector<HTMLElement>("[data-artifact-count]")!.textContent = `${artifacts.length} public file${artifacts.length === 1 ? "" : "s"}`;
     const filters = [
       ["all", "All"],
       ["video", "Video"],
@@ -258,9 +268,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
     if (shown.length === 0) {
       artifactGrid.replaceChildren(emptyState("archive",
         artifacts.length === 0 ? "No accepted artifacts" : `No ${artifactFilter} artifacts`,
-        library?.runtime === undefined
-          ? "Artifacts appear only from a selected Runtime archive."
-          : "Only ArtifactStore objects referenced by accepted Records appear here."));
+        "Public files appear here when a Build Result contains them."));
       return;
     }
     artifactGrid.replaceChildren(...shown.map(artifactCard));
@@ -297,7 +305,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       if (active === "tasks") taskList.replaceChildren(emptyState("tasks", "Archive unavailable", detail));
-      if (active === "artifacts") artifactGrid.replaceChildren(emptyState("archive", "ArtifactStore unavailable", detail));
+      if (active === "artifacts") artifactGrid.replaceChildren(emptyState("archive", "Build Results unavailable", detail));
     } finally {
       refreshing = false;
       element.classList.remove("is-refreshing");

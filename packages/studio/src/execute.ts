@@ -1,5 +1,5 @@
-import { EndpointRegistry, MemoryArtifactStore, NodeDriver } from "@hypit/driver-node";
-import type { ArtifactStore } from "@hypit/runtime";
+import { EndpointRegistry, MemoryResourceStore, NodeDriver } from "@hypit/driver-node";
+import type { ResourceStore } from "@hypit/runtime";
 import type { BuildState } from "@hypit/protocol";
 
 import type { StudioDomain } from "./domain.js";
@@ -15,14 +15,14 @@ export type Executed = {
 export async function executeDeterministic(
   domain: StudioDomain,
   planned: BuildState,
-  artifacts: ArtifactStore,
+  resources: ResourceStore,
   endpoints: EndpointRegistry = new EndpointRegistry(),
 ): Promise<Executed> {
   const result = await new NodeDriver({
     producers: domain.producers,
     validators: domain.validators,
     endpoints,
-    artifacts,
+    resources,
   }).run(planned);
   const counts = new Map<string, number>();
   for (const item of result.blocked) {
@@ -40,4 +40,4 @@ export async function executeDeterministic(
   };
 }
 
-export { MemoryArtifactStore };
+export { MemoryResourceStore };

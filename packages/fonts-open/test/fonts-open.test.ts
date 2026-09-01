@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import test from "node:test";
@@ -33,7 +32,7 @@ async function decode(
       return {
         artifact: {
           kind: "blob",
-          digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+          resource: `res_font-${requests.length}`,
           size: bytes.byteLength,
           mediaType: request.mediaType,
         },
@@ -84,10 +83,7 @@ test("every declared family, static weight and style can materialize exact bytes
       for (const style of family.styles) {
         const { font, requests } = await decodeFace(name, String(weight), style);
         assert.ok(font.sources.length > 0, `${name} ${weight} ${style}`);
-        const uniqueBytes = new Set(requests.map(
-          (request) => createHash("sha256").update(request.bytes).digest("hex"),
-        ));
-        assert.equal(uniqueBytes.size, font.sources.length, `${name} ${weight} ${style}`);
+        assert.equal(requests.length, font.sources.length, `${name} ${weight} ${style}`);
         assert.equal(new Set(requests.map((request) => request.from)).size, requests.length, name);
       }
     }

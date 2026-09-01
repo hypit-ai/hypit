@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { FileArtifactStore } from "@hypit/artifact-store-fs";
+import { FileResourceStore } from "@hypit/resource-store-fs";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { registerTypeValidatorFacets } from "@hypit/component-kit";
 import {
@@ -252,7 +252,7 @@ async function smokeCases(root: string): Promise<readonly SmokeCase[]> {
   const referencePath = process.env.HYPIT_KIE_SMOKE_REFERENCE;
   if (referencePath !== undefined) {
     const absolute = resolve(referencePath);
-    const store = new FileArtifactStore(join(root, ".svml", "artifacts"));
+    const store = new FileResourceStore(join(root, ".svml", "artifacts"));
     const reference = await store.put(await readFile(absolute), referenceMediaType(absolute));
     cases.push({
       key: "gpt-image-2-edit",
@@ -333,14 +333,13 @@ function generatedArtifact(item: SmokeCase, records: readonly TypedRecord[]): Bl
   const artifacts = product[item.media === "image" ? "images" : "videos"];
   assert(Array.isArray(artifacts) && artifacts.length > 0, `${item.key} generated Product has no artifacts`);
   const first = object(artifacts[0], `${item.key} generated artifact`);
-  assert(first.kind === "blob" && typeof first.digest === "string"
+  assert(first.kind === "blob" && typeof first.resource === "string"
     && typeof first.size === "number" && typeof first.mediaType === "string", `${item.key} BlobRef is invalid`);
   return first as unknown as BlobRef;
 }
 
 async function inspectArtifact(root: string, item: SmokeCase, artifact: BlobRef): Promise<string> {
-  const artifactHex = artifact.digest.slice("sha256:".length);
-  const artifactPath = join(root, ".svml", "artifacts", "sha256", artifactHex.slice(0, 2), artifactHex);
+  const artifactPath = join(root, ".svml", "artifacts", "resources", artifact.resource);
   const inspectPath = join(root, `${item.key}-live${resultExtension(artifact.mediaType)}`);
   await writeFile(inspectPath, await readFile(artifactPath), { flag: "w" });
   return inspectPath;
@@ -376,7 +375,7 @@ async function main(): Promise<void> {
     buildCatalog: state.catalog,
     operationStore: state.operations,
     dispatchStore: state.dispatch,
-    artifactStore: new FileArtifactStore(join(root, ".hypit", "artifacts")),
+    resourceStore: new FileResourceStore(join(root, ".hypit", "artifacts")),
     credentialStore: new EnvironmentCredentialStore(),
     components: [
       generationComponent,
@@ -404,7 +403,7 @@ async function main(): Promise<void> {
         if (build.status !== "complete") throw new Error(failureMessage(item, build));
         const artifact = generatedArtifact(item, build.state.records);
         const inspectPath = await inspectArtifact(root, item, artifact);
-        console.log(`[${item.key}] artifact: ${artifact.digest}`);
+        console.log(`[${item.key}] artifact: ${artifact.resource}`);
         console.log(`[${item.key}] inspection copy: ${inspectPath}`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

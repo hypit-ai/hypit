@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -26,6 +25,8 @@ async function ffmpeg(argv: readonly string[]): Promise<void> {
   });
 }
 
+let surfaceId = 0;
+
 function surface(bytes: Uint8Array, options: {
   readonly mediaType: string;
   readonly width: number;
@@ -33,9 +34,9 @@ function surface(bytes: Uint8Array, options: {
   readonly alphaMode: "opaque" | "straight";
   readonly timing: CompositableSurfaceRef["timing"];
 }): CompositableSurfaceRef {
-  const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const;
+  const resource = `res_surface-${surfaceId += 1}` as const;
   return {
-    artifact: { kind: "blob", digest, size: bytes.byteLength, mediaType: options.mediaType },
+    artifact: { kind: "blob", resource, size: bytes.byteLength, mediaType: options.mediaType },
     width: options.width,
     height: options.height,
     colorSpace: "srgb",

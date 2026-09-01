@@ -5,7 +5,7 @@ import { hypiHubRoutes } from "../src/routes.js";
 
 const image = {
   kind: "blob" as const,
-  digest: `sha256:${"1".repeat(64)}`,
+  resource: "res_hypihub-route-1",
   size: 3,
   mediaType: "image/png",
 };
@@ -81,7 +81,7 @@ test("HypiHub Seedance sends reference images through the public top-level field
       webSearch: [false],
       referenceImage: [
         { role: "image", artifact: image },
-        { role: "image", artifact: { ...image, digest: `sha256:${"2".repeat(64)}` } },
+        { role: "image", artifact: { ...image, resource: "res_hypihub-route-2" } },
       ],
     },
   }, resolve);
@@ -116,7 +116,7 @@ test("HypiHub uses ref_video_url for one video and the public array for multiple
   const route = hypiHubRoutes.find((item) => item.capability.name === "minimax-h3");
   assert.ok(route);
   const video = { ...image, mediaType: "video/mp4" };
-  const resolveVideo = async (artifact: typeof video) => `https://hypit.ai/files/${artifact.digest.slice(-1)}.mp4`;
+  const resolveVideo = async (artifact: typeof video) => `https://hypit.ai/files/${artifact.resource.slice(-1)}.mp4`;
 
   const single = await route.compile({ ports: {
     prompt: ["animate"], duration: [6],
@@ -131,7 +131,7 @@ test("HypiHub uses ref_video_url for one video and the public array for multiple
     prompt: ["animate"], duration: [6],
     referenceVideo: [
       { role: "video", artifact: video },
-      { role: "video", artifact: { ...video, digest: `sha256:${"2".repeat(64)}` } },
+      { role: "video", artifact: { ...video, resource: "res_hypihub-route-2" } },
     ],
   } }, resolveVideo);
   assert.deepEqual(multiple.input, {

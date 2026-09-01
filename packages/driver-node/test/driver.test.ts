@@ -4,7 +4,7 @@ import test from "node:test";
 import { reduce } from "@hypit/core";
 import {
   ProducerRegistry,
-  MemoryArtifactStore,
+  MemoryResourceStore,
   NodeDriver,
   EndpointRegistry,
 } from "@hypit/driver-node";
@@ -206,17 +206,17 @@ test("an alternate Candidate is explicitly selected before execution, never by E
   assert.equal(accepted.state.needs.length, 0);
 });
 
-test("MemoryArtifactStore is content addressed and returns defensive copies", async () => {
-  const store = new MemoryArtifactStore();
+test("MemoryResourceStore keeps independent admissions and returns defensive copies", async () => {
+  const store = new MemoryResourceStore();
   const source = new Uint8Array([1, 2, 3]);
   const first = await store.put(source, "application/octet-stream");
   source[0] = 9;
   const second = await store.put(new Uint8Array([1, 2, 3]), "application/octet-stream");
-  assert.equal(first.digest, second.digest);
-  const loaded = await store.get(first.digest);
+  assert.notEqual(first.resource, second.resource);
+  const loaded = await store.get(first.resource);
   assert.deepEqual(loaded, new Uint8Array([1, 2, 3]));
   if (loaded !== undefined) loaded[0] = 8;
-  assert.deepEqual(await store.get(first.digest), new Uint8Array([1, 2, 3]));
+  assert.deepEqual(await store.get(first.resource), new Uint8Array([1, 2, 3]));
 });
 
 test("Core still owns scheduling when Driver has every implementation", async () => {

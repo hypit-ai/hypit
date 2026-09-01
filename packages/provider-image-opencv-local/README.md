@@ -3,7 +3,7 @@
 Local OpenCV/NumPy realization of the single `@hypit/raster` capability.
 
 Image Transform and Image Compose lower their different author meanings to one closed RasterRequest.
-One Handler stages its content-addressed inputs, and one Python interpreter shares decoding, fit,
+One Handler stages its declared Resource inputs, and one Python interpreter shares decoding, fit,
 interpolation, alpha and encoding primitives across both variants. It runs in a bounded child process
 and stores one new image Artifact. Temporary paths, OpenCV details and diagnostics stay inside the
 Endpoint and never enter the image Product.

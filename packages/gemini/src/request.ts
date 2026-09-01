@@ -27,7 +27,7 @@ export function verifyGeminiRequest(value: unknown): asserts value is GeminiRequ
   for (const [index, raw] of request.media.entries()) {
     const item = object(raw, `Gemini request media[${index}]`);
     const artifact = object(item.artifact, `Gemini request media[${index}].artifact`);
-    assert(artifact.kind === "blob" && typeof artifact.digest === "string"
+    assert(artifact.kind === "blob" && typeof artifact.resource === "string"
       && typeof artifact.size === "number" && Number.isSafeInteger(artifact.size)
       && typeof artifact.mediaType === "string",
     `Gemini request media[${index}].artifact must be a BlobRef`);

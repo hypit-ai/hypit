@@ -4,7 +4,7 @@ Asynchronous AWS Step Functions/Lambda implementation of the exact
 `@hypit/render-hyperframes#render-visual` capability.
 
 The Endpoint stages the immutable `HyperframesDocument` with the shared
-`stageHyperframesProject()` layout, uploads that content-addressed site, starts one distributed
+`stageHyperframesProject()` layout, uploads that operation-scoped site, starts one distributed
 render and persists its execution ARN in the Operation checkpoint. Its Step Functions execution name is derived from the
 Runtime Operation id, so recovery cannot accidentally submit the same attempt twice.
 Cancellation uses that same identity to stop the remote Step Functions execution, including the
