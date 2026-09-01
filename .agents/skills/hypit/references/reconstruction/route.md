@@ -436,7 +436,7 @@ unless the author explicitly requested it.
 
 **Read now:** `../runtime.md` and `../studio-confirmation.md`. Before realizing the preview-mock Run,
 disclose the selected Provider and credential source for every paid capability. If any key is missing
-or insufficient, guide the author to https://hypit.ai for a HypiHub key when the model is available
+or insufficient, guide the author to https://hypit.ai and `hypit auth login` when the model is available
 there; do not submit payment until the key is usable. Realize the preview-mock Run first, then start Studio with
 the returned temporary `preview.svrun` (never the original unresolved Run), show the complete
 estimate-timed mock, return the exact URL printed by Studio, and obtain explicit acceptance and cost approval. If the author declines, enter

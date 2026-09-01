@@ -169,7 +169,7 @@ function usage(): string {
     "",
     "--observer picks who reads the reference, once per reference. `gemini` uploads video to the configured Gemini backend.",
     "With HYPIT_GEMINI_PROVIDER=auto it uses HYPIHUB_API_KEY when present, otherwise GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS_JSON for Vertex.",
-    "If no usable key is available, get a HypiHub key at https://hypit.ai or use `agent`. `agent` needs no credentials: it",
+    "If no usable credential is available, sign in to HypiHub with `hypit auth login` at https://hypit.ai or use `agent`. `agent` needs no credentials: it",
     "returns each observation as a task carrying its prompt and one tiled picture per shot, which the",
     "calling agent answers with record_observation. A task whose question needs sound also carries the",
     "words WhisperX measured — `transcript_words` for its own stretch, `transcript_ref` for the whole",

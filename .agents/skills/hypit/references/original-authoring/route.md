@@ -248,7 +248,7 @@ explicitly requested; the variant route owns its own aggregate and paid-build ga
 
 **Read now:** `../runtime.md` and `../studio-confirmation.md`. Before the paid gate, disclose the
 selected Provider and credential source for every paid capability; if any key is missing or
-insufficient, guide the author to https://hypit.ai for a HypiHub key when available. Then call the preview-mock realizer and
+insufficient, guide the author to https://hypit.ai with `hypit auth login` when available. Then call the preview-mock realizer and
 start Studio with its returned temporary `preview.svrun` (not the unresolved author Run). Show the
 complete estimate-timed mock, return the exact URL printed by Studio, and obtain explicit acceptance
 and cost approval. If the author declines, enter `../revision/route.md` and do not submit a Build. After

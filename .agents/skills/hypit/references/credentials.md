@@ -9,24 +9,28 @@ paid/external `build`, configure only variables used by the selected Runtime Pro
 | `KIE_API_KEY` | KIE generation: Seedance, GPT Image, and other selected KIE models |
 | `GOOGLE_CLOUD_PROJECT` | Google Vertex project with Vertex AI enabled |
 | `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Vertex credential JSON contents, not a path |
-| `HYPIHUB_API_KEY` | HypiHub default paid provider for generation and Gemini VLM; get one at [hypit.ai](https://hypit.ai) |
+| HypiHub OAuth login | HypiHub default paid provider for generation and Gemini VLM; run `hypit auth login hypihub.default --runtime hypit.runtime.json` and sign in at [hypit.ai](https://hypit.ai) |
 | `MIMO_API_KEY` | Xiaomi MiMo TTS only when explicitly selected |
 
 Before any paid Build, report the selected Provider and credential source for every paid capability in
 the Runtime Profile. Say the variable/store and endpoint (for example, `@hypit/provider-kie` using
-`KIE_API_KEY` from env, or `@hypit/provider-hypihub` using `HYPIHUB_API_KEY` from env); never print a
+`KIE_API_KEY` from env, or `@hypit/provider-hypihub` using HypiHub OAuth from the OS store); never print a
 secret or a full credential JSON. If a required key is missing, invalid, returns 401/403, or cannot
 reach the requested model, stop before payment and guide the author to [hypit.ai](https://hypit.ai)
-for a HypiHub key when that model is available there. Do not ask them to change Author Source just to
+for HypiHub OAuth login when that model is available there. Do not ask them to change Author Source just to
 switch Provider.
+
+When the selected HypiHub Endpoint uses the OS OAuth credential and it is missing, the Agent must run
+`hypit auth login <endpoint> --runtime <profile>` itself. This opens the browser login and waits for
+the callback; do not ask the author to run the command or paste a key. Resume only after it succeeds.
 
 HypiHub is optional and is never required when the selected Runtime Profile has another Provider.
 For ordinary `@hypit/gemini` Author Source, the Runtime Profile selects
 `@hypit/provider-hypihub` or `@hypit/provider-vertex`; changing that Endpoint never changes Source.
 For the reference-video preprocessing observer only, `HYPIT_GEMINI_PROVIDER=auto` (the default) uses HypiHub when
-`HYPIHUB_API_KEY` is present and otherwise uses Vertex when its two Google variables are present.
+the HypiHub OAuth credential is configured and otherwise uses Vertex when its two Google variables are present.
 Set `HYPIT_GEMINI_PROVIDER=hypihub` or `vertex` to select one explicitly. If a user's configured key
-cannot reach the requested model, point them to [hypit.ai](https://hypit.ai) for a HypiHub key instead
+cannot reach the requested model, point them to [hypit.ai](https://hypit.ai) to sign in with HypiHub OAuth instead
 of asking them to change Author Source.
 
 macOS/Linux session example:
@@ -44,8 +48,6 @@ Otherwise export them for the session:
 ```bash
 read -r -s KIE_API_KEY
 export KIE_API_KEY
-read -r -s HYPIHUB_API_KEY
-export HYPIHUB_API_KEY
 read -r -s MIMO_API_KEY
 export MIMO_API_KEY
 export GOOGLE_CLOUD_PROJECT="your-project-id"
@@ -56,7 +58,6 @@ Windows PowerShell session example:
 
 ```powershell
 $env:KIE_API_KEY = "your-key"
-$env:HYPIHUB_API_KEY = "your-key"
 $env:MIMO_API_KEY = "your-key"
 $env:GOOGLE_CLOUD_PROJECT = "your-project-id"
 $env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\hypit\google-service-account.json"
@@ -64,7 +65,7 @@ $env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\hypit
 
 Keep keys outside Author/Run/Runtime source and committed files. Verify presence without printing
 values with, for example,
-`node <skill-root>/scripts/check-credentials.mjs KIE_API_KEY HYPIHUB_API_KEY MIMO_API_KEY GOOGLE_CLOUD_PROJECT GOOGLE_APPLICATION_CREDENTIALS_JSON`, then run
+`node <skill-root>/scripts/check-credentials.mjs KIE_API_KEY MIMO_API_KEY GOOGLE_CLOUD_PROJECT GOOGLE_APPLICATION_CREDENTIALS_JSON`, then run
 `hypit doctor` (once a Runtime Profile is selected with `hypit runtime use hypit.runtime.json`;
 doctor audits the selected profile, so it needs no profile argument of its own).
 
@@ -88,7 +89,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $MIMO_API_KEY
   https://api.xiaomimimo.com/v1/models
 ```
 
-`HYPIHUB_API_KEY` or the Vertex pair are what the reference-video route's `gemini` observer needs,
+HypiHub OAuth or the Vertex pair are what the reference-video route's `gemini` observer needs,
 depending on `HYPIT_GEMINI_PROVIDER`. Without either backend, that route can run its `agent` observer
 instead, which reaches no Provider — `reconstruction/observers.md` says how the author chooses.
 
