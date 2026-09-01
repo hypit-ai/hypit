@@ -20,7 +20,11 @@ reach the requested model, stop before payment and guide the author to [hypit.ai
 for HypiHub OAuth login when that model is available there. Do not ask them to change Author Source just to
 switch Provider.
 
-When the selected HypiHub Endpoint uses the OS OAuth credential and it is missing, the Agent must run
+When the selected HypiHub Endpoint uses the OS OAuth credential and it is missing, first explain to the
+author why the login is being opened: no usable credential is configured, and browser sign-in lets the
+Agent use HypiHub without asking the author to copy or paste an API key. If the account has no active
+Hypit subscription, the author can purchase one on hypit.ai after signing in. The session is stored in
+the OS credential store, and opening login does not itself submit a paid generation. Then the Agent must run
 `hypit auth login <endpoint> --runtime <profile>` itself. This opens the browser login and waits for
 the callback; do not ask the author to run the command or paste a key. Resume only after it succeeds.
 
