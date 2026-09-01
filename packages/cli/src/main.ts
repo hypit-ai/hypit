@@ -224,25 +224,22 @@ function oauthCallbackPage(success: boolean): string {
       :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       * { box-sizing: border-box; }
       body { margin: 0; min-height: 100vh; display: grid; place-items: center; color: #18181b; background: #f7f6f3; }
-      main { width: min(100% - 48px, 560px); padding: 48px 0 52px; }
+      main { width: min(100% - 48px, 560px); padding: 48px 42px 52px; border: 1px solid #e2dfdb; border-radius: 16px; background: #fff; box-shadow: 0 18px 50px rgba(24,24,27,.08); }
       .brand { display: inline-flex; align-items: center; gap: 10px; color: #18181b; font-size: 18px; font-weight: 650; letter-spacing: -.04em; }
       .brand svg { width: 28px; height: 28px; }
       .wordmark { background: linear-gradient(110deg, #e83f5f, #f6a9bd); -webkit-background-clip: text; background-clip: text; color: transparent; }
-      .mark { width: 58px; height: 58px; margin: 72px 0 28px; display: grid; place-items: center; border: 1px solid #ddd9d5; background: #fff; color: #e83f5f; }
+      .mark { width: 58px; height: 58px; margin: 72px 0 28px; display: grid; place-items: center; border: 1px solid #ddd9d5; border-radius: 14px; background: #fff; color: #e83f5f; }
       .mark.success { color: #e83f5f; }
       .mark.error { color: #c73d45; border-color: #e2c9c9; background: #fffafa; }
       h1 { margin: 0; font-size: clamp(26px, 7vw, 34px); line-height: 1.08; letter-spacing: -.035em; }
       p { margin: 14px 0 0; color: #66636a; font-size: 15px; line-height: 1.6; }
-      .rule { height: 1px; margin: 30px 0 18px; background: #e4e1dd; }
-      .hint { margin: 0; color: #8b878d; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
       @media (prefers-color-scheme: dark) {
         body { color: #f7f2f4; background: #111114; }
         .brand { color: #f7f2f4; }
+        main { border-color: #3a3036; background: #19171b; box-shadow: 0 24px 70px rgba(0,0,0,.36); }
         .mark { border-color: #3a3036; background: #19171b; }
         .mark.error { border-color: #6b3f40; background: #291d1e; }
         p { color: #bdb3b8; }
-        .rule { background: #332c31; }
-        .hint { color: #81767d; }
       }
     </style>
   </head>
@@ -257,8 +254,6 @@ function oauthCallbackPage(success: boolean): string {
       </div>
       <h1>${heading}</h1>
       <p>${message}</p>
-      <div class="rule"></div>
-      <p class="hint">HypiHub OAuth · local callback</p>
     </main>
   </body>
 </html>`;
