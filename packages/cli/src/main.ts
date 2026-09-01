@@ -135,7 +135,13 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
   const address = server.address();
   if (address === null || typeof address === "string") throw new Error("could not open a local OAuth callback");
   const redirectUri = `http://127.0.0.1:${address.port}/callback`;
-  const authorize = new URL("https://hypit.ai/oauth/authorize");
+  // Open the site's SPA consent surface rather than the protocol endpoint.
+  // The latter can only read a browser session from an Authorization header,
+  // while the login page stores the session in localStorage. Returning there
+  // after login would therefore bounce straight back to /login forever. The
+  // consent page reads that localStorage token and calls /oauth/authorize with
+  // the required header.
+  const authorize = new URL("https://hypit.ai/oauth/consent");
   authorize.search = new URLSearchParams({
     response_type: "code", client_id: HYPIHUB_OAUTH_CLIENT_ID, redirect_uri: redirectUri,
     scope: "user:profile user:inference", state, code_challenge: challenge, code_challenge_method: "S256",
