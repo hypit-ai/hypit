@@ -37,11 +37,17 @@ a run the author has to restart.
 If the request is only to sign in or authenticate HypiHub (for example, `login to hypit`), treat it as
 credential setup, not video production. Do not read or enter the reconstruction, original-authoring,
 observer, playbook, vocabulary, preview, or recovery routes; do not inspect media, create a project,
-start a Worker, or ask which observer to use. Use the currently selected Runtime Profile (or the
-explicit profile the author names), check only the HypiHub Endpoint credential status, and follow the
-HypiHub login instructions below. Before opening the browser, explain that no usable credential is
-configured, that OAuth avoids copying an API key, that an account without an active subscription can
-purchase one at hypit.ai after signing in, and that opening login does not submit a paid generation.
+start a Worker, or ask which observer to use. Do not read any supporting reference for this path,
+including `environment.md` and `credentials.md`; this section contains the needed login instructions.
+Do not inspect `.env`, `hypit.runtime.json`, package code or CredentialStore implementations. Confirm
+the launcher, use the currently selected Runtime Profile (or the explicit profile the author names),
+and run only `auth status` for the HypiHub Endpoint. If the status says the credential store is
+read-only or the Endpoint uses `env`, do not run `auth login`: report that OAuth login is unavailable
+for that Endpoint and stop without source or filesystem investigation. If the status is writable and
+missing, explain before opening the browser that no usable credential is configured, OAuth avoids
+copying an API key, an account without an active subscription can purchase one at hypit.ai after
+signing in, and opening login does not submit a paid generation; then run `auth login` and wait for it
+to finish.
 
 ## Credentials: run HypiHub login for the author
 
