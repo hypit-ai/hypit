@@ -27,8 +27,12 @@ the other path's does.
 
 Before `prepare_reference`, inspect the selected Runtime Profile and report what this machine actually
 holds rather than asking the author to recall it. For a HypiHub Endpoint, use `hypit auth status
-<endpoint> --runtime <profile>`; if its OS credential is missing, run `hypit auth login <endpoint>
---runtime <profile>` yourself and wait for the browser OAuth callback:
+<endpoint> --runtime <profile>`; if its OS credential is missing, first tell the author that no usable
+credential is configured and that browser sign-in is needed so Hypit can use HypiHub without asking for
+a pasted API key. If the account has no active Hypit subscription, explain that it can be purchased on
+hypit.ai after signing in. Explain that the session is stored in the OS credential store and that opening
+login does not itself submit a paid generation. Then run `hypit auth login <endpoint> --runtime <profile>`
+yourself and wait for the browser OAuth callback:
 
 ```text
 node <skill-root>/scripts/check-credentials.mjs GOOGLE_CLOUD_PROJECT GOOGLE_APPLICATION_CREDENTIALS_JSON
