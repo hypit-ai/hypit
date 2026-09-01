@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import {
   compileSourceClosure,
@@ -162,6 +162,7 @@ export class NodeCompiler {
         const bytes = Uint8Array.from(request.bytes);
         const artifact: BlobRef = {
           kind: "blob",
+          resource: `res_${randomUUID()}`,
           digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
           size: bytes.byteLength,
           mediaType: request.mediaType,

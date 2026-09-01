@@ -70,4 +70,6 @@ export type OperationStore = {
   list(query: OperationQuery): Promise<readonly OperationSnapshot[]>;
   /** One local Worker owns execution. A terminal Operation is returned unchanged. */
   update(id: string, update: OperationUpdate): Promise<OperationSnapshot>;
+  /** Drop Provider execution payloads after the owning Build Result is terminal. */
+  removeBuild?(build: string): Promise<void>;
 };

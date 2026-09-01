@@ -10,6 +10,14 @@ export type CanonicalValue =
 
 export type BlobRef = {
   readonly kind: "blob";
+  /** One admitted resource instance. Unlike digest, equal bytes admitted twice keep distinct identities. */
+  readonly resource?: string;
+  /** Exact durable origin carried only when a historical Build file enters a new execution. */
+  readonly origin?: {
+    readonly kind: "build-file";
+    readonly build: string;
+    readonly path: string;
+  };
   readonly digest: Digest;
   readonly size: number;
   readonly mediaType: string;
@@ -75,6 +83,18 @@ export function blobRefObjectSchema(mediaTypes?: readonly string[]): ValueSchema
     kind: "object",
     fields: {
       kind: { schema: { kind: "literal", value: "blob" } },
+      resource: { schema: { kind: "string", minLength: 1 }, optional: true },
+      origin: {
+        schema: {
+          kind: "object",
+          fields: {
+            kind: { schema: { kind: "literal", value: "build-file" } },
+            build: { schema: { kind: "string", minLength: 1 } },
+            path: { schema: { kind: "string", minLength: 1 } },
+          },
+        },
+        optional: true,
+      },
       digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
       size: { schema: { kind: "number", integer: true, minimum: 0 } },
       mediaType: {

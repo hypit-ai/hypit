@@ -61,6 +61,7 @@
     "@hypit/artifact": "workspace:*",
     "@hypit/artifact-store-fs": "workspace:*",
     "@hypit/artifact-store-s3": "workspace:*",
+    "@hypit/build-result": "workspace:*",
     "@hypit/audio-track": "workspace:*",
     "@hypit/audio-track-studio": "workspace:*",
     "@hypit/background-removal": "workspace:*",

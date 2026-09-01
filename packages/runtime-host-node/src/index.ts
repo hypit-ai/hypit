@@ -3,6 +3,7 @@ import { constants } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, isAbsolute, join, resolve } from "node:path";
 import type { ArtifactAttachment } from "@hypit/workspace";
+import type { BuildResultReuse } from "@hypit/build-result";
 import type { BuildDefinition, BuildState, CapabilityRef, Digest } from "@hypit/protocol";
 import type {
   BuildCatalogDescriptor,
@@ -79,6 +80,12 @@ export type RuntimeHostExecution = RuntimeHostArchive & RuntimeHostArtifactAcces
     readonly componentPackages?: readonly string[];
     readonly catalog?: BuildCatalogDescriptor;
     readonly attachments?: readonly ArtifactAttachment[];
+    /** Project-owned result destination. Runtime Profile never selects this location. */
+    readonly result?: {
+      readonly root: string;
+      readonly name?: string;
+      readonly reuses?: readonly BuildResultReuse[];
+    };
   }, options?: {
     readonly follow?: boolean;
     readonly pollIntervalMs?: number;

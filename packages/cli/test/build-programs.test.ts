@@ -144,12 +144,12 @@ test("Build fails its cheap preflight before submitting or starting programs", a
   assert.deepEqual(calls, []);
 });
 
-test("Build never provisions programs after a clean preflight", async () => {
+test("Build accepts a human name and never provisions programs after a clean preflight", async () => {
   const calls: string[] = [];
   const source = await runSource();
   await assert.rejects(
     async () => await runCli(
-      ["build", source, "--runtime", "/p/hypit.runtime.json"],
+      ["build", source, "--name", "first-cut", "--runtime", "/p/hypit.runtime.json"],
       io,
       distribution(calls, []),
     ),

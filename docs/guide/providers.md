@@ -47,7 +47,7 @@ packages or the CLI:
 ## 3. Implement the Provider
 
 The Provider handles Commands from the Scheduler: request submission, polling, download and
-ArtifactStore persistence.
+admission into the current Build's working byte area.
 
 ```typescript
 // src/provider.ts
@@ -215,7 +215,7 @@ hypit doctor hypit.runtime.json
 
 | Package | Pattern |
 |---|---|
-| `provider-kie` | Remote API: upload, paid submission, checkpointed polling, bounded download, immediate ArtifactStore persistence |
+| `provider-kie` | Remote API: upload, paid submission, checkpointed polling, bounded download into the current Build workspace |
 | `provider-media-local` | Local process: shell-free ffprobe/ffmpeg with bounded execution |
 | `provider-whisperx-local` | Local HTTP service with a warm model, single-admit concurrency |
 | `provider-hyperframes-local` | Local process: Chrome rendering with worker parallelism and output probe validation |

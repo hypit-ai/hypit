@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readFile, realpath } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
@@ -26,7 +26,11 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
   readonly entry: SourceUnit;
   readonly #assetRoots: readonly string[];
   readonly #sourceCache = new Map<string, SourceUnit>();
-  readonly #assetIdentity = new Map<string, { readonly digest: BlobRef["digest"]; readonly size: number }>();
+  readonly #assetIdentity = new Map<string, {
+    readonly resource: string;
+    readonly digest: BlobRef["digest"];
+    readonly size: number;
+  }>();
   readonly #attachments = new Map<string, ArtifactAttachment>();
 
   private constructor(root: string, entry: SourceUnit, assetRoots: readonly string[]) {
@@ -126,11 +130,12 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
         hash.update(chunk);
         size += chunk.byteLength;
       }
-      identity = { digest: `sha256:${hash.digest("hex")}`, size };
+      identity = { resource: `res_${randomUUID()}`, digest: `sha256:${hash.digest("hex")}`, size };
       this.#assetIdentity.set(canonical, identity);
     }
     const artifact: BlobRef = {
       kind: "blob",
+      resource: identity.resource,
       digest: identity.digest,
       size: identity.size,
       mediaType: request.mediaType,

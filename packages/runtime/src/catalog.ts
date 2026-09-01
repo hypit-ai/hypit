@@ -28,4 +28,6 @@ export type BuildCatalog = {
   record(build: string, descriptor: BuildCatalogDescriptor): Promise<BuildCatalogEntry>;
   read(build: string): Promise<BuildCatalogEntry | undefined>;
   list(): Promise<readonly BuildCatalogEntry[]>;
+  /** Result manifests own terminal presentation; Runtime Catalog covers active execution only. */
+  remove?(build: string): Promise<void>;
 };

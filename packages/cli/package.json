@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@hypit/build-result": "workspace:*",
     "@hypit/compiler-node": "workspace:*",
     "@hypit/elaborator": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
@@ -18,5 +19,10 @@
     "@hypit/source": "workspace:*",
     "@hypit/workspace": "workspace:*",
     "typescript": "5.9.3"
+  },
+  "devDependencies": {
+    "@hypit/markup": "workspace:*",
+    "@hypit/run-markup": "workspace:*",
+    "@hypit/workspace-fs-node": "workspace:*"
   }
 }

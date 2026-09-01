@@ -30,6 +30,9 @@ importers:
       '@hypit/background-removal':
         specifier: workspace:*
         version: link:packages/background-removal
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:packages/build-result
       '@hypit/caption':
         specifier: workspace:*
         version: link:packages/caption
@@ -437,6 +440,12 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/build-result:
+    dependencies:
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/caption:
     dependencies:
       '@hypit/component-kit':
@@ -534,6 +543,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
       '@hypit/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
@@ -564,6 +576,16 @@ importers:
       typescript:
         specifier: 5.9.3
         version: 5.9.3
+    devDependencies:
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/run-markup':
+        specifier: workspace:*
+        version: link:../run-markup
+      '@hypit/workspace-fs-node':
+        specifier: workspace:*
+        version: link:../workspace-fs-node
 
   packages/comment-sticker:
     dependencies:
@@ -2584,6 +2606,9 @@ importers:
 
   packages/runtime-host-node:
     dependencies:
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2614,6 +2639,12 @@ importers:
 
   packages/runtime-local:
     dependencies:
+      '@hypit/artifact-store-fs':
+        specifier: workspace:*
+        version: link:../artifact-store-fs
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
       '@hypit/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -2645,9 +2676,6 @@ importers:
         specifier: workspace:*
         version: link:../validation
     devDependencies:
-      '@hypit/artifact-store-fs':
-        specifier: workspace:*
-        version: link:../artifact-store-fs
       '@hypit/core':
         specifier: workspace:*
         version: link:../core

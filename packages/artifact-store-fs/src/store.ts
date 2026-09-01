@@ -41,7 +41,8 @@ export class FileArtifactStore implements ArtifactStore {
     if (mediaType.trim().length === 0) throw new Error("Artifact mediaType must not be empty");
     const incoming = join(this.root, ".incoming");
     await mkdir(incoming, { recursive: true });
-    const temporary = join(incoming, randomUUID());
+    const resource = `res_${randomUUID()}`;
+    const temporary = join(incoming, resource);
     const handle = await openFile(temporary, "wx");
     const hash = createHash("sha256");
     let size = 0;
@@ -78,7 +79,7 @@ export class FileArtifactStore implements ArtifactStore {
       }
     }
     await rm(temporary, { force: true });
-    return { kind: "blob", digest, size, mediaType };
+    return { kind: "blob", resource, digest, size, mediaType };
   }
 
   async get(digest: Digest): Promise<Uint8Array | undefined> {

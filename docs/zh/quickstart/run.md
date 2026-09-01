@@ -5,7 +5,7 @@ description: 声明 Build 目标、复用结果以及配置运行时环境。
 
 # Run Source 与 Build
 
-Author Source 定义视频本身。Run Source 从中挑选要产出哪些公开输出，以及是否用明确的 Candidate 来满足它们。Runtime Profile 则选择执行这份计划的机器、Store 与 Provider endpoint。
+Author Source 定义视频本身。Run Source 从中挑选最终目标，以及是否用明确的 Candidate 来满足它们。Runtime Profile 则选择执行这份计划的机器、凭据、Provider Endpoint 与服务。
 
 先为项目选择一次 Runtime：
 
@@ -60,7 +60,7 @@ Run Source 与 Runtime Profile 不会悄悄改写视频。创作性的模型选�
 
 ### Target
 
-Target 就是你希望这次 Build 产出的东西。它可以是一张生成的图片、一个视频镜头、一份时序映射、一条 Track，或者最终成片。编译器只执行选定 Target 所需的 Operation；无关的分支不会被触碰。
+Target 表达这次 Build 的最终意图，通常是成片或另一个真正的交付物；它不是“要保存哪些东西”的列表。编译器只执行通向 Target 的路线，而这条路上真正完成的每个公开 Author Output 都会自动进入同一个 Build Result。内部 Operation 值不进入 Result。
 
 ### 多个 Target
 
@@ -71,13 +71,13 @@ Target 就是你希望这次 Build 产出的东西。它可以是一张生成的
 <target output="captions.track"/>
 ```
 
-不同的运行意图写成不同的 `.svrun` 文件即可，它们可以共同指向同一个 Author Source。例如 `images.svrun` 只请求图片，`film.svrun` 请求最终视频，无需在文件内部再造一层集合。
+只有一次执行确实存在多个最终目标时才写多个 Target。不同运行意图写成不同的 `.svrun` 文件即可，它们可以共同指向同一个 Author Source。
 
 ## 复用结果
 
-Hypit 没有隐式缓存。复用结果是显式的运行图编写——你将历史 Record 声明为零输入 Candidate，并通过 Satisfaction 边将它们连接起来。
+Hypit 没有隐式缓存。复用结果是显式的运行图编写：把某个旧 Build Result 里的一个具名 Output 声明为零输入 Candidate，再通过 Satisfaction 边连接到当前输出。
 
-生成图片或 Take 一经验收，就在下一份 `.svrun` 中用 `build-record` 与 `satisfy` 显式复用，并在启动付费下游工作前检查冻结 plan。Core 没有 Pin 状态或 fidelity 标签。
+生成图片或 Take 一完成，就能在下一份 `.svrun` 中用 `build-record` 与 `satisfy` 显式复用，并在启动付费下游工作前检查 plan。
 
 ```svml
 <?svml using="@hypit/run-markup@1"?>
@@ -104,21 +104,19 @@ Hypit 没有隐式缓存。复用结果是显式的运行图编写——你将�
 
 ### 查找可复用输出
 
-按照输出在各个历史 Build 冻结 Catalog 中的旧名字查询：
+按照输出在项目本地 Build Result 中的名字查询：
 
 ```bash
 hypit history hook-take.video
 ```
 
-`history` 只列出该 Build 确实产出过的公开 Logical Output。仅仅在源码中声明但没有运行出来的别名，以及不能作为 `build-record` Candidate 的 authored Record 别名，都不会混入结果。如果忘了旧名字，可以按 Catalog 当时记录的精确源码路径列出真正验收过的输出名：
+`history` 只列出该 Build 确实完成的公开 Author Output。只声明但没有运行出来的输出和内部 Operation 值不会混入结果。如果忘了旧名字，可以按 Result 里记录的精确 Author Source 路径查询：
 
 ```bash
 hypit history --source ./main.svml
 ```
 
-输出名只是某个不可变历史 Catalog 内供人查找的名字，不是产物身份。真正身份由历史 Core
-Build、Logical Output 和 Record 摘要共同确定。假如当前源码把 `hook-take.video` 改名为
-`opening-shot.video`，`<build-record>` 仍写历史旧名，`<satisfy>` 写当前新名：
+输出名是某个 Build Result 内供人查找的名字；`build + output` 这对地址已经足够精确。假如当前源码把 `hook-take.video` 改名为 `opening-shot.video`，`<build-record>` 仍写历史旧名，`<satisfy>` 写当前新名：
 
 ```svml
 <build-record id="approved-opening"
@@ -126,13 +124,11 @@ Build、Logical Output 和 Record 摘要共同确定。假如当前源码把 `ho
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
-Hypit 永远不会猜测两个名字代表同一份作者意图。每次执行 `build` 都会得到一个新的
-Build id，由 CLI 打印并由 Runtime 归档。源码身份绝不会重新认领旧 Build；后续 Run 只有在
-这里明确写出历史 Build id 时，才会复用它已经接受的结果。
+Hypit 永远不会猜测两个名字代表同一份作者意图。每次执行 `build` 都会得到新的 Build id 和独立 Result 目录，即使源码完全没变。后续 Run 只有明确写出旧 Build id 与 Output 时才复用；若旧 Output 本身继续转发到更老的 Result，就沿显式关系向前解析，不把文件复制进新 Result。
 
 ### build-record
 
-声明一个由先前 Build 的历史 Record 支持的零输入 Candidate：
+声明一个由先前 Build Result 的具名 Output 支持的零输入 Candidate：
 
 | 属性 | 说明 |
 |---|---|
@@ -162,7 +158,7 @@ Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本�
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
-文件相对于 `.svrun` 读取，按内容寻址，并随 Build 归档。系统没有额外的 Pin 状态、文件名缓存或隐式历史查找；黑场、预览图与人工交付的产物也使用同一个机制。
+文件相对于 `.svrun` 读取。如果它在 Target 路线上成为已经完成的公开 Output，就像生成媒体一样写入 Build Result。系统没有隐式历史查找；黑场、预览图与人工交付的产物也使用同一个机制。
 
 ## Runtime Profile
 
@@ -251,6 +247,9 @@ Runtime Profile 无权改变这条源码边界。`--package-root` 只定位已�
 output/
 ```
 
+每次 Build 的权威结果位于 `.hypit/results/<build-id>/`：`result.json` 记录名字、状态、Target
+和公开 Output，媒体在 `files/`，结构化值在 `values/`。
+
 `status`、`builds` 等只读归档命令不会在状态尚不存在时初始化 Runtime 数据库。
 
 共享只读素材库不必复制进项目，也不必放宽 Source 边界：
@@ -310,7 +309,7 @@ status` 用于观察，`programs up|status|down` 只管理外部程序。
 ### 4. 提交 Build
 
 ```bash
-hypit build build.svrun --follow
+hypit build build.svrun --name first-cut --follow
 ```
 
 不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是观察者，并会报告 phase / Operation 数量变化；Ctrl-C 不会取消任务。
@@ -328,11 +327,12 @@ hypit status <build-id> --watch
 | `--runtime` | 单次命令的 Runtime Profile 覆盖；通常用 `runtime use` 选择一次即可 |
 | `--package-root` | 存放已安装包的 Host 目录 |
 | `--workspace` | 显式 Source Workspace 覆盖项 |
+| `--name` | 给这次独立 Build 一个供人阅读的名字 |
 | `--follow` | 将 Build 进度流式输出到终端 |
 
 每次执行都会创建新的 Build id，即使 Author Source 和 Run Source 完全没变。这是非确定性生成
 所要求的边界：跨 Build 复用只能由 Run Source 里的显式 Candidate 决定。一次 Build 提交后
-具有耐久性；Worker 重启会继续它已经接受的 Record 和同一外部任务的 checkpoint，但不会让
+处于活跃状态时具有耐久性；Worker 重启会继续它已经接受的执行事实和同一外部任务，但不会让
 另一次命令变成这个 Build。
 
 ### 5. 检查并获取结果
@@ -341,7 +341,7 @@ hypit status <build-id> --watch
 hypit inspect <build-id>
 ```
 
-`inspect` 会显示耐久 Build 状态、所需输出与已接受的 Record。确认这些事实正确后，再获取所选归档 Artifact：
+`inspect` 直接读取项目里的 Build Result，列出最终 Target，以及通向它们的路线上实际完成的所有公开 Output：
 
 ```bash
 hypit get <build-id> \
@@ -349,14 +349,13 @@ hypit get <build-id> \
   --to examples/talking-head-aroll/output/final.mp4
 ```
 
-每个被接受的中间 Record 和 Artifact 在 Build 完成前都会被归档。`get` 会复制一份已持久化的
-Record。Blob Artifact 会从所选 Store 流式读取，逐步校验长度与 SHA-256，完整通过后才原子替换目标路径；导出大 MP4 不会把整段视频塞进 CLI 内存。
-Build 的最终输出会为每个目标别名打印精确的 `get --name …` 命令，不必为了导出
-`final.video` 去查不透明的 Record id。
+`get` 解析一个精确的 `build + output` 地址并按需复制。文件从所属 Result 复制，结构化 Output
+从 Result 的值文件读取，历史转发则沿显式关系找到前一个 Result；整个过程不需要 Runtime Profile。
+Build 的最终输出会为每个文件 Target 打印精确的 `get --name …` 命令。
 
 ### 6. 在新 Build 中复用
 
-创建一个引用已完成 Build 的 Record 的新 `.svrun` 文件（参见上文 [复用结果](#复用结果)），然后提交：
+创建一个引用已完成 Build Output 的新 `.svrun` 文件（参见上文 [复用结果](#复用结果)），然后提交：
 
 ```bash
 hypit build reuse-generated.svrun --follow

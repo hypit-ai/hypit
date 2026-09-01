@@ -105,6 +105,8 @@ export type BuildStore = {
   create(build: string, definition: BuildDefinition): Promise<BuildSnapshot>;
   read(build: string): Promise<BuildSnapshot | undefined>;
   append(build: string, fact: BuildFact): Promise<void>;
+  /** Drop execution material after the project Build Result has become authoritative. */
+  remove?(build: string): Promise<void>;
 };
 
 export type ScheduledBuild =
@@ -132,4 +134,6 @@ export type ScheduledBuildResult = {
 export type BuildSchedulerOptions = {
   /** Optional durable authority. When present, every admitted Core Fact is appended. */
   readonly buildStore?: BuildStore;
+  /** Called after an accepted event changes the materialized Build view. */
+  readonly onStateChange?: (build: string, state: BuildState) => Promise<void>;
 };

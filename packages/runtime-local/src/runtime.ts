@@ -10,6 +10,7 @@ import {
 import {
   isStreamingArtifactStore,
 } from "@hypit/runtime";
+import { FileBuildResult } from "@hypit/build-result";
 import { TypeValidatorRegistry } from "@hypit/validation";
 
 import { createLocalRuntimeArchiveControl, createLocalRuntimeArtifactAccess } from "./control.js";
@@ -86,6 +87,7 @@ export async function createLocalRuntime(
     producers,
     endpoints,
     artifacts: options.artifactStore,
+    ...(options.artifactStoreForBuild === undefined ? {} : { artifactsForBuild: options.artifactStoreForBuild }),
     credentials: options.credentialStore,
     operations: options.operationStore,
     validators,
@@ -93,9 +95,13 @@ export async function createLocalRuntime(
   const worker = createDurableLocalWorker(driver, {
     stores: {
       builds: options.buildStore,
+      ...(buildCatalog === undefined ? {} : { catalog: buildCatalog }),
       operations: options.operationStore,
       dispatch: options.dispatchStore,
     },
+    artifactStore: options.artifactStore,
+    ...(options.artifactStoreForBuild === undefined ? {} : { artifactStoreForBuild: options.artifactStoreForBuild }),
+    ...(options.clearBuildArtifacts === undefined ? {} : { clearBuildArtifacts: options.clearBuildArtifacts }),
     installComponentPackages,
   });
   const credentialControl = createLocalCredentialControl({
@@ -112,12 +118,13 @@ export async function createLocalRuntime(
     artifactStore: options.artifactStore,
   });
   const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
+    const artifactStore = options.artifactStoreForBuild?.(request.id) ?? options.artifactStore;
     for (const item of request.attachments ?? []) {
-      if (await options.artifactStore.has(item.artifact.digest)) continue;
+      if (await artifactStore.has(item.artifact.digest)) continue;
       const stream = await item.open();
-      const stored = isStreamingArtifactStore(options.artifactStore)
-        ? await options.artifactStore.putStream(stream, item.artifact.mediaType)
-        : await options.artifactStore.put(await (async () => {
+      const stored = isStreamingArtifactStore(artifactStore)
+        ? await artifactStore.putStream(stream, item.artifact.mediaType)
+        : await artifactStore.put(await (async () => {
             const chunks: Uint8Array[] = [];
             let size = 0;
             for await (const chunk of stream) {
@@ -140,28 +147,51 @@ export async function createLocalRuntime(
       );
     }
   };
-  const presentation = async (build: string): Promise<LocalBuildSubmission> => {
+  const presentation = async (build: string, previousState?: LocalBuildSubmission["state"]): Promise<LocalBuildSubmission> => {
     const [snapshot, dispatch] = await Promise.all([
       options.buildStore.read(build),
       options.dispatchStore.read(build),
     ]);
-    assert(snapshot !== undefined && dispatch !== undefined, `Build ${build} has no durable Runtime state`);
+    assert(dispatch !== undefined, `Build ${build} has no Runtime dispatch`);
+    const state = snapshot?.state ?? previousState;
+    assert(state !== undefined, `Build ${build} has no execution state`);
     const status: LocalBuildSubmission["status"] = dispatch.phase === "terminal"
       ? dispatch.terminal!
       : dispatch.phase;
-    return { id: build, state: snapshot.state, status, dispatch };
+    return { id: build, state, status, dispatch };
   };
 
   const submit = async (request: LocalBuildRequest): Promise<LocalBuildSubmission> => {
-    assert(request.id.trim().length > 0, "Build id must not be empty");
+    assert(request.id.trim().length > 0 && !request.id.includes("/") && !request.id.includes("\\"),
+      "Build id must be one directory-safe name");
     if (request.catalog !== undefined) {
       assert(buildCatalog !== undefined, "Build supplied Host catalog metadata but no BuildCatalog was selected");
     }
     await stageAttachments(request);
     await options.buildStore.create(request.id, request.definition);
+    const resultRequest = request.result;
+    const result = resultRequest === undefined
+      ? undefined
+      : await (async () => {
+          assert(request.catalog !== undefined, "Build Result requires Author catalog names");
+          const aliases = request.catalog.aliases.flatMap((alias) => alias.ref.kind === "logical-output"
+            ? [{ name: alias.name, output: alias.ref.id }]
+            : []);
+          const names = new Map(aliases.map((alias) => [alias.output, alias.name]));
+          return await FileBuildResult.create(resultRequest.root, {
+            id: request.id,
+            ...(resultRequest.name === undefined ? {} : { name: resultRequest.name }),
+            source: request.catalog.source,
+            ...(request.catalog.run === undefined ? {} : { run: request.catalog.run }),
+            targets: request.definition.request.targets.map((target) => names.get(target.output) ?? target.output),
+            aliases,
+            ...(resultRequest.reuses === undefined ? {} : { reuses: resultRequest.reuses }),
+          });
+        })();
     await options.dispatchStore.create({
       build: request.id,
       componentPackages: [...new Set(request.componentPackages ?? [])].sort(),
+      ...(result === undefined ? {} : { resultDirectory: result.directory }),
     });
     if (request.catalog !== undefined) {
       await buildCatalog!.record(request.id, request.catalog);
@@ -182,7 +212,7 @@ export async function createLocalRuntime(
     while (follow.follow === true && !["complete", "failed", "cancelled"].includes(result.status)) {
       if (maxWaitMs !== undefined && Date.now() - startedAt + pollIntervalMs > maxWaitMs) return result;
       await wait(pollIntervalMs, follow.signal);
-      result = await presentation(request.id);
+      result = await presentation(request.id, result.state);
     }
     return result;
   };

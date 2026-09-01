@@ -169,6 +169,13 @@ class SqliteBuildStore implements BuildStore {
     `).run(build, fact.command, JSON.stringify(fact));
     if (result.changes !== 1) throw new Error(`Build ${build} Fact was not stored`);
   }
+
+  async remove(build: string): Promise<void> {
+    transaction(this.#database, () => {
+      this.#database.prepare("DELETE FROM hypit_build_facts WHERE build_id = ?").run(build);
+      this.#database.prepare("DELETE FROM hypit_builds WHERE build_id = ?").run(build);
+    });
+  }
 }
 
 function parseCatalogEntry(row: Row): BuildCatalogEntry {
@@ -218,6 +225,10 @@ class SqliteBuildCatalog implements BuildCatalog {
     `).all() as Row[];
     return rows.map(parseCatalogEntry);
   }
+
+  async remove(build: string): Promise<void> {
+    this.#database.prepare("DELETE FROM hypit_build_catalog WHERE build_id = ?").run(build);
+  }
 }
 
 class SqliteOperationStore implements OperationStore {
@@ -257,6 +268,10 @@ class SqliteOperationStore implements OperationStore {
       WHERE operation_id = ?
     `).get(id) as Row | undefined;
     return row === undefined ? undefined : parseOperationSnapshot(row);
+  }
+
+  async removeBuild(build: string): Promise<void> {
+    this.#database.prepare("DELETE FROM hypit_operations WHERE build_id = ?").run(build);
   }
 
   async list(query: OperationQuery): Promise<readonly OperationSnapshot[]> {
@@ -335,6 +350,7 @@ function parseDispatchSnapshot(row: Row): BuildDispatchSnapshot {
   const snapshot = {
     build: row.build_id,
     componentPackages,
+    ...(typeof row.result_directory === "string" ? { resultDirectory: row.result_directory } : {}),
     createdAt: row.created_at,
     availableAt: row.available_at,
     phase: row.phase,
@@ -360,10 +376,10 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     nonNegativeInteger(now, "Dispatch creation time");
     this.#database.prepare(`
       INSERT INTO hypit_dispatches (
-        build_id, component_packages_json, created_at, available_at,
+        build_id, component_packages_json, result_directory, created_at, available_at,
         phase, reason, cancel_requested, terminal
-      ) VALUES (?, ?, ?, ?, 'queued', NULL, 0, NULL)
-    `).run(request.build, JSON.stringify(request.componentPackages), now, now);
+      ) VALUES (?, ?, ?, ?, ?, 'queued', NULL, 0, NULL)
+    `).run(request.build, JSON.stringify(request.componentPackages), request.resultDirectory ?? null, now, now);
     return {
       ...copy(request),
       createdAt: now,
@@ -442,7 +458,8 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       const effective = current.cancellation === undefined ? terminal : "cancelled";
       this.#database.prepare(`
         UPDATE hypit_dispatches
-        SET phase = 'terminal', terminal = ?, reason = ?
+        SET phase = 'terminal', terminal = ?, reason = ?,
+            component_packages_json = '[]', result_directory = NULL
         WHERE build_id = ?
       `).run(effective, reason ?? current.cancellation?.reason ?? null, build);
       return parseDispatchSnapshot(
@@ -641,6 +658,7 @@ export class SqliteRuntimeState {
       CREATE TABLE IF NOT EXISTS hypit_dispatches (
         build_id TEXT PRIMARY KEY,
         component_packages_json TEXT NOT NULL,
+        result_directory TEXT,
         created_at INTEGER NOT NULL,
         available_at INTEGER NOT NULL,
         phase TEXT NOT NULL CHECK (phase IN ('queued', 'running', 'waiting', 'terminal')),
@@ -659,6 +677,13 @@ export class SqliteRuntimeState {
         PRIMARY KEY (build_id, command_id)
       ) STRICT;
     `);
+    if (!options.readOnly || emptyReadOnly) {
+      const dispatchColumns = new Set((this.#database.prepare("PRAGMA table_info(hypit_dispatches)").all() as Row[])
+        .flatMap((row) => typeof row.name === "string" ? [row.name] : []));
+      if (!dispatchColumns.has("result_directory")) {
+        this.#database.exec("ALTER TABLE hypit_dispatches ADD COLUMN result_directory TEXT");
+      }
+    }
     this.builds = new SqliteBuildStore(database);
     this.operations = new SqliteOperationStore(database);
     this.dispatch = new SqliteBuildDispatchStore(database);

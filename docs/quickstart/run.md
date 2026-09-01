@@ -7,7 +7,7 @@ description: Declaring build targets, reusing results and configuring the runtim
 
 The Author Source defines the video. A Run Source chooses which of its public outputs to produce and
 which explicit Candidates, if any, should satisfy them. The Runtime Profile chooses the machine,
-stores and Provider endpoints that execute the resulting plan.
+credentials, Provider endpoints and services that execute the resulting plan.
 
 Select the project Runtime once:
 
@@ -65,9 +65,10 @@ Every `.svrun` file begins with its processing instruction:
 
 ### Targets
 
-A Target is simply an output you want from this Build. It may be a generated image, a video take, a
-timing map, a Track or the final render. The compiler only executes Operations needed for the chosen
-Targets; unrelated branches are left alone.
+A Target is the Build's final intention, normally the finished video or another real deliverable.
+It is not a retention list. The compiler executes only the route needed for the Targets, and every
+public Author Output that actually completes on that route is written into the same Build Result.
+Internal Operation values remain execution details.
 
 ### Multiple targets
 
@@ -78,18 +79,18 @@ You can demand multiple outputs from one Build:
 <target output="captions.track"/>
 ```
 
-Different build intentions should be separate `.svrun` files. They can point to the same Author
-Source without duplicating it. For example, `images.svrun` may target image outputs while
-`film.svrun` targets the final video.
+Use multiple Targets only when one execution genuinely has several final goals. Different build
+intentions should be separate `.svrun` files. They can point to the same Author Source without
+duplicating it.
 
 ## Reusing results
 
-Hypit has no implicit cache. Reusing a result is explicit Run Graph authoring — you declare
-historical Records as zero-input Candidates and connect them through Satisfaction edges.
+Hypit has no implicit cache. Reusing a result is explicit Run Graph authoring — you declare one
+named Output from one earlier Build Result as a zero-input Candidate and connect it through a
+Satisfaction edge.
 
 As soon as a generated image or take is accepted, reuse it explicitly in the next `.svrun` with
-`build-record` and `satisfy`, then inspect the frozen plan before starting paid downstream work.
-Core has no Pin state or fidelity label.
+`build-record` and `satisfy`, then inspect the plan before starting paid downstream work.
 
 ```svml
 <?svml using="@hypit/run-markup@1"?>
@@ -116,25 +117,23 @@ Core has no Pin state or fidelity label.
 
 ### Finding reusable output
 
-Query an output name as it appeared in each historical Build's frozen Host Catalog:
+Query an output name across the project's local Build Results:
 
 ```bash
 hypit history hook-take.video
 ```
 
-`history` reports only public Logical Outputs that the Build actually produced. It
-does not list merely declared-but-unbuilt aliases or authored Record aliases that cannot back a
-`build-record` Candidate. If the old name is unknown, list accepted output names from Builds whose
-Catalog recorded an exact source path:
+`history` reports only public Author Outputs that the Build actually produced. It does not list
+declared-but-unbuilt outputs or internal Operation values. If the old name is unknown, list Outputs
+from Results whose manifest names the exact Author Source path:
 
 ```bash
 hypit history --source ./main.svml
 ```
 
-An output name is a human locator inside one immutable historical Catalog, not its identity. The
-historical Core Build, Logical Output and Record digests carry identity. If the current source
-renames `hook-take.video` to `opening-shot.video`, keep the old name on `<build-record>` and use the
-current name on `<satisfy>`:
+An output name is a human locator inside one Build Result. The pair `build + output` is the exact
+address. If the current source renames `hook-take.video` to `opening-shot.video`, keep the old name
+on `<build-record>` and use the current name on `<satisfy>`:
 
 ```svml
 <build-record id="approved-opening"
@@ -142,13 +141,14 @@ current name on `<satisfy>`:
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
-Hypit never infers that two names mean the same author intent. Every `build` invocation receives
-a fresh Build id, which the CLI prints and the Runtime archives. Source identity never reclaims an
-earlier Build. A later Run reuses an accepted result only by naming that historical Build id here.
+Hypit never infers that two names mean the same author intent. Every `build` invocation receives a
+fresh Build id and its own Result directory, even when nothing changed. A later Run reuses an Output
+only by naming the earlier Build id and Output here. If that earlier Output already forwards to an
+older one, resolution follows the explicit chain; no bytes are copied into the new Result.
 
 ### build-record
 
-Declares a zero-input Candidate backed by a historical Record from a previous Build:
+Declares a zero-input Candidate backed by one named Output from a previous Build Result:
 
 | Attribute | Description |
 |---|---|
@@ -183,9 +183,9 @@ to one current Logical Output:
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
-The file is read relative to the `.svrun`, content-addressed and archived with the Build. There is
-no special Pin state, filename cache or hidden history lookup. A black video, preview image or
-human-supplied result uses the same mechanism.
+The file is read relative to the `.svrun`. If it becomes a completed public Output on the Target
+route, it is written into the Build Result like any generated media. There is no hidden history
+lookup. A black video, preview image or human-supplied result uses the same mechanism.
 
 ## Runtime Profile
 
@@ -252,6 +252,11 @@ only with `--workspace`. `--package-root` locates installed packages and never w
 
 ```text
 .hypit/
+  results/
+    <build-id>/
+      result.json
+      files/
+      values/
 output/
 ```
 
@@ -305,7 +310,7 @@ processes declared by Endpoints.
 ### 4. Submit the Build
 
 ```bash
-hypit build build.svrun --follow
+hypit build build.svrun --name first-cut --follow
 ```
 
 Without `--follow`, `build` returns after durable submission. The detached Worker continues. With
@@ -326,12 +331,13 @@ A plain `status <build-id>` prints one snapshot. `status --watch` exits at termi
 | `--runtime` | One-command Runtime Profile override; normally select it once with `runtime use` |
 | `--package-root` | Host directory containing the installed packages |
 | `--workspace` | Explicit Source Workspace override |
+| `--name` | Optional human-facing name for this independent Build |
 | `--follow` | Wait for terminal state as an observer; durable execution remains with the Worker |
 
 Each invocation creates a fresh Build id, even when the Author and Run Sources are unchanged. That
 is necessary for non-deterministic generation: cross-Build reuse belongs only to explicit Candidates
-in a Run Source. Once submitted, that one Build is durable. A Worker restart continues its accepted
-Records and the same external task checkpoints; it never turns another invocation into that Build.
+in a Run Source. While a Build is active, a Worker restart continues its accepted execution facts
+and the same external task checkpoints; it never turns another invocation into that Build.
 
 ### 5. Inspect and retrieve results
 
@@ -339,8 +345,8 @@ Records and the same external task checkpoints; it never turns another invocatio
 hypit inspect <build-id>
 ```
 
-`inspect` reports durable Build state, demanded outputs, and accepted Records. Retrieve the selected
-archived Artifact only after those facts are correct:
+`inspect` reads the project-owned Result directly and lists final Targets plus every completed
+public Output saved along their execution route:
 
 ```bash
 hypit get <build-id> \
@@ -348,17 +354,16 @@ hypit get <build-id> \
   --to examples/talking-head-aroll/output/final.mp4
 ```
 
-Every accepted intermediate Record and Artifact is archived before the Build completes. `get` makes
-a copy of an already durable Record. Blob Artifacts are streamed from the selected Store, checked
-against their declared size and SHA-256 digest, and only then atomically replace the destination;
-exporting a large MP4 does not buffer the complete file in CLI memory.
+`get` resolves one exact `build + output` address and makes an optional copy. A file Output is copied
+from that Result; a structured Output is read from its Result value file; a forwarded historical
+Output is followed to its declared earlier Result. The Runtime Profile is not involved.
 
-The terminal Build result prints the exact `get --name …` command for every targeted source alias;
+The terminal Build result prints the exact `get --name …` command for every file Target;
 there is no need to inspect opaque Record ids just to export `final.video`.
 
 ### 6. Reuse in a new Build
 
-Create a new `.svrun` file that references the completed Build's Records (see [Reusing results](#reusing-results)
+Create a new `.svrun` file that references the completed Build's Outputs (see [Reusing results](#reusing-results)
 above), then submit it:
 
 ```bash

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import {
   mkdir,
   mkdtemp,
+  readFile,
   rm,
+  stat,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -11,13 +12,13 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { FileArtifactStore } from "@hypit/artifact-store-fs";
+import { readBuildResult } from "@hypit/build-result";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
-import { MemoryArtifactStore } from "@hypit/driver-node";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { AsyncEndpoint, EndpointPackage } from "@hypit/endpoint-kit";
 import type { ComponentPackage } from "@hypit/component-kit";
 import { createLocalRuntime } from "@hypit/runtime-local";
-import { defineBuild } from "@hypit/core";
+import { defineBuild, sealBuildRequest } from "@hypit/core";
 import {
   collectLoadedNodePackageComponents,
   loadNodePackageSelection,
@@ -42,12 +43,17 @@ function definition(state: ReturnType<typeof createGreetingBuild>) {
 
 function projectRuntimeFixture(directory: string) {
   const state = new SqliteRuntimeState(join(directory, ".hypit", "runtime.sqlite"));
+  const work = join(directory, ".hypit", "work");
   return {
     buildStore: state.builds,
     buildCatalog: state.catalog,
     operationStore: state.operations,
     dispatchStore: state.dispatch,
     artifactStore: new FileArtifactStore(join(directory, ".hypit", "artifacts")),
+    artifactStoreForBuild: (build: string) => new FileArtifactStore(join(work, build)),
+    clearBuildArtifacts: async (build: string) => {
+      await rm(join(work, build), { recursive: true, force: true });
+    },
     credentialStore: new EnvironmentCredentialStore(),
     close: () => state.close(),
   } as const;
@@ -107,6 +113,12 @@ test("project local runtime queues, polls and cancels work with replaceable pack
     aliases: [{
       name: "final.document",
       ref: { kind: "logical-output" as const, id: initial.request.targets[0]!.output },
+    }, {
+      name: "prompt.text",
+      ref: { kind: "logical-output" as const, id: "prompt" },
+    }, {
+      name: "generated.text",
+      ref: { kind: "logical-output" as const, id: "generated" },
     }],
   };
   let promptCalls = 0;
@@ -195,7 +207,12 @@ test("project local runtime queues, polls and cancels work with replaceable pack
       components: [components],
       endpoints: [endpointPackage],
     });
-    const first = await firstRuntime.build({ id: "greeting-build", definition: definition(initial), catalog });
+    const first = await firstRuntime.build({
+      id: "greeting-build",
+      definition: definition(initial),
+      catalog,
+      result: { root: join(directory, "results") },
+    });
     assert.equal(first.status, "queued");
     assert.equal((await firstRuntime.workOnce())?.phase, "waiting");
     assert.equal(starts, 1);
@@ -209,8 +226,18 @@ test("project local runtime queues, polls and cancels work with replaceable pack
     assert.equal(requestCalls, 1, "the Need request Producer is also persisted");
     assert.equal(assembleCalls, 1);
     const clientStatus = await firstRuntime.status("greeting-build");
-    assert.equal(clientStatus.catalog?.aliases[0]?.name, "final.document");
-    assert.deepEqual((await firstRuntime.builds()).map((item) => item.build), ["greeting-build"]);
+    assert.equal(clientStatus.build, undefined);
+    assert.equal(clientStatus.catalog, undefined);
+    assert.deepEqual(clientStatus.operations, []);
+    assert.equal(clientStatus.dispatch?.terminal, "complete");
+    assert.deepEqual(await firstRuntime.builds(), []);
+    const buildResult = await readBuildResult(join(directory, "results", "greeting-build"));
+    assert.deepEqual(Object.keys(buildResult?.outputs ?? {}).sort(), [
+      "final.document",
+      "generated.text",
+      "prompt.text",
+    ]);
+    assert.deepEqual(buildResult?.targets, ["final.document"]);
 
     await firstRuntime.build({ id: "greeting-follow", definition: definition(createGreetingBuild()) });
     await firstRuntime.workOnce();
@@ -232,6 +259,116 @@ test("project local runtime queues, polls and cancels work with replaceable pack
     assert.equal(cancelled?.terminal, "cancelled");
     assert.equal(cancels, 1);
     await firstRuntime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("a completed public file moves into its Build Result and leaves no Runtime working copy", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-result-file-"));
+  const id = "public-file-result";
+  const workStore = new FileArtifactStore(join(directory, ".hypit", "work", id));
+  const initial = createGreetingBuild({ generationRealization: "placeholder" });
+  const buildDefinition = defineBuild(initial.program, initial.graph, sealBuildRequest({
+    targets: [{ output: "generated" }],
+  }));
+  const components: ComponentPackage = {
+    producers: [{
+      producer: producers.makePrompt,
+      handler: () => ({ outputs: { prompt: { kind: "inline", value: "make a clip" } }, needs: {} }),
+    }, {
+      producer: producers.placeholderText,
+      handler: async () => ({
+        outputs: { generated: await workStore.put(new TextEncoder().encode("video bytes"), "video/mp4") },
+        needs: {},
+      }),
+    }],
+  };
+  try {
+    const runtime = await createLocalRuntime({
+      ...projectRuntimeFixture(directory),
+      components: [components],
+    });
+    await runtime.build({
+      id,
+      definition: buildDefinition,
+      catalog: {
+        source: { path: join(directory, "main.svml") },
+        aliases: [{ name: "clip.video", ref: { kind: "logical-output", id: "generated" } }],
+      },
+      result: { root: join(directory, "results") },
+    });
+    assert.equal((await runtime.workOnce())?.terminal, "complete");
+    const result = await readBuildResult(join(directory, "results", id));
+    assert.equal(result?.outputs["clip.video"]?.value.kind, "build-file");
+    assert.equal(await readFile(join(directory, "results", id, "files", "clip.video.mp4"), "utf8"), "video bytes");
+    assert.equal(await stat(join(directory, ".hypit", "work", id)).then(() => true, () => false), false);
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("a failed Build keeps public Outputs completed before the failure and retires execution state", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-partial-result-"));
+  const initial = createGreetingBuild();
+  const components: ComponentPackage = {
+    producers: [{
+      producer: producers.makePrompt,
+      handler: () => ({ outputs: { prompt: { kind: "inline", value: "Greet Ada" } }, needs: {} }),
+    }, {
+      producer: producers.requestText,
+      handler: ({ inputs }) => {
+        assert.equal(inputs.prompt?.value.kind, "inline");
+        return { outputs: {}, needs: { generation: { prompt: inputs.prompt.value.value } } };
+      },
+    }],
+  };
+  const endpoint = defineEndpointPackage({
+    module: providerModule,
+    facet: "generation",
+    instance: "generation.failure",
+    pool: "generation.failure",
+    capabilities: [{
+      lifecycle: "asynchronous",
+      capability: capabilities.generation,
+      returns: types.generated,
+      endpoint: {
+        start: () => ({ status: "failed", failure: { code: "REMOTE_FAILED", message: "generation failed" } }),
+        poll: () => { throw new Error("failed work is not polled"); },
+      },
+    }],
+  });
+  try {
+    const runtime = await createLocalRuntime({
+      ...projectRuntimeFixture(directory),
+      components: [components],
+      endpoints: [endpoint],
+    });
+    await runtime.build({
+      id: "partial-result",
+      definition: definition(initial),
+      catalog: {
+        source: { path: join(directory, "main.svml") },
+        aliases: [{ name: "prompt.text", ref: { kind: "logical-output", id: "prompt" } }, {
+          name: "generated.text", ref: { kind: "logical-output", id: "generated" },
+        }, {
+          name: "final.document", ref: { kind: "logical-output", id: "document" },
+        }],
+      },
+      result: { root: join(directory, "results") },
+    });
+    assert.equal((await runtime.workOnce())?.terminal, "failed");
+    const result = await readBuildResult(join(directory, "results", "partial-result"));
+    assert.equal(result?.status, "failed");
+    assert.equal(result?.failure, "generation failed");
+    assert.deepEqual(Object.keys(result?.outputs ?? {}), ["prompt.text"]);
+    assert.deepEqual(result?.outputs["prompt.text"]?.value, { kind: "inline", value: "Greet Ada" });
+    const status = await runtime.status("partial-result");
+    assert.equal(status.build, undefined);
+    assert.deepEqual(status.operations, []);
+    assert.equal(status.dispatch?.terminal, "failed");
+    await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -469,64 +606,6 @@ test("project local runtime remembers the complete package closure across increm
     ]);
   } finally {
     await runtime.close();
-    await rm(directory, { recursive: true, force: true });
-  }
-});
-
-test("project local runtime accepts an explicitly selected replacement ArtifactStore package", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "hypit-local-artifacts-"));
-  const artifactStore = new MemoryArtifactStore();
-  try {
-    const runtime = await createLocalRuntime({
-      ...projectRuntimeFixture(directory),
-      artifactStore,
-    });
-    const bytes = new Uint8Array([7, 8, 9]);
-    const sourceArtifact = {
-      kind: "blob" as const,
-      digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const,
-      size: bytes.byteLength,
-      mediaType: "application/octet-stream",
-    };
-    assert.equal(await artifactStore.has(sourceArtifact.digest), false);
-    await runtime.build({
-      id: "source-artifact-staging",
-      definition: definition(createGreetingBuild()),
-      attachments: [{ artifact: sourceArtifact, open: async () => (async function* () { yield bytes; })() }],
-    });
-    const failed = await runtime.workOnce();
-    assert.equal(failed?.terminal, "failed");
-    assert.deepEqual(await artifactStore.get(sourceArtifact.digest), bytes);
-    let reopened = false;
-    await runtime.build({
-      id: "existing-source-artifact",
-      definition: definition(createGreetingBuild()),
-      attachments: [{
-        artifact: sourceArtifact,
-        open: async () => {
-          reopened = true;
-          throw new Error("existing content-addressed bytes must not be reopened");
-        },
-      }],
-    });
-    assert.equal(reopened, false);
-    const absentBytes = new Uint8Array([10, 11, 12]);
-    const absentArtifact = {
-      kind: "blob" as const,
-      digest: `sha256:${createHash("sha256").update(absentBytes).digest("hex")}` as const,
-      size: absentBytes.byteLength,
-      mediaType: "application/octet-stream",
-    };
-    await assert.rejects(runtime.build({
-      id: "mismatched-source-artifact",
-      definition: definition(createGreetingBuild()),
-      attachments: [{
-        artifact: absentArtifact,
-        open: async () => (async function* () { yield new Uint8Array([0]); })(),
-      }],
-    }), /does not match its staged bytes/u);
-    await runtime.close();
-  } finally {
     await rm(directory, { recursive: true, force: true });
   }
 });

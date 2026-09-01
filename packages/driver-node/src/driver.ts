@@ -48,6 +48,8 @@ export type NodeDriverOptions = {
   readonly producers?: ProducerRegistry;
   readonly endpoints?: EndpointRegistry;
   readonly artifacts?: ArtifactStore;
+  /** Runtime execution may isolate transient bytes by Build without exposing that policy to Endpoints. */
+  readonly artifactsForBuild?: (build: string) => ArtifactStore;
   readonly operations?: OperationStore;
   readonly credentials?: CredentialStore;
   readonly validators?: TypeValidatorRegistryLike;
@@ -89,6 +91,7 @@ export class NodeDriver {
   readonly producers: ProducerRegistry;
   readonly endpoints: EndpointRegistry;
   readonly artifacts: ArtifactStore;
+  readonly #artifactsForBuild: ((build: string) => ArtifactStore) | undefined;
   readonly operations: OperationStore | undefined;
   readonly credentials: CredentialStore | undefined;
   readonly validators: TypeValidatorRegistryLike;
@@ -97,9 +100,14 @@ export class NodeDriver {
     this.producers = options.producers ?? new ProducerRegistry();
     this.endpoints = options.endpoints ?? new EndpointRegistry();
     this.artifacts = options.artifacts ?? new MemoryArtifactStore();
+    this.#artifactsForBuild = options.artifactsForBuild;
     this.operations = options.operations;
     this.credentials = options.credentials;
     this.validators = options.validators ?? new TypeValidatorRegistry();
+  }
+
+  #artifactStore(build?: string): ArtifactStore {
+    return build === undefined ? this.artifacts : this.#artifactsForBuild?.(build) ?? this.artifacts;
   }
 
   async #endpointCredentials(
@@ -317,7 +325,7 @@ export class NodeDriver {
     const endpointContext = {
       command: structuredClone(executable.command),
       need: structuredClone(executable.command.need),
-      artifacts: this.artifacts,
+      artifacts: this.#artifactStore(context.build),
       credentials: await this.#endpointCredentials(executable.registration),
       operation: identity.id,
     };
@@ -420,7 +428,7 @@ export class NodeDriver {
       const result = await executable.registration.handler({
         command: structuredClone(executable.command),
         need: structuredClone(executable.command.need),
-        artifacts: this.artifacts,
+        artifacts: this.#artifactStore(context?.build),
         credentials: await this.#endpointCredentials(executable.registration),
       });
       return { status: "completed", event: await this.#endpointEvent(state, executable, result) };
@@ -493,7 +501,7 @@ export class NodeDriver {
     const endpointContext = {
       command: structuredClone(executable.command),
       need: structuredClone(executable.command.need),
-      artifacts: this.artifacts,
+      artifacts: this.#artifactStore(operation.build),
       credentials: await this.#endpointCredentials(executable.registration),
       operation: current.id,
       handle: structuredClone(current.handle as NonNullable<typeof current.handle>),

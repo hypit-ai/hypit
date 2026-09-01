@@ -51,10 +51,12 @@ function buildCommandKey(build: string, command: string): string {
 export class LocalBuildScheduler {
   readonly #executor: RuntimeCommandExecutor;
   readonly #buildStore: BuildSchedulerOptions["buildStore"];
+  readonly #onStateChange: BuildSchedulerOptions["onStateChange"];
 
   constructor(executor: RuntimeCommandExecutor, options: BuildSchedulerOptions = {}) {
     this.#executor = executor;
     this.#buildStore = options.buildStore;
+    this.#onStateChange = options.onStateChange;
   }
 
   async run(requests: readonly ScheduledBuild[]): Promise<readonly ScheduledBuildResult[]> {
@@ -106,6 +108,7 @@ export class LocalBuildScheduler {
     const accept = async (build: MutableBuild, event: import("@hypit/protocol").CommandResult): Promise<void> => {
       if (this.#buildStore === undefined || build.machine === undefined) {
         build.state = reduce(build.state, event);
+        await this.#onStateChange?.(build.id, build.state);
         return;
       }
       const fact = build.machine.evaluate(event);
@@ -116,6 +119,7 @@ export class LocalBuildScheduler {
       await this.#buildStore.append(build.id, fact);
       build.machine.commit();
       build.state = build.machine.view();
+      await this.#onStateChange?.(build.id, build.state);
     };
 
     const preparations = async (): Promise<Map<string, readonly RuntimeRunnableCommand[]>> => {
