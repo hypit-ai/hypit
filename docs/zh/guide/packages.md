@@ -129,8 +129,8 @@ Frontend；不存在一个认识全部语法的中央解析器。
 
 ### Layer 6：Runtime
 
-领域无关的执行端口与可替换部署实现。Runtime 包负责队列、Store、凭据与进程生命周期，
-但不定义作者语法。
+领域无关的执行端口与可替换部署实现。本地 Runtime 把队列、活跃 Store 与进程生命周期作为一个
+整体实现；真正由包选择的边界是凭据、Endpoint 与项目 Build Result 仓库。
 
 ```text
 @hypit/runtime               Scheduler、Worker 与 Store 端口
@@ -140,8 +140,12 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/runtime-host-node     Node Runtime Host ABI
 @hypit/runtime-local         本地 Worker 与组装
 @hypit/store-sqlite          SQLite 状态
-@hypit/artifact-store-fs     文件系统 Artifact
-@hypit/artifact-store-s3     S3 Artifact
+@hypit/artifact-store-fs     Runtime 内部文件系统临时 Artifact
+@hypit/artifact-store-s3     供需要 S3 临时 Artifact 的 Runtime 实现使用的库
+@hypit/build-result          存储无关的项目 Result 模型
+@hypit/build-result-kit      Build Result 仓库包 ABI
+@hypit/build-result-fs       默认项目 Result 仓库
+@hypit/build-result-s3       可选 S3 兼容项目 Result 仓库
 @hypit/credential-store-env  环境变量凭据
 @hypit/credential-store-os      macOS 钥匙串或 Windows 凭据锁
 ```

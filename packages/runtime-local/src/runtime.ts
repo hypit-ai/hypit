@@ -10,7 +10,6 @@ import {
 import {
   isStreamingArtifactStore,
 } from "@hypit/runtime";
-import { FileBuildResult } from "@hypit/build-result";
 import { TypeValidatorRegistry } from "@hypit/validation";
 
 import { createLocalRuntimeArchiveControl, createLocalRuntimeArtifactAccess } from "./control.js";
@@ -53,6 +52,7 @@ async function wait(delayMs: number, signal: AbortSignal | undefined): Promise<v
 export async function createLocalRuntime(
   options: CreateLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
+  const openBuildResultRepository = options.openBuildResultRepository;
   const buildCatalog = options.buildCatalog;
   const producers = new ProducerRegistry();
   const endpoints = new EndpointRegistry();
@@ -102,6 +102,10 @@ export async function createLocalRuntime(
     artifactStore: options.artifactStore,
     ...(options.artifactStoreForBuild === undefined ? {} : { artifactStoreForBuild: options.artifactStoreForBuild }),
     ...(options.clearBuildArtifacts === undefined ? {} : { clearBuildArtifacts: options.clearBuildArtifacts }),
+    openBuildResultRepository: async (location) => {
+      assert(openBuildResultRepository !== undefined, "this Runtime cannot open Build Result Repositories");
+      return await openBuildResultRepository(location);
+    },
     installComponentPackages,
   });
   const credentialControl = createLocalCredentialControl({
@@ -170,28 +174,32 @@ export async function createLocalRuntime(
     await stageAttachments(request);
     await options.buildStore.create(request.id, request.definition);
     const resultRequest = request.result;
-    const result = resultRequest === undefined
-      ? undefined
-      : await (async () => {
-          assert(request.catalog !== undefined, "Build Result requires Author catalog names");
-          const aliases = request.catalog.aliases.flatMap((alias) => alias.ref.kind === "logical-output"
-            ? [{ name: alias.name, output: alias.ref.id }]
-            : []);
-          const names = new Map(aliases.map((alias) => [alias.output, alias.name]));
-          return await FileBuildResult.create(resultRequest.root, {
-            id: request.id,
-            ...(resultRequest.name === undefined ? {} : { name: resultRequest.name }),
-            source: request.catalog.source,
-            ...(request.catalog.run === undefined ? {} : { run: request.catalog.run }),
-            targets: request.definition.request.targets.map((target) => names.get(target.output) ?? target.output),
-            aliases,
-            ...(resultRequest.reuses === undefined ? {} : { reuses: resultRequest.reuses }),
-          });
-        })();
+    if (resultRequest !== undefined) {
+      assert(openBuildResultRepository !== undefined, "this Runtime cannot open Build Result Repositories");
+      const opened = await openBuildResultRepository(resultRequest.repository);
+      try {
+        assert(request.catalog !== undefined, "Build Result requires Author catalog names");
+        const aliases = request.catalog.aliases.flatMap((alias) => alias.ref.kind === "logical-output"
+          ? [{ name: alias.name, output: alias.ref.id }]
+          : []);
+        const names = new Map(aliases.map((alias) => [alias.output, alias.name]));
+        await opened.repository.create({
+          id: request.id,
+          ...(resultRequest.name === undefined ? {} : { name: resultRequest.name }),
+          source: request.catalog.source,
+          ...(request.catalog.run === undefined ? {} : { run: request.catalog.run }),
+          targets: request.definition.request.targets.map((target) => names.get(target.output) ?? target.output),
+          aliases,
+          ...(resultRequest.reuses === undefined ? {} : { reuses: resultRequest.reuses }),
+        });
+      } finally {
+        await opened.close?.();
+      }
+    }
     await options.dispatchStore.create({
       build: request.id,
       componentPackages: [...new Set(request.componentPackages ?? [])].sort(),
-      ...(result === undefined ? {} : { resultDirectory: result.directory }),
+      ...(resultRequest === undefined ? {} : { result: resultRequest.repository }),
     });
     if (request.catalog !== undefined) {
       await buildCatalog!.record(request.id, request.catalog);

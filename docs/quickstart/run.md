@@ -260,6 +260,10 @@ only with `--workspace`. `--package-root` locates installed packages and never w
 output/
 ```
 
+That is the zero-configuration Result repository. A Runtime Profile may instead select
+`@hypit/build-result-s3`; commands and historical `build-record` references then use that same
+repository. Runtime working Artifacts remain local and private to the Runtime.
+
 ### 1. Select a Runtime
 
 ```bash
@@ -268,7 +272,8 @@ hypit runtime use hypit.runtime.json
 ```
 
 Author and Run Sources select their packages through imports. The Runtime Profile selects its Host,
-infrastructure and Provider packages through `use`. The installed package manager owns their versions.
+Result repository, credential and Endpoint packages through `use`. The installed package manager
+owns their versions.
 
 ### 2. Diagnose the environment
 

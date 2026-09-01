@@ -10,6 +10,7 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import type { BlobRef, BuildState, StoredValue, TypedRecord } from "@hypit/protocol";
@@ -25,6 +26,8 @@ import type {
   BuildResultSync,
   HistoricalBuildOutputRef,
   ResolvedBuildResultOutput,
+  BuildResultRepository,
+  RepositoryBuildResultOutput,
 } from "./types.js";
 
 type WriterState = {
@@ -254,6 +257,52 @@ export async function materializeBuildResultOutput(
   };
 }
 
+export async function materializeRepositoryBuildResultOutput(
+  repository: BuildResultRepository,
+  build: string,
+  output: string,
+  destination: string,
+): Promise<{
+  readonly build: string;
+  readonly output: string;
+  readonly path: string;
+  readonly kind: "file" | "json" | "inline";
+}> {
+  const resolvedOutput = await repository.resolve(build, output);
+  if (resolvedOutput === undefined) throw new Error(`Build ${build} has no Output ${output}`);
+  const target = resolve(destination);
+  await mkdir(dirname(target), { recursive: true });
+  const temporary = `${target}.part-${randomUUID()}`;
+  try {
+    if (resolvedOutput.value.kind === "inline") {
+      await writeFile(temporary, `${JSON.stringify(resolvedOutput.value.value, null, 2)}\n`, { flag: "wx" });
+    } else if (resolvedOutput.value.kind === "json") {
+      await writeFile(temporary, `${JSON.stringify(resolvedOutput.value.value, null, 2)}\n`, { flag: "wx" });
+    } else {
+      const input = await repository.openFile(resolvedOutput.build, resolvedOutput.value);
+      if (input === undefined) {
+        throw new Error(`Build ${resolvedOutput.build} file ${resolvedOutput.value.path} is unavailable`);
+      }
+      const handle = await open(temporary, "wx");
+      try {
+        for await (const chunk of input) await handle.write(Uint8Array.from(chunk));
+      } finally {
+        await handle.close();
+      }
+    }
+    await rename(temporary, target);
+  } catch (error) {
+    await rm(temporary, { force: true });
+    throw error;
+  }
+  return {
+    build: resolvedOutput.build,
+    output: resolvedOutput.output,
+    path: target,
+    kind: resolvedOutput.value.kind === "build-file" ? "file" : resolvedOutput.value.kind === "json" ? "json" : "inline",
+  };
+}
+
 export class FileBuildResult {
   readonly directory: string;
 
@@ -421,5 +470,47 @@ export class FileBuildResult {
     await writeJsonAtomic(join(this.directory, manifestName), updated);
     await rm(join(this.directory, writerStateName), { force: true });
     return updated;
+  }
+}
+
+/** Default zero-configuration project repository backed by one ordinary directory tree. */
+export class FileBuildResultRepository implements BuildResultRepository {
+  readonly root: string;
+
+  constructor(root: string) {
+    assert(root.trim().length > 0, "Build Result root must not be empty");
+    this.root = resolve(root);
+  }
+
+  async create(seed: BuildResultSeed): Promise<FileBuildResult> {
+    return await FileBuildResult.create(this.root, seed);
+  }
+
+  async openWriter(build: string): Promise<FileBuildResult | undefined> {
+    const directory = buildResultDirectory(this.root, build);
+    return await readBuildResult(directory) === undefined ? undefined : await FileBuildResult.open(directory);
+  }
+
+  async read(build: string): Promise<BuildResultManifest | undefined> {
+    return await readBuildResult(buildResultDirectory(this.root, build));
+  }
+
+  async list(): Promise<readonly BuildResultManifest[]> {
+    return await listBuildResults(this.root);
+  }
+
+  async resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined> {
+    const resolvedOutput = await resolveBuildResultOutput(this.root, build, output);
+    if (resolvedOutput === undefined) return undefined;
+    const { directory: _directory, ...portable } = resolvedOutput;
+    return portable;
+  }
+
+  async openFile(build: string, file: BuildResultFileRef): Promise<AsyncIterable<Uint8Array> | undefined> {
+    const owner = file.build ?? build;
+    const directory = buildResultDirectory(this.root, owner);
+    const path = containedResultPath(directory, file.path);
+    if (!await exists(path)) return undefined;
+    return createReadStream(path);
   }
 }

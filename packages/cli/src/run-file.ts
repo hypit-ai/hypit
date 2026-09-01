@@ -1,24 +1,18 @@
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-
-import {
-  buildResultDirectory,
-  resolveBuildResultOutput,
-} from "@hypit/build-result";
+import { createHash, randomUUID } from "node:crypto";
 import type {
+  BuildResultRepository,
   BuildResultFileRef,
   BuildResultJsonValue,
-  ResolvedBuildResultOutput,
+  RepositoryBuildResultOutput,
 } from "@hypit/build-result";
-import {
-  NodeRunCompiler,
-} from "@hypit/compiler-node";
+import { NodeRunCompiler } from "@hypit/compiler-node";
 import type {
   NodeCompiledRun,
   NodeCompiler,
 } from "@hypit/compiler-node";
 import type { CliRuntime } from "./runtime-port.js";
 import type { NodePackageContribution } from "@hypit/package-loader-node";
-import type { WorkspaceSession } from "@hypit/workspace";
+import type { ArtifactAttachment, WorkspaceSession } from "@hypit/workspace";
 import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
 import {
   installRunFragmentHostFacets,
@@ -49,8 +43,7 @@ function createRunCompiler(options: {
   readonly frontends: readonly RunFrontend[];
   readonly packageContributions: readonly NodePackageContribution[];
   readonly runtime?: Pick<CliRuntime, "status">;
-  readonly resultsRoot?: string;
-  readonly workspace?: WorkspaceSession;
+  readonly results?: BuildResultRepository;
 }): NodeRunCompiler {
   const fragments = new RunFragmentRegistry();
   for (const item of options.packageContributions) {
@@ -72,10 +65,47 @@ function createRunCompiler(options: {
     return item.kind === "build-file" && typeof item.path === "string"
       && typeof item.size === "number" && typeof item.mediaType === "string";
   };
-  const isResultOutput = (value: unknown): value is { readonly kind: "build-output"; readonly build: string; readonly output: string } => {
+  const isResultOutput = (value: unknown): value is {
+    readonly kind: "build-output";
+    readonly build: string;
+    readonly output: string;
+  } => {
     if (value === null || Array.isArray(value) || typeof value !== "object") return false;
     const item = value as Readonly<Record<string, unknown>>;
     return item.kind === "build-output" && typeof item.build === "string" && typeof item.output === "string";
+  };
+  const resultAttachment = async (
+    repository: BuildResultRepository,
+    owner: string,
+    file: BuildResultFileRef,
+  ): Promise<ArtifactAttachment> => {
+    const build = file.build ?? owner;
+    const initial = await repository.openFile(build, file);
+    if (initial === undefined) throw new Error(`Build ${build} file ${file.path} is unavailable`);
+    const hash = createHash("sha256");
+    let size = 0;
+    for await (const value of initial) {
+      const chunk = Uint8Array.from(value);
+      hash.update(chunk);
+      size += chunk.byteLength;
+    }
+    if (size !== file.size) throw new Error(`Build ${build} file ${file.path} has size ${size}, expected ${file.size}`);
+    const artifact: BlobRef = {
+      kind: "blob",
+      resource: `res_${randomUUID()}`,
+      digest: `sha256:${hash.digest("hex")}`,
+      size,
+      mediaType: file.mediaType,
+      origin: { kind: "build-file", build, path: file.path },
+    };
+    return {
+      artifact,
+      async open() {
+        const stream = await repository.openFile(build, file);
+        if (stream === undefined) throw new Error(`Build ${build} file ${file.path} is unavailable`);
+        return stream;
+      },
+    };
   };
   const isBlob = (value: unknown): value is BlobRef => {
     if (value === null || Array.isArray(value) || typeof value !== "object") return false;
@@ -86,68 +116,59 @@ function createRunCompiler(options: {
   const resultValue = async (
     value: BuildResultJsonValue,
     owner: string,
+    attachments: ArtifactAttachment[],
   ): Promise<CanonicalValue | BlobRef> => {
-    const workspace = options.workspace;
-    const resultsRoot = options.resultsRoot;
-    if (workspace === undefined || resultsRoot === undefined) {
-      throw new Error("Build Result resolution has no Workspace");
+    const repository = options.results;
+    if (repository === undefined) throw new Error("Build Result resolution has no Repository");
+    if (isResultFile(value)) {
+      const attachment = await resultAttachment(repository, owner, value);
+      attachments.push(attachment);
+      return attachment.artifact;
     }
-    const admit = async (file: BuildResultFileRef, defaultBuild: string): Promise<BlobRef> => {
-      const build = file.build ?? defaultBuild;
-      const directory = buildResultDirectory(resultsRoot, build);
-      if (isAbsolute(file.path)) throw new Error(`Build ${build} file path must be relative`);
-      const absolute = resolve(directory, file.path);
-      const relation = relative(directory, absolute);
-      if (relation === ".." || relation.startsWith(`..${sep}`)) {
-        throw new Error(`Build ${build} file path leaves its result directory`);
-      }
-      const sourceRelative = relative(dirname(workspace.entry.id), absolute);
-      const from = sourceRelative.startsWith(".") ? sourceRelative : `.${sep}${sourceRelative}`;
-      const admitted = await workspace.resolveAsset(workspace.entry, { from, mediaType: file.mediaType });
-      return {
-        ...admitted.artifact,
-        origin: { kind: "build-file", build, path: file.path },
-      };
-    };
-    if (isResultFile(value)) return await admit(value, owner);
     if (isResultOutput(value)) {
-        const forwarded = await resolveBuildResultOutput(resultsRoot, value.build, value.output);
-        if (forwarded === undefined) throw new Error(`Build ${value.build} has no Output ${value.output}`);
-        return await resolvedValue(forwarded);
+      const forwarded = await repository.resolve(value.build, value.output);
+      if (forwarded === undefined) throw new Error(`Build ${value.build} has no Output ${value.output}`);
+      return await resolvedValue(forwarded, attachments);
     }
     if (Array.isArray(value)) {
-      return await Promise.all(value.map(async (item) => await resultValue(item, owner))) as CanonicalValue;
+      return await Promise.all(value.map(async (item) => await resultValue(item, owner, attachments))) as CanonicalValue;
     }
     if (value !== null && typeof value === "object") {
       return Object.fromEntries(await Promise.all(Object.entries(value)
-        .map(async ([key, item]) => [key, await resultValue(item, owner)] as const))) as CanonicalValue;
+        .map(async ([key, item]) => [key, await resultValue(item, owner, attachments)] as const))) as CanonicalValue;
     }
     return value;
   };
-  const resolvedValue = async (resolved: ResolvedBuildResultOutput): Promise<BlobRef | CanonicalValue> => {
-    if (resolved.value.kind === "build-file") return await resultValue(resolved.value, resolved.build);
+  const resolvedValue = async (
+    resolved: RepositoryBuildResultOutput,
+    attachments: ArtifactAttachment[],
+  ): Promise<BlobRef | CanonicalValue> => {
+    if (resolved.value.kind === "build-file") return await resultValue(resolved.value, resolved.build, attachments);
     if (resolved.value.kind === "inline") return resolved.value.value;
-    return await resultValue(resolved.value.value, resolved.build);
+    return await resultValue(resolved.value.value, resolved.build, attachments);
   };
   const storedResult = async (build: string, output: string): Promise<{
-    readonly type: ResolvedBuildResultOutput["type"];
+    readonly type: RepositoryBuildResultOutput["type"];
     readonly value: StoredValue;
+    readonly attachments?: readonly ArtifactAttachment[];
   } | undefined> => {
-    const resultsRoot = options.resultsRoot;
-    if (resultsRoot === undefined) return undefined;
-    const resolved = await resolveBuildResultOutput(resultsRoot, build, output);
+    const repository = options.results;
+    if (repository === undefined) return undefined;
+    const resolved = await repository.resolve(build, output);
     if (resolved === undefined) return undefined;
-    const value = await resolvedValue(resolved);
+    const attachments: ArtifactAttachment[] = [];
+    const value = await resolvedValue(resolved, attachments);
     return {
       type: resolved.type,
       value: isBlob(value) ? value : { kind: "inline", value },
+      ...(attachments.length === 0 ? {} : { attachments }),
     };
   };
   return new NodeRunCompiler({
     authorCompiler: options.authorCompiler,
     frontends,
     fragments,
-    ...(options.resultsRoot !== undefined ? {
+    ...(options.results !== undefined ? {
       async resolveBuildRecord(id: string, output: string) {
         return await storedResult(id, output);
       },
@@ -184,9 +205,9 @@ export async function loadRunFile(options: {
   readonly frontends: readonly RunFrontend[];
   readonly packageContributions: readonly NodePackageContribution[];
   readonly runtime?: Pick<CliRuntime, "status">;
-  readonly resultsRoot?: string;
+  readonly results?: BuildResultRepository;
 }): Promise<LoadedRunFile> {
-  const compiler = createRunCompiler({ ...options, workspace: options.workspace });
+  const compiler = createRunCompiler(options);
   const compiled = await compiler.compileSource(options.workspace.entry, options.workspace);
   return { path: options.workspace.entry.id, compiler, ...compiled };
 }

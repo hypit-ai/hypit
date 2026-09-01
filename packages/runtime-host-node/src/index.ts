@@ -4,6 +4,8 @@ import { homedir } from "node:os";
 import { delimiter, isAbsolute, join, resolve } from "node:path";
 import type { ArtifactAttachment } from "@hypit/workspace";
 import type { BuildResultReuse } from "@hypit/build-result";
+import type { BuildResultRepository } from "@hypit/build-result";
+import type { BuildResultRepositoryLocation } from "@hypit/build-result-kit";
 import type { BuildDefinition, BuildState, CapabilityRef, Digest } from "@hypit/protocol";
 import type {
   BuildCatalogDescriptor,
@@ -80,9 +82,9 @@ export type RuntimeHostExecution = RuntimeHostArchive & RuntimeHostArtifactAcces
     readonly componentPackages?: readonly string[];
     readonly catalog?: BuildCatalogDescriptor;
     readonly attachments?: readonly ArtifactAttachment[];
-    /** Project-owned result destination. Runtime Profile never selects this location. */
+    /** Project-owned result destination, resolved before this Build enters the durable queue. */
     readonly result?: {
-      readonly root: string;
+      readonly repository: BuildResultRepositoryLocation;
       readonly name?: string;
       readonly reuses?: readonly BuildResultReuse[];
     };
@@ -164,6 +166,12 @@ export type NodeRuntimeHost = {
   openArchive(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostArchive>;
   openArtifacts(): Promise<RuntimeHostArtifactAccess>;
   openCredentials(endpoint: string): Promise<RuntimeHostCredentialControl>;
+  /** Open the project Repository selected by this Profile, or the supplied zero-config file default. */
+  openResults?(defaultRoot: string): Promise<{
+    readonly location: BuildResultRepositoryLocation;
+    readonly repository: BuildResultRepository;
+    close(): void | Promise<void>;
+  }>;
   /** Explicitly prepare upstream packages selected by this Runtime Profile. */
   prepare(options?: {
     readonly onProgress?: (event: import("./packages.js").HostPackageProgress) => void;

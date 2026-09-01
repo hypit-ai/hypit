@@ -1,3 +1,5 @@
+import type { BuildResultRepositoryLocation } from "@hypit/build-result-kit";
+
 export type DispatchPhase = "queued" | "running" | "waiting" | "terminal";
 export type DispatchTerminal = "complete" | "failed" | "cancelled";
 
@@ -5,8 +7,8 @@ export type BuildDispatchRequest = {
   readonly build: string;
   /** Installed component packages loaded when a Worker claims this Build. */
   readonly componentPackages: readonly string[];
-  /** Exact per-Build result directory selected by the submitting project. */
-  readonly resultDirectory?: string;
+  /** Exact project Repository selected before this Build was queued. */
+  readonly result?: BuildResultRepositoryLocation;
 };
 
 export type BuildDispatchSnapshot = BuildDispatchRequest & {

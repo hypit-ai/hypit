@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  createRuntimeArtifactStoreAdapterFacet,
+  createRuntimeCredentialStoreAdapterFacet,
   createRuntimeEndpointAdapterFacet,
   isRuntimeAdapterHostFacet,
   runtimeConfigBoolean,
@@ -32,46 +32,46 @@ const endpoint = (use: string, extra: Record<string, unknown> = {}) =>
 test("a facet declares which kind it is, and the registry keeps the two apart", () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.endpoint"));
-  registry.registerFacet(createRuntimeArtifactStoreAdapterFacet({
+  registry.registerFacet(createRuntimeCredentialStoreAdapterFacet({
     use: "example.service",
     validate() {},
     open: () => ({ value: {} as never }),
   }));
 
   assert.ok(registry.has("example.endpoint", "endpoint"));
-  assert.equal(registry.has("example.endpoint", "artifact-store"), false);
-  assert.ok(registry.has("example.service", "artifact-store"));
+  assert.equal(registry.has("example.endpoint", "credential-store"), false);
+  assert.ok(registry.has("example.service", "credential-store"));
   assert.equal(registry.has("example.service", "endpoint"), false);
 });
 
-test("Endpoint and Artifact Store adapters may share one package address", () => {
+test("Endpoint and Credential Store adapters may share one package address", () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.shared"));
-  registry.registerFacet(createRuntimeArtifactStoreAdapterFacet({
+  registry.registerFacet(createRuntimeCredentialStoreAdapterFacet({
     use: "example.shared",
     validate() {},
     open: () => ({ value: {} as never }),
   }));
   assert.ok(registry.has("example.shared", "endpoint"));
-  assert.ok(registry.has("example.shared", "artifact-store"));
+  assert.ok(registry.has("example.shared", "credential-store"));
 });
 
-test("asking an Endpoint adapter for an Artifact Store is refused, not coerced", async () => {
+test("asking an Endpoint adapter for a Credential Store is refused, not coerced", async () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.endpoint"));
-  await assert.rejects(async () => await registry.openArtifactStore("example.endpoint", context));
+  await assert.rejects(async () => await registry.openCredentialStore("example.endpoint", context));
   await assert.rejects(async () => await registry.createEndpoint("example.absent", context));
 });
 
-test("an Artifact Store adapter returns the selected Store directly", async () => {
+test("a Credential Store adapter returns the selected Store directly", async () => {
   const registry = new RuntimeAdapterRegistry();
-  const value = { put() {}, get() {}, has() {} } as never;
-  registry.registerFacet(createRuntimeArtifactStoreAdapterFacet({
-    use: "example.artifacts",
+  const value = { resolve() {} } as never;
+  registry.registerFacet(createRuntimeCredentialStoreAdapterFacet({
+    use: "example.credentials",
     validate() {},
     open: () => ({ value }),
   }));
-  assert.equal((await registry.openArtifactStore("example.artifacts", context)).value, value);
+  assert.equal((await registry.openCredentialStore("example.credentials", context)).value, value);
 });
 
 test("one kind and logical name has one adapter, so a second registration is an error", () => {

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { FileBuildResult } from "@hypit/build-result";
+import { FileBuildResult, FileBuildResultRepository } from "@hypit/build-result";
 import { ModulePackageRegistry, NodeCompiler } from "@hypit/compiler-node";
 import { AuthorFrontendRegistry, sealGraphFragment } from "@hypit/elaborator";
 import { createMarkupAuthorFrontend, MarkupSurfaceRegistry } from "@hypit/markup";
@@ -218,7 +218,7 @@ test("build-record reads one exact result file and preserves its historical orig
       authorCompiler,
       frontends: [runMarkupFrontend],
       packageContributions: [],
-      resultsRoot,
+      results: new FileBuildResultRepository(resultsRoot),
     });
     const candidate = loaded.run.graph.candidates[0];
     assert.equal(candidate?.root.kind, "value");

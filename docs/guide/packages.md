@@ -137,8 +137,9 @@ never on exact-model packages or the CLI.
 
 ### Layer 6: Runtime
 
-Domain-neutral execution ports plus replaceable deployment implementations. Runtime packages own
-queues, stores, credentials and process lifecycle; they never define author syntax.
+Domain-neutral execution ports plus replaceable deployment implementations. The local Runtime owns
+its queue, active stores and process lifecycle as one implementation; credentials, Endpoints and the
+project Build Result repository are the intentional package-selected boundaries.
 
 ```text
 @hypit/runtime               Scheduler, Worker and Store ports
@@ -148,8 +149,12 @@ queues, stores, credentials and process lifecycle; they never define author synt
 @hypit/runtime-host-node     Node Runtime Host ABI
 @hypit/runtime-local         local Worker and assembly
 @hypit/store-sqlite          SQLite state
-@hypit/artifact-store-fs     filesystem Artifacts
-@hypit/artifact-store-s3     S3 Artifacts
+@hypit/artifact-store-fs     internal filesystem working Artifacts
+@hypit/artifact-store-s3     library for Runtime implementations needing S3 working Artifacts
+@hypit/build-result          storage-neutral project Result model
+@hypit/build-result-kit      Build Result repository package ABI
+@hypit/build-result-fs       default project Result repository
+@hypit/build-result-s3       optional S3-compatible project Result repository
 @hypit/credential-store-env  environment credentials
 @hypit/credential-store-os      macOS Keychain or Windows Credential Locker
 ```

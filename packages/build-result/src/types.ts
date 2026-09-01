@@ -106,3 +106,25 @@ export type ResolvedBuildResultOutput = {
     | { readonly kind: "inline"; readonly value: null | boolean | number | string }
     | { readonly kind: "json"; readonly path: string; readonly value: BuildResultJsonValue };
 };
+
+/** Storage-neutral resolved Output. Physical repositories never enter Build or Run identity. */
+export type RepositoryBuildResultOutput = Omit<ResolvedBuildResultOutput, "directory">;
+
+export type BuildResultWriter = {
+  read(): Promise<BuildResultManifest>;
+  sync(input: BuildResultSync): Promise<BuildResultManifest>;
+  finish(input: BuildResultFinish): Promise<BuildResultManifest>;
+};
+
+/**
+ * Project result history addressed only by Build id, Output name and Build-relative file path.
+ * Filesystem paths, bucket keys and service URLs remain implementation details.
+ */
+export type BuildResultRepository = {
+  create(seed: BuildResultSeed): Promise<BuildResultWriter>;
+  openWriter(build: string): Promise<BuildResultWriter | undefined>;
+  read(build: string): Promise<BuildResultManifest | undefined>;
+  list(): Promise<readonly BuildResultManifest[]>;
+  resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined>;
+  openFile(build: string, file: BuildResultFileRef): Promise<AsyncIterable<Uint8Array> | undefined>;
+};

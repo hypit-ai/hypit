@@ -1,5 +1,5 @@
 {
-  "name": "@hypit/runtime",
+  "name": "@hypit/build-result-s3",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,9 +7,13 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1103.0",
+    "@hypit/build-result": "workspace:*",
     "@hypit/build-result-kit": "workspace:*",
-    "@hypit/core": "workspace:*",
     "@hypit/protocol": "workspace:*"
   }
 }

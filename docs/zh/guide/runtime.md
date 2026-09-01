@@ -31,6 +31,10 @@ Profile 只保留真正会随环境变化的选择：
     "use": "@hypit/runtime-local",
     "config": {
       "dataRoot": ".hypit/runtimes/local",
+      "results": {
+        "use": "@hypit/build-result-fs",
+        "config": { "path": ".hypit/results" }
+      },
       "credentials": {
         "env": { "use": "@hypit/credential-store-env" }
       },
@@ -42,6 +46,7 @@ Profile 只保留真正会随环境变化的选择：
 }
 ```
 
+`results` 可选地指定项目的完整 Build Result 仓库；省略时就是项目里的 `.hypit/results`。
 `credentials` 选择凭证存储；`endpoints` 选择明确的 Provider 实现。
 
 安装包只增加一种可选实现，不会自动激活。Profile 不包含 Workspace、作者 import 或隐藏的
@@ -73,10 +78,28 @@ Result 安全写完后，Definition/Facts、Operation 载荷、Catalog 和临时
 正是 Result 写入本身，则保留执行状态供本地修复。Runtime 可以留一条很小的终态调度回执供
 `status` 使用，但它不是历史权威。
 
-历史内容属于项目：`.hypit/results/<build-id>/result.json` 记录最终 Target，以及这条执行路线
-上真正完成的所有公开 Author Output。媒体放在该 Result 的 `files/`，结构化值放在 `values/`。
-`builds`、`history`、`inspect`、`get` 和 `build-record` 都直接读取这些 Result，不依赖 Runtime
-SQLite，也不需要选择历史产物存储。
+历史内容属于所选的项目 Result 仓库，不属于 Runtime SQLite。使用默认仓库时，
+`.hypit/results/<build-id>/result.json` 记录最终 Target，以及这条执行路线上真正完成的所有公开
+Author Output；媒体放在该 Result 的 `files/`，结构化值放在 `values/`。`builds`、`history`、
+`inspect`、`get` 和 `build-record` 都通过同一个仓库接口读取。提交给独立 Worker 的 Build 会带着
+当时选定的仓库位置，因此之后修改 Profile 不会把已经排队的 Build 改写到别处。
+
+使用 S3 或兼容服务时：
+
+```json
+"results": {
+  "use": "@hypit/build-result-s3",
+  "config": {
+    "bucket": "my-video-results",
+    "prefix": "projects/episode-12",
+    "region": "us-east-1"
+  }
+}
+```
+
+AWS SDK 使用它通常的凭证链；兼容服务还可以配置 `endpoint` 与 `forcePathStyle`。`prefix` 是项目
+边界，每个项目应使用自己的 prefix。S3 只改变完整 Build Result 的存放位置，不会把 Runtime
+SQLite、队列或临时工作 Artifact 搬进 bucket。
 
 Workspace 独立由显式 `--workspace`、Runtime 指针所在项目或入口 Source 目录确定。Runtime 配置
 不能扩大源码读取范围。
