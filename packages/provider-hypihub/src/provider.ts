@@ -44,13 +44,13 @@ function apiBaseUrl(value: string): string {
 }
 function credential(context: EndpointInvocationContext): string {
   const value = context.credentials.apiKey?.secret;
-  assert(typeof value === "string" && value.length > 0, "HypiHub API key is unavailable");
+  assert(typeof value === "string" && value.length > 0, "HypiHub login is unavailable; run hypit auth login for HypiHub");
   return value;
 }
 function guidedMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  return /API key is unavailable|HTTP (?:401|403|404)\b|not enabled for|model_not_found|no_capable_provider/iu.test(message)
-    ? `${message}. Get a HypiHub key with this model enabled at https://hypit.ai`
+  return /API key is unavailable|HypiHub login is unavailable|HTTP (?:401|403|404)\b|not enabled for|model_not_found|no_capable_provider/iu.test(message)
+    ? `${message}. Sign in to HypiHub at https://hypit.ai with hypit auth login`
     : message;
 }
 function failure(error: unknown): EndpointOutcome {
@@ -252,10 +252,10 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   };
   return defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
-    credentials: { apiKey: options.apiKey ?? credentialRef("env", "HYPIHUB_API_KEY") }, credentialInputs: { apiKey: { label: "HypiHub API key" } }, defaultConcurrency: options.defaultConcurrency ?? 4,
+    credentials: { apiKey: options.apiKey ?? credentialRef("os", "hypihub.oauth") }, credentialInputs: { apiKey: { label: "HypiHub login" } }, defaultConcurrency: options.defaultConcurrency ?? 4,
     capabilities: [
       ...hypiHubRoutes
-      // HypiHub keys do not necessarily include the MiMo audio models. Keep
+      // HypiHub OAuth grants do not necessarily include the MiMo audio models. Keep
       // official Xiaomi MiMo as the safe default; opting into HypiHub audio is
       // an explicit Runtime decision for a key that actually has those models.
       .filter((route) => options.audio === true || route.media !== "audio")

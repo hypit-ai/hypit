@@ -128,7 +128,7 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
       if (!response.ok) {
         const message = `HypiHub Gemini returned HTTP ${response.status}: ${text.slice(0, 300)}`;
         if (response.status === 401 || response.status === 403 || response.status === 404) {
-          throw new Error(`${message}. Get a HypiHub key with this model enabled at https://hypit.ai`);
+          throw new Error(`${message}. Sign in to HypiHub at https://hypit.ai with hypit auth login`);
         }
         throw new Error(message);
       }

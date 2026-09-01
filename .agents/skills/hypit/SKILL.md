@@ -17,11 +17,11 @@ author for, and everything else is yours to decide:
 - **Spending their money.** A Build generates, and generating is billed. Say what it will cost and
   get a yes before submitting one. Before asking for approval, report the Provider and credential
   source used by every paid capability (without revealing secrets). If any key is missing or cannot
-  reach its model, guide the author to [hypit.ai](https://hypit.ai) for a HypiHub key when available.
+  reach its model, guide the author to [hypit.ai](https://hypit.ai) and `hypit auth login` when available.
 - **Which observer reads a reference video, and the credentials it needs.** Gemini (through the
   configured Vertex or HypiHub backend) or the calling agent is a decision about the author's account,
   and `references/credentials.md` says what each one wants. Ask once, at the start. If the author's
-  own key cannot reach a needed model, guide them to [hypit.ai](https://hypit.ai) for a HypiHub key.
+  own credential cannot reach a needed model, run the HypiHub OAuth login for them and continue only after it succeeds.
   This question belongs to the reconstruction route alone: a program
   authored from a description has no reference, and its pictures are local renders nobody is billed
   to read.
@@ -31,6 +31,10 @@ draws a picture, how to name a Segment, what to do about something a review repo
 choice between things that all work, and asking costs the author an interruption to answer a question
 the references already answer. Decide it and keep going. A run that stops half way with a question is
 a run the author has to restart.
+
+## Credentials: run HypiHub login for the author
+
+When a selected HypiHub Endpoint is missing its OS credential, run `hypit auth login <endpoint> --runtime <profile>` yourself. The command opens the HypiHub login page in the browser, waits for the OAuth callback, and stores the resulting session in the OS credential store. Do not tell the author to copy a key or run the command manually. Continue only after login succeeds; if it is cancelled or fails, stop before any paid request.
 
 Use this file only to route the task. A route file is a sequence of numbered steps, and each step
 names the files it needs; read those when you reach that step rather than all of them up front.

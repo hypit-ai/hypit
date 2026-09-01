@@ -211,7 +211,7 @@ variables referenced by the selected Runtime Profile:
 
 | Variable | Provider/use |
 |---|---|
-| `HYPIHUB_API_KEY` | HypiHub paid generation and Gemini VLM; get one at https://hypit.ai |
+| HypiHub OAuth | HypiHub paid generation and Gemini VLM; run `hypit auth login hypihub.default --runtime hypit.runtime.json` |
 | `KIE_API_KEY` | Explicit KIE Provider only |
 | `MIMO_API_KEY` | Xiaomi MiMo TTS, only when that Endpoint is selected |
 

@@ -2,7 +2,7 @@
 
 Thin Hypit Runtime Provider for a HypiHub deployment. It is an optional default gateway for
 paid generation and Gemini VLM requests; callers may keep their own Provider and select HypiHub only
-when its key is configured.
+when its OAuth login is configured.
 
 It maps the currently shipped image/video model capabilities to HypiHub, including image edits and
 image-to-video first-frame inputs, submits jobs, polls them, downloads the first-class assets and
@@ -22,7 +22,7 @@ Runtime Profile example:
       "pool": "hypihub.default",
       "config": {
         "baseUrl": "https://hypit.ai",
-        "apiKey": { "store": "env", "key": "HYPIHUB_API_KEY" },
+        "apiKey": { "store": "os", "key": "hypihub.oauth" },
         "defaultConcurrency": 4
       }
     }
@@ -32,7 +32,7 @@ Runtime Profile example:
 
 Gemini VLM is also exposed as the provider-neutral `@hypit/gemini` Runtime capability, so an Author
 Source can select the exact model while the Runtime chooses HypiHub or Vertex. Existing embedded
-callers can still use the exported `createHypiHubGeminiGenerator`. Set `HYPIHUB_API_KEY` (and optionally `HYPIHUB_BASE_URL`; either the origin or
+callers can still use the exported `createHypiHubGeminiGenerator`. Run `hypit auth login hypihub.default --runtime hypit.runtime.json` to sign in with HypiHub OAuth (and optionally set `HYPIHUB_BASE_URL`; either the origin or
 an existing `/v1`/`/v1beta` base is accepted) only when choosing HypiHub. The Runtime Provider also
 accepts the origin or either versioned base and normalizes it to `/v1`; missing or insufficient user
 credentials should be resolved at [hypit.ai](https://hypit.ai). Referenced image, audio and video
@@ -40,7 +40,7 @@ Artifacts are uploaded automatically through `POST /v1/files`, then their return
 URLs are used in image and video requests. Uploads are deduplicated by Artifact digest within one
 Runtime operation. Embedded callers may override that transport with `publicAssetUrl`.
 
-HypiHub audio capabilities are disabled by default because a HypiHub key may not include the MiMo
+HypiHub audio capabilities are disabled by default because a HypiHub OAuth grant may not include the MiMo
 audio models. Set `audio: true` only when that key explicitly has them enabled. The usual setup keeps
 official `@hypit/provider-xiaomi-mimo` as the audio endpoint, so one Runtime uses HypiHub for
 image/video and official MiMo for audio.
