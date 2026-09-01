@@ -97,9 +97,13 @@ async function resolveCredentials(
 ): Promise<Readonly<Record<string, { readonly secret: string }>>> {
   const resolved: Record<string, { readonly secret: string }> = {};
   for (const [slot, ref] of Object.entries(registration.credentials ?? {})) {
-    const value = ref.store === "os" && (process.platform === "darwin" || process.platform === "win32")
-      ? await new OsCredentialStore().resolve(ref) ?? await new EnvironmentCredentialStore().resolve({ store: "env", key: "HYPIHUB_API_KEY" })
-      : await new EnvironmentCredentialStore().resolve(ref);
+    let value = await new EnvironmentCredentialStore().resolve(ref);
+    if (ref.store === "os") {
+      if (process.platform === "darwin" || process.platform === "win32") {
+        value = await new OsCredentialStore().resolve(ref).catch(() => undefined);
+      }
+      value ??= await new EnvironmentCredentialStore().resolve({ store: "env", key: "HYPIHUB_API_KEY" });
+    }
     assert(value !== undefined, ref.key === "HYPIHUB_API_KEY"
       ? `credential ${slot} is unavailable; sign in with HypiHub using: hypit auth login hypihub.default`
       : ref.store === "env"
