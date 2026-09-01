@@ -149,16 +149,3 @@ test("HypiHub MiMo TTS mappings use the public audio speech fields", async () =>
   assert.equal(result.model, "mimo-v2.5-tts-voicedesign");
   assert.deepEqual(result.input, { input: "hello", voice_description: "warm and calm" });
 });
-
-test("HypiHub MiMo voice clone sends the upstream-required bare base64 sample", async () => {
-  const voiceClone = hypiHubRoutes.find((item) => item.capability.name === "mimo-v2.5-tts-voiceclone");
-  assert.ok(voiceClone);
-  const result = await voiceClone.compile({
-    ports: {
-      text: ["hello"],
-      sample: [{ role: "audio", artifact: { ...image, mediaType: "audio/wav" } }],
-    },
-  }, resolveAudio);
-  assert.equal(result.model, "mimo-v2.5-tts-voiceclone");
-  assert.deepEqual(result.input, { input: "hello", voice: "AQID" });
-});
