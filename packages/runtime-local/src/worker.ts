@@ -1,5 +1,5 @@
 import type { BuildState } from "@hypit/protocol";
-import { FileBuildResult } from "@hypit/build-result";
+import type { BuildResultWriter } from "@hypit/build-result";
 import type {
   ArtifactStore,
   BuildDispatchSnapshot,
@@ -22,6 +22,7 @@ type LocalWorkerOptions = {
   readonly artifactStore: ArtifactStore;
   readonly artifactStoreForBuild?: (build: string) => ArtifactStore;
   readonly clearBuildArtifacts?: (build: string) => Promise<void> | void;
+  readonly openBuildResultRepository: NonNullable<import("./types.js").CreateLocalRuntimeOptions["openBuildResultRepository"]>;
   readonly installComponentPackages: (specifiers: readonly string[]) => Promise<void>;
 };
 
@@ -146,28 +147,47 @@ class DurableLocalWorker {
     this.#executorWithCapacity = new CapacityExecutor(executor, options);
   }
 
-  async #openResult(dispatch: BuildDispatchSnapshot): Promise<FileBuildResult | undefined> {
-    return dispatch.resultDirectory === undefined
-      ? undefined
-      : await FileBuildResult.open(dispatch.resultDirectory);
+  async #openResult(dispatch: BuildDispatchSnapshot): Promise<{
+    readonly writer: BuildResultWriter;
+    close(): Promise<void>;
+  } | undefined> {
+    if (dispatch.result === undefined) return undefined;
+    const opened = await this.#options.openBuildResultRepository(dispatch.result);
+    try {
+      const writer = await opened.repository.openWriter(dispatch.build);
+      assert(writer !== undefined, `Build ${dispatch.build} has no Build Result`);
+      return {
+        writer,
+        close: async () => {
+          await opened.close?.();
+        },
+      };
+    } catch (error) {
+      await opened.close?.();
+      throw error;
+    }
   }
 
   async #syncResult(dispatch: BuildDispatchSnapshot, state: BuildState): Promise<void> {
     const result = await this.#openResult(dispatch);
     if (result === undefined) return;
-    const artifactStore = this.#options.artifactStoreForBuild?.(dispatch.build) ?? this.#options.artifactStore;
-    await result.sync({
-      state,
-      artifacts: {
-        open: async (artifact) => {
-          if (isStreamingArtifactStore(artifactStore)) {
-            return await artifactStore.open(artifact.digest);
-          }
-          const bytes = await artifactStore.get(artifact.digest);
-          return bytes === undefined ? undefined : (async function* () { yield bytes; })();
+    try {
+      const artifactStore = this.#options.artifactStoreForBuild?.(dispatch.build) ?? this.#options.artifactStore;
+      await result.writer.sync({
+        state,
+        artifacts: {
+          open: async (artifact) => {
+            if (isStreamingArtifactStore(artifactStore)) {
+              return await artifactStore.open(artifact.digest);
+            }
+            const bytes = await artifactStore.get(artifact.digest);
+            return bytes === undefined ? undefined : (async function* () { yield bytes; })();
+          },
         },
-      },
-    });
+      });
+    } finally {
+      await result.close();
+    }
   }
 
   async #finishResult(
@@ -177,8 +197,12 @@ class DurableLocalWorker {
   ): Promise<boolean> {
     const result = await this.#openResult(dispatch);
     if (result === undefined) return false;
-    await result.finish({ status, ...(failure === undefined ? {} : { failure }) });
-    return true;
+    try {
+      await result.writer.finish({ status, ...(failure === undefined ? {} : { failure }) });
+      return true;
+    } finally {
+      await result.close();
+    }
   }
 
   async #retireExecution(build: string): Promise<void> {

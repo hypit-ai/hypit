@@ -347,10 +347,27 @@ function parseDispatchSnapshot(row: Row): BuildDispatchSnapshot {
         },
       }
     : {};
+  const result = typeof row.result_directory !== "string"
+    ? undefined
+    : (() => {
+        try {
+          const parsed = JSON.parse(row.result_directory) as Partial<NonNullable<BuildDispatchSnapshot["result"]>>;
+          if (typeof parsed.root === "string" && parsed.selection !== undefined
+            && typeof parsed.selection.use === "string") {
+            return parsed as NonNullable<BuildDispatchSnapshot["result"]>;
+          }
+        } catch {
+          // Dispatches queued by the previous filesystem-only implementation stored one directory.
+        }
+        return {
+          root: dirname(row.result_directory),
+          selection: { use: "@hypit/build-result-fs", config: { path: "." } },
+        } satisfies NonNullable<BuildDispatchSnapshot["result"]>;
+      })();
   const snapshot = {
     build: row.build_id,
     componentPackages,
-    ...(typeof row.result_directory === "string" ? { resultDirectory: row.result_directory } : {}),
+    ...(result === undefined ? {} : { result }),
     createdAt: row.created_at,
     availableAt: row.available_at,
     phase: row.phase,
@@ -379,7 +396,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
         build_id, component_packages_json, result_directory, created_at, available_at,
         phase, reason, cancel_requested, terminal
       ) VALUES (?, ?, ?, ?, ?, 'queued', NULL, 0, NULL)
-    `).run(request.build, JSON.stringify(request.componentPackages), request.resultDirectory ?? null, now, now);
+    `).run(request.build, JSON.stringify(request.componentPackages), request.result === undefined ? null : JSON.stringify(request.result), now, now);
     return {
       ...copy(request),
       createdAt: now,

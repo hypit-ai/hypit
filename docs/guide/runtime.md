@@ -32,6 +32,10 @@ The Profile contains only environmental choices that genuinely vary:
     "use": "@hypit/runtime-local",
     "config": {
       "dataRoot": ".hypit/runtimes/local",
+      "results": {
+        "use": "@hypit/build-result-fs",
+        "config": { "path": ".hypit/results" }
+      },
       "credentials": {
         "env": { "use": "@hypit/credential-store-env" }
       },
@@ -43,6 +47,8 @@ The Profile contains only environmental choices that genuinely vary:
 }
 ```
 
+* `results` optionally locates the project's complete Build Result repository. If omitted, it is
+  the ordinary `.hypit/results` directory in the project.
 * `credentials` selects stores for explicit credential references.
 * `endpoints` selects exact Provider implementations and their configuration.
 
@@ -76,11 +82,30 @@ rows and working bytes are removed. If writing the Result itself fails, the work
 local repair. One small terminal dispatch row may remain for Runtime status. It is not the history
 source.
 
-Historical content lives in the project, not the Profile: `.hypit/results/<build-id>/result.json`
-names final Targets and every public Author Output that actually completed on their route. Media is
-under that Result's `files/`; structured values are under `values/`. `builds`, `history`, `inspect`,
-`get` and `build-record` read these Results directly and never need Runtime SQLite or a selected byte
-store.
+Historical content lives in the selected project Result repository, not Runtime SQLite. With the
+default repository, `.hypit/results/<build-id>/result.json` names final Targets and every public
+Author Output that actually completed on their route. Media is under that Result's `files/`;
+structured values are under `values/`. `builds`, `history`, `inspect`, `get` and `build-record` use
+the same repository interface. A Build queued for a detached Worker carries the exact repository
+location it was given, so changing a Profile later cannot redirect that in-flight Build.
+
+For an S3-compatible repository:
+
+```json
+"results": {
+  "use": "@hypit/build-result-s3",
+  "config": {
+    "bucket": "my-video-results",
+    "prefix": "projects/episode-12",
+    "region": "us-east-1"
+  }
+}
+```
+
+The AWS SDK uses its normal credential chain. `endpoint` and `forcePathStyle` are available for
+S3-compatible services. The prefix is the project boundary: each project should have its own
+prefix. S3 changes only where complete Results live; it does not move Runtime SQLite, queues or
+temporary working Artifacts into the bucket.
 
 The Workspace is resolved independently from the explicit `--workspace`, the project containing the
 Runtime pointer, or the entry source directory. Runtime configuration cannot widen source access.

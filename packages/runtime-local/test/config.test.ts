@@ -9,17 +9,24 @@ import {
   createRuntimeEndpointAdapterFacet,
   RuntimeAdapterRegistry,
 } from "@hypit/runtime-kit";
+import {
+  BuildResultRepositoryRegistry,
+  createBuildResultRepositoryHostFacet,
+} from "@hypit/build-result-kit";
+import { FileBuildResultRepository } from "@hypit/build-result";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 import {
   createRuntimeArchiveFromConfig,
   createRuntimeArtifactAccessFromConfig,
   doctorRuntimeConfig,
+  openBuildResultRepositoryFromConfig,
   parseRuntimeConfig,
   preflightRuntimeConfig,
 } from "@hypit/runtime-local";
 
 function profile(config: {
   readonly dataRoot?: string;
+  readonly results?: Readonly<Record<string, unknown>>;
   readonly credentials?: Readonly<Record<string, unknown>>;
   readonly endpoints?: Readonly<Record<string, unknown>>;
 } = {}) {
@@ -29,6 +36,7 @@ function profile(config: {
       use: "@hypit/runtime-local",
       config: {
         dataRoot: config.dataRoot ?? ".hypit/runtimes/local",
+        ...(config.results === undefined ? {} : { results: config.results }),
         credentials: config.credentials ?? {},
         endpoints: config.endpoints ?? {},
       },
@@ -36,14 +44,77 @@ function profile(config: {
   };
 }
 
-test("Runtime Profile names credentials and Endpoints, not historical storage", () => {
+test("Runtime Profile names the result repository, credentials and Endpoints", () => {
   const parsed = parseRuntimeConfig(profile({
+    results: { use: "example.results", config: { bucket: "project" } },
     credentials: { secrets: { use: "example.credentials" } },
     endpoints: { generation: { use: "example.provider", pool: "shared" } },
   }));
   assert.equal(parsed.dataRoot, ".hypit/runtimes/local");
+  assert.deepEqual(parsed.results, {
+    use: "example.results",
+    instance: "results",
+    config: { bucket: "project" },
+  });
   assert.deepEqual(parsed.credentials, [{ use: "example.credentials", instance: "secrets" }]);
   assert.deepEqual(parsed.endpoints, [{ use: "example.provider", instance: "generation", pool: "shared" }]);
+});
+
+test("Build Result repositories default to the project path and can be selected explicitly", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-results-"));
+  const defaultProfile = join(root, "default.runtime.json");
+  const selectedProfile = join(root, "selected.runtime.json");
+  const defaultRoot = join(root, "project", ".hypit", "results");
+  await writeFile(defaultProfile, JSON.stringify(profile()));
+  await writeFile(
+    selectedProfile,
+    JSON.stringify(
+      profile({
+        results: { use: "example.results", config: { name: "episode-12" } },
+      }),
+    ),
+  );
+  const registry = new BuildResultRepositoryRegistry();
+  let openedContext: unknown;
+  registry.registerFacet(
+    createBuildResultRepositoryHostFacet({
+      use: "example.results",
+      validate(context) {
+        assert.deepEqual(context.config, { name: "episode-12" });
+      },
+      open(context) {
+        openedContext = context;
+        return {
+          repository: new FileBuildResultRepository(join(root, "remote-fixture")),
+        };
+      },
+    }),
+  );
+  try {
+    const local = await openBuildResultRepositoryFromConfig(defaultProfile, defaultRoot, {
+      packageRoot: process.cwd(),
+    });
+    assert.ok(local.repository instanceof FileBuildResultRepository);
+    assert.equal(local.location.root, defaultRoot);
+    assert.deepEqual(local.location.selection, {
+      use: "@hypit/build-result-fs",
+      config: { path: "." },
+    });
+
+    const selected = await openBuildResultRepositoryFromConfig(selectedProfile, defaultRoot, {
+      resultRegistry: registry,
+    });
+    assert.deepEqual(openedContext, {
+      root,
+      config: { name: "episode-12" },
+    });
+    assert.deepEqual(selected.location, {
+      root,
+      selection: { use: "example.results", config: { name: "episode-12" } },
+    });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test("Runtime Profile rejects source ownership fields", () => {

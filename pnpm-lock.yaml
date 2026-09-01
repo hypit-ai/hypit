@@ -33,6 +33,15 @@ importers:
       '@hypit/build-result':
         specifier: workspace:*
         version: link:packages/build-result
+      '@hypit/build-result-fs':
+        specifier: workspace:*
+        version: link:packages/build-result-fs
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:packages/build-result-kit
+      '@hypit/build-result-s3':
+        specifier: workspace:*
+        version: link:packages/build-result-s3
       '@hypit/caption':
         specifier: workspace:*
         version: link:packages/caption
@@ -330,9 +339,6 @@ importers:
       '@hypit/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@hypit/runtime-kit':
-        specifier: workspace:*
-        version: link:../runtime-kit
 
   packages/artifact-store-s3:
     dependencies:
@@ -345,9 +351,6 @@ importers:
       '@hypit/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@hypit/runtime-kit':
-        specifier: workspace:*
-        version: link:../runtime-kit
 
   packages/audio-track:
     dependencies:
@@ -442,6 +445,42 @@ importers:
 
   packages/build-result:
     dependencies:
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/build-result-fs:
+    dependencies:
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
+
+  packages/build-result-kit:
+    dependencies:
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
+      '@hypit/host':
+        specifier: workspace:*
+        version: link:../host
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/build-result-s3:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: 3.1103.0
+        version: 3.1103.0
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2597,6 +2636,9 @@ importers:
 
   packages/runtime:
     dependencies:
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
       '@hypit/core':
         specifier: workspace:*
         version: link:../core
@@ -2609,6 +2651,9 @@ importers:
       '@hypit/build-result':
         specifier: workspace:*
         version: link:../build-result
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2645,6 +2690,12 @@ importers:
       '@hypit/build-result':
         specifier: workspace:*
         version: link:../build-result
+      '@hypit/build-result-fs':
+        specifier: workspace:*
+        version: link:../build-result-fs
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
       '@hypit/component-kit':
         specifier: workspace:*
         version: link:../component-kit

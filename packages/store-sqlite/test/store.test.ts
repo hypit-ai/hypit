@@ -129,6 +129,32 @@ test("cancelling a never-claimed Build atomically withdraws it from dispatch", a
   }
 });
 
+test("a queued Build retains its exact Build Result repository selection", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-result-location-"));
+  try {
+    const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
+    const result = {
+      root: "/profiles/team",
+      selection: {
+        use: "@hypit/build-result-s3",
+        config: { bucket: "video-results", prefix: "projects/episode-12" },
+      },
+    } as const;
+    await state.dispatch.create(
+      {
+        build: "queued-build",
+        componentPackages: ["example.component@1"],
+        result,
+      },
+      { now: 100 },
+    );
+    assert.deepEqual((await state.dispatch.read("queued-build"))?.result, result);
+    state.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("Pool and Lane limits count only asynchronous Operations still in flight", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-hierarchy-"));
   try {

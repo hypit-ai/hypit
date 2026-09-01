@@ -12,6 +12,7 @@ export {
   createRuntimeArchiveFromConfig,
   createRuntimeArtifactAccessFromConfig,
   createRuntimeCredentialsFromConfig,
+  openBuildResultRepositoryFromConfig,
   declaredManagedPrograms,
   doctorRuntimeConfig,
   prepareRuntimeConfigPackages,

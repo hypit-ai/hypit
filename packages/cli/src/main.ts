@@ -6,11 +6,8 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 
 import { deterministicSpeechDurations, deterministicSpeechDurationsFromGraph } from "@hypit/compiler-node";
 import {
-  buildResultDirectory,
-  listBuildResults,
-  materializeBuildResultOutput,
-  readBuildResult,
-  resolveBuildResultOutput,
+  FileBuildResultRepository,
+  materializeRepositoryBuildResultOutput,
 } from "@hypit/build-result";
 import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
@@ -989,6 +986,20 @@ export async function runCli(
     }
     return await opened;
   };
+  const projectResults = async (root = join(commandProjectRoot(), ".hypit", "results")) => {
+    if (args.runtime !== undefined) {
+      const host = await runtimeHost(args.runtime);
+      if (host.openResults !== undefined) return await host.openResults(root);
+    }
+    return {
+      location: {
+        root,
+        selection: { use: "@hypit/build-result-fs", config: { path: "." } },
+      },
+      repository: new FileBuildResultRepository(root),
+      close() {},
+    } as const;
+  };
   if (args.command === "_worker") {
     if (args.file === undefined || args.readyFile === undefined) throw new Error("internal Worker launch is incomplete");
     await (await runtimeHost(args.file, await packageRootForProject())).runWorker(args.readyFile);
@@ -1420,121 +1431,125 @@ export async function runCli(
     return;
   }
   if (args.command === "builds" || args.command === "history" || args.command === "inspect" || args.command === "get") {
-    const resultsRoot = join(commandProjectRoot(), ".hypit", "results");
-    if (args.command === "builds") {
-      const manifests = await listBuildResults(resultsRoot);
-      const shown = manifests.slice(0, args.verbose ? undefined : 20);
-      const builds = shown.map((manifest) => ({
-        build: manifest.id,
-        ...(manifest.name === undefined ? {} : { name: manifest.name }),
-        status: manifest.status,
-        startedAt: manifest.startedAt,
-        source: manifest.source,
-        ...(manifest.run === undefined ? {} : { run: manifest.run }),
-        targets: manifest.targets,
-        outputs: Object.keys(manifest.outputs),
-      }));
-      writeOperational({ builds }, "Build results", "info", [["Builds", String(manifests.length)]],
-        builds.map((item) => {
-          const source = basename(item.run?.path ?? item.source.path);
-          const label = item.name === undefined ? item.build : `${item.name} · ${item.build}`;
-          return `${label}: ${item.status} · ${source} · ${item.outputs.length} outputs`;
+    const results = await projectResults();
+    const repository = results.repository;
+    try {
+      if (args.command === "builds") {
+        const manifests = await repository.list();
+        const shown = manifests.slice(0, args.verbose ? undefined : 20);
+        const builds = shown.map((manifest) => ({
+          build: manifest.id,
+          ...(manifest.name === undefined ? {} : { name: manifest.name }),
+          status: manifest.status,
+          startedAt: manifest.startedAt,
+          source: manifest.source,
+          ...(manifest.run === undefined ? {} : { run: manifest.run }),
+          targets: manifest.targets,
+          outputs: Object.keys(manifest.outputs),
         }));
-      return;
-    }
-    if (args.command === "history") {
-      const manifests = await listBuildResults(resultsRoot);
-      const source = args.source === undefined ? undefined : resolve(args.source);
-      const entries = manifests.flatMap((manifest) => {
-        if (source !== undefined && manifest.source.path !== source) return [];
-        return Object.entries(manifest.outputs).flatMap(([name, output]) => {
-          if (args.file !== undefined && name !== args.file) return [];
-          if (args.excludeTargets && manifest.targets.includes(name)) return [];
-          return [{
-            build: manifest.id,
-            createdAt: manifest.startedAt,
-            status: manifest.status,
-            source: manifest.source,
-            ...(manifest.run === undefined ? {} : { run: manifest.run }),
-            output: { name, type: output.type, value: output.value },
-          }];
-        });
-      }).sort((left, right) => right.createdAt - left.createdAt
-        || left.output.name.localeCompare(right.output.name)
-        || left.build.localeCompare(right.build));
-      const pins = args.pin ? pinnedRecords(entries) : [];
-      const shown = entries.slice(0, args.verbose ? undefined : 20);
-      writeOperational({
-        query: {
-          ...(args.file === undefined ? {} : { output: args.file }),
-          ...(source === undefined ? {} : { source }),
-        },
-        entries,
-        ...(args.pin ? { pins } : {}),
-      }, entries.length === 0 ? "No Build Output history" : args.pin ? "Reuse these Outputs" : "Output history",
-      entries.length === 0 ? "warning" : "info", [
-        ...(args.file === undefined ? [] : [["Output", args.file] as const]),
-        ...(source === undefined ? [] : [["Source", source] as const]),
-        ["Outputs", String(entries.length)],
-      ], args.pin
-        ? ["Paste into a Run Source; every reference names one exact Build Output.", ...pins.flatMap((item) => item.markup)]
-        : shown.map((item) => {
-            const created = new Date(item.createdAt).toISOString();
-            return `${item.build}: ${item.output.name} · ${created} · ${item.output.value.kind}`;
+        writeOperational({ builds }, "Build results", "info", [["Builds", String(manifests.length)]],
+          builds.map((item) => {
+            const source = basename(item.run?.path ?? item.source.path);
+            const label = item.name === undefined ? item.build : `${item.name} · ${item.build}`;
+            return `${label}: ${item.status} · ${source} · ${item.outputs.length} outputs`;
           }));
-      return;
-    }
-    if (args.command === "inspect") {
-      const manifest = await readBuildResult(buildResultDirectory(resultsRoot, args.file!));
+        return;
+      }
+      if (args.command === "history") {
+        const manifests = await repository.list();
+        const source = args.source === undefined ? undefined : resolve(args.source);
+        const entries = manifests.flatMap((manifest) => {
+          if (source !== undefined && manifest.source.path !== source) return [];
+          return Object.entries(manifest.outputs).flatMap(([name, output]) => {
+            if (args.file !== undefined && name !== args.file) return [];
+            if (args.excludeTargets && manifest.targets.includes(name)) return [];
+            return [{
+              build: manifest.id,
+              createdAt: manifest.startedAt,
+              status: manifest.status,
+              source: manifest.source,
+              ...(manifest.run === undefined ? {} : { run: manifest.run }),
+              output: { name, type: output.type, value: output.value },
+            }];
+          });
+        }).sort((left, right) => right.createdAt - left.createdAt
+          || left.output.name.localeCompare(right.output.name)
+          || left.build.localeCompare(right.build));
+        const pins = args.pin ? pinnedRecords(entries) : [];
+        const shown = entries.slice(0, args.verbose ? undefined : 20);
+        writeOperational({
+          query: {
+            ...(args.file === undefined ? {} : { output: args.file }),
+            ...(source === undefined ? {} : { source }),
+          },
+          entries,
+          ...(args.pin ? { pins } : {}),
+        }, entries.length === 0 ? "No Build Output history" : args.pin ? "Reuse these Outputs" : "Output history",
+        entries.length === 0 ? "warning" : "info", [
+          ...(args.file === undefined ? [] : [["Output", args.file] as const]),
+          ...(source === undefined ? [] : [["Source", source] as const]),
+          ["Outputs", String(entries.length)],
+        ], args.pin
+          ? ["Paste into a Run Source; every reference names one exact Build Output.", ...pins.flatMap((item) => item.markup)]
+          : shown.map((item) => {
+              const created = new Date(item.createdAt).toISOString();
+              return `${item.build}: ${item.output.name} · ${created} · ${item.output.value.kind}`;
+            }));
+        return;
+      }
+      if (args.command === "inspect") {
+        const manifest = await repository.read(args.file!);
+        if (manifest === undefined) throw new Error(`Build Result ${args.file} does not exist`);
+        const outputs = Object.entries(manifest.outputs).map(([name, output]) => ({
+          name,
+          target: manifest.targets.includes(name),
+          type: output.type,
+          value: output.value,
+        }));
+        writeOperational({ result: manifest, outputs }, "Build Result detail", manifest.status === "failed" ? "error" : "info", [
+          ["Build", manifest.id],
+          ...(manifest.name === undefined ? [] : [["Name", manifest.name] as const]),
+          ["Status", manifest.status],
+          ["Targets", String(manifest.targets.length)],
+          ["Outputs", String(outputs.length)],
+        ], [
+          ...(manifest.failure === undefined ? [] : [`Reason    ${manifest.failure}`]),
+          ...outputs.map((item) => `${item.target ? "Target" : "Output"}    ${item.name} · ${displayType(item.type)} · ${item.value.kind}`),
+        ]);
+        return;
+      }
+      if (args.record !== undefined || args.output !== undefined || args.artifact !== undefined) {
+        throw new Error("get now addresses Build Results by --name; Record, Logical Output id and Artifact digest selectors were removed");
+      }
+      const manifest = await repository.read(args.file!);
       if (manifest === undefined) throw new Error(`Build Result ${args.file} does not exist`);
-      const outputs = Object.entries(manifest.outputs).map(([name, output]) => ({
-        name,
-        target: manifest.targets.includes(name),
-        type: output.type,
-        value: output.value,
-      }));
-      writeOperational({ result: manifest, outputs }, "Build Result detail", manifest.status === "failed" ? "error" : "info", [
-        ["Build", manifest.id],
-        ...(manifest.name === undefined ? [] : [["Name", manifest.name] as const]),
-        ["Status", manifest.status],
-        ["Targets", String(manifest.targets.length)],
-        ["Outputs", String(outputs.length)],
-      ], [
-        ...(manifest.failure === undefined ? [] : [`Reason    ${manifest.failure}`]),
-        ...outputs.map((item) => `${item.target ? "Target" : "Output"}    ${item.name} · ${displayType(item.type)} · ${item.value.kind}`),
-      ]);
+      const available = Object.keys(manifest.outputs);
+      const name = args.name
+        ?? (manifest.targets.length === 1 && manifest.outputs[manifest.targets[0]!] !== undefined
+          ? manifest.targets[0]
+          : available.length === 1 ? available[0] : undefined);
+      if (name === undefined) throw new Error(`Build ${manifest.id} has several Outputs; select one with --name`);
+      const resolved = await repository.resolve(manifest.id, name);
+      if (resolved === undefined) throw new Error(`Build ${manifest.id} has no Output ${name}`);
+      if (args.to === undefined) {
+        writeOperational({ build: manifest.id, output: name, resolved }, "Build Output", "info", [
+          ["Build", manifest.id],
+          ["Output", name],
+          ["Type", displayType(resolved.type)],
+          ["Storage", resolved.value.kind],
+        ], resolved.build === manifest.id && resolved.output === name
+          ? []
+          : [`Forwards to ${resolved.build} / ${resolved.output}`]);
+      } else {
+        const materialized = await materializeRepositoryBuildResultOutput(repository, manifest.id, name, args.to);
+        writeOperational({ build: manifest.id, output: name, resolved, materialized }, "Build Output materialized", "success", [
+          ["Build", manifest.id], ["Output", name], ["Path", materialized.path],
+        ]);
+      }
       return;
+    } finally {
+      await results.close();
     }
-    if (args.record !== undefined || args.output !== undefined || args.artifact !== undefined) {
-      throw new Error("get now addresses Build Results by --name; Record, Logical Output id and Artifact digest selectors were removed");
-    }
-    const directory = buildResultDirectory(resultsRoot, args.file!);
-    const manifest = await readBuildResult(directory);
-    if (manifest === undefined) throw new Error(`Build Result ${args.file} does not exist`);
-    const available = Object.keys(manifest.outputs);
-    const name = args.name
-      ?? (manifest.targets.length === 1 && manifest.outputs[manifest.targets[0]!] !== undefined
-        ? manifest.targets[0]
-        : available.length === 1 ? available[0] : undefined);
-    if (name === undefined) throw new Error(`Build ${manifest.id} has several Outputs; select one with --name`);
-    const resolved = await resolveBuildResultOutput(resultsRoot, manifest.id, name);
-    if (resolved === undefined) throw new Error(`Build ${manifest.id} has no Output ${name}`);
-    if (args.to === undefined) {
-      writeOperational({ build: manifest.id, output: name, resolved }, "Build Output", "info", [
-        ["Build", manifest.id],
-        ["Output", name],
-        ["Type", displayType(resolved.type)],
-        ["Storage", resolved.value.kind],
-      ], resolved.build === manifest.id && resolved.output === name
-        ? []
-        : [`Forwards to ${resolved.build} / ${resolved.output}`]);
-    } else {
-      const materialized = await materializeBuildResultOutput(resultsRoot, manifest.id, name, args.to);
-      writeOperational({ build: manifest.id, output: name, resolved, materialized }, "Build Output materialized", "success", [
-        ["Build", manifest.id], ["Output", name], ["Path", materialized.path],
-      ]);
-    }
-    return;
   }
   if (args.command === "status" || args.command === "cancel" || args.command === "queue"
   ) {
@@ -1636,9 +1651,8 @@ export async function runCli(
           });
           status = await runtime.status(args.file!);
         }
-        const result = await readBuildResult(
-          buildResultDirectory(join(commandProjectRoot(), ".hypit", "results"), args.file!),
-        );
+        const openedResults = await projectResults();
+        const result = await openedResults.repository.read(args.file!).finally(async () => await openedResults.close());
         const found = status.build !== undefined || status.dispatch !== undefined || result !== undefined;
         const effectiveStatus = status.dispatch === undefined
           ? status.build?.state.status ?? result?.status
@@ -1822,21 +1836,33 @@ export async function runCli(
     if (args.runtime === undefined) {
       throw new Error("build requires a Runtime; run hypit runtime use <profile> or pass --runtime <profile>");
     }
-    const archive = lazyRuntimeArchive(await runtimeHost(args.runtime));
+    const buildResults = await projectResults(projectResultsRoot);
+    let archive: RuntimeArchiveView | undefined;
     let loadedRun;
     try {
+      archive = lazyRuntimeArchive(await runtimeHost(args.runtime));
       loadedRun = await loadRunFile({
         workspace,
         authorCompiler: compiler,
         frontends: runFrontends,
         packageContributions,
         runtime: archive,
-        resultsRoot: projectResultsRoot,
+        results: buildResults.repository,
       });
+    } catch (error) {
+      await buildResults.close();
+      throw error;
     } finally {
-      await archive.close();
+      await archive?.close();
     }
-    const result = loadedRun.compiler.planCompilation(loadedRun);
+    const result = await (async () => {
+      try {
+        return loadedRun.compiler.planCompilation(loadedRun);
+      } catch (error) {
+        await buildResults.close();
+        throw error;
+      }
+    })();
     let runtime: CliRuntime | undefined;
     try {
       const catalog = createCatalogDescriptor({
@@ -1859,7 +1885,7 @@ export async function runCli(
         catalog,
         attachments: result.compilation.attachments,
         result: {
-          root: projectResultsRoot,
+          repository: buildResults.location,
           ...(args.name === undefined ? {} : { name: args.name }),
           reuses: result.compilation.run.document.candidates.flatMap((candidate) => {
             if (candidate.kind !== "build-record") return [];
@@ -1909,7 +1935,7 @@ export async function runCli(
       }
       const terminal = built.dispatch.phase === "terminal";
       const terminalResult = terminal
-        ? await readBuildResult(buildResultDirectory(projectResultsRoot, built.id))
+        ? await buildResults.repository.read(built.id)
         : undefined;
       const targetOutputs = new Set(built.state.request.targets.map((target) => target.output));
       const presentation = catalog;
@@ -1993,21 +2019,24 @@ export async function runCli(
       if (built.status === "failed") io.setExitCode?.(1);
     } finally {
       await runtime?.close();
+      await buildResults.close();
     }
     return;
   }
   let runtime: RuntimeArchiveView | undefined;
+  let planResults: Awaited<ReturnType<typeof projectResults>> | undefined;
   try {
     runtime = args.runtime === undefined
       ? undefined
       : lazyRuntimeArchive(await runtimeHost(args.runtime));
+    planResults = await projectResults(projectResultsRoot);
     const loaded = await loadRunFile({
       workspace,
       authorCompiler: compiler,
       frontends: runFrontends,
       packageContributions,
       ...(runtime === undefined ? {} : { runtime }),
-      resultsRoot: projectResultsRoot,
+      results: planResults.repository,
     });
     const result = loaded.compiler.planCompilation(loaded);
     const preflight = args.runtime === undefined
@@ -2032,5 +2061,6 @@ export async function runCli(
     if (preflight !== undefined && !preflight.ok) io.setExitCode?.(1);
   } finally {
     await runtime?.close();
+    await planResults?.close();
   }
 }

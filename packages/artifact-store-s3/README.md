@@ -1,13 +1,8 @@
 # `@hypit/artifact-store-s3`
 
-S3 implementation of the Runtime `ArtifactStore` port. Objects use:
+S3 implementation of the Runtime's internal byte port. It is a library for a Runtime implementation
+that deliberately embeds it; the local Runtime does not expose it as a Runtime Profile choice.
 
-```text
-<prefix>/sha256/<first-two-hex>/<full-hex>
-```
-
-The injected AWS client owns authentication. Multipart upload, streaming reads and retention are exposed
-when that client supports the required S3 operations. The package stores no Build state or credentials.
-
-The Runtime Profile selects its adapter; code embedding the Runtime directly may call
-`createS3ArtifactStore()`.
+This package is not a Build Result repository and is not needed for ordinary local use. A project that
+wants complete, reusable Build Results in S3 selects `@hypit/build-result-s3` instead. The injected AWS
+client owns authentication; this package stores no Build history or credentials.

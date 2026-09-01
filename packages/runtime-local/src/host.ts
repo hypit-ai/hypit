@@ -12,6 +12,7 @@ import {
   createRuntimeCredentialsFromConfig,
   createRuntimeFromConfig,
   doctorRuntimeConfig,
+  openBuildResultRepositoryFromConfig,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
   resolveRuntimeConfigPaths,
@@ -113,6 +114,19 @@ export async function openLocalRuntimeHost(
       endpoint,
       { packageRoot: basePackageRoot, ...distribution },
     ),
+    openResults: async (defaultRoot) => {
+      const opened = await openBuildResultRepositoryFromConfig(profile, defaultRoot, {
+        packageRoot: basePackageRoot,
+        ...distribution,
+      });
+      return {
+        location: opened.location,
+        repository: opened.repository,
+        close: async () => {
+          await opened.close?.();
+        },
+      };
+    },
     prepare: async (options) => await prepareRuntimeConfigPackages(profile, {
       packageRoot: basePackageRoot,
       ...distribution,

@@ -15,6 +15,15 @@ import {
 import type { CredentialStore } from "@hypit/runtime";
 import { FileArtifactStore } from "@hypit/artifact-store-fs";
 import {
+  buildResultRepositoryHostAbi,
+  BuildResultRepositoryRegistry,
+  isBuildResultRepositoryHostFacet,
+} from "@hypit/build-result-kit";
+import type {
+  BuildResultRepositoryLocation,
+  BuildResultRepositoryOpened,
+} from "@hypit/build-result-kit";
+import {
   isRuntimeAdapterHostFacet,
   runtimeCredentialStoreAdapterHostAbi,
   runtimeEndpointAdapterHostAbi,
@@ -59,12 +68,14 @@ export type RuntimeConfigEntry = {
 export type RuntimeConfigDocument = {
   readonly format: "hypit.runtime-profile@1";
   readonly dataRoot: string;
+  readonly results?: RuntimeConfigEntry;
   readonly credentials: readonly RuntimeConfigEntry[];
   readonly endpoints: readonly RuntimeConfigEntry[];
 };
 
 export type LoadRuntimeConfigOptions = {
   readonly registry?: RuntimeAdapterRegistry;
+  readonly resultRegistry?: BuildResultRepositoryRegistry;
   readonly packageRoot?: string;
   readonly distributionPackageRoot?: string;
   /** Persistent machine/user state. Defaults to the platform Hypit state root. */
@@ -90,6 +101,7 @@ type OpenedRuntimeConfig = {
   readonly absolute: string;
   readonly document: RuntimeConfigDocument;
   readonly root: string;
+  readonly profileRoot: string;
   readonly packageRoot: string;
 };
 
@@ -145,7 +157,8 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
     throw new Error(`Local Runtime loader cannot activate ${String(runtime.use)}`);
   }
   const config = object(runtime.config, "$runtime.runtime.config");
-  exactKeys(config, ["dataRoot", "credentials", "endpoints"], "$runtime.runtime.config");
+  exactKeys(config, ["dataRoot", "results", "credentials", "endpoints"], "$runtime.runtime.config");
+  const results = config.results === undefined ? undefined : entry(config.results, "results", "$runtime.runtime.config.results");
   const credentials = entries(config.credentials, "$runtime.runtime.config.credentials");
   const endpoints = entries(config.endpoints, "$runtime.runtime.config.endpoints", true);
   const ids = [...credentials, ...endpoints].map((value) => value.instance);
@@ -153,6 +166,7 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   return {
     format: "hypit.runtime-profile@1",
     dataRoot: requiredString(config.dataRoot, "$runtime.runtime.config.dataRoot"),
+    ...(results === undefined ? {} : { results }),
     credentials,
     endpoints,
   };
@@ -166,6 +180,7 @@ async function openRuntimeConfig(path: string, packageRootHint?: string): Promis
     absolute,
     document,
     root: resolve(profileRoot, document.dataRoot),
+    profileRoot,
     packageRoot: resolve(packageRootHint ?? profileRoot),
   };
 }
@@ -177,6 +192,13 @@ function runtimePackageSelection(document: RuntimeConfigDocument): NodePackageSe
       ...document.credentials.map((item) => ({ abi: runtimeCredentialStoreAdapterHostAbi, name: item.use })),
       ...document.endpoints.map((item) => ({ abi: runtimeEndpointAdapterHostAbi, name: item.use })),
     ],
+  };
+}
+
+function resultPackageSelection(use: string): NodePackageSelectionRequest {
+  return {
+    selected: [],
+    logical: [{ abi: buildResultRepositoryHostAbi, name: use }],
   };
 }
 
@@ -209,6 +231,62 @@ async function installRuntimeAdapters(
   }
 }
 
+async function installBuildResultAdapter(
+  registry: BuildResultRepositoryRegistry,
+  packageRoot: string,
+  use: string,
+  distributionPackageRoot?: string,
+): Promise<void> {
+  if (registry.has(use)) return;
+  const loaded = await loadNodePackageSelection(resultPackageSelection(use), packageRoot, {
+    ...(distributionPackageRoot === undefined ? {} : { fallbackRoots: [distributionPackageRoot] }),
+  });
+  for (const item of loaded) {
+    for (const facet of item.contribution.hostFacets ?? []) {
+      if (isBuildResultRepositoryHostFacet(facet)) registry.registerFacet(facet);
+    }
+  }
+  if (!registry.has(use)) throw new Error(`Package selection did not provide Build Result Repository ${use}`);
+}
+
+function resultLocation(opened: OpenedRuntimeConfig, defaultRoot: string): BuildResultRepositoryLocation {
+  const selected = opened.document.results;
+  return selected === undefined
+    ? {
+        root: resolve(defaultRoot),
+        selection: { use: "@hypit/build-result-fs", config: { path: "." } },
+      }
+    : {
+        root: opened.profileRoot,
+        selection: {
+          use: selected.use,
+          ...(selected.config === undefined ? {} : { config: selected.config }),
+        },
+      };
+}
+
+async function openBuildResultLocation(
+  location: BuildResultRepositoryLocation,
+  options: LoadRuntimeConfigOptions,
+  packageRoot: string,
+  registry: BuildResultRepositoryRegistry,
+): Promise<BuildResultRepositoryOpened> {
+  await installBuildResultAdapter(registry, packageRoot, location.selection.use, options.distributionPackageRoot);
+  return await registry.open(location.selection, location.root);
+}
+
+export async function openBuildResultRepositoryFromConfig(
+  path: string,
+  defaultRoot: string,
+  options: LoadRuntimeConfigOptions = {},
+): Promise<BuildResultRepositoryOpened & { readonly location: BuildResultRepositoryLocation }> {
+  const opened = await openRuntimeConfig(path, options.packageRoot);
+  const location = resultLocation(opened, defaultRoot);
+  const registry = options.resultRegistry ?? new BuildResultRepositoryRegistry();
+  const result = await openBuildResultLocation(location, options, opened.packageRoot, registry);
+  return { ...result, location };
+}
+
 export async function resolveRuntimeConfigPaths(
   path: string,
   options: LoadRuntimeConfigOptions = {},
@@ -227,6 +305,7 @@ export async function prepareRuntimeConfigPackages(
   if (options.distributionPackageRoot === undefined) return [];
   const { document } = await openRuntimeConfig(path, options.packageRoot);
   const requirements = await distributionExternalPackageRequirements([
+    ...(document.results === undefined ? [] : [document.results.use]),
     ...document.credentials.map((item) => item.use),
     ...document.endpoints.map((item) => item.use),
   ], options.distributionPackageRoot);
@@ -336,7 +415,7 @@ async function inspectRuntimeConfig(
   path: string,
   options: RuntimeInspectionOptions,
 ): Promise<RuntimeConfigDoctorResult> {
-  const { absolute, document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const { absolute, document, root, profileRoot, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
   const diagnostics: RuntimeDoctorDiagnostic[] = [];
   try {
@@ -347,8 +426,19 @@ async function inspectRuntimeConfig(
     }
   }
   const registry = options.registry ?? new RuntimeAdapterRegistry();
+  const resultRegistry = options.resultRegistry ?? new BuildResultRepositoryRegistry();
   try {
     await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
+    if (document.results !== undefined) {
+      await installBuildResultAdapter(resultRegistry, packageRoot, document.results.use, options.distributionPackageRoot);
+      resultRegistry.validate(
+        {
+          use: document.results.use,
+          ...(document.results.config === undefined ? {} : { config: document.results.config }),
+        },
+        profileRoot,
+      );
+    }
   } catch (error) {
     return { dataRoot: root, diagnostics: [diagnostic(error, "RUNTIME_PACKAGE_SELECTION_INVALID")] };
   }
@@ -472,7 +562,14 @@ export async function createRuntimeFromConfig(
   const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
   const registry = options.registry ?? new RuntimeAdapterRegistry();
+  const resultRegistry = options.resultRegistry ?? new BuildResultRepositoryRegistry();
   await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
+  await installBuildResultAdapter(
+    resultRegistry,
+    packageRoot,
+    document.results?.use ?? "@hypit/build-result-fs",
+    options.distributionPackageRoot,
+  );
   const state = new SqliteRuntimeState(statePath(root));
   let credentials: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
   try {
@@ -491,6 +588,7 @@ export async function createRuntimeFromConfig(
       clearBuildArtifacts: async (build) => {
         await rm(buildWorkPath(root, build), { recursive: true, force: true });
       },
+      openBuildResultRepository: async (location) => await openBuildResultLocation(location, options, packageRoot, resultRegistry),
       credentialStore: credentials.store,
       loadComponentPackages: async (specifiers) => {
         const loaded = await loadNodePackageSelection(specifiers, packageRoot, {

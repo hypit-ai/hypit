@@ -42,8 +42,16 @@ export type NodeRunCompilerOptions = {
   readonly resolveBuildRecord?: (
     build: string,
     output: string,
-  ) => Promise<{ readonly type: TypeRef; readonly value: StoredValue } | undefined>
-    | { readonly type: TypeRef; readonly value: StoredValue }
+  ) => Promise<{
+    readonly type: TypeRef;
+    readonly value: StoredValue;
+    readonly attachments?: readonly ArtifactAttachment[];
+  } | undefined>
+    | {
+      readonly type: TypeRef;
+      readonly value: StoredValue;
+      readonly attachments?: readonly ArtifactAttachment[];
+    }
     | undefined;
 };
 
@@ -281,6 +289,7 @@ export class NodeRunCompiler {
     );
     const executionCompilation = program === author.program ? author : { ...author, program };
     const resolveBuildRecord = this.#options.resolveBuildRecord;
+    const buildAttachments: ArtifactAttachment[] = [];
     const run = await resolveRunDocument(decoded.document, {
       compilation: executionCompilation,
       fragments: this.#options.fragments,
@@ -290,7 +299,10 @@ export class NodeRunCompiler {
         if (resolveBuildRecord === undefined) {
           throw new Error(`Run contains historical Build Candidate ${build}; plan/build requires --runtime to resolve it`);
         }
-        return await resolveBuildRecord(build, output);
+        const resolved = await resolveBuildRecord(build, output);
+        if (resolved === undefined) return undefined;
+        buildAttachments.push(...(resolved.attachments ?? []));
+        return { type: resolved.type, value: resolved.value };
       },
     });
     return {
@@ -299,7 +311,7 @@ export class NodeRunCompiler {
       author,
       program,
       run,
-      attachments: mergeAttachments([author.attachments, await workspace.attachments()]),
+      attachments: mergeAttachments([author.attachments, await workspace.attachments(), buildAttachments]),
     };
   }
 

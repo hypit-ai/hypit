@@ -250,6 +250,10 @@ output/
 每次 Build 的权威结果位于 `.hypit/results/<build-id>/`：`result.json` 记录名字、状态、Target
 和公开 Output，媒体在 `files/`，结构化值在 `values/`。
 
+这是无需配置的默认 Result 仓库。Runtime Profile 也可以选择 `@hypit/build-result-s3`；历史命令
+与 `.svrun` 中的 `build-record` 会使用同一个仓库。Runtime 临时 Artifact 仍由 Runtime 在本地
+私有管理。
+
 `status`、`builds` 等只读归档命令不会在状态尚不存在时初始化 Runtime 数据库。
 
 共享只读素材库不必复制进项目，也不必放宽 Source 边界：

@@ -12,7 +12,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { FileArtifactStore } from "@hypit/artifact-store-fs";
-import { readBuildResult } from "@hypit/build-result";
+import { FileBuildResultRepository, readBuildResult } from "@hypit/build-result";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { AsyncEndpoint, EndpointPackage } from "@hypit/endpoint-kit";
@@ -54,8 +54,21 @@ function projectRuntimeFixture(directory: string) {
     clearBuildArtifacts: async (build: string) => {
       await rm(join(work, build), { recursive: true, force: true });
     },
+    openBuildResultRepository: async (location: import("@hypit/build-result-kit").BuildResultRepositoryLocation) => {
+      assert.equal(location.selection.use, "@hypit/build-result-fs");
+      return { repository: new FileBuildResultRepository(location.root) };
+    },
     credentialStore: new EnvironmentCredentialStore(),
     close: () => state.close(),
+  } as const;
+}
+
+function resultDestination(directory: string) {
+  return {
+    repository: {
+      root: join(directory, "results"),
+      selection: { use: "@hypit/build-result-fs" },
+    },
   } as const;
 }
 
@@ -211,7 +224,7 @@ test("project local runtime queues, polls and cancels work with replaceable pack
       id: "greeting-build",
       definition: definition(initial),
       catalog,
-      result: { root: join(directory, "results") },
+      result: resultDestination(directory),
     });
     assert.equal(first.status, "queued");
     assert.equal((await firstRuntime.workOnce())?.phase, "waiting");
@@ -296,7 +309,7 @@ test("a completed public file moves into its Build Result and leaves no Runtime 
         source: { path: join(directory, "main.svml") },
         aliases: [{ name: "clip.video", ref: { kind: "logical-output", id: "generated" } }],
       },
-      result: { root: join(directory, "results") },
+      result: resultDestination(directory),
     });
     assert.equal((await runtime.workOnce())?.terminal, "complete");
     const result = await readBuildResult(join(directory, "results", id));
@@ -356,7 +369,7 @@ test("a failed Build keeps public Outputs completed before the failure and retir
           name: "final.document", ref: { kind: "logical-output", id: "document" },
         }],
       },
-      result: { root: join(directory, "results") },
+      result: resultDestination(directory),
     });
     assert.equal((await runtime.workOnce())?.terminal, "failed");
     const result = await readBuildResult(join(directory, "results", "partial-result"));

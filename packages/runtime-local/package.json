@@ -13,6 +13,8 @@
   "dependencies": {
     "@hypit/artifact-store-fs": "workspace:*",
     "@hypit/build-result": "workspace:*",
+    "@hypit/build-result-fs": "workspace:*",
+    "@hypit/build-result-kit": "workspace:*",
     "@hypit/component-kit": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/endpoint-kit": "workspace:*",
