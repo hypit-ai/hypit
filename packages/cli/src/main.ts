@@ -118,6 +118,10 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
       server.close();
       server.closeIdleConnections?.();
     };
+    const closeAllConnections = (): void => {
+      server.closeAllConnections?.();
+      server.unref();
+    };
     server.on("request", (request, response) => {
       // Browsers commonly fetch /favicon.ico after rendering the callback.
       // The old one-shot listener left that second connection unanswered,
@@ -141,7 +145,7 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
           connection: "close",
           "content-type": "text/html; charset=utf-8",
         });
-        response.end(oauthCallbackPage(true));
+        response.end(oauthCallbackPage(true), closeAllConnections);
         settled = true;
         resolveCode(code);
       } catch (error) {
@@ -150,7 +154,7 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
           connection: "close",
           "content-type": "text/html; charset=utf-8",
         });
-        response.end(oauthCallbackPage(false));
+        response.end(oauthCallbackPage(false), closeAllConnections);
         settled = true;
         reject(error);
       } finally {
