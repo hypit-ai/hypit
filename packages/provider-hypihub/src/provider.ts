@@ -252,7 +252,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   };
   return defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
-    credentials: { apiKey: options.apiKey ?? credentialRef("os", "hypihub.oauth") }, credentialInputs: { apiKey: { label: "HypiHub login" } }, defaultConcurrency: options.defaultConcurrency ?? 4,
+    credentials: { apiKey: options.apiKey ?? credentialRef("os", "hypihub.oauth") }, credentialInputs: { apiKey: { label: "HypiHub login" } }, defaultConcurrency: options.defaultConcurrency ?? 10,
     capabilities: [
       ...hypiHubRoutes
       // HypiHub OAuth grants do not necessarily include the MiMo audio models. Keep
@@ -268,7 +268,6 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
         lifecycle: "immediate" as const,
         handler: geminiEndpoint,
         lane: "gemini",
-        maxConcurrency: 1,
       })),
     ],
   });
