@@ -90,7 +90,7 @@ specific Provider deployment.
 @hypit/gpt-image             GPT Image model family
 @hypit/nano-banana           Nano Banana model family
 @hypit/seedream              Seedream model family
-@hypit/mimo-tts              three exact Xiaomi MiMo TTS models + author Surfaces
+@hypit/mimo-tts              Xiaomi MiMo VoiceDesign model + author Surface
 @hypit/estimate              duration estimation
 @hypit/speech                shared speech products
 @hypit/speech-evidence       acoustic evidence products
@@ -131,7 +131,7 @@ never on exact-model packages or the CLI.
 @hypit/provider-hyperframes-aws-lambda asynchronous distributed rendering
 @hypit/provider-image-opencv-local   local OpenCV Raster execution
 @hypit/provider-media-aws-lambda     synchronous AWS media execution
-@hypit/provider-xiaomi-mimo           official Xiaomi MiMo TTS API
+@hypit/provider-xiaomi-mimo           official Xiaomi MiMo VoiceDesign API
 ```
 
 ### Layer 6: Runtime

@@ -6,7 +6,7 @@ screen, product, hand, or proof changes.
 ## Author the SVML program
 
 1. Write one narration Script Segment with Selections/Moments for every visual proof beat.
-2. Take the voice sample once, with `mimo:Preset` or `mimo:VoiceDesign`.
+2. Take the voice sample once with `mimo:VoiceDesign`.
 3. The narration is spoken by a take, and that take is the base. It is under the whole Segment and
    the B-roll covers it; the viewer sees the desk only where nothing is over it, and the speech and
    the picture are one generation either way — `../craft/generated-dependencies.md` says why that
