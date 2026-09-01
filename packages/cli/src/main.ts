@@ -106,7 +106,17 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
   const state = base64url(randomBytes(24));
   const server = createServer();
   const callback = new Promise<string>((resolveCode, reject) => {
-    server.once("request", (request, response) => {
+    let settled = false;
+    server.on("request", (request, response) => {
+      // Browsers commonly fetch /favicon.ico after rendering the callback.
+      // The old one-shot listener left that second connection unanswered,
+      // keeping the local server (and therefore the CLI) alive forever after
+      // a successful login.
+      if (settled) {
+        response.writeHead(204, { "cache-control": "no-store", connection: "close" });
+        response.end();
+        return;
+      }
       try {
         const url = new URL(request.url ?? "/", "http://127.0.0.1");
         if (url.pathname !== "/callback") throw new Error("unexpected OAuth callback path");
@@ -115,15 +125,26 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
         if (error !== null) throw new Error(`HypiHub OAuth authorization failed: ${error}`);
         const code = url.searchParams.get("code");
         if (code === null || code.length === 0) throw new Error("HypiHub OAuth callback contained no code");
-        response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
-        response.end("Hypit is signed in. You can close this window.\n");
+        response.writeHead(200, {
+          "cache-control": "no-store",
+          connection: "close",
+          "content-type": "text/html; charset=utf-8",
+        });
+        response.end(oauthCallbackPage(true));
+        settled = true;
         resolveCode(code);
       } catch (error) {
-        response.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
-        response.end("Hypit sign-in failed. You can close this window.\n");
+        response.writeHead(400, {
+          "cache-control": "no-store",
+          connection: "close",
+          "content-type": "text/html; charset=utf-8",
+        });
+        response.end(oauthCallbackPage(false));
+        settled = true;
         reject(error);
       } finally {
         server.close();
+        server.closeIdleConnections?.();
       }
     });
     server.once("error", reject);
@@ -160,6 +181,61 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
   const parsed = JSON.parse(body) as { access_token?: unknown };
   if (typeof parsed.access_token !== "string" || parsed.access_token.length === 0) throw new Error("HypiHub OAuth returned no access token");
   return parsed.access_token;
+}
+
+/**
+ * The loopback callback is the last screen a person sees during login. Keep it
+ * self-contained: relying on a remote stylesheet or image makes a successful
+ * login look broken when the network is settling, and the old plain-text body
+ * had no visual identity at all.
+ */
+function oauthCallbackPage(success: boolean): string {
+  const title = success ? "Signed in to Hypit" : "Hypit sign-in failed";
+  const heading = success ? "Hypit is signed in" : "Hypit sign-in failed";
+  const message = success
+    ? "Your HypiHub session is ready. You can close this window."
+    : "The sign-in could not be completed. You can close this window and try again.";
+  const tone = success ? "success" : "error";
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23ed98b9' d='M7.6 3.8h7l-2 3.4H5.6zM4.1 10.4h12.5L18.7 7h11.7l-2.5 4.1H16.1l-2 3.1H1.8zM19.1 14.1h4l-3.8 6.6h-3.9z'/%3E%3C/svg%3E">
+    <title>${title}</title>
+    <style>
+      :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; color: #f7f2f4; background: #111114; }
+      main { width: min(100% - 40px, 460px); padding: 42px 38px 36px; border: 1px solid #3a3036; background: #19171b; box-shadow: 0 24px 70px rgba(0,0,0,.36); }
+      .brand { display: inline-flex; align-items: center; gap: 11px; color: #ed98b9; font-weight: 700; letter-spacing: .02em; }
+      .brand svg { width: 30px; height: 30px; }
+      .mark { width: 58px; height: 58px; margin: 34px 0 24px; display: grid; place-items: center; border: 1px solid #5b3d4b; background: #281d24; color: #ed98b9; }
+      .mark.success { color: #ed98b9; }
+      .mark.error { color: #f08d86; border-color: #6b3f40; background: #291d1e; }
+      h1 { margin: 0; font-size: clamp(26px, 7vw, 34px); line-height: 1.08; letter-spacing: -.035em; }
+      p { margin: 14px 0 0; color: #bdb3b8; font-size: 15px; line-height: 1.6; }
+      .rule { height: 1px; margin: 30px 0 18px; background: #332c31; }
+      .hint { margin: 0; color: #81767d; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand" aria-label="Hypit">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M7.6 3.8H14.6L12.6 7.2H5.6L7.6 3.8Z" fill="currentColor"/><path d="M4.1 10.4H16.6L18.7 7H30.4L27.9 11.1H16.1L14.1 14.2H1.8L4.1 10.4Z" fill="currentColor"/><path d="M19.1 14.1H23.1L19.3 20.7H15.4L19.1 14.1Z" fill="currentColor"/></svg>
+        <span>HYPIT</span>
+      </div>
+      <div class="mark ${tone}" aria-hidden="true">
+        ${success ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="m5 12 4 4L19 6"/></svg>' : '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M6 6 18 18M18 6 6 18"/></svg>'}
+      </div>
+      <h1>${heading}</h1>
+      <p>${message}</p>
+      <div class="rule"></div>
+      <p class="hint">HypiHub OAuth · local callback</p>
+    </main>
+  </body>
+</html>`;
 }
 
 async function nearestProjectPackageRoot(start: string): Promise<string | undefined> {
