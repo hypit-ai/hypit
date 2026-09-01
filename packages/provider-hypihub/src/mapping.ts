@@ -109,26 +109,10 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: MIMO_TTS, name: "mimo-v2.5-tts" }, result: "audio", routes: [{ model: "mimo-v2.5-tts" }],
-    fields: {
-      text: { as: "value", field: "input" },
-      instruction: { as: "value", field: "prompt" },
-      voice: { as: "value", field: "voice" },
-    },
-  },
-  {
     capability: { module: MIMO_TTS, name: "mimo-v2.5-tts-voicedesign" }, result: "audio", routes: [{ model: "mimo-v2.5-tts-voicedesign" }],
     fields: {
       text: { as: "value", field: "input" },
       voiceDescription: { as: "value", field: "voice_description" },
-    },
-  },
-  {
-    capability: { module: MIMO_TTS, name: "mimo-v2.5-tts-voiceclone" }, result: "audio", routes: [{ model: "mimo-v2.5-tts-voiceclone" }],
-    fields: {
-      text: { as: "value", field: "input" },
-      instruction: { as: "value", field: "prompt" },
-      sample: { as: "url", field: "voice" },
     },
   },
 ];
