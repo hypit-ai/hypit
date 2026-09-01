@@ -1,20 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { artifactTypes } from "@hypit/artifact";
 import { generationProducers, generationTypes } from "@hypit/generation";
-import { sealText, textTypes } from "@hypit/text";
 import { parseStructuredElement } from "@hypit/markup";
 import type { SurfaceResolvedReference } from "@hypit/markup";
+import { sealText, textTypes } from "@hypit/text";
 
 import mimoNodePackage from "../src/activation.js";
 import {
-  decodeMimoPresetSurface,
-  decodeMimoVoiceCloneSurface,
   decodeMimoVoiceDesignSurface,
   mimoTtsEndpoints,
   mimoTtsMarkupSurfaces,
+  mimoTtsModels,
   mimoTtsPorts,
   sealMimoTtsRequest,
 } from "../src/index.js";
@@ -23,106 +20,60 @@ function parsed(source: string) {
   return parseStructuredElement({ name: "mimo.svml", text: source }, 0).element;
 }
 
-function authored(path: string, type: SurfaceResolvedReference["type"], value: unknown): SurfaceResolvedReference {
-  return {
-    path,
-    ref: { kind: "record", id: path },
-    type,
-    record: {
-      id: path,
-      type,
-      value: type.name === artifactTypes.blob.name
-        ? value as never
-        : { kind: "inline", value: value as never },
-    },
-  };
-}
-
 const speech = sealText("Exact authored words stay exact.");
-const sample = { kind: "blob" as const, digest: fixtureDigest("voice-sample"), size: 4, mediaType: "audio/wav" };
-const refs = new Map<string, SurfaceResolvedReference>([
-  ["story.segment.opening.speech", authored("story.segment.opening.speech", textTypes.text, speech)],
-  ["voice", authored("voice", artifactTypes.blob, sample)],
-]);
+const reference: SurfaceResolvedReference = {
+  path: "story.segment.opening.speech",
+  ref: { kind: "record", id: "story.segment.opening.speech" },
+  type: textTypes.text,
+  record: {
+    id: "story.segment.opening.speech",
+    type: textTypes.text,
+    value: { kind: "inline", value: speech },
+  },
+};
 const context = (source: string) => ({
   sourceName: "mimo.svml",
   element: parsed(source),
-  resolveReference: (path: string) => refs.get(path),
+  resolveReference: (path: string) => path === reference.path ? reference : undefined,
   resolveAsset: () => { throw new Error("no asset"); },
 });
 
-test("MiMo declares three audio models without Provider facts", () => {
-  assert.deepEqual(Object.values(mimoTtsPorts).map((ports) => ports.result), ["audio", "audio", "audio"]);
-  assert.deepEqual(Object.values(mimoTtsEndpoints).map((endpoint) => endpoint.returns), [
-    generationTypes.audioSet,
-    generationTypes.audioSet,
-    generationTypes.audioSet,
-  ]);
+test("MiMo declares only the VoiceDesign audio model without Provider facts", () => {
+  assert.deepEqual(mimoTtsModels, ["mimo-v2.5-tts-voicedesign"]);
+  assert.deepEqual(Object.values(mimoTtsPorts).map((ports) => ports.result), ["audio"]);
+  assert.deepEqual(Object.values(mimoTtsEndpoints).map((endpoint) => endpoint.returns), [generationTypes.audioSet]);
   assert.equal(JSON.stringify(mimoTtsPorts).includes("xiaomimimo.com"), false);
-  assert.equal(mimoTtsPorts["mimo-v2.5-tts"].ports.find((port) => port.name === "text")?.value.kind, "text");
-  assert.equal("maxChars" in mimoTtsPorts["mimo-v2.5-tts"].ports[0]!.value, false);
   assert.throws(() => sealMimoTtsRequest("mimo-v2.5-tts-voicedesign", {
     text: ["Do not rewrite me."],
   }), /voiceDescription is required/u);
 });
 
-test("one installed author package contributes all three Surfaces without a Runtime Provider", () => {
+test("the installed author package contributes only VoiceDesign", () => {
   assert.equal(mimoNodePackage.format, "hypit.node-package@1");
   assert.equal(mimoNodePackage.modules[0]?.manifest.version, "1");
-  assert.deepEqual(mimoTtsMarkupSurfaces.map((surface) => surface.name),
-    ["preset", "voiceDesign", "voiceClone"]);
+  assert.deepEqual(mimoTtsMarkupSurfaces.map((surface) => surface.name), ["voiceDesign"]);
   assert.equal(JSON.stringify(mimoNodePackage).includes("MIMO_API_KEY"), false);
 });
 
-test("the three author Surfaces are separate components with one ordinary audio output", async () => {
-  const results = await Promise.all([
-    decodeMimoPresetSurface(context(`<mimo:Preset id="preset" speech={story.segment.opening.speech} voice="Chloe">
-      Warm, restrained delivery.
-    </mimo:Preset>`)),
-    decodeMimoVoiceDesignSurface(context(`<mimo:VoiceDesign id="designed" speech={story.segment.opening.speech}>
-      A clear, confident young woman with a grounded conversational tone.
-    </mimo:VoiceDesign>`)),
-    decodeMimoVoiceCloneSurface(context(`<mimo:VoiceClone id="cloned" speech={story.segment.opening.speech} sample={voice}>
-      Calm and direct.
-    </mimo:VoiceClone>`)),
+test("VoiceDesign produces one ordinary audio output", async () => {
+  const result = await decodeMimoVoiceDesignSurface(context(`<mimo:VoiceDesign id="designed" speech={story.segment.opening.speech}>
+    A clear, confident young woman with a grounded conversational tone.
+  </mimo:VoiceDesign>`));
+  assert.equal(result.components.length, 1);
+  assert.deepEqual(Object.keys(result.components[0]!.outputs), ["audio"]);
+  assert.deepEqual(result.fragments[0]!.operations.map((operation) => operation.producer.name), [
+    "bind-request-mimo-v2.5-tts-voicedesign-text-text",
+    "finalize-request-mimo-v2.5-tts-voicedesign",
+    "request-mimo-v2.5-tts-voicedesign",
+    generationProducers.primaryAudio.name,
   ]);
-  for (const [index, result] of results.entries()) {
-    assert.equal(result.components.length, 1);
-    assert.deepEqual(Object.keys(result.components[0]!.outputs), ["audio"]);
-    assert.deepEqual(result.fragments[0]!.operations.map((operation) => operation.producer.name), index === 2
-      ? [
-          "bind-request-mimo-v2.5-tts-voiceclone-text-text",
-          "bind-request-mimo-v2.5-tts-voiceclone-sample",
-          "finalize-request-mimo-v2.5-tts-voiceclone",
-          "request-mimo-v2.5-tts-voiceclone",
-          generationProducers.primaryAudio.name,
-        ]
-      : [
-          index === 0
-            ? "bind-request-mimo-v2.5-tts-text-text"
-            : "bind-request-mimo-v2.5-tts-voicedesign-text-text",
-          index === 0 ? "finalize-request-mimo-v2.5-tts" : "finalize-request-mimo-v2.5-tts-voicedesign",
-          index === 0 ? "request-mimo-v2.5-tts" : "request-mimo-v2.5-tts-voicedesign",
-          generationProducers.primaryAudio.name,
-        ]);
-    assert.equal(result.records[0]!.value.kind, "inline");
-    const request = result.records[0]!.value.kind === "inline"
-      ? result.records[0]!.value.value as Record<string, unknown> : {};
-    assert.equal((request.ports as Record<string, unknown[]>).text, undefined);
-    assert.deepEqual(result.components[0]!.inputs["speech:text"], {
-      kind: "record",
-      id: "story.segment.opening.speech",
-    });
-    assert.equal(JSON.stringify(request).includes("optimize_text_preview"), false);
-  }
-});
-
-test("voice clone refuses a non-audio sample before any Need exists", async () => {
-  const wrong = { ...sample, mediaType: "video/mp4" };
-  const invalid = new Map(refs);
-  invalid.set("voice", authored("voice", artifactTypes.blob, wrong));
-  assert.throws(() => decodeMimoVoiceCloneSurface({
-    ...context('<mimo:VoiceClone id="bad" speech={story.segment.opening.speech} sample={voice}/>'),
-    resolveReference: (path) => invalid.get(path),
-  }), /must be audio/u);
+  assert.equal(result.records[0]!.value.kind, "inline");
+  const request = result.records[0]!.value.kind === "inline"
+    ? result.records[0]!.value.value as Record<string, unknown> : {};
+  assert.equal((request.ports as Record<string, unknown[]>).text, undefined);
+  assert.deepEqual(result.components[0]!.inputs["speech:text"], {
+    kind: "record",
+    id: "story.segment.opening.speech",
+  });
+  assert.equal(JSON.stringify(request).includes("optimize_text_preview"), false);
 });
