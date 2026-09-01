@@ -55,7 +55,14 @@ function normalizeRef(ref: GraphValueRef): GraphValueRef {
 
 function normalizedStoredValue(value: StoredValue): StoredValue {
   if (value.kind === "inline") return { kind: "inline", value: canonicalize(value.value) };
-  return { kind: "blob", digest: value.digest, size: value.size, mediaType: value.mediaType };
+  return {
+    kind: "blob",
+    ...(value.resource === undefined ? {} : { resource: value.resource }),
+    ...(value.origin === undefined ? {} : { origin: { ...value.origin } }),
+    digest: value.digest,
+    size: value.size,
+    mediaType: value.mediaType,
+  };
 }
 
 function normalizeRoot(root: CandidateRoot): CandidateRoot {

@@ -1,5 +1,7 @@
 import type { BuildState } from "@hypit/protocol";
+import { FileBuildResult } from "@hypit/build-result";
 import type {
+  ArtifactStore,
   BuildDispatchSnapshot,
   RuntimeCommandExecutor,
   RuntimeExecutionResult,
@@ -8,14 +10,18 @@ import type {
   ScheduledBuildResult,
   RuntimeWorkerRunOptions,
 } from "@hypit/runtime";
-import { LocalBuildScheduler } from "@hypit/runtime";
+import { isStreamingArtifactStore, LocalBuildScheduler } from "@hypit/runtime";
 
 type LocalWorkerOptions = {
   readonly stores: {
     readonly builds: import("@hypit/runtime").BuildStore;
+    readonly catalog?: import("@hypit/runtime").BuildCatalog;
     readonly operations: import("@hypit/runtime").OperationStore;
     readonly dispatch: import("@hypit/runtime").BuildDispatchStore;
   };
+  readonly artifactStore: ArtifactStore;
+  readonly artifactStoreForBuild?: (build: string) => ArtifactStore;
+  readonly clearBuildArtifacts?: (build: string) => Promise<void> | void;
   readonly installComponentPackages: (specifiers: readonly string[]) => Promise<void>;
 };
 
@@ -140,6 +146,50 @@ class DurableLocalWorker {
     this.#executorWithCapacity = new CapacityExecutor(executor, options);
   }
 
+  async #openResult(dispatch: BuildDispatchSnapshot): Promise<FileBuildResult | undefined> {
+    return dispatch.resultDirectory === undefined
+      ? undefined
+      : await FileBuildResult.open(dispatch.resultDirectory);
+  }
+
+  async #syncResult(dispatch: BuildDispatchSnapshot, state: BuildState): Promise<void> {
+    const result = await this.#openResult(dispatch);
+    if (result === undefined) return;
+    const artifactStore = this.#options.artifactStoreForBuild?.(dispatch.build) ?? this.#options.artifactStore;
+    await result.sync({
+      state,
+      artifacts: {
+        open: async (artifact) => {
+          if (isStreamingArtifactStore(artifactStore)) {
+            return await artifactStore.open(artifact.digest);
+          }
+          const bytes = await artifactStore.get(artifact.digest);
+          return bytes === undefined ? undefined : (async function* () { yield bytes; })();
+        },
+      },
+    });
+  }
+
+  async #finishResult(
+    dispatch: BuildDispatchSnapshot,
+    status: "complete" | "failed" | "cancelled",
+    failure?: string,
+  ): Promise<boolean> {
+    const result = await this.#openResult(dispatch);
+    if (result === undefined) return false;
+    await result.finish({ status, ...(failure === undefined ? {} : { failure }) });
+    return true;
+  }
+
+  async #retireExecution(build: string): Promise<void> {
+    await Promise.allSettled([
+      this.#options.clearBuildArtifacts?.(build),
+      this.#options.stores.operations.removeBuild?.(build),
+      this.#options.stores.builds.remove?.(build),
+      this.#options.stores.catalog?.remove?.(build),
+    ].filter((task): task is Promise<void> => task !== undefined));
+  }
+
   async #cancel(dispatch: BuildDispatchSnapshot): Promise<BuildDispatchSnapshot> {
     const snapshot = await this.#options.stores.builds.read(dispatch.build);
     assert(snapshot !== undefined, `Build ${dispatch.build} has no durable state`);
@@ -153,11 +203,14 @@ class DurableLocalWorker {
       }
     }
     await this.#options.stores.dispatch.releaseBuildCapacity(dispatch.build);
-    return await this.#options.stores.dispatch.finish(
+    const persisted = await this.#finishResult(dispatch, "cancelled", dispatch.cancellation?.reason ?? "cancelled by Runtime");
+    const finished = await this.#options.stores.dispatch.finish(
       dispatch.build,
       "cancelled",
       dispatch.cancellation?.reason ?? "cancelled by Runtime",
     );
+    if (persisted) await this.#retireExecution(dispatch.build);
+    return finished;
   }
 
   async #finish(dispatch: BuildDispatchSnapshot, result: ScheduledBuildResult): Promise<BuildDispatchSnapshot> {
@@ -166,19 +219,30 @@ class DurableLocalWorker {
     if (current.cancellation !== undefined) return await this.#cancel(current);
     if (result.status === "complete") {
       await this.#options.stores.dispatch.releaseBuildCapacity(dispatch.build);
-      return await this.#options.stores.dispatch.finish(dispatch.build, "complete");
+      const persisted = await this.#finishResult(dispatch, "complete");
+      const finished = await this.#options.stores.dispatch.finish(dispatch.build, "complete");
+      if (persisted) await this.#retireExecution(dispatch.build);
+      return finished;
     }
     if (result.status === "failed" || result.outcomes.some((item) => item.status === "error")) {
-      const reason = result.outcomes.find((item) => item.status === "error")?.message ?? "Core Build failed";
+      const reason = result.outcomes.find((item) => item.status === "error")?.message
+        ?? result.state.diagnostics.at(-1)?.message
+        ?? "Core Build failed";
       await this.#options.stores.dispatch.releaseBuildCapacity(dispatch.build);
-      return await this.#options.stores.dispatch.finish(dispatch.build, "failed", reason);
+      const persisted = await this.#finishResult(dispatch, "failed", reason);
+      const finished = await this.#options.stores.dispatch.finish(dispatch.build, "failed", reason);
+      if (persisted) await this.#retireExecution(dispatch.build);
+      return finished;
     }
     const pending = result.outcomes.filter((item) => item.status === "pending");
     const deferred = result.outcomes.filter((item) => item.status === "deferred");
     if (pending.length === 0 && deferred.length === 0 && result.blocked.length > 0) {
       const reason = result.blocked.map((item) => `${item.reason}: ${item.subject}`).join(", ");
       await this.#options.stores.dispatch.releaseBuildCapacity(dispatch.build);
-      return await this.#options.stores.dispatch.finish(dispatch.build, "failed", reason);
+      const persisted = await this.#finishResult(dispatch, "failed", reason);
+      const finished = await this.#options.stores.dispatch.finish(dispatch.build, "failed", reason);
+      if (persisted) await this.#retireExecution(dispatch.build);
+      return finished;
     }
     const now = Date.now();
     const wakeAt = Math.min(...[
@@ -197,7 +261,11 @@ class DurableLocalWorker {
     if (current?.cancellation !== undefined) return await this.#cancel(current);
     const reason = error instanceof Error ? error.message : String(error);
     await this.#options.stores.dispatch.releaseBuildCapacity(dispatch.build);
-    return await this.#options.stores.dispatch.finish(dispatch.build, "failed", reason);
+    await this.#finishResult(dispatch, "failed", reason).catch(() => false);
+    const finished = await this.#options.stores.dispatch.finish(dispatch.build, "failed", reason);
+    // An infrastructure failure may be the Result writer itself. Keep execution bytes and facts so
+    // a local repair can recover already accepted public Outputs instead of deleting their source.
+    return finished;
   }
 
   async #runClaimed(dispatches: readonly BuildDispatchSnapshot[]): Promise<readonly BuildDispatchSnapshot[]> {
@@ -212,6 +280,7 @@ class DurableLocalWorker {
         await this.#options.installComponentPackages(dispatch.componentPackages);
         const snapshot = await this.#options.stores.builds.read(dispatch.build);
         assert(snapshot !== undefined, `Dispatch ${dispatch.build} has no Build Definition`);
+        await this.#syncResult(dispatch, snapshot.state);
         runnable.push({ dispatch, snapshot });
       } catch (error) {
         finished.push(await this.#fail(dispatch, error));
@@ -220,6 +289,11 @@ class DurableLocalWorker {
     if (runnable.length === 0) return finished;
     const scheduler = new LocalBuildScheduler(this.#executorWithCapacity, {
       buildStore: this.#options.stores.builds,
+      onStateChange: async (build, state) => {
+        const item = runnable.find((candidate) => candidate.dispatch.build === build);
+        assert(item !== undefined, `Result update refers to unknown Build ${build}`);
+        await this.#syncResult(item.dispatch, state);
+      },
     });
     try {
       const results = await scheduler.run(runnable.map(({ dispatch, snapshot }) => ({

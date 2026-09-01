@@ -287,6 +287,7 @@ function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Workspace 
           const bytes = Uint8Array.from(assetBytes);
           const artifact: BlobRef = {
             kind: "blob",
+            resource: "res_memory-reference",
             digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
             size: bytes.byteLength,
             mediaType: request.mediaType,
@@ -602,8 +603,16 @@ test("filesystem and in-memory Workspaces load identical asset bytes", async () 
   const filesystem = await assetCompiler({ root }).compileFile(file);
   const memory = await assetCompiler({ workspace: memoryWorkspace(source, bytes) }).compileFile("memory:main");
 
-  assert.deepEqual(memory.attachments.map((item) => item.artifact),
-    filesystem.attachments.map((item) => item.artifact));
+  const memoryArtifact = memory.attachments[0]?.artifact;
+  const filesystemArtifact = filesystem.attachments[0]?.artifact;
+  assert.ok(memoryArtifact?.resource);
+  assert.ok(filesystemArtifact?.resource);
+  assert.notEqual(memoryArtifact.resource, filesystemArtifact.resource,
+    "separate admissions keep separate resource identities even for equal bytes");
+  assert.deepEqual(
+    { digest: memoryArtifact.digest, size: memoryArtifact.size, mediaType: memoryArtifact.mediaType },
+    { digest: filesystemArtifact.digest, size: filesystemArtifact.size, mediaType: filesystemArtifact.mediaType },
+  );
   assert.deepEqual(await readAttachment(memory.attachments[0]),
     await readAttachment(filesystem.attachments[0]));
 });

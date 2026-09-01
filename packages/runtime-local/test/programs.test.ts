@@ -51,7 +51,6 @@ async function project(program: (root: string) => ManagedProgram) {
       use: "@hypit/runtime-local",
       config: {
         dataRoot: ".",
-        artifacts: { use: "example.artifacts" },
         credentials: {},
         endpoints: {
           one: { use: "example.program", pool: "example.local", config: {} },
@@ -231,7 +230,6 @@ test("up creates a fresh Runtime data directory before running commands", async 
       use: "@hypit/runtime-local",
       config: {
         dataRoot: "./never-created",
-        artifacts: { use: "example.artifacts" },
         credentials: {},
         endpoints: { one: { use: "example.program", config: {} } },
       },

@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { readFile, rm, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 import {
@@ -12,10 +12,10 @@ import type { CanonicalValue, CapabilityRef } from "@hypit/protocol";
 import {
   CompositeCredentialStore,
 } from "@hypit/runtime";
-import type { ArtifactStore, CredentialStore } from "@hypit/runtime";
+import type { CredentialStore } from "@hypit/runtime";
+import { FileArtifactStore } from "@hypit/artifact-store-fs";
 import {
   isRuntimeAdapterHostFacet,
-  runtimeArtifactStoreAdapterHostAbi,
   runtimeCredentialStoreAdapterHostAbi,
   runtimeEndpointAdapterHostAbi,
   RuntimeAdapterRegistry,
@@ -59,7 +59,6 @@ export type RuntimeConfigEntry = {
 export type RuntimeConfigDocument = {
   readonly format: "hypit.runtime-profile@1";
   readonly dataRoot: string;
-  readonly artifacts: RuntimeConfigEntry;
   readonly credentials: readonly RuntimeConfigEntry[];
   readonly endpoints: readonly RuntimeConfigEntry[];
 };
@@ -146,8 +145,7 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
     throw new Error(`Local Runtime loader cannot activate ${String(runtime.use)}`);
   }
   const config = object(runtime.config, "$runtime.runtime.config");
-  exactKeys(config, ["dataRoot", "artifacts", "credentials", "endpoints"], "$runtime.runtime.config");
-  const artifacts = entry(config.artifacts, "artifacts", "$runtime.runtime.config.artifacts");
+  exactKeys(config, ["dataRoot", "credentials", "endpoints"], "$runtime.runtime.config");
   const credentials = entries(config.credentials, "$runtime.runtime.config.credentials");
   const endpoints = entries(config.endpoints, "$runtime.runtime.config.endpoints", true);
   const ids = [...credentials, ...endpoints].map((value) => value.instance);
@@ -155,7 +153,6 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   return {
     format: "hypit.runtime-profile@1",
     dataRoot: requiredString(config.dataRoot, "$runtime.runtime.config.dataRoot"),
-    artifacts,
     credentials,
     endpoints,
   };
@@ -177,7 +174,6 @@ function runtimePackageSelection(document: RuntimeConfigDocument): NodePackageSe
   return {
     selected: [],
     logical: [
-      { abi: runtimeArtifactStoreAdapterHostAbi, name: document.artifacts.use },
       ...document.credentials.map((item) => ({ abi: runtimeCredentialStoreAdapterHostAbi, name: item.use })),
       ...document.endpoints.map((item) => ({ abi: runtimeEndpointAdapterHostAbi, name: item.use })),
     ],
@@ -199,7 +195,6 @@ async function installRuntimeAdapters(
 ): Promise<void> {
   const logical = selection.logical?.filter((address) => {
     if (address.abi === runtimeEndpointAdapterHostAbi) return !registry.has(address.name, "endpoint");
-    if (address.abi === runtimeArtifactStoreAdapterHostAbi) return !registry.has(address.name, "artifact-store");
     if (address.abi === runtimeCredentialStoreAdapterHostAbi) return !registry.has(address.name, "credential-store");
     return true;
   }) ?? [];
@@ -232,7 +227,6 @@ export async function prepareRuntimeConfigPackages(
   if (options.distributionPackageRoot === undefined) return [];
   const { document } = await openRuntimeConfig(path, options.packageRoot);
   const requirements = await distributionExternalPackageRequirements([
-    document.artifacts.use,
     ...document.credentials.map((item) => item.use),
     ...document.endpoints.map((item) => item.use),
   ], options.distributionPackageRoot);
@@ -327,18 +321,15 @@ async function openCredentialStores(
   }
 }
 
-async function openArtifactStore(
-  document: RuntimeConfigDocument,
-  root: string,
-  hostStateRoot: string,
-  registry: RuntimeAdapterRegistry,
-): Promise<RuntimeOpened<ArtifactStore>> {
-  const item = document.artifacts;
-  return await registry.openArtifactStore(item.use, adapterContext(root, hostStateRoot, item));
-}
-
 function statePath(root: string): string {
   return resolve(root, "runtime.sqlite");
+}
+
+function buildWorkPath(root: string, build: string): string {
+  if (build.trim().length === 0 || build.includes("/") || build.includes("\\")) {
+    throw new Error("Build id is not a working-directory name");
+  }
+  return resolve(root, "work", build);
 }
 
 async function inspectRuntimeConfig(
@@ -362,7 +353,6 @@ async function inspectRuntimeConfig(
     return { dataRoot: root, diagnostics: [diagnostic(error, "RUNTIME_PACKAGE_SELECTION_INVALID")] };
   }
   const storeSelections = [
-    { item: document.artifacts, kind: "artifact-store" as const },
     ...document.credentials.map((item) => ({ item, kind: "credential-store" as const })),
   ];
   for (const selection of storeSelections) {
@@ -467,7 +457,7 @@ export async function preflightRuntimeConfig(
   return await inspectRuntimeConfig(path, { ...options, active: false });
 }
 
-/** Active diagnosis may ask selected stores and adapters to verify their configured services. */
+/** Active diagnosis may ask selected credentials and Endpoints to verify their configured services. */
 export async function doctorRuntimeConfig(
   path: string,
   options: LoadRuntimeConfigOptions & { readonly capabilities?: readonly CapabilityRef[] } = {},
@@ -484,10 +474,8 @@ export async function createRuntimeFromConfig(
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
   const state = new SqliteRuntimeState(statePath(root));
-  let artifacts: RuntimeOpened<ArtifactStore> | undefined;
   let credentials: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
   try {
-    artifacts = await openArtifactStore(document, root, hostStateRoot, registry);
     credentials = await openCredentialStores(document, root, hostStateRoot, registry);
     const endpoints = await Promise.all(document.endpoints.map(async (item) => await registry.createEndpoint(
       item.use,
@@ -498,7 +486,11 @@ export async function createRuntimeFromConfig(
       buildCatalog: state.catalog,
       operationStore: state.operations,
       dispatchStore: state.dispatch,
-      artifactStore: artifacts.value,
+      artifactStore: new FileArtifactStore(resolve(root, "artifacts")),
+      artifactStoreForBuild: (build) => new FileArtifactStore(buildWorkPath(root, build)),
+      clearBuildArtifacts: async (build) => {
+        await rm(buildWorkPath(root, build), { recursive: true, force: true });
+      },
       credentialStore: credentials.store,
       loadComponentPackages: async (specifiers) => {
         const loaded = await loadNodePackageSelection(specifiers, packageRoot, {
@@ -511,13 +503,11 @@ export async function createRuntimeFromConfig(
       endpoints,
       close: async () => {
         await credentials?.close();
-        await artifacts?.close?.();
         state.close();
       },
     });
   } catch (error) {
     await credentials?.close();
-    await artifacts?.close?.();
     state.close();
     throw error;
   }
@@ -542,16 +532,9 @@ export async function createRuntimeArtifactAccessFromConfig(
   path: string,
   options: LoadRuntimeConfigOptions = {},
 ): Promise<LocalRuntimeArtifactAccess> {
-  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
-  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
-  const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, {
-    selected: [], logical: [{ abi: runtimeArtifactStoreAdapterHostAbi, name: document.artifacts.use }],
-  }, options.distributionPackageRoot);
-  const opened = await openArtifactStore(document, root, hostStateRoot, registry);
+  const { root } = await openRuntimeConfig(path, options.packageRoot);
   return createLocalRuntimeArtifactAccess({
-    artifactStore: opened.value,
-    ...(opened.close === undefined ? {} : { close: opened.close }),
+    artifactStore: new FileArtifactStore(resolve(root, "artifacts")),
   });
 }
 

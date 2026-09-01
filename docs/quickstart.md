@@ -83,7 +83,7 @@ A working video project normally has four authored or configured inputs:
 | `main.svml` | What video are you making? |
 | `recipes.svs` | Which reusable Recipe values does it use? |
 | `build.svrun` | Which outputs and Candidates does this Run select? |
-| `hypit.runtime.json` | Which machine, stores and Provider endpoints execute it? |
+| `hypit.runtime.json` | Which credentials, Provider endpoints and services execute it? |
 
 The short form is:
 
@@ -111,7 +111,8 @@ hypit plan build.svrun
 
 A project with `package.json` owns its third-party packages. A plain creative folder needs no Node
 project and uses official packages from the installed Distribution. Source and exported files remain in the
-project. Runtime state and Artifacts live under the selected Profile's `dataRoot`.
+project. Build Results live under the project's `.hypit/results`; active execution state lives under
+the selected Profile's `dataRoot`.
 `runtime use` stores only a local pointer at `.hypit/runtime`. Source imports select author
 packages; the Profile independently selects Runtime packages through `use`.
 
@@ -145,8 +146,8 @@ hypit get <build-id> \
   --to output/final.mp4
 ```
 
-The Runtime archives accepted intermediate Records and media. `get` makes a human-readable copy; it
-does not decide whether an intermediate result should have been retained.
+The Build Result saves every public Author Output completed on the Target route. `get` makes an
+optional human-readable copy; Targets do not double as a retention list.
 
 ## Local tools used by real Builds
 

@@ -1,19 +1,13 @@
 # `@hypit/provider-media-aws-lambda`
 
-AWS Lambda Endpoint package for the nine exact capabilities declared by
+Retired AWS Lambda Endpoint package for the nine capabilities declared by
 `@hypit/media-pipeline` and implemented by `@hypit/media-execution`.
 
-The Provider invokes one versioned or aliased Lambda ARN synchronously. Source and result bytes stay
-in the configured S3 ArtifactStore bucket; invocation carries only bounded JSON and content-addressed
-references. Every reported result is checked through the Build's ArtifactStore before it can fulfill
-a Need.
+This route required the Runtime and Lambda function to share one selected S3 Artifact Store. Runtime
+Profiles no longer select an Artifact Store: each Build has private transient working resources and
+publishes its public outputs into the project Build Result. Consequently this package cannot be
+activated from a current Runtime Profile.
 
-Runtime configuration must provide:
-
-- a qualified `functionArn`, never an unversioned mutable function name;
-- the same `bucket` used by the selected S3 ArtifactStore;
-- optional `prefix`, `region` and `defaultConcurrency`.
-
-The package requests `network:aws:lambda` and `network:aws:s3`. It contains no deployment
-credentials, author syntax or media policy fork. The local and Lambda Providers consume the same
-public contracts and shared execution body.
+The source remains only as the description of the former transport. A replacement must own its
+remote staging internally, import completed resources into the current Build working store, and
+leave no Runtime-wide storage choice behind.

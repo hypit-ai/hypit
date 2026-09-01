@@ -1,10 +1,17 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 
 import { deterministicSpeechDurations, deterministicSpeechDurationsFromGraph } from "@hypit/compiler-node";
+import {
+  buildResultDirectory,
+  listBuildResults,
+  materializeBuildResultOutput,
+  readBuildResult,
+  resolveBuildResultOutput,
+} from "@hypit/build-result";
 import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
 import {
@@ -18,14 +25,7 @@ import type { BuildState, CapabilityRef, TypeRef } from "@hypit/protocol";
 import { parseSourceHeader } from "@hypit/source";
 
 import {
-  acceptedArchivedOutputs,
-  collectArtifacts,
-  findArchivedArtifact,
-  inspectBuild,
-  materializeArtifact,
-  materializeRecord,
   pinnedRecords,
-  selectArchivedRecord,
   summarizeBuildCatalog,
 } from "./archive.js";
 import { unreachedGenerations } from "./reachability.js";
@@ -38,7 +38,6 @@ import type {
   CliManagedProgramReport,
   CliRuntime,
   CliRuntimeArchiveControl,
-  CliRuntimeArtifactAccess,
   CliRuntimeController,
 } from "./runtime-port.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
@@ -394,7 +393,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       continue;
     }
     if (item === "--out") {
-      throw new Error("--out was removed: Build always archives accepted Records; use `get <build-id> --to <path>` for an optional copy");
+      throw new Error("--out was removed: Build Results save completed public Outputs automatically; use `get <build-id> --name <output> --to <path>` for an optional copy");
     }
     if (item === "--record") {
       const value = rest[index + 1];
@@ -412,7 +411,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     }
     if (item === "--name") {
       const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--name requires a source output name");
+      if (value === undefined || value.startsWith("--")) throw new Error("--name requires a name");
       name = value;
       index += 1;
       continue;
@@ -580,7 +579,7 @@ function assertCommandOptions(args: ParsedArgs): void {
       add("--runtime");
       break;
     case "get":
-      add("--runtime", "--name", "--record", "--output", "--artifact", "--to");
+      add("--workspace", "--name", "--record", "--output", "--artifact", "--to");
       break;
     case "image":
       // A package asset needs credentials and nothing else; no Runtime Profile applies.
@@ -595,9 +594,11 @@ function assertCommandOptions(args: ParsedArgs): void {
       break;
     case "builds":
     case "history":
-    case "inspect":
-      add("--runtime");
+      add("--workspace");
       if (args.command === "history") add("--source", "--pin", "--exclude-targets");
+      break;
+    case "inspect":
+      add("--workspace");
       break;
     case "check":
     case "plan":
@@ -605,7 +606,7 @@ function assertCommandOptions(args: ParsedArgs): void {
       break;
     case "build":
       add("--runtime", "--package-root", "--workspace", "--asset-root", "--follow",
-        "--max-wait-ms");
+        "--max-wait-ms", "--name");
       break;
   }
   const invalid = args.seenOptions.find((item) => !allowed.has(item));
@@ -633,12 +634,12 @@ function usage(): string {
     "  hypit queue [--runtime profile.json] [--watch]",
     "  hypit check <self-described-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
     "  hypit plan <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
-    "  hypit build <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow]",
+    "  hypit build <run-source> [--name name] [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow]",
     "  hypit status <build-id> [--runtime profile.json] [--watch]",
-    "  hypit builds [--runtime profile.json]",
-    "  hypit history [source-output-name] [--runtime profile.json] [--source author.svml] [--pin] [--exclude-targets]",
-    "  hypit inspect <build-id> [--runtime profile.json]",
-    "  hypit get <build-id> [--runtime profile.json] [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
+    "  hypit builds [--workspace project]",
+    "  hypit history [source-output-name] [--workspace project] [--source author.svml] [--pin] [--exclude-targets]",
+    "  hypit inspect <build-id> [--workspace project]",
+    "  hypit get <build-id> --name output-name [--workspace project] [--to path]",
     "  hypit cancel <build-id> [--runtime profile.json] [--reason text]",
     "  hypit auth status|login|logout <endpoint-instance> [--runtime profile.json] [--slot name] [--from secret-file]",
     "  hypit image --prompt <text|text-file> --to <path.png> [--model package] [--aspect-ratio r] [--resolution r]",
@@ -729,12 +730,6 @@ async function loadRuntimeArchive(
   readOnly = true,
 ): Promise<CliRuntimeArchiveControl> {
   return await host.openArchive({ readOnly });
-}
-
-async function loadRuntimeArtifactAccess(
-  host: NodeRuntimeHost,
-): Promise<CliRuntimeArtifactAccess> {
-  return await host.openArtifacts();
 }
 
 function displayType(type: TypeRef): string {
@@ -891,12 +886,12 @@ async function observeBuild(
   }
   if (observedActivity) {
     const status = await runtime.status(current.id);
-    if (status.build === undefined || status.dispatch === undefined) {
+    if (status.dispatch === undefined) {
       throw new Error(`Build ${current.id} disappeared while it was being observed`);
     }
     current = {
       id: current.id,
-      state: status.build.state,
+      state: status.build?.state ?? current.state,
       status: submissionStatus(status.dispatch),
       dispatch: status.dispatch,
     };
@@ -1424,8 +1419,124 @@ export async function runCli(
     }
     return;
   }
-  if (args.command === "status" || args.command === "builds" || args.command === "inspect"
-    || args.command === "history" || args.command === "get" || args.command === "cancel" || args.command === "queue"
+  if (args.command === "builds" || args.command === "history" || args.command === "inspect" || args.command === "get") {
+    const resultsRoot = join(commandProjectRoot(), ".hypit", "results");
+    if (args.command === "builds") {
+      const manifests = await listBuildResults(resultsRoot);
+      const shown = manifests.slice(0, args.verbose ? undefined : 20);
+      const builds = shown.map((manifest) => ({
+        build: manifest.id,
+        ...(manifest.name === undefined ? {} : { name: manifest.name }),
+        status: manifest.status,
+        startedAt: manifest.startedAt,
+        source: manifest.source,
+        ...(manifest.run === undefined ? {} : { run: manifest.run }),
+        targets: manifest.targets,
+        outputs: Object.keys(manifest.outputs),
+      }));
+      writeOperational({ builds }, "Build results", "info", [["Builds", String(manifests.length)]],
+        builds.map((item) => {
+          const source = basename(item.run?.path ?? item.source.path);
+          const label = item.name === undefined ? item.build : `${item.name} · ${item.build}`;
+          return `${label}: ${item.status} · ${source} · ${item.outputs.length} outputs`;
+        }));
+      return;
+    }
+    if (args.command === "history") {
+      const manifests = await listBuildResults(resultsRoot);
+      const source = args.source === undefined ? undefined : resolve(args.source);
+      const entries = manifests.flatMap((manifest) => {
+        if (source !== undefined && manifest.source.path !== source) return [];
+        return Object.entries(manifest.outputs).flatMap(([name, output]) => {
+          if (args.file !== undefined && name !== args.file) return [];
+          if (args.excludeTargets && manifest.targets.includes(name)) return [];
+          return [{
+            build: manifest.id,
+            createdAt: manifest.startedAt,
+            status: manifest.status,
+            source: manifest.source,
+            ...(manifest.run === undefined ? {} : { run: manifest.run }),
+            output: { name, type: output.type, value: output.value },
+          }];
+        });
+      }).sort((left, right) => right.createdAt - left.createdAt
+        || left.output.name.localeCompare(right.output.name)
+        || left.build.localeCompare(right.build));
+      const pins = args.pin ? pinnedRecords(entries) : [];
+      const shown = entries.slice(0, args.verbose ? undefined : 20);
+      writeOperational({
+        query: {
+          ...(args.file === undefined ? {} : { output: args.file }),
+          ...(source === undefined ? {} : { source }),
+        },
+        entries,
+        ...(args.pin ? { pins } : {}),
+      }, entries.length === 0 ? "No Build Output history" : args.pin ? "Reuse these Outputs" : "Output history",
+      entries.length === 0 ? "warning" : "info", [
+        ...(args.file === undefined ? [] : [["Output", args.file] as const]),
+        ...(source === undefined ? [] : [["Source", source] as const]),
+        ["Outputs", String(entries.length)],
+      ], args.pin
+        ? ["Paste into a Run Source; every reference names one exact Build Output.", ...pins.flatMap((item) => item.markup)]
+        : shown.map((item) => {
+            const created = new Date(item.createdAt).toISOString();
+            return `${item.build}: ${item.output.name} · ${created} · ${item.output.value.kind}`;
+          }));
+      return;
+    }
+    if (args.command === "inspect") {
+      const manifest = await readBuildResult(buildResultDirectory(resultsRoot, args.file!));
+      if (manifest === undefined) throw new Error(`Build Result ${args.file} does not exist`);
+      const outputs = Object.entries(manifest.outputs).map(([name, output]) => ({
+        name,
+        target: manifest.targets.includes(name),
+        type: output.type,
+        value: output.value,
+      }));
+      writeOperational({ result: manifest, outputs }, "Build Result detail", manifest.status === "failed" ? "error" : "info", [
+        ["Build", manifest.id],
+        ...(manifest.name === undefined ? [] : [["Name", manifest.name] as const]),
+        ["Status", manifest.status],
+        ["Targets", String(manifest.targets.length)],
+        ["Outputs", String(outputs.length)],
+      ], [
+        ...(manifest.failure === undefined ? [] : [`Reason    ${manifest.failure}`]),
+        ...outputs.map((item) => `${item.target ? "Target" : "Output"}    ${item.name} · ${displayType(item.type)} · ${item.value.kind}`),
+      ]);
+      return;
+    }
+    if (args.record !== undefined || args.output !== undefined || args.artifact !== undefined) {
+      throw new Error("get now addresses Build Results by --name; Record, Logical Output id and Artifact digest selectors were removed");
+    }
+    const directory = buildResultDirectory(resultsRoot, args.file!);
+    const manifest = await readBuildResult(directory);
+    if (manifest === undefined) throw new Error(`Build Result ${args.file} does not exist`);
+    const available = Object.keys(manifest.outputs);
+    const name = args.name
+      ?? (manifest.targets.length === 1 && manifest.outputs[manifest.targets[0]!] !== undefined
+        ? manifest.targets[0]
+        : available.length === 1 ? available[0] : undefined);
+    if (name === undefined) throw new Error(`Build ${manifest.id} has several Outputs; select one with --name`);
+    const resolved = await resolveBuildResultOutput(resultsRoot, manifest.id, name);
+    if (resolved === undefined) throw new Error(`Build ${manifest.id} has no Output ${name}`);
+    if (args.to === undefined) {
+      writeOperational({ build: manifest.id, output: name, resolved }, "Build Output", "info", [
+        ["Build", manifest.id],
+        ["Output", name],
+        ["Type", displayType(resolved.type)],
+        ["Storage", resolved.value.kind],
+      ], resolved.build === manifest.id && resolved.output === name
+        ? []
+        : [`Forwards to ${resolved.build} / ${resolved.output}`]);
+    } else {
+      const materialized = await materializeBuildResultOutput(resultsRoot, manifest.id, name, args.to);
+      writeOperational({ build: manifest.id, output: name, resolved, materialized }, "Build Output materialized", "success", [
+        ["Build", manifest.id], ["Output", name], ["Path", materialized.path],
+      ]);
+    }
+    return;
+  }
+  if (args.command === "status" || args.command === "cancel" || args.command === "queue"
   ) {
     if (args.runtime === undefined) {
       throw new Error(
@@ -1501,85 +1612,6 @@ export async function runCli(
           await writeQueue();
           await new Promise((resolveWait) => setTimeout(resolveWait, 1_000));
         }
-      } else if (args.command === "builds") {
-        const entries = await runtime.builds();
-        const inspected = args.json || args.verbose ? entries : entries.slice(0, 20);
-        const builds = await Promise.all(inspected.map(async (entry) => {
-          const status = await runtime.status(entry.build);
-          return {
-            build: entry.build,
-            createdAt: entry.createdAt,
-            status: status.dispatch === undefined
-              ? status.build?.state.status
-              : submissionStatus(status.dispatch),
-            ...(status.build === undefined ? {} : { coreStatus: status.build.state.status }),
-            ...summarizeBuildCatalog(entry, status.build?.state),
-          };
-        }));
-        writeOperational({ builds }, "Build archive", "info", [["Builds", String(entries.length)]],
-          builds.map((item) => {
-            const source = basename(item.run?.path ?? item.source.path);
-            const targets = item.targets.length === 0 ? "no named target" : item.targets.join(", ");
-            return `${item.build}: ${item.status ?? "unknown"} · ${source} · ${targets}`;
-          }));
-      } else if (args.command === "history") {
-        const catalogs = await runtime.builds();
-        const history = await Promise.all(catalogs.map(async (catalog) => {
-          if (args.source !== undefined && catalog.source.path !== args.source) {
-            return { entries: [], targetNames: [] };
-          }
-          if (args.file !== undefined && !catalog.aliases.some((alias) => alias.name === args.file)) {
-            return { entries: [], targetNames: [] };
-          }
-          const status = await runtime.status(catalog.build);
-          if (status.build === undefined) return { entries: [], targetNames: [] };
-          const targetOutputs = new Set(status.build.state.request.targets.map((target) => target.output));
-          return {
-            targetNames: catalog.aliases
-              .filter((alias) => alias.ref.kind === "logical-output" && targetOutputs.has(alias.ref.id))
-              .map((alias) => alias.name),
-            entries: acceptedArchivedOutputs(status.build.state, catalog)
-              .filter((output) => args.file === undefined || output.name === args.file)
-              .map((output) => ({
-                build: catalog.build,
-                createdAt: catalog.createdAt,
-                status: status.dispatch === undefined
-                  ? status.build!.state.status
-                  : submissionStatus(status.dispatch),
-                source: catalog.source,
-                ...(catalog.run === undefined ? {} : { run: catalog.run }),
-                output,
-              })),
-          };
-        }));
-        const targetNames = new Set(history.flatMap((item) => item.targetNames));
-        const entries = history.flatMap((item) => item.entries)
-          .filter((entry) => !args.excludeTargets || !targetNames.has(entry.output.name))
-          .sort((left, right) => right.createdAt - left.createdAt
-            || left.output.name.localeCompare(right.output.name)
-            || left.build.localeCompare(right.build));
-        const query = {
-          ...(args.file === undefined ? {} : { output: args.file }),
-          ...(args.source === undefined ? {} : { source: args.source }),
-        };
-        const pins = args.pin ? pinnedRecords(entries) : [];
-        const shown = entries.slice(0, args.verbose ? undefined : 20);
-        writeOperational({ query, entries, ...(args.pin ? { pins } : {}) },
-          entries.length === 0 ? "No accepted output history" : args.pin ? "Reuse these Records" : "Output history",
-          entries.length === 0 ? "warning" : "info", [
-            ...(args.file === undefined ? [] : [["Output", args.file] as const]),
-            ...(args.source === undefined ? [] : [["Source", args.source] as const]),
-            ["Records", String(entries.length)],
-            ...(args.pin ? [["Outputs pinned", String(pins.length)] as const] : []),
-          ], args.pin
-            ? [
-              "Paste into a Run Source; the newest accepted Record of each output is selected.",
-              ...pins.flatMap((item) => item.markup),
-            ]
-            : shown.map((item) => {
-              const created = new Date(item.createdAt).toISOString();
-              return `${item.build}: ${item.output.name} · ${created} · ${item.output.record.id}`;
-            }));
       } else if (args.command === "status") {
         let status = await runtime.status(args.file!);
         if (args.watch && status.build !== undefined && status.dispatch !== undefined) {
@@ -1604,15 +1636,22 @@ export async function runCli(
           });
           status = await runtime.status(args.file!);
         }
+        const result = await readBuildResult(
+          buildResultDirectory(join(commandProjectRoot(), ".hypit", "results"), args.file!),
+        );
+        const found = status.build !== undefined || status.dispatch !== undefined || result !== undefined;
         const effectiveStatus = status.dispatch === undefined
-          ? status.build?.state.status
+          ? status.build?.state.status ?? result?.status
           : submissionStatus(status.dispatch);
         const machine = {
-          build: status.build === undefined ? null : {
-            id: status.build.build,
+          build: !found ? null : {
+            id: status.build?.build ?? status.dispatch?.build ?? result!.id,
             status: effectiveStatus,
-            coreStatus: status.build.state.status,
-            diagnostics: status.build.state.diagnostics,
+            ...(status.build === undefined ? {} : {
+              coreStatus: status.build.state.status,
+              diagnostics: status.build.state.diagnostics,
+            }),
+            ...(result === undefined ? {} : { result }),
           },
           catalog: status.catalog === undefined
             ? null
@@ -1632,12 +1671,12 @@ export async function runCli(
         const notableOperations = status.operations.filter((operation) =>
           operation.status !== "completed").slice(0, args.verbose ? undefined : 12);
         const terminal = status.dispatch?.phase === "terminal";
-        writeOperational(machine, status.build === undefined
+        writeOperational(machine, !found
           ? "Build not found"
           : args.watch
             ? terminal ? "Build finished" : "Build still running"
             : "Build status",
-        status.build === undefined
+        !found
           ? "warning"
           : status.dispatch?.terminal === "failed"
             ? "error"
@@ -1655,137 +1694,7 @@ export async function runCli(
               ? `${operation.endpoint}: ${operation.status}`
               : `${operation.endpoint}: ${formatOperationProgress(operation.progress)}`)
             .concat(status.dispatch?.reason === undefined ? [] : [`Reason    ${status.dispatch.reason}`]));
-        if (status.build === undefined || status.dispatch?.terminal === "failed") io.setExitCode?.(1);
-      } else if (args.command === "inspect") {
-        const status = await runtime.status(args.file!);
-        if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
-        const archive = inspectBuild(status.build.state, status.catalog);
-        const effectiveStatus = status.dispatch === undefined
-          ? status.build.state.status
-          : submissionStatus(status.dispatch);
-        const machine = {
-          build: status.build.build,
-          status: effectiveStatus,
-          coreStatus: status.build.state.status,
-          dispatch: status.dispatch,
-          archive,
-          operations: status.operations.map((operation) => ({
-            id: operation.id,
-            command: operation.command,
-            endpoint: operation.endpoint,
-            status: operation.status,
-            ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
-            ...(operation.progress === undefined ? {} : { progress: operation.progress }),
-            ...(operation.failure === undefined ? {} : { failure: operation.failure }),
-          })),
-        };
-        const aliases = archive.presentation?.aliases ?? [];
-        const aliasByOutput = new Map(aliases.flatMap((alias) =>
-          alias.ref.kind === "logical-output" ? [[alias.ref.id, alias] as const] : []));
-        const recordById = new Map(archive.records.map((record) => [record.id, record]));
-        const targetOutputs = new Set(archive.targets.map((target) => target.output));
-        const targetLines = archive.targets.map((target) => {
-          const alias = aliasByOutput.get(target.output);
-          const record = target.record === undefined ? undefined : recordById.get(target.record);
-          const name = alias?.name ?? target.output;
-          if (record === undefined) return `Target    ${name} · not accepted`;
-          return `Target    ${name} · ${displayType(record.type)} · ${record.id}`;
-        });
-        const otherAccepted = archive.demandedOutputs.filter((item) =>
-          item.accepted && !targetOutputs.has(item.output));
-        const otherLines = args.verbose
-          ? otherAccepted.map((item) => {
-              const alias = aliasByOutput.get(item.output);
-              const record = recordById.get(item.record);
-              const name = alias?.name ?? item.output;
-              return record === undefined
-                ? `Output    ${name}`
-                : `Output    ${name} · ${displayType(record.type)} · ${record.id}`;
-            })
-          : otherAccepted.length === 0
-            ? []
-            : [`Other accepted outputs  ${otherAccepted.length} · use --verbose to list them`];
-        writeOperational(machine, "Build archive detail", "info", [
-          ["Build", status.build.build], ["Status", effectiveStatus],
-          ...(status.dispatch?.phase === "terminal" || effectiveStatus === archive.status
-            ? [] : [["Core", archive.status] as const]),
-          ["Targets", String(archive.targets.length)], ["Accepted records", String(archive.records.length)],
-          ["Operations", String(status.operations.length)],
-        ], [
-          ...(status.dispatch?.reason === undefined ? [] : [`Reason    ${status.dispatch.reason}`]),
-          ...targetLines,
-          ...otherLines,
-        ]);
-      } else if (args.command === "get") {
-        const status = await runtime.status(args.file!);
-        if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
-        if (args.artifact !== undefined && (args.name !== undefined || args.record !== undefined || args.output !== undefined)) {
-          throw new Error("get accepts one of --name, --record, --output or --artifact");
-        }
-        if (args.artifact !== undefined) {
-          const references = findArchivedArtifact(status.build.state, args.artifact);
-          if (args.to === undefined) {
-            writeOperational({ build: status.build.build, artifact: args.artifact, references }, "Artifact references", "info", [
-              ["Build", status.build.build], ["Artifact", args.artifact], ["References", String(references.length)],
-            ]);
-          } else {
-            const [first] = references;
-            if (first === undefined) throw new Error(`Build ${args.file} does not reference Artifact ${args.artifact}`);
-            const artifacts = await loadRuntimeArtifactAccess(await runtimeHost(args.runtime!));
-            let materialized;
-            try {
-              materialized = await materializeArtifact(artifacts, first, args.to, `Build ${args.file}`);
-            } finally {
-              await artifacts.close();
-            }
-            const machine = {
-              build: status.build.build,
-              artifact: args.artifact,
-              references,
-              materialized,
-            };
-            writeOperational(machine, "Artifact materialized", "success", [
-              ["Build", status.build.build], ["Artifact", args.artifact], ["Path", materialized.path],
-            ]);
-          }
-          return;
-        }
-        const record = selectArchivedRecord(status.build.state, {
-          ...(args.name === undefined ? {} : { name: args.name }),
-          ...(args.record === undefined ? {} : { record: args.record }),
-          ...(args.output === undefined ? {} : { output: args.output }),
-          ...(status.catalog === undefined ? {} : { catalog: status.catalog }),
-        });
-        if (args.to === undefined) {
-          const machine = {
-            build: status.build.build,
-            record,
-            artifacts: collectArtifacts(record.value.kind === "blob" ? record.value : record.value.value),
-          };
-          writeOperational(machine, "Archived Record", "info", [
-            ["Build", status.build.build], ["Record", record.id],
-            ...(record.value.kind === "inline"
-              ? [["Value", inlineValuePreview(record.value.value)] as const]
-              : []),
-            ["Artifacts", String(machine.artifacts.length)],
-          ]);
-        } else {
-          const artifacts = await loadRuntimeArtifactAccess(await runtimeHost(args.runtime!));
-          let materialized;
-          try {
-            materialized = await materializeRecord(artifacts, record, args.to);
-          } finally {
-            await artifacts.close();
-          }
-          const machine = {
-            build: status.build.build,
-            record: record.id,
-            materialized,
-          };
-          writeOperational(machine, "Record materialized", "success", [
-            ["Build", status.build.build], ["Record", record.id], ["Path", materialized.path],
-          ]);
-        }
+        if (!found || status.dispatch?.terminal === "failed") io.setExitCode?.(1);
       } else {
         const result = await runtime.cancel(args.file!, args.reason);
         const machine = {
@@ -1822,6 +1731,7 @@ export async function runCli(
   const effectiveWorkspaceRoot = args.workspaceRoot
     ?? selectedRuntimeProjectRoot
     ?? dirname(resolve(args.file!));
+  const projectResultsRoot = join(effectiveWorkspaceRoot, ".hypit", "results");
   const sourcePackageRoot = effectivePackageRoot
     ?? await resolvePackageRoot(effectiveWorkspaceRoot);
   const loadedPackageSet = distribution.discoverSourcePackages === undefined
@@ -1921,6 +1831,7 @@ export async function runCli(
         frontends: runFrontends,
         packageContributions,
         runtime: archive,
+        resultsRoot: projectResultsRoot,
       });
     } finally {
       await archive.close();
@@ -1947,6 +1858,19 @@ export async function runCli(
         }),
         catalog,
         attachments: result.compilation.attachments,
+        result: {
+          root: projectResultsRoot,
+          ...(args.name === undefined ? {} : { name: args.name }),
+          reuses: result.compilation.run.document.candidates.flatMap((candidate) => {
+            if (candidate.kind !== "build-record") return [];
+            const resolvedCandidate = result.compilation.run.candidates[candidate.id];
+            return resolvedCandidate === undefined ? [] : [{
+              candidate: resolvedCandidate,
+              build: candidate.build,
+              output: candidate.output,
+            }];
+          }),
+        },
       } as const;
       const controller = await (await runtimeHost(args.runtime)).controller({
         packageRoot: sourcePackageRoot,
@@ -1983,6 +1907,10 @@ export async function runCli(
           }),
         });
       }
+      const terminal = built.dispatch.phase === "terminal";
+      const terminalResult = terminal
+        ? await readBuildResult(buildResultDirectory(projectResultsRoot, built.id))
+        : undefined;
       const targetOutputs = new Set(built.state.request.targets.map((target) => target.output));
       const presentation = catalog;
       const targetAliases = presentation.aliases.filter((alias) =>
@@ -2003,8 +1931,10 @@ export async function runCli(
       });
       const machine = {
         build: built.id,
+        ...(args.name === undefined ? {} : { name: args.name }),
         status: built.status,
         worker,
+        ...(terminalResult === undefined ? {} : { result: terminalResult }),
         goals: built.state.plan.goals.map((goal) => {
           const record = built.state.records.find((item) => item.id === goal.record);
           return {
@@ -2020,25 +1950,33 @@ export async function runCli(
         },
       };
       const runtimeHint = runtimeNeedsHint ? ` --runtime ${args.runtime}` : "";
-      const terminalLines = targetPresentations.length === 0
+      const resultTargets = terminalResult?.targets.flatMap((name) => {
+        const output = terminalResult.outputs[name];
+        return output === undefined ? [] : [{ name, output }];
+      }) ?? [];
+      const terminalLines = resultTargets.length === 0 && targetPresentations.length === 0
         ? [
             ...(built.dispatch.reason === undefined ? [] : [`Reason   ${built.dispatch.reason}`]),
-            `Inspect  hypit inspect ${built.id}${runtimeHint}`,
+            `Inspect  hypit inspect ${built.id}`,
           ]
         : [
             ...(built.dispatch.reason === undefined ? [] : [`Reason   ${built.dispatch.reason}`]),
-            `Inspect  hypit inspect ${built.id}${runtimeHint}`,
-            ...targetPresentations
-              .filter((item) => item.inline !== undefined)
+            `Inspect  hypit inspect ${built.id}`,
+            ...resultTargets
+              .filter((item) => item.output.value.kind === "inline")
               .slice(0, args.verbose ? undefined : 8)
-              .map((item) => `Result   ${item.alias.name} = ${item.inline}`),
-            ...targetPresentations
-              .filter((item) => item.inline === undefined)
+              .map((item) => `Result   ${item.name} = ${inlineValuePreview(
+                item.output.value.kind === "inline" ? item.output.value.value : undefined,
+              )}`),
+            ...resultTargets
+              .filter((item) => item.output.value.kind !== "inline")
               .slice(0, args.verbose ? undefined : 4)
               .map((item) =>
-                `Export   hypit get ${built.id}${runtimeHint} --name ${item.alias.name} --to <path>`),
+                `Export   hypit get ${built.id} --name ${item.name} --to <path>`),
+            ...(resultTargets.length > 0 ? [] : targetPresentations
+              .filter((item) => item.inline !== undefined)
+              .map((item) => `Result   ${item.alias.name} = ${item.inline}`)),
           ];
-      const terminal = built.dispatch.phase === "terminal";
       writeOperational(machine, args.follow
         ? terminal ? "Build finished" : "Build still running"
         : "Build submitted",
@@ -2047,7 +1985,7 @@ export async function runCli(
           ["Build", built.id],
           ["Status", built.status],
           ["Worker", worker.state === "running" ? String(worker.pid) : worker.state],
-          ["Goals", String(machine.goals.length)],
+          ["Goals", String(terminalResult?.targets.length ?? machine.goals.length)],
         ], terminal ? terminalLines : [
           `Watch    hypit status ${built.id}${runtimeHint} --watch`,
           `Cancel   hypit cancel ${built.id}${runtimeHint}`,
@@ -2069,6 +2007,7 @@ export async function runCli(
       frontends: runFrontends,
       packageContributions,
       ...(runtime === undefined ? {} : { runtime }),
+      resultsRoot: projectResultsRoot,
     });
     const result = loaded.compiler.planCompilation(loaded);
     const preflight = args.runtime === undefined

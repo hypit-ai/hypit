@@ -44,7 +44,7 @@ Provider 包依赖 Runtime 端口与共享能力词汇，不依赖精确模型�
 
 ## 3. 实现 Provider
 
-Provider 处理来自 Scheduler 的 Command：提交请求、轮询、下载以及 ArtifactStore 持久化。
+Provider 处理来自 Scheduler 的 Command：提交请求、轮询、下载，并把字节交给当前 Build 的临时工作区。
 
 ```typescript
 // src/provider.ts
@@ -207,7 +207,7 @@ hypit doctor hypit.runtime.json
 
 | 包 | 模式 |
 |---|---|
-| `provider-kie` | 远程 API：上传、付费提交、带检查点的轮询、有界下载、即时 ArtifactStore 持久化 |
+| `provider-kie` | 远程 API：上传、付费提交、带检查点的轮询、有界下载、写入当前 Build 工作区 |
 | `provider-media-local` | 本地进程：不经 shell 的 ffprobe/ffmpeg，执行有界 |
 | `provider-whisperx-local` | 本地 HTTP 服务：带热模型，单次准入并发 |
 | `provider-hyperframes-local` | 本地进程：Chrome 渲染，带 worker 并行与输出探测校验 |

@@ -25,6 +25,10 @@ export type CreateLocalRuntimeOptions = {
   readonly operationStore: OperationStore;
   readonly dispatchStore: import("@hypit/runtime").BuildDispatchStore;
   readonly artifactStore: ArtifactStore;
+  /** Optional Build-local transient byte area used by Provider execution and Result writing. */
+  readonly artifactStoreForBuild?: (build: string) => ArtifactStore;
+  /** Called only after a terminal Build Result has accepted every public Output completed so far. */
+  readonly clearBuildArtifacts?: (build: string) => Awaitable<void>;
   readonly credentialStore: CredentialStore;
   readonly components?: readonly ComponentPackage[];
   /** Load the complete physical package closure named by a claimed Build. */

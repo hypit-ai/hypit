@@ -87,14 +87,14 @@ Manifests actually imported by the author document; installing KIE does not add 
 
 ## Paid-operation law
 
-1. Reference `BlobRef`s are read from the configured ArtifactStore and uploaded through KIE's file
+1. Reference `BlobRef`s are read from the current Build's working byte area and uploaded through KIE's file
    stream API. KIE temporary URLs never enter author source or generated Product identity.
 2. A successful `createTask` response is persisted as one asynchronous Operation. Because KIE does not document an
    idempotency key, an ambiguous network/5xx submission is not automatically retried.
 3. Once a `taskId` exists, later Worker polling continues only that same task. Poll/download errors cannot create a new
    paid generation.
 4. Successful result URLs are converted to short-lived download URLs, bounded while streaming,
-   immediately written to the configured content-addressed ArtifactStore, and removed from durable
+   immediately admitted into that Build's working byte area, and removed from durable
    result metadata.
 5. The selected `BuildDispatchStore` owns shared Build capacity. This Provider contributes one KIE
    pool plus exact capability lanes and a conservative create-task interval; it does not introduce Redis or another source of

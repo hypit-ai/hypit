@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import type { BlobRef, Digest } from "@hypit/protocol";
 
@@ -11,7 +11,7 @@ export class MemoryArtifactStore implements ArtifactStore {
     const copy = Uint8Array.from(bytes);
     const digest = `sha256:${createHash("sha256").update(copy).digest("hex")}` as Digest;
     this.#values.set(digest, copy);
-    return { kind: "blob", digest, size: copy.byteLength, mediaType };
+    return { kind: "blob", resource: `res_${randomUUID()}`, digest, size: copy.byteLength, mediaType };
   }
 
   async get(digest: Digest): Promise<Uint8Array | undefined> {

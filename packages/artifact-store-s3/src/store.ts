@@ -127,7 +127,7 @@ export class S3ArtifactStore implements ArtifactStore {
         : { ExpectedBucketOwner: this.#expectedBucketOwner }),
     } as const;
     await this.#client.put(input);
-    return { kind: "blob", digest, size: copy.byteLength, mediaType };
+    return { kind: "blob", resource: `res_${randomUUID()}`, digest, size: copy.byteLength, mediaType };
   }
 
   async get(digest: Digest): Promise<Uint8Array | undefined> {
@@ -256,7 +256,7 @@ export class S3ArtifactStore implements ArtifactStore {
     } finally {
       await client.delete?.({ Bucket: this.#bucket, Key: staging, ...owner }).catch(() => undefined);
     }
-    return { kind: "blob", digest, size, mediaType };
+    return { kind: "blob", resource: `res_${randomUUID()}`, digest, size, mediaType };
   }
 
 }
