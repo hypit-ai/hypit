@@ -4,7 +4,7 @@ import {
   generationTypes,
   sealGeneratedAudioSet,
 } from "@hypit/generation";
-import type { GenerationMediaValue, GenerationRequest } from "@hypit/generation";
+import type { GenerationRequest } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
 import type { CanonicalValue, CapabilityRef } from "@hypit/protocol";
 import { credentialRef } from "@hypit/runtime";
@@ -12,11 +12,7 @@ import type { CredentialRef } from "@hypit/runtime";
 
 export const xiaomiMimoProviderModuleRef = { name: "@hypit/provider-xiaomi-mimo", version: "1" } as const;
 const mimoModelModule = { name: "@hypit/mimo-tts", version: "1" } as const;
-const modelNames = [
-  "mimo-v2.5-tts",
-  "mimo-v2.5-tts-voicedesign",
-  "mimo-v2.5-tts-voiceclone",
-] as const;
+const modelNames = ["mimo-v2.5-tts-voicedesign"] as const;
 type Model = typeof modelNames[number];
 
 const capabilities = Object.fromEntries(modelNames.map((name) => [name, {
@@ -34,7 +30,6 @@ export type CreateXiaomiMimoProviderOptions = {
   readonly defaultConcurrency?: number;
   readonly requestTimeoutMs?: number;
   readonly maxResponseBytes?: number;
-  readonly maxVoiceSampleBase64Bytes?: number;
   readonly fetch?: Fetch;
 };
 
@@ -57,11 +52,7 @@ function normalizeBaseUrl(value: string): string {
 function request(value: CanonicalValue, model: Model): GenerationRequest {
   const result = value as unknown as GenerationRequest;
   assert(result.ports !== null && typeof result.ports === "object", "Xiaomi MiMo request has no ports");
-  const allowed = model === "mimo-v2.5-tts"
-    ? new Set(["text", "instruction", "voice"])
-    : model === "mimo-v2.5-tts-voicedesign"
-      ? new Set(["text", "voiceDescription"])
-      : new Set(["text", "instruction", "sample"]);
+  const allowed = new Set(["text", "voiceDescription"]);
   assert(Object.keys(result.ports).every((name) => allowed.has(name)),
     `${model} request contains an unsupported port`);
   return result;
@@ -81,32 +72,6 @@ function credential(context: EndpointInvocationContext): string {
   const value = context.credentials.apiKey?.secret;
   assert(value !== undefined && value.length > 0, "Xiaomi MiMo API key is unavailable");
   return value;
-}
-
-async function readVoiceSample(
-  context: EndpointInvocationContext,
-  req: GenerationRequest,
-  maxBase64Bytes: number,
-): Promise<string> {
-  const values = req.ports.sample;
-  assert(values?.length === 1, "MiMo voice clone requires exactly one sample");
-  const value = values[0] as GenerationMediaValue;
-  assert(value.role === "audio", "MiMo voice clone sample must be audio");
-  const supported = new Set(["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav"]);
-  assert(supported.has(value.artifact.mediaType), "Xiaomi MiMo accepts only MP3 or WAV voice samples");
-  const encodedSize = 4 * Math.ceil(value.artifact.size / 3);
-  assert(encodedSize <= maxBase64Bytes,
-    `MiMo voice sample exceeds the configured ${maxBase64Bytes}-byte Base64 limit`);
-  const bytes = await context.artifacts.get(value.artifact.digest);
-  assert(bytes !== undefined, `MiMo voice sample ${value.artifact.digest} is unavailable`);
-  assert(bytes.byteLength === value.artifact.size, "MiMo voice sample size differs from its BlobRef");
-  const mediaType = value.artifact.mediaType === "audio/x-wav"
-    ? "audio/wav"
-    : value.artifact.mediaType === "audio/mp3" ? "audio/mpeg" : value.artifact.mediaType;
-  const encoded = Buffer.from(bytes).toString("base64");
-  assert(Buffer.byteLength(encoded, "utf8") <= maxBase64Bytes,
-    `MiMo voice sample exceeds the configured ${maxBase64Bytes}-byte Base64 limit`);
-  return `data:${mediaType};base64,${encoded}`;
 }
 
 function parseAudio(text: string, maxAudioBytes: number): Uint8Array {
@@ -162,10 +127,6 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
   const apiBaseUrl = normalizeBaseUrl(options.apiBaseUrl ?? "https://api.xiaomimimo.com/v1");
   const requestTimeoutMs = positiveInteger(options.requestTimeoutMs ?? 180_000, "requestTimeoutMs");
   const maxResponseBytes = positiveInteger(options.maxResponseBytes ?? 64 * 1024 * 1024, "maxResponseBytes");
-  const maxVoiceSampleBase64Bytes = positiveInteger(
-    options.maxVoiceSampleBase64Bytes ?? 10_000_000,
-    "maxVoiceSampleBase64Bytes",
-  );
   const fetcher = options.fetch ?? globalThis.fetch;
   const endpointCapabilities = modelNames.map((model) => ({
     capability: capabilities[model],
@@ -174,19 +135,10 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
     handler: async (context: EndpointInvocationContext) => {
       const req = request(context.need.constraints, model);
       const text = scalar(req, model, "text")!;
-      const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+      const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+        { role: "user", content: scalar(req, model, "voiceDescription")! },
+      ];
       const audio: Record<string, CanonicalValue> = { format: "wav" };
-      if (model === "mimo-v2.5-tts") {
-        const instruction = scalar(req, model, "instruction", false);
-        if (instruction !== undefined) messages.push({ role: "user", content: instruction });
-        audio.voice = scalar(req, model, "voice")!;
-      } else if (model === "mimo-v2.5-tts-voicedesign") {
-        messages.push({ role: "user", content: scalar(req, model, "voiceDescription")! });
-      } else {
-        const instruction = scalar(req, model, "instruction", false);
-        if (instruction !== undefined) messages.push({ role: "user", content: instruction });
-        audio.voice = await readVoiceSample(context, req, maxVoiceSampleBase64Bytes);
-      }
       messages.push({ role: "assistant", content: text });
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(new Error("Xiaomi MiMo request timed out")), requestTimeoutMs);

@@ -87,6 +87,4 @@
   </gemini:Generate>
 
   <mimo:VoiceDesign id="mimo-voice" speech={speech}>A clear, warm narrator with a lightly playful delivery.</mimo:VoiceDesign>
-  <mimo:Preset id="mimo-preset" speech={speech} voice="Chloe"/>
-  <mimo:VoiceClone id="mimo-clone" speech={speech} sample={reference-audio}/>
 </svml>

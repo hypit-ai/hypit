@@ -84,7 +84,7 @@ Look at existing Providers for reference:
 - `packages/provider-hyperframes-local/` — local Chrome rendering
 - `packages/provider-hyperframes-aws-lambda/` — asynchronous Step Functions/Lambda rendering
 - `packages/provider-media-aws-lambda/` — synchronous Lambda media execution over the shared ffmpeg body
-- `packages/provider-xiaomi-mimo/` — immediate official TTS API without importing the MiMo model package
+- `packages/provider-xiaomi-mimo/` — immediate official VoiceDesign API without importing the MiMo model package
 
 ## 4. Write the activation descriptor
 
@@ -222,4 +222,4 @@ hypit doctor hypit.runtime.json
 | `provider-hyperframes-aws-lambda` | Remote asynchronous job: Step Functions submission, polling and S3 streaming |
 | `provider-image-opencv-local` | Local Python: bounded OpenCV/NumPy with locked Python environment |
 | `provider-media-aws-lambda` | Remote synchronous Lambda: the same nine capabilities as local media |
-| `provider-xiaomi-mimo` | Remote immediate API: exact MiMo TTS requests to persisted audio Artifacts |
+| `provider-xiaomi-mimo` | Remote immediate API: exact MiMo VoiceDesign requests to persisted audio Artifacts |

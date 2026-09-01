@@ -21,7 +21,7 @@ export type CreateHypiHubProviderOptions = {
   readonly defaultConcurrency?: number;
   readonly pollIntervalMs?: number;
   readonly requestTimeoutMs?: number;
-  /** Expose HypiHub's MiMo audio capabilities. Disable when official MiMo owns audio. */
+  /** Expose HypiHub VoiceDesign. Defaults to enabled; set false only for an explicit alternate Provider. */
   readonly audio?: boolean;
   readonly fetch?: typeof globalThis.fetch;
   /** Overrides the default POST /v1/files upload for referenced artifacts. */
@@ -255,10 +255,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     credentials: { apiKey: options.apiKey ?? credentialRef("os", "hypihub.oauth") }, credentialInputs: { apiKey: { label: "HypiHub login" } }, defaultConcurrency: options.defaultConcurrency ?? 10,
     capabilities: [
       ...hypiHubRoutes
-      // HypiHub OAuth grants do not necessarily include the MiMo audio models. Keep
-      // official Xiaomi MiMo as the safe default; opting into HypiHub audio is
-      // an explicit Runtime decision for a key that actually has those models.
-      .filter((route) => options.audio === true || route.media !== "audio")
+      .filter((route) => options.audio !== false || route.media !== "audio")
       .map((route) => route.media === "audio"
         ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, lane: route.capability.name }
         : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, lane: route.capability.name }),

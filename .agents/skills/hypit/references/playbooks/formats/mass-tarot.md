@@ -7,7 +7,7 @@ ordered reveals and interpretations.
 
 - Write one authoritative Script with Selections/Moments for the question, choice window, each reveal,
   and the close.
-- Take the voice sample once with `mimo:Preset` or `mimo:VoiceDesign`. The reading is spoken by a
+- Take the voice sample once with `mimo:VoiceDesign`. The reading is spoken by a
   take, and that take is the base under the whole Segment — the cards and the spread cover it, and
   the speech and the picture stay one generation. `../craft/generated-dependencies.md` says why.
   Cut the Segment to fit one generation.
