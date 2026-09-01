@@ -116,7 +116,7 @@ writing a Run Source whose only purpose is to produce a component's own texture,
 the wrong place: generate it once while authoring the package and commit the file.
 
 Produce that file with `hypit image --prompt <text> --to <path>`, a direct billed HypiHub image-model
-call (default `@hypit/gpt-image`, using `HYPIHUB_API_KEY`; get a key at [hypit.ai](https://hypit.ai)). It writes a picture and nothing else; no
+call (default `@hypit/gpt-image`, using HypiHub OAuth via `hypit auth login` at [hypit.ai](https://hypit.ai)). It writes a picture and nothing else; no
 project Runtime Profile, Source, Run, Build or Record participates. A package asset is authoring
 input, not the output of anybody's video, so it is never a Target or Record.
 

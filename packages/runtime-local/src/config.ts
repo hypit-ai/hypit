@@ -438,7 +438,9 @@ async function inspectRuntimeConfig(
             code: "RUNTIME_CREDENTIAL_MISSING",
             message: `${slot.label} for Endpoint ${slot.endpoint} is not configured. ${
               slot.ref.store === "env"
-                ? `Set ${slot.ref.key} in this process environment.`
+                ? slot.ref.key === "HYPIHUB_API_KEY"
+                  ? `Sign in with HypiHub using: hypit auth login ${slot.endpoint} --runtime ${absolute}`
+                  : `Set ${slot.ref.key} in this process environment.`
                 : `Configure it with: hypit auth login ${slot.endpoint} --runtime ${absolute}`}`,
             subject: `${slot.endpoint}.${slot.slot}`,
           });

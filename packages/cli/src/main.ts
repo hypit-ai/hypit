@@ -1,4 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createServer } from "node:http";
+import { spawn } from "node:child_process";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 
@@ -91,6 +93,68 @@ type ParsedArgs = {
   /** Exact option spellings seen after positional dispatch. */
   readonly seenOptions: readonly string[];
 };
+
+const HYPIHUB_OAUTH_CLIENT_ID = "hyc_d5d5e8e7131b0c877756e66c";
+
+function base64url(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString("base64").replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
+}
+
+async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
+  const verifier = base64url(randomBytes(32));
+  const challenge = base64url(createHash("sha256").update(verifier).digest());
+  const state = base64url(randomBytes(24));
+  const server = createServer();
+  const callback = new Promise<string>((resolveCode, reject) => {
+    server.once("request", (request, response) => {
+      try {
+        const url = new URL(request.url ?? "/", "http://127.0.0.1");
+        if (url.pathname !== "/callback") throw new Error("unexpected OAuth callback path");
+        if (url.searchParams.get("state") !== state) throw new Error("HypiHub OAuth state mismatch");
+        const error = url.searchParams.get("error");
+        if (error !== null) throw new Error(`HypiHub OAuth authorization failed: ${error}`);
+        const code = url.searchParams.get("code");
+        if (code === null || code.length === 0) throw new Error("HypiHub OAuth callback contained no code");
+        response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+        response.end("Hypit is signed in. You can close this window.\n");
+        resolveCode(code);
+      } catch (error) {
+        response.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+        response.end("Hypit sign-in failed. You can close this window.\n");
+        reject(error);
+      } finally {
+        server.close();
+      }
+    });
+    server.once("error", reject);
+  });
+  await new Promise<void>((resolveListen, rejectListen) => {
+    server.listen(0, "127.0.0.1", () => resolveListen());
+    server.once("error", rejectListen);
+  });
+  const address = server.address();
+  if (address === null || typeof address === "string") throw new Error("could not open a local OAuth callback");
+  const redirectUri = `http://127.0.0.1:${address.port}/callback`;
+  const authorize = new URL("https://hypit.ai/oauth/authorize");
+  authorize.search = new URLSearchParams({
+    response_type: "code", client_id: HYPIHUB_OAUTH_CLIENT_ID, redirect_uri: redirectUri,
+    scope: "user:profile user:inference", state, code_challenge: challenge, code_challenge_method: "S256",
+  }).toString();
+  io.write(`Opening HypiHub login: ${authorize}\n`);
+  const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
+  const openerArgs = process.platform === "win32" ? ["/c", "start", "", authorize.toString()] : [authorize.toString()];
+  spawn(opener, openerArgs, { stdio: "ignore", detached: true }).unref();
+  const code = await callback;
+  const tokenResponse = await fetch("https://hypit.ai/oauth/token", {
+    method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri, client_id: HYPIHUB_OAUTH_CLIENT_ID, code_verifier: verifier }),
+  });
+  const body = await tokenResponse.text();
+  if (!tokenResponse.ok) throw new Error(`HypiHub OAuth token exchange failed (${tokenResponse.status}): ${body.slice(0, 200)}`);
+  const parsed = JSON.parse(body) as { access_token?: unknown };
+  if (typeof parsed.access_token !== "string" || parsed.access_token.length === 0) throw new Error("HypiHub OAuth returned no access token");
+  return parsed.access_token;
+}
 
 async function nearestProjectPackageRoot(start: string): Promise<string | undefined> {
   let directory = resolve(start);
@@ -1223,9 +1287,12 @@ export async function runCli(
             + "or select the writable OS CredentialStore in the Runtime Profile",
           );
         }
-        const raw = args.from === undefined
-          ? await io.readSecret?.(`${item.label}: `)
-          : await readFile(args.from, "utf8");
+        const oauth = item.ref.store === "os" && /hypihub/iu.test(`${item.endpoint} ${item.ref.key}`);
+        const raw = oauth && args.from === undefined
+          ? await hypiHubOAuthLogin(io)
+          : args.from === undefined
+            ? await io.readSecret?.(`${item.label}: `)
+            : await readFile(args.from, "utf8");
         if (raw === undefined) throw new Error("interactive credential input is unavailable; use --from <file>");
         const secret = raw.trim();
         if (secret.length === 0) throw new Error("credential input is empty");
