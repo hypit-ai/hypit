@@ -22,8 +22,7 @@ Connect only the references a component actually needs.
 
 - Use `gpt:Image` with ordered `gpt:Reference` children when a new character/scene image must preserve
   supplied identity or product facts.
-- Use `mimo:Preset` for a selected built-in voice or `mimo:VoiceDesign` for an English voice
-  description. Either one produces the sample, once per person.
+- Use `mimo:VoiceDesign` with a written voice description. Generate the sample once per person.
 - That sample is a reference on every take the person appears in, and the take speaks the Segment.
   `generated-dependencies.md` holds the rule and what it costs: one generation carries the speech and
   the picture, so the Segment's length and its picture's length are one number.

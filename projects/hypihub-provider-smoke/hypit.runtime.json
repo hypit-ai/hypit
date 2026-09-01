@@ -15,18 +15,7 @@
             "apiKey": { "store": "env", "key": "HYPIHUB_API_KEY" },
             "defaultConcurrency": 8,
             "pollIntervalMs": 5000,
-            "requestTimeoutMs": 120000,
-            "audio": false
-          }
-        },
-        "xiaomi-mimo.smoke": {
-          "use": "@hypit/provider-xiaomi-mimo",
-          "pool": "xiaomi-mimo.smoke",
-          "config": {
-            "apiBaseUrl": "https://api.xiaomimimo.com/v1",
-            "apiKey": { "store": "env", "key": "MIMO_API_KEY" },
-            "defaultConcurrency": 2,
-            "requestTimeoutMs": 180000
+            "requestTimeoutMs": 120000
           }
         }
       }
