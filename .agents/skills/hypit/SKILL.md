@@ -39,15 +39,31 @@ credential setup, not video production. Do not read or enter the reconstruction,
 observer, playbook, vocabulary, preview, or recovery routes; do not inspect media, create a project,
 start a Worker, or ask which observer to use. Do not read any supporting reference for this path,
 including `environment.md` and `credentials.md`; this section contains the needed login instructions.
-Do not inspect `.env`, `hypit.runtime.json`, package code or CredentialStore implementations. Confirm
-the launcher, use the currently selected Runtime Profile (or the explicit profile the author names),
-and run only `auth status` for the HypiHub Endpoint. If the status says the credential store is
-read-only or the Endpoint uses `env`, do not run `auth login`: report that OAuth login is unavailable
-for that Endpoint and stop without source or filesystem investigation. If the status is writable and
-missing, explain before opening the browser that no usable credential is configured, OAuth avoids
-copying an API key, an account without an active subscription can purchase one at hypit.ai after
-signing in, and opening login does not submit a paid generation; then run `auth login` and wait for it
-to finish.
+This is a strict login-only fast path, not a general environment-diagnosis route. Do not run
+`ls`, `find`, `rg`, `pwd`, `which`, `cat`, `head`, `tail`, `grep`, `doctor`, `runtime status`,
+`runtime logs`, `runtime up`, any `--help` command, or any other exploratory command. Do not inspect
+`.env`, `hypit.runtime.json`, package code, CredentialStore implementations, or repository metadata.
+Do not compose exploratory shell commands around the login commands. Use the already selected Runtime
+Profile (or the explicit profile the author names) and invoke the configured launcher directly. For
+the standard HypiHub OAuth endpoint, the only allowed probe is:
+
+```bash
+hypit auth status hypihub.default [--runtime <explicit-profile>]
+```
+
+If that status says the credential store is read-only, the Endpoint uses `env`, or the Endpoint is not
+declared in the selected Profile, report that OAuth login is unavailable for the selected Endpoint and
+stop immediately. Do not investigate why with source or filesystem reads. If the status is writable
+and missing, first explain that no usable credential is configured, OAuth avoids copying an API key,
+an account without an active subscription can purchase one at hypit.ai after signing in, and opening
+login does not submit a paid generation; then immediately run:
+
+```bash
+hypit auth login hypihub.default [--runtime <explicit-profile>]
+```
+
+Wait for it to finish. The login-only path consists solely of `auth status`, the one short explanation,
+and `auth login`; never add discovery, help, diagnostics, or source inspection between them.
 
 ## Credentials: run HypiHub login for the author
 
