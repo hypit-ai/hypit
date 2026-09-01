@@ -260,7 +260,7 @@ For a media slot, declare an Artifact Fragment input. Producer inputs are `Typed
 value is under `kind === "inline"`. Branch on BlobRef `mediaType` (`image/*` or `video/*`) when
 choosing the Visual IR element, and still draw the empty frame/cell when no material is supplied.
 `hypit image` is a direct, billed HypiHub image-model call (default `@hypit/gpt-image`, credential
-`HYPIHUB_API_KEY`; get a key at [hypit.ai](https://hypit.ai)); it does not use a project Runtime Profile, Build or Run Source. Obtain approval
+HypiHub OAuth via `hypit auth login` at [hypit.ai](https://hypit.ai)); it does not use a project Runtime Profile, Build or Run Source. Obtain approval
 before using it and reserve it for package-owned chrome.
 
 ```typescript

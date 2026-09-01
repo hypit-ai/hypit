@@ -44,7 +44,7 @@ test("HypiHub Gemini points unavailable models to HypiHub", async () => {
     fetch: async () => new Response("missing", { status: 404 }),
   });
   await assert.rejects(() => generate({ instruction: "x", parts: [{ text: "x" }] }),
-    /get a HypiHub key with this model enabled at https:\/\/hypit\.ai/iu);
+    /sign in to HypiHub at https:\/\/hypit\.ai with hypit auth login/iu);
 });
 
 test("HypiHub Gemini retries upstream rate limits without reuploading files", async () => {

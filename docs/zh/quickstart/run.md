@@ -185,7 +185,7 @@ hypit paths
 
 | 变量 | Provider / 用途 |
 |---|---|
-| `HYPIHUB_API_KEY` | HypiHub 付费生成与 Gemini VLM；前往 https://hypit.ai 获取 |
+| HypiHub OAuth | HypiHub 付费生成与 Gemini VLM；运行 `hypit auth login hypihub.default --runtime hypit.runtime.json` 并在 https://hypit.ai 登录 |
 | `KIE_API_KEY` | 仅在显式选择 KIE Provider 时使用 |
 | `MIMO_API_KEY` | Xiaomi MiMo TTS；只有选择该 Endpoint 时才需要 |
 
