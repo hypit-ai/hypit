@@ -68,6 +68,13 @@ test("HypiHub uploads referenced Artifacts once, submits their HTTPS URLs, and p
   const fakeFetch: typeof globalThis.fetch = async (input, init) => {
     const url = String(input);
     calls.push(url);
+    if (url.endsWith("/v1/files/uploads")) {
+      assert.equal(init?.method, "POST");
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      assert.equal(body.bytes, 3);
+      assert.equal(typeof body.sha256, "string");
+      return Response.json({ upload_mode: "api_multipart" });
+    }
     if (url.endsWith("/v1/files")) {
       assert.equal(init?.method, "POST");
       assert.equal((init?.headers as Record<string, string>).authorization, "Bearer test-key");
@@ -114,7 +121,7 @@ test("HypiHub uploads referenced Artifacts once, submits their HTTPS URLs, and p
   if (started.status !== "pending") return;
   const completed = await endpoint.poll({ ...common, handle: started.handle });
   assert.equal(completed.status, "completed");
-  assert.equal(calls.length, 6);
+  assert.equal(calls.length, 7);
 });
 
 test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every media Artifact", async () => {
@@ -136,6 +143,9 @@ test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every med
   const registry = new EndpointRegistry();
   await createHypiHubProvider({ fetch: async (input, init) => {
     const url = String(input);
+    if (url.endsWith("/v1/files/uploads")) {
+      return Response.json({ upload_mode: "api_multipart" });
+    }
     if (url.endsWith("/v1/files")) {
       assert.ok(init?.body instanceof FormData);
       const file = init.body.get("file");
@@ -163,4 +173,63 @@ test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every med
     { fileData: { mimeType: "image/png", fileUri: "https://hypit.ai/files/1" } },
     { fileData: { mimeType: "video/mp4", fileUri: "https://hypit.ai/files/2" } },
   ] }]);
+});
+
+test("HypiHub splits a large Artifact across accelerated S3 parts and retries only the failed part", async () => {
+  const artifacts = new MemoryArtifactStore();
+  const reference = await artifacts.put(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]), "video/mp4");
+  const request = need(sealSeedanceRequest("seedance-2-mini", {
+    prompt: ["Continue the motion."], referenceVideo: [{ role: "video", artifact: reference }],
+    resolution: ["720p"], aspectRatio: ["16:9"], duration: [5], generateAudio: [false], webSearch: [false],
+  }) as unknown as CanonicalValue);
+  const signedBatches: number[][] = [];
+  const putAttempts = new Map<number, number>();
+  let completedParts: unknown;
+  const fakeFetch: typeof globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/v1/files/uploads")) {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      assert.equal(body.bytes, 12);
+      assert.equal(body.mime_type, "video/mp4");
+      assert.equal(Buffer.from(String(body.head_base64), "base64").byteLength, 12);
+      return Response.json({
+        upload_mode: "s3_multipart", upload_id: "up_test", asset_id: "as_test",
+        part_size: 5, part_count: 3, concurrency: 2,
+      }, { status: 201 });
+    }
+    if (url.endsWith("/v1/files/uploads/up_test/parts")) {
+      const body = JSON.parse(String(init?.body)) as { parts: Array<{ part_number: number; checksum_sha256: string }> };
+      signedBatches.push(body.parts.map((part) => part.part_number));
+      return Response.json({ parts: body.parts.map((part) => ({
+        part_number: part.part_number,
+        url: `https://private.s3-accelerate.amazonaws.com/opaque-part-${part.part_number}?signature=secret`,
+        headers: { "content-length": part.part_number === 3 ? "2" : "5", "x-amz-checksum-sha256": part.checksum_sha256 },
+      })) });
+    }
+    if (url.startsWith("https://private.s3-accelerate.amazonaws.com/")) {
+      const match = /opaque-part-(\d+)/u.exec(url); assert.ok(match);
+      const partNumber = Number(match[1]); const attempt = (putAttempts.get(partNumber) ?? 0) + 1;
+      putAttempts.set(partNumber, attempt);
+      if (partNumber === 2 && attempt === 1) return new Response("retry", { status: 503 });
+      const headers = init?.headers as Record<string, string>;
+      return new Response(null, { status: 200, headers: { etag: `\"part-${partNumber}\"`, "x-amz-checksum-sha256": headers["x-amz-checksum-sha256"] ?? "" } });
+    }
+    if (url.endsWith("/v1/files/uploads/up_test/complete")) {
+      completedParts = (JSON.parse(String(init?.body)) as Record<string, unknown>).parts;
+      return Response.json({ url: "https://hypit.ai/files/as_reference.mp4" });
+    }
+    if (url.endsWith("/v1/models/bytedance%2Fseedance-2-mini")) return Response.json({ endpoints: ["videos"] });
+    if (url.endsWith("/v1/videos")) return Response.json({ id: "job_direct_upload", status: "queued" });
+    throw new Error(`Unexpected URL ${url}`);
+  };
+  const endpoint = await endpointFor(request, fakeFetch);
+  const started = await endpoint.start({
+    command: { kind: "fulfill-need", id: "command:direct-upload", need: request },
+    need: request, artifacts, credentials: { apiKey: { secret: "test-key" } }, operation: "operation:direct-upload",
+  });
+  assert.equal(started.status, "pending");
+  assert.deepEqual(signedBatches, [[1, 2, 3], [2]]);
+  assert.deepEqual([...putAttempts.entries()].sort(), [[1, 1], [2, 2], [3, 1]]);
+  assert.ok(Array.isArray(completedParts));
+  assert.equal(completedParts.length, 3);
 });
