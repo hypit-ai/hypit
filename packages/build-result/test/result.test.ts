@@ -55,6 +55,9 @@ test("one same-Build resource backs a public video and a SemanticTake payload", 
         { name: "unused.video", output: "logical:unused" },
       ],
     });
+    const storedManifest = JSON.parse(await readFile(join(result.directory, "result.json"), "utf8")) as object;
+    assert.equal(Object.hasOwn(storedManifest, "id"), false);
+    assert.equal((await result.read()).id, "bld_20260902T100000000Z_0000000001");
     const manifest = await result.sync({
       state: state({
         records: [
@@ -164,6 +167,48 @@ test("filesystem repository streams one normalized byte range", async () => {
   }
 });
 
+test("filesystem decodes Result and writer data before exposing it", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-result-decode-"));
+  const malformed = "bld_20260902T100000010Z_0000000001";
+  const unfinished = "bld_20260902T100000011Z_0000000001";
+  try {
+    const directory = join(root, malformed);
+    await mkdir(directory, { recursive: true });
+    await writeFile(join(directory, "result.json"), JSON.stringify({
+      format: "hypit.build-result@2",
+      source: { path: "main.svml" },
+      targets: ["video"],
+      outputs: {
+        video: {
+          type: videoType,
+          value: { kind: "build-file", path: "../outside.mp4", size: 1, mediaType: "video/mp4" },
+        },
+      },
+    }));
+    const repository = new FileBuildResultRepository(root);
+    await assert.rejects(repository.read(malformed), /outputs\["video"\]\.value\.path is not a Result-relative path/u);
+
+    const writer = await repository.create({
+      id: unfinished,
+      source: { path: "main.svml" },
+      targets: [],
+      publishedOutputs: [],
+    });
+    await writeFile(join(root, unfinished, ".writer.json"), JSON.stringify({
+      resources: null,
+      values: {},
+      publishedOutputs: [],
+      forwards: [],
+    }));
+    await assert.rejects(writer.sync({
+      state: state({ records: [], bindings: [] }),
+      resources: { async open() { return undefined; } },
+    }), /\.writer\.json\.resources must be an object/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("reserved-looking domain objects remain ordinary Composite data", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-json-reference-"));
   const id = "bld_20260902T100000000Z_0000000001";
@@ -172,7 +217,6 @@ test("reserved-looking domain objects remain ordinary Composite data", async () 
     await mkdir(join(directory, "values"), { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
       format: "hypit.build-result@2",
-      id,
       source: { path: "main.svml" },
       targets: ["value"],
       outcome: "complete",

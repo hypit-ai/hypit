@@ -123,6 +123,11 @@ test("S3 keeps the same Build Result model as the filesystem repository", async 
       { name: "shot.video", output: "logical:video" },
     ],
   });
+  const storedManifestKey = [...client.objects.keys()].find((key) => key.endsWith("/result.json"));
+  assert.notEqual(storedManifestKey, undefined);
+  const storedManifest = JSON.parse(new TextDecoder().decode(client.objects.get(storedManifestKey!)!)) as object;
+  assert.equal(Object.hasOwn(storedManifest, "id"), false);
+  assert.equal((await writer.read()).id, "bld_20260902T100000000Z_0000000001");
   const manifest = await writer.sync({
     state: state({
       records: [
@@ -218,6 +223,20 @@ test("S3 opens only the requested byte range of a Result file", async () => {
   const chunks: number[] = [];
   for await (const chunk of stream!) chunks.push(...chunk);
   assert.equal(new TextDecoder().decode(Uint8Array.from(chunks)), "2345");
+});
+
+test("S3 uses the shared Result decoder before exposing a manifest", async () => {
+  const client = new MemoryS3();
+  const repository = new S3BuildResultRepository({ bucket: "unused", client });
+  const build = "bld_20260902T100000012Z_0000000001";
+  const physical = `${(Number.MAX_SAFE_INTEGER - Date.parse("2026-09-02T10:00:00.012Z")).toString().padStart(16, "0")}-${build}`;
+  client.objects.set(`${physical}/result.json`, new TextEncoder().encode(JSON.stringify({
+    format: "hypit.build-result@2",
+    source: { path: "main.svml" },
+    targets: [],
+    outputs: null,
+  })));
+  await assert.rejects(repository.read(build), /result\.json\.outputs must be an object/u);
 });
 
 test("S3 diagnosis performs one bounded prefix listing", async () => {

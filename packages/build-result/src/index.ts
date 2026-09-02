@@ -2,6 +2,13 @@ export {
   assertBuildResultValueDocument,
   assertBuildResultSeed,
 } from "./types.js";
+export {
+  decodeBuildResultJson,
+  decodeBuildResultManifest,
+  decodeBuildResultValueDocument,
+  decodeBuildResultWriterState,
+  encodeBuildResultManifest,
+} from "./decode.js";
 export { syncBuildResultOutputs } from "./writer.js";
 export {
   FileBuildResult,
