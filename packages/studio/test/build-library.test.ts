@@ -50,6 +50,16 @@ test("Studio library joins this environment's Builds with project Build Result f
     async updatePresentation() { throw new Error("read-only fixture"); },
     async read(build) { return manifests.find((item) => item.id === build); },
     async browse() { return { results: manifests }; },
+    async describeOutput(build, output) {
+      const manifest = manifests.find((item) => item.id === build);
+      const value = manifest?.outputs[output as "final.video"];
+      return value === undefined ? undefined : {
+        type: value.type,
+        kind: "resource",
+        size: value.value.size,
+        mediaType: value.value.mediaType,
+      };
+    },
     async resolve(build, output) {
       const manifest = manifests.find((item) => item.id === build);
       const value = manifest?.outputs[output as "final.video"];

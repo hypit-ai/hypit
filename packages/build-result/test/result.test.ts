@@ -239,6 +239,29 @@ test("reserved-looking domain objects remain ordinary Composite data", async () 
   }
 });
 
+test("describing a Composite Output reads only its manifest", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-result-describe-"));
+  const id = "bld_20260902T100000020Z_0000000001";
+  try {
+    const directory = join(root, id);
+    await mkdir(directory, { recursive: true });
+    await writeFile(join(directory, "result.json"), JSON.stringify({
+      format: "hypit.build-result@2",
+      source: { path: "main.svml" },
+      targets: ["take"],
+      outcome: "complete",
+      finishedAt: 1,
+      outputs: { take: { type: takeType, value: { kind: "value", path: "values/missing.json" } } },
+    }));
+    const repository = new FileBuildResultRepository(root);
+    const description = await repository.describeOutput(id, "take");
+    assert.equal(description?.kind, "composite");
+    await assert.rejects(repository.resolve(id, "take"), /missing\.json/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("an explicitly reused public output is a forward reference and copies no bytes", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-result-reuse-"));
   try {

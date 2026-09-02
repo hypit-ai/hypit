@@ -497,6 +497,7 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
       read: async (build) => await base.read(build),
       updatePresentation: async (build, update) => await base.updatePresentation(build, update),
       browse: async (request) => await base.browse(request),
+      describeOutput: async (build, output) => await base.describeOutput(build, output),
       resolve: async (build, output) => await base.resolve(build, output),
       openFile: async (build, file) => await base.openFile(build, file),
     };
@@ -545,6 +546,7 @@ test("a failed Result creation leaves no active Build", async () => {
     async read() { return undefined; },
     async updatePresentation() { throw new Error("result repository refused update"); },
     async browse() { return { results: [] }; },
+    async describeOutput() { return undefined; },
     async resolve() { return undefined; },
     async openFile() { return undefined; },
   };

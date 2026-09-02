@@ -35,8 +35,8 @@ async function fixture(root: string): Promise<void> {
   const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
     id: "bld_20260902T110000000Z_0000000001",
     title: "episode-stage",
-    source: { path: join(root, "main.svml") },
-    run: { path: join(root, "build.svrun") },
+    source: { path: "main.svml" },
+    run: { path: "build.svrun" },
     targets: ["stage.value"],
     publishedOutputs: [{ name: "stage.value", output: "logical:stage" }],
   });
@@ -47,11 +47,27 @@ async function fixture(root: string): Promise<void> {
   await result.finish({ outcome: "complete" });
 }
 
+function resultDistribution(): CliDistribution {
+  return {
+    async openProjectResults(projectRoot: string) {
+      return {
+        location: {
+          root: projectRoot,
+          selection: { use: "test.results", config: {} },
+        },
+        repository: new FileBuildResultRepository(join(projectRoot, ".hypit", "results")),
+        close() {},
+      };
+    },
+    async diagnoseProjectResults() { return { diagnostics: [] }; },
+  } as unknown as CliDistribution;
+}
+
 async function jsonCommand(args: readonly string[], root: string): Promise<unknown> {
   let output = "";
   await runCli([...args, "--workspace", root, "--json"], {
     write(text) { output += text; },
-  }, {} as CliDistribution);
+  }, resultDistribution());
   return JSON.parse(output);
 }
 
@@ -105,6 +121,37 @@ test("builds, history, inspect and get read project Build Results without openin
       jsonCommand(["get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination], root),
       /Export destination .* already exists/u,
     );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("history scans older pages for matches and compares project-relative source paths", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-history-"));
+  try {
+    await fixture(root);
+    const repository = new FileBuildResultRepository(join(root, ".hypit", "results"));
+    for (const id of [
+      "bld_20260902T110000001Z_0000000001",
+      "bld_20260902T110000002Z_0000000001",
+    ]) {
+      const writer = await repository.create({
+        id,
+        source: { path: "other.svml" },
+        targets: [],
+        publishedOutputs: [],
+      });
+      await writer.finish({ outcome: "failed", failure: "fixture without the requested Output" });
+    }
+
+    const history = await jsonCommand([
+      "history", "stage.value", "--source", join(root, "main.svml"), "--limit", "1",
+    ], root) as {
+      readonly source: string;
+      readonly entries: readonly { readonly build: string }[];
+    };
+    assert.equal(history.source, "main.svml");
+    assert.deepEqual(history.entries.map((item) => item.build), ["bld_20260902T110000000Z_0000000001"]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -202,22 +249,22 @@ test("get requires an exact Output name and an explicit destination", async () =
   try {
     const silent = { write() {} };
     await assert.rejects(
-      runCli(["get", "bld_20260902T110000000Z_0000000001", "--workspace", root], silent, {} as CliDistribution),
+      runCli(["get", "bld_20260902T110000000Z_0000000001", "--workspace", root], silent, resultDistribution()),
       /get requires --output/u,
     );
     await assert.rejects(
       runCli([
         "get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--workspace", root,
-      ], silent, {} as CliDistribution),
+      ], silent, resultDistribution()),
       /get requires --to/u,
     );
     await assert.rejects(
       runCli(["history", "--source", join(root, "main.svml"), "--workspace", root], silent,
-        {} as CliDistribution),
+        resultDistribution()),
       /history requires one exact Output name/u,
     );
     await assert.rejects(
-      runCli(["history", "stage.value", "--pin", "--workspace", root], silent, {} as CliDistribution),
+      runCli(["history", "stage.value", "--pin", "--workspace", root], silent, resultDistribution()),
       /unknown option --pin/u,
     );
   } finally {

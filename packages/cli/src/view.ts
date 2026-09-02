@@ -3,7 +3,7 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 import type {
   BuildResultManifest,
   BuildResultRepository,
-  RepositoryBuildResultOutput,
+  RepositoryBuildResultOutputDescription,
 } from "@hypit/build-result";
 import { buildIdCreatedAt } from "@hypit/protocol";
 import type { TypeRef } from "@hypit/protocol";
@@ -17,6 +17,8 @@ export type CliOutputView = {
   readonly kind: PublicOutputKind;
   readonly target: boolean;
   readonly highlighted: boolean;
+  readonly mediaType?: string;
+  readonly size?: number;
 };
 
 export type CliBuildSummary = {
@@ -92,27 +94,25 @@ export function buildCreatedAtIso(build: string): string {
   return new Date(createdAt).toISOString();
 }
 
-export function publicOutputKind(output: RepositoryBuildResultOutput): PublicOutputKind {
-  if (output.value.kind === "build-file") return "resource";
-  if (output.value.kind === "value") return "composite";
-  return "scalar";
-}
-
 export async function outputView(
   repository: BuildResultRepository,
   manifest: BuildResultManifest,
   name: string,
 ): Promise<CliOutputView> {
-  const output = await repository.resolve(manifest.id, name);
+  const output = await repository.describeOutput(manifest.id, name);
   if (output === undefined) {
     throw new Error(`Build Result ${manifest.id} Output ${name} cannot be resolved`);
   }
   return {
     name,
     type: cliTypeName(output.type),
-    kind: publicOutputKind(output),
+    kind: output.kind,
     target: manifest.targets.includes(name),
     highlighted: manifest.highlightedOutputs?.includes(name) === true,
+    ...(output.kind === "resource" ? {
+      mediaType: output.mediaType,
+      size: output.size,
+    } : {}),
   };
 }
 

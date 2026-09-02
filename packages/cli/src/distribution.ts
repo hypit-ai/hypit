@@ -46,7 +46,7 @@ export type CliDistribution = {
     readonly distributionPackageRoot?: string;
   }): Promise<NodeRuntimeHost>;
   /** Open project-owned Result history even when no Runtime Profile is selected. */
-  openProjectResults?(projectRoot: string, options: {
+  openProjectResults(projectRoot: string, options: {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;
   }): Promise<{
@@ -55,7 +55,7 @@ export type CliDistribution = {
     close(): void | Promise<void>;
   }>;
   /** Actively diagnose this project's selected Result Store without reading its history. */
-  diagnoseProjectResults?(projectRoot: string, options: {
+  diagnoseProjectResults(projectRoot: string, options: {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;
   }): Promise<{

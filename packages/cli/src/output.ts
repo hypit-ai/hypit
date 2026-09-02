@@ -1,5 +1,7 @@
 import { relative, resolve } from "node:path";
 
+import type { OperationalMachineView } from "./machine-view.js";
+
 export type CliTerminal = {
   readonly isTTY: boolean;
   readonly color: boolean;
@@ -33,9 +35,10 @@ export type CliDiagnostic = {
 };
 
 export type DoctorOutput = {
-  readonly format: "hypit.cli-doctor@2";
+  readonly format: "hypit.cli-doctor@3";
   readonly ok: boolean;
-  readonly profile: string;
+  readonly project: string;
+  readonly profile?: string;
   readonly diagnosticCount: number;
   readonly diagnostics: readonly CliDiagnostic[];
   readonly omittedDiagnostics?: number;
@@ -110,7 +113,7 @@ export type PlanOutput = {
   readonly preflight?: PlanPreflight;
 };
 
-export type CliMachineView = Readonly<Record<string, unknown>>;
+export type CliMachineView = OperationalMachineView;
 
 export type CliPresentation =
   | {
@@ -196,7 +199,8 @@ function heading(status: "success" | "warning" | "error" | "info", text: string,
 function renderDoctor(view: Extract<CliPresentation, { kind: "doctor" }>, io: CliIo, colors: Palette): string {
   const lines = [colors.accent(colors.strong("Hypit Doctor")), ""];
   lines.push(...facts([
-    ["Profile", shortPath(view.machine.profile)],
+    ["Project", shortPath(view.machine.project)],
+    ...(view.machine.profile === undefined ? [] : [["Profile", shortPath(view.machine.profile)] as const]),
   ], colors));
   lines.push("");
   if (view.machine.diagnostics.length === 0) {
@@ -239,19 +243,17 @@ function renderAuthorCheck(
   if (readable.length > 0) {
     lines.push("", colors.strong("Outputs"));
     const ordered = [...readable].sort((left, right) => left.name.localeCompare(right.name));
-    const shown = ordered.slice(0, 12);
-    const width = Math.max(...shown.map((item) => item.name.length));
-    for (const item of shown) {
+    const width = Math.max(...ordered.map((item) => item.name.length));
+    for (const item of ordered) {
       lines.push(`  ${colors.accent(item.name.padEnd(width))}  ${item.type}`);
     }
-    const omitted = (view.machine.omittedOutputs ?? 0) + Math.max(0, ordered.length - shown.length);
-    if (omitted > 0) {
-      lines.push(`  ${colors.dim(`${omitted} more · use --limit <count>`)}`);
+    if ((view.machine.omittedOutputs ?? 0) > 0) {
+      lines.push(`  ${colors.dim(`${view.machine.omittedOutputs} more · use --limit <count>`)}`);
     }
   }
   if (verbose && view.machine.details !== undefined && view.machine.details.values.length > 0) {
     lines.push("", colors.strong("Values"));
-    for (const item of view.machine.details.values.slice(0, 12)) {
+    for (const item of view.machine.details.values) {
       lines.push(`  ${colors.accent(item.name)}  ${item.type}`);
     }
   }
@@ -403,10 +405,10 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
     ],
     doctor: [
       colors.accent(colors.strong("hypit doctor")),
-      colors.dim("Diagnose one complete declarative Runtime Profile without submitting work."),
+      colors.dim("Diagnose project Results and, when selected or supplied, one Runtime Profile."),
       "",
       "  hypit doctor [<runtime-profile>] [--workspace <project>]",
-      "  Checks the Runtime deployment and the project's selected Result Store.",
+      "  Without a Runtime Profile, checks only the project's selected Result Store.",
     ],
     plan: [
       colors.accent(colors.strong("hypit plan")),
@@ -431,8 +433,8 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("hypit runtime")),
       colors.dim("Select a project Runtime Profile, then operate its durable Worker."),
       "",
-      "  hypit runtime use <profile>       select the Profile for this project",
-      "  hypit runtime unset               remove only the local selection",
+      "  hypit runtime use <profile> [--workspace <project>]  select the project Profile",
+      "  hypit runtime unset [--workspace <project>]          remove only that selection",
       "  hypit runtime up [<profile>]      prepare selected packages, programs and Worker",
       "  hypit runtime status [<profile>]  inspect Worker, active Builds and declared programs",
       "  hypit runtime logs [<profile>] [--lines <count>]",
@@ -500,7 +502,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
     ],
     history: [
       colors.accent(colors.strong("hypit history")),
-      colors.dim("Find project Build Outputs from local result manifests."),
+      colors.dim("Find one named Output across project-owned Build Results."),
       "",
       "  hypit history <output-name> [--workspace <project>] [--source <author-source>] [--limit <count>] [--before <build-id>]",
     ],

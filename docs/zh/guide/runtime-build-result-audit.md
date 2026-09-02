@@ -160,6 +160,22 @@ manifest 中，不再耦合路径、平台大小写或文件系统字符规则�
 主动 doctor 只做一次有上限的 prefix 列表。项目 Result doctor 与 Runtime doctor 在 CLI 输出中合并，但
 Result 选择仍属于 `hypit.results.json`，没有塞回 Runtime Profile。
 
+### CLI 只组合公开能力
+
+通用 CLI 不再自行选择文件系统 Result Repository；Distribution 必须显式提供项目 Result 的打开与诊断能力。
+`builds / history / inspect / get / result edit` 只打开项目 Repository，`status` 在没有 Runtime 时也能读取结束
+Result；`result discard` 只打开精确的 Result control，不再为了删除一份未提交完成的草稿顺带打开执行状态。
+
+命令实现按职责拆成参数解析、项目 Result、活动执行、外部环境、Build 观察、公开视图与终端渲染。JSON 输出是
+显式、版本化且有上限的视图联合，不再接受任意 Runtime/Repository 对象。`history --limit` 以匹配到的 Output
+数量为准沿 Repository cursor 继续扫描，Source 过滤统一按项目相对路径解释；它不建立索引。`inspect` 与
+`history` 只读取 manifest 级 Output 描述来判断 Scalar、Composite 或 Resource，不为列表展示打开 Composite
+正文或媒体字节。
+
+通用 CLI 不再含 HypiHub 名称、OAuth 地址或 client id。需要交互登录的 Endpoint 在自己的凭据描述中声明通用
+OAuth PKCE 获取参数，CLI 只执行该声明；普通密钥与 JSON 凭据仍走所选 Credential Store。这里的 PKCE S256
+只属于 OAuth 协议认证，不参与内容身份、Result 寻址或复用。
+
 ### Reference Video 工具回到内容工具
 
 `reference-video-tools` 已删除 route/revision/variant 状态机、恢复游标、内容摘要证据目录和聚合批准流程。
@@ -195,8 +211,6 @@ Result 选择仍属于 `hypit.results.json`，没有塞回 Runtime Profile。
   用户显式执行的活动状态迁移，要么明确宣布旧活动 Runtime 不可迁移；不能把它做成启动时兜底或 Build 重跑。
 - `hypit.build-result@1`、旧随机 Build id 与旧 S3 物理 key 不进入 Core/Runtime 兼容分支。若发布前确认用户确实
   有必须保留的旧 Result，只能提供一次性、显式指定源和目标的迁移工具；新 Repository 浏览会忽略非有序目录。
-- 项目 Result doctor 已经独立实现，但 CLI 只能通过要求 Runtime Profile 的 `hypit doctor` 间接调用。它应有
-  不要求 Runtime 的项目入口；诊断仍只检查选中的 adapter 和一次有界存储访问，不扫描历史。
 - 是否提供一个内置的纯本地 Runtime Profile 仍是产品决定。目前 Result Store 已有文件系统默认值，但
   Endpoint、Program 和 Service 不会因为机器缺少 S3 或 Lambda 就偷偷改选另一条技术路线。
 

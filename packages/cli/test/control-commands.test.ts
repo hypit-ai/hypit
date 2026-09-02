@@ -279,7 +279,7 @@ test("result discard invokes only the exact one-shot Result control", async () =
     "result", "discard", "build-submitting", "--runtime", "/tmp/runtime.json", "--json",
   ], { write: (text) => { output += text; } }, distribution);
 
-  assert.deepEqual(calls, ["discard:build-submitting", "result-control.close", "control.close"]);
+  assert.deepEqual(calls, ["discard:build-submitting", "result-control.close"]);
   assert.deepEqual(JSON.parse(output), {
     format: "hypit.cli-result-discard@2", build: "build-submitting", discarded: true,
   });
@@ -316,6 +316,32 @@ test("command options fail closed instead of being silently ignored", async () =
     ], io, distribution),
     /profile delegated: .*hypit\.runtime\.ts/u,
   );
+});
+
+test("doctor diagnoses project Results without requiring a Runtime Profile", async () => {
+  const calls: string[] = [];
+  const distribution = {
+    async diagnoseProjectResults(projectRoot: string) {
+      calls.push(`results:${projectRoot}`);
+      return { diagnostics: [] };
+    },
+    async openRuntimeHost() {
+      calls.push("runtime");
+      throw new Error("doctor without a Profile must not open a Runtime");
+    },
+  } as unknown as CliDistribution;
+  let output = "";
+  await runCli(["doctor", "--workspace", "/tmp/hypit-project", "--json"], {
+    write(text) { output += text; },
+  }, distribution);
+  assert.deepEqual(calls, ["results:/tmp/hypit-project"]);
+  assert.deepEqual(JSON.parse(output), {
+    format: "hypit.cli-doctor@3",
+    ok: true,
+    project: "/tmp/hypit-project",
+    diagnosticCount: 0,
+    diagnostics: [],
+  });
 });
 
 test("auth opens only one Endpoint credential control, never the execution Runtime", async () => {

@@ -10,6 +10,7 @@ import type {
   BuildCatalogDescriptor,
   BuildCompletion,
   CapacityReservation,
+  CredentialAcquisition,
   CredentialRef,
   OperationSnapshot,
   RuntimeWorkerRunOptions,
@@ -61,6 +62,7 @@ export type RuntimeHostCredentialStatus = {
   readonly label: string;
   readonly kind: "secret" | "json";
   readonly ref: CredentialRef;
+  readonly acquisition?: CredentialAcquisition;
   readonly configured: boolean;
   readonly writable: boolean;
 };

@@ -58,10 +58,10 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
     } as unknown as CliDistribution;
     process.chdir(root);
 
-    await runCli(["runtime", "use", profile, "--json"], { write() {} }, distribution);
+    await runCli(["runtime", "use", profile, "--workspace", root, "--json"], { write() {} }, distribution);
     await runCli(["activity", "--json"], { write() {} }, distribution);
     await runCli(["activity", "--runtime", otherProfile, "--json"], { write() {} }, distribution);
-    await runCli(["runtime", "unset", "--json"], { write() {} }, distribution);
+    await runCli(["runtime", "unset", "--workspace", root, "--json"], { write() {} }, distribution);
 
     assert.deepEqual(calls, [
       `activity:${await realpath(profile)}`,

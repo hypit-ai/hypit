@@ -363,6 +363,8 @@ test("S3 forwarding can cross several Builds without copying the historical file
   await forward("bld_20260902T100000002Z_0000000001", "bld_20260902T100000001Z_0000000001");
   await forward("bld_20260902T100000003Z_0000000001", "bld_20260902T100000002Z_0000000001");
 
+  const described = await repository.describeOutput("bld_20260902T100000003Z_0000000001", "video");
+  assert.equal(described?.kind, "resource");
   const resolved = await repository.resolve("bld_20260902T100000003Z_0000000001", "video");
   assert.equal(resolved?.build, "bld_20260902T100000001Z_0000000001");
   assert.equal(resolved?.value.kind, "build-file");
