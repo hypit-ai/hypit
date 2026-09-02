@@ -252,7 +252,18 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   };
   return defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
-    credentials: { apiKey: options.apiKey ?? credentialRef("os", "hypihub.oauth") }, credentialInputs: { apiKey: { label: "HypiHub login" } }, defaultConcurrency: options.defaultConcurrency ?? 3,
+    credentials: { apiKey: options.apiKey ?? credentialRef("os", "hypihub.oauth") },
+    credentialInputs: { apiKey: {
+      label: "HypiHub login",
+      acquisition: {
+        kind: "oauth2-pkce",
+        authorizationEndpoint: "https://hypit.ai/oauth/consent",
+        tokenEndpoint: "https://hypit.ai/oauth/token",
+        clientId: "hyc_d5d5e8e7131b0c877756e66c",
+        scopes: ["user:profile", "user:inference"],
+      },
+    } },
+    defaultConcurrency: options.defaultConcurrency ?? 4,
     capabilities: [
       ...hypiHubRoutes
       .filter((route) => options.audio !== false || route.media !== "audio")

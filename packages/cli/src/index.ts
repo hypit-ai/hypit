@@ -21,6 +21,7 @@ export type {
   CliOutputView,
   PublicOutputKind,
 } from "./view.js";
+export type { OperationalMachineView } from "./machine-view.js";
 export type {
   CliCompilerOptions,
   CliDistribution,

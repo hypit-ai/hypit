@@ -11,6 +11,15 @@ export type CredentialValue = {
   readonly expiresAt?: number;
 };
 
+/** Host-facing way to acquire one credential; Provider-specific values stay in its Endpoint package. */
+export type CredentialAcquisition = {
+  readonly kind: "oauth2-pkce";
+  readonly authorizationEndpoint: string;
+  readonly tokenEndpoint: string;
+  readonly clientId: string;
+  readonly scopes: readonly string[];
+};
+
 export type CredentialStore = {
   resolve(ref: CredentialRef): Promise<CredentialValue | undefined>;
 };

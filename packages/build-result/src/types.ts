@@ -290,6 +290,19 @@ export type ResolvedBuildResultOutput = {
 /** Storage-neutral resolved Output. Physical repositories never enter Build or Run identity. */
 export type RepositoryBuildResultOutput = Omit<ResolvedBuildResultOutput, "directory">;
 
+/**
+ * Storage-neutral description of one resolved public Output. Unlike `resolve`, this never opens a
+ * Composite value document or Resource bytes. Forwarding remains internal: callers cannot use this
+ * view to distinguish a forwarded Output from one produced by the named Build.
+ */
+export type RepositoryBuildResultOutputDescription = {
+  readonly type: TypeRef;
+} & (
+  | { readonly kind: "scalar" }
+  | { readonly kind: "composite" }
+  | { readonly kind: "resource"; readonly size: number; readonly mediaType: string }
+);
+
 export type BuildResultWriter = {
   read(): Promise<BuildResultManifest>;
   sync(input: BuildResultSync): Promise<BuildResultManifest>;
@@ -310,6 +323,8 @@ export type BuildResultRepository = {
   updatePresentation(build: string, update: BuildResultPresentationUpdate): Promise<BuildResultManifest>;
   /** Browse finished Results in descending Build-id time order. */
   browse(request: BuildResultBrowseRequest): Promise<BuildResultPage>;
+  /** Follow explicit Output forwarding and describe its terminal value without opening content. */
+  describeOutput(build: string, output: string): Promise<RepositoryBuildResultOutputDescription | undefined>;
   resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined>;
   openFile(
     build: string,

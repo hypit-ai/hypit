@@ -298,10 +298,11 @@ owns their versions.
 hypit doctor
 ```
 
-Doctor validates every selected Runtime role, Endpoint configuration, credential
-presence and bounded environment probes. It never starts the Worker or performs a paid request.
+Doctor always validates the project's selected Result Store. When a Runtime Profile is selected or
+passed explicitly, it also validates every selected Runtime role, Endpoint configuration, credential
+presence and bounded environment probe. It never starts the Worker or performs a paid request.
 
-Doctor is intentionally a **full profile audit**. For the environment required by one Run, use
+When a Profile is present, Doctor intentionally performs a **full profile audit**. For the environment required by one Run, use
 `plan`: it checks only capabilities demanded by that finite plan. Missing readiness is returned in
 `preflight` and gives the command a non-zero exit status, while the frozen plan remains available in
 JSON for inspection.

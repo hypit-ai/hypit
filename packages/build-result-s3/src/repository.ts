@@ -10,6 +10,7 @@ import type {
   BuildResultWriter,
   BuildResultWriterState,
   RepositoryBuildResultOutput,
+  RepositoryBuildResultOutputDescription,
 } from "@hypit/build-result";
 import {
   applyBuildResultPresentation,
@@ -264,6 +265,30 @@ export class S3BuildResultRepository implements BuildResultRepository {
       results,
       ...(found.length > request.limit && results.length > 0 ? { next: results[results.length - 1]!.id } : {}),
     };
+  }
+
+  async describeOutput(build: string, output: string): Promise<RepositoryBuildResultOutputDescription | undefined> {
+    const seen = new Set<string>();
+    let currentBuild = build;
+    let currentOutput = output;
+    while (true) {
+      const address = `${currentBuild}\u0000${currentOutput}`;
+      assert(!seen.has(address), `Build Output forwarding repeats ${currentBuild} / ${currentOutput}`);
+      seen.add(address);
+      const manifest = await this.read(currentBuild);
+      const entry = manifest?.outputs[currentOutput];
+      if (entry === undefined) return undefined;
+      if (entry.value.kind === "build-output") {
+        currentBuild = entry.value.build;
+        currentOutput = entry.value.output;
+        continue;
+      }
+      return entry.value.kind === "build-file"
+        ? { type: entry.type, kind: "resource", size: entry.value.size, mediaType: entry.value.mediaType }
+        : entry.value.kind === "value"
+          ? { type: entry.type, kind: "composite" }
+          : { type: entry.type, kind: "scalar" };
+    }
   }
 
   async resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined> {

@@ -9,6 +9,7 @@ import type {
 } from "@hypit/protocol";
 import type {
   ResourceStore,
+  CredentialAcquisition,
   CredentialRef,
   CredentialValue,
   OperationFailure,
@@ -131,6 +132,7 @@ export type EndpointCredentialDescription = {
   readonly label: string;
   readonly kind: "secret" | "json";
   readonly ref: CredentialRef;
+  readonly acquisition?: CredentialAcquisition;
 };
 
 type EndpointCapabilityBase = {
@@ -165,6 +167,7 @@ export type DefineEndpointPackageOptions = {
   readonly credentialInputs?: Readonly<Record<string, {
     readonly label: string;
     readonly kind?: "secret" | "json";
+    readonly acquisition?: CredentialAcquisition;
   }>>;
   /** Total capacity shared by every lane under this configured Provider pool. */
   readonly defaultConcurrency?: number;
@@ -231,6 +234,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
       label,
       kind,
       ref: structuredClone(ref),
+      ...(input?.acquisition === undefined ? {} : { acquisition: structuredClone(input.acquisition) }),
     } satisfies EndpointCredentialDescription;
   });
   const fulfills = options.capabilities.map((item) => ({

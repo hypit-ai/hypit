@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { FileBuildResultRepository } from "@hypit/build-result";
 import { createRunFrontendHostFacet } from "@hypit/run";
 
 import { runCli } from "../src/main.js";
@@ -88,6 +89,15 @@ function distribution(
       }),
       extendExecutionProgram: (program: unknown) => program,
     }),
+    openProjectResults: async (projectRoot: string) => ({
+      location: {
+        root: projectRoot,
+        selection: { use: "test.results", config: {} },
+      },
+      repository: new FileBuildResultRepository(join(projectRoot, ".hypit", "results")),
+      close() {},
+    }),
+    diagnoseProjectResults: async () => ({ diagnostics: [] }),
     openRuntimeHost: async (path: string) => ({
       profile: path,
       resolvePaths: async () => ({}),

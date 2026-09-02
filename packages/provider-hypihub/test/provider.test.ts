@@ -30,6 +30,13 @@ async function endpointFor(request: Need, fetch: typeof globalThis.fetch): Promi
   return resolution.registration.endpoint;
 }
 
+test("HypiHub declares its own credential acquisition flow", () => {
+  const [credential] = createHypiHubProvider().credentials;
+  assert.equal(credential?.acquisition?.kind, "oauth2-pkce");
+  assert.equal(credential?.acquisition?.authorizationEndpoint, "https://hypit.ai/oauth/consent");
+  assert.equal(credential?.acquisition?.tokenEndpoint, "https://hypit.ai/oauth/token");
+});
+
 test("HypiHub exposes VoiceDesign by default and permits an explicit alternate audio Provider", async () => {
   const registry = new EndpointRegistry();
   await createHypiHubProvider({ fetch: async () => { throw new Error("audio must not call fetch"); } }).install(registry);

@@ -27,6 +27,7 @@ import type {
   ResolvedBuildResultOutput,
   BuildResultRepository,
   RepositoryBuildResultOutput,
+  RepositoryBuildResultOutputDescription,
   FinishedBuildResultManifest,
 } from "./types.js";
 import { assertBuildResultSeed } from "./types.js";
@@ -240,6 +241,34 @@ export async function resolveBuildResultOutput(
   }
 }
 
+export async function describeBuildResultOutput(
+  root: string,
+  build: string,
+  output: string,
+): Promise<RepositoryBuildResultOutputDescription | undefined> {
+  const seen = new Set<string>();
+  let currentBuild = build;
+  let currentOutput = output;
+  while (true) {
+    const address = `${currentBuild}\u0000${currentOutput}`;
+    assert(!seen.has(address), `Build Output forwarding repeats ${currentBuild} / ${currentOutput}`);
+    seen.add(address);
+    const manifest = await readBuildResult(buildResultDirectory(root, currentBuild));
+    const entry = manifest?.outputs[currentOutput];
+    if (entry === undefined) return undefined;
+    if (entry.value.kind === "build-output") {
+      currentBuild = entry.value.build;
+      currentOutput = entry.value.output;
+      continue;
+    }
+    return entry.value.kind === "build-file"
+      ? { type: entry.type, kind: "resource", size: entry.value.size, mediaType: entry.value.mediaType }
+      : entry.value.kind === "value"
+        ? { type: entry.type, kind: "composite" }
+        : { type: entry.type, kind: "scalar" };
+  }
+}
+
 export class FileBuildResult {
   readonly directory: string;
 
@@ -383,6 +412,10 @@ export class FileBuildResultRepository implements BuildResultRepository {
 
   async browse(request: { readonly before?: string; readonly limit: number }) {
     return await browseBuildResults(this.root, request);
+  }
+
+  async describeOutput(build: string, output: string): Promise<RepositoryBuildResultOutputDescription | undefined> {
+    return await describeBuildResultOutput(this.root, build, output);
   }
 
   async resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined> {

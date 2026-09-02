@@ -296,9 +296,10 @@ Author/Run Source 通过 import 选择作者包，Runtime Profile 通过 `use` �
 hypit doctor
 ```
 
-Doctor 校验全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；它不启动 Worker，也不发付费请求。
+Doctor 总会校验项目选择的 Result Store；存在已选或显式传入的 Runtime Profile 时，还会校验全部
+Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测。它不启动 Worker，也不发付费请求。
 
-`doctor` 有意检查完整 Runtime Profile。若只想检查某次 Run 真正需要的环境，请使用带
+存在 Profile 时，`doctor` 有意检查完整 Runtime Profile。若只想检查某次 Run 真正需要的环境，请使用带
 所选 Runtime 的 `plan`。未就绪会写入 `preflight` 并令命令非零退出，但 JSON 中仍保留
 冻结计划供检查。
 
