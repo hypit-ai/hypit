@@ -15,17 +15,12 @@ import type {
 } from "./runtime-port.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliIo, CliMachineView } from "./output.js";
-import {
-  assertCommandOptions,
-  commandAllowsMissingPositional,
-  isKnownCommand,
-  parseArgs,
-  usage,
-} from "./arguments.js";
+import { parseCommand } from "./arguments.js";
+import type { CliCommand } from "./command.js";
 import { assertPreflight, createCatalogDescriptor, preflightPlan } from "./build-planning.js";
 import { observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
-import { runEnvironmentCommand } from "./commands/environment.js";
+import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
 import { isExecutionCommand, runExecutionCommand } from "./commands/execution.js";
 import { inlineValuePreview } from "./runtime-view.js";
 import { resolvePackageRoot } from "./project-context.js";
@@ -49,6 +44,18 @@ async function loadRuntime(host: NodeRuntimeHost): Promise<CliRuntime> {
   return await host.createRuntime();
 }
 
+function commandWorkspaceRoot(command: CliCommand): string | undefined {
+  return "workspaceRoot" in command ? command.workspaceRoot : undefined;
+}
+
+function commandPackageRoot(command: CliCommand): string | undefined {
+  return "packageRoot" in command ? command.packageRoot : undefined;
+}
+
+function commandRuntimeProfile(command: CliCommand): string | undefined {
+  return "runtimeProfile" in command ? command.runtimeProfile : undefined;
+}
+
 export async function runCli(
   argv: readonly string[],
   io: CliIo,
@@ -59,16 +66,15 @@ export async function runCli(
     writeCliHelp(io, topic);
     return;
   }
-  let args = parseArgs(argv);
+  const args = parseCommand(argv);
   let selectedRuntimeProjectRoot: string | undefined;
-  const commandProjectRoot = (): string => args.workspaceRoot
+  const commandProjectRoot = (): string => commandWorkspaceRoot(args)
     ?? selectedRuntimeProjectRoot
     ?? ((args.command === "check" || args.command === "plan" || args.command === "build")
-      && args.file !== undefined
-      ? dirname(resolve(args.file))
+      ? dirname(resolve(args.source))
       : process.cwd());
   const packageRootForProject = async (projectRoot = commandProjectRoot()): Promise<string> =>
-    args.packageRoot ?? await resolvePackageRoot(projectRoot);
+    commandPackageRoot(args) ?? await resolvePackageRoot(projectRoot);
   const writeOperational = (
     machine: CliMachineView,
     title: string,
@@ -76,10 +82,7 @@ export async function runCli(
     facts: readonly (readonly [string, string])[] = [],
     lines: readonly string[] = [],
   ): void => writeCliOutput(io, {
-    json: args.json || args.jsonl,
-    jsonl: args.jsonl,
-    color: args.color,
-    verbose: args.verbose,
+    ...args.presentation,
   }, { kind: "operational", machine, title, status, facts, lines });
   const runtimeHosts = new Map<string, Promise<NodeRuntimeHost>>();
   const runtimeHost = async (path: string, requestedPackageRoot?: string): Promise<NodeRuntimeHost> => {
@@ -106,22 +109,14 @@ export async function runCli(
     });
   };
   if (args.command === "_worker") {
-    if (args.file === undefined || args.readyFile === undefined || args.workerOwner === undefined) {
-      throw new Error("internal Worker launch is incomplete");
-    }
     await (await runtimeHost(
-      args.file,
+      args.profile,
       args.packageRoot ?? await packageRootForProject(),
     )).runWorker(args.readyFile, args.workerOwner);
     return;
   }
   if (args.command === "runtime" && args.action === "use") {
-    if (args.runtime !== undefined) {
-      throw new Error("runtime use takes the Runtime Profile positionally, not through --runtime");
-    }
-    if (args.file === undefined) throw new Error("runtime use requires a Runtime Profile");
-    assertCommandOptions(args);
-    const profile = resolve(args.file);
+    const profile = resolve(args.profile);
     const selected = await selectRuntimeProfile(args.workspaceRoot ?? process.cwd(), profile);
     writeOperational({
       format: "hypit.cli-runtime-selection@2",
@@ -135,10 +130,6 @@ export async function runCli(
     return;
   }
   if (args.command === "runtime" && args.action === "unset") {
-    if (args.file !== undefined || args.runtime !== undefined) {
-      throw new Error("runtime unset does not take a Runtime Profile");
-    }
-    assertCommandOptions(args);
     const cleared = await clearRuntimeProfile(args.workspaceRoot ?? process.cwd());
     writeOperational({
       format: "hypit.cli-runtime-selection@2",
@@ -152,57 +143,24 @@ export async function runCli(
     return;
   }
 
-  const positionalRuntime = (args.command === "runtime" || args.command === "programs"
-    || args.command === "doctor") && args.file !== undefined;
-  const runtimeWasExplicit = args.runtime !== undefined || positionalRuntime;
+  let runtimeProfile = commandRuntimeProfile(args);
+  const runtimeWasExplicit = runtimeProfile !== undefined;
   let runtimeNeedsHint = runtimeWasExplicit;
-  if (args.runtime === undefined && !positionalRuntime) {
+  if (runtimeProfile === undefined) {
     const sourceScoped = args.command === "check" || args.command === "plan" || args.command === "build";
-    const start = args.workspaceRoot
-      ?? (sourceScoped && args.file !== undefined ? dirname(resolve(args.file)) : process.cwd());
+    const start = commandWorkspaceRoot(args)
+      ?? (sourceScoped ? dirname(resolve(args.source)) : process.cwd());
     const selected = await findRuntimeProfile(start);
     if (selected !== undefined) {
-      args = { ...args, runtime: selected.profile };
+      runtimeProfile = selected.profile;
       selectedRuntimeProjectRoot = selected.projectRoot;
       const cwdFromProject = relative(selected.projectRoot, resolve(process.cwd()));
       runtimeNeedsHint = cwdFromProject === ".." || cwdFromProject.startsWith(`..${sep}`)
         || isAbsolute(cwdFromProject);
     }
   }
-  if (!isKnownCommand(args.command)
-    || (!commandAllowsMissingPositional(args.command) && args.file === undefined)) {
-    throw new Error(usage());
-  }
-  if (args.watch && args.command !== "activity" && args.command !== "status") {
-    throw new Error("--watch applies only to status or activity");
-  }
-  if (args.jsonl && (args.command !== "activity" || !args.watch)) {
-    throw new Error("--jsonl applies only to activity --watch");
-  }
-  if (args.command === "activity" && args.watch && args.json) {
-    throw new Error("activity --watch is a stream; use --jsonl instead of --json");
-  }
-  if (args.command === "history" && args.file === undefined) {
-    throw new Error("history requires one exact Output name");
-  }
-  if (args.command === "result" && args.action !== "finish"
-    && args.action !== "discard" && args.action !== "edit") {
-    throw new Error("result accepts finish, discard or edit");
-  }
-  if (args.command === "result" && args.action === "edit") {
-    if (args.title !== undefined && args.clearTitle) throw new Error("--title and --clear-title are mutually exclusive");
-    if (args.note !== undefined && args.clearNote) throw new Error("--note and --clear-note are mutually exclusive");
-    if (args.highlightedOutputs.length > 0 && args.clearHighlights) {
-      throw new Error("--highlight and --clear-highlights are mutually exclusive");
-    }
-    if (args.title === undefined && args.note === undefined && args.highlightedOutputs.length === 0
-      && !args.clearTitle && !args.clearNote && !args.clearHighlights) {
-      throw new Error("result edit requires a presentation change");
-    }
-  }
-  assertCommandOptions(args);
   const runtimeController = async (profile: string, source?: string): Promise<CliRuntimeController> => {
-    const workspaceRoot = args.workspaceRoot
+    const workspaceRoot = commandWorkspaceRoot(args)
       ?? selectedRuntimeProjectRoot
       ?? (source === undefined ? process.cwd() : dirname(resolve(source)));
     const packageRoot = await packageRootForProject(workspaceRoot);
@@ -210,16 +168,20 @@ export async function runCli(
       packageRoot,
     });
   };
-  if (await runEnvironmentCommand({
-    args,
-    io,
-    distribution,
-    projectRoot: args.command === "paths" ? selectedRuntimeProjectRoot ?? process.cwd() : commandProjectRoot(),
-    packageRootForProject,
-    runtimeHost,
-    runtimeController,
-    write: writeOperational,
-  })) return;
+  if (isEnvironmentCommand(args)) {
+    await runEnvironmentCommand({
+      args,
+      runtimeProfile,
+      io,
+      distribution,
+      projectRoot: args.command === "paths" ? selectedRuntimeProjectRoot ?? process.cwd() : commandProjectRoot(),
+      packageRootForProject,
+      runtimeHost,
+      runtimeController,
+      write: writeOperational,
+    });
+    return;
+  }
   if (isProjectResultCommand(args)) {
     const results = await projectResults();
     try {
@@ -237,6 +199,7 @@ export async function runCli(
   if (isExecutionCommand(args)) {
     await runExecutionCommand({
       args,
+      runtimeProfile,
       io,
       runtimeHost,
       runtimeController,
@@ -245,20 +208,20 @@ export async function runCli(
     });
     return;
   }
-  const runtimePaths = args.runtime === undefined
+  const runtimePaths = runtimeProfile === undefined
     ? undefined
-    : await (await runtimeHost(args.runtime)).resolvePaths();
+    : await (await runtimeHost(runtimeProfile)).resolvePaths();
   const effectivePackageRoot = args.packageRoot ?? runtimePaths?.packageRoot;
   const effectiveWorkspaceRoot = args.workspaceRoot
     ?? selectedRuntimeProjectRoot
-    ?? dirname(resolve(args.file!));
+    ?? dirname(resolve(args.source));
   const projectResultsRoot = effectiveWorkspaceRoot;
   const sourcePackageRoot = effectivePackageRoot
     ?? await resolvePackageRoot(effectiveWorkspaceRoot);
   const loadedPackageSet = distribution.discoverSourcePackages === undefined
     ? undefined
     : await loadDiscoveredSourcePackages(distribution, {
-          source: args.file!,
+          source: args.source,
           ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
           packageRoot: sourcePackageRoot,
           ...(distribution.packageRoot === undefined
@@ -273,7 +236,7 @@ export async function runCli(
     ...(args.assetRoots.length === 0 ? {} : { assetRoots: args.assetRoots }),
     packageContributions,
   });
-  const workspace = await compiler.openFile(args.file!);
+  const workspace = await compiler.openFile(args.source);
   const sourceHeader = parseSourceHeader(workspace.entry.name, workspace.entry.text);
   const runMode = runFrontends.some((frontend) => frontend.id === sourceHeader.using);
   const authorMode = compiler.supportsFrontend(sourceHeader.using);
@@ -320,7 +283,7 @@ export async function runCli(
             omittedHistoricalOutputs: loaded.unresolvedHistoricalOutputs.length - args.limit,
           }),
         } as const;
-        writeCliOutput(io, args, {
+        writeCliOutput(io, args.presentation, {
           kind: "check-run",
           machine,
         });
@@ -345,12 +308,12 @@ export async function runCli(
         outputCount: outputs.length,
         outputs: outputs.slice(0, args.limit).map((item) => ({ name: item.name, type: cliTypeName(item.type) })),
         ...(outputs.length <= args.limit ? {} : { omittedOutputs: outputs.length - args.limit }),
-        ...(args.verbose ? { details: {
+        ...(args.presentation.verbose ? { details: {
           modules: modules.slice(0, args.limit),
           values: values.slice(0, args.limit).map((item) => ({ name: item.name, type: cliTypeName(item.type) })),
         } } : {}),
       } as const;
-      writeCliOutput(io, args, {
+      writeCliOutput(io, args.presentation, {
         kind: "check-author",
         machine,
       });
@@ -358,7 +321,7 @@ export async function runCli(
     }
   }
   if (args.command === "build") {
-    if (args.runtime === undefined) {
+    if (runtimeProfile === undefined) {
       throw new Error("build requires a Runtime; run hypit runtime use <profile> or pass --runtime <profile>");
     }
     const buildResults = await projectResults(projectResultsRoot);
@@ -411,10 +374,10 @@ export async function runCli(
             catalog.publishedOutputs.some((published) => published.ref.id === forward.output)),
         },
       } as const;
-      const controller = await (await runtimeHost(args.runtime)).controller({
+      const controller = await (await runtimeHost(runtimeProfile)).controller({
         packageRoot: sourcePackageRoot,
       });
-      const preflight = await preflightPlan(await runtimeHost(args.runtime), result.state);
+      const preflight = await preflightPlan(await runtimeHost(runtimeProfile), result.state);
       // Build is an execution boundary, not a provisioning command. The cheap
       // preflight must already be clean; `runtime up` is the explicit place for
       // installing or starting declared programs.
@@ -427,21 +390,21 @@ export async function runCli(
         const detail = error instanceof Error ? error.message : String(error);
         throw new Error(`Runtime Worker could not start; no Build was queued: ${detail}`);
       }
-      runtime = await loadRuntime(await runtimeHost(args.runtime));
+      runtime = await loadRuntime(await runtimeHost(runtimeProfile));
       let built = await runtime.build(request);
       if (args.follow && runtime !== undefined) {
         built = await observeBuild(runtime, built, {
           ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
           controller,
           readResult: async () => await buildResults.repository.read(built.id),
-          ...(args.json || args.jsonl ? {} : {
+          ...(args.presentation.json ? {} : {
             onProgress: (progress) => {
               const operations = Object.entries(progress.operations)
                 .map(([status, count]) => `${count} ${status}`)
                 .join(", ");
               io.write(`  · ${progress.phase}`
                 + `${operations.length === 0 ? "" : ` · ${operations}`}\n`);
-              if (args.verbose) {
+              if (args.presentation.verbose) {
                 for (const line of progress.activity.slice(0, args.limit)) io.write(`    ${line}\n`);
               }
             },
@@ -478,7 +441,7 @@ export async function runCli(
         id: built.id,
         ...(activeView === undefined ? {} : { runtime: activeView }),
         ...(finishedResult === undefined ? {} : { result: finishedResult }),
-        verbose: args.verbose,
+        verbose: args.presentation.verbose,
         operationLimit: args.limit,
       });
       const machine = {
@@ -487,7 +450,7 @@ export async function runCli(
           ? buildView
           : { ...buildView, title: args.title },
       };
-      const runtimeHint = runtimeNeedsHint ? ` --runtime ${args.runtime}` : "";
+      const runtimeHint = runtimeNeedsHint ? ` --runtime ${runtimeProfile}` : "";
       const resultTargets = finishedResult?.targets.flatMap((name) => {
         const output = finishedResult.outputs[name];
         return output === undefined ? [] : [{ name, output }];
@@ -551,9 +514,9 @@ export async function runCli(
       results: planResults.repository,
     });
     const result = loaded.compiler.planCompilation(loaded);
-    const preflight = args.runtime === undefined
+    const preflight = runtimeProfile === undefined
       ? undefined
-      : await preflightPlan(await runtimeHost(args.runtime), result.state);
+      : await preflightPlan(await runtimeHost(runtimeProfile), result.state);
     const outputNames = Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
       item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : []));
     const externalRequests = new Map<string, number>();
@@ -573,7 +536,7 @@ export async function runCli(
     const requestViews = [...externalRequests.entries()].sort(([left], [right]) => left.localeCompare(right))
       .map(([operation, count]) => ({ operation, count }));
     const targets = loaded.run.document.targets.map((item) => item.output);
-    writeCliOutput(io, args, {
+    writeCliOutput(io, args.presentation, {
       kind: "plan",
       machine: {
         format: "hypit.cli-plan@2",

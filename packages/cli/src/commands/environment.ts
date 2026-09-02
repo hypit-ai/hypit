@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
 import { hypitHostPackageRoot, inspectHostPackage, prepareHostPackages } from "@hypit/runtime-host-node";
 
-import type { ParsedArgs } from "../arguments.js";
+import type { CliCommand, EnvironmentCommand } from "../command.js";
 import type { CliDistribution } from "../distribution.js";
 import { acquireOAuthCredential } from "../oauth.js";
 import { writeCliOutput } from "../output.js";
@@ -14,8 +14,16 @@ import type { CliRuntimeController } from "../runtime-port.js";
 import { queueLaneLines, summarizeQueueLanes } from "../runtime-view.js";
 import type { OperationalWriter } from "./types.js";
 
+export function isEnvironmentCommand(args: CliCommand): args is EnvironmentCommand {
+  return args.command === "paths" || args.command === "packages" || args.command === "doctor"
+    || args.command === "programs" || args.command === "auth"
+    || (args.command === "runtime"
+      && (args.action === "up" || args.action === "down" || args.action === "status" || args.action === "logs"));
+}
+
 export async function runEnvironmentCommand(input: {
-  readonly args: ParsedArgs;
+  readonly args: EnvironmentCommand;
+  readonly runtimeProfile: string | undefined;
   readonly io: CliIo;
   readonly distribution: CliDistribution;
   readonly projectRoot: string;
@@ -23,11 +31,11 @@ export async function runEnvironmentCommand(input: {
   readonly runtimeHost: (profile: string, packageRoot?: string) => Promise<NodeRuntimeHost>;
   readonly runtimeController: (profile: string) => Promise<CliRuntimeController>;
   readonly write: OperationalWriter;
-}): Promise<boolean> {
+}): Promise<void> {
   const {
-    args, io, distribution, projectRoot, packageRootForProject, runtimeHost, runtimeController, write,
+    args, runtimeProfile, io, distribution, projectRoot, packageRootForProject, runtimeHost, runtimeController, write,
   } = input;
-  const reportProgramProgress = args.json || args.jsonl
+  const reportProgramProgress = args.presentation.json
     ? undefined
     : (event: { readonly id: string; readonly phase: "checking" | "installing" | "starting" | "waiting" | "ready" }): void => {
       const verb = {
@@ -39,21 +47,21 @@ export async function runEnvironmentCommand(input: {
       }[event.phase];
       io.write(`  · ${verb} ${event.id}\n`);
     };
-  const reportPackageProgress = args.json || args.jsonl
+  const reportPackageProgress = args.presentation.json
     ? undefined
     : (event: { readonly specifier: string; readonly phase: "checking" | "installing" | "ready" }): void => {
       if (event.phase === "installing") io.write(`  · Installing ${event.specifier}\n`);
     };
 
   if (args.command === "paths") {
-    const runtimePaths = args.runtime === undefined
+    const runtimePaths = runtimeProfile === undefined
       ? undefined
-      : await (await runtimeHost(args.runtime)).resolvePaths();
+      : await (await runtimeHost(runtimeProfile)).resolvePaths();
     const machine = {
       format: "hypit.cli-paths@1" as const,
       project: projectRoot,
       projectState: hypitProjectStateRoot(projectRoot),
-      ...(args.runtime === undefined ? {} : { profile: args.runtime }),
+      ...(runtimeProfile === undefined ? {} : { profile: runtimeProfile }),
       ...(runtimePaths === undefined ? {} : { runtimeData: runtimePaths.runtimeDataRoot }),
       hostState: hypitHostStateRoot(),
       machinePackages: hypitHostPackageRoot(),
@@ -68,18 +76,14 @@ export async function runEnvironmentCommand(input: {
       ["Machine packages", machine.machinePackages],
       ["Distribution", machine.distribution ?? "embedded"],
     ]);
-    return true;
+    return;
   }
 
   if (args.command === "packages") {
-    if (args.action !== "install" && args.action !== "status") {
-      throw new Error("packages takes install or status");
-    }
-    if (args.file === undefined) throw new Error(`packages ${args.action} requires package@exact-version`);
     const root = hypitHostPackageRoot();
-    const existing = await inspectHostPackage(args.file, root);
+    const existing = await inspectHostPackage(args.package, root);
     const reports = args.action === "install"
-      ? await prepareHostPackages([args.file], {
+      ? await prepareHostPackages([args.package], {
         root,
         ...(reportPackageProgress === undefined ? {} : { onProgress: reportPackageProgress }),
       })
@@ -88,23 +92,19 @@ export async function runEnvironmentCommand(input: {
     write({
       format: "hypit.cli-package@2",
       action: args.action,
-      package: args.file,
+      package: args.package,
       ready,
     }, args.action === "install" ? "Machine package is ready" : "Machine package status",
     ready ? "success" : "warning", [
-      ["Package", args.file],
+      ["Package", args.package],
       ["Ready", String(ready)],
     ]);
     if (!ready) io.setExitCode?.(1);
-    return true;
+    return;
   }
 
   if (args.command === "doctor") {
-    if (args.packageRoot !== undefined) {
-      throw new Error("doctor reads all deployment selection from the Runtime Profile itself");
-    }
-    const profileInput = args.runtime ?? args.file;
-    const profile = profileInput === undefined ? undefined : resolve(profileInput);
+    const profile = runtimeProfile === undefined ? undefined : resolve(runtimeProfile);
     const [runtimeResult, projectResult] = await Promise.all([
       profile === undefined ? undefined : (await runtimeHost(profile)).doctor(),
       distribution.diagnoseProjectResults(projectRoot, {
@@ -124,32 +124,14 @@ export async function runEnvironmentCommand(input: {
       diagnostics: diagnostics.slice(0, args.limit),
       ...(diagnostics.length <= args.limit ? {} : { omittedDiagnostics: diagnostics.length - args.limit }),
     };
-    writeCliOutput(io, {
-      json: args.json || args.jsonl,
-      jsonl: args.jsonl,
-      color: args.color,
-      verbose: args.verbose,
-    }, { kind: "doctor", machine });
+    writeCliOutput(io, args.presentation, { kind: "doctor", machine });
     if (!machine.ok) io.setExitCode?.(1);
-    return true;
+    return;
   }
 
   if (args.command === "programs") {
-    if (args.file !== undefined && args.runtime !== undefined) {
-      throw new Error("programs reads all deployment selection from the Runtime Profile itself; provide that Profile only once");
-    }
-    if (args.packageRoot !== undefined) {
-      throw new Error("programs reads all deployment selection from the Runtime Profile itself");
-    }
-    if (args.action !== "up" && args.action !== "down" && args.action !== "status") {
-      throw new Error("programs takes up, down or status");
-    }
-    if (args.action !== "up" && args.maxWaitMs !== undefined) {
-      throw new Error("--max-wait-ms applies to programs up");
-    }
-    const profileInput = args.runtime ?? args.file;
-    if (profileInput === undefined) throw new Error("programs requires a Runtime Profile");
-    const profile = resolve(profileInput);
+    if (runtimeProfile === undefined) throw new Error("programs requires a Runtime Profile");
+    const profile = resolve(runtimeProfile);
     const host = await runtimeHost(profile);
     if (args.action === "up") {
       await host.prepare(reportPackageProgress === undefined ? {} : { onProgress: reportPackageProgress });
@@ -174,7 +156,7 @@ export async function runEnvironmentCommand(input: {
       programs: result.programs.slice(0, args.limit).map((item) => ({
         id: item.id,
         state: item.state.state,
-        ...(args.verbose && item.action !== undefined ? { action: item.action } : {}),
+        ...(args.presentation.verbose && item.action !== undefined ? { action: item.action } : {}),
       })),
       ...(result.programs.length <= args.limit ? {} : { omittedPrograms: result.programs.length - args.limit }),
     }, `External programs ${args.action}`,
@@ -183,19 +165,12 @@ export async function runEnvironmentCommand(input: {
       ["Ready", String(result.programs.filter((item) => item.state.state === "ready").length)],
     ], shownPrograms.map((item) => `${item.id}: ${item.state.state}`));
     if (!lifecycleOk) io.setExitCode?.(1);
-    return true;
+    return;
   }
 
   if (args.command === "runtime") {
-    if (args.action !== "up" && args.action !== "down" && args.action !== "status" && args.action !== "logs") {
-      throw new Error("runtime takes up, down, status or logs");
-    }
-    if (args.file !== undefined && args.runtime !== undefined) {
-      throw new Error("runtime accepts the Runtime Profile either positionally or with --runtime, not both");
-    }
-    const profileInput = args.runtime ?? args.file;
-    if (profileInput === undefined) throw new Error("runtime requires a Runtime Profile");
-    const profile = resolve(profileInput);
+    if (runtimeProfile === undefined) throw new Error("runtime requires a Runtime Profile");
+    const profile = resolve(runtimeProfile);
     const controller = await runtimeController(profile);
     if (args.action === "up") {
       const packageRoot = await packageRootForProject();
@@ -229,7 +204,7 @@ export async function runEnvironmentCommand(input: {
         ["External programs", String(external.programs.length)],
       ]);
       if (!ok) io.setExitCode?.(1);
-      return true;
+      return;
     }
     if (args.action === "logs") {
       const logs = await controller.worker.logs();
@@ -240,12 +215,12 @@ export async function runEnvironmentCommand(input: {
         lines: shown,
         totalLines: lines.length,
         omittedLines: Math.max(0, lines.length - shown.length),
-        ...(args.verbose ? { path: logs.path } : {}),
+        ...(args.presentation.verbose ? { path: logs.path } : {}),
       }, "Runtime logs", "info", [
         ["Lines", `${shown.length}/${lines.length}`],
-        ...(args.verbose ? [["Path", logs.path] as const] : []),
+        ...(args.presentation.verbose ? [["Path", logs.path] as const] : []),
       ], shown.length === 0 ? ["No log output."] : shown);
-      return true;
+      return;
     }
     if (args.action === "down") {
       const worker = await controller.worker.down({
@@ -254,7 +229,7 @@ export async function runEnvironmentCommand(input: {
       write({ format: "hypit.cli-runtime-down@2", worker: worker.state },
         "Runtime Worker is down", "success", [["Worker", worker.state]],
         ["External programs were left running. Stop them explicitly with hypit programs down."]);
-      return true;
+      return;
     }
 
     const runtimeLoading = (await runtimeHost(profile)).openControl({ readOnly: true });
@@ -295,7 +270,7 @@ export async function runEnvironmentCommand(input: {
         },
         capacity: {
           active: activity.capacity.length,
-          ...(args.verbose ? { lanes: lanes.slice(0, args.limit) } : {}),
+          ...(args.presentation.verbose ? { lanes: lanes.slice(0, args.limit) } : {}),
         },
       };
       write(machine, "Runtime status", attention ? "warning" : ready ? "success" : "info", [
@@ -305,33 +280,29 @@ export async function runEnvironmentCommand(input: {
         ["Waiting", String(counts.waiting ?? 0)],
         ["Decided", String(counts.decided ?? 0)],
         ["Programs", `${external.programs.length - unavailable.length}/${external.programs.length} ready`],
-        ...(args.verbose ? [["Active requests", String(activity.capacity.length)] as const] : []),
+        ...(args.presentation.verbose ? [["Active requests", String(activity.capacity.length)] as const] : []),
       ], [
         ...unavailable.slice(0, args.limit).map((item) => `${item.id}: ${item.state.state}`),
-        ...(args.verbose ? queueLaneLines(lanes.slice(0, args.limit)) : []),
+        ...(args.presentation.verbose ? queueLaneLines(lanes.slice(0, args.limit)) : []),
       ]);
     } finally {
       if (runtime !== undefined) await runtime.close();
       else await runtimeLoading.then(async (loaded) => await loaded.close(), () => undefined);
     }
-    return true;
+    return;
   }
 
   if (args.command === "auth") {
-    if (args.action !== "status" && args.action !== "login" && args.action !== "logout") {
-      throw new Error("auth takes status, login or logout");
-    }
-    if (args.runtime === undefined) {
+    if (runtimeProfile === undefined) {
       throw new Error("auth requires a Runtime; run hypit runtime use <profile> or pass --runtime <profile>");
     }
-    if (args.from !== undefined && args.action !== "login") throw new Error("--from applies only to auth login");
-    const credentialsControl = await (await runtimeHost(args.runtime)).openCredentials(args.file!);
+    const credentialsControl = await (await runtimeHost(runtimeProfile)).openCredentials(args.endpoint);
     try {
-      let credentials = await credentialsControl.credentials(args.file!);
+      let credentials = await credentialsControl.credentials(args.endpoint);
       if (args.slot !== undefined) credentials = credentials.filter((item) => item.slot === args.slot);
-      if (credentials.length === 0) throw new Error(`Endpoint ${args.file} has no matching credential`);
+      if (credentials.length === 0) throw new Error(`Endpoint ${args.endpoint} has no matching credential`);
       if (args.slot === undefined && credentials.length > 1 && args.action !== "status") {
-        throw new Error(`Endpoint ${args.file} has several credentials; select one with --slot`);
+        throw new Error(`Endpoint ${args.endpoint} has several credentials; select one with --slot`);
       }
       if (args.action === "status") {
         const view = credentials.slice(0, args.limit).map((item) => ({
@@ -344,28 +315,28 @@ export async function runEnvironmentCommand(input: {
         }));
         write({
           format: "hypit.cli-auth-status@2",
-          endpoint: args.file!,
+          endpoint: args.endpoint,
           credentials: view,
           ...(credentials.length <= args.limit ? {} : { omittedCredentials: credentials.length - args.limit }),
         }, "Credential status", "info", [
-          ["Endpoint", args.file!],
+          ["Endpoint", args.endpoint],
           ["Configured", `${credentials.filter((item) => item.configured).length}/${credentials.length}`],
         ], credentials.slice(0, args.limit).map((item) =>
           `${item.slot}: ${item.configured ? "configured" : "missing"} · ${item.writable ? "writable" : "read-only"}`));
       } else if (args.action === "login") {
         const [item] = credentials;
-        if (item === undefined) throw new Error(`Endpoint ${args.file} has no matching credential`);
+        if (item === undefined) throw new Error(`Endpoint ${args.endpoint} has no matching credential`);
         if (!item.writable) {
           const source = item.ref.store === "env"
             ? `set ${item.ref.key} in the environment`
             : "select a writable credential source in the Runtime Profile";
           throw new Error(`${item.label} cannot be written by this command; ${source}`);
         }
-        const raw = item.acquisition !== undefined && args.from === undefined
+        const raw = item.acquisition !== undefined && args.credentialFile === undefined
           ? await acquireOAuthCredential(io, item.acquisition)
-          : args.from === undefined
+          : args.credentialFile === undefined
             ? await io.readSecret?.(`${item.label}: `)
-            : await readFile(args.from, "utf8");
+            : await readFile(args.credentialFile, "utf8");
         if (raw === undefined) throw new Error("interactive credential input is unavailable; use --from <file>");
         const secret = raw.trim();
         if (secret.length === 0) throw new Error("credential input is empty");
@@ -375,30 +346,28 @@ export async function runEnvironmentCommand(input: {
         const stored = await credentialsControl.putCredential(item.endpoint, item.slot, secret);
         write({
           format: "hypit.cli-auth-change@2",
-          endpoint: args.file!,
+          endpoint: args.endpoint,
           slot: stored.slot,
           configured: true,
-        }, "Credential stored", "success", [["Endpoint", args.file!], ["Slot", stored.slot]]);
+        }, "Credential stored", "success", [["Endpoint", args.endpoint], ["Slot", stored.slot]]);
       } else {
         const [item] = credentials;
-        if (item === undefined) throw new Error(`Endpoint ${args.file} has no matching credential`);
+        if (item === undefined) throw new Error(`Endpoint ${args.endpoint} has no matching credential`);
         const removed = await credentialsControl.deleteCredential(item.endpoint, item.slot);
         write({
           format: "hypit.cli-auth-change@2",
-          endpoint: args.file!,
+          endpoint: args.endpoint,
           slot: removed.credential.slot,
           configured: false,
           changed: removed.deleted,
         }, removed.deleted ? "Credential removed" : "Credential was absent",
         removed.deleted ? "success" : "warning", [
-          ["Endpoint", args.file!], ["Slot", removed.credential.slot],
+          ["Endpoint", args.endpoint], ["Slot", removed.credential.slot],
         ]);
       }
     } finally {
       await credentialsControl.close();
     }
-    return true;
+    return;
   }
-
-  return false;
 }

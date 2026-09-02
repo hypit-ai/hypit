@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 
 import type { BuildResultRepository } from "@hypit/build-result";
 
-import type { ParsedArgs } from "../arguments.js";
+import type { CliCommand, ProjectResultCommand } from "../command.js";
 import { exportBuildResultOutput } from "../result-export.js";
 import { browseBuildOutputHistory } from "../result-query.js";
 import {
@@ -14,14 +14,14 @@ import {
 } from "../view.js";
 import type { OperationalWriter } from "./types.js";
 
-export function isProjectResultCommand(args: ParsedArgs): boolean {
+export function isProjectResultCommand(args: CliCommand): args is ProjectResultCommand {
   return args.command === "builds" || args.command === "history" || args.command === "inspect"
     || args.command === "get" || (args.command === "result" && args.action === "edit");
 }
 
 /** Execute commands that need only project-owned Result history, never a Runtime. */
 export async function runProjectResultCommand(input: {
-  readonly args: ParsedArgs;
+  readonly args: ProjectResultCommand;
   readonly projectRoot: string;
   readonly repository: BuildResultRepository;
   readonly write: OperationalWriter;
@@ -39,7 +39,7 @@ export async function runProjectResultCommand(input: {
       outcome: manifest.outcome,
       ...(manifest.run === undefined ? {} : { run: projectPath(manifest.run.path, projectRoot) }),
       targetCount: manifest.targets.length,
-      ...(args.verbose ? {
+      ...(args.presentation.verbose ? {
         targets: manifest.targets.slice(0, args.limit),
         ...(manifest.targets.length <= args.limit ? {} : { omittedTargets: manifest.targets.length - args.limit }),
       } : {}),
@@ -62,7 +62,7 @@ export async function runProjectResultCommand(input: {
     const source = args.source === undefined ? undefined : resolve(args.source);
     const page = await browseBuildOutputHistory(repository, {
       projectRoot,
-      output: args.file!,
+      output: args.outputName,
       ...(source === undefined ? {} : { source }),
       ...(args.before === undefined ? {} : { before: args.before }),
       limit: args.limit,
@@ -72,32 +72,32 @@ export async function runProjectResultCommand(input: {
       ...(manifest.title === undefined ? {} : { title: manifest.title }),
       createdAt: buildCreatedAtIso(manifest.id),
       outcome: manifest.outcome,
-      output: await outputView(repository, manifest, args.file!),
+      output: await outputView(repository, manifest, args.outputName),
     })));
     write({
       format: "hypit.cli-history@4",
-      output: args.file!,
+      output: args.outputName,
       ...(source === undefined ? {} : { source: projectPath(source, projectRoot) }),
       entries,
       ...(page.next === undefined ? {} : { next: page.next }),
     }, entries.length === 0 ? "No matching Output" : "Output history",
     entries.length === 0 ? "warning" : "info", [
-      ["Output", args.file!],
+      ["Output", args.outputName],
       ...(source === undefined ? [] : [["Source", projectPath(source, projectRoot)] as const]),
       ["Builds", String(entries.length)],
     ], entries.map((item) => {
       const label = item.title === undefined ? item.build : `${item.title} · ${item.build}`;
       return `${label}: ${item.outcome} · ${item.output.kind} · ${item.output.type} · ${item.createdAt}`;
-    }).concat(page.next === undefined ? [] : [`Older    hypit history ${args.file} --before ${page.next}`]));
+    }).concat(page.next === undefined ? [] : [`Older    hypit history ${args.outputName} --before ${page.next}`]));
     return;
   }
 
   if (args.command === "inspect") {
-    const manifest = await repository.read(args.file!);
-    if (manifest === undefined) throw new Error(`Build Result ${args.file} does not exist`);
+    const manifest = await repository.read(args.build);
+    if (manifest === undefined) throw new Error(`Build Result ${args.build} does not exist`);
     const build = await buildResultView(repository, manifest, {
       projectRoot,
-      ...(args.output === undefined ? {} : { output: args.output }),
+      ...(args.outputName === undefined ? {} : { output: args.outputName }),
       limit: args.limit,
     });
     write({ format: "hypit.cli-inspect@4", build }, "Build Result",
@@ -122,7 +122,7 @@ export async function runProjectResultCommand(input: {
   }
 
   if (args.command === "result") {
-    const manifest = await repository.updatePresentation(args.file!, {
+    const manifest = await repository.updatePresentation(args.build, {
       ...(args.clearTitle ? { title: null } : args.title === undefined ? {} : { title: args.title }),
       ...(args.clearNote ? { note: null } : args.note === undefined ? {} : { note: args.note }),
       ...(args.clearHighlights
@@ -148,7 +148,7 @@ export async function runProjectResultCommand(input: {
     return;
   }
 
-  const exported = await exportBuildResultOutput(repository, args.file!, args.output!, args.to!);
+  const exported = await exportBuildResultOutput(repository, args.build, args.outputName, args.destination);
   const machine = {
     format: "hypit.cli-get@4" as const,
     build: exported.build,
