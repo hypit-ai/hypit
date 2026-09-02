@@ -306,6 +306,12 @@ test("command options fail closed instead of being silently ignored", async () =
   );
   await assert.rejects(
     async () => await runCli([
+      "activity", "--runtime", "/tmp/runtime.json", "--watch", "--json", "--jsonl",
+    ], io, distribution),
+    /use --jsonl instead of --json/u,
+  );
+  await assert.rejects(
+    async () => await runCli([
       "doctor", "/tmp/runtime.json", "--workspace", "/tmp",
     ], io, distribution),
     /profile delegated: .*runtime\.json/u,

@@ -152,7 +152,7 @@ export function parseCommand(argv: readonly string[]): CliCommand {
       if (options.presentation.jsonl === true && !options.watch) {
         throw new Error("--jsonl applies only to activity --watch");
       }
-      if (options.watch && options.presentation.json && options.presentation.jsonl !== true) {
+      if (options.watch && options.seenOptions.includes("--json")) {
         throw new Error("activity --watch is a stream; use --jsonl instead of --json");
       }
       return {
@@ -545,7 +545,7 @@ function optionalRuntime(options: RawOptions): RuntimeOption {
 }
 
 function runtimeOption(profile: string | undefined): RuntimeOption {
-  return profile === undefined ? {} : { runtimeProfile: profile };
+  return { runtimeProfile: profile };
 }
 
 function optionalPackageRoot(options: RawOptions): { readonly packageRoot?: string } {

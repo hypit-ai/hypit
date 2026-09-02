@@ -5,7 +5,7 @@ type CommandBase = {
 };
 
 export type RuntimeOption = {
-  readonly runtimeProfile?: string;
+  readonly runtimeProfile: string | undefined;
 };
 
 export type ProjectOption = {
