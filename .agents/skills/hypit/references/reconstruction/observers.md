@@ -26,7 +26,7 @@ must never select `agent` merely because no credential was found.
 ## Choosing
 
 Before `prepare_reference`, inspect the selected Runtime Profile and report what this machine actually
-holds. Credential setup should already be complete from `environment.md`; if it is not, return to that
+holds. Credential setup should already be complete from `../environment.md`; if it is not, return to that
 gate and complete HypiHub OAuth (or the explicitly requested author-owned key) before proceeding:
 
 ```text
