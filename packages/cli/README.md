@@ -15,10 +15,12 @@ Human output is compact by default. `--json` emits a stable, bounded command vie
 compiler, Runtime or Repository objects. `--verbose` adds bounded operational detail; it never turns
 the command into an internal state dump.
 
-The implementation follows those same boundaries: argument parsing and option ownership live in
-`arguments.ts`; project Result browsing/export lives under `commands/results.ts`; Runtime,
+The implementation follows those same boundaries: `command.ts` defines the exact semantic command
+union, while argument parsing and option ownership live in `arguments.ts`; project Result
+browsing/export lives under `commands/results.ts`; Runtime,
 credential, package and deployment operations live under `commands/environment.ts`; active Build
 observation is read-only code in `observation.ts`; and human rendering is separate from the explicit
-machine-view union. `main.ts` resolves project context and dispatches these command groups. Result
+machine-view union. `main.ts` resolves project and selected Runtime context separately from parsed
+syntax, then dispatches these command groups. Result
 commands cannot silently construct a Runtime, and the generic CLI cannot silently choose a physical
 Result Store or a Provider-specific login flow.
