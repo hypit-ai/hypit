@@ -6,4 +6,4 @@ SVML author source, SVS recipes/kits, and SVRun build or reuse sources.
 
 Read the top-level `reference.svml`, `swap-host.svml`, `swap-effect.svml`, and `swap-topic.svml` with
 their matching `.svrun` files first. The nested banana projects show explicit reuse and replacement
-of accepted generated media. `accepted/` contains checked-in media used by the published examples.
+of generated media.
