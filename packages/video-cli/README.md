@@ -61,10 +61,11 @@ another Candidate. None of these commands creates or stores a ready-Command queu
 
 The Result saves every public Author Output completed on the demanded route, including structured
 values such as semantic takes. Each Logical Output has exactly one public name in `publishedOutputs`;
-there are no Record, Artifact or alias selectors. `inspect` shows those Outputs, and `get --output`
-reads one exact name. `--to` copies a file or writes an inline structured value as JSON. This is Host
-egress only and never changes Build identity or retention. File streaming writes a temporary file and
-then atomically replaces the destination, so large video need not be loaded into CLI memory.
+there are no Record, Artifact or alias selectors. `inspect` shows those Outputs. `get` requires one
+exact `--output` name and one explicit `--to` destination: a Scalar becomes a JSON file, a Resource
+streams to one file, and a Composite becomes a self-contained directory with `value.json` plus every
+referenced Resource. The destination must not already exist. This is Host egress only and never
+changes Build identity or retention; large media does not need to be loaded into CLI memory.
 
 `builds` and `history` browse project-owned Result manifests newest first. `--before <build-id>` moves
 the cursor to older Results without a central history table. Presentation titles, notes and highlights

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -87,8 +87,118 @@ test("builds, history, inspect and get read project Build Results without openin
     assert.equal(inspected.result.title, "episode-stage");
 
     const destination = join(root, "exported.json");
-    await jsonCommand(["get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination], root);
+    const exported = await jsonCommand([
+      "get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination,
+    ], root);
+    assert.deepEqual(exported, {
+      format: "hypit.cli-get@3",
+      build: "bld_20260902T110000000Z_0000000001",
+      output: "stage.value",
+      type: valueType,
+      kind: "scalar",
+      path: destination,
+    });
     assert.equal(await readFile(destination, "utf8"), "\"ready\"\n");
+    await assert.rejects(
+      jsonCommand(["get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination], root),
+      /Export destination .* already exists/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("get exports Resource bytes and a self-contained Composite directory", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-get-"));
+  const build = "bld_20260902T110000010Z_0000000001";
+  const videoType = { module: { name: "example.media", version: "1" }, name: "Video" } satisfies TypeRef;
+  const takeType = { module: { name: "example.speech", version: "1" }, name: "SemanticTake" } satisfies TypeRef;
+  const bytes = new TextEncoder().encode("video bytes");
+  const video = {
+    kind: "blob",
+    resource: "res_video",
+    size: bytes.byteLength,
+    mediaType: "video/mp4",
+  } as const;
+  try {
+    const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
+      id: build,
+      source: { path: join(root, "main.svml") },
+      targets: ["final.video"],
+      publishedOutputs: [
+        { name: "final.video", output: "logical:video" },
+        { name: "final.take", output: "logical:take" },
+      ],
+    });
+    await result.sync({
+      state: {
+        status: "complete",
+        records: [
+          { id: "record:video", type: videoType, value: video },
+          {
+            id: "record:take",
+            type: takeType,
+            value: { kind: "inline", value: { words: ["hello"], media: { artifact: video } } },
+          },
+        ],
+        plan: { outputBindings: [
+          { output: "logical:video", record: "record:video", type: videoType },
+          { output: "logical:take", record: "record:take", type: takeType },
+        ] },
+      } as unknown as BuildState,
+      resources: {
+        async open() { return (async function* () { yield bytes; })(); },
+      },
+    });
+    await result.finish({ outcome: "complete" });
+
+    const resourceDestination = join(root, "output", "final.mp4");
+    const resource = await jsonCommand([
+      "get", build, "--output", "final.video", "--to", resourceDestination,
+    ], root) as { readonly kind: string; readonly build: string; readonly output: string };
+    assert.equal(resource.kind, "resource");
+    assert.equal(resource.build, build);
+    assert.equal(resource.output, "final.video");
+    assert.equal(new TextDecoder().decode(await readFile(resourceDestination)), "video bytes");
+
+    const compositeDestination = join(root, "output", "final-take");
+    const composite = await jsonCommand([
+      "get", build, "--output", "final.take", "--to", compositeDestination,
+    ], root) as { readonly kind: string; readonly path: string };
+    assert.equal(composite.kind, "composite");
+    assert.equal(composite.path, compositeDestination);
+    assert.equal((await stat(compositeDestination)).isDirectory(), true);
+    const document = JSON.parse(await readFile(join(compositeDestination, "value.json"), "utf8")) as {
+      readonly format: string;
+      readonly value: { readonly words: readonly string[]; readonly media: { readonly artifact: null } };
+      readonly resources: readonly [{ readonly file: { readonly path: string } }];
+    };
+    assert.equal(document.format, "hypit.result-value@1");
+    assert.deepEqual(document.value.words, ["hello"]);
+    assert.equal(document.value.media.artifact, null);
+    assert.equal(
+      new TextDecoder().decode(await readFile(join(compositeDestination, document.resources[0].file.path))),
+      "video bytes",
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("get requires an exact Output name and an explicit destination", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-get-options-"));
+  try {
+    const silent = { write() {} };
+    await assert.rejects(
+      runCli(["get", "bld_20260902T110000000Z_0000000001", "--workspace", root], silent, {} as CliDistribution),
+      /get requires --output/u,
+    );
+    await assert.rejects(
+      runCli([
+        "get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--workspace", root,
+      ], silent, {} as CliDistribution),
+      /get requires --to/u,
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }
