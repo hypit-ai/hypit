@@ -1,0 +1,340 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
+  <import as="estimate" from="@hypit/estimate@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="estimated" from="@hypit/semantic-take-estimate@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
+  <import as="media-track" from="@hypit/media-track@1"/>
+  <import as="audio-track" from="@hypit/audio-track@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
+  <import as="ranking" from="@hypit/ranking@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="recipes" source="./tech-tier-recipes.svs"/>
+  <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+
+  <!-- Each executive is one continuous spoken Segment and one generated Take.
+       Every B-roll insert consumes an authored semantic Selection. -->
+  <script id="story">
+    <elon>
+      <HOST>Elon is <D | Dee> tier. || @money-rain Man bought Twitter || for 44 billion dollars || @twitter-x just to change || the name@/twitter-x@/money-rain. || @mars-rocket Sends rockets || to Mars, || but @market-crash can't send a tweet || without crashing || the stock market@/market-crash@/mars-rocket. || @richest-chair Richest guy || on Earth, || but somehow || @haircut-x still can't buy || a good haircut@/haircut-x@/richest-chair.
+    </elon>
+    <sam>
+      <HOST>Sam Altman? || @fired-friday Guy got fired || on a Friday, || @company-quit the entire company || threatened to quit, || and @back-monday he was back || in the chair || by Monday@/back-monday@/company-quit@/fired-friday. || @elon-lawsuit Elon sued him, || @google-fears Google fears him, || @congress-grilled Congress grilled him, || @still-here and he's still here@/still-here@/congress-grilled@/google-fears@/elon-lawsuit. || I have to || put him in || <S | Ess> tier.
+    </sam>
+  </script>
+
+  <asset:Image id="presenter" src="./assets/goth3.png"/>
+  <asset:Audio id="presenter-voice" src="./assets/goth.wav"/>
+  <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
+  <asset:Audio id="ranking-appear-sfx" src="./assets/ranking-appear.wav"/>
+  <asset:Audio id="ranking-move-sfx" src="./assets/ranking-move.wav"/>
+  <asset:Image id="elon-icon" src="./assets/elon.jpg"/>
+  <asset:Image id="sam-icon" src="./assets/sam.jpg"/>
+  <asset:Image id="jensen-icon" src="./assets/jensen.jpg"/>
+  <asset:Image id="tim-icon" src="./assets/tim-new.jpg"/>
+  <asset:Image id="bill-icon" src="./assets/bill.jpg"/>
+  <asset:Image id="dario-icon" src="./assets/dario-new.jpg"/>
+  <asset:Image id="mark-icon" src="./assets/mark.jpg"/>
+  <asset:Image id="jeff-icon" src="./assets/jeff.jpg"/>
+  <asset:Image id="jack-icon" src="./assets/jack.jpg"/>
+
+  <estimate:Speech id="elon-preview-duration" source={story.segment.elon.speech}
+    language="en" pace="normal" min="4" max="15" rounding="round"/>
+  <estimate:Speech id="sam-preview-duration" source={story.segment.sam.speech}
+    language="en" pace="normal" min="4" max="15" rounding="round"/>
+
+  <text:Value id="elon-action">
+    Keep the handheld microphone in the same hand throughout and use only the free hand for gestures. Open "Elon is D tier" with a skeptical look, lower the free palm decisively, and finish the verdict with one dry downward nod. On "44 billion dollars", rub the free thumb against two fingers in a clear money gesture while widening the eyes at the number. On "change the name", turn the free palm over once as if replacing one label with another, then give a disbelieving side glance. On "Sends rockets to Mars", sweep the free hand upward in a smooth launch arc and follow it briefly with the eyes. Across "can't send a tweet without crashing the stock market", tap the air once like posting, then snap the gaze downward and grimace as the free hand drops sharply. On "Richest guy on Earth", open the free arm with exaggerated confidence and a smug half-smile. On "good haircut", lightly touch the top of the hair once, pull the hand away, and finish with a mocking wince.
+  </text:Value>
+  <text:Value id="sam-action">
+    Keep the handheld microphone in the same hand throughout and use only the free hand for gestures. Open "Sam Altman?" with a curious head tilt and one raised eyebrow. On "fired on a Friday", point the free thumb over the shoulder as if someone has just been sent out, then flash a quick shocked expression. Across "the entire company threatened to quit", sweep the free hand broadly across the room to suggest a crowd rising together. On "back in the chair by Monday", draw the free hand firmly back toward the body, settle the shoulders, and give a small victorious smile. On "Elon sued him", make one crisp downward chopping gesture. On "Google fears him", glance sideways with an amused, confident smirk. On "Congress grilled him", turn the free palm from side to side as if deflecting hard questions from several directions. On "he's still here", present the free palm forward with calm certainty. Finish "S tier" by lifting the free hand high, holding one index finger up, and giving a firm approving nod.
+  </text:Value>
+
+  <text:Value id="broll-money-rain-prompt">
+    A satirical high-end studio photograph of an enormous chaotic mountain of crisp United States dollar bills piled across the floor, with many more loose banknotes frozen in midair as they rain down from above. Dense layers of cash, dramatic overhead lighting, realistic paper texture, absurd billionaire-scale excess, no people, no readable serial numbers, no logos, no watermark.
+  </text:Value>
+  <text:Value id="broll-twitter-x-prompt">
+    A bold diagonal split-screen parody. The upper-left half is vivid social-media blue with a clean white bird silhouette; the lower-right half is pure black with a large clean white letter X. Both symbols have expressive cartoon eyes and angry eyebrows and glare fiercely across the diagonal at each other like rival mascots. Crisp icon geometry, high contrast, polished graphic lighting, no extra text, no watermark.
+  </text:Value>
+  <text:Value id="broll-mars-rocket-prompt">
+    A cinematic satirical scene on the red surface of Mars. A sleek futuristic rocket is launching upward from a dusty crater, but its enormous exhaust plume is made from thousands of flying United States dollar bills and glittering cash fragments instead of flame. Rust-red mountains, dramatic low-angle composition, realistic spacecraft, energetic motion frozen sharply, no readable text, no logos, no watermark.
+  </text:Value>
+  <text:Value id="broll-market-crash-prompt">
+    A polished financial-news parody dominated by a violently fluctuating stock-market candlestick chart with extreme peaks, deep crashes, red and green bars, and sharp zigzagging movement. In the upper-left corner, one small social-media post card shows the display name "Elon Musk", a simple rocket avatar, and the exact message "gonna launch somethin this afternoon". The post is clearly readable while the unstable market chart fills the rest of the screen, no other readable text, no watermark.
+  </text:Value>
+  <text:Value id="broll-richest-chair-prompt">
+    A photorealistic satirical portrait of a fabulously wealthy corporate boss in an immaculate dark suit seated in a monumental white marble armchair inspired by the Lincoln Memorial seat. He crosses one leg over the other, holds a thick cigar, and looks calmly powerful while faint smoke curls upward. Grand symmetrical architecture, cinematic prestige lighting, excessive authority, no readable text, no logos, no watermark.
+  </text:Value>
+  <text:Value id="broll-haircut-x-prompt">
+    An absurd extreme close-up of the top and back of a man's head with an enormous electrified afro. Individual stiff hair spikes rise and bend into clearly legible sculpted letters spelling exactly "HAIRCUTX", parodying an aerospace company name. Professional hair-product photography, crisp strand detail, deadpan visual comedy, plain studio background, no other text, no logos, no watermark.
+  </text:Value>
+  <text:Value id="broll-fired-friday-prompt">
+    A warm hand-painted Japanese animated-film scene with soft ink lines, watercolor backgrounds, expressive acting, and gentle cinematic lighting. A lean clean-shaven white man in his late thirties with short tousled dark-brown hair, a long narrow face, prominent ears, light eyes, and a straight nose looks stunned while clutching a cardboard departure box and wearing a dangling employee badge. A security employee ushers him through the glass front doors of a modern artificial-intelligence research office. His box holds a laptop, a small plant, and notebooks. No readable text, no watermark.
+  </text:Value>
+  <text:Value id="broll-company-quit-prompt">
+    A warm hand-painted Japanese animated-film scene with soft ink lines, watercolor backgrounds, expressive faces, and dynamic perspective. Inside a large modern white-collar office, every employee has stood up from their workstation at the same moment and is raising an arm toward an unseen board of directors in unified protest. Rows of desks create strong converging lines, determined faces, forceful group composition, laptops and office chairs left behind, no readable text, no logos, no watermark.
+  </text:Value>
+  <text:Value id="broll-back-monday-prompt">
+    A warm hand-painted Japanese animated-film boardroom scene with soft ink lines, watercolor texture, and expressive cinematic acting. At the far end of a long board table sits a lean clean-shaven white man in his late thirties with short tousled dark-brown hair, a long narrow face, prominent ears, light eyes, and a straight nose. He leans back with a quietly triumphant smirk and looks confidently down the table. Senior male and female directors in varied formal suits sit on both sides with lowered heads and defeated postures. Modern technology-company interior, no readable text, no logos, no watermark.
+  </text:Value>
+  <text:Value id="broll-elon-lawsuit-prompt">
+    A funny three-dimensional mascot icon on a clean dark background: a bold white letter X on a black square tile has cartoon arms, mischievous eyes, and an exaggerated serious expression while raising a wooden judge's gavel. Polished app-icon rendering, strong silhouette, dramatic rim light, no extra text, no watermark.
+  </text:Value>
+  <text:Value id="broll-google-fears-prompt">
+    A funny three-dimensional mascot icon on a clean pale background: a large multicolored capital G-shaped character in blue, red, yellow, and green has cartoon arms and a worried but determined face while holding an oversized extremely sturdy silver safety shield in front of itself. Polished app-icon rendering, readable silhouette, playful corporate parody, no extra text, no watermark.
+  </text:Value>
+  <text:Value id="broll-congress-grilled-prompt">
+    A playful abstract three-dimensional mascot icon of the United States Capitol building with cartoon arms and an intensely serious face. The Capitol character holds an enormous metal barbecue skewer over a glowing charcoal grill directly beneath it, with small flames and curls of smoke. Clean neutral background, strong icon silhouette, polished satirical rendering, no readable text, no logos, no watermark.
+  </text:Value>
+  <text:Value id="broll-still-here-prompt">
+    A polished 2.5D animated editorial portrait of a lean clean-shaven white man in his late thirties with short tousled dark-brown hair, a long narrow face, prominent ears, light eyes, and a straight nose. He wears his signature plain black short-sleeve shirt and light-colored trousers, stands with both arms folded proudly outside the grand glass entrance of a modern artificial-intelligence research headquarters, lifts his chin, raises his left eyebrow, and looks directly into the camera with calm triumph. A restrained black-and-white circular knot emblem marks the doorway. Crisp dimensional shading, heroic low camera angle, no readable text, no watermark.
+  </text:Value>
+
+  <gpt:Image id="broll-money-rain" prompt={broll-money-rain-prompt}
+    aspect-ratio="1:1" resolution="2K"/>
+  <gpt:Image id="broll-twitter-x" prompt={broll-twitter-x-prompt}
+    aspect-ratio="4:3" resolution="2K"/>
+  <gpt:Image id="broll-mars-rocket" prompt={broll-mars-rocket-prompt}
+    aspect-ratio="9:16" resolution="2K"/>
+  <gpt:Image id="broll-market-crash" prompt={broll-market-crash-prompt}
+    aspect-ratio="16:9" resolution="2K"/>
+  <gpt:Image id="broll-richest-chair" prompt={broll-richest-chair-prompt}
+    aspect-ratio="1:1" resolution="2K"/>
+  <gpt:Image id="broll-haircut-x" prompt={broll-haircut-x-prompt}
+    aspect-ratio="4:3" resolution="2K"/>
+  <gpt:Image id="broll-fired-friday" prompt={broll-fired-friday-prompt}
+    aspect-ratio="3:4" resolution="2K"/>
+  <gpt:Image id="broll-company-quit" prompt={broll-company-quit-prompt}
+    aspect-ratio="1:1" resolution="2K"/>
+  <gpt:Image id="broll-back-monday" prompt={broll-back-monday-prompt}
+    aspect-ratio="4:3" resolution="2K"/>
+  <gpt:Image id="broll-elon-lawsuit" prompt={broll-elon-lawsuit-prompt}
+    aspect-ratio="1:1" resolution="2K"/>
+  <gpt:Image id="broll-google-fears" prompt={broll-google-fears-prompt}
+    aspect-ratio="1:1" resolution="2K"/>
+  <gpt:Image id="broll-congress-grilled" prompt={broll-congress-grilled-prompt}
+    aspect-ratio="1:1" resolution="2K"/>
+  <gpt:Image id="broll-still-here" prompt={broll-still-here-prompt}
+    aspect-ratio="4:3" resolution="2K"/>
+
+  <text:Render id="elon-prompt" template={speaker-kit.speaker-v1}
+    recipe={recipes.speaker.host}>
+    <text:Set name="dialogue" text={story.segment.elon.dialogue}/>
+    <text:Set name="action" text={elon-action}/>
+  </text:Render>
+  <text:Render id="sam-prompt" template={speaker-kit.speaker-v1}
+    recipe={recipes.speaker.host}>
+    <text:Set name="dialogue" text={story.segment.sam.dialogue}/>
+    <text:Set name="action" text={sam-action}/>
+  </text:Render>
+
+  <seedance:ReferenceVideo id="elon-take" model="mini"
+    prompt={elon-prompt} duration="10"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter}/>
+    <seedance:Reference audio={presenter-voice}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="sam-take" model="mini"
+    prompt={sam-prompt} duration="10"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter}/>
+    <seedance:Reference audio={presenter-voice}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <program:Clock id="clock" frame-rate="30"/>
+  <pipeline:Normalize id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <pipeline:Normalize id="ranking-appear-media" source={ranking-appear-sfx}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <pipeline:Normalize id="ranking-move-media" source={ranking-move-sfx}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <space:Frame id="speech-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <space:Frame id="tier-frame" within={vertical}
+    left="0%" top="55%" right="100%" bottom="100%"/>
+
+  <space:Extent id="money-rain-extent" width="2048" height="2048"/>
+  <space:Extent id="twitter-x-extent" width="2688" height="2016"/>
+  <space:Extent id="mars-rocket-extent" width="1152" height="2048"/>
+  <space:Extent id="market-crash-extent" width="2688" height="1512"/>
+  <space:Extent id="richest-chair-extent" width="2048" height="2048"/>
+  <space:Extent id="haircut-x-extent" width="2688" height="2016"/>
+  <space:Extent id="fired-friday-extent" width="2016" height="2688"/>
+  <space:Extent id="company-quit-extent" width="2048" height="2048"/>
+  <space:Extent id="back-monday-extent" width="2688" height="2016"/>
+  <space:Extent id="elon-lawsuit-extent" width="2048" height="2048"/>
+  <space:Extent id="google-fears-extent" width="2048" height="2048"/>
+  <space:Extent id="congress-grilled-extent" width="2048" height="2048"/>
+  <space:Extent id="still-here-extent" width="2688" height="2016"/>
+
+  <space:AspectFrame id="money-rain-frame" within={vertical}
+    x="30%" y="82%" width="58%" aspect={money-rain-extent} anchor="center"/>
+  <space:AspectFrame id="twitter-x-frame" within={vertical}
+    x="66%" y="82%" width="68%" aspect={twitter-x-extent} anchor="center"/>
+  <space:AspectFrame id="mars-rocket-frame" within={vertical}
+    x="24%" y="81%" width="42%" aspect={mars-rocket-extent} anchor="center"/>
+  <space:AspectFrame id="market-crash-frame" within={vertical}
+    x="62%" y="82%" width="84%" aspect={market-crash-extent} anchor="center"/>
+  <space:AspectFrame id="richest-chair-frame" within={vertical}
+    x="30%" y="82%" width="58%" aspect={richest-chair-extent} anchor="center"/>
+  <space:AspectFrame id="haircut-x-frame" within={vertical}
+    x="66%" y="82%" width="68%" aspect={haircut-x-extent} anchor="center"/>
+  <space:AspectFrame id="fired-friday-frame" within={vertical}
+    x="24%" y="81%" width="42%" aspect={fired-friday-extent} anchor="center"/>
+  <space:AspectFrame id="company-quit-frame" within={vertical}
+    x="76%" y="83%" width="52%" aspect={company-quit-extent} anchor="center"/>
+  <space:AspectFrame id="back-monday-frame" within={vertical}
+    x="52%" y="82%" width="72%" aspect={back-monday-extent} anchor="center"/>
+  <space:AspectFrame id="elon-lawsuit-frame" within={vertical}
+    x="27%" y="84%" width="42%" aspect={elon-lawsuit-extent} anchor="center"/>
+  <space:AspectFrame id="google-fears-frame" within={vertical}
+    x="50%" y="84%" width="42%" aspect={google-fears-extent} anchor="center"/>
+  <space:AspectFrame id="congress-grilled-frame" within={vertical}
+    x="73%" y="84%" width="42%" aspect={congress-grilled-extent} anchor="center"/>
+  <space:AspectFrame id="still-here-frame" within={vertical}
+    x="50%" y="70%" width="64%" aspect={still-here-extent} anchor="center"/>
+
+  <pipeline:Normalize id="elon-media" source={elon-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="sam-media" source={sam-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <whisperx:SemanticTake id="elon-semantic" narrative={story}
+    segment={story.segment.elon} media={elon-media.media} language="en"/>
+  <whisperx:SemanticTake id="sam-semantic" narrative={story}
+    segment={story.segment.sam} media={sam-media.media} language="en"/>
+
+  <pipeline:StillVideo id="elon-still" source={presenter}
+    duration={elon-preview-duration.duration} clock={clock}/>
+  <pipeline:StillVideo id="sam-still" source={presenter}
+    duration={sam-preview-duration.duration} clock={clock}/>
+  <pipeline:Normalize id="elon-preview-media" source={elon-still.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="sam-preview-media" source={sam-still.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <estimated:SemanticTake id="elon-preview" narrative={story}
+    segment={story.segment.elon} media={elon-preview-media.media}
+    policy={elon-preview-duration.policy}/>
+  <estimated:SemanticTake id="sam-preview" narrative={story}
+    segment={story.segment.sam} media={sam-preview-media.media}
+    policy={sam-preview-duration.policy}/>
+
+  <speech:Track id="speech" visual-frame={speech-frame}
+    visual-appearance={recipes.speech.visual} visual-z="0">
+    <speech:Take source={elon-semantic.take}/>
+    <speech:Take source={sam-semantic.take}/>
+  </speech:Track>
+  <audio-track:Track id="music-bed" semantic={speech.semantic}>
+    <audio-track:Clip source={soundtrack-media.media} during="program"
+      playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
+  </audio-track:Track>
+
+  <fonts:Stack id="display-font" family="montserrat" weight="900" style="normal"/>
+  <fonts:Stack id="tier-font" family="inter" weight="400" style="normal"/>
+  <ranking:TierBoardStyle id="tier-style" recipe={recipes.ranking.tech}
+    font={tier-font}/>
+  <ranking:TierBoard id="tech-tiers" semantic={speech.semantic}
+    canvas={vertical} frame={tier-frame}
+    during="program" style={tier-style}
+    appear-sound={ranking-appear-media.media}
+    move-sound={ranking-move-media.media}>
+    <ranking:TierItem id="jensen" tier="s" preset="true" icon={jensen-icon}/>
+    <ranking:TierItem id="bill" tier="s" preset="true" icon={bill-icon}/>
+    <ranking:TierItem id="jeff" tier="a" preset="true" icon={jeff-icon}/>
+    <ranking:TierItem id="dario" tier="b" preset="true" icon={dario-icon}/>
+    <ranking:TierItem id="jack" tier="b" preset="true" icon={jack-icon}/>
+    <ranking:TierItem id="tim" tier="c" preset="true" icon={tim-icon}/>
+    <ranking:TierItem id="mark" tier="d" preset="true" icon={mark-icon}/>
+    <ranking:TierItem id="elon" tier="d" entry="drop"
+      icon={elon-icon} during={story.segment.elon}/>
+    <ranking:TierItem id="sam" tier="s" entry="drop"
+      icon={sam-icon} during={story.segment.sam}/>
+  </ranking:TierBoard>
+
+  <media-track:Track id="broll" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Item id="money-rain" image={broll-money-rain.image}
+      extent={money-rain-extent} during={story.selection.money-rain}
+      frame={money-rain-frame} appearance={recipes.media.money-rain}
+      motion={recipes.motion.broll-left}/>
+    <media-track:Item id="twitter-x" image={broll-twitter-x.image}
+      extent={twitter-x-extent} during={story.selection.twitter-x}
+      frame={twitter-x-frame} appearance={recipes.media.twitter-x}
+      motion={recipes.motion.broll-right}/>
+    <media-track:Item id="mars-rocket" image={broll-mars-rocket.image}
+      extent={mars-rocket-extent} during={story.selection.mars-rocket}
+      frame={mars-rocket-frame} appearance={recipes.media.mars-rocket}
+      motion={recipes.motion.broll-left}/>
+    <media-track:Item id="market-crash" image={broll-market-crash.image}
+      extent={market-crash-extent} during={story.selection.market-crash}
+      frame={market-crash-frame} appearance={recipes.media.market-crash}
+      motion={recipes.motion.broll-wide}/>
+    <media-track:Item id="richest-chair" image={broll-richest-chair.image}
+      extent={richest-chair-extent} during={story.selection.richest-chair}
+      frame={richest-chair-frame} appearance={recipes.media.richest-chair}
+      motion={recipes.motion.broll-right}/>
+    <media-track:Item id="haircut-x" image={broll-haircut-x.image}
+      extent={haircut-x-extent} during={story.selection.haircut-x}
+      frame={haircut-x-frame} appearance={recipes.media.haircut-x}
+      motion={recipes.motion.broll-wide}/>
+    <media-track:Item id="fired-friday" image={broll-fired-friday.image}
+      extent={fired-friday-extent} during={story.selection.fired-friday}
+      frame={fired-friday-frame} appearance={recipes.media.fired-friday}
+      motion={recipes.motion.broll-left}/>
+    <media-track:Item id="company-quit" image={broll-company-quit.image}
+      extent={company-quit-extent} during={story.selection.company-quit}
+      frame={company-quit-frame} appearance={recipes.media.company-quit}
+      motion={recipes.motion.broll-right}/>
+    <media-track:Item id="back-monday" image={broll-back-monday.image}
+      extent={back-monday-extent} during={story.selection.back-monday}
+      frame={back-monday-frame} appearance={recipes.media.back-monday}
+      motion={recipes.motion.broll-wide}/>
+    <media-track:Item id="elon-lawsuit" image={broll-elon-lawsuit.image}
+      extent={elon-lawsuit-extent} during={story.selection.elon-lawsuit}
+      frame={elon-lawsuit-frame} appearance={recipes.media.elon-lawsuit}
+      motion={recipes.motion.broll-left}/>
+    <media-track:Item id="google-fears" image={broll-google-fears.image}
+      extent={google-fears-extent} during={story.selection.google-fears}
+      frame={google-fears-frame} appearance={recipes.media.google-fears}
+      motion={recipes.motion.broll-right}/>
+    <media-track:Item id="congress-grilled" image={broll-congress-grilled.image}
+      extent={congress-grilled-extent} during={story.selection.congress-grilled}
+      frame={congress-grilled-frame} appearance={recipes.media.congress-grilled}
+      motion={recipes.motion.broll-left}/>
+    <media-track:Item id="still-here" image={broll-still-here.image}
+      extent={still-here-extent} during={story.selection.still-here}
+      frame={still-here-frame} appearance={recipes.media.still-here}
+      motion={recipes.motion.broll-wide}/>
+  </media-track:Track>
+
+  <caption-fine:Style id="caption-style" recipe={recipes.caption.primary}
+    font={display-font}/>
+  <caption:Program id="caption-program" document={story.caption}
+    narrative={story} default={caption-style}/>
+  <caption-fine:Track id="captions" document={story.caption}
+    semantic={speech.semantic} program={caption-program}/>
+
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
+    appearance={recipes.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audio}/>
+    <film:Track source={tech-tiers.visual}/>
+    <film:Track source={tech-tiers.audio}/>
+    <film:Track source={broll.visual}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={music-bed.track}/>
+  </film:Film>
+  <render:Video id="final" composition={main.composition}
+    semantic={speech.semantic}/>
+</svml>

@@ -690,7 +690,7 @@ const allRankingMarkupSurfaces = [
       } },
 ] as const;
 
-export const rankingMarkupSurfaces = allRankingMarkupSurfaces.filter((surface) => surface.name !== "tier-style" && surface.name !== "tier");
+export const rankingMarkupSurfaces = allRankingMarkupSurfaces;
 
 export const rankingManifest: ModuleManifest = {
   format: "hypit.module@1", name: rankingModuleRef.name, version: rankingModuleRef.version,

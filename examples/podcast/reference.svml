@@ -1,0 +1,252 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="estimate" from="@hypit/estimate@1"/>
+  <import as="estimated" from="@hypit/semantic-take-estimate@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
+  <import as="audio-track" from="@hypit/audio-track@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="media-track" from="@hypit/media-track@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="recipes" source="./recipes.svs"/>
+  <import as="broll-kit" source="./kits/broll-v1.svs"/>
+  <import as="podcast-kit" source="./kits/podcast-v1.svs"/>
+
+  <script id="story">
+    <opening-question>
+      <GUY>OK Sarah || so what is || the one single thing || that you literally || can't live without?
+    </opening-question>
+    <daily-creatine>
+      <GIRL>Creatine. Five grams || a day, every day. ~@lifestyle || I put it || in my coffee, || my smoothie, || and even my || pasta water.
+      <GUY>God I think || you're treating this @/lifestyle || as flour.
+    </daily-creatine>
+    <arms-are-asking>
+      <GIRL>But actually you || need this way || more than I do.
+      <GUY>Wait what? || I didn't ask || for that!
+      <GIRL>Of course you did. || Look at your arms!
+    </arms-are-asking>
+  </script>
+
+  <asset:Image id="guy" src="./assets/guy.png"/>
+  <asset:Image id="girl" src="./assets/girl.png"/>
+  <asset:Image id="guy-hypihub" src="./assets/guy-hypihub.jpg"/>
+  <asset:Image id="girl-hypihub" src="./assets/girl-hypihub.jpg"/>
+  <asset:Image id="split-hypihub" src="./assets/split-hypihub.jpg"/>
+  <asset:Image id="creatine" src="./assets/creatine.png"/>
+
+  <asset:Audio id="guy-voice" src="./assets/dude.mp3"/>
+  <asset:Audio id="girl-voice" src="./assets/girl.wav"/>
+  <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
+
+  <text:Value id="split-prompt">
+    A photorealistic vertical image with the authentic texture of an iPhone video frame. It must look like a single frame captured from a real iPhone recording: natural and lifelike, never glossy or overprocessed. Keep the background clearly visible with no shallow depth-of-field blur. Preserve realistic, finely detailed skin texture, natural lighting, coherent anatomy, and a clean image with no fragmentation or visual artifacts. Preserve the Rembrandt lighting in the reference images exactly. Create a horizontal split-screen composition with the man in the upper half and the woman in the lower half. Frame both people in tight close-ups focused on their upper bodies from the upper chest upward.
+  </text:Value>
+
+  <text:Value id="guy-hold-prompt">
+    A photorealistic vertical medium close-up with the authentic texture of an iPhone video frame. It must look like a single frame captured from a real iPhone recording: natural and lifelike, never glossy or overprocessed. Keep the background clearly visible with no shallow depth-of-field blur. Preserve realistic, finely detailed skin texture, natural lighting, coherent anatomy, and a clean image with no fragmentation or visual artifacts. Preserve the Rembrandt lighting from the first reference image exactly. Preserve the microphone and its placement, shifting it only slightly toward the right side of the frame to leave enough room for the man to raise his forearm. Show the man smiling while holding the creatine container from the second reference image. He continues looking toward the right side of the frame as though speaking to someone there. He holds the creatine with the hand on the left side of the frame.
+  </text:Value>
+
+  <text:Value id="girl-hold-prompt">
+    A photorealistic vertical medium close-up with the authentic texture of an iPhone video frame. It must look like a single frame captured from a real iPhone recording: natural and lifelike, never glossy or overprocessed. Keep the background clearly visible with no shallow depth-of-field blur. Preserve realistic, finely detailed skin texture, natural lighting, coherent anatomy, and a clean image with no fragmentation or visual artifacts. Preserve the Rembrandt lighting from the first reference image exactly. Preserve the microphone and its placement, shifting it only slightly toward the left side of the frame to leave enough room for the woman to raise her forearm. Show the woman smiling while holding the creatine container from the second reference image. She continues looking toward the left side of the frame as though speaking to someone there. She holds the creatine with the hand on the right side of the frame and points toward it with the hand on the left side of the frame.
+  </text:Value>
+
+  <text:Value id="coffee-prompt">
+    A photorealistic vertical arm's-length selfie with the authentic texture of an iPhone video frame. It must look like a single frame captured from a real iPhone recording: natural and lifelike, never glossy or overprocessed. Keep the background clearly visible with no shallow depth-of-field blur. Preserve realistic, finely detailed skin texture, natural lighting, coherent anatomy, and a clean image with no fragmentation or visual artifacts. Preserve the woman's identity and strongly athletic physique from the reference image, including her visibly muscular arms. She is inside a café, holding the phone high with an extended arm and turning her upper body for a lively selfie. She now wears a light-gray sleeveless hooded zip-up athletic vest over a beige bandeau top, with the hood up and an additional pink baseball cap. She makes an animated, playful expression while pointing behind herself toward a cup of coffee on a table. Other café patrons are subtly visible in the clear background. The lighting is convincingly real: bright afternoon daylight enters from outside and fills the café, casting natural golden side light across her face. Keep the composition energetic and spontaneous, like genuine phone-shot UGC.
+  </text:Value>
+
+  <text:Value id="smoothie-prompt">
+    A photorealistic vertical mirror selfie with the authentic texture of an iPhone video frame. It must look like a single frame captured from a real iPhone recording: natural and lifelike, never glossy or overprocessed. Keep the background clearly visible with no shallow depth-of-field blur. Preserve realistic, finely detailed skin texture, natural lighting, coherent anatomy, and a clean image with no fragmentation or visual artifacts. Preserve the woman's identity and strongly athletic physique from the reference image, including her visibly muscular arms. She is standing inside a dessert shop and taking a mirror selfie with her phone. She now wears a dark navy Adidas athletic tank top and gray-black over-ear headphones. With her free hand she holds a delicious bowl of strawberry shaved ice close to herself, her lips slightly parted in a lively expression as though she is about to taste it. Her phone has a cute CASETiFY case covered with adorable bunny illustrations, and she looks directly at the phone screen. The lighting is convincingly real: bright afternoon daylight enters from outside and fills the shop, giving her face natural frontal illumination. Use an energetic, playful composition rather than a stiff or symmetrical pose.
+  </text:Value>
+
+  <text:Value id="pasta-prompt">
+    A photorealistic vertical low-angle image with the authentic texture of an iPhone video frame. It must look like a single frame captured from a real iPhone recording: natural and lifelike, never glossy or overprocessed. Keep the background clearly visible with no shallow depth-of-field blur. Preserve realistic, finely detailed skin texture, natural lighting, coherent anatomy, and a clean image with no fragmentation or visual artifacts. Preserve the woman's identity and strongly athletic physique from the reference image, including her muscular shoulders and arms. She is in the courtyard of her home, photographed from a phone placed on a table and angled upward. The covered courtyard has a warm modern Korean interior style, a wooden slatted roof, and hanging plants. She now wears a cute pink spaghetti-strap apron over a white T-shirt, with part of her hair held back by a white hair clip. She is seriously preparing a batch of macaroni at the stovetop, ready to place it into a pot. The lighting is convincingly real: bright golden afternoon light fills the outdoor space and gives her face natural frontal illumination.
+  </text:Value>
+
+  <text:Value id="lifestyle-montage-story">
+    Use the three reference images as three ordered shots in one compact, quiet montage. Shot one uses the coffee reference: the woman looks into the camera, raises one relaxed peace sign, and gently turns her face a little from side to side while keeping the rest of her pose natural. Shot two uses the strawberry shaved-ice reference: she continues taking a mirror selfie, keeps the phone clearly visible in one hand and her gaze on its screen, and slightly parts her lips as if she is about to taste the shaved ice. Shot three uses the pasta reference: she calmly continues preparing the pasta with small, practical hand movements and a focused, attentive expression. Keep the action inside each shot continuous and physically coherent, then cut cleanly to the next reference scene in the authored order. Keep all three performances restrained and natural, with ordinary real-time motion, no exaggerated gestures, no repeated blinking, and no slow motion.
+  </text:Value>
+
+  <text:Value id="opening-take-prompt">
+    Preserve the reference image as a fixed horizontal split screen for the entire shot, with the man in the upper half and the woman in the lower half. Keep both identities, outfits, lighting, backgrounds, framing, scale, and the split-screen boundary unchanged. Use one continuous locked view with no cuts, reframing, zoom, or camera movement. In the upper half, the man keeps his gaze toward the right side of the frame throughout while speaking briskly and naturally in one continuous thought, with only a small conversational head movement and no dramatic pause. He says exactly: “OK Sarah so what is the one single thing that you literally can't live without?” At the same time in the lower half, the woman remains completely silent and does not move her mouth. She briefly looks downward, makes one small seated-posture adjustment, then raises her eyes and looks toward the left side of the frame with a focused, attentive expression. Keep both performances understated, simultaneous, photorealistic, and physically coherent. Add no subtitles, captions, labels, UI text, or floating words.
+  </text:Value>
+
+  <text:Value id="daily-creatine-action">
+    ROLE LABEL MAPPING: GIRL is Host A and uses the first image and first audio reference. GUY is Host B and uses the second image and second audio reference. In the dialogue text, every GIRL line belongs only to Host A and every GUY line belongs only to Host B. Only the speaker assigned to the current line moves their mouth; the listener remains silent. GIRL PERFORMANCE: While saying “Creatine,” she lifts the creatine container into a clear, readable position. While saying “Five grams a day, every day,” she points at the container with her free hand and gives small, confident nods. During the next sentence, give each item one distinct, compact gesture with that same free hand: on “I put it in my coffee,” make a small pinching-and-sprinkling motion downward as if adding a scoop to a mug; on “my smoothie,” make one brief circular stirring motion; on “and even my pasta water,” turn the palm outward in a playful, matter-of-fact presentation gesture that lands the joke. Keep the container secure in her other hand throughout. GUY PERFORMANCE: While saying “God, I think you're,” he braces one hand against the sofa and makes one quick seated-posture adjustment, with a mildly incredulous and amused expression. On “treating this as flour,” he raises his right hand for one compact conversational wave. Deliver the word “flour” with a clear falling intonation so the sentence lands decisively rather than sounding like a question. Keep the gestures brisk, readable, understated, and naturally synchronized to the specified phrases.
+  </text:Value>
+
+  <text:Value id="arms-are-asking-action">
+    ROLE LABEL MAPPING: GIRL is Host A and uses the first image and first audio reference. GUY is Host B and uses the second image and second audio reference. In the dialogue text, every GIRL line belongs only to Host A and every GUY line belongs only to Host B. Only the speaker assigned to the current line moves their mouth; the listener remains silent. CONTINUITY: At the beginning, the woman's free hand on the left side of her frame is already lowered naturally while her other hand still holds the creatine container. On the cut to the man, make the container handoff read as one continuous action across the two fixed camera views. Once the man has received it, the container must remain absent from the woman's later shot. PACING AND PERFORMANCE: use quick, conversational handoffs with no long pauses. Keep every expression understated, relaxed, and natural. FIRST GIRL LINE: On “But actually,” she gives a small head tilt and looks toward the left with a slight amused smile, then continues immediately. While saying “you need this way more than I do,” she leans slightly left and extends the container toward the left edge of her frame in one direct offering motion. GUY LINE: On “Wait, what?” he receives the container from the right edge of his frame. On “I didn't ask for that!” he keeps it in one hand, gives one quick palm-up questioning gesture with the free hand, and makes one small confused head shake. FINAL GIRL LINE: The container is no longer visible in her frame. While saying “Of course you did,” she loosely folds her arms and looks left with a slight natural smile. While saying “Look at your arms!” she leans slightly left, unfolds one hand, points toward the left once, and gives one small confident nod. Keep every action brisk, readable, physically coherent, and precisely synchronized to the specified words.
+  </text:Value>
+
+  <gpt:Image id="split" prompt={split-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={split-hypihub}/>
+  </gpt:Image>
+
+  <gpt:Image id="guy-hold" prompt={guy-hold-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={guy}/>
+    <gpt:Reference image={creatine}/>
+  </gpt:Image>
+
+  <gpt:Image id="girl-hold" prompt={girl-hold-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={girl}/>
+    <gpt:Reference image={creatine}/>
+  </gpt:Image>
+
+  <gpt:Image id="coffee" prompt={coffee-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={girl-hypihub}/>
+  </gpt:Image>
+
+  <gpt:Image id="smoothie" prompt={smoothie-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={girl}/>
+  </gpt:Image>
+
+  <gpt:Image id="pasta" prompt={pasta-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={girl}/>
+  </gpt:Image>
+
+  <text:Render id="lifestyle-montage-prompt"
+    template={broll-kit.broll-v1} recipe={recipes.broll.calm-ugc-montage}>
+    <text:Set name="story" text={lifestyle-montage-story}/>
+  </text:Render>
+
+  <seedance:ReferenceVideo id="lifestyle-montage" model="mini"
+    prompt={lifestyle-montage-prompt} duration="5"
+    resolution="720p" aspect-ratio="9:16" generate-audio="false">
+    <seedance:Reference image={coffee.image}/>
+    <seedance:Reference image={smoothie.image}/>
+    <seedance:Reference image={pasta.image}/>
+  </seedance:ReferenceVideo>
+
+  <text:Render id="daily-creatine-take-prompt"
+    template={podcast-kit.podcast-v1} recipe={recipes.podcast.daily-creatine}>
+    <text:Set name="dialogue" text={story.segment.daily-creatine.dialogue}/>
+    <text:Set name="action" text={daily-creatine-action}/>
+  </text:Render>
+
+  <text:Render id="arms-are-asking-take-prompt"
+    template={podcast-kit.podcast-v1} recipe={recipes.podcast.arms-are-asking}>
+    <text:Set name="dialogue" text={story.segment.arms-are-asking.dialogue}/>
+    <text:Set name="action" text={arms-are-asking-action}/>
+  </text:Render>
+
+  <seedance:ReferenceVideo id="opening-take" model="mini"
+    prompt={opening-take-prompt} duration="4"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={split.image}/>
+    <seedance:Reference audio={guy-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="daily-creatine-take" model="mini"
+    prompt={daily-creatine-take-prompt} duration="8"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={girl-hold.image}/>
+    <seedance:Reference image={guy}/>
+    <seedance:Reference audio={girl-voice}/>
+    <seedance:Reference audio={guy-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="arms-are-asking-take" model="mini"
+    prompt={arms-are-asking-take-prompt} duration="6"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={girl-hold.image}/>
+    <seedance:Reference image={guy-hold.image}/>
+    <seedance:Reference audio={girl-voice}/>
+    <seedance:Reference audio={guy-voice}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <space:Frame id="full-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <program:Clock id="clock" frame-rate="30"/>
+
+  <pipeline:Normalize id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+
+  <pipeline:Normalize id="opening-media" source={opening-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="daily-creatine-media" source={daily-creatine-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="arms-are-asking-media" source={arms-are-asking-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="lifestyle-media" source={lifestyle-montage.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+
+  <whisperx:SemanticTake id="opening-semantic" narrative={story}
+    segment={story.segment.opening-question} media={opening-media.media} language="en"/>
+  <whisperx:SemanticTake id="daily-creatine-semantic" narrative={story}
+    segment={story.segment.daily-creatine} media={daily-creatine-media.media} language="en"/>
+  <whisperx:SemanticTake id="arms-are-asking-semantic" narrative={story}
+    segment={story.segment.arms-are-asking} media={arms-are-asking-media.media} language="en"/>
+
+  <estimate:Speech id="preview-estimate" source={story.segment.opening-question.speech}
+    policy={recipes.speech.preview}/>
+  <estimated:SemanticTake id="opening-estimated" narrative={story}
+    segment={story.segment.opening-question} media={opening-media.media}
+    policy={preview-estimate.policy}/>
+  <estimated:SemanticTake id="daily-creatine-estimated" narrative={story}
+    segment={story.segment.daily-creatine} media={daily-creatine-media.media}
+    policy={preview-estimate.policy}/>
+  <estimated:SemanticTake id="arms-are-asking-estimated" narrative={story}
+    segment={story.segment.arms-are-asking} media={arms-are-asking-media.media}
+    policy={preview-estimate.policy}/>
+
+  <speech:Track id="speech" visual-frame={full-frame}
+    visual-appearance={recipes.speech.visual} visual-z="10">
+    <speech:Take source={opening-semantic.take}/>
+    <speech:Take source={daily-creatine-semantic.take}/>
+    <speech:Take source={arms-are-asking-semantic.take}/>
+  </speech:Track>
+
+  <audio-track:Track id="music-bed" semantic={speech.semantic}>
+    <audio-track:Clip source={soundtrack-media.media} during="program"
+      playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
+  </audio-track:Track>
+
+  <media-track:Track id="lifestyle" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Item id="lifestyle-cutaway" media={lifestyle-media.media}
+      frame={full-frame} during={story.selection.lifestyle}
+      appearance={recipes.media.lifestyle}/>
+  </media-track:Track>
+
+  <fonts:Stack id="caption-font" family="montserrat" weight="900" style="normal"/>
+  <caption-fine:Style id="caption-style" recipe={recipes.caption.original-girl}
+    font={caption-font}/>
+  <caption-fine:Style id="caption-guy-style" recipe={recipes.caption.original-guy}
+    font={caption-font}/>
+  <caption:Program id="caption-program" document={story.caption}
+    narrative={story} default={caption-style}>
+    <caption:Use role="GUY" style={caption-guy-style}/>
+  </caption:Program>
+  <caption-fine:Track id="captions" document={story.caption}
+    semantic={speech.semantic} program={caption-program}/>
+
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
+    appearance={recipes.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audio}/>
+    <film:Track source={lifestyle.visual}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={music-bed.track}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition}
+    semantic={speech.semantic}/>
+</svml>

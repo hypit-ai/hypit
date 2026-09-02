@@ -1,0 +1,77 @@
+<?svml using="@hypit/run-markup@1"?>
+<svrun version="1">
+  <author source="./swap-effect-banana-reference-sync.svml"/>
+  <target output="final.video"/>
+  <file id="ronaldo-banana" type="@hypit/artifact@1#BlobArtifact" from="./reused/ronaldo.mp4" media-type="video/mp4"/>
+  <file id="messi-banana" type="@hypit/artifact@1#BlobArtifact" from="./reused/messi.mp4" media-type="video/mp4"/>
+  <satisfy output="ronaldo-take.video" candidate="ronaldo-banana"/>
+  <satisfy output="messi-take.video" candidate="messi-banana"/>
+  <build-record id="record-broll-greek-god-image" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="broll-greek-god.image"/>
+  <satisfy output="broll-greek-god.image" candidate="record-broll-greek-god-image"/>
+  <build-record id="record-broll-greek-tragedy-image" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="broll-greek-tragedy.image"/>
+  <satisfy output="broll-greek-tragedy.image" candidate="record-broll-greek-tragedy-image"/>
+  <build-record id="record-broll-hair-gel-image" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="broll-hair-gel.image"/>
+  <satisfy output="broll-hair-gel.image" candidate="record-broll-hair-gel-image"/>
+  <build-record id="record-broll-hat-trick-image" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="broll-hat-trick.image"/>
+  <satisfy output="broll-hat-trick.image" candidate="record-broll-hat-trick-image"/>
+  <build-record id="record-broll-penaldo-social-image" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="broll-penaldo-social.image"/>
+  <satisfy output="broll-penaldo-social.image" candidate="record-broll-penaldo-social-image"/>
+  <build-record id="record-broll-tired-dad-trophy-image" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="broll-tired-dad-trophy.image"/>
+  <satisfy output="broll-tired-dad-trophy.image" candidate="record-broll-tired-dad-trophy-image"/>
+  <build-record id="record-broll-trophy-image" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="broll-trophy.image"/>
+  <satisfy output="broll-trophy.image" candidate="record-broll-trophy-image"/>
+  <build-record id="record-broll-walks-around-image" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="broll-walks-around.image"/>
+  <satisfy output="broll-walks-around.image" candidate="record-broll-walks-around-image"/>
+  <build-record id="record-broll-visual" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="broll.visual"/>
+  <satisfy output="broll.visual" candidate="record-broll-visual"/>
+  <build-record id="record-captions-track" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="captions.track"/>
+  <satisfy output="captions.track" candidate="record-captions-track"/>
+  <build-record id="record-column-frame" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="column-frame"/>
+  <satisfy output="column-frame" candidate="record-column-frame"/>
+  <build-record id="record-football-column-audio" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="football-column.audio"/>
+  <satisfy output="football-column.audio" candidate="record-football-column-audio"/>
+  <build-record id="record-football-column-visual" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="football-column.visual"/>
+  <satisfy output="football-column.visual" candidate="record-football-column-visual"/>
+  <build-record id="record-greek-god-frame" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="greek-god-frame"/>
+  <satisfy output="greek-god-frame" candidate="record-greek-god-frame"/>
+  <build-record id="record-greek-tragedy-frame" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="greek-tragedy-frame"/>
+  <satisfy output="greek-tragedy-frame" candidate="record-greek-tragedy-frame"/>
+  <build-record id="record-hair-gel-frame" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="hair-gel-frame"/>
+  <satisfy output="hair-gel-frame" candidate="record-hair-gel-frame"/>
+  <build-record id="record-hat-trick-frame" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="hat-trick-frame"/>
+  <satisfy output="hat-trick-frame" candidate="record-hat-trick-frame"/>
+  <build-record id="record-main-composition" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="main.composition"/>
+  <satisfy output="main.composition" candidate="record-main-composition"/>
+  <build-record id="record-messi-media-media" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="messi-media.media"/>
+  <satisfy output="messi-media.media" candidate="record-messi-media-media"/>
+  <build-record id="record-messi-semantic-take" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="messi-semantic.take"/>
+  <satisfy output="messi-semantic.take" candidate="record-messi-semantic-take"/>
+  <build-record id="record-music-bed-track" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="music-bed.track"/>
+  <satisfy output="music-bed.track" candidate="record-music-bed-track"/>
+  <build-record id="record-penaldo-social-frame" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="penaldo-social-frame"/>
+  <satisfy output="penaldo-social-frame" candidate="record-penaldo-social-frame"/>
+  <build-record id="record-ranking-appear-media-media" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="ranking-appear-media.media"/>
+  <satisfy output="ranking-appear-media.media" candidate="record-ranking-appear-media-media"/>
+  <build-record id="record-ranking-move-media-media" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="ranking-move-media.media"/>
+  <satisfy output="ranking-move-media.media" candidate="record-ranking-move-media-media"/>
+  <build-record id="record-ronaldo-media-media" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="ronaldo-media.media"/>
+  <satisfy output="ronaldo-media.media" candidate="record-ronaldo-media-media"/>
+  <build-record id="record-ronaldo-semantic-take" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="ronaldo-semantic.take"/>
+  <satisfy output="ronaldo-semantic.take" candidate="record-ronaldo-semantic-take"/>
+  <build-record id="record-soundtrack-media-media" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="soundtrack-media.media"/>
+  <satisfy output="soundtrack-media.media" candidate="record-soundtrack-media-media"/>
+  <build-record id="record-speech-frame" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="speech-frame"/>
+  <satisfy output="speech-frame" candidate="record-speech-frame"/>
+  <build-record id="record-speech-audio" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="speech.audio"/>
+  <satisfy output="speech.audio" candidate="record-speech-audio"/>
+  <build-record id="record-speech-semantic" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="speech.semantic"/>
+  <satisfy output="speech.semantic" candidate="record-speech-semantic"/>
+  <build-record id="record-speech-visual" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="speech.visual"/>
+  <satisfy output="speech.visual" candidate="record-speech-visual"/>
+  <build-record id="record-tired-dad-frame" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="tired-dad-frame"/>
+  <satisfy output="tired-dad-frame" candidate="record-tired-dad-frame"/>
+  <build-record id="record-trophy-frame" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="trophy-frame"/>
+  <satisfy output="trophy-frame" candidate="record-trophy-frame"/>
+  <build-record id="record-walks-around-frame" build="bld_82a78194-5421-4598-8f2b-2636deb3fc0c" output="walks-around-frame"/>
+  <satisfy output="walks-around-frame" candidate="record-walks-around-frame"/>
+</svrun>

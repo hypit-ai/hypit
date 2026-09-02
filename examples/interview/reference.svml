@@ -1,0 +1,242 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="media" from="@hypit/media@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
+  <import as="estimate" from="@hypit/estimate@1"/>
+  <import as="audio-track" from="@hypit/audio-track@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="screen" from="@hypit/screen-overlay@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
+  <import as="recipes" source="./recipes.svs"/>
+  <import as="tracking" source="./tracking.svs"/>
+  <import as="interview-kit" source="./kits/street-interview-v1.svs"/>
+
+  <script id="story">
+    <manifest-rule>
+      <BOY>Hey yo! || Is this || Lamborghini || yours?
+      <WIFE>Mmm hmm.
+      <BOY>Give me || three rules || to make your || first million.
+      <WIFE>OK || the || first one || is || @manifest! Manifest.
+      <BOY>You manifested || a Lamborghini?
+      <WIFE>I || said it || to || myself || every || morning.
+    </manifest-rule>
+
+    <real-estate-rule>
+      <BOY>Did it really || work?
+      <WIFE>No. || But || rule two || did.
+      <BOY>Say it.
+      <WIFE>@real-estate! Real estate. || Buy || the || building, || and || charge || everyone || rent.
+      <BOY>But how did you || buy the building?
+      <WIFE>That's || rule three.
+    </real-estate-rule>
+
+    <bitcoin-rule>
+      <BOY>Wait what?
+      <WIFE>@bitcoin! Bitcoin. || I || pressed || the || wrong || button || in <2012 | twenty twelve> || and || made || six figures.
+      <BOY>So you || accidentally || bought Bitcoin?!
+      <WIFE>That's || manifesting, || baby.
+    </bitcoin-rule>
+  </script>
+
+  <media:Image id="interviewer-view" src="./assets/guy.png"/>
+  <media:Image id="guest-view" src="./assets/wife.png"/>
+  <media:Image id="shared-view" src="./assets/host.png"/>
+  <media:Audio id="boy-voice" src="./assets/guy.wav"/>
+  <media:Audio id="wife-voice" src="./assets/wife.wav"/>
+  <media:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
+  <media:Audio id="rule-reveal-sound" src="./assets/rule-reveal.wav"/>
+  <media:Image id="rule-placeholder" src="./assets/emoji-reveal/rendered/question-mark.png"/>
+  <media:Image id="manifest-icon" src="./assets/emoji-reveal/rendered/sparkles.png"/>
+  <media:Image id="real-estate-icon" src="./assets/emoji-reveal/rendered/building-estate.png"/>
+  <media:Image id="bitcoin-icon" src="./assets/emoji-reveal/rendered/currency-bitcoin.png"/>
+
+  <text:Value id="manifest-rule-action">
+    BOY is interviewer A, the young man holding the microphone. WIFE is guest B, the woman holding her bag beside the Lamborghini. Preserve their identities, outfits, props, left-right relationship, and the street location throughout.
+    Throughout the entire take, BOY's long fringe hangs naturally over both eyes and keeps them fully concealed in every camera setup, head turn, gesture, and expression. Both eyes remain invisible behind his hair for the whole clip.
+    Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for BOY's “Hey yo! Is this Lamborghini yours?” WIFE initially looks down while checking her bag. As BOY asks the question, he takes one step forward toward her. Hearing him, WIFE is briefly startled, then raises her head and looks at BOY.
+    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “Mmm hmm.” WIFE pouts slightly and nods.
+    Hard cut directly to the exact shared camera setup from @image3 and hold that complete frame for BOY's “Give me three rules to make your first million.” BOY speaks with natural explanatory hand gestures.
+    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “OK, the first one is manifest.” WIFE tilts her head and rests one hand lightly against her chin.
+    Hard cut directly to the exact BOY camera setup from @image1 and hold that complete frame for “You manifested a Lamborghini?” BOY makes a visibly surprised hand gesture while asking.
+    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “I said it to myself every morning.” WIFE uses the hand not holding her bag to pat her upper chest while speaking.
+  </text:Value>
+
+  <text:Value id="real-estate-rule-action">
+    BOY is interviewer A, the young man holding the microphone. WIFE is guest B, the woman holding her bag beside the Lamborghini. Preserve their identities, outfits, props, left-right relationship, and the street location throughout.
+    Throughout the entire take, BOY's long fringe hangs naturally over both eyes and keeps them fully concealed in every camera setup, head turn, gesture, and expression. Both eyes remain invisible behind his hair for the whole clip.
+    Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for BOY's “Did it really work?” BOY uses a natural questioning hand gesture.
+    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “No. But rule two did.” WIFE shakes her head on “No,” then looks at BOY meaningfully as she delivers the second sentence.
+    Hard cut directly to the exact shared camera setup from @image3 and hold that complete frame for BOY's short line, “Say it.”
+    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “Real estate. Buy the building, and charge everyone rent.” WIFE plants the hand holding her bag on her hip and lightly waves her free hand as she speaks, looking bold and expansive.
+    Hard cut directly to the exact BOY camera setup from @image1 and hold that complete frame for “But how did you buy the building?” BOY asks with visible disbelief.
+    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “That's rule three.” WIFE folds her arms, tilts her head, and gives a small smile.
+  </text:Value>
+
+  <text:Value id="bitcoin-rule-action">
+    BOY is interviewer A, the young man holding the microphone. WIFE is guest B, the woman holding her bag beside the Lamborghini. Preserve their identities, outfits, props, left-right relationship, and the street location throughout.
+    Throughout the entire take, BOY's long fringe hangs naturally over both eyes and keeps them fully concealed in every camera setup, head turn, gesture, and expression. Both eyes remain invisible behind his hair for the whole clip.
+    Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for BOY's “Wait what?” BOY makes a questioning hand gesture.
+    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “Bitcoin. I pressed the wrong button in twenty twelve and made six figures.” WIFE raises one finger while explaining, then makes a broad emphatic hand gesture to show how much money she made.
+    Hard cut directly to the exact BOY camera setup from @image1 and hold that complete frame for “So you accidentally bought Bitcoin?” BOY reacts with astonished disbelief.
+    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “That's manifesting, baby.” WIFE tilts her head with a cheeky, flirtatious attitude, then turns to her left at the end of the line as if preparing to walk away.
+  </text:Value>
+
+  <text:Render id="manifest-rule-prompt"
+    template={interview-kit.street-interview-v1}
+    recipe={recipes.interview.street}>
+    <text:Set name="dialogue" text={story.segment.manifest-rule.dialogue}/>
+    <text:Set name="action" text={manifest-rule-action}/>
+  </text:Render>
+  <text:Render id="real-estate-rule-prompt"
+    template={interview-kit.street-interview-v1}
+    recipe={recipes.interview.street}>
+    <text:Set name="dialogue" text={story.segment.real-estate-rule.dialogue}/>
+    <text:Set name="action" text={real-estate-rule-action}/>
+  </text:Render>
+  <text:Render id="bitcoin-rule-prompt"
+    template={interview-kit.street-interview-v1}
+    recipe={recipes.interview.street}>
+    <text:Set name="dialogue" text={story.segment.bitcoin-rule.dialogue}/>
+    <text:Set name="action" text={bitcoin-rule-action}/>
+  </text:Render>
+
+  <seedance:ReferenceVideo id="manifest-rule-take"
+    model="mini" prompt={manifest-rule-prompt}
+    duration="10"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={interviewer-view}/>
+    <seedance:Reference image={guest-view}/>
+    <seedance:Reference image={shared-view}/>
+    <seedance:Reference audio={boy-voice}/>
+    <seedance:Reference audio={wife-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="real-estate-rule-take"
+    model="mini" prompt={real-estate-rule-prompt}
+    duration="8"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={interviewer-view}/>
+    <seedance:Reference image={guest-view}/>
+    <seedance:Reference image={shared-view}/>
+    <seedance:Reference audio={boy-voice}/>
+    <seedance:Reference audio={wife-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="bitcoin-rule-take"
+    model="mini" prompt={bitcoin-rule-prompt}
+    duration="8"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={interviewer-view}/>
+    <seedance:Reference image={guest-view}/>
+    <seedance:Reference image={shared-view}/>
+    <seedance:Reference audio={boy-voice}/>
+    <seedance:Reference audio={wife-voice}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <space:RegionTimeline id="wife-heads" within={vertical}
+    recipe={tracking.heads.wife}/>
+  <space:Frame id="full-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <program:Clock id="clock" frame-rate="30"/>
+
+  <!-- Preview-only timing policy used by the local mock Run. The paid path
+       continues to use the WhisperX SemanticTake declarations above. -->
+  <estimate:Speech id="preview-estimate" source={story.segment.manifest-rule.speech}
+    language="en" pace="normal" min="1" max="30" rounding="none"/>
+
+  <pipeline:Normalize id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <pipeline:Normalize id="rule-reveal-sound-media" source={rule-reveal-sound}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+
+  <pipeline:Normalize id="manifest-rule-media" source={manifest-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="real-estate-rule-media" source={real-estate-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="bitcoin-rule-media" source={bitcoin-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+
+  <whisperx:SemanticTake id="manifest-rule-semantic" narrative={story}
+    segment={story.segment.manifest-rule} media={manifest-rule-media.media} language="en"/>
+  <whisperx:SemanticTake id="real-estate-rule-semantic" narrative={story}
+    segment={story.segment.real-estate-rule} media={real-estate-rule-media.media} language="en"/>
+  <whisperx:SemanticTake id="bitcoin-rule-semantic" narrative={story}
+    segment={story.segment.bitcoin-rule} media={bitcoin-rule-media.media} language="en"/>
+
+  <speech:Track id="speech" visual-frame={full-frame}
+    visual-appearance={recipes.speech.visual} visual-z="10">
+    <speech:Take source={manifest-rule-semantic.take}/>
+    <speech:Take source={real-estate-rule-semantic.take}/>
+    <speech:Take source={bitcoin-rule-semantic.take}/>
+  </speech:Track>
+
+  <audio-track:Track id="music-bed" semantic={speech.semantic}>
+    <audio-track:Clip source={soundtrack-media.media} during="program"
+      playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
+  </audio-track:Track>
+
+  <audio-track:Track id="rule-reveal-sfx" semantic={speech.semantic}>
+    <audio-track:Clip id="manifest-reveal-sfx" source={rule-reveal-sound-media.media}
+      at={story.moment.manifest} for="20f" playback="once-start" gain="0.20"/>
+    <audio-track:Clip id="real-estate-reveal-sfx" source={rule-reveal-sound-media.media}
+      at={story.moment.real-estate} for="20f" playback="once-start" gain="0.20"/>
+    <audio-track:Clip id="bitcoin-reveal-sfx" source={rule-reveal-sound-media.media}
+      at={story.moment.bitcoin} for="20f" playback="once-start" gain="0.20"/>
+  </audio-track:Track>
+
+  <fonts:Stack id="caption-font" family="league-spartan" weight="900" style="normal"/>
+  <caption-fine:Style id="caption-boy-style" recipe={recipes.caption.boy}
+    font={caption-font}/>
+  <caption-fine:Style id="caption-wife-style" recipe={recipes.caption.wife}
+    font={caption-font}/>
+  <caption:Program id="caption-program" document={story.caption}
+    narrative={story} default={caption-boy-style}>
+    <caption:Use role="WIFE" style={caption-wife-style}/>
+  </caption:Program>
+  <caption-fine:Track id="captions" document={story.caption}
+    semantic={speech.semantic} program={caption-program} regions={wife-heads}/>
+
+  <emoji:Style id="rule-reveal-style" recipe={recipes.emoji.strip}/>
+  <emoji:Track id="rule-reveal" semantic={speech.semantic} canvas={vertical}
+    style={rule-reveal-style} placeholder={rule-placeholder} during="program">
+    <emoji:Item id="manifest" icon={manifest-icon} at={story.moment.manifest}/>
+    <emoji:Item id="real-estate" icon={real-estate-icon} at={story.moment.real-estate}/>
+    <emoji:Item id="bitcoin" icon={bitcoin-icon} at={story.moment.bitcoin}/>
+  </emoji:Track>
+
+  <screen:Track id="rule-reveal-flashes" semantic={speech.semantic} canvas={vertical}>
+    <screen:Flash id="manifest-flash" at={story.moment.manifest} for="8f" z="80"
+      color="#FF4D6D" intensity="0.28" attack="2" hold="1" decay="5"/>
+    <screen:Flash id="real-estate-flash" at={story.moment.real-estate} for="8f" z="80"
+      color="#14A68A" intensity="0.28" attack="2" hold="1" decay="5"/>
+    <screen:Flash id="bitcoin-flash" at={story.moment.bitcoin} for="8f" z="80"
+      color="#F59E0B" intensity="0.28" attack="2" hold="1" decay="5"/>
+  </screen:Track>
+
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
+    appearance={recipes.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audio}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={rule-reveal.track}/>
+    <film:Track source={rule-reveal-flashes.track}/>
+    <film:Track source={music-bed.track}/>
+    <film:Track source={rule-reveal-sfx.track}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition}
+    semantic={speech.semantic}/>
+</svml>
