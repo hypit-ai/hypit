@@ -5,7 +5,7 @@ preview checks (and optionally render for artifact integrity), but never calls a
 `revision/route.md` for that route.
 
 `preview_check` and `render_element` advance the project's `.hypit/route-state.json` only after their
-success predicates hold. After a new turn or interruption, read `../recovery.md`, reconcile the state,
+success predicates hold. After a new turn or interruption, read `recovery.md`, reconcile the state,
 and resume from its `next_action`; do not rely on chat history.
 
 Before preview, the command repeats `validate_local_author_packages` and `validate_script_cues`; a

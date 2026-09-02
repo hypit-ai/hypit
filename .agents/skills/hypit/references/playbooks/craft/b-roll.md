@@ -9,7 +9,7 @@ program audio.
 
 A reference may cover the whole frame with the same speaker in a second location while their voice
 continues: the picture cuts away to the person whose voice is heard, shown silent in another setting.
-This is B-roll, and the base stays the primary take. `continuity.md` owns the rule — the picture that
+This is B-roll, and the base stays the primary take. `../../reconstruction/continuity.md` owns the rule — the picture that
 shows the speaker saying the words is the base, whoever else fills the frame. Author the second
 location exactly like any other B-roll: vendor `broll-v1.svs`, one shot per beat, placed over the
 Script Selection with `during=`.

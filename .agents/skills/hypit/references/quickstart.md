@@ -39,6 +39,6 @@ accepted Records, retrieve Artifacts, and declare any reuse explicitly in a new 
 
 Both production routes expose current progress in `.hypit/route-state.json` and preserve each
 execution under `.hypit/routes/<route-id>/`; after an interruption, follow
-`references/recovery.md` and reconcile before resuming. Before `preview_check`, run
+`recovery.md` and reconcile before resuming. Before `preview_check`, run
 `inspect_svml_vocabulary --run`, `validate_local_author_packages --run` and
 `validate_script_cues --run`; the preview and final checks repeat these gates.
