@@ -1,0 +1,140 @@
+<?svml using="@hypit/svs@1"?>
+
+<sheet version="1">
+  speaker.host {
+    composition-stability: strict-locked;
+    camera-motion: none;
+    edit-rhythm: pause-trim-jump-cuts;
+    performance: high-energy-ugc;
+    gesture: expressive;
+  }
+
+  film.vertical { background: #090A0F; }
+
+  speech.visual {
+    fit: cover;
+    frame-x: 0.5;
+    frame-y: 0.5;
+    content-x: 0.5;
+    content-y: 0.5;
+  }
+
+  /* Ten perceptually separated hues, balanced for the dark video background. */
+  ranking.football-column {
+    rank-colors: [
+      "#FF3F56",
+      "#FF9E38",
+      "#F3CE2F",
+      "#9BC647",
+      "#46BF71",
+      "#28B7A6",
+      "#31ADD0",
+      "#4F7DE8",
+      "#9B69DA",
+      "#D85FAE"
+    ];
+    board-background: #00000000;
+    board-border-color: #00000000;
+    board-border-width: 0;
+    board-radius: 0;
+    board-shadow-x: 0;
+    board-shadow-y: 0;
+    board-shadow-blur: 0;
+    board-shadow-spread: 0;
+    board-shadow-color: #00000000;
+    padding: 12;
+    row-height: 64;
+    row-gap: 8;
+    icon-size: 64;
+    icon-radius: 12;
+    icon-fit: cover;
+    stage-x: 0.67;
+    stage-y: 0.73;
+    stage-size: 330;
+    font-size: 26;
+    font-weight: 700;
+    text-color: #FFFFFF;
+    line-height: 1;
+    appear-frames: 8;
+    move-frames: 12;
+    motion-easing: ease-out;
+    appear-gain: 0.14;
+    move-gain: 0.10;
+    sound-fade-frames: 0;
+    board-stack: 20;
+    stage-stack: 25;
+    item-stack: 30;
+  }
+
+  media.pitch-pov { stack-order: 40; fit: cover; shadows: 0 16 32 -8 #000000D9; }
+  media.ikea-sign { stack-order: 41; fit: cover; shadows: 0 16 32 -8 #000000D9; }
+  media.retirement-room { stack-order: 42; fit: cover; shadows: 0 16 32 -8 #000000D9; }
+  media.rent-jump { stack-order: 43; fit: cover; shadows: 0 16 32 -8 #000000D9; }
+  media.nine-hundred { stack-order: 44; fit: cover; shadows: 0 16 32 -8 #000000D9; }
+  media.laboratory-body { stack-order: 45; fit: cover; shadows: 0 16 32 -8 #000000D9; }
+  media.museum-jawline { stack-order: 46; fit: cover; shadows: 0 16 32 -8 #000000D9; }
+
+  motion.broll {
+    enter: pop;
+    enter-frames: 6;
+    enter-easing: ease-out;
+    exit: fade;
+    exit-frames: 4;
+    exit-easing: ease-in;
+  }
+
+  /* Caption and stage share one horizontal center line. The caption remains
+     above the lower stage and wins every occasional overlap through z-order. */
+  caption.primary {
+    stack-order: 70;
+    x: 0.67;
+    y: 0.55;
+    width: 0.60;
+    height: 0.18;
+    anchor-x: center;
+    anchor-y: center;
+    align: center;
+    block-align: center;
+    inline-size: fixed;
+    wrap: word;
+    max-lines: 2;
+    max-words-per-line: 4;
+    line-height: 1.28;
+    size: 44;
+    letter-spacing: -0.8;
+    fill: #FFFFFF;
+    stroke-color: #090A0F;
+    stroke-width: 2;
+    shadow-color: #000000;
+    shadow-opacity: 0.72;
+    shadow-x: 0;
+    shadow-y: 3;
+    shadow-blur: 7;
+    background: #00000000;
+    border-color: #00000000;
+    border-width: 0;
+    padding: 0 0;
+    radius: 0;
+    karaoke: current;
+    karaoke-transition: step;
+    active-fill: #FFFFFF;
+    active-box: current;
+    active-box-continuity: isolated;
+    active-box-background: #E93643;
+    active-box-border-color: #00000000;
+    active-box-border-width: 0;
+    active-box-padding: 4 9;
+    active-box-radius: 5;
+    active-box-transition-frames: 2;
+    active-response: pop;
+    active-response-frames: 3;
+    active-scale: 1.04;
+    lead-frames: 2;
+    tail-frames: 2;
+    handoff: cut;
+    cue-enter: fade;
+    cue-enter-frames: 2;
+    cue-exit: fade;
+    cue-exit-frames: 2;
+  }
+</sheet>

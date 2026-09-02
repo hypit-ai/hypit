@@ -1,0 +1,236 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
+  <import as="audio-track" from="@hypit/audio-track@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="media-track" from="@hypit/media-track@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="recipes" source="./recipes.svs"/>
+  <import as="broll-kit" source="./kits/broll-v1.svs"/>
+  <import as="podcast-kit" source="./kits/podcast-v1.svs"/>
+
+  <script id="story">
+    <opening-question>
+      <TBOY>OK pretty boy || so what is || the one single thing || that you literally || can't live without?
+    </opening-question>
+    <daily-retinol>
+      <IDOL>Retinol. || Every single night || for three years. ~@lifestyle || After my cleanser, || before my || moisturizer, || I literally set || an alarm for it.
+      <TBOY>You set @/lifestyle an alarm || for face cream?
+    </daily-retinol>
+    <skin-is-asking>
+      <IDOL>You know what || needs an alarm? || That forehead. || Here.
+      <TBOY>Wait no! || I wash my face || with bar soap!
+      <IDOL>God, I know || where the pores || come from!
+    </skin-is-asking>
+  </script>
+
+  <asset:Image id="tboy" src="./assets/tboy.png"/>
+  <asset:Image id="idol" src="./assets/idol.png"/>
+  <asset:Image id="retinol" src="./assets/retinol.png"/>
+
+  <asset:Audio id="tboy-voice" src="./assets/tboy.wav"/>
+  <asset:Audio id="idol-voice" src="./assets/idol.wav"/>
+  <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
+
+  <text:Value id="idoltboy-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical horizontal-split-screen close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. Both backgrounds stay clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Place the young woman from the first reference in the upper half and the young man from the second reference in the lower half. Frame both people from the upper chest upward at matching close-up scale. The woman looks toward the right side of the frame and the man looks toward the left, so the two podcast hosts appear to face each other across the horizontal split. Preserve each person's exact identity, face, hair, clothing, microphone position, natural lighting, camera height, framing logic, and distinct background sector from the corresponding reference image. Keep the split boundary clean and the two halves visually coherent without blending or merging the people.
+  </text:Value>
+
+  <text:Value id="idol-hold-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Preserve the natural lighting and microphone position from the first reference image exactly. Show the young man from the first reference holding the retinol bottle from the second reference while still looking toward the left side of the frame, as though speaking to someone there. He holds the bottle with the hand on the right side of the frame and points toward it with the hand on the left side of the frame. Preserve the bottle's exact geometry, cap, label, and proportions, and integrate it naturally into the environmental lighting.
+  </text:Value>
+
+  <text:Value id="tboy-hold-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Preserve the natural lighting and microphone position from the first reference image exactly. Show the young woman from the first reference holding the retinol bottle from the second reference while still looking toward the right side of the frame, as though speaking to someone there. She raises both hands to hold the bottle, with the bottle positioned toward the left side of the frame. Preserve the bottle's exact geometry, cap, label, and proportions, and integrate it naturally into the environmental lighting.
+  </text:Value>
+
+  <text:Value id="cleanser-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical close shot, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Use the reference image only to preserve the young man's exact identity, face, hair, apparent age, and overall body proportions. Show him in a bright bathroom with a lived-in washbasin and several ordinary toiletries and small objects on the counter. He is standing at the mirror and washing his face. A light-blue fabric headband holds his hair back from his forehead. The camera is positioned slightly behind him and to his right, so his side-back silhouette and his face in the mirror are both clearly visible. He looks attentively at his reflection while washing, with facial cleanser foam covering his face. He wears a relaxed bedtime bathrobe, and the whole moment feels quiet, comfortable, and natural.
+  </text:Value>
+
+  <text:Value id="mask-selfie-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical mirror selfie, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Use the reference image only to preserve the young man's exact identity, face, hair, apparent age, and overall body proportions. Show him taking a late-night mirror selfie in a bright living room. He wears a sheet face mask, relaxed cartoon-print pajamas, and black-framed glasses over the mask. His phone is an iPhone in a CASETiFY case with a dark background and a pattern of small white flowers. He looks completely at ease. Keep the cluttered, lived-in living room clearly visible behind him, with believable nighttime household lighting and no staged or polished advertising look.
+  </text:Value>
+
+  <text:Value id="alarm-phone-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical selfie-style close shot, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Use the reference image only to preserve the young man's exact identity, face, hair, apparent age, and overall body proportions. Show him late at night in a bright bedroom, lying on his stomach across the bed in a simple dark T-shirt and holding an iPhone in his hand. The iPhone screen is visible from our viewpoint and shows an English alarm-clock interface filled with enabled alarms scheduled every ninety minutes. Keep the phone, hands, screen geometry, and reflections physically coherent and the English alarm rows clean and legible. The bedroom behind him is cluttered and lived-in rather than staged.
+  </text:Value>
+
+  <text:Value id="lifestyle-montage-story">
+    Use the three reference images as three ordered shots in one compact, quiet nighttime skincare montage. SHOT ONE — BATHROOM CLEANSING: preserve the first reference's over-the-right-shoulder mirror composition, bathrobe, light-blue headband, cleanser foam, bathroom lighting, counter clutter, and reflected identity. The young man leans closer to the mirror and methodically washes his face, rubbing the cleanser over his face with both hands in natural real-time motion. SHOT TWO — MASK SELFIE: cut to the second reference and preserve its mirror-selfie composition, sheet mask, cartoon pajamas, black-framed glasses, iPhone and floral CASETiFY case, living-room clutter, and nighttime light. He keeps the hand holding the iPhone steady in the mirror-selfie position and uses the other, completely empty hand to reach up and adjust the black-framed glasses once, looking calm and content. SHOT THREE — ALARM PROOF: cut to the third reference and preserve its composition, dark T-shirt, bedroom clutter, and English alarm interface. He first glances down at the iPhone in his hand, then shows the phone screen directly to the viewer. Keep each shot internally continuous, use clean direct cuts only between the three authored references, preserve the same man's identity throughout, and add no speech, subtitles, captions, labels, or floating graphics.
+  </text:Value>
+
+  <text:Value id="opening-take-prompt">
+    Preserve the reference image as a fixed horizontal split screen for the entire shot, with the young woman in the upper half and the young man in the lower half. Keep both identities, outfits, lighting, backgrounds, framing, scale, microphone placement, and the split-screen boundary unchanged. Use one continuous locked view with no cuts, reframing, zoom, or camera movement. In the upper half, the young woman keeps looking toward the right side of the frame throughout while speaking briskly and naturally in one continuous thought, with only a small conversational head movement and no dramatic pause. She says exactly: “OK pretty boy so what is the one single thing that you literally can't live without?” At the same time in the lower half, the young man remains completely silent and does not move his mouth. He briefly looks downward, makes one small seated-posture adjustment, then raises his eyes and looks toward the left side of the frame with a focused, attentive expression. Keep both performances understated, simultaneous, photorealistic, and physically coherent. Add no subtitles, captions, labels, UI text, or floating words.
+  </text:Value>
+
+  <text:Value id="daily-retinol-action">
+    ROLE LABEL MAPPING: IDOL is Host A and uses the first image and first audio reference. TBOY is Host B and uses the second image and second audio reference. In the dialogue text, every IDOL line belongs only to Host A and every TBOY line belongs only to Host B. Only the speaker assigned to the current line moves their mouth; the listener remains silent. IDOL PERFORMANCE: The young man already holds the retinol bottle at the beginning. While saying “Retinol,” he raises the bottle into one clear, readable position and delivers “Retinol” with a firm falling intonation as a plain statement, never as a question. While saying “Every single night,” he points directly toward the bottle with his free hand. On “for three years,” he opens that free hand with four fingers extended and the palm facing outward, then sweeps the hand outward from the right side of the frame toward the left side in one clean motion; this is an expressive outward wave, not a counting gesture. Give “After my cleanser” and “before my moisturizer” two compact sequential beats with the same free hand so the order reads clearly without distracting from the bottle. While saying “I literally set an alarm for it,” he makes one small alarm-setting tap in the air with his free index finger and finishes with one matter-of-fact nod. Keep the bottle stable and visible in his other hand throughout. TBOY PERFORMANCE: Do not bring the retinol bottle into the young woman's view in this segment. When her turn begins, she braces one hand against the chair and makes one small seated-posture adjustment. She then turns her attention toward the right side of the frame and keeps looking right while asking, “You set an alarm for face cream?” She gives one restrained, incredulous nod; deliver “face cream?” with a clearly incredulous rising intonation. Keep the handoff immediate, the performance lively but photorealistic, and every gesture synchronized to the specified phrase, with no dead air or exaggerated facial distortion.
+  </text:Value>
+
+  <text:Value id="skin-is-asking-action">
+    ROLE LABEL MAPPING: IDOL is Host A and uses the first image and first audio reference. TBOY is Host B and uses the second image and second audio reference. In the dialogue text, every IDOL line belongs only to Host A and every TBOY line belongs only to Host B. Only the speaker assigned to the current line moves their mouth; the listener remains silent. CONTINUITY: At the beginning, the retinol bottle belongs only to the young man. On “Here,” he passes it out through the left edge of his frame. On the cut to the young woman, make her receive the same bottle from the right edge of her frame so the handoff reads as one continuous action across the two fixed camera views. Once she has received it, the bottle must remain absent from the young man's final shot. FIRST IDOL TURN: While saying “You know what needs an alarm?” the young man tilts his head slightly and rests his free hand lightly against his chin with a relaxed, thoughtful face. On “That forehead,” he lowers that hand naturally and gives one small, cool, knowing nod while keeping his attention toward the left side of the frame; he makes no pointing gesture. On “Here,” he leans left and extends the bottle directly out through the left edge of his frame. TBOY TURN: The young woman keeps her gaze naturally directed toward the right side of the frame throughout her turn. On “Wait, no!” she receives the bottle from the right edge of her frame and gives a quick, matter-of-fact refusal. Her eyes remain softly focused toward the right at the same natural relaxed openness as in the reference image, and her brow stays neutral. While saying “I wash my face with bar soap!” she keeps the bottle secure in one hand and makes one small dismissive wave with her free hand. Convey her objection through the timing of the handoff and this single hand movement, not through a startled facial reaction; she never widens her eyes or adopts a surprised expression. FINAL IDOL TURN: The bottle is no longer visible in the young man's frame. Throughout “God, I know where the pores come from!” he simply leans his body toward the left side of the frame and speaks with quiet dawning realization, as though the explanation has just clicked into place. He does not hold, steady, or touch the microphone and does not add another hand gesture during this final line. Keep his brow soft and his eyes at their natural relaxed width, with calm recognition rather than excitement or shock; he does not widen his eyes, stare, or make an exaggerated surprised expression. Keep every cut immediate, preserve the microphone and both camera views, and make the exchange brisk, physically coherent, and precisely synchronized to the specified words, with no exaggerated facial distortion.
+  </text:Value>
+
+  <gpt:Image id="idoltboy" prompt={idoltboy-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={tboy}/>
+    <gpt:Reference image={idol}/>
+  </gpt:Image>
+
+  <gpt:Image id="idol-hold" prompt={idol-hold-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={idol}/>
+    <gpt:Reference image={retinol}/>
+  </gpt:Image>
+
+  <gpt:Image id="tboy-hold" prompt={tboy-hold-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={tboy}/>
+    <gpt:Reference image={retinol}/>
+  </gpt:Image>
+
+  <gpt:Image id="cleanser" prompt={cleanser-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={idol}/>
+  </gpt:Image>
+
+  <gpt:Image id="mask-selfie" prompt={mask-selfie-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={idol}/>
+  </gpt:Image>
+
+  <gpt:Image id="alarm-phone" prompt={alarm-phone-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={idol}/>
+  </gpt:Image>
+
+  <text:Render id="lifestyle-montage-prompt"
+    template={broll-kit.broll-v1} recipe={recipes.broll.calm-ugc-montage}>
+    <text:Set name="story" text={lifestyle-montage-story}/>
+  </text:Render>
+
+  <text:Render id="daily-retinol-take-prompt"
+    template={podcast-kit.podcast-v1} recipe={recipes.podcast.daily-retinol}>
+    <text:Set name="dialogue" text={story.segment.daily-retinol.dialogue}/>
+    <text:Set name="action" text={daily-retinol-action}/>
+  </text:Render>
+
+  <text:Render id="skin-is-asking-take-prompt"
+    template={podcast-kit.podcast-v1} recipe={recipes.podcast.skin-is-asking}>
+    <text:Set name="dialogue" text={story.segment.skin-is-asking.dialogue}/>
+    <text:Set name="action" text={skin-is-asking-action}/>
+  </text:Render>
+
+  <seedance:ReferenceVideo id="opening-take" model="mini"
+    prompt={opening-take-prompt} duration="4"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={idoltboy.image}/>
+    <seedance:Reference audio={tboy-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="lifestyle-montage" model="mini"
+    prompt={lifestyle-montage-prompt} duration="4"
+    resolution="720p" aspect-ratio="9:16" generate-audio="false">
+    <seedance:Reference image={cleanser.image}/>
+    <seedance:Reference image={mask-selfie.image}/>
+    <seedance:Reference image={alarm-phone.image}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="daily-retinol-take" model="mini"
+    prompt={daily-retinol-take-prompt} duration="8"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={idol-hold.image}/>
+    <seedance:Reference image={tboy}/>
+    <seedance:Reference audio={idol-voice}/>
+    <seedance:Reference audio={tboy-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="skin-is-asking-take" model="mini"
+    prompt={skin-is-asking-take-prompt} duration="6"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={idol-hold.image}/>
+    <seedance:Reference image={tboy-hold.image}/>
+    <seedance:Reference audio={idol-voice}/>
+    <seedance:Reference audio={tboy-voice}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <space:Frame id="full-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <program:Clock id="clock" frame-rate="30"/>
+
+  <pipeline:Normalize id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+
+  <pipeline:Normalize id="opening-media" source={opening-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="daily-retinol-media" source={daily-retinol-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="skin-is-asking-media" source={skin-is-asking-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="lifestyle-media" source={lifestyle-montage.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+
+  <whisperx:SemanticTake id="opening-semantic" narrative={story}
+    segment={story.segment.opening-question} media={opening-media.media} language="en"/>
+  <whisperx:SemanticTake id="daily-retinol-semantic" narrative={story}
+    segment={story.segment.daily-retinol} media={daily-retinol-media.media} language="en"/>
+  <whisperx:SemanticTake id="skin-is-asking-semantic" narrative={story}
+    segment={story.segment.skin-is-asking} media={skin-is-asking-media.media} language="en"/>
+
+  <speech:Track id="speech" visual-frame={full-frame}
+    visual-appearance={recipes.speech.visual} visual-z="10">
+    <speech:Take source={opening-semantic.take}/>
+    <speech:Take source={daily-retinol-semantic.take}/>
+    <speech:Take source={skin-is-asking-semantic.take}/>
+  </speech:Track>
+
+  <audio-track:Track id="music-bed" semantic={speech.semantic}>
+    <audio-track:Clip source={soundtrack-media.media} during="program"
+      playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
+  </audio-track:Track>
+
+  <media-track:Track id="lifestyle" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Item id="lifestyle-cutaway" media={lifestyle-media.media}
+      frame={full-frame} during={story.selection.lifestyle}
+      appearance={recipes.media.lifestyle}/>
+  </media-track:Track>
+
+  <fonts:Stack id="caption-font" family="montserrat" weight="900" style="normal"/>
+  <caption-fine:Style id="caption-idol-style" recipe={recipes.caption.retinol-idol}
+    font={caption-font}/>
+  <caption-fine:Style id="caption-tboy-style" recipe={recipes.caption.retinol-tboy}
+    font={caption-font}/>
+  <caption:Program id="caption-program" document={story.caption}
+    narrative={story} default={caption-idol-style}>
+    <caption:Use role="TBOY" style={caption-tboy-style}/>
+  </caption:Program>
+  <caption-fine:Track id="captions" document={story.caption}
+    semantic={speech.semantic} program={caption-program}/>
+
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
+    appearance={recipes.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audio}/>
+    <film:Track source={lifestyle.visual}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={music-bed.track}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition}
+    semantic={speech.semantic}/>
+</svml>

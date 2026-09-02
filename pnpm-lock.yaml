@@ -93,6 +93,9 @@ importers:
       '@hypit/image-transform':
         specifier: workspace:*
         version: link:packages/image-transform
+      '@hypit/interview-emoji-reveal':
+        specifier: workspace:*
+        version: link:packages/interview-emoji-reveal
       '@hypit/media':
         specifier: workspace:*
         version: link:packages/media
@@ -1539,6 +1542,48 @@ importers:
       '@hypit/raster':
         specifier: workspace:*
         version: link:../raster
+
+  packages/interview-emoji-reveal:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@hypit/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@hypit/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/semantic-track':
+        specifier: workspace:*
+        version: link:../semantic-track
+      '@hypit/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@hypit/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@hypit/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+      '@hypit/temporal-markup':
+        specifier: workspace:*
+        version: link:../temporal-markup
 
   packages/markup:
     dependencies:

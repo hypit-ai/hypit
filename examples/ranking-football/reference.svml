@@ -1,0 +1,300 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
+  <import as="estimate" from="@hypit/estimate@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="estimated" from="@hypit/semantic-take-estimate@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
+  <import as="media-track" from="@hypit/media-track@1"/>
+  <import as="audio-track" from="@hypit/audio-track@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
+  <import as="ranking" from="@hypit/ranking@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="recipes" source="./recipes.svs"/>
+  <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+
+  <!-- The Program projection owns the complete board lifetime. Each discussed
+       footballer's complete Segment projects its disjoint reveal window, so
+       TierBoard consumes windows without finding frames. Cue breaks are author intent. -->
+  <script id="story">
+    <ronaldo>
+      <HOST>Ronaldo is <D | Dee> tier. || Bro has @hair-gel more || hair gel than @trophy trophies || at this point@/trophy@/hair-gel. || Built like || @greek-god a Greek god, || plays like || @greek-tragedy a Greek tragedy@/greek-tragedy@/greek-god. || But hey, || at least @penaldo-social he's got || the most followers || on Instagram@/penaldo-social.
+    </ronaldo>
+    <messi>
+      <HOST>Messi? Man won || a World Cup || @tired-dad looking like || somebody's tired dad@/tired-dad. || Walks around || @walks-around for 89 minutes, || touches the ball || three times, || and somehow || @hat-trick you just watched || a hat trick@/hat-trick@/walks-around. || Definitely <S | Ess> tier.
+    </messi>
+  </script>
+
+  <asset:Image id="presenter" src="./assets/goth.jpg"/>
+  <asset:Audio id="presenter-voice" src="./assets/goth.wav"/>
+  <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
+  <asset:Audio id="ranking-appear-sfx" src="./assets/ranking-appear.wav"/>
+  <asset:Audio id="ranking-move-sfx" src="./assets/ranking-move.wav"/>
+  <asset:Image id="ronaldo-icon" src="./assets/ronaldo.jpeg"/>
+  <asset:Image id="messi-icon" src="./assets/messi.jpeg"/>
+  <asset:Image id="yamal-icon" src="./assets/yamal.jpg"/>
+  <asset:Image id="haaland-icon" src="./assets/haaland.jpg"/>
+  <asset:Image id="de-bruyne-icon" src="./assets/debrunye.jpg"/>
+  <asset:Image id="bellingham-icon" src="./assets/bellingham-new.jpg"/>
+  <asset:Image id="kane-icon" src="./assets/kane.jpg"/>
+  <asset:Image id="modric-icon" src="./assets/modric.jpg"/>
+  <asset:Image id="mbappe-icon" src="./assets/mbappe-new.jpg"/>
+  <asset:Image id="neymar-icon" src="./assets/neymar.jpg"/>
+  <asset:Image id="benzema-icon" src="./assets/benzema.jpg"/>
+
+  <!-- Real Seedance Takes use explicit fixed ten-second requests. These
+       estimates belong only to the optional static preview candidates. -->
+  <estimate:Speech id="ronaldo-preview-duration" source={story.segment.ronaldo.speech}
+    language="en" pace="normal" min="4" max="15" rounding="round"/>
+  <estimate:Speech id="messi-preview-duration" source={story.segment.messi.speech}
+    language="en" pace="normal" min="4" max="15" rounding="round"/>
+
+  <text:Value id="ronaldo-action">
+    Keep the handheld microphone in the same hand throughout, and use only the free hand for gestures. At the opening, widen his eyes and nod emphatically as he begins speaking. On "hair gel", deliberately run the free hand over his hair. On "Greek god", react with exaggerated surprise. On "Greek tragedy", shake his head with a mocking laugh. On "But hey", lean his body forward and raise the free index finger as if he has just thought of something. On the final sentence, give a sarcastic shrug.
+  </text:Value>
+  <text:Value id="messi-action">
+    Keep the handheld microphone in the same hand throughout, and use only the free hand for gestures. Throughout the opening sentence, nod continuously in small rhythmic beats. On "tired dad", look both admiring and incredulous. On "Walks around", draw a small circle in the air with the free hand. On "touches the ball", point the free thumb toward the right side of frame. As he says the exact phrase "hat trick", look deeply impressed and lift and extend the free arm upward above shoulder level with the palm open toward the upper part of the frame. The prosody of "hat trick" is strict: put the primary lexical stress on HAT. Make HAT clearly higher, louder, longer, and more accented; make "trick" shorter, lighter, and lower. The pitch must fall sharply from HAT through "trick" and finish low and closed, as a confident statement. Do not stress TRICK, do not keep both words level, and absolutely do not use rising or question-like intonation. On the final sentence, give one firm affirmative nod.
+  </text:Value>
+
+  <!-- Comedy B-roll source images. Aspect ratio and resolution stay model
+       parameters; semantic placement is authored separately in the Script. -->
+  <text:Value id="broll-hair-gel-prompt">
+    An absurdly polished commercial product photograph of a fictional men's hair gel: an unbranded black jar with a glossy ribbon of translucent gel squeezed out beside it. Next to the jar is the back of a man's head, cropped at the shoulders, with a sharply styled short haircut so overloaded with gel that every strand looks wet, mirror-shiny, and almost reflective. Crisp studio lighting, premium cosmetics advertising, realistic textures, deadpan visual comedy, no readable text, no logos.
+  </text:Value>
+  <text:Value id="broll-trophy-prompt">
+    A surreal comedy photograph of a monumentally oversized championship trophy planted at the center spot of a real football stadium, towering over the goals and stands. Tiny groundskeepers and players stare up at it in disbelief. Gold metal, dramatic stadium floodlights, realistic grass, cinematic sports photography, ridiculous scale, no readable text, no logos.
+  </text:Value>
+  <text:Value id="broll-greek-god-prompt">
+    A photorealistic museum-style photograph of a muscular ancient Greek plaster statue posing like an overly confident fashion influencer: chest out, chin raised, one hand on his hip, the other adjusting imaginary sunglasses. Classical curls, white gypsum surface, heroic anatomy, dramatic gallery lighting, straight-faced visual comedy, no text.
+  </text:Value>
+  <text:Value id="broll-greek-tragedy-prompt">
+    A photorealistic production still from a classical Greek tragedy performed in an old opera house. A male actor in ancient robes kneels at center stage with his face buried in both hands, sobbing theatrically. A chorus of mourners surrounds him with raised hands, bowed heads, and black drapery. Painted temple scenery, smoky footlights, grand melodrama, emotionally excessive but historically theatrical, no modern objects, no text.
+  </text:Value>
+  <text:Value id="broll-penaldo-social-prompt">
+    A tightly cropped screenshot of a fictional social-media profile interface in the familiar clean Instagram visual language. The profile name must read exactly "Penaldo". The statistics must clearly show exactly "4,122 posts" and "679 million followers". The circular profile picture shows only the back silhouette of a footballer striking a penalty kick, one leg extended toward the ball. Crisp authentic mobile UI, white background, black interface text, blue verification badge, polished parody, no other names or numbers.
+  </text:Value>
+  <text:Value id="broll-tired-dad-trophy-prompt">
+    A photorealistic sports comedy photograph of a chubby, heavily bearded middle-aged uncle in a blue-and-white striped football jersey, panting hard and drenched in sweat while clutching the FIFA World Cup trophy against his chest. His cheeks are flushed, his eyes look exhausted yet reverent, and his belly presses against the jersey. Stadium grass and celebratory confetti, affectionate absurdity, realistic human anatomy, no text.
+  </text:Value>
+  <text:Value id="broll-walks-around-prompt">
+    A photorealistic first-person POV from someone lounging on the grass of a football pitch with legs crossed. The lower edge of the viewer's own blue-and-white striped jersey is visible, along with shorts, knees, and cleats. Far away, two teams are playing an intense match: one team in blue-and-white shirts, the other in red. The relaxed spectator posture contrasts absurdly with the frantic game, natural daylight, realistic depth, no text.
+  </text:Value>
+  <text:Value id="broll-hat-trick-prompt">
+    A surreal visual pun rendered as a polished studio photograph: one classic black-and-white football on a small pedestal, wearing three distinct elegant black top hats perched on it at playful angles. Dramatic spotlight, rich shadows, immaculate textures, whimsical deadpan comedy, an unmistakable hat-trick joke, no text, no logos.
+  </text:Value>
+
+  <gpt:Image id="broll-hair-gel" prompt={broll-hair-gel-prompt}
+    aspect-ratio="4:3" resolution="2K"/>
+  <gpt:Image id="broll-trophy" prompt={broll-trophy-prompt}
+    aspect-ratio="1:1" resolution="2K"/>
+  <gpt:Image id="broll-greek-god" prompt={broll-greek-god-prompt}
+    aspect-ratio="3:4" resolution="2K"/>
+  <gpt:Image id="broll-greek-tragedy" prompt={broll-greek-tragedy-prompt}
+    aspect-ratio="4:3" resolution="2K"/>
+  <gpt:Image id="broll-penaldo-social" prompt={broll-penaldo-social-prompt}
+    aspect-ratio="21:9" resolution="2K"/>
+  <gpt:Image id="broll-tired-dad-trophy" prompt={broll-tired-dad-trophy-prompt}
+    aspect-ratio="4:3" resolution="2K"/>
+  <gpt:Image id="broll-walks-around" prompt={broll-walks-around-prompt}
+    aspect-ratio="4:3" resolution="2K"/>
+  <gpt:Image id="broll-hat-trick" prompt={broll-hat-trick-prompt}
+    aspect-ratio="1:1" resolution="2K"/>
+
+  <text:Render id="ronaldo-prompt" template={speaker-kit.speaker-v1}
+    recipe={recipes.speaker.host}>
+    <text:Set name="dialogue" text={story.segment.ronaldo.dialogue}/>
+    <text:Set name="action" text={ronaldo-action}/>
+  </text:Render>
+  <text:Render id="messi-prompt" template={speaker-kit.speaker-v1}
+    recipe={recipes.speaker.host}>
+    <text:Set name="dialogue" text={story.segment.messi.dialogue}/>
+    <text:Set name="action" text={messi-action}/>
+  </text:Render>
+
+  <!-- The only two generated A-roll Takes in the author programme. -->
+  <seedance:ReferenceVideo id="ronaldo-take" model="mini"
+    prompt={ronaldo-prompt} duration="10"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter}/>
+    <seedance:Reference audio={presenter-voice}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="messi-take" model="mini"
+    prompt={messi-prompt} duration="10"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter}/>
+    <seedance:Reference audio={presenter-voice}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <program:Clock id="clock" frame-rate="30"/>
+  <pipeline:Normalize id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <pipeline:Normalize id="ranking-appear-media" source={ranking-appear-sfx}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <pipeline:Normalize id="ranking-move-media" source={ranking-move-sfx}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <space:Frame id="speech-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <space:Frame id="tier-frame" within={vertical}
+    left="0%" top="55%" right="100%" bottom="100%"/>
+
+  <!-- B-roll lives inside the lower board region. Deliberately varied card
+       proportions and offsets keep the treatment playful without entering the
+       caption band above it. Extents describe the generated image bytes. -->
+  <space:Extent id="hair-gel-extent" width="2688" height="2016"/>
+  <space:Extent id="trophy-extent" width="2048" height="2048"/>
+  <space:Extent id="greek-god-extent" width="2016" height="2688"/>
+  <space:Extent id="greek-tragedy-extent" width="2688" height="2016"/>
+  <space:Extent id="penaldo-social-extent" width="2688" height="1152"/>
+  <space:Extent id="tired-dad-extent" width="2336" height="1744"/>
+  <space:Extent id="walks-around-extent" width="2688" height="2016"/>
+  <space:Extent id="hat-trick-extent" width="2048" height="2048"/>
+
+  <space:AspectFrame id="hair-gel-frame" within={vertical}
+    x="34%" y="78%" width="58%" aspect={hair-gel-extent} anchor="center"/>
+  <space:AspectFrame id="trophy-frame" within={vertical}
+    x="73%" y="82%" width="42%" aspect={trophy-extent} anchor="center"/>
+  <space:AspectFrame id="greek-god-frame" within={vertical}
+    x="24%" y="78%" width="38%" aspect={greek-god-extent} anchor="center"/>
+  <space:AspectFrame id="greek-tragedy-frame" within={vertical}
+    x="63%" y="79%" width="66%" aspect={greek-tragedy-extent} anchor="center"/>
+  <space:AspectFrame id="penaldo-social-frame" within={vertical}
+    x="50%" y="78%" width="94%" aspect={penaldo-social-extent} anchor="center"/>
+  <space:AspectFrame id="tired-dad-frame" within={vertical}
+    x="58%" y="79%" width="62%" aspect={tired-dad-extent} anchor="center"/>
+  <space:AspectFrame id="walks-around-frame" within={vertical}
+    x="38%" y="79%" width="68%" aspect={walks-around-extent} anchor="center"/>
+  <space:AspectFrame id="hat-trick-frame" within={vertical}
+    x="72%" y="80%" width="46%" aspect={hat-trick-extent} anchor="center"/>
+
+  <!-- Real Build path: generated video -> one shared normalization waist ->
+       measured alignment. -->
+  <pipeline:Normalize id="ronaldo-media" source={ronaldo-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="messi-media" source={messi-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <whisperx:SemanticTake id="ronaldo-semantic" narrative={story}
+    segment={story.segment.ronaldo} media={ronaldo-media.media} language="en"/>
+  <whisperx:SemanticTake id="messi-semantic" narrative={story}
+    segment={story.segment.messi} media={messi-media.media} language="en"/>
+
+  <!-- Preview candidate path: the authored presenter image is formally encoded
+       as a silent MP4, normalized through the same waist, then given an honest
+       syllable-weighted estimated alignment over its complete frame count. -->
+  <pipeline:StillVideo id="ronaldo-still" source={presenter}
+    duration={ronaldo-preview-duration.duration} clock={clock}/>
+  <pipeline:StillVideo id="messi-still" source={presenter}
+    duration={messi-preview-duration.duration} clock={clock}/>
+  <pipeline:Normalize id="ronaldo-preview-media" source={ronaldo-still.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="messi-preview-media" source={messi-still.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <estimated:SemanticTake id="ronaldo-preview" narrative={story}
+    segment={story.segment.ronaldo} media={ronaldo-preview-media.media}
+    policy={ronaldo-preview-duration.policy}/>
+  <estimated:SemanticTake id="messi-preview" narrative={story}
+    segment={story.segment.messi} media={messi-preview-media.media}
+    policy={messi-preview-duration.policy}/>
+
+  <speech:Track id="speech" visual-frame={speech-frame}
+    visual-appearance={recipes.speech.visual} visual-z="0">
+    <speech:Take source={ronaldo-semantic.take}/>
+    <speech:Take source={messi-semantic.take}/>
+  </speech:Track>
+  <audio-track:Track id="music-bed" semantic={speech.semantic}>
+    <audio-track:Clip source={soundtrack-media.media} during="program"
+      playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
+  </audio-track:Track>
+
+  <fonts:Stack id="display-font" family="montserrat" weight="900" style="normal"/>
+  <fonts:Stack id="tier-font" family="inter" weight="400" style="normal"/>
+  <ranking:TierBoardStyle id="tier-style" recipe={recipes.ranking.football}
+    font={tier-font}/>
+  <ranking:TierBoard id="football-tiers" semantic={speech.semantic}
+    canvas={vertical} frame={tier-frame}
+    during="program" style={tier-style}
+    appear-sound={ranking-appear-media.media}
+    move-sound={ranking-move-media.media}>
+    <ranking:TierItem id="yamal" tier="s" preset="true" icon={yamal-icon}/>
+    <ranking:TierItem id="haaland" tier="a" preset="true" icon={haaland-icon}/>
+    <ranking:TierItem id="de-bruyne" tier="b" preset="true" icon={de-bruyne-icon}/>
+    <ranking:TierItem id="bellingham" tier="b" preset="true" icon={bellingham-icon}/>
+    <ranking:TierItem id="kane" tier="c" preset="true" icon={kane-icon}/>
+    <ranking:TierItem id="modric" tier="c" preset="true" icon={modric-icon}/>
+    <ranking:TierItem id="mbappe" tier="d" preset="true" icon={mbappe-icon}/>
+    <ranking:TierItem id="neymar" tier="d" preset="true" icon={neymar-icon}/>
+    <ranking:TierItem id="benzema" tier="d" preset="true" icon={benzema-icon}/>
+    <ranking:TierItem id="ronaldo" tier="d" entry="drop"
+      icon={ronaldo-icon} during={story.segment.ronaldo}/>
+    <ranking:TierItem id="messi" tier="s" entry="drop"
+      icon={messi-icon} during={story.segment.messi}/>
+  </ranking:TierBoard>
+
+  <!-- Every Item consumes a projected Selection window. Later overlapping
+       jokes use a higher stack order through their appearance Recipe. -->
+  <media-track:Track id="broll" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Item id="hair-gel" image={broll-hair-gel.image}
+      extent={hair-gel-extent} during={story.selection.hair-gel}
+      frame={hair-gel-frame} appearance={recipes.media.hair-gel}
+      motion={recipes.motion.broll-left}/>
+    <media-track:Item id="trophy" image={broll-trophy.image}
+      extent={trophy-extent} during={story.selection.trophy}
+      frame={trophy-frame} appearance={recipes.media.trophy}
+      motion={recipes.motion.broll-right}/>
+    <media-track:Item id="greek-god" image={broll-greek-god.image}
+      extent={greek-god-extent} during={story.selection.greek-god}
+      frame={greek-god-frame} appearance={recipes.media.greek-god}
+      motion={recipes.motion.broll-left}/>
+    <media-track:Item id="greek-tragedy" image={broll-greek-tragedy.image}
+      extent={greek-tragedy-extent} during={story.selection.greek-tragedy}
+      frame={greek-tragedy-frame} appearance={recipes.media.greek-tragedy}
+      motion={recipes.motion.broll-right}/>
+    <media-track:Item id="penaldo-social" image={broll-penaldo-social.image}
+      extent={penaldo-social-extent} during={story.selection.penaldo-social}
+      frame={penaldo-social-frame} appearance={recipes.media.penaldo-social}
+      motion={recipes.motion.broll-wide}/>
+    <media-track:Item id="tired-dad" image={broll-tired-dad-trophy.image}
+      extent={tired-dad-extent} during={story.selection.tired-dad}
+      frame={tired-dad-frame} appearance={recipes.media.tired-dad}
+      motion={recipes.motion.broll-right}/>
+    <media-track:Item id="walks-around" image={broll-walks-around.image}
+      extent={walks-around-extent} during={story.selection.walks-around}
+      frame={walks-around-frame} appearance={recipes.media.walks-around}
+      motion={recipes.motion.broll-left}/>
+    <media-track:Item id="hat-trick" image={broll-hat-trick.image}
+      extent={hat-trick-extent} during={story.selection.hat-trick}
+      frame={hat-trick-frame} appearance={recipes.media.hat-trick}
+      motion={recipes.motion.broll-right}/>
+  </media-track:Track>
+
+  <caption-fine:Style id="caption-style" recipe={recipes.caption.primary}
+    font={display-font}/>
+  <caption:Program id="caption-program" document={story.caption}
+    narrative={story} default={caption-style}/>
+  <caption-fine:Track id="captions" document={story.caption}
+    semantic={speech.semantic} program={caption-program}/>
+
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
+    appearance={recipes.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audio}/>
+    <film:Track source={football-tiers.visual}/>
+    <film:Track source={football-tiers.audio}/>
+    <film:Track source={broll.visual}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={music-bed.track}/>
+  </film:Film>
+  <render:Video id="final" composition={main.composition}
+    semantic={speech.semantic}/>
+</svml>

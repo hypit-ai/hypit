@@ -1,0 +1,151 @@
+<?svml using="@hypit/svs@1"?>
+
+<sheet version="1">
+  speaker.host {
+    composition-stability: strict-locked;
+    camera-motion: none;
+    edit-rhythm: pause-trim-jump-cuts;
+    performance: high-energy-ugc;
+    gesture: expressive;
+  }
+
+  film.vertical { background: #090A0F; }
+
+  speech.visual {
+    fit: cover;
+    frame-x: 0.5;
+    frame-y: 0.5;
+    content-x: 0.5;
+    content-y: 0.5;
+  }
+
+  ranking.football {
+    rows: [
+      { "id": "s", "label": "S", "color": "#EE5F52" },
+      { "id": "a", "label": "A", "color": "#F0A04C" },
+      { "id": "b", "label": "B", "color": "#F0C84D" },
+      { "id": "c", "label": "C", "color": "#EDE356" },
+      { "id": "d", "label": "D", "color": "#A6DA7B" }
+    ];
+    board-background: #2B2B30;
+    board-border-color: #111315;
+    board-border-width: 3;
+    stage-x: 0.2;
+    stage-y: 0.3;
+    stage-size: 168;
+    icon-radius-ratio: 0.12;
+    icon-fit: cover;
+    label-text-color: #2C2C2C;
+    label-size: 0.3;
+    line-height: 1;
+    appear-frames: 8;
+    move-frames: 14;
+    appear-gain: 0.14;
+    move-gain: 0.10;
+    sound-fade-frames: 0;
+    board-stack: 20;
+    stage-stack: 25;
+    item-stack: 30;
+  }
+
+  /* B-roll cards sit above the Ranking board and below captions. The later
+     member of every overlapping joke pair receives the higher stack order. */
+  media.hair-gel {
+    stack-order: 40; fit: cover;
+    shadows: 0 18 34 -8 #000000D9;
+  }
+  media.trophy {
+    stack-order: 41; fit: cover;
+    shadows: 0 18 34 -8 #000000D9;
+  }
+  media.greek-god {
+    stack-order: 42; fit: cover;
+    shadows: 0 18 34 -8 #000000D9;
+  }
+  media.greek-tragedy {
+    stack-order: 43; fit: cover;
+    shadows: 0 18 34 -8 #000000D9;
+  }
+  media.penaldo-social {
+    stack-order: 44; fit: cover;
+    shadows: 0 18 34 -8 #000000D9;
+  }
+  media.tired-dad {
+    stack-order: 45; fit: cover;
+    shadows: 0 18 34 -8 #000000D9;
+  }
+  media.walks-around {
+    stack-order: 46; fit: cover;
+    shadows: 0 18 34 -8 #000000D9;
+  }
+  media.hat-trick {
+    stack-order: 47; fit: cover;
+    shadows: 0 18 34 -8 #000000E6;
+  }
+
+  motion.broll-left {
+    enter: pop; enter-frames: 6; enter-easing: ease-out;
+    exit: fade; exit-frames: 4; exit-easing: ease-in;
+  }
+  motion.broll-right {
+    enter: bounce; enter-frames: 7; enter-easing: ease-out;
+    exit: scale; exit-frames: 4; exit-amount: 0.94; exit-easing: ease-in;
+  }
+  motion.broll-wide {
+    enter: scale; enter-frames: 6; enter-amount: 0.9; enter-easing: ease-out;
+    exit: fade; exit-frames: 4; exit-easing: ease-in;
+  }
+
+  caption.primary {
+    stack-order: 70;
+    x: 0.5;
+    y: 0.55;
+    width: 0.88;
+    height: 0.18;
+    anchor-x: center;
+    anchor-y: center;
+    align: center;
+    block-align: center;
+    inline-size: hug;
+    wrap: word;
+    max-lines: 2;
+    max-words-per-line: 4;
+    line-height: 1.28;
+    size: 44;
+    letter-spacing: -0.8;
+    fill: #FFFFFF;
+    stroke-color: #090A0F;
+    stroke-width: 2;
+    shadow-color: #000000;
+    shadow-opacity: 0.72;
+    shadow-x: 0;
+    shadow-y: 3;
+    shadow-blur: 7;
+    background: #00000000;
+    border-color: #00000000;
+    border-width: 0;
+    padding: 0 0;
+    radius: 0;
+    karaoke: current;
+    karaoke-transition: step;
+    active-fill: #FFFFFF;
+    active-box: current;
+    active-box-continuity: isolated;
+    active-box-background: #008FC7;
+    active-box-border-color: #00000000;
+    active-box-border-width: 0;
+    active-box-padding: 4 9;
+    active-box-radius: 5;
+    active-box-transition-frames: 2;
+    active-response: pop;
+    active-response-frames: 3;
+    active-scale: 1.04;
+    lead-frames: 2;
+    tail-frames: 2;
+    handoff: cut;
+    cue-enter: fade;
+    cue-enter-frames: 2;
+    cue-exit: fade;
+    cue-exit-frames: 2;
+  }
+</sheet>

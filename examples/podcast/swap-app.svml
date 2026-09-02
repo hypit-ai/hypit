@@ -1,0 +1,228 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
+  <import as="audio-track" from="@hypit/audio-track@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="media-track" from="@hypit/media-track@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="recipes" source="./recipes.svs"/>
+  <import as="broll-kit" source="./kits/broll-v1.svs"/>
+  <import as="podcast-kit" source="./kits/podcast-v1.svs"/>
+
+  <script id="story">
+    <opening-question>
+      <NERD>OK big guy || so what is || the one single thing || that you literally || can't live without?
+    </opening-question>
+    <daily-cheatgpt>
+      <JOCK>CheatGPT. Every single day || since sophomore year. ~@lifestyle || For my essays, || my emails, || and even || my wedding vows.
+      <NERD>You used AI || on your @/lifestyle vows?
+    </daily-cheatgpt>
+    <brain-is-asking>
+      <JOCK>And guess what? || She cried. || Sent you the link.
+      <NERD>Wait no! || I have a <PhD | Pee Aych Dee>!
+      <JOCK>And I have || a <4.0 | four point oh>. || Which of us || looks tired?
+    </brain-is-asking>
+  </script>
+
+  <asset:Image id="nerd" src="./assets/nerd.png"/>
+  <asset:Image id="jock" src="./assets/jock.png"/>
+  <asset:Image id="cheatgpt-icon" src="./assets/cheatgpt.png"/>
+
+  <asset:Audio id="nerd-voice" src="./assets/nerd.wav"/>
+  <asset:Audio id="jock-voice" src="./assets/jock.wav"/>
+  <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
+
+  <text:Value id="jocknerd-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical horizontal-split-screen close-up as one frame cut from video genuinely shot on an iPhone: realistic rather than glossy, with the texture of video instead of a posed photograph. Keep both backgrounds clearly visible with no depth-of-field blur. Preserve fine natural skin texture, coherent anatomy, natural light, and a clean image without fragmentation. Place the young woman from the first reference in the upper half and the young man from the second reference in the lower half. Frame both people from the upper chest upward at matching close-up scale. The woman looks toward the right side of the frame and the man looks toward the left, so the two podcast hosts appear to face each other across the horizontal split. Preserve each person's exact identity, face, hair, clothing, microphone position, gymnasium setting, natural lighting, camera height, framing logic, and distinct background sector from the corresponding reference image. Keep the split boundary clean and keep the two halves visually coherent without blending or merging the people.
+  </text:Value>
+
+  <text:Value id="jock-hold-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical medium close-up as one frame cut from video genuinely shot on an iPhone: realistic rather than glossy, with the texture of video instead of a posed photograph. Keep the background clearly visible with no depth-of-field blur. Preserve fine natural skin texture, coherent anatomy, natural light, and a clean image without fragmentation. Preserve the natural lighting and microphone position from the first reference image exactly. Show the young man from the first reference holding a smartphone whose screen displays the square parody icon from the second reference. He continues looking toward the left side of the frame as though speaking to someone there. He holds the phone with the hand on the right side of the frame and points toward the phone with the hand on the left side of the frame. Keep the phone geometry, screen plane, hand contact, icon proportions, and screen content physically coherent, sharp, readable, and naturally integrated into the environmental lighting.
+  </text:Value>
+
+  <text:Value id="classroom-selfie-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical close arm's-length selfie as one frame cut from video genuinely shot on an iPhone: realistic rather than glossy, with the texture of video instead of a posed photograph. Keep the background clearly visible with no depth-of-field blur. Preserve fine natural skin texture, coherent anatomy, natural light, and a clean image without fragmentation. Show the young man from the first reference seated in an American university classroom, turning slightly in his seat and holding the phone up for an arm's-length selfie. A lecturer's podium and a whiteboard are visible behind him, along with several other students seated at their desks. An open black laptop sits on his desk, and its screen displays the parody icon from the second reference enlarged to fill the entire screen. He now wears a serious dark navy designer streetwear hoodie. His headband is removed and his hair is neatly styled into braids. His free hand gives a clear thumbs-up. Preserve his exact identity and muscular build, and keep the laptop, screen plane, icon, hands, classroom geometry, and natural university lighting physically coherent.
+  </text:Value>
+
+  <text:Value id="library-study-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical close tabletop selfie as one frame cut from video genuinely shot on an iPhone: realistic rather than glossy, with the texture of video instead of a posed photograph. Keep the background clearly visible with no depth-of-field blur. Preserve fine natural skin texture, coherent anatomy, natural light, and a clean image without fragmentation. The phone rests on the table and records from a low upward angle. Show the young man from the first reference seated in an American university library, looking down and studying a book with focused concentration. Several other students are reading in the background, and ordinary textbooks and notebooks are spread across his table. The book he is reading has a white cover whose front reads “How to Cheat on CheatGPT,” while its back cover carries the parody icon from the second reference. He now wears a neat light-blue button-up shirt. His headband is removed, his hair hangs naturally down on both sides, and he wears black-framed glasses. Preserve his exact identity and muscular build, and keep the phone viewpoint, book geometry, printed title, icon, hands, table, and library lighting physically coherent.
+  </text:Value>
+
+  <text:Value id="wedding-vows-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical close candid photograph as one frame cut from video genuinely shot on an iPhone: realistic rather than glossy, with the texture of video instead of a posed photograph. Keep the background clearly visible with no depth-of-field blur. Preserve fine natural skin texture, coherent anatomy, natural light, and a clean image without fragmentation. Show an outdoor Western-style wedding on a lawn, photographed casually by another guest. The young man from the first reference stands on the right as the groom, while the bride stands on the left with her face fully obscured by her bridal veil. The groom's hair is tied back neatly, and he wears a deep navy groom's suit with a floral boutonniere on his chest. Between and slightly behind the couple stands the wedding officiant, wearing a full-head costume shaped exactly like the parody icon from the second reference. The groom holds out a bouquet of flowers toward the bride. Keep the composition loose and spontaneous, like an ordinary guest's quick iPhone snapshot, while preserving the groom's exact identity, the couple's positions, the bouquet hand contact, the officiant's placement, and the natural outdoor wedding light.
+  </text:Value>
+
+  <text:Value id="lifestyle-montage-story">
+    Use the three reference images as three ordered shots in one compact, lively university-life montage. SHOT ONE — CLASSROOM SELFIE: preserve the first reference's classroom, desk, open laptop, full-screen parody icon, dark navy hoodie, braided hair, other students, and arm's-length phone composition. The young man holds the phone up for the selfie, keeps his free hand in a clear thumbs-up, lifts his chin, and gives one confident nod. SHOT TWO — LIBRARY STUDY: cut to the second reference and preserve its low tabletop phone viewpoint, library, books, white-covered “How to Cheat on CheatGPT” book, black-framed glasses, light-blue shirt, loose hair, and background students. The young man studies attentively, turns one page while continuing to read, then tilts his head slightly as though considering what he has just read. SHOT THREE — WEDDING VOWS: cut to the third reference and preserve the lawn wedding, veiled bride, deep navy groom's suit, boutonniere, parody-icon officiant head, and candid guest-photo composition. The young man extends the bouquet and hands it to the bride in one simple, physically coherent motion. Keep each shot internally continuous, use clean direct cuts only between the three authored references, preserve the same man's identity throughout, and add no speech, subtitles, captions, labels, or floating graphics.
+  </text:Value>
+
+  <text:Value id="opening-take-prompt">
+    Preserve the reference image as a fixed horizontal split screen for the entire shot, with the young woman in the upper half and the young man in the lower half. Keep both identities, outfits, lighting, gymnasium backgrounds, framing, scale, microphone placement, and the split-screen boundary unchanged. Use one continuous locked view with no cuts, reframing, zoom, or camera movement. In the upper half, the young woman keeps looking toward the right side of the frame throughout while speaking briskly and naturally in one continuous thought, with only a small conversational head movement and no dramatic pause. She says exactly: “OK big guy so what is the one single thing that you literally can't live without?” At the same time in the lower half, the young man remains completely silent and does not move his mouth. He briefly looks downward, makes one small seated-posture adjustment, then raises his eyes and looks toward the left side of the frame with a focused, attentive expression. Keep both performances understated, simultaneous, photorealistic, and physically coherent. Add no subtitles, captions, labels, UI text, or floating words.
+  </text:Value>
+
+  <text:Value id="daily-cheatgpt-action">
+    ROLE LABEL MAPPING: JOCK is Host A and uses the first image and first audio reference. NERD is Host B and uses the second image and second audio reference. In the dialogue text, every JOCK line belongs only to Host A and every NERD line belongs only to Host B. Only the speaker assigned to the current line moves their mouth; the listener remains silent. JOCK PERFORMANCE: From the very first frame, the young man is already looking toward the left side of the frame, directly addressing the off-camera woman there. He keeps his head and gaze oriented toward frame-left throughout his entire speaking turn, including while raising and pointing to the phone. The phone remains visible on frame-right without pulling his gaze away from the woman. The young man already holds the phone at the beginning. He says “CheatGPT” as a confident plain statement with a clear falling intonation and raises the phone only slightly into one readable position. While saying “Every single day,” he points directly toward the phone with his free hand. On “since sophomore year,” he closes that free hand into one compact fist and holds it still for one short beat. Give “For my essays” and “my emails” two small sequential beats with the free hand, first a brief writing-like motion and then one compact outward tap. On “and even,” he brings the free hand lightly toward his chest. While saying “my wedding vows,” he gives a dry matter-of-fact half-smile and finishes with one small nod, keeping the phone stable and visible in his other hand. NERD PERFORMANCE: The phone never enters the young woman's view in this segment. When her turn begins, she braces one hand on the chair arm, makes one small seated-posture adjustment, then looks toward the right side of the frame and asks, “You used AI on your vows?” with compact, skeptical disbelief and a clear rising intonation on “vows?” Keep the exchange brisk and photorealistic, with immediate speaker handoffs, no dead air, and no exaggerated facial distortion.
+  </text:Value>
+
+  <text:Value id="brain-is-asking-action">
+    ROLE LABEL MAPPING: JOCK is Host A and uses the first image and first audio reference. NERD is Host B and uses the second image and second audio reference. In the dialogue text, every JOCK line belongs only to Host A and every NERD line belongs only to Host B. Only the speaker assigned to the current line moves their mouth; the listener remains silent. PHONE CONTINUITY: The phone begins in the young man's hand. It is never passed to the young woman and never enters her view. By the end of his first turn, the young man places it on the table at the lower-left edge of his own frame, where it remains with its screen locked and black for the rest of the segment. FIRST JOCK TURN: On “And guess what?” the young man tilts his head slightly, looks seriously toward the left side of the frame, and holds one short natural pause. While saying “She cried,” he lowers his gaze, rotates the phone into a comfortable typing position, and types a short message with compact thumb movements. On “Sent you the link,” he finishes the send action, locks the phone so the screen turns black, and places it naturally onto the table at the lower-left edge of his frame. NERD TURN: The young woman continues looking toward the right side of the frame. On “Wait, no!” she crosses both arms firmly over her chest in a clear refusal. While saying “I have a Pee Aych Dee!” she releases one hand, places it flat against her chest, and delivers the phrase deliberately, one beat at a time. FINAL JOCK TURN: The phone remains on the table and both of the young man's hands are free. While saying “And I have a four point oh,” he leans back and opens both hands with relaxed palms up. On “Which of us looks tired?” he settles both hands behind his head and remains completely relaxed, looking toward the left side of the frame with effortless confidence. Keep all cuts immediate, preserve the two fixed camera views and microphone positions, and make every action physically coherent, brisk, and precisely synchronized to the specified words.
+  </text:Value>
+
+  <gpt:Image id="jocknerd" prompt={jocknerd-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={nerd}/>
+    <gpt:Reference image={jock}/>
+  </gpt:Image>
+
+  <gpt:Image id="jock-hold" prompt={jock-hold-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={jock}/>
+    <gpt:Reference image={cheatgpt-icon}/>
+  </gpt:Image>
+
+  <gpt:Image id="classroom-selfie" prompt={classroom-selfie-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={jock}/>
+    <gpt:Reference image={cheatgpt-icon}/>
+  </gpt:Image>
+
+  <gpt:Image id="library-study" prompt={library-study-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={jock}/>
+    <gpt:Reference image={cheatgpt-icon}/>
+  </gpt:Image>
+
+  <gpt:Image id="wedding-vows" prompt={wedding-vows-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={jock}/>
+    <gpt:Reference image={cheatgpt-icon}/>
+  </gpt:Image>
+
+  <text:Render id="lifestyle-montage-prompt"
+    template={broll-kit.broll-v1} recipe={recipes.broll.calm-ugc-montage}>
+    <text:Set name="story" text={lifestyle-montage-story}/>
+  </text:Render>
+
+  <text:Render id="daily-cheatgpt-take-prompt"
+    template={podcast-kit.podcast-v1} recipe={recipes.podcast.daily-cheatgpt}>
+    <text:Set name="dialogue" text={story.segment.daily-cheatgpt.dialogue}/>
+    <text:Set name="action" text={daily-cheatgpt-action}/>
+  </text:Render>
+
+  <text:Render id="brain-is-asking-take-prompt"
+    template={podcast-kit.podcast-v1} recipe={recipes.podcast.brain-is-asking}>
+    <text:Set name="dialogue" text={story.segment.brain-is-asking.dialogue}/>
+    <text:Set name="action" text={brain-is-asking-action}/>
+  </text:Render>
+
+  <seedance:ReferenceVideo id="opening-take" model="mini"
+    prompt={opening-take-prompt} duration="4"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={jocknerd.image}/>
+    <seedance:Reference audio={nerd-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="lifestyle-montage" model="mini"
+    prompt={lifestyle-montage-prompt} duration="4"
+    resolution="720p" aspect-ratio="9:16" generate-audio="false">
+    <seedance:Reference image={classroom-selfie.image}/>
+    <seedance:Reference image={library-study.image}/>
+    <seedance:Reference image={wedding-vows.image}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="daily-cheatgpt-take" model="mini"
+    prompt={daily-cheatgpt-take-prompt} duration="7"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={jock-hold.image}/>
+    <seedance:Reference image={nerd}/>
+    <seedance:Reference audio={jock-voice}/>
+    <seedance:Reference audio={nerd-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="brain-is-asking-take" model="mini"
+    prompt={brain-is-asking-take-prompt} duration="7"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={jock-hold.image}/>
+    <seedance:Reference image={nerd}/>
+    <seedance:Reference audio={jock-voice}/>
+    <seedance:Reference audio={nerd-voice}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <space:Frame id="full-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <program:Clock id="clock" frame-rate="30"/>
+
+  <pipeline:Normalize id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <pipeline:Normalize id="opening-media" source={opening-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="daily-cheatgpt-media" source={daily-cheatgpt-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="brain-is-asking-media" source={brain-is-asking-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="lifestyle-media" source={lifestyle-montage.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+
+  <whisperx:SemanticTake id="opening-semantic" narrative={story}
+    segment={story.segment.opening-question} media={opening-media.media} language="en"/>
+  <whisperx:SemanticTake id="daily-cheatgpt-semantic" narrative={story}
+    segment={story.segment.daily-cheatgpt} media={daily-cheatgpt-media.media} language="en"/>
+  <whisperx:SemanticTake id="brain-is-asking-semantic" narrative={story}
+    segment={story.segment.brain-is-asking} media={brain-is-asking-media.media} language="en"/>
+
+  <speech:Track id="speech" visual-frame={full-frame}
+    visual-appearance={recipes.speech.visual} visual-z="10">
+    <speech:Take source={opening-semantic.take}/>
+    <speech:Take source={daily-cheatgpt-semantic.take}/>
+    <speech:Take source={brain-is-asking-semantic.take}/>
+  </speech:Track>
+
+  <audio-track:Track id="music-bed" semantic={speech.semantic}>
+    <audio-track:Clip source={soundtrack-media.media} during="program"
+      playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
+  </audio-track:Track>
+
+  <media-track:Track id="lifestyle" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Item id="lifestyle-cutaway" media={lifestyle-media.media}
+      frame={full-frame} during={story.selection.lifestyle}
+      appearance={recipes.media.lifestyle}/>
+  </media-track:Track>
+
+  <fonts:Stack id="caption-font" family="montserrat" weight="900" style="normal"/>
+  <caption-fine:Style id="caption-jock-style" recipe={recipes.caption.jock}
+    font={caption-font}/>
+  <caption-fine:Style id="caption-nerd-style" recipe={recipes.caption.nerd}
+    font={caption-font}/>
+  <caption:Program id="caption-program" document={story.caption}
+    narrative={story} default={caption-jock-style}>
+    <caption:Use role="NERD" style={caption-nerd-style}/>
+  </caption:Program>
+  <caption-fine:Track id="captions" document={story.caption}
+    semantic={speech.semantic} program={caption-program}/>
+
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
+    appearance={recipes.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audio}/>
+    <film:Track source={lifestyle.visual}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={music-bed.track}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition}
+    semantic={speech.semantic}/>
+</svml>

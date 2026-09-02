@@ -106,6 +106,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/render-hyperframes    explicit HyperFrames rendering component
 @hypit/image-transform       image processing component
 @hypit/image-compose         有序静态图像合成
+@hypit/interview-emoji-reveal 可复用的顶部答案图标条
 @hypit/raster                共享确定性光栅执行合同
 @hypit/background-removal    外部图像去背景能力
 ```
