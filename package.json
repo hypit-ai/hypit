@@ -85,6 +85,7 @@
     "@hypit/hyperframes": "workspace:*",
     "@hypit/image-compose": "workspace:*",
     "@hypit/image-transform": "workspace:*",
+    "@hypit/interview-emoji-reveal": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/media-pipeline": "workspace:*",
     "@hypit/mock-media": "workspace:*",

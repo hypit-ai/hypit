@@ -1,0 +1,250 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="estimate" from="@hypit/estimate@1"/>
+  <import as="estimated" from="@hypit/semantic-take-estimate@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
+  <import as="audio-track" from="@hypit/audio-track@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="media-track" from="@hypit/media-track@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="recipes" source="./recipes.svs"/>
+  <import as="broll-kit" source="./kits/broll-v1.svs"/>
+  <import as="podcast-kit" source="./kits/podcast-v1.svs"/>
+
+  <script id="story">
+    <opening-question>
+      <DOGE>OK <Pepe | PEP-ay> || so what is || the one single thing || that you literally || can't live without?
+    </opening-question>
+    <daily-creatine>
+      <PEPE>Creatine. Ten grams || a day, every day. ~@lifestyle || Before my workout, || after my workout, || and honestly? || During my workout.
+      <DOGE>Bro that @/lifestyle sounds || like an addiction.
+    </daily-creatine>
+    <arms-are-asking>
+      <PEPE>You know what's || an addiction? || Being skinny. || Take this.
+      <DOGE>Wait no! || I don't even || lift!
+      <PEPE>Exactly my point. || Look at those || doggy arms!
+    </arms-are-asking>
+  </script>
+
+  <asset:Image id="doge" src="./assets/doge.png"/>
+  <asset:Image id="pepe" src="./assets/pepe.png"/>
+  <asset:Image id="creatine" src="./assets/creatine.png"/>
+
+  <asset:Audio id="doge-voice" src="./assets/doge.wav"/>
+  <asset:Audio id="pepe-voice" src="./assets/pepe.wav"/>
+  <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
+
+  <text:Value id="pepedoge-prompt">
+    A photorealistic vertical image with the authentic texture of a real iPhone video frame: natural and lifelike, never glossy or overprocessed. Keep both podcast backgrounds clearly visible with no shallow depth-of-field blur. Preserve the characters' identities, realistic surface detail, natural lighting, microphones, coherent anatomy, and clean silhouettes with no fragmentation or visual artifacts. Preserve the natural lighting of both reference images exactly. Create a horizontal split-screen composition with Doge in the upper half and the sad frog Pepe in the lower half. Frame both characters in tight close-ups from the upper chest upward. Doge looks toward the right side of the frame and Pepe looks toward the left, so they read as two podcast hosts facing each other across the split screen.
+  </text:Value>
+
+  <text:Value id="pepe-hold-prompt">
+    A photorealistic vertical medium close-up with the authentic texture of a real iPhone video frame. The image should look like a frame captured from genuine iPhone footage: realistic without looking glossy or overprocessed. Keep the background clearly visible with no shallow depth-of-field blur. Preserve fine, natural surface detail, coherent anatomy, natural lighting, and a clean image with no fragmentation or visual artifacts. Preserve the natural lighting and the microphone position from the first reference image exactly. Show the sad frog holding the creatine container from the second reference image while still looking toward the left side of the frame, as though speaking to someone there. He holds the container with the hand on the right side of the frame and points toward it with the hand on the left side of the frame. Make the creatine container fully photorealistic and naturally integrated into the environmental lighting.
+  </text:Value>
+
+  <text:Value id="doge-hold-prompt">
+    A photorealistic vertical medium close-up with the authentic texture of a real iPhone video frame. The image should look like a frame captured from genuine iPhone footage: realistic without looking glossy or overprocessed. Keep the background clearly visible with no shallow depth-of-field blur. Preserve fine, natural surface detail, coherent anatomy, natural lighting, and a clean image with no fragmentation or visual artifacts. Preserve the natural lighting and the microphone position from the first reference image exactly. Show Doge holding the creatine container from the second reference image while still looking toward the right side of the frame, as though speaking to someone there. Doge holds the container asymmetrically with both hands. Make the creatine container fully photorealistic and naturally integrated into the environmental lighting.
+  </text:Value>
+
+  <text:Value id="before-prompt">
+    A photorealistic vertical arm's-length selfie with the authentic texture of a real iPhone video frame. The image should look like a frame captured from genuine iPhone footage: realistic without looking glossy or overprocessed. Keep the background clearly visible with no shallow depth-of-field blur. Preserve fine, natural surface detail, coherent anatomy, natural lighting, and a clean image with no fragmentation or visual artifacts. The sad frog from the reference image is outside the entrance of a gym, holding the phone high with an extended arm and turning for a selfie. He now wears a black sleeveless tank top, carries a large gym duffel bag, and wears a baseball cap. He raises his chin with a tough-guy expression and makes a backward rock-hand gesture. Preserve his strongly muscular physique. He looks directly into the camera. Include a few ordinary objects and trash cans along the sidewalk so the setting feels like a real American street. Use convincingly real lighting: bright afternoon daylight illuminates the scene and casts natural golden side light across the frog's face.
+  </text:Value>
+
+  <text:Value id="after-prompt">
+    A photorealistic vertical mirror selfie with the authentic texture of a real iPhone video frame. The image should look like a frame captured from genuine iPhone footage: realistic without looking glossy or overprocessed. Keep the background clearly visible with no shallow depth-of-field blur. Preserve fine, natural surface detail, coherent anatomy, natural lighting, and a clean image with no fragmentation or visual artifacts. The sad frog from the reference image is inside a gym taking a mirror selfie with an iPhone in a black phone case. He now wears a gray textured athletic T-shirt and over-ear headphones. He raises his free arm to show a powerful bicep. Preserve his strongly muscular physique. He looks intently at the phone screen. Use convincingly real indoor frontal lighting across the frog's face.
+  </text:Value>
+
+  <text:Value id="during-prompt">
+    A photorealistic vertical image with the authentic texture of a real iPhone video frame. The image should look like a frame captured from genuine iPhone footage: realistic without looking glossy or overprocessed. Keep the background clearly visible with no shallow depth-of-field blur. Preserve fine, natural surface detail, coherent anatomy, natural lighting, and a clean image with no fragmentation or visual artifacts. The sad frog from the reference image is bench-pressing inside a gym. He wears a light-blue athletic top, keeps his eyes closed, and strains with an intense grimace. Preserve his strongly muscular physique. The photograph is taken by another person standing beside the bench rather than as a selfie. Use convincingly real indoor frontal lighting across the frog's face.
+  </text:Value>
+
+  <text:Value id="lifestyle-montage-story">
+    Use the three reference images as three ordered shots in one compact, lively montage. Shot one uses the before-workout reference: Pepe holds the phone for an arm's-length selfie and turns his upper body slightly from side to side, producing gentle, natural phone-camera sway. He keeps the rock-hand sign from the reference and gives that gesture one small, clear pulse for emphasis. Shot two uses the after-workout reference: Pepe continues taking a mirror selfie with his gaze on the phone screen. His free arm begins relaxed at his side, then rises into a strong flex so he can clearly show off his muscular bicep, followed by one small, satisfied nod. Shot three uses the during-workout reference: Pepe performs a strenuous bench press, driving through the lift while his body and arms visibly tremble under the effort and his teeth remain tightly clenched. Keep the action within each authored shot continuous and physically coherent, then cut cleanly to the next reference scene in order. Preserve each reference's identity, wardrobe, setting, lighting, framing, props, and phone-camera texture. Use ordinary real-time motion with no slow motion, no repeated action, and no speaking to camera.
+  </text:Value>
+
+  <text:Value id="opening-take-prompt">
+    Preserve the reference image as a fixed horizontal split screen for the entire shot, with Doge in the upper half and Pepe in the lower half. Keep both character identities, outfits, lighting, backgrounds, framing, scale, microphone placement, and the split-screen boundary unchanged. Use one continuous locked view with no cuts, reframing, zoom, or camera movement. In the upper half, Doge keeps looking toward the right side of the frame throughout while speaking briskly and naturally in one continuous thought, with only a small conversational head movement and no dramatic pause. Doge says exactly: “OK PEP-ay so what is the one single thing that you literally can't live without?” At the same time in the lower half, Pepe remains completely silent and does not move his mouth. Pepe briefly looks downward, makes one small seated-posture adjustment, then raises his eyes and looks toward the left side of the frame with a focused, attentive expression. Keep both performances understated, simultaneous, photorealistic, and physically coherent. Add no subtitles, captions, labels, UI text, or floating words.
+  </text:Value>
+
+  <text:Value id="daily-creatine-action">
+    ROLE LABEL MAPPING: PEPE is Host A and uses the first image and first audio reference. DOGE is Host B and uses the second image and second audio reference. In the dialogue text, every PEPE line belongs only to Host A and every DOGE line belongs only to Host B. Only the speaker assigned to the current line moves their mouth; the listener remains silent. PEPE PERFORMANCE: Pepe already holds the creatine container at the beginning. While saying “Creatine,” he raises the container only slightly into a clear, readable position. While saying “Ten grams a day, every day,” he points toward the container with his free hand and gives one small, confident nod. Give the three workout phrases distinct, compact beats with that same free hand: on “Before my workout,” move the hand forward once; on “after my workout,” draw it back once; on “and honestly?” use only a very brief comic pause with a slight knowing expression; and on “During my workout,” lift the container slightly and finish with one matter-of-fact nod. Keep the container secure in his other hand throughout. DOGE PERFORMANCE: While saying “Bro, that sounds like an addiction,” Doge leans back only slightly, forms a skeptical half-smile, and lifts one open palm in a compact questioning gesture. Deliver “addiction” with a dry, clear falling intonation. Do not bring the creatine container into Doge's view in this segment. Keep the handoffs immediate, the delivery brisk, and every gesture understated, readable, and synchronized to the specified phrase, with no dead air or exaggerated reaction.
+  </text:Value>
+
+  <text:Value id="arms-are-asking-action">
+    ROLE LABEL MAPPING: PEPE is Host A and uses the first image and first audio reference. DOGE is Host B and uses the second image and second audio reference. In the dialogue text, every PEPE line belongs only to Host A and every DOGE line belongs only to Host B. Only the speaker assigned to the current line moves their mouth; the listener remains silent. CONTINUITY: At the beginning, the creatine container belongs only to Pepe. On “Take this,” Pepe passes it out through the left edge of his frame. On the cut to Doge, make Doge receive the same container from the right edge of his frame so the handoff reads as one continuous action across the two fixed camera views. Once Doge has received it, the container must remain absent from Pepe's later shot. FIRST PEPE TURN: While saying “You know what's an addiction?” Pepe tilts his head, knits his brow, and looks toward the left side of the frame. On “Being skinny,” he tilts his head to the opposite side and gives one mocking, deliberate nod. On “Take this,” he leans toward the left and extends the container directly out of the left edge of his frame. DOGE TURN: On “Wait, no!” Doge receives the container from the right edge with both hands, recoils slightly, and gives one quick head shake. While saying “I don't even lift!” he keeps the container secure in one hand and briefly opens the free hand in a compact protesting gesture. FINAL PEPE TURN: The container is no longer visible in Pepe's frame. On “Exactly my point,” Pepe crosses both arms over his chest, raises his eyebrows, lowers his gaze slightly, and holds a clearly contemptuous, superior expression. On “Look at those doggy arms!” he unfolds one arm and extends one open hand sharply toward the left side of the frame, using the palm to indicate Doge, then gives that open hand one short, clearly visible shake for emphasis. Keep every cut immediate, every expression readable without distortion, and the entire exchange brisk, physically coherent, and precisely synchronized to the specified words.
+  </text:Value>
+
+  <gpt:Image id="pepedoge" prompt={pepedoge-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={doge}/>
+    <gpt:Reference image={pepe}/>
+  </gpt:Image>
+
+  <gpt:Image id="pepe-hold" prompt={pepe-hold-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={pepe}/>
+    <gpt:Reference image={creatine}/>
+  </gpt:Image>
+
+  <gpt:Image id="doge-hold" prompt={doge-hold-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={doge}/>
+    <gpt:Reference image={creatine}/>
+  </gpt:Image>
+
+  <gpt:Image id="before" prompt={before-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={pepe}/>
+  </gpt:Image>
+
+  <gpt:Image id="after" prompt={after-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={pepe}/>
+  </gpt:Image>
+
+  <gpt:Image id="during" prompt={during-prompt}
+    aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={pepe}/>
+  </gpt:Image>
+
+  <text:Render id="lifestyle-montage-prompt"
+    template={broll-kit.broll-v1} recipe={recipes.broll.calm-ugc-montage}>
+    <text:Set name="story" text={lifestyle-montage-story}/>
+  </text:Render>
+
+  <seedance:ReferenceVideo id="lifestyle-montage" model="mini"
+    prompt={lifestyle-montage-prompt} duration="4"
+    resolution="720p" aspect-ratio="9:16" generate-audio="false">
+    <seedance:Reference image={before.image}/>
+    <seedance:Reference image={after.image}/>
+    <seedance:Reference image={during.image}/>
+  </seedance:ReferenceVideo>
+
+  <text:Render id="daily-creatine-take-prompt"
+    template={podcast-kit.podcast-v1} recipe={recipes.podcast.daily-creatine}>
+    <text:Set name="dialogue" text={story.segment.daily-creatine.dialogue}/>
+    <text:Set name="action" text={daily-creatine-action}/>
+  </text:Render>
+
+  <text:Render id="arms-are-asking-take-prompt"
+    template={podcast-kit.podcast-v1} recipe={recipes.podcast.arms-are-asking}>
+    <text:Set name="dialogue" text={story.segment.arms-are-asking.dialogue}/>
+    <text:Set name="action" text={arms-are-asking-action}/>
+  </text:Render>
+
+  <seedance:ReferenceVideo id="opening-take" model="mini"
+    prompt={opening-take-prompt} duration="4"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={pepedoge.image}/>
+    <seedance:Reference audio={doge-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="daily-creatine-take" model="mini"
+    prompt={daily-creatine-take-prompt} duration="7"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={pepe-hold.image}/>
+    <seedance:Reference image={doge}/>
+    <seedance:Reference audio={pepe-voice}/>
+    <seedance:Reference audio={doge-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="arms-are-asking-take" model="mini"
+    prompt={arms-are-asking-take-prompt} duration="7"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={pepe-hold.image}/>
+    <seedance:Reference image={doge-hold.image}/>
+    <seedance:Reference audio={pepe-voice}/>
+    <seedance:Reference audio={doge-voice}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <space:Frame id="full-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <program:Clock id="clock" frame-rate="30"/>
+
+  <pipeline:Normalize id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+
+  <pipeline:Normalize id="opening-media" source={opening-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="daily-creatine-media" source={daily-creatine-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="arms-are-asking-media" source={arms-are-asking-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="lifestyle-media" source={lifestyle-montage.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+
+  <whisperx:SemanticTake id="opening-semantic" narrative={story}
+    segment={story.segment.opening-question} media={opening-media.media} language="en"/>
+  <whisperx:SemanticTake id="daily-creatine-semantic" narrative={story}
+    segment={story.segment.daily-creatine} media={daily-creatine-media.media} language="en"/>
+  <whisperx:SemanticTake id="arms-are-asking-semantic" narrative={story}
+    segment={story.segment.arms-are-asking} media={arms-are-asking-media.media} language="en"/>
+
+  <estimate:Speech id="preview-estimate" source={story.segment.opening-question.speech}
+    policy={recipes.speech.preview}/>
+  <estimated:SemanticTake id="opening-estimated" narrative={story}
+    segment={story.segment.opening-question} media={opening-media.media}
+    policy={preview-estimate.policy}/>
+  <estimated:SemanticTake id="daily-creatine-estimated" narrative={story}
+    segment={story.segment.daily-creatine} media={daily-creatine-media.media}
+    policy={preview-estimate.policy}/>
+  <estimated:SemanticTake id="arms-are-asking-estimated" narrative={story}
+    segment={story.segment.arms-are-asking} media={arms-are-asking-media.media}
+    policy={preview-estimate.policy}/>
+
+  <speech:Track id="speech" visual-frame={full-frame}
+    visual-appearance={recipes.speech.visual} visual-z="10">
+    <speech:Take source={opening-semantic.take}/>
+    <speech:Take source={daily-creatine-semantic.take}/>
+    <speech:Take source={arms-are-asking-semantic.take}/>
+  </speech:Track>
+
+  <audio-track:Track id="music-bed" semantic={speech.semantic}>
+    <audio-track:Clip source={soundtrack-media.media} during="program"
+      playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
+  </audio-track:Track>
+
+  <media-track:Track id="lifestyle" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Item id="lifestyle-cutaway" media={lifestyle-media.media}
+      frame={full-frame} during={story.selection.lifestyle}
+      appearance={recipes.media.lifestyle}/>
+  </media-track:Track>
+
+  <fonts:Stack id="caption-font" family="montserrat" weight="900" style="normal"/>
+  <caption-fine:Style id="caption-style" recipe={recipes.caption.pepe}
+    font={caption-font}/>
+  <caption-fine:Style id="caption-doge-style" recipe={recipes.caption.doge}
+    font={caption-font}/>
+  <caption:Program id="caption-program" document={story.caption}
+    narrative={story} default={caption-style}>
+    <caption:Use role="DOGE" style={caption-doge-style}/>
+  </caption:Program>
+  <caption-fine:Track id="captions" document={story.caption}
+    semantic={speech.semantic} program={caption-program}/>
+
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
+    appearance={recipes.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audio}/>
+    <film:Track source={lifestyle.visual}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={music-bed.track}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition}
+    semantic={speech.semantic}/>
+</svml>

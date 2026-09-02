@@ -113,6 +113,7 @@ specific Provider deployment.
 @hypit/render-hyperframes    explicit HyperFrames rendering component
 @hypit/image-transform       image processing component
 @hypit/image-compose         ordered still-image composition
+@hypit/interview-emoji-reveal reusable top-of-frame answer icon strip
 @hypit/raster                shared deterministic raster execution contract
 @hypit/background-removal    external image cutout capability
 ```

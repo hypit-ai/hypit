@@ -1,0 +1,81 @@
+<?svml using="@hypit/run-markup@1"?>
+<svrun version="1">
+  <author source="./reference-banana.svml"/>
+  <target output="final.video"/>
+<build-record id="record-broll-greek-god-image" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="broll-greek-god.image"/>
+<satisfy output="broll-greek-god.image" candidate="record-broll-greek-god-image"/>
+<build-record id="record-broll-greek-tragedy-image" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="broll-greek-tragedy.image"/>
+<satisfy output="broll-greek-tragedy.image" candidate="record-broll-greek-tragedy-image"/>
+<build-record id="record-broll-hair-gel-image" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="broll-hair-gel.image"/>
+<satisfy output="broll-hair-gel.image" candidate="record-broll-hair-gel-image"/>
+<build-record id="record-broll-hat-trick-image" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="broll-hat-trick.image"/>
+<satisfy output="broll-hat-trick.image" candidate="record-broll-hat-trick-image"/>
+<build-record id="record-broll-penaldo-social-image" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="broll-penaldo-social.image"/>
+<satisfy output="broll-penaldo-social.image" candidate="record-broll-penaldo-social-image"/>
+<build-record id="record-broll-tired-dad-trophy-image" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="broll-tired-dad-trophy.image"/>
+<satisfy output="broll-tired-dad-trophy.image" candidate="record-broll-tired-dad-trophy-image"/>
+<build-record id="record-broll-trophy-image" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="broll-trophy.image"/>
+<satisfy output="broll-trophy.image" candidate="record-broll-trophy-image"/>
+<build-record id="record-broll-walks-around-image" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="broll-walks-around.image"/>
+<satisfy output="broll-walks-around.image" candidate="record-broll-walks-around-image"/>
+<build-record id="record-broll-visual" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="broll.visual"/>
+<satisfy output="broll.visual" candidate="record-broll-visual"/>
+<build-record id="record-captions-track" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="captions.track"/>
+<satisfy output="captions.track" candidate="record-captions-track"/>
+<build-record id="record-football-tiers-audio" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="football-tiers.audio"/>
+<satisfy output="football-tiers.audio" candidate="record-football-tiers-audio"/>
+<build-record id="record-football-tiers-visual" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="football-tiers.visual"/>
+<satisfy output="football-tiers.visual" candidate="record-football-tiers-visual"/>
+<build-record id="record-greek-god-frame" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="greek-god-frame"/>
+<satisfy output="greek-god-frame" candidate="record-greek-god-frame"/>
+<build-record id="record-greek-tragedy-frame" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="greek-tragedy-frame"/>
+<satisfy output="greek-tragedy-frame" candidate="record-greek-tragedy-frame"/>
+<build-record id="record-hair-gel-frame" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="hair-gel-frame"/>
+<satisfy output="hair-gel-frame" candidate="record-hair-gel-frame"/>
+<build-record id="record-hat-trick-frame" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="hat-trick-frame"/>
+<satisfy output="hat-trick-frame" candidate="record-hat-trick-frame"/>
+<build-record id="record-main-composition" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="main.composition"/>
+<satisfy output="main.composition" candidate="record-main-composition"/>
+<build-record id="record-messi-media-media" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="messi-media.media"/>
+<satisfy output="messi-media.media" candidate="record-messi-media-media"/>
+<build-record id="record-messi-prompt" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="messi-prompt"/>
+<satisfy output="messi-prompt" candidate="record-messi-prompt"/>
+<build-record id="record-messi-semantic-take" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="messi-semantic.take"/>
+<satisfy output="messi-semantic.take" candidate="record-messi-semantic-take"/>
+<build-record id="record-messi-take-video" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="messi-take.video"/>
+<satisfy output="messi-take.video" candidate="record-messi-take-video"/>
+<build-record id="record-music-bed-track" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="music-bed.track"/>
+<satisfy output="music-bed.track" candidate="record-music-bed-track"/>
+<build-record id="record-penaldo-social-frame" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="penaldo-social-frame"/>
+<satisfy output="penaldo-social-frame" candidate="record-penaldo-social-frame"/>
+<build-record id="record-ranking-appear-media-media" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="ranking-appear-media.media"/>
+<satisfy output="ranking-appear-media.media" candidate="record-ranking-appear-media-media"/>
+<build-record id="record-ranking-move-media-media" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="ranking-move-media.media"/>
+<satisfy output="ranking-move-media.media" candidate="record-ranking-move-media-media"/>
+<build-record id="record-ronaldo-media-media" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="ronaldo-media.media"/>
+<satisfy output="ronaldo-media.media" candidate="record-ronaldo-media-media"/>
+<build-record id="record-ronaldo-prompt" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="ronaldo-prompt"/>
+<satisfy output="ronaldo-prompt" candidate="record-ronaldo-prompt"/>
+<build-record id="record-ronaldo-semantic-take" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="ronaldo-semantic.take"/>
+<satisfy output="ronaldo-semantic.take" candidate="record-ronaldo-semantic-take"/>
+<build-record id="record-ronaldo-take-video" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="ronaldo-take.video"/>
+<satisfy output="ronaldo-take.video" candidate="record-ronaldo-take-video"/>
+<build-record id="record-soundtrack-media-media" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="soundtrack-media.media"/>
+<satisfy output="soundtrack-media.media" candidate="record-soundtrack-media-media"/>
+<build-record id="record-speech-frame" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="speech-frame"/>
+<satisfy output="speech-frame" candidate="record-speech-frame"/>
+<build-record id="record-speech-audio" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="speech.audio"/>
+<satisfy output="speech.audio" candidate="record-speech-audio"/>
+<build-record id="record-speech-semantic" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="speech.semantic"/>
+<satisfy output="speech.semantic" candidate="record-speech-semantic"/>
+<build-record id="record-speech-visual" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="speech.visual"/>
+<satisfy output="speech.visual" candidate="record-speech-visual"/>
+<build-record id="record-tier-frame" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="tier-frame"/>
+<satisfy output="tier-frame" candidate="record-tier-frame"/>
+<build-record id="record-tired-dad-frame" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="tired-dad-frame"/>
+<satisfy output="tired-dad-frame" candidate="record-tired-dad-frame"/>
+<build-record id="record-trophy-frame" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="trophy-frame"/>
+<satisfy output="trophy-frame" candidate="record-trophy-frame"/>
+<build-record id="record-walks-around-frame" build="bld_a6516394-85bb-42b0-aa2a-63a4e14c2d3f" output="walks-around-frame"/>
+<satisfy output="walks-around-frame" candidate="record-walks-around-frame"/>
+</svrun>
