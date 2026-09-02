@@ -35,20 +35,30 @@
     </sam>
   </script>
 
-  <asset:Image id="presenter" src="./assets/goth3.png"/>
+  <text:Value id="presenter-prompt">Photorealistic vertical iPhone video frame featuring presenter, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="presenter" prompt={presenter-prompt} aspect-ratio="9:16" resolution="2K"/>
   <asset:Audio id="presenter-voice" src="./assets/goth.wav"/>
   <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
   <asset:Audio id="ranking-appear-sfx" src="./assets/ranking-appear.wav"/>
   <asset:Audio id="ranking-move-sfx" src="./assets/ranking-move.wav"/>
-  <asset:Image id="elon-icon" src="./assets/elon.jpg"/>
-  <asset:Image id="sam-icon" src="./assets/sam.jpg"/>
-  <asset:Image id="jensen-icon" src="./assets/jensen.jpg"/>
-  <asset:Image id="tim-icon" src="./assets/tim-new.jpg"/>
-  <asset:Image id="bill-icon" src="./assets/bill.jpg"/>
-  <asset:Image id="dario-icon" src="./assets/dario-new.jpg"/>
-  <asset:Image id="mark-icon" src="./assets/mark.jpg"/>
-  <asset:Image id="jeff-icon" src="./assets/jeff.jpg"/>
-  <asset:Image id="jack-icon" src="./assets/jack.jpg"/>
+  <text:Value id="elon-icon-prompt">Realistic square portrait icon of elon, clean neutral background, natural detail, no readable text or logos.</text:Value>
+  <gpt:Image id="elon-icon" prompt={elon-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
+  <text:Value id="sam-icon-prompt">Realistic square portrait icon of sam, clean neutral background, natural detail, no readable text or logos.</text:Value>
+  <gpt:Image id="sam-icon" prompt={sam-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
+  <text:Value id="jensen-icon-prompt">Realistic square portrait icon of jensen, clean neutral background, natural detail, no readable text or logos.</text:Value>
+  <gpt:Image id="jensen-icon" prompt={jensen-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
+  <text:Value id="tim-icon-prompt">Realistic square portrait icon of tim, clean neutral background, natural detail, no readable text or logos.</text:Value>
+  <gpt:Image id="tim-icon" prompt={tim-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
+  <text:Value id="bill-icon-prompt">Realistic square portrait icon of bill, clean neutral background, natural detail, no readable text or logos.</text:Value>
+  <gpt:Image id="bill-icon" prompt={bill-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
+  <text:Value id="dario-icon-prompt">Realistic square portrait icon of dario, clean neutral background, natural detail, no readable text or logos.</text:Value>
+  <gpt:Image id="dario-icon" prompt={dario-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
+  <text:Value id="mark-icon-prompt">Realistic square portrait icon of mark, clean neutral background, natural detail, no readable text or logos.</text:Value>
+  <gpt:Image id="mark-icon" prompt={mark-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
+  <text:Value id="jeff-icon-prompt">Realistic square portrait icon of jeff, clean neutral background, natural detail, no readable text or logos.</text:Value>
+  <gpt:Image id="jeff-icon" prompt={jeff-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
+  <text:Value id="jack-icon-prompt">Realistic square portrait icon of jack, clean neutral background, natural detail, no readable text or logos.</text:Value>
+  <gpt:Image id="jack-icon" prompt={jack-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
 
   <estimate:Speech id="elon-preview-duration" source={story.segment.elon.speech}
     language="en" pace="normal" min="4" max="15" rounding="round"/>
