@@ -115,7 +115,7 @@ project. By default, Build Results live under the project's `.hypit/results`; a 
 `hypit.results.json` may point the same complete Result model at S3. Active execution state always lives under the selected Profile's
 `dataRoot`.
 `runtime use` stores only a local pointer at `.hypit/runtime`. Source imports select author
-packages; the Profile independently selects Runtime packages through `use`.
+packages; the Profile independently selects Credential Stores and Endpoints through their own `use` entries.
 
 Start from [`examples/talking-film-live`](https://github.com/hypit-ai/hypit/tree/main/examples/talking-film-live) when you need a
 complete Runtime Profile. Copy the source structure, then replace its assets, Script, model choices

@@ -177,6 +177,14 @@ Result；`result discard` 只打开精确的 Result control，不再为了删除
 OAuth PKCE 获取参数，CLI 只执行该声明；普通密钥与 JSON 凭据仍走所选 Credential Store。这里的 PKCE S256
 只属于 OAuth 协议认证，不参与内容身份、Result 寻址或复用。
 
+### Runtime Host 由 Distribution 组装
+
+通用 CLI 只要求 Distribution 提供 `openRuntimeHost`；官方视频 Distribution 在唯一组装入口明确选择 Local
+Runtime。原 Profile 中的 `runtime.use` 并不参与这次选择，只能再次写死 `@hypit/runtime-local`，现已连同
+`runtime.config` 空包装删除。Local Profile 直接使用 `hypit.runtime-local@1`，只声明 `dataRoot`、Credential
+Store 和 Endpoint。没有第二种真实 Host 前不建立 Host adapter、注册表或动态加载器；将来另一种应用可以在自己的
+Distribution 边界提供不同实现，不需要改 Core 或通用 CLI。
+
 ### Reference Video 工具回到内容工具
 
 `reference-video-tools` 已删除 route/revision/variant 状态机、恢复游标、内容摘要证据目录和聚合批准流程。
@@ -206,9 +214,6 @@ OAuth PKCE 获取参数，CLI 只执行该声明；普通密钥与 JSON 凭据�
   完整的按需浏览视图；打开一个 Result 时再解析该 Result，而不是启动时解析全部历史。
 - 损坏的多级 Output 转发会明确报错，但当前 `Promise.all` 会让一个损坏 Output 使整个 Studio Library 失败。
   应把错误限制在那个 Output/Result 上，不能增加后台修复、自动回退或重建。
-- 顶层 Runtime Profile 虽然写了 `runtime.use`，当前 Node loader 仍只接受 `@hypit/runtime-local`。Endpoint、
-  Credential Store、Result Store、Resource Store 和 Program 已各自走 adapter，但完整 Runtime Host 实现还没有
-  对称的 adapter loader；若确实需要另一种 Host，这是尚未完成的插拔边界。
 - 是否提供一个内置的纯本地 Runtime Profile 仍是产品决定。目前 Result Store 已有文件系统默认值，但
   Endpoint、Program 和 Service 不会因为机器缺少 S3 或 Lambda 就偷偷改选另一条技术路线。
 

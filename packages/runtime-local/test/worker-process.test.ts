@@ -15,7 +15,7 @@ test("one detached Runtime Worker can be started, observed and stopped", async (
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-process-"));
   const profile = join(root, "runtime.json");
   const dataRoot = join(root, ".hypit", "runtimes", "local");
-  await writeFile(profile, JSON.stringify({ format: "hypit.runtime-profile@1" }), "utf8");
+  await writeFile(profile, JSON.stringify({ format: "hypit.runtime-local@1" }), "utf8");
   await mkdir(join(root, ".hypit"), { recursive: true });
   await writeFile(join(root, ".hypit", "runtime"), "runtime.json\n", "utf8");
   const program = `
@@ -75,7 +75,7 @@ test("one detached Runtime Worker can be started, observed and stopped", async (
     assert.equal((await runtimeProcessStatus(profile, dataRoot)).state, "running");
     assert.match((await runtimeProcessLogs(dataRoot)).text, /worker-ready/u);
 
-    await writeFile(profile, JSON.stringify({ format: "hypit.runtime-profile@1", changed: true }), "utf8");
+    await writeFile(profile, JSON.stringify({ format: "hypit.runtime-local@1", changed: true }), "utf8");
     assert.equal((await runtimeProcessStatus(profile, dataRoot)).configuration, "changed");
     await assert.rejects(
       ensureRuntimeProcess(profile, dataRoot, { command: "must-not-run", args: [] }, 5_000),

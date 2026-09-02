@@ -46,17 +46,12 @@ async function project(program: (root: string) => ManagedProgram) {
   const root = await mkdtemp(join(tmpdir(), "hypit-programs-"));
   const path = join(root, "hypit.runtime.json");
   await writeFile(path, JSON.stringify({
-    format: "hypit.runtime-profile@1",
-    runtime: {
-      use: "@hypit/runtime-local",
-      config: {
-        dataRoot: ".",
-        credentials: {},
-        endpoints: {
-          one: { use: "example.program", pool: "example.local", config: {} },
-          two: { use: "example.program", pool: "example.local", config: {} },
-        },
-      },
+    format: "hypit.runtime-local@1",
+    dataRoot: ".",
+    credentials: {},
+    endpoints: {
+      one: { use: "example.program", pool: "example.local", config: {} },
+      two: { use: "example.program", pool: "example.local", config: {} },
     },
   }));
   const registry = new RuntimeAdapterRegistry();
@@ -225,15 +220,10 @@ test("up creates a fresh Runtime data directory before running commands", async 
   const dataRoot = join(projectRoot, "never-created");
   const path = join(projectRoot, "hypit.runtime.json");
   await writeFile(path, JSON.stringify({
-    format: "hypit.runtime-profile@1",
-    runtime: {
-      use: "@hypit/runtime-local",
-      config: {
-        dataRoot: "./never-created",
-        credentials: {},
-        endpoints: { one: { use: "example.program", config: {} } },
-      },
-    },
+    format: "hypit.runtime-local@1",
+    dataRoot: "./never-created",
+    credentials: {},
+    endpoints: { one: { use: "example.program", config: {} } },
   }));
   const registry = new RuntimeAdapterRegistry();
   const probe = async () => {

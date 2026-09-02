@@ -22,7 +22,7 @@ import {
   doctorProjectBuildResultRepository,
   doctorRuntimeConfig,
   openProjectBuildResultRepository,
-  parseRuntimeConfig,
+  parseLocalRuntimeProfile,
   preflightRuntimeConfig,
 } from "@hypit/runtime-local";
 function profile(config: {
@@ -31,20 +31,15 @@ function profile(config: {
   readonly endpoints?: Readonly<Record<string, unknown>>;
 } = {}) {
   return {
-    format: "hypit.runtime-profile@1",
-    runtime: {
-      use: "@hypit/runtime-local",
-      config: {
-        dataRoot: config.dataRoot ?? ".hypit/runtimes/local",
-        credentials: config.credentials ?? {},
-        endpoints: config.endpoints ?? {},
-      },
-    },
+    format: "hypit.runtime-local@1",
+    dataRoot: config.dataRoot ?? ".hypit/runtimes/local",
+    credentials: config.credentials ?? {},
+    endpoints: config.endpoints ?? {},
   };
 }
 
-test("Runtime Profile names credentials and Endpoints, not project result storage", () => {
-  const parsed = parseRuntimeConfig(profile({
+test("Local Runtime Profile names credentials and Endpoints, not project result storage", () => {
+  const parsed = parseLocalRuntimeProfile(profile({
     credentials: { secrets: { use: "example.credentials" } },
     endpoints: { generation: { use: "example.provider", pool: "shared" } },
   }));
@@ -125,8 +120,8 @@ test("Build Result repositories default to the project path and can be selected 
   }
 });
 
-test("Runtime Profile rejects source ownership fields", () => {
-  assert.throws(() => parseRuntimeConfig({ ...profile(), root: "." }), /does not accept root/u);
+test("Local Runtime Profile rejects source ownership fields", () => {
+  assert.throws(() => parseLocalRuntimeProfile({ ...profile(), root: "." }), /does not accept root/u);
 });
 
 test("active Build inspection requires no selected ResourceStore", async () => {

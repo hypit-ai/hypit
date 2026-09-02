@@ -5,7 +5,7 @@ description: The execution boundary outside Hypit source and Core.
 
 # Runtime
 
-Hypit keeps three decisions separate:
+Hypit keeps four decisions separate:
 
 | Owner | Decides |
 |---|---|
@@ -28,24 +28,24 @@ The Profile contains only environmental choices that genuinely vary:
 
 ```json
 {
-  "format": "hypit.runtime-profile@1",
-  "runtime": {
-    "use": "@hypit/runtime-local",
-    "config": {
-      "dataRoot": ".hypit/runtimes/local",
-      "credentials": {
-        "env": { "use": "@hypit/credential-store-env" }
-      },
-      "endpoints": {
-        "media": { "use": "@hypit/provider-media-local" }
-      }
-    }
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/runtimes/local",
+  "credentials": {
+    "env": { "use": "@hypit/credential-store-env" }
+  },
+  "endpoints": {
+    "media": { "use": "@hypit/provider-media-local" }
   }
 }
 ```
 
 * `credentials` selects stores for explicit credential references.
 * `endpoints` selects exact Provider implementations and their configuration.
+
+The official video Distribution selects the local Runtime before opening this file. The Profile
+does not repeat a `runtime.use` selector that cannot make another choice. Another application may
+provide a different Runtime Host at its Distribution assembly boundary without changing Core or
+the generic CLI.
 
 Result storage belongs to the project, not the execution environment. A project may select it in
 `hypit.results.json`; omitting the file uses the same filesystem default:
