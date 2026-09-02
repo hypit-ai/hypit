@@ -4,6 +4,12 @@ Read a step, do it, read the next one. Each step names the files it needs; read 
 
 ## What this route delivers
 
+This route has a hard credential gate. Before preparing or observing the reference, establish a
+usable HypiHub OAuth session (the default and recommended provider) or an appropriate author-owned
+provider credential after the author explicitly declines HypiHub. If neither exists, stop immediately;
+the request to avoid keys does not permit a credentialless route. The `agent` observer is not a bypass
+for this gate. This check comes before media inspection, project creation, observation, or authoring.
+
 The components the video needs, `main.svml`, `recipes.svs`, `build.svrun`, and the Runtime Profile
 that binds what they demand — **wired**, meaning `preview_check` proves every track the sources
 declare traces to the Film. Every generation the Source declares is declared rather than performed:
@@ -38,6 +44,12 @@ Writing `<media:Image src="./assets/meme.png"/>` instead spends money this route
 loses the thing that mattered: the prompt. A declared generation carries its own description in the
 Source, so it can be reread, corrected and rebuilt; a PNG on disk carries nothing, and the next
 person has to invent the prompt again. `media:Image` is for material the author supplied.
+
+The reference video itself is never supplied project media. It is observation/comparison evidence only.
+Never copy it into project assets or wire its path into `media:Video`, `asset:Video`, a Media Track,
+the Film, or a Run Target. Every visible shot must be newly authored as a generated take or an
+explicitly author-supplied replacement asset. A project that directly plays the reference is invalid
+and must be rejected before preview or Build.
 
 Reference observation is part of the work and is expected to cost what it costs.
 
