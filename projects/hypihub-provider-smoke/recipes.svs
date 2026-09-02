@@ -1,6 +1,0 @@
-<?svml using="@hypit/svs@1"?>
-
-<sheet version="1">
-  film.vertical { background: #09090B; }
-  speech.normal { language: en; pace: normal; min: 4; max: 30; rounding: round; }
-</sheet>
