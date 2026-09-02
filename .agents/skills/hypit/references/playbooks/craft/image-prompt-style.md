@@ -8,6 +8,10 @@
   use ordered `gpt:Reference` children and consume `{shot.image}` downstream.
 - Set aspect ratio and resolution on the model Surface. Do not put pixels, resolution, or aspect-ratio
   tokens into prompt prose.
+- Never describe output dimensions in the prompt itself: do not write values such as `1:1`, `16:9`,
+  `9:16`, `square image`, `portrait orientation`, `2K`, or `4K`. Those belong in the `gpt:Image`
+  attributes. Use a shot description such as “close portrait” or “medium close-up” only when it
+  explains composition, not as a substitute for the model's size parameters.
 
 ## Write every generation prompt in English
 

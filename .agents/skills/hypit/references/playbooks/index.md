@@ -58,6 +58,8 @@ file that some jobs never open.
   references constrain the shot but never replace that prefix.
 - Spend descriptive detail on the subject's identity and silhouette first. Keep the background to one
   short continuity sentence unless a setting detail is required for the story or camera geometry.
+- Keep dimensions out of prompt prose. Put aspect ratio and resolution on `gpt:Image`; do not mention
+  values such as `1:1`, `16:9`, `square image`, `2K`, or `4K` in the prompt.
 - Describe the desired visible state directly. Omit unwanted concrete objects instead of naming
   them inside negations or hypotheticals that a model may materialize.
 - Keep editorial captions, titles, stickers, cards, and callouts out of generation prompts. Author
