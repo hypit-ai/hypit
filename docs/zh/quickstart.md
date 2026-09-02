@@ -110,7 +110,7 @@ hypit plan build.svrun
 Distribution 里的官方包。默认情况下，完整 Build Result 位于项目的 `.hypit/results`；Profile
 不管理 Result，项目根的 `hypit.results.json` 可以把同一套 Result 模型指向 S3。Runtime 活跃状态与临时 Artifact 始终位于所选 Profile 的
 `dataRoot`。`runtime use` 只在 `.hypit/runtime` 保存一个本地指针。Source import 选择作者包，
-Profile 则通过 `use` 独立选择 Runtime 包。
+Profile 则通过 Credential Store 与 Endpoint 各自的 `use` 独立选择环境包。
 
 需要完整 Runtime Profile 时，从
 [`examples/talking-film-live`](https://github.com/hypit-ai/hypit/tree/main/examples/talking-film-live) 的结构开始：复制文件结构，

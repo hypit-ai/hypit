@@ -7,19 +7,17 @@ A Runtime Profile selects only the environmental parts that genuinely vary:
 
 ```json
 {
-  "format": "hypit.runtime-profile@1",
-  "runtime": {
-    "use": "@hypit/runtime-local",
-    "config": {
-      "dataRoot": ".hypit/runtimes/local",
-      "credentials": {
-        "env": { "use": "@hypit/credential-store-env" }
-      },
-      "endpoints": {}
-    }
-  }
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/runtimes/local",
+  "credentials": {
+    "env": { "use": "@hypit/credential-store-env" }
+  },
+  "endpoints": {}
 }
 ```
+
+The official video Distribution selects this Runtime implementation before it opens the file. The
+Profile therefore describes only local execution and does not repeat a fake Runtime Host selector.
 
 A project that wants a non-default Result repository owns a separate `hypit.results.json`:
 

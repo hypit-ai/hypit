@@ -8,7 +8,7 @@ description: Hypit Source 与 Core 之外的执行边界。
 实现审计与仍待处理的问题记录在
 [Runtime 与 Build Result 实现审计](./runtime-build-result-audit.md)。
 
-Hypit 把三个决定分开：
+Hypit 把四个决定分开：
 
 | 所有者 | 决定什么 |
 |---|---|
@@ -29,21 +29,20 @@ Profile 只保留真正会随环境变化的选择：
 
 ```json
 {
-  "format": "hypit.runtime-profile@1",
-  "runtime": {
-    "use": "@hypit/runtime-local",
-    "config": {
-      "dataRoot": ".hypit/runtimes/local",
-      "credentials": {
-        "env": { "use": "@hypit/credential-store-env" }
-      },
-      "endpoints": {
-        "media": { "use": "@hypit/provider-media-local" }
-      }
-    }
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/runtimes/local",
+  "credentials": {
+    "env": { "use": "@hypit/credential-store-env" }
+  },
+  "endpoints": {
+    "media": { "use": "@hypit/provider-media-local" }
   }
 }
 ```
+
+官方视频 Distribution 在打开文件前已经明确选择 Local Runtime，因此 Profile 不再重复一个无法产生第二种
+选择的 `runtime.use`。另一种应用若确实拥有不同 Runtime Host，应在自己的 Distribution 组装边界提供它；
+Core 与通用 CLI 都不需要知道具体实现，也不预建没有第二个实现验证过的 Host 插件注册表。
 
 `credentials` 选择凭证存储，`endpoints` 选择明确的 Provider 实现。Result 仓库不属于执行环境，
 因此不能放进 Runtime Profile。

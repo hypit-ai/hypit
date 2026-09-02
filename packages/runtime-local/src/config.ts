@@ -60,18 +60,18 @@ import type {
   LocalRuntimeControl,
 } from "./types.js";
 
-export type RuntimeConfigEntry = {
+export type LocalRuntimeAdapterSelection = {
   readonly use: string;
   readonly instance: string;
   readonly pool?: string;
   readonly config?: CanonicalValue;
 };
 
-export type RuntimeConfigDocument = {
-  readonly format: "hypit.runtime-profile@1";
+export type LocalRuntimeProfile = {
+  readonly format: "hypit.runtime-local@1";
   readonly dataRoot: string;
-  readonly credentials: readonly RuntimeConfigEntry[];
-  readonly endpoints: readonly RuntimeConfigEntry[];
+  readonly credentials: readonly LocalRuntimeAdapterSelection[];
+  readonly endpoints: readonly LocalRuntimeAdapterSelection[];
 };
 
 export type ProjectBuildResultConfig = {
@@ -113,7 +113,7 @@ export type ResolvedRuntimeConfigPaths = {
 
 type OpenedRuntimeConfig = {
   readonly absolute: string;
-  readonly document: RuntimeConfigDocument;
+  readonly document: LocalRuntimeProfile;
   readonly root: string;
   readonly profileRoot: string;
   readonly packageRoot: string;
@@ -139,7 +139,7 @@ function requiredString(value: unknown, subject: string): string {
   return value;
 }
 
-function entry(value: unknown, instance: string, subject: string, poolAllowed = false): RuntimeConfigEntry {
+function entry(value: unknown, instance: string, subject: string, poolAllowed = false): LocalRuntimeAdapterSelection {
   const item = object(value, subject);
   exactKeys(item, poolAllowed ? ["use", "pool", "config"] : ["use", "config"], subject);
   const pool = item.pool === undefined ? undefined : requiredString(item.pool, `${subject}.pool`);
@@ -151,7 +151,7 @@ function entry(value: unknown, instance: string, subject: string, poolAllowed = 
   };
 }
 
-function entries(value: unknown, subject: string, poolAllowed = false): readonly RuntimeConfigEntry[] {
+function entries(value: unknown, subject: string, poolAllowed = false): readonly LocalRuntimeAdapterSelection[] {
   const values = object(value ?? {}, subject);
   return Object.entries(values).sort(([left], [right]) => left.localeCompare(right)).map(([instance, item]) => {
     requiredString(instance, `${subject} instance`);
@@ -159,26 +159,19 @@ function entries(value: unknown, subject: string, poolAllowed = false): readonly
   });
 }
 
-export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
+export function parseLocalRuntimeProfile(value: unknown): LocalRuntimeProfile {
   const item = object(value, "$runtime");
-  exactKeys(item, ["format", "runtime"], "$runtime");
-  if (item.format !== "hypit.runtime-profile@1") {
-    throw new Error("$runtime.format must be hypit.runtime-profile@1");
+  exactKeys(item, ["format", "dataRoot", "credentials", "endpoints"], "$runtime");
+  if (item.format !== "hypit.runtime-local@1") {
+    throw new Error("$runtime.format must be hypit.runtime-local@1");
   }
-  const runtime = object(item.runtime, "$runtime.runtime");
-  exactKeys(runtime, ["use", "config"], "$runtime.runtime");
-  if (runtime.use !== "@hypit/runtime-local") {
-    throw new Error(`Local Runtime loader cannot activate ${String(runtime.use)}`);
-  }
-  const config = object(runtime.config, "$runtime.runtime.config");
-  exactKeys(config, ["dataRoot", "credentials", "endpoints"], "$runtime.runtime.config");
-  const credentials = entries(config.credentials, "$runtime.runtime.config.credentials");
-  const endpoints = entries(config.endpoints, "$runtime.runtime.config.endpoints", true);
+  const credentials = entries(item.credentials, "$runtime.credentials");
+  const endpoints = entries(item.endpoints, "$runtime.endpoints", true);
   const ids = [...credentials, ...endpoints].map((value) => value.instance);
   if (new Set(ids).size !== ids.length) throw new Error("$runtime repeats a Runtime instance id");
   return {
-    format: "hypit.runtime-profile@1",
-    dataRoot: requiredString(config.dataRoot, "$runtime.runtime.config.dataRoot"),
+    format: "hypit.runtime-local@1",
+    dataRoot: requiredString(item.dataRoot, "$runtime.dataRoot"),
     credentials,
     endpoints,
   };
@@ -186,7 +179,7 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
 
 async function openRuntimeConfig(path: string, packageRootHint?: string): Promise<OpenedRuntimeConfig> {
   const absolute = resolve(path);
-  const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
+  const document = parseLocalRuntimeProfile(JSON.parse(await readFile(absolute, "utf8")));
   const profileRoot = dirname(absolute);
   return {
     absolute,
@@ -197,7 +190,7 @@ async function openRuntimeConfig(path: string, packageRootHint?: string): Promis
   };
 }
 
-function runtimePackageSelection(document: RuntimeConfigDocument): NodePackageSelectionRequest {
+function runtimePackageSelection(document: LocalRuntimeProfile): NodePackageSelectionRequest {
   return {
     selected: [],
     logical: [
@@ -214,7 +207,7 @@ function resultPackageSelection(use: string): NodePackageSelectionRequest {
   };
 }
 
-function endpointPackageSelection(document: RuntimeConfigDocument): NodePackageSelectionRequest {
+function endpointPackageSelection(document: LocalRuntimeProfile): NodePackageSelectionRequest {
   return {
     selected: [],
     logical: document.endpoints.map((item) => ({ abi: runtimeEndpointAdapterHostAbi, name: item.use })),
@@ -392,7 +385,7 @@ function capabilityKey(capability: CapabilityRef): string {
 function adapterContext(
   root: string,
   hostStateRoot: string,
-  item: RuntimeConfigEntry,
+  item: LocalRuntimeAdapterSelection,
 ): RuntimeAdapterFactoryContext {
   return {
     hostStateRoot,
@@ -404,11 +397,11 @@ function adapterContext(
 }
 
 async function activatedEndpoints(
-  document: RuntimeConfigDocument,
+  document: LocalRuntimeProfile,
   root: string,
   hostStateRoot: string,
   registry: RuntimeAdapterRegistry,
-): Promise<readonly { readonly entry: RuntimeConfigEntry; readonly activation: RuntimeEndpointActivation }[]> {
+): Promise<readonly { readonly entry: LocalRuntimeAdapterSelection; readonly activation: RuntimeEndpointActivation }[]> {
   return await Promise.all(document.endpoints.map(async (item) => ({
     entry: item,
     activation: await registry.activateEndpoint(item.use, adapterContext(root, hostStateRoot, {
@@ -448,7 +441,7 @@ function diagnostic(error: unknown, code: string, subject?: string): RuntimeDoct
 }
 
 async function openCredentialStores(
-  document: RuntimeConfigDocument,
+  document: LocalRuntimeProfile,
   root: string,
   hostStateRoot: string,
   registry: RuntimeAdapterRegistry,
