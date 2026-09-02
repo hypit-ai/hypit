@@ -177,8 +177,7 @@ receipt, digest inventory or project-local copy.
 
 ## Update an installed Distribution
 
-Updates to an installed, published Distribution are an explicit package-manager operation, never an
-automatic mutation during authoring:
+Updates to an installed, published Distribution remain an explicit package-manager operation:
 
 ```text
 npm outdated --global hypit
@@ -187,7 +186,10 @@ npx skills update --global
 ```
 
 Use `hypit --version` to report the installed Distribution. Check npm only when the user asks about
-updates or during deliberate environment maintenance; do not add a registry request to every route.
+updates or during deliberate environment maintenance; do not add a Distribution registry request to
+every route. The Hypit Skill itself is different: its `SKILL.md` requires one
+`npx --yes skills update hypit --global --yes` refresh the first time the Skill is loaded in each new
+conversation.
 
 Do not run those npm commands for a contributor checkout; update it through its repository workflow.
 After updating Hypit, stop an idle Runtime Worker before the next Build so the next process loads the
