@@ -1,24 +1,5 @@
 <?svml using="@hypit/run-markup@1"?>
-
 <svrun version="1">
   <author source="./reference.svml"/>
-  <build-record id="record-arms-are-asking-take-prompt" build="bld_934baff2-78bb-4360-aa63-d498719e53be" output="arms-are-asking-take-prompt"/>
-  <satisfy output="arms-are-asking-take-prompt" candidate="record-arms-are-asking-take-prompt"/>
-  <build-record id="record-daily-creatine-take-prompt" build="bld_934baff2-78bb-4360-aa63-d498719e53be" output="daily-creatine-take-prompt"/>
-  <satisfy output="daily-creatine-take-prompt" candidate="record-daily-creatine-take-prompt"/>
-  <build-record id="record-full-frame" build="bld_934baff2-78bb-4360-aa63-d498719e53be" output="full-frame"/>
-  <satisfy output="full-frame" candidate="record-full-frame"/>
-  <build-record id="record-lifestyle-montage-prompt" build="bld_934baff2-78bb-4360-aa63-d498719e53be" output="lifestyle-montage-prompt"/>
-  <satisfy output="lifestyle-montage-prompt" candidate="record-lifestyle-montage-prompt"/>
-  <build-record id="record-pasta-image" build="bld_934baff2-78bb-4360-aa63-d498719e53be" output="pasta.image"/>
-  <satisfy output="pasta.image" candidate="record-pasta-image"/>
-  <build-record id="record-coffee-image" build="bld_2a4ee616-3286-41bf-871c-07193cfe2a1a" output="coffee.image"/>
-  <satisfy output="coffee.image" candidate="record-coffee-image"/>
-  <build-record id="record-split-image" build="bld_2a4ee616-3286-41bf-871c-07193cfe2a1a" output="split.image"/>
-  <satisfy output="split.image" candidate="record-split-image"/>
-  <build-record id="record-smoothie-image" build="bld_934baff2-78bb-4360-aa63-d498719e53be" output="smoothie.image"/>
-  <satisfy output="smoothie.image" candidate="record-smoothie-image"/>
-  <build-record id="record-soundtrack-media-media" build="bld_934baff2-78bb-4360-aa63-d498719e53be" output="soundtrack-media.media"/>
-  <satisfy output="soundtrack-media.media" candidate="record-soundtrack-media-media"/>
   <target output="final.video"/>
 </svrun>
