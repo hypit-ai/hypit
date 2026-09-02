@@ -62,6 +62,19 @@ This gate comes before reference preparation, media inspection, project authorin
 reconstruction action. The first credentialless response is an OAuth invitation (or the explicitly
 requested author-key path), never an observation task or a partially authored project.
 
+## Non-negotiable WhisperX gate
+
+For every video-production route — original authoring, reconstruction, revision, and variant work —
+WhisperX must be installed and healthy before the route advances beyond environment setup. Select a
+Runtime Profile with the local WhisperX Endpoint, run `hypit runtime up`, and verify that the service
+reports `Ready whisperx` (or an equivalent successful health check). Do this before reading or
+preparing a reference, inspecting examples or vocabulary, freezing a brief, writing Source, previewing,
+or building. Installation, model setup, or the health probe may never be skipped, replaced by another
+transcriber, deferred until later, or worked around because the user asks to proceed. If WhisperX is
+not installed, still installing, unhealthy, or its health check cannot be confirmed, stop at the
+environment stage and repair it first. The login-only authentication path is the sole exception
+because it is not video production.
+
 The credentialless `agent` observer is not a way around this rule. It may be used only after the
 credential choice has been settled; never silently select it because no credential was found.
 

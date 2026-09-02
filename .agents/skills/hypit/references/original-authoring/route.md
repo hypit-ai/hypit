@@ -26,6 +26,13 @@ If the same request also asks for many independent derivatives, finish this rout
 deterministic gate, then enter `../variant-expansion/route.md`. The base project's format, examples,
 component choices and package gaps are decided globally there before any variant agent starts.
 
+This route has a hard WhisperX gate. Before Step 3 or any brief, example, vocabulary, Source, preview,
+or Build work, select a Runtime Profile containing the local WhisperX Endpoint, run `hypit runtime up`,
+and verify `Ready whisperx` (or an equivalent successful health check). If installation or health is
+incomplete, stop at environment setup and repair it; do not substitute another transcriber or proceed
+because the user asks to bypass it. If no profile exists yet, create a minimal profile with local media
+and WhisperX endpoints, select it, and provision it before continuing; extend that same profile later.
+
 ## Checkpoint and recovery
 
 Start the project snapshot after creating the project directory:
@@ -44,7 +51,7 @@ interruption or context compaction, read `../recovery.md`, run `route_state --ac
 
 | state | update / completion predicate | recovery entry |
 | --- | --- | --- |
-| `environment` | explicit checkpoint after Distribution, project and credentials are selected | `hypit paths --json` |
+| `environment` | explicit checkpoint after Distribution, project, credentials and healthy WhisperX are ready | `hypit paths --json` / `hypit runtime up` |
 | `brief-frozen` | explicit checkpoint naming the frozen brief, audience, format and claims | return to the brief checkpoint |
 | `vocabulary-checked` | Run-scoped vocabulary inspection and the frozen `.hypit/component-fit.json` are both persisted | `inspect_svml_vocabulary --run <run>` |
 | `source-authored` | explicit checkpoint naming `main.svml` (and Recipe/Run when available) | `hypit check <run>` |

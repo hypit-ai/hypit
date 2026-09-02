@@ -10,6 +10,11 @@ provider credential after the author explicitly declines HypiHub. If neither exi
 the request to avoid keys does not permit a credentialless route. The `agent` observer is not a bypass
 for this gate. This check comes before media inspection, project creation, observation, or authoring.
 
+WhisperX is a second hard gate. Before Step 4 or any later route work, the selected Runtime Profile
+must include the local WhisperX Endpoint, `hypit runtime up` must finish its installation and startup,
+and the service health must report `Ready whisperx` (or an equivalent successful probe). Do not prepare
+the reference, inspect vocabulary, or author Source while WhisperX is missing, installing or unhealthy.
+
 The components the video needs, `main.svml`, `recipes.svs`, `build.svrun`, and the Runtime Profile
 that binds what they demand — **wired**, meaning `preview_check` proves every track the sources
 declare traces to the Film. Every generation the Source declares is declared rather than performed:
@@ -95,7 +100,7 @@ of intent; files and check results remain the authority.
 
 | state | update / completion predicate | recovery entry |
 | --- | --- | --- |
-| `environment` | explicit checkpoint after Distribution, project and credentials are selected | `hypit paths --json` |
+| `environment` | explicit checkpoint after Distribution, project, credentials and healthy WhisperX are ready | `hypit paths --json` / `hypit runtime up` |
 | `reference-prepared` | checkpoint after `prepare_reference` reports ready `state.json` | `prepare_reference` or `route_state reconcile` |
 | `reference-observed` | explicit observer checkpoint; all required observation answers are complete | `observe_reference` / `record_observation` |
 | `vocabulary-checked` | Run-scoped vocabulary inspection and the frozen `.hypit/component-fit.json` are both persisted | `inspect_svml_vocabulary --run <run>` |
