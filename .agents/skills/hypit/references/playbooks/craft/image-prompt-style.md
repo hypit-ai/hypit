@@ -41,6 +41,25 @@ Describe the final image directly. Do not write an edit-operation checklist, con
 or long negative inventories containing unwanted concrete objects. Split mutually exclusive states
 into separate prompts.
 
+## Spend prompt detail on the subject
+
+Use a deliberate detail budget. For a person-led image, the person is the visual priority: spend most
+of the descriptive space on intended ethnicity or heritage when it is authored or known, apparent age,
+face shape, brow and eye structure, nose, lips, jaw and chin, hairline, hair texture and hairstyle,
+skin tone and undertone, distinctive marks, shoulder line, body silhouette, and wardrobe. These are the
+facts that make the generated person recognizable and stable across shots.
+
+Treat the background as support, not a second subject. Usually describe it in one short sentence with
+only the setting and the one or two landmarks that continuity actually needs. Do not enumerate decor,
+patrons, furniture, surfaces, atmosphere, or lighting variations unless one of them changes the story
+or the camera geometry. Keep required props, action, and framing explicit, but remove ornamental detail
+that competes with identity.
+
+When the identity comes from a supplied reference, say to preserve that exact identity and describe
+only observable, production-relevant traits; never infer sensitive background from appearance. A useful
+priority order is: identity and silhouette, required prop or action, camera geometry, then the concise
+setting and finish.
+
 ## Keep the reality prefix on every photographic image
 
 The reality contract is an invariant prompt prefix, not a hint for the model. Every `gpt:Image`
@@ -108,19 +127,18 @@ particular, do not emit openings such as `Scene/purpose:`, `Composition/camera:`
 for example:
 
 ```text
-Set the frame in a compact neighborhood podcast studio, with the acoustic wall and the edge of the
-desk still clearly visible. Compose it as a seated medium close-up from the guest's eye level, with
-the subject slightly right of center, leaning toward an unseen host on the left. He is a
-Japanese-American mixed-race man in his early thirties with a broad square face, softly hooded
-dark-brown eyes beneath straight brows, a medium-width nose, a defined jaw, and a slightly uneven
-smile. His warm light-olive skin shows natural pores, faint under-eye creases, and subtle cheek
-asymmetry; his short coarse black hair has a believable, mildly uneven hairline. He has broad
-shoulders and wears a faded charcoal work jacket over a white T-shirt. He rests one forearm on the
-desk and holds a single matte-black microphone near his mouth while listening with a restrained
-smile. Natural window light enters from frame left and keeps skin, cloth, painted wall, and desk
-textures visible without glossy polish or background blur. Keep both shoulder edges, the microphone,
-and its contact with his hand intact inside the frame. Use the first reference to preserve his exact
-identity and wardrobe, while allowing the new posture and camera distance described here.
+The frame is a compact neighborhood podcast studio; keep the acoustic wall and desk edge visible.
+Compose a seated medium close-up from the guest's eye level, with him slightly right of center and
+leaning toward an unseen host on the left. He is a Japanese-American mixed-race man in his early
+thirties with a broad square face, softly hooded dark-brown eyes set beneath straight brows, a
+medium-width nose with a rounded tip, defined cheekbones, a strong jaw and chin, and a slightly uneven
+smile. His warm light-olive skin has visible pores, faint under-eye creases, and subtle cheek
+asymmetry. His short coarse black hair has a mildly uneven hairline and a natural forward texture.
+He has broad shoulders and a strong upper-body silhouette, wearing a faded charcoal work jacket over
+a white T-shirt. He rests one forearm on the desk and holds one matte-black microphone near his mouth
+while listening with a restrained smile. Keep both shoulder edges, the microphone, and its contact with
+his hand inside the frame. Use the first reference to preserve his exact identity and wardrobe while
+allowing the new posture and camera distance described here.
 ```
 
 This example demonstrates the prose shape, not wording to paste literally. One or several short

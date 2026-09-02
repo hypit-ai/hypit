@@ -56,6 +56,8 @@ file that some jobs never open.
 - Every photographic `gpt:Image` prompt begins with the invariant reality contract in
   `craft/image-prompt-style.md`, including when ordered `gpt:Reference` children are present;
   references constrain the shot but never replace that prefix.
+- Spend descriptive detail on the subject's identity and silhouette first. Keep the background to one
+  short continuity sentence unless a setting detail is required for the story or camera geometry.
 - Describe the desired visible state directly. Omit unwanted concrete objects instead of naming
   them inside negations or hypotheticals that a model may materialize.
 - Keep editorial captions, titles, stickers, cards, and callouts out of generation prompts. Author
