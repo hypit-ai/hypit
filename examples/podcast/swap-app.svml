@@ -37,11 +37,11 @@
     </brain-is-asking>
   </script>
 
-  <text:Value id="nerd-prompt">Photorealistic vertical iPhone video frame featuring nerd, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <text:Value id="nerd-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. slim young East Asian man with a narrow oval face, round glasses, straight dark hair, and narrow shoulders. Keep the face, hair, shoulder line, clothing, and podcast microphone clearly visible.</text:Value>
   <gpt:Image id="nerd" prompt={nerd-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="jock-prompt">Photorealistic vertical iPhone video frame featuring jock, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <text:Value id="jock-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. muscular young East Asian man with a square jaw, thick dark hair, broad shoulders, and a confident expression. Keep the face, hair, shoulder line, clothing, and podcast microphone clearly visible.</text:Value>
   <gpt:Image id="jock" prompt={jock-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="cheatgpt-icon-prompt">Clean colorful 3D emoji-style icon representing cheatgpt, centered on a simple light background, crisp edges, no readable text.</text:Value>
+  <text:Value id="cheatgpt-icon-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. A carefully framed photorealistic image with the subject centered and the required object or pose clearly visible. Keep the background concise and unobtrusive.</text:Value>
   <gpt:Image id="cheatgpt-icon" prompt={cheatgpt-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
 
   <asset:Audio id="nerd-voice" src="./assets/nerd.wav"/>
