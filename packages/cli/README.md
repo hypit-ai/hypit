@@ -11,5 +11,6 @@ Source imports decide which language and component packages give the source mean
 Profile separately selects the Host and environment packages allowed to execute work. The CLI does
 not invent targets, candidates or provider choices.
 
-Human output is compact by default. `--verbose` expands details and `--json` emits machine readable
-results without presentation text.
+Human output is compact by default. `--json` emits a stable, bounded command view rather than raw
+compiler, Runtime or Repository objects. `--verbose` adds bounded operational detail; it never turns
+the command into an internal state dump.

@@ -1,4 +1,3 @@
-import type { CliPicture, CliPictureRequest } from "@hypit/cli";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { OsCredentialStore } from "@hypit/credential-store-os";
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
@@ -23,6 +22,22 @@ const optionPorts = {
   aspectRatio: "--aspect-ratio",
   resolution: "--resolution",
 } as const;
+
+export type VideoCliPictureRequest = {
+  readonly model?: string;
+  readonly prompt: string;
+  readonly aspectRatio?: string;
+  readonly resolution?: string;
+  readonly packageRoot: string;
+  readonly distributionPackageRoot?: string;
+};
+
+export type VideoCliPicture = {
+  readonly package: string;
+  readonly model: string;
+  readonly mediaType: string;
+  readonly bytes: Uint8Array;
+};
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -58,7 +73,7 @@ async function selectImageModel(
  */
 function portValue(
   port: GenerationPort,
-  request: CliPictureRequest,
+  request: VideoCliPictureRequest,
   model: string,
 ): GenerationPortValue | undefined {
   if (port.name === "prompt") return request.prompt;
@@ -74,7 +89,7 @@ function portValue(
   throw new Error(`${model} requires ${port.name}, which hypit image cannot supply`);
 }
 
-function sealPictureRequest(endpoint: ExactModelEndpoint, request: CliPictureRequest): CanonicalValue {
+function sealPictureRequest(endpoint: ExactModelEndpoint, request: VideoCliPictureRequest): CanonicalValue {
   const table = endpoint.ports;
   for (const [name, option] of Object.entries(optionPorts)) {
     if (request[name as keyof typeof optionPorts] === undefined) continue;
@@ -140,7 +155,7 @@ async function readPicture(
  * ResourceStore and the Provider all live for the length of this one call, and no
  * Build, Record or Runtime Profile observes any of it.
  */
-export async function generateVideoCliPicture(request: CliPictureRequest): Promise<CliPicture> {
+export async function generateVideoCliPicture(request: VideoCliPictureRequest): Promise<VideoCliPicture> {
   const specifier = request.model ?? defaultPictureModel;
   const model = await selectImageModel(specifier, request.packageRoot, request.distributionPackageRoot);
   const need: Need = {

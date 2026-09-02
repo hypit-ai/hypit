@@ -8,6 +8,8 @@ import { hypitHostPackageRoot } from "@hypit/runtime-host-node";
 import type { LoadedPackage } from "@hypit/package-loader-node";
 
 import { videoCliDistribution } from "./distribution.js";
+import { runVideoImageCli } from "./image-command.js";
+import { writeVideoImageHelp } from "./image-command.js";
 
 export {
   createVideoCompiler,
@@ -24,6 +26,14 @@ export function runVideoCli(
     ? []
     : [videoCliDistribution.packageRoot]);
   installExternalPackageResolution([hypitHostPackageRoot()]);
+  if ((argv[0] === "image" && argv.includes("--help"))
+    || (argv[0] === "help" && argv[1] === "image")) {
+    writeVideoImageHelp(io);
+    return Promise.resolve();
+  }
+  if (argv[0] === "image") {
+    return runVideoImageCli(argv, io, videoCliDistribution.packageRoot);
+  }
   return runCli(argv, io, {
     ...videoCliDistribution,
     bootstrapPackages: packages,

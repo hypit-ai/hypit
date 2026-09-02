@@ -16,8 +16,7 @@ export type UnreachedGeneration = {
  *
  * A Run Source does have targets, and planning already prunes to what they reach. So the question
  * that can be answered is the one that matters: this Run declares the generation and will not run
- * it. Either nothing needs it, or a target is missing, or an accepted Record should have been
- * pinned and was not.
+ * it. Either nothing needs it, a target is missing, or an explicit Candidate supplies the Output.
  */
 export function unreachedGenerations(
   graph: CompiledGraph,

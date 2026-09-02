@@ -1,10 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { readFile, stat } from "node:fs/promises";
 
-import { deterministicSpeechDurations, deterministicSpeechDurationsFromGraph } from "@hypit/compiler-node";
 import { FileBuildResultRepository } from "@hypit/build-result";
 import type { BuildResultManifest, BuildResultRepository } from "@hypit/build-result";
 import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
@@ -16,11 +15,10 @@ import {
 } from "@hypit/runtime-host-node";
 import { plannedNeeds } from "@hypit/runtime";
 import type { BuildCatalogDescriptor, CapacityReservation, OperationProgress } from "@hypit/runtime";
-import { buildIdCreatedAt, orderedBuildId } from "@hypit/protocol";
-import type { BuildState, CapabilityRef, TypeRef } from "@hypit/protocol";
+import { orderedBuildId } from "@hypit/protocol";
+import type { BuildState, CapabilityRef } from "@hypit/protocol";
 import { parseSourceHeader } from "@hypit/source";
 
-import { pinnedRecords } from "./reuse-markup.js";
 import { unreachedGenerations } from "./reachability.js";
 import { typecheckProjectPackages } from "./package-typecheck.js";
 import { checkRunFile, collectRunFrontends, loadRunFile } from "./run-file.js";
@@ -28,13 +26,12 @@ import type { CliDistribution } from "./distribution.js";
 import type {
   CliBuildSubmission,
   CliManagedProgramProgress,
-  CliManagedProgramReport,
   CliRuntime,
   CliRuntimeControl,
   CliRuntimeController,
 } from "./runtime-port.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
-import type { CliColorMode, CliIo } from "./output.js";
+import type { CliColorMode, CliIo, CliMachineView } from "./output.js";
 import { exportBuildResultOutput } from "./result-export.js";
 import { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
 import { loadDiscoveredSourcePackages } from "./source-packages.js";
@@ -43,6 +40,14 @@ import {
   findRuntimeProfile,
   selectRuntimeProfile,
 } from "./runtime-selection.js";
+import {
+  buildCreatedAtIso,
+  buildResultView,
+  buildStatusView,
+  cliTypeName,
+  outputView,
+  projectPath,
+} from "./view.js";
 
 type ParsedArgs = {
   readonly command: string | undefined;
@@ -56,10 +61,6 @@ type ParsedArgs = {
   readonly packageRoot: string | undefined;
   readonly runtime: string | undefined;
   readonly follow: boolean;
-  /** Emit Run Source markup that reuses these Outputs instead of listing them. */
-  readonly pin: boolean;
-  /** Omit this Build's requested Targets from history and generated pin markup. */
-  readonly excludeTargets: boolean;
   readonly maxWaitMs: number | undefined;
   readonly output: string | undefined;
   readonly title: string | undefined;
@@ -69,14 +70,9 @@ type ParsedArgs = {
   readonly clearNote: boolean;
   readonly clearHighlights: boolean;
   readonly limit: number;
+  readonly lines: number;
   readonly before: string | undefined;
   readonly to: string | undefined;
-  /** Prompt text, or the path of a text file holding it. */
-  readonly prompt: string | undefined;
-  /** Installed package specifier naming the exact model family. */
-  readonly model: string | undefined;
-  readonly aspectRatio: string | undefined;
-  readonly resolution: string | undefined;
   readonly json: boolean;
   readonly color: CliColorMode;
   readonly verbose: boolean;
@@ -105,12 +101,6 @@ function base64url(bytes: Uint8Array): string {
 
 function createPublicBuildId(now = Date.now()): string {
   return orderedBuildId(now, randomBytes(5).toString("hex").toUpperCase());
-}
-
-function buildCreatedAt(build: string): number {
-  const createdAt = buildIdCreatedAt(build);
-  if (createdAt === undefined) throw new Error(`Build id ${build} has no submission time`);
-  return createdAt;
 }
 
 async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
@@ -299,8 +289,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     || command === "packages";
   const action = scoped ? tail[0] : undefined;
   const positional = scoped ? tail.slice(1) : tail;
-  const noFile = command === "builds" || command === "activity" || command === "paths"
-    || command === "image";
+  const noFile = command === "builds" || command === "activity" || command === "paths";
   const hasFile = !noFile && positional[0] !== undefined && !positional[0]!.startsWith("--");
   const file = hasFile ? positional[0] : undefined;
   const rest = noFile || !hasFile ? positional : positional.slice(1);
@@ -309,8 +298,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let packageRoot: string | undefined;
   let runtime: string | undefined;
   let follow = false;
-  let pin = false;
-  let excludeTargets = false;
   let maxWaitMs: number | undefined;
   let output: string | undefined;
   let title: string | undefined;
@@ -320,12 +307,9 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let clearNote = false;
   let clearHighlights = false;
   let limit = 20;
+  let lines = 50;
   let before: string | undefined;
   let to: string | undefined;
-  let prompt: string | undefined;
-  let model: string | undefined;
-  let aspectRatio: string | undefined;
-  let resolution: string | undefined;
   let json = false;
   let color: CliColorMode = "auto";
   let verbose = false;
@@ -459,6 +443,14 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       index += 1;
       continue;
     }
+    if (item === "--lines") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--lines requires a positive integer");
+      lines = Number(value);
+      if (!Number.isSafeInteger(lines) || lines < 1) throw new Error("--lines requires a positive integer");
+      index += 1;
+      continue;
+    }
     if (item === "--before") {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--before requires a Build id");
@@ -473,44 +465,8 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       index += 1;
       continue;
     }
-    if (item === "--prompt") {
-      const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--prompt requires text or a text file path");
-      prompt = value;
-      index += 1;
-      continue;
-    }
-    if (item === "--model") {
-      const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--model requires an installed package specifier");
-      model = value;
-      index += 1;
-      continue;
-    }
-    if (item === "--aspect-ratio") {
-      const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--aspect-ratio requires a ratio the model accepts");
-      aspectRatio = value;
-      index += 1;
-      continue;
-    }
-    if (item === "--resolution") {
-      const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--resolution requires a resolution the model accepts");
-      resolution = value;
-      index += 1;
-      continue;
-    }
     if (item === "--follow") {
       follow = true;
-      continue;
-    }
-    if (item === "--pin") {
-      pin = true;
-      continue;
-    }
-    if (item === "--exclude-targets") {
-      excludeTargets = true;
       continue;
     }
     if (item === "--max-wait-ms") {
@@ -576,8 +532,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     packageRoot,
     runtime,
     follow,
-    pin,
-    excludeTargets,
     maxWaitMs,
     output,
     title,
@@ -587,12 +541,9 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     clearNote,
     clearHighlights,
     limit,
+    lines,
     before,
     to,
-    prompt,
-    model,
-    aspectRatio,
-    resolution,
     json,
     color,
     verbose,
@@ -616,20 +567,23 @@ function assertCommandOptions(args: ParsedArgs): void {
     case "programs":
       // This command has older, more specific diagnostics for deployment-selection
       // flags and waiting on status/down; let its handler render those repairs.
-      add("--max-wait-ms", "--runtime");
+      add("--max-wait-ms", "--runtime", "--limit");
       break;
     case "runtime":
       add("--runtime");
       if (args.action === "up" || args.action === "down") add("--max-wait-ms");
+      if (args.action === "logs") add("--lines");
+      if (args.action === "status") add("--limit");
       break;
     case "packages":
       break;
     case "auth":
       add("--runtime", "--slot");
       if (args.action === "login") add("--from");
+      if (args.action === "status") add("--limit");
       break;
     case "activity":
-      add("--runtime", "--watch", "--jsonl");
+      add("--runtime", "--watch", "--jsonl", "--limit");
       break;
     case "paths":
       add("--runtime");
@@ -637,41 +591,37 @@ function assertCommandOptions(args: ParsedArgs): void {
     case "get":
       add("--workspace", "--output", "--to");
       break;
-    case "image":
-      // A package asset needs credentials and nothing else; no Runtime Profile applies.
-      add("--prompt", "--to", "--model", "--aspect-ratio", "--resolution");
-      break;
     case "cancel":
       add("--runtime", "--reason");
       break;
     case "result":
       if (args.action === "finish" || args.action === "discard") add("--runtime");
       if (args.action === "edit") {
-        add("--workspace", "--title", "--note", "--highlight", "--clear-title", "--clear-note", "--clear-highlights");
+        add("--workspace", "--title", "--note", "--highlight", "--clear-title", "--clear-note", "--clear-highlights", "--limit");
       }
       break;
     case "doctor":
-      add("--workspace");
+      add("--workspace", "--limit");
       break;
     case "status":
-      add("--runtime", "--watch");
+      add("--runtime", "--watch", "--limit");
       if (args.watch) add("--max-wait-ms");
       break;
     case "builds":
     case "history":
       add("--workspace", "--limit", "--before");
-      if (args.command === "history") add("--source", "--pin", "--exclude-targets");
+      if (args.command === "history") add("--source");
       break;
     case "inspect":
-      add("--workspace");
+      add("--workspace", "--output", "--limit");
       break;
     case "check":
     case "plan":
-      add("--runtime", "--package-root", "--workspace", "--asset-root");
+      add("--runtime", "--package-root", "--workspace", "--asset-root", "--limit");
       break;
     case "build":
       add("--runtime", "--package-root", "--workspace", "--asset-root", "--follow",
-        "--max-wait-ms", "--title");
+        "--max-wait-ms", "--title", "--limit");
       break;
   }
   const invalid = args.seenOptions.find((item) => !allowed.has(item));
@@ -692,47 +642,10 @@ function assertCommandOptions(args: ParsedArgs): void {
 
 function usage(): string {
   return [
-    "usage:",
-    "  hypit doctor [<runtime-profile>] [--workspace project]",
-    "  hypit programs up|down|status [<runtime-profile>] [--max-wait-ms milliseconds]",
-    "  hypit runtime use <runtime-profile>",
-    "  hypit runtime unset",
-    "  hypit runtime up|status|logs|down [<runtime-profile>]",
-    "  hypit packages install|status <package@exact-version>",
-    "  hypit activity [--runtime profile.json] [--watch]",
-    "  hypit check <self-described-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
-    "  hypit plan <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
-    "  hypit build <run-source> [--title text] [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow]",
-    "  hypit status <build-id> [--runtime profile.json] [--watch]",
-    "  hypit result finish <build-id> [--runtime profile.json]",
-    "  hypit result discard <build-id> [--runtime profile.json]",
-    "  hypit result edit <build-id> [--title text] [--note text] [--highlight output] [--workspace project]",
-    "  hypit builds [--workspace project] [--limit count] [--before build-id]",
-    "  hypit history [output-name] [--workspace project] [--source author.svml] [--limit count] [--before build-id] [--pin] [--exclude-targets]",
-    "  hypit inspect <build-id> [--workspace project]",
-    "  hypit get <build-id> --output output-name --to path [--workspace project]",
-    "  hypit cancel <build-id> [--runtime profile.json] [--reason text]",
-    "  hypit auth status|login|logout <endpoint-instance> [--runtime profile.json] [--slot name] [--from secret-file]",
-    "  hypit image --prompt <text|text-file> --to <path.png> [--model package] [--aspect-ratio r] [--resolution r]",
+    "usage: hypit <command> [options]",
     "",
-    "output:",
-    "  --json  --verbose  --color auto|always|never  --no-color  --debug",
+    "Run `hypit help` for commands or `hypit help <command>` for exact syntax.",
   ].join("\n");
-}
-
-/**
- * A prompt is either the text itself or a file holding it. A long prompt lives in a file
- * beside the asset it describes, so it can be edited and reread; a short one does not
- * deserve a file.
- */
-async function readPromptText(value: string): Promise<string> {
-  const path = resolve(value);
-  const isFile = await stat(path).then((item) => item.isFile(), () => false);
-  const prompt = (isFile ? await readFile(path, "utf8") : value).trim();
-  if (prompt.length === 0) {
-    throw new Error(isFile ? `prompt file ${path} is empty` : "--prompt is empty");
-  }
-  return prompt;
 }
 
 function createCatalogDescriptor(options: {
@@ -784,7 +697,6 @@ async function preflightPlan(
   const result = await host.preflight({ capabilities });
   return {
     ok: !result.diagnostics.some((item) => item.severity === "error"),
-    dataRoot: result.dataRoot,
     capabilities: capabilities.map(capabilityName),
     diagnostics: result.diagnostics,
   } as const;
@@ -811,10 +723,6 @@ async function loadRuntimeControl(
   readOnly = true,
 ): Promise<CliRuntimeControl> {
   return await host.openControl({ readOnly });
-}
-
-function displayType(type: TypeRef): string {
-  return `${type.module.name}@${type.module.version}/${type.name}`;
 }
 
 function formatOperationProgress(progress: OperationProgress): string {
@@ -859,16 +767,6 @@ function queueLaneLines(groups: readonly QueueLaneSummary[]): readonly string[] 
     lines.push(`  ${group.lane}: ${group.inFlight} remote`);
   }
   return lines;
-}
-
-function programLine(program: CliManagedProgramReport): string {
-  const stateDetail = "detail" in program.state ? ` — ${program.state.detail}` : "";
-  const action = program.action === undefined ? "" : ` · ${program.action}`;
-  const detail = program.detail === undefined ? "" : ` · ${program.detail}`;
-  const instances = program.instances.length === 0 ? "" : ` · ${program.instances.join(", ")}`;
-  const pid = program.pid === undefined ? "" : ` · pid ${program.pid}`;
-  const log = program.logPath === undefined ? "" : ` · log ${program.logPath}`;
-  return `${program.id}: ${program.state.state}${stateDetail}${action}${detail}${instances}${pid}${log}`;
 }
 
 function inlineValuePreview(value: unknown, limit = 240): string {
@@ -1008,7 +906,7 @@ export async function runCli(
   const packageRootForProject = async (projectRoot = commandProjectRoot()): Promise<string> =>
     args.packageRoot ?? await resolvePackageRoot(projectRoot);
   const writeOperational = (
-    machine: unknown,
+    machine: CliMachineView,
     title: string,
     status: "success" | "warning" | "error" | "info" = "info",
     facts: readonly (readonly [string, string])[] = [],
@@ -1090,10 +988,10 @@ export async function runCli(
     const profile = resolve(args.file);
     const selected = await selectRuntimeProfile(args.workspaceRoot ?? process.cwd(), profile);
     writeOperational({
-      format: "hypit.cli-runtime-selection@1",
+      format: "hypit.cli-runtime-selection@2",
+      selected: true,
       profile: selected.profile,
       project: selected.projectRoot,
-      selectionFile: selected.selectionFile,
     }, "Runtime selected", "success", [
       ["Profile", selected.profile],
       ["Project", selected.projectRoot],
@@ -1107,11 +1005,10 @@ export async function runCli(
     assertCommandOptions(args);
     const cleared = await clearRuntimeProfile(process.cwd());
     writeOperational({
-      format: "hypit.cli-runtime-selection@1",
+      format: "hypit.cli-runtime-selection@2",
       selected: false,
       removed: cleared !== undefined,
-      profile: cleared?.profile,
-      project: cleared?.projectRoot,
+      ...(cleared === undefined ? {} : { profile: cleared.profile, project: cleared.projectRoot }),
     }, cleared === undefined ? "No Runtime was selected" : "Runtime selection removed",
     cleared === undefined ? "info" : "success", cleared === undefined ? [] : [
       ["Profile", cleared.profile], ["Project", cleared.projectRoot],
@@ -1142,10 +1039,10 @@ export async function runCli(
     || args.command === "result"
     || args.command === "doctor" || args.command === "programs"
     || args.command === "runtime" || args.command === "activity" || args.command === "paths"
-    || args.command === "image" || args.command === "packages";
+    || args.command === "packages";
   const operational = known || args.command === "auth";
   const fileOptional = args.command === "builds" || args.command === "history" || args.command === "activity"
-    || args.command === "paths" || args.command === "image"
+    || args.command === "paths"
     || args.command === "programs" || args.command === "runtime" || args.command === "doctor";
   if (!operational || (!fileOptional && args.file === undefined)) {
     throw new Error(usage());
@@ -1159,8 +1056,8 @@ export async function runCli(
   if (args.command === "activity" && args.watch && args.json) {
     throw new Error("activity --watch is a stream; use --jsonl instead of --json");
   }
-  if (args.command === "history" && args.file === undefined && args.source === undefined) {
-    throw new Error("history requires an output name or --source path");
+  if (args.command === "history" && args.file === undefined) {
+    throw new Error("history requires one exact Output name");
   }
   if (args.command === "result" && args.action !== "finish"
     && args.action !== "discard" && args.action !== "edit") {
@@ -1178,9 +1075,6 @@ export async function runCli(
     }
   }
   assertCommandOptions(args);
-  if (args.excludeTargets && !args.pin) {
-    throw new Error("--exclude-targets requires history --pin");
-  }
   const runtimeController = async (profile: string, source?: string): Promise<CliRuntimeController> => {
     const workspaceRoot = args.workspaceRoot
       ?? selectedRuntimeProjectRoot
@@ -1190,40 +1084,6 @@ export async function runCli(
       packageRoot,
     });
   };
-  if (args.command === "image") {
-    if (args.prompt === undefined) throw new Error("image requires --prompt with text or a text file path");
-    if (args.to === undefined) throw new Error("image requires --to with the file to write");
-    if (distribution.generatePicture === undefined) {
-      throw new Error("this Distribution cannot generate a picture directly");
-    }
-    const picture = await distribution.generatePicture({
-      prompt: await readPromptText(args.prompt),
-      packageRoot: await packageRootForProject(process.cwd()),
-      ...(distribution.packageRoot === undefined
-        ? {}
-        : { distributionPackageRoot: distribution.packageRoot }),
-      ...(args.model === undefined ? {} : { model: args.model }),
-      ...(args.aspectRatio === undefined ? {} : { aspectRatio: args.aspectRatio }),
-      ...(args.resolution === undefined ? {} : { resolution: args.resolution }),
-    });
-    await mkdir(dirname(args.to), { recursive: true });
-    await writeFile(args.to, picture.bytes);
-    writeOperational({
-      format: "hypit.cli-image@1",
-      package: picture.package,
-      model: picture.model,
-      mediaType: picture.mediaType,
-      size: picture.bytes.byteLength,
-      path: args.to,
-    }, "Picture written", "success", [
-      ["Model", picture.model],
-      ["Package", picture.package],
-      ["Type", picture.mediaType],
-      ["Bytes", String(picture.bytes.byteLength)],
-      ["Path", args.to],
-    ], ["This picture is authoring input; no Build, Record or Runtime Profile took part."]);
-    return;
-  }
   if (args.command === "paths") {
     const projectRoot = selectedRuntimeProjectRoot ?? process.cwd();
     const runtimePaths = args.runtime === undefined
@@ -1265,14 +1125,13 @@ export async function runCli(
       : existing === undefined ? [] : [existing];
     const ready = reports.length === 1;
     writeOperational({
-      format: "hypit.cli-packages-status@1",
-      ok: ready,
-      root,
-      packages: reports,
+      format: "hypit.cli-package@2",
+      action: args.action,
+      package: args.file,
+      ready,
     }, args.action === "install" ? "Machine package is ready" : "Machine package status",
     ready ? "success" : "warning", [
       ["Package", args.file],
-      ["Root", root],
       ["Ready", String(ready)],
     ]);
     if (!ready) io.setExitCode?.(1);
@@ -1300,18 +1159,14 @@ export async function runCli(
     ]);
     const diagnostics = [...result.diagnostics, ...(projectResult?.diagnostics ?? [])];
     const machine = {
-      format: "hypit.cli-doctor@1" as const,
+      format: "hypit.cli-doctor@2" as const,
       ok: !diagnostics.some((item) => item.severity === "error"),
-      dataRoot: result.dataRoot,
-      ...(projectResult?.location === undefined ? {} : {
-        resultRepository: {
-          root: projectResult.location.root,
-          use: projectResult.location.selection.use,
-        },
-      }),
-      diagnostics,
+      profile,
+      diagnosticCount: diagnostics.length,
+      diagnostics: diagnostics.slice(0, args.limit),
+      ...(diagnostics.length <= args.limit ? {} : { omittedDiagnostics: diagnostics.length - args.limit }),
     };
-    writeCliOutput(io, args, { kind: "doctor", machine, profile });
+    writeCliOutput(io, args, { kind: "doctor", machine });
     if (!machine.ok) io.setExitCode?.(1);
     return;
   }
@@ -1346,25 +1201,25 @@ export async function runCli(
         : await controller.programs.report();
     const ready = result.programs.every((item) => item.state.state === "ready");
     const desiredState = args.action === "down" ? !result.programs.some((item) => item.state.state === "ready") : ready;
-    const machine = {
-      format: "hypit.cli-programs-status@1" as const,
-      // A successful status query is not a failed lifecycle action. `ready` carries readiness.
-      ok: args.action === "status" ? true : desiredState,
+    const lifecycleOk = args.action === "status" || desiredState;
+    const shownPrograms = result.programs.filter((item) => item.state.state !== "ready")
+      .slice(0, args.limit);
+    writeOperational({
+      format: "hypit.cli-programs@2",
+      action: args.action,
       ready,
-      dataRoot: result.dataRoot,
-      packages: prepared,
-      programs: result.programs,
-    };
-    const shownPrograms = args.verbose || args.action !== "status"
-      ? result.programs
-      : result.programs.filter((item) => item.state.state !== "ready");
-    writeOperational(machine, `External programs ${args.action}`,
-      args.action === "status" ? ready ? "success" : "info" : machine.ok ? "success" : "warning", [
-      ["Data root", result.dataRoot],
+      programs: result.programs.slice(0, args.limit).map((item) => ({
+        id: item.id,
+        state: item.state.state,
+        ...(args.verbose && item.action !== undefined ? { action: item.action } : {}),
+      })),
+      ...(result.programs.length <= args.limit ? {} : { omittedPrograms: result.programs.length - args.limit }),
+    }, `External programs ${args.action}`,
+      args.action === "status" ? ready ? "success" : "info" : lifecycleOk ? "success" : "warning", [
       ["Programs", String(result.programs.length)],
       ["Ready", String(result.programs.filter((item) => item.state.state === "ready").length)],
-    ], shownPrograms.map(programLine));
-    if (args.action !== "status" && !machine.ok) io.setExitCode?.(1);
+    ], shownPrograms.map((item) => `${item.id}: ${item.state.state}`));
+    if (!lifecycleOk) io.setExitCode?.(1);
     return;
   }
   if (args.command === "runtime") {
@@ -1396,10 +1251,19 @@ export async function runCli(
       });
       const ok = processState.state === "running"
         && external.programs.every((item) => item.state.state === "ready");
-      writeOperational({ ok, packages: prepared, worker: processState, programs: external.programs }, "Runtime is up",
+      writeOperational({
+        format: "hypit.cli-runtime-up@2",
+        ready: ok,
+        worker: processState.state,
+        preparedPackages: prepared.length,
+        programs: {
+          total: external.programs.length,
+          ready: external.programs.filter((item) => item.state.state === "ready").length,
+        },
+      }, "Runtime is up",
         ok ? "success" : "warning", [
         ["Machine packages", String(prepared.length)],
-        ["Worker", String(processState.pid)],
+        ["Worker", processState.state],
         ["External programs", String(external.programs.length)],
       ]);
       if (!ok) io.setExitCode?.(1);
@@ -1408,14 +1272,16 @@ export async function runCli(
     if (args.action === "logs") {
       const logs = await controller.worker.logs();
       const lines = logs.text.length === 0 ? [] : logs.text.replace(/\n$/u, "").split("\n");
-      const shown = args.verbose ? lines : lines.slice(-100);
+      const shown = lines.slice(-args.lines);
       writeOperational({
-        format: "hypit.cli-runtime-logs@1",
-        path: logs.path,
-        text: logs.text,
+        format: "hypit.cli-runtime-logs@2",
+        lines: shown,
+        totalLines: lines.length,
+        omittedLines: Math.max(0, lines.length - shown.length),
+        ...(args.verbose ? { path: logs.path } : {}),
       }, "Runtime logs", "info", [
-        ["Path", logs.path],
-        ["Lines", String(lines.length)],
+        ["Lines", `${shown.length}/${lines.length}`],
+        ...(args.verbose ? [["Path", logs.path] as const] : []),
       ], shown.length === 0 ? ["No log output."] : shown);
       return;
     }
@@ -1423,7 +1289,7 @@ export async function runCli(
       const worker = await controller.worker.down({
         ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
       });
-      writeOperational({ ok: true, worker }, "Runtime Worker is down", "success", [
+      writeOperational({ format: "hypit.cli-runtime-down@2", worker: worker.state }, "Runtime Worker is down", "success", [
         ["Worker", worker.state],
       ], ["External programs were left running. Stop them explicitly with hypit programs down."]);
       return;
@@ -1442,8 +1308,12 @@ export async function runCli(
       runtime = selectedRuntime;
       const activity = await runtime.activity();
       const counts = Object.fromEntries(
-        ["submitting", "ready", "running", "waiting", "saving-result"].map((name) =>
-          [name, activity.builds.filter((item) => item.activity === name).length]),
+        [
+          ["starting", activity.builds.filter((item) => item.activity === "submitting" || item.activity === "ready").length],
+          ["active", activity.builds.filter((item) => item.activity === "running").length],
+          ["waiting", activity.builds.filter((item) => item.activity === "waiting").length],
+          ["decided", activity.builds.filter((item) => item.activity === "saving-result").length],
+        ],
       );
       const lanes = summarizeQueueLanes(activity.capacity);
       const ready = worker.state === "running"
@@ -1452,24 +1322,35 @@ export async function runCli(
       const attention = activity.builds.some((item) => item.issue !== undefined) || (active > 0 && !ready);
       const unavailable = external.programs.filter((item) => item.state.state !== "ready");
       const machine = {
-        format: "hypit.cli-runtime-status@1" as const,
-        ok: true,
+        format: "hypit.cli-runtime-status@2" as const,
         ready,
         attention,
-        worker,
-        activity: { counts, lanes },
-        programs: external.programs,
+        worker: {
+          state: worker.state,
+          ...(worker.configuration === undefined ? {} : { configuration: worker.configuration }),
+        },
+        builds: counts,
+        programs: {
+          total: external.programs.length,
+          ready: external.programs.length - unavailable.length,
+          unavailable: unavailable.slice(0, args.limit).map((item) => ({ id: item.id, state: item.state.state })),
+        },
+        capacity: {
+          active: activity.capacity.length,
+          ...(args.verbose ? { lanes: lanes.slice(0, args.limit) } : {}),
+        },
       };
       writeOperational(machine, "Runtime status", attention ? "warning" : ready ? "success" : "info", [
         ["Worker", worker.state],
-        ["Ready", String(counts.ready ?? 0)],
-        ["Running", String(counts.running ?? 0)],
+        ["Starting", String(counts.starting ?? 0)],
+        ["Active", String(counts.active ?? 0)],
         ["Waiting", String(counts.waiting ?? 0)],
+        ["Decided", String(counts.decided ?? 0)],
         ["Programs", `${external.programs.length - unavailable.length}/${external.programs.length} ready`],
-        ["Capacity reservations", String(activity.capacity.length)],
+        ...(args.verbose ? [["Active requests", String(activity.capacity.length)] as const] : []),
       ], [
-        ...unavailable.map(programLine),
-        ...queueLaneLines(lanes),
+        ...unavailable.slice(0, args.limit).map((item) => `${item.id}: ${item.state.state}`),
+        ...(args.verbose ? queueLaneLines(lanes.slice(0, args.limit)) : []),
       ]);
     } finally {
       if (runtime !== undefined) await runtime.close();
@@ -1494,20 +1375,33 @@ export async function runCli(
         throw new Error(`Endpoint ${args.file} has several credentials; select one with --slot`);
       }
       if (args.action === "status") {
-        writeOperational({ endpoint: args.file, credentials }, "Credential status", "info", [
+        const view = credentials.slice(0, args.limit).map((item) => ({
+          endpoint: item.endpoint,
+          slot: item.slot,
+          label: item.label,
+          kind: item.kind,
+          configured: item.configured,
+          writable: item.writable,
+        }));
+        writeOperational({
+          format: "hypit.cli-auth-status@2",
+          endpoint: args.file,
+          credentials: view,
+          ...(credentials.length <= args.limit ? {} : { omittedCredentials: credentials.length - args.limit }),
+        }, "Credential status", "info", [
           ["Endpoint", args.file!],
           ["Configured", `${credentials.filter((item) => item.configured).length}/${credentials.length}`],
-        ], credentials.map((item) => `${item.slot}: ${item.configured ? "configured" : "missing"} · ${item.writable ? "writable" : "read-only"}`));
+        ], credentials.slice(0, args.limit).map((item) =>
+          `${item.slot}: ${item.configured ? "configured" : "missing"} · ${item.writable ? "writable" : "read-only"}`));
       } else if (args.action === "login") {
         const [item] = credentials;
         if (item === undefined) throw new Error(`Endpoint ${args.file} has no matching credential`);
         if (!item.writable) {
           const source = item.ref.store === "env"
             ? `set ${item.ref.key} in the environment`
-            : `configure ${item.ref.key} through CredentialStore ${item.ref.store}`;
+            : "select a writable credential source in the Runtime Profile";
           throw new Error(
-            `CredentialStore ${item.ref.store} is read-only for ${item.label}; ${source}, `
-            + "or select the writable OS CredentialStore in the Runtime Profile",
+            `${item.label} cannot be written by this command; ${source}`,
           );
         }
         const oauth = item.ref.store === "os" && /hypihub/iu.test(`${item.endpoint} ${item.ref.key}`);
@@ -1523,16 +1417,27 @@ export async function runCli(
           try { JSON.parse(secret); } catch { throw new Error(`${item.label} is not valid JSON`); }
         }
         const stored = await runtime.putCredential(item.endpoint, item.slot, secret);
-        writeOperational({ endpoint: args.file, stored }, "Credential stored", "success", [
-          ["Endpoint", args.file!], ["Slot", stored.slot], ["Store", stored.ref.store],
+        writeOperational({
+          format: "hypit.cli-auth-change@2",
+          endpoint: args.file,
+          slot: stored.slot,
+          configured: true,
+        }, "Credential stored", "success", [
+          ["Endpoint", args.file!], ["Slot", stored.slot],
         ]);
       } else {
         const [item] = credentials;
         if (item === undefined) throw new Error(`Endpoint ${args.file} has no matching credential`);
         const removed = await runtime.deleteCredential(item.endpoint, item.slot);
-        writeOperational({ endpoint: args.file, ...removed }, removed.deleted ? "Credential removed" : "Credential was absent",
+        writeOperational({
+          format: "hypit.cli-auth-change@2",
+          endpoint: args.file,
+          slot: removed.credential.slot,
+          configured: false,
+          changed: removed.deleted,
+        }, removed.deleted ? "Credential removed" : "Credential was absent",
           removed.deleted ? "success" : "warning", [
-            ["Endpoint", args.file!], ["Slot", removed.credential.slot], ["Store", removed.credential.ref.store],
+            ["Endpoint", args.file!], ["Slot", removed.credential.slot],
           ]);
       }
     } finally {
@@ -1548,87 +1453,80 @@ export async function runCli(
       if (args.command === "builds") {
         const page = await repository.browse({ limit: args.limit, ...(args.before === undefined ? {} : { before: args.before }) });
         const builds = page.results.map((manifest) => ({
-          build: manifest.id,
-          createdAt: buildCreatedAt(manifest.id),
+          id: manifest.id,
+          createdAt: buildCreatedAtIso(manifest.id),
           ...(manifest.title === undefined ? {} : { title: manifest.title }),
           outcome: manifest.outcome,
-          source: manifest.source,
-          ...(manifest.run === undefined ? {} : { run: manifest.run }),
-          targets: manifest.targets,
-          outputs: Object.keys(manifest.outputs),
+          ...(manifest.run === undefined ? {} : { run: projectPath(manifest.run.path, commandProjectRoot()) }),
+          targetCount: manifest.targets.length,
+          ...(args.verbose ? {
+            targets: manifest.targets.slice(0, args.limit),
+            ...(manifest.targets.length <= args.limit ? {} : { omittedTargets: manifest.targets.length - args.limit }),
+          } : {}),
+          outputCount: Object.keys(manifest.outputs).length,
         }));
-        writeOperational({ format: "hypit.cli-builds@2", builds, ...(page.next === undefined ? {} : { next: page.next }) },
+        writeOperational({ format: "hypit.cli-builds@3", builds, ...(page.next === undefined ? {} : { next: page.next }) },
           "Build results", "info", [["Builds", String(builds.length)]],
           builds.map((item) => {
-            const source = basename(item.run?.path ?? item.source.path);
-            const label = item.title === undefined ? item.build : `${item.title} · ${item.build}`;
-            return `${label}: ${item.outcome} · ${new Date(item.createdAt).toLocaleString()} · ${source} · ${item.targets.join(", ")}`;
+            const label = item.title === undefined ? item.id : `${item.title} · ${item.id}`;
+            const run = item.run === undefined ? "" : ` · ${item.run}`;
+            return `${label}: ${item.outcome} · ${new Date(item.createdAt).toLocaleString()}${run} · ${item.targetCount} target${item.targetCount === 1 ? "" : "s"}`;
           }).concat(page.next === undefined ? [] : [`Older    hypit builds --before ${page.next}`]));
         return;
       }
       if (args.command === "history") {
         const page = await repository.browse({ limit: args.limit, ...(args.before === undefined ? {} : { before: args.before }) });
         const source = args.source === undefined ? undefined : resolve(args.source);
-        const entries = page.results.flatMap((manifest) => {
+        const matches = page.results.flatMap((manifest) => {
           if (source !== undefined && manifest.source.path !== source) return [];
-          return Object.entries(manifest.outputs).flatMap(([name, output]) => {
-            if (args.file !== undefined && name !== args.file) return [];
-            if (args.excludeTargets && manifest.targets.includes(name)) return [];
-            return [{
-              build: manifest.id,
-              createdAt: buildCreatedAt(manifest.id),
-              outcome: manifest.outcome,
-              source: manifest.source,
-              ...(manifest.run === undefined ? {} : { run: manifest.run }),
-              output: { name, type: output.type, value: output.value },
-            }];
-          });
+          return manifest.outputs[args.file!] === undefined ? [] : [manifest];
         });
-        const pins = args.pin ? pinnedRecords(entries) : [];
+        const entries = await Promise.all(matches.map(async (manifest) => ({
+          build: manifest.id,
+          ...(manifest.title === undefined ? {} : { title: manifest.title }),
+          createdAt: buildCreatedAtIso(manifest.id),
+          outcome: manifest.outcome,
+          output: await outputView(repository, manifest, args.file!),
+        })));
         writeOperational({
-          format: "hypit.cli-history@2",
-          query: {
-            ...(args.file === undefined ? {} : { output: args.file }),
-            ...(source === undefined ? {} : { source }),
-          },
+          format: "hypit.cli-history@3",
+          output: args.file,
+          ...(source === undefined ? {} : { source: projectPath(source, commandProjectRoot()) }),
           entries,
           ...(page.next === undefined ? {} : { next: page.next }),
-          ...(args.pin ? { pins } : {}),
-        }, entries.length === 0 ? "No Build Output history" : args.pin ? "Reuse these Outputs" : "Output history",
+        }, entries.length === 0 ? "No matching Output" : "Output history",
         entries.length === 0 ? "warning" : "info", [
-          ...(args.file === undefined ? [] : [["Output", args.file] as const]),
-          ...(source === undefined ? [] : [["Source", source] as const]),
-          ["Outputs", String(entries.length)],
-        ], args.pin
-          ? ["Paste into a Run Source; every reference names one exact Build Output.", ...pins.flatMap((item) => item.markup)]
-          : entries.map((item) => {
-              const created = new Date(item.createdAt).toISOString();
-              const kind = item.output.value.kind === "build-file"
-                ? item.output.value.mediaType
-                : item.output.value.kind === "inline" ? "inline value" : "structured value";
-              return `${item.build}: ${item.output.name} · ${displayType(item.output.type)} · ${kind} · ${created}`;
-            }).concat(page.next === undefined ? [] : [`Older    hypit history${args.file === undefined ? "" : ` ${args.file}`} --before ${page.next}`]));
+          ["Output", args.file!],
+          ...(source === undefined ? [] : [["Source", projectPath(source, commandProjectRoot())] as const]),
+          ["Builds", String(entries.length)],
+        ], entries.map((item) => {
+          const label = item.title === undefined ? item.build : `${item.title} · ${item.build}`;
+          return `${label}: ${item.outcome} · ${item.output.kind} · ${item.output.type} · ${item.createdAt}`;
+        }).concat(page.next === undefined ? [] : [`Older    hypit history ${args.file} --before ${page.next}`]));
         return;
       }
       if (args.command === "inspect") {
         const manifest = await repository.read(args.file!);
         if (manifest === undefined) throw new Error(`Build Result ${args.file} does not exist`);
-        const outputs = Object.entries(manifest.outputs).map(([name, output]) => ({
-          name,
-          target: manifest.targets.includes(name),
-          type: output.type,
-          value: output.value,
-        }));
-        writeOperational({ format: "hypit.cli-inspect@2", result: manifest }, "Build Result detail", manifest.outcome === "failed" ? "error" : "info", [
-          ["Build", manifest.id],
-          ["Created", new Date(buildCreatedAt(manifest.id)).toLocaleString()],
-          ...(manifest.title === undefined ? [] : [["Title", manifest.title] as const]),
-          ["Outcome", manifest.outcome ?? "unfinished"],
-          ["Targets", String(manifest.targets.length)],
-          ["Outputs", String(outputs.length)],
+        const build = await buildResultView(repository, manifest, {
+          projectRoot: commandProjectRoot(),
+          ...(args.output === undefined ? {} : { output: args.output }),
+          limit: args.limit,
+        });
+        writeOperational({ format: "hypit.cli-inspect@3", build }, "Build Result", manifest.outcome === "failed" ? "error" : "info", [
+          ["Build", build.id],
+          ["Created", new Date(build.createdAt).toLocaleString()],
+          ...(build.title === undefined ? [] : [["Title", build.title] as const]),
+          ["Outcome", build.outcome],
+          ["Targets", String(build.targetCount)],
+          ["Outputs", String(build.outputs.length + (build.omittedOutputs ?? 0))],
         ], [
-          ...(manifest.failure === undefined ? [] : [`Reason    ${manifest.failure}`]),
-          ...outputs.map((item) => `${item.target ? "Target" : "Output"}    ${item.name} · ${displayType(item.type)} · ${item.value.kind}`),
+          ...(build.failure === undefined ? [] : [`Reason    ${build.failure}`]),
+          ...(build.note === undefined ? [] : [`Note      ${build.note}`]),
+          ...build.outputs.map((item) => `${item.highlighted ? "★" : item.target ? "Target" : "Output"}    ${item.name} · ${item.type} · ${item.kind}`),
+          ...(build.omittedOutputs === undefined ? [] : [
+            `${build.omittedOutputs} more Outputs · use --limit <count> or --output <name>`,
+          ]),
         ]);
         return;
       }
@@ -1641,11 +1539,15 @@ export async function runCli(
             : args.highlightedOutputs.length === 0 ? {} : { highlightedOutputs: args.highlightedOutputs }),
         });
         const presentation = {
-          format: "hypit.cli-result-edit@2",
+          format: "hypit.cli-result-edit@3",
           build: manifest.id,
           title: manifest.title ?? null,
           note: manifest.note ?? null,
-          highlightedOutputs: manifest.highlightedOutputs ?? [],
+          highlightedOutputCount: manifest.highlightedOutputs?.length ?? 0,
+          highlightedOutputs: manifest.highlightedOutputs?.slice(0, args.limit) ?? [],
+          ...((manifest.highlightedOutputs?.length ?? 0) <= args.limit
+            ? {}
+            : { omittedHighlightedOutputs: manifest.highlightedOutputs!.length - args.limit }),
         };
         writeOperational(presentation, "Build Result updated", "success", [
           ["Build", manifest.id],
@@ -1655,10 +1557,18 @@ export async function runCli(
         return;
       }
       const exported = await exportBuildResultOutput(repository, args.file!, args.output!, args.to!);
-      writeOperational({ format: "hypit.cli-get@3", ...exported }, "Build Output exported", "success", [
+      const machine = {
+        format: "hypit.cli-get@4",
+        build: exported.build,
+        output: exported.output,
+        type: cliTypeName(exported.type),
+        kind: exported.kind,
+        path: exported.path,
+      } as const;
+      writeOperational(machine, "Build Output exported", "success", [
         ["Build", exported.build],
         ["Output", exported.output],
-        ["Type", displayType(exported.type)],
+        ["Type", machine.type],
         ["Kind", exported.kind],
         ["Path", exported.path],
       ]);
@@ -1681,28 +1591,20 @@ export async function runCli(
       );
     }
     const finished = result?.outcome !== undefined;
+    const build = result === undefined ? null : buildStatusView({ id: result.id, result });
     const machine = {
-      format: "hypit.cli-status@2",
-      build: result === undefined ? null : {
-        id: result.id,
-        ...(result.outcome === undefined ? {} : { outcome: result.outcome }),
-        result: {
-          title: result.title,
-          targets: result.targets,
-          outputs: Object.keys(result.outputs),
-          outcome: result.outcome,
-        },
-        operations: [],
-      },
+      format: "hypit.cli-status@3",
+      build,
     };
     writeOperational(machine, result === undefined
       ? "Build Result not found"
       : finished ? "Build Result is finished" : "Build Result is unfinished",
     result === undefined || !finished ? "warning" : "info", [
       ["Build", args.file!],
-      ["Runtime", "not selected; execution state is unknown"],
-      ...(result?.outcome === undefined ? [] : [["Outcome", result.outcome] as const]),
-      ["Operations", "0"],
+      ["Work", build?.work.state ?? "unknown"],
+      ...(build?.work.outcome === undefined ? [] : [["Decision", build.work.outcome] as const]),
+      ["Result", build?.result.state ?? "missing"],
+      ...(build?.result.outputCount === undefined ? [] : [["Outputs", String(build.result.outputCount)] as const]),
     ], result === undefined ? [] : [
       "Result and Runtime are independent facts; select the Runtime to inspect active execution.",
     ]);
@@ -1738,29 +1640,40 @@ export async function runCli(
           });
           if (args.watch && currentView === previous) return;
           previous = currentView;
+          const builds = activity.builds.slice(0, args.limit).map((item) => {
+            const status = buildStatusView({ id: item.id, runtime: item });
+            return {
+              id: item.id,
+              work: status.work,
+              ...(item.outcome === undefined ? {} : { outcome: item.outcome }),
+              ...(status.attention === undefined ? {} : { attention: status.attention }),
+            };
+          });
           const value = {
-            format: "hypit.cli-activity@1",
+            format: "hypit.cli-activity@2",
             at: Date.now(),
-            worker,
-            builds: activity.builds,
-            lanes: summarizeQueueLanes(activity.capacity),
+            worker: worker.state,
+            builds,
+            ...(activity.builds.length <= args.limit ? {} : { omittedBuilds: activity.builds.length - args.limit }),
+            activeRequests: activity.capacity.length,
+            ...(args.verbose ? { lanes: summarizeQueueLanes(activity.capacity).slice(0, args.limit) } : {}),
           };
-          const buildLines = activity.builds.slice(0, args.verbose ? undefined : 12).map((item) =>
-            `${item.id}: ${item.activity}`
+          const buildLines = activity.builds.slice(0, args.limit).map((item) =>
+            `${item.id}: ${buildStatusView({ id: item.id, runtime: item }).work.state}`
               + `${item.cancellationRequested ? " · cancelling" : ""}`
-              + `${item.issue === undefined ? "" : ` · ${item.issue.scope}: ${item.issue.message}`}`);
+              + `${item.issue === undefined ? "" : ` · ${item.issue.message}`}`);
           const activeOperations = activity.builds.flatMap((item) => item.operations)
             .filter((item) => item.status === "pending");
           const operationLines = args.verbose
             ? activity.builds.flatMap((build) => build.operations.filter((item) => item.status === "pending")
                 .map((item) => `${build.id} · ${item.endpoint}: ${item.progress === undefined
                   ? item.status
-                  : formatOperationProgress(item.progress)}`))
+                  : formatOperationProgress(item.progress)}`)).slice(0, args.limit)
             : [];
           writeOperational(value, "Runtime activity", activity.builds.length === 0 ? "success" : "info", [
             ["Active Builds", String(activity.builds.length)],
             ["Active Operations", String(activeOperations.length)],
-            ["Worker", worker.pid === undefined ? worker.state : `${worker.state} · ${worker.pid}`],
+            ["Worker", worker.state],
           ], [
             ...buildLines,
             ...(operationLines.length === 0 ? [] : ["Operations:", ...operationLines]),
@@ -1815,23 +1728,17 @@ export async function runCli(
         const activity = view?.activity;
         const outcome = result?.outcome ?? view?.outcome;
         const issue = view?.issue;
-        const resultSummary = result === undefined ? undefined : {
-          title: result.title,
-          targets: result.targets,
-          outputs: Object.keys(result.outputs),
-          outcome: result.outcome,
-        };
-        const machine = {
-          format: "hypit.cli-status@2",
-          build: !found ? null : {
-            id: view?.id ?? result!.id,
-            ...(activity === undefined ? {} : { activity }),
-            ...(outcome === undefined ? {} : { outcome }),
-            ...(issue === undefined ? {} : { issue }),
-            ...(resultSummary === undefined ? {} : { result: resultSummary }),
-            operations: view?.operations ?? [],
-          },
+        const build = !found ? null : buildStatusView({
+          id: view?.id ?? result!.id,
+          ...(view === undefined ? {} : { runtime: view }),
+          ...(result === undefined ? {} : { result }),
           ...(resultReadError === undefined ? {} : { resultReadError }),
+          verbose: args.verbose,
+          operationLimit: args.limit,
+        });
+        const machine = {
+          format: "hypit.cli-status@3",
+          build,
         };
         writeOperational(machine, !found
           ? "Build not found"
@@ -1848,34 +1755,33 @@ export async function runCli(
             ? "error"
           : args.watch && activity !== undefined ? "warning" : "info", [
             ["Build", args.file!],
-            ...(result?.title === undefined ? [] : [["Title", result.title] as const]),
-            ...(activity === undefined ? [] : [["Activity", activity] as const]),
-            ...(outcome === undefined ? [] : [["Outcome", outcome] as const]),
-            ...(result === undefined ? [] : [["Outputs", String(Object.keys(result.outputs).length)] as const]),
-          ], (view?.operations ?? []).filter((operation) => operation.status !== "completed")
-            .slice(0, args.verbose ? undefined : 12).map((operation) => operation.failure !== undefined
+            ...(build?.title === undefined ? [] : [["Title", build.title] as const]),
+            ["Work", build?.work.state ?? "unknown"],
+            ...(build?.work.outcome === undefined ? [] : [["Decision", build.work.outcome] as const]),
+            ["Result", build?.result.state ?? "missing"],
+            ...(build?.result.outputCount === undefined ? [] : [["Outputs", String(build.result.outputCount)] as const]),
+          ], (build?.operations ?? []).map((operation) => operation.failure !== undefined
             ? `${operation.endpoint}: ${operation.failure.code} — ${operation.failure.message}`
             : operation.progress === undefined
-              ? `${operation.endpoint}: ${operation.status}`
+              ? `${operation.endpoint}: ${operation.state}`
               : `${operation.endpoint}: ${formatOperationProgress(operation.progress)}`)
-            .concat(issue === undefined ? [] : [
-              `${issue.scope === "result" ? "Result save" : "Cleanup"}    ${issue.message}`,
-            ])
-            .concat(resultReadError === undefined ? [] : [`Result    unavailable: ${resultReadError}`])
-            .concat(issue === undefined ? [] : [`Finish    hypit result finish ${args.file}`]));
+            .concat(build?.attention === undefined ? [] : [
+              `Attention  ${build.attention.message}`,
+              ...(build.attention.action === undefined ? [] : [`Action     ${build.attention.action}`]),
+            ]));
         if (!found || issue !== undefined || resultReadError !== undefined || outcome === "failed") io.setExitCode?.(1);
       } else if (args.command === "result") {
         if (args.action === "discard") {
           const resultControl = await selectedHost.openResultControl();
           const discarded = await resultControl.discardSubmission(args.file!)
             .finally(async () => await resultControl.close());
-          writeOperational({ format: "hypit.cli-result-discard@1", build: args.file, discarded }, discarded
+          writeOperational({ format: "hypit.cli-result-discard@2", build: args.file, discarded }, discarded
             ? "Incomplete Build discarded"
             : "Incomplete Build not found", discarded ? "success" : "warning", [
             ["Build", args.file!],
             ["State", discarded ? "discarded" : "missing"],
           ], discarded ? [
-            "The incomplete submission, Result draft and temporary Build files were removed.",
+            "The incomplete submission was removed.",
           ] : []);
           if (!discarded) io.setExitCode?.(1);
           return;
@@ -1897,25 +1803,28 @@ export async function runCli(
           const opened = await projectResults();
           const existing = await opened.repository.read(args.file!).finally(async () => await opened.close());
           if (existing?.outcome === undefined) {
-            writeOperational({ format: "hypit.cli-result-finish@1", build: args.file, found: false },
+            writeOperational({ format: "hypit.cli-result-finish@2", build: args.file, found: false },
               "Build not found", "warning", [["Build", args.file!]]);
             io.setExitCode?.(1);
             return;
           }
-          writeOperational({ format: "hypit.cli-result-finish@1", build: args.file, outcome: existing.outcome },
+          writeOperational({ format: "hypit.cli-result-finish@2", build: args.file, outcome: existing.outcome },
             "Result already finished", "info", [["Build", args.file!], ["Outcome", existing.outcome]]);
           return;
         }
         writeOperational({
-          format: "hypit.cli-result-finish@1",
+          format: "hypit.cli-result-finish@2",
           build: args.file,
           outcome: finished.outcome,
-          ...(finished.issue === undefined ? {} : { issue: finished.issue }),
+          ...(finished.issue === undefined ? {} : { attention: {
+            message: finished.issue.message,
+            action: `hypit result finish ${args.file}`,
+          } }),
         }, finished.issue === undefined ? "Result finished" : "Result still needs attention",
         finished.issue === undefined ? "success" : "error", [
           ["Build", args.file!],
           ["Outcome", finished.outcome],
-        ], finished.issue === undefined ? [] : [`${finished.issue.scope}: ${finished.issue.message}`]);
+        ], finished.issue === undefined ? [] : [`Attention  ${finished.issue.message}`]);
         if (finished.issue !== undefined) io.setExitCode?.(1);
       } else {
         const active = await runtime.cancel(args.file!, args.reason);
@@ -1923,19 +1832,22 @@ export async function runCli(
         const finished = openedResults === undefined
           ? undefined
           : await openedResults.repository.read(args.file!).finally(async () => await openedResults.close());
+        const build = active === undefined && finished === undefined ? null : buildStatusView({
+          id: args.file!,
+          ...(active === undefined ? {} : { runtime: active }),
+          ...(finished === undefined ? {} : { result: finished }),
+        });
         const machine = {
-          format: "hypit.cli-cancel@2",
-          build: args.file,
+          format: "hypit.cli-cancel@3",
           requested: active?.cancellationRequested === true,
-          ...(active === undefined ? {} : { activity: active.activity }),
-          outcome: active?.outcome ?? finished?.outcome,
+          build,
         };
         const title = active === undefined && finished === undefined
           ? "Build not found"
           : active === undefined ? "Build already finished" : "Build cancellation requested";
         writeOperational(machine, title,
           active === undefined && finished === undefined ? "warning" : active === undefined ? "info" : "success", [
-            ["Build", args.file!], ...(machine.activity === undefined ? [] : [["Activity", machine.activity] as const]),
+            ["Build", args.file!], ...(build === null ? [] : [["Work", build.work.state] as const]),
           ], active === undefined && finished?.outcome !== undefined
             ? [`No running work was changed; this Build is already ${finished.outcome}.`]
             : []);
@@ -2002,40 +1914,58 @@ export async function runCli(
           packageContributions,
         });
         const machine = {
-          format: "hypit.cli-check@1" as const,
+          format: "hypit.cli-check@2" as const,
           sourceKind: "run" as const,
           ok: true,
-          run: loaded.source,
-          source: loaded.authorSource,
-          targets: loaded.document.targets,
-          candidates: Object.fromEntries(loaded.document.candidates.map((item) => [item.id, item.kind])),
-          satisfactions: loaded.document.satisfactions,
-          unresolvedHistoricalOutputs: loaded.unresolvedHistoricalOutputs,
-          deterministic_durations: deterministicSpeechDurationsFromGraph(loaded.author.graph, loaded.author.program.records),
+          run: projectPath(loaded.source, effectiveWorkspaceRoot),
+          author: projectPath(loaded.authorSource, effectiveWorkspaceRoot),
+          frontend: sourceHeader.using,
+          targetCount: loaded.document.targets.length,
+          targets: loaded.document.targets.slice(0, args.limit).map((item) => item.output),
+          candidates: loaded.document.candidates.length,
+          satisfactions: loaded.document.satisfactions.length,
+          unresolvedHistoricalOutputs: loaded.unresolvedHistoricalOutputs.slice(0, args.limit).map((item) => ({
+            candidate: item.id,
+            build: item.build,
+            output: item.output,
+          })),
+          ...(loaded.unresolvedHistoricalOutputs.length <= args.limit ? {} : {
+            omittedHistoricalOutputs: loaded.unresolvedHistoricalOutputs.length - args.limit,
+          }),
         } as const;
         writeCliOutput(io, args, {
           kind: "check-run",
           machine,
-          frontend: sourceHeader.using,
         });
         return;
     }
     {
       const result = await compiler.compileSource(workspace.entry, workspace);
+      const authorFacing = result.exports.filter((item) =>
+        !item.name.includes(".__") && !/\.binding-\d+$/u.test(item.name) && !item.name.endsWith(".bindings"));
+      const outputs = authorFacing.filter((item) => item.ref.kind === "logical-output");
+      const values = authorFacing.filter((item) => item.ref.kind !== "logical-output");
+      const modules = result.program.closure.modules.map((item) => `${item.manifest.name}@${item.manifest.version}`);
       const machine = {
-        format: "hypit.cli-check@1" as const,
-          sourceKind: "author" as const,
-          ok: true,
-          units: result.closure.units.length,
-        sourceAssets: result.attachments.map((item) => item.artifact),
-        modules: result.program.closure.modules.map((item) => `${item.manifest.name}@${item.manifest.version}`),
-        exports: result.exports.map((item) => ({ name: item.name, type: item.type, kind: item.ref.kind })),
+        format: "hypit.cli-check@2" as const,
+        sourceKind: "author" as const,
+        ok: true,
+        source: projectPath(workspace.entry.name, effectiveWorkspaceRoot),
+        frontend: sourceHeader.using,
+        units: result.closure.units.length,
+        assets: result.attachments.length,
+        modules: modules.length,
+        outputCount: outputs.length,
+        outputs: outputs.slice(0, args.limit).map((item) => ({ name: item.name, type: cliTypeName(item.type) })),
+        ...(outputs.length <= args.limit ? {} : { omittedOutputs: outputs.length - args.limit }),
+        ...(args.verbose ? { details: {
+          modules: modules.slice(0, args.limit),
+          values: values.slice(0, args.limit).map((item) => ({ name: item.name, type: cliTypeName(item.type) })),
+        } } : {}),
       } as const;
       writeCliOutput(io, args, {
         kind: "check-author",
         machine,
-        source: workspace.entry.name,
-        frontend: sourceHeader.using,
       });
       return;
     }
@@ -2102,9 +2032,8 @@ export async function runCli(
       // preflight must already be clean; `runtime up` is the explicit place for
       // installing or starting declared programs.
       assertPreflight(preflight);
-      let worker;
       try {
-        worker = await controller.worker.up({
+        await controller.worker.up({
           ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
         });
       } catch (error) {
@@ -2123,9 +2052,11 @@ export async function runCli(
               const operations = Object.entries(progress.operations)
                 .map(([status, count]) => `${count} ${status}`)
                 .join(", ");
-              io.write(`  · ${progress.build}: ${progress.phase}`
+              io.write(`  · ${progress.phase}`
                 + `${operations.length === 0 ? "" : ` · ${operations}`}\n`);
-              for (const line of progress.activity) io.write(`    ${line}\n`);
+              if (args.verbose) {
+                for (const line of progress.activity.slice(0, args.limit)) io.write(`    ${line}\n`);
+              }
             },
           }),
         });
@@ -2156,22 +2087,18 @@ export async function runCli(
             : {}),
         }];
       });
+      const buildView = buildStatusView({
+        id: built.id,
+        ...(activeView === undefined ? {} : { runtime: activeView }),
+        ...(finishedResult === undefined ? {} : { result: finishedResult }),
+        verbose: args.verbose,
+        operationLimit: args.limit,
+      });
       const machine = {
-        format: "hypit.cli-build@2",
-        build: {
-          id: built.id,
-          ...(args.title === undefined ? {} : { title: args.title }),
-          ...(activeView === undefined ? {} : { activity: activeView.activity }),
-          ...(buildOutcome === undefined ? {} : { outcome: buildOutcome }),
-          ...(issue === undefined ? {} : { issue }),
-          ...(finishedResult === undefined ? {} : {
-            result: {
-              targets: finishedResult.targets,
-              outputs: Object.keys(finishedResult.outputs),
-              outcome: finishedResult.outcome,
-            },
-          }),
-        },
+        format: "hypit.cli-build@3",
+        build: args.title === undefined || buildView.title !== undefined
+          ? buildView
+          : { ...buildView, title: args.title },
       };
       const runtimeHint = runtimeNeedsHint ? ` --runtime ${args.runtime}` : "";
       const resultTargets = finishedResult?.targets.flatMap((name) => {
@@ -2188,17 +2115,18 @@ export async function runCli(
             `Inspect  hypit inspect ${built.id}`,
             ...resultTargets
               .filter((item) => item.output.value.kind === "inline")
-              .slice(0, args.verbose ? undefined : 8)
+              .slice(0, args.limit)
               .map((item) => `Result   ${item.name} = ${inlineValuePreview(
                 item.output.value.kind === "inline" ? item.output.value.value : undefined,
               )}`),
             ...resultTargets
               .filter((item) => item.output.value.kind !== "inline")
-              .slice(0, args.verbose ? undefined : 4)
+              .slice(0, args.limit)
               .map((item) =>
                 `Export   hypit get ${built.id} --output ${item.name} --to <path>`),
             ...(resultTargets.length > 0 ? [] : targetPresentations
               .filter((item) => item.inline !== undefined)
+              .slice(0, args.limit)
               .map((item) => `Result   ${item.published.name} = ${item.inline}`)),
           ];
       writeOperational(machine, args.follow
@@ -2207,11 +2135,9 @@ export async function runCli(
       buildOutcome === "failed" || issue !== undefined ? "error"
         : buildOutcome === "cancelled" || (args.follow && !finished) ? "warning" : "success", [
           ["Build", built.id],
-          ...(activeView === undefined
-            ? []
-            : [["Activity", activeView.activity] as const]),
-          ...(buildOutcome === undefined ? [] : [["Outcome", buildOutcome] as const]),
-          ["Worker", worker.state === "running" ? String(worker.pid) : worker.state],
+          ["Work", machine.build.work.state],
+          ...(machine.build.work.outcome === undefined ? [] : [["Decision", machine.build.work.outcome] as const]),
+          ["Result", machine.build.result.state],
           ["Targets", String(finishedResult?.targets.length ?? targetPublishedOutputs.length)],
         ], finished ? finishedLines : issue !== undefined ? [
           `Result   ${issue.scope}: ${issue.message}`,
@@ -2243,20 +2169,54 @@ export async function runCli(
       : await preflightPlan(await runtimeHost(args.runtime), result.state);
     const outputNames = Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
       item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : []));
+    const externalRequests = new Map<string, number>();
+    for (const step of result.definition.plan.steps) {
+      const count = Object.keys(step.needs).length;
+      if (count === 0) continue;
+      const operation = `${step.producer.module.name}@${step.producer.module.version}/${step.producer.name}`;
+      externalRequests.set(operation, (externalRequests.get(operation) ?? 0) + count);
+    }
+    const allChoices = result.selections.flatMap((selection) => {
+      const output = outputNames[selection.output];
+      const candidate = loaded.run.satisfactionNames[selection.output];
+      return output === undefined || candidate === undefined ? [] : [{ output, candidate }];
+    });
+    const allUnreached = unreachedGenerations(result.compilation.author.graph, result.state, outputNames)
+      .map((item) => ({ output: item.name, operation: item.producer }));
+    const requestViews = [...externalRequests.entries()].sort(([left], [right]) => left.localeCompare(right))
+      .map(([operation, count]) => ({ operation, count }));
+    const targets = loaded.run.document.targets.map((item) => item.output);
     writeCliOutput(io, args, {
       kind: "plan",
       machine: {
-        format: "hypit.cli-plan@1",
+        format: "hypit.cli-plan@2",
         ok: preflight?.ok ?? true,
-        plan: result.definition.plan,
-        unreached: unreachedGenerations(result.compilation.author.graph, result.state, outputNames),
-        deterministic_durations: deterministicSpeechDurations(result.compilation),
-        ...(preflight === undefined ? {} : { preflight }),
+        run: projectPath(loaded.path, effectiveWorkspaceRoot),
+        targetCount: targets.length,
+        targets: targets.slice(0, args.limit),
+        steps: result.definition.plan.steps.length,
+        externalRequestCount: requestViews.reduce((total, item) => total + item.count, 0),
+        externalRequests: requestViews.slice(0, args.limit),
+        ...(requestViews.length <= args.limit ? {} : { omittedExternalRequests: requestViews.length - args.limit }),
+        choiceCount: allChoices.length,
+        choices: allChoices.slice(0, args.limit),
+        ...(allChoices.length <= args.limit ? {} : { omittedChoices: allChoices.length - args.limit }),
+        ...(allUnreached.length === 0 ? {} : { unreached: allUnreached.slice(0, args.limit) }),
+        ...(allUnreached.length <= args.limit ? {} : { omittedUnreached: allUnreached.length - args.limit }),
+        ...(preflight === undefined ? {} : { preflight: {
+          ok: preflight.ok,
+          capabilityCount: preflight.capabilities.length,
+          capabilities: preflight.capabilities.slice(0, args.limit),
+          ...(preflight.capabilities.length <= args.limit
+            ? {}
+            : { omittedCapabilities: preflight.capabilities.length - args.limit }),
+          diagnosticCount: preflight.diagnostics.length,
+          diagnostics: preflight.diagnostics.slice(0, args.limit),
+          ...(preflight.diagnostics.length <= args.limit
+            ? {}
+            : { omittedDiagnostics: preflight.diagnostics.length - args.limit }),
+        } }),
       },
-      run: loaded.path,
-      outputNames,
-      satisfactionNames: loaded.run.satisfactionNames,
-      selections: result.selections,
     });
     if (preflight !== undefined && !preflight.ok) io.setExitCode?.(1);
   } finally {

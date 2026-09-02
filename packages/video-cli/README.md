@@ -18,12 +18,11 @@ hypit build build.svrun --follow
 hypit status <build-id> --watch
 hypit activity
 hypit builds
-hypit history [source-output-name] [--source ./main.svml] [--pin] [--exclude-targets]
-hypit inspect <build-id>
+hypit history <source-output-name> [--source ./main.svml]
+hypit inspect <build-id> [--output <source-output-name>]
 hypit get <build-id> --output final.video --to ./final.mp4
 hypit cancel <build-id>
 hypit doctor
-hypit gc
 ```
 
 Install the `hypit` Distribution globally once. It resolves its own TypeScript loader and CLI, so it
@@ -70,6 +69,13 @@ changes Build identity or retention; large media does not need to be loaded into
 `builds` and `history` browse project-owned Result manifests newest first. `--before <build-id>` moves
 the cursor to older Results without a central history table. Presentation titles, notes and highlights
 live in the Result manifest and may be edited without changing the Build id or the saved Outputs.
+`history` always asks for one exact Output name; it never chooses a Result or writes reuse markup.
+Use the returned Build id and Output name explicitly in a Run Source when reusing that value.
+
+Human output is compact and organized around author-facing names. `--json` returns a stable, bounded
+command view rather than Repository manifests or Runtime persistence objects. `--verbose` adds bounded
+operational detail; physical state locations remain the job of `paths`, while `get --to` and
+`runtime logs --verbose` expose the paths those commands explicitly operate on.
 
 Historical Records, fixed files and generated previews are declared as ordinary Candidates in the
 Run Source and selected by explicit Satisfaction edges. The Host verifies a referenced prior Build
