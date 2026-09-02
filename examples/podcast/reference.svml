@@ -39,12 +39,18 @@
     </arms-are-asking>
   </script>
 
-  <asset:Image id="guy" src="./assets/guy.png"/>
-  <asset:Image id="girl" src="./assets/girl.png"/>
-  <asset:Image id="guy-hypihub" src="./assets/guy-hypihub.jpg"/>
-  <asset:Image id="girl-hypihub" src="./assets/girl-hypihub.jpg"/>
-  <asset:Image id="split-hypihub" src="./assets/split-hypihub.jpg"/>
-  <asset:Image id="creatine" src="./assets/creatine.png"/>
+  <text:Value id="guy-prompt">Photorealistic vertical iPhone video frame featuring guy, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="guy" prompt={guy-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="girl-prompt">Photorealistic vertical iPhone video frame featuring girl, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="girl" prompt={girl-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="guy-hypihub-prompt">Photorealistic vertical image of guy hypihub, natural lighting, realistic detail, clear composition, no readable text or logos.</text:Value>
+  <gpt:Image id="guy-hypihub" prompt={guy-hypihub-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="girl-hypihub-prompt">Photorealistic vertical image of girl hypihub, natural lighting, realistic detail, clear composition, no readable text or logos.</text:Value>
+  <gpt:Image id="girl-hypihub" prompt={girl-hypihub-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="split-hypihub-prompt">Photorealistic vertical image of split hypihub, natural lighting, realistic detail, clear composition, no readable text or logos.</text:Value>
+  <gpt:Image id="split-hypihub" prompt={split-hypihub-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="creatine-prompt">Photorealistic vertical iPhone video frame featuring creatine, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="creatine" prompt={creatine-prompt} aspect-ratio="9:16" resolution="2K"/>
 
   <asset:Audio id="guy-voice" src="./assets/dude.mp3"/>
   <asset:Audio id="girl-voice" src="./assets/girl.wav"/>

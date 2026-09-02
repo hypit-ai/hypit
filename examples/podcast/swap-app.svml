@@ -37,9 +37,12 @@
     </brain-is-asking>
   </script>
 
-  <asset:Image id="nerd" src="./assets/nerd.png"/>
-  <asset:Image id="jock" src="./assets/jock.png"/>
-  <asset:Image id="cheatgpt-icon" src="./assets/cheatgpt.png"/>
+  <text:Value id="nerd-prompt">Photorealistic vertical iPhone video frame featuring nerd, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="nerd" prompt={nerd-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="jock-prompt">Photorealistic vertical iPhone video frame featuring jock, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="jock" prompt={jock-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="cheatgpt-icon-prompt">Clean colorful 3D emoji-style icon representing cheatgpt, centered on a simple light background, crisp edges, no readable text.</text:Value>
+  <gpt:Image id="cheatgpt-icon" prompt={cheatgpt-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
 
   <asset:Audio id="nerd-voice" src="./assets/nerd.wav"/>
   <asset:Audio id="jock-voice" src="./assets/jock.wav"/>

@@ -39,9 +39,12 @@
     </arms-are-asking>
   </script>
 
-  <asset:Image id="doge" src="./assets/doge.png"/>
-  <asset:Image id="pepe" src="./assets/pepe.png"/>
-  <asset:Image id="creatine" src="./assets/creatine.png"/>
+  <text:Value id="doge-prompt">Photorealistic vertical iPhone video frame featuring doge, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="doge" prompt={doge-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="pepe-prompt">Photorealistic vertical iPhone video frame featuring pepe, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="pepe" prompt={pepe-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="creatine-prompt">Photorealistic vertical iPhone video frame featuring creatine, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="creatine" prompt={creatine-prompt} aspect-ratio="9:16" resolution="2K"/>
 
   <asset:Audio id="doge-voice" src="./assets/doge.wav"/>
   <asset:Audio id="pepe-voice" src="./assets/pepe.wav"/>

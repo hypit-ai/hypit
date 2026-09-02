@@ -36,7 +36,8 @@
     </messi>
   </script>
 
-  <asset:Image id="presenter" src="./assets/goth.jpg"/>
+  <text:Value id="presenter-prompt">Photorealistic vertical iPhone video frame featuring presenter, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="presenter" prompt={presenter-prompt} aspect-ratio="9:16" resolution="2K"/>
   <text:Value id="presenter-mock-prompt">A realistic vertical portrait of a charismatic football commentator with medium-brown skin, dark wavy hair, expressive brown eyes, and a neatly trimmed beard, holding a microphone in a moody studio, natural skin texture, no text, no logos.</text:Value>
   <gpt:Image id="presenter-mock" prompt={presenter-mock-prompt} aspect-ratio="9:16" resolution="1K"/>
   <asset:Audio id="presenter-voice" src="./assets/goth.wav"/>
