@@ -32,6 +32,31 @@ choice between things that all work, and asking costs the author an interruption
 the references already answer. Decide it and keep going. A run that stops half way with a question is
 a run the author has to restart.
 
+## Non-negotiable reconstruction credential gate
+
+For any request that starts from a reference video, establish a usable provider credential before
+reconstruction work begins. HypiHub OAuth is the default and recommended path. Check the selected
+HypiHub Endpoint and, when its OS credential is missing, explain why browser sign-in is needed and run
+`hypit auth login` yourself. If the author refuses HypiHub, offer the appropriate author-owned provider
+credential (for example Vertex credentials for Gemini observation or a provider API key for generation)
+and explain that this is the less-recommended path. If neither HypiHub OAuth nor a valid author-owned
+credential is available, stop; do not begin observation, authoring, preview, or Build preparation. The
+author's request to avoid keys never waives this gate.
+
+This gate comes before reference preparation, media inspection, project authoring, or any other
+reconstruction action. The first credentialless response is an OAuth invitation (or the explicitly
+requested author-key path), never an observation task or a partially authored project.
+
+The credentialless `agent` observer is not a way around this rule. It may be used only after the
+credential choice has been settled; never silently select it because no credential was found.
+
+The supplied reference video is evidence only. It may be prepared, observed, sampled and compared,
+but it must never be copied into the project or used as the final Film/Track/Take source. Do not wire
+the reference path through `media:Video`, `asset:Video`, a media track, a Film, or a Run Target. Every
+visible shot in a reconstruction must be newly authored as a generated take or as an explicitly
+author-supplied replacement asset. A source that directly plays the reference is not a reconstruction
+and must be rejected before preview or Build.
+
 ## Login-only fast path
 
 If the request is only to sign in or authenticate HypiHub (for example, `login to hypit`), treat it as

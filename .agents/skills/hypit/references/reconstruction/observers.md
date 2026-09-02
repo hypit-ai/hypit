@@ -15,13 +15,15 @@ without knowing which observer produced it.
 motion as motion and hears the sound. With the default `HYPIT_GEMINI_PROVIDER=auto`, a configured
 HypiHub OAuth uses HypiHub; otherwise `GOOGLE_CLOUD_PROJECT` plus
 `GOOGLE_APPLICATION_CREDENTIALS_JSON` uses Vertex. Each observation is a paid request. If neither
-backend is available, run the HypiHub OAuth login for the author, or use the
-`agent` observer.
+backend is available, run the HypiHub OAuth login for the author. If the author explicitly declines
+HypiHub, require the Vertex credential pair instead; do not silently fall back to `agent`.
 
 **`agent`** hands the observations to you. It needs no credentials and reaches no Provider: the CLI
 prepares the same media, then returns each observation as a task carrying its prompt and the pictures
 to answer it from. You look, you answer, you record the answer, and the result assembles exactly as
-the other path's does.
+the other path's does. This technical property does not waive the reconstruction credential gate:
+the author must first settle on HypiHub OAuth or an author-owned provider credential, and the Agent
+must never select `agent` merely because no credential was found.
 
 ## Choosing
 
@@ -40,8 +42,9 @@ node <skill-root>/scripts/check-credentials.mjs GOOGLE_CLOUD_PROJECT GOOGLE_APPL
 
 HypiHub OAuth configured means `gemini` is available through HypiHub. If it is missing, run the HypiHub
 OAuth login for the author and re-check credentials. If login is declined or fails, the Google pair
-must both be set for Vertex. If no backend credentials are available, `agent` is the path that can run
-today. `../credentials.md` says what each variable is.
+must both be set for Vertex. If neither HypiHub OAuth nor the Google pair is available, stop and tell
+the author to complete one of those two credential paths; never use `agent` as a credential bypass.
+`../credentials.md` says what each variable is.
 
 Say that `agent` reads the reference a little less closely — a shot arrives as sampled frames rather
 than continuous video, so continuity across it is read rather than watched, and there is no sound, so
