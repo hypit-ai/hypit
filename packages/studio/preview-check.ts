@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 
 import { videoCliDistribution } from "@hypit/video-cli";
 
-import { openStudioArchive } from "./src/archive.js";
+import { openStudioBuildLibrary } from "./src/build-library.js";
 import { loadStudioCompanionRegistry } from "./src/companion-profile.js";
 import { loadStudioDomain } from "./src/domain.js";
 import { loadStudioRun } from "./src/run.js";
@@ -62,7 +62,7 @@ if (runArgument === undefined) {
 
   const registry = await loadStudioCompanionRegistry({ workspaceRoot, packageRoot, distributionPackageRoot });
   const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
-  const archive = await openStudioArchive(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
+  const buildLibrary = await openStudioBuildLibrary(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
   const awaitingPrefix = "the Studio projection closure requires unresolved capabilities:";
 
   let session: Awaited<ReturnType<typeof readStudioSession>> | undefined;
@@ -73,7 +73,7 @@ if (runArgument === undefined) {
       run: runPath,
       domain,
       registry,
-      ...(archive === undefined ? {} : { archive }),
+      ...(buildLibrary === undefined ? {} : { buildLibrary }),
     });
     inspectStudioRun(registry, run.source, run);
     session = await readStudioSession({
@@ -81,7 +81,6 @@ if (runArgument === undefined) {
       registry,
       run,
       workspaceRoot,
-      ...(archive === undefined ? {} : { archive }),
       revision: 0,
     });
   } catch (error) {
@@ -93,7 +92,7 @@ if (runArgument === undefined) {
       refusal = error instanceof Error ? error.message : String(error);
     }
   } finally {
-    await archive?.close();
+    await buildLibrary?.close();
   }
 
   if (refusal !== undefined) {

@@ -1,5 +1,5 @@
 import { readFile, rm, stat } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 
 import {
   collectLoadedNodePackageComponents,
@@ -7,19 +7,21 @@ import {
   loadNodePackageSelection,
 } from "@hypit/package-loader-node";
 import type { NodePackageSelectionRequest } from "@hypit/package-loader-node";
-import { canonicalize } from "@hypit/protocol";
+import { assertBuildId, canonicalize, canonicalStringify } from "@hypit/protocol";
 import type { CanonicalValue, CapabilityRef } from "@hypit/protocol";
 import {
   CompositeCredentialStore,
 } from "@hypit/runtime";
 import type { CredentialStore } from "@hypit/runtime";
 import { FileResourceStore } from "@hypit/resource-store-fs";
+import { FileBuildResultRepository } from "@hypit/build-result";
 import {
   buildResultRepositoryHostAbi,
   BuildResultRepositoryRegistry,
   isBuildResultRepositoryHostFacet,
 } from "@hypit/build-result-kit";
 import type {
+  BuildResultRepositoryDiagnostic,
   BuildResultRepositoryLocation,
   BuildResultRepositoryOpened,
 } from "@hypit/build-result-kit";
@@ -47,15 +49,15 @@ import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
 import { createLocalRuntime } from "./runtime.js";
 import {
-  createLocalRuntimeArchiveControl,
-  createLocalRuntimeResourceAccess,
+  createLocalRuntimeControl,
 } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
+import { createLocalResultWriter } from "./result-writer.js";
 import type {
   LocalCredentialControl,
+  LocalResultWriter,
   LocalRuntime,
-  LocalRuntimeArchiveControl,
-  LocalRuntimeResourceAccess,
+  LocalRuntimeControl,
 } from "./types.js";
 
 export type RuntimeConfigEntry = {
@@ -68,9 +70,19 @@ export type RuntimeConfigEntry = {
 export type RuntimeConfigDocument = {
   readonly format: "hypit.runtime-profile@1";
   readonly dataRoot: string;
-  readonly results?: RuntimeConfigEntry;
   readonly credentials: readonly RuntimeConfigEntry[];
   readonly endpoints: readonly RuntimeConfigEntry[];
+};
+
+export type ProjectBuildResultConfig = {
+  readonly format: "hypit.build-results@1";
+  readonly use: string;
+  readonly config?: CanonicalValue;
+};
+
+export type ProjectBuildResultDoctorResult = {
+  readonly location?: BuildResultRepositoryLocation;
+  readonly diagnostics: readonly BuildResultRepositoryDiagnostic[];
 };
 
 export type LoadRuntimeConfigOptions = {
@@ -80,6 +92,8 @@ export type LoadRuntimeConfigOptions = {
   readonly distributionPackageRoot?: string;
   /** Persistent machine/user state. Defaults to the platform Hypit state root. */
   readonly hostStateRoot?: string;
+  /** Worker-only ownership check performed before reclaiming or claiming execution. */
+  readonly assertExecutionOwner?: () => Promise<void> | void;
 };
 
 export type RuntimeConfigDoctorResult = {
@@ -139,7 +153,7 @@ function entry(value: unknown, instance: string, subject: string, poolAllowed = 
 
 function entries(value: unknown, subject: string, poolAllowed = false): readonly RuntimeConfigEntry[] {
   const values = object(value ?? {}, subject);
-  return Object.entries(values).map(([instance, item]) => {
+  return Object.entries(values).sort(([left], [right]) => left.localeCompare(right)).map(([instance, item]) => {
     requiredString(instance, `${subject} instance`);
     return entry(item, instance, `${subject}.${instance}`, poolAllowed);
   });
@@ -157,8 +171,7 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
     throw new Error(`Local Runtime loader cannot activate ${String(runtime.use)}`);
   }
   const config = object(runtime.config, "$runtime.runtime.config");
-  exactKeys(config, ["dataRoot", "results", "credentials", "endpoints"], "$runtime.runtime.config");
-  const results = config.results === undefined ? undefined : entry(config.results, "results", "$runtime.runtime.config.results");
+  exactKeys(config, ["dataRoot", "credentials", "endpoints"], "$runtime.runtime.config");
   const credentials = entries(config.credentials, "$runtime.runtime.config.credentials");
   const endpoints = entries(config.endpoints, "$runtime.runtime.config.endpoints", true);
   const ids = [...credentials, ...endpoints].map((value) => value.instance);
@@ -166,7 +179,6 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   return {
     format: "hypit.runtime-profile@1",
     dataRoot: requiredString(config.dataRoot, "$runtime.runtime.config.dataRoot"),
-    ...(results === undefined ? {} : { results }),
     credentials,
     endpoints,
   };
@@ -249,22 +261,6 @@ async function installBuildResultAdapter(
   if (!registry.has(use)) throw new Error(`Package selection did not provide Build Result Repository ${use}`);
 }
 
-function resultLocation(opened: OpenedRuntimeConfig, defaultRoot: string): BuildResultRepositoryLocation {
-  const selected = opened.document.results;
-  return selected === undefined
-    ? {
-        root: resolve(defaultRoot),
-        selection: { use: "@hypit/build-result-fs", config: { path: "." } },
-      }
-    : {
-        root: opened.profileRoot,
-        selection: {
-          use: selected.use,
-          ...(selected.config === undefined ? {} : { config: selected.config }),
-        },
-      };
-}
-
 async function openBuildResultLocation(
   location: BuildResultRepositoryLocation,
   options: LoadRuntimeConfigOptions,
@@ -275,16 +271,91 @@ async function openBuildResultLocation(
   return await registry.open(location.selection, location.root);
 }
 
-export async function openBuildResultRepositoryFromConfig(
-  path: string,
-  defaultRoot: string,
+export async function openBuildResultRepositoryLocation(
+  location: BuildResultRepositoryLocation,
+  options: LoadRuntimeConfigOptions = {},
+): Promise<BuildResultRepositoryOpened> {
+  const root = resolve(location.root);
+  const registry = options.resultRegistry ?? new BuildResultRepositoryRegistry();
+  return await openBuildResultLocation(location, options, resolve(options.packageRoot ?? root), registry);
+}
+
+export async function openProjectBuildResultRepository(
+  projectRoot: string,
   options: LoadRuntimeConfigOptions = {},
 ): Promise<BuildResultRepositoryOpened & { readonly location: BuildResultRepositoryLocation }> {
-  const opened = await openRuntimeConfig(path, options.packageRoot);
-  const location = resultLocation(opened, defaultRoot);
+  const root = resolve(projectRoot);
+  const selected = await projectBuildResultLocation(root);
+  const location = selected.location;
+  if (selected.implicit) {
+    return {
+      location,
+      repository: new FileBuildResultRepository(resolve(root, ".hypit/results")),
+    };
+  }
   const registry = options.resultRegistry ?? new BuildResultRepositoryRegistry();
-  const result = await openBuildResultLocation(location, options, opened.packageRoot, registry);
+  const result = await openBuildResultLocation(location, options, resolve(options.packageRoot ?? root), registry);
   return { ...result, location };
+}
+
+async function projectBuildResultLocation(root: string): Promise<{
+  readonly location: BuildResultRepositoryLocation;
+  readonly implicit: boolean;
+}> {
+  const configPath = resolve(root, "hypit.results.json");
+  const text = await readFile(configPath, "utf8").catch((error: unknown) => {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
+    throw error;
+  });
+  let selection: BuildResultRepositoryLocation["selection"];
+  const implicit = text === undefined;
+  if (text === undefined) {
+    selection = { use: "@hypit/build-result-fs", config: { path: ".hypit/results" } };
+  } else {
+    const item = object(JSON.parse(text), "$results");
+    exactKeys(item, ["format", "use", "config"], "$results");
+    if (item.format !== "hypit.build-results@1") {
+      throw new Error("$results.format must be hypit.build-results@1");
+    }
+    selection = {
+      use: requiredString(item.use, "$results.use"),
+      ...(item.config === undefined ? {} : { config: canonicalize(item.config) }),
+    };
+  }
+  return { location: { root, selection }, implicit };
+}
+
+/** Diagnose the project-owned Result Store without reading Result history or mutating storage. */
+export async function doctorProjectBuildResultRepository(
+  projectRoot: string,
+  options: LoadRuntimeConfigOptions = {},
+): Promise<ProjectBuildResultDoctorResult> {
+  const root = resolve(projectRoot);
+  let location: BuildResultRepositoryLocation | undefined;
+  try {
+    location = (await projectBuildResultLocation(root)).location;
+    const registry = options.resultRegistry ?? new BuildResultRepositoryRegistry();
+    await installBuildResultAdapter(
+      registry,
+      resolve(options.packageRoot ?? root),
+      location.selection.use,
+      options.distributionPackageRoot,
+    );
+    return {
+      location,
+      diagnostics: await registry.doctor(location.selection, location.root),
+    };
+  } catch (error) {
+    return {
+      ...(location === undefined ? {} : { location }),
+      diagnostics: [{
+        severity: "error",
+        code: "RESULT_REPOSITORY_INVALID",
+        message: error instanceof Error ? error.message : String(error),
+        subject: resolve(root, "hypit.results.json"),
+      }],
+    };
+  }
 }
 
 export async function resolveRuntimeConfigPaths(
@@ -305,7 +376,6 @@ export async function prepareRuntimeConfigPackages(
   if (options.distributionPackageRoot === undefined) return [];
   const { document } = await openRuntimeConfig(path, options.packageRoot);
   const requirements = await distributionExternalPackageRequirements([
-    ...(document.results === undefined ? [] : [document.results.use]),
     ...document.credentials.map((item) => item.use),
     ...document.endpoints.map((item) => item.use),
   ], options.distributionPackageRoot);
@@ -405,17 +475,21 @@ function statePath(root: string): string {
 }
 
 function buildWorkPath(root: string, build: string): string {
-  if (build.trim().length === 0 || build.includes("/") || build.includes("\\")) {
-    throw new Error("Build id is not a working-directory name");
+  assertBuildId(build);
+  const work = resolve(root, "work");
+  const target = resolve(work, build);
+  const relation = relative(work, target);
+  if (relation.length === 0 || relation === ".." || relation.startsWith(`..${sep}`)) {
+    throw new Error(`Build ${build} leaves Runtime work root ${work}`);
   }
-  return resolve(root, "work", build);
+  return target;
 }
 
 async function inspectRuntimeConfig(
   path: string,
   options: RuntimeInspectionOptions,
 ): Promise<RuntimeConfigDoctorResult> {
-  const { absolute, document, root, profileRoot, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const { absolute, document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
   const diagnostics: RuntimeDoctorDiagnostic[] = [];
   try {
@@ -426,19 +500,8 @@ async function inspectRuntimeConfig(
     }
   }
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  const resultRegistry = options.resultRegistry ?? new BuildResultRepositoryRegistry();
   try {
     await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
-    if (document.results !== undefined) {
-      await installBuildResultAdapter(resultRegistry, packageRoot, document.results.use, options.distributionPackageRoot);
-      resultRegistry.validate(
-        {
-          use: document.results.use,
-          ...(document.results.config === undefined ? {} : { config: document.results.config }),
-        },
-        profileRoot,
-      );
-    }
   } catch (error) {
     return { dataRoot: root, diagnostics: [diagnostic(error, "RUNTIME_PACKAGE_SELECTION_INVALID")] };
   }
@@ -518,9 +581,7 @@ async function inspectRuntimeConfig(
             code: "RUNTIME_CREDENTIAL_MISSING",
             message: `${slot.label} for Endpoint ${slot.endpoint} is not configured. ${
               slot.ref.store === "env"
-                ? slot.ref.key === "HYPIHUB_API_KEY"
-                  ? `Sign in with HypiHub using: hypit auth login ${slot.endpoint} --runtime ${absolute}`
-                  : `Set ${slot.ref.key} in this process environment.`
+                ? `Set ${slot.ref.key} in this process environment.`
                 : `Configure it with: hypit auth login ${slot.endpoint} --runtime ${absolute}`}`,
             subject: `${slot.endpoint}.${slot.slot}`,
           });
@@ -564,15 +625,16 @@ export async function createRuntimeFromConfig(
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   const resultRegistry = options.resultRegistry ?? new BuildResultRepositoryRegistry();
   await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
-  await installBuildResultAdapter(
-    resultRegistry,
-    packageRoot,
-    document.results?.use ?? "@hypit/build-result-fs",
-    options.distributionPackageRoot,
-  );
   const state = new SqliteRuntimeState(statePath(root));
+  // Only selections that can change Command execution or an Operation handle are pinned until
+  // every Build using them has left active Runtime state.
+  const environmentConfig = canonicalStringify({
+    credentials: document.credentials,
+    endpoints: document.endpoints,
+  });
   let credentials: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
   try {
+    await state.environment.use(environmentConfig);
     credentials = await openCredentialStores(document, root, hostStateRoot, registry);
     const endpoints = await Promise.all(document.endpoints.map(async (item) => await registry.createEndpoint(
       item.use,
@@ -582,7 +644,14 @@ export async function createRuntimeFromConfig(
       buildStore: state.builds,
       buildCatalog: state.catalog,
       operationStore: state.operations,
-      dispatchStore: state.dispatch,
+      commandExecutionStore: state.commandExecutions,
+      assertEnvironment: async () => {
+        await state.environment.assert(environmentConfig);
+        await options.assertExecutionOwner?.();
+      },
+      executionStore: state.execution,
+      removeActiveBuild: async (build) => await state.removeActiveBuild(build),
+      submissionStore: state.submissions,
       resourceStore: new FileResourceStore(resolve(root, "resources")),
       resourceStoreForBuild: (build) => new FileResourceStore(buildWorkPath(root, build)),
       clearBuildResources: async (build) => {
@@ -611,28 +680,44 @@ export async function createRuntimeFromConfig(
   }
 }
 
-export async function createRuntimeArchiveFromConfig(
+export async function createRuntimeControlFromConfig(
   path: string,
   options: LoadRuntimeConfigOptions & { readonly readOnly?: boolean } = {},
-): Promise<LocalRuntimeArchiveControl> {
+): Promise<LocalRuntimeControl> {
   const { root } = await openRuntimeConfig(path, options.packageRoot);
   const state = new SqliteRuntimeState(statePath(root), { readOnly: options.readOnly === true });
-  return createLocalRuntimeArchiveControl({
+  return createLocalRuntimeControl({
     buildStore: state.builds,
     buildCatalog: state.catalog,
     operationStore: state.operations,
-    dispatchStore: state.dispatch,
+    executionStore: state.execution,
+    submissionStore: state.submissions,
     close: () => state.close(),
   });
 }
 
-export async function createRuntimeResourceAccessFromConfig(
+export async function createRuntimeResultControlFromConfig(
   path: string,
   options: LoadRuntimeConfigOptions = {},
-): Promise<LocalRuntimeResourceAccess> {
-  const { root } = await openRuntimeConfig(path, options.packageRoot);
-  return createLocalRuntimeResourceAccess({
+): Promise<LocalResultWriter> {
+  const { root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const state = new SqliteRuntimeState(statePath(root));
+  const resultRegistry = options.resultRegistry ?? new BuildResultRepositoryRegistry();
+  return createLocalResultWriter({
+    buildStore: state.builds,
+    operationStore: state.operations,
+    commandExecutionStore: state.commandExecutions,
+    executionStore: state.execution,
+    removeActiveBuild: async (build) => await state.removeActiveBuild(build),
+    submissionStore: state.submissions,
     resourceStore: new FileResourceStore(resolve(root, "resources")),
+    resourceStoreForBuild: (build) => new FileResourceStore(buildWorkPath(root, build)),
+    clearBuildResources: async (build) => {
+      await rm(buildWorkPath(root, build), { recursive: true, force: true });
+    },
+    openBuildResultRepository: async (location) =>
+      await openBuildResultLocation(location, options, packageRoot, resultRegistry),
+    close: () => state.close(),
   });
 }
 

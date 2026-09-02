@@ -1,6 +1,6 @@
 ---
 title: Studio Workspace 与 Inspector 信息架构审计
-description: 记录左上资源工作区、右上组件工作台、Runtime 历史与数据依赖可见性的现状、原则和待调研问题。
+description: 记录左上资源工作区、右上组件工作台、Build Result 历史与数据依赖可见性的现状、原则和待调研问题。
 ---
 
 # Studio Workspace 与 Inspector 信息架构审计
@@ -89,11 +89,11 @@ Studio 只显示当前 Source 中真实存在、可写、且被 Companion Inspec
 
 会话级元信息因此只在未选中状态出现；选中状态只承担调整。身份、Provenance、Source 路径和只读执行关系不再混进字段列表。“不重复元信息”和“选中后全是可调整内容”的边界已经落实。
 
-### 3.4 Runtime 已经拥有任务和产物所需的主要事实
+### 3.4 活动执行与历史结果已有各自的事实来源
 
-Runtime Host 已经能读取 Build Catalog、Build 状态、Operation、Dispatch、Queue 和 Artifact。Build Catalog 已记录 Source、可选 Run、公共别名、Build 与创建时间；Build Definition、Facts 和物化 State 保存执行图、选择、输入输出 Record、Need 与诊断。
+Runtime Host 只向 Studio 提供稳定的活动 `BuildView`；底层提交行、Execution 与容量票据不会穿过这个边界。Build Result 则保存每次 Build 的公开 `publishedOutputs`、Source、可选 Run、目标、展示字段与最终 outcome；它不依赖 Runtime SQLite 才能被读取或复用。
 
-Studio Archive 现在会把当前环境边界内的 Build Catalog、Build 状态、Dispatch、Operation 与 accepted Record Artifact 投影到 Tasks / Artifacts；仍不创建 Studio 数据库。当前查询仍是全量 Catalog 后逐 Build 读取状态，长期历史的分页接口仍待解决。
+Studio Build Library 现在把所选 Runtime 中的活动 `BuildView` 与项目 Result 仓库中的已结束 Build 合并投影到 Tasks，把 Result 公开输出中的文件投影到 Artifacts；仍不创建 Studio 数据库。没有 Runtime 时，历史 Result 和 Artifacts 仍然可见，只缺少活动执行状态。Repository 已按有序 Build id 提供 newest-first 游标分页；当前 Studio 只读最近 100 个 Result，继续翻页的交互仍待设计。
 
 ### 3.5 精确的数据依赖并未从底层消失
 
@@ -132,19 +132,19 @@ twinit 的完整 DAG 主要服务于编辑 workspace。Hypit 已由 Source 和 R
 - `.svml` 是 Author Source；
 - `.svs` 是 Recipe Source；
 - `.svrun` 是 Run Source；
-- Runtime Profile 与 Runtime Archive 提供执行和历史；
+- Runtime Profile 提供外部执行环境，Runtime 的 `BuildView` 只提供活动执行；项目 Build Result 提供历史结果与复用地址；
 - Studio 只是这些事实的读取、投影和受控写回界面，不拥有第二份作者状态。
 
 ### 5.2 左上不是裸文件系统
 
-默认范围应来自当前 Run 的真实 Source closure、当前 Runtime Profile 和真实 Archive。不得遍历项目目录后把无关文件、临时文件或碰巧存在的媒体冒充制作资源。
+默认范围应来自当前 Run 的真实 Source closure、项目 Result 仓库，以及可选的当前 Runtime 活动状态。不得遍历项目目录后把无关文件、临时文件或碰巧存在的媒体冒充制作资源。
 
 是否还需要一个明确授权的更广“项目文件”视图，仍待调研。
 
 ### 5.3 任务不是新的实体，产物不是目录扫描结果
 
-- 任务应建立在 Build、Dispatch 和 Operation 上；
-- 产物应建立在 accepted Record、Logical Output 和 Artifact 上；
+- 活动任务应建立在 Build 与 Operation 上，已结束任务应建立在 Build Result 上；
+- 产物应建立在 Result 公开的 Logical Output 及其值文件上；
 - 不为 Studio 再造 task.json、history.json、索引摘要、运行锁或内容哈希清单；
 - 不复制 Artifact 到 Studio 私有目录来制造“素材库”。
 
@@ -181,7 +181,7 @@ twinit 的完整 DAG 主要服务于编辑 workspace。Hypit 已由 Source 和 R
 第一阶段已经确定为：
 
 - Source：当前 Run 涉及的 Author、Recipe 与 Run Source；
-- Tasks：当前环境 Runtime 中由 Catalog 证明属于该边界的 Build 和活动状态；
+- Tasks：项目 Result 中的已结束 Build，以及当前 Runtime 中由 Catalog 证明属于该边界的活动状态；
 - Artifacts：这些 Build 的项目 Build Result 中公开的文件。
 
 三者共用一级标签。Source 内按精确文件切换；Tasks 与 Artifacts 保持只读。这个决定不引入业务目录语义，也不阻止后续为大量历史增加分页或筛选。
@@ -204,9 +204,9 @@ twinit 的完整 DAG 主要服务于编辑 workspace。Hypit 已由 Source 和 R
 
 ## 七、存储与查询方面的观察
 
-现有 Build Catalog 是正确的起点，但当前读取接口只提供全量 `list()`，SQLite 里 Source 与 Run 又位于 `descriptor_json` 中。长期积累大量广告 Build 后，Studio 如果先全量读取再逐个查询状态，会形成不必要的扫描与 N+1 请求。
+Build Result 是历史查询的唯一事实来源。Repository 现在用有序 Build id 提供 newest-first 游标分页；文件系统 adapter 只枚举 Result 目录名，S3 adapter 通过可逆时间前缀请求有界 delimiter page，两者都不建立中央索引。活动 Runtime 只提供当前 `BuildView`，不承担历史分页。
 
-后续需要调研一个可分页、可限定当前 Run / Source 的只读查询面。是否应把已有 Source/Run 路径投影为可索引列、各 Runtime adapter 如何实现统一游标、哪些状态需要实时查询，尚未定案。
+Studio 当前固定读取最近 100 个 Result。后续若需要按当前 Run / Source 筛选或继续向前翻页，应直接扩展 Repository 的只读查询能力和 UI 游标，不建立 Studio 私有索引；活动状态继续直接向可选 Runtime 查询。
 
 明确不考虑：
 
@@ -215,7 +215,7 @@ twinit 的完整 DAG 主要服务于编辑 workspace。Hypit 已由 Source 和 R
 - 为项目关联生成内容哈希；
 - 在项目移动后静默猜测它与旧绝对路径是不是“同一个项目”。
 
-在没有显式 Project 身份的前提下，“当前 Run / 当前 Source / 当前 Runtime 全部历史”可能比伪造稳定项目 ID 更诚实。这个判断仍需结合跨目录复用工作流验证。
+在没有显式 Project 身份的前提下，“当前 Run / 当前 Source / 当前项目 Result”可能比伪造稳定项目 ID 更诚实。这个判断仍需结合跨目录复用工作流验证。
 
 ## 八、必须继续调研的问题
 
@@ -229,10 +229,10 @@ twinit 的完整 DAG 主要服务于编辑 workspace。Hypit 已由 Source 和 R
 
 ### 8.2 任务列表
 
-- Studio 需要展示 Build、Dispatch、Operation 到什么粒度才足够支持 0-1 调试？
+- Studio 需要展示 `BuildView` 与 Operation 到什么粒度才足够支持 0-1 调试？
 - 任务列表是否只读；取消、重试等运行控制是否应继续留给 CLI/agent？
 - 活跃状态怎样廉价订阅或轮询，怎样避免不可见页面后台工作？
-- 当前 Run、当前 Source 和 Runtime 全部历史的筛选语义是否足够？
+- 当前 Run、当前 Source 和项目 Result 全部历史的筛选语义是否足够？
 
 ### 8.3 产物历史
 
@@ -259,10 +259,10 @@ twinit 的完整 DAG 主要服务于编辑 workspace。Hypit 已由 Source 和 R
 
 ### 8.6 性能与生命周期
 
-- 长期 Runtime Archive 的分页规模与查询延迟；
+- 长期 Build Result 的分页规模与查询延迟；
 - 浏览器可同时保留多少任务、产物和关系详情；
 - 哪些数据只在标签首次打开时获取，哪些数据可安全缓存；
-- Studio Source revision 变化时，哪些面板失效，哪些 Runtime 历史保持不变；
+- Studio Source revision 变化时，哪些面板失效，哪些 Result 历史保持不变；
 - Runtime 不可用或没有配置时，左上如何降级而不影响已经满足的 Studio Run。
 
 ## 九、后续调研的验收方式

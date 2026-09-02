@@ -42,12 +42,11 @@ page belongs with the change to its counterpart.
 
 ## Check your work
 
-CI runs these three commands on every pull request. Run them locally first:
+CI runs these commands on every pull request. Run them locally first:
 
 ```bash
 pnpm check         # TypeScript type-check
-pnpm test          # package, service-adapter and repository-boundary tests
-pnpm test:release  # repository hygiene
+pnpm test          # package and service-adapter tests
 ```
 
 ## Open the pull request

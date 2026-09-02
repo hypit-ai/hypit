@@ -1,8 +1,4 @@
-import {
-  materializeArtifact,
-  materializeRecord,
-  runCli,
-} from "@hypit/cli";
+import { runCli } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
 import {
   installDistributionPackageResolution,
@@ -13,7 +9,6 @@ import type { LoadedPackage } from "@hypit/package-loader-node";
 
 import { videoCliDistribution } from "./distribution.js";
 
-export { materializeArtifact, materializeRecord };
 export {
   createVideoCompiler,
 } from "./compiler.js";

@@ -1,33 +1,27 @@
 import type {
   BuildResultFileRef,
+  BuildResultFileRange,
   BuildResultFinish,
-  BuildResultJsonValue,
+  BuildResultValueDocument,
   BuildResultManifest,
-  BuildResultOutput,
+  BuildResultPresentationUpdate,
   BuildResultRepository,
   BuildResultSeed,
   BuildResultSync,
   BuildResultWriter,
-  HistoricalBuildOutputRef,
+  BuildResultWriterState,
   RepositoryBuildResultOutput,
 } from "@hypit/build-result";
-import type { BlobRef, BuildState, StoredValue, TypedRecord } from "@hypit/protocol";
+import {
+  applyBuildResultPresentation,
+  assertBuildResultValueDocument,
+  assertBuildResultSeed,
+  syncBuildResultOutputs,
+} from "@hypit/build-result";
+import { assertOrderedBuildId, buildIdCreatedAt } from "@hypit/protocol";
 
 import { AwsBuildResultS3Client } from "./client.js";
 import type { AwsBuildResultS3ClientOptions, BuildResultS3Client } from "./client.js";
-
-type WriterState = {
-  readonly resources: Readonly<Record<string, string>>;
-  readonly aliases: readonly {
-    readonly name: string;
-    readonly output: string;
-  }[];
-  readonly reuses: readonly {
-    readonly candidate: string;
-    readonly build: string;
-    readonly output: string;
-  }[];
-};
 
 export type S3BuildResultRepositoryOptions = AwsBuildResultS3ClientOptions & {
   readonly prefix?: string;
@@ -45,60 +39,23 @@ function normalizePrefix(value: string | undefined): string {
   return normalized;
 }
 
-function safeBuild(build: string): string {
-  assert(build.trim().length > 0 && !build.includes("/") && !build.includes("\\"), "Build id is not a repository name");
-  return build;
+function physicalBuild(build: string): string {
+  assertOrderedBuildId(build);
+  const createdAt = buildIdCreatedAt(build)!;
+  const descendingTime = (Number.MAX_SAFE_INTEGER - createdAt).toString().padStart(16, "0");
+  return `${descendingTime}-${build}`;
+}
+
+function publicBuild(physical: string): string | undefined {
+  if (!/^\d{16}-bld_/u.test(physical)) return undefined;
+  const build = physical.slice(17);
+  return buildIdCreatedAt(build) === undefined || physicalBuild(build) !== physical ? undefined : build;
 }
 
 function safePath(path: string): string {
   assert(path.length > 0 && !path.startsWith("/") && !path.includes("\\"), "Build Result path must be relative");
   assert(!path.split("/").some((part) => part.length === 0 || part === "." || part === ".."), `Build Result path ${path} is invalid`);
   return path;
-}
-
-function safeName(value: string): string {
-  const safe = value
-    .trim()
-    .replace(/[^a-zA-Z0-9._-]+/gu, "-")
-    .replace(/^-+|-+$/gu, "");
-  return safe.length === 0 ? "output" : safe;
-}
-
-function valueFileName(output: string): string {
-  return `${encodeURIComponent(output)}.json`;
-}
-
-function mediaExtension(mediaType: string): string {
-  const subtype = mediaType.split("/", 2)[1]?.split(";", 1)[0]?.trim().toLowerCase();
-  if (subtype === undefined || subtype.length === 0) return ".bin";
-  const conventional = subtype === "jpeg" ? "jpg" : subtype === "x-wav" ? "wav" : subtype;
-  const suffix = conventional.includes("+") ? conventional.slice(0, conventional.indexOf("+")) : conventional;
-  const safe = suffix.replace(/[^a-z0-9]+/gu, "-").replace(/^-+|-+$/gu, "");
-  return safe.length === 0 ? ".bin" : `.${safe}`;
-}
-
-function scalar(value: unknown): value is null | boolean | number | string {
-  return value === null || ["boolean", "number", "string"].includes(typeof value);
-}
-
-function isBlobRef(value: unknown): value is BlobRef {
-  if (value === null || Array.isArray(value) || typeof value !== "object") return false;
-  const item = value as Readonly<Record<string, unknown>>;
-  return item.kind === "blob" && typeof item.resource === "string" && typeof item.size === "number" && typeof item.mediaType === "string";
-}
-
-function resourceIdentity(artifact: BlobRef): string {
-  assert(artifact.resource !== undefined, "Build resource has no instance identity; the producing Store must return BlobRef.resource");
-  return artifact.resource;
-}
-
-function outputRecord(state: BuildState, output: string): TypedRecord | undefined {
-  const selection = state.plan.selections.find((item) => item.output === output);
-  return selection === undefined ? undefined : state.records.find((item) => item.id === selection.record);
-}
-
-function outputCandidate(state: BuildState, output: string): string | undefined {
-  return state.plan.selections.find((item) => item.output === output)?.candidate;
 }
 
 function encodeJson(value: unknown): Uint8Array {
@@ -130,124 +87,41 @@ class S3BuildResultWriter implements BuildResultWriter {
 
   async sync(input: BuildResultSync): Promise<BuildResultManifest> {
     const manifest = await this.read();
-    if (manifest.status !== "running") return manifest;
+    if (manifest.outcome !== undefined) return manifest;
     const writer = await this.#repository.readWriter(this.#build);
     assert(writer !== undefined, `Build Result ${this.#build} has no writer state`);
-    const resources = new Map(Object.entries(writer.resources));
-    const outputs: Record<string, BuildResultOutput> = { ...manifest.outputs };
-    const materialize = async (artifact: BlobRef, preferredName: string): Promise<BuildResultFileRef> => {
-      if (artifact.origin !== undefined) {
-        return {
-          kind: "build-file",
-          build: artifact.origin.build,
-          path: artifact.origin.path,
-          size: artifact.size,
-          mediaType: artifact.mediaType,
-        };
-      }
-      const identity = resourceIdentity(artifact);
-      let path = resources.get(identity);
-      if (path === undefined) {
-        const base = safeName(preferredName);
-        let candidate = `files/${base}${mediaExtension(artifact.mediaType)}`;
-        let counter = 2;
-        const occupied = new Set(resources.values());
-        while (occupied.has(candidate)) {
-          candidate = `files/${base}-${counter}${mediaExtension(artifact.mediaType)}`;
-          counter += 1;
-        }
-        path = candidate;
-        resources.set(identity, path);
-        const chunks = await input.resources.open(artifact);
-        if (chunks === undefined) throw new Error(`Build resource ${identity} is unavailable`);
-        await this.#repository.writeFile(this.#build, path, chunks, artifact.mediaType);
-      }
-      return {
-        kind: "build-file",
-        path,
-        size: artifact.size,
-        mediaType: artifact.mediaType,
-      };
-    };
-    const convert = async (value: unknown, preferredName: string): Promise<BuildResultJsonValue> => {
-      if (isBlobRef(value)) return await materialize(value, preferredName);
-      if (scalar(value)) return value;
-      if (Array.isArray(value)) {
-        return await Promise.all(value.map(async (item, index) => await convert(item, `${preferredName}-${index + 1}`)));
-      }
-      assert(typeof value === "object", `Build Output ${preferredName} contains a non-canonical value`);
-      return Object.fromEntries(
-        await Promise.all(
-          Object.entries(value as Readonly<Record<string, unknown>>).map(async ([key, item]) => [key, await convert(item, `${preferredName}-${key}`)] as const),
-        ),
-      );
-    };
-    const outputValue = async (name: string, value: StoredValue): Promise<BuildResultOutput["value"]> => {
-      if (value.kind === "blob") return await materialize(value, name);
-      if (scalar(value.value)) return { kind: "inline", value: value.value };
-      const path = `values/${valueFileName(name)}`;
-      await this.#repository.writeJson(this.#build, path, await convert(value.value, name));
-      return { kind: "json", path };
-    };
-    const reuses = new Map(writer.reuses.map((item) => [item.candidate, item]));
-    const outputRank = (record: TypedRecord, reused: { readonly build: string; readonly output: string } | undefined): number =>
-      reused !== undefined ? 0 : record.value.kind === "blob" ? 1 : scalar(record.value.value) ? 2 : 3;
-    const ready = writer.aliases
-      .flatMap((alias) => {
-        const record = outputRecord(input.state, alias.output);
-        if (record === undefined) return [];
-        const reused = reuses.get(outputCandidate(input.state, alias.output) ?? "");
-        return [{ alias, record, reused }];
-      })
-      .sort((left, right) => {
-        return outputRank(left.record, left.reused) - outputRank(right.record, right.reused) || left.alias.name.localeCompare(right.alias.name);
-      });
-    for (const { alias, record, reused } of ready) {
-      const value: BuildResultOutput["value"] =
-        reused === undefined
-          ? await outputValue(alias.name, record.value)
-          : ({
-              kind: "build-output",
-              build: reused.build,
-              output: reused.output,
-            } satisfies HistoricalBuildOutputRef);
-      outputs[alias.name] = { type: record.type, value };
-    }
-    const now = Date.now();
-    const status = input.state.status === "complete" ? "complete" : input.state.status === "failed" ? "failed" : manifest.status;
-    const updated: BuildResultManifest = {
-      ...manifest,
-      updatedAt: now,
-      status,
-      ...(status === "running" ? {} : { finishedAt: manifest.finishedAt ?? now }),
-      outputs,
-    };
-    await this.#repository.writeWriter(this.#build, {
-      ...writer,
-      resources: Object.fromEntries(resources),
+    const updated = await syncBuildResultOutputs({
+      manifest,
+      writer,
+      sync: input,
+      target: {
+        writeResource: async (path, artifact, source) => {
+          const chunks = await source.open(artifact);
+          if (chunks === undefined) throw new Error(`Build resource ${artifact.resource} is unavailable`);
+          await this.#repository.writeFile(this.#build, path, chunks, artifact.mediaType);
+        },
+        writeValue: async (path, document) => {
+          await this.#repository.writeJson(this.#build, path, document);
+        },
+      },
     });
-    await this.#repository.writeManifest(this.#build, updated);
-    if (status !== "running") await this.#repository.deleteWriter(this.#build);
-    return updated;
+    await this.#repository.writeWriter(this.#build, updated.writer);
+    await this.#repository.writeManifest(this.#build, updated.manifest);
+    return updated.manifest;
   }
 
   async finish(input: BuildResultFinish): Promise<BuildResultManifest> {
     const manifest = await this.read();
-    if (manifest.status !== "running") {
-      if (manifest.status !== input.status || input.failure === undefined || manifest.failure !== undefined) return manifest;
-      const updated = {
-        ...manifest,
-        failure: input.failure,
-        updatedAt: Date.now(),
-      };
-      await this.#repository.writeManifest(this.#build, updated);
-      return updated;
+    if (manifest.outcome !== undefined) {
+      assert(manifest.outcome === input.outcome && manifest.failure === input.failure,
+        `Build Result ${manifest.id} is already finished with a different outcome`);
+      await this.#repository.deleteWriter(this.#build);
+      return manifest;
     }
     const now = Date.now();
     const updated: BuildResultManifest = {
       ...manifest,
-      status: input.status,
-      updatedAt: now,
+      outcome: input.outcome,
       finishedAt: manifest.finishedAt ?? now,
       ...(input.failure === undefined ? {} : { failure: input.failure }),
     };
@@ -268,7 +142,7 @@ export class S3BuildResultRepository implements BuildResultRepository {
   }
 
   #key(build: string, path: string): string {
-    const relative = `${safeBuild(build)}/${safePath(path)}`;
+    const relative = `${physicalBuild(build)}/${safePath(path)}`;
     return this.#prefix.length === 0 ? relative : `${this.#prefix}/${relative}`;
   }
 
@@ -289,11 +163,11 @@ export class S3BuildResultRepository implements BuildResultRepository {
     await this.writeJson(build, "result.json", manifest);
   }
 
-  async readWriter(build: string): Promise<WriterState | undefined> {
-    return await this.#readJson<WriterState>(build, ".writer.json");
+  async readWriter(build: string): Promise<BuildResultWriterState | undefined> {
+    return await this.#readJson<BuildResultWriterState>(build, ".writer.json");
   }
 
-  async writeWriter(build: string, state: WriterState): Promise<void> {
+  async writeWriter(build: string, state: BuildResultWriterState): Promise<void> {
     await this.writeJson(build, ".writer.json", state);
   }
 
@@ -302,27 +176,35 @@ export class S3BuildResultRepository implements BuildResultRepository {
   }
 
   async create(seed: BuildResultSeed): Promise<BuildResultWriter> {
+    assertOrderedBuildId(seed.id);
+    assertBuildResultSeed(seed);
     assert((await this.read(seed.id)) === undefined, `Build Result ${seed.id} already exists`);
-    assert(seed.name === undefined || seed.name.trim().length > 0, "Build Result name must not be empty");
-    const now = seed.startedAt ?? Date.now();
+    for (const forward of seed.forwards ?? []) {
+      assert(await this.resolve(forward.build, forward.sourceOutput) !== undefined,
+        `Build ${forward.build} has no Output ${forward.sourceOutput}`);
+    }
     const manifest: BuildResultManifest = {
-      format: "hypit.build-result@1",
+      format: "hypit.build-result@2",
       id: seed.id,
-      ...(seed.name === undefined ? {} : { name: seed.name }),
+      ...(seed.title === undefined ? {} : { title: seed.title }),
       source: seed.source,
       ...(seed.run === undefined ? {} : { run: seed.run }),
       targets: [...seed.targets],
-      startedAt: now,
-      updatedAt: now,
-      status: "running",
       outputs: {},
     };
-    await this.writeManifest(seed.id, manifest);
-    await this.writeWriter(seed.id, {
-      resources: {},
-      aliases: seed.aliases,
-      reuses: seed.reuses ?? [],
-    });
+    try {
+      await this.writeWriter(seed.id, {
+        resources: {},
+        values: {},
+        publishedOutputs: seed.publishedOutputs,
+        forwards: seed.forwards ?? [],
+      });
+      await this.writeManifest(seed.id, manifest);
+    } catch (error) {
+      await this.#client.delete(this.#key(seed.id, ".writer.json")).catch(() => undefined);
+      await this.#client.delete(this.#key(seed.id, "result.json")).catch(() => undefined);
+      throw error;
+    }
     return new S3BuildResultWriter(this, seed.id);
   }
 
@@ -330,24 +212,61 @@ export class S3BuildResultRepository implements BuildResultRepository {
     return (await this.read(build)) === undefined ? undefined : new S3BuildResultWriter(this, build);
   }
 
+  async remove(build: string): Promise<void> {
+    const prefix = this.#key(build, "result.json").slice(0, -"result.json".length);
+    const keys = await this.#client.list(prefix);
+    await Promise.all(keys.filter((key) => key.startsWith(prefix)).map(async (key) => await this.#client.delete(key)));
+  }
+
   async read(build: string): Promise<BuildResultManifest | undefined> {
     const manifest = await this.#readJson<BuildResultManifest>(build, "result.json");
-    if (manifest !== undefined) assert(manifest.format === "hypit.build-result@1", `${build}/result.json is not a Build Result`);
+    if (manifest !== undefined) assert(manifest.format === "hypit.build-result@2", `${build}/result.json is not a Build Result`);
     return manifest;
   }
 
-  async list(): Promise<readonly BuildResultManifest[]> {
+  async updatePresentation(
+    build: string,
+    update: BuildResultPresentationUpdate,
+  ): Promise<BuildResultManifest> {
+    const manifest = await this.read(build);
+    assert(manifest !== undefined, `Build Result ${build} does not exist`);
+    const updated = applyBuildResultPresentation(manifest, update);
+    await this.writeManifest(build, updated);
+    return updated;
+  }
+
+  async browse(request: { readonly before?: string; readonly limit: number }) {
+    assert(Number.isSafeInteger(request.limit) && request.limit > 0, "Build Result browse limit must be positive");
+    if (request.before !== undefined) assertOrderedBuildId(request.before);
     const prefix = this.#prefix.length === 0 ? "" : `${this.#prefix}/`;
-    const suffix = "/result.json";
-    const builds = (await this.#client.list(prefix)).flatMap((key) => {
-      if (!key.startsWith(prefix) || !key.endsWith(suffix)) return [];
-      const build = key.slice(prefix.length, -suffix.length);
-      return build.length > 0 && !build.includes("/") ? [build] : [];
-    });
-    const manifests = (await Promise.all([...new Set(builds)].map(async (build) => await this.read(build)))).filter(
-      (item): item is BuildResultManifest => item !== undefined,
-    );
-    return manifests.sort((left, right) => right.startedAt - left.startedAt || left.id.localeCompare(right.id));
+    const found: Array<BuildResultManifest & { readonly outcome: NonNullable<BuildResultManifest["outcome"]>; readonly finishedAt: number }> = [];
+    let after = request.before === undefined ? undefined : `${prefix}${physicalBuild(request.before)}/`;
+    while (found.length <= request.limit) {
+      const page = await this.#client.list(prefix, {
+        limit: Math.min(1_000, Math.max(32, request.limit + 1)),
+        delimiter: "/",
+        ...(after === undefined ? {} : { after }),
+      });
+      if (page.length === 0) break;
+      for (const item of page) {
+        after = item;
+        if (!item.startsWith(prefix) || !item.endsWith("/")) continue;
+        const physical = item.slice(prefix.length, -1);
+        if (physical.includes("/")) continue;
+        const build = publicBuild(physical);
+        if (build === undefined) continue;
+        const manifest = await this.read(build);
+        if (manifest?.outcome === undefined || manifest.finishedAt === undefined) continue;
+        found.push(manifest as typeof found[number]);
+        if (found.length > request.limit) break;
+      }
+      if (found.length > request.limit || page.length < Math.min(1_000, Math.max(32, request.limit + 1))) break;
+    }
+    const results = found.slice(0, request.limit);
+    return {
+      results,
+      ...(found.length > request.limit && results.length > 0 ? { next: results[results.length - 1]!.id } : {}),
+    };
   }
 
   async resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined> {
@@ -366,16 +285,20 @@ export class S3BuildResultRepository implements BuildResultRepository {
         currentOutput = entry.value.output;
         continue;
       }
-      if (entry.value.kind === "json") {
-        const value = await this.#readJson<BuildResultJsonValue>(currentBuild, entry.value.path);
-        assert(value !== undefined, `Build ${currentBuild} value ${entry.value.path} is unavailable`);
+      if (entry.value.kind === "value") {
+        const document = await this.#readJson<BuildResultValueDocument>(currentBuild, entry.value.path);
+        assert(document !== undefined, `Build ${currentBuild} value ${entry.value.path} is unavailable`);
+        assertBuildResultValueDocument(document, `Build ${currentBuild} Output ${currentOutput}`);
         return {
           build: currentBuild,
           output: currentOutput,
           type: entry.type,
-          value: { ...entry.value, value },
+          value: { ...entry.value, document },
         };
       }
+      const terminalKind = (entry.value as { readonly kind?: unknown }).kind;
+      assert(terminalKind === "build-file" || terminalKind === "inline",
+        `Build ${currentBuild} Output ${currentOutput} has unsupported Result value kind ${String(terminalKind)}`);
       return {
         build: currentBuild,
         output: currentOutput,
@@ -385,8 +308,24 @@ export class S3BuildResultRepository implements BuildResultRepository {
     }
   }
 
-  async openFile(build: string, file: BuildResultFileRef): Promise<AsyncIterable<Uint8Array> | undefined> {
-    return await this.#client.open(this.#key(file.build ?? build, file.path));
+  async openFile(
+    build: string,
+    file: BuildResultFileRef,
+    range?: BuildResultFileRange,
+  ): Promise<AsyncIterable<Uint8Array> | undefined> {
+    if (range !== undefined) {
+      assert(Number.isSafeInteger(range.start) && range.start >= 0, "Build Result file range start is invalid");
+      assert(Number.isSafeInteger(range.endExclusive) && range.endExclusive > range.start,
+        "Build Result file range end is invalid");
+      assert(range.endExclusive <= file.size, "Build Result file range exceeds the declared file size");
+    }
+    return await this.#client.open(this.#key(build, file.path), range);
+  }
+
+  /** Verify that the configured bucket/prefix can be listed without loading Result history. */
+  async diagnose(): Promise<void> {
+    const prefix = this.#prefix.length === 0 ? "" : `${this.#prefix}/`;
+    await this.#client.list(prefix, { limit: 1 });
   }
 
   async close(): Promise<void> {

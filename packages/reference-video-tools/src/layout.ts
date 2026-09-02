@@ -1,6 +1,5 @@
-import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { readFile, readdir, stat } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { dirname, extname, join, normalize, resolve, sep } from "node:path";
@@ -9,7 +8,6 @@ import { spawnSync } from "node:child_process";
 import puppeteer from "puppeteer-core";
 
 import { authorSource, invokedFrom, realizeAuthoringPreview, repositoryRoot, stageAuthoringPreview } from "./authoring.js";
-import { atomicJson } from "./state-files.js";
 
 export type LayoutCheckInput = {
   readonly run: string;
@@ -23,8 +21,6 @@ export type LayoutAcceptInput = {
   readonly reason?: string;
   readonly findings?: readonly LayoutAcceptance[];
 };
-const LAYOUT_CHECKER_VERSION = 3 as const;
-
 type Bounds = { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number; readonly width: number; readonly height: number };
 type RawFinding = {
   readonly kind: "vertical-offset" | "parent-overflow" | "canvas-overflow" | "peer-overlap";
@@ -43,71 +39,34 @@ type RawFinding = {
 
 type LayoutDecision = {
   readonly finding: string;
-  readonly layout_digest: string;
   readonly reason: string;
   readonly accepted_at: string;
 };
 
-type LayoutDecisions = { readonly version: 1; readonly decisions: readonly LayoutDecision[] };
+type LayoutDecisions = { readonly decisions: readonly LayoutDecision[] };
 
 function projectRoot(runPath: string): string { return dirname(runPath); }
 export function layoutCheckPath(runPath: string): string { return join(projectRoot(runPath), ".hypit", "layout-check.json"); }
 export function layoutDecisionsPath(runPath: string): string { return join(projectRoot(runPath), ".hypit", "layout-decisions.json"); }
 
-function hash(value: unknown): string {
-  return `sha256:${createHash("sha256").update(typeof value === "string" ? value : JSON.stringify(value)).digest("hex")}`;
-}
-
-async function inputDigests(runPath: string, sourcePath: string): Promise<Readonly<Record<string, string>>> {
-  const files = new Set<string>([runPath]);
-  const queue = [sourcePath];
-  while (queue.length > 0) {
-    const path = queue.shift()!;
-    if (files.has(path)) continue;
-    files.add(path);
-    const source = await readFile(path, "utf8").catch(() => undefined);
-    if (source === undefined) continue;
-    for (const match of source.matchAll(/<import\s+[^>]*\bsource="([^"]+)"[^>]*\/?\s*>/gu)) {
-      queue.push(resolve(dirname(path), match[1]!));
-    }
-  }
-  const root = dirname(runPath);
-  for (const name of ["package.json", "pnpm-lock.yaml", "hypit.runtime.json"]) {
-    const path = join(root, name);
-    if (await stat(path).then((value) => value.isFile(), () => false)) files.add(path);
-  }
-  const localPackages = join(root, "packages");
-  const visit = async (directory: string): Promise<void> => {
-    const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
-    for (const entry of entries) {
-      if (entry.name === "node_modules" || entry.name === ".hypit") continue;
-      const path = join(directory, entry.name);
-      if (entry.isDirectory()) await visit(path);
-      else if (entry.isFile()) files.add(path);
-    }
-  };
-  await visit(localPackages);
-  const result: Record<string, string> = {};
-  for (const path of [...files].sort()) {
-    const bytes = await readFile(path).catch(() => undefined);
-    if (bytes !== undefined) result[path] = hash(bytes);
-  }
-  return result;
-}
-
 function round(value: number): number { return Math.round(value * 1000) / 1000; }
+
+async function writeJson(path: string, value: unknown): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
 
 async function readDecisions(path: string): Promise<LayoutDecisions> {
   const source = await readFile(path, "utf8").catch((error: unknown) => {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
   });
-  if (source === undefined) return { version: 1, decisions: [] };
+  if (source === undefined) return { decisions: [] };
   let value: unknown;
   try { value = JSON.parse(source); }
   catch (error) { throw new Error(`layout decisions at ${path} are invalid JSON; original file was preserved: ${error instanceof Error ? error.message : String(error)}`); }
   const decisions = value as Partial<LayoutDecisions>;
-  if (decisions.version !== 1 || !Array.isArray(decisions.decisions)) throw new Error(`layout decisions at ${path} have an unsupported shape`);
+  if (!Array.isArray(decisions.decisions)) throw new Error(`layout decisions at ${path} have an unsupported shape`);
   return decisions as LayoutDecisions;
 }
 
@@ -448,11 +407,18 @@ function aggregate(findings: readonly RawFinding[]): RawFinding[] {
   return [...grouped.values()].map((finding) => ({ ...finding, pixels: round(finding.pixels), ratio: round(finding.ratio) }));
 }
 
-function withIdentity(findings: readonly RawFinding[], digest: string, packages: ReadonlyMap<string, string>, decisions: LayoutDecisions): readonly Record<string, unknown>[] {
-  const accepted = new Map(decisions.decisions.filter((item) => item.layout_digest === digest).map((item) => [item.finding, item] as const));
+function findingId(finding: RawFinding, packageName: string | undefined): string {
+  return [finding.kind, packageName, finding.track, finding.present, finding.element, finding.related]
+    .filter((part): part is string => part !== undefined && part.length > 0)
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+}
+
+function withIdentity(findings: readonly RawFinding[], packages: ReadonlyMap<string, string>, decisions: LayoutDecisions): readonly Record<string, unknown>[] {
+  const accepted = new Map(decisions.decisions.map((item) => [item.finding, item] as const));
   return findings.map((finding) => {
     const packageName = finding.track === undefined ? undefined : packages.get(finding.track);
-    const id = hash([finding.kind, finding.layer, packageName ?? "", finding.track ?? "", finding.present ?? "", finding.element, finding.related ?? "", digest]);
+    const id = findingId(finding, packageName);
     const decision = accepted.get(id);
     return {
       id, ...finding, ...(packageName === undefined ? {} : { package: packageName }),
@@ -465,42 +431,22 @@ function withIdentity(findings: readonly RawFinding[], digest: string, packages:
 export async function layoutCheck(input: LayoutCheckInput): Promise<Record<string, unknown>> {
   const runPath = resolve(invokedFrom(), input.run);
   const source = await authorSource(runPath);
-  const inputs = await inputDigests(runPath, source.path);
   const realized = await realizeAuthoringPreview(input);
   const { stage, document, mediaTypes } = await stageAuthoringPreview(realized);
-  const digest = hash({
-    checker: LAYOUT_CHECKER_VERSION,
-    inputs,
-    graph: realized.built.source.compiled.graph,
-    program: realized.built.source.compiled.program.records,
-    composition: realized.built.composition,
-    served: [...realized.built.served.keys()].sort(),
-  });
   const decisionsPath = layoutDecisionsPath(runPath);
   const decisions = await readDecisions(decisionsPath);
-  await atomicJson(decisionsPath, decisions);
+  await writeJson(decisionsPath, decisions);
   const currentPath = layoutCheckPath(runPath);
-  const cached = await readFile(currentPath, "utf8").then((text) => JSON.parse(text) as Record<string, unknown>, () => undefined);
-  let raw: RawFinding[];
-  let samples: readonly StableSample[];
-  if (cached?.layout_digest === digest && Array.isArray(cached.raw_findings) && Array.isArray(cached.samples)) {
-    raw = cached.raw_findings as RawFinding[];
-    samples = cached.samples as StableSample[];
-  } else {
-    samples = framePlan(realized.built.composition).filter((sample) => sample.frame < document.frameCount);
-    raw = aggregate(await realizedFindings(realized, stage, mediaTypes, samples));
-  }
-  const findings = withIdentity(raw, digest, packageByTrack(realized), decisions);
+  const samples = framePlan(realized.built.composition).filter((sample) => sample.frame < document.frameCount);
+  const raw = aggregate(await realizedFindings(realized, stage, mediaTypes, samples));
+  const findings = withIdentity(raw, packageByTrack(realized), decisions);
   const pending = findings.filter((finding) => finding.disposition === "agent-review-required");
   const result = {
-    version: LAYOUT_CHECKER_VERSION,
     run: runPath,
     source: source.path,
-    input_digests: inputs,
-    layout_digest: digest,
-    executed: true,
-    settled: pending.length === 0,
-    semantics: "candidate-evidence-only",
+    checked: true,
+    reviewed: pending.length === 0,
+    semantics: "advisory-measurements",
     note: "Mechanical measurements assist the Agent; they are not findings of fault and never override design intent. Repair a genuine issue or use layout_accept with a reason for intentional geometry.",
     samples,
     raw_findings: raw,
@@ -509,8 +455,8 @@ export async function layoutCheck(input: LayoutCheckInput): Promise<Record<strin
     accepted_count: findings.length - pending.length,
     checked_at: new Date().toISOString(),
   };
-  await atomicJson(currentPath, result);
-  return { ...result, evidence: currentPath, decisions: decisionsPath };
+  await writeJson(currentPath, result);
+  return { ...result, report: currentPath, decisions: decisionsPath };
 }
 
 export async function layoutAccept(input: LayoutAcceptInput): Promise<Record<string, unknown>> {
@@ -520,8 +466,8 @@ export async function layoutAccept(input: LayoutAcceptInput): Promise<Record<str
     : [{ finding: input.finding, reason: input.reason }]);
   if (acceptances.length === 0) throw new Error("layout_accept requires --finding/--reason or a non-empty findings batch");
   const reportPath = layoutCheckPath(runPath);
-  const report = JSON.parse(await readFile(reportPath, "utf8")) as { layout_digest?: unknown; findings?: unknown };
-  if (typeof report.layout_digest !== "string" || !Array.isArray(report.findings)) throw new Error(`run layout_check first; ${reportPath} has no usable report`);
+  const report = JSON.parse(await readFile(reportPath, "utf8")) as { findings?: unknown };
+  if (!Array.isArray(report.findings)) throw new Error(`run layout_check first; ${reportPath} has no usable report`);
   const path = layoutDecisionsPath(runPath);
   const existing = await readDecisions(path);
   const decisions = [...existing.decisions];
@@ -530,16 +476,15 @@ export async function layoutAccept(input: LayoutAcceptInput): Promise<Record<str
     if (reason.length === 0) throw new Error(`layout_accept requires a non-empty reason for ${acceptance.finding}`);
     const finding = report.findings.find((item) => item !== null && typeof item === "object" && (item as { id?: unknown }).id === acceptance.finding);
     if (finding === undefined) throw new Error(`layout report contains no finding ${acceptance.finding}`);
-    const decision: LayoutDecision = { finding: acceptance.finding, layout_digest: report.layout_digest, reason, accepted_at: new Date().toISOString() };
-    const index = decisions.findIndex((item) => item.finding === decision.finding && item.layout_digest === decision.layout_digest);
+    const decision: LayoutDecision = { finding: acceptance.finding, reason, accepted_at: new Date().toISOString() };
+    const index = decisions.findIndex((item) => item.finding === decision.finding);
     if (index >= 0) decisions.splice(index, 1);
     decisions.push(decision);
   }
-  await atomicJson(path, { version: 1, decisions });
+  await writeJson(path, { decisions });
   return {
     accepted: true,
     findings: acceptances.map((item) => item.finding),
-    layout_digest: report.layout_digest,
     decisions: path,
     next_action: `rerun layout_check --run ${runPath}`,
   };

@@ -106,16 +106,14 @@ role files may be read as the bounded implementation skeleton; this is the only 
 exception. When the fit is not good enough, use the project-local package route and author it from
 the visible requirement, inspect contract, README and `local-author-package.md`.
 
-## Freeze the judgement
+## Record the judgement
 
 Before package development or Source authoring, write the decisions to the canonical
 `.hypit/component-fit.json`. Keep it concise and record only what affected the choice:
 
 ```json
 {
-  "version": 1,
-  "route": "description",
-  "basis": ".hypit/brief.json and its frozen digest",
+  "basis": ".hypit/brief.json",
   "systems": [{
     "role": "ranking board",
     "inspected_candidates": ["@hypit/ranking"],
@@ -128,18 +126,9 @@ Before package development or Source authoring, write the decisions to the canon
 ```
 
 `accepted_variances` contains short natural-language differences only for
-`reuse-with-accepted-variance`; it is empty for the other decisions. Checkpoint the file before
-developing a gap. For `project-local-package`, `selected_package` names the planned project specifier.
-
-```bash
-hypit-reference-video-tools route_state --action checkpoint --project-root <project> \
-  --route description|reconstruction --state vocabulary-checked --status in_progress \
-  --artifacts '{"component_fit":".hypit/component-fit.json"}'
-```
-
-The later Run-scoped `inspect_svml_vocabulary --run <run>` persists the vocabulary evidence and
-completes `vocabulary-checked` only while this frozen file is valid. After compaction, read it before
-resuming package work, Source authoring or visual repair.
+`reuse-with-accepted-variance`; it is empty for the other decisions. For `project-local-package`,
+`selected_package` names the planned project specifier. This file records the actual design decision;
+it does not unlock Source authoring and may be edited when the decision changes.
 
 ## A real gap
 

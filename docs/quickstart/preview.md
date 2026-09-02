@@ -17,7 +17,7 @@ hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
 | Argument | Meaning |
 | --- | --- |
 | `--run <build.svrun>` | Run Source to open. Required. |
-| `--runtime <hypit.runtime.json>` | Runtime Profile containing earlier Builds and Artifacts; required for `<build-record>`. |
+| `--runtime <hypit.runtime.json>` | Optional Runtime Profile used only to show active `BuildView` and Operation information. Historical Results and `<build-record>` come from the project Result Store. |
 | `--workspace <directory>` | Source access and writeback boundary; defaults to the Run directory. |
 | `--port <number>` | HTTP port; defaults to `5179`. |
 

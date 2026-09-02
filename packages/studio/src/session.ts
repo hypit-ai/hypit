@@ -5,7 +5,6 @@ import type { EndpointRegistry } from "@hypit/driver-node";
 import { markupAuthorFrontendId } from "@hypit/markup";
 import { svsFrontendId } from "@hypit/svs";
 
-import type { StudioArchive } from "./archive.js";
 import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import type { Observations } from "./observe.js";
@@ -57,7 +56,6 @@ export async function readStudioSession(input: {
   readonly domain: StudioDomain;
   readonly registry: StudioCompanionRegistry;
   readonly run: RunPlan;
-  readonly archive?: StudioArchive;
   readonly revision: number;
   readonly sourcePath?: string;
   readonly workspaceRoot: string;
@@ -80,7 +78,6 @@ export async function readStudioSession(input: {
     outputRefs,
     compositionRef: inspection.filmComposition,
     projections: inspection.projections,
-    ...(input.archive === undefined ? {} : { archive: input.archive }),
     ...(input.endpoints === undefined ? {} : { endpoints: input.endpoints }),
   });
   const rendered = renderPreview({

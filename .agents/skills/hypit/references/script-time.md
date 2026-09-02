@@ -21,8 +21,8 @@ N:M Alignment Unit. A closing `</segment>` is also a hard Cue boundary: Cue coun
 restart at the next Segment, so a trailing `||` is not required merely to prevent a Cue crossing
 Segments.
 
-The mechanical gate `validate_script_cues --run <build.svrun>` enforces a maximum of four visible
-words per Cue. Fix the Script before `hypit check` or preview.
+`validate_script_cues --run <build.svrun>` reports every Cue over four visible words. Fix the Script
+before `hypit check` or preview.
 
 ## A Segment is a stretch that is spoken as one
 

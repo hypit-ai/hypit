@@ -103,7 +103,7 @@ test("local HyperFrames Provider exposes one exact visual capability and two sep
   }]);
   const resolved = await handlerFor(requestNeed());
   assert.equal(resolved.registration.scheduling?.resources.find((item) =>
-    item.id.startsWith("pool:"))?.maxActive, 1,
+    item.id.startsWith("pool:"))?.limit, 1,
     "Runtime request admission must remain separate from HyperFrames frame workers");
 });
 

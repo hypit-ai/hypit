@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@hypit/build-result": "workspace:*",
+    "@hypit/build-result-kit": "workspace:*",
     "@hypit/compiler-node": "workspace:*",
     "@hypit/elaborator": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",

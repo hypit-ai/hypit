@@ -112,7 +112,7 @@ function distribution(
       preflight: async () => ({ dataRoot: "/tmp", diagnostics }),
       doctor: async () => ({ dataRoot: "/tmp", diagnostics: [] }),
       createRuntime: async () => { throw new Error("createRuntime is unavailable"); },
-      openArchive: async () => ({ status: async () => ({}) }),
+      openControl: async () => ({ inspect: async () => undefined }),
     }),
   } as unknown as CliDistribution;
 }
@@ -144,29 +144,18 @@ test("Build fails its cheap preflight before submitting or starting programs", a
   assert.deepEqual(calls, []);
 });
 
-test("Build accepts a human name and never provisions programs after a clean preflight", async () => {
+test("Build accepts a Result title and never provisions programs after a clean preflight", async () => {
   const calls: string[] = [];
   const source = await runSource();
   await assert.rejects(
     async () => await runCli(
-      ["build", source, "--name", "first-cut", "--runtime", "/p/hypit.runtime.json"],
+      ["build", source, "--title", "first-cut", "--runtime", "/p/hypit.runtime.json"],
       io,
       distribution(calls, []),
     ),
     /createRuntime is unavailable/u,
   );
   assert.deepEqual(calls, []);
-});
-
-test("the removed --no-programs switch is rejected", async () => {
-  await assert.rejects(
-    async () => await runCli(
-      ["build", "/p/build.svrun", "--no-programs"],
-      io,
-      distribution([], []),
-    ),
-    /unknown option --no-programs/u,
-  );
 });
 
 test("plan preserves the frozen plan but exits non-zero when cheap preflight fails", async () => {

@@ -27,7 +27,7 @@ function planFor(svml: string) {
   return reviewPlan({ svml, svmlPath: "main.svml", scriptBody: scriptBody(svml), drawn: BROLL });
 }
 
-// Under-covering is the silent direction: the gate passes, the round runs, and the second design is
+// Under-covering is the silent direction: the plan looks complete, the round runs, and the second design is
 // simply never drawn. The two exclusion lists this key is built from will grow as packages are added,
 // and widening one by an attribute that actually decides what a picture looks like merges two groups
 // into one. That edit has no visible symptom, so it is the one worth pinning.
@@ -72,7 +72,7 @@ const CAPTIONS = `<?svml using="@hypit/markup@1"?>
 // A caption Track is one tag with no window on it, so reading its placements the ordinary way finds
 // one design however many the Program hands out. An override is written inside the Program, and the
 // stretch it covers is a genuinely different picture that nothing on the Track mentions — so leaving
-// it out is a design nobody looks at while the gate reports full coverage.
+// it out is a design nobody looks at while the plan reports full coverage.
 test("a caption Style override is its own look, over the stretch it covers", () => {
   const plan = reviewPlan({
     svml: CAPTIONS, svmlPath: "main.svml", scriptBody: scriptBody(CAPTIONS),

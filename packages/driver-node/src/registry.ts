@@ -41,10 +41,8 @@ function verifyScheduling(scheduling: EndpointScheduling | undefined): void {
   if (scheduling.resources.length === 0) throw new Error("scheduling resources must not be empty");
   const ids = scheduling.resources.map((resource) => {
     if (resource.id.trim().length === 0) throw new Error("scheduling resource id must not be empty");
-    for (const [name, value] of [["maxActive", resource.maxActive], ["maxInFlight", resource.maxInFlight]] as const) {
-      if (!Number.isSafeInteger(value) || value < 1) {
-        throw new Error(`scheduling resource ${resource.id} ${name} must be a positive safe integer`);
-      }
+    if (!Number.isSafeInteger(resource.limit) || resource.limit < 1) {
+      throw new Error(`scheduling resource ${resource.id} limit must be a positive safe integer`);
     }
     return resource.id;
   });

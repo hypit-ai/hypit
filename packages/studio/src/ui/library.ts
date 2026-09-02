@@ -66,7 +66,7 @@ function taskProgress(task: StudioTaskView): string | undefined {
 function taskCard(task: StudioTaskView): HTMLElement {
   const node = document.createElement("article");
   node.className = `task-card task-${task.status}`;
-  const title = task.targets.length === 0 ? leaf(task.run ?? task.source) : task.targets.join(", ");
+  const title = task.title ?? (task.targets.length === 0 ? leaf(task.run ?? task.source) : task.targets.join(", "));
   const progress = taskProgress(task);
   node.innerHTML = `
     <div class="task-state"><span></span></div>
@@ -89,7 +89,7 @@ function taskCard(task: StudioTaskView): HTMLElement {
   const progressNode = node.querySelector<HTMLElement>("[data-progress]")!;
   if (progress === undefined) progressNode.remove();
   else progressNode.textContent = progress;
-  node.title = `${task.id}\n${source}`;
+  node.title = [title, task.id, source, task.note].filter((item) => item !== undefined).join("\n");
   return node;
 }
 
@@ -103,7 +103,7 @@ function artifactKind(mediaType: string): { readonly label: string; readonly ico
 function artifactCard(artifact: StudioArtifactView): HTMLElement {
   const kind = artifactKind(artifact.mediaType);
   const link = document.createElement("a");
-  link.className = `artifact-card artifact-${kind.label.toLowerCase()}`;
+  link.className = `artifact-card artifact-${kind.label.toLowerCase()}${artifact.highlighted ? " artifact-highlighted" : ""}`;
   const query = new URLSearchParams({
     build: artifact.build,
     output: artifact.output,
@@ -117,6 +117,7 @@ function artifactCard(artifact: StudioArtifactView): HTMLElement {
     <div class="artifact-preview">
       <span class="artifact-glyph">${icon(kind.icon)}</span>
       <span class="artifact-type"></span>
+      ${artifact.highlighted ? '<span class="artifact-highlight">Highlighted</span>' : ""}
     </div>
     <div class="artifact-copy">
       <strong></strong>
@@ -124,7 +125,11 @@ function artifactCard(artifact: StudioArtifactView): HTMLElement {
     </div>`;
   link.querySelector<HTMLElement>(".artifact-type")!.textContent = kind.label;
   link.querySelector("strong")!.textContent = title;
-  link.querySelector<HTMLElement>(".artifact-meta")!.textContent = `${formatBytes(artifact.size)} · ${date.format(artifact.createdAt)}`;
+  link.querySelector<HTMLElement>(".artifact-meta")!.textContent = [
+    artifact.buildTitle,
+    formatBytes(artifact.size),
+    date.format(artifact.createdAt),
+  ].filter((item) => item !== undefined).join(" · ");
   if (artifact.mediaType.startsWith("image/")) {
     const image = document.createElement("img");
     image.src = link.href;
@@ -137,7 +142,8 @@ function artifactCard(artifact: StudioArtifactView): HTMLElement {
     artifact.mediaType,
     `${artifact.ownerBuild}/${artifact.ownerOutput}/${artifact.filePath}`,
     artifact.run ?? artifact.source,
-  ].join("\n");
+    artifact.buildNote,
+  ].filter((item) => item !== undefined).join("\n");
   return link;
 }
 
@@ -153,7 +159,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
         <span>${icon("tasks")}</span><strong>Tasks</strong>
       </button>
       <button type="button" class="library-tab" data-library-tab="artifacts" role="tab" aria-selected="false">
-        <span>${icon("archive")}</span><strong>Artifacts</strong>
+        <span>${icon("results")}</span><strong>Artifacts</strong>
       </button>
     </div>
     <section class="library-view active" data-library-view="source">
@@ -168,7 +174,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
     </section>
     <section class="library-view" data-library-view="tasks">
       <div class="library-toolbar">
-        <div><strong>Build archive</strong><small data-task-count></small></div>
+        <div><strong>Build Results</strong><small data-task-count></small></div>
         <button type="button" class="library-refresh" data-library-refresh aria-label="Refresh tasks" title="Refresh">${icon("refresh")}</button>
       </div>
       <div class="library-context-row" data-runtime-context></div>
@@ -266,7 +272,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
       ? artifacts
       : artifacts.filter((artifact) => artifact.mediaType.startsWith(`${artifactFilter}/`));
     if (shown.length === 0) {
-      artifactGrid.replaceChildren(emptyState("archive",
+      artifactGrid.replaceChildren(emptyState("results",
         artifacts.length === 0 ? "No accepted artifacts" : `No ${artifactFilter} artifacts`,
         "Public files appear here when a Build Result contains them."));
       return;
@@ -304,8 +310,8 @@ export function createLibraryPane(code: CodePane): LibraryPane {
       renderArtifacts();
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      if (active === "tasks") taskList.replaceChildren(emptyState("tasks", "Archive unavailable", detail));
-      if (active === "artifacts") artifactGrid.replaceChildren(emptyState("archive", "Build Results unavailable", detail));
+      if (active === "tasks") taskList.replaceChildren(emptyState("tasks", "Build Results unavailable", detail));
+      if (active === "artifacts") artifactGrid.replaceChildren(emptyState("results", "Build Results unavailable", detail));
     } finally {
       refreshing = false;
       element.classList.remove("is-refreshing");

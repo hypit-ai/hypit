@@ -75,8 +75,8 @@ export type AsyncEndpoint = {
 export type EndpointScheduling = {
   readonly resources: readonly {
     readonly id: string;
-    readonly maxActive: number;
-    readonly maxInFlight: number;
+    /** Maximum Commands occupying this active Provider resource across Builds. */
+    readonly limit: number;
   }[];
   readonly queue?: {
     readonly pool: string;
@@ -265,13 +265,11 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
             resources: [
               {
                 id: `pool:${options.pool}`,
-                maxActive: authorityConcurrency,
-                maxInFlight: authorityConcurrency,
+                limit: authorityConcurrency,
               },
               {
                 id: `lane:${options.pool}/${lane}`,
-                maxActive: laneConcurrency,
-                maxInFlight: laneConcurrency,
+                limit: laneConcurrency,
               },
             ],
           },

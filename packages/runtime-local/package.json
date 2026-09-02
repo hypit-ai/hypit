@@ -16,6 +16,7 @@
     "@hypit/build-result-fs": "workspace:*",
     "@hypit/build-result-kit": "workspace:*",
     "@hypit/component-kit": "workspace:*",
+    "@hypit/core": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/endpoint-kit": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
@@ -27,7 +28,6 @@
     "@hypit/validation": "workspace:*"
   },
   "devDependencies": {
-    "@hypit/credential-store-env": "workspace:*",
-    "@hypit/core": "workspace:*"
+    "@hypit/credential-store-env": "workspace:*"
   }
 }

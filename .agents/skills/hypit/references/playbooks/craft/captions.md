@@ -84,7 +84,7 @@ and twelve horizontal — which no JSON number can carry, so it travels as text 
 space. A single value is still written as one: `padding: "0"`.
 
 `cue-min-words` and `cue-max-words` are not Recipe properties. Cue length belongs to Script `||`
-boundaries and the route's `validate_script_cues` gate.
+boundaries and is reported directly by `validate_script_cues`.
 
 ## Cue boundaries are marked in the Script, with `||`
 
@@ -106,8 +106,8 @@ Treat roughly **3–4 spoken words per Cue as the hard default** (fewer for long
 dense designs). A longer Cue is an explicit exception that must be justified by the reference and
 verified in the rendered bounds; it is never the result of forgetting `||`.
 
-The route's mechanical gate is stricter: `validate_script_cues --run <build.svrun>` rejects every Cue
-over four visible words, including Dual Text display words. Split it with `||` between complete units.
+`validate_script_cues --run <build.svrun>` reports every Cue over four visible words, including Dual
+Text display words. Split it with `||` between complete units.
 
 Mark the breaks where the reference breaks. The observation for a shot says what is on screen at
 once, and that is the Cue.

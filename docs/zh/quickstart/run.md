@@ -18,7 +18,7 @@ hypit runtime use hypit.runtime.json
 ```bash
 hypit plan build.svrun
 hypit build build.svrun --follow
-hypit get <build-id> --name final.video --to output/final.mp4
+hypit get <build-id> --output final.video --to output/final.mp4
 ```
 
 快速开始只需全局安装一次 Distribution。此后本页所有命令都直接写作 `hypit`，在任何独立视频项目中都一样。
@@ -120,11 +120,12 @@ hypit history --source ./main.svml
 
 ```svml
 <build-record id="approved-opening"
-  build="bld_01234567-89ab-cdef-0123-456789abcdef" output="hook-take.video"/>
+  build="bld_20260902T110000001Z_0000000001" output="hook-take.video"/>
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
 Hypit 永远不会猜测两个名字代表同一份作者意图。每次执行 `build` 都会得到新的 Build id 和独立 Result 目录，即使源码完全没变。后续 Run 只有明确写出旧 Build id 与 Output 时才复用；若旧 Output 本身继续转发到更老的 Result，就沿显式关系向前解析，不把文件复制进新 Result。
+转发只适用于完整的公开 Output；结构化 JSON 不能在内部递归指向另一个 Output。历史值若只是新 Fragment 的一项输入，Fragment 产生的新 Output 仍属于当前 Result。
 
 ### build-record
 
@@ -134,7 +135,7 @@ Hypit 永远不会猜测两个名字代表同一份作者意图。每次执行 `
 |---|---|
 | `id` | 此 Run Source 内的本地 Candidate 标识符 |
 | `build` | 先前 Build 自动分配的 id |
-| `output` | 该 Build 中的逻辑输出名 |
+| `output` | 该 Build Result 中的公开 Output 名 |
 
 ### satisfy
 
@@ -145,7 +146,7 @@ Hypit 永远不会猜测两个名字代表同一份作者意图。每次执行 `
 | `output` | 要满足的逻辑输出 |
 | `candidate` | Candidate 标识符（来自 `build-record`） |
 
-编译后的计划会裁剪所选 Candidate 取代的上游 Operation。这是一次新的 Build，而非旧 Build 的延续。下游处理（归一化、WhisperX、字幕生成、渲染）仍然会对复用的媒体执行。
+Planner 会同时读取完整 Author Graph 与 Run Graph：裁剪所选 Candidate 替代掉的默认 Operation，同时保留该 Candidate 自身仍然消费的 Author Output。这是一次新的 Build，而非旧 Build 的延续。下游处理（归一化、WhisperX、字幕生成、渲染）仍然会对复用的媒体执行。
 
 Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本身就是这次运行的明确实现决定。系统校验类型兼容性，但不猜测创作等价性，也不把这种判断作为冗余元信息沿整条图传播。
 
@@ -250,7 +251,7 @@ output/
 每次 Build 的权威结果位于 `.hypit/results/<build-id>/`：`result.json` 记录名字、状态、Target
 和公开 Output，媒体在 `files/`，结构化值在 `values/`。
 
-这是无需配置的默认 Result 仓库。Runtime Profile 也可以选择 `@hypit/build-result-s3`；历史命令
+这是无需配置的默认 Result 仓库。项目根的 `hypit.results.json` 也可以选择 `@hypit/build-result-s3`；历史命令
 与 `.svrun` 中的 `build-record` 会使用同一个仓库。Runtime 临时 Artifact 仍由 Runtime 在本地
 私有管理。
 
@@ -313,7 +314,7 @@ status` 用于观察，`programs up|status|down` 只管理外部程序。
 ### 4. 提交 Build
 
 ```bash
-hypit build build.svrun --name first-cut --follow
+hypit build build.svrun --title first-cut --follow
 ```
 
 不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是观察者，并会报告 phase / Operation 数量变化；Ctrl-C 不会取消任务。
@@ -324,14 +325,14 @@ hypit build build.svrun --name first-cut --follow
 hypit status <build-id> --watch
 ```
 
-普通的 `status <build-id>` 只打印一次快照。`status --watch` 会在 Build 进入终态时退出；脚本需要限制等待时间时可以加 `--max-wait-ms`。
+普通的 `status <build-id>` 只打印一次快照。`status --watch` 会在 Result 得到 outcome 时退出；脚本需要限制等待时间时可以加 `--max-wait-ms`。
 
 | 标志 | 说明 |
 |---|---|
 | `--runtime` | 单次命令的 Runtime Profile 覆盖；通常用 `runtime use` 选择一次即可 |
 | `--package-root` | 存放已安装包的 Host 目录 |
 | `--workspace` | 显式 Source Workspace 覆盖项 |
-| `--name` | 给这次独立 Build 一个供人阅读的名字 |
+| `--title` | 给这次 Result 一个供人阅读的标题 |
 | `--follow` | 将 Build 进度流式输出到终端 |
 
 每次执行都会创建新的 Build id，即使 Author Source 和 Run Source 完全没变。这是非确定性生成
@@ -349,13 +350,13 @@ hypit inspect <build-id>
 
 ```bash
 hypit get <build-id> \
-  --name final.video \
+  --output final.video \
   --to examples/talking-head-aroll/output/final.mp4
 ```
 
 `get` 解析一个精确的 `build + output` 地址并按需复制。文件从所属 Result 复制，结构化 Output
 从 Result 的值文件读取，历史转发则沿显式关系找到前一个 Result；整个过程不需要 Runtime Profile。
-Build 的最终输出会为每个文件 Target 打印精确的 `get --name …` 命令。
+Build 的最终输出会为每个文件 Target 打印精确的 `get --output …` 命令。
 
 ### 6. 在新 Build 中复用
 
@@ -374,4 +375,4 @@ hypit runtime down
 
 `runtime down` 只会让 Worker 停止领取新 Build，并保留外部程序；只有确实要停掉这些程序时
 才执行 `programs down`。两条命令都不会取消耐久 Build 或远程 Provider 工作。再次启动同一
-Profile 后，会继续其中尚未完成的 dispatch。
+Profile 后，会继续其中尚未完成的执行。

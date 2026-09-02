@@ -3,12 +3,15 @@ import type { FSWatcher } from "node:fs";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
 import type { Plugin, ViteDevServer } from "vite";
+import type { BuildResultFileRange } from "@hypit/build-result";
 import type { StudioTemporalInstantProjection } from "@hypit/studio-adapter";
 import type { EndpointRegistry } from "@hypit/driver-node";
 
-import type { StudioArchive } from "./archive.js";
+import type { StudioBuildLibrary } from "./build-library.js";
 import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
@@ -27,7 +30,7 @@ export type StudioPluginOptions = {
   readonly domain: StudioDomain;
   readonly registry: StudioCompanionRegistry;
   readonly workspaceRoot: string;
-  readonly archive?: StudioArchive;
+  readonly buildLibrary?: StudioBuildLibrary;
   readonly endpoints?: EndpointRegistry;
 };
 
@@ -36,6 +39,26 @@ function json(response: import("node:http").ServerResponse, status: number, valu
   response.setHeader("content-type", "application/json; charset=utf-8");
   response.setHeader("cache-control", "no-store");
   response.end(`${JSON.stringify(value)}\n`);
+}
+
+function requestedByteRange(value: string | undefined, size: number): BuildResultFileRange | undefined {
+  if (value === undefined) return undefined;
+  const match = /^bytes=(\d*)-(\d*)$/u.exec(value.trim());
+  if (match === null || (match[1]!.length === 0 && match[2]!.length === 0) || size === 0) {
+    throw new RangeError("requested byte range is not satisfiable");
+  }
+  if (match[1]!.length === 0) {
+    const suffix = Number(match[2]);
+    if (!Number.isSafeInteger(suffix) || suffix <= 0) throw new RangeError("requested byte range is not satisfiable");
+    return { start: Math.max(0, size - suffix), endExclusive: size };
+  }
+  const start = Number(match[1]);
+  const requestedEnd = match[2]!.length === 0 ? size - 1 : Number(match[2]);
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(requestedEnd) || start < 0
+    || start >= size || requestedEnd < start) {
+    throw new RangeError("requested byte range is not satisfiable");
+  }
+  return { start, endExclusive: Math.min(size, requestedEnd + 1) };
 }
 
 function rangeOf(error: unknown): Range | undefined {
@@ -74,7 +97,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   const storyboards = new Map<string, Promise<StudioStoryboard>>();
 
   const readLibrary = async (): Promise<StudioLibraryView> => {
-    const next = await options.archive?.library() ?? {
+    const next = await options.buildLibrary?.library() ?? {
       environment: options.workspaceRoot,
       tasks: [],
       artifacts: [],
@@ -114,7 +137,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         run: options.runPath,
         domain: options.domain,
         registry: options.registry,
-        ...(options.archive === undefined ? {} : { archive: options.archive }),
+        ...(options.buildLibrary === undefined ? {} : { buildLibrary: options.buildLibrary }),
         ...(options.endpoints === undefined ? {} : { endpoints: options.endpoints }),
       });
       currentSource = run.authorSource;
@@ -129,7 +152,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         domain: options.domain,
         registry: options.registry,
         run,
-        ...(options.archive === undefined ? {} : { archive: options.archive }),
+        ...(options.buildLibrary === undefined ? {} : { buildLibrary: options.buildLibrary }),
         ...(options.endpoints === undefined ? {} : { endpoints: options.endpoints }),
         revision: attempt,
         sourcePath: relative(options.workspaceRoot, run.authorSource),
@@ -644,25 +667,53 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             const build = url.searchParams.get("build");
             const output = url.searchParams.get("output");
             const valuePath = url.searchParams.get("path");
-            if (build === null || output === null || valuePath === null || options.archive === undefined) {
+            if (build === null || output === null || valuePath === null || options.buildLibrary === undefined) {
               response.statusCode = 404;
               response.end();
               return;
             }
-            const artifact = await options.archive.openArtifact(build, output, valuePath);
+            const artifact = await options.buildLibrary.openArtifact(build, output, valuePath);
             if (artifact === undefined) {
               response.statusCode = 404;
               response.end();
               return;
             }
-            response.statusCode = 200;
+            let range: BuildResultFileRange | undefined;
+            try {
+              range = requestedByteRange(request.headers.range, artifact.size);
+            } catch (error) {
+              if (!(error instanceof RangeError)) throw error;
+              response.statusCode = 416;
+              response.setHeader("content-range", `bytes */${artifact.size}`);
+              response.end();
+              return;
+            }
+            response.statusCode = range === undefined ? 200 : 206;
             response.setHeader("content-type", artifact.mediaType);
-            response.setHeader("content-length", String(artifact.bytes.byteLength));
+            response.setHeader("content-length", String(range === undefined
+              ? artifact.size
+              : range.endExclusive - range.start));
             response.setHeader("cache-control", "private, no-store");
-            if (request.method === "HEAD") response.end();
-            else response.end(Buffer.from(artifact.bytes));
+            response.setHeader("accept-ranges", "bytes");
+            if (range !== undefined) {
+              response.setHeader("content-range", `bytes ${range.start}-${range.endExclusive - 1}/${artifact.size}`);
+            }
+            if (request.method === "HEAD") {
+              response.end();
+              return;
+            }
+            const stream = await artifact.open(range);
+            if (stream === undefined) {
+              response.statusCode = 404;
+              response.removeHeader("content-length");
+              response.removeHeader("content-range");
+              response.end();
+              return;
+            }
+            await pipeline(Readable.from(stream), response);
           })().catch((error) => {
-            json(response, 500, { error: error instanceof Error ? error.message : String(error) });
+            if (response.headersSent) response.destroy(error instanceof Error ? error : new Error(String(error)));
+            else json(response, 500, { error: error instanceof Error ? error.message : String(error) });
           });
           return;
         }
@@ -672,7 +723,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     async closeBundle() {
       for (const watcher of watched.values()) watcher.close();
       watched.clear();
-      await options.archive?.close();
+      await options.buildLibrary?.close();
     },
   };
 }

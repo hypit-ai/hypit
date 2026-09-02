@@ -1,12 +1,11 @@
 import type { WorkspaceSession } from "@hypit/workspace";
-import { resolveCompiledSourceExport } from "@hypit/elaborator";
 import {
-  sealBuildRequest,
-  sealCompiledGraph,
   sliceExecution,
   defineBuild,
   materializeBuild,
+  planBuild,
 } from "@hypit/core";
+import type { BuildCandidateSelection } from "@hypit/core";
 import type {
   ArtifactAttachment,
 } from "@hypit/workspace";
@@ -16,10 +15,12 @@ import type {
   StoredValue,
   TypeRef,
 } from "@hypit/protocol";
+import { sameType } from "@hypit/protocol";
 import {
   collectRunModuleRequests,
   compileRunSource,
   resolveRunDocument,
+  sealRunGraph,
 } from "@hypit/run";
 import type {
   RunCompilation,
@@ -39,7 +40,7 @@ export type NodeRunCompilerOptions = {
   readonly authorCompiler: NodeCompiler;
   readonly frontends: RunFrontendRegistryLike;
   readonly fragments: RunFragmentRegistryLike;
-  readonly resolveBuildRecord?: (
+  readonly resolveHistoricalOutput?: (
     build: string,
     output: string,
   ) => Promise<{
@@ -71,7 +72,7 @@ export type NodeCheckedRun = {
   readonly author: NodeCompiledSourceClosure;
   readonly program: LinkedProgram;
   readonly document: RunCompilation["document"];
-  readonly unresolvedBuildRecords: readonly {
+  readonly unresolvedHistoricalOutputs: readonly {
     readonly id: string;
     readonly build: string;
     readonly output: string;
@@ -81,6 +82,14 @@ export type NodeCheckedRun = {
 
 export type PlannedBuild = {
   readonly compilation: NodeCompiledRun;
+  /** Compiler-only explanation of how the two graphs became the execution plan. */
+  readonly selections: readonly BuildCandidateSelection[];
+  /** Whole-Output historical sources selected by the plan; Result storage may forward them directly. */
+  readonly resultForwards: readonly {
+    readonly output: string;
+    readonly build: string;
+    readonly sourceOutput: string;
+  }[];
   /** Immutable authority persisted once for every fresh Runtime Build. */
   readonly definition: BuildDefinition;
   /** Materialized plan/read view; durable Stores persist Definition + Facts instead. */
@@ -191,7 +200,7 @@ export class NodeRunCompiler {
    * Validate both source documents without materializing historical Build values.
    *
    * A future BuildRecord is valid Run intent even before that Build exists. It
-   * becomes executable only when plan/build resolves its exact archived value.
+   * becomes executable only when plan/build resolves its exact historical Result value.
    */
   async checkSource(source: RunSourceUnit, workspace: WorkspaceSession): Promise<NodeCheckedRun> {
     const decoded = await compileRunSource(source, this.#options.frontends);
@@ -204,62 +213,53 @@ export class NodeRunCompiler {
       author.program,
       collectRunModuleRequests(decoded.document, this.#options.fragments),
     );
-    const authorOutput = (name: string) => resolveCompiledSourceExport(author, name);
-    const imports = new Map(decoded.document.imports.map((item) => [item.as, item.from]));
-    const candidateNames = new Set<string>();
-    for (const declaration of decoded.document.candidates) {
-      if (declaration.kind === "provided") {
-        await storedValueFromWorkspace(workspace, source, declaration.from);
-        candidateNames.add(declaration.id);
-        continue;
-      }
-      if (declaration.kind === "file") {
-        await fileValueFromWorkspace(workspace, source, declaration.from, declaration.mediaType);
-        candidateNames.add(declaration.id);
-        continue;
-      }
-      if (declaration.kind === "build-record") {
-        candidateNames.add(declaration.id);
-        continue;
-      }
-      const packageName = imports.get(declaration.using.alias);
-      if (packageName === undefined) throw new Error(`Run Fragment alias ${declaration.using.alias} is not imported`);
-      const fragment = this.#options.fragments.resolve(packageName, declaration.using.name);
-      if (fragment === undefined) throw new Error(`${packageName} exports no Run Fragment ${declaration.using.name}`);
-      const inputs = new Map(declaration.inputs.map((item) => [item.name, item.from]));
-      for (const expected of fragment.inputs) {
-        const from = inputs.get(expected.name);
-        if (from === undefined) throw new Error(`Run Fragment ${declaration.id} has no input ${expected.name}`);
-        const actual = authorOutput(from).type;
-        if (actual.name !== expected.type.name
-          || actual.module.name !== expected.type.module.name
-          || actual.module.version !== expected.type.module.version) {
-          throw new Error(`Run Fragment ${declaration.id} input ${expected.name} has the wrong type`);
-        }
-      }
-      const unknownInput = declaration.inputs.find((item) => !fragment.inputs.some((expected) => expected.name === item.name));
-      if (unknownInput !== undefined) throw new Error(`Run Fragment ${declaration.id} has unknown input ${unknownInput.name}`);
-      const selected = declaration.exports ?? fragment.exports.map((item) => item.name);
-      for (const name of selected) {
-        if (!fragment.exports.some((item) => item.name === name)) {
-          throw new Error(`Run Fragment ${declaration.id} has no export ${name}`);
-        }
-        candidateNames.add(`${declaration.id}.${name}`);
-      }
+    const executionCompilation = program === author.program ? author : { ...author, program };
+    const structuralRun = await resolveRunDocument(decoded.document, {
+      compilation: executionCompilation,
+      fragments: this.#options.fragments,
+    });
+    const structuralPlan = planBuild(program, author.graph, structuralRun.graph);
+    const selectedLocalSources = new Set(structuralPlan.selections
+      .filter((selection) => {
+        const candidateSource = structuralRun.candidateSources[selection.candidate];
+        return candidateSource?.kind === "stored-value" || candidateSource?.kind === "file";
+      })
+      .map((selection) => selection.candidate));
+    const resolvedValues = new Map<string, StoredValue>();
+    for (const candidate of selectedLocalSources) {
+      const candidateSource = structuralRun.candidateSources[candidate]!;
+      const value = candidateSource.kind === "stored-value"
+        ? await storedValueFromWorkspace(workspace, source, candidateSource.from)
+        : candidateSource.kind === "file"
+          ? await fileValueFromWorkspace(workspace, source, candidateSource.from, candidateSource.mediaType)
+          : undefined;
+      if (value !== undefined) resolvedValues.set(candidate, value);
     }
-    for (const satisfaction of decoded.document.satisfactions) {
-      const output = authorOutput(satisfaction.output);
-      if (output.ref.kind !== "logical-output") {
-        throw new Error(`${satisfaction.output} is an authored Record, not a realizable Logical Output`);
-      }
-      if (!candidateNames.has(satisfaction.candidate)) {
-        throw new Error(`Unknown Run Candidate ${satisfaction.candidate}`);
-      }
-    }
-    for (const target of decoded.document.targets) {
-      const output = authorOutput(target.output);
-      if (output.ref.kind !== "logical-output") {
-        throw new Error(`${target.output} is an authored Record, not a realizable Logical Output`);
+    const checkedRunGraph = sealRunGraph({
+      ...structuralRun.graph,
+      candidates: structuralRun.graph.candidates.map((candidate) => {
+        const value = resolvedValues.get(candidate.id);
+        if (value === undefined) return candidate;
+        if (candidate.root.kind !== "value") throw new Error(`Run Candidate ${candidate.id} is not a zero-input value`);
+        return {
+          ...candidate,
+          root: {
+            kind: "value" as const,
+            value: { id: candidate.root.value.id, value },
+          },
+        };
+      }),
+    });
+    const checkedPlan = planBuild(program, author.graph, checkedRunGraph);
+    const admitRecord = (this.#options.authorCompiler as NodeCompiler & {
+      readonly admitRecord?: NodeCompiler["admitRecord"];
+    }).admitRecord;
+    if (typeof admitRecord === "function") {
+      const localRecordIds = new Set(checkedPlan.selections
+        .filter((selection) => selectedLocalSources.has(selection.candidate))
+        .map((selection) => selection.record));
+      for (const record of checkedPlan.initialRecords) {
+        if (localRecordIds.has(record.id)) await admitRecord.call(this.#options.authorCompiler, program, record);
       }
     }
     return {
@@ -268,7 +268,7 @@ export class NodeRunCompiler {
       author,
       program,
       document: decoded.document,
-      unresolvedBuildRecords: decoded.document.candidates.flatMap((item) => item.kind === "build-record"
+      unresolvedHistoricalOutputs: decoded.document.candidates.flatMap((item) => item.kind === "build-record"
         ? [{ id: item.id, build: item.build, output: item.output }]
         : []),
       attachments: mergeAttachments([author.attachments, await workspace.attachments()]),
@@ -288,23 +288,73 @@ export class NodeRunCompiler {
       collectRunModuleRequests(decoded.document, this.#options.fragments),
     );
     const executionCompilation = program === author.program ? author : { ...author, program };
-    const resolveBuildRecord = this.#options.resolveBuildRecord;
+    const resolveHistoricalOutput = this.#options.resolveHistoricalOutput;
     const buildAttachments: ArtifactAttachment[] = [];
-    const run = await resolveRunDocument(decoded.document, {
+    const structuralRun = await resolveRunDocument(decoded.document, {
       compilation: executionCompilation,
       fragments: this.#options.fragments,
-      readStoredValue: async (from) => await storedValueFromWorkspace(workspace, source, from),
-      readFile: async (from, mediaType) => await fileValueFromWorkspace(workspace, source, from, mediaType),
-      async resolveBuildRecord(build, output) {
-        if (resolveBuildRecord === undefined) {
-          throw new Error(`Run contains historical Build Candidate ${build}; plan/build requires --runtime to resolve it`);
-        }
-        const resolved = await resolveBuildRecord(build, output);
-        if (resolved === undefined) return undefined;
-        buildAttachments.push(...(resolved.attachments ?? []));
-        return { type: resolved.type, value: resolved.value };
-      },
     });
+    const structuralPlan = planBuild(program, author.graph, structuralRun.graph);
+    const selectedSources = new Set(structuralPlan.selections
+      .filter((selection) => structuralRun.candidateSources[selection.candidate] !== undefined)
+      .map((selection) => selection.candidate));
+    const resolvedValues = new Map<string, StoredValue>();
+    for (const candidate of selectedSources) {
+      const candidateSource = structuralRun.candidateSources[candidate]!;
+      if (candidateSource.kind === "stored-value") {
+        resolvedValues.set(candidate, await storedValueFromWorkspace(workspace, source, candidateSource.from));
+        continue;
+      }
+      if (candidateSource.kind === "file") {
+        resolvedValues.set(candidate, await fileValueFromWorkspace(
+          workspace,
+          source,
+          candidateSource.from,
+          candidateSource.mediaType,
+        ));
+        continue;
+      }
+      if (resolveHistoricalOutput === undefined) {
+        throw new Error(`Historical Build Candidate ${candidateSource.build}/${candidateSource.output} requires a project Result Store`);
+      }
+      const resolved = await resolveHistoricalOutput(candidateSource.build, candidateSource.output);
+      if (resolved === undefined) {
+        throw new Error(`Build ${candidateSource.build} has no Output ${candidateSource.output}`);
+      }
+      const declaration = structuralRun.graph.candidates.find((item) => item.id === candidate)!;
+      if (!sameType(resolved.type, declaration.type)) {
+        throw new Error(`Build ${candidateSource.build} Output ${candidateSource.output} has the wrong type for its satisfied Logical Output`);
+      }
+      resolvedValues.set(candidate, resolved.value);
+      buildAttachments.push(...(resolved.attachments ?? []));
+    }
+    const run = {
+      ...structuralRun,
+      graph: sealRunGraph({
+        ...structuralRun.graph,
+        candidates: structuralRun.graph.candidates.map((candidate) => {
+          const resolved = resolvedValues.get(candidate.id);
+          if (resolved === undefined) return candidate;
+          if (candidate.root.kind !== "value") throw new Error(`Historical Candidate ${candidate.id} is not a zero-input value`);
+          return {
+            ...candidate,
+            root: {
+              kind: "value" as const,
+              value: { id: candidate.root.value.id, value: resolved },
+            },
+          };
+        }),
+      }),
+    };
+    const admitted = planBuild(program, author.graph, run.graph);
+    const admitRecord = (this.#options.authorCompiler as NodeCompiler & {
+      readonly admitRecord?: NodeCompiler["admitRecord"];
+    }).admitRecord;
+    if (typeof admitRecord === "function") {
+      for (const record of admitted.initialRecords) {
+        await admitRecord.call(this.#options.authorCompiler, program, record);
+      }
+    }
     return {
       source: source.id,
       authorSource: authorSource.id,
@@ -316,23 +366,23 @@ export class NodeRunCompiler {
   }
 
   planCompilation(compilation: NodeCompiledRun): PlannedBuild {
-    const authorGraph = compilation.author.graph;
-    const selected = new Map(compilation.run.graph.satisfactions.map((item) => [item.output, item.candidate]));
-    const fullGraph = sealCompiledGraph({
-      outputs: authorGraph.outputs.map((output) => ({
-        ...output,
-        primary: selected.get(output.id) ?? output.primary,
-      })),
-      candidates: [...authorGraph.candidates, ...compilation.run.graph.candidates],
-      operations: [...authorGraph.operations, ...compilation.run.graph.operations],
+    const sliced = sliceExecution(compilation.program, compilation.author.graph, compilation.run.graph);
+    const definition = defineBuild({
+      program: sliced.program,
+      initialRecords: sliced.initialRecords,
+      plan: sliced.plan,
+      targets: sliced.targets,
     });
-    const fullRequest = sealBuildRequest({
-      targets: compilation.run.graph.targets,
-    });
-    const sliced = sliceExecution(compilation.program, fullGraph, fullRequest);
-    const definition = defineBuild(sliced.program, sliced.graph, fullRequest);
     const state = materializeBuild(definition, []);
-    return { compilation, definition, state };
+    const resultForwards = sliced.selections.flatMap((selection) => {
+      const source = compilation.run.candidateSources[selection.candidate];
+      return source?.kind !== "build-output" ? [] : [{
+        output: selection.output,
+        build: source.build,
+        sourceOutput: source.output,
+      }];
+    });
+    return { compilation, selections: sliced.selections, resultForwards, definition, state };
   }
 
   async planFile(file: string): Promise<PlannedBuild> {

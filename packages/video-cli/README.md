@@ -16,10 +16,11 @@ hypit check main.svml
 hypit plan build.svrun
 hypit build build.svrun --follow
 hypit status <build-id> --watch
+hypit activity
 hypit builds
 hypit history [source-output-name] [--source ./main.svml] [--pin] [--exclude-targets]
 hypit inspect <build-id>
-hypit get <build-id> --name final.video --to ./final.mp4
+hypit get <build-id> --output final.video --to ./final.mp4
 hypit cancel <build-id>
 hypit doctor
 hypit gc
@@ -42,37 +43,32 @@ the Script-owned deterministic CaptionDocument alongside real local/remote Endpo
 fabricates a Target, Candidate or missing fact.
 
 `build` compiles one immutable Build Definition and passes it to the selected Runtime Profile with a fresh,
-automatically assigned execution id. Source or Plan identity never reclaims an earlier Build; reuse
+automatically assigned Build id. The id begins with its UTC creation time, so repository order is both
+stable and visible; its random suffix prevents same-millisecond collisions and says nothing about content.
+Source or Plan identity never reclaims an earlier Build; reuse
 across Builds exists only through explicit Run Source Candidates. JSON Profiles resolve only adapters in their separately
 selected `use` fields and contain no executable callback. The CLI imports no Provider. A TypeScript config
 module remains trusted deployment code with normal Node authority. Neither form is discovered from
 a source import.
 
 Without `--follow`, `build` returns after durable submission and the detached Worker continues.
-With `--follow`, the CLI observes dispatch and Operation facts until terminal state or
+With `--follow`, the CLI observes Build activity and Operation facts until a Result outcome or
 `--max-wait-ms`; Ctrl-C only detaches that observer. `status` reads durable verified state, and
 `status --watch` reattaches the same kind of observer to an existing Build. The CLI
 controls Builds, not individual Operations. Cancelling a Build atomically withdraws it before claim,
 or marks running work for one best-effort Provider cancellation call after claim. It never selects
 another Candidate. None of these commands creates or stores a ready-Command queue.
 
-`build` archives every accepted Record in the demanded closure and every referenced byte Artifact,
-whether or not the user wants a conventional filesystem copy. `inspect` lists Targets, demanded
-Logical Outputs, accepted Records and their Artifact references. `get` reads one accepted Record;
-without a selector it requires one distinct target, while `--name`, `--record` and `--output` select
-a source output alias, accepted Record or demanded Logical Output. `--artifact` selects any nested
-BlobRef that the Build actually references. `--to` copies an Artifact or writes an inline structured
-value as JSON. It is Host egress only and never changes Build identity or retention.
-Blob egress uses the Store's streaming facet, verifies the declared size and content digest while
-writing a temporary file, then atomically replaces the requested destination. A large video is not
-loaded into CLI memory and a corrupt stream cannot overwrite an existing export.
+The Result saves every public Author Output completed on the demanded route, including structured
+values such as semantic takes. Each Logical Output has exactly one public name in `publishedOutputs`;
+there are no Record, Artifact or alias selectors. `inspect` shows those Outputs, and `get --output`
+reads one exact name. `--to` copies a file or writes an inline structured value as JSON. This is Host
+egress only and never changes Build identity or retention. File streaming writes a temporary file and
+then atomically replaces the destination, so large video need not be loaded into CLI memory.
 
-`builds` and source aliases come from an optional Host `BuildCatalog`. The Catalog contains paths
-and presentation names only. It is not Core truth; `inspect` and `get`
-always resolve the alias back through the verified BuildState before accepting it.
-`history` searches those frozen Catalog names across Builds, but reports only Logical Outputs whose
-selected Record is present in the reconstructed Build view. It neither infers renames nor lists unbuilt
-aliases; an old Catalog name and a current output name are connected explicitly in the Run Source.
+`builds` and `history` browse project-owned Result manifests newest first. `--before <build-id>` moves
+the cursor to older Results without a central history table. Presentation titles, notes and highlights
+live in the Result manifest and may be edited without changing the Build id or the saved Outputs.
 
 Historical Records, fixed files and generated previews are declared as ordinary Candidates in the
 Run Source and selected by explicit Satisfaction edges. The Host verifies a referenced prior Build

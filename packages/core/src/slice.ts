@@ -1,21 +1,21 @@
 import type {
-  BuildRequest,
   CompiledGraph,
   GraphValueRef,
   LinkedProgram,
   ModuleRef,
+  RunGraph,
 } from "@hypit/protocol";
 
-import { sealCompiledGraph } from "./graph.js";
 import { createResolvedClosure, link } from "./link.js";
-import { compileBuild } from "./plan.js";
+import { planBuild } from "./plan.js";
+import type { BuildCandidateSelection } from "./plan.js";
 
 function moduleKey(ref: ModuleRef): string {
   return `${ref.name}\u0000${ref.version}`;
 }
 
 /**
- * Materialize exactly the execution graph selected by one BuildRequest.
+ * Materialize exactly the execution selected by one Author Graph and one Run Graph.
  *
  * Candidate choice is Core semantics: once an alternate Candidate satisfies an
  * output, only that Candidate's reachable upstream graph survives. Hosts must
@@ -23,11 +23,23 @@ function moduleKey(ref: ModuleRef): string {
  */
 export function sliceExecution(
   program: LinkedProgram,
-  graph: CompiledGraph,
-  request: BuildRequest,
-): { readonly program: LinkedProgram; readonly graph: CompiledGraph } {
-  const preliminary = compileBuild(program, graph, request);
-  const outputById = new Map(graph.outputs.map((item) => [item.id, item]));
+  authorGraph: CompiledGraph,
+  runGraph: RunGraph,
+): {
+  readonly program: LinkedProgram;
+  readonly plan: ReturnType<typeof planBuild>["plan"];
+  readonly initialRecords: ReturnType<typeof planBuild>["initialRecords"];
+  readonly targets: RunGraph["targets"];
+  readonly selections: readonly BuildCandidateSelection[];
+} {
+  const preliminary = planBuild(program, authorGraph, runGraph);
+  const graph = {
+    format: "hypit.graph@1" as const,
+    outputs: authorGraph.outputs,
+    candidates: [...authorGraph.candidates, ...runGraph.candidates],
+    operations: [...authorGraph.operations, ...runGraph.operations],
+  };
+  const outputById = new Map(authorGraph.outputs.map((item) => [item.id, item]));
   const candidateById = new Map(graph.candidates.map((item) => [item.id, item]));
   const operationById = new Map(graph.operations.map((item) => [item.id, item]));
   const selectionByOutput = new Map(preliminary.selections.map((item) => [item.output, item]));
@@ -62,10 +74,8 @@ export function sliceExecution(
     outputs.add(id);
     visitCandidate(selectionByOutput.get(id)?.candidate ?? output.primary);
   };
-  request.targets.forEach((target) => visitOutput(target.output));
+  runGraph.targets.forEach((target) => visitOutput(target.output));
 
-  const selectedOutputs = graph.outputs.filter((item) => outputs.has(item.id));
-  const selectedCandidates = graph.candidates.filter((item) => candidates.has(item.id));
   const selectedOperations = graph.operations.filter((item) => operations.has(item.id));
   const authoredRecords = program.records.filter((record) => records.has(record.id));
 
@@ -80,8 +90,8 @@ export function sliceExecution(
     resolved.manifest.dependencies.forEach((item) => requireModule(item.module));
   };
   selectedOperations.forEach((item) => requireModule(item.producer.module));
-  selectedOutputs.forEach((item) => requireModule(item.type.module));
-  selectedCandidates.forEach((item) => requireModule(item.type.module));
+  preliminary.plan.outputBindings.forEach((item) => requireModule(item.type.module));
+  preliminary.initialRecords.forEach((item) => requireModule(item.type.module));
   authoredRecords.forEach((item) => requireModule(item.type.module));
 
   const closure = createResolvedClosure(program.closure.modules
@@ -90,10 +100,9 @@ export function sliceExecution(
   const slicedProgram = link(closure, authoredRecords);
   return {
     program: slicedProgram,
-    graph: sealCompiledGraph({
-      outputs: selectedOutputs,
-      candidates: selectedCandidates,
-      operations: selectedOperations,
-    }),
+    plan: preliminary.plan,
+    initialRecords: preliminary.initialRecords,
+    targets: runGraph.targets,
+    selections: preliminary.selections,
   };
 }

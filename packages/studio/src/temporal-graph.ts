@@ -158,7 +158,7 @@ function producingSteps(state: BuildState): ReadonlyMap<string, ProducerStep> {
 }
 
 function closure(state: BuildState, output: string): ReadonlySet<string> {
-  const selected = state.plan.selections.find((selection) => selection.output === output);
+  const selected = state.plan.outputBindings.find((selection) => selection.output === output);
   if (selected === undefined) return new Set();
   const producers = producingSteps(state);
   const steps = new Set<string>();

@@ -108,7 +108,7 @@ hypit plan build.svrun
 
 含有 `package.json` 的项目负责自己的第三方包；普通创作文件夹不需要成为 Node 项目，直接使用
 Distribution 里的官方包。默认情况下，完整 Build Result 位于项目的 `.hypit/results`；Profile
-也可以把同一套 Result 模型指向 S3。Runtime 活跃状态与临时 Artifact 始终位于所选 Profile 的
+不管理 Result，项目根的 `hypit.results.json` 可以把同一套 Result 模型指向 S3。Runtime 活跃状态与临时 Artifact 始终位于所选 Profile 的
 `dataRoot`。`runtime use` 只在 `.hypit/runtime` 保存一个本地指针。Source import 选择作者包，
 Profile 则通过 `use` 独立选择 Runtime 包。
 
@@ -134,15 +134,15 @@ Build 前必须重复的仪式。
 ```bash
 hypit status <build-id> --watch
 
-hypit queue
+hypit activity
 
 hypit get <build-id> \
-  --name final.video \
+  --output final.video \
   --to output/final.mp4
 ```
 
-Runtime 会归档所有已经接受的中间 Record 和媒体。`get` 只负责把某个归档结果复制到便于人查看的位置，
-不会决定哪些中间结果应该被保存。
+Build Result 会保存目标路径上已经完成的所有公开 Author Output，包括媒体和结构化值。`get`
+只负责按唯一公开名称读取或复制某个 Output，不会决定哪些中间结果应该被保存。
 
 ## 真实 Build 可能使用的本地工具
 
@@ -166,7 +166,7 @@ hypit runtime up
 Runtime 只会在机器 Program Home 中缺少托管环境时创建它，随后被所有项目和会话复用。不要在
 创作项目里手动执行服务的 `uv sync`。
 
-修改 Runtime Profile 后运行 `hypit doctor hypit.runtime.json`。它会报告缺少的工具、凭据和
+修改 Runtime Profile 或项目 Result Store 后运行 `hypit doctor hypit.runtime.json`。它会报告缺少的工具、凭据和
 Endpoint 配置，但不会执行作者图。
 
 ## 接下来读什么

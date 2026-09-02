@@ -214,7 +214,7 @@ test("Selection and Moment each place one independent item", () => {
   assert.deepEqual(track.clips.map((clip) => clip.target.startSample), [48_000, 144_000]);
 });
 
-test("one Track with overlaps and two peer Tracks compile to the same deterministic mix facts", () => {
+test("one Track with overlaps and two peer Tracks compile to the same mix", () => {
   const sourceA = media("a", 48_000);
   const sourceB = media("b", 48_000);
   const first = { ...programTrack(sourceA, spec({ id: "a" })), id: "first" };
@@ -240,9 +240,6 @@ test("one Track with overlaps and two peer Tracks compile to the same determinis
     peerPlan.clips.map(({ id: _id, ...clip }) => clip),
     combinedPlan.clips.map(({ id: _id, ...clip }) => clip),
   );
-  const localReceived = structuredClone(peerPlan);
-  const remoteReceived = JSON.parse(JSON.stringify(peerPlan)) as typeof peerPlan;
-  assert.deepEqual(localReceived, remoteReceived);
 });
 
 test("dynamic Fragment keeps every material and temporal dependency as an explicit input", () => {

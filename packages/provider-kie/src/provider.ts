@@ -11,9 +11,7 @@ import type {
   BlobRef,
   CanonicalValue,
   ResourceId,
-  Need,
 } from "@hypit/protocol";
-import type { GenerationRequest } from "@hypit/generation";
 import {
   defineEndpointPackage,
   wakeAfter,
@@ -24,7 +22,6 @@ import type { ResourceStore, CredentialRef } from "@hypit/runtime";
 import {
   kieRouteForCapability,
   kieRoutes,
-  supportsKieGptImageRequest,
   verifyKieRoutes,
 } from "./routes.js";
 import type { KieTaskRequest } from "./routes.js";
@@ -53,11 +50,9 @@ export type CreateKieProviderOptions = {
 };
 
 type KieHandle = {
-  readonly contract: "hypit.kie-operation@1";
   readonly taskId: string;
   readonly routeKey: string;
   readonly startedAt: number;
-  readonly polls: number;
 };
 
 class KieError extends Error {
@@ -226,7 +221,7 @@ class KieClient {
       + `Content-Type: ${artifact.mediaType}\r\n\r\n`,
     );
     const fields = encode(
-      `\r\n--${boundary}\r\nContent-Disposition: form-data; name="uploadPath"\r\n\r\nsvml/resources`
+      `\r\n--${boundary}\r\nContent-Disposition: form-data; name="uploadPath"\r\n\r\nhypit/resources`
       + `\r\n--${boundary}\r\nContent-Disposition: form-data; name="fileName"\r\n\r\n${fileName}`
       + `\r\n--${boundary}--\r\n`,
     );
@@ -418,13 +413,11 @@ function readHandle(value: CanonicalValue | undefined, context: EndpointPollCont
   }
   const handle = object(value, "KIE handle") as unknown as KieHandle;
   const route = kieRouteForCapability(context.need.capability);
-  if (handle.contract !== "hypit.kie-operation@1"
-    || typeof handle.taskId !== "string"
+  if (typeof handle.taskId !== "string"
     || route === undefined
     || handle.routeKey !== route.key
-    || !Number.isSafeInteger(handle.startedAt)
-    || !Number.isSafeInteger(handle.polls)) {
-    throw new KieError("KIE_HANDLE_INVALID", "KIE handle does not match the regenerated Need");
+    || !Number.isSafeInteger(handle.startedAt)) {
+    throw new KieError("KIE_HANDLE_INVALID", "KIE handle does not match the current Need");
   }
   return handle;
 }
@@ -464,11 +457,9 @@ function endpoint(options: {
         await options.gate.enter();
         const taskId = await options.client.createTask(task, key);
         const handle: KieHandle = {
-          contract: "hypit.kie-operation@1",
           taskId,
           routeKey: route.key,
           startedAt: options.now(),
-          polls: 0,
         };
         return wakeAfter(canonicalize(handle), options.pollIntervalMs, options.now(), {
           phase: "submitted",
@@ -496,8 +487,7 @@ function endpoint(options: {
         const data = await options.client.taskInfo(handle.taskId, key);
         const state = data.state;
         if (state === "waiting" || state === "queuing" || state === "generating") {
-          const next = { ...handle, polls: handle.polls + 1 };
-          return wakeAfter(canonicalize(next), options.pollIntervalMs, options.now(), {
+          return wakeAfter(canonicalize(handle), options.pollIntervalMs, options.now(), {
             phase: state,
           });
         }
@@ -589,9 +579,7 @@ export function createKieProvider(config: CreateKieProviderOptions) {
         : { maxConcurrency: laneConcurrency[route.capability.name] }),
       lifecycle: "asynchronous" as const,
       endpoint: providerEndpoint,
-      ...(route.capability.module.name === "@hypit/gpt-image" ? {
-        supports: (need: Need) => supportsKieGptImageRequest(need.constraints as unknown as GenerationRequest),
-      } : {}),
+      ...(route.supports === undefined ? {} : { supports: route.supports }),
     })),
   });
 }

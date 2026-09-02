@@ -20,7 +20,7 @@ Ordinary work then follows the short path:
 ```bash
 hypit plan build.svrun
 hypit build build.svrun --follow
-hypit get <build-id> --name final.video --to output/final.mp4
+hypit get <build-id> --output final.video --to output/final.mp4
 ```
 
 The Quickstart installs the Distribution once. Every command on this page then works as `hypit`
@@ -137,7 +137,7 @@ on `<build-record>` and use the current name on `<satisfy>`:
 
 ```svml
 <build-record id="approved-opening"
-  build="bld_01234567-89ab-cdef-0123-456789abcdef" output="hook-take.video"/>
+  build="bld_20260902T110000001Z_0000000001" output="hook-take.video"/>
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
@@ -145,6 +145,9 @@ Hypit never infers that two names mean the same author intent. Every `build` inv
 fresh Build id and its own Result directory, even when nothing changed. A later Run reuses an Output
 only by naming the earlier Build id and Output here. If that earlier Output already forwards to an
 older one, resolution follows the explicit chain; no bytes are copied into the new Result.
+Forwarding applies only to a complete public Output. Structured JSON cannot recursively point at
+another Output; a historical value consumed inside a new Fragment is an ordinary input and the new
+Fragment's Output belongs to the current Result.
 
 ### build-record
 
@@ -154,7 +157,7 @@ Declares a zero-input Candidate backed by one named Output from a previous Build
 |---|---|
 | `id` | Local Candidate id within this Run Source |
 | `build` | The automatically assigned id of the previous Build |
-| `output` | The Logical Output name from that Build |
+| `output` | The public Output name in that Build Result |
 
 ### satisfy
 
@@ -165,7 +168,9 @@ Connects a Candidate to a Logical Output:
 | `output` | The Logical Output to satisfy |
 | `candidate` | The Candidate id (from `build-record`) |
 
-The compiled plan prunes all upstream Operations that the selected Candidates replace. This is a
+The Planner reads the complete Author Graph and Run Graph together. It prunes default Operations
+that selected Candidates replace while retaining any Author Outputs the selected Candidate itself
+still consumes. This is a
 new Build, not a continuation of the old one. Downstream processing (normalization, WhisperX,
 captioning, rendering) still runs against the reused media.
 
@@ -260,7 +265,7 @@ only with `--workspace`. `--package-root` locates installed packages and never w
 output/
 ```
 
-That is the zero-configuration Result repository. A Runtime Profile may instead select
+That is the zero-configuration Result repository. A project-owned `hypit.results.json` may instead select
 `@hypit/build-result-s3`; commands and historical `build-record` references then use that same
 repository. Runtime working Artifacts remain local and private to the Runtime.
 
@@ -272,7 +277,7 @@ hypit runtime use hypit.runtime.json
 ```
 
 Author and Run Sources select their packages through imports. The Runtime Profile selects its Host,
-Result repository, credential and Endpoint packages through `use`. The installed package manager
+credential and Endpoint packages through `use`; the project separately owns its Result repository. The installed package manager
 owns their versions.
 
 ### 2. Diagnose the environment
@@ -315,7 +320,7 @@ processes declared by Endpoints.
 ### 4. Submit the Build
 
 ```bash
-hypit build build.svrun --name first-cut --follow
+hypit build build.svrun --title first-cut --follow
 ```
 
 Without `--follow`, `build` returns after durable submission. The detached Worker continues. With
@@ -328,7 +333,7 @@ Attach or reattach an observer at any time:
 hypit status <build-id> --watch
 ```
 
-A plain `status <build-id>` prints one snapshot. `status --watch` exits at terminal state; use
+A plain `status <build-id>` prints one snapshot. `status --watch` exits when the Result has an outcome; use
 `--max-wait-ms` when a script needs a bounded wait.
 
 | Flag | Description |
@@ -336,8 +341,8 @@ A plain `status <build-id>` prints one snapshot. `status --watch` exits at termi
 | `--runtime` | One-command Runtime Profile override; normally select it once with `runtime use` |
 | `--package-root` | Host directory containing the installed packages |
 | `--workspace` | Explicit Source Workspace override |
-| `--name` | Optional human-facing name for this independent Build |
-| `--follow` | Wait for terminal state as an observer; durable execution remains with the Worker |
+| `--title` | Optional human-facing Result title |
+| `--follow` | Wait for a Result outcome as an observer; durable execution remains with the Worker |
 
 Each invocation creates a fresh Build id, even when the Author and Run Sources are unchanged. That
 is necessary for non-deterministic generation: cross-Build reuse belongs only to explicit Candidates
@@ -355,7 +360,7 @@ public Output saved along their execution route:
 
 ```bash
 hypit get <build-id> \
-  --name final.video \
+  --output final.video \
   --to examples/talking-head-aroll/output/final.mp4
 ```
 
@@ -363,7 +368,7 @@ hypit get <build-id> \
 from that Result; a structured Output is read from its Result value file; a forwarded historical
 Output is followed to its declared earlier Result. The Runtime Profile is not involved.
 
-The terminal Build result prints the exact `get --name …` command for every file Target;
+The finished Build result prints the exact `get --output …` command for every file Target;
 there is no need to inspect opaque Record ids just to export `final.video`.
 
 ### 6. Reuse in a new Build

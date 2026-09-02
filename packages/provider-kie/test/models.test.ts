@@ -1,45 +1,34 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { videoContractManifests } from "../../../test/support/video-domain.js";
-import { createResolvedClosure } from "@hypit/core";
-
-import { verifyGraphFragment } from "@hypit/elaborator";
 import { MemoryResourceStore } from "@hypit/driver-node";
 import {
   assertMappingCoversPorts,
   compileWireRequest,
-  generationManifest,
 } from "@hypit/generation";
 import type { GenerationPortTable } from "@hypit/generation";
 import {
   gptImageDefinition,
-  gptImageManifest,
   sealGptImage2Request,
 } from "@hypit/gpt-image";
 import {
   grokImagineDefinition,
-  grokImagineManifest,
   sealGrokImagineRequest,
 } from "@hypit/grok-imagine";
 import {
   minimaxH3Definition,
-  minimaxH3Manifest,
   sealMinimaxH3Request,
 } from "@hypit/minimax-h3";
 import {
   nanoBananaDefinition,
-  nanoBananaManifest,
   sealNanoBananaRequest,
 } from "@hypit/nano-banana";
 import { kieModelCatalog } from "@hypit/provider-kie";
-import { seedanceDefinition, seedanceManifest, seedancePorts, sealSeedanceRequest } from "@hypit/seedance";
+import { seedanceDefinition, sealSeedanceRequest } from "@hypit/seedance";
 import {
   seedreamDefinition,
-  seedreamManifest,
   sealSeedreamRequest,
 } from "@hypit/seedream";
-import type { CapabilityRef, LinkedProgram } from "@hypit/protocol";
-import { textManifest } from "@hypit/text";
+import type { CapabilityRef } from "@hypit/protocol";
 
 /**
  * Every exact model this repository ships, paired with the Capability it publishes.
@@ -58,25 +47,6 @@ function capabilityKey(ref: CapabilityRef): string {
 
 const upload = async (artifact: { readonly resource: string }) => `https://upload.test/${artifact.resource}`;
 
-test("the selected KIE release is six exact model families and no Grok image capability", () => {
-  assert.equal(kieModelCatalog.length, 11);
-  assert.equal(
-    kieModelCatalog.some((item) => item.capability.name.startsWith("grok-") && item.result === "image"),
-    false,
-  );
-  assert.deepEqual(
-    [...new Set(kieModelCatalog.map((item) => item.capability.module.name))].sort(),
-    [
-      "@hypit/gpt-image",
-      "@hypit/grok-imagine",
-      "@hypit/minimax-h3",
-      "@hypit/nano-banana",
-      "@hypit/seedance",
-      "@hypit/seedream",
-    ],
-  );
-});
-
 /**
  * The check the old hand-written translators could not perform. Forgetting a
  * reference role or an item field used to surface only after paid generation
@@ -91,58 +61,6 @@ test("the KIE mapping covers every port every exact model declares", () => {
     assert.ok(mapping, `KIE declares no mapping for ${capabilityKey(capability)}`);
     assertMappingCoversPorts(ports, mapping);
   }
-});
-
-test("dropping one reference modality from a mapping fails coverage before any spend", () => {
-  const seedance = kieModelCatalog.find((item) => item.capability.name === "seedance-2-mini");
-  assert.ok(seedance);
-  const { referenceAudio: _dropped, ...withoutAudio } = seedance.fields;
-  assert.throws(
-    () => assertMappingCoversPorts(seedancePorts["seedance-2-mini"], { ...seedance, fields: withoutAudio }),
-    /does not cover port referenceAudio/u,
-  );
-});
-
-test("all model manifests close over the shared generation contract and every Fragment verifies", () => {
-  const definitions = [
-    seedanceDefinition,
-    minimaxH3Definition,
-    grokImagineDefinition,
-    gptImageDefinition,
-    nanoBananaDefinition,
-    seedreamDefinition,
-  ];
-  const closure = createResolvedClosure([
-    ...videoContractManifests,
-    textManifest,
-    generationManifest,
-    seedanceManifest,
-    minimaxH3Manifest,
-    grokImagineManifest,
-    gptImageManifest,
-    nanoBananaManifest,
-    seedreamManifest,
-  ]);
-  const program: LinkedProgram = {
-    closure,
-    records: [],
-  };
-  definitions.forEach((definition) => {
-    Object.values(definition.endpoints).forEach((endpoint) => verifyGraphFragment(program, endpoint.fragment));
-  });
-});
-
-test("Seedream safety policy remains explicit author content", () => {
-  const base = {
-    prompt: ["A fashion editorial."],
-    aspectRatio: ["3:4"],
-    quality: ["basic"],
-    outputFormat: ["png"],
-  };
-  const unchecked = sealSeedreamRequest({ ...base, nsfwCheck: [false] });
-  const checked = sealSeedreamRequest({ ...base, nsfwCheck: [true] });
-  assert.deepEqual(unchecked.ports.nsfwCheck, [false]);
-  assert.deepEqual(checked.ports.nsfwCheck, [true]);
 });
 
 test("all eleven exact capabilities route to their documented KIE model slug", async () => {

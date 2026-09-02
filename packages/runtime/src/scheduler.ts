@@ -96,7 +96,7 @@ export class LocalBuildScheduler {
     let cursor = 0;
 
     const resourceLimit = (resource: RuntimeRunnableCommand["resources"][number]): number => {
-      const proposed = positiveInteger(resource.maxActive, `resource ${resource.id} default`);
+      const proposed = positiveInteger(resource.limit, `resource ${resource.id} limit`);
       const previous = resourceDefaults.get(resource.id);
       if (previous !== undefined && previous !== proposed) {
         throw new Error(`resource ${resource.id} has conflicting default concurrency ${previous} and ${proposed}`);

@@ -1,79 +1,104 @@
-import {
-  isStreamingResourceStore,
-} from "@hypit/runtime";
-
 import type {
-  CreateLocalRuntimeArchiveControlOptions,
-  CreateLocalRuntimeResourceAccessOptions,
-  LocalRuntimeArchiveControl,
-  LocalRuntimeResourceAccess,
+  CreateLocalRuntimeControlOptions,
+  LocalRuntimeControl,
 } from "./types.js";
+import { buildExecutionActivity } from "@hypit/runtime";
+import type {
+  PendingBuildSubmission,
+  BuildCatalogEntry,
+  BuildExecutionSnapshot,
+  BuildSnapshot,
+  OperationSnapshot,
+} from "@hypit/runtime";
+import type { BuildView } from "@hypit/runtime-host-node";
+import { buildIdCreatedAt } from "@hypit/protocol";
 
-/** Durable execution-state control that never opens or depends on a ResourceStore. */
-export function createLocalRuntimeArchiveControl(
-  options: CreateLocalRuntimeArchiveControlOptions,
-): LocalRuntimeArchiveControl {
-  const buildCatalog = options.buildCatalog;
+function buildView(input: {
+  readonly build: string;
+  readonly snapshot?: BuildSnapshot;
+  readonly catalog?: BuildCatalogEntry;
+  readonly submission?: PendingBuildSubmission;
+  readonly execution?: BuildExecutionSnapshot;
+  readonly operations: readonly OperationSnapshot[];
+}): BuildView | undefined {
+  if (input.submission === undefined && input.execution === undefined) return undefined;
+  const createdAt = buildIdCreatedAt(input.build);
+  if (createdAt === undefined) throw new Error(`Active Build ${input.build} has no ordered public id`);
+  const runtimeActivity = input.execution === undefined ? undefined : buildExecutionActivity(input.execution);
+  const activity: BuildView["activity"] = input.submission !== undefined
+    ? "submitting"
+    : runtimeActivity!;
+  const names = new Map(input.catalog?.publishedOutputs.map((item) => [item.ref.id, item.name]) ?? []);
+  const targets = input.snapshot?.state.targets.map((target) => {
+    const name = names.get(target.output);
+    if (name === undefined) throw new Error(`Build ${input.build} target ${target.output} has no published Output name`);
+    return name;
+  }) ?? [];
   return {
-    async activity(build) {
-      const [operations, dispatch] = await Promise.all([
-        options.operationStore.list({ build }),
-        options.dispatchStore.read(build),
-      ]);
-      return { operations, dispatch };
-    },
-    async status(build) {
-      const [snapshot, catalog, operations, dispatch] = await Promise.all([
-        options.buildStore.read(build),
-        buildCatalog?.read(build),
-        options.operationStore.list({ build }),
-        options.dispatchStore.read(build),
-      ]);
-      return {
-        build: snapshot,
-        catalog,
-        operations,
-        dispatch,
-      };
-    },
-    async queue() {
-      const [dispatches, capacity] = await Promise.all([
-        options.dispatchStore.list({ phases: ["queued", "running", "waiting"] }),
-        options.dispatchStore.listCapacity(),
-      ]);
-      const operationHistory = (await Promise.all(dispatches.map(async (item) =>
-        await options.operationStore.list({ build: item.build })))).flat();
-      return {
-        dispatches,
-        capacity,
-        operations: operationHistory,
-      };
-    },
-    async builds() {
-      return await buildCatalog?.list() ?? [];
-    },
-    async cancel(build, reason) {
-      if (await options.dispatchStore.read(build) === undefined) return undefined;
-      return await options.dispatchStore.requestCancellation(build, reason);
-    },
-    close() {
-      return options.close?.();
-    },
+    id: input.build,
+    createdAt,
+    activity,
+    ...(input.execution?.decision === undefined ? {} : { outcome: input.execution.decision.outcome }),
+    ...(input.execution?.attention === undefined ? {} : {
+      issue: { scope: input.execution.attention.step, message: input.execution.attention.error },
+    }),
+    cancellationRequested: input.execution?.cancellation !== undefined,
+    ...(input.catalog?.source === undefined ? {} : { source: input.catalog.source }),
+    ...(input.catalog?.run === undefined ? {} : { run: input.catalog.run }),
+    targets,
+    acceptedRecords: input.snapshot?.state.records.length ?? 0,
+    outstandingCommands: input.snapshot?.state.outstanding.length ?? 0,
+    operations: input.operations.map((operation) => ({
+      endpoint: operation.endpoint,
+      status: operation.status,
+      ...(operation.progress === undefined ? {} : { progress: operation.progress }),
+      ...(operation.failure === undefined ? {} : { failure: operation.failure }),
+    })),
   };
 }
 
-/** Explicit active-resource byte access with no dependency on execution-state Stores. */
-export function createLocalRuntimeResourceAccess(
-  options: CreateLocalRuntimeResourceAccessOptions,
-): LocalRuntimeResourceAccess {
+/** Active Runtime control that never opens or depends on a ResourceStore. */
+export function createLocalRuntimeControl(
+  options: CreateLocalRuntimeControlOptions,
+): LocalRuntimeControl {
+  const buildCatalog = options.buildCatalog;
+  const inspect = async (build: string): Promise<BuildView | undefined> => {
+    const [snapshot, catalog, operations, submission, execution] = await Promise.all([
+      options.buildStore.read(build),
+      buildCatalog?.read(build),
+      options.operationStore.list({ build }),
+      options.submissionStore.read(build),
+      options.executionStore.read(build),
+    ]);
+    return buildView({
+      build,
+      ...(snapshot === undefined ? {} : { snapshot }),
+      ...(catalog === undefined ? {} : { catalog }),
+      ...(submission === undefined ? {} : { submission }),
+      ...(execution === undefined ? {} : { execution }),
+      operations,
+    });
+  };
   return {
-    async readResource(resource) {
-      return await options.resourceStore.get(resource);
+    inspect,
+    async activity() {
+      const [submissions, executions, capacity] = await Promise.all([
+        options.submissionStore.list(),
+        options.executionStore.list(),
+        options.executionStore.listCapacity(),
+      ]);
+      return {
+        builds: (await Promise.all([...submissions, ...executions].map(async (item) =>
+          await inspect(item.build))))
+          .filter((item): item is BuildView => item !== undefined)
+          .sort((left, right) => right.id.localeCompare(left.id)),
+        capacity,
+      };
     },
-    async openResource(resource) {
-      if (isStreamingResourceStore(options.resourceStore)) return await options.resourceStore.open(resource);
-      const bytes = await options.resourceStore.get(resource);
-      return bytes === undefined ? undefined : (async function* () { yield bytes; })();
+    async cancel(build, reason) {
+      if (await options.executionStore.read(build) === undefined) return undefined;
+      await options.executionStore.requestCancellation(build, reason);
+      return await inspect(build);
     },
     close() {
       return options.close?.();

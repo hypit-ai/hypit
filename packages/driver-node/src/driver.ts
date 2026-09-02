@@ -212,8 +212,7 @@ export class NodeDriver {
         endpointId: registration.id,
         resources: registration.scheduling?.resources ?? [{
           id: `endpoint:${registration.id}`,
-          maxActive: 1,
-          maxInFlight: 1,
+          limit: 1,
         }],
         ...(registration.scheduling?.queue === undefined ? {} : { queue: registration.scheduling.queue }),
         registration,
@@ -308,6 +307,9 @@ export class NodeDriver {
       command: base.command,
       endpoint: base.endpoint,
     });
+    if (history.length > 1) {
+      throw new Error(`Command ${base.command} has multiple asynchronous Operations; refusing to submit or choose between them`);
+    }
     const latest = history[0];
     if (latest?.status === "completed" || latest?.status === "cancelled") {
       return await this.#completedOperation(state, executable, latest, latest.id);
@@ -317,6 +319,16 @@ export class NodeDriver {
     }
     if (latest?.status === "failed") {
       return await this.#completedOperation(state, executable, latest, latest.id);
+    }
+    if (latest?.status === "pending" && latest.handle === undefined) {
+      const unknown = await operations.update(latest.id, {
+        status: "failed",
+        failure: {
+          code: "SUBMISSION_UNKNOWN",
+          message: `Operation ${latest.id} stopped before its Endpoint acknowledgement was stored; the same Build will not submit it again`,
+        },
+      });
+      return await this.#completedOperation(state, executable, unknown, latest.id);
     }
     const fresh = latest === undefined;
     const identity = fresh
@@ -331,7 +343,23 @@ export class NodeDriver {
     };
     let outcome: EndpointOutcome;
     if (latest === undefined) {
-      outcome = await executable.registration.endpoint.start(endpointContext);
+      await operations.create({
+        ...identity,
+        status: "pending",
+        progress: { phase: "submitting" },
+      });
+      try {
+        outcome = await executable.registration.endpoint.start(endpointContext);
+      } catch (error) {
+        const unknown = await operations.update(identity.id, {
+          status: "failed",
+          failure: {
+            code: "SUBMISSION_UNKNOWN",
+            message: `Endpoint start ended without a stored acknowledgement: ${failureMessage(error)}`,
+          },
+        });
+        return await this.#completedOperation(state, executable, unknown, identity.id);
+      }
     } else {
       if (latest.status !== "pending" || latest.handle === undefined) {
         throw new Error(`Operation ${latest.id} cannot be polled`);
@@ -342,7 +370,7 @@ export class NodeDriver {
       });
     }
     const write = async (update: OperationUpdate): Promise<OperationSnapshot> =>
-      fresh ? await operations.create({ ...identity, ...update }) : await operations.update(identity.id, update);
+      await operations.update(identity.id, update);
     if (outcome.status === "pending") {
       const written = await write({
         status: "pending",
@@ -369,16 +397,14 @@ export class NodeDriver {
         identity.id,
       );
     }
-    const written = await write({
+    // Validate before the terminal completion becomes durable. Result writing may later
+    // accept this stored value without loading or calling the Endpoint package again.
+    const event = await this.#endpointEvent(state, executable, outcome.result);
+    await write({
       status: "completed",
       completion: outcome.result,
     });
-    return await this.#completedOperation(
-      state,
-      executable,
-      written,
-      identity.id,
-    );
+    return { status: "completed", event };
   }
 
   async #execute(
@@ -496,7 +522,7 @@ export class NodeDriver {
     if (executable === undefined || !("endpointId" in executable)
       || executable.endpointId !== operation.endpoint
       || executable.registration.kind !== "asynchronous") {
-      throw new Error(`Operation ${operation.id} does not match the regenerated Endpoint Command`);
+      throw new Error(`Operation ${operation.id} does not match the current Endpoint Command`);
     }
     const endpointContext = {
       command: structuredClone(executable.command),

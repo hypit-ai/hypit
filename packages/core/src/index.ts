@@ -18,8 +18,8 @@ export {
   verifyBuildRequest,
   verifyCompiledGraph,
 } from "./graph.js";
-export { compileBuild, plannedNeeds } from "./plan.js";
-export type { PlannedNeed } from "./plan.js";
+export { compileBuild, planBuild, plannedNeeds } from "./plan.js";
+export type { BuildCandidateSelection, PlannedExecution, PlannedNeed } from "./plan.js";
 export { sliceExecution } from "./slice.js";
 export {
   admitBuildResult,

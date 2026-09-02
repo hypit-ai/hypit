@@ -1,7 +1,6 @@
 import { access, appendFile, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { cpus } from "node:os";
-import { createHash } from "node:crypto";
 import { deflateSync } from "node:zlib";
 import { basename, dirname, join, resolve } from "node:path";
 import { loadNodePackageSelection, locateNodePackage, physicalPackageName } from "@hypit/package-loader-node";
@@ -18,7 +17,7 @@ import {
 } from "@hypit/composition";
 import { VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@hypit/visual-ir";
 
-import { describeSchema } from "./contract.js";
+import { describeSchema } from "./schema.js";
 import { videoCliDistribution } from "@hypit/video-cli";
 import { createHypiHubGeminiGenerator } from "@hypit/provider-hypihub";
 import { createVertexGeminiGenerator } from "@hypit/provider-vertex";
@@ -28,62 +27,13 @@ import { authorSource, invokedFrom, nearestPackageRoot, referenceRoot, reference
 import type { RenderElementInput, RenderPreviewsInput, SpokenRange, StandInFocus, StandInSidecar } from "./authoring.js";
 import { downloadReferenceVideo, isReferenceUrl } from "@hypit/yt-dlp";
 import { loadStudioCompanionRegistry } from "@hypit/studio/src/companion-profile.js";
-import { openStudioArchive } from "@hypit/studio/src/archive.js";
+import { openStudioBuildLibrary } from "@hypit/studio/src/build-library.js";
 import { loadStudioDomain } from "@hypit/studio/src/domain.js";
 import { loadStudioRun } from "@hypit/studio/src/run.js";
-import { authoringCheck, mechanicalAuthoringCheck, previewCheck, reviewLogPath, scriptCueCheck } from "./checks.js";
+import { authoringCheck, previewCheck, reviewLogPath, scriptCueCheck } from "./checks.js";
 import type { AuthoringCheckInput, PreviewCheckInput, ReconstructionCheckInput, ScriptCueCheckInput } from "./checks.js";
-import {
-  checkpointRouteState,
-  componentFitPath,
-  componentFitSatisfied,
-  readRouteState,
-  reconcileRouteState,
-  routeExecutionStatePath,
-  routeStatePath,
-  startRouteState,
-  ROUTE_STATE_STEPS,
-} from "./route-state.js";
-import type { RouteKind, RouteState } from "./route-state.js";
-import type { RouteStep } from "./route-state.js";
-import {
-  checkpointRevisionState,
-  readRevisionState,
-  reconcileRevisionState,
-  revisionExecutionStatePath,
-  revisionRequestPath,
-  revisionStatePath,
-  startRevisionState,
-} from "./revision-state.js";
-import type { RevisionParentRoute, RevisionState, RevisionStep } from "./revision-state.js";
-import { persistEvidence } from "./state-files.js";
 import { layoutAccept, layoutCheck } from "./layout.js";
 import type { LayoutAcceptInput, LayoutCheckInput } from "./layout.js";
-import {
-  checkpointVariantExpansion,
-  discoverVariantExpansions,
-  readVariantExpansionState,
-  reconcileVariantExpansion,
-  startVariantExpansion,
-  variantExpansionStatePath,
-  VARIANT_EXPANSION_STEPS,
-} from "./variant-state.js";
-import type {
-  VariantExpansionCheckpointInput,
-  VariantExpansionPackage,
-  VariantExpansionStep,
-  VariantExpansionVariant,
-  VariantWorkloadDisclosure,
-} from "./variant-state.js";
-import {
-  findGeneratedLeakage,
-  initializeVariantProjects,
-  inspectSourceVocabularyUsage,
-  inspectVariantDiff,
-  snapshotProject,
-  writeVariantJson,
-} from "./variant-project.js";
-import type { ApprovedVariantPackage, VariantProjectManifest } from "./variant-project.js";
 import {
   assert,
   completelyStill,
@@ -123,7 +73,7 @@ export type ObserveReferenceInput = {
 };
 export type RecordObservationInput = {
   readonly reference_id: string;
-  /** Optional Run used to persist reconstruction route progress after an out-of-band answer. */
+  /** Optional Run used to place comparison observations beside the project that requested them. */
   readonly run?: string;
   readonly key?: string;
   readonly text?: string;
@@ -176,7 +126,7 @@ export type CompareReconstructionInput = {
   readonly question?: string;
   /**
    * Names the reconstructed element this image draws, for the comparison log only. It is never sent
-   * to the observer: the comparison stays blind, and this is what lets a later gate tell which
+   * to the observer: the comparison stays blind, and this is what lets a later report tell which
    * elements have been compared and which have never been looked at.
    */
   readonly element?: string;
@@ -196,7 +146,7 @@ export type CompareReconstructionInput = {
  * The counterpart of `compare_reconstruction` on the route with no reference. There is nothing to
  * differ from, so the question is conformance: does the picture match the description, and what is
  * visibly wrong with it. That makes it one-sided, which is the only structural difference — the
- * render is prepared the same way, the log has the same shape, and the same gate reads it.
+ * render is prepared the same way, the log has the same shape, and the same report reads it.
  *
  * There is no observer choice here. The picture is a local render and nobody is billed to look at it,
  * so the task always comes back to be answered rather than being sent anywhere.
@@ -237,25 +187,6 @@ export type RecordReviewInput = {
   readonly text: string;
 };
 
-export type RouteStateCommandInput =
-  | ({ readonly action: "start"; readonly project_root: string; readonly route: RouteKind; readonly run?: string; readonly reference_id?: string })
-  | ({ readonly action: "read" | "reconcile"; readonly project_root: string })
-  | ({ readonly action: "checkpoint"; readonly project_root: string; readonly route: RouteKind; readonly step: number | RouteStep; readonly status?: "in_progress" | "complete" | "blocked"; readonly run?: string; readonly reference_id?: string; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly decision?: string; readonly command?: string; readonly error?: string });
-
-export type RevisionStateCommandInput =
-  | ({ readonly action: "start"; readonly project_root: string; readonly run?: string; readonly parent_route?: RevisionParentRoute; readonly parent_state_digest?: string; readonly request?: string })
-  | ({ readonly action: "read" | "reconcile"; readonly project_root: string })
-  | ({ readonly action: "checkpoint"; readonly project_root: string; readonly step: number | RevisionStep; readonly status?: "in_progress" | "complete" | "blocked"; readonly run?: string; readonly parent_route?: RevisionParentRoute; readonly parent_state_digest?: string; readonly request?: string; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly decision?: string; readonly command?: string; readonly error?: string; readonly impact?: readonly string[]; readonly affected_source?: readonly string[] });
-
-export type VariantStateCommandInput =
-  | ({ readonly action: "discover"; readonly project_root: string })
-  | ({ readonly action: "start"; readonly project_root: string; readonly output_root: string; readonly run?: string; readonly request?: string; readonly count?: number; readonly delivery_mode?: "source" | "build"; readonly parent_route?: "reconstruction" | "description" | "variant"; readonly parent_state_digest?: string; readonly revision_state_digest?: string })
-  | ({ readonly action: "read" | "reconcile"; readonly project_root: string; readonly output_root?: string; readonly batch_id?: string })
-  | ({ readonly action: "checkpoint"; readonly project_root: string; readonly output_root?: string; readonly batch_id?: string; readonly step: number | VariantExpansionStep; readonly status?: "in_progress" | "complete" | "blocked"; readonly next_action?: string; readonly artifacts?: Readonly<Record<string, string>>; readonly workload_disclosure?: VariantWorkloadDisclosure; readonly packages?: readonly VariantExpansionPackage[]; readonly variants?: readonly VariantExpansionVariant[]; readonly decision?: string; readonly conflict?: string; readonly resolve_conflict?: string; readonly command?: string; readonly error?: string });
-
-export type VariantInitInput = { readonly project_root: string; readonly output_root: string; readonly slate: string };
-export type VariantCheckInput = { readonly run: string; readonly runtime?: string };
-
 export type { RenderElementInput, RenderPreviewsInput } from "./authoring.js";
 export type { PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
 
@@ -266,7 +197,7 @@ export type ReferenceVideoTools = {
   inspect_svml_vocabulary(input: InspectVocabularyInput): Promise<Record<string, unknown>>;
   validate_local_author_packages(input: ValidateLocalAuthorPackagesInput): Promise<Record<string, unknown>>;
   validate_script_cues(input: ScriptCueCheckInput): Promise<Record<string, unknown>>;
-  inspect_visual_contract(input: { readonly shape?: string; readonly producers?: readonly string[] }): Promise<Record<string, unknown>>;
+  inspect_visual_schema(input: { readonly shape?: string; readonly producers?: readonly string[] }): Promise<Record<string, unknown>>;
   paths(): Promise<Record<string, unknown>>;
   compare_reconstruction(input: CompareReconstructionInput): Promise<Record<string, unknown>>;
   record_observation(input: RecordObservationInput): Promise<Record<string, unknown>>;
@@ -278,18 +209,8 @@ export type ReferenceVideoTools = {
   layout_check(input: LayoutCheckInput): Promise<Record<string, unknown>>;
   layout_accept(input: LayoutAcceptInput): Promise<Record<string, unknown>>;
   reconstruction_check(input: ReconstructionCheckInput): Promise<Record<string, unknown>>;
-  /**
-   * The same gate for a program authored from a description. It resolves no reference, credits an
-   * element from the project's own review log, and refuses on everything the Source alone decides —
-   * an uncovered stretch, a Frame past the Canvas, a `playback` left at its default — all of which
-   * were unreachable to this route while the check began by demanding a reference.
-   */
+  /** The corresponding direct report for a program authored from a description. */
   authoring_check(input: Omit<AuthoringCheckInput, "mode" | "reference_id">): Promise<Record<string, unknown>>;
-  route_state(input: RouteStateCommandInput): Promise<Record<string, unknown>>;
-  revision_state(input: RevisionStateCommandInput): Promise<Record<string, unknown>>;
-  variant_state(input: VariantStateCommandInput): Promise<Record<string, unknown>>;
-  variant_init(input: VariantInitInput): Promise<Record<string, unknown>>;
-  variant_check(input: VariantCheckInput): Promise<Record<string, unknown>>;
 };
 
 type ToolOptions = {
@@ -303,225 +224,13 @@ type ToolOptions = {
 export type GenerateText = (input: { readonly parts: readonly GeminiInlinePart[]; readonly instruction: string }) => Promise<string>;
 type ObservationTask = { readonly key: string; readonly request: Request };
 
-function routeStateResult(state: RouteState | undefined): Record<string, unknown> {
-  return state === undefined ? { state: null } : {
-    state,
-    path: routeStatePath(state.project_root),
-    history_path: routeExecutionStatePath(state.project_root, state.route_id),
-  };
-}
+let eventSequence = 0;
 
-function revisionStateResult(state: RevisionState | undefined): Record<string, unknown> {
-  return state === undefined ? { state: null } : {
-    state,
-    path: revisionStatePath(state.project_root),
-    history_path: revisionExecutionStatePath(state.project_root, state.revision_id),
-    request_path: revisionRequestPath(state.project_root, state.revision_id),
-  };
-}
-
-function variantStateResult(state: Awaited<ReturnType<typeof readVariantExpansionState>>): Record<string, unknown> {
-  return state === undefined ? { state: null } : { state, path: variantExpansionStatePath(state.output_root) };
-}
-
-function routeStepFor(route: RouteKind, name: string): number | undefined {
-  const aliases: Readonly<Record<string, string>> = route === "variant"
-    ? { "vocabulary-checked": "vocabulary-verified", "source-authored": "source-updated" }
-    : route === "variant-package"
-      ? { "vocabulary-checked": "vocabulary-inspected", "package-ready": "package-validated", "source-authored": "implemented" }
-      : {};
-  const stage = aliases[name] ?? name;
-  const index = ROUTE_STATE_STEPS[route].indexOf(stage);
-  if (index < 0) return undefined;
-  return index + 1;
-}
-
-async function runRouteStateCommand(input: RouteStateCommandInput): Promise<Record<string, unknown>> {
-  if (input.action === "start") {
-    const state = await startRouteState({ projectRoot: input.project_root, route: input.route, ...(input.run === undefined ? {} : { run: input.run }), ...(input.reference_id === undefined ? {} : { referenceId: input.reference_id }) });
-    return routeStateResult(state);
-  }
-  if (input.action === "read") return routeStateResult(await readRouteState(input.project_root));
-  if (input.action === "reconcile") return routeStateResult(await reconcileRouteState(input.project_root));
-  if (input.action !== "checkpoint") throw new Error(`unsupported route state action ${input.action}`);
-  const state = await checkpointRouteState({
-    projectRoot: input.project_root,
-    route: input.route,
-    step: input.step,
-    ...(input.status === undefined ? {} : { status: input.status }),
-    ...(input.run === undefined ? {} : { run: input.run }),
-    ...(input.reference_id === undefined ? {} : { referenceId: input.reference_id }),
-    ...(input.next_action === undefined ? {} : { nextAction: input.next_action }),
-    ...(input.artifacts === undefined ? {} : { artifacts: input.artifacts }),
-    ...(input.decision === undefined ? {} : { decision: input.decision }),
-    ...(input.command === undefined ? {} : { command: input.command }),
-    ...(input.error === undefined ? {} : { error: input.error }),
-  });
-  return routeStateResult(state);
-}
-
-async function runRevisionStateCommand(input: RevisionStateCommandInput): Promise<Record<string, unknown>> {
-  if (input.action === "start") {
-    return revisionStateResult(await startRevisionState({
-      projectRoot: input.project_root,
-      ...(input.run === undefined ? {} : { run: input.run }),
-      ...(input.parent_route === undefined ? {} : { parentRoute: input.parent_route }),
-      ...(input.parent_state_digest === undefined ? {} : { parentStateDigest: input.parent_state_digest }),
-      ...(input.request === undefined ? {} : { request: input.request }),
-    }));
-  }
-  if (input.action === "read") return revisionStateResult(await readRevisionState(input.project_root));
-  if (input.action === "reconcile") return revisionStateResult(await reconcileRevisionState(input.project_root));
-  if (input.action !== "checkpoint") throw new Error(`unsupported revision state action ${input.action}`);
-  return revisionStateResult(await checkpointRevisionState({
-    projectRoot: input.project_root,
-    step: input.step,
-    ...(input.status === undefined ? {} : { status: input.status }),
-    ...(input.run === undefined ? {} : { run: input.run }),
-    ...(input.parent_route === undefined ? {} : { parentRoute: input.parent_route }),
-    ...(input.parent_state_digest === undefined ? {} : { parentStateDigest: input.parent_state_digest }),
-    ...(input.request === undefined ? {} : { request: input.request }),
-    ...(input.next_action === undefined ? {} : { nextAction: input.next_action }),
-    ...(input.artifacts === undefined ? {} : { artifacts: input.artifacts }),
-    ...(input.decision === undefined ? {} : { decision: input.decision }),
-    ...(input.command === undefined ? {} : { command: input.command }),
-    ...(input.error === undefined ? {} : { error: input.error }),
-    ...(input.impact === undefined ? {} : { impact: input.impact }),
-    ...(input.affected_source === undefined ? {} : { affectedSource: input.affected_source }),
-  }));
-}
-
-async function runVariantStateCommand(input: VariantStateCommandInput): Promise<Record<string, unknown>> {
-  if (input.action === "discover") {
-    const batches = await discoverVariantExpansions(input.project_root);
-    return { project_root: resolve(input.project_root), batches, active: batches.filter((batch) => batch.status !== "complete") };
-  }
-  if (input.action === "start") {
-    return variantStateResult(await startVariantExpansion({
-      projectRoot: input.project_root, outputRoot: input.output_root,
-      ...(input.run === undefined ? {} : { run: input.run }),
-      ...(input.request === undefined ? {} : { request: input.request }),
-      ...(input.count === undefined ? {} : { count: input.count }),
-      ...(input.delivery_mode === undefined ? {} : { deliveryMode: input.delivery_mode }),
-      ...(input.parent_route === undefined ? {} : { parentRoute: input.parent_route }),
-      ...(input.parent_state_digest === undefined ? {} : { parentStateDigest: input.parent_state_digest }),
-      ...(input.revision_state_digest === undefined ? {} : { revisionStateDigest: input.revision_state_digest }),
-    }));
-  }
-  if (input.action === "read") return variantStateResult(await readVariantExpansionState(input.project_root, input.output_root, input.batch_id));
-  if (input.action === "reconcile") return variantStateResult(await reconcileVariantExpansion(input.project_root, input.output_root, input.batch_id));
-  if (input.action !== "checkpoint") throw new Error(`unsupported variant state action ${(input as { action: string }).action}`);
-  const checkpoint: VariantExpansionCheckpointInput = {
-    projectRoot: input.project_root, step: input.step,
-    ...(input.output_root === undefined ? {} : { outputRoot: input.output_root }),
-    ...(input.batch_id === undefined ? {} : { batchId: input.batch_id }),
-    ...(input.status === undefined ? {} : { status: input.status }),
-    ...(input.next_action === undefined ? {} : { nextAction: input.next_action }),
-    ...(input.artifacts === undefined ? {} : { artifacts: input.artifacts }),
-    ...(input.workload_disclosure === undefined ? {} : { workloadDisclosure: input.workload_disclosure }),
-    ...(input.packages === undefined ? {} : { packages: input.packages }),
-    ...(input.variants === undefined ? {} : { variants: input.variants }),
-    ...(input.decision === undefined ? {} : { decision: input.decision }),
-    ...(input.conflict === undefined ? {} : { conflict: input.conflict }),
-    ...(input.resolve_conflict === undefined ? {} : { resolveConflict: input.resolve_conflict }),
-    ...(input.command === undefined ? {} : { command: input.command }),
-    ...(input.error === undefined ? {} : { error: input.error }),
-  };
-  return variantStateResult(await checkpointVariantExpansion(checkpoint));
-}
-
-async function autoRouteCheckpoint(
-  runPath: string | undefined,
-  step: number | undefined,
-  artifacts: Readonly<Record<string, string>> = {},
-  nextAction?: string,
-  command?: string,
-): Promise<void> {
-  if (runPath === undefined || step === undefined) return;
-  const projectRoot = dirname(resolve(runPath));
-  const state = await readRouteState(projectRoot);
-  if (state === undefined || state.status === "complete") return;
-  await checkpointRouteState({
-    projectRoot,
-    route: state.route,
-    step,
-    status: "complete",
-    run: runPath,
-    artifacts,
-    command: command ?? `route step ${step}`,
-    ...(nextAction === undefined ? {} : { nextAction }),
-  });
-}
-
-async function persistRouteEvidence(runPath: string, name: string, result: Record<string, unknown>): Promise<string> {
-  return persistEvidence(dirname(resolve(runPath)), name, result);
-}
-
-async function readSettledLayout(runPath: string): Promise<Record<string, unknown>> {
-  const path = join(dirname(resolve(runPath)), ".hypit", "layout-check.json");
-  try {
-    const value = JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>;
-    return {
-      passed: value.executed === true && value.settled === true,
-      evidence: path,
-      executed: value.executed === true,
-      settled: value.settled === true,
-      pending_count: value.pending_count,
-      semantics: value.semantics,
-    };
-  } catch {
-    return { passed: false, evidence: path, executed: false, settled: false, reason: "run layout_check first" };
-  }
-}
-
-async function autoRouteError(runPath: string | undefined, command: string, error: unknown): Promise<void> {
-  if (runPath === undefined) return;
-  const resolved = resolve(invokedFrom(), runPath);
-  const projectRoot = dirname(resolved);
-  const state = await readRouteState(projectRoot);
-  if (state === undefined || state.status === "complete") return;
-  await checkpointRouteState({
-    projectRoot,
-    route: state.route,
-    step: state.current_step <= ROUTE_STATE_STEPS[state.route].length ? state.current_step : ROUTE_STATE_STEPS[state.route].length,
-    status: "in_progress",
-    run: resolved,
-    command,
-    error: error instanceof Error ? error.message : String(error),
-  });
-}
-
-async function renderEvidence(output: unknown): Promise<Readonly<Record<string, string>>> {
-  if (typeof output !== "string") return {};
-  const rendered = resolve(invokedFrom(), output);
-  const sidecar = standInSidecarPath(rendered);
-  const [renderFile, sidecarFile] = await Promise.all([
-    stat(rendered).then((value) => value.isFile(), () => false),
-    stat(sidecar).then((value) => value.isFile(), () => false),
-  ]);
-  return renderFile && sidecarFile ? { preview_render: rendered, render_sidecar: sidecar } : {};
-}
-
-async function referenceObservationComplete(referenceId: string): Promise<boolean> {
-  const state = await readJson<ReferenceState>(join(stateRoot(referenceId), "state.json")).catch(() => undefined);
-  if (state === undefined || !prepared(state)) return false;
-  const observations = await readJson<Record<string, Observation>>(join(state.root, "observations.json")) ?? {};
-  const required = state.shots.flatMap((shot, index) => [
-    `visual:${shot.shot_id}`, `type:${shot.shot_id}`, `audio:${shot.shot_id}`,
-    ...(index === 0 ? [] : [`boundary:${shot.shot_id}`]),
-  ]);
-  return required.every((key) => observations[key]?.status === "complete")
-    && Object.values(observations).every((value) => value?.status === "complete");
-}
-
-async function maybeCheckpointReferenceObservation(input: RecordObservationInput): Promise<void> {
-  if (input.run === undefined || !(await referenceObservationComplete(input.reference_id))) return;
-  const runPath = resolve(invokedFrom(), input.run);
-  await autoRouteCheckpoint(runPath, routeStepFor("reconstruction", "reference-observed"), { reference_observations: join(stateRoot(input.reference_id), "observations.json") }, "inspect vocabulary and resolve any package gap");
-}
-
-async function persistRoutePlan(runPath: string, result: Record<string, unknown>): Promise<string> {
-  return persistEvidence(dirname(resolve(runPath)), "route-plan.json", { plan: result.plan ?? [], generated_at: new Date().toISOString() });
+function eventId(label: string, at = new Date()): string {
+  eventSequence += 1;
+  const readable = label.trim().replace(/[^0-9A-Za-z._-]+/gu, "-").replace(/^-+|-+$/gu, "") || "item";
+  const time = at.toISOString().replace(/[-:.TZ]/gu, "");
+  return `${readable}-${time}-${eventSequence.toString(36)}`;
 }
 
 function observation(status: Observation["status"], text: string): Observation { return { status, text }; }
@@ -573,7 +282,7 @@ export type ComparisonRecord = {
   /**
    * Names this comparison so an observer that answers out of band can close it. The `agent` observer
    * is handed the pair and the question and returns nothing in band, so without a name the entry
-   * stayed `pending` for ever and a gate had to choose between crediting an unanswered comparison and
+   * stayed `pending` for ever and a report had to choose between crediting an unanswered comparison and
    * crediting none of them.
    */
   readonly id: string;
@@ -584,7 +293,6 @@ export type ComparisonRecord = {
   readonly range?: ComparedRange;
   readonly element?: string;
   readonly image_path: string;
-  readonly image_digest: string;
   readonly observer: Observer;
   readonly status: Observation["status"];
   readonly scoped: boolean;
@@ -604,7 +312,7 @@ export type ComparisonRecord = {
 /**
  * One line per element review on the route that has no reference to compare against.
  *
- * The fields it shares with `ComparisonRecord` are spelled the same, so the gate reads one shape from
+ * The fields it shares with `ComparisonRecord` are spelled the same, so reports read one shape from
  * either log without an adapter. What differs is the question: a comparison reports how two pictures
  * differ, and a review reports whether one picture is what it was asked to be — so it carries the
  * intent it was judged against, and its answer is `findings`.
@@ -617,11 +325,10 @@ export type ReviewRecord = {
   /**
    * The window, named the way it was asked for. Only the name: `ComparedRange` also carries where the
    * reference speaks those words and how the cut was snapped to its shot boundaries, and none of that
-   * exists here. The gate reads the name and nothing else from either log.
+   * exists here. Reports read the name and nothing else from either log.
    */
   readonly range?: { readonly segment?: string; readonly selection?: string; readonly tokens?: readonly [number, number] };
   readonly image_path: string;
-  readonly image_digest: string;
   readonly status: Observation["status"];
   readonly scope?: string;
   readonly clip?: boolean;
@@ -631,10 +338,6 @@ export type ReviewRecord = {
   /** What the reader found, once it has come back. */
   readonly findings?: string;
 };
-
-async function fileDigest(path: string): Promise<string> {
-  return `sha256:${createHash("sha256").update(await readFile(path)).digest("hex")}`;
-}
 
 /**
  * What timed the stand-in behind a rendered picture, read from beside the picture itself.
@@ -680,65 +383,6 @@ async function appendLooked(log: LookLog, record: ComparisonRecord | ReviewRecor
     await mkdir(log.root, { recursive: true });
     await appendFile(join(log.root, log.file), `${JSON.stringify(record)}\n`, "utf8");
   });
-}
-
-/**
- * An answered comparison of the same two files, asked the same way.
- *
- * The render's digest is what makes this safe, because it is also the repair detector: change
- * anything the element draws and the bytes change, so the pair is new and is asked again. Bytes that
- * did not change mean the edit did not reach the picture, and putting the identical pair in front of
- * the observer a second time buys a paraphrase of the first answer.
- *
- * The stretch and the scope are part of the key because they are the rest of the question. The same
- * render against a different stretch is a different comparison — the reference side moved — and that
- * is the case this must not swallow.
- */
-async function answeredAlready(
-  log: LookLog,
-  key: {
-    readonly digest: string; readonly stretch: string; readonly clip: boolean;
-    /** Which element the answer was credited to, and what the observer was asked to limit itself to. */
-    readonly element: string; readonly scope: string;
-  },
-): Promise<(ComparisonRecord & ReviewRecord) | undefined> {
-  const lines = (await readFile(join(log.root, log.file), "utf8").catch(() => "")).split("\n");
-  for (const line of lines.reverse()) {
-    if (line.trim().length === 0) continue;
-    let record: ComparisonRecord & ReviewRecord;
-    try { record = JSON.parse(line) as ComparisonRecord & ReviewRecord; } catch { continue; }
-    if (record.status !== "complete" || record[log.answer] === undefined) continue;
-    if (record.image_digest !== key.digest) continue;
-    if (comparedStretch(record) !== key.stretch) continue;
-    if ((record.clip ?? false) !== key.clip) continue;
-    // The element and the scope are part of the question. `render_element` draws the whole stretch
-    // rather than the element alone, so two elements over one Segment can be byte-identical renders,
-    // and what separates their comparisons is which element the answer is credited to and what the
-    // observer was told to limit itself to. Keyed on the bytes alone, one element's answer would be
-    // handed back for another and counted as having looked at it.
-    if ((record.element ?? "") !== key.element) continue;
-    if ((record.scope ?? "") !== key.scope) continue;
-    return record;
-  }
-  return undefined;
-}
-
-/**
- * What a look was made over, in the form it was asked for.
- *
- * A word range is written as its own form because the finest thing worth looking at is not always a
- * thing the Script named — a caption Cue is a run of words with no id — and a gate comparing a round
- * against a plan has to be able to tell one of those from another.
- */
-function comparedStretch(record: {
-  readonly shot_id?: string;
-  readonly range?: { readonly segment?: string; readonly selection?: string; readonly tokens?: readonly [number, number] };
-}): string {
-  return record.shot_id
-    ?? (record.range?.tokens === undefined ? undefined : `tokens:${record.range.tokens[0]}-${record.range.tokens[1]}`)
-    ?? (record.range?.segment === undefined ? undefined : `segment:${record.range.segment}`)
-    ?? (record.range?.selection === undefined ? undefined : `selection:${record.range.selection}`)
-    ?? "";
 }
 
 /**
@@ -1259,7 +903,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     const packagesRoot = join(projectRoot, "packages");
     // Project package directories are discovered by their location and manifest, not by a
     // naming convention. A package created for one video may use any valid descriptive slug;
-    // requiring a `local-` prefix would let other project-owned packages evade this gate.
+    // requiring a `local-` prefix would let other project-owned packages evade this validation.
     const projectPackageDirectories = (await readdir(packagesRoot, { withFileTypes: true }).catch(() => []))
       .filter((entry) => entry.isDirectory() && entry.name !== "node_modules" && !entry.name.startsWith("."))
       .map((entry) => join(packagesRoot, entry.name));
@@ -1296,15 +940,16 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const registry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot: projectRoot, distributionPackageRoot });
         const domain = await loadStudioDomain({ run: runPath, workspaceRoot: projectRoot, packageRoot: projectRoot });
         const runtimePath = input.runtime === undefined ? undefined : resolve(invokedFrom(), input.runtime);
-        const archive = await openStudioArchive(runtimePath, projectRoot, projectRoot, distributionPackageRoot);
+        const buildLibrary = await openStudioBuildLibrary(runtimePath, projectRoot, projectRoot, distributionPackageRoot);
         try {
-          const loaded = await loadStudioRun({ run: runPath, domain, registry, ...(archive === undefined ? {} : { archive }) });
+          const loaded = await loadStudioRun({ run: runPath, domain, registry,
+            ...(buildLibrary === undefined ? {} : { buildLibrary }) });
           graphModules = new Set([
             ...loaded.source.compiled.graph.operations.map((operation) => `${operation.producer.module.name}@${operation.producer.module.version}`),
             ...loaded.run.graph.operations.map((operation) => `${operation.producer.module.name}@${operation.producer.module.version}`),
           ]);
         } finally {
-          await archive?.close();
+          await buildLibrary?.close();
         }
       }
     } catch {
@@ -1698,11 +1343,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       if (question.length > 0) {
         assert(input.shot_ids !== undefined && input.shot_ids.length > 0, "question requires at least one shot id, so that it is answered from the shots it is about");
         assert(selected.length === 1, "question accepts exactly one shot id; use the built-in boundary/window observations for cross-shot continuity");
-        // Keyed by the shots it is asked over and by the question itself, so the observer that answers
-        // out of band has a key it can record against and a second, different question over the same
-        // shots gets its own. Keyed on the shots alone, the two would share an entry and the later one
-        // would be answered with the earlier one's text.
-        const key = `question:${selected.map((shot) => shot.shot_id).join("+")}:${createHash("sha256").update(question).digest("hex").slice(0, 8)}`;
+        // Keep the actual question in the key. It remains directly inspectable and distinguishes two
+        // questions over the same shot without inventing a second identifier namespace.
+        const key = `question:${selected.map((shot) => shot.shot_id).join("+")}:${encodeURIComponent(question)}`;
         const path = join(state.root, "observations.json");
         const held = (await readJson<Record<string, Observation>>(path))?.[key];
         const reused = held?.status === "complete" && input.reobserve !== true;
@@ -1731,8 +1374,6 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           question,
           observation_key: key,
           result: answer,
-          // Compatibility alias for callers written before the canonical result envelope.
-          answer,
           // Says the answer came back without asking anyone, so a reader knows they were not billed
           // for it and that `--reobserve` is what asks again.
           ...(reused ? { reused: true } : {}),
@@ -1925,53 +1566,15 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         }
       }
       const result = { packages: input.package_names, surfaces };
-      let evidence: string | undefined;
-      let componentFitRequired: string | undefined;
-      if (input.run !== undefined) {
-        const runPath = resolve(invokedFrom(), input.run);
-        evidence = await persistRouteEvidence(runPath, "vocabulary.json", result);
-        const route = await readRouteState(dirname(runPath));
-        const step = routeStepFor(route?.route ?? "reconstruction", "vocabulary-checked");
-        if (route?.route === "description" || route?.route === "reconstruction") {
-          const fit = componentFitPath(dirname(runPath));
-          if (await componentFitSatisfied(dirname(runPath), route.route)) {
-            await autoRouteCheckpoint(runPath, step, { vocabulary: evidence, component_fit: fit }, "validate_local_author_packages --run <build.svrun>");
-          } else componentFitRequired = fit;
-        } else {
-          await autoRouteCheckpoint(runPath, step, { vocabulary: evidence }, "validate_local_author_packages --run <build.svrun>");
-        }
-      }
-      return evidence === undefined ? result : {
-        ...result,
-        evidence,
-        ...(componentFitRequired === undefined ? {} : { component_fit_required: componentFitRequired }),
-      };
+      return result;
     },
 
     async validate_local_author_packages(input): Promise<Record<string, unknown>> {
-      const result = await validateLocalAuthorPackages(input);
-      const runPath = resolve(invokedFrom(), input.run);
-      const evidence = await persistRouteEvidence(runPath, "package-ready.json", result);
-      if (result.passed === true) {
-        const route = await readRouteState(dirname(runPath));
-        const step = routeStepFor(route?.route ?? "reconstruction", "package-ready");
-        const next = route?.route === "variant-package" ? "run preview_check for the staging project"
-          : "validate_script_cues --run <build.svrun>";
-        await autoRouteCheckpoint(runPath, step, { package_ready: evidence }, next);
-      } else await autoRouteError(runPath, "validate_local_author_packages", (result.packages as unknown[] ?? []));
-      return { ...result, evidence };
+      return await validateLocalAuthorPackages(input);
     },
 
     async validate_script_cues(input): Promise<Record<string, unknown>> {
-      const result = await scriptCueCheck(input);
-      const runPath = resolve(invokedFrom(), input.run);
-      const evidence = await persistRouteEvidence(runPath, "script-cues.json", result);
-      if (result.passed === true) {
-        const route = await readRouteState(dirname(runPath));
-        const step = routeStepFor(route?.route ?? "reconstruction", "script-checked");
-        await autoRouteCheckpoint(runPath, step, { script_cues: evidence }, "write main.svml, recipes.svs and build.svrun");
-      } else await autoRouteError(runPath, "validate_script_cues", result.violations ?? result.errors ?? "cue validation failed");
-      return { ...result, evidence };
+      return await scriptCueCheck(input);
     },
 
     /**
@@ -1983,7 +1586,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
      * declared schema, so it cannot drift from what the seal will accept. Without it the only way to
      * learn the shape was to open a package that already draws and copy its habits.
      */
-    async inspect_visual_contract(input): Promise<Record<string, unknown>> {
+    async inspect_visual_schema(input): Promise<Record<string, unknown>> {
       const shapes: Record<string, ValueSchema> = {
         "visual-track": visualTrackSchema,
         "visual-element": visualElementSchema,
@@ -2089,11 +1692,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       assert(file?.isFile(), `${clip ? "video_path" : "image_path"} is not a file: ${renderedPath}`);
       const scope = input.question?.trim() ?? "";
       const startedAt = new Date().toISOString();
-      // Everything this call derives is written under this name, so two comparisons of one stretch —
-      // two elements drawn over the same Segment, or one element read twice — never write each other's
-      // files. The render is what distinguishes them, so the render names the slot.
-      const slot = `${basename(renderedPath).replace(/\.[^.]*$/u, "")}-`
-        + createHash("sha256").update(renderedPath).digest("hex").slice(0, 8);
+      // Each explicit comparison gets its own readable directory. Repeating the command is a new
+      // observation by request; no hidden equivalence rule silently reuses an older answer.
+      const slot = eventId(basename(renderedPath).replace(/\.[^.]*$/u, ""), new Date(startedAt));
       const standIn = await standInBeside(renderedPath);
       const observer: Observer = state.observer ?? "gemini";
       const { ask, pending } = await askerFor(observer, state, input.run);
@@ -2195,50 +1796,14 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           + " two as sequences rather than as single moments. Neither grid is one continuous camera"
           + " shot; a stretch may contain cuts."
         : "";
-      // The slot already names this render and this stretch uniquely within the reference, and the
-      // clock separates two readings of the same pair, so it is what the answer is recorded against.
-      const comparisonId = `${slot}-${createHash("sha256")
-        .update(`${slot}|${input.segment ?? input.selection ?? input.shot_id ?? ""}|${startedAt}`)
-        .digest("hex").slice(0, 6)}`;
-      // Nothing changed since this pair was last answered, so nothing new can be said about it.
-      const digest = await fileDigest(renderedPath);
+      const comparisonId = slot;
       const comparisonEvidence = comparisonLogForRun(input.run, root);
-      const already = await answeredAlready(comparisonEvidence, {
-        digest,
-        stretch: comparedStretch({ ...(shot === undefined ? {} : { shot_id: shot.shot_id }), ...(cut === undefined ? {} : { range: cut.record }) }),
-        clip: asClip,
-        element: input.element?.trim() ?? "",
-        scope,
-      });
-      if (already !== undefined) {
-        if (input.run !== undefined) await autoRouteCheckpoint(resolve(invokedFrom(), input.run), routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(comparisonEvidence.root, comparisonEvidence.file) }, "repair differences, then rerun reconstruction_check");
-        return {
-          reference_id: state.reference_id,
-          observer,
-          ...(shot === undefined ? {} : { shot_id: shot.shot_id }),
-          ...(cut === undefined ? {} : { range: cut.record }),
-          compared: asClip ? "clip" : "still",
-          reused: {
-            answered_at: already.at,
-            comparison_id: already.id,
-            note: "the same render, against the same stretch, asked the same way. The render's bytes are "
-              + "identical to the ones already compared, so nothing drawn has changed since — and a "
-              + "second reading of one pair is a paraphrase, not evidence. Repair against the "
-              + "differences below, or render a change and compare that.",
-          },
-          differences: { status: "complete", text: already.differences! },
-          unresolved: [],
-          pending_observations: pending,
-        };
-      }
       const differences = await ask(`comparison:${comparisonId}`, {
         media: [referenceMedia, renderedMedia],
         instruction: `You compare two supplied ${unit} and describe their visible differences in natural language only. You are not told how either was made. Do not write code, markup, SVML, component names, or production advice.`,
         prompt: `Two ${unit} are supplied in order: one, then two. Call them one and two throughout your answer, and say which of the two each difference is in.${reading}${asClip ? "\n\nThe two clips may have different total durations or playback speeds. Compare corresponding visual stages and events rather than matching the same elapsed second, and do not treat a duration difference alone as a visual defect." : ""}${asClip ? cut?.incomplete ?? "" : ""}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nStart with a geometry pass before style: identify the Canvas, the outer frame or background box, and the inner text/element. For every region intended to be vertically centred, compare inner and outer centres on the Y axis and report whether it is too high or too low. Do not treat deliberate left/right bias as a defect. Check containment separately (inner content inside its outer frame; outer frame inside the Canvas), naming the overflowing edge and approximate amount. Check that the outer frame is wide and tall enough for the longest line or mark including padding, stroke, shadow and corner treatment. Treat overlap candidates as prompts for inspection only: the supplied reference or settled brief and intent decide whether an overlap or offset is correct; never recommend removing an intentional overlap merely because it exists. Distinguish intentional bleed, crop, or enter/exit motion from accidental overflow. Then describe every other visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${asClip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
       });
-      // What was compared, and what was seen. The record is what a gate reads to tell an element that
-      // was looked at from one that never was, and what an identical pair is answered from without
-      // asking again.
+      // What was compared, and what was seen. The record is useful content, not a workflow cursor.
       await appendLooked(comparisonEvidence, {
         at: startedAt,
         id: comparisonId,
@@ -2247,7 +1812,6 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         ...(cut === undefined ? {} : { range: cut.record }),
         ...(input.element === undefined ? {} : { element: input.element.trim() }),
         image_path: renderedPath,
-        image_digest: digest,
         observer,
         status: differences.status,
         scoped: scope.length > 0,
@@ -2256,9 +1820,6 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         ...(standIn === undefined ? {} : { stand_in: standIn }),
         ...(differences.status === "complete" ? { differences: differences.text } : {}),
       });
-      if (differences.status === "complete" && input.run !== undefined) {
-        await autoRouteCheckpoint(resolve(invokedFrom(), input.run), routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(comparisonEvidence.root, comparisonEvidence.file) }, "repair differences, then rerun reconstruction_check");
-      }
       return {
         reference_id: state.reference_id,
         observer,
@@ -2323,35 +1884,30 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           const current = await readJson<ReferenceState>(join(root, "state.json")) ?? state;
           await writeJson(join(root, "state.json"), { ...current, [field]: observation("complete", text) });
         });
-        await maybeCheckpointReferenceObservation(input);
         return { reference_id: state.reference_id, key, stored_in: "state" };
       }
       // A comparison is answered against the entry it opened in the log rather than against the
-      // observation cache: the log is what a gate reads to tell an element that was looked at from one
+      // observation cache: the log is what a report reads to tell an element that was looked at from one
       // that never was, and until this existed an agent-observer comparison could never leave `pending`.
       if (key.startsWith("comparison:")) {
         const comparisonId = key.slice("comparison:".length);
         const comparisonEvidence = comparisonLogForRun(input.run, root);
         const closed = await closeLooked(comparisonEvidence, comparisonId, text);
         assert(closed, `${key} names no open comparison of reference ${input.reference_id}`);
-        const comparison = (await readFile(join(comparisonEvidence.root, comparisonEvidence.file), "utf8"))
-          .split("\n").filter((line) => line.trim().length > 0).flatMap((line) => {
-            try { return [JSON.parse(line) as ComparisonRecord]; } catch { return []; }
-          }).find((entry) => entry.id === comparisonId);
-        if (comparison?.run !== undefined) await autoRouteCheckpoint(comparison.run, routeStepFor("reconstruction", "comparison-complete"), { comparison_log: join(comparisonEvidence.root, comparisonEvidence.file) }, "repair differences, then rerun reconstruction_check");
-        await maybeCheckpointReferenceObservation(input);
         return { reference_id: state.reference_id, key, stored_in: "comparisons" };
       }
       const shotKeys = new Set(state.shots.flatMap((shot) => [`visual:${shot.shot_id}`, `type:${shot.shot_id}`, `audio:${shot.shot_id}`, `boundary:${shot.shot_id}`, `window:${shot.shot_id}`]));
-      // A narrow question is asked over exactly one shot and keyed by it and by a digest of the
-      // question, so its key is matched the same way `observe_reference` builds it rather than
-      // enumerated here. A shot id is `shot-001`: the hyphen belongs in the class, and leaving it out
-      // rejected every key this tool actually produces, so an answer to a narrow question had nowhere
-      // to go on the one observer that has to record its answers by hand.
-      const questionKey = /^question:([0-9a-z-]+(?:\+[0-9a-z-]+)*):[0-9a-f]{8}$/u.exec(key);
+      // Narrow questions carry the encoded question itself after the shot id. That is longer than an
+      // opaque token, but it is inspectable and requires no side table.
+      const questionKey = /^question:([0-9a-z-]+(?:\+[0-9a-z-]+)*):(.+)$/u.exec(key);
       const knownShots = new Set(state.shots.map((shot) => shot.shot_id));
       const askedOver = questionKey?.[1]!.split("+") ?? [];
-      const isQuestion = questionKey !== null && askedOver.length === 1 && askedOver.every((id) => knownShots.has(id));
+      let validEncodedQuestion = false;
+      if (questionKey !== null) {
+        try { validEncodedQuestion = decodeURIComponent(questionKey[2]!).trim().length > 0; }
+        catch { validEncodedQuestion = false; }
+      }
+      const isQuestion = questionKey !== null && validEncodedQuestion && askedOver.length === 1 && askedOver.every((id) => knownShots.has(id));
       assert(shotKeys.has(key) || isQuestion, `key ${key} is not an observation of reference ${input.reference_id}`);
       // A round of answers arrives as a round of calls, and each one is a read-modify-write of this
       // file. Two of them reading before either writes is how an answer disappears with no error.
@@ -2361,7 +1917,6 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         cache[key] = observation("complete", text);
         await writeJson(path, cache);
       });
-      await maybeCheckpointReferenceObservation(input);
       return { reference_id: state.reference_id, key, stored_in: "observations" };
     },
 
@@ -2403,7 +1958,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
 
       const renderedPath = resolve(invokedFrom(), input.video_path ?? input.image_path!);
       await stat(renderedPath).catch(() => { throw new Error(`cannot read ${renderedPath}`); });
-      const slot = `${basename(renderedPath).replace(/\.[^.]+$/u, "")}-${createHash("sha256").update(renderedPath).digest("hex").slice(0, 8)}`;
+      const slot = eventId(basename(renderedPath).replace(/\.[^.]+$/u, ""));
       const standIn = await standInBeside(renderedPath);
       const scope = input.question?.trim() ?? "";
       const startedAt = new Date().toISOString();
@@ -2423,32 +1978,17 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           : await cutFrame(renderedPath, drawn.duration / 2, target);
       }
 
-      const digest = await fileDigest(renderedPath);
       const range = {
         ...(input.segment === undefined ? {} : { segment: input.segment }),
         ...(input.selection === undefined ? {} : { selection: input.selection }),
         ...(input.tokens === undefined ? {} : { tokens: input.tokens }),
       };
-      const stretch = comparedStretch({ range });
-      // Nothing about the picture or the question changed since this was last answered, so nothing new
-      // can be said about it. Here this is what bounds the looking: a review costs no vendor money, so
-      // without it a round could re-ask the same picture until it liked the answer.
-      const already = await answeredAlready(reviewLog(root), { digest, stretch, clip: asClip, element, scope });
-      if (already !== undefined) {
-        return {
-          run: runPath, element, ...(input.segment === undefined ? {} : { segment: input.segment }),
-          ...(input.selection === undefined ? {} : { selection: input.selection }),
-          reviewed: asClip ? "clip" : "still",
-          reused: { answered_at: already.at, review_id: already.id, findings: already.findings },
-        };
-      }
-
-      const reviewId = `${slot}-${createHash("sha256").update(`${slot}|${stretch}|${startedAt}`).digest("hex").slice(0, 6)}`;
+      const reviewId = slot;
       const unit = asClip ? "grid of frames sampled evenly across the stretch, laid out in reading order: left to right, then top to bottom" : "still picture";
       const record: ReviewRecord = {
         at: startedAt, id: reviewId, element,
         range,
-        image_path: renderedPath, image_digest: digest, status: "pending",
+        image_path: renderedPath, status: "pending",
         ...(scope.length === 0 ? {} : { scope }), clip: asClip,
         ...(standIn === undefined ? {} : { stand_in: standIn }),
         intent,
@@ -2512,7 +2052,6 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       assert(text.length > 0, "text is required; a review that found nothing wrong says so in words");
       const closed = await closeLooked(reviewLog(root), id, text);
       assert(closed, `${id} names no open review of ${runPath}`);
-      await autoRouteCheckpoint(runPath, routeStepFor("description", "review-complete"), { review_log: reviewLogPath(runPath) }, "repair findings, then rerun authoring_check");
       return { run: runPath, review_id: id, stored_in: reviewLogPath(runPath) };
     },
 
@@ -2530,18 +2069,6 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           ...one, run: one.run ?? input.run,
           ...(one.reference_id ?? input.reference_id === undefined ? {} : { reference_id: input.reference_id }),
         } as RenderElementInput));
-        if (failures.length === 0 && done.length > 0) {
-          const run = round[0]?.run ?? input.run;
-          const first = done[0] as Record<string, unknown>;
-          const evidence = await renderEvidence(first.out);
-          if (Object.keys(evidence).length > 0) {
-            await autoRouteCheckpoint(run === undefined ? undefined : resolve(invokedFrom(), run), routeStepFor((await readRouteState(dirname(resolve(invokedFrom(), run ?? ""))))?.route ?? "reconstruction", "preview-rendered"),
-              evidence, "compare_reconstruction or review_element");
-          }
-        } else if (failures.length > 0) {
-          const failedRun = round[0]?.run ?? input.run;
-          await autoRouteError(failedRun, "render_element", failures[0]?.error ?? "render failed");
-        }
         return {
           rendered: done.length,
           failed: failures.length,
@@ -2549,18 +2076,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           ...(failures.length === 0 ? {} : { failures }),
         };
       }
-      try {
-        const result = await renderElement(input);
-        const evidence = await renderEvidence(result.out);
-        if (Object.keys(evidence).length > 0) {
-          await autoRouteCheckpoint(input.run === undefined ? undefined : resolve(invokedFrom(), input.run), routeStepFor((await readRouteState(dirname(resolve(invokedFrom(), input.run ?? ""))))?.route ?? "reconstruction", "preview-rendered"),
-            evidence, "compare_reconstruction or review_element");
-        }
-        return result;
-      } catch (error) {
-        await autoRouteError(input.run, "render_element", error);
-        throw error;
-      }
+      return await renderElement(input);
     },
 
     async render_previews(input): Promise<Record<string, unknown>> {
@@ -2568,73 +2084,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async preview_check(input): Promise<Record<string, unknown>> {
-      const runPath = resolve(invokedFrom(), input.run);
-      try {
-        const packageGate = await validateLocalAuthorPackages({ run: input.run, ...(input.runtime === undefined ? {} : { runtime: input.runtime }) });
-        const cueGate = await scriptCueCheck({ run: input.run });
-        if (packageGate.passed !== true || cueGate.passed !== true) {
-          const refused = { run: runPath, sound: false, package_gate: packageGate, script_cue_gate: cueGate, refused: "package or Script Cue gate failed" };
-          const evidence = await persistRouteEvidence(runPath, "preview-check.json", refused);
-          await autoRouteError(runPath, "preview_check", refused.refused);
-          return { ...refused, evidence };
-        }
-        const result = await previewCheck(input, { packageRoot });
-        const evidence = await persistRouteEvidence(runPath, "preview-check.json", result);
-        if (result.sound === true) {
-          const source = await authorSource(runPath).catch(() => undefined);
-          const route = await readRouteState(dirname(runPath));
-          const sourceStep = routeStepFor(route?.route ?? "reconstruction", "source-authored");
-          const next = "run layout_check --run <build.svrun>";
-          await autoRouteCheckpoint(runPath, sourceStep, source === undefined ? {} : { author_source: source.path }, next);
-          const routeAfterSource = await readRouteState(dirname(runPath));
-          await autoRouteCheckpoint(runPath, routeStepFor(routeAfterSource?.route ?? "reconstruction", "graph-checked"), { preview_check: evidence }, next);
-        } else await autoRouteError(runPath, "preview_check", result.refused ?? result.problems ?? "preview check failed");
-        return { ...result, evidence };
-      } catch (error) {
-        await autoRouteError(runPath, "preview_check", error);
-        throw error;
-      }
+      return await previewCheck(input, { packageRoot });
     },
 
     async layout_check(input): Promise<Record<string, unknown>> {
-      const runPath = resolve(invokedFrom(), input.run);
-      try {
-        const result = await layoutCheck(input);
-        const evidence = typeof result.evidence === "string" ? result.evidence : join(dirname(runPath), ".hypit", "layout-check.json");
-        const decisions = typeof result.decisions === "string" ? result.decisions : join(dirname(runPath), ".hypit", "layout-decisions.json");
-        const route = await readRouteState(dirname(runPath));
-        if (route !== undefined && route.status !== "complete") {
-          const step = routeStepFor(route.route, "layout-checked");
-          if (step !== undefined) {
-            if (result.settled === true) {
-              await autoRouteCheckpoint(runPath, step, { layout_check: evidence, layout_decisions: decisions },
-                route.route === "variant" ? "run variant_check --run <build.svrun>"
-                  : route.route === "variant-package" ? "freeze the package digest and checkpoint package-ready"
-                    : "plan the visual declaration review");
-            } else {
-              await checkpointRouteState({
-                projectRoot: dirname(runPath), route: route.route, step, status: "in_progress", run: runPath,
-                artifacts: { layout_check: evidence, layout_decisions: decisions }, command: "layout_check",
-                nextAction: "Agent reviews each layout candidate, repairs genuine issues or records intentional geometry with layout_accept, then reruns layout_check",
-              });
-            }
-          }
-        }
-        const revision = await readRevisionState(dirname(runPath));
-        if (revision !== undefined && revision.status !== "complete") {
-          await checkpointRevisionState({
-            projectRoot: dirname(runPath), step: "gates-checked", status: "in_progress", run: runPath,
-            artifacts: { layout_check: evidence, layout_decisions: decisions }, command: "layout_check",
-            nextAction: result.settled === true
-              ? "complete the remaining revision gates"
-              : "Agent reviews layout candidates; repair or accept them, then rerun layout_check",
-          });
-        }
-        return result;
-      } catch (error) {
-        await autoRouteError(runPath, "layout_check", error);
-        throw error;
-      }
+      return await layoutCheck(input);
     },
 
     async layout_accept(input): Promise<Record<string, unknown>> {
@@ -2642,319 +2096,13 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async reconstruction_check(input): Promise<Record<string, unknown>> {
-      const runPath = resolve(invokedFrom(), input.run);
-      try {
-        const packageGate = await validateLocalAuthorPackages({ run: input.run, ...(input.runtime === undefined ? {} : { runtime: input.runtime }) });
-        const cueGate = await scriptCueCheck({ run: input.run });
-        if (packageGate.passed !== true || cueGate.passed !== true) {
-          const refused = { run: runPath, passed: false, package_gate: packageGate, script_cue_gate: cueGate, issues: ["package or Script Cue gate failed"] };
-          const evidence = await persistRouteEvidence(runPath, "final-check.json", refused);
-          await autoRouteError(runPath, "reconstruction_check", refused.issues);
-          return { ...refused, evidence };
-        }
-        const authored = await authoringCheck({ ...input, mode: "reconstruction" }, { packageRoot });
-        const layout = await readSettledLayout(runPath);
-        const result: Record<string, unknown> = layout.passed === true ? { ...authored, layout }
-          : { ...authored, passed: false, layout, issues: [...(Array.isArray(authored.issues) ? authored.issues : []), "layout candidates are unresolved or layout_check has not run"] };
-        const evidence = await persistRouteEvidence(runPath, "final-check.json", result);
-        if (Array.isArray(result.plan)) {
-          const planPath = await persistRoutePlan(runPath, result);
-          const route = await readRouteState(dirname(runPath));
-          await autoRouteCheckpoint(runPath, routeStepFor(route?.route ?? "reconstruction", "review-planned"), { review_plan: planPath }, "render_element --batch <round.json>");
-        }
-        if (result.passed === true) { const route = await readRouteState(dirname(runPath)); await autoRouteCheckpoint(runPath, routeStepFor(route?.route ?? "reconstruction", "final-checked"), { final_check: evidence }, "submit the approved Build"); }
-        else await autoRouteError(runPath, "reconstruction_check", result.issues ?? result.unresolved ?? "reconstruction check failed");
-        return { ...result, evidence };
-      } catch (error) {
-        await autoRouteError(runPath, "reconstruction_check", error);
-        throw error;
-      }
+      return await authoringCheck({ ...input, mode: "reconstruction" }, { packageRoot });
     },
 
     async authoring_check(input): Promise<Record<string, unknown>> {
-      const runPath = resolve(invokedFrom(), input.run);
-      try {
-        const packageGate = await validateLocalAuthorPackages({ run: input.run, ...(input.runtime === undefined ? {} : { runtime: input.runtime }) });
-        const cueGate = await scriptCueCheck({ run: input.run });
-        if (packageGate.passed !== true || cueGate.passed !== true) {
-          const refused = { run: runPath, passed: false, package_gate: packageGate, script_cue_gate: cueGate, issues: ["package or Script Cue gate failed"] };
-          const evidence = await persistRouteEvidence(runPath, "final-check.json", refused);
-          await autoRouteError(runPath, "authoring_check", refused.issues);
-          return { ...refused, evidence };
-        }
-        const authored = await authoringCheck({ ...input, mode: "description" }, { packageRoot });
-        const layout = await readSettledLayout(runPath);
-        const result: Record<string, unknown> = layout.passed === true ? { ...authored, layout }
-          : { ...authored, passed: false, layout, issues: [...(Array.isArray(authored.issues) ? authored.issues : []), "layout candidates are unresolved or layout_check has not run"] };
-        const evidence = await persistRouteEvidence(runPath, "final-check.json", result);
-        if (Array.isArray(result.plan)) {
-          const planPath = await persistRoutePlan(runPath, result);
-          const route = await readRouteState(dirname(runPath));
-          await autoRouteCheckpoint(runPath, routeStepFor(route?.route ?? "description", "review-planned"), { review_plan: planPath }, "render_element --batch <round.json>");
-        }
-        if (result.passed === true) { const route = await readRouteState(dirname(runPath)); await autoRouteCheckpoint(runPath, routeStepFor(route?.route ?? "description", "final-checked"), { final_check: evidence }, "submit the approved Build"); }
-        else await autoRouteError(runPath, "authoring_check", result.issues ?? result.unresolved ?? "authoring check failed");
-        return { ...result, evidence };
-      } catch (error) {
-        await autoRouteError(runPath, "authoring_check", error);
-        throw error;
-      }
+      return await authoringCheck({ ...input, mode: "description" }, { packageRoot });
     },
 
-    async route_state(input): Promise<Record<string, unknown>> {
-      return await runRouteStateCommand(input);
-    },
-
-    async revision_state(input): Promise<Record<string, unknown>> {
-      return await runRevisionStateCommand(input);
-    },
-
-    async variant_state(input): Promise<Record<string, unknown>> {
-      return await runVariantStateCommand(input);
-    },
-
-    async variant_init(input): Promise<Record<string, unknown>> {
-      const batch = await reconcileVariantExpansion(input.project_root, input.output_root);
-      if (batch === undefined) throw new Error("no variant expansion state; run variant_state --action start first");
-      if (batch.conflicts.length > 0) throw new Error(`variant_init is blocked by unresolved conflicts: ${batch.conflicts.join("; ")}`);
-      const required = ["workload-disclosed", "package-gaps-resolved", "slate-frozen"]
-        .map((name) => VARIANT_EXPANSION_STEPS.indexOf(name as VariantExpansionStep) + 1);
-      const missing = required.filter((step) => !batch.completed_steps.includes(step));
-      if (missing.length > 0) throw new Error(`variant_init is blocked until ${missing.map((step) => VARIANT_EXPANSION_STEPS[step - 1]).join(", ")}`);
-      const initialized = await initializeVariantProjects({
-        projectRoot: input.project_root, outputRoot: input.output_root, slatePath: input.slate,
-        expectedBaseDigest: batch.baseline_digest,
-        ...(batch.count === undefined ? {} : { expectedCount: batch.count }),
-        approvedPackages: batch.packages.flatMap((pack): ApprovedVariantPackage[] => pack.status === "ready" && pack.digest !== undefined
-          ? [{ id: pack.id, package_root: pack.package_root ?? pack.staging_root, digest: pack.digest }] : []),
-      });
-      const readPlan = async (key: "format_plan" | "component_plan"): Promise<unknown> => {
-        const path = batch.artifacts[key];
-        if (path === undefined) throw new Error(`batch state has no ${key} artifact`);
-        try { return JSON.parse(await readFile(path, "utf8")); }
-        catch (error) { throw new Error(`cannot read ${key} at ${path}: ${error instanceof Error ? error.message : String(error)}`); }
-      };
-      const [formatPlan, componentPlan] = await Promise.all([readPlan("format_plan"), readPlan("component_plan")]);
-      const selectedPlan = async (plan: unknown, item: { readonly id: string; readonly brief: string }): Promise<unknown> => {
-        if (plan !== null && typeof plan === "object" && Array.isArray((plan as { variants?: unknown }).variants)) {
-          const entry = ((plan as { variants: unknown[] }).variants).find((candidate) => candidate !== null && typeof candidate === "object" && (candidate as { id?: unknown }).id === item.id);
-          if (entry !== undefined) return entry;
-        }
-        let directionId: string | undefined;
-        try {
-          const brief = JSON.parse(await readFile(item.brief, "utf8")) as {
-            direction_id?: unknown;
-            brief?: { direction_id?: unknown };
-          };
-          const value = brief.direction_id ?? brief.brief?.direction_id;
-          directionId = typeof value === "string" ? value : undefined;
-        } catch { directionId = undefined; }
-        if (directionId !== undefined && plan !== null && typeof plan === "object" && Array.isArray((plan as { directions?: unknown }).directions)) {
-          const entry = ((plan as { directions: unknown[] }).directions).find((candidate) => candidate !== null && typeof candidate === "object" && (candidate as { id?: unknown }).id === directionId);
-          if (entry !== undefined) return entry;
-        }
-        return plan;
-      };
-      const variants: VariantExpansionVariant[] = [];
-      for (const item of initialized.variants) {
-        const formatPlanPath = join(item.project_root, ".hypit", "format-plan.json");
-        const componentPlanPath = join(item.project_root, ".hypit", "component-plan.json");
-        await writeVariantJson(formatPlanPath, { variant_id: item.id, source: batch.artifacts.format_plan, plan: await selectedPlan(formatPlan, item) });
-        await writeVariantJson(componentPlanPath, { variant_id: item.id, source: batch.artifacts.component_plan, plan: await selectedPlan(componentPlan, item) });
-        await startRouteState({ projectRoot: item.project_root, route: "variant", run: item.run });
-        await checkpointRouteState({ projectRoot: item.project_root, route: "variant", step: 1, status: "complete", artifacts: { baseline_manifest: item.manifest } });
-        await checkpointRouteState({ projectRoot: item.project_root, route: "variant", step: 2, status: "complete", artifacts: { variant_brief: item.brief } });
-        await checkpointRouteState({ projectRoot: item.project_root, route: "variant", step: 3, status: "complete", artifacts: { allowed_changes: item.allowed_changes } });
-        if (item.vocabulary_mode === "inherited") {
-          await checkpointRouteState({ projectRoot: item.project_root, route: "variant", step: 5, status: "complete", artifacts: { vocabulary: join(item.project_root, ".hypit", "vocabulary.json") } });
-        }
-        variants.push({ ...item, route_state: routeStatePath(item.project_root), format_plan: formatPlanPath, component_plan: componentPlanPath });
-      }
-      const copyManifest = join(resolve(input.output_root), ".hypit", "variant-copy-manifest.json");
-      await writeVariantJson(copyManifest, {
-        version: 1, project_root: resolve(input.project_root), output_root: resolve(input.output_root),
-        base_digest: initialized.base_digest, slate: resolve(input.slate), variants, created_at: new Date().toISOString(),
-      });
-      const state = await checkpointVariantExpansion({
-        projectRoot: input.project_root, outputRoot: input.output_root, step: "projects-copied", status: "complete",
-        artifacts: { copy_manifest: copyManifest, slate: resolve(input.slate) }, variants,
-        command: `variant_init --project-root ${resolve(input.project_root)} --output-root ${resolve(input.output_root)} --slate ${resolve(input.slate)}`,
-        nextAction: "dispatch only the variant routes whose package prerequisites are ready",
-      });
-      return { passed: true, state, copy_manifest: copyManifest, variants };
-    },
-
-    async variant_check(input): Promise<Record<string, unknown>> {
-      const runPath = resolve(invokedFrom(), input.run);
-      const projectRoot = dirname(runPath);
-      const route = await readRouteState(projectRoot);
-      if (route?.route !== "variant") throw new Error(`${projectRoot} has no active variant route`);
-      const revision = await readRevisionState(projectRoot);
-      if (revision?.parent_route === "variant") {
-        throw new Error(`${projectRoot} has entered post-completion Revision; variant_check cannot reapply the original batch allowed_changes`);
-      }
-      const briefPath = join(projectRoot, ".hypit", "variant-brief.json");
-      const brief = JSON.parse(await readFile(briefPath, "utf8")) as {
-        id?: string;
-        batch_root?: string;
-        base_project_root?: string;
-      };
-      const manifestPath = join(projectRoot, ".hypit", "variant-baseline-manifest.json");
-      let manifest: VariantProjectManifest | undefined;
-      try { manifest = JSON.parse(await readFile(manifestPath, "utf8")) as VariantProjectManifest; }
-      catch { manifest = undefined; }
-      const batch = brief.batch_root === undefined || brief.base_project_root === undefined
-        ? undefined : await readVariantExpansionState(brief.base_project_root, brief.batch_root);
-      const expectedVariant = batch?.variants.find((variant) => resolve(variant.project_root) === projectRoot && (brief.id === undefined || variant.id === brief.id));
-      const stateBindingPassed = manifest !== undefined && expectedVariant !== undefined
-        && JSON.stringify(manifest.allowed_changes) === JSON.stringify(expectedVariant.allowed_change_paths)
-        && manifest.vocabulary_mode === expectedVariant.vocabulary_mode
-        && JSON.stringify(manifest.vocabulary_packages) === JSON.stringify(expectedVariant.vocabulary_packages)
-        && manifest.vocabulary_digest === expectedVariant.vocabulary_digest
-        && JSON.stringify(manifest.package_injections) === JSON.stringify(expectedVariant.package_injections);
-      const vocabularyPath = join(projectRoot, ".hypit", "vocabulary.json");
-      let vocabulary: Record<string, unknown> | undefined;
-      try { vocabulary = JSON.parse(await readFile(vocabularyPath, "utf8")) as Record<string, unknown>; }
-      catch { vocabulary = undefined; }
-      const requiredPackages = manifest?.vocabulary_packages ?? [];
-      const vocabularyMode = manifest?.vocabulary_mode ?? "inspect";
-      const evidencePackages = Array.isArray(vocabulary?.packages) ? vocabulary.packages.filter((item): item is string => typeof item === "string") : [];
-      const evidenceSurfaces = Array.isArray(vocabulary?.surfaces)
-        ? vocabulary.surfaces.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object") : [];
-      const evidenceShapePassed = vocabulary !== undefined && Array.isArray(vocabulary.packages) && Array.isArray(vocabulary.surfaces);
-      const vocabularyBytes = await readFile(vocabularyPath).catch(() => undefined);
-      const vocabularyDigest = vocabularyBytes === undefined ? undefined : `sha256:${createHash("sha256").update(vocabularyBytes).digest("hex")}`;
-      const sourceUsage = await inspectSourceVocabularyUsage(runPath).catch(() => ({ imports: [] as readonly string[], tags: [] as readonly string[] }));
-      const baselineImports = manifest?.source_imports ?? [];
-      const addedImports = sourceUsage.imports.filter((name) => !baselineImports.includes(name));
-      const requiredImportedAndUsed = requiredPackages.every((name) => {
-        const imported = sourceUsage.imports.includes(name);
-        const tags = evidenceSurfaces.filter((surface) => surface.package_name === name)
-          .flatMap((surface) => typeof surface.tag === "string" ? [surface.tag] : []);
-        return imported && tags.length > 0 && tags.some((tag) => sourceUsage.tags.includes(tag));
-      });
-      const inheritedContractPassed = vocabularyMode === "inherited"
-        && manifest?.vocabulary_digest !== undefined && vocabularyDigest === manifest.vocabulary_digest
-        && JSON.stringify(sourceUsage.imports) === JSON.stringify(baselineImports)
-        && JSON.stringify(sourceUsage.tags) === JSON.stringify(manifest.source_tags);
-      const inspectedContractPassed = vocabularyMode === "inspect"
-        && requiredPackages.length > 0
-        && requiredPackages.every((name) => evidencePackages.includes(name))
-        && addedImports.every((name) => requiredPackages.includes(name))
-        && requiredImportedAndUsed;
-      const packageBindings = await Promise.all((manifest?.package_injections ?? []).map(async (injection) => ({
-        ...injection,
-        current_digest: await snapshotProject(join(projectRoot, injection.destination), { preserveTopLevelOutputs: true }).then((snapshot) => snapshot.digest, () => undefined),
-      })));
-      const packageBindingsPassed = packageBindings.every((binding) => binding.current_digest === binding.digest);
-      const vocabularyPassed = stateBindingPassed && evidenceShapePassed && packageBindingsPassed
-        && (inheritedContractPassed || inspectedContractPassed);
-      const packageGate = await validateLocalAuthorPackages({ run: runPath, ...(input.runtime === undefined ? {} : { runtime: input.runtime }) });
-      const cueGate = await scriptCueCheck({ run: runPath });
-      const graphGate = packageGate.passed === true && cueGate.passed === true
-        ? await previewCheck({ run: runPath, ...(input.runtime === undefined ? {} : { runtime: input.runtime }) }, { packageRoot })
-          .catch((error) => ({ run: runPath, sound: false, refused: error instanceof Error ? error.message : String(error) }))
-        : { run: runPath, sound: false, refused: "package or Script Cue gate failed" };
-      const mechanics = await mechanicalAuthoringCheck({ run: runPath }, { packageRoot })
-        .catch((error) => ({ run: runPath, passed: false, error: error instanceof Error ? error.message : String(error) }));
-      const minimalDiff = await inspectVariantDiff(projectRoot)
-        .catch((error) => ({ passed: false, error: error instanceof Error ? error.message : String(error) }));
-      const generatedLeakage = await findGeneratedLeakage(projectRoot, runPath)
-        .catch((error) => ({ passed: false, error: error instanceof Error ? error.message : String(error) }));
-      const layoutGate = await readSettledLayout(runPath);
-      const result: Record<string, unknown> = {
-        run: runPath,
-        passed: vocabularyPassed && packageGate.passed === true && cueGate.passed === true
-          && graphGate.sound === true && layoutGate.passed === true && mechanics.passed === true && minimalDiff.passed === true && generatedLeakage.passed === true,
-        vocabulary: {
-          passed: vocabularyPassed, mode: vocabularyMode, required_packages: requiredPackages, evidence: vocabularyPath,
-          evidence_digest: vocabularyDigest, baseline_digest: manifest?.vocabulary_digest,
-          state_binding: stateBindingPassed, evidence_shape: evidenceShapePassed,
-          baseline_imports: baselineImports, current_imports: sourceUsage.imports, added_imports: addedImports,
-          baseline_tags: manifest?.source_tags ?? [], current_tags: sourceUsage.tags,
-          required_packages_imported_and_used: requiredImportedAndUsed,
-          package_bindings: packageBindings,
-        },
-        package_gate: packageGate, script_cue_gate: cueGate, graph: graphGate, layout: layoutGate, mechanics, minimal_diff: minimalDiff,
-        generated_result_leakage: generatedLeakage,
-        visual_review: "not performed",
-      };
-      const packageEvidence = await persistRouteEvidence(runPath, "package-ready.json", packageGate);
-      const cueEvidence = await persistRouteEvidence(runPath, "script-cues.json", cueGate);
-      const previewEvidence = await persistRouteEvidence(runPath, "preview-check.json", graphGate);
-      const finalEvidence = await persistRouteEvidence(runPath, "variant-check.json", result);
-      result.evidence = finalEvidence;
-      if (vocabularyPassed) await autoRouteCheckpoint(runPath, routeStepFor("variant", "vocabulary-checked"), { vocabulary: vocabularyPath });
-      if (packageGate.passed === true) await autoRouteCheckpoint(runPath, routeStepFor("variant", "package-ready"), { package_ready: packageEvidence });
-      if (cueGate.passed === true) await autoRouteCheckpoint(runPath, routeStepFor("variant", "script-checked"), { script_cues: cueEvidence });
-      if (graphGate.sound === true) {
-        const source = await authorSource(runPath).catch(() => undefined);
-        await autoRouteCheckpoint(runPath, routeStepFor("variant", "source-authored"), source === undefined ? {} : { author_source: source.path });
-        await autoRouteCheckpoint(runPath, routeStepFor("variant", "graph-checked"), { preview_check: previewEvidence });
-      }
-      if (layoutGate.passed === true) {
-        await autoRouteCheckpoint(runPath, routeStepFor("variant", "layout-checked"), {
-          layout_check: String(layoutGate.evidence), layout_decisions: join(projectRoot, ".hypit", "layout-decisions.json"),
-        });
-      }
-      if (result.passed === true) {
-        await autoRouteCheckpoint(runPath, routeStepFor("variant", "final-checked"), { variant_check: finalEvidence });
-        const readyToComplete = await readRouteState(projectRoot);
-        const completeStep = ROUTE_STATE_STEPS.variant.indexOf("variant-complete") + 1;
-        const allPrior = Array.from({ length: completeStep - 1 }, (_, index) => index + 1)
-          .every((step) => readyToComplete?.completed_steps.includes(step) === true);
-        if (allPrior) {
-          await checkpointRouteState({ projectRoot, route: "variant", step: "variant-complete", status: "complete", artifacts: { variant_check: finalEvidence } });
-        }
-      } else {
-        const outsideScope = Array.isArray((minimalDiff as { outside_allowed_changes?: unknown }).outside_allowed_changes)
-          && ((minimalDiff as { outside_allowed_changes: unknown[] }).outside_allowed_changes.length > 0);
-        if (outsideScope) {
-          await checkpointRouteState({ projectRoot, route: "variant", step: route.current_step, status: "blocked", run: runPath,
-            command: "variant_check", error: "scope-expansion-required" });
-        } else await autoRouteError(runPath, "variant_check", result);
-      }
-
-      result.route_state = await readRouteState(projectRoot);
-
-      if (brief.batch_root !== undefined && brief.base_project_root !== undefined) {
-        let batch = await reconcileVariantExpansion(brief.base_project_root, brief.batch_root);
-        if (batch !== undefined) {
-          const currentRoute = await readRouteState(projectRoot);
-          const outsideScope = Array.isArray((minimalDiff as { outside_allowed_changes?: unknown }).outside_allowed_changes)
-            && ((minimalDiff as { outside_allowed_changes: unknown[] }).outside_allowed_changes.length > 0);
-          const updatedVariant = batch.variants.find((variant) => variant.project_root === projectRoot);
-          const variantUpdate = updatedVariant === undefined ? undefined : {
-            ...updatedVariant, status: currentRoute?.status === "complete" ? "complete" as const
-              : outsideScope ? "scope-expansion-required" as const : result.passed === true ? "dispatched" as const : "failed" as const,
-            ...(result.passed === true ? {} : { error: outsideScope ? "scope-expansion-required" : "variant_check failed" }),
-          };
-          batch = await checkpointVariantExpansion({
-            projectRoot: brief.base_project_root, outputRoot: brief.batch_root,
-            step: batch.current_step <= VARIANT_EXPANSION_STEPS.length ? batch.current_step : VARIANT_EXPANSION_STEPS.length,
-            status: batch.status === "blocked" ? "blocked" : "in_progress",
-            ...(variantUpdate === undefined ? {} : { variantUpdates: [variantUpdate] }),
-          });
-          const variants = batch.variants;
-          const reports = await Promise.all(variants.map(async (variant) => {
-            const childRoute = await readRouteState(variant.project_root);
-            const path = childRoute?.artifacts.variant_check ?? join(variant.project_root, ".hypit", "variant-check.json");
-            let report: { passed?: unknown } | undefined;
-            try { report = JSON.parse(await readFile(path, "utf8")) as { passed?: unknown }; } catch { report = undefined; }
-            return { id: variant.id, project_root: variant.project_root, route_complete: childRoute?.status === "complete", passed: report?.passed === true, report: path };
-          }));
-          const aggregate = { passed: reports.length > 0 && reports.every((item) => item.route_complete && item.passed), variants: reports, checked_at: new Date().toISOString() };
-          const aggregatePath = await persistEvidence(brief.batch_root, "aggregate-check.json", aggregate);
-          if (reports.every((item) => item.route_complete)) {
-            await checkpointVariantExpansion({ projectRoot: brief.base_project_root, outputRoot: brief.batch_root, step: "variants-complete", status: "complete", variants });
-          }
-          if (aggregate.passed) {
-            await checkpointVariantExpansion({ projectRoot: brief.base_project_root, outputRoot: brief.batch_root, step: "aggregate-checked", status: "complete", artifacts: { aggregate_check: aggregatePath }, variants });
-          }
-        }
-      }
-      return result;
-    },
   };
   return tools;
 }

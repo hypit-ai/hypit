@@ -17,7 +17,7 @@ writes atomic state to
 
 It reports only `realized_layout`: DOM bounds after official or project-local Producers run, including
 parent or Canvas overflow, vertical offset of package-internal content, and partial overlap between
-independent top-level tracks. It does not use literal SVML Canvas/Frame arithmetic as a quality gate.
+independent top-level tracks. It does not treat literal SVML Canvas/Frame arithmetic as a quality verdict.
 
 `Present` is the Composition IR's time-bounded visual unit: one Producer output with its internal
 text, icons, boxes and other elements. For each Present/content state, the checker derives its longest interval in which layout-affecting IR
@@ -46,15 +46,13 @@ hypit-reference-video-tools layout_accept --run <build.svrun> --batch acceptance
 
 Each entry is `{ "finding": "<id>", "reason": "<why this measured relationship is intentional>" }`.
 
-`layout-checked` means the browser/Producer pass executed and every candidate has been judged: repaired
-candidates disappeared and intentional candidates carry a persisted reason. It does **not** mean the
-mechanical checker reported zero candidates. A browser, font or Producer execution failure is a hard
-failure because no measurement was made; it must never be converted into an empty passing report.
+The browser report separates candidates still needing judgement from intentional candidates carrying
+a reason. It does **not** turn zero candidates into approval of the whole design. A browser, font or
+Producer execution failure means no measurement was made and must be reported as such.
 
-Finding identities include the relevant layout digest. A Source, SVS, package, runtime, font or
-composition change invalidates affected acceptances. Rerun `layout_check` after any visual repair, and
-rerun the affected declaration's visual review when the repair changed its look. The final gate needs
-both settled layout evidence and current visual evidence where that route performs visual review.
+Finding identities are readable structural names built from the finding kind, package, Track,
+Present, element and related element. They do not fingerprint the project. Rerun `layout_check` after
+a visual repair, and read the affected declaration again when its appearance changed.
 
 The 1 CSS px tolerance removes only browser numeric noise. It is not a design threshold and does not
 turn measurements beyond it into mandatory fixes. Do not copy or edit an installed package after a

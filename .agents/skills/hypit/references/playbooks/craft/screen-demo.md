@@ -25,7 +25,7 @@ Define both views before generating either one:
 
 For example, a person-facing classroom view may show chairs behind the user, while the device-facing
 reverse view shows the lectern and blackboard behind the laptop. Writing only “the same classroom”
-for both views is insufficient. Apply the complete gate in `visual-continuity.md`.
+for both views is insufficient. Apply the complete geometry review in `visual-continuity.md`.
 
 ## Keep the interface on the correct surface
 

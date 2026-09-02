@@ -1,15 +1,9 @@
-export {
-  collectArtifacts,
-  materializeArtifact,
-  materializeRecord,
-  pinnedRecords,
-  selectArchivedRecord,
-} from "./archive.js";
-export type { PinnedRecord } from "./archive.js";
+export { pinnedRecords } from "./reuse-markup.js";
+export type { PinnedRecord } from "./reuse-markup.js";
 export { runCli } from "./main.js";
 export { discoverSourcePackages } from "./source-discovery.js";
 export { loadDiscoveredSourcePackages } from "./source-packages.js";
-export { collectRunFrontends, loadRunFile, resolveBuildResultRecord } from "./run-file.js";
+export { collectRunFrontends, loadRunFile, resolveBuildResultValue } from "./run-file.js";
 export type { LoadedRunFile } from "./run-file.js";
 export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
 export { findRuntimeProfile } from "./runtime-selection.js";

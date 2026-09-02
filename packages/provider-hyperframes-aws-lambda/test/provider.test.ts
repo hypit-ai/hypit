@@ -263,7 +263,7 @@ test("one submission is polled and streams the output into the ResourceStore", a
   const { client, state } = fakeClient();
   const { endpoint, registration } = await endpointFor(request, client);
   assert.equal(registration.scheduling?.resources.find((item) =>
-    item.id.startsWith("pool:"))?.maxActive, 2);
+    item.id.startsWith("pool:"))?.limit, 2);
 
   const memory = new MemoryResourceStore();
   let streamed = 0;

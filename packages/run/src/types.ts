@@ -5,10 +5,11 @@ import type {
 import type {
   Candidate,
   OperationNode,
+  RunGraph,
   Satisfaction,
-  StoredValue,
   TypeRef,
 } from "@hypit/protocol";
+export type { RunGraph } from "@hypit/protocol";
 import type { SourceHeader, SourceUnit } from "@hypit/source";
 
 export type RunSourceUnit = SourceUnit;
@@ -51,7 +52,7 @@ export type RunBuildRecord = {
   readonly kind: "build-record";
   readonly id: string;
   readonly build: string;
-  /** Logical Output id selected by the prior Build; independent of the current author graph. */
+  /** Unique public Output name inside the prior Build Result. */
   readonly output: string;
 };
 
@@ -118,33 +119,22 @@ export interface RunFragmentRegistryLike {
   resolve(packageName: string, fragmentName: string): GraphFragment | undefined;
 }
 
-/** Complete, mandatory execution-intent graph. Empty alternate Candidate sets are still a Run Graph. */
-export type RunGraph = {
-  readonly format: "hypit.run-graph@1";
-  readonly candidates: readonly Candidate[];
-  readonly operations: readonly OperationNode[];
-  readonly satisfactions: readonly Satisfaction[];
-  readonly targets: readonly { readonly output: string }[];
-};
-
 export type ResolveRunDocumentContext = {
   readonly compilation: CompiledSourceClosure;
   readonly fragments: RunFragmentRegistryLike;
-  readonly readStoredValue: (from: string) => Promise<StoredValue> | StoredValue;
-  readonly readFile: (from: string, mediaType: string) => Promise<StoredValue> | StoredValue;
-  /** Host archive boundary: resolve exactly one accepted historical output, never expose Build state. */
-  readonly resolveBuildRecord: (
-    build: string,
-    output: string,
-  ) => Promise<{ readonly type: TypeRef; readonly value: StoredValue } | undefined>
-    | { readonly type: TypeRef; readonly value: StoredValue }
-    | undefined;
 };
+
+export type RunCandidateSource =
+  | { readonly kind: "stored-value"; readonly from: string }
+  | { readonly kind: "file"; readonly from: string; readonly mediaType: string }
+  | { readonly kind: "build-output"; readonly build: string; readonly output: string };
 
 export type RunCompilation = {
   readonly document: RunDocument;
   readonly graph: RunGraph;
   readonly candidates: Readonly<Record<string, string>>;
+  /** Sources for zero-input Candidates, materialized only after global planning selects them. */
+  readonly candidateSources: Readonly<Record<string, RunCandidateSource>>;
   /** Author-written Candidate name selected for each resolved Logical Output. Presentation only. */
   readonly satisfactionNames: Readonly<Record<string, string>>;
 };

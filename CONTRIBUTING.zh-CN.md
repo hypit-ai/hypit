@@ -35,12 +35,11 @@ pnpm install --frozen-lockfile
 
 ## 自查
 
-每个 Pull Request 的 CI 都会运行下面三条命令，提交前先在本地跑一遍：
+每个 Pull Request 的 CI 都会运行下面这些命令，提交前先在本地跑一遍：
 
 ```bash
 pnpm check         # TypeScript 类型检查
-pnpm test          # 包、服务适配器与仓库边界测试
-pnpm test:release  # 仓库卫生检查
+pnpm test          # 包与服务适配器测试
 ```
 
 ## 提交 Pull Request

@@ -37,7 +37,7 @@ where a literal read off the old reference would not.
 
 Then check and wire, in that order. `../authoring.md` holds the check set — all four commands, not
 only the Author Source — and `../preview.md` holds the graph check that comes after it. A Source that
-passes every check can still declare a Run that does not trace, and neither gate is bounded by the
+passes every check can still declare a Run that does not trace, and neither check is bounded by the
 round's two-attempt ceiling: a graph that does not trace is not a difference to weigh, it is work that
 is not done.
 

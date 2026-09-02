@@ -19,7 +19,7 @@ hypit-studio --run <project>/build.svrun
 
 Run 决定读取哪份 Author Source、选择哪些 Candidate，以及哪些已接受 Build Record 被复用。Studio preflight 要求 Film/Render 目标及其显示闭包都能从已满足 Candidate 或确定性 Producer 得到。打开 Studio 不调用 Provider、不创建 Build，也不为未解决的 Need 猜测素材或放置占位。
 
-未显式传 `--runtime` 时，Studio 与 CLI 一样从 Run 所在位置向上寻找最近的 `.hypit/runtime` 选择；该选择所在目录同时成为默认环境边界。未选择 Runtime 时 Source 与 Preview 仍可使用，Tasks 与 Artifacts 明确显示不可用，不猜测其他目录。
+未显式传 `--runtime` 时，Studio 与 CLI 一样从 Run 所在位置向上寻找最近的 `.hypit/runtime` 选择；该选择所在目录同时成为默认环境边界。未选择 Runtime 时 Source 与 Preview 仍可使用，项目 Result 中已经结束的 Tasks 与 Artifacts 也仍可读取；只有活动 `BuildView` 与 Operation 状态不可用。Studio 不猜测另一个 Runtime。
 
 ## 当前四区
 
@@ -28,7 +28,7 @@ Run 决定读取哪份 Author Source、选择哪些 Candidate，以及哪些已�
 左上不是项目文件管理器，只显示三类有权威来源的内容：
 
 - Source：当前 Run、Author 与编译闭包中真实引用的 SVML/SVS；每个文件都可切换查看，并只写回被选中的精确 Source；
-- Tasks：当前环境的 Runtime Build Catalog、Build State、Dispatch 与 Operation 的只读投影；
+- Tasks：项目 Result 中的已结束 Build，以及所选 Runtime 中活动 `BuildView` 与 Operation 的只读合并投影；
 - Artifacts：项目 Build Result 中公开输出实际包含的文件；不读取已清理的 Runtime 工作区。
 
 Studio 不推断 campaign、方向或 variant 文件夹，不维护项目清单、历史摘要、运行锁或第二份数据库。任务和产物视图不会创建、取消、重试或恢复 Build。
@@ -111,7 +111,7 @@ Companion 不能向应用注入任意 DOM、CSS 或前端状态。删除 Studio 
 
 - Inspector 后续是否需要字体、媒体引用等新的统一控件，以及嵌套作者实体怎样获得自己的选择上下文；
 - 怎样恢复 prompt、参考素材、Producer、Provider、Artifact 与 Track 之间的可读依赖关系；
-- Runtime 历史怎样分页读取，避免长期积累后逐个读取全部 Build 状态，同时不新增中心 Project 数据库或拖慢 Build；
+- Result 历史怎样分页读取，避免长期积累后读取全部 Build Result，同时不新增中心 Project 数据库或拖慢 Build；
 - Artifacts 的视频海报、详情与复用动作应如何惰性提供而不污染 Build truth。
 
 这些问题统一记录在 [Workspace 与 Inspector 信息架构审计](./studio-workspace-inspector-audit.md)，在调研完成前不固化为 ABI 或存储格式。

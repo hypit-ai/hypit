@@ -87,7 +87,7 @@ hypit build build.svrun --follow
 
 hypit inspect <build-id>
 hypit get <build-id> \
-  --name final.video --to output/final.mp4
+  --output final.video --to output/final.mp4
 ```
 
 The paid-build handoff is defined in `studio-confirmation.md`: show the complete preview-mock Run in
@@ -109,9 +109,9 @@ an active full-profile diagnosis and `runtime status` to observe the deployment.
 cheap preflight and fails before durable submission when deployment is not ready; it never installs
 or starts a Managed Program.
 
-Use `runtime logs` to diagnose the Worker. Use `runtime down` to stop it from claiming more Builds.
-External programs are intentionally independent; stop them only with `programs down`. Durable
-Builds remain archived and neither command cancels remote Provider work.
+Use `runtime logs` to diagnose the Worker. Use `runtime down` to stop it from advancing active Builds.
+External programs are intentionally independent; stop them only with `programs down`. Saved Build
+Results remain in the project Result repository, and neither command cancels remote Provider work.
 
 ## Preserve durable semantics
 
@@ -127,8 +127,8 @@ Builds remain archived and neither command cancels remote Provider work.
   terminal state without resubmitting or taking execution ownership.
 - Every `build` invocation creates a fresh automatic Build id. Source identity never reclaims an
   earlier Build; reuse across Builds exists only through explicit Run Source Candidates.
-- `inspect` reads durable Build state and accepted Records. `get` copies an archived Artifact to the
-  requested destination.
+- `inspect` reads one finished Build Result. `get --output <name>` reads or copies one uniquely named
+  public Output from that Result.
 - A running Worker loads an installed Component package when a Build first names it and remembers
   every physical package in that dependency closure. A later Build may add another installed
   Component package without restarting the Worker; shared dependencies are not registered twice.
@@ -147,29 +147,16 @@ Builds remain archived and neither command cancels remote Provider work.
 
   Read an identical repeat failure as this until you have ruled it out. Reasoning about why a correct
   fix did not work is how an afternoon goes, and the fix was never loaded.
-- **Stop the Worker between Builds, never during one.** A remote generation belongs to the Provider,
-  and the Worker is the only thing watching it: take the Worker down mid-flight and the request keeps
-  running with nobody to collect it, passes its operation deadline, and fails — taking the whole Build
-  with it, not merely the requests that were in the air. `runtime status` reports what is queued,
-  running and reserved; wait for it to report nothing before stopping anything. This applies to the
-  Profile as much as the code — raising an Endpoint's `defaultConcurrency` needs the same restart, so
-  a change that costs nothing on an idle Runtime costs the whole Build on a busy one. Nothing is lost
-  by waiting: accepted Records are durable, and the requests still in flight are the expensive ones.
+- **Prefer stopping an idle Worker.** A changed Runtime Profile or already-loaded package code takes
+  effect only after restart. Check active work first so an immediate in-process Producer is not
+  interrupted. Asynchronous Provider Operations are durable and are polled again after restart; the
+  Worker does not submit them a second time.
 
-  **Check before every restart, and treat a running Build as a stop sign rather than a delay.** The
-  reading takes one command, and it is the same one whatever the reason for restarting:
+  Use the activity view before every restart:
 
   ```bash
-  hypit runtime status   # proceed only on Queued 0 · Running 0
+  hypit activity   # proceed when no active Builds are listed
   ```
-
-  What follows a restart taken during a Build is not only the lost generation. The Build is left
-  `running` and holding the lane it reserved, a Worker claims only `queued` and `waiting` Builds, and
-  cancelling happens on a claimed Build — so it holds that lane against every later Build, and
-  `hypit cancel` reports the request and changes nothing. A current Worker takes such a Build back at
-  startup; an older one does not, and the symptom there is a queue that never moves while
-  `Active Operations` stays `0`. Read that pair — a Build `running` with no active operation — as this,
-  and restarting again is the one thing that cannot help.
 
 ## Keep the Distribution and every project physically separate
 

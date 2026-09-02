@@ -15,12 +15,12 @@ When `--runtime` is omitted, Studio uses the nearest Runtime selection made by
 boundary. The upper-left library is intentionally not a filesystem browser:
 
 - Source is the exact Run + Author closure and writes back only the selected file;
-- Tasks are read-only Build Catalog/Archive/Dispatch/Operation views;
+- Tasks combine finished project Results with read-only active `BuildView` and Operation information;
 - Artifacts are public files exposed by project Build Results.
 
 No project manifest, Studio database, output-directory scan or inferred campaign
-folder structure is involved. With no selected Runtime, Source and Preview still
-work while Tasks and Artifacts stay explicitly unavailable.
+folder structure is involved. With no selected Runtime, Source, Preview, finished
+Result tasks and Artifacts still work; only active execution status is unavailable.
 
 Studio is an application boundary. Core and domain packages do not import it or
 register UI metadata. The installed Distribution explicitly selects one independent

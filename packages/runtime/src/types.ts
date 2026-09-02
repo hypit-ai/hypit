@@ -26,8 +26,7 @@ export type RuntimeRunnableCommand = {
 
 export type RuntimeResourceClaim = {
   readonly id: string;
-  readonly maxActive: number;
-  readonly maxInFlight: number;
+  readonly limit: number;
 };
 
 export type RuntimeQueueLane = {
@@ -38,6 +37,8 @@ export type RuntimeQueueLane = {
 export type RuntimeWorkerRunOptions = {
   readonly idlePollMs: number;
   readonly signal?: AbortSignal;
+  /** Called after abandoned work is claimable and immediately before the claim loop starts. */
+  readonly ready?: () => void | Promise<void>;
 };
 
 export type RuntimePreparation = {

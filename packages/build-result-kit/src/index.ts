@@ -26,9 +26,18 @@ export type BuildResultRepositoryOpened = {
   readonly close?: () => void | Promise<void>;
 };
 
+export type BuildResultRepositoryDiagnostic = {
+  readonly severity: "error" | "warning" | "info";
+  readonly code: string;
+  readonly message: string;
+  readonly subject?: string;
+};
+
 export type BuildResultRepositoryAdapter = {
   validate(context: BuildResultRepositoryContext): void;
   open(context: BuildResultRepositoryContext): BuildResultRepositoryOpened | Promise<BuildResultRepositoryOpened>;
+  /** Active, read-only reachability/permission diagnosis for the selected backing store. */
+  doctor?(context: BuildResultRepositoryContext): readonly BuildResultRepositoryDiagnostic[] | Promise<readonly BuildResultRepositoryDiagnostic[]>;
 };
 
 export type BuildResultRepositoryHostFacet = HostFacet & {
@@ -45,12 +54,17 @@ export function createBuildResultRepositoryHostFacet(options: {
   readonly use: string;
   readonly validate: BuildResultRepositoryAdapter["validate"];
   readonly open: BuildResultRepositoryAdapter["open"];
+  readonly doctor?: BuildResultRepositoryAdapter["doctor"];
 }): BuildResultRepositoryHostFacet {
   assert(options.use.trim().length > 0, "Build Result Repository use name is empty");
   return {
     abi: buildResultRepositoryHostAbi,
     offers: [options.use],
-    implementation: { validate: options.validate, open: options.open },
+    implementation: {
+      validate: options.validate,
+      open: options.open,
+      ...(options.doctor === undefined ? {} : { doctor: options.doctor }),
+    },
   };
 }
 
@@ -58,7 +72,10 @@ export function isBuildResultRepositoryHostFacet(value: HostFacet): value is Bui
   if (value.abi !== buildResultRepositoryHostAbi || value.offers?.length !== 1) return false;
   const implementation = value.implementation as Partial<BuildResultRepositoryAdapter> | null;
   return (
-    implementation !== null && typeof implementation === "object" && typeof implementation.validate === "function" && typeof implementation.open === "function"
+    implementation !== null && typeof implementation === "object"
+      && typeof implementation.validate === "function"
+      && typeof implementation.open === "function"
+      && (implementation.doctor === undefined || typeof implementation.doctor === "function")
   );
 }
 
@@ -88,6 +105,17 @@ export class BuildResultRepositoryRegistry {
     const context = { root, config: selection.config ?? {} };
     adapter.validate(context);
     return await adapter.open(context);
+  }
+
+  async doctor(
+    selection: BuildResultRepositorySelection,
+    root: string,
+  ): Promise<readonly BuildResultRepositoryDiagnostic[]> {
+    const adapter = this.#adapters.get(selection.use);
+    assert(adapter !== undefined, `Build Result Repository ${selection.use} is not installed`);
+    const context = { root, config: selection.config ?? {} };
+    adapter.validate(context);
+    return await adapter.doctor?.(context) ?? [];
   }
 }
 

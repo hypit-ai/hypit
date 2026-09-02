@@ -1,7 +1,7 @@
 # Hypit production playbooks
 
 Use these playbooks to author production decisions directly in `.svml`, `.svs`, and `.svrun`
-sources. Each playbook names the SVML components, timing model, review gates, and reuse behavior
+sources. Each playbook names the SVML components, timing model, review questions, and reuse behavior
 needed for that craft or format.
 
 ## Required load order

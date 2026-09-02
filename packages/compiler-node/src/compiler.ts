@@ -199,4 +199,9 @@ export class NodeCompiler {
     return link(closure, program.records);
   }
 
+  /** Admit one selected Run value through the same Type-owner boundary as authored Records. */
+  async admitRecord(program: LinkedProgram, record: import("@hypit/protocol").TypedRecord): Promise<void> {
+    await this.#admitRecord(program.closure, record);
+  }
+
 }

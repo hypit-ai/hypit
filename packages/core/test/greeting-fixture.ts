@@ -163,6 +163,7 @@ export function greetingGraph(includeSide = false): CompiledGraph {
 export function createGreetingBuild(options?: {
   readonly generationRealization?: "primary" | "placeholder";
   readonly includeSideTarget?: boolean;
+  readonly targetOutputs?: readonly string[];
 }): BuildState {
   const closure = createResolvedClosure([manifest]);
   const authored = sealRecord({
@@ -182,9 +183,8 @@ export function createGreetingBuild(options?: {
       })
     : sourceGraph;
   const request = sealBuildRequest({
-    targets: [...(options?.includeSideTarget ? [{ output: "side-document" }] : []), {
-      output: "document",
-    }],
+    targets: options?.targetOutputs?.map((output) => ({ output }))
+      ?? [...(options?.includeSideTarget ? [{ output: "side-document" }] : []), { output: "document" }],
   });
   return start(program, graph, request);
 }

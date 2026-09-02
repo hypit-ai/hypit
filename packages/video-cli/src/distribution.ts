@@ -1,5 +1,9 @@
 import type { CliDistribution } from "@hypit/cli";
-import { openLocalRuntimeHost } from "@hypit/runtime-local";
+import {
+  doctorProjectBuildResultRepository,
+  openLocalRuntimeHost,
+  openProjectBuildResultRepository,
+} from "@hypit/runtime-local";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import {
@@ -41,4 +45,14 @@ export const videoCliDistribution: CliDistribution = {
         : [installedLauncher],
     },
   }),
+  openProjectResults: async (projectRoot, options) => {
+    const opened = await openProjectBuildResultRepository(projectRoot, options);
+    return {
+      location: opened.location,
+      repository: opened.repository,
+      close: async () => await opened.close?.(),
+    };
+  },
+  diagnoseProjectResults: async (projectRoot, options) =>
+    await doctorProjectBuildResultRepository(projectRoot, options),
 };

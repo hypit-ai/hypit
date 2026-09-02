@@ -1,8 +1,8 @@
 # Reading each element against what it was asked to be
 
-Completed reviews are durable evidence in the project review log and route snapshot. After a context
-boundary, reconcile `.hypit/route-state.json` and continue from its `next_action`; do not repeat an
-already completed local review.
+Completed reviews are ordinary content in the project review log. After an interruption, inspect that
+log and the current render directly. Repeat a local review only when the visible source changed or the
+caller explicitly wants a new reading.
 
 **Read `../element-review.md` first.** It owns the round this file sits inside, and everything below
 is what having no reference changes.

@@ -1,17 +1,6 @@
 import type { ValueSchema } from "@hypit/protocol";
 
-/**
- * Read a declared shape back as prose an author can act on.
- *
- * A package that draws returns a Visual Track from its Producer, and every field on it — which
- * element kinds exist, which style names are admitted, which of them take an enum, how few keyframes
- * an animation may have — is declared in `composition`'s own schema. Nothing read that schema, so the
- * only way to learn the shape was to open another package and copy it, which is how a component gets
- * written against one example's habits rather than against the contract.
- *
- * This renders the schema instead. It is generated from the declaration, so it cannot say something
- * the code does not.
- */
+/** Render a declared value shape as prose an author can act on. */
 export function describeSchema(schema: ValueSchema, indent = ""): string[] {
   const step = `${indent}  `;
   switch (schema.kind) {
@@ -26,8 +15,6 @@ export function describeSchema(schema: ValueSchema, indent = ""): string[] {
       return lines;
     }
     case "oneOf": {
-      // A union of objects each pinned by one literal is how the schema spells "these kinds"; naming
-      // the discriminating values is more use than printing every variant in full.
       const pinned = schema.variants.map((variant) => {
         if (variant.kind !== "object") return undefined;
         const literal = Object.entries(variant.fields)

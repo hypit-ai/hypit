@@ -186,8 +186,11 @@ export type StudioSourceView = {
 
 export type StudioTaskView = {
   readonly id: string;
+  readonly title?: string;
+  readonly note?: string;
+  readonly highlightedOutputs?: readonly string[];
   readonly createdAt: number;
-  readonly status: "queued" | "running" | "waiting" | "complete" | "failed" | "cancelled" | "active" | "unknown";
+  readonly status: "queued" | "running" | "waiting" | "complete" | "failed" | "cancelled" | "active" | "blocked" | "unknown";
   readonly source: string;
   readonly run?: string;
   readonly targets: readonly string[];
@@ -208,6 +211,9 @@ export type StudioArtifactView = {
   readonly build: string;
   readonly createdAt: number;
   readonly output: string;
+  readonly highlighted: boolean;
+  readonly buildTitle?: string;
+  readonly buildNote?: string;
   readonly valuePath: string;
   readonly ownerBuild: string;
   readonly ownerOutput: string;
