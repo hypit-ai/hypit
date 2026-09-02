@@ -37,11 +37,11 @@
     </skin-is-asking>
   </script>
 
-  <text:Value id="tboy-prompt">Photorealistic vertical iPhone video frame featuring tboy, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <text:Value id="tboy-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. slim young East Asian man with a soft oval face, straight dark hair, and narrow shoulders. Keep the face, hair, shoulder line, clothing, and podcast microphone clearly visible.</text:Value>
   <gpt:Image id="tboy" prompt={tboy-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="idol-prompt">Photorealistic vertical iPhone video frame featuring idol, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <text:Value id="idol-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. young East Asian woman with a heart-shaped face, large dark eyes, long black hair with bangs, and broad athletic shoulders. Keep the face, hair, shoulder line, clothing, and podcast microphone clearly visible.</text:Value>
   <gpt:Image id="idol" prompt={idol-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="retinol-prompt">Photorealistic vertical iPhone video frame featuring retinol, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <text:Value id="retinol-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. single retinol skincare bottle with a slim rectangular body, fitted cap, and simple product label centered in the frame, with its shape, cap, label placement, and hand scale clearly readable. Use a short neutral product backdrop and no extra objects.</text:Value>
   <gpt:Image id="retinol" prompt={retinol-prompt} aspect-ratio="9:16" resolution="2K"/>
 
   <asset:Audio id="tboy-voice" src="./assets/tboy.wav"/>
