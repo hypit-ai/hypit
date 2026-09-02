@@ -50,17 +50,24 @@
     </bitcoin-rule>
   </script>
 
-  <media:Image id="interviewer-view" src="./assets/guy.png"/>
-  <media:Image id="guest-view" src="./assets/wife.png"/>
-  <media:Image id="shared-view" src="./assets/host.png"/>
+  <text:Value id="interviewer-view-prompt">Photorealistic vertical street-interview frame showing interviewer view, natural handheld phone-camera texture, realistic people and background, no readable text or logos.</text:Value>
+  <gpt:Image id="interviewer-view" prompt={interviewer-view-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="guest-view-prompt">Photorealistic vertical street-interview frame showing guest view, natural handheld phone-camera texture, realistic people and background, no readable text or logos.</text:Value>
+  <gpt:Image id="guest-view" prompt={guest-view-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="shared-view-prompt">Photorealistic vertical street-interview frame showing shared view, natural handheld phone-camera texture, realistic people and background, no readable text or logos.</text:Value>
+  <gpt:Image id="shared-view" prompt={shared-view-prompt} aspect-ratio="9:16" resolution="2K"/>
   <media:Audio id="boy-voice" src="./assets/guy.wav"/>
   <media:Audio id="wife-voice" src="./assets/wife.wav"/>
   <media:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
   <media:Audio id="rule-reveal-sound" src="./assets/rule-reveal.wav"/>
-  <media:Image id="rule-placeholder" src="./assets/emoji-reveal/rendered/question-mark.png"/>
-  <media:Image id="manifest-icon" src="./assets/emoji-reveal/rendered/sparkles.png"/>
-  <media:Image id="real-estate-icon" src="./assets/emoji-reveal/rendered/building-estate.png"/>
-  <media:Image id="bitcoin-icon" src="./assets/emoji-reveal/rendered/currency-bitcoin.png"/>
+  <text:Value id="rule-placeholder-prompt">Photorealistic vertical image of rule placeholder, natural lighting, realistic detail, clear composition, no readable text or logos.</text:Value>
+  <gpt:Image id="rule-placeholder" prompt={rule-placeholder-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="manifest-icon-prompt">Clean colorful 3D emoji-style icon representing manifest, centered on a simple light background, crisp edges, no readable text.</text:Value>
+  <gpt:Image id="manifest-icon" prompt={manifest-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
+  <text:Value id="real-estate-icon-prompt">Clean colorful 3D emoji-style icon representing real estate, centered on a simple light background, crisp edges, no readable text.</text:Value>
+  <gpt:Image id="real-estate-icon" prompt={real-estate-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
+  <text:Value id="bitcoin-icon-prompt">Clean colorful 3D emoji-style icon representing bitcoin, centered on a simple light background, crisp edges, no readable text.</text:Value>
+  <gpt:Image id="bitcoin-icon" prompt={bitcoin-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
 
   <text:Value id="manifest-rule-action">
     BOY is interviewer A, the young man holding the microphone. WIFE is guest B, the woman holding her bag beside the Lamborghini. Preserve their identities, outfits, props, left-right relationship, and the street location throughout.

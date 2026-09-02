@@ -37,9 +37,12 @@
     </skin-is-asking>
   </script>
 
-  <asset:Image id="tboy" src="./assets/tboy.png"/>
-  <asset:Image id="idol" src="./assets/idol.png"/>
-  <asset:Image id="retinol" src="./assets/retinol.png"/>
+  <text:Value id="tboy-prompt">Photorealistic vertical iPhone video frame featuring tboy, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="tboy" prompt={tboy-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="idol-prompt">Photorealistic vertical iPhone video frame featuring idol, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="idol" prompt={idol-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <text:Value id="retinol-prompt">Photorealistic vertical iPhone video frame featuring retinol, natural lighting and realistic detail, clear background, no readable text or logos.</text:Value>
+  <gpt:Image id="retinol" prompt={retinol-prompt} aspect-ratio="9:16" resolution="2K"/>
 
   <asset:Audio id="tboy-voice" src="./assets/tboy.wav"/>
   <asset:Audio id="idol-voice" src="./assets/idol.wav"/>
