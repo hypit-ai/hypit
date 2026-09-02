@@ -60,6 +60,8 @@ file that some jobs never open.
   short continuity sentence unless a setting detail is required for the story or camera geometry.
 - Keep dimensions out of prompt prose. Put aspect ratio and resolution on `gpt:Image`; do not mention
   values such as `1:1`, `16:9`, `square image`, `2K`, or `4K` in the prompt.
+- Do not use real-person names as visual shorthand. Spell out the subject's visible appearance and
+  wardrobe so the image model can render the intended identity without a named-person reference.
 - Describe the desired visible state directly. Omit unwanted concrete objects instead of naming
   them inside negations or hypotheticals that a model may materialize.
 - Keep editorial captions, titles, stickers, cards, and callouts out of generation prompts. Author

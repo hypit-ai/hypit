@@ -12,6 +12,8 @@
   `9:16`, `square image`, `portrait orientation`, `2K`, or `4K`. Those belong in the `gpt:Image`
   attributes. Use a shot description such as “close portrait” or “medium close-up” only when it
   explains composition, not as a substitute for the model's size parameters.
+- Do not name real people in image prompts. Describe the visible subject instead: age range, skin tone,
+  face shape, eyes, brows, nose, mouth, hair, facial hair, build, clothing, and expression.
 
 ## Write every generation prompt in English
 
