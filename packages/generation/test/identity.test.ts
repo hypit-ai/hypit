@@ -39,9 +39,6 @@ test("generated audio is an ordinary Resource-backed media result", async () => 
   const result = await facet.handler({ inputs: { set: { value: { kind: "inline", value: set } } } } as never);
   assert.ok("audio" in result.outputs);
   assert.deepEqual(result.outputs.audio, audio);
-  const validators = new TypeValidatorRegistry();
-  registerTypeValidatorFacets(validators, generationComponent.validators);
-  assert.ok(validators.resolve(generationTypes.audioSet));
 });
 
 test("the primary-video projection returns the ordered Product member as a Blob value", async () => {

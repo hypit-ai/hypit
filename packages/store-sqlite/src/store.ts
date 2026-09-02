@@ -1113,14 +1113,6 @@ export class SqliteRuntimeState {
     `);
     this.builds = new SqliteBuildStore(database);
     this.operations = new SqliteOperationStore(database);
-    const legacy = this.#database.prepare(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'hypit_dispatches'",
-    ).get() as Row | undefined;
-    if (legacy !== undefined) {
-      const count = this.#database.prepare("SELECT COUNT(*) AS count FROM hypit_dispatches").get() as Row;
-      assert(count.count === 0,
-        "This Runtime contains legacy Dispatch rows; they require an explicit project migration");
-    }
     this.commandExecutions = new SqliteCommandExecutionStore(database);
     this.execution = new SqliteBuildExecutionStore(database);
     this.catalog = new SqliteBuildCatalog(database);

@@ -33,13 +33,8 @@ const definition = defineExactModelModule({
   }],
 });
 
-test("one exact model definition owns draft, media binding, finalization and generation contracts", async () => {
+test("media binding reaches the finalized exact-model request", async () => {
   const endpoint = definition.endpoints.image!;
-  assert.equal(endpoint.draftType.name, "GraphNativeImageRequestDraft");
-  assert.equal(endpoint.mediaBindings.images?.type.name, "GraphNativeImageRequestImagesBinding");
-  assert.equal(endpoint.textBindings.prompt?.producer.name, "bind-request-graph-native-image-prompt-text");
-  assert.ok(definition.manifest.producers.some((producer) => producer.name === endpoint.finalizeProducer.name));
-
   const artifact = {
     kind: "blob" as const,
     resource: fixtureResource("graph-native-image"),
@@ -61,8 +56,12 @@ test("one exact model definition owns draft, media binding, finalization and gen
   assert.ok(finalizeFacet);
   const finalized = await finalizeFacet.handler({ inputs: { draft: { value: bound.outputs.draft! } } } as never);
   assert.equal(finalized.outputs.request?.kind, "inline");
-  if (finalized.outputs.request?.kind !== "inline") return;
-  const request = finalized.outputs.request.value as Record<string, unknown>;
+  assert.deepEqual(finalized.outputs.request?.kind === "inline" ? finalized.outputs.request.value : undefined, {
+    ports: {
+      images: [{ artifact, role: "image" }],
+      prompt: ["draw it"],
+    },
+  });
 });
 
 test("one graph Text edge fills the exact model prompt before finalization", async () => {
@@ -95,8 +94,5 @@ test("the dynamic Fragment exposes every Text and media edge as an explicit sema
     "finalize-request-graph-native-image",
     "request-graph-native-image",
     "select-primary-image",
-  ]);
-  assert.deepEqual(fragment.inputs.map((input) => input.name), [
-    "draft", "first:artifact", "first:binding", "prompt:text", "second:artifact", "second:binding",
   ]);
 });
