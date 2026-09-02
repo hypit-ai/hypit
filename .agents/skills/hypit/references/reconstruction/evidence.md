@@ -55,9 +55,10 @@ to transcribe.
 `transcript` reports `status`, `transcript_ref` and `word_count`. Read the words from
 `transcript_ref`, a JSON file of passages, each with its own `words` array of
 `{ text, start_seconds, end_seconds, score }`. A machine with no WhisperX service running reports
-`status: "unavailable"` with a `reason` and prepares everything else; run `hypit runtime up` for the
-project's selected Profile and prepare again. `../host-setup.md` covers diagnosing that service when
-starting it is not enough.
+`status: "unavailable"` with a `reason`. Under the Skill's hard environment gate, do not continue from
+that result: run `hypit runtime up` for the project's selected Profile, confirm the service health, and
+prepare the reference again only after it reports ready. `../host-setup.md` covers diagnosing that
+service when starting it is not enough.
 
 When a completed preparation stage must be rerun, use one small `--redo` value:
 
