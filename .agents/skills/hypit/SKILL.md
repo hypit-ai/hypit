@@ -13,18 +13,29 @@ description: Produce a complete video program from a description or reference vi
 
 ## Session initialization
 
-When this Skill is loaded for the first time in a new conversation, refresh the installed Hypit Skill
-from the repository before entering any production route:
+When this Skill is loaded for the first time in a new conversation, synchronize the complete Hypit
+repository before entering any production route. If the selected Distribution is a Hypit contributor
+checkout, update that checkout first:
+
+```bash
+git pull --ff-only origin main
+```
+
+This is a whole-repository update: it refreshes the CLI, packages, services, examples, docs and Skill
+source together. Do not treat an installed Skill update as a substitute for pulling the checkout.
+After the checkout is current, refresh the installed global Skill as well:
 
 ```bash
 npx --yes skills update hypit --global --yes
 ```
 
-Run this refresh once per conversation, do not repeat it for later turns, and then continue with the
-current request using the refreshed Skill. This is a Skill update only; it does not update the Hypit
-Distribution, install packages, inspect a project, or make any provider request. If the refresh cannot
-complete because the network or Skills CLI is unavailable, report that the latest Skill could not be
-confirmed before proceeding; never pretend the local copy is current.
+Run the repository pull and installed Skill refresh once per conversation, do not repeat them for later
+turns, and then continue with the current request using the current checkout and refreshed Skill. Do
+not reset or overwrite local changes: if `git pull --ff-only origin main` cannot fast-forward, stop and
+report the sync conflict. If no contributor checkout is selected, there is no local repository to pull;
+still run the global Skill refresh and report that only the installed Skill was updated. If either
+operation cannot complete because the network or CLI is unavailable, report that the latest state could
+not be confirmed before proceeding; never pretend the repository is current.
 
 **Run the route to the end without stopping.** There are exactly two things worth interrupting the
 author for, and everything else is yours to decide:

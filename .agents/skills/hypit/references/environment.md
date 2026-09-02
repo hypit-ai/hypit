@@ -166,6 +166,17 @@ may also use it as the Distribution when no installed CLI exists, as described a
 projects in this checkout live under `<checkout-root>/projects/<project-name>/`; they remain independent
 author projects and are not part of the repository workspace globs.
 
+When this checkout is the selected Distribution and the Hypit Skill is loaded for the first time in a
+new conversation, synchronize the complete repository before using it:
+
+```text
+git pull --ff-only origin main
+```
+
+This updates the CLI, packages, services, examples, docs and Skill source together. Never reset or
+overwrite local changes; a pull that cannot fast-forward is a sync conflict and blocks the route until
+it is resolved. Updating only the installed Skill does not make the contributor checkout current.
+
 A project directory carries its own `package.json` with the runtime-safe minimum
 `{ "name": "<project-name>", "version": "0.0.0", "private": true, "type": "module" }`.
 `hypit check`, `plan` and `build` locate the package root by walking
