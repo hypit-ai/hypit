@@ -17,6 +17,13 @@ Requests such as “move this element right” or “raise the captions” start
 Do not edit the rendered MP4, PNG, WAV, preview mock or Artifact directly. The source remains
 authoritative.
 
+Before any revision command or project inspection, read `../environment.md` completely and finish its
+environment checklist. The selected Distribution, project boundary, credentials, Runtime Profile,
+selected managed programs and their health checks must all be confirmed; the local WhisperX Endpoint
+must report `Ready whisperx` (or an equivalent successful probe). Do not begin a revision from a
+partial, installing, unhealthy or unconfirmed environment, even when the change itself appears
+deterministic or the user asks to bypass setup.
+
 ## Recovery and state
 
 Read `../../SKILL.md`, `../recovery.md`, the project's current `.hypit/revision-state.json` view, its

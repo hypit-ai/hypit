@@ -62,18 +62,23 @@ This gate comes before reference preparation, media inspection, project authorin
 reconstruction action. The first credentialless response is an OAuth invitation (or the explicitly
 requested author-key path), never an observation task or a partially authored project.
 
-## Non-negotiable WhisperX gate
+## Non-negotiable environment gate
 
 For every video-production route — original authoring, reconstruction, revision, and variant work —
-WhisperX must be installed and healthy before the route advances beyond environment setup. Select a
-Runtime Profile with the local WhisperX Endpoint, run `hypit runtime up`, and verify that the service
-reports `Ready whisperx` (or an equivalent successful health check). Do this before reading or
-preparing a reference, inspecting examples or vocabulary, freezing a brief, writing Source, previewing,
-or building. Installation, model setup, or the health probe may never be skipped, replaced by another
-transcriber, deferred until later, or worked around because the user asks to proceed. If WhisperX is
-not installed, still installing, unhealthy, or its health check cannot be confirmed, stop at the
-environment stage and repair it first. The login-only authentication path is the sole exception
-because it is not video production.
+read `references/environment.md` completely and finish its environment setup before doing anything
+else in the route. This is a hard prerequisite, not documentation to consult later. The completed
+environment must include a selected Hypit Distribution, an explicit project boundary, the project's
+Runtime Profile, resolved credentials for the capabilities the route will use, and every selected
+managed program installed and healthy. Run the required `hypit runtime up` provisioning and health
+checks; WhisperX must report `Ready whisperx` (or an equivalent successful probe). Do this before
+inspecting media or examples, preparing a reference, choosing an observer, freezing a brief, reading
+vocabulary, writing Source, previewing, or building.
+
+Do not skip, replace, defer, or partially complete any environment step, and do not proceed because
+the user asks to bypass it. If Distribution selection, project setup, credential resolution, Runtime
+Profile selection, program installation, or any health check is incomplete or cannot be confirmed,
+stop at the environment stage and repair it first. The login-only authentication path is the sole
+exception because it is not video production.
 
 The credentialless `agent` observer is not a way around this rule. It may be used only after the
 credential choice has been settled; never silently select it because no credential was found.

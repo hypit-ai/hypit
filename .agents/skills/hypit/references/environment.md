@@ -15,11 +15,20 @@ Hypit has three different lifetimes. Never collapse them into one directory.
 An ordinary user does not clone the repository and does not run pnpm, Corepack, `npm link`, or a
 service's `uv sync` by hand. A clone is only a contributor checkout.
 
-WhisperX is a mandatory environment prerequisite for every video-production route. Before any route
-advances beyond environment setup, the selected Runtime Profile must include the local WhisperX
-Endpoint, `hypit runtime up` must install and start it, and its health must report `Ready whisperx` (or
-an equivalent successful probe). Do not proceed while it is missing, still installing or unhealthy;
-the only exception is the login-only authentication path, which is not video production.
+## Environment completion gate
+
+This document must be read completely before any video-production route continues. Environment setup is
+complete only when all of the following are true: a Hypit Distribution is selected; the project
+directory and its package boundary are established; credentials for every capability the route will
+use are resolved; the project's Runtime Profile is selected; `hypit runtime up` has finished installing
+and starting every selected managed program; and every required health check passes. The local
+WhisperX Endpoint is mandatory for video production and must report `Ready whisperx` (or an equivalent
+successful probe).
+
+Do not inspect media or examples, prepare or observe a reference, freeze a brief, inspect vocabulary,
+write Source, preview, or Build until this checklist is complete. Do not substitute another
+transcriber, defer installation, or continue from a partial or unconfirmed setup. The only exception
+is the login-only authentication path, which is not video production.
 
 ## Select a Distribution; do not assume registry publication
 

@@ -10,6 +10,12 @@ The default deliverable is checked Source. Do not render, visually review or sub
 the author explicitly asks for finished videos. A Build spends money and still requires a fresh cost
 approval; context recovery is never approval to repeat it.
 
+Before discovering or copying a batch, read `../environment.md` completely and finish its environment
+checklist. The selected Distribution, project boundary, credentials, Runtime Profile, selected managed
+programs and health checks must be confirmed; the local WhisperX Endpoint must report `Ready whisperx`
+(or an equivalent successful probe). Do not treat source-only delivery or an existing completed base
+as a reason to skip this gate.
+
 ## Recovery comes first
 
 At the start of a new turn or after context compaction:
