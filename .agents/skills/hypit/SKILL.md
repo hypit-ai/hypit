@@ -13,18 +13,29 @@ description: Produce a complete video program from a description or reference vi
 
 ## Session initialization
 
-When this Skill is loaded for the first time in a new conversation, refresh the installed Hypit Skill
-from the repository before entering any production route:
+When this Skill is loaded for the first time in a new conversation, synchronize the complete Hypit
+repository before entering any production route. If the selected Distribution is a Hypit contributor
+checkout, update that checkout first:
+
+```bash
+git pull --ff-only origin main
+```
+
+This is a whole-repository update: it refreshes the CLI, packages, services, examples, docs and Skill
+source together. Do not treat an installed Skill update as a substitute for pulling the checkout.
+After the checkout is current, refresh the installed global Skill as well:
 
 ```bash
 npx --yes skills update hypit --global --yes
 ```
 
-Run this refresh once per conversation, do not repeat it for later turns, and then continue with the
-current request using the refreshed Skill. This is a Skill update only; it does not update the Hypit
-Distribution, install packages, inspect a project, or make any provider request. If the refresh cannot
-complete because the network or Skills CLI is unavailable, report that the latest Skill could not be
-confirmed before proceeding; never pretend the local copy is current.
+Run the repository pull and installed Skill refresh once per conversation, do not repeat them for later
+turns, and then continue with the current request using the current checkout and refreshed Skill. Do
+not reset or overwrite local changes: if `git pull --ff-only origin main` cannot fast-forward, stop and
+report the sync conflict. If no contributor checkout is selected, there is no local repository to pull;
+still run the global Skill refresh and report that only the installed Skill was updated. If either
+operation cannot complete because the network or CLI is unavailable, report that the latest state could
+not be confirmed before proceeding; never pretend the repository is current.
 
 **Run the route to the end without stopping.** There are exactly two things worth interrupting the
 author for, and everything else is yours to decide:
@@ -62,18 +73,23 @@ This gate comes before reference preparation, media inspection, project authorin
 reconstruction action. The first credentialless response is an OAuth invitation (or the explicitly
 requested author-key path), never an observation task or a partially authored project.
 
-## Non-negotiable WhisperX gate
+## Non-negotiable environment gate
 
 For every video-production route — original authoring, reconstruction, revision, and variant work —
-WhisperX must be installed and healthy before the route advances beyond environment setup. Select a
-Runtime Profile with the local WhisperX Endpoint, run `hypit runtime up`, and verify that the service
-reports `Ready whisperx` (or an equivalent successful health check). Do this before reading or
-preparing a reference, inspecting examples or vocabulary, freezing a brief, writing Source, previewing,
-or building. Installation, model setup, or the health probe may never be skipped, replaced by another
-transcriber, deferred until later, or worked around because the user asks to proceed. If WhisperX is
-not installed, still installing, unhealthy, or its health check cannot be confirmed, stop at the
-environment stage and repair it first. The login-only authentication path is the sole exception
-because it is not video production.
+read `references/environment.md` completely and finish its environment setup before doing anything
+else in the route. This is a hard prerequisite, not documentation to consult later. The completed
+environment must include a selected Hypit Distribution, an explicit project boundary, the project's
+Runtime Profile, resolved credentials for the capabilities the route will use, and every selected
+managed program installed and healthy. Run the required `hypit runtime up` provisioning and health
+checks; WhisperX must report `Ready whisperx` (or an equivalent successful probe). Do this before
+inspecting media or examples, preparing a reference, choosing an observer, freezing a brief, reading
+vocabulary, writing Source, previewing, or building.
+
+Do not skip, replace, defer, or partially complete any environment step, and do not proceed because
+the user asks to bypass it. If Distribution selection, project setup, credential resolution, Runtime
+Profile selection, program installation, or any health check is incomplete or cannot be confirmed,
+stop at the environment stage and repair it first. The login-only authentication path is the sole
+exception because it is not video production.
 
 The credentialless `agent` observer is not a way around this rule. It may be used only after the
 credential choice has been settled; never silently select it because no credential was found.
