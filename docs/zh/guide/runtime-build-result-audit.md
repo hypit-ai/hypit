@@ -196,22 +196,19 @@ OAuth PKCE 获取参数，CLI 只执行该声明；普通密钥与 JSON 凭据�
 旧八阶段执行测试已经替换为少量直接事实：待提交状态只能 commit/discard；Execution turn 可回收；decision
 不可重新领取；attention 与 decision 正交；结束后原子删除整个 SQLite 活跃聚合。
 
+未发布的旧 Result 布局、随机 Build id 与 `hypit_dispatches` 不再列作迁移任务：新实现不读取、不猜测，也不为它们
+保留启动检查或兼容分支。项目 Result doctor 已经可以脱离 Runtime Profile 独立运行。将来只有出现一份真实、明确且
+值得保留的数据时，才针对那一例另写显式工具；本项目现在不预建通用迁移框架，也不把“本地搬到 S3”当作 Core 能力。
+
 ## 仍待处理
 
 - Studio 仍只把 Output 中的文件叶子做成 Artifact 卡片。inline/JSON、Semantic Take 与其内部文件关系需要
   完整的按需浏览视图；打开一个 Result 时再解析该 Result，而不是启动时解析全部历史。
 - 损坏的多级 Output 转发会明确报错，但当前 `Promise.all` 会让一个损坏 Output 使整个 Studio Library 失败。
   应把错误限制在那个 Output/Result 上，不能增加后台修复、自动回退或重建。
-- 项目从本地 Result Repository 改到 S3 后，新 Build 会准确写入新位置，但旧 Result 不会自动移动。仍缺一个
-  显式的 Repository 间复制命令；它应逐个复制用户指定的 Result，不建立索引，不改写 Build 身份，也不扫描
-  Runtime SQLite 猜测历史。
 - 顶层 Runtime Profile 虽然写了 `runtime.use`，当前 Node loader 仍只接受 `@hypit/runtime-local`。Endpoint、
   Credential Store、Result Store、Resource Store 和 Program 已各自走 adapter，但完整 Runtime Host 实现还没有
   对称的 adapter loader；若确实需要另一种 Host，这是尚未完成的插拔边界。
-- 旧 `hypit_dispatches` 中若仍有活跃行，当前 SQLite 会明确拒绝打开，不做静默猜测迁移。发布前要么提供一次性、
-  用户显式执行的活动状态迁移，要么明确宣布旧活动 Runtime 不可迁移；不能把它做成启动时兜底或 Build 重跑。
-- `hypit.build-result@1`、旧随机 Build id 与旧 S3 物理 key 不进入 Core/Runtime 兼容分支。若发布前确认用户确实
-  有必须保留的旧 Result，只能提供一次性、显式指定源和目标的迁移工具；新 Repository 浏览会忽略非有序目录。
 - 是否提供一个内置的纯本地 Runtime Profile 仍是产品决定。目前 Result Store 已有文件系统默认值，但
   Endpoint、Program 和 Service 不会因为机器缺少 S3 或 Lambda 就偷偷改选另一条技术路线。
 
