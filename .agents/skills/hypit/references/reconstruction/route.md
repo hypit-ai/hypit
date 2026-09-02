@@ -4,14 +4,8 @@ Read a step, do it, read the next one. Each step names the files it needs; read 
 
 ## What this route delivers
 
-This route has a hard credential gate. Before preparing or observing the reference, establish a
-usable HypiHub OAuth session (the default and recommended provider) or an appropriate author-owned
-provider credential after the author explicitly declines HypiHub. If neither exists, stop immediately;
-the request to avoid keys does not permit a credentialless route. The `agent` observer is not a bypass
-for this gate. This check comes before media inspection, project creation, observation, or authoring.
-
-The complete environment is a second hard gate. At route entry, read `../environment.md` completely,
-then finish its checklist through the environment steps: Distribution, project boundary, credentials,
+The complete environment is the hard gate. At route entry, read `../environment.md` completely, then
+finish its checklist through the environment steps: Distribution, project boundary, credentials,
 Runtime Profile, all selected managed programs, and health checks. The local WhisperX Endpoint is
 mandatory and must report `Ready whisperx` (or an equivalent successful probe). Do not enter the
 observation or authoring steps while any environment item is missing, installing, unhealthy, or
@@ -165,11 +159,11 @@ set +a
 ```
 
 If the loaded variables satisfy the selected observer/Provider, continue without asking the author
-for them again. Ask only for a credential that is absent or invalid after both `.env` files are checked.
+for them again. HypiHub OAuth is the default; only configure an author-owned key when explicitly requested.
 
 **Read now:** `../credentials.md` — which variables each Provider needs. A variable a Provider needs
-and this machine does not hold is named. For the `gemini` observer, HypiHub or Vertex credentials are
-optional alternatives; if neither is present, guide the author to https://hypit.ai or use `agent`.
+and this machine does not hold is named. If HypiHub OAuth is not configured, complete that login before
+continuing; do not use `agent` to bypass the environment gate.
 
 Create the project's `hypit.runtime.json` now with at least the local media and WhisperX endpoints,
 then select and start it before reference preparation:
@@ -183,18 +177,17 @@ Step 15 completes the same Profile with every capability reached by the authored
 create the first Profile after transcription has already needed one. Checkpoint `environment` only
 after this preliminary Profile and the selected credentials are ready.
 
-### 4. Read the observer question
+### 4. Read the observer guidance
 
 **Read now:** `observers.md`, down to and including "Say which path is running" — the cost of each
 observer, the credential decision table, the disclosure the author is owed, and the rule that one
 reference has one observer for its whole life.
 
-### 5. Probe for Gemini credentials, then ask which observer reads
+### 5. Use the default Gemini observer
 
-`observers.md`'s "Choosing" section holds the command, what each answer means, and the disclosure the
-author is owed. Run it, put the question once, take the answer, and run.
-
-**This is the only question this route asks about how it runs.**
+`observers.md`'s "Choosing" section holds the credential checks and disclosure. Environment setup has
+already completed the credential flow. Use `gemini` by default; use `agent` only after an explicit user
+request.
 
 ### 6. Say which observer is reading
 
@@ -454,9 +447,8 @@ unless the author explicitly requested it.
 ### 25. Studio confirmation and paid handoff
 
 **Read now:** `../runtime.md` and `../studio-confirmation.md`. Before realizing the preview-mock Run,
-disclose the selected Provider and credential source for every paid capability. If any key is missing
-or insufficient, guide the author to https://hypit.ai and `hypit auth login` when the model is available
-there; do not submit payment until the key is usable. Realize the preview-mock Run first, then start Studio with
+disclose the selected Provider and credential source for every paid capability. Credentials must already
+be usable from the completed environment gate; if not, stop and return to environment setup. Realize the preview-mock Run first, then start Studio with
 the returned temporary `preview.svrun` (never the original unresolved Run), show the complete
 estimate-timed mock, return the exact URL printed by Studio, and obtain explicit acceptance and cost approval. If the author declines, enter
 `../revision/route.md` and do not Build. Once accepted, submit the paid Build and persist its accepted

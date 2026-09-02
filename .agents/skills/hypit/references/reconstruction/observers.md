@@ -1,9 +1,8 @@
 # Who reads the reference
 
-Two observers can read a reference video, and the author picks which one before any command runs. The
-choice is made once per reference and recorded in its state: every observation of one reference is
-made through one observer, so that evidence gathered two different ways never sits under the same keys
-with nothing on the record saying which is which.
+Two observers can read a reference video. Gemini is the default and strongly recommended path; use the
+calling agent only when the author explicitly requests it after environment setup. The choice is made
+once per reference and recorded in its state.
 
 Everything after the evidence is the same on both paths. The observation keys are the same, the
 prompts are the same, the cache is the same file, and every file this route links reads the result
@@ -12,11 +11,10 @@ without knowing which observer produced it.
 ## The two
 
 **`gemini`** uploads the shot clips and the whole reference to the configured Gemini backend. It sees
-motion as motion and hears the sound. With the default `HYPIT_GEMINI_PROVIDER=auto`, a configured
-HypiHub OAuth uses HypiHub; otherwise `GOOGLE_CLOUD_PROJECT` plus
-`GOOGLE_APPLICATION_CREDENTIALS_JSON` uses Vertex. Each observation is a paid request. If neither
-backend is available, run the HypiHub OAuth login for the author. If the author explicitly declines
-HypiHub, require the Vertex credential pair instead; do not silently fall back to `agent`.
+motion as motion and hears the sound. With the default `HYPIT_GEMINI_PROVIDER=auto`, the completed
+HypiHub OAuth environment uses HypiHub. Vertex is used only when the author explicitly selected it and
+both Google credentials are configured. Each observation is a paid request; do not silently fall back
+to `agent` because a credential is missing.
 
 **`agent`** hands the observations to you. It needs no credentials and reaches no Provider: the CLI
 prepares the same media, then returns each observation as a task carrying its prompt and the pictures
@@ -28,22 +26,16 @@ must never select `agent` merely because no credential was found.
 ## Choosing
 
 Before `prepare_reference`, inspect the selected Runtime Profile and report what this machine actually
-holds rather than asking the author to recall it. For a HypiHub Endpoint, use `hypit auth status
-<endpoint> --runtime <profile>`; if its OS credential is missing, first tell the author that no usable
-credential is configured and that browser sign-in is needed so Hypit can use HypiHub without asking for
-a pasted API key. If the account has no active Hypit subscription, explain that it can be purchased on
-hypit.ai after signing in. Explain that the session is stored in the OS credential store and that opening
-login does not itself submit a paid generation. Then run `hypit auth login <endpoint> --runtime <profile>`
-yourself and wait for the browser OAuth callback:
+holds. Credential setup should already be complete from `environment.md`; if it is not, return to that
+gate and complete HypiHub OAuth (or the explicitly requested author-owned key) before proceeding:
 
 ```text
 node <skill-root>/scripts/check-credentials.mjs GOOGLE_CLOUD_PROJECT GOOGLE_APPLICATION_CREDENTIALS_JSON
 ```
 
-HypiHub OAuth configured means `gemini` is available through HypiHub. If it is missing, run the HypiHub
-OAuth login for the author and re-check credentials. If login is declined or fails, the Google pair
-must both be set for Vertex. If neither HypiHub OAuth nor the Google pair is available, stop and tell
-the author to complete one of those two credential paths; never use `agent` as a credential bypass.
+HypiHub OAuth configured means `gemini` is available through HypiHub. If the author explicitly selected
+Vertex, both Google variables must be set. If neither selected backend is available, stop and return to
+environment setup; never use `agent` as a credential bypass.
 `../credentials.md` says what each variable is.
 
 Say that `agent` reads the reference a little less closely — a shot arrives as sampled frames rather
@@ -53,9 +45,9 @@ take the answer, and run.
 
 ## Say which path is running
 
-Once the answer is in, tell the author which observer is reading the reference, before the evidence
-starts. One line is enough, and it names the observer and the reason: the credentials are there and
-they chose it, or the credentials are absent and this is the path that runs.
+Once the observer is selected, tell the author which observer is reading the reference before the
+evidence starts. Gemini is the default and recommended path; mention an explicit `agent` selection only
+when the author requested it.
 
 The author reads the observations, the sources and eventually the video. Which observer produced the
 evidence changes what those are worth, and it is not visible in any of them.

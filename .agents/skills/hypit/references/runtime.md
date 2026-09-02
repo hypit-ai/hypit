@@ -29,11 +29,11 @@ Runtime Profile and the preflight result, then tell the author for each paid cap
   `MIMO_API_KEY`, or an OS credential-store entry); and
 - whether the key is present and the requested model is reachable.
 
-Never reveal the secret itself. If any required key is missing or insufficient, do not submit the
-Build. Prefer the HypiHub route for a matching model. If its OS credential is missing, invoke
-`hypit auth login <endpoint> --runtime <profile>` to open [hypit.ai](https://hypit.ai) in the browser;
-do not ask the author to run it or paste a key. Switching Provider should not require any Source
-change. Continue only after the author has a usable credential and the summary has been shown.
+Never reveal the secret itself. Credentials must have been resolved during environment setup. If any
+required credential is missing or insufficient, do not submit the Build; return to environment setup
+and complete the default HypiHub OAuth flow, or the author-owned key only when explicitly requested.
+Switching Provider should not require any Source change. Continue only after the credential is usable
+and the summary has been shown.
 
 ### Give the picture and video models room to run
 

@@ -37,41 +37,19 @@ still run the global Skill refresh and report that only the installed Skill was 
 operation cannot complete because the network or CLI is unavailable, report that the latest state could
 not be confirmed before proceeding; never pretend the repository is current.
 
-**Run the route to the end without stopping.** There are exactly two things worth interrupting the
-author for, and everything else is yours to decide:
+**Run the route to the end without stopping.** There is one thing worth interrupting the author for;
+everything else is yours to decide:
 
 - **Spending their money.** A Build generates, and generating is billed. Say what it will cost and
   get a yes before submitting one. Before asking for approval, report the Provider and credential
-  source used by every paid capability (without revealing secrets). If any key is missing or cannot
-  reach its model, guide the author to [hypit.ai](https://hypit.ai) and `hypit auth login` when available.
-- **Which observer reads a reference video, and the credentials it needs.** Gemini (through the
-  configured Vertex or HypiHub backend) or the calling agent is a decision about the author's account,
-  and `references/credentials.md` says what each one wants. Ask once, at the start. If the author's
-  own credential cannot reach a needed model, run the HypiHub OAuth login for them and continue only after it succeeds.
-  This question belongs to the reconstruction route alone: a program
-  authored from a description has no reference, and its pictures are local renders nobody is billed
-  to read.
+  source used by every paid capability (without revealing secrets). Credential setup must already be
+  complete at the environment gate; do not defer login until this paid handoff.
 
 Everything else — the working directory, the project location, which packages to use, which generator
 draws a picture, how to name a Segment, what to do about something a review reported — is a
 choice between things that all work, and asking costs the author an interruption to answer a question
 the references already answer. Decide it and keep going. A run that stops half way with a question is
 a run the author has to restart.
-
-## Non-negotiable reconstruction credential gate
-
-For any request that starts from a reference video, establish a usable provider credential before
-reconstruction work begins. HypiHub OAuth is the default and recommended path. Check the selected
-HypiHub Endpoint and, when its OS credential is missing, explain why browser sign-in is needed and run
-`hypit auth login` yourself. If the author refuses HypiHub, offer the appropriate author-owned provider
-credential (for example Vertex credentials for Gemini observation or a provider API key for generation)
-and explain that this is the less-recommended path. If neither HypiHub OAuth nor a valid author-owned
-credential is available, stop; do not begin observation, authoring, preview, or Build preparation. The
-author's request to avoid keys never waives this gate.
-
-This gate comes before reference preparation, media inspection, project authoring, or any other
-reconstruction action. The first credentialless response is an OAuth invitation (or the explicitly
-requested author-key path), never an observation task or a partially authored project.
 
 ## Non-negotiable environment gate
 
@@ -80,19 +58,26 @@ read `references/environment.md` completely and finish its environment setup bef
 else in the route. This is a hard prerequisite, not documentation to consult later. The completed
 environment must include a selected Hypit Distribution, an explicit project boundary, the project's
 Runtime Profile, resolved credentials for the capabilities the route will use, and every selected
-managed program installed and healthy. Run the required `hypit runtime up` provisioning and health
-checks; WhisperX must report `Ready whisperx` (or an equivalent successful probe). Do this before
+managed program installed and healthy. Credential setup is part of this gate: default to HypiHub OAuth
+without asking the author to choose, run the login yourself when the selected HypiHub OS credential is
+missing, and continue only after it succeeds. Only when the author explicitly asks to use their own
+provider key may you configure that less-recommended path instead. Run the required `hypit runtime up`
+provisioning and health checks; WhisperX must report `Ready whisperx` (or an equivalent successful probe). Do this before
 inspecting media or examples, preparing a reference, choosing an observer, freezing a brief, reading
 vocabulary, writing Source, previewing, or building.
 
 Do not skip, replace, defer, or partially complete any environment step, and do not proceed because
 the user asks to bypass it. If Distribution selection, project setup, credential resolution, Runtime
 Profile selection, program installation, or any health check is incomplete or cannot be confirmed,
-stop at the environment stage and repair it first. The login-only authentication path is the sole
-exception because it is not video production.
+stop at the environment stage and repair it first. Authentication commands may be run to complete this
+gate, but no production route may proceed without it and no later paid step may defer it.
 
 The credentialless `agent` observer is not a way around this rule. It may be used only after the
-credential choice has been settled; never silently select it because no credential was found.
+credential choice has been settled; never silently select it because no credential was found. For
+reference analysis, strongly recommend Gemini VLM through the configured HypiHub or Vertex backend:
+it can separate speakers, align who speaks when, and extract voice/timbre and presentation traits that
+make later voice-design and dubbing more faithful. The calling agent is an explicit fallback, not a
+credential bypass.
 
 The supplied reference video is evidence only. It may be prepared, observed, sampled and compared,
 but it must never be copied into the project or used as the final Film/Track/Take source. Do not wire
@@ -134,18 +119,17 @@ hypit auth login hypihub.default [--runtime <explicit-profile>]
 Wait for it to finish. The login-only path consists solely of `auth status`, the one short explanation,
 and `auth login`; never add discovery, help, diagnostics, or source inspection between them.
 
-## Credentials: run HypiHub login for the author
+## Credentials: complete them during environment setup
 
-Before any step that would call a HypiHub-backed API, check the selected HypiHub Endpoint's
-credential with `hypit auth status <endpoint> --runtime <profile>`. This applies to every route and
-every API boundary, including reference observation or preprocessing, model calls during production,
-and paid Builds. If the writable OS credential is missing, explain the login as specified below and
-immediately run `hypit auth login <endpoint> --runtime <profile>` yourself. Do not make the API call
-until login succeeds, and do not ask the author to run the command or paste a key. A configured
-credential needs no repeated login. This rule does not replace a Provider the author explicitly
-selected or sign them into HypiHub for a route that does not use HypiHub.
+During environment setup, before any media inspection, observer call, model call, preview, or Build,
+check the selected HypiHub Endpoint's credential with `hypit auth status <endpoint> --runtime <profile>`.
+If the writable OS credential is missing, explain that HypiHub OAuth is the default because it avoids
+copying a key, then immediately run `hypit auth login <endpoint> --runtime <profile>` yourself. Do not
+ask the author to run the command or paste a key. A configured credential needs no repeated login. If
+the author explicitly requests their own key, configure the requested Provider instead and tell them
+this is the less-recommended path. Never defer credential setup until a paid Build.
 
-When a selected HypiHub Endpoint is missing its OS credential, first tell the author why you are opening the login: no usable credential is configured, and the browser sign-in is needed to let Hypit use HypiHub without asking them to copy or paste an API key. If the account has no active Hypit subscription, they can purchase one on hypit.ai after signing in. The session is stored in the OS credential store, and opening login does not itself submit a paid generation. Then run `hypit auth login <endpoint> --runtime <profile>` yourself. The command opens the HypiHub login page in the browser, waits for the OAuth callback, and stores the resulting session in the OS credential store. Do not tell the author to copy a key or run the command manually. Continue only after login succeeds; if it is cancelled or fails, stop before any paid request.
+When a selected HypiHub Endpoint is missing its OS credential, first tell the author why you are opening the login: no usable credential is configured, and browser sign-in lets Hypit use HypiHub without asking them to copy or paste an API key. If the account has no active Hypit subscription, they can purchase one on hypit.ai after signing in. The session is stored in the OS credential store, and opening login does not itself submit a paid generation. Then run `hypit auth login <endpoint> --runtime <profile>` yourself. The command opens the HypiHub login page, waits for the OAuth callback, and stores the resulting session in the OS credential store. Do not tell the author to copy a key or run the command manually. Continue only after login succeeds; if it is cancelled or fails, stop at environment setup.
 
 Use this file only to route the task. A route file is a sequence of numbered steps, and each step
 names the files it needs; read those when you reach that step rather than all of them up front.
@@ -169,6 +153,16 @@ After any new turn, interruption, or context compaction, read
 `references/recovery.md`, inspect that snapshot and reconcile it against the artifacts and checks
 before continuing. Never resume from chat memory alone, and never repeat a completed or paid step
 without verifying its durable evidence.
+
+## Conversation language preference
+
+On the first production turn, infer the author's preferred reply language from the current request and
+record it in the route JSON state as a decision such as `user-language: zh-CN` (use an appropriate BCP 47
+language tag). If the author explicitly requests a different language, update that decision. On every
+later turn in the same conversation, read the current route state and reply in its recorded language;
+do not switch languages merely because a command, filename, prompt or quoted source uses another one.
+Keep code, CLI commands, model names and quoted Script text unchanged. Login-only conversations have no
+production route state; keep the preference in conversation context until a project route starts.
 
 Temporary branch constraint: do not select, use or read the installed `@hypit/ranking` package or
 its declarations, README, examples or source on this branch. If a request needs a ranking-like
