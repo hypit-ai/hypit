@@ -12,7 +12,7 @@ import {
 import { createReadStream } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-import { assertBuildId, assertOrderedBuildId, buildIdCreatedAt } from "@hypit/protocol";
+import { assertOrderedBuildId, buildIdCreatedAt } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 
 import type {
@@ -131,10 +131,16 @@ async function copyArtifactAtomic(
   }
 }
 
+function buildResultDateBucket(build: string): string | undefined {
+  const createdAt = buildIdCreatedAt(build);
+  return createdAt === undefined ? undefined : new Date(createdAt).toISOString().slice(0, 10);
+}
+
 export function buildResultDirectory(root: string, build: string): string {
-  assertBuildId(build);
+  assertOrderedBuildId(build);
   const directory = resolve(root);
-  const target = resolve(directory, build);
+  const bucket = buildResultDateBucket(build)!;
+  const target = resolve(directory, bucket, build);
   const relation = relative(directory, target);
   assert(relation.length > 0 && relation !== ".." && !relation.startsWith(`..${sep}`),
     `Build ${build} leaves Build Result root ${directory}`);
@@ -173,17 +179,35 @@ export async function browseBuildResults(
     if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
     throw error;
   });
-  const builds = entries
-    .filter((entry) => entry.isDirectory() && !entry.name.startsWith(".preparing-"))
+  const beforeBucket = request.before === undefined
+    ? undefined
+    : buildResultDateBucket(request.before)!;
+  const buckets = entries
+    .filter((entry) => entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/u.test(entry.name))
     .map((entry) => entry.name)
-    .filter((build) => buildIdCreatedAt(build) !== undefined)
-    .filter((build) => request.before === undefined || build < request.before)
+    .filter((bucket) => beforeBucket === undefined || bucket <= beforeBucket)
     .sort((left, right) => right.localeCompare(left));
   const found: FinishedBuildResultManifest[] = [];
-  for (const build of builds) {
-    const manifest = await readBuildResult(join(directory, build));
-    if (manifest?.outcome === undefined || manifest.finishedAt === undefined) continue;
-    found.push(manifest as FinishedBuildResultManifest);
+  for (const bucket of buckets) {
+    const bucketDirectory = join(directory, bucket);
+    const builds = await readdir(bucketDirectory, { withFileTypes: true }).catch((error: unknown) => {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+      throw error;
+    });
+    const ordered = builds
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .filter((build) => {
+        return buildResultDateBucket(build) === bucket
+          && (request.before === undefined || build < request.before);
+      })
+      .sort((left, right) => right.localeCompare(left));
+    for (const build of ordered) {
+      const manifest = await readBuildResult(join(bucketDirectory, build));
+      if (manifest?.outcome === undefined || manifest.finishedAt === undefined) continue;
+      found.push(manifest as FinishedBuildResultManifest);
+      if (found.length > request.limit) break;
+    }
     if (found.length > request.limit) break;
   }
   const results = found.slice(0, request.limit);
@@ -318,7 +342,7 @@ export class FileBuildResult {
       resolve: async (build, output) => await resolveBuildResultOutput(root, build, output),
     }, seed.forwards ?? []);
     const directory = buildResultDirectory(root, seed.id);
-    await mkdir(resolve(root), { recursive: true });
+    await mkdir(dirname(directory), { recursive: true });
     const temporary = join(resolve(root), `.preparing-${seed.id}-${randomUUID()}`);
     await mkdir(temporary);
     const manifest: BuildResultManifest = {

@@ -6,6 +6,7 @@
   "type": "module",
   "bin": {
     "hypit": "./bin/hypit.mjs",
+    "hypit-migrate-flat-results": "./bin/hypit-migrate-flat-results.mjs",
     "hypit-studio": "./bin/hypit-studio.mjs",
     "hypit-preview-check": "./bin/hypit-preview-check.mjs",
     "hypit-reference-video-tools": "./packages/reference-video-tools/bin/reference-video-tools.mjs"

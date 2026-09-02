@@ -12,7 +12,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { FileResourceStore } from "@hypit/resource-store-fs";
-import { FileBuildResultRepository, readBuildResult } from "@hypit/build-result";
+import { FileBuildResultRepository } from "@hypit/build-result";
 import type { BuildResultRepository } from "@hypit/build-result";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
@@ -307,7 +307,8 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     const clientStatus = await firstRuntime.inspect("bld_20260902T120000001Z_0000000001");
     assert.equal(clientStatus, undefined);
     assert.deepEqual((await firstRuntime.activity()).builds, []);
-    const buildResult = await readBuildResult(join(directory, "results", "bld_20260902T120000001Z_0000000001"));
+    const buildResult = await new FileBuildResultRepository(join(directory, "results"))
+      .read("bld_20260902T120000001Z_0000000001");
     assert.deepEqual(Object.keys(buildResult?.outputs ?? {}).sort(), [
       "final.document",
       "generated.text",
@@ -373,9 +374,17 @@ test("a completed public file moves into its Build Result and leaves no Runtime 
       result: resultDestination(directory),
     });
     assert.equal((await finishClaimedBuild(runtime)).outcome, "complete");
-    const result = await readBuildResult(join(directory, "results", id));
+    const results = new FileBuildResultRepository(join(directory, "results"));
+    const result = await results.read(id);
     assert.equal(result?.outputs["clip.video"]?.value.kind, "build-file");
-    assert.equal(await readFile(join(directory, "results", id, "files", "file-0001.mp4"), "utf8"), "video bytes");
+    const resolved = await results.resolve(id, "clip.video");
+    assert.equal(resolved?.value.kind, "build-file");
+    if (resolved?.value.kind !== "build-file") throw new Error("expected completed Result file");
+    const opened = await results.openFile(resolved.build, resolved.value);
+    if (opened === undefined) throw new Error("expected completed Result bytes");
+    const resultBytes: number[] = [];
+    for await (const chunk of opened) resultBytes.push(...chunk);
+    assert.equal(new TextDecoder().decode(Uint8Array.from(resultBytes)), "video bytes");
     assert.equal(await stat(join(directory, ".hypit", "work", id)).then(() => true, () => false), false);
     await runtime.close();
   } finally {
@@ -433,7 +442,8 @@ test("a failed Build keeps public Outputs completed before removing active Runti
       result: resultDestination(directory),
     });
     assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
-    const result = await readBuildResult(join(directory, "results", "bld_20260902T120000005Z_0000000001"));
+    const result = await new FileBuildResultRepository(join(directory, "results"))
+      .read("bld_20260902T120000005Z_0000000001");
     assert.equal(result?.outcome, "failed");
     assert.equal(result?.failure, "generation failed");
     assert.deepEqual(Object.keys(result?.outputs ?? {}), ["prompt.text"]);
@@ -601,7 +611,8 @@ test("an immediate Command left in started state fails its Build without invokin
     const terminal = await finishClaimedBuild(runtime);
     assert.equal(terminal.outcome, "failed");
     assert.equal(calls, 0);
-    const failed = await readBuildResult(join(directory, "results", "bld_20260902T120000008Z_0000000001"));
+    const failed = await new FileBuildResultRepository(join(directory, "results"))
+      .read("bld_20260902T120000008Z_0000000001");
     assert.equal(failed?.outcome, "failed");
     assert.match(failed?.failure ?? "", /stopped before its result was stored/u);
     await runtime.close();
@@ -780,9 +791,10 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
     const work = runtime.work({ idlePollMs: 5, signal: controller.signal });
     await firstStarted;
     await runtime.build(durableBuildRequest(directory, "bld_20260902T120000011Z_0000000001", createGreetingBuild()));
+    const results = new FileBuildResultRepository(join(directory, "results"));
     while (true) {
       const outcomes = await Promise.all(["bld_20260902T120000010Z_0000000001", "bld_20260902T120000011Z_0000000001"].map(async (id) =>
-        (await readBuildResult(join(directory, "results", id)))?.outcome));
+        (await results.read(id))?.outcome));
       if (outcomes.every((outcome) => outcome === "complete")) break;
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
@@ -860,7 +872,8 @@ test("project local runtime accepts components loaded from an installed package"
     assert.equal(result.view.activity, "ready");
     const completed = await finishClaimedBuild(runtime);
     assert.equal(completed.outcome, "complete");
-    assert.equal((await readBuildResult(join(runtimeRoot, "results", "bld_20260902T120000012Z_0000000001")))?.outcome, "complete");
+    assert.equal((await new FileBuildResultRepository(join(runtimeRoot, "results"))
+      .read("bld_20260902T120000012Z_0000000001"))?.outcome, "complete");
     await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

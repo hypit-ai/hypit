@@ -14,10 +14,25 @@ An explicit selection can move the same repository elsewhere:
 }
 ```
 
-Relative paths are resolved from the project root. Each Build owns one directory with
-its `result.json`, public Resource files and Composite Value Documents. A Value Document keeps
-domain data separate from its nested Resource-path bindings. There is no project-wide history database.
-Directories use the ordered public Build id, so browsing sorts names newest first and continues with
-an explicit `before` cursor; only the requested Result manifests are opened. File reads support byte
-ranges. Active diagnosis checks the selected directory (or its nearest
+Relative paths are resolved from the project root. Results are grouped by the UTC date already encoded
+in their ordered Build ids, and each Build then owns one intact directory with its `result.json`, public
+Resource files and Composite Value Documents:
+
+```text
+.hypit/results/2026-09-03/<build-id>/
+```
+
+A Value Document keeps domain data separate from its nested Resource-path bindings. There is no
+project-wide history database. Browsing sorts the shallow date buckets and enumerates Build directories
+only inside the dates reached while filling the requested cursor page; only those Result manifests are
+opened. File reads support byte ranges. Active diagnosis checks the selected directory (or its nearest
 existing parent) for read/write access without creating a probe file.
+
+Development checkouts that still contain the former flat `<result-root>/<build-id>` layout can move
+those Results explicitly:
+
+```bash
+hypit-migrate-flat-results /absolute/path/to/.hypit/results
+```
+
+Normal repository reads never invoke this migration and never fall back to the flat layout.

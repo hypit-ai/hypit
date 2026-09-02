@@ -156,7 +156,8 @@ manifest 中，不再耦合路径、平台大小写或文件系统字符规则�
 
 文件与 S3 Repository 都支持半开区间的字节读取，Studio 的 HTTP 媒体接口正确返回 `Range`、`206` 与
 `Content-Range`，并把存储流直接送给客户端，不再把整个视频聚合进 Node 内存。Result Repository 提供从新到旧
-的 cursor 浏览；文件实现只枚举目录名，S3 用可逆倒序时间 prefix 直接读取有界对象页，不建立中央索引；
+的 cursor 浏览；文件实现先枚举浅层 UTC 日期桶，再只读取填满当前页所需日期中的 Build 目录，S3 用可逆倒序
+时间 prefix 直接读取有界对象页；两者都不建立中央索引；
 主动 doctor 只做一次有上限的 prefix 列表。项目 Result doctor 与 Runtime doctor 在 CLI 输出中合并，但
 Result 选择仍属于 `hypit.results.json`，没有塞回 Runtime Profile。
 
