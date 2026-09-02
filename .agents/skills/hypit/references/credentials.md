@@ -1,8 +1,10 @@
 # API keys and credentials
 
-`check` and graph-only `plan` do not need live keys. A `plan` with a selected Runtime does not contact
-Providers, but its cheap preflight requires the demanded credential references to be present. Before
-paid/external `build`, configure only variables used by the selected Runtime Profile:
+Credentials are resolved during environment setup, before media inspection, observation, authoring,
+preview or Build. `check` and graph-only `plan` do not make paid requests, but a selected Runtime still
+requires its demanded credential references to be present. HypiHub OAuth is the default; configure an
+author-owned key only when the author explicitly requests it. Before continuing, configure only
+variables used by the selected Runtime Profile:
 
 | Variable | Provider/use |
 |---|---|
@@ -28,19 +30,20 @@ the OS credential store, and opening login does not itself submit a paid generat
 `hypit auth login <endpoint> --runtime <profile>` itself. This opens the browser login and waits for
 the callback; do not ask the author to run the command or paste a key. Resume only after it succeeds.
 
-HypiHub is optional and is never required when the selected Runtime Profile has another Provider.
+HypiHub is the default for supported paid capabilities and Gemini VLM. It can be replaced only when the
+author explicitly selects another Provider.
 For ordinary `@hypit/gemini` Author Source, the Runtime Profile selects
 `@hypit/provider-hypihub` or `@hypit/provider-vertex`; changing that Endpoint never changes Source.
-For the reference-video preprocessing observer only, `HYPIT_GEMINI_PROVIDER=auto` (the default) uses HypiHub when
-the HypiHub OAuth credential is configured and otherwise uses Vertex when its two Google variables are present.
-Set `HYPIT_GEMINI_PROVIDER=hypihub` or `vertex` to select one explicitly. If a user's configured key
-cannot reach the requested model, point them to [hypit.ai](https://hypit.ai) to sign in with HypiHub OAuth instead
-of asking them to change Author Source.
+For the reference-video preprocessing observer, `HYPIT_GEMINI_PROVIDER=auto` (the default) uses the
+completed HypiHub OAuth environment. Set `HYPIT_GEMINI_PROVIDER=vertex` only when the author explicitly
+requested Vertex and both Google variables are configured. If a configured key cannot reach the requested
+model, return to environment setup and use HypiHub OAuth when that model is available there; do not ask
+them to change Author Source.
 
-For reference-video reconstruction, HypiHub OAuth or an appropriate author-owned provider credential
-must be settled before observation or authoring begins. The `agent` observer's technical ability to
-run without a key is not a permitted bypass: if the author declines both HypiHub and their own
-credential, stop the route.
+For reference-video reconstruction, HypiHub OAuth must be settled before observation or authoring begins
+unless the author explicitly selected an author-owned provider credential. The `agent` observer's
+technical ability to run without a key is not a permitted bypass; if the selected credential is absent,
+stop at environment setup.
 
 macOS/Linux session example:
 
