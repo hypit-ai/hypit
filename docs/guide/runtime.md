@@ -75,10 +75,11 @@ Selecting a Profile writes a project pointer. Execution data stays under `dataRo
       worker/
       programs/
   results/
-    <build-id>/
-      result.json
-      files/
-      values/
+    <UTC-date>/
+      <build-id>/
+        result.json
+        files/
+        values/
 ```
 
 `check` and `plan` do not create Runtime data. Submission first prepares a non-schedulable row.
@@ -95,7 +96,7 @@ Every Build committed to a persistent Runtime must provide its project Result lo
 Catalog. Execution without a Result is not a hidden alternate mode.
 
 Historical content lives in the selected project Result repository, not Runtime SQLite. With the
-default repository, `.hypit/results/<build-id>/result.json` names final Targets and every public
+default repository, `.hypit/results/<UTC-date>/<build-id>/result.json` names final Targets and every public
 Author Output that actually completed on their route. Resource bytes are under that Result's `files/`;
 Composite Value Documents are under `values/`; each document keeps canonical domain data separate
 from its nested Resource-path bindings. `builds`, `history`, `inspect`, `get` and `build-record` use

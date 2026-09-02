@@ -259,7 +259,7 @@ Runtime Profile 无权改变这条源码边界。`--package-root` 只定位已�
 output/
 ```
 
-每次 Build 的权威结果位于 `.hypit/results/<build-id>/`：`result.json` 记录名字、状态、Target
+每次 Build 的权威结果位于 `.hypit/results/<UTC-date>/<build-id>/`：`result.json` 记录名字、状态、Target
 和公开 Output，媒体在 `files/`，结构化值在 `values/`。
 
 这是无需配置的默认 Result 仓库。项目根的 `hypit.results.json` 也可以选择 `@hypit/build-result-s3`；历史命令

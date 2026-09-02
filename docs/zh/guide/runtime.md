@@ -78,10 +78,11 @@ Result 地址。
       worker/
       programs/
   results/
-    <build-id>/
-      result.json
-      files/
-      values/
+    <UTC-date>/
+      <build-id>/
+        result.json
+        files/
+        values/
 ```
 
 `check` 和 `plan` 不创建 Runtime 数据。提交时先建立不可调度的暂存行；Result draft、附件和工作目录
@@ -97,7 +98,7 @@ Build 的历史行。
 执行不会作为另一种隐藏模式存在。
 
 历史内容属于所选的项目 Result 仓库，不属于 Runtime SQLite。使用默认仓库时，
-`.hypit/results/<build-id>/result.json` 记录最终 Target，以及这条执行路线上真正完成的所有公开
+`.hypit/results/<UTC-date>/<build-id>/result.json` 记录最终 Target，以及这条执行路线上真正完成的所有公开
 Author Output；Resource 字节放在该 Result 的 `files/`，Composite Value Document 放在 `values/`，
 领域数据与嵌套 Resource 的路径绑定彼此分开。`builds`、`history`、
 `inspect`、`get` 和 `build-record` 都通过同一个仓库接口读取。提交给独立 Worker 的 Build 会带着

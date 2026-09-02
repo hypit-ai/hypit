@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { FileBuildResult, FileBuildResultRepository } from "@hypit/build-result";
+import { buildResultDirectory, FileBuildResult, FileBuildResultRepository } from "@hypit/build-result";
 import type { BlobRef, BuildState, TypeRef } from "@hypit/protocol";
 
 const videoType: TypeRef = {
@@ -55,6 +55,10 @@ test("one same-Build resource backs a public video and a SemanticTake payload", 
         { name: "unused.video", output: "logical:unused" },
       ],
     });
+    assert.equal(
+      result.directory,
+      join(root, "2026-09-02", "bld_20260902T100000000Z_0000000001"),
+    );
     const storedManifest = JSON.parse(await readFile(join(result.directory, "result.json"), "utf8")) as object;
     assert.equal(Object.hasOwn(storedManifest, "id"), false);
     assert.equal((await result.read()).id, "bld_20260902T100000000Z_0000000001");
@@ -146,13 +150,14 @@ test("one same-Build resource backs a public video and a SemanticTake payload", 
 
 test("filesystem repository streams one normalized byte range", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-range-"));
+  const build = "bld_20260902T100000009Z_0000000001";
   try {
-    const directory = join(root, "bld_range");
+    const directory = buildResultDirectory(root, build);
     await mkdir(join(directory, "files"), { recursive: true });
     const bytes = new TextEncoder().encode("abcdefghij");
     await writeFile(join(directory, "files", "video.mp4"), bytes);
     const repository = new FileBuildResultRepository(root);
-    const stream = await repository.openFile("bld_range", {
+    const stream = await repository.openFile(build, {
       kind: "build-file",
       path: "files/video.mp4",
       size: bytes.byteLength,
@@ -172,7 +177,7 @@ test("filesystem decodes Result and writer data before exposing it", async () =>
   const malformed = "bld_20260902T100000010Z_0000000001";
   const unfinished = "bld_20260902T100000011Z_0000000001";
   try {
-    const directory = join(root, malformed);
+    const directory = buildResultDirectory(root, malformed);
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
       format: "hypit.build-result@2",
@@ -194,7 +199,7 @@ test("filesystem decodes Result and writer data before exposing it", async () =>
       targets: [],
       publishedOutputs: [],
     });
-    await writeFile(join(root, unfinished, ".writer.json"), JSON.stringify({
+    await writeFile(join(buildResultDirectory(root, unfinished), ".writer.json"), JSON.stringify({
       resources: null,
       values: {},
       publishedOutputs: [],
@@ -213,7 +218,7 @@ test("reserved-looking domain objects remain ordinary Composite data", async () 
   const root = await mkdtemp(join(tmpdir(), "hypit-result-json-reference-"));
   const id = "bld_20260902T100000000Z_0000000001";
   try {
-    const directory = join(root, id);
+    const directory = buildResultDirectory(root, id);
     await mkdir(join(directory, "values"), { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
       format: "hypit.build-result@2",
@@ -243,7 +248,7 @@ test("describing a Composite Output reads only its manifest", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-describe-"));
   const id = "bld_20260902T100000020Z_0000000001";
   try {
-    const directory = join(root, id);
+    const directory = buildResultDirectory(root, id);
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
       format: "hypit.build-result@2",
@@ -330,9 +335,9 @@ test("filesystem Results have one public name per Output and browse newest first
   const root = await mkdtemp(join(tmpdir(), "hypit-build-result-browse-"));
   const repository = new FileBuildResultRepository(root);
   const ids = [
-    "bld_20260902T100000001Z_0000000001",
+    "bld_20260901T100000001Z_0000000001",
     "bld_20260902T100000002Z_0000000001",
-    "bld_20260902T100000003Z_0000000001",
+    "bld_20260903T100000003Z_0000000001",
   ];
   try {
     await assert.rejects(repository.create({
@@ -354,6 +359,7 @@ test("filesystem Results have one public name per Output and browse newest first
       });
       await writer.finish({ outcome: "failed", failure: "ordering fixture" });
     }
+    assert.deepEqual(await readdir(root), ["2026-09-01", "2026-09-02", "2026-09-03"]);
 
     const first = await repository.browse({ limit: 2 });
     assert.deepEqual(first.results.map((item) => item.id), [ids[2], ids[1]]);
