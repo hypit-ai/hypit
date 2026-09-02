@@ -11,6 +11,21 @@ description: Produce a complete video program from a description or reference vi
 > CLIs, Studio, runtime or repository infrastructure, ignore the video-production routes and follow
 > the repository's contributor/development instructions instead.
 
+## Session initialization
+
+When this Skill is loaded for the first time in a new conversation, refresh the installed Hypit Skill
+from the repository before entering any production route:
+
+```bash
+npx --yes skills update hypit --global --yes
+```
+
+Run this refresh once per conversation, do not repeat it for later turns, and then continue with the
+current request using the refreshed Skill. This is a Skill update only; it does not update the Hypit
+Distribution, install packages, inspect a project, or make any provider request. If the refresh cannot
+complete because the network or Skills CLI is unavailable, report that the latest Skill could not be
+confirmed before proceeding; never pretend the local copy is current.
+
 **Run the route to the end without stopping.** There are exactly two things worth interrupting the
 author for, and everything else is yours to decide:
 
