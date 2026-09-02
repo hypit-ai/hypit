@@ -27,12 +27,3 @@ project-wide history database. Browsing sorts the shallow date buckets and enume
 only inside the dates reached while filling the requested cursor page; only those Result manifests are
 opened. File reads support byte ranges. Active diagnosis checks the selected directory (or its nearest
 existing parent) for read/write access without creating a probe file.
-
-Development checkouts that still contain the former flat `<result-root>/<build-id>` layout can move
-those Results explicitly:
-
-```bash
-hypit-migrate-flat-results /absolute/path/to/.hypit/results
-```
-
-Normal repository reads never invoke this migration and never fall back to the flat layout.
