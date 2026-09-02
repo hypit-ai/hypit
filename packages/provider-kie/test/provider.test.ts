@@ -62,7 +62,6 @@ test("all KIE capabilities share one asynchronous task engine and differ only by
     defaultConcurrency: 8,
     laneConcurrency: { "seedance-2-mini": 4 },
   });
-  assert.equal(provider.offers.length, 12);
   const registry = new EndpointRegistry();
   await provider.install(registry);
   const seed = need(sealSeedanceRequest("seedance-2-mini", {
@@ -81,8 +80,8 @@ test("all KIE capabilities share one asynchronous task engine and differ only by
   assert.deepEqual(seedResolution.registration.scheduling, {
     queue: { pool: "kie.default", lane: "seedance-2-mini" },
     resources: [
-      { id: "pool:kie.default", maxActive: 8, maxInFlight: 8 },
-      { id: "lane:kie.default/seedance-2-mini", maxActive: 4, maxInFlight: 4 },
+      { id: "pool:kie.default", limit: 8 },
+      { id: "lane:kie.default/seedance-2-mini", limit: 4 },
     ],
   });
 });
@@ -111,6 +110,8 @@ test("KIE uploads referenced resources, polls one task, and persists generated b
       for await (const chunk of init?.body as unknown as AsyncIterable<Uint8Array>) chunks.push(chunk);
       const multipart = Buffer.concat(chunks).toString("latin1");
       assert.match(multipart, /name="fileName"\r\n\r\nres_[a-zA-Z0-9-]+\.png/u);
+      assert.match(multipart, /name="uploadPath"\r\n\r\nhypit\/resources/u);
+      assert.doesNotMatch(multipart, /svml\/resources/u);
       assert.ok(Buffer.concat(chunks).includes(Buffer.from([1, 2, 3])));
       return Response.json({
         success: true,
@@ -177,7 +178,7 @@ test("KIE uploads referenced resources, polls one task, and persists generated b
   assert.equal(await resources.has(videos[0]!.resource as `res_${string}`), true);
 });
 
-test("KIE fulfills generic Background Removal with the documented Recraft wire contract", async () => {
+test("KIE fulfills generic Background Removal with the documented Recraft wire mapping", async () => {
   const resources = new MemoryResourceStore();
   const source = await resources.put(new Uint8Array([1, 2, 3, 4]), "image/png");
   const request = removeBackgroundNeed(backgroundRemovalRequest(source) as unknown as CanonicalValue);

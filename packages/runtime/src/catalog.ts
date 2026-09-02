@@ -1,11 +1,10 @@
 import type {
   LogicalOutputRef,
-  RecordRef,
 } from "@hypit/protocol";
 
-export type BuildCatalogAlias = {
+export type BuildPublishedOutput = {
   readonly name: string;
-  readonly ref: RecordRef | LogicalOutputRef;
+  readonly ref: LogicalOutputRef;
 };
 
 export type BuildCatalogDescriptor = {
@@ -15,19 +14,17 @@ export type BuildCatalogDescriptor = {
   readonly run?: {
     readonly path: string;
   };
-  readonly aliases: readonly BuildCatalogAlias[];
+  readonly publishedOutputs: readonly BuildPublishedOutput[];
 };
 
 export type BuildCatalogEntry = BuildCatalogDescriptor & {
   readonly build: string;
-  readonly createdAt: number;
 };
 
 /** Host presentation index only. It is never Build truth. */
 export type BuildCatalog = {
   record(build: string, descriptor: BuildCatalogDescriptor): Promise<BuildCatalogEntry>;
   read(build: string): Promise<BuildCatalogEntry | undefined>;
-  list(): Promise<readonly BuildCatalogEntry[]>;
-  /** Result manifests own terminal presentation; Runtime Catalog covers active execution only. */
+  /** Result manifests own finished presentation; Runtime Catalog covers active execution only. */
   remove?(build: string): Promise<void>;
 };

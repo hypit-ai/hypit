@@ -167,7 +167,6 @@ test("a narrow question costs one call, answers from the named shots and is answ
   assert.match(calls[0]!.text, /platform UI|editing-software watermark/u);
   assert.deepEqual(result["shot_ids"], ["shot-003"]);
   assert.deepEqual(result["result"], { status: "complete", text: "the caption sits above the lower edge" });
-  assert.deepEqual(result["answer"], result["result"], "answer remains only as a compatibility alias");
 
   // The key carries the question as well as the shots, so a second question over the same shot is a
   // separate entry rather than the first one's answer handed back under a shared key.

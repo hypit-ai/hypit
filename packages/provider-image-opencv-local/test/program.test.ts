@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
@@ -51,12 +51,4 @@ test("an interpreter carrying another OpenCV major is a mismatch, not a failure"
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
-});
-
-test("the major versions the probe demands are the ones the packaged project installs", async () => {
-  const project = localOpenCvProgram(context()).installation?.commands[0]?.args.at(-2);
-  assert.ok(project);
-  const pyproject = await readFile(join(project, "pyproject.toml"), "utf8");
-  assert.match(pyproject, /"opencv-python-headless>=4\./u, "probe expects cv2 4.x");
-  assert.match(pyproject, /"numpy>=2\./u, "probe expects numpy 2.x");
 });

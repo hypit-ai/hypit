@@ -10,7 +10,7 @@ choose another model.
 
 It imports no exact-model package. Every supported Capability contributes one `KieRoute`: exact
 Capability, return Type, request compiler, media/count limits and result packer. All Routes share one
-upload, admission, paid submission, checkpoint, polling and download state machine. Model mappings
+upload, admission, paid submission, durable Operation polling and download state machine. Model mappings
 generate eleven Routes; Background Removal contributes the twelfth.
 
 ## Supported catalog
@@ -96,25 +96,10 @@ Manifests actually imported by the author document; installing KIE does not add 
 4. Successful result URLs are converted to short-lived download URLs, bounded while streaming,
    immediately admitted into that Build's working byte area, and removed from durable
    result metadata.
-5. The selected `BuildDispatchStore` owns shared Build capacity. This Provider contributes one KIE
+5. The selected Runtime Execution Store owns shared Build capacity. This Provider contributes one KIE
    pool plus exact capability lanes and a conservative create-task interval; it does not introduce Redis or another source of
    Build truth.
 
-The automated suite uses an adversarial fake KIE service. The credentialed smoke command is a paid
-deployment test and is intentionally not run by the public repository test suite. It must be enabled
-explicitly and keeps a stable Runtime directory under the operating system temporary directory so
-an interrupted paid task can continue polling from its SQLite checkpoint:
-
-```sh
-HYPIT_KIE_LIVE=1 KIE_API_KEY=... pnpm smoke:kie
-```
-
-The default case is `gpt-image-2`. Set `HYPIT_KIE_SMOKE_CASES=all` or a comma-separated subset of
-`gpt-image-2,nano-banana-2,seedream-5-lite,seedance-2-mini,minimax-h3,grok-imagine`.
-Set `HYPIT_KIE_SMOKE_REFERENCE` to add the optional `gpt-image-2-edit` upload case; only use an asset
-that is explicitly approved for external upload.
-
-`KIE_BASE_URL` and `HYPIT_KIE_SMOKE_ROOT` are optional deployment overrides. The command prints
-credit usage, the content digest and a local inspection copy, but never prints or persists the key.
-A representative run of all six families and the optional upload case has passed. Generated
-results are deployment evidence and are intentionally not committed as a dated transcript.
+The automated suite uses an adversarial fake KIE service. It covers submission ambiguity,
+continuation of accepted tasks, polling, bounded downloads and failures without spending money or
+requiring deployment credentials.

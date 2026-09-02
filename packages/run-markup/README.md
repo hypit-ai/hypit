@@ -20,15 +20,16 @@ The Author Source's own Header—not this file and not its suffix—selects its 
 
 `<value>` declares a typed zero-input `StoredValue`. `<file>` admits ordinary source
 bytes as the explicitly named blob Type; Run itself does not assume an Artifact module.
-`<build-record>` exposes a verified prior Build Record as a zero-input Candidate. `<fragment>`
+`<build-record>` exposes one exact named Output from a prior Build Result as a zero-input Candidate. `<fragment>`
 instantiates a trusted package Fragment and may
 export several Candidates backed by shared Operations. Two declarations are two instances; one
 declaration with several exports is one instance.
 
-The `output` on `<build-record>` may be the prior source's public output alias. The Host resolves it
-through its Build Catalog to the verified logical Record before Run compilation. Core never sees or
-trusts the presentation alias, and the historical value receives no automatic semantic-relationship
-claim against the output it is selected to satisfy.
+The `output` on `<build-record>` is the prior Result's unique public Output name. After Core plans the
+complete Author and Run graphs, the Host resolves only the selected zero-input Candidate sources;
+unreached local values, local files and historical Outputs are not opened. Core receives only the typed Candidate value,
+and the historical value receives no automatic semantic-relationship claim
+against the output it is selected to satisfy.
 
 Imports form the opening prologue. They name Fragment libraries already admitted by the Host; they
 do not install packages. Provider credentials, queues, Stores, Endpoint bindings and inline

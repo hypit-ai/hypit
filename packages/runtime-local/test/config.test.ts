@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -16,17 +16,17 @@ import {
 import { FileBuildResultRepository } from "@hypit/build-result";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 import {
-  createRuntimeArchiveFromConfig,
-  createRuntimeResourceAccessFromConfig,
+  createRuntimeControlFromConfig,
+  createRuntimeFromConfig,
+  createRuntimeResultControlFromConfig,
+  doctorProjectBuildResultRepository,
   doctorRuntimeConfig,
-  openBuildResultRepositoryFromConfig,
+  openProjectBuildResultRepository,
   parseRuntimeConfig,
   preflightRuntimeConfig,
 } from "@hypit/runtime-local";
-
 function profile(config: {
   readonly dataRoot?: string;
-  readonly results?: Readonly<Record<string, unknown>>;
   readonly credentials?: Readonly<Record<string, unknown>>;
   readonly endpoints?: Readonly<Record<string, unknown>>;
 } = {}) {
@@ -36,7 +36,6 @@ function profile(config: {
       use: "@hypit/runtime-local",
       config: {
         dataRoot: config.dataRoot ?? ".hypit/runtimes/local",
-        ...(config.results === undefined ? {} : { results: config.results }),
         credentials: config.credentials ?? {},
         endpoints: config.endpoints ?? {},
       },
@@ -44,38 +43,35 @@ function profile(config: {
   };
 }
 
-test("Runtime Profile names the result repository, credentials and Endpoints", () => {
+test("Runtime Profile names credentials and Endpoints, not project result storage", () => {
   const parsed = parseRuntimeConfig(profile({
-    results: { use: "example.results", config: { bucket: "project" } },
     credentials: { secrets: { use: "example.credentials" } },
     endpoints: { generation: { use: "example.provider", pool: "shared" } },
   }));
   assert.equal(parsed.dataRoot, ".hypit/runtimes/local");
-  assert.deepEqual(parsed.results, {
-    use: "example.results",
-    instance: "results",
-    config: { bucket: "project" },
-  });
   assert.deepEqual(parsed.credentials, [{ use: "example.credentials", instance: "secrets" }]);
   assert.deepEqual(parsed.endpoints, [{ use: "example.provider", instance: "generation", pool: "shared" }]);
 });
 
 test("Build Result repositories default to the project path and can be selected explicitly", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-results-"));
-  const defaultProfile = join(root, "default.runtime.json");
-  const selectedProfile = join(root, "selected.runtime.json");
-  const defaultRoot = join(root, "project", ".hypit", "results");
-  await writeFile(defaultProfile, JSON.stringify(profile()));
+  const defaultProject = join(root, "default-project");
+  const selectedProject = join(root, "selected-project");
+  await Promise.all([
+    mkdir(defaultProject, { recursive: true }),
+    mkdir(selectedProject, { recursive: true }),
+  ]);
   await writeFile(
-    selectedProfile,
-    JSON.stringify(
-      profile({
-        results: { use: "example.results", config: { name: "episode-12" } },
-      }),
-    ),
+    join(selectedProject, "hypit.results.json"),
+    JSON.stringify({
+      format: "hypit.build-results@1",
+      use: "example.results",
+      config: { name: "episode-12" },
+    }),
   );
   const registry = new BuildResultRepositoryRegistry();
   let openedContext: unknown;
+  let diagnosedContext: unknown;
   registry.registerFacet(
     createBuildResultRepositoryHostFacet({
       use: "example.results",
@@ -88,29 +84,41 @@ test("Build Result repositories default to the project path and can be selected 
           repository: new FileBuildResultRepository(join(root, "remote-fixture")),
         };
       },
+      doctor(context) {
+        diagnosedContext = context;
+        return [];
+      },
     }),
   );
   try {
-    const local = await openBuildResultRepositoryFromConfig(defaultProfile, defaultRoot, {
+    const local = await openProjectBuildResultRepository(defaultProject, {
       packageRoot: process.cwd(),
     });
     assert.ok(local.repository instanceof FileBuildResultRepository);
-    assert.equal(local.location.root, defaultRoot);
+    assert.equal(local.location.root, defaultProject);
     assert.deepEqual(local.location.selection, {
       use: "@hypit/build-result-fs",
-      config: { path: "." },
+      config: { path: ".hypit/results" },
     });
 
-    const selected = await openBuildResultRepositoryFromConfig(selectedProfile, defaultRoot, {
+    const selected = await openProjectBuildResultRepository(selectedProject, {
       resultRegistry: registry,
     });
     assert.deepEqual(openedContext, {
-      root,
+      root: selectedProject,
       config: { name: "episode-12" },
     });
     assert.deepEqual(selected.location, {
-      root,
+      root: selectedProject,
       selection: { use: "example.results", config: { name: "episode-12" } },
+    });
+    const diagnosed = await doctorProjectBuildResultRepository(selectedProject, {
+      resultRegistry: registry,
+    });
+    assert.deepEqual(diagnosed.diagnostics, []);
+    assert.deepEqual(diagnosedContext, {
+      root: selectedProject,
+      config: { name: "episode-12" },
     });
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -121,7 +129,7 @@ test("Runtime Profile rejects source ownership fields", () => {
   assert.throws(() => parseRuntimeConfig({ ...profile(), root: "." }), /does not accept root/u);
 });
 
-test("archive inspection and working Resource access require no selected ResourceStore", async () => {
+test("active Build inspection requires no selected ResourceStore", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-slice-"));
   const path = join(root, "hypit.runtime.json");
   await writeFile(path, JSON.stringify(profile({ dataRoot: "." })));
@@ -129,12 +137,26 @@ test("archive inspection and working Resource access require no selected Resourc
   state.close();
   const registry = new RuntimeAdapterRegistry();
   try {
-    const archive = await createRuntimeArchiveFromConfig(path, { registry, readOnly: true });
-    assert.equal((await archive.status("missing")).build, undefined);
-    await archive.close();
-    const artifacts = await createRuntimeResourceAccessFromConfig(path, { registry });
-    assert.equal(await artifacts.readResource("res_missing"), undefined);
-    await artifacts.close();
+    const control = await createRuntimeControlFromConfig(path, { registry, readOnly: true });
+    assert.equal(await control.inspect("missing"), undefined);
+    await control.close();
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("Result control opens without loading the Runtime Profile's Endpoint adapters", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-result-control-"));
+  const path = join(root, "hypit.runtime.json");
+  await writeFile(path, JSON.stringify(profile({
+    dataRoot: ".",
+    endpoints: { unavailable: { use: "package.that.must.not.load" } },
+  })));
+  try {
+    const resultControl = await createRuntimeResultControlFromConfig(path, {
+      registry: new RuntimeAdapterRegistry(),
+    });
+    await resultControl.close();
   } finally {
     await rm(root, { recursive: true, force: true });
   }

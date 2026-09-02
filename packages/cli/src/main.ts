@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -9,6 +9,7 @@ import {
   FileBuildResultRepository,
   materializeRepositoryBuildResultOutput,
 } from "@hypit/build-result";
+import type { BuildResultManifest, BuildResultRepository } from "@hypit/build-result";
 import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
 import {
@@ -18,13 +19,11 @@ import {
 } from "@hypit/runtime-host-node";
 import { plannedNeeds } from "@hypit/runtime";
 import type { BuildCatalogDescriptor, CapacityReservation, OperationProgress } from "@hypit/runtime";
+import { buildIdCreatedAt, orderedBuildId } from "@hypit/protocol";
 import type { BuildState, CapabilityRef, TypeRef } from "@hypit/protocol";
 import { parseSourceHeader } from "@hypit/source";
 
-import {
-  pinnedRecords,
-  summarizeBuildCatalog,
-} from "./archive.js";
+import { pinnedRecords } from "./reuse-markup.js";
 import { unreachedGenerations } from "./reachability.js";
 import { typecheckProjectPackages } from "./package-typecheck.js";
 import { checkRunFile, collectRunFrontends, loadRunFile } from "./run-file.js";
@@ -34,7 +33,7 @@ import type {
   CliManagedProgramProgress,
   CliManagedProgramReport,
   CliRuntime,
-  CliRuntimeArchiveControl,
+  CliRuntimeControl,
   CliRuntimeController,
 } from "./runtime-port.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
@@ -59,15 +58,20 @@ type ParsedArgs = {
   readonly packageRoot: string | undefined;
   readonly runtime: string | undefined;
   readonly follow: boolean;
-  /** Emit the Run Source markup that reuses these Records instead of listing them. */
+  /** Emit Run Source markup that reuses these Outputs instead of listing them. */
   readonly pin: boolean;
   /** Omit this Build's requested Targets from history and generated pin markup. */
   readonly excludeTargets: boolean;
   readonly maxWaitMs: number | undefined;
-  readonly record: string | undefined;
   readonly output: string | undefined;
-  readonly name: string | undefined;
-  readonly artifact: string | undefined;
+  readonly title: string | undefined;
+  readonly note: string | undefined;
+  readonly highlightedOutputs: readonly string[];
+  readonly clearTitle: boolean;
+  readonly clearNote: boolean;
+  readonly clearHighlights: boolean;
+  readonly limit: number;
+  readonly before: string | undefined;
   readonly to: string | undefined;
   /** Prompt text, or the path of a text file holding it. */
   readonly prompt: string | undefined;
@@ -81,12 +85,13 @@ type ParsedArgs = {
   readonly watch: boolean;
   readonly jsonl: boolean;
   readonly readyFile: string | undefined;
+  readonly workerOwner: string | undefined;
   readonly reason: string | undefined;
   readonly slot: string | undefined;
   readonly from: string | undefined;
   /** Exact historical source path filter. It is Host presentation, never Build identity. */
   readonly source: string | undefined;
-  /** Exact option spellings seen after positional dispatch. */
+  /** Exact option spellings seen after the positional command. */
   readonly seenOptions: readonly string[];
 };
 
@@ -98,6 +103,16 @@ const HYPIHUB_MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="158.2
 
 function base64url(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64").replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
+}
+
+function createPublicBuildId(now = Date.now()): string {
+  return orderedBuildId(now, randomBytes(5).toString("hex").toUpperCase());
+}
+
+function buildCreatedAt(build: string): number {
+  const createdAt = buildIdCreatedAt(build);
+  if (createdAt === undefined) throw new Error(`Build id ${build} has no submission time`);
+  return createdAt;
 }
 
 async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
@@ -282,11 +297,11 @@ async function resolvePackageRoot(projectStart: string): Promise<string> {
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
   const [command, ...tail] = argv;
-  const scoped = command === "programs" || command === "runtime" || command === "auth"
+  const scoped = command === "programs" || command === "runtime" || command === "auth" || command === "result"
     || command === "packages";
   const action = scoped ? tail[0] : undefined;
   const positional = scoped ? tail.slice(1) : tail;
-  const noFile = command === "builds" || command === "queue" || command === "paths"
+  const noFile = command === "builds" || command === "activity" || command === "paths"
     || command === "image";
   const hasFile = !noFile && positional[0] !== undefined && !positional[0]!.startsWith("--");
   const file = hasFile ? positional[0] : undefined;
@@ -299,10 +314,15 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let pin = false;
   let excludeTargets = false;
   let maxWaitMs: number | undefined;
-  let record: string | undefined;
   let output: string | undefined;
-  let name: string | undefined;
-  let artifact: string | undefined;
+  let title: string | undefined;
+  let note: string | undefined;
+  const highlightedOutputs: string[] = [];
+  let clearTitle = false;
+  let clearNote = false;
+  let clearHighlights = false;
+  let limit = 20;
+  let before: string | undefined;
   let to: string | undefined;
   let prompt: string | undefined;
   let model: string | undefined;
@@ -314,6 +334,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let watch = false;
   let jsonl = false;
   let readyFile: string | undefined;
+  let workerOwner: string | undefined;
   let reason: string | undefined;
   let slot: string | undefined;
   let from: string | undefined;
@@ -324,7 +345,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     if (item.startsWith("--")) {
       const repeatable = [
         "--json", "--jsonl", "--watch", "--verbose", "--debug",
-        "--no-color", "--follow", "--asset-root",
+        "--no-color", "--follow", "--asset-root", "--highlight",
       ].includes(item);
       if (!repeatable && seenOptions.has(item)) throw new Error(`${item} cannot be repeated`);
       seenOptions.add(item);
@@ -390,33 +411,60 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       continue;
     }
     if (item === "--out") {
-      throw new Error("--out was removed: Build Results save completed public Outputs automatically; use `get <build-id> --name <output> --to <path>` for an optional copy");
-    }
-    if (item === "--record") {
-      const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--record requires a Record id");
-      record = value;
-      index += 1;
-      continue;
+      throw new Error("--out does not apply to Build submission; use `get <build-id> --output <name> --to <path>` for an optional copy");
     }
     if (item === "--output") {
       const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--output requires a Logical Output id");
+      if (value === undefined || value.startsWith("--")) throw new Error("--output requires a public Output name");
       output = value;
       index += 1;
       continue;
     }
-    if (item === "--name") {
+    if (item === "--title") {
       const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--name requires a name");
-      name = value;
+      if (value === undefined || value.startsWith("--")) throw new Error("--title requires text");
+      title = value;
       index += 1;
       continue;
     }
-    if (item === "--artifact") {
+    if (item === "--note") {
       const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--artifact requires a content digest");
-      artifact = value;
+      if (value === undefined || value.startsWith("--")) throw new Error("--note requires text");
+      note = value;
+      index += 1;
+      continue;
+    }
+    if (item === "--highlight") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--highlight requires an Output name");
+      highlightedOutputs.push(value);
+      index += 1;
+      continue;
+    }
+    if (item === "--clear-title") {
+      clearTitle = true;
+      continue;
+    }
+    if (item === "--clear-note") {
+      clearNote = true;
+      continue;
+    }
+    if (item === "--clear-highlights") {
+      clearHighlights = true;
+      continue;
+    }
+    if (item === "--limit") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--limit requires a positive integer");
+      limit = Number(value);
+      if (!Number.isSafeInteger(limit) || limit < 1) throw new Error("--limit requires a positive integer");
+      index += 1;
+      continue;
+    }
+    if (item === "--before") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--before requires a Build id");
+      before = value;
       index += 1;
       continue;
     }
@@ -484,6 +532,13 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       index += 1;
       continue;
     }
+    if (item === "--worker-owner") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--worker-owner requires an identity");
+      workerOwner = value;
+      index += 1;
+      continue;
+    }
     if (item === "--reason") {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--reason requires text");
@@ -526,10 +581,15 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     pin,
     excludeTargets,
     maxWaitMs,
-    record,
     output,
-    name,
-    artifact,
+    title,
+    note,
+    highlightedOutputs,
+    clearTitle,
+    clearNote,
+    clearHighlights,
+    limit,
+    before,
     to,
     prompt,
     model,
@@ -541,6 +601,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     watch,
     jsonl,
     readyFile,
+    workerOwner,
     reason,
     slot,
     from,
@@ -569,14 +630,14 @@ function assertCommandOptions(args: ParsedArgs): void {
       add("--runtime", "--slot");
       if (args.action === "login") add("--from");
       break;
-    case "queue":
+    case "activity":
       add("--runtime", "--watch", "--jsonl");
       break;
     case "paths":
       add("--runtime");
       break;
     case "get":
-      add("--workspace", "--name", "--record", "--output", "--artifact", "--to");
+      add("--workspace", "--output", "--to");
       break;
     case "image":
       // A package asset needs credentials and nothing else; no Runtime Profile applies.
@@ -585,13 +646,22 @@ function assertCommandOptions(args: ParsedArgs): void {
     case "cancel":
       add("--runtime", "--reason");
       break;
+    case "result":
+      if (args.action === "finish" || args.action === "discard") add("--runtime");
+      if (args.action === "edit") {
+        add("--workspace", "--title", "--note", "--highlight", "--clear-title", "--clear-note", "--clear-highlights");
+      }
+      break;
+    case "doctor":
+      add("--workspace");
+      break;
     case "status":
       add("--runtime", "--watch");
       if (args.watch) add("--max-wait-ms");
       break;
     case "builds":
     case "history":
-      add("--workspace");
+      add("--workspace", "--limit", "--before");
       if (args.command === "history") add("--source", "--pin", "--exclude-targets");
       break;
     case "inspect":
@@ -603,15 +673,12 @@ function assertCommandOptions(args: ParsedArgs): void {
       break;
     case "build":
       add("--runtime", "--package-root", "--workspace", "--asset-root", "--follow",
-        "--max-wait-ms", "--name");
+        "--max-wait-ms", "--title");
       break;
   }
   const invalid = args.seenOptions.find((item) => !allowed.has(item));
   if (invalid !== undefined) {
     const command = args.action === undefined ? args.command : `${args.command} ${args.action}`;
-    if (args.command === "doctor" && invalid === "--workspace") {
-      throw new Error("doctor does not compile a Source Workspace; remove --workspace");
-    }
     throw new Error(`${invalid} does not apply to ${command}`);
   }
   if (args.seenOptions.includes("--color") && args.seenOptions.includes("--no-color")) {
@@ -622,21 +689,24 @@ function assertCommandOptions(args: ParsedArgs): void {
 function usage(): string {
   return [
     "usage:",
-    "  hypit doctor [<runtime-profile>]",
+    "  hypit doctor [<runtime-profile>] [--workspace project]",
     "  hypit programs up|down|status [<runtime-profile>] [--max-wait-ms milliseconds]",
     "  hypit runtime use <runtime-profile>",
     "  hypit runtime unset",
     "  hypit runtime up|status|logs|down [<runtime-profile>]",
     "  hypit packages install|status <package@exact-version>",
-    "  hypit queue [--runtime profile.json] [--watch]",
+    "  hypit activity [--runtime profile.json] [--watch]",
     "  hypit check <self-described-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
     "  hypit plan <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
-    "  hypit build <run-source> [--name name] [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow]",
+    "  hypit build <run-source> [--title text] [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow]",
     "  hypit status <build-id> [--runtime profile.json] [--watch]",
-    "  hypit builds [--workspace project]",
-    "  hypit history [source-output-name] [--workspace project] [--source author.svml] [--pin] [--exclude-targets]",
+    "  hypit result finish <build-id> [--runtime profile.json]",
+    "  hypit result discard <build-id> [--runtime profile.json]",
+    "  hypit result edit <build-id> [--title text] [--note text] [--highlight output] [--workspace project]",
+    "  hypit builds [--workspace project] [--limit count] [--before build-id]",
+    "  hypit history [output-name] [--workspace project] [--source author.svml] [--limit count] [--before build-id] [--pin] [--exclude-targets]",
     "  hypit inspect <build-id> [--workspace project]",
-    "  hypit get <build-id> --name output-name [--workspace project] [--to path]",
+    "  hypit get <build-id> --output output-name [--workspace project] [--to path]",
     "  hypit cancel <build-id> [--runtime profile.json] [--reason text]",
     "  hypit auth status|login|logout <endpoint-instance> [--runtime profile.json] [--slot name] [--from secret-file]",
     "  hypit image --prompt <text|text-file> --to <path.png> [--model package] [--aspect-ratio r] [--resolution r]",
@@ -666,12 +736,22 @@ function createCatalogDescriptor(options: {
   readonly compilation: NodeCompiledSourceClosure;
   readonly run?: { readonly path: string };
 }): BuildCatalogDescriptor {
-  const aliases = options.compilation.exports.map((item) => {
+  const publishedOutputs = options.compilation.exports.flatMap((item) => {
     if (item.ref.kind === "operation-result") {
       throw new Error(`public output ${item.name} was not lowered to a stable Record or Logical Output`);
     }
-    return { name: item.name, ref: item.ref };
+    return item.ref.kind === "logical-output" ? [{ name: item.name, ref: item.ref }] : [];
   });
+  const names = new Set<string>();
+  const outputs = new Set<string>();
+  for (const published of publishedOutputs) {
+    if (names.has(published.name)) throw new Error(`public Output name ${published.name} is repeated`);
+    if (outputs.has(published.ref.id)) {
+      throw new Error(`Logical Output ${published.ref.id} has more than one public name`);
+    }
+    names.add(published.name);
+    outputs.add(published.ref.id);
+  }
   return {
     source: {
       path: resolve(options.source),
@@ -679,7 +759,7 @@ function createCatalogDescriptor(options: {
     ...(options.run === undefined ? {} : { run: {
       path: resolve(options.run.path),
     } }),
-    aliases,
+    publishedOutputs,
   };
 }
 
@@ -722,23 +802,15 @@ async function loadRuntime(host: NodeRuntimeHost): Promise<CliRuntime> {
   return await host.createRuntime();
 }
 
-async function loadRuntimeArchive(
+async function loadRuntimeControl(
   host: NodeRuntimeHost,
   readOnly = true,
-): Promise<CliRuntimeArchiveControl> {
-  return await host.openArchive({ readOnly });
+): Promise<CliRuntimeControl> {
+  return await host.openControl({ readOnly });
 }
 
 function displayType(type: TypeRef): string {
   return `${type.module.name}@${type.module.version}/${type.name}`;
-}
-
-function submissionStatus(
-  dispatch: NonNullable<Awaited<ReturnType<CliRuntime["status"]>>["dispatch"]>,
-): CliBuildSubmission["status"] {
-  return dispatch.phase === "terminal"
-    ? dispatch.terminal!
-    : dispatch.phase;
 }
 
 function formatOperationProgress(progress: OperationProgress): string {
@@ -802,11 +874,12 @@ function inlineValuePreview(value: unknown, limit = 240): string {
 }
 
 async function observeBuild(
-  runtime: Pick<CliRuntimeArchiveControl, "activity" | "status">,
+  runtime: Pick<CliRuntimeControl, "inspect">,
   initial: CliBuildSubmission,
   options: {
     readonly maxWaitMs?: number;
     readonly controller?: CliRuntimeController;
+    readonly readResult: () => Promise<BuildResultManifest | undefined>;
     readonly onProgress?: (value: {
       readonly build: string;
       readonly phase: string;
@@ -820,7 +893,22 @@ async function observeBuild(
   let pollDelayMs = 100;
   let observedActivity = false;
   const startedAt = Date.now();
-  while (current.status !== "complete" && current.status !== "failed" && current.status !== "cancelled") {
+  const finishFromResult = async (): Promise<CliBuildSubmission> => {
+    const result = await options.readResult();
+    if (result?.outcome === undefined) {
+      throw new Error(`Build ${current.id} left active Runtime state without a finished Result`);
+    }
+    return {
+      id: current.id,
+      state: current.state,
+      completion: {
+        build: current.id,
+        outcome: result.outcome,
+        ...(result.failure === undefined ? {} : { reason: result.failure }),
+      },
+    };
+  };
+  while ("view" in current && current.view.issue === undefined) {
     const elapsedMs = Date.now() - startedAt;
     const remainingMs = options.maxWaitMs === undefined
       ? undefined
@@ -830,18 +918,18 @@ async function observeBuild(
       ? pollDelayMs
       : Math.min(pollDelayMs, remainingMs);
     await new Promise((resolveWait) => setTimeout(resolveWait, waitMs));
-    const status = await runtime.activity(current.id);
+    const view = await runtime.inspect(current.id);
     observedActivity = true;
-    if (status.dispatch === undefined) {
-      throw new Error(`Build ${current.id} disappeared while it was being observed`);
+    if (view === undefined) {
+      current = await finishFromResult();
+      break;
     }
     current = {
       id: current.id,
       state: current.state,
-      status: submissionStatus(status.dispatch),
-      dispatch: status.dispatch,
+      view,
     };
-    if (!["complete", "failed", "cancelled"].includes(current.status)
+    if (current.view.issue === undefined
       && options.controller !== undefined) {
       const worker = await options.controller.worker.status();
       if (worker.state !== "running") {
@@ -851,19 +939,19 @@ async function observeBuild(
         );
       }
     }
-    const operations = Object.fromEntries([...new Set(status.operations.map((item) => item.status))]
-      .sort().map((state) => [state, status.operations.filter((item) => item.status === state).length]));
-    const activity = status.operations
+    const operations = Object.fromEntries([...new Set(view.operations.map((item) => item.status))]
+      .sort().map((state) => [state, view.operations.filter((item) => item.status === state).length]));
+    const activity = view.operations
       .filter((item) => item.status === "pending")
       .map((item) => `${item.endpoint}: ${item.progress === undefined
         ? item.status
         : formatOperationProgress(item.progress)}`);
     const nextProgress = JSON.stringify({
-      phase: status.dispatch.phase,
-      terminal: status.dispatch.terminal,
+      buildActivity: view.activity,
+      outcome: view.outcome,
       operations,
-      activity: status.operations.map((item) => ({
-        id: item.id,
+      activity: view.operations.map((item) => ({
+        endpoint: item.endpoint,
         status: item.status,
         progress: item.progress,
       })),
@@ -873,7 +961,7 @@ async function observeBuild(
       pollDelayMs = 100;
       options.onProgress?.({
         build: current.id,
-        phase: status.dispatch.phase,
+        phase: view.activity,
         operations,
         activity,
       });
@@ -881,43 +969,18 @@ async function observeBuild(
       pollDelayMs = Math.min(1_000, pollDelayMs * 2);
     }
   }
-  if (observedActivity) {
-    const status = await runtime.status(current.id);
-    if (status.dispatch === undefined) {
-      throw new Error(`Build ${current.id} disappeared while it was being observed`);
+  if (observedActivity && "view" in current) {
+    const view = await runtime.inspect(current.id);
+    if (view === undefined) {
+      return await finishFromResult();
     }
     current = {
       id: current.id,
-      state: status.build?.state ?? current.state,
-      status: submissionStatus(status.dispatch),
-      dispatch: status.dispatch,
+      state: current.state,
+      view,
     };
   }
   return current;
-}
-
-type RuntimeArchiveView = Pick<CliRuntimeArchiveControl, "status" | "close">;
-
-/**
- * A Run Source needs the archive only when it names a historical Build Candidate.
- * Delay Store assembly until that edge is actually resolved.
- */
-function lazyRuntimeArchive(
-  host: NodeRuntimeHost,
-): RuntimeArchiveView {
-  let loading: Promise<CliRuntimeArchiveControl> | undefined;
-  const open = (): Promise<CliRuntimeArchiveControl> => {
-    loading ??= loadRuntimeArchive(host);
-    return loading;
-  };
-  return {
-    async status(build) {
-      return await (await open()).status(build);
-    },
-    async close() {
-      if (loading !== undefined) await (await loading).close();
-    },
-  };
 }
 
 export async function runCli(
@@ -986,23 +1049,32 @@ export async function runCli(
     }
     return await opened;
   };
-  const projectResults = async (root = join(commandProjectRoot(), ".hypit", "results")) => {
-    if (args.runtime !== undefined) {
-      const host = await runtimeHost(args.runtime);
-      if (host.openResults !== undefined) return await host.openResults(root);
+  const projectResults = async (projectRoot = commandProjectRoot()) => {
+    if (distribution.openProjectResults !== undefined) {
+      const packageRoot = await packageRootForProject(projectRoot);
+      return await distribution.openProjectResults(projectRoot, {
+        packageRoot,
+        ...(distribution.packageRoot === undefined ? {} : { distributionPackageRoot: distribution.packageRoot }),
+      });
     }
+    const root = join(projectRoot, ".hypit", "results");
     return {
       location: {
-        root,
-        selection: { use: "@hypit/build-result-fs", config: { path: "." } },
+        root: projectRoot,
+        selection: { use: "@hypit/build-result-fs", config: { path: ".hypit/results" } },
       },
       repository: new FileBuildResultRepository(root),
       close() {},
     } as const;
   };
   if (args.command === "_worker") {
-    if (args.file === undefined || args.readyFile === undefined) throw new Error("internal Worker launch is incomplete");
-    await (await runtimeHost(args.file, await packageRootForProject())).runWorker(args.readyFile);
+    if (args.file === undefined || args.readyFile === undefined || args.workerOwner === undefined) {
+      throw new Error("internal Worker launch is incomplete");
+    }
+    await (await runtimeHost(
+      args.file,
+      args.packageRoot ?? await packageRootForProject(),
+    )).runWorker(args.readyFile, args.workerOwner);
     return;
   }
   if (args.command === "runtime" && args.action === "use") {
@@ -1063,27 +1135,43 @@ export async function runCli(
     || args.command === "build" || args.command === "status" || args.command === "builds"
     || args.command === "history"
     || args.command === "inspect" || args.command === "get" || args.command === "cancel"
+    || args.command === "result"
     || args.command === "doctor" || args.command === "programs"
-    || args.command === "runtime" || args.command === "queue" || args.command === "paths"
+    || args.command === "runtime" || args.command === "activity" || args.command === "paths"
     || args.command === "image" || args.command === "packages";
   const operational = known || args.command === "auth";
-  const fileOptional = args.command === "builds" || args.command === "history" || args.command === "queue"
+  const fileOptional = args.command === "builds" || args.command === "history" || args.command === "activity"
     || args.command === "paths" || args.command === "image"
     || args.command === "programs" || args.command === "runtime" || args.command === "doctor";
   if (!operational || (!fileOptional && args.file === undefined)) {
     throw new Error(usage());
   }
-  if (args.watch && args.command !== "queue" && args.command !== "status") {
-    throw new Error("--watch applies only to status or queue");
+  if (args.watch && args.command !== "activity" && args.command !== "status") {
+    throw new Error("--watch applies only to status or activity");
   }
-  if (args.jsonl && (args.command !== "queue" || !args.watch)) {
-    throw new Error("--jsonl applies only to queue --watch");
+  if (args.jsonl && (args.command !== "activity" || !args.watch)) {
+    throw new Error("--jsonl applies only to activity --watch");
   }
-  if (args.command === "queue" && args.watch && args.json) {
-    throw new Error("queue --watch is a stream; use --jsonl instead of --json");
+  if (args.command === "activity" && args.watch && args.json) {
+    throw new Error("activity --watch is a stream; use --jsonl instead of --json");
   }
   if (args.command === "history" && args.file === undefined && args.source === undefined) {
     throw new Error("history requires an output name or --source path");
+  }
+  if (args.command === "result" && args.action !== "finish"
+    && args.action !== "discard" && args.action !== "edit") {
+    throw new Error("result accepts finish, discard or edit");
+  }
+  if (args.command === "result" && args.action === "edit") {
+    if (args.title !== undefined && args.clearTitle) throw new Error("--title and --clear-title are mutually exclusive");
+    if (args.note !== undefined && args.clearNote) throw new Error("--note and --clear-note are mutually exclusive");
+    if (args.highlightedOutputs.length > 0 && args.clearHighlights) {
+      throw new Error("--highlight and --clear-highlights are mutually exclusive");
+    }
+    if (args.title === undefined && args.note === undefined && args.highlightedOutputs.length === 0
+      && !args.clearTitle && !args.clearNote && !args.clearHighlights) {
+      throw new Error("result edit requires a presentation change");
+    }
   }
   assertCommandOptions(args);
   if (args.excludeTargets && !args.pin) {
@@ -1195,12 +1283,29 @@ export async function runCli(
       throw new Error("doctor requires a Runtime Profile; run hypit runtime use <profile> or provide it positionally");
     }
     const profile = resolve(profileInput);
-    const result = await (await runtimeHost(profile)).doctor();
+    const [result, projectResult] = await Promise.all([
+      (await runtimeHost(profile)).doctor(),
+      distribution.diagnoseProjectResults === undefined
+        ? undefined
+        : distribution.diagnoseProjectResults(commandProjectRoot(), {
+            packageRoot: await packageRootForProject(),
+            ...(distribution.packageRoot === undefined
+              ? {}
+              : { distributionPackageRoot: distribution.packageRoot }),
+          }),
+    ]);
+    const diagnostics = [...result.diagnostics, ...(projectResult?.diagnostics ?? [])];
     const machine = {
       format: "hypit.cli-doctor@1" as const,
-      ok: !result.diagnostics.some((item) => item.severity === "error"),
+      ok: !diagnostics.some((item) => item.severity === "error"),
       dataRoot: result.dataRoot,
-      diagnostics: result.diagnostics,
+      ...(projectResult?.location === undefined ? {} : {
+        resultRepository: {
+          root: projectResult.location.root,
+          use: projectResult.location.selection.use,
+        },
+      }),
+      diagnostics,
     };
     writeCliOutput(io, args, { kind: "doctor", machine, profile });
     if (!machine.ok) io.setExitCode?.(1);
@@ -1321,8 +1426,8 @@ export async function runCli(
     }
     // These are independent views over one Profile. Load them concurrently without inventing a
     // second registry; each selected package remains responsible for its own report.
-    const runtimeLoading = loadRuntimeArchive(await runtimeHost(profile));
-    let runtime: CliRuntimeArchiveControl | undefined;
+    const runtimeLoading = loadRuntimeControl(await runtimeHost(profile));
+    let runtime: CliRuntimeControl | undefined;
     try {
       const loaded = await Promise.all([
         controller.worker.status(),
@@ -1331,15 +1436,16 @@ export async function runCli(
       ]);
       const [worker, external, selectedRuntime] = loaded;
       runtime = selectedRuntime;
-      const queue = await runtime.queue();
-      const counts = Object.fromEntries(["queued", "running", "waiting", "terminal"]
-        .map((phase) => [phase, queue.dispatches.filter((item) => item.phase === phase).length]));
-      const lanes = summarizeQueueLanes(queue.capacity);
+      const activity = await runtime.activity();
+      const counts = Object.fromEntries(
+        ["submitting", "ready", "running", "waiting", "saving-result"].map((name) =>
+          [name, activity.builds.filter((item) => item.activity === name).length]),
+      );
+      const lanes = summarizeQueueLanes(activity.capacity);
       const ready = worker.state === "running"
         && external.programs.every((item) => item.state.state === "ready");
-      const active = ["queued", "running", "waiting"]
-        .reduce((total, phase) => total + (counts[phase] ?? 0), 0);
-      const attention = active > 0 && !ready;
+      const active = activity.builds.length;
+      const attention = activity.builds.some((item) => item.issue !== undefined) || (active > 0 && !ready);
       const unavailable = external.programs.filter((item) => item.state.state !== "ready");
       const machine = {
         format: "hypit.cli-runtime-status@1" as const,
@@ -1347,16 +1453,16 @@ export async function runCli(
         ready,
         attention,
         worker,
-        queue: { counts, lanes, capacity: queue.capacity },
+        activity: { counts, lanes },
         programs: external.programs,
       };
       writeOperational(machine, "Runtime status", attention ? "warning" : ready ? "success" : "info", [
         ["Worker", worker.state],
-        ["Queued", String(counts.queued ?? 0)],
+        ["Ready", String(counts.ready ?? 0)],
         ["Running", String(counts.running ?? 0)],
         ["Waiting", String(counts.waiting ?? 0)],
         ["Programs", `${external.programs.length - unavailable.length}/${external.programs.length} ready`],
-        ["Capacity reservations", String(queue.capacity.length)],
+        ["Capacity reservations", String(activity.capacity.length)],
       ], [
         ...unavailable.map(programLine),
         ...queueLaneLines(lanes),
@@ -1430,59 +1536,59 @@ export async function runCli(
     }
     return;
   }
-  if (args.command === "builds" || args.command === "history" || args.command === "inspect" || args.command === "get") {
+  if (args.command === "builds" || args.command === "history" || args.command === "inspect"
+    || args.command === "get" || (args.command === "result" && args.action === "edit")) {
     const results = await projectResults();
     const repository = results.repository;
     try {
       if (args.command === "builds") {
-        const manifests = await repository.list();
-        const shown = manifests.slice(0, args.verbose ? undefined : 20);
-        const builds = shown.map((manifest) => ({
+        const page = await repository.browse({ limit: args.limit, ...(args.before === undefined ? {} : { before: args.before }) });
+        const builds = page.results.map((manifest) => ({
           build: manifest.id,
-          ...(manifest.name === undefined ? {} : { name: manifest.name }),
-          status: manifest.status,
-          startedAt: manifest.startedAt,
+          createdAt: buildCreatedAt(manifest.id),
+          ...(manifest.title === undefined ? {} : { title: manifest.title }),
+          outcome: manifest.outcome,
           source: manifest.source,
           ...(manifest.run === undefined ? {} : { run: manifest.run }),
           targets: manifest.targets,
           outputs: Object.keys(manifest.outputs),
         }));
-        writeOperational({ builds }, "Build results", "info", [["Builds", String(manifests.length)]],
+        writeOperational({ format: "hypit.cli-builds@2", builds, ...(page.next === undefined ? {} : { next: page.next }) },
+          "Build results", "info", [["Builds", String(builds.length)]],
           builds.map((item) => {
             const source = basename(item.run?.path ?? item.source.path);
-            const label = item.name === undefined ? item.build : `${item.name} · ${item.build}`;
-            return `${label}: ${item.status} · ${source} · ${item.outputs.length} outputs`;
-          }));
+            const label = item.title === undefined ? item.build : `${item.title} · ${item.build}`;
+            return `${label}: ${item.outcome} · ${new Date(item.createdAt).toLocaleString()} · ${source} · ${item.targets.join(", ")}`;
+          }).concat(page.next === undefined ? [] : [`Older    hypit builds --before ${page.next}`]));
         return;
       }
       if (args.command === "history") {
-        const manifests = await repository.list();
+        const page = await repository.browse({ limit: args.limit, ...(args.before === undefined ? {} : { before: args.before }) });
         const source = args.source === undefined ? undefined : resolve(args.source);
-        const entries = manifests.flatMap((manifest) => {
+        const entries = page.results.flatMap((manifest) => {
           if (source !== undefined && manifest.source.path !== source) return [];
           return Object.entries(manifest.outputs).flatMap(([name, output]) => {
             if (args.file !== undefined && name !== args.file) return [];
             if (args.excludeTargets && manifest.targets.includes(name)) return [];
             return [{
               build: manifest.id,
-              createdAt: manifest.startedAt,
-              status: manifest.status,
+              createdAt: buildCreatedAt(manifest.id),
+              outcome: manifest.outcome,
               source: manifest.source,
               ...(manifest.run === undefined ? {} : { run: manifest.run }),
               output: { name, type: output.type, value: output.value },
             }];
           });
-        }).sort((left, right) => right.createdAt - left.createdAt
-          || left.output.name.localeCompare(right.output.name)
-          || left.build.localeCompare(right.build));
+        });
         const pins = args.pin ? pinnedRecords(entries) : [];
-        const shown = entries.slice(0, args.verbose ? undefined : 20);
         writeOperational({
+          format: "hypit.cli-history@2",
           query: {
             ...(args.file === undefined ? {} : { output: args.file }),
             ...(source === undefined ? {} : { source }),
           },
           entries,
+          ...(page.next === undefined ? {} : { next: page.next }),
           ...(args.pin ? { pins } : {}),
         }, entries.length === 0 ? "No Build Output history" : args.pin ? "Reuse these Outputs" : "Output history",
         entries.length === 0 ? "warning" : "info", [
@@ -1491,10 +1597,13 @@ export async function runCli(
           ["Outputs", String(entries.length)],
         ], args.pin
           ? ["Paste into a Run Source; every reference names one exact Build Output.", ...pins.flatMap((item) => item.markup)]
-          : shown.map((item) => {
+          : entries.map((item) => {
               const created = new Date(item.createdAt).toISOString();
-              return `${item.build}: ${item.output.name} · ${created} · ${item.output.value.kind}`;
-            }));
+              const kind = item.output.value.kind === "build-file"
+                ? item.output.value.mediaType
+                : item.output.value.kind === "inline" ? "inline value" : "structured value";
+              return `${item.build}: ${item.output.name} · ${displayType(item.output.type)} · ${kind} · ${created}`;
+            }).concat(page.next === undefined ? [] : [`Older    hypit history${args.file === undefined ? "" : ` ${args.file}`} --before ${page.next}`]));
         return;
       }
       if (args.command === "inspect") {
@@ -1506,10 +1615,11 @@ export async function runCli(
           type: output.type,
           value: output.value,
         }));
-        writeOperational({ result: manifest, outputs }, "Build Result detail", manifest.status === "failed" ? "error" : "info", [
+        writeOperational({ format: "hypit.cli-inspect@2", result: manifest }, "Build Result detail", manifest.outcome === "failed" ? "error" : "info", [
           ["Build", manifest.id],
-          ...(manifest.name === undefined ? [] : [["Name", manifest.name] as const]),
-          ["Status", manifest.status],
+          ["Created", new Date(buildCreatedAt(manifest.id)).toLocaleString()],
+          ...(manifest.title === undefined ? [] : [["Title", manifest.title] as const]),
+          ["Outcome", manifest.outcome ?? "unfinished"],
           ["Targets", String(manifest.targets.length)],
           ["Outputs", String(outputs.length)],
         ], [
@@ -1518,31 +1628,50 @@ export async function runCli(
         ]);
         return;
       }
-      if (args.record !== undefined || args.output !== undefined || args.artifact !== undefined) {
-        throw new Error("get now addresses Build Results by --name; Record, Logical Output id and Artifact digest selectors were removed");
+      if (args.command === "result") {
+        const manifest = await repository.updatePresentation(args.file!, {
+          ...(args.clearTitle ? { title: null } : args.title === undefined ? {} : { title: args.title }),
+          ...(args.clearNote ? { note: null } : args.note === undefined ? {} : { note: args.note }),
+          ...(args.clearHighlights
+            ? { highlightedOutputs: [] }
+            : args.highlightedOutputs.length === 0 ? {} : { highlightedOutputs: args.highlightedOutputs }),
+        });
+        const presentation = {
+          format: "hypit.cli-result-edit@2",
+          build: manifest.id,
+          title: manifest.title ?? null,
+          note: manifest.note ?? null,
+          highlightedOutputs: manifest.highlightedOutputs ?? [],
+        };
+        writeOperational(presentation, "Build Result updated", "success", [
+          ["Build", manifest.id],
+          ["Title", manifest.title ?? "—"],
+          ["Highlighted", String(manifest.highlightedOutputs?.length ?? 0)],
+        ], manifest.note === undefined ? [] : [`Note    ${manifest.note}`]);
+        return;
       }
       const manifest = await repository.read(args.file!);
       if (manifest === undefined) throw new Error(`Build Result ${args.file} does not exist`);
       const available = Object.keys(manifest.outputs);
-      const name = args.name
+      const name = args.output
         ?? (manifest.targets.length === 1 && manifest.outputs[manifest.targets[0]!] !== undefined
           ? manifest.targets[0]
           : available.length === 1 ? available[0] : undefined);
-      if (name === undefined) throw new Error(`Build ${manifest.id} has several Outputs; select one with --name`);
+      if (name === undefined) throw new Error(`Build ${manifest.id} has several Outputs; select one with --output`);
       const resolved = await repository.resolve(manifest.id, name);
       if (resolved === undefined) throw new Error(`Build ${manifest.id} has no Output ${name}`);
       if (args.to === undefined) {
-        writeOperational({ build: manifest.id, output: name, resolved }, "Build Output", "info", [
+        writeOperational({ format: "hypit.cli-get@2", build: manifest.id, output: name, type: resolved.type, value: resolved.value }, "Build Output", "info", [
           ["Build", manifest.id],
           ["Output", name],
           ["Type", displayType(resolved.type)],
-          ["Storage", resolved.value.kind],
+          ...(resolved.value.kind === "build-file" ? [["Media", `${resolved.value.mediaType} · ${resolved.value.size} bytes`] as const] : []),
         ], resolved.build === manifest.id && resolved.output === name
           ? []
           : [`Forwards to ${resolved.build} / ${resolved.output}`]);
       } else {
         const materialized = await materializeRepositoryBuildResultOutput(repository, manifest.id, name, args.to);
-        writeOperational({ build: manifest.id, output: name, resolved, materialized }, "Build Output materialized", "success", [
+        writeOperational({ format: "hypit.cli-get@2", build: manifest.id, output: name, path: materialized.path, kind: materialized.kind }, "Build Output materialized", "success", [
           ["Build", manifest.id], ["Output", name], ["Path", materialized.path],
         ]);
       }
@@ -1551,187 +1680,279 @@ export async function runCli(
       await results.close();
     }
   }
-  if (args.command === "status" || args.command === "cancel" || args.command === "queue"
+  if (args.command === "status" && args.runtime === undefined) {
+    const openedResults = await projectResults();
+    let result;
+    try {
+      result = await openedResults.repository.read(args.file!);
+    } finally {
+      await openedResults.close();
+    }
+    if (args.watch && result?.outcome === undefined) {
+      throw new Error(
+        `Build ${args.file} has no finished Result; select its Runtime to observe active execution`,
+      );
+    }
+    const finished = result?.outcome !== undefined;
+    const machine = {
+      format: "hypit.cli-status@2",
+      build: result === undefined ? null : {
+        id: result.id,
+        ...(result.outcome === undefined ? {} : { outcome: result.outcome }),
+        result: {
+          title: result.title,
+          targets: result.targets,
+          outputs: Object.keys(result.outputs),
+          outcome: result.outcome,
+        },
+        operations: [],
+      },
+    };
+    writeOperational(machine, result === undefined
+      ? "Build Result not found"
+      : finished ? "Build Result is finished" : "Build Result is unfinished",
+    result === undefined || !finished ? "warning" : "info", [
+      ["Build", args.file!],
+      ["Runtime", "not selected; execution state is unknown"],
+      ...(result?.outcome === undefined ? [] : [["Outcome", result.outcome] as const]),
+      ["Operations", "0"],
+    ], result === undefined ? [] : [
+      "Result and Runtime are independent facts; select the Runtime to inspect active execution.",
+    ]);
+    if (result === undefined || !finished) io.setExitCode?.(1);
+    return;
+  }
+  if (args.command === "status" || args.command === "cancel" || args.command === "activity"
+    || (args.command === "result" && (args.action === "finish" || args.action === "discard"))
   ) {
     if (args.runtime === undefined) {
       throw new Error(
         `${args.command} requires a Runtime; run hypit runtime use <profile> or pass --runtime <profile>`,
       );
     }
-    const runtime = await loadRuntimeArchive(await runtimeHost(args.runtime), args.command !== "cancel");
+    const selectedHost = await runtimeHost(args.runtime);
+    const runtime = await loadRuntimeControl(
+      selectedHost,
+      args.command !== "cancel",
+    );
     try {
-      if (args.command === "queue") {
+      if (args.command === "activity") {
         const controller = await runtimeController(args.runtime);
         let previous: string | undefined;
-        const writeQueue = async (): Promise<void> => {
-          const [queue, worker] = await Promise.all([
-            runtime.queue(),
+        const writeActivity = async (): Promise<void> => {
+          const [activity, worker] = await Promise.all([
+            runtime.activity(),
             controller.worker.status(),
           ]);
-          const queueView = JSON.stringify({
-            dispatches: queue.dispatches,
-            capacity: queue.capacity,
+          const currentView = JSON.stringify({
+            builds: activity.builds,
+            capacity: activity.capacity,
             worker,
-            operations: queue.operations.map((item) => ({
-              id: item.id,
-              status: item.status,
-              progress: item.progress,
-            })),
           });
-          if (args.watch && queueView === previous) return;
-          previous = queueView;
+          if (args.watch && currentView === previous) return;
+          previous = currentView;
           const value = {
-            format: "hypit.cli-queue@1",
+            format: "hypit.cli-activity@1",
             at: Date.now(),
             worker,
-            dispatches: queue.dispatches,
-            lanes: summarizeQueueLanes(queue.capacity),
-            capacity: queue.capacity,
-            operations: queue.operations.map((item) => ({
-              id: item.id,
-              build: item.build,
-              endpoint: item.endpoint,
-              pool: item.pool,
-              lane: item.lane,
-              status: item.status,
-              ...(item.progress === undefined ? {} : { progress: item.progress }),
-            })),
+            builds: activity.builds,
+            lanes: summarizeQueueLanes(activity.capacity),
           };
-          const active = queue.dispatches.filter((item) => item.phase !== "terminal");
-          const activeOperations = queue.operations.filter((item) =>
-            item.status === "pending");
-          const buildLines = active.slice(0, args.verbose ? undefined : 12).map((item) =>
-            `${item.build}: ${item.phase}${item.cancellation === undefined ? "" : " · cancelling"}`);
-          const laneLines = queueLaneLines(summarizeQueueLanes(queue.capacity));
-          const genericCapacityLines = queue.capacity.filter((item) => item.queue === undefined)
-            .slice(0, args.verbose ? undefined : 12)
-            .map((item) => `${item.resources.map((resource) => resource.id).join(" + ")}: remote · ${item.build}`);
-          const operationLines = activeOperations.slice(0, args.verbose ? undefined : 12).map((item) =>
-            `${item.build} · ${item.pool} → ${item.lane}: ${item.progress === undefined
-              ? item.status
-              : formatOperationProgress(item.progress)}`);
-          writeOperational(value, "Runtime queue", active.length === 0 ? "success" : "info", [
-            ["Active Builds", String(active.length)],
+          const buildLines = activity.builds.slice(0, args.verbose ? undefined : 12).map((item) =>
+            `${item.id}: ${item.activity}`
+              + `${item.cancellationRequested ? " · cancelling" : ""}`
+              + `${item.issue === undefined ? "" : ` · ${item.issue.scope}: ${item.issue.message}`}`);
+          const activeOperations = activity.builds.flatMap((item) => item.operations)
+            .filter((item) => item.status === "pending");
+          const operationLines = args.verbose
+            ? activity.builds.flatMap((build) => build.operations.filter((item) => item.status === "pending")
+                .map((item) => `${build.id} · ${item.endpoint}: ${item.progress === undefined
+                  ? item.status
+                  : formatOperationProgress(item.progress)}`))
+            : [];
+          writeOperational(value, "Runtime activity", activity.builds.length === 0 ? "success" : "info", [
+            ["Active Builds", String(activity.builds.length)],
             ["Active Operations", String(activeOperations.length)],
             ["Worker", worker.pid === undefined ? worker.state : `${worker.state} · ${worker.pid}`],
-            ["Operation tickets", String(queue.capacity.length)],
           ], [
             ...buildLines,
             ...(operationLines.length === 0 ? [] : ["Operations:", ...operationLines]),
-            ...(laneLines.length === 0 ? [] : ["Provider queues:", ...laneLines]),
-            ...(genericCapacityLines.length === 0 ? [] : ["Other resources:", ...genericCapacityLines]),
+            ...(args.verbose ? queueLaneLines(summarizeQueueLanes(activity.capacity)) : []),
           ]);
         };
-        if (!args.watch) await writeQueue();
+        if (!args.watch) await writeActivity();
         else while (true) {
-          await writeQueue();
+          await writeActivity();
           await new Promise((resolveWait) => setTimeout(resolveWait, 1_000));
         }
       } else if (args.command === "status") {
-        let status = await runtime.status(args.file!);
-        if (args.watch && status.build !== undefined && status.dispatch !== undefined) {
-          await observeBuild(runtime, {
-            id: status.build.build,
-            state: status.build.state,
-            status: submissionStatus(status.dispatch),
-            dispatch: status.dispatch,
-          }, {
-            ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
-            controller: await runtimeController(args.runtime),
-            ...(args.json ? {} : {
-              onProgress: (progress) => {
-                const operations = Object.entries(progress.operations)
-                  .map(([operationStatus, count]) => `${count} ${operationStatus}`)
-                  .join(", ");
-                io.write(`  · ${progress.build}: ${progress.phase}`
-                  + `${operations.length === 0 ? "" : ` · ${operations}`}\n`);
-                for (const line of progress.activity) io.write(`    ${line}\n`);
-              },
-            }),
-          });
-          status = await runtime.status(args.file!);
+        let view = await runtime.inspect(args.file!);
+        let result: BuildResultManifest | undefined;
+        let resultReadError: string | undefined;
+        let openedResults: Awaited<ReturnType<typeof projectResults>> | undefined;
+        try {
+          openedResults = await projectResults();
+          if (args.watch && view !== undefined && view.issue === undefined) {
+            const startedAt = Date.now();
+            let delayMs = 100;
+            let previous: string | undefined;
+            const controller = await runtimeController(args.runtime);
+            while (view !== undefined && view.issue === undefined) {
+              const encoded = JSON.stringify(view);
+              if (encoded !== previous && !args.json) {
+                previous = encoded;
+                io.write(`  · ${view.id}: ${view.activity}`
+                  + `${view.operations.length === 0 ? "" : ` · ${view.operations.length} operation(s)`}\n`);
+                delayMs = 100;
+              } else {
+                delayMs = Math.min(1_000, delayMs * 2);
+              }
+              const remaining = args.maxWaitMs === undefined
+                ? undefined
+                : args.maxWaitMs - (Date.now() - startedAt);
+              if (remaining !== undefined && remaining <= 0) break;
+              const worker = await controller.worker.status();
+              if (worker.state !== "running") break;
+              await new Promise((resolveWait) => setTimeout(resolveWait,
+                remaining === undefined ? delayMs : Math.min(delayMs, remaining)));
+              view = await runtime.inspect(args.file!);
+            }
+          }
+          result = await openedResults.repository.read(args.file!);
+        } catch (error) {
+          resultReadError = error instanceof Error ? error.message : String(error);
+        } finally {
+          await openedResults?.close();
         }
-        const openedResults = await projectResults();
-        const result = await openedResults.repository.read(args.file!).finally(async () => await openedResults.close());
-        const found = status.build !== undefined || status.dispatch !== undefined || result !== undefined;
-        const effectiveStatus = status.dispatch === undefined
-          ? status.build?.state.status ?? result?.status
-          : submissionStatus(status.dispatch);
-        const machine = {
-          build: !found ? null : {
-            id: status.build?.build ?? status.dispatch?.build ?? result!.id,
-            status: effectiveStatus,
-            ...(status.build === undefined ? {} : {
-              coreStatus: status.build.state.status,
-              diagnostics: status.build.state.diagnostics,
-            }),
-            ...(result === undefined ? {} : { result }),
-          },
-          catalog: status.catalog === undefined
-            ? null
-            : summarizeBuildCatalog(status.catalog, status.build?.state),
-          operations: status.operations.map((operation) => ({
-            id: operation.id,
-            command: operation.command,
-            endpoint: operation.endpoint,
-            status: operation.status,
-            ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
-            ...(operation.progress === undefined ? {} : { progress: operation.progress }),
-            ...(operation.failure === undefined ? {} : { failure: operation.failure }),
-          })),
-          dispatch: status.dispatch ?? null,
+        const found = view !== undefined || result !== undefined;
+        const activity = view?.activity;
+        const outcome = result?.outcome ?? view?.outcome;
+        const issue = view?.issue;
+        const resultSummary = result === undefined ? undefined : {
+          title: result.title,
+          targets: result.targets,
+          outputs: Object.keys(result.outputs),
+          outcome: result.outcome,
         };
-        const phase = status.dispatch?.phase ?? "missing";
-        const notableOperations = status.operations.filter((operation) =>
-          operation.status !== "completed").slice(0, args.verbose ? undefined : 12);
-        const terminal = status.dispatch?.phase === "terminal";
+        const machine = {
+          format: "hypit.cli-status@2",
+          build: !found ? null : {
+            id: view?.id ?? result!.id,
+            ...(activity === undefined ? {} : { activity }),
+            ...(outcome === undefined ? {} : { outcome }),
+            ...(issue === undefined ? {} : { issue }),
+            ...(resultSummary === undefined ? {} : { result: resultSummary }),
+            operations: view?.operations ?? [],
+          },
+          ...(resultReadError === undefined ? {} : { resultReadError }),
+        };
         writeOperational(machine, !found
           ? "Build not found"
+          : issue !== undefined
+            ? "Build needs attention"
           : args.watch
-            ? terminal ? "Build finished" : "Build still running"
+            ? activity === undefined ? "Build finished" : "Build still active"
             : "Build status",
         !found
           ? "warning"
-          : status.dispatch?.terminal === "failed"
+          : issue !== undefined || resultReadError !== undefined
             ? "error"
-            : args.watch && !terminal ? "warning" : "info", [
+          : outcome === "failed"
+            ? "error"
+          : args.watch && activity !== undefined ? "warning" : "info", [
             ["Build", args.file!],
-            ["Status", effectiveStatus ?? "missing"],
-            ...(status.build === undefined || terminal || effectiveStatus === status.build.state.status
-              ? []
-              : [["Core", status.build.state.status] as const]),
-            ["Dispatch", phase],
-            ["Operations", String(status.operations.length)],
-          ], notableOperations.map((operation) => operation.failure !== undefined
+            ...(result?.title === undefined ? [] : [["Title", result.title] as const]),
+            ...(activity === undefined ? [] : [["Activity", activity] as const]),
+            ...(outcome === undefined ? [] : [["Outcome", outcome] as const]),
+            ...(result === undefined ? [] : [["Outputs", String(Object.keys(result.outputs).length)] as const]),
+          ], (view?.operations ?? []).filter((operation) => operation.status !== "completed")
+            .slice(0, args.verbose ? undefined : 12).map((operation) => operation.failure !== undefined
             ? `${operation.endpoint}: ${operation.failure.code} — ${operation.failure.message}`
             : operation.progress === undefined
               ? `${operation.endpoint}: ${operation.status}`
               : `${operation.endpoint}: ${formatOperationProgress(operation.progress)}`)
-            .concat(status.dispatch?.reason === undefined ? [] : [`Reason    ${status.dispatch.reason}`]));
-        if (!found || status.dispatch?.terminal === "failed") io.setExitCode?.(1);
-      } else {
-        const result = await runtime.cancel(args.file!, args.reason);
-        const machine = {
+            .concat(issue === undefined ? [] : [
+              `${issue.scope === "result" ? "Result save" : "Cleanup"}    ${issue.message}`,
+            ])
+            .concat(resultReadError === undefined ? [] : [`Result    unavailable: ${resultReadError}`])
+            .concat(issue === undefined ? [] : [`Finish    hypit result finish ${args.file}`]));
+        if (!found || issue !== undefined || resultReadError !== undefined || outcome === "failed") io.setExitCode?.(1);
+      } else if (args.command === "result") {
+        if (args.action === "discard") {
+          const resultControl = await selectedHost.openResultControl();
+          const discarded = await resultControl.discardSubmission(args.file!)
+            .finally(async () => await resultControl.close());
+          writeOperational({ format: "hypit.cli-result-discard@1", build: args.file, discarded }, discarded
+            ? "Incomplete Build discarded"
+            : "Incomplete Build not found", discarded ? "success" : "warning", [
+            ["Build", args.file!],
+            ["State", discarded ? "discarded" : "missing"],
+          ], discarded ? [
+            "The incomplete submission, Result draft and temporary Build files were removed.",
+          ] : []);
+          if (!discarded) io.setExitCode?.(1);
+          return;
+        }
+        const before = await runtime.inspect(args.file!);
+        if (before !== undefined && before.activity !== "saving-result") {
+          throw new Error(`Build ${args.file} is still ${before.activity}; there is no Result write to finish`);
+        }
+        if (before !== undefined && before.issue === undefined) {
+          const worker = await (await selectedHost.controller()).worker.status();
+          if (worker.state === "running") {
+            throw new Error(`Build ${args.file} Result is currently being written by the Runtime Worker`);
+          }
+        }
+        const resultControl = await selectedHost.openResultControl();
+        const finished = await resultControl.finishResult(args.file!)
+          .finally(async () => await resultControl.close());
+        if (finished === undefined) {
+          const opened = await projectResults();
+          const existing = await opened.repository.read(args.file!).finally(async () => await opened.close());
+          if (existing?.outcome === undefined) {
+            writeOperational({ format: "hypit.cli-result-finish@1", build: args.file, found: false },
+              "Build not found", "warning", [["Build", args.file!]]);
+            io.setExitCode?.(1);
+            return;
+          }
+          writeOperational({ format: "hypit.cli-result-finish@1", build: args.file, outcome: existing.outcome },
+            "Result already finished", "info", [["Build", args.file!], ["Outcome", existing.outcome]]);
+          return;
+        }
+        writeOperational({
+          format: "hypit.cli-result-finish@1",
           build: args.file,
-          requested: result !== undefined
-            && (result.phase !== "terminal" || result.terminal === "cancelled"),
-          phase: result?.phase,
-          terminal: result?.terminal,
+          outcome: finished.outcome,
+          ...(finished.issue === undefined ? {} : { issue: finished.issue }),
+        }, finished.issue === undefined ? "Result finished" : "Result still needs attention",
+        finished.issue === undefined ? "success" : "error", [
+          ["Build", args.file!],
+          ["Outcome", finished.outcome],
+        ], finished.issue === undefined ? [] : [`${finished.issue.scope}: ${finished.issue.message}`]);
+        if (finished.issue !== undefined) io.setExitCode?.(1);
+      } else {
+        const active = await runtime.cancel(args.file!, args.reason);
+        const openedResults = active === undefined ? await projectResults() : undefined;
+        const finished = openedResults === undefined
+          ? undefined
+          : await openedResults.repository.read(args.file!).finally(async () => await openedResults.close());
+        const machine = {
+          format: "hypit.cli-cancel@2",
+          build: args.file,
+          requested: active?.cancellationRequested === true,
+          ...(active === undefined ? {} : { activity: active.activity }),
+          outcome: active?.outcome ?? finished?.outcome,
         };
-        const title = result === undefined
+        const title = active === undefined && finished === undefined
           ? "Build not found"
-          : result.terminal === "cancelled"
-            ? "Build cancelled"
-            : result.phase === "terminal"
-              ? "Build already finished"
-              : "Build cancellation requested";
+          : active === undefined ? "Build already finished" : "Build cancellation requested";
         writeOperational(machine, title,
-          result === undefined ? "warning" : result.phase === "terminal" && result.terminal !== "cancelled" ? "info" : "success", [
-            ["Build", args.file!], ["Phase", result?.phase ?? "missing"],
-          ], result?.phase === "terminal" && result.terminal !== "cancelled"
-            ? [`No running work was changed; this Build is already ${result.terminal}.`]
+          active === undefined && finished === undefined ? "warning" : active === undefined ? "info" : "success", [
+            ["Build", args.file!], ...(machine.activity === undefined ? [] : [["Activity", machine.activity] as const]),
+          ], active === undefined && finished?.outcome !== undefined
+            ? [`No running work was changed; this Build is already ${finished.outcome}.`]
             : []);
-        if (result === undefined) io.setExitCode?.(1);
+        if (active === undefined && finished === undefined) io.setExitCode?.(1);
       }
     } finally {
       await runtime.close();
@@ -1745,7 +1966,7 @@ export async function runCli(
   const effectiveWorkspaceRoot = args.workspaceRoot
     ?? selectedRuntimeProjectRoot
     ?? dirname(resolve(args.file!));
-  const projectResultsRoot = join(effectiveWorkspaceRoot, ".hypit", "results");
+  const projectResultsRoot = effectiveWorkspaceRoot;
   const sourcePackageRoot = effectivePackageRoot
     ?? await resolvePackageRoot(effectiveWorkspaceRoot);
   const loadedPackageSet = distribution.discoverSourcePackages === undefined
@@ -1802,7 +2023,7 @@ export async function runCli(
           targets: loaded.document.targets,
           candidates: Object.fromEntries(loaded.document.candidates.map((item) => [item.id, item.kind])),
           satisfactions: loaded.document.satisfactions,
-          unresolvedBuildRecords: loaded.unresolvedBuildRecords,
+          unresolvedHistoricalOutputs: loaded.unresolvedHistoricalOutputs,
           deterministic_durations: deterministicSpeechDurationsFromGraph(loaded.author.graph, loaded.author.program.records),
         } as const;
         writeCliOutput(io, args, {
@@ -1837,23 +2058,18 @@ export async function runCli(
       throw new Error("build requires a Runtime; run hypit runtime use <profile> or pass --runtime <profile>");
     }
     const buildResults = await projectResults(projectResultsRoot);
-    let archive: RuntimeArchiveView | undefined;
     let loadedRun;
     try {
-      archive = lazyRuntimeArchive(await runtimeHost(args.runtime));
       loadedRun = await loadRunFile({
         workspace,
         authorCompiler: compiler,
         frontends: runFrontends,
         packageContributions,
-        runtime: archive,
         results: buildResults.repository,
       });
     } catch (error) {
       await buildResults.close();
       throw error;
-    } finally {
-      await archive?.close();
     }
     const result = await (async () => {
       try {
@@ -1875,7 +2091,7 @@ export async function runCli(
       const request = {
         // One CLI invocation is one execution instance. Source and Plan identity
         // remain in Core; they never reclaim a previous Build.
-        id: `bld_${randomUUID()}`,
+        id: createPublicBuildId(),
         definition: result.definition,
         ...(loadedPackageSet === undefined ? {} : {
           componentPackages: loadedPackageSet
@@ -1886,41 +2102,35 @@ export async function runCli(
         attachments: result.compilation.attachments,
         result: {
           repository: buildResults.location,
-          ...(args.name === undefined ? {} : { name: args.name }),
-          reuses: result.compilation.run.document.candidates.flatMap((candidate) => {
-            if (candidate.kind !== "build-record") return [];
-            const resolvedCandidate = result.compilation.run.candidates[candidate.id];
-            return resolvedCandidate === undefined ? [] : [{
-              candidate: resolvedCandidate,
-              build: candidate.build,
-              output: candidate.output,
-            }];
-          }),
+          ...(args.title === undefined ? {} : { title: args.title }),
+          forwards: result.resultForwards.filter((forward) =>
+            catalog.publishedOutputs.some((published) => published.ref.id === forward.output)),
         },
       } as const;
       const controller = await (await runtimeHost(args.runtime)).controller({
         packageRoot: sourcePackageRoot,
       });
-      let worker = await controller.worker.status();
       const preflight = await preflightPlan(await runtimeHost(args.runtime), result.state);
       // Build is an execution boundary, not a provisioning command. The cheap
       // preflight must already be clean; `runtime up` is the explicit place for
       // installing or starting declared programs.
       assertPreflight(preflight);
-      runtime = await loadRuntime(await runtimeHost(args.runtime));
-      let built = await runtime.build(request);
+      let worker;
       try {
         worker = await controller.worker.up({
           ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
         });
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
-        throw new Error(`Build ${built.id} is queued, but the Runtime Worker could not start: ${detail}`);
+        throw new Error(`Runtime Worker could not start; no Build was queued: ${detail}`);
       }
+      runtime = await loadRuntime(await runtimeHost(args.runtime));
+      let built = await runtime.build(request);
       if (args.follow && runtime !== undefined) {
         built = await observeBuild(runtime, built, {
           ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
           controller,
+          readResult: async () => await buildResults.repository.read(built.id),
           ...(args.json || args.jsonl ? {} : {
             onProgress: (progress) => {
               const operations = Object.entries(progress.operations)
@@ -1933,22 +2143,26 @@ export async function runCli(
           }),
         });
       }
-      const terminal = built.dispatch.phase === "terminal";
-      const terminalResult = terminal
+      const finished = "completion" in built;
+      const activeView = "view" in built ? built.view : undefined;
+      const completionReason = "completion" in built ? built.completion.reason : undefined;
+      const buildOutcome = "completion" in built ? built.completion.outcome : activeView?.outcome;
+      const issue = activeView?.issue;
+      const finishedResult = finished
         ? await buildResults.repository.read(built.id)
         : undefined;
-      const targetOutputs = new Set(built.state.request.targets.map((target) => target.output));
+      const targetOutputs = new Set(built.state.targets.map((target) => target.output));
       const presentation = catalog;
-      const targetAliases = presentation.aliases.filter((alias) =>
-        alias.ref.kind === "logical-output" && targetOutputs.has(alias.ref.id));
-      const targetPresentations = targetAliases.flatMap((alias) => {
-        const selection = built.state.plan.selections.find((item) => item.output === alias.ref.id);
+      const targetPublishedOutputs = presentation.publishedOutputs.filter((published) =>
+        targetOutputs.has(published.ref.id));
+      const targetPresentations = targetPublishedOutputs.flatMap((published) => {
+        const selection = built.state.plan.outputBindings.find((item) => item.output === published.ref.id);
         const record = selection === undefined
           ? undefined
           : built.state.records.find((item) => item.id === selection.record);
         if (record === undefined) return [];
         return [{
-          alias,
+          published,
           record,
           ...(record?.value.kind === "inline"
             ? { inline: inlineValuePreview(record.value.value) }
@@ -1956,37 +2170,34 @@ export async function runCli(
         }];
       });
       const machine = {
-        build: built.id,
-        ...(args.name === undefined ? {} : { name: args.name }),
-        status: built.status,
-        worker,
-        ...(terminalResult === undefined ? {} : { result: terminalResult }),
-        goals: built.state.plan.goals.map((goal) => {
-          const record = built.state.records.find((item) => item.id === goal.record);
-          return {
-            record: goal.record,
-            type: goal.type,
-            ...(record === undefined ? {} : { value: record.value }),
-          };
-        }),
-        dispatch: {
-          phase: built.dispatch.phase,
-          ...(built.dispatch.cancellation === undefined ? {} : { cancellation: true }),
-          ...(built.dispatch.reason === undefined ? {} : { reason: built.dispatch.reason }),
+        format: "hypit.cli-build@2",
+        build: {
+          id: built.id,
+          ...(args.title === undefined ? {} : { title: args.title }),
+          ...(activeView === undefined ? {} : { activity: activeView.activity }),
+          ...(buildOutcome === undefined ? {} : { outcome: buildOutcome }),
+          ...(issue === undefined ? {} : { issue }),
+          ...(finishedResult === undefined ? {} : {
+            result: {
+              targets: finishedResult.targets,
+              outputs: Object.keys(finishedResult.outputs),
+              outcome: finishedResult.outcome,
+            },
+          }),
         },
       };
       const runtimeHint = runtimeNeedsHint ? ` --runtime ${args.runtime}` : "";
-      const resultTargets = terminalResult?.targets.flatMap((name) => {
-        const output = terminalResult.outputs[name];
+      const resultTargets = finishedResult?.targets.flatMap((name) => {
+        const output = finishedResult.outputs[name];
         return output === undefined ? [] : [{ name, output }];
       }) ?? [];
-      const terminalLines = resultTargets.length === 0 && targetPresentations.length === 0
+      const finishedLines = resultTargets.length === 0 && targetPresentations.length === 0
         ? [
-            ...(built.dispatch.reason === undefined ? [] : [`Reason   ${built.dispatch.reason}`]),
+            ...(completionReason === undefined ? [] : [`Reason   ${completionReason}`]),
             `Inspect  hypit inspect ${built.id}`,
           ]
         : [
-            ...(built.dispatch.reason === undefined ? [] : [`Reason   ${built.dispatch.reason}`]),
+            ...(completionReason === undefined ? [] : [`Reason   ${completionReason}`]),
             `Inspect  hypit inspect ${built.id}`,
             ...resultTargets
               .filter((item) => item.output.value.kind === "inline")
@@ -1998,44 +2209,45 @@ export async function runCli(
               .filter((item) => item.output.value.kind !== "inline")
               .slice(0, args.verbose ? undefined : 4)
               .map((item) =>
-                `Export   hypit get ${built.id} --name ${item.name} --to <path>`),
+                `Export   hypit get ${built.id} --output ${item.name} --to <path>`),
             ...(resultTargets.length > 0 ? [] : targetPresentations
               .filter((item) => item.inline !== undefined)
-              .map((item) => `Result   ${item.alias.name} = ${item.inline}`)),
+              .map((item) => `Result   ${item.published.name} = ${item.inline}`)),
           ];
       writeOperational(machine, args.follow
-        ? terminal ? "Build finished" : "Build still running"
+        ? finished ? "Build finished" : issue !== undefined ? "Result needs attention" : "Build still active"
         : "Build submitted",
-      built.status === "failed" ? "error"
-        : built.status === "cancelled" || (args.follow && !terminal) ? "warning" : "success", [
+      buildOutcome === "failed" || issue !== undefined ? "error"
+        : buildOutcome === "cancelled" || (args.follow && !finished) ? "warning" : "success", [
           ["Build", built.id],
-          ["Status", built.status],
+          ...(activeView === undefined
+            ? []
+            : [["Activity", activeView.activity] as const]),
+          ...(buildOutcome === undefined ? [] : [["Outcome", buildOutcome] as const]),
           ["Worker", worker.state === "running" ? String(worker.pid) : worker.state],
-          ["Goals", String(terminalResult?.targets.length ?? machine.goals.length)],
-        ], terminal ? terminalLines : [
+          ["Targets", String(finishedResult?.targets.length ?? targetPublishedOutputs.length)],
+        ], finished ? finishedLines : issue !== undefined ? [
+          `Result   ${issue.scope}: ${issue.message}`,
+          `Finish   hypit result finish ${built.id}${runtimeHint}`,
+        ] : [
           `Watch    hypit status ${built.id}${runtimeHint} --watch`,
           `Cancel   hypit cancel ${built.id}${runtimeHint}`,
         ]);
-      if (built.status === "failed") io.setExitCode?.(1);
+      if (buildOutcome === "failed" || issue !== undefined) io.setExitCode?.(1);
     } finally {
       await runtime?.close();
       await buildResults.close();
     }
     return;
   }
-  let runtime: RuntimeArchiveView | undefined;
   let planResults: Awaited<ReturnType<typeof projectResults>> | undefined;
   try {
-    runtime = args.runtime === undefined
-      ? undefined
-      : lazyRuntimeArchive(await runtimeHost(args.runtime));
     planResults = await projectResults(projectResultsRoot);
     const loaded = await loadRunFile({
       workspace,
       authorCompiler: compiler,
       frontends: runFrontends,
       packageContributions,
-      ...(runtime === undefined ? {} : { runtime }),
       results: planResults.repository,
     });
     const result = loaded.compiler.planCompilation(loaded);
@@ -2057,10 +2269,10 @@ export async function runCli(
       run: loaded.path,
       outputNames,
       satisfactionNames: loaded.run.satisfactionNames,
+      selections: result.selections,
     });
     if (preflight !== undefined && !preflight.ok) io.setExitCode?.(1);
   } finally {
-    await runtime?.close();
     await planResults?.close();
   }
 }

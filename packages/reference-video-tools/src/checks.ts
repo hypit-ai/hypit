@@ -8,7 +8,7 @@ import { loadNodePackageSelection, physicalPackageName } from "@hypit/package-lo
 import { parseScript, validateCaptionCueLengths } from "@hypit/script";
 import { videoCliDistribution } from "@hypit/video-cli";
 import { loadStudioCompanionRegistry } from "@hypit/studio/src/companion-profile.js";
-import { openStudioArchive } from "@hypit/studio/src/archive.js";
+import { openStudioBuildLibrary } from "@hypit/studio/src/build-library.js";
 import { loadStudioDomain } from "@hypit/studio/src/domain.js";
 import { loadStudioRun } from "@hypit/studio/src/run.js";
 import { readStudioSession } from "@hypit/studio/src/session.js";
@@ -182,7 +182,7 @@ export async function previewCheck(
 
   const registry = await loadStudioCompanionRegistry({ workspaceRoot, packageRoot, distributionPackageRoot });
   const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
-  const archive = await openStudioArchive(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
+  const buildLibrary = await openStudioBuildLibrary(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
 
   let session: StudioSession | undefined;
   let refusal: string | undefined;
@@ -192,7 +192,7 @@ export async function previewCheck(
       run: runPath,
       domain,
       registry,
-      ...(archive === undefined ? {} : { archive }),
+      ...(buildLibrary === undefined ? {} : { buildLibrary }),
     });
     // Preflight first, so an unopenable Run is reported as the refusal it is
     // rather than as whatever the build happens to fail on afterwards.
@@ -202,7 +202,6 @@ export async function previewCheck(
       registry,
       run,
       workspaceRoot,
-      ...(archive === undefined ? {} : { archive }),
       revision: 0,
     });
   } catch (error) {
@@ -213,15 +212,15 @@ export async function previewCheck(
       refusal = error instanceof Error ? error.message : String(error);
     }
   } finally {
-    // Close before reporting: a runtime archive left open outlives the check.
-    await archive?.close();
+    // Close before reporting: the read-only Runtime connection must not outlive the check.
+    await buildLibrary?.close();
   }
 
   if (refusal !== undefined) return { run: runPath, sound: false, sources, refused: refusal };
 
   if (awaiting !== undefined) {
     // The graph traced all the way to a Film and a semantic spine; what is left is
-    // work a Provider has to do. That is a pass for this gate, and the delivery
+    // work a Provider has to do. That is sound for this report, and the delivery
     // measurements happen on the real Build either way.
     const noun = awaiting.length === 1 ? "capability" : "capabilities";
     return {
@@ -276,7 +275,6 @@ export type AuthoringCheckInput = ReconstructionCheckInput & {
   readonly mode?: AuthoringCheckMode;
 };
 
-export type MechanicalAuthoringCheckInput = { readonly run: string };
 
 /**
  * Where a description-authored project's reviews are logged.
@@ -513,7 +511,7 @@ function frameGeometry(svml: string): FrameGeometry {
  * speech, so it renders before a Build like any other.
  *
  * A look counts once it has been answered: in band (`complete`, the gemini observer) or handed out
- * and closed by whoever answered it (`pending` until then). Only `failed` is not a look. The gate
+ * and closed by whoever answered it (`pending` until then). Only `failed` is not a look. The report
  * cannot judge whether the stretch an element was looked at over actually showed it, so the stretches
  * are reported for a reader, and a lone look is called out rather than assumed meaningful.
  *
@@ -997,7 +995,7 @@ export async function authoringCheck(
     // has reported on, and crediting it credited the tool call rather than the look.
     .filter((entry) => entry.status === "complete");
 
-  // Which stretches each element was compared against, in order. The gate cannot judge whether a
+  // Which stretches each element was compared against, in order. The report cannot judge whether a
   // stretch was the right one to compare against — it does not know what the element draws — so it
   // reports them and lets a reader notice a component compared against one that never showed it.
   const rounds = new Map<string, string[]>();
@@ -1026,7 +1024,7 @@ export async function authoringCheck(
   // A logged look and a planned one are compared as word ranges, because that is the one form both
   // can always be put in: a look recorded against a Segment resolves to the words that Segment marks,
   // and a look recorded against a Cue was never anything else. Comparing the names instead would let
-  // a Cue in the middle of a Segment match the Segment, and the coverage this gate claims would be
+  // a Cue in the middle of a Segment match the Segment, and the coverage this report claims would be
   // wider than the coverage it has.
   const asTokens = (entry: LoggedComparison): string | undefined => {
     if (entry.range?.tokens !== undefined) return `${entry.range.tokens[0]}-${entry.range.tokens[1]}`;
@@ -1068,7 +1066,7 @@ export async function authoringCheck(
       compared_against: [...new Set(stretches)],
       state,
       timing_basis: timingBasis(element.id),
-      // The gate cannot judge whether the stretch chosen actually showed the element, so a lone
+      // The report cannot judge whether the stretch chosen actually showed the element, so a lone
       // comparison is called out for a reader to confirm rather than silently accepted.
       ...(stretches.length === 1 ? { note: `single ${looking} — confirm this stretch shows the element, not a look-alike` } : {}),
     };
@@ -1279,36 +1277,5 @@ export async function authoringCheck(
         + "window, loop-start to repeat, or stretch to retime. Read playbooks/craft/frame-coverage.md "
         + "on inherited edges before choosing — lengthening the material instead leaves the same edge.",
     }),
-  };
-}
-
-/**
- * Source-only delivery gate for variant expansion.
- *
- * It reuses the authoring check's graph-independent analysis but deliberately does not require a
- * render, comparison, review log or VLM judgement. Only deterministic failures (unresolved vocabulary,
- * uncovered Script words and timed
- * pictures that empty their windows) decide `passed` here.
- */
-export async function mechanicalAuthoringCheck(
-  input: MechanicalAuthoringCheckInput,
-  roots: { readonly packageRoot: string },
-): Promise<Record<string, unknown>> {
-  const result = await authoringCheck({ run: input.run, mode: "description" }, roots);
-  const playback = Array.isArray(result.playback) ? result.playback : [];
-  const uncovered = Array.isArray(result.uncovered) ? result.uncovered : [];
-  const unresolved = result.unresolved_packages;
-  const summary = Array.isArray(result.summary) ? result.summary.map(String) : [];
-  const unreadable = summary.some((line) => line.startsWith("no aliased package import could be read")
-    || line.startsWith("no package the Source imports publishes a Surface that draws"));
-  const passed = playback.length === 0 && uncovered.length === 0 && unresolved === undefined && !unreadable;
-  return {
-    run: result.run,
-    passed,
-    summary,
-    playback,
-    uncovered,
-    ...(unresolved === undefined ? {} : { unresolved_packages: unresolved }),
-    note: "Mechanical variant gate only; no render, VLM comparison or visual review was performed.",
   };
 }

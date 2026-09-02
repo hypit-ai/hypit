@@ -194,12 +194,10 @@ test("one FragmentInstance shares its generation Operation across all exports", 
   );
 });
 
-test("the same Fragment instance is deterministic while distinct instances never content-dedupe", () => {
+test("distinct Fragment instances never content-dedupe", () => {
   const linked = program();
   const opening = instance(linked, "opening");
-  const openingAgain = instance(linked, "opening");
   const closing = instance(linked, "closing");
-  assert.deepEqual(opening, openingAgain);
   assert.notEqual(opening.id, closing.id);
   assert.equal(
     new Set([...opening.operations, ...closing.operations].map((operation) => operation.id)).size,

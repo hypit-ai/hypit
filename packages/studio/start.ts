@@ -7,7 +7,7 @@ import { videoCliDistribution } from "@hypit/video-cli";
 import { EndpointRegistry } from "@hypit/driver-node";
 import { createLocalMediaProvider } from "@hypit/provider-media-local";
 
-import { openStudioArchive } from "./src/archive.js";
+import { openStudioBuildLibrary } from "./src/build-library.js";
 import { loadStudioCompanionRegistry } from "./src/companion-profile.js";
 import { loadStudioDomain } from "./src/domain.js";
 import { loadStudioRun } from "./src/run.js";
@@ -79,17 +79,17 @@ const registry = await loadStudioCompanionRegistry({
   ...(studioProfilePath === undefined ? {} : { profile: studioProfilePath }),
 });
 const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
-const archive = await openStudioArchive(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
+const buildLibrary = await openStudioBuildLibrary(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
 let run;
 try {
   run = await loadStudioRun({
     run: runPath,
     domain,
     registry,
-    ...(archive === undefined ? {} : { archive }),
+    ...(buildLibrary === undefined ? {} : { buildLibrary }),
   });
 } catch (error) {
-  await archive?.close();
+  await buildLibrary?.close();
   throw error;
 }
 const source = run.authorSource;
@@ -102,7 +102,7 @@ if (endpoints !== undefined) await createLocalMediaProvider({}).install(endpoint
 try {
   inspectStudioRun(registry, run.source, run, previewOnly ? PREVIEW_LOCAL_MEDIA_CAPABILITIES : undefined);
 } catch (error) {
-  await archive?.close();
+  await buildLibrary?.close();
   throw error;
 }
 const server = await createServer({
@@ -122,7 +122,7 @@ const server = await createServer({
     workspaceRoot,
     domain,
     registry,
-    ...(archive === undefined ? {} : { archive }),
+    ...(buildLibrary === undefined ? {} : { buildLibrary }),
     ...(endpoints === undefined ? {} : { endpoints }),
   })],
 });

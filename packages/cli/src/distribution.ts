@@ -1,6 +1,9 @@
 import type { NodeCompiler } from "@hypit/compiler-node";
 import type { LoadedPackage, NodePackageContribution } from "@hypit/package-loader-node";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
+import type { BuildResultRepository } from "@hypit/build-result";
+import type { BuildResultRepositoryLocation } from "@hypit/build-result-kit";
+import type { BuildResultRepositoryDiagnostic } from "@hypit/build-result-kit";
 
 export type CliCompilerOptions = {
   /** Canonical containment boundary for Author and Run Sources plus source assets. */
@@ -70,6 +73,23 @@ export type CliDistribution = {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;
   }): Promise<NodeRuntimeHost>;
+  /** Open project-owned Result history even when no Runtime Profile is selected. */
+  openProjectResults?(projectRoot: string, options: {
+    readonly packageRoot: string;
+    readonly distributionPackageRoot?: string;
+  }): Promise<{
+    readonly location: BuildResultRepositoryLocation;
+    readonly repository: BuildResultRepository;
+    close(): void | Promise<void>;
+  }>;
+  /** Actively diagnose this project's selected Result Store without reading its history. */
+  diagnoseProjectResults?(projectRoot: string, options: {
+    readonly packageRoot: string;
+    readonly distributionPackageRoot?: string;
+  }): Promise<{
+    readonly location?: BuildResultRepositoryLocation;
+    readonly diagnostics: readonly BuildResultRepositoryDiagnostic[];
+  }>;
   /**
    * Generate one picture for a package asset.
    *

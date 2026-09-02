@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { parseRunDocument } from "@hypit/run-markup";
 
-import { pinnedRecords } from "../src/archive.js";
+import { pinnedRecords } from "../src/reuse-markup.js";
 
 test("pinned Records emit Run Source markup that parses, one per output", () => {
   const pins = pinnedRecords([

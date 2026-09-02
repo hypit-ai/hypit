@@ -7,10 +7,6 @@ const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; 
 const blobArtifactSchema = (mediaTypes?: readonly string[]): ValueSchema => object({
   kind: { schema: { kind: "literal", value: "blob" } },
   resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
-  origin: { schema: object({
-    kind: { schema: { kind: "literal", value: "build-file" } },
-    build: { schema: string }, path: { schema: string },
-  }), optional: true },
   size: { schema: integer },
   mediaType: { schema: mediaTypes === undefined ? string : { kind: "string", enum: mediaTypes } },
 });

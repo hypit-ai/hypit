@@ -1,7 +1,6 @@
 import type {
   BuildDefinition,
   BuildFact,
-  BuildPlan,
   BuildRequest,
   BuildState,
   CoreCommand,
@@ -20,7 +19,7 @@ import type {
 import { canonicalize, SvmlError } from "@hypit/protocol";
 import { invariant } from "./error.js";
 import { resolveProducer, verifyRecordStructure } from "./link.js";
-import { compileBuild, producerStep, selectedProvidedRecords } from "./plan.js";
+import { planBuild, producerStep, verifyBuildPlan } from "./plan.js";
 
 function commandId(kind: "producer" | "need", subject: string): string {
   return `${kind}:${subject}`;
@@ -239,21 +238,19 @@ export function start(
   graph: CompiledGraph,
   request: BuildRequest,
 ): BuildState {
-  const plan: BuildPlan = compileBuild(program, graph, request);
-  const state: BuildState = {
-    format: "hypit.build@1",
+  const planned = planBuild(program, graph, {
+    format: "hypit.run-graph@1",
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: request.targets,
+  });
+  return initialBuildView(defineBuild({
     program,
-    graph,
-    request,
-    plan,
-    status: "active",
-    records: [...program.records, ...selectedProvidedRecords(program, graph, plan)],
-    steps: plan.steps.map((step) => ({ id: step.id, status: "pending" })),
-    needs: [],
-    outstanding: [],
-    diagnostics: [],
-  };
-  return state;
+    initialRecords: planned.initialRecords,
+    plan: planned.plan,
+    targets: request.targets,
+  }));
 }
 
 export function reduce(state: BuildState, event?: CommandResult): BuildState {
@@ -261,42 +258,32 @@ export function reduce(state: BuildState, event?: CommandResult): BuildState {
   return schedule(next);
 }
 
-function definitionContent(
-  state: Pick<BuildState, "program" | "graph" | "request" | "plan">,
-): Omit<BuildDefinition, "format"> {
-  return {
-    program: state.program,
-    graph: state.graph,
-    request: state.request,
-    plan: state.plan,
-  };
-}
-
-/** Compile one immutable finite Build definition. Runtime execution never changes it. */
+/** Seal one already selected execution. Graphs and Candidates do not cross this boundary. */
 export function defineBuild(
-  program: LinkedProgram,
-  graph: CompiledGraph,
-  request: BuildRequest,
+  input: Omit<BuildDefinition, "format">,
 ): BuildDefinition {
-  const initial = start(program, graph, request);
-  return {
-    format: "hypit.build-definition@1",
-    ...definitionContent(initial),
-  };
+  verifyBuildPlan(input.program, input.initialRecords, input.plan);
+  invariant(input.targets.length > 0, "EMPTY_BUILD_TARGETS", "Build has no Targets");
+  const bindings = new Set(input.plan.outputBindings.map((binding) => binding.output));
+  const targets = new Set<string>();
+  for (const target of input.targets) {
+    invariant(bindings.has(target.output), "UNKNOWN_BUILD_TARGET", `${target.output} has no Output binding`, target.output);
+    invariant(!targets.has(target.output), "DUPLICATE_BUILD_TARGET", `${target.output} is targeted twice`, target.output);
+    targets.add(target.output);
+  }
+  return { format: "hypit.build-definition@2", ...input };
 }
 
 function initialBuildView(definition: BuildDefinition): BuildState {
+  invariant(definition.format === "hypit.build-definition@2", "UNSUPPORTED_BUILD_DEFINITION", definition.format);
+  verifyBuildPlan(definition.program, definition.initialRecords, definition.plan);
   return {
     format: "hypit.build@1",
     program: definition.program,
-    graph: definition.graph,
-    request: definition.request,
     plan: definition.plan,
+    targets: definition.targets,
     status: "active",
-    records: [
-      ...definition.program.records,
-      ...selectedProvidedRecords(definition.program, definition.graph, definition.plan),
-    ],
+    records: [...definition.program.records, ...definition.initialRecords],
     steps: definition.plan.steps.map((step) => ({ id: step.id, status: "pending" })),
     needs: [],
     outstanding: [],

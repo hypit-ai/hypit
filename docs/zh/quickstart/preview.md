@@ -17,7 +17,7 @@ hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
 | 参数 | 含义 |
 | --- | --- |
 | `--run <build.svrun>` | 要打开的 Run Source。必填。 |
-| `--runtime <hypit.runtime.json>` | 选择包含早先 Build 与 Artifact 的 Runtime Profile；使用 `<build-record>` 时需要。 |
+| `--runtime <hypit.runtime.json>` | 可选，只用于显示活动 `BuildView` 与 Operation；历史 Result 与 `<build-record>` 来自项目 Result Store。 |
 | `--workspace <directory>` | Source 访问与写回边界；默认是 Run 所在目录。 |
 | `--port <number>` | HTTP 端口，默认 `5179`。 |
 

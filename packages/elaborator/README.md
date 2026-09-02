@@ -50,7 +50,7 @@ into Source Closure identity. It does not know whether a Host obtained the bytes
 browser upload, repository object or remote content store.
 
 Frontend output passes a Host-owned Record admission hook before linking. The hook is permitted to
-reject a Record but is forbidden to rewrite Record identity, Type, value, digest, or origin.
+reject a Record but is forbidden to rewrite Record identity, Type or value.
 `@hypit/compiler-node` wires this to `@hypit/validation` by default, so authored
 values use the same Type-owner gate as Producer, Provider and provided Candidate values.
 
@@ -59,7 +59,7 @@ contains no JavaScript callback, ambient file lookup, credential access or Runti
 expansion the Elaborator verifies producer ports, types, cycles, reachable exports and Semantic
 Input Envelopes.
 
-Expansion assigns hygienic identities from `fragment digest + author instance id + local id`.
+Expansion assigns hygienic identities from `Fragment id + author instance id + local id`.
 Multiple exports of one instance therefore share internal Operations, while two explicit instances
 remain two nodes even when their content is identical. Author exports become Logical Outputs with
 Primary Candidates; Run exports become independent typed Candidates plus explicit Satisfaction

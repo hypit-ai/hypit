@@ -345,7 +345,7 @@ const label = {
 };
 ```
 
-The exact `fontArtifact` fields are shown by `inspect_visual_contract`; use a real Blob Artifact in
+The exact `fontArtifact` fields are shown by `inspect_visual_schema`; use a real Blob Artifact in
 `sources`, with an explicit weight and style. The important boundary is that parent links, child
 cardinality, recipe properties, slot inputs and animation are declared explicitly and validated by
 their owning layer.

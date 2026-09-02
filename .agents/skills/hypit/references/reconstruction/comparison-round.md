@@ -1,8 +1,8 @@
 # Comparing what was built against the reference
 
-Completed comparisons are durable evidence in `comparisons.jsonl` and the route snapshot. After a
-context boundary, run `route_state --action reconcile` before comparing again; answered pairs are
-reused and are not sent to the observer twice.
+Completed comparisons are ordinary content in `comparisons.jsonl`. After an interruption, inspect
+that log and the current render directly. Do not repeat paid generation; make another local comparison
+only when the current task calls for a new observation.
 
 **Read `../element-review.md` first.** It owns the round this file sits inside: one element at a time,
 render what the Source configures, realize preview mocks for what a Build has not made, one round, two attempt ceilings,
@@ -116,10 +116,10 @@ hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <ru
 This fallback compares the visible state at the range midpoint and does not claim anything about
 motion. The judgement for a normal window still comes from the reference observation, never from
 looking at your own render and deciding that it does not move. If a longer clip returns
-`INVALID_ARGUMENT`, record the complete error and treat it as a gate/provider defect rather than
+`INVALID_ARGUMENT`, record the complete error and treat it as a comparison/provider defect rather than
 silently switching evidence modes.
 
-Pass `--element <id>` every time so the gate credits the comparison to that element.
+Pass `--element <id>` every time so the comparison record names the element it assessed.
 
 ## One observer reads the reference, and it is the one the reference was prepared with
 

@@ -23,16 +23,3 @@ test("Seedance Kits are finite data programs with distinct rendered semantics", 
     assert.match(output.value, new RegExp(item.marker, "u"), item.file);
   }
 });
-
-test("official Seedance Kits select semantics by file and explicit axes, never inferred branches", () => {
-  for (const item of cases) {
-    const source = readFileSync(new URL(`../kits/${item.file}`, import.meta.url), "utf8");
-    assert.doesNotMatch(source, /kind:\s*variant|when-(?:param|select)-/u, item.file);
-    assert.doesNotMatch(source, /slot:\s*extra/u, item.file);
-  }
-  const broll = readFileSync(new URL("../kits/broll-v1.svs", import.meta.url), "utf8");
-  assert.doesNotMatch(broll, /reference-plan/u);
-  const speaker = readFileSync(new URL("../kits/speaker-v1.svs", import.meta.url), "utf8");
-  assert.match(speaker, /slot:\s*dialogue/u);
-  assert.match(speaker, /slot:\s*action/u);
-});

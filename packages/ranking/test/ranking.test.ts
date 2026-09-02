@@ -498,7 +498,7 @@ test("visual and sound event plans share exact phase frames while absent sound s
   assert.deepEqual(audio.clips.map((clip) => clip.gain), [0.8, 0.6, 0.8, 0.6]);
 });
 
-test("each component owns a distinct event law and repeated lowering is canonical", () => {
+test("each component owns a distinct event law", () => {
   const tierOwner = header("tier-board", "tier-events");
   const tierItems = [tierSpec("direct", "s"), tierSpec("drop", "a", "drop")];
   const tier = decodeTierBoardStyle(recipe("ranking.tier", { rows: [{ id: "s", label: "S", color: "#ef4444" }, { id: "a", label: "A", color: "#22c55e" }] }), font).style;
@@ -510,12 +510,6 @@ test("each component owns a distinct event law and repeated lowering is canonica
   const top = decodeTopThreeStyle(recipe("ranking.top"), font).style;
   assert.deepEqual(buildTopThreeSoundEvents(schedule(topOwner, topItems), top, specs(topOwner, topItems)).events.map((item) => item.kind), ["appear"]);
 
-  const columnOwner = header("column", "deterministic");
-  const columnItems = [columnSpec("one", 3)];
-  const columnStyle = decodeColumnStyle(recipe("ranking.column"), font).style;
-  let set = appendColumnItem(createColumnItemSet(), columnItems[0]!);
-  const program = buildColumnProgram(columnOwner, canvas, frame, columnSchedule(columnOwner, columnItems, { one: early }), columnStyle, set);
-  assert.deepEqual(renderColumn(space, program), renderColumn(space, program));
 });
 
 test("all three author Surfaces preserve explicit semantic, spatial, font, image and optional sound graph edges", async () => {

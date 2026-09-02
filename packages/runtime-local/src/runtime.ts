@@ -1,3 +1,5 @@
+import { isAbsolute, relative, resolve, sep } from "node:path";
+
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
@@ -10,10 +12,13 @@ import {
 import {
   isStreamingResourceStore,
 } from "@hypit/runtime";
+import { assertOrderedBuildId } from "@hypit/protocol";
+import type { BlobRef, BuildDefinition } from "@hypit/protocol";
 import { TypeValidatorRegistry } from "@hypit/validation";
 
-import { createLocalRuntimeArchiveControl, createLocalRuntimeResourceAccess } from "./control.js";
+import { createLocalRuntimeControl } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
+import { createLocalResultWriter } from "./result-writer.js";
 import { createDurableLocalWorker } from "./worker.js";
 import type {
   CreateLocalRuntimeOptions,
@@ -30,6 +35,46 @@ function assert(condition: unknown, message: string): asserts condition {
 function nonNegativeInteger(value: number, subject: string): number {
   assert(Number.isSafeInteger(value) && value >= 0, `${subject} must be a non-negative safe integer`);
   return value;
+}
+
+function projectPath(root: string, path: string): string {
+  const absolute = isAbsolute(path) ? resolve(path) : resolve(root, path);
+  const relation = relative(resolve(root), absolute);
+  assert(relation === "" || (!relation.startsWith("..") && !isAbsolute(relation)),
+    `Build Result source ${path} is outside project ${resolve(root)}`);
+  return (relation || ".").split(sep).join("/");
+}
+
+function requiredInitialResources(request: LocalBuildRequest): ReadonlySet<string> {
+  const definition = request.definition;
+  const forwarded = new Set(request.result.forwards?.map((item) => item.output) ?? []);
+  const publicOwnedRecords = request.catalog.publishedOutputs.flatMap((published) => {
+    if (forwarded.has(published.ref.id)) return [];
+    const binding = definition.plan.outputBindings.find((item) => item.output === published.ref.id);
+    return binding === undefined ? [] : [binding.record];
+  });
+  const recordIds = new Set([
+    ...publicOwnedRecords,
+    ...definition.plan.steps.flatMap((step) => Object.values(step.inputs)),
+  ]);
+  const resources = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (value === null || typeof value !== "object") return;
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    const item = value as Readonly<Record<string, unknown>>;
+    if (item.kind === "blob" && typeof item.resource === "string") {
+      resources.add((item as unknown as BlobRef).resource);
+      return;
+    }
+    Object.values(item).forEach(visit);
+  };
+  [...definition.program.records, ...definition.initialRecords]
+    .filter((record) => recordIds.has(record.id))
+    .forEach((record) => visit(record.value));
+  return resources;
 }
 
 async function wait(delayMs: number, signal: AbortSignal | undefined): Promise<void> {
@@ -92,38 +137,48 @@ export async function createLocalRuntime(
     operations: options.operationStore,
     validators,
   });
-  const worker = createDurableLocalWorker(driver, {
-    stores: {
-      builds: options.buildStore,
-      ...(buildCatalog === undefined ? {} : { catalog: buildCatalog }),
-      operations: options.operationStore,
-      dispatch: options.dispatchStore,
-    },
+  const resultWriter = createLocalResultWriter({
+    buildStore: options.buildStore,
+    operationStore: options.operationStore,
+    commandExecutionStore: options.commandExecutionStore,
+    executionStore: options.executionStore,
+    removeActiveBuild: options.removeActiveBuild,
+    submissionStore: options.submissionStore,
     resourceStore: options.resourceStore,
     ...(options.resourceStoreForBuild === undefined ? {} : { resourceStoreForBuild: options.resourceStoreForBuild }),
     ...(options.clearBuildResources === undefined ? {} : { clearBuildResources: options.clearBuildResources }),
-    openBuildResultRepository: async (location) => {
-      assert(openBuildResultRepository !== undefined, "this Runtime cannot open Build Result Repositories");
-      return await openBuildResultRepository(location);
+    openBuildResultRepository,
+  });
+  const worker = createDurableLocalWorker(driver, {
+    stores: {
+      builds: options.buildStore,
+      operations: options.operationStore,
+      executions: options.commandExecutionStore,
+      execution: options.executionStore,
     },
+    resourceStore: options.resourceStore,
+    ...(options.resourceStoreForBuild === undefined ? {} : { resourceStoreForBuild: options.resourceStoreForBuild }),
+    openBuildResultRepository,
+    ...(options.assertEnvironment === undefined ? {} : { assertEnvironment: options.assertEnvironment }),
     installComponentPackages,
+    resultWriter,
   });
   const credentialControl = createLocalCredentialControl({
     credentialStore: options.credentialStore,
     endpoints: options.endpoints ?? [],
   });
-  const archive = createLocalRuntimeArchiveControl({
+  const control = createLocalRuntimeControl({
     buildStore: options.buildStore,
-    ...(buildCatalog === undefined ? {} : { buildCatalog }),
+    buildCatalog,
     operationStore: options.operationStore,
-    dispatchStore: options.dispatchStore,
-  });
-  const resources = createLocalRuntimeResourceAccess({
-    resourceStore: options.resourceStore,
+    executionStore: options.executionStore,
+    submissionStore: options.submissionStore,
   });
   const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
     const resourceStore = options.resourceStoreForBuild?.(request.id) ?? options.resourceStore;
-    for (const item of request.attachments ?? []) {
+    const required = requiredInitialResources(request);
+    for (const item of (request.attachments ?? []).filter((attachment) =>
+      required.has(attachment.artifact.resource))) {
       if (await resourceStore.has(item.artifact.resource)) continue;
       const stream = await item.open();
       if (isStreamingResourceStore(resourceStore)) {
@@ -147,60 +202,94 @@ export async function createLocalRuntime(
       }
     }
   };
-  const presentation = async (build: string, previousState?: LocalBuildSubmission["state"]): Promise<LocalBuildSubmission> => {
-    const [snapshot, dispatch] = await Promise.all([
+  const presentation = async (
+    build: string,
+    resultLocation: LocalBuildRequest["result"]["repository"],
+    previousState?: LocalBuildSubmission["state"],
+  ): Promise<LocalBuildSubmission> => {
+    const [snapshot, execution] = await Promise.all([
       options.buildStore.read(build),
-      options.dispatchStore.read(build),
+      options.executionStore.read(build),
     ]);
-    assert(dispatch !== undefined, `Build ${build} has no Runtime dispatch`);
     const state = snapshot?.state ?? previousState;
     assert(state !== undefined, `Build ${build} has no execution state`);
-    const status: LocalBuildSubmission["status"] = dispatch.phase === "terminal"
-      ? dispatch.terminal!
-      : dispatch.phase;
-    return { id: build, state, status, dispatch };
+    if (execution !== undefined) {
+      const view = await control.inspect(build);
+      assert(view !== undefined, `Build ${build} has no active Runtime view`);
+      return { id: build, state, view };
+    }
+    const opened = await openBuildResultRepository(resultLocation);
+    try {
+      const result = await opened.repository.read(build);
+      assert(result?.outcome !== undefined, `Build ${build} has neither active execution nor a finished Result`);
+      return {
+        id: build,
+        state,
+        completion: {
+          build,
+          outcome: result.outcome,
+          ...(result.failure === undefined ? {} : { reason: result.failure }),
+        },
+      };
+    } finally {
+      await opened.close?.();
+    }
   };
 
   const submit = async (request: LocalBuildRequest): Promise<LocalBuildSubmission> => {
-    assert(request.id.trim().length > 0 && !request.id.includes("/") && !request.id.includes("\\"),
-      "Build id must be one directory-safe name");
-    if (request.catalog !== undefined) {
-      assert(buildCatalog !== undefined, "Build supplied Host catalog metadata but no BuildCatalog was selected");
-    }
-    await stageAttachments(request);
-    await options.buildStore.create(request.id, request.definition);
+    assertOrderedBuildId(request.id);
     const resultRequest = request.result;
-    if (resultRequest !== undefined) {
-      assert(openBuildResultRepository !== undefined, "this Runtime cannot open Build Result Repositories");
+    const executionRequest = {
+      build: request.id,
+      componentPackages: [...new Set(request.componentPackages ?? [])].sort(),
+      result: resultRequest.repository,
+    } as const;
+    let prepared = false;
+    try {
+      await options.submissionStore.prepare(executionRequest);
+      prepared = true;
+      await stageAttachments(request);
       const opened = await openBuildResultRepository(resultRequest.repository);
       try {
-        assert(request.catalog !== undefined, "Build Result requires Author catalog names");
-        const aliases = request.catalog.aliases.flatMap((alias) => alias.ref.kind === "logical-output"
-          ? [{ name: alias.name, output: alias.ref.id }]
-          : []);
-        const names = new Map(aliases.map((alias) => [alias.output, alias.name]));
+        const publishedOutputs = request.catalog.publishedOutputs.map((published) => ({
+          name: published.name,
+          output: published.ref.id,
+        }));
+        const names = new Map<string, string>();
+        for (const published of publishedOutputs) {
+          assert(!names.has(published.output),
+            `Logical Output ${published.output} has more than one public name`);
+          names.set(published.output, published.name);
+        }
+        const targets = request.definition.targets.map((target) => {
+          const name = names.get(target.output);
+          assert(name !== undefined, `Target ${target.output} is not a published Author Output`);
+          return name;
+        });
         await opened.repository.create({
           id: request.id,
-          ...(resultRequest.name === undefined ? {} : { name: resultRequest.name }),
-          source: request.catalog.source,
-          ...(request.catalog.run === undefined ? {} : { run: request.catalog.run }),
-          targets: request.definition.request.targets.map((target) => names.get(target.output) ?? target.output),
-          aliases,
-          ...(resultRequest.reuses === undefined ? {} : { reuses: resultRequest.reuses }),
+          ...(resultRequest.title === undefined ? {} : { title: resultRequest.title }),
+          source: { path: projectPath(resultRequest.repository.root, request.catalog.source.path) },
+          ...(request.catalog.run === undefined ? {} : {
+            run: { path: projectPath(resultRequest.repository.root, request.catalog.run.path) },
+          }),
+          targets,
+          publishedOutputs,
+          ...(resultRequest.forwards === undefined ? {} : { forwards: resultRequest.forwards }),
         });
       } finally {
         await opened.close?.();
       }
+      await options.submissionStore.commit({
+        ...executionRequest,
+        definition: request.definition,
+        catalog: request.catalog,
+      });
+      return await presentation(request.id, resultRequest.repository);
+    } catch (error) {
+      if (prepared) await resultWriter.discardSubmission(request.id).catch(() => undefined);
+      throw error;
     }
-    await options.dispatchStore.create({
-      build: request.id,
-      componentPackages: [...new Set(request.componentPackages ?? [])].sort(),
-      ...(resultRequest === undefined ? {} : { result: resultRequest.repository }),
-    });
-    if (request.catalog !== undefined) {
-      await buildCatalog!.record(request.id, request.catalog);
-    }
-    return await presentation(request.id);
   };
 
   const runBuild = async (
@@ -213,17 +302,17 @@ export async function createLocalRuntime(
     const maxWaitMs = follow.maxWaitMs === undefined
       ? undefined
       : nonNegativeInteger(follow.maxWaitMs, "maxWaitMs");
-    while (follow.follow === true && !["complete", "failed", "cancelled"].includes(result.status)) {
+    while (follow.follow === true && "view" in result && result.view.issue === undefined) {
       if (maxWaitMs !== undefined && Date.now() - startedAt + pollIntervalMs > maxWaitMs) return result;
       await wait(pollIntervalMs, follow.signal);
-      result = await presentation(request.id, result.state);
+      result = await presentation(request.id, request.result.repository, result.state);
     }
     return result;
   };
   return {
-    ...archive,
-    ...resources,
+    ...control,
     ...credentialControl,
+    ...resultWriter,
     build: runBuild,
     async workOnce() {
       return await worker.runOnce();

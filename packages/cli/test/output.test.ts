@@ -144,10 +144,10 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
       needs: {},
     }],
     goals: [],
-    selections: [{
+    outputBindings: [{
       output: "logical:take",
-      candidate: "candidate:preview",
       record: "record:take",
+      type: { module: { name: "example.media", version: "1" }, name: "Take" },
     }],
   };
   const output = capture(human, {
@@ -156,6 +156,7 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
     run: "/project/build.svrun",
     outputNames: { "logical:take": "take.video" },
     satisfactionNames: { "logical:take": "preview" },
+    selections: [{ output: "logical:take", candidate: "candidate:preview", record: "record:take" }],
   });
   assert.match(output, /Run choices/u);
   assert.match(output, /take\.video\s+← preview/u);
@@ -169,6 +170,7 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
     run: "/project/build.svrun",
     outputNames: { "logical:take": "take.video" },
     satisfactionNames: { "logical:take": "preview" },
+    selections: [{ output: "logical:take", candidate: "candidate:preview", record: "record:take" }],
   }), /2\s+@hypit\/media@1/u);
 });
 
@@ -177,7 +179,7 @@ test("a plan with no Needs stays compact without knowing any Provider names", ()
     format: "hypit.plan@1",
     steps: [],
     goals: [],
-    selections: [],
+    outputBindings: [],
   };
   const output = capture(human, {
     kind: "plan",
@@ -193,7 +195,7 @@ test("plan runtime preflight presents only demanded capabilities", () => {
     format: "hypit.plan@1",
     steps: [],
     goals: [],
-    selections: [],
+    outputBindings: [],
   };
   const preflight: PlanPreflight = {
       ok: false,
@@ -247,7 +249,7 @@ test("command help explains only the selected shell grammar", () => {
   assert.doesNotMatch(output, /Authoring/u);
 });
 
-test("archive commands have their own help instead of falling back to the global screen", () => {
+test("Result commands have their own help instead of falling back to the global screen", () => {
   let output = "";
   writeCliHelp({ write(text) { output += text; } }, "get");
   assert.match(output, /^hypit get\n/u);

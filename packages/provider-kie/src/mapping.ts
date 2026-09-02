@@ -1,6 +1,11 @@
 import type { CapabilityRef, ModuleRef } from "@hypit/protocol";
 import type { GenerationWireMapping } from "@hypit/generation";
 
+export type KieGenerationWireMapping = GenerationWireMapping & {
+  /** Values advertised by the model vocabulary but refused by this KIE route. */
+  readonly unsupportedPortValues?: Readonly<Record<string, readonly (string | number | boolean)[]>>;
+};
+
 /**
  * How KIE names each model's declared input ports.
  *
@@ -95,7 +100,7 @@ const grokPreviewMapping: GenerationWireMapping = {
   },
 };
 
-const gptImageMapping: GenerationWireMapping = {
+const gptImageMapping: KieGenerationWireMapping = {
   capability: { module: GPT_IMAGE, name: "gpt-image-2" },
   result: "image",
   routes: [
@@ -107,6 +112,9 @@ const gptImageMapping: GenerationWireMapping = {
     aspectRatio: { as: "value", field: "aspect_ratio" },
     resolution: { as: "value", field: "resolution" },
     images: { as: "urlArray", field: "input_urls" },
+  },
+  unsupportedPortValues: {
+    aspectRatio: ["4:3", "3:4", "4:5"],
   },
 };
 
@@ -143,7 +151,7 @@ const seedreamMapping: GenerationWireMapping = {
   },
 };
 
-export const kieModelCatalog: readonly GenerationWireMapping[] = [
+export const kieModelCatalog: readonly KieGenerationWireMapping[] = [
   seedanceMapping("seedance-2", "bytedance/seedance-2"),
   seedanceMapping("seedance-2-fast", "bytedance/seedance-2-fast"),
   seedanceMapping("seedance-2-mini", "bytedance/seedance-2-mini"),

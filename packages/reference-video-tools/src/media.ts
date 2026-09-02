@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { cpus } from "node:os";
 import { join, resolve } from "node:path";
@@ -284,6 +283,7 @@ export async function writeJson(path: string, value: unknown): Promise<void> { a
 export async function readJson<T>(path: string): Promise<T | undefined> { try { return JSON.parse(await readFile(path, "utf8")) as T; } catch { return undefined; } }
 export async function referenceId(videoPath: string): Promise<string> {
   const info = await stat(videoPath);
-  const value = `${resolve(videoPath)}\u0000${info.size}\u0000${info.mtimeMs}`;
-  return `ref-${createHash("sha256").update(value).digest("hex").slice(0, 24)}`;
+  const name = resolve(videoPath).split(/[\\/]/u).at(-1)?.replace(/\.[^.]+$/u, "")
+    .replace(/[^0-9A-Za-z._-]+/gu, "-").replace(/^-+|-+$/gu, "") || "video";
+  return `ref-${name}-${info.size}-${Math.trunc(info.mtimeMs)}`;
 }

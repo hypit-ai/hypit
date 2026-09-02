@@ -107,7 +107,7 @@ only; narration, music, and effects remain explicit audio contributions.
   titles, arrows, comparisons, and cards on `typo:Track` or `media-track:Track`.
 - When exact UI or brand artwork matters, use the supplied asset as authored media rather than asking
   a generator to recreate it.
-- A person-facing view and its device-facing reverse view must pass the hard geometry gate in
+- A person-facing view and its device-facing reverse view must satisfy the explicit geometry rules in
   `visual-continuity.md`: opposing camera positions require different background sectors and different
   dominant landmark sets. The same main background is an automatic rejection.
 - Follow `screen-demo.md` for context/proof pairs and physically possible screen orientation.

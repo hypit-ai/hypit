@@ -90,7 +90,13 @@ test("Core executes a finite plan through an external Need and completion", () =
 
 test("Build Definition plus admitted Facts restores the same next Command", () => {
   const initial = createGreetingBuild();
-  const definition = defineBuild(initial.program, initial.graph, initial.request);
+  const authored = new Set(initial.program.records.map((record) => record.id));
+  const definition = defineBuild({
+    program: initial.program,
+    initialRecords: initial.records.filter((record) => !authored.has(record.id)),
+    plan: initial.plan,
+    targets: initial.targets,
+  });
   const machine = new BuildMachine(definition);
   const facts: BuildFact[] = [];
   const prompt = machine.commands()[0];

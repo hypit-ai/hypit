@@ -15,7 +15,7 @@ import type { CompiledGraph } from "@hypit/protocol";
 import { parseScript } from "@hypit/script";
 import { videoCliDistribution } from "@hypit/video-cli";
 import { loadStudioCompanionRegistry } from "@hypit/studio/src/companion-profile.js";
-import { openStudioArchive } from "@hypit/studio/src/archive.js";
+import { openStudioBuildLibrary } from "@hypit/studio/src/build-library.js";
 import { loadStudioDomain } from "@hypit/studio/src/domain.js";
 import type { Preview } from "@hypit/studio/src/programme.js";
 import { preview } from "@hypit/studio/src/programme.js";
@@ -582,9 +582,10 @@ export async function realizeAuthoringPreview(input: {
   const registry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot, distributionPackageRoot });
   const domain = await loadStudioDomain({ run: runPath, workspaceRoot: projectRoot, packageRoot });
   const runtimePath = input.runtime === undefined ? undefined : resolve(cwd, input.runtime);
-  const archive = await openStudioArchive(runtimePath, packageRoot, projectRoot, distributionPackageRoot);
+  const buildLibrary = await openStudioBuildLibrary(runtimePath, packageRoot, projectRoot, distributionPackageRoot);
   try {
-    const original = await loadStudioRun({ run: runPath, domain, registry, ...(archive === undefined ? {} : { archive }) });
+    const original = await loadStudioRun({ run: runPath, domain, registry,
+      ...(buildLibrary === undefined ? {} : { buildLibrary }) });
     const graph: CompiledGraph = {
       format: "hypit.graph@1",
       outputs: original.source.compiled.graph.outputs,
@@ -603,11 +604,11 @@ export async function realizeAuthoringPreview(input: {
     });
     const previewRegistry = await loadStudioCompanionRegistry({ workspaceRoot: projectRoot, packageRoot, distributionPackageRoot });
     const previewDomain = await loadStudioDomain({ run: previewMock.previewRun, workspaceRoot: projectRoot, packageRoot });
-    const previewArchive = await openStudioArchive(runtimePath, packageRoot, projectRoot, distributionPackageRoot);
+    const previewBuildLibrary = await openStudioBuildLibrary(runtimePath, packageRoot, projectRoot, distributionPackageRoot);
     try {
       const loadedPreview = await loadStudioRun({
         run: previewMock.previewRun, domain: previewDomain, registry: previewRegistry,
-        ...(previewArchive === undefined ? {} : { archive: previewArchive }),
+        ...(previewBuildLibrary === undefined ? {} : { buildLibrary: previewBuildLibrary }),
       });
       const previewRun = { ...loadedPreview, attachments: [...loadedPreview.attachments, ...previewMock.attachments] };
       const inspection = inspectStudioRun(previewRegistry, previewRun.source, previewRun, new Set([
@@ -626,7 +627,6 @@ export async function realizeAuthoringPreview(input: {
         outputRefs: [inspection.filmComposition, ...inspection.projections.map((item) => item.ref)],
         compositionRef: inspection.filmComposition,
         projections: inspection.projections,
-        ...(previewArchive === undefined ? {} : { archive: previewArchive }),
         endpoints: deterministicEndpoints,
       });
       const programFrames = Math.max(1, ...built.anchors.values());
@@ -653,7 +653,7 @@ export async function realizeAuthoringPreview(input: {
         programFrames, frameOfToken, selections, segmentTokenCounts,
       };
     } finally {
-      await previewArchive?.close();
+      await previewBuildLibrary?.close();
     }
   } catch (error) {
     const issues = (error as { readonly issues?: unknown } | null)?.issues;
@@ -662,7 +662,7 @@ export async function realizeAuthoringPreview(input: {
     }
     throw error instanceof Error ? error : new Error(String(error));
   } finally {
-    await archive?.close();
+    await buildLibrary?.close();
   }
 }
 

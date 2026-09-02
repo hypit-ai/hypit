@@ -561,6 +561,9 @@ importers:
       '@hypit/build-result':
         specifier: workspace:*
         version: link:../build-result
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
       '@hypit/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
@@ -2662,6 +2665,9 @@ importers:
       '@hypit/component-kit':
         specifier: workspace:*
         version: link:../component-kit
+      '@hypit/core':
+        specifier: workspace:*
+        version: link:../core
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
@@ -2693,9 +2699,6 @@ importers:
         specifier: workspace:*
         version: link:../validation
     devDependencies:
-      '@hypit/core':
-        specifier: workspace:*
-        version: link:../core
       '@hypit/credential-store-env':
         specifier: workspace:*
         version: link:../credential-store-env

@@ -10,8 +10,7 @@
  * So the lockfile is written with that directory set aside, and put back afterwards. Dependencies
  * declared inside `packages/` resolve identically either way; only the importers differ.
  *
- * Run this after changing any package's dependencies. `repository-hygiene.test.mjs` refuses a
- * lockfile written without it.
+ * Run this after changing package dependencies to keep the committed lockfile reproducible.
  */
 import { rename } from "node:fs/promises";
 import { existsSync } from "node:fs";

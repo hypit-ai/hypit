@@ -26,24 +26,25 @@ function completedState(): BuildState {
     status: "complete",
     records: [{ id: "record:stage", type: valueType, value: { kind: "inline", value: "ready" } }],
     plan: {
-      selections: [{ output: "logical:stage", candidate: "candidate:stage", record: "record:stage" }],
+      outputBindings: [{ output: "logical:stage", record: "record:stage", type: valueType }],
     },
   } as unknown as BuildState;
 }
 
 async function fixture(root: string): Promise<void> {
   const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
-    id: "bld_result",
-    name: "episode-stage",
+    id: "bld_20260902T110000000Z_0000000001",
+    title: "episode-stage",
     source: { path: join(root, "main.svml") },
     run: { path: join(root, "build.svrun") },
-    targets: ["final.video"],
-    aliases: [{ name: "stage.value", output: "logical:stage" }],
+    targets: ["stage.value"],
+    publishedOutputs: [{ name: "stage.value", output: "logical:stage" }],
   });
   await result.sync({
     state: completedState(),
     resources: { async open() { throw new Error("inline Result has no files"); } },
   });
+  await result.finish({ outcome: "complete" });
 }
 
 async function jsonCommand(args: readonly string[], root: string): Promise<unknown> {
@@ -61,46 +62,84 @@ test("builds, history, inspect and get read project Build Results without openin
     const builds = await jsonCommand(["builds"], root) as {
       readonly builds: readonly {
         readonly build: string;
-        readonly name?: string;
-        readonly status: string;
+        readonly title?: string;
+        readonly outcome: string;
         readonly outputs: readonly string[];
       }[];
     };
     assert.equal(builds.builds.length, 1);
-    assert.equal(builds.builds[0]?.build, "bld_result");
-    assert.equal(builds.builds[0]?.name, "episode-stage");
-    assert.equal(builds.builds[0]?.status, "complete");
+    assert.equal(builds.builds[0]?.build, "bld_20260902T110000000Z_0000000001");
+    assert.equal(builds.builds[0]?.title, "episode-stage");
+    assert.equal(builds.builds[0]?.outcome, "complete");
     assert.deepEqual(builds.builds[0]?.outputs, ["stage.value"]);
 
     const history = await jsonCommand(["history", "stage.value"], root) as {
       readonly entries: readonly { readonly build: string; readonly output: { readonly name: string } }[];
     };
     assert.equal(history.entries.length, 1);
-    assert.equal(history.entries[0]?.build, "bld_result");
+    assert.equal(history.entries[0]?.build, "bld_20260902T110000000Z_0000000001");
     assert.equal(history.entries[0]?.output.name, "stage.value");
 
-    const inspected = await jsonCommand(["inspect", "bld_result"], root) as {
-      readonly result: { readonly id: string; readonly name?: string };
-      readonly outputs: readonly { readonly name: string; readonly target: boolean }[];
+    const inspected = await jsonCommand(["inspect", "bld_20260902T110000000Z_0000000001"], root) as {
+      readonly result: { readonly id: string; readonly title?: string };
     };
-    assert.equal(inspected.result.id, "bld_result");
-    assert.equal(inspected.result.name, "episode-stage");
-    assert.deepEqual(inspected.outputs, [{
-      name: "stage.value",
-      target: false,
-      type: valueType,
-      value: { kind: "inline", value: "ready" },
-    }]);
+    assert.equal(inspected.result.id, "bld_20260902T110000000Z_0000000001");
+    assert.equal(inspected.result.title, "episode-stage");
 
     const destination = join(root, "exported.json");
-    await jsonCommand(["get", "bld_result", "--name", "stage.value", "--to", destination], root);
+    await jsonCommand(["get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination], root);
     assert.equal(await readFile(destination, "utf8"), "\"ready\"\n");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test("build-record reads one exact result file and preserves its historical origin", async () => {
+test("result edit changes only the exact project Result presentation without opening a Runtime", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-result-edit-"));
+  try {
+    await fixture(root);
+    const edited = await jsonCommand([
+      "result", "edit", "bld_20260902T110000000Z_0000000001",
+      "--title", "Episode 12 B-roll",
+      "--note", "Use the close-up for the opening beat.",
+      "--highlight", "stage.value",
+      "--highlight", "stage.value",
+    ], root) as {
+      readonly build: string;
+      readonly title: string;
+      readonly note: string;
+      readonly highlightedOutputs: readonly string[];
+    };
+    assert.deepEqual(edited, {
+      format: "hypit.cli-result-edit@2",
+      build: "bld_20260902T110000000Z_0000000001",
+      title: "Episode 12 B-roll",
+      note: "Use the close-up for the opening beat.",
+      highlightedOutputs: ["stage.value"],
+    });
+
+    const repository = new FileBuildResultRepository(join(root, ".hypit", "results"));
+    const stored = await repository.read("bld_20260902T110000000Z_0000000001");
+    assert.equal(stored?.title, "Episode 12 B-roll");
+    assert.equal(stored?.note, "Use the close-up for the opening beat.");
+    assert.deepEqual(stored?.highlightedOutputs, ["stage.value"]);
+
+    const cleared = await jsonCommand([
+      "result", "edit", "bld_20260902T110000000Z_0000000001", "--clear-title", "--clear-note", "--clear-highlights",
+    ], root) as {
+      readonly title: null;
+      readonly note: null;
+      readonly highlightedOutputs: readonly string[];
+    };
+    assert.equal(cleared.title, null);
+    assert.equal(cleared.note, null);
+    assert.deepEqual(cleared.highlightedOutputs, []);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("build-record selects one exact Result Output without leaking its storage address into Core", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-result-reuse-"));
   try {
     const module = { name: "example.result-reuse", version: "1" } as const;
@@ -167,11 +206,11 @@ test("build-record reads one exact result file and preserves its historical orig
 
     const resultsRoot = join(root, ".hypit", "results");
     const result = await FileBuildResult.create(resultsRoot, {
-      id: "bld_prior",
+      id: "bld_20260902T110000001Z_0000000001",
       source: { path: join(root, "main.svml") },
       run: { path: join(root, "prior.svrun") },
       targets: ["shot.video"],
-      aliases: [{ name: "shot.video", output: "logical:video" }],
+      publishedOutputs: [{ name: "shot.video", output: "logical:video" }],
     });
     const bytes = new TextEncoder().encode("prior video bytes");
     await result.sync({
@@ -180,14 +219,14 @@ test("build-record reads one exact result file and preserves its historical orig
         records: [{
           id: "record:video",
           type: videoType,
-          value: {
+          value: { kind: "inline", value: { artifact: {
             kind: "blob",
             resource: "res_prior_video",
             size: bytes.byteLength,
             mediaType: "video/mp4",
-          },
+          } } },
         }],
-        plan: { selections: [{ output: "logical:video", candidate: "candidate:video", record: "record:video" }] },
+        plan: { outputBindings: [{ output: "logical:video", record: "record:video", type: videoType }] },
       } as unknown as BuildState,
       resources: {
         async open() {
@@ -207,7 +246,7 @@ test("build-record reads one exact result file and preserves its historical orig
 <svrun version="1">
   <author source="./main.svml"/>
   <target output="shot.video"/>
-  <build-record id="prior" build="bld_prior" output="shot.video"/>
+  <build-record id="prior" build="bld_20260902T110000001Z_0000000001" output="shot.video"/>
   <satisfy output="shot.video" candidate="prior"/>
 </svrun>`, "utf8");
 
@@ -229,12 +268,17 @@ test("build-record reads one exact result file and preserves its historical orig
     const candidate = loaded.run.graph.candidates[0];
     assert.equal(candidate?.root.kind, "value");
     const value = candidate?.root.kind === "value" ? candidate.root.value.value : undefined;
-    assert.equal(value?.kind, "blob");
-    assert.deepEqual(value?.kind === "blob" ? value.origin : undefined, {
-      kind: "build-file",
-      build: "bld_prior",
-      path: "files/shot.video.mp4",
-    });
+    assert.equal(value?.kind, "inline");
+    assert.equal(value?.kind === "inline"
+      ? (value.value as { readonly artifact?: { readonly kind?: string } }).artifact?.kind
+      : undefined, "blob");
+    const logicalOutput = loaded.author.exports.find((item) => item.name === "shot.video")?.ref;
+    assert.equal(logicalOutput?.kind, "logical-output");
+    assert.deepEqual(loaded.compiler.planCompilation(loaded).resultForwards, [{
+      output: logicalOutput!.id,
+      build: "bld_20260902T110000001Z_0000000001",
+      sourceOutput: "shot.video",
+    }]);
     assert.equal(loaded.attachments.length, 1);
     assert.equal(opens, 0, "compilation does not read or summarize historical bytes");
     const reused: number[] = [];

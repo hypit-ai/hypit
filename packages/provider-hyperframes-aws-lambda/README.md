@@ -26,6 +26,3 @@ dependency.
 
 The production client uses the AWS SDK default credential chain. No access key is accepted by the
 package configuration or written into Build state.
-
-The opt-in live canary uses a fresh operation identity on every run and cleans its exact
-render/site prefixes by default.

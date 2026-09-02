@@ -218,4 +218,4 @@ pnpm install --frozen-lockfile
 
 当 vocabulary 证明输入/输出 Type、timing contract、终端 Track 和 Surface ports 高度相似，
 才可走 close-sibling 路径：读取该 sibling 的 README 与必要 role 文件，复制结构，重建
-Module/Producer identity，并继续通过 package-ready、Source-use、preview 和最终 gate。
+Module/Producer identity，并直接检查 Source 使用方式与 preview 结果。

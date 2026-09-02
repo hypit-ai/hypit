@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { materializeRecord, runVideoCli, videoCliDistribution } from "@hypit/video-cli";
+import { runVideoCli, videoCliDistribution } from "@hypit/video-cli";
 
 import { videoTestPackages } from "./packages.js";
 
@@ -127,34 +127,6 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
     globalThis.fetch = realFetch;
     if (realKey === undefined) delete process.env.HYPIHUB_API_KEY;
     else process.env.HYPIHUB_API_KEY = realKey;
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-test("materializeRecord copies an archived Artifact without rerunning a Build", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-cli-get-"));
-  try {
-    const bytes = Buffer.from("final-video-bytes");
-    const artifactResource = "res_archived-final-video";
-    const output = join(root, "final.mp4");
-    const runtime = {
-      async openResource(resource: string) {
-        return resource === artifactResource ? (async function* () { yield bytes; })() : undefined;
-      },
-    } as Parameters<typeof materializeRecord>[0];
-    const record = {
-      id: "final.video",
-      value: { kind: "inline", value: { resource: artifactResource, size: bytes.byteLength, mediaType: "video/mp4" } },
-    } as unknown as Parameters<typeof materializeRecord>[1];
-    const result = await materializeRecord(runtime, record, output);
-    assert.deepEqual(result, {
-      kind: "artifact",
-      resource: artifactResource,
-      mediaType: "video/mp4",
-      size: bytes.byteLength,
-      path: output,
-    });
-  } finally {
     await rm(root, { recursive: true, force: true });
   }
 });

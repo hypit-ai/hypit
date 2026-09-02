@@ -32,7 +32,7 @@ export function unreachedGenerations(
     for (const binding of Object.values(step.needs)) built.add(binding.result);
   }
   // A satisfied output is deliberately not produced again; that is reuse working, not a leftover.
-  for (const selection of state.plan.selections) built.add(selection.record);
+  for (const binding of state.plan.outputBindings) built.add(binding.record);
 
   // The author's name for a generation sits on the Logical Output, which selects a Candidate, which
   // roots at the Operation. Reporting the Operation's internal name instead would be accurate and

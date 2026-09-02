@@ -6,7 +6,7 @@ import test from "node:test";
 
 import type { CliDistribution } from "../src/distribution.js";
 import { runCli } from "../src/main.js";
-import type { CliRuntimeArchiveControl } from "../src/runtime-port.js";
+import type { CliRuntimeControl } from "../src/runtime-port.js";
 import { findRuntimeProfile, selectRuntimeProfile } from "../src/runtime-selection.js";
 
 test("project Runtime selection is a relative local pointer discovered from nested sources", async () => {
@@ -40,15 +40,15 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
     await writeFile(otherProfile, "{}\n", "utf8");
     const calls: string[] = [];
     const control = {
-      async queue() { return { dispatches: [], capacity: [], operations: [] }; },
+      async activity() { return { builds: [], capacity: [] }; },
       async close() {},
-    } as unknown as CliRuntimeArchiveControl;
+    } as unknown as CliRuntimeControl;
     const distribution = {
       openRuntimeHost: async (path: string) => ({
         profile: path,
         resolvePaths: async () => ({}),
-        openArchive: async () => {
-          calls.push(`queue:${resolve(path)}`);
+        openControl: async () => {
+          calls.push(`activity:${resolve(path)}`);
           return control;
         },
         controller: async () => ({
@@ -59,13 +59,13 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
     process.chdir(root);
 
     await runCli(["runtime", "use", profile, "--json"], { write() {} }, distribution);
-    await runCli(["queue", "--json"], { write() {} }, distribution);
-    await runCli(["queue", "--runtime", otherProfile, "--json"], { write() {} }, distribution);
+    await runCli(["activity", "--json"], { write() {} }, distribution);
+    await runCli(["activity", "--runtime", otherProfile, "--json"], { write() {} }, distribution);
     await runCli(["runtime", "unset", "--json"], { write() {} }, distribution);
 
     assert.deepEqual(calls, [
-      `queue:${await realpath(profile)}`,
-      `queue:${otherProfile}`,
+      `activity:${await realpath(profile)}`,
+      `activity:${otherProfile}`,
     ]);
     assert.equal(await findRuntimeProfile(root), undefined);
   } finally {

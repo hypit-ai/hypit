@@ -3,15 +3,12 @@ import { constants } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, isAbsolute, join, resolve } from "node:path";
 import type { ArtifactAttachment } from "@hypit/workspace";
-import type { BuildResultReuse } from "@hypit/build-result";
-import type { BuildResultRepository } from "@hypit/build-result";
+import type { BuildResultForward } from "@hypit/build-result";
 import type { BuildResultRepositoryLocation } from "@hypit/build-result-kit";
-import type { BuildDefinition, BuildState, CapabilityRef, ResourceId } from "@hypit/protocol";
+import type { BuildDefinition, BuildState, CapabilityRef } from "@hypit/protocol";
 import type {
   BuildCatalogDescriptor,
-  BuildCatalogEntry,
-  BuildDispatchSnapshot,
-  BuildSnapshot,
+  BuildCompletion,
   CapacityReservation,
   CredentialRef,
   OperationSnapshot,
@@ -19,18 +16,43 @@ import type {
 } from "@hypit/runtime";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-kit";
 
-export type RuntimeHostBuildSubmission = {
+export type RuntimeHostActiveBuildSubmission = {
   readonly id: string;
   readonly state: BuildState;
-  readonly status: "queued" | "running" | "waiting" | "complete" | "failed" | "cancelled";
-  readonly dispatch: BuildDispatchSnapshot;
+  readonly view: BuildView;
 };
 
-export type RuntimeHostStatus = {
-  readonly build: BuildSnapshot | undefined;
-  readonly catalog: BuildCatalogEntry | undefined;
-  readonly operations: readonly OperationSnapshot[];
-  readonly dispatch: BuildDispatchSnapshot | undefined;
+export type RuntimeHostFinishedBuildSubmission = {
+  readonly id: string;
+  readonly state: BuildState;
+  readonly completion: BuildCompletion;
+};
+
+export type RuntimeHostBuildSubmission = RuntimeHostActiveBuildSubmission | RuntimeHostFinishedBuildSubmission;
+
+export type BuildActivity = "submitting" | "ready" | "running" | "waiting" | "saving-result";
+
+export type BuildOperationView = {
+  readonly endpoint: string;
+  readonly status: OperationSnapshot["status"];
+  readonly progress?: OperationSnapshot["progress"];
+  readonly failure?: OperationSnapshot["failure"];
+};
+
+/** Stable Host view. Runtime persistence records never cross this boundary. */
+export type BuildView = {
+  readonly id: string;
+  readonly createdAt: number;
+  readonly activity: BuildActivity;
+  readonly outcome?: BuildCompletion["outcome"];
+  readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
+  readonly cancellationRequested: boolean;
+  readonly source?: { readonly path: string };
+  readonly run?: { readonly path: string };
+  readonly targets: readonly string[];
+  readonly acceptedRecords: number;
+  readonly outstandingCommands: number;
+  readonly operations: readonly BuildOperationView[];
 };
 
 export type RuntimeHostCredentialStatus = {
@@ -43,25 +65,24 @@ export type RuntimeHostCredentialStatus = {
   readonly writable: boolean;
 };
 
-export type RuntimeHostArchive = {
-  status(build: string): Promise<RuntimeHostStatus>;
-  activity(build: string): Promise<{
-    readonly operations: readonly OperationSnapshot[];
-    readonly dispatch: BuildDispatchSnapshot | undefined;
-  }>;
-  queue(): Promise<{
-    readonly dispatches: readonly BuildDispatchSnapshot[];
+export type RuntimeHostControl = {
+  inspect(build: string): Promise<BuildView | undefined>;
+  activity(): Promise<{
+    readonly builds: readonly BuildView[];
     readonly capacity: readonly CapacityReservation[];
-    readonly operations: readonly OperationSnapshot[];
   }>;
-  builds(): Promise<readonly BuildCatalogEntry[]>;
-  cancel(build: string, reason?: string): Promise<BuildDispatchSnapshot | undefined>;
+  cancel(build: string, reason?: string): Promise<BuildView | undefined>;
   close(): void | Promise<void>;
 };
 
-export type RuntimeHostResourceAccess = {
-  readResource(resource: ResourceId): Promise<Uint8Array | undefined>;
-  openResource(resource: ResourceId): Promise<AsyncIterable<Uint8Array> | undefined>;
+/** One-shot Result write or incomplete-submission cleanup with no execution Providers. */
+export type RuntimeHostResultControl = {
+  finishResult(build: string): Promise<{
+    readonly id: string;
+    readonly outcome: BuildCompletion["outcome"];
+    readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
+  } | undefined>;
+  discardSubmission(build: string): Promise<boolean>;
   close(): void | Promise<void>;
 };
 
@@ -75,18 +96,18 @@ export type RuntimeHostCredentialControl = {
   close(): void | Promise<void>;
 };
 
-export type RuntimeHostExecution = RuntimeHostArchive & RuntimeHostResourceAccess & RuntimeHostCredentialControl & {
+export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialControl & RuntimeHostResultControl & {
   build(request: {
     readonly id: string;
     readonly definition: BuildDefinition;
     readonly componentPackages?: readonly string[];
-    readonly catalog?: BuildCatalogDescriptor;
+    readonly catalog: BuildCatalogDescriptor;
     readonly attachments?: readonly ArtifactAttachment[];
-    /** Project-owned result destination, resolved before this Build enters the durable queue. */
-    readonly result?: {
+    /** Project-owned Result destination, fixed before this Build becomes active. */
+    readonly result: {
       readonly repository: BuildResultRepositoryLocation;
-      readonly name?: string;
-      readonly reuses?: readonly BuildResultReuse[];
+      readonly title?: string;
+      readonly forwards?: readonly BuildResultForward[];
     };
   }, options?: {
     readonly follow?: boolean;
@@ -122,6 +143,7 @@ export type ManagedProgramReport = {
 
 export type RuntimeWorkerState = {
   readonly state: "running" | "stopped";
+  readonly configuration?: "current" | "changed";
   readonly profile: string;
   readonly pid?: number;
   readonly startedAt?: number;
@@ -163,15 +185,10 @@ export type NodeRuntimeHost = {
     readonly packageRoot?: string;
   }): Promise<RuntimeController>;
   createRuntime(): Promise<RuntimeHostExecution>;
-  openArchive(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostArchive>;
-  openResources(): Promise<RuntimeHostResourceAccess>;
+  openControl(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostControl>;
+  /** Open only Result-writing dependencies; never construct execution Providers. */
+  openResultControl(): Promise<RuntimeHostResultControl>;
   openCredentials(endpoint: string): Promise<RuntimeHostCredentialControl>;
-  /** Open the project Repository selected by this Profile, or the supplied zero-config file default. */
-  openResults?(defaultRoot: string): Promise<{
-    readonly location: BuildResultRepositoryLocation;
-    readonly repository: BuildResultRepository;
-    close(): void | Promise<void>;
-  }>;
   /** Explicitly prepare upstream packages selected by this Runtime Profile. */
   prepare(options?: {
     readonly onProgress?: (event: import("./packages.js").HostPackageProgress) => void;
@@ -188,7 +205,7 @@ export type NodeRuntimeHost = {
   doctor(options?: {
     readonly capabilities?: readonly CapabilityRef[];
   }): Promise<RuntimeHostDoctorResult>;
-  runWorker(readyFile: string): Promise<void>;
+  runWorker(readyFile: string, owner: string): Promise<void>;
 };
 
 /**

@@ -13,7 +13,6 @@ import { semanticTrackTypes } from "@hypit/semantic-track";
 import type { ProgramSpace } from "@hypit/program-space";
 import type { StudioResolvedTrack, StudioTemporalBinding } from "@hypit/studio-adapter";
 
-import type { StudioArchive } from "./archive.js";
 import type { CompiledSource, ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import { executeDeterministic, MemoryResourceStore } from "./execute.js";
@@ -75,7 +74,7 @@ function selectedValue(
   state: ExecutionState,
   output: string,
 ): StoredValue | undefined {
-  const selection = state.plan.selections.find((item) => item.output === output);
+  const selection = state.plan.outputBindings.find((item) => item.output === output);
   if (selection === undefined) return undefined;
   const executed = state.records.find((item) => item.id === selection.record)?.value;
   if (executed !== undefined) return executed;
@@ -111,7 +110,6 @@ export async function preview(input: {
   readonly outputRefs: readonly string[];
   readonly compositionRef: string;
   readonly projections: readonly StudioViewRequirement[];
-  readonly archive?: StudioArchive;
   /** Preview-only endpoint set. Production Studio passes none; preview-mock may pass only local mock media. */
   readonly endpoints?: EndpointRegistry;
 }): Promise<Preview> {

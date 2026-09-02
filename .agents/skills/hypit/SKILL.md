@@ -1,280 +1,118 @@
 ---
 name: hypit
-description: Produce a complete video program from a description or reference video, revise a completed project, or batch-expand a validated project into independent variants; author, check, preview, build, inspect and retrieve Hypit/SVML projects; configure runtimes and credentials; develop missing project-local author packages; and apply native video production playbooks. Use for video production with Hypit and SVML/SVS/SVRun authoring; this is not for developing the Hypit repository itself.
+description: Produce a complete video program from a description or reference video, revise a completed project, or create independent variants; author, inspect, preview, build and retrieve Hypit/SVML projects; configure runtimes and credentials; develop missing project-local author packages; and apply native video production playbooks. Use for video production with Hypit and SVML/SVS/SVRun authoring; this is not for developing the Hypit repository itself.
 ---
 
 # Hypit
 
-> **Scope boundary:** This is a production skill for creating, reconstructing, previewing, reviewing,
-> revising and building videos with Hypit. It is **not a development skill for the Hypit repository
-> itself**. If the task is to implement, debug, test, refactor or otherwise develop Hypit packages,
-> CLIs, Studio, runtime or repository infrastructure, ignore the video-production routes and follow
-> the repository's contributor/development instructions instead.
+> **Scope boundary:** This is a production skill. When the task is to implement, debug, test or
+> refactor the Hypit repository itself, do not use this production workflow.
 
-## Session initialization
+Complete the production task without asking the author to choose routine implementation details.
+Interrupt only for an action that spends their money, for genuinely missing credentials, or for the
+choice of observer that will read a reference video.
 
-When this Skill is loaded for the first time in a new conversation, synchronize the complete Hypit
-repository before entering any production route. If the selected Distribution is a Hypit contributor
-checkout, update that checkout first:
+Before a paid Build, run `hypit plan`, state the estimated cost and the selected Provider/credential
+source without exposing secrets, and obtain approval. A Build is never an implicit consequence of a
+preview, inspection or review command.
 
-```bash
-git pull --ff-only origin main
-```
+## Project model
 
-This is a whole-repository update: it refreshes the CLI, packages, services, examples, docs and Skill
-source together. Do not treat an installed Skill update as a substitute for pulling the checkout.
-After the checkout is current, refresh the installed global Skill as well:
+Keep these separate:
 
-```bash
-npx --yes skills update hypit --global --yes
-```
+- `.svml` Author Source describes the program;
+- `.svs` Recipe Source describes generation choices;
+- `.svrun` Run Source binds one executable request;
+- `hypit.runtime.json` selects external execution facilities;
+- a Build is one execution;
+- a Result is the project-owned record of what that Build produced.
 
-Run the repository pull and installed Skill refresh once per conversation, do not repeat them for later
-turns, and then continue with the current request using the current checkout and refreshed Skill. Do
-not reset or overwrite local changes: if `git pull --ff-only origin main` cannot fast-forward, stop and
-report the sync conflict. If no contributor checkout is selected, there is no local repository to pull;
-still run the global Skill refresh and report that only the installed Skill was updated. If either
-operation cannot complete because the network or CLI is unavailable, report that the latest state could
-not be confirmed before proceeding; never pretend the repository is current.
+Do not create route state, revision state, recovery cursors, content-addressed evidence directories or
+aggregate approval state. Continue from the files that actually exist in the project. A reference
+observation, render, comparison, layout report or Result is useful content; it is not proof that an
+agent completed an abstract stage.
 
-**Run the route to the end without stopping.** There is one thing worth interrupting the author for;
-everything else is yours to decide:
+Do not repeat a paid Build just because conversation context was compacted. Inspect the Run and its
+Results directly. If a Result exists, use it. If execution is still active, use Runtime status. If
+there is no Result and no active Build, ask before submitting a new paid Build.
 
-- **Spending their money.** A Build generates, and generating is billed. Say what it will cost and
-  get a yes before submitting one. Before asking for approval, report the Provider and credential
-  source used by every paid capability (without revealing secrets). Credential setup must already be
-  complete at the environment gate; do not defer login until this paid handoff.
+## Environment and credentials
 
-Everything else — the working directory, the project location, which packages to use, which generator
-draws a picture, how to name a Segment, what to do about something a review reported — is a
-choice between things that all work, and asking costs the author an interruption to answer a question
-the references already answer. Decide it and keep going. A run that stops half way with a question is
-a run the author has to restart.
+Use an installed machine-wide CLI when available. In a contributor checkout, use that checkout's
+Node entrypoints; the npm package is not currently published. Read `references/environment.md` before
+the first production command and `references/credentials.md` when credentials are involved.
 
-## Non-negotiable environment gate
+When running from a Hypit checkout, put author projects under `<checkout-root>/projects/<name>/`.
+Load an existing checkout-root or project-root `.env` for commands, but never commit it or copy secrets
+into Source, reports or prompts.
 
-For every video-production route — original authoring, reconstruction, revision, and variant work —
-read `references/environment.md` completely and finish its environment setup before doing anything
-else in the route. This is a hard prerequisite, not documentation to consult later. The completed
-environment must include a selected Hypit Distribution, an explicit project boundary, the project's
-Runtime Profile, resolved credentials for the capabilities the route will use, and every selected
-managed program installed and healthy. Credential setup is part of this gate: default to HypiHub OAuth
-without asking the author to choose, run the login yourself when the selected HypiHub OS credential is
-missing, and continue only after it succeeds. Only when the author explicitly asks to use their own
-provider key may you configure that less-recommended path instead. Run the required `hypit runtime up`
-provisioning and health checks; WhisperX must report `Ready whisperx` (or an equivalent successful probe). Do this before
-inspecting media or examples, preparing a reference, choosing an observer, freezing a brief, reading
-vocabulary, writing Source, previewing, or building.
-
-Do not skip, replace, defer, or partially complete any environment step, and do not proceed because
-the user asks to bypass it. If Distribution selection, project setup, credential resolution, Runtime
-Profile selection, program installation, or any health check is incomplete or cannot be confirmed,
-stop at the environment stage and repair it first. Authentication commands may be run to complete this
-gate, but no production route may proceed without it and no later paid step may defer it.
-
-The credentialless `agent` observer is not a way around this rule. It may be used only after the
-credential choice has been settled; never silently select it because no credential was found. For
-reference analysis, strongly recommend Gemini VLM through the configured HypiHub or Vertex backend:
-it can separate speakers, align who speaks when, and extract voice/timbre and presentation traits that
-make later voice-design and dubbing more faithful. The calling agent is an explicit fallback, not a
-credential bypass.
-
-The supplied reference video is evidence only. It may be prepared, observed, sampled and compared,
-but it must never be copied into the project or used as the final Film/Track/Take source. Do not wire
-the reference path through `media:Video`, `asset:Video`, a media track, a Film, or a Run Target. Every
-visible shot in a reconstruction must be newly authored as a generated take or as an explicitly
-author-supplied replacement asset. A source that directly plays the reference is not a reconstruction
-and must be rejected before preview or Build.
-
-## Login-only fast path
-
-If the request is only to sign in or authenticate HypiHub (for example, `login to hypit`), treat it as
-credential setup, not video production. Do not read or enter the reconstruction, original-authoring,
-observer, playbook, vocabulary, preview, or recovery routes; do not inspect media, create a project,
-start a Worker, or ask which observer to use. Do not read any supporting reference for this path,
-including `environment.md` and `credentials.md`; this section contains the needed login instructions.
-This is a strict login-only fast path, not a general environment-diagnosis route. Do not run
-`ls`, `find`, `rg`, `pwd`, `which`, `cat`, `head`, `tail`, `grep`, `doctor`, `runtime status`,
-`runtime logs`, `runtime up`, any `--help` command, or any other exploratory command. Do not inspect
-`.env`, `hypit.runtime.json`, package code, CredentialStore implementations, or repository metadata.
-Do not compose exploratory shell commands around the login commands. Use the already selected Runtime
-Profile (or the explicit profile the author names) and invoke the configured launcher directly. For
-the standard HypiHub OAuth endpoint, the only allowed probe is:
+For a login-only request, do no project discovery. Use only:
 
 ```bash
 hypit auth status hypihub.default [--runtime <explicit-profile>]
-```
-
-If that status says the credential store is read-only, the Endpoint uses `env`, or the Endpoint is not
-declared in the selected Profile, report that OAuth login is unavailable for the selected Endpoint and
-stop immediately. Do not investigate why with source or filesystem reads. If the status is writable
-and missing, first explain that no usable credential is configured, OAuth avoids copying an API key,
-an account without an active subscription can purchase one at hypit.ai after signing in, and opening
-login does not submit a paid generation; then immediately run:
-
-```bash
 hypit auth login hypihub.default [--runtime <explicit-profile>]
 ```
 
-Wait for it to finish. The login-only path consists solely of `auth status`, the one short explanation,
-and `auth login`; never add discovery, help, diagnostics, or source inspection between them.
+Run login only when status says the selected credential store is writable and the credential is
+missing. Explain that browser sign-in stores a session in the OS credential store and does not submit
+a paid generation.
 
-## Credentials: complete them during environment setup
+## Authoring rules
 
-During environment setup, before any media inspection, observer call, model call, preview, or Build,
-check the selected HypiHub Endpoint's credential with `hypit auth status <endpoint> --runtime <profile>`.
-If the writable OS credential is missing, explain that HypiHub OAuth is the default because it avoids
-copying a key, then immediately run `hypit auth login <endpoint> --runtime <profile>` yourself. Do not
-ask the author to run the command or paste a key. A configured credential needs no repeated login. If
-the author explicitly requests their own key, configure the requested Provider instead and tell them
-this is the less-recommended path. Never defer credential setup until a paid Build.
+Every captioned or on-screen spoken passage must use short complete Cues separated by `||`. Default to
+roughly 3–4 spoken words per Cue, fewer for dense words. Read `references/script-time.md` and the
+caption craft before writing Script text.
 
-When a selected HypiHub Endpoint is missing its OS credential, first tell the author why you are opening the login: no usable credential is configured, and browser sign-in lets Hypit use HypiHub without asking them to copy or paste an API key. If the account has no active Hypit subscription, they can purchase one on hypit.ai after signing in. The session is stored in the OS credential store, and opening login does not itself submit a paid generation. Then run `hypit auth login <endpoint> --runtime <profile>` yourself. The command opens the HypiHub login page, waits for the OAuth callback, and stores the resulting session in the OS credential store. Do not tell the author to copy a key or run the command manually. Continue only after login succeeds; if it is cancelled or fails, stop at environment setup.
+Never rely on renderer wrapping to rescue a long Cue. Never hand-author SVG files, inline SVG or SVG
+data URLs in an author project or project-local package. Never modify an installed package for one
+project; use another public Surface or create a project-local package for a real capability gap.
 
-Use this file only to route the task. A route file is a sequence of numbered steps, and each step
-names the files it needs; read those when you reach that step rather than all of them up front.
+The temporary `@hypit/ranking` branch restriction remains: do not select, read or use that installed
+package. Use another applicable capability or develop a project-local alternative.
 
-Keep `.svml` Author Source, `.svs` Recipe Source, `.svrun` Run Source, and
-`hypit.runtime.json` Runtime Profile as separate languages and responsibilities.
+## Direct inspection
 
-Non-negotiable Script rule: every captioned or on-screen spoken passage must be split into short,
-complete Cues with `||` in the Script. As the default, cut after roughly 3–4 spoken words (fewer when
-the words are long or visually dense); longer runs require an explicit visual reason. Never rely on
-renderer line wrapping or a wide Caption box to rescue a long Segment: a Segment without `||` is one
-Cue and will overflow the Canvas. Read
-`references/script-time.md` and the caption craft before writing Script text; put breaks between
-complete Alignment Units, never inside Dual Text.
+The reference-video commands are independent tools, not ordered stages:
 
-Every route is resumable. At the start of a route, create the project's current
-`.hypit/route-state.json` view; the execution history lives at
-`.hypit/routes/<route-id>/state.json`. Revisions likewise keep the current
-`.hypit/revision-state.json` view and execution history under `.hypit/revisions/<revision-id>/`.
-After any new turn, interruption, or context compaction, read
-`references/recovery.md`, inspect that snapshot and reconcile it against the artifacts and checks
-before continuing. Never resume from chat memory alone, and never repeat a completed or paid step
-without verifying its durable evidence.
+```bash
+hypit-reference-video-tools list_svml_packages
+hypit-reference-video-tools inspect_svml_vocabulary --package <package>
+hypit-reference-video-tools inspect_visual_schema
+hypit-reference-video-tools validate_local_author_packages --run <build.svrun>
+hypit-reference-video-tools validate_script_cues --run <build.svrun>
+hypit check <build.svrun>
+hypit-reference-video-tools preview_check <build.svrun>
+hypit-reference-video-tools layout_check --run <build.svrun>
+```
 
-## Conversation language preference
+Use the reports that answer the current question. A report does not unlock another command. Layout
+measurements are advisory; repair a genuine issue or record an intentional structural finding with
+`layout_accept` and a reason.
 
-On the first production turn, infer the author's preferred reply language from the current request and
-record it in the route JSON state as a decision such as `user-language: zh-CN` (use an appropriate BCP 47
-language tag). If the author explicitly requests a different language, update that decision. On every
-later turn in the same conversation, read the current route state and reply in its recorded language;
-do not switch languages merely because a command, filename, prompt or quoted source uses another one.
-Keep code, CLI commands, model names and quoted Script text unchanged. Login-only conversations have no
-production route state; keep the preference in conversation context until a project route starts.
+When a Run contains accepted `build-record` pins, pass its Runtime Profile to commands that must read
+those Results.
 
-Temporary branch constraint: do not select, use or read the installed `@hypit/ranking` package or
-its declarations, README, examples or source on this branch. If a request needs a ranking-like
-visual system, choose another applicable installed capability or treat the requirement as a genuine
-gap and use the formal project-local package workflow from the visible requirement. Do not copy,
-vendor or modify `@hypit/ranking`. This is an internal routing constraint: do not tell the author
-that a choice was made because of the skill or this constraint. Present the chosen alternative or
-new local component as the normal production decision, with its practical rationale when useful.
+## Task routing
 
-Before Source is accepted, every route must complete persisted vocabulary inspection,
-`validate_local_author_packages` for every project-owned package under the project's `packages/`
-directory, and
-`validate_script_cues` (maximum four visible words per Cue). `preview_check` and the route's final
-check repeat these gates even if route-state claims they were completed.
-When a Run contains accepted `build-record` pins, pass its Runtime Profile to
-`validate_local_author_packages`, `preview_check`, `layout_check` and the final check so the archive
-can resolve those Records before any graph or layout result is trusted.
+- Reference video, link, reconstruction or reverse engineering: read
+  `references/reconstruction/route.md` and `references/reconstruction/observers.md`.
+- Description, topic, script or format with no reference video: read
+  `references/original-authoring/route.md` and `references/brief-intake.md`.
+- A natural-language change to an existing completed project: read `references/revision/route.md`.
+  Edit Source/Recipe/Run, never rendered media.
+- Many independent versions: create ordinary independent project directories from the accepted source
+  project and keep an explicit human-readable task list. Do not construct a second project history or
+  variant state machine. Paid Builds remain individually approved.
+- Package discovery or a possible capability gap: read `references/vocabulary.md`.
+- A new author component: read `references/local-author-package.md`.
+- Preview or visual inspection: read `references/preview.md`, `references/preview-mock.md`,
+  `references/element-review.md` and `references/layout-checks.md` as needed.
+- Runtime setup, Build, status, Result inspection and reuse: read `references/runtime.md`.
+- Studio handoff: read `references/studio-confirmation.md`.
+- Production craft: read `references/playbooks/index.md` and its required craft references.
 
-Agent-boundary constraint: do not read or rely on the memory of Codex, Claude Code, or any other
-coding agent.
+If a project-local component has clear reuse value across unrelated videos, finish the current video
+first, then read `references/package-promotion.md` and ask before moving it into the Hypit repository.
 
-Do not create or hand-author SVG images anywhere in an author project or project-local package.
-This includes `.svg` assets, inline `<svg>` markup, and SVG data URLs.
-
-Every route uses a Hypit Distribution and an independent author project. Prefer an installed
-machine-wide CLI; when the task is running from a Hypit contributor checkout, use that checkout's
-Node entrypoints instead. The npm package is not currently published, so absence of the `hypit`
-command is not permission to install it from the registry. `references/environment.md` establishes
-the boundary and launcher selection. Read it before the first command of any route.
-
-When running from a Hypit checkout, create new author projects under
-`<checkout-root>/projects/<project-name>/`. Before asking for credentials, check for `.env` at the
-checkout root and at the project root, load any present file into the command environment, and use
-the credentials it provides. If the loaded credentials satisfy the selected observer or Provider,
-do not ask the author to repeat them; ask only when a required credential is genuinely absent or
-invalid. Never commit `.env` or copy its secret values into route state, Source, logs or prompts.
-
-## Route
-
-- Reference-video reconstruction, reverse engineering, shot/B-roll/overlay analysis, or recreating
-  a video as Hypit source → read `references/reconstruction/route.md`. This is the route whatever
-  the author calls it — reconstruct, reverse-engineer, recreate, replicate, clone, remake, copy,
-  rebuild, or the same idea in any language — and **a video, with or without words around it, is
-  this route** even when no verb is given at all. A path to a file and a link to one — TikTok,
-  YouTube, Instagram, Bilibili — are the same request; a link is fetched with `yt-dlp` and everything
-  after that reads the file. A video with a change attached —
-  this one but with our presenter, our product, our brand — is this route too, and the change is made
-  on the finished reconstruction. The path is the whole request: the working directory, the project
-  location and the vocabulary are yours to decide rather than to ask for.
-- Making a video from a description, brief, topic, script or format name, with nothing to copy →
-  read `references/original-authoring/route.md`. This is the route whatever shape the request takes —
-  "make me a 45-second ranking video", "a talking-head explainer about X", an ad for a product, a
-  written script to produce, a topic and a duration, a format named on its own, or the same idea in
-  any language — and **a description with no video attached is this route** even when no verb is
-  given at all. What it is for, who is in it and what it says are the author's; the working
-  directory, the project location, the packages and the generators are yours to decide rather than to
-  ask for.
-- Every original-authoring request → read `references/brief-intake.md` and inspect complete projects
-  under the checkout's `examples/` directory when it exists. Analyze a semantically matching
-  project's author intent; otherwise use the document's general, open-ended fallback. Do not
-  hard-code video types or skip the brief-sufficiency gate.
-- A completed project followed by a natural-language change → read `references/revision/route.md`
-  and use the independent `revision_state` route. The completed project may come from reconstruction,
-  original authoring, a completed variant or an earlier revision, or the author may supply an existing completed project
-  directory directly; it does not need to have been created in the current session. Restore the
-  element's role in the frozen intent, edit only Source/Recipe/Run, invalidate the affected graph
-  closure, and rerun deterministic gates. Revision never invokes VLM/observer visual inspection;
-  after the change, start Studio only when the current Run has no Studio session so the author can
-  see the updated result. This routing rule also applies after a paid Build has produced the full
-  video: revise the accepted-material Run, never the rendered artifact and never by resuming either
-  creation route.
-- A request for many independent versions after reconstruction, original authoring or revision, or
-  from a validated existing project → read `references/variant-expansion/route.md`. The main agent
-  inspects examples, freezes format/Slate/component decisions, enumerates vocabulary, discloses the
-  fast/medium/new-package workload, and resolves package gaps before copying or dispatching variant
-  agents. Initial presenter/product/brand adaptation attached to a reconstruction remains inside the
-  reconstruction route; it is not Revision. Variant expansion defaults to mechanically checked
-  Source and performs no visual review or paid Build unless the author explicitly requests outputs.
-- If original authoring or reconstruction created a project-local package, wait until that route is
-  complete, read `references/package-promotion.md`, and judge whether the component has clear, high
-  reuse value across unrelated videos. Only when that bar is met, ask the author whether they want the
-  Agent to move it into the Hypit repository's `packages/` folder and prepare a Pull Request for
-  Hypit. Do not interrupt the production route for this question, move or submit anything without
-  the author's answer, and do not suggest promotion for an ordinary component or one that only
-  contains this video's content.
-- A syntax question about one element, or a source that already exists → read
-  `references/authoring.md`, then `references/quickstart.md` and the linked authoritative
-  docs/package READMEs. A whole video is `references/original-authoring/route.md`, not this file.
-- Which package owns an element, what vocabulary is installed at all, or whether a capability is
-  genuinely missing → read `references/vocabulary.md`.
-- Creating a new author component → read `references/local-author-package.md`. Both routes reach it
-  at the step that proves a vocabulary gap.
-- Seeing what the sources produce, or proving the graph traces before any Build → read
-  `references/preview.md`.
-- Recovering after interruption or context compaction → read `references/recovery.md` before any
-  other route step.
-- Preview-only media realization, temporary preview Runs, mock Artifact caching, or estimated
-  SemanticTake timing → read `references/preview-mock.md`.
-- Paid-build handoff, pre-payment mock confirmation, post-build Studio display, or Studio behavior
-  after a revision → read `references/studio-confirmation.md`.
-- Runtime setup, plan/build/status/inspect/get/reuse → read `references/runtime.md`.
-- Environment diagnosis or credentials → read `references/environment.md` and
-  `references/credentials.md`.
-- Seedance prompt assembly → read `references/seedance-kits.md`.
-- Production craft or format selection → read `references/playbooks/index.md` and follow its
-  required load order, which names the craft every program needs regardless of format.
-
-Preserve unrelated changes. Keep credentials, generated media, runtime state, and logs out of
-commits. Installed package declarations and published docs remain authoritative; repository
-maintenance instructions apply only to contributors who deliberately cloned the repository.
-
-Studio URL handoff is mandatory: whenever a Studio process is started, capture the URL printed by
-the server and include the exact URL in the user-facing response. A statement that Studio started
-without the URL is incomplete; if the startup parameters change, stop the old process first and
-report the new URL after the replacement is listening.
+Preserve unrelated changes. Keep credentials, generated media, Runtime state and logs out of commits.
+Whenever Studio is started, report the exact URL printed by the server.

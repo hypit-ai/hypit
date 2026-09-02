@@ -9,18 +9,18 @@ import type {
   OperationNode,
   ProducerStep,
   RecordId,
+  RunGraph,
+  Satisfaction,
   TypeRef,
   TypedRecord,
 } from "@hypit/protocol";
 
-import { canonicalStringify } from "@hypit/protocol";
 import { invariant } from "./error.js";
 import {
   operationResultRecord,
   resolveCandidate,
   resolveLogicalOutput,
   resolveOperation,
-  satisfiedCandidate,
   verifyBuildRequest,
 } from "./graph.js";
 import { resolveProducer } from "./link.js";
@@ -98,27 +98,60 @@ export function plannedNeeds(state: BuildState): readonly PlannedNeed[] {
 function planContent(
   steps: readonly ProducerStep[],
   goals: BuildPlan["goals"],
-  selections: BuildPlan["selections"],
+  outputBindings: BuildPlan["outputBindings"],
 ): BuildPlan {
   return {
     format: "hypit.plan@1",
     steps,
     goals,
-    selections,
+    outputBindings,
   };
 }
 
-export function compileBuild(
+/** Candidate identity is useful only while the two source graphs are being planned. */
+export type BuildCandidateSelection = {
+  readonly output: string;
+  readonly candidate: string;
+  readonly record: string;
+};
+
+export type PlannedExecution = {
+  readonly plan: BuildPlan;
+  readonly selections: readonly BuildCandidateSelection[];
+  readonly initialRecords: readonly TypedRecord[];
+};
+
+function compilePlanning(
   program: LinkedProgram,
   graph: CompiledGraph,
   request: BuildRequest,
-): BuildPlan {
+  satisfactions: readonly Satisfaction[],
+): PlannedExecution {
   verifyBuildRequest(program, graph, request);
+
+  const selectedCandidates = new Map<string, string>();
+  for (const satisfaction of satisfactions) {
+    const output = resolveLogicalOutput(graph, satisfaction.output);
+    const candidate = resolveCandidate(graph, satisfaction.candidate);
+    invariant(
+      !selectedCandidates.has(output.id),
+      "DUPLICATE_RUN_SATISFACTION",
+      `${output.id} is satisfied more than once`,
+      output.id,
+    );
+    invariant(
+      sameType(candidate.type, output.type),
+      "CANDIDATE_RESULT_TYPE_MISMATCH",
+      `${candidate.id} supplies ${typeKey(candidate.type)}, not ${typeKey(output.type)}`,
+      candidate.id,
+    );
+    selectedCandidates.set(output.id, candidate.id);
+  }
 
   const authored = new Map(program.records.map((record) => [record.id, record]));
   const demandedOperations = new Map<string, OperationNode>();
   const resolvedOutputs = new Map<string, ResolvedSource>();
-  const selections = new Map<string, BuildPlan["selections"][number]>();
+  const selections = new Map<string, BuildCandidateSelection>();
 
   const operationSource = (id: string): ResolvedSource => {
     const operation = resolveOperation(graph, id);
@@ -149,7 +182,7 @@ export function compileBuild(
     }
     if (resolvedOutputs.has(ref.id)) continue;
     const output = resolveLogicalOutput(graph, ref.id);
-    const candidate = satisfiedCandidate(graph, ref.id);
+    const candidate = resolveCandidate(graph, selectedCandidates.get(ref.id) ?? output.primary);
     let resolved: ResolvedSource;
     if (candidate.root.kind === "value") {
       const record: TypedRecord = {
@@ -222,14 +255,49 @@ export function compileBuild(
     .map(({ source }) => ({ record: source.record, type: source.type }))
     .sort((a, b) => a.record.localeCompare(b.record));
   const sortedSelections = [...selections.values()].sort((a, b) => a.output.localeCompare(b.output));
-  const plan = planContent(steps, goals, sortedSelections);
-  validatePlanStructure(program, graph, plan);
-  return plan;
+  const outputBindings = sortedSelections.map((selection) => ({
+    output: selection.output,
+    record: selection.record,
+    type: resolveLogicalOutput(graph, selection.output).type,
+  }));
+  const initialRecords = selectedProvidedRecords(program, graph, sortedSelections);
+  const plan = planContent(steps, goals, outputBindings);
+  verifyBuildPlan(program, initialRecords, plan);
+  return { plan, selections: sortedSelections, initialRecords };
 }
 
-function validatePlanStructure(
+/** Plan one Author Graph with one complete Run Graph without rewriting either graph. */
+export function planBuild(
+  program: LinkedProgram,
+  authorGraph: CompiledGraph,
+  runGraph: RunGraph,
+): PlannedExecution {
+  invariant(runGraph.format === "hypit.run-graph@1", "UNSUPPORTED_RUN_GRAPH", "unsupported Run Graph");
+  const graph: CompiledGraph = {
+    format: "hypit.graph@1",
+    outputs: authorGraph.outputs,
+    candidates: [...authorGraph.candidates, ...runGraph.candidates],
+    operations: [...authorGraph.operations, ...runGraph.operations],
+  };
+  const request: BuildRequest = {
+    format: "hypit.build-request@1",
+    targets: runGraph.targets,
+  };
+  return compilePlanning(program, graph, request, runGraph.satisfactions);
+}
+
+/** Author-only planning convenience. Run compilation should call `planBuild`. */
+export function compileBuild(
   program: LinkedProgram,
   graph: CompiledGraph,
+  request: BuildRequest,
+): BuildPlan {
+  return compilePlanning(program, graph, request, []).plan;
+}
+
+export function verifyBuildPlan(
+  program: LinkedProgram,
+  initialRecords: readonly TypedRecord[],
   plan: BuildPlan,
 ): void {
   invariant(plan.format === "hypit.plan@1", "UNSUPPORTED_PLAN", "unsupported build plan format");
@@ -237,7 +305,7 @@ function validatePlanStructure(
 
   const records = new Map<RecordId, ProducedRecord>();
   for (const record of program.records) records.set(record.id, { type: record.type });
-  for (const record of selectedProvidedRecords(program, graph, plan)) {
+  for (const record of initialRecords) {
     invariant(!records.has(record.id), "DUPLICATE_RECORD", `record ${record.id} has multiple sources`, record.id);
     records.set(record.id, { type: record.type });
   }
@@ -288,11 +356,13 @@ function validatePlanStructure(
     }
   }
 
-  for (const selection of plan.selections) {
-    const output = resolveLogicalOutput(graph, selection.output);
-    const record = records.get(selection.record);
-    invariant(record !== undefined, "UNKNOWN_SELECTION_RECORD", `${selection.output} selects ${selection.record}`);
-    invariant(sameType(record.type, output.type), "SELECTION_TYPE_MISMATCH", selection.output);
+  const outputIds = new Set<string>();
+  for (const binding of plan.outputBindings) {
+    invariant(!outputIds.has(binding.output), "DUPLICATE_OUTPUT_BINDING", `${binding.output} is bound more than once`);
+    outputIds.add(binding.output);
+    const record = records.get(binding.record);
+    invariant(record !== undefined, "UNKNOWN_OUTPUT_RECORD", `${binding.output} binds ${binding.record}`);
+    invariant(sameType(record.type, binding.type), "OUTPUT_BINDING_TYPE_MISMATCH", binding.output);
   }
   for (const goal of plan.goals) {
     const supplied = records.get(goal.record);
@@ -307,11 +377,12 @@ function validatePlanStructure(
 export function selectedProvidedRecords(
   program: LinkedProgram,
   graph: CompiledGraph,
-  plan: BuildPlan,
+  selections: readonly BuildCandidateSelection[],
 ): readonly TypedRecord[] {
   const authored = new Set(program.records.map((record) => record.id));
   const records = new Map<string, TypedRecord>();
-  for (const selection of plan.selections) {
+  const candidates = new Map<string, string>();
+  for (const selection of selections) {
     const candidate = resolveCandidate(graph, selection.candidate);
     if (candidate.root.kind !== "value") continue;
     const record: TypedRecord = {
@@ -321,13 +392,14 @@ export function selectedProvidedRecords(
     };
     invariant(selection.record === record.id, "SELECTION_RECORD_MISMATCH", `${selection.output} does not select ${record.id}`);
     invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`, record.id);
-    const previous = records.get(record.id);
+    const previousCandidate = candidates.get(record.id);
     invariant(
-      previous === undefined || canonicalStringify(previous) === canonicalStringify(record),
+      previousCandidate === undefined || previousCandidate === candidate.id,
       "PROVIDED_RECORD_CONFLICT",
-      `${record.id} has conflicting Provided Values`,
+      `${record.id} is supplied by both ${previousCandidate ?? "an authored Record"} and ${candidate.id}`,
       record.id,
     );
+    candidates.set(record.id, candidate.id);
     records.set(record.id, record);
   }
   return [...records.values()].sort((left, right) => left.id.localeCompare(right.id));

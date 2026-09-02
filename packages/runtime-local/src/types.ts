@@ -4,33 +4,40 @@ import type { LoadedComponentPackage } from "@hypit/package-loader-node";
 import type { BuildResultRepositoryLocation, BuildResultRepositoryOpened } from "@hypit/build-result-kit";
 import type {
   ResourceStore,
+  BuildCompletion,
   BuildCatalog,
   BuildStore,
-  BuildDispatchStore,
-  BuildDispatchSnapshot,
+  BuildExecutionStore,
+  BuildExecutionSnapshot,
   CredentialStore,
   OperationStore,
 } from "@hypit/runtime";
 import type {
-  RuntimeHostArchive,
-  RuntimeHostResourceAccess,
+  RuntimeHostControl,
   RuntimeHostBuildSubmission,
   RuntimeHostCredentialControl,
   RuntimeHostExecution,
+  RuntimeHostResultControl,
 } from "@hypit/runtime-host-node";
 
 export type CreateLocalRuntimeOptions = {
   readonly buildStore: BuildStore;
   /** Host presentation metadata only; never part of Core state. */
-  readonly buildCatalog?: BuildCatalog;
+  readonly buildCatalog: BuildCatalog;
   readonly operationStore: OperationStore;
-  readonly dispatchStore: import("@hypit/runtime").BuildDispatchStore;
+  /** Durable receipt boundary: one immediate Command is never invoked twice for one Build. */
+  readonly commandExecutionStore: import("@hypit/runtime").CommandExecutionStore;
+  readonly assertEnvironment?: () => Awaitable<void>;
+  readonly executionStore: import("@hypit/runtime").BuildExecutionStore;
+  readonly removeActiveBuild: (build: string) => Awaitable<BuildCompletion>;
+  /** Atomic submission boundary: external preparation is never a claimable partial Build. */
+  readonly submissionStore: import("@hypit/runtime").PendingBuildStore;
   readonly resourceStore: ResourceStore;
   /** Optional Build-local transient byte area used by Provider execution and Result writing. */
   readonly resourceStoreForBuild?: (build: string) => ResourceStore;
-  /** Called only after a terminal Build Result has accepted every public Output completed so far. */
+  /** Called only after a finished Build Result has accepted every public Output completed so far. */
   readonly clearBuildResources?: (build: string) => Awaitable<void>;
-  readonly openBuildResultRepository?: (location: BuildResultRepositoryLocation) => Awaitable<BuildResultRepositoryOpened>;
+  readonly openBuildResultRepository: (location: BuildResultRepositoryLocation) => Awaitable<BuildResultRepositoryOpened>;
   readonly credentialStore: CredentialStore;
   readonly components?: readonly ComponentPackage[];
   /** Load the complete physical package closure named by a claimed Build. */
@@ -39,18 +46,27 @@ export type CreateLocalRuntimeOptions = {
   readonly close?: () => Awaitable<void>;
 };
 
-export type CreateLocalRuntimeArchiveControlOptions = {
+export type CreateLocalRuntimeControlOptions = {
   readonly buildStore: BuildStore;
   readonly buildCatalog?: BuildCatalog;
   readonly operationStore: OperationStore;
-  readonly dispatchStore: BuildDispatchStore;
+  readonly executionStore: BuildExecutionStore;
+  readonly submissionStore: import("@hypit/runtime").PendingBuildStore;
   /** Optional owner supplied by the Runtime assembly. */
   readonly close?: () => Awaitable<void>;
 };
 
-export type CreateLocalRuntimeResourceAccessOptions = {
+export type CreateLocalResultWriterOptions = {
+  readonly buildStore: BuildStore;
+  readonly operationStore: OperationStore;
+  readonly commandExecutionStore: import("@hypit/runtime").CommandExecutionStore;
+  readonly executionStore: BuildExecutionStore;
+  readonly removeActiveBuild: (build: string) => Awaitable<BuildCompletion>;
+  readonly submissionStore: import("@hypit/runtime").PendingBuildStore;
   readonly resourceStore: ResourceStore;
-  /** Optional owner supplied by the Runtime assembly. */
+  readonly resourceStoreForBuild?: (build: string) => ResourceStore;
+  readonly clearBuildResources?: (build: string) => Awaitable<void>;
+  readonly openBuildResultRepository: (location: BuildResultRepositoryLocation) => Awaitable<BuildResultRepositoryOpened>;
   readonly close?: () => Awaitable<void>;
 };
 
@@ -65,14 +81,18 @@ export type LocalBuildOptions = Parameters<RuntimeHostExecution["build"]>[1];
 export type LocalBuildSubmission = RuntimeHostBuildSubmission;
 
 export type LocalRuntime = RuntimeHostExecution & {
-  workOnce(): Promise<BuildDispatchSnapshot | undefined>;
+  workOnce(): Promise<BuildExecutionSnapshot | BuildCompletion | undefined>;
 };
 
-/** Durable execution-state archive that never opens the selected ResourceStore. */
-export type LocalRuntimeArchiveControl = RuntimeHostArchive;
+/** Active execution control that never opens the selected ResourceStore. */
+export type LocalRuntimeControl = RuntimeHostControl;
 
-/** Explicit Artifact byte access that never opens Build, Operation or Dispatch state. */
-export type LocalRuntimeResourceAccess = RuntimeHostResourceAccess;
+export type LocalResultWriter = RuntimeHostResultControl & {
+  /** Incrementally accept public Outputs already completed during execution. */
+  sync(execution: BuildExecutionSnapshot, state: import("@hypit/protocol").BuildState): Promise<void>;
+  /** Persist the outcome just frozen by the execution Worker, then remove active Runtime state. */
+  completeResult(execution: BuildExecutionSnapshot): Promise<BuildExecutionSnapshot | BuildCompletion>;
+};
 
 /** Credential control for one or more exact Endpoint declarations; no execution state is opened. */
 export type LocalCredentialControl = RuntimeHostCredentialControl;

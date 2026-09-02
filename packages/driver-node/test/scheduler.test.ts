@@ -149,8 +149,7 @@ function configuredExecutor(options: {
       scheduling: {
         resources: [{
           id: options.resource,
-          maxActive: options.defaultConcurrency,
-          maxInFlight: options.defaultConcurrency,
+          limit: options.defaultConcurrency,
         }],
       },
     },
@@ -196,8 +195,8 @@ function asyncExecutor(
       scheduling: {
         queue: { pool: "fixture.account", lane: "generation" },
         resources: [
-          { id: "pool:fixture.account", maxActive: 1, maxInFlight: 1 },
-          { id: "lane:fixture.account/generation", maxActive: 1, maxInFlight: 1 },
+          { id: "pool:fixture.account", limit: 1 },
+          { id: "lane:fixture.account/generation", limit: 1 },
         ],
       },
     },
@@ -293,6 +292,45 @@ test("an asynchronous Endpoint starts once and is polled until complete", async 
   assert.equal(starts, 1);
   assert.equal(polls, 1);
   assert.equal((await operations.read(pending.operation))?.status, "completed");
+});
+
+test("a persisted submitting Operation is never submitted again after its caller stops", async () => {
+  const durable = memoryOperations();
+  let interruptCreate = true;
+  const operations: OperationStore = {
+    ...durable,
+    async create(operation) {
+      const stored = await durable.create(operation);
+      if (interruptCreate) {
+        interruptCreate = false;
+        throw new Error("caller stopped after the Operation row was stored");
+      }
+      return stored;
+    },
+  };
+  let starts = 0;
+  const endpoint: AsyncEndpoint = {
+    start() {
+      starts += 1;
+      return { status: "pending", handle: { remoteJob: "must-not-exist" } };
+    },
+    poll() {
+      throw new Error("an unacknowledged Operation cannot be polled");
+    },
+  };
+  const [interrupted] = await new LocalBuildScheduler(asyncExecutor(endpoint, operations))
+    .run([{ id: "submission-window", state: createGreetingBuild() }]);
+  assert.equal(interrupted?.status, "paused");
+  assert.equal(starts, 0);
+  const [stored] = await operations.list({ build: "submission-window" });
+  assert.equal(stored?.status, "pending");
+  assert.equal(stored?.handle, undefined);
+
+  const [resumed] = await new LocalBuildScheduler(asyncExecutor(endpoint, operations))
+    .run([{ id: "submission-window", state: interrupted!.state }]);
+  assert.equal(resumed?.status, "failed");
+  assert.equal(resumed?.state.diagnostics.at(-1)?.code, "SUBMISSION_UNKNOWN");
+  assert.equal(starts, 0);
 });
 
 test("wakeAt prevents early polling and Runtime cancellation becomes a terminal Core failure", async () => {

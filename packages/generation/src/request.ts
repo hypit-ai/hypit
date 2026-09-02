@@ -113,7 +113,7 @@ export type GenerationPortSubset = {
   /**
    * Ports that may be absent while a graph is still attaching values. If they
    * are present, their item and cardinality rules are still checked. Exact
-   * finalization never uses this escape hatch.
+   * Result writing never uses this escape hatch.
    */
   readonly defer?: readonly string[];
 };

@@ -10,13 +10,18 @@ import {
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
 import type { S3ClientConfig } from "@aws-sdk/client-s3";
+import type { BuildResultFileRange } from "@hypit/build-result";
 
 export type BuildResultS3Client = {
   put(key: string, bytes: Uint8Array, mediaType: string): Promise<void>;
   putStream(key: string, chunks: AsyncIterable<Uint8Array>, mediaType: string): Promise<void>;
   get(key: string): Promise<Uint8Array | undefined>;
-  open(key: string): Promise<AsyncIterable<Uint8Array> | undefined>;
-  list(prefix: string): Promise<readonly string[]>;
+  open(key: string, range?: BuildResultFileRange): Promise<AsyncIterable<Uint8Array> | undefined>;
+  list(prefix: string, options?: {
+    readonly limit?: number;
+    readonly after?: string;
+    readonly delimiter?: string;
+  }): Promise<readonly string[]>;
   delete(key: string): Promise<void>;
   close?(): void | Promise<void>;
 };
@@ -180,12 +185,13 @@ export class AwsBuildResultS3Client implements BuildResultS3Client {
     }
   }
 
-  async open(key: string): Promise<AsyncIterable<Uint8Array> | undefined> {
+  async open(key: string, range?: BuildResultFileRange): Promise<AsyncIterable<Uint8Array> | undefined> {
     try {
       const response = await this.#client.send(
         new GetObjectCommand({
           Bucket: this.#bucket,
           Key: key,
+          ...(range === undefined ? {} : { Range: `bytes=${range.start}-${range.endExclusive - 1}` }),
           ...this.#owner(),
         }),
       );
@@ -200,7 +206,14 @@ export class AwsBuildResultS3Client implements BuildResultS3Client {
     }
   }
 
-  async list(prefix: string): Promise<readonly string[]> {
+  async list(prefix: string, options: {
+    readonly limit?: number;
+    readonly after?: string;
+    readonly delimiter?: string;
+  } = {}): Promise<readonly string[]> {
+    if (options.limit !== undefined && (!Number.isSafeInteger(options.limit) || options.limit < 1)) {
+      throw new Error("S3 list limit must be a positive safe integer");
+    }
     const keys: string[] = [];
     let continuationToken: string | undefined;
     do {
@@ -208,11 +221,18 @@ export class AwsBuildResultS3Client implements BuildResultS3Client {
         new ListObjectsV2Command({
           Bucket: this.#bucket,
           Prefix: prefix,
+          ...(options.after === undefined ? {} : { StartAfter: options.after }),
+          ...(options.delimiter === undefined ? {} : { Delimiter: options.delimiter }),
+          ...(options.limit === undefined ? {} : { MaxKeys: Math.min(1_000, options.limit - keys.length) }),
           ...(continuationToken === undefined ? {} : { ContinuationToken: continuationToken }),
           ...this.#owner(),
         }),
       );
-      keys.push(...(response.Contents ?? []).flatMap((item) => (item.Key === undefined ? [] : [item.Key])));
+      keys.push(
+        ...(response.CommonPrefixes ?? []).flatMap((item) => item.Prefix === undefined ? [] : [item.Prefix]),
+        ...(response.Contents ?? []).flatMap((item) => item.Key === undefined ? [] : [item.Key]),
+      );
+      if (options.limit !== undefined && keys.length >= options.limit) return keys.slice(0, options.limit);
       continuationToken = response.IsTruncated === true ? response.NextContinuationToken : undefined;
     } while (continuationToken !== undefined);
     return keys;

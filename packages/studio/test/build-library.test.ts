@@ -4,76 +4,38 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import type { BuildState, ResourceId } from "@hypit/protocol";
 import type { BuildResultRepository } from "@hypit/build-result";
-import type { BuildCatalogEntry } from "@hypit/runtime";
-import type { RuntimeHostStatus } from "@hypit/runtime-host-node";
+import type { BuildView } from "@hypit/runtime-host-node";
 
-import { openStudioArchive, readStudioLibrary } from "../src/archive.js";
+import { openStudioBuildLibrary, readStudioLibrary } from "../src/build-library.js";
 
-const resource = "res_studio-archive" as ResourceId;
-
-function state(): BuildState {
+function activeBuild(id: string, root: string): BuildView {
   return {
-    format: "hypit.build@1",
-    program: { closure: { format: "hypit.closure@1", modules: [] }, records: [] },
-    graph: { format: "hypit.graph@1", outputs: [], candidates: [], operations: [] },
-    request: { format: "hypit.build-request@1", targets: [{ output: "final-output" }] },
-    plan: {
-      format: "hypit.plan@1",
-      steps: [],
-      goals: [{ record: "final-record", type: { module: { name: "example", version: "1" }, name: "Video" } }],
-      selections: [{ output: "final-output", candidate: "render", record: "final-record" }],
-    },
-    status: "complete",
-    records: [{
-      id: "final-record",
-      type: { module: { name: "example", version: "1" }, name: "Video" },
-      value: { kind: "blob", resource, size: 42, mediaType: "video/mp4" },
-    }],
-    steps: [],
-    needs: [],
-    outstanding: [],
-    diagnostics: [],
-  };
-}
-
-function catalog(build: string, root: string): BuildCatalogEntry {
-  return {
-    build,
+    id,
     createdAt: 100,
+    activity: "saving-result",
+    outcome: "complete",
+    cancellationRequested: false,
     source: { path: `${root}/author/main.svml` },
     run: { path: `${root}/runs/build.svrun` },
-    aliases: [{ name: "final.video", ref: { kind: "logical-output", id: "final-output" } }],
+    targets: ["final.video"],
+    acceptedRecords: 1,
+    outstandingCommands: 0,
+    operations: [],
   };
 }
 
 test("Studio library joins this environment's Builds with project Build Result files", async () => {
-  const relevant = catalog("build-inside", "/project");
-  const unrelated = catalog("build-outside", "/another-project");
-  const status: RuntimeHostStatus = {
-    build: { build: relevant.build, definition: {} as never, facts: [], state: state() },
-    catalog: relevant,
-    operations: [],
-    dispatch: {
-      build: relevant.build,
-      componentPackages: [],
-      createdAt: 100,
-      availableAt: 100,
-      phase: "terminal",
-      terminal: "complete",
-    },
-  };
+  const relevant = activeBuild("bld_20260902T130000000Z_0000000001", "/project");
+  const unrelated = activeBuild("bld_20260902T130000001Z_0000000001", "/another-project");
   const manifests = [relevant, unrelated].map((entry) => ({
-    format: "hypit.build-result@1" as const,
-    id: entry.build,
-    source: entry.source,
+    format: "hypit.build-result@2" as const,
+    id: entry.id,
+    source: entry.source!,
     ...(entry.run === undefined ? {} : { run: entry.run }),
     targets: ["final.video"],
-    startedAt: entry.createdAt,
-    updatedAt: entry.createdAt,
     finishedAt: entry.createdAt,
-    status: "complete" as const,
+    outcome: "complete" as const,
     outputs: {
       "final.video": {
         type: { module: { name: "example", version: "1" }, name: "Video" },
@@ -84,8 +46,10 @@ test("Studio library joins this environment's Builds with project Build Result f
   const results: BuildResultRepository = {
     async create() { throw new Error("not used"); },
     async openWriter() { return undefined; },
+    async remove() {},
+    async updatePresentation() { throw new Error("read-only fixture"); },
     async read(build) { return manifests.find((item) => item.id === build); },
-    async list() { return manifests; },
+    async browse() { return { results: manifests }; },
     async resolve(build, output) {
       const manifest = manifests.find((item) => item.id === build);
       const value = manifest?.outputs[output as "final.video"];
@@ -97,10 +61,8 @@ test("Studio library joins this environment's Builds with project Build Result f
     profile: "/project/hypit.runtime.json",
     workspaceRoot: "/project",
     runtime: {
-      async builds() { return [relevant, unrelated]; },
-      async status(build) {
-        assert.equal(build, relevant.build);
-        return status;
+      async activity() {
+        return { builds: [relevant, unrelated], capacity: [] };
       },
     },
     results,
@@ -113,8 +75,8 @@ test("Studio library joins this environment's Builds with project Build Result f
     run: task.run,
     targets: task.targets,
   })), [{
-    id: "build-inside",
-    status: "complete",
+    id: "bld_20260902T130000000Z_0000000001",
+    status: "active",
     source: "author/main.svml",
     run: "runs/build.svrun",
     targets: ["final.video"],
@@ -126,7 +88,7 @@ test("Studio library joins this environment's Builds with project Build Result f
     filePath: artifact.filePath,
     mediaType: artifact.mediaType,
   })), [{
-    build: "build-inside",
+    build: "bld_20260902T130000000Z_0000000001",
     output: "final.video",
     valuePath: "$",
     filePath: "files/final.video.mp4",
@@ -136,22 +98,21 @@ test("Studio library joins this environment's Builds with project Build Result f
 
 test("Studio opens project Build Results without a Runtime or ResourceStore", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-studio-results-"));
-  const directory = join(root, ".hypit", "results", "build-one");
+  const build = "bld_20260902T130000002Z_0000000001";
+  const directory = join(root, ".hypit", "results", build);
   const bytes = new TextEncoder().encode("finished-video");
   try {
     await mkdir(join(directory, "files"), { recursive: true });
     await writeFile(join(directory, "files", "final.mp4"), bytes);
     await writeFile(join(directory, "result.json"), `${JSON.stringify({
-      format: "hypit.build-result@1",
-      id: "build-one",
-      name: "First cut",
+      format: "hypit.build-result@2",
+      id: build,
+      title: "First cut",
       source: { path: join(root, "main.svml") },
       run: { path: join(root, "build.svrun") },
       targets: ["final.video"],
-      startedAt: 100,
-      updatedAt: 200,
       finishedAt: 200,
-      status: "complete",
+      outcome: "complete",
       outputs: {
         "final.video": {
           type: { module: { name: "example", version: "1" }, name: "Video" },
@@ -160,18 +121,27 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
       },
     }, null, 2)}\n`, "utf8");
 
-    const archive = await openStudioArchive(undefined, root, root);
-    assert(archive !== undefined);
-    const view = await archive.library();
+    const buildLibrary = await openStudioBuildLibrary(undefined, root, root);
+    assert(buildLibrary !== undefined);
+    const view = await buildLibrary.library();
     assert.equal(view.runtime, undefined);
-    assert.deepEqual(view.artifacts.map((item) => [item.build, item.output, item.valuePath]), [
-      ["build-one", "final.video", "$"],
+    assert.deepEqual(view.tasks.map((item) => [item.id, item.title, item.status]), [
+      [build, "First cut", "complete"],
     ]);
-    assert.deepEqual((await archive.openArtifact("build-one", "final.video", "$"))?.bytes, bytes);
-    const record = await archive.resolveBuildRecord("build-one", "final.video");
+    assert.deepEqual(view.artifacts.map((item) => [item.build, item.output, item.valuePath]), [
+      [build, "final.video", "$"],
+    ]);
+    const artifact = await buildLibrary.openArtifact(build, "final.video", "$");
+    assert.notEqual(artifact, undefined);
+    const stream = await artifact!.open({ start: 2, endExclusive: 8 });
+    assert.notEqual(stream, undefined);
+    const opened: number[] = [];
+    for await (const chunk of stream!) opened.push(...chunk);
+    assert.deepEqual(Uint8Array.from(opened), bytes.slice(2, 8));
+    const record = await buildLibrary.resolveHistoricalOutput(build, "final.video");
     assert.equal(record?.value.kind, "blob");
     assert.equal(record?.attachments?.length, 1);
-    await archive.close();
+    await buildLibrary.close();
   } finally {
     await rm(root, { recursive: true, force: true });
   }

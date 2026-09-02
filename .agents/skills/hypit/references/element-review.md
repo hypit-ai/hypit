@@ -1,7 +1,7 @@
 # Looking at what was built, before a Build runs
 
 This visual-review page is for the initial reconstruction/description routes. A post-completion
-revision does not use it, does not call a VLM/observer, and stops after deterministic gates; see
+revision does not use it, does not call a VLM/observer, and stops after direct deterministic checks; see
 `revision/route.md`.
 
 Structural checks prove that a source is legal. They prove nothing about whether it looks like what
@@ -15,19 +15,18 @@ reference, so it asks what differs — `reconstruction/comparison-round.md`. A p
 a description has none, so it asks whether the picture is what it was asked to be —
 `original-authoring/conformance-round.md`. Read this file first and that one after.
 
-Whether an element is *wired at all* is a different gate with a different rule: `preview.md`'s
-`preview_check` must pass before this round is reached, and its failures are repaired without any
-attempt ceiling. A graph that does not trace is not a difference to weigh; it is work that is not
-done.
+Whether an element is *wired at all* is a different question: `preview.md`'s `preview_check` reports
+graph failures before this visual round. A graph that does not trace is not a difference to weigh; it
+is work that is not done.
 
-Note what that gate covers: it proves the graph is wired, not that every track draws. Nothing is
+That check proves the graph is wired, not that every track draws. Nothing is
 handed to a Producer until the Build runs, so a Producer that refuses the media it receives surfaces
 there rather than here.
 
-The difference between the two gates is what each reports. `preview_check` names the graph failure —
+The two reports answer different questions. `preview_check` names the graph failure —
 the target that does not trace, the chain that is missing — so its repairs are not guessing. This round
 names what is visibly wrong with the picture, in words, and a repair aims at something the round
-named. Neither gate expects you to guess; each one tells you what is wrong, and you repair that.
+named. Each report tells you what is wrong; neither records hidden progress or grants approval.
 
 ## The round is named by the check, not chosen by you
 
@@ -42,8 +41,8 @@ appears. This is also the floor, since every placed element declares something.
 A token range is the stable identity used by every command. `--segment` and `--selection` remain
 available for ranges that already have names.
 
-The gate then holds the round to that list. An element looked at once used to pass; now every entry the
-plan names has to have been answered.
+The returned plan is the explicit review list. Review every entry it names; no separate workflow
+state records whether the list is complete.
 
 ### Render what the Source configures, not what the catalogue shows
 
@@ -79,7 +78,7 @@ can be illegible on the picture that will replace it.
 `render_element` delegates this to `@hypit/preview-mock`. The realizer finds every relevant logical
 output in the compiled Author/Run Graph — the takes, stills and slot contents — derives geometry from
 Graph inputs, and materializes them through `@hypit/mock-media` in a temporary Run under
-`.hypit/preview/<realization-digest>/`. Never `hypit image`, which pays for a generation
+`.hypit/preview/<run-name>/`. Never `hypit image`, which pays for a generation
 the video will not reuse, and never a placeholder drawn by a script written for the occasion.
 
 Geometry follows the fixed Graph policy: Canvas width/height first, then generation aspect-ratio,
@@ -119,7 +118,7 @@ Do not treat a clearly platform/player/export-tool watermark as authored content
 provenance is obvious; if it could be part of the design, record the uncertainty instead of inventing
 a repair.
 
-A mock lives only in this render. It is never written into the Source, and no gate reads it: the
+A mock lives only in this render. It is never written into the Source, and no later check reads it: the
 `playback` check reads the Source's Recipes, so a mock cannot be mistaken for coverage.
 
 ### The derived Run carries the mocks, and nothing else changes
@@ -129,7 +128,7 @@ and the window is cut out of the frames afterwards, so every element the Source 
 drawn wherever the Source puts it — what is on screen over the words being looked at is what the
 delivery will put there.
 
-That derived Run is on disk under `<project>/.hypit/preview/<realization-digest>/preview.svrun`, beside
+That derived Run is on disk under `<project>/.hypit/preview/<run-name>/preview.svrun`, beside
 its materialized Artifact attachments. Open it
 whenever something you expected to see is not in the picture: an element that is in the Source and
 still not on screen is the package failing to draw it.
@@ -287,7 +286,7 @@ State plainly, in the completion report, that the following are unsettled:
   Caption, Media or Typography Track sits against the speech that is finally delivered is settled once
   that speech exists;
 - **whether the picture is continuous** — the frames nobody authored that
-  `playbooks/craft/frame-coverage.md` is about. One inherited edge is settled here: the gate reads each
+  `playbooks/craft/frame-coverage.md` is about. One inherited edge is reported here: the check reads each
   Recipe's `playback` and refuses an insert configured to stop when its material runs out. The rest —
   a window that starts late, a blend whose frames are half-covered, a schedule inside a component that
   stops between activations — appear in the delivery;
@@ -296,9 +295,9 @@ State plainly, in the completion report, that the following are unsettled:
   `playbooks/craft/seedance-directing.md` says how to trace a take's prompt back to the Segment's
   `dialogue` while the Source is being written, which is where this one is prevented.
 
-The gate is the mechanical half of this: it names the elements nobody looked at and the timed pictures
-configured to empty their windows, and refuses to pass while either remains. It cannot name what a
-Build has not produced yet, which is why this list is stated rather than computed.
+The mechanical report names elements with no recorded review and timed pictures configured to empty
+their windows. It cannot name what a Build has not produced yet, which is why this list is stated
+rather than computed.
 
 If a project-local package was built along the way, decide whether it should outlive this video and
 put that to the author: `package-promotion.md` says how to judge it and what promoting it actually

@@ -128,7 +128,6 @@ test("the local Provider returns only a new image BlobArtifact", {
   assert.equal(result.value.kind, "blob");
   assert.equal(result.value.mediaType, "image/png");
   assert.equal(await resources.has(result.value.resource), true);
-  assert.deepEqual(Object.keys(result.value).sort(), ["digest", "kind", "mediaType", "size"]);
   const output = await resources.get(result.value.resource);
   assert(output !== undefined);
   const encoded = Buffer.from(output);

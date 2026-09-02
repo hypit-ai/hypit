@@ -53,7 +53,7 @@ skip intake. Use the user's words, installed vocabulary, craft references and th
 This is an analysis method, not a list of ranking, interview, podcast or other type questions. Keep
 the brief unfrozen while any unresolved answer could change the program's intent or graph.
 
-## Durable brief
+## Project brief
 
 Persist a concise JSON object at the one canonical path `.hypit/brief.json` (do not put it in Author
 Source) containing:
@@ -61,17 +61,11 @@ Source) containing:
 - user goal and audience;
 - intent, Hook/attention strategy and narrative progression;
 - visual/audio/text relationships;
-- example project path and digest, or the general-analysis basis;
+- example project path, or the general-analysis basis;
 - confirmed decisions and unresolved questions;
 - the expected SVML/SVS/SVRun structural consequences.
 
-Write it atomically. It may be refined before `brief-frozen`; after that checkpoint its recorded
-digest is immutable, and any mismatch is a recovery conflict rather than permission to overwrite
-the old intent. Do not create `.hypit/brief`, `.hypit/brief.md`, or a second route-specific base brief.
-Revision records its own request under `.hypit/revisions/<revision-id>/request.json` and never rewrites
-the base brief.
-
-Checkpoint `brief-frozen` only after unresolved questions no longer affect those consequences. An
-agent may select fonts, package details and model tier when they are genuinely low risk; it may not
-invent core facts, ranking criteria, claims, Hook or audience promises. The brief is the reference for
-later review and revision, not a copy of an example.
+Keep one brief and edit it when the author clarifies intent. Do not create route-specific copies or a
+second history of the brief. An agent may select fonts, package details and model tier when they are
+genuinely low risk; it may not invent core facts, ranking criteria, claims, Hook or audience promises.
+The brief is useful authoring content and the reference for later review, not a progress marker.

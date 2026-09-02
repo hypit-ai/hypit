@@ -404,12 +404,12 @@ test("Run-only Fragment modules extend the execution closure without polluting t
     "the durable Build keeps only modules needed by its selected execution slice",
   );
   assert.equal(planned.definition.plan, planned.state.plan);
-  assert.equal(planned.definition.request, planned.state.request);
+  assert.equal(planned.definition.targets, planned.state.targets);
   assert.equal(planned.definition.plan.steps.length, 1);
   assert.equal(planned.definition.plan.steps[0]?.producer.name, previewProducer.name);
 });
 
-test("static Run checking accepts a future BuildRecord without opening a BuildArchive", async () => {
+test("static Run checking accepts a future BuildRecord without opening project Results", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-future-build-record-"));
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "reuse.svrun");
@@ -435,15 +435,52 @@ test("static Run checking accepts a future BuildRecord without opening a BuildAr
   });
   const workspace = await new NodeFilesystemWorkspace({ root }).open(runFile);
   const checked = await runCompiler.checkSource(workspace.entry, workspace);
-  assert.deepEqual(checked.unresolvedBuildRecords, [{
+  assert.deepEqual(checked.unresolvedHistoricalOutputs, [{
     id: "prior",
     build: "future-build",
     output: "hello.result",
   }]);
   await assert.rejects(
     runCompiler.compileSource(workspace.entry, workspace),
-    /plan\/build requires --runtime to resolve it/u,
+    /requires a project Result Store/u,
   );
+
+  await writeFile(authorFile, `<?svml using="@hypit/markup@1"?>
+  <svml>
+    <import as="lab" from="example.compiler-lab@1"/>
+    <lab:Result id="hello"/><lab:Result id="unused-history"/>
+    <lab:Result id="unused-value"/><lab:Result id="unused-file"/>
+  </svml>`, "utf8");
+  await writeFile(runFile, `<?svml using="@hypit/run-markup@1"?>
+  <svrun version="1">
+    <author source="./main.svml"/>
+    <target output="hello.result"/>
+    <build-record id="prior" build="future-build" output="unused-history.result"/>
+    <value id="fixed" type="example.compiler-lab@1#Result" from="./missing-value.json"/>
+    <file id="media" type="example.compiler-lab@1#Result" from="./missing-file.mp4" media-type="video/mp4"/>
+    <satisfy output="unused-history.result" candidate="prior"/>
+    <satisfy output="unused-value.result" candidate="fixed"/>
+    <satisfy output="unused-file.result" candidate="media"/>
+  </svrun>`, "utf8");
+  const unusedWorkspace = await new NodeFilesystemWorkspace({ root }).open(runFile);
+  const compiled = await runCompiler.compileSource(unusedWorkspace.entry, unusedWorkspace);
+  assert.equal(runCompiler.planCompilation(compiled).state.plan.steps.length, 1,
+    "unreachable zero-input Candidates are never opened or substituted into the selected execution");
+
+  await writeFile(join(root, "selected-value.json"), JSON.stringify({ kind: "inline", value: "ready" }), "utf8");
+  await writeFile(join(root, "selected-file.mp4"), new Uint8Array([1, 2, 3]));
+  await writeFile(runFile, `<?svml using="@hypit/run-markup@1"?>
+  <svrun version="1">
+    <author source="./main.svml"/>
+    <target output="unused-value.result"/><target output="unused-file.result"/>
+    <value id="fixed" type="example.compiler-lab@1#Result" from="./selected-value.json"/>
+    <file id="media" type="example.compiler-lab@1#Result" from="./selected-file.mp4" media-type="video/mp4"/>
+    <satisfy output="unused-value.result" candidate="fixed"/>
+    <satisfy output="unused-file.result" candidate="media"/>
+  </svrun>`, "utf8");
+  const selectedWorkspace = await new NodeFilesystemWorkspace({ root }).open(runFile);
+  const selected = runCompiler.planCompilation(await runCompiler.compileSource(selectedWorkspace.entry, selectedWorkspace));
+  assert.deepEqual(selected.definition.initialRecords.map((record) => record.value.kind).sort(), ["blob", "inline"]);
 });
 
 test("source assets become graph values and a Host transfer bundle without closure metadata", async () => {

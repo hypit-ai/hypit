@@ -17,8 +17,8 @@ A crop of the same image is not a new beat.
 
 ## Author the SVML shots
 
-1. Generate or supply the exact first frame for each beat and pass every generated image through the
-   image review gate.
+1. Generate or supply the exact first frame for each beat and review every generated image before it
+   drives a video.
 2. Vendor `broll-v1.svs`; select one coherent material/edit language while varying the beat-specific
    English `story` slot.
 3. Prefer `seedance:FrameVideo` when the first frame is the controlling fact. Use
