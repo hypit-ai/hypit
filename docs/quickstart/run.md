@@ -29,11 +29,22 @@ from any independent video project.
 Only `build` submits work. `plan` is the normal preview. `check` is an editing aid; `doctor` is a
 deployment diagnostic. They are safe to run, but not mandatory ceremony before every Build.
 
+One convenient project layout is:
+
 ```text
-main.svml          author meaning
-build.svrun        this Run's Targets and Candidate choices
-hypit.runtime.json  execution environment
+my-video/
+  main.svml           author meaning
+  styles.svs          optional authored styles
+  build.svrun         this Run's Targets and Candidate choices
+  assets/             project-owned input media
+  output/             explicit exports for people and other tools
+  hypit.runtime.json  execution environment
 ```
+
+This is a convention, not a schema. Hypit uses the paths written in Source imports, `<author
+source="…">`, CLI arguments and `get --to`; it does not require these names or recognize `assets/`
+or `output/` specially. The managed Result repository remains separate under `.hypit/results` by
+default.
 
 Run Source and Runtime Profile do not silently rewrite the video. Creative model choices remain in
 the Author Source or in packages that it explicitly imports.
@@ -100,13 +111,13 @@ As soon as a generated image or take is accepted, reuse it explicitly in the nex
   <target output="final.video"/>
 
   <build-record id="hook-video"
-    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="hook-take.video"/>
+    build="bld_20260902T142031123Z_0123456789" output="hook-take.video"/>
   <build-record id="meeting-video"
-    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="meeting-take.video"/>
+    build="bld_20260902T142031123Z_0123456789" output="meeting-take.video"/>
   <build-record id="evidence-video"
-    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="evidence-take.video"/>
+    build="bld_20260902T142031123Z_0123456789" output="evidence-take.video"/>
   <build-record id="payoff-video"
-    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="payoff-take.video"/>
+    build="bld_20260902T142031123Z_0123456789" output="payoff-take.video"/>
 
   <satisfy output="hook-take.video" candidate="hook-video"/>
   <satisfy output="meeting-take.video" candidate="meeting-video"/>
@@ -262,10 +273,10 @@ only with `--workspace`. `--package-root` locates installed packages and never w
       result.json
       files/
       values/
-output/
 ```
 
-That is the zero-configuration Result repository. A project-owned `hypit.results.json` may instead select
+That is the zero-configuration Result repository. The `output/` directory shown earlier is only a
+convenient destination for explicit exports and is not part of Result storage. A project-owned `hypit.results.json` may instead select
 `@hypit/build-result-s3`; commands and historical `build-record` references then use that same
 repository. Runtime working Artifacts remain local and private to the Runtime.
 
@@ -364,9 +375,15 @@ hypit get <build-id> \
   --to examples/talking-head-aroll/output/final.mp4
 ```
 
-`get` resolves one exact `build + output` address and makes an optional copy. A file Output is copied
-from that Result; a structured Output is read from its Result value file; a forwarded historical
-Output is followed to its declared earlier Result. The Runtime Profile is not involved.
+`get` exports one exact `build + output` address to the required `--to` destination. A Scalar becomes
+a JSON file. A Resource becomes one file containing its original bytes. A Composite becomes a
+self-contained directory: `value.json` holds its Composite value document and the Resource files it
+references keep their Result-relative paths inside that directory. The destination must not already
+exist.
+
+A forwarded historical Output is resolved transparently to its declared earlier Result. This does
+not create a Build, alter a Result or copy anything back into Result storage, and the Runtime Profile
+is not involved. Use `inspect` to view an Output; `get` is only explicit local export.
 
 The finished Build result prints the exact `get --output …` command for every file Target;
 there is no need to inspect opaque Record ids just to export `final.video`.

@@ -25,11 +25,21 @@ hypit get <build-id> --output final.video --to output/final.mp4
 
 只有 `build` 会真正提交工作。`plan` 是普通预览；`check` 用于编辑源码，`doctor` 用于配置和排查部署。它们都安全，但不是每次 Build 前必须重复的仪式。
 
+一种顺手的项目目录约定是：
+
 ```text
-main.svml          作者意图
-build.svrun        本次 Run 的 Target 与 Candidate 选择
-hypit.runtime.json  执行环境
+my-video/
+  main.svml           作者意图
+  styles.svs          可选的作者样式
+  build.svrun         本次 Run 的 Target 与 Candidate 选择
+  assets/             项目自己的输入素材
+  output/             显式导出给人或其他工具的副本
+  hypit.runtime.json  执行环境
 ```
+
+这只是推荐，不是项目格式。Hypit 只服从 Source import、`<author source="…">`、CLI 参数和
+`get --to` 中明确写出的路径，不要求这些名字，也不会特殊识别 `assets/` 或 `output/`。受管理的
+Result 仓库与它们分开，零配置时仍位于 `.hypit/results`。
 
 Run Source 与 Runtime Profile 不会悄悄改写视频。创作性的模型选择仍然留在 Author Source，或它显式导入的包里。
 
@@ -87,13 +97,13 @@ Hypit 没有隐式缓存。复用结果是显式的运行图编写：把某个�
   <target output="final.video"/>
 
   <build-record id="hook-video"
-    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="hook-take.video"/>
+    build="bld_20260902T142031123Z_0123456789" output="hook-take.video"/>
   <build-record id="meeting-video"
-    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="meeting-take.video"/>
+    build="bld_20260902T142031123Z_0123456789" output="meeting-take.video"/>
   <build-record id="evidence-video"
-    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="evidence-take.video"/>
+    build="bld_20260902T142031123Z_0123456789" output="evidence-take.video"/>
   <build-record id="payoff-video"
-    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="payoff-take.video"/>
+    build="bld_20260902T142031123Z_0123456789" output="payoff-take.video"/>
 
   <satisfy output="hook-take.video" candidate="hook-video"/>
   <satisfy output="meeting-take.video" candidate="meeting-video"/>
@@ -264,7 +274,7 @@ hypit plan /work/my-film/build.svrun --asset-root /work/shared-media
 ```
 
 `--asset-root` 可重复使用，只授权读取素材字节，不允许从那里导入 `.svml/.svs` 源码。该 Host
-选项不进入作者或 Build 身份；真正进入图的仍是素材内容摘要。
+选项不进入作者或 Build 身份；真正进入图的是由该文件形成的显式 Resource 值。
 
 Runtime Profile 只选择 Runtime 包与该 Runtime 的封闭配置。完整结构只在
 [Runtime](../guide/runtime.md) 维护，不在 Quickstart 复制第二份。
@@ -354,9 +364,13 @@ hypit get <build-id> \
   --to examples/talking-head-aroll/output/final.mp4
 ```
 
-`get` 解析一个精确的 `build + output` 地址并按需复制。文件从所属 Result 复制，结构化 Output
-从 Result 的值文件读取，历史转发则沿显式关系找到前一个 Result；整个过程不需要 Runtime Profile。
-Build 的最终输出会为每个文件 Target 打印精确的 `get --output …` 命令。
+`get` 把一个精确的 `build + output` 地址导出到必填的 `--to` 目的地。Scalar 写成 JSON 文件；
+Resource 原样写成一个文件；Composite 写成一个自足目录，其中 `value.json` 保存它的 Composite 值
+文档，被引用的 Resource 则按 Result 内的相对路径一起写入。目的地必须尚不存在。
+
+历史转发会透明地沿显式关系找到更早的 Result。这个过程不会创建 Build、修改 Result，或把
+副本写回 Result 仓库，也不需要 Runtime Profile。查看 Output 用 `inspect`；`get` 只负责显式
+本地导出。Build 的最终输出会为每个文件 Target 打印精确的 `get --output …` 命令。
 
 ### 6. 在新 Build 中复用
 

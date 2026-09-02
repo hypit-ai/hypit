@@ -253,6 +253,7 @@ test("Result commands have their own help instead of falling back to the global 
   let output = "";
   writeCliHelp({ write(text) { output += text; } }, "get");
   assert.match(output, /^hypit get\n/u);
-  assert.match(output, /copying never reruns work/u);
+  assert.match(output, /--output <name> --to <path>/u);
+  assert.match(output, /Composite Output becomes a directory/u);
   assert.doesNotMatch(output, /Typical flow/u);
 });

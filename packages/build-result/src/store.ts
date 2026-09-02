@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import {
-  copyFile,
   mkdir,
   open,
   readFile,
@@ -239,89 +238,6 @@ export async function resolveBuildResultOutput(
       value: entry.value,
     };
   }
-}
-
-export async function materializeBuildResultOutput(
-  root: string,
-  build: string,
-  output: string,
-  destination: string,
-): Promise<{
-  readonly build: string;
-  readonly output: string;
-  readonly path: string;
-  readonly kind: "file" | "value" | "inline";
-}> {
-  const resolvedOutput = await resolveBuildResultOutput(root, build, output);
-  if (resolvedOutput === undefined) throw new Error(`Build ${build} has no Output ${output}`);
-  const target = resolve(destination);
-  await mkdir(dirname(target), { recursive: true });
-  const temporary = `${target}.part-${randomUUID()}`;
-  try {
-    if (resolvedOutput.value.kind === "inline") {
-      await writeFile(temporary, `${JSON.stringify(resolvedOutput.value.value, null, 2)}\n`, { flag: "wx" });
-    } else {
-      await copyFile(containedResultPath(resolvedOutput.directory, resolvedOutput.value.path), temporary);
-    }
-    await rename(temporary, target);
-  } catch (error) {
-    await rm(temporary, { force: true });
-    throw error;
-  }
-  return {
-    build: resolvedOutput.build,
-    output: resolvedOutput.output,
-    path: target,
-    kind: resolvedOutput.value.kind === "build-file"
-      ? "file"
-      : resolvedOutput.value.kind === "value" ? "value" : "inline",
-  };
-}
-
-export async function materializeRepositoryBuildResultOutput(
-  repository: BuildResultRepository,
-  build: string,
-  output: string,
-  destination: string,
-): Promise<{
-  readonly build: string;
-  readonly output: string;
-  readonly path: string;
-  readonly kind: "file" | "value" | "inline";
-}> {
-  const resolvedOutput = await repository.resolve(build, output);
-  if (resolvedOutput === undefined) throw new Error(`Build ${build} has no Output ${output}`);
-  const target = resolve(destination);
-  await mkdir(dirname(target), { recursive: true });
-  const temporary = `${target}.part-${randomUUID()}`;
-  try {
-    if (resolvedOutput.value.kind === "inline") {
-      await writeFile(temporary, `${JSON.stringify(resolvedOutput.value.value, null, 2)}\n`, { flag: "wx" });
-    } else if (resolvedOutput.value.kind === "value") {
-      await writeFile(temporary, `${JSON.stringify(resolvedOutput.value.document, null, 2)}\n`, { flag: "wx" });
-    } else {
-      const input = await repository.openFile(resolvedOutput.build, resolvedOutput.value);
-      if (input === undefined) {
-        throw new Error(`Build ${resolvedOutput.build} file ${resolvedOutput.value.path} is unavailable`);
-      }
-      const handle = await open(temporary, "wx");
-      try {
-        for await (const chunk of input) await handle.write(Uint8Array.from(chunk));
-      } finally {
-        await handle.close();
-      }
-    }
-    await rename(temporary, target);
-  } catch (error) {
-    await rm(temporary, { force: true });
-    throw error;
-  }
-  return {
-    build: resolvedOutput.build,
-    output: resolvedOutput.output,
-    path: target,
-    kind: resolvedOutput.value.kind === "build-file" ? "file" : resolvedOutput.value.kind === "value" ? "value" : "inline",
-  };
 }
 
 export class FileBuildResult {

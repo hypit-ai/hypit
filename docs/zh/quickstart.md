@@ -142,7 +142,8 @@ hypit get <build-id> \
 ```
 
 Build Result 会保存目标路径上已经完成的所有公开 Author Output，包括媒体和结构化值。`get`
-只负责按唯一公开名称读取或复制某个 Output，不会决定哪些中间结果应该被保存。
+只把唯一公开名称指定的 Output 导出到明确的 `--to` 目的地，不会决定哪些中间结果应该被保存。
+Scalar 与 Resource 导出为文件；Composite 导出为包含 `value.json` 及其引用 Resource 的目录。
 
 ## 真实 Build 可能使用的本地工具
 

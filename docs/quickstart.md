@@ -147,8 +147,10 @@ hypit get <build-id> \
   --to output/final.mp4
 ```
 
-The Build Result saves every public Author Output completed on the Target route. `get` makes an
-optional human-readable copy; Targets do not double as a retention list.
+The Build Result saves every public Author Output completed on the Target route. `get` exports one
+exact named Output to the explicit `--to` destination; Targets do not double as a retention list.
+A Scalar or Resource becomes a file, while a Composite becomes a directory containing `value.json`
+and its referenced Resource files.
 
 ## Local tools used by real Builds
 

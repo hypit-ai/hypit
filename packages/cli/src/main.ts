@@ -5,10 +5,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 
 import { deterministicSpeechDurations, deterministicSpeechDurationsFromGraph } from "@hypit/compiler-node";
-import {
-  FileBuildResultRepository,
-  materializeRepositoryBuildResultOutput,
-} from "@hypit/build-result";
+import { FileBuildResultRepository } from "@hypit/build-result";
 import type { BuildResultManifest, BuildResultRepository } from "@hypit/build-result";
 import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
@@ -38,6 +35,7 @@ import type {
 } from "./runtime-port.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliColorMode, CliIo } from "./output.js";
+import { exportBuildResultOutput } from "./result-export.js";
 import { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
 import { loadDiscoveredSourcePackages } from "./source-packages.js";
 import {
@@ -411,7 +409,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       continue;
     }
     if (item === "--out") {
-      throw new Error("--out does not apply to Build submission; use `get <build-id> --output <name> --to <path>` for an optional copy");
+      throw new Error("--out does not apply to Build submission; use `get <build-id> --output <name> --to <path>` to export one Result Output");
     }
     if (item === "--output") {
       const value = rest[index + 1];
@@ -684,6 +682,12 @@ function assertCommandOptions(args: ParsedArgs): void {
   if (args.seenOptions.includes("--color") && args.seenOptions.includes("--no-color")) {
     throw new Error("--color and --no-color are mutually exclusive");
   }
+  if (args.command === "get" && args.output === undefined) {
+    throw new Error("get requires --output with one public Output name");
+  }
+  if (args.command === "get" && args.to === undefined) {
+    throw new Error("get requires --to with the export destination");
+  }
 }
 
 function usage(): string {
@@ -706,7 +710,7 @@ function usage(): string {
     "  hypit builds [--workspace project] [--limit count] [--before build-id]",
     "  hypit history [output-name] [--workspace project] [--source author.svml] [--limit count] [--before build-id] [--pin] [--exclude-targets]",
     "  hypit inspect <build-id> [--workspace project]",
-    "  hypit get <build-id> --output output-name [--workspace project] [--to path]",
+    "  hypit get <build-id> --output output-name --to path [--workspace project]",
     "  hypit cancel <build-id> [--runtime profile.json] [--reason text]",
     "  hypit auth status|login|logout <endpoint-instance> [--runtime profile.json] [--slot name] [--from secret-file]",
     "  hypit image --prompt <text|text-file> --to <path.png> [--model package] [--aspect-ratio r] [--resolution r]",
@@ -1650,31 +1654,14 @@ export async function runCli(
         ], manifest.note === undefined ? [] : [`Note    ${manifest.note}`]);
         return;
       }
-      const manifest = await repository.read(args.file!);
-      if (manifest === undefined) throw new Error(`Build Result ${args.file} does not exist`);
-      const available = Object.keys(manifest.outputs);
-      const name = args.output
-        ?? (manifest.targets.length === 1 && manifest.outputs[manifest.targets[0]!] !== undefined
-          ? manifest.targets[0]
-          : available.length === 1 ? available[0] : undefined);
-      if (name === undefined) throw new Error(`Build ${manifest.id} has several Outputs; select one with --output`);
-      const resolved = await repository.resolve(manifest.id, name);
-      if (resolved === undefined) throw new Error(`Build ${manifest.id} has no Output ${name}`);
-      if (args.to === undefined) {
-        writeOperational({ format: "hypit.cli-get@2", build: manifest.id, output: name, type: resolved.type, value: resolved.value }, "Build Output", "info", [
-          ["Build", manifest.id],
-          ["Output", name],
-          ["Type", displayType(resolved.type)],
-          ...(resolved.value.kind === "build-file" ? [["Media", `${resolved.value.mediaType} · ${resolved.value.size} bytes`] as const] : []),
-        ], resolved.build === manifest.id && resolved.output === name
-          ? []
-          : [`Forwards to ${resolved.build} / ${resolved.output}`]);
-      } else {
-        const materialized = await materializeRepositoryBuildResultOutput(repository, manifest.id, name, args.to);
-        writeOperational({ format: "hypit.cli-get@2", build: manifest.id, output: name, path: materialized.path, kind: materialized.kind }, "Build Output materialized", "success", [
-          ["Build", manifest.id], ["Output", name], ["Path", materialized.path],
-        ]);
-      }
+      const exported = await exportBuildResultOutput(repository, args.file!, args.output!, args.to!);
+      writeOperational({ format: "hypit.cli-get@3", ...exported }, "Build Output exported", "success", [
+        ["Build", exported.build],
+        ["Output", exported.output],
+        ["Type", displayType(exported.type)],
+        ["Kind", exported.kind],
+        ["Path", exported.path],
+      ]);
       return;
     } finally {
       await results.close();
