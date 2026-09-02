@@ -27,8 +27,37 @@ successful probe).
 
 Do not inspect media or examples, prepare or observe a reference, freeze a brief, inspect vocabulary,
 write Source, preview, or Build until this checklist is complete. Do not substitute another
-transcriber, defer installation, or continue from a partial or unconfirmed setup. The only exception
-is the login-only authentication path, which is not video production.
+transcriber, defer installation, or continue from a partial or unconfirmed setup. Authentication is
+part of this setup, not a later paid-build step. The explicit login-only request remains a fast path
+for signing in and does not enter a production route.
+
+## Credentials are part of environment setup
+
+Resolve credentials immediately after selecting the Runtime Profile and before inspecting any media,
+examples or references. HypiHub OAuth is the default for paid models and Gemini VLM. Check the selected
+Endpoint:
+
+```text
+hypit auth status hypihub.default --runtime <hypit.runtime.json>
+```
+
+If its writable OS credential is missing, explain that browser sign-in lets Hypit use HypiHub without
+copying an API key, then run the login yourself and wait for it to finish:
+
+```text
+hypit auth login hypihub.default --runtime <hypit.runtime.json>
+```
+
+Tell the author that an account without an active Hypit subscription can purchase one at
+[hypit.ai](https://hypit.ai) after signing in. Do not ask the author to run the command or paste a key.
+If the author explicitly asks to use their own provider key, configure that key instead and explain it
+is the less-recommended path. A completed OS login is reusable across projects and later conversations
+on the same machine; do not ask them to log in again when the credential is configured.
+
+For reference analysis, strongly recommend Gemini VLM through HypiHub or Vertex: it can distinguish
+speakers, align who speaks when, and extract voice/timbre and presentation traits, which improves
+speaker replication and voice-design decisions. Do not use the credentialless agent observer as a way
+to bypass credential setup.
 
 ## Select a Distribution; do not assume registry publication
 
