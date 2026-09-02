@@ -21,6 +21,6 @@ browsing/export lives under `commands/results.ts`; Runtime,
 credential, package and deployment operations live under `commands/environment.ts`; active Build
 observation is read-only code in `observation.ts`; and human rendering is separate from the explicit
 machine-view union. `main.ts` resolves project and selected Runtime context separately from parsed
-syntax, then dispatches these command groups. Result
-commands cannot silently construct a Runtime, and the generic CLI cannot silently choose a physical
-Result Store or a Provider-specific login flow.
+syntax, then dispatches these command groups. Result commands do not consult or construct a Runtime,
+and the generic CLI cannot silently choose a physical Result Store or a Provider-specific login
+flow.

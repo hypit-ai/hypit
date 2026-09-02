@@ -16,7 +16,7 @@ import type {
 import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliIo, CliMachineView } from "./output.js";
 import { parseCommand } from "./arguments.js";
-import type { CliCommand } from "./command.js";
+import type { CliCommand, RuntimeOption } from "./command.js";
 import { assertPreflight, createCatalogDescriptor, preflightPlan } from "./build-planning.js";
 import { observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
@@ -52,8 +52,8 @@ function commandPackageRoot(command: CliCommand): string | undefined {
   return "packageRoot" in command ? command.packageRoot : undefined;
 }
 
-function commandRuntimeProfile(command: CliCommand): string | undefined {
-  return "runtimeProfile" in command ? command.runtimeProfile : undefined;
+function acceptsRuntimeContext(command: CliCommand): command is CliCommand & RuntimeOption {
+  return "runtimeProfile" in command;
 }
 
 export async function runCli(
@@ -143,10 +143,10 @@ export async function runCli(
     return;
   }
 
-  let runtimeProfile = commandRuntimeProfile(args);
+  let runtimeProfile = acceptsRuntimeContext(args) ? args.runtimeProfile : undefined;
   const runtimeWasExplicit = runtimeProfile !== undefined;
   let runtimeNeedsHint = runtimeWasExplicit;
-  if (runtimeProfile === undefined) {
+  if (acceptsRuntimeContext(args) && runtimeProfile === undefined) {
     const sourceScoped = args.command === "check" || args.command === "plan" || args.command === "build";
     const start = commandWorkspaceRoot(args)
       ?? (sourceScoped ? dirname(resolve(args.source)) : process.cwd());
