@@ -1,0 +1,280 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
+  <import as="estimate" from="@hypit/estimate@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="estimated" from="@hypit/semantic-take-estimate@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
+  <import as="media-track" from="@hypit/media-track@1"/>
+  <import as="audio-track" from="@hypit/audio-track@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
+  <import as="ranking" from="@hypit/ranking@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="recipes" source="./column-recipes.svs"/>
+  <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+
+  <!-- Cue boundaries remain explicit author intent. The complete Messi and
+       Ronaldo Segments are also the two disjoint Column reveal windows. -->
+  <script id="story">
+    <messi>
+      <HOST>Messi is the bottom. || Five foot seven, || no muscles, || no speed, || just vibes. || @pitch-pov Man walks around || the pitch like || @ikea-sign he's lost in <IKEA | eye KEE uh>@/ikea-sign@/pitch-pov. || @retirement-room Went to Miami || and turned the league || into a retirement home@/retirement-room.
+    </messi>
+    <ronaldo>
+      <HOST>Ronaldo? Bro is || 39 years old || @rent-jump and still jumps || higher than your rent@/rent-jump. || @nine-hundred-goals Nine hundred goals, || @laboratory-body a body built || in a laboratory, || @museum-jawline and a jawline || that belongs || in a museum@/museum-jawline@/laboratory-body@/nine-hundred-goals. || Absolutely the top one.
+    </ronaldo>
+  </script>
+
+  <asset:Image id="presenter" src="./assets/goth2.jpg"/>
+  <asset:Audio id="presenter-voice" src="./assets/goth.wav"/>
+  <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
+  <asset:Audio id="ranking-appear-sfx" src="./assets/ranking-appear.wav"/>
+  <asset:Audio id="ranking-move-sfx" src="./assets/ranking-move.wav"/>
+  <asset:Image id="ronaldo-icon" src="./assets/ronaldo.jpeg"/>
+  <asset:Image id="messi-icon" src="./assets/messi.jpeg"/>
+  <asset:Image id="mbappe-icon" src="./assets/mbappe-new.jpg"/>
+  <asset:Image id="haaland-icon" src="./assets/haaland.jpg"/>
+  <asset:Image id="bellingham-icon" src="./assets/bellingham-new.jpg"/>
+  <asset:Image id="de-bruyne-icon" src="./assets/debrunye.jpg"/>
+  <asset:Image id="yamal-icon" src="./assets/yamal.jpg"/>
+  <asset:Image id="kane-icon" src="./assets/kane.jpg"/>
+  <asset:Image id="modric-icon" src="./assets/modric.jpg"/>
+  <asset:Image id="neymar-icon" src="./assets/neymar.jpg"/>
+
+  <estimate:Speech id="messi-preview-duration" source={story.segment.messi.speech}
+    language="en" pace="normal" min="4" max="15" rounding="round"/>
+  <estimate:Speech id="ronaldo-preview-duration" source={story.segment.ronaldo.speech}
+    language="en" pace="normal" min="4" max="15" rounding="round"/>
+
+  <text:Value id="messi-action">
+    Keep the handheld microphone in the same hand throughout and use only the free hand for gestures. On "Messi is the bottom", lower the free palm toward the floor and give one deadpan downward nod. On "Five foot seven", hold the free hand low as if marking a short height. Give three small counting beats through "no muscles, no speed, just vibes", ending with a loose shoulder shrug and an amused half-smile on "just vibes". On "Man walks around", slowly draw a lazy circle in the air. On "lost in IKEA", glance left and right with a puzzled squint, then point uncertainly off frame. On "retirement home", briefly hunch the shoulders and mime one slow old-man step with the free hand before finishing with a knowing smirk.
+  </text:Value>
+  <text:Value id="ronaldo-action">
+    Keep the handheld microphone in the same hand throughout and use only the free hand for gestures. Keep the presenter's face, skin, hair, clothing, body, microphone, room, lighting, and natural human appearance continuous and unchanged from the first frame to the last. Open with a skeptical raised eyebrow on "Ronaldo?" and one emphatic nod on "39 years old". On "still jumps higher than your rent", drive the free hand sharply upward above shoulder level and follow it with the eyes, then land the punchline with a sarcastic grin. Present "Nine hundred goals" with one broad, confident sweep of the free hand. On "a body built in a laboratory", briefly flex the free arm, tap the bicep once, and immediately return to a relaxed natural speaking posture while keeping the face animated. On "jawline", trace the edge of the jaw once with the free index finger. On "museum", turn the free palm outward as if presenting an expensive exhibit offscreen, raise one eyebrow, and keep talking naturally. On "Absolutely the top one", raise one index finger decisively and finish with a firm nod.
+  </text:Value>
+
+  <!-- Aspect ratio is model configuration, never prose hidden in the prompt. -->
+  <text:Value id="broll-pitch-pov-prompt">
+    A photorealistic first-person POV from someone lounging lazily on the grass of a football pitch with legs crossed. The lower edge of the viewer's own blue-and-white striped football jersey is visible. In the distance, two teams play an intense match, one in blue and white and the other in red. The relaxed spectator posture contrasts absurdly with the frantic game, natural daylight, realistic depth, deadpan sports comedy, no readable text, no logos.
+  </text:Value>
+  <text:Value id="broll-ikea-sign-prompt">
+    A deadpan comedy photograph of a monumental blue-and-white striped storefront sign standing beside a football training ground. The sign must read exactly "IKEA" in large clean yellow capital letters. Stark commercial architecture, bright daylight, crisp realistic materials, absurdly oversized wayfinding sign, no people, no other readable text.
+  </text:Value>
+  <text:Value id="broll-retirement-room-prompt">
+    A photorealistic professional football locker room after practice, with open lockers, wooden benches, boots and blue towels. The room has been absurdly taken over by elderly mobility equipment: scattered walking canes, walkers, wheelchairs, a mobility scooter, orthopedic cushions and reading glasses. No people, realistic stadium facilities, dry visual comedy, no readable text, no logos.
+  </text:Value>
+  <text:Value id="broll-rent-jump-prompt">
+    A surreal editorial sports image of a fictional gel-haired footballer in a red jersey leaping cleanly over a huge, extremely steep rising data curve as if it were a hurdle. The athlete is frozen at the apex with dramatic athletic form while the graph shoots upward beneath him. Bold abstract background, cinematic lighting, energetic meme composition, no axis labels, no numbers, no readable text, no logos.
+  </text:Value>
+  <text:Value id="broll-nine-hundred-prompt">
+    A polished satirical football analytics report card. The dominant centerpiece must read exactly "900 GOALS", with the number 900 enormous and unmistakable. Surround it with minimal clean data bars, goal markers and subtle stadium-grid details, high contrast sports-broadcast design, no player portrait, no logos, no other words or numbers.
+  </text:Value>
+  <text:Value id="broll-laboratory-body-prompt">
+    A photorealistic museum-safe bronze sculpture of a fictional Greek champion seen from behind, wearing a modest classical athletic singlet and knee-length training shorts, standing on a pedestal in a futuristic biomedical laboratory and flexing both arms in a double-biceps bodybuilding pose. Glass instruments, cool laboratory lights and clinical equipment surround the fully clothed heroic bronze figure. Family-friendly straight-faced visual comedy, realistic metal patina, no readable text, no logos.
+  </text:Value>
+  <text:Value id="broll-museum-jawline-prompt">
+    A tight funny studio headshot of a fictional sigma tough guy looking slightly upward into the camera. He has a cartoonishly exaggerated square jawline, a confident smile and his left eyebrow raised at the viewer. Slick hair, dramatic beauty lighting, crisp realistic skin, intentionally over-serious internet-meme masculinity, no readable text, no logos.
+  </text:Value>
+
+  <gpt:Image id="broll-pitch-pov" prompt={broll-pitch-pov-prompt}
+    aspect-ratio="4:3" resolution="2K"/>
+  <gpt:Image id="broll-ikea-sign" prompt={broll-ikea-sign-prompt}
+    aspect-ratio="1:1" resolution="2K"/>
+  <gpt:Image id="broll-retirement-room" prompt={broll-retirement-room-prompt}
+    aspect-ratio="4:3" resolution="2K"/>
+  <gpt:Image id="broll-rent-jump" prompt={broll-rent-jump-prompt}
+    aspect-ratio="4:3" resolution="2K"/>
+  <gpt:Image id="broll-nine-hundred" prompt={broll-nine-hundred-prompt}
+    aspect-ratio="1:1" resolution="2K"/>
+  <gpt:Image id="broll-laboratory-body" prompt={broll-laboratory-body-prompt}
+    aspect-ratio="3:4" resolution="2K"/>
+  <gpt:Image id="broll-museum-jawline" prompt={broll-museum-jawline-prompt}
+    aspect-ratio="1:1" resolution="2K"/>
+
+  <text:Render id="messi-prompt" template={speaker-kit.speaker-v1}
+    recipe={recipes.speaker.host}>
+    <text:Set name="dialogue" text={story.segment.messi.dialogue}/>
+    <text:Set name="action" text={messi-action}/>
+  </text:Render>
+  <text:Render id="ronaldo-prompt" template={speaker-kit.speaker-v1}
+    recipe={recipes.speaker.host}>
+    <text:Set name="dialogue" text={story.segment.ronaldo.dialogue}/>
+    <text:Set name="action" text={ronaldo-action}/>
+  </text:Render>
+
+  <seedance:ReferenceVideo id="messi-take" model="mini"
+    prompt={messi-prompt} duration="10"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter}/>
+    <seedance:Reference audio={presenter-voice}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="ronaldo-take" model="mini"
+    prompt={ronaldo-prompt} duration="10"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter}/>
+    <seedance:Reference audio={presenter-voice}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <program:Clock id="clock" frame-rate="30"/>
+  <pipeline:Normalize id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <pipeline:Normalize id="ranking-appear-media" source={ranking-appear-sfx}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <pipeline:Normalize id="ranking-move-media" source={ranking-move-sfx}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <space:Frame id="speech-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <space:Frame id="column-frame" within={vertical}
+    left="0%" top="10%" right="26%" bottom="67.5%"/>
+
+  <space:Extent id="pitch-pov-extent" width="2688" height="2016"/>
+  <space:Extent id="ikea-sign-extent" width="2048" height="2048"/>
+  <space:Extent id="retirement-room-extent" width="2688" height="2016"/>
+  <space:Extent id="rent-jump-extent" width="2688" height="2016"/>
+  <space:Extent id="nine-hundred-extent" width="2048" height="2048"/>
+  <space:Extent id="laboratory-body-extent" width="2016" height="2688"/>
+  <space:Extent id="museum-jawline-extent" width="2048" height="2048"/>
+
+  <!-- These straight-edged cards occupy the same right-side stage as the
+       active Column item. They have no border, rounded mask or sustain motion. -->
+  <space:AspectFrame id="pitch-pov-frame" within={vertical}
+    x="50%" y="72%" width="74%" aspect={pitch-pov-extent} anchor="center"/>
+  <space:AspectFrame id="ikea-sign-frame" within={vertical}
+    x="75%" y="79%" width="50%" aspect={ikea-sign-extent} anchor="center"/>
+  <space:AspectFrame id="retirement-room-frame" within={vertical}
+    x="52%" y="75%" width="88%" aspect={retirement-room-extent} anchor="center"/>
+  <space:AspectFrame id="rent-jump-frame" within={vertical}
+    x="52%" y="75%" width="78%" aspect={rent-jump-extent} anchor="center"/>
+  <space:AspectFrame id="nine-hundred-frame" within={vertical}
+    x="25%" y="72%" width="50%" aspect={nine-hundred-extent} anchor="center"/>
+  <space:AspectFrame id="laboratory-body-frame" within={vertical}
+    x="50%" y="68%" width="46%" aspect={laboratory-body-extent} anchor="center"/>
+  <space:AspectFrame id="museum-jawline-frame" within={vertical}
+    x="75%" y="78%" width="50%" aspect={museum-jawline-extent} anchor="center"/>
+
+  <pipeline:Normalize id="messi-media" source={messi-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="ronaldo-media" source={ronaldo-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <whisperx:SemanticTake id="messi-semantic" narrative={story}
+    segment={story.segment.messi} media={messi-media.media} language="en"/>
+  <whisperx:SemanticTake id="ronaldo-semantic" narrative={story}
+    segment={story.segment.ronaldo} media={ronaldo-media.media} language="en"/>
+
+  <pipeline:StillVideo id="messi-still" source={presenter}
+    duration={messi-preview-duration.duration} clock={clock}/>
+  <pipeline:StillVideo id="ronaldo-still" source={presenter}
+    duration={ronaldo-preview-duration.duration} clock={clock}/>
+  <pipeline:Normalize id="messi-preview-media" source={messi-still.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="ronaldo-preview-media" source={ronaldo-still.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <estimated:SemanticTake id="messi-preview" narrative={story}
+    segment={story.segment.messi} media={messi-preview-media.media}
+    policy={messi-preview-duration.policy}/>
+  <estimated:SemanticTake id="ronaldo-preview" narrative={story}
+    segment={story.segment.ronaldo} media={ronaldo-preview-media.media}
+    policy={ronaldo-preview-duration.policy}/>
+
+  <speech:Track id="speech" visual-frame={speech-frame}
+    visual-appearance={recipes.speech.visual} visual-z="0">
+    <speech:Take source={messi-semantic.take}/>
+    <speech:Take source={ronaldo-semantic.take}/>
+  </speech:Track>
+  <audio-track:Track id="music-bed" semantic={speech.semantic}>
+    <audio-track:Clip source={soundtrack-media.media} during="program"
+      playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
+  </audio-track:Track>
+
+  <fonts:Stack id="display-font" family="montserrat" weight="900" style="normal"/>
+  <fonts:Stack id="column-font" family="inter" weight="700" style="normal"/>
+  <ranking:ColumnStyle id="column-style" recipe={recipes.ranking.football-column}
+    font={column-font}/>
+  <ranking:Column id="football-column" semantic={speech.semantic}
+    canvas={vertical} frame={column-frame} during="program" style={column-style}
+    appear-sound={ranking-appear-media.media}
+    move-sound={ranking-move-media.media}>
+    <ranking:ColumnItem id="ronaldo" rank="1" label="Ronaldo"
+      icon={ronaldo-icon} during={story.segment.ronaldo}/>
+    <ranking:ColumnItem id="mbappe" rank="2" label="Mbappe"
+      preset="true" icon={mbappe-icon}/>
+    <ranking:ColumnItem id="haaland" rank="3" label="Haaland"
+      preset="true" icon={haaland-icon}/>
+    <ranking:ColumnItem id="bellingham" rank="4" label="Bellingham"
+      preset="true" icon={bellingham-icon}/>
+    <ranking:ColumnItem id="de-bruyne" rank="5" label="De Bruyne"
+      preset="true" icon={de-bruyne-icon}/>
+    <ranking:ColumnItem id="yamal" rank="6" label="Yamal"
+      preset="true" icon={yamal-icon}/>
+    <ranking:ColumnItem id="kane" rank="7" label="Kane"
+      preset="true" icon={kane-icon}/>
+    <ranking:ColumnItem id="modric" rank="8" label="Modric"
+      preset="true" icon={modric-icon}/>
+    <ranking:ColumnItem id="neymar" rank="9" label="Neymar"
+      preset="true" icon={neymar-icon}/>
+    <ranking:ColumnItem id="messi" rank="10" label="Messi"
+      icon={messi-icon} during={story.segment.messi}/>
+  </ranking:Column>
+
+  <media-track:Track id="broll" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Item id="pitch-pov" image={broll-pitch-pov.image}
+      extent={pitch-pov-extent} during={story.selection.pitch-pov}
+      frame={pitch-pov-frame} appearance={recipes.media.pitch-pov}
+      motion={recipes.motion.broll}/>
+    <media-track:Item id="ikea-sign" image={broll-ikea-sign.image}
+      extent={ikea-sign-extent} during={story.selection.ikea-sign}
+      frame={ikea-sign-frame} appearance={recipes.media.ikea-sign}
+      motion={recipes.motion.broll}/>
+    <media-track:Item id="retirement-room" image={broll-retirement-room.image}
+      extent={retirement-room-extent} during={story.selection.retirement-room}
+      frame={retirement-room-frame} appearance={recipes.media.retirement-room}
+      motion={recipes.motion.broll}/>
+    <media-track:Item id="rent-jump" image={broll-rent-jump.image}
+      extent={rent-jump-extent} during={story.selection.rent-jump}
+      frame={rent-jump-frame} appearance={recipes.media.rent-jump}
+      motion={recipes.motion.broll}/>
+    <media-track:Item id="nine-hundred-goals" image={broll-nine-hundred.image}
+      extent={nine-hundred-extent} during={story.selection.nine-hundred-goals}
+      frame={nine-hundred-frame} appearance={recipes.media.nine-hundred}
+      motion={recipes.motion.broll}/>
+    <media-track:Item id="laboratory-body" image={broll-laboratory-body.image}
+      extent={laboratory-body-extent} during={story.selection.laboratory-body}
+      frame={laboratory-body-frame} appearance={recipes.media.laboratory-body}
+      motion={recipes.motion.broll}/>
+    <media-track:Item id="museum-jawline" image={broll-museum-jawline.image}
+      extent={museum-jawline-extent} during={story.selection.museum-jawline}
+      frame={museum-jawline-frame} appearance={recipes.media.museum-jawline}
+      motion={recipes.motion.broll}/>
+  </media-track:Track>
+
+  <caption-fine:Style id="caption-style" recipe={recipes.caption.primary}
+    font={display-font}/>
+  <caption:Program id="caption-program" document={story.caption}
+    narrative={story} default={caption-style}/>
+  <caption-fine:Track id="captions" document={story.caption}
+    semantic={speech.semantic} program={caption-program}/>
+
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
+    appearance={recipes.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audio}/>
+    <film:Track source={football-column.visual}/>
+    <film:Track source={football-column.audio}/>
+    <film:Track source={broll.visual}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={music-bed.track}/>
+  </film:Film>
+  <render:Video id="final" composition={main.composition}
+    semantic={speech.semantic}/>
+</svml>

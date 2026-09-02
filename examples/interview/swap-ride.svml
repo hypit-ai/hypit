@@ -1,0 +1,243 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="media" from="@hypit/media@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
+  <import as="audio-track" from="@hypit/audio-track@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="screen" from="@hypit/screen-overlay@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
+  <import as="recipes" source="./recipes.svs"/>
+  <import as="tracking" source="./ada-tracking.svs"/>
+  <import as="interview-kit" source="./kits/street-interview-v1.svs"/>
+
+  <script id="story">
+    <uber-rule>
+      <LEON>Hey yo! || Is this <F1 | F One> car || yours?
+      <ADA>Mmm hmm.
+      <LEON>Give me three rules || to make your || first million.
+      <ADA>OK || the || first one || is || @uber! Uber.
+      <LEON>You drove || Uber?
+      <ADA>Two || years. || Five || stars || for || every || single || ride.
+    </uber-rule>
+
+    <shortcuts-rule>
+      <LEON>Did that || make you || a million?
+      <ADA>No. || But || rule two || did.
+      <LEON>Say it.
+      <ADA>@shortcuts! Shortcuts. || Take || every || single || one.
+      <LEON>Like on the track?
+      <ADA>Like on || Google || Maps. || I || missed || my || exit || and || ended up || on a || racetrack.
+      <LEON>Wait like || during a race?
+      <ADA>That's || rule three.
+    </shortcuts-rule>
+
+    <first-place-rule>
+      <LEON>What?!
+      <ADA>I won || the || @first-place! First || place || so || they || gave me || the car.
+      <LEON>So you won an || <F1 | F One> race || by accident?!
+      <ADA>Five star || driver, || baby.
+    </first-place-rule>
+  </script>
+
+  <media:Image id="interviewer-view" src="./assets/leon.png"/>
+  <media:Image id="guest-view" src="./assets/aida.png"/>
+  <media:Image id="shared-view" src="./assets/aidaleon.png"/>
+  <media:Audio id="leon-voice" src="./assets/leon.wav"/>
+  <media:Audio id="ada-voice" src="./assets/aida.wav"/>
+  <media:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
+  <media:Audio id="rule-reveal-sound" src="./assets/rule-reveal.wav"/>
+  <media:Image id="rule-placeholder" src="./assets/emoji-reveal/rendered/question-mark-red.png"/>
+  <media:Image id="uber-icon" src="./assets/emoji-reveal/rendered/uber.png"/>
+  <media:Image id="shortcuts-icon" src="./assets/emoji-reveal/rendered/shortcuts.png"/>
+  <media:Image id="first-place-icon" src="./assets/emoji-reveal/rendered/first-place.png"/>
+
+  <text:Value id="uber-rule-action">
+    LEON is interviewer A, the young man in black holding the microphone. ADA is guest B, the woman in the red racing suit holding her racing helmet beside the red Formula One car. Preserve their identities, outfits, helmet, microphone, car, left-right relationship, street location, and lighting throughout.
+    ABSOLUTE SHOT LOCK: @image1, @image2, and @image3 are the only permitted complete camera compositions. Select exactly the explicitly named setup for each line below and hold that supplied composition unchanged. Never invent another shot size, crop, angle, camera position, reverse angle, over-the-shoulder view, intermediate framing, push, pan, tilt, zoom, orbit, reframe, or transitional camera move.
+    LEON never turns front-on and never looks toward the camera. Whenever he appears, preserve the same side-profile orientation established by @image1 and @image3, facing ADA. His fringe remains low over his eyes, so his eyes stay subdued, partially obscured, and never become a prominent visible feature. Keep every LEON reaction restrained and conversational: he never widens his eyes, stares, or makes an exaggerated shocked expression.
+    Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for LEON's “Hey yo! Is this F One car yours?” ADA initially looks down while lightly adjusting the racing helmet in her hands. As LEON asks, he takes one small step toward her. Hearing him, ADA raises her head and looks at LEON.
+    Hard cut directly to the exact ADA camera setup from @image2 and hold that complete frame for “Mmm hmm.” ADA gives LEON a simple affirmative nod.
+    Hard cut directly to the exact shared two-person camera setup from @image3 and hold that complete frame for LEON's “Give me three rules to make your first million.” LEON asks with a natural open questioning hand gesture while keeping the microphone controlled.
+    Hard cut directly to the exact ADA camera setup from @image2 and hold that complete frame for “OK, the first one is Uber.” ADA answers confidently with her free hand planted on her hip while keeping hold of the helmet.
+    Hard cut directly to the exact LEON side-profile camera setup from @image1 and hold that complete frame for “You drove Uber?” LEON asks with mild curiosity, still facing only ADA and never turning toward the camera.
+    Hard cut directly to the exact ADA camera setup from @image2 and hold that complete frame for “Two years. Five stars for every single ride.” ADA naturally gestures with her free hand while speaking.
+  </text:Value>
+
+  <text:Value id="shortcuts-rule-action">
+    LEON is interviewer A, the young man in black holding the microphone. ADA is guest B, the woman in the red racing suit holding her racing helmet beside the red Formula One car. Preserve their identities, outfits, helmet, microphone, car, left-right relationship, street location, and lighting throughout.
+    ABSOLUTE SHOT LOCK: @image1, @image2, and @image3 are the only permitted complete camera compositions. Select exactly the explicitly named setup for each line below and hold that supplied composition unchanged. Never invent another shot size, crop, angle, camera position, reverse angle, over-the-shoulder view, intermediate framing, push, pan, tilt, zoom, orbit, reframe, or transitional camera move.
+    LEON never turns front-on and never looks toward the camera. Whenever he appears, preserve the same side-profile orientation established by @image1 and @image3, facing ADA. His fringe remains low over his eyes, so his eyes stay subdued, partially obscured, and never become a prominent visible feature. Keep every LEON reaction restrained and conversational: he never widens his eyes, stares, or makes an exaggerated shocked expression.
+    Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for LEON's “Did that make you a million?” LEON asks with restrained curiosity and a natural questioning gesture.
+    Hard cut directly to the exact ADA camera setup from @image2 and hold that complete frame for “No. But rule two did.” ADA shakes her head on “No,” then uses a small redirecting gesture as she deliberately changes the subject.
+    Hard cut directly to the exact shared two-person camera setup from @image3 and hold that complete frame for LEON's short line, “Say it.” LEON speaks normally and waits for the answer.
+    Hard cut directly to the exact ADA camera setup from @image2 and hold that complete frame for “Shortcuts. Take every single one.” ADA raises one index finger to introduce the rule, then makes several compact beat gestures in time with the rest of the sentence.
+    Hard cut directly to the exact LEON side-profile camera setup from @image1 and hold that complete frame for “Like on the track?” LEON asks with a puzzled questioning gesture while continuing to face ADA.
+    Hard cut directly to the exact ADA camera setup from @image2 and hold that complete frame for “Like on Google Maps. I missed my exit and ended up on a racetrack.” ADA lifts her free hand to indicate a direction, then returns it to her hip, tilts her head, and answers with an amused smile.
+    Hard cut directly to the exact LEON side-profile camera setup from @image1 and hold that complete frame for “Wait, like during a race?” LEON reacts with restrained disbelief and a compact questioning hand gesture, without turning his face toward the camera or widening his eyes.
+    Hard cut directly to the exact ADA camera setup from @image2 and hold that complete frame for “That's rule three.” ADA gives LEON a confident affirmative nod.
+  </text:Value>
+
+  <text:Value id="first-place-rule-action">
+    LEON is interviewer A, the young man in black holding the microphone. ADA is guest B, the woman in the red racing suit holding her racing helmet beside the red Formula One car. Preserve their identities, outfits, helmet, microphone, car, left-right relationship, street location, and lighting throughout.
+    ABSOLUTE SHOT LOCK: @image1, @image2, and @image3 are the only permitted complete camera compositions. Select exactly the explicitly named setup for each line below and hold that supplied composition unchanged. Never invent another shot size, crop, angle, camera position, reverse angle, over-the-shoulder view, intermediate framing, push, pan, tilt, zoom, orbit, reframe, or transitional camera move.
+    LEON never turns front-on and never looks toward the camera. Whenever he appears, preserve the same side-profile orientation established by @image1 and @image3, facing ADA. His fringe remains low over his eyes, so his eyes stay subdued, partially obscured, and never become a prominent visible feature. Keep every LEON reaction restrained and conversational: he never widens his eyes, stares, or makes an exaggerated shocked expression.
+    Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for LEON's “What?” LEON asks with a mildly confused questioning gesture.
+    Hard cut directly to the exact ADA camera setup from @image2 and hold that complete frame for “I won first place, so they gave me the car.” ADA pats the racing helmet once with her free hand, then points toward the red Formula One car behind her.
+    Hard cut directly to the exact shared two-person camera setup from @image3 and hold that complete frame for LEON's “So you won an F One race by accident?” LEON points toward the Formula One car with restrained disbelief while keeping his side profile, looking only at ADA, and never widening his eyes.
+    Hard cut directly to the exact ADA camera setup from @image2 and hold that complete frame for “Five-star driver, baby.” ADA lifts her chin toward LEON with a playful, flirtatious confidence, then hugs the helmet against her body and turns to her left as if preparing to leave.
+  </text:Value>
+
+  <text:Render id="uber-rule-prompt"
+    template={interview-kit.street-interview-v1}
+    recipe={recipes.interview.street}>
+    <text:Set name="dialogue" text={story.segment.uber-rule.dialogue}/>
+    <text:Set name="action" text={uber-rule-action}/>
+  </text:Render>
+  <text:Render id="shortcuts-rule-prompt"
+    template={interview-kit.street-interview-v1}
+    recipe={recipes.interview.street}>
+    <text:Set name="dialogue" text={story.segment.shortcuts-rule.dialogue}/>
+    <text:Set name="action" text={shortcuts-rule-action}/>
+  </text:Render>
+  <text:Render id="first-place-rule-prompt"
+    template={interview-kit.street-interview-v1}
+    recipe={recipes.interview.street}>
+    <text:Set name="dialogue" text={story.segment.first-place-rule.dialogue}/>
+    <text:Set name="action" text={first-place-rule-action}/>
+  </text:Render>
+
+  <seedance:ReferenceVideo id="uber-rule-take"
+    model="mini" prompt={uber-rule-prompt}
+    duration="9"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={interviewer-view}/>
+    <seedance:Reference image={guest-view}/>
+    <seedance:Reference image={shared-view}/>
+    <seedance:Reference audio={leon-voice}/>
+    <seedance:Reference audio={ada-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="shortcuts-rule-take"
+    model="mini" prompt={shortcuts-rule-prompt}
+    duration="11"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={interviewer-view}/>
+    <seedance:Reference image={guest-view}/>
+    <seedance:Reference image={shared-view}/>
+    <seedance:Reference audio={leon-voice}/>
+    <seedance:Reference audio={ada-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="first-place-rule-take"
+    model="mini" prompt={first-place-rule-prompt}
+    duration="6"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={interviewer-view}/>
+    <seedance:Reference image={guest-view}/>
+    <seedance:Reference image={shared-view}/>
+    <seedance:Reference audio={leon-voice}/>
+    <seedance:Reference audio={ada-voice}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <space:Frame id="full-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <program:Clock id="clock" frame-rate="30"/>
+
+  <pipeline:Normalize id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <pipeline:Normalize id="rule-reveal-sound-media" source={rule-reveal-sound}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+
+  <pipeline:Normalize id="uber-rule-media" source={uber-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="shortcuts-rule-media" source={shortcuts-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="first-place-rule-media" source={first-place-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+
+  <whisperx:SemanticTake id="uber-rule-semantic" narrative={story}
+    segment={story.segment.uber-rule} media={uber-rule-media.media} language="en"/>
+  <whisperx:SemanticTake id="shortcuts-rule-semantic" narrative={story}
+    segment={story.segment.shortcuts-rule} media={shortcuts-rule-media.media} language="en"/>
+  <whisperx:SemanticTake id="first-place-rule-semantic" narrative={story}
+    segment={story.segment.first-place-rule} media={first-place-rule-media.media} language="en"/>
+
+  <speech:Track id="speech" visual-frame={full-frame}
+    visual-appearance={recipes.speech.visual} visual-z="10">
+    <speech:Take source={uber-rule-semantic.take}/>
+    <speech:Take source={shortcuts-rule-semantic.take}/>
+    <speech:Take source={first-place-rule-semantic.take}/>
+  </speech:Track>
+
+  <audio-track:Track id="music-bed" semantic={speech.semantic}>
+    <audio-track:Clip source={soundtrack-media.media} during="program"
+      playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
+  </audio-track:Track>
+
+  <audio-track:Track id="rule-reveal-sfx" semantic={speech.semantic}>
+    <audio-track:Clip id="uber-reveal-sfx" source={rule-reveal-sound-media.media}
+      at={story.moment.uber} for="20f" playback="once-start" gain="0.20"/>
+    <audio-track:Clip id="shortcuts-reveal-sfx" source={rule-reveal-sound-media.media}
+      at={story.moment.shortcuts} for="20f" playback="once-start" gain="0.20"/>
+    <audio-track:Clip id="first-place-reveal-sfx" source={rule-reveal-sound-media.media}
+      at={story.moment.first-place} for="20f" playback="once-start" gain="0.20"/>
+  </audio-track:Track>
+
+  <fonts:Stack id="caption-font" family="league-spartan" weight="900" style="normal"/>
+  <caption-fine:Style id="caption-leon-style" recipe={recipes.caption.boy}
+    font={caption-font}/>
+  <caption-fine:Style id="caption-ada-style" recipe={recipes.caption.ada}
+    font={caption-font}/>
+  <caption:Program id="caption-program" document={story.caption}
+    narrative={story} default={caption-leon-style}>
+    <caption:Use role="ADA" style={caption-ada-style}/>
+  </caption:Program>
+  <space:RegionTimeline id="ada-heads" within={vertical}
+    recipe={tracking.heads.ada}/>
+  <caption-fine:Track id="captions" document={story.caption}
+    semantic={speech.semantic} program={caption-program} regions={ada-heads}/>
+
+  <emoji:Style id="rule-reveal-style" recipe={recipes.emoji.strip}/>
+  <emoji:Track id="rule-reveal" semantic={speech.semantic} canvas={vertical}
+    style={rule-reveal-style} placeholder={rule-placeholder} during="program">
+    <emoji:Item id="uber" icon={uber-icon} at={story.moment.uber}/>
+    <emoji:Item id="shortcuts" icon={shortcuts-icon} at={story.moment.shortcuts}/>
+    <emoji:Item id="first-place" icon={first-place-icon} at={story.moment.first-place}/>
+  </emoji:Track>
+
+  <screen:Track id="rule-reveal-flashes" semantic={speech.semantic} canvas={vertical}>
+    <screen:Flash id="uber-flash" at={story.moment.uber} for="8f" z="80"
+      color="#2A9DFF" intensity="0.28" attack="2" hold="1" decay="5"/>
+    <screen:Flash id="shortcuts-flash" at={story.moment.shortcuts} for="8f" z="80"
+      color="#A855F7" intensity="0.28" attack="2" hold="1" decay="5"/>
+    <screen:Flash id="first-place-flash" at={story.moment.first-place} for="8f" z="80"
+      color="#F2B832" intensity="0.28" attack="2" hold="1" decay="5"/>
+  </screen:Track>
+
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
+    appearance={recipes.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audio}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={rule-reveal.track}/>
+    <film:Track source={rule-reveal-flashes.track}/>
+    <film:Track source={music-bed.track}/>
+    <film:Track source={rule-reveal-sfx.track}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition}
+    semantic={speech.semantic}/>
+</svml>

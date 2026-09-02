@@ -1,0 +1,49 @@
+{
+  "format": "hypit.runtime-profile@1",
+  "runtime": {
+    "use": "@hypit/runtime-local",
+    "config": {
+      "dataRoot": ".hypit/runtimes/local",
+      "artifacts": {
+        "use": "@hypit/artifact-store-fs",
+        "config": { "path": "artifacts" }
+      },
+      "credentials": {
+        "os": { "use": "@hypit/credential-store-os" }
+      },
+      "endpoints": {
+        "kie.hypit-interview": {
+          "use": "@hypit/provider-kie",
+          "pool": "generation",
+          "config": {
+            "apiKey": { "store": "os", "key": "KIE_API_KEY" },
+            "defaultConcurrency": 10,
+            "laneConcurrency": { "seedance-2-mini": 10 }
+          }
+        },
+        "media.hypit-interview": {
+          "use": "@hypit/provider-media-local",
+          "pool": "media",
+          "config": { "defaultConcurrency": 2 }
+        },
+        "whisperx.hypit-interview": {
+          "use": "@hypit/provider-whisperx-local",
+          "pool": "alignment",
+          "config": {
+            "expectedModel": "large-v3",
+            "defaultConcurrency": 1
+          }
+        },
+        "hyperframes.hypit-interview": {
+          "use": "@hypit/provider-hyperframes-local",
+          "pool": "render",
+          "config": {
+            "workers": 2,
+            "quality": "standard",
+            "defaultConcurrency": 1
+          }
+        }
+      }
+    }
+  }
+}

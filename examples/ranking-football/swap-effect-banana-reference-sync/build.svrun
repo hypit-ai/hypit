@@ -1,0 +1,28 @@
+<?svml using="@hypit/run-markup@1"?>
+<svrun version="1">
+  <author source="./swap-effect-banana-reference-sync.svml"/>
+  <target output="final.video"/>
+  <file id="ronaldo-banana" type="@hypit/artifact@1#BlobArtifact" from="./reused/ronaldo.mp4" media-type="video/mp4"/>
+  <file id="messi-banana" type="@hypit/artifact@1#BlobArtifact" from="./reused/messi.mp4" media-type="video/mp4"/>
+  <satisfy output="ronaldo-take.video" candidate="ronaldo-banana"/>
+  <satisfy output="messi-take.video" candidate="messi-banana"/>
+
+  <!-- Reuse the accepted reference B-roll images; speech, captions, Column
+       and Film are rebuilt from the current Source graph. -->
+  <file id="broll-1" type="@hypit/artifact@1#BlobArtifact" from="./accepted/brolls/1-1.png" media-type="image/png"/>
+  <file id="broll-2" type="@hypit/artifact@1#BlobArtifact" from="./accepted/brolls/1-2.png" media-type="image/png"/>
+  <file id="broll-3" type="@hypit/artifact@1#BlobArtifact" from="./accepted/brolls/1-3.png" media-type="image/png"/>
+  <file id="broll-4" type="@hypit/artifact@1#BlobArtifact" from="./accepted/brolls/1-4.png" media-type="image/png"/>
+  <file id="broll-5" type="@hypit/artifact@1#BlobArtifact" from="./accepted/brolls/1-5.png" media-type="image/png"/>
+  <file id="broll-6" type="@hypit/artifact@1#BlobArtifact" from="./accepted/brolls/1-6.png" media-type="image/png"/>
+  <file id="broll-7" type="@hypit/artifact@1#BlobArtifact" from="./accepted/brolls/1-7.png" media-type="image/png"/>
+  <file id="broll-8" type="@hypit/artifact@1#BlobArtifact" from="./accepted/brolls/1-8.png" media-type="image/png"/>
+  <satisfy output="broll-hair-gel.image" candidate="broll-1"/>
+  <satisfy output="broll-trophy.image" candidate="broll-2"/>
+  <satisfy output="broll-greek-god.image" candidate="broll-3"/>
+  <satisfy output="broll-greek-tragedy.image" candidate="broll-4"/>
+  <satisfy output="broll-penaldo-social.image" candidate="broll-5"/>
+  <satisfy output="broll-tired-dad-trophy.image" candidate="broll-6"/>
+  <satisfy output="broll-walks-around.image" candidate="broll-7"/>
+  <satisfy output="broll-hat-trick.image" candidate="broll-8"/>
+</svrun>

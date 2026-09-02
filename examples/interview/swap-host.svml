@@ -1,0 +1,236 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="media" from="@hypit/media@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
+  <import as="audio-track" from="@hypit/audio-track@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="screen" from="@hypit/screen-overlay@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
+  <import as="recipes" source="./recipes.svs"/>
+  <import as="interview-kit" source="./kits/street-interview-v1.svs"/>
+  <import as="wojak-tracking" source="./wojak-tracking.svs"/>
+
+  <script id="story">
+    <manifest-rule>
+      <CHAD>Hey yo! || Is this Lamborghini || yours?
+      <WOJAK>Um, || yeah.
+      <CHAD>Give me three rules || to make your || first million.
+      <WOJAK>OK || the || first one || is || @manifest! Manifest.
+      <CHAD>You manifested || a Lamborghini?
+      <WOJAK>I || whispered || it || to || myself || in || the || shower.
+    </manifest-rule>
+
+    <real-estate-rule>
+      <CHAD>Did it really || work?
+      <WOJAK>No. || But || rule two || did.
+      <CHAD>Say it.
+      <WOJAK>@real-estate! Real estate. || Buy || the || building, || and || charge || everyone || rent.
+      <CHAD>But how did you || buy the building?
+      <WOJAK>That's || rule three.
+    </real-estate-rule>
+
+    <bitcoin-rule>
+      <CHAD>Wait what?
+      <WOJAK>@bitcoin! Bitcoin. || I || pressed || the || wrong || button || in <2012 | twenty twelve> || and || made || six figures.
+      <CHAD>So you || accidentally || bought Bitcoin?!
+      <WOJAK>That's || manifesting, || bro.
+    </bitcoin-rule>
+  </script>
+
+  <media:Image id="interviewer-view" src="./assets/chad.png"/>
+  <media:Image id="guest-view" src="./assets/wojak.png"/>
+  <media:Image id="shared-view" src="./assets/wojakchad.png"/>
+  <media:Audio id="chad-voice" src="./assets/chad.wav"/>
+  <media:Audio id="wojak-voice" src="./assets/wojak.wav"/>
+  <media:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
+  <media:Audio id="rule-reveal-sound" src="./assets/rule-reveal.wav"/>
+  <media:Image id="rule-placeholder" src="./assets/emoji-reveal/rendered/question-mark-green.png"/>
+  <media:Image id="manifest-icon" src="./assets/emoji-reveal/rendered/sparkles.png"/>
+  <media:Image id="real-estate-icon" src="./assets/emoji-reveal/rendered/building-estate.png"/>
+  <media:Image id="bitcoin-icon" src="./assets/emoji-reveal/rendered/currency-bitcoin.png"/>
+
+  <text:Value id="manifest-rule-action">
+    CHAD is interviewer A, the blond bearded 2D character holding the microphone. WOJAK is guest B, the black-clad 2D character beside the Lamborghini. Preserve their identities, outfits, props, left-right relationship, street location, and supplied camera setups throughout.
+    STYLE LOCK: CHAD and WOJAK remain exactly the same flat 2D line-art meme characters shown in the references, with crisp black contour lines, simple drawn facial features, and flat color fills. Their faces, hair, clothing, hands, and body shapes remain visibly illustrated in every frame and every expression. The street, building, trees, and Lamborghini remain photographic, preserving the deliberate 2D-character-on-photographic-background mixed-media composition.
+    Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for CHAD's “Hey yo! Is this Lamborghini yours?” WOJAK initially glances down toward the car, then raises his head and looks at CHAD as the question lands.
+    Hard cut directly to the exact WOJAK camera setup from @image2 and hold that complete frame for “Um, yeah.” WOJAK gives a small hesitant nod.
+    Hard cut directly to the exact shared camera setup from @image3 and hold that complete frame for CHAD's “Give me three rules to make your first million.” CHAD speaks with natural explanatory hand gestures while keeping the microphone in the same hand.
+    Hard cut directly to the exact WOJAK camera setup from @image2 and hold that complete frame for “OK, the first one is manifest.” WOJAK tilts his head and rests one hand lightly against his chin.
+    Hard cut directly to the exact CHAD camera setup from @image1 and hold that complete frame for “You manifested a Lamborghini?” CHAD makes a visibly surprised hand gesture while asking.
+    Hard cut directly to the exact WOJAK camera setup from @image2 and hold that complete frame for “I whispered it to myself in the shower.” WOJAK remains in the same street setup, leans slightly toward the microphone, and makes a small confidential whispering gesture beside his mouth.
+  </text:Value>
+
+  <text:Value id="real-estate-rule-action">
+    CHAD is interviewer A, the blond bearded 2D character holding the microphone. WOJAK is guest B, the black-clad 2D character beside the Lamborghini. Preserve their identities, outfits, props, left-right relationship, street location, and supplied camera setups throughout.
+    STYLE LOCK: CHAD and WOJAK remain exactly the same flat 2D line-art meme characters shown in the references, with crisp black contour lines, simple drawn facial features, and flat color fills. Their faces, hair, clothing, hands, and body shapes remain visibly illustrated in every frame and every expression. The street, building, trees, and Lamborghini remain photographic, preserving the deliberate 2D-character-on-photographic-background mixed-media composition.
+    Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for CHAD's “Did it really work?” CHAD uses a natural questioning hand gesture.
+    Hard cut directly to the exact WOJAK camera setup from @image2 and hold that complete frame for “No. But rule two did.” WOJAK shakes his head on “No,” then looks at CHAD meaningfully as he delivers the second sentence.
+    Hard cut directly to the exact shared camera setup from @image3 and hold that complete frame for CHAD's short line, “Say it.”
+    Hard cut directly to the exact WOJAK camera setup from @image2 and hold that complete frame for “Real estate. Buy the building, and charge everyone rent.” WOJAK loosely plants one hand on his hip and lightly waves the other as he speaks, becoming unexpectedly bold and expansive.
+    Hard cut directly to the exact CHAD camera setup from @image1 and hold that complete frame for “But how did you buy the building?” CHAD asks with visible disbelief.
+    Hard cut directly to the exact WOJAK camera setup from @image2 and hold that complete frame for “That's rule three.” WOJAK folds his arms, tilts his head, and gives a small knowing smile.
+  </text:Value>
+
+  <text:Value id="bitcoin-rule-action">
+    CHAD is interviewer A, the blond bearded 2D character holding the microphone. WOJAK is guest B, the black-clad 2D character beside the Lamborghini. Preserve their identities, outfits, props, left-right relationship, street location, and supplied camera setups throughout.
+    STYLE LOCK: CHAD and WOJAK remain exactly the same flat 2D line-art meme characters shown in the references, with crisp black contour lines, simple drawn facial features, and flat color fills. Their faces, hair, clothing, hands, and body shapes remain visibly illustrated in every frame and every expression. The street, building, trees, and Lamborghini remain photographic, preserving the deliberate 2D-character-on-photographic-background mixed-media composition.
+    Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for CHAD's “Wait what?” CHAD makes a questioning hand gesture.
+    Hard cut directly to the exact WOJAK camera setup from @image2 and hold that complete frame for “Bitcoin. I pressed the wrong button in twenty twelve and made six figures.” WOJAK raises one finger while explaining, then makes a broad emphatic hand gesture to show how much money he made.
+    Hard cut directly to the exact CHAD camera setup from @image1 and hold that complete frame for “So you accidentally bought Bitcoin?” CHAD reacts with astonished disbelief.
+    Hard cut directly to the exact WOJAK camera setup from @image2 and hold that complete frame for “That's manifesting, bro.” WOJAK tilts his head with a smug, friendly expression and gives CHAD a small confident nod.
+  </text:Value>
+
+  <text:Render id="manifest-rule-prompt"
+    template={interview-kit.street-interview-v1}
+    recipe={recipes.interview.street}>
+    <text:Set name="dialogue" text={story.segment.manifest-rule.dialogue}/>
+    <text:Set name="action" text={manifest-rule-action}/>
+  </text:Render>
+  <text:Render id="real-estate-rule-prompt"
+    template={interview-kit.street-interview-v1}
+    recipe={recipes.interview.street}>
+    <text:Set name="dialogue" text={story.segment.real-estate-rule.dialogue}/>
+    <text:Set name="action" text={real-estate-rule-action}/>
+  </text:Render>
+  <text:Render id="bitcoin-rule-prompt"
+    template={interview-kit.street-interview-v1}
+    recipe={recipes.interview.street}>
+    <text:Set name="dialogue" text={story.segment.bitcoin-rule.dialogue}/>
+    <text:Set name="action" text={bitcoin-rule-action}/>
+  </text:Render>
+
+  <seedance:ReferenceVideo id="manifest-rule-take"
+    model="mini" prompt={manifest-rule-prompt}
+    duration="10"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={interviewer-view}/>
+    <seedance:Reference image={guest-view}/>
+    <seedance:Reference image={shared-view}/>
+    <seedance:Reference audio={chad-voice}/>
+    <seedance:Reference audio={wojak-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="real-estate-rule-take"
+    model="mini" prompt={real-estate-rule-prompt}
+    duration="8"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={interviewer-view}/>
+    <seedance:Reference image={guest-view}/>
+    <seedance:Reference image={shared-view}/>
+    <seedance:Reference audio={chad-voice}/>
+    <seedance:Reference audio={wojak-voice}/>
+  </seedance:ReferenceVideo>
+
+  <seedance:ReferenceVideo id="bitcoin-rule-take"
+    model="mini" prompt={bitcoin-rule-prompt}
+    duration="8"
+    resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={interviewer-view}/>
+    <seedance:Reference image={guest-view}/>
+    <seedance:Reference image={shared-view}/>
+    <seedance:Reference audio={chad-voice}/>
+    <seedance:Reference audio={wojak-voice}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <space:RegionTimeline id="wojak-heads" within={vertical}
+    recipe={wojak-tracking.heads.wojak}/>
+  <space:Frame id="full-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <program:Clock id="clock" frame-rate="30"/>
+
+  <pipeline:Normalize id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <pipeline:Normalize id="rule-reveal-sound-media" source={rule-reveal-sound}
+    video="none" audio="default" span-authority="audio" clock={clock}/>
+
+  <pipeline:Normalize id="manifest-rule-media" source={manifest-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="real-estate-rule-media" source={real-estate-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="bitcoin-rule-media" source={bitcoin-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+
+  <whisperx:SemanticTake id="manifest-rule-semantic" narrative={story}
+    segment={story.segment.manifest-rule} media={manifest-rule-media.media} language="en"/>
+  <whisperx:SemanticTake id="real-estate-rule-semantic" narrative={story}
+    segment={story.segment.real-estate-rule} media={real-estate-rule-media.media} language="en"/>
+  <whisperx:SemanticTake id="bitcoin-rule-semantic" narrative={story}
+    segment={story.segment.bitcoin-rule} media={bitcoin-rule-media.media} language="en"/>
+
+  <speech:Track id="speech" visual-frame={full-frame}
+    visual-appearance={recipes.speech.visual} visual-z="10">
+    <speech:Take source={manifest-rule-semantic.take}/>
+    <speech:Take source={real-estate-rule-semantic.take}/>
+    <speech:Take source={bitcoin-rule-semantic.take}/>
+  </speech:Track>
+
+  <audio-track:Track id="music-bed" semantic={speech.semantic}>
+    <audio-track:Clip source={soundtrack-media.media} during="program"
+      playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
+  </audio-track:Track>
+
+  <audio-track:Track id="rule-reveal-sfx" semantic={speech.semantic}>
+    <audio-track:Clip id="manifest-reveal-sfx" source={rule-reveal-sound-media.media}
+      at={story.moment.manifest} for="20f" playback="once-start" gain="0.20"/>
+    <audio-track:Clip id="real-estate-reveal-sfx" source={rule-reveal-sound-media.media}
+      at={story.moment.real-estate} for="20f" playback="once-start" gain="0.20"/>
+    <audio-track:Clip id="bitcoin-reveal-sfx" source={rule-reveal-sound-media.media}
+      at={story.moment.bitcoin} for="20f" playback="once-start" gain="0.20"/>
+  </audio-track:Track>
+
+  <fonts:Stack id="caption-font" family="league-spartan" weight="900" style="normal"/>
+  <caption-fine:Style id="caption-chad-style" recipe={recipes.caption.boy}
+    font={caption-font}/>
+  <caption-fine:Style id="caption-wojak-style" recipe={recipes.caption.wojak}
+    font={caption-font}/>
+  <caption:Program id="caption-program" document={story.caption}
+    narrative={story} default={caption-chad-style}>
+    <caption:Use role="WOJAK" style={caption-wojak-style}/>
+  </caption:Program>
+  <caption-fine:Track id="captions" document={story.caption}
+    semantic={speech.semantic} program={caption-program} regions={wojak-heads}/>
+
+  <emoji:Style id="rule-reveal-style" recipe={recipes.emoji.strip}/>
+  <emoji:Track id="rule-reveal" semantic={speech.semantic} canvas={vertical}
+    style={rule-reveal-style} placeholder={rule-placeholder} during="program">
+    <emoji:Item id="manifest" icon={manifest-icon} at={story.moment.manifest}/>
+    <emoji:Item id="real-estate" icon={real-estate-icon} at={story.moment.real-estate}/>
+    <emoji:Item id="bitcoin" icon={bitcoin-icon} at={story.moment.bitcoin}/>
+  </emoji:Track>
+
+  <screen:Track id="rule-reveal-flashes" semantic={speech.semantic} canvas={vertical}>
+    <screen:Flash id="manifest-flash" at={story.moment.manifest} for="8f" z="80"
+      color="#FF4D6D" intensity="0.28" attack="2" hold="1" decay="5"/>
+    <screen:Flash id="real-estate-flash" at={story.moment.real-estate} for="8f" z="80"
+      color="#14A68A" intensity="0.28" attack="2" hold="1" decay="5"/>
+    <screen:Flash id="bitcoin-flash" at={story.moment.bitcoin} for="8f" z="80"
+      color="#F59E0B" intensity="0.28" attack="2" hold="1" decay="5"/>
+  </screen:Track>
+
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
+    appearance={recipes.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audio}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={rule-reveal.track}/>
+    <film:Track source={rule-reveal-flashes.track}/>
+    <film:Track source={music-bed.track}/>
+    <film:Track source={rule-reveal-sfx.track}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition}
+    semantic={speech.semantic}/>
+</svml>
