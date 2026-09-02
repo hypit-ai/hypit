@@ -15,6 +15,12 @@ Hypit has three different lifetimes. Never collapse them into one directory.
 An ordinary user does not clone the repository and does not run pnpm, Corepack, `npm link`, or a
 service's `uv sync` by hand. A clone is only a contributor checkout.
 
+WhisperX is a mandatory environment prerequisite for every video-production route. Before any route
+advances beyond environment setup, the selected Runtime Profile must include the local WhisperX
+Endpoint, `hypit runtime up` must install and start it, and its health must report `Ready whisperx` (or
+an equivalent successful probe). Do not proceed while it is missing, still installing or unhealthy;
+the only exception is the login-only authentication path, which is not video production.
+
 ## Select a Distribution; do not assume registry publication
 
 The skill must be global; the skills CLI's default is project-local:
