@@ -493,7 +493,7 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
           finish: async (input) => await writer.finish(input),
         };
       },
-      remove: async (build) => await base.remove(build),
+      removeIncomplete: async (build) => await base.removeIncomplete(build),
       read: async (build) => await base.read(build),
       updatePresentation: async (build, update) => await base.updatePresentation(build, update),
       browse: async (request) => await base.browse(request),
@@ -542,7 +542,7 @@ test("a failed Result creation leaves no active Build", async () => {
   const unavailable: BuildResultRepository = {
     async create() { throw new Error("result repository refused creation"); },
     async openWriter() { return undefined; },
-    async remove() {},
+    async removeIncomplete() {},
     async read() { return undefined; },
     async updatePresentation() { throw new Error("result repository refused update"); },
     async browse() { return { results: [] }; },

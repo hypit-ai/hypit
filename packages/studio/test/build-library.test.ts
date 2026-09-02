@@ -46,7 +46,7 @@ test("Studio library joins this environment's Builds with project Build Result f
   const results: BuildResultRepository = {
     async create() { throw new Error("not used"); },
     async openWriter() { return undefined; },
-    async remove() {},
+    async removeIncomplete() {},
     async updatePresentation() { throw new Error("read-only fixture"); },
     async read(build) { return manifests.find((item) => item.id === build); },
     async browse() { return { results: manifests }; },

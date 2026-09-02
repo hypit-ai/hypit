@@ -85,6 +85,8 @@ export async function resolveBuildResultValue(
   readonly value: StoredValue;
   readonly attachments?: readonly ArtifactAttachment[];
   } | undefined> {
+  const manifest = await repository.read(build);
+  if (manifest?.outcome === undefined) return undefined;
   const resultAttachment = async (owner: string, file: BuildResultFileRef): Promise<ArtifactAttachment> => {
     const address = `${owner}\u0000${file.path}`;
     const existing = session.files.get(address);
@@ -115,6 +117,8 @@ export async function resolveBuildResultValue(
   }
   const resolved = await pending;
   if (resolved === undefined) return undefined;
+  const owner = resolved.build === build ? manifest : await repository.read(resolved.build);
+  if (owner?.outcome === undefined) return undefined;
   let value: StoredValue;
   if (resolved.value.kind === "build-file") {
     const attachment = await resultAttachment(resolved.build, resolved.value);

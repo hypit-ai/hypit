@@ -282,7 +282,7 @@ test("S3 browses ordered Build ids newest first with a public cursor", async () 
   assert.equal(client.listRequests.at(-1)?.after?.endsWith(`-${ids[1]}/`), true);
 });
 
-test("S3 forwarding can cross several Builds without copying the historical file", async () => {
+test("S3 reduces repeated reuse to its finished content owner without copying bytes", async () => {
   const client = new MemoryS3();
   const repository = new S3BuildResultRepository({ bucket: "fixture", client });
   const bytes = new TextEncoder().encode("historical video");
@@ -322,6 +322,25 @@ test("S3 forwarding can cross several Builds without copying the historical file
       },
     },
   });
+  await assert.rejects(
+    repository.create({
+      id: "bld_20260902T100000002Z_0000000001",
+      source: { path: "/project/main.svml" },
+      targets: ["video"],
+      publishedOutputs: [{ name: "video", output: "logical:video" }],
+      forwards: [{
+        output: "logical:video",
+        build: "bld_20260902T100000001Z_0000000001",
+        sourceOutput: "video",
+      }],
+    }),
+    /is not a finished Result/u,
+  );
+  await original.finish({ outcome: "complete" });
+  await assert.rejects(
+    repository.removeIncomplete("bld_20260902T100000001Z_0000000001"),
+    /cannot be removed/u,
+  );
 
   const forward = async (id: string, fromBuild: string) => {
     const writer = await repository.create({
@@ -331,7 +350,7 @@ test("S3 forwarding can cross several Builds without copying the historical file
       publishedOutputs: [{ name: "video", output: "logical:video" }],
       forwards: [{ output: "logical:video", build: fromBuild, sourceOutput: "video" }],
     });
-    await writer.sync({
+    const manifest = await writer.sync({
       state: state({
         status: "complete",
         records: [
@@ -359,9 +378,19 @@ test("S3 forwarding can cross several Builds without copying the historical file
         },
       },
     });
+    await writer.finish({ outcome: "complete" });
+    return manifest;
   };
   await forward("bld_20260902T100000002Z_0000000001", "bld_20260902T100000001Z_0000000001");
-  await forward("bld_20260902T100000003Z_0000000001", "bld_20260902T100000002Z_0000000001");
+  const forwardedAgain = await forward(
+    "bld_20260902T100000003Z_0000000001",
+    "bld_20260902T100000002Z_0000000001",
+  );
+  assert.deepEqual(forwardedAgain.outputs.video?.value, {
+    kind: "build-output",
+    build: "bld_20260902T100000001Z_0000000001",
+    output: "video",
+  });
 
   const described = await repository.describeOutput("bld_20260902T100000003Z_0000000001", "video");
   assert.equal(described?.kind, "resource");

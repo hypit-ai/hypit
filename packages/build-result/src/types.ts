@@ -316,8 +316,8 @@ export type BuildResultWriter = {
 export type BuildResultRepository = {
   create(seed: BuildResultSeed): Promise<BuildResultWriter>;
   openWriter(build: string): Promise<BuildResultWriter | undefined>;
-  /** Remove one exact Result created by a submission that never became claimable. */
-  remove(build: string): Promise<void>;
+  /** Remove one exact unfinished Result created by a submission that never became claimable. */
+  removeIncomplete(build: string): Promise<void>;
   read(build: string): Promise<BuildResultManifest | undefined>;
   /** Edit only human presentation stored inside this exact finished Result. */
   updatePresentation(build: string, update: BuildResultPresentationUpdate): Promise<BuildResultManifest>;

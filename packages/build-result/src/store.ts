@@ -20,6 +20,7 @@ import type {
   BuildResultFileRef,
   BuildResultFileRange,
   BuildResultFinish,
+  BuildResultForward,
   BuildResultManifest,
   BuildResultPresentationUpdate,
   BuildResultSeed,
@@ -269,6 +270,39 @@ export async function describeBuildResultOutput(
   }
 }
 
+/**
+ * Accept only finished historical Results and reduce every new Forward to the Result that owns its
+ * terminal value. This follows only the addresses named by the caller; it needs no reverse index or
+ * global Result scan.
+ */
+export async function normalizeBuildResultForwards(
+  repository: {
+    read(build: string): Promise<BuildResultManifest | undefined>;
+    resolve(build: string, output: string): Promise<{
+      readonly build: string;
+      readonly output: string;
+    } | undefined>;
+  },
+  forwards: readonly BuildResultForward[],
+): Promise<readonly BuildResultForward[]> {
+  return await Promise.all(forwards.map(async (forward) => {
+    const source = await repository.read(forward.build);
+    assert(source?.outcome !== undefined,
+      `Build ${forward.build} is not a finished Result`);
+    const resolved = await repository.resolve(forward.build, forward.sourceOutput);
+    assert(resolved !== undefined,
+      `Build ${forward.build} has no Output ${forward.sourceOutput}`);
+    const owner = resolved.build === source.id ? source : await repository.read(resolved.build);
+    assert(owner?.outcome !== undefined,
+      `Build ${resolved.build} is not a finished Result`);
+    return {
+      output: forward.output,
+      build: resolved.build,
+      sourceOutput: resolved.output,
+    };
+  }));
+}
+
 export class FileBuildResult {
   readonly directory: string;
 
@@ -279,10 +313,10 @@ export class FileBuildResult {
   static async create(root: string, seed: BuildResultSeed): Promise<FileBuildResult> {
     assertOrderedBuildId(seed.id);
     assertBuildResultSeed(seed);
-    for (const forward of seed.forwards ?? []) {
-      assert(await resolveBuildResultOutput(root, forward.build, forward.sourceOutput) !== undefined,
-        `Build ${forward.build} has no Output ${forward.sourceOutput}`);
-    }
+    const forwards = await normalizeBuildResultForwards({
+      read: async (build) => await readBuildResult(buildResultDirectory(root, build)),
+      resolve: async (build, output) => await resolveBuildResultOutput(root, build, output),
+    }, seed.forwards ?? []);
     const directory = buildResultDirectory(root, seed.id);
     await mkdir(resolve(root), { recursive: true });
     const temporary = join(resolve(root), `.preparing-${seed.id}-${randomUUID()}`);
@@ -302,7 +336,7 @@ export class FileBuildResult {
         resources: {},
         values: {},
         publishedOutputs: seed.publishedOutputs,
-        forwards: seed.forwards ?? [],
+        forwards,
       });
       await rename(temporary, directory);
     } catch (error) {
@@ -391,7 +425,10 @@ export class FileBuildResultRepository implements BuildResultRepository {
     return await readBuildResult(directory) === undefined ? undefined : await FileBuildResult.open(directory);
   }
 
-  async remove(build: string): Promise<void> {
+  async removeIncomplete(build: string): Promise<void> {
+    const manifest = await this.read(build);
+    if (manifest === undefined) return;
+    assert(manifest.outcome === undefined, `Finished Build Result ${build} cannot be removed`);
     await rm(buildResultDirectory(this.root, build), { recursive: true, force: true });
   }
 

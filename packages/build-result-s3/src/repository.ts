@@ -20,6 +20,7 @@ import {
   decodeBuildResultValueDocument,
   decodeBuildResultWriterState,
   encodeBuildResultManifest,
+  normalizeBuildResultForwards,
   syncBuildResultOutputs,
 } from "@hypit/build-result";
 import { assertOrderedBuildId, buildIdCreatedAt } from "@hypit/protocol";
@@ -177,10 +178,7 @@ export class S3BuildResultRepository implements BuildResultRepository {
     assertOrderedBuildId(seed.id);
     assertBuildResultSeed(seed);
     assert((await this.read(seed.id)) === undefined, `Build Result ${seed.id} already exists`);
-    for (const forward of seed.forwards ?? []) {
-      assert(await this.resolve(forward.build, forward.sourceOutput) !== undefined,
-        `Build ${forward.build} has no Output ${forward.sourceOutput}`);
-    }
+    const forwards = await normalizeBuildResultForwards(this, seed.forwards ?? []);
     const manifest: BuildResultManifest = {
       format: "hypit.build-result@2",
       id: seed.id,
@@ -195,7 +193,7 @@ export class S3BuildResultRepository implements BuildResultRepository {
         resources: {},
         values: {},
         publishedOutputs: seed.publishedOutputs,
-        forwards: seed.forwards ?? [],
+        forwards,
       });
       await this.writeManifest(seed.id, manifest);
     } catch (error) {
@@ -210,7 +208,10 @@ export class S3BuildResultRepository implements BuildResultRepository {
     return (await this.read(build)) === undefined ? undefined : new S3BuildResultWriter(this, build);
   }
 
-  async remove(build: string): Promise<void> {
+  async removeIncomplete(build: string): Promise<void> {
+    const manifest = await this.read(build);
+    if (manifest === undefined) return;
+    assert(manifest.outcome === undefined, `Finished Build Result ${build} cannot be removed`);
     const prefix = this.#key(build, "result.json").slice(0, -"result.json".length);
     const keys = await this.#client.list(prefix);
     await Promise.all(keys.filter((key) => key.startsWith(prefix)).map(async (key) => await this.#client.delete(key)));

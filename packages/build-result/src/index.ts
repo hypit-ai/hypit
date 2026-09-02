@@ -17,6 +17,7 @@ export {
   browseBuildResults,
   buildResultDirectory,
   describeBuildResultOutput,
+  normalizeBuildResultForwards,
   readBuildResult,
   resolveBuildResultOutput,
 } from "./store.js";
