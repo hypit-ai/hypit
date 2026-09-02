@@ -12,12 +12,14 @@
         "os": { "use": "@hypit/credential-store-os" }
       },
       "endpoints": {
-        "kie.football-ranking": {
-          "use": "@hypit/provider-kie",
+        "hypihub.football-ranking": {
+          "use": "@hypit/provider-hypihub",
           "pool": "generation",
           "config": {
-            "apiKey": { "store": "os", "key": "KIE_API_KEY" },
-            "defaultConcurrency": 10
+            "baseUrl": "https://hypit.ai",
+            "apiKey": { "store": "os", "key": "hypihub.oauth" },
+            "defaultConcurrency": 4,
+            "requestTimeoutMs": 120000
           }
         },
         "media.football-ranking": {

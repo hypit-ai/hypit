@@ -3,6 +3,7 @@
 <svml>
   <import from="@hypit/script@1"/>
   <import as="asset" from="@hypit/media@1"/>
+  <import as="mimo" from="@hypit/mimo-tts@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
@@ -52,8 +53,14 @@
   <text:Value id="creatine-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. single creatine supplement tub with a squat cylindrical body, wide lid, and bold product label centered in the frame, with its shape, cap, label placement, and hand scale clearly readable. Use a short neutral product backdrop and no extra objects.</text:Value>
   <gpt:Image id="creatine" prompt={creatine-prompt} aspect-ratio="9:16" resolution="2K"/>
 
-  <asset:Audio id="guy-voice" src="./assets/dude.mp3"/>
-  <asset:Audio id="girl-voice" src="./assets/girl.wav"/>
+  <text:Value id="guy-voice-sample">OK Sarah, so what is the one single thing that you literally can't live without?</text:Value>
+  <mimo:VoiceDesign id="guy-voice" speech={guy-voice-sample}>
+    A young East Asian man with a curious, friendly podcast-host delivery; clear, relaxed, lightly nasal, and conversational, with an easy medium pace.
+  </mimo:VoiceDesign>
+  <text:Value id="girl-voice-sample">Creatine. Five grams a day, every day.</text:Value>
+  <mimo:VoiceDesign id="girl-voice" speech={girl-voice-sample}>
+    A young East Asian woman with a confident, lively podcast delivery; clear, bright, athletic, and matter-of-fact, with expressive emphasis and natural pacing.
+  </mimo:VoiceDesign>
   <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
 
   <text:Value id="split-prompt">
@@ -157,7 +164,7 @@
     prompt={opening-take-prompt} duration="4"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={split.image}/>
-    <seedance:Reference audio={guy-voice}/>
+    <seedance:Reference audio={guy-voice.audio}/>
   </seedance:ReferenceVideo>
 
   <seedance:ReferenceVideo id="daily-creatine-take" model="mini"
@@ -165,8 +172,8 @@
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={girl-hold.image}/>
     <seedance:Reference image={guy}/>
-    <seedance:Reference audio={girl-voice}/>
-    <seedance:Reference audio={guy-voice}/>
+    <seedance:Reference audio={girl-voice.audio}/>
+    <seedance:Reference audio={guy-voice.audio}/>
   </seedance:ReferenceVideo>
 
   <seedance:ReferenceVideo id="arms-are-asking-take" model="mini"
@@ -174,8 +181,8 @@
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={girl-hold.image}/>
     <seedance:Reference image={guy-hold.image}/>
-    <seedance:Reference audio={girl-voice}/>
-    <seedance:Reference audio={guy-voice}/>
+    <seedance:Reference audio={girl-voice.audio}/>
+    <seedance:Reference audio={guy-voice.audio}/>
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="720" height="1280"/>

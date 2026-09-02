@@ -17,7 +17,8 @@
           "use": "@hypit/provider-hypihub",
           "pool": "generation",
           "config": {
-            "apiKey": { "store": "env", "key": "HYPIHUB_API_KEY" },
+            "baseUrl": "https://hypit.ai",
+            "apiKey": { "store": "os", "key": "hypihub.oauth" },
             "defaultConcurrency": 4,
             "requestTimeoutMs": 120000
           }

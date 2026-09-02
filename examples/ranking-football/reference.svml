@@ -4,6 +4,7 @@
   <import from="@hypit/script@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="asset" from="@hypit/media@1"/>
+  <import as="mimo" from="@hypit/mimo-tts@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="estimate" from="@hypit/estimate@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
@@ -38,7 +39,10 @@
 
   <text:Value id="presenter-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. A pale young woman with a narrow oval face, large gray eyes, straight brows, long jet-black hair with blunt bangs, and a slim shoulder line wears a black spiked cap, black choker, layered silver necklaces, and a black graphic top while holding a furry microphone. Keep her face, hair, shoulders, and microphone visible.</text:Value>
   <gpt:Image id="presenter" prompt={presenter-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <asset:Audio id="presenter-voice" src="./assets/goth.wav"/>
+  <text:Value id="presenter-voice-sample">Welcome back. Today we're ranking the most ridiculous football takes.</text:Value>
+  <mimo:VoiceDesign id="presenter-voice" speech={presenter-voice-sample}>
+    A young woman with a smoky, low-register alt voice and dry sarcastic presenter delivery; cool, composed, slightly deadpan, with sharp comedic timing and confident emphasis.
+  </mimo:VoiceDesign>
   <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
   <asset:Audio id="ranking-appear-sfx" src="./assets/ranking-appear.wav"/>
   <asset:Audio id="ranking-move-sfx" src="./assets/ranking-move.wav"/>
@@ -139,13 +143,13 @@
     prompt={ronaldo-prompt} duration="10"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={presenter}/>
-    <seedance:Reference audio={presenter-voice}/>
+    <seedance:Reference audio={presenter-voice.audio}/>
   </seedance:ReferenceVideo>
   <seedance:ReferenceVideo id="messi-take" model="mini"
     prompt={messi-prompt} duration="10"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={presenter}/>
-    <seedance:Reference audio={presenter-voice}/>
+    <seedance:Reference audio={presenter-voice.audio}/>
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="720" height="1280"/>

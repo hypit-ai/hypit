@@ -4,6 +4,7 @@
   <import from="@hypit/script@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="media" from="@hypit/media@1"/>
+  <import as="mimo" from="@hypit/mimo-tts@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="program" from="@hypit/program-space@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
@@ -56,8 +57,14 @@
   <gpt:Image id="guest-view" prompt={guest-view-prompt} aspect-ratio="9:16" resolution="2K"/>
   <text:Value id="shared-view-prompt">A photograph with the texture of real iPhone footage. Generate a vertical street-interview frame, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Show the light-skinned young interviewer and the light-medium-skinned young woman together beside the blue Lamborghini, preserving their facial features, hair, clothing, microphone, handbag, and left-right relationship.</text:Value>
   <gpt:Image id="shared-view" prompt={shared-view-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <media:Audio id="boy-voice" src="./assets/guy.wav"/>
-  <media:Audio id="wife-voice" src="./assets/wife.wav"/>
+  <text:Value id="boy-voice-sample">Hey yo! Is this Lamborghini yours?</text:Value>
+  <mimo:VoiceDesign id="boy-voice" speech={boy-voice-sample}>
+    A young American man with a bright, casual street-interviewer delivery; energetic, lightly raspy, confident, and conversational, with quick natural pacing.
+  </mimo:VoiceDesign>
+  <text:Value id="wife-voice-sample">Mmm hmm. Give me three rules to make your first million.</text:Value>
+  <mimo:VoiceDesign id="wife-voice" speech={wife-voice-sample}>
+    A young woman with a playful, self-assured delivery; warm, expressive, slightly husky, and flirtatious, with crisp conversational English.
+  </mimo:VoiceDesign>
   <media:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
   <media:Audio id="rule-reveal-sound" src="./assets/rule-reveal.wav"/>
   <text:Value id="rule-placeholder-prompt">A clean, colorful 3D question-mark icon centered on a simple light background, with crisp edges and no readable text.</text:Value>
@@ -126,8 +133,8 @@
     <seedance:Reference image={interviewer-view}/>
     <seedance:Reference image={guest-view}/>
     <seedance:Reference image={shared-view}/>
-    <seedance:Reference audio={boy-voice}/>
-    <seedance:Reference audio={wife-voice}/>
+    <seedance:Reference audio={boy-voice.audio}/>
+    <seedance:Reference audio={wife-voice.audio}/>
   </seedance:ReferenceVideo>
 
   <seedance:ReferenceVideo id="real-estate-rule-take"
@@ -137,8 +144,8 @@
     <seedance:Reference image={interviewer-view}/>
     <seedance:Reference image={guest-view}/>
     <seedance:Reference image={shared-view}/>
-    <seedance:Reference audio={boy-voice}/>
-    <seedance:Reference audio={wife-voice}/>
+    <seedance:Reference audio={boy-voice.audio}/>
+    <seedance:Reference audio={wife-voice.audio}/>
   </seedance:ReferenceVideo>
 
   <seedance:ReferenceVideo id="bitcoin-rule-take"
@@ -148,8 +155,8 @@
     <seedance:Reference image={interviewer-view}/>
     <seedance:Reference image={guest-view}/>
     <seedance:Reference image={shared-view}/>
-    <seedance:Reference audio={boy-voice}/>
-    <seedance:Reference audio={wife-voice}/>
+    <seedance:Reference audio={boy-voice.audio}/>
+    <seedance:Reference audio={wife-voice.audio}/>
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="720" height="1280"/>
