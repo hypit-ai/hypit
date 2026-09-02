@@ -134,12 +134,13 @@ Query an output name across the project's local Build Results:
 hypit history hook-take.video
 ```
 
-`history` reports only public Author Outputs that the Build actually produced. It does not list
-declared-but-unbuilt outputs or internal Operation values. If the old name is unknown, list Outputs
-from Results whose manifest names the exact Author Source path:
+`history` reports only the exact public Author Output requested. It does not list
+declared-but-unbuilt outputs or internal Operation values. If the old name is unknown, browse Builds
+and inspect the likely Result:
 
 ```bash
-hypit history --source ./main.svml
+hypit builds
+hypit inspect <build-id>
 ```
 
 An output name is a human locator inside one Build Result. The pair `build + output` is the exact
@@ -366,8 +367,8 @@ and the same external task checkpoints; it never turns another invocation into t
 hypit inspect <build-id>
 ```
 
-`inspect` reads the project-owned Result directly and lists final Targets plus every completed
-public Output saved along their execution route:
+`inspect` reads the project-owned Result directly and shows its Targets plus a bounded list of
+completed public Outputs. Use `--output <name>` for one exact Output or `--limit <count>` to show more:
 
 ```bash
 hypit get <build-id> \

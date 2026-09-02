@@ -14,34 +14,6 @@ export type CliCompilerOptions = {
 };
 
 /**
- * One picture asked for directly, with no Source, Build, Record or Runtime Profile.
- *
- * A component package's own chrome — a paper texture, a board, a panel — is authoring
- * input that ships inside the package, so it is never anybody's Output. Credentials are
- * the only thing this needs.
- */
-export type CliPictureRequest = {
-  /** Installed package specifier naming the exact model family; the Distribution defaults it. */
-  readonly model?: string;
-  readonly prompt: string;
-  readonly aspectRatio?: string;
-  readonly resolution?: string;
-  /** Project package root; the Distribution remains a separate read-only resolution root. */
-  readonly packageRoot: string;
-  /** Read-only packages shipped by the active Distribution. */
-  readonly distributionPackageRoot?: string;
-};
-
-export type CliPicture = {
-  /** Installed package specifier that declared the exact model. */
-  readonly package: string;
-  /** Exact model name, as the model package declares it. */
-  readonly model: string;
-  readonly mediaType: string;
-  readonly bytes: Uint8Array;
-};
-
-/**
  * Explicit application assembly for the generic command engine.
  *
  * A Distribution selects author vocabulary/compiler semantics and trusted Runtime-config adapters.
@@ -90,12 +62,4 @@ export type CliDistribution = {
     readonly location?: BuildResultRepositoryLocation;
     readonly diagnostics: readonly BuildResultRepositoryDiagnostic[];
   }>;
-  /**
-   * Generate one picture for a package asset.
-   *
-   * Which exact models exist is a model package's declaration and which Provider fulfils
-   * them is this Distribution's choice, so both stay here. The generic engine only reads
-   * the prompt, writes the file and reports where it went.
-   */
-  generatePicture?(request: CliPictureRequest): Promise<CliPicture>;
 };

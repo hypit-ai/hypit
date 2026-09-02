@@ -61,17 +61,19 @@ test("builds, history, inspect and get read project Build Results without openin
     await fixture(root);
     const builds = await jsonCommand(["builds"], root) as {
       readonly builds: readonly {
-        readonly build: string;
+        readonly id: string;
         readonly title?: string;
         readonly outcome: string;
-        readonly outputs: readonly string[];
+        readonly outputCount: number;
       }[];
     };
     assert.equal(builds.builds.length, 1);
-    assert.equal(builds.builds[0]?.build, "bld_20260902T110000000Z_0000000001");
+    assert.equal(builds.builds[0]?.id, "bld_20260902T110000000Z_0000000001");
     assert.equal(builds.builds[0]?.title, "episode-stage");
     assert.equal(builds.builds[0]?.outcome, "complete");
-    assert.deepEqual(builds.builds[0]?.outputs, ["stage.value"]);
+    assert.equal(builds.builds[0]?.outputCount, 1);
+    assert.equal("source" in builds.builds[0]!, false);
+    assert.equal("outputs" in builds.builds[0]!, false);
 
     const history = await jsonCommand(["history", "stage.value"], root) as {
       readonly entries: readonly { readonly build: string; readonly output: { readonly name: string } }[];
@@ -81,20 +83,20 @@ test("builds, history, inspect and get read project Build Results without openin
     assert.equal(history.entries[0]?.output.name, "stage.value");
 
     const inspected = await jsonCommand(["inspect", "bld_20260902T110000000Z_0000000001"], root) as {
-      readonly result: { readonly id: string; readonly title?: string };
+      readonly build: { readonly id: string; readonly title?: string };
     };
-    assert.equal(inspected.result.id, "bld_20260902T110000000Z_0000000001");
-    assert.equal(inspected.result.title, "episode-stage");
+    assert.equal(inspected.build.id, "bld_20260902T110000000Z_0000000001");
+    assert.equal(inspected.build.title, "episode-stage");
 
     const destination = join(root, "exported.json");
     const exported = await jsonCommand([
       "get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination,
     ], root);
     assert.deepEqual(exported, {
-      format: "hypit.cli-get@3",
+      format: "hypit.cli-get@4",
       build: "bld_20260902T110000000Z_0000000001",
       output: "stage.value",
-      type: valueType,
+      type: "example.result@1/Value",
       kind: "scalar",
       path: destination,
     });
@@ -152,6 +154,16 @@ test("get exports Resource bytes and a self-contained Composite directory", asyn
     });
     await result.finish({ outcome: "complete" });
 
+    const inspected = await jsonCommand([
+      "inspect", build, "--output", "final.take",
+    ], root) as {
+      readonly build: { readonly outputs: readonly [{ readonly name: string; readonly kind: string }] };
+    };
+    assert.equal(inspected.build.outputs[0].name, "final.take");
+    assert.equal(inspected.build.outputs[0].kind, "composite");
+    assert.equal("value" in inspected.build.outputs[0], false);
+    assert.equal("path" in inspected.build.outputs[0], false);
+
     const resourceDestination = join(root, "output", "final.mp4");
     const resource = await jsonCommand([
       "get", build, "--output", "final.video", "--to", resourceDestination,
@@ -199,6 +211,15 @@ test("get requires an exact Output name and an explicit destination", async () =
       ], silent, {} as CliDistribution),
       /get requires --to/u,
     );
+    await assert.rejects(
+      runCli(["history", "--source", join(root, "main.svml"), "--workspace", root], silent,
+        {} as CliDistribution),
+      /history requires one exact Output name/u,
+    );
+    await assert.rejects(
+      runCli(["history", "stage.value", "--pin", "--workspace", root], silent, {} as CliDistribution),
+      /unknown option --pin/u,
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -221,10 +242,11 @@ test("result edit changes only the exact project Result presentation without ope
       readonly highlightedOutputs: readonly string[];
     };
     assert.deepEqual(edited, {
-      format: "hypit.cli-result-edit@2",
+      format: "hypit.cli-result-edit@3",
       build: "bld_20260902T110000000Z_0000000001",
       title: "Episode 12 B-roll",
       note: "Use the close-up for the opening beat.",
+      highlightedOutputCount: 1,
       highlightedOutputs: ["stage.value"],
     });
 
@@ -239,10 +261,12 @@ test("result edit changes only the exact project Result presentation without ope
     ], root) as {
       readonly title: null;
       readonly note: null;
+      readonly highlightedOutputCount: number;
       readonly highlightedOutputs: readonly string[];
     };
     assert.equal(cleared.title, null);
     assert.equal(cleared.note, null);
+    assert.equal(cleared.highlightedOutputCount, 0);
     assert.deepEqual(cleared.highlightedOutputs, []);
   } finally {
     await rm(root, { recursive: true, force: true });

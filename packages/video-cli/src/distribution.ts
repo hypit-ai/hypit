@@ -24,10 +24,6 @@ export const videoCliDistribution: CliDistribution = {
     const { discoverVideoSourcePackages } = await import("./package-selection.js");
     return await discoverVideoSourcePackages(path, options);
   },
-  generatePicture: async (request) => {
-    const { generateVideoCliPicture } = await import("./picture.js");
-    return await generateVideoCliPicture(request);
-  },
   openRuntimeHost: async (path, options) => await openLocalRuntimeHost(path, {
     packageRoot: options.packageRoot,
     ...(options.distributionPackageRoot === undefined

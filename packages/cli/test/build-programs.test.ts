@@ -158,7 +158,7 @@ test("Build accepts a Result title and never provisions programs after a clean p
   assert.deepEqual(calls, []);
 });
 
-test("plan preserves the frozen plan but exits non-zero when cheap preflight fails", async () => {
+test("plan preserves the selected work summary but exits non-zero when cheap preflight fails", async () => {
   const source = await runSource();
   let output = "";
   let exitCode: number | undefined;
@@ -176,11 +176,11 @@ test("plan preserves the frozen plan but exits non-zero when cheap preflight fai
   );
   const value = JSON.parse(output) as {
     readonly ok: boolean;
-    readonly plan: unknown;
+    readonly steps: number;
     readonly preflight: { readonly ok: boolean };
   };
   assert.equal(value.ok, false);
   assert.equal(value.preflight.ok, false);
-  assert.notEqual(value.plan, undefined);
+  assert.equal(typeof value.steps, "number");
   assert.equal(exitCode, 1);
 });

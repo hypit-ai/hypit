@@ -46,7 +46,7 @@ test("activity opens Runtime control without constructing execution Providers", 
     readonly at: number;
     readonly builds: readonly unknown[];
   };
-  assert.equal(result.format, "hypit.cli-activity@1");
+  assert.equal(result.format, "hypit.cli-activity@2");
   assert.equal(typeof result.at, "number");
   assert.deepEqual(result.builds, []);
 });
@@ -112,10 +112,11 @@ test("status --watch follows active execution, then reads its finished Result", 
   ], { write: (text) => { output += text; } }, distribution);
 
   const result = JSON.parse(output) as {
-    readonly build: { readonly id: string; readonly outcome: string };
+    readonly build: { readonly id: string; readonly work: { readonly outcome: string }; readonly result: { readonly state: string } };
   };
   assert.equal(result.build.id, "build-watch");
-  assert.equal(result.build.outcome, "complete");
+  assert.equal(result.build.work.outcome, "complete");
+  assert.equal(result.build.result.state, "complete");
   assert.deepEqual(calls, [
     "control.inspect",
     "control.inspect",
@@ -154,10 +155,11 @@ test("status reads a finished project Result without a Runtime", async () => {
   ], { write: (text) => { output += text; } }, distribution);
 
   const result = JSON.parse(output) as {
-    readonly build: { readonly id: string; readonly outcome: string };
+    readonly build: { readonly id: string; readonly work: { readonly outcome: string }; readonly result: { readonly state: string } };
   };
   assert.equal(result.build.id, "build-finished");
-  assert.equal(result.build.outcome, "complete");
+  assert.equal(result.build.work.outcome, "complete");
+  assert.equal(result.build.result.state, "complete");
   assert.deepEqual(calls, ["result.read:build-finished", "result.close"]);
 });
 
@@ -172,7 +174,8 @@ test("status preserves Runtime decision and attention when its Result Store is u
     targets: [],
     acceptedRecords: 0,
     outstandingCommands: 0,
-    operations: [],
+    operations: [{ endpoint: "kie.internal", status: "failed" as const,
+      failure: { code: "REMOTE", message: "provider detail" } }],
   };
   const control = {
     async inspect() { return view; },
@@ -193,12 +196,16 @@ test("status preserves Runtime decision and attention when its Result Store is u
   ], { write: (text) => { output += text; }, setExitCode: (code) => { exitCode = code; } }, distribution);
 
   const result = JSON.parse(output) as {
-    readonly build: typeof view;
-    readonly resultReadError: string;
+    readonly build: {
+      readonly work: { readonly outcome: string };
+      readonly result: { readonly state: string };
+      readonly attention: { readonly message: string };
+    };
   };
-  assert.equal(result.build.outcome, "failed");
-  assert.equal(result.build.issue.scope, "result");
-  assert.equal(result.resultReadError, "S3 unavailable");
+  assert.equal(result.build.work.outcome, "failed");
+  assert.equal(result.build.result.state, "unavailable");
+  assert.equal(result.build.attention.message, "S3 unavailable");
+  assert.equal("operations" in result.build, false);
   assert.equal(exitCode, 1);
 });
 
@@ -245,7 +252,7 @@ test("result finish writes only an already-decided Result that needs attention",
 
   assert.equal(finishes, 1);
   assert.deepEqual(JSON.parse(output), {
-    format: "hypit.cli-result-finish@1",
+    format: "hypit.cli-result-finish@2",
     build: "build-blocked",
     outcome: "complete",
   });
@@ -274,7 +281,7 @@ test("result discard invokes only the exact one-shot Result control", async () =
 
   assert.deepEqual(calls, ["discard:build-submitting", "result-control.close", "control.close"]);
   assert.deepEqual(JSON.parse(output), {
-    format: "hypit.cli-result-discard@1", build: "build-submitting", discarded: true,
+    format: "hypit.cli-result-discard@2", build: "build-submitting", discarded: true,
   });
 });
 
@@ -353,9 +360,36 @@ test("auth opens only one Endpoint credential control, never the execution Runti
     "credentials.close",
   ]);
   assert.equal((JSON.parse(output) as { readonly endpoint?: string }).endpoint, "kie.project");
+  const machine = JSON.parse(output) as { readonly credentials: readonly Record<string, unknown>[] };
+  assert.equal("ref" in machine.credentials[0]!, false);
+  assert.equal("key" in machine.credentials[0]!, false);
 });
 
-test("auth login rejects a read-only CredentialStore before asking for a secret", async () => {
+test("runtime logs returns only the requested tail and hides its path by default", async () => {
+  const distribution = {
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      controller: async () => ({
+        worker: {
+          logs: async () => ({ path: "/private/runtime.log", text: "one\ntwo\nthree\n" }),
+        },
+      }),
+    }),
+  } as unknown as CliDistribution;
+  let output = "";
+  await runCli([
+    "runtime", "logs", "/tmp/runtime.json", "--lines", "2", "--json",
+  ], { write: (text) => { output += text; } }, distribution);
+
+  assert.deepEqual(JSON.parse(output), {
+    format: "hypit.cli-runtime-logs@2",
+    lines: ["two", "three"],
+    totalLines: 3,
+    omittedLines: 1,
+  });
+});
+
+test("auth login explains an environment-owned credential before asking for a secret", async () => {
   let prompted = false;
   let closed = false;
   const credentials = {
@@ -389,7 +423,7 @@ test("auth login rejects a read-only CredentialStore before asking for a secret"
         return "must-not-be-read";
       },
     }, distribution),
-    /CredentialStore env is read-only.*set KIE_API_KEY/u,
+    /cannot be written.*set KIE_API_KEY/u,
   );
   assert.equal(prompted, false);
   assert.equal(closed, true);
@@ -429,9 +463,12 @@ test("cancelling a completed Build reports that no cancellation was requested", 
   ], { write: (text) => { output += text; } }, distribution);
 
   assert.deepEqual(JSON.parse(output), {
-    format: "hypit.cli-cancel@2",
-    build: "build-complete",
+    format: "hypit.cli-cancel@3",
     requested: false,
-    outcome: "complete",
+    build: {
+      id: "build-complete",
+      work: { state: "done", outcome: "complete" },
+      result: { state: "complete", outputCount: 0 },
+    },
   });
 });

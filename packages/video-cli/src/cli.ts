@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { renderCliError, writeCliHelp } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
+import { writeVideoImageHelp } from "./image-command.js";
 
 const argv = process.argv.slice(2);
 const json = argv.includes("--json");
@@ -59,7 +60,11 @@ const io: CliIo = {
 async function main(): Promise<void> {
   if (argv.length === 0 || argv[0] === "help" || argv.includes("--help")) {
     const topic = argv[0] === "help" ? argv[1] : argv.includes("--help") ? argv[0] : undefined;
-    writeCliHelp(io, topic);
+    if (topic === "image") writeVideoImageHelp(io);
+    else {
+      writeCliHelp(io, topic);
+      if (topic === undefined) io.write("\nVideo utility\n  image --prompt <text|file> --to <path>  create authoring input\n");
+    }
     return;
   }
   const { runVideoCli } = await import("./index.js");

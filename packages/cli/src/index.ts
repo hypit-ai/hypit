@@ -1,5 +1,3 @@
-export { pinnedRecords } from "./reuse-markup.js";
-export type { PinnedRecord } from "./reuse-markup.js";
 export { runCli } from "./main.js";
 export { discoverSourcePackages } from "./source-discovery.js";
 export { loadDiscoveredSourcePackages } from "./source-packages.js";
@@ -11,14 +9,20 @@ export { renderCliError, writeCliHelp, writeCliOutput } from "./output.js";
 export type {
   CliColorMode,
   CliIo,
+  CliMachineView,
   CliOutputOptions,
   CliPresentation,
   CliTerminal,
 } from "./output.js";
 export type {
+  CliBuildResultView,
+  CliBuildStatusView,
+  CliBuildSummary,
+  CliOutputView,
+  PublicOutputKind,
+} from "./view.js";
+export type {
   CliCompilerOptions,
   CliDistribution,
-  CliPicture,
-  CliPictureRequest,
 } from "./distribution.js";
 export type * from "./runtime-port.js";

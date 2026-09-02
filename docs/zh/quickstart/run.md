@@ -120,10 +120,11 @@ Hypit 没有隐式缓存。复用结果是显式的运行图编写：把某个�
 hypit history hook-take.video
 ```
 
-`history` 只列出该 Build 确实完成的公开 Author Output。只声明但没有运行出来的输出和内部 Operation 值不会混入结果。如果忘了旧名字，可以按 Result 里记录的精确 Author Source 路径查询：
+`history` 只查询明确给出的那个公开 Author Output。只声明但没有运行出来的输出和内部 Operation 值不会混入结果。如果忘了旧名字，先浏览 Build，再检查可能的 Result：
 
 ```bash
-hypit history --source ./main.svml
+hypit builds
+hypit inspect <build-id>
 ```
 
 输出名是某个 Build Result 内供人查找的名字；`build + output` 这对地址已经足够精确。假如当前源码把 `hook-take.video` 改名为 `opening-shot.video`，`<build-record>` 仍写历史旧名，`<satisfy>` 写当前新名：
@@ -356,7 +357,8 @@ hypit status <build-id> --watch
 hypit inspect <build-id>
 ```
 
-`inspect` 直接读取项目里的 Build Result，列出最终 Target，以及通向它们的路线上实际完成的所有公开 Output：
+`inspect` 直接读取项目里的 Build Result，列出最终 Target 和一页实际完成的公开 Output；用
+`--output <name>` 精确查看一个 Output，或用 `--limit <count>` 增加显示数量：
 
 ```bash
 hypit get <build-id> \

@@ -51,15 +51,14 @@ test("provider-free example plans from installed Source packages", async () => {
     "--workspace",
     process.cwd(),
   ], { write: (text) => { output += text; } });
-  const plan = (JSON.parse(output) as { readonly plan: {
-    readonly goals: readonly unknown[];
-    readonly steps: readonly { readonly producer: { readonly name: string } }[];
-  } }).plan;
-  const producers = new Set(plan.steps.map((step) => step.producer.name));
-  assert.equal(producers.has("assemble-semantic-track"), true);
-  assert.equal(producers.has("compile-composition"), true);
-  assert.equal(producers.has("project-muxed-media"), true);
-  assert.equal(plan.goals.length, 1);
+  const plan = JSON.parse(output) as {
+    readonly format: string;
+    readonly steps: number;
+    readonly targets: readonly string[];
+  };
+  assert.equal(plan.format, "hypit.cli-plan@2");
+  assert.equal(plan.steps > 0, true);
+  assert.equal(plan.targets.length, 1);
 });
 
 /**
@@ -107,12 +106,12 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
     ], { write: (text) => { output += text; } });
     const machine = JSON.parse(output) as {
       readonly package: string; readonly model: string;
-      readonly mediaType: string; readonly size: number; readonly path: string;
+      readonly mediaType: string; readonly bytes: number; readonly path: string;
     };
     assert.equal(machine.package, "@hypit/gpt-image");
     assert.equal(machine.model, "gpt-image-2");
     assert.equal(machine.mediaType, "image/png");
-    assert.equal(machine.size, pictureBytes.byteLength);
+    assert.equal(machine.bytes, pictureBytes.byteLength);
     assert.equal(machine.path, destination);
     assert.deepEqual(Uint8Array.from(await readFile(destination)), pictureBytes);
     // The author gave one option; every other port took the model's own first value.
