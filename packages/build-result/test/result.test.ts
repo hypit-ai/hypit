@@ -282,13 +282,20 @@ test("an explicitly reused public output is a forward reference and copies no by
       }),
       resources: { async open() { return (async function* () { yield new Uint8Array(10); })(); } },
     });
-    const result = await FileBuildResult.create(root, {
+    const reused = {
       id: "bld_20260902T100000002Z_0000000002",
       source: { path: "/project/main.svml" },
       targets: ["shot.video"],
       publishedOutputs: [{ name: "shot.video", output: "logical:shot-video" }],
       forwards: [{ output: "logical:shot-video", build: "bld_20260902T100000001Z_0000000001", sourceOutput: "opening.video" }],
-    });
+    } as const;
+    await assert.rejects(FileBuildResult.create(root, reused), /is not a finished Result/u);
+    await prior.finish({ outcome: "complete" });
+    await assert.rejects(
+      new FileBuildResultRepository(root).removeIncomplete("bld_20260902T100000001Z_0000000001"),
+      /cannot be removed/u,
+    );
+    const result = await FileBuildResult.create(root, reused);
     const manifest = await result.sync({
       state: state({
         records: [{

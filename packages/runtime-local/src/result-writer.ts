@@ -193,7 +193,7 @@ export function createLocalResultWriter(
     if (submission === undefined) return false;
     const opened = await options.openBuildResultRepository(submission.result);
     try {
-      await opened.repository.remove(build);
+      await opened.repository.removeIncomplete(build);
     } finally {
       await opened.close?.();
     }

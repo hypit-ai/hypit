@@ -156,7 +156,8 @@ on `<build-record>` and use the current name on `<satisfy>`:
 Hypit never infers that two names mean the same author intent. Every `build` invocation receives a
 fresh Build id and its own Result directory, even when nothing changed. A later Run reuses an Output
 only by naming the earlier Build id and Output here. If that earlier Output already forwards to an
-older one, resolution follows the explicit chain; no bytes are copied into the new Result.
+older one, Result storage resolves that explicit path once and records the new Forward directly to
+the finished Result that owns the value; no bytes are copied and no reverse index is maintained.
 Forwarding applies only to a complete public Output. Structured JSON cannot recursively point at
 another Output; a historical value consumed inside a new Fragment is an ordinary input and the new
 Fragment's Output belongs to the current Result.

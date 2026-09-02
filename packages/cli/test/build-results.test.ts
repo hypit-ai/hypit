@@ -416,6 +416,7 @@ test("build-record selects one exact Result Output without leaking its storage a
         },
       },
     });
+    await result.finish({ outcome: "complete" });
 
     const authorFile = join(root, "main.svml");
     const runFile = join(root, "reuse.svrun");
