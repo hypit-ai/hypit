@@ -106,7 +106,6 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
     await writeFile(join(directory, "files", "final.mp4"), bytes);
     await writeFile(join(directory, "result.json"), `${JSON.stringify({
       format: "hypit.build-result@2",
-      id: build,
       title: "First cut",
       source: { path: join(root, "main.svml") },
       run: { path: join(root, "build.svrun") },

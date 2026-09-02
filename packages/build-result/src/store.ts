@@ -11,13 +11,12 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { createReadStream } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { assertBuildId, assertOrderedBuildId, buildIdCreatedAt } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 
 import type {
-  BuildResultValueDocument,
   BuildResultResourceSource,
   BuildResultFileRef,
   BuildResultFileRange,
@@ -31,9 +30,15 @@ import type {
   RepositoryBuildResultOutput,
   FinishedBuildResultManifest,
 } from "./types.js";
-import { assertBuildResultValueDocument, assertBuildResultSeed } from "./types.js";
+import { assertBuildResultSeed } from "./types.js";
+import {
+  decodeBuildResultJson,
+  decodeBuildResultManifest,
+  decodeBuildResultValueDocument,
+  decodeBuildResultWriterState,
+  encodeBuildResultManifest,
+} from "./decode.js";
 import { syncBuildResultOutputs } from "./writer.js";
-import type { BuildResultWriterState } from "./writer.js";
 
 const manifestName = "result.json";
 const writerStateName = ".writer.json";
@@ -96,6 +101,10 @@ async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
   }
 }
 
+async function writeManifestAtomic(path: string, manifest: BuildResultManifest): Promise<void> {
+  await writeJsonAtomic(path, encodeBuildResultManifest(manifest));
+}
+
 async function copyArtifactAtomic(
   source: BuildResultResourceSource,
   artifact: BlobRef,
@@ -133,14 +142,13 @@ export function buildResultDirectory(root: string, build: string): string {
 
 export async function readBuildResult(directory: string): Promise<BuildResultManifest | undefined> {
   const path = join(resolve(directory), manifestName);
-  const text = await readFile(path, "utf8").catch((error: unknown) => {
+  const bytes = await readFile(path).catch((error: unknown) => {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
     throw error;
   });
-  if (text === undefined) return undefined;
-  const value = JSON.parse(text) as BuildResultManifest;
-  assert(value.format === "hypit.build-result@2", `${path} is not a Hypit Build Result`);
-  return value;
+  if (bytes === undefined) return undefined;
+  const build = basename(resolve(directory));
+  return decodeBuildResultManifest(decodeBuildResultJson(bytes, path), build, path);
 }
 
 function containedResultPath(directory: string, path: string): string {
@@ -207,10 +215,11 @@ export async function resolveBuildResultOutput(
       continue;
     }
     if (entry.value.kind === "value") {
-      const document = JSON.parse(
-        await readFile(containedResultPath(directory, entry.value.path), "utf8"),
-      ) as BuildResultValueDocument;
-      assertBuildResultValueDocument(document, `Build ${currentBuild} Output ${currentOutput}`);
+      const path = containedResultPath(directory, entry.value.path);
+      const document = decodeBuildResultValueDocument(
+        decodeBuildResultJson(await readFile(path), path),
+        `Build ${currentBuild} Output ${currentOutput}`,
+      );
       return {
         build: currentBuild,
         output: currentOutput,
@@ -343,7 +352,7 @@ export class FileBuildResult {
       outputs: {},
     };
     try {
-      await writeJsonAtomic(join(temporary, manifestName), manifest);
+      await writeManifestAtomic(join(temporary, manifestName), manifest);
       await writeJsonAtomic(join(temporary, writerStateName), {
         resources: {},
         values: {},
@@ -374,8 +383,11 @@ export class FileBuildResult {
   async sync(input: BuildResultSync): Promise<BuildResultManifest> {
     const manifest = await this.read();
     if (manifest.outcome !== undefined) return manifest;
-    const rawWriter = await readFile(join(this.directory, writerStateName), "utf8");
-    const writer = JSON.parse(rawWriter) as BuildResultWriterState;
+    const writerPath = join(this.directory, writerStateName);
+    const writer = decodeBuildResultWriterState(
+      decodeBuildResultJson(await readFile(writerPath), writerPath),
+      writerPath,
+    );
     const directory = this.directory;
     const updated = await syncBuildResultOutputs({
       manifest,
@@ -391,7 +403,7 @@ export class FileBuildResult {
       },
     });
     await writeJsonAtomic(join(this.directory, writerStateName), updated.writer);
-    await writeJsonAtomic(join(this.directory, manifestName), updated.manifest);
+    await writeManifestAtomic(join(this.directory, manifestName), updated.manifest);
     return updated.manifest;
   }
 
@@ -410,7 +422,7 @@ export class FileBuildResult {
       finishedAt: manifest.finishedAt ?? now,
       ...(input.failure === undefined ? {} : { failure: input.failure }),
     };
-    await writeJsonAtomic(join(this.directory, manifestName), updated);
+    await writeManifestAtomic(join(this.directory, manifestName), updated);
     await rm(join(this.directory, writerStateName), { force: true });
     return updated;
   }
@@ -449,7 +461,7 @@ export class FileBuildResultRepository implements BuildResultRepository {
     const manifest = await this.read(build);
     assert(manifest !== undefined, `Build Result ${build} does not exist`);
     const updated = applyBuildResultPresentation(manifest, update);
-    await writeJsonAtomic(join(buildResultDirectory(this.root, build), manifestName), updated);
+    await writeManifestAtomic(join(buildResultDirectory(this.root, build), manifestName), updated);
     return updated;
   }
 

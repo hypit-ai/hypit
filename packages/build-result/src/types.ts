@@ -63,16 +63,26 @@ function assertCanonicalValue(value: unknown, subject: string): asserts value is
   }
 }
 
-function assertBuildResultFileRef(value: unknown, subject: string): asserts value is BuildResultFileRef {
+/** One portable address inside a Build Result; repositories map it to their own physical storage. */
+export function assertBuildResultPath(value: unknown, subject: string): asserts value is string {
+  if (typeof value !== "string" || value.length === 0 || value.startsWith("/")
+    || value.includes("\\") || value.includes("\0")
+    || value.split("/").some((part) => part.length === 0 || part === "." || part === "..")) {
+    throw new Error(`${subject} is not a Result-relative path`);
+  }
+}
+
+export function assertBuildResultFileRef(value: unknown, subject: string): asserts value is BuildResultFileRef {
   if (value === null || Array.isArray(value) || typeof value !== "object") {
     throw new Error(`${subject} is not a Build file reference`);
   }
   const item = value as Readonly<Record<string, unknown>>;
-  if (item.kind !== "build-file" || typeof item.path !== "string" || item.path.length === 0
+  if (item.kind !== "build-file"
     || typeof item.size !== "number" || !Number.isSafeInteger(item.size) || item.size < 0
     || typeof item.mediaType !== "string" || item.mediaType.length === 0) {
     throw new Error(`${subject} is not a valid Build file reference`);
   }
+  assertBuildResultPath(item.path, `${subject}.path`);
 }
 
 function valueAtPath(value: CanonicalValue, path: BuildResultValuePath, subject: string): CanonicalValue {
@@ -146,6 +156,7 @@ export type BuildResultOutput = {
 
 export type BuildResultManifest = {
   readonly format: "hypit.build-result@2";
+  /** Injected from the Repository address; `result.json` does not repeat its containing Build id. */
   readonly id: string;
   readonly title?: string;
   readonly note?: string;

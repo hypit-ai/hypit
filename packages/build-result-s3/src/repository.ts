@@ -2,7 +2,6 @@ import type {
   BuildResultFileRef,
   BuildResultFileRange,
   BuildResultFinish,
-  BuildResultValueDocument,
   BuildResultManifest,
   BuildResultPresentationUpdate,
   BuildResultRepository,
@@ -14,8 +13,12 @@ import type {
 } from "@hypit/build-result";
 import {
   applyBuildResultPresentation,
-  assertBuildResultValueDocument,
   assertBuildResultSeed,
+  decodeBuildResultJson,
+  decodeBuildResultManifest,
+  decodeBuildResultValueDocument,
+  decodeBuildResultWriterState,
+  encodeBuildResultManifest,
   syncBuildResultOutputs,
 } from "@hypit/build-result";
 import { assertOrderedBuildId, buildIdCreatedAt } from "@hypit/protocol";
@@ -60,14 +63,6 @@ function safePath(path: string): string {
 
 function encodeJson(value: unknown): Uint8Array {
   return new TextEncoder().encode(`${JSON.stringify(value, null, 2)}\n`);
-}
-
-function decodeJson<T>(value: Uint8Array, subject: string): T {
-  try {
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(value)) as T;
-  } catch (error) {
-    throw new Error(`${subject} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
-  }
 }
 
 class S3BuildResultWriter implements BuildResultWriter {
@@ -146,9 +141,9 @@ export class S3BuildResultRepository implements BuildResultRepository {
     return this.#prefix.length === 0 ? relative : `${this.#prefix}/${relative}`;
   }
 
-  async #readJson<T>(build: string, path: string): Promise<T | undefined> {
+  async #readJson(build: string, path: string): Promise<unknown | undefined> {
     const bytes = await this.#client.get(this.#key(build, path));
-    return bytes === undefined ? undefined : decodeJson<T>(bytes, `${build}/${path}`);
+    return bytes === undefined ? undefined : decodeBuildResultJson(bytes, `${build}/${path}`);
   }
 
   async writeJson(build: string, path: string, value: unknown): Promise<void> {
@@ -160,11 +155,13 @@ export class S3BuildResultRepository implements BuildResultRepository {
   }
 
   async writeManifest(build: string, manifest: BuildResultManifest): Promise<void> {
-    await this.writeJson(build, "result.json", manifest);
+    await this.writeJson(build, "result.json", encodeBuildResultManifest(manifest));
   }
 
   async readWriter(build: string): Promise<BuildResultWriterState | undefined> {
-    return await this.#readJson<BuildResultWriterState>(build, ".writer.json");
+    const subject = `${build}/.writer.json`;
+    const value = await this.#readJson(build, ".writer.json");
+    return value === undefined ? undefined : decodeBuildResultWriterState(value, subject);
   }
 
   async writeWriter(build: string, state: BuildResultWriterState): Promise<void> {
@@ -219,9 +216,9 @@ export class S3BuildResultRepository implements BuildResultRepository {
   }
 
   async read(build: string): Promise<BuildResultManifest | undefined> {
-    const manifest = await this.#readJson<BuildResultManifest>(build, "result.json");
-    if (manifest !== undefined) assert(manifest.format === "hypit.build-result@2", `${build}/result.json is not a Build Result`);
-    return manifest;
+    const subject = `${build}/result.json`;
+    const value = await this.#readJson(build, "result.json");
+    return value === undefined ? undefined : decodeBuildResultManifest(value, build, subject);
   }
 
   async updatePresentation(
@@ -286,9 +283,12 @@ export class S3BuildResultRepository implements BuildResultRepository {
         continue;
       }
       if (entry.value.kind === "value") {
-        const document = await this.#readJson<BuildResultValueDocument>(currentBuild, entry.value.path);
-        assert(document !== undefined, `Build ${currentBuild} value ${entry.value.path} is unavailable`);
-        assertBuildResultValueDocument(document, `Build ${currentBuild} Output ${currentOutput}`);
+        const rawDocument = await this.#readJson(currentBuild, entry.value.path);
+        assert(rawDocument !== undefined, `Build ${currentBuild} value ${entry.value.path} is unavailable`);
+        const document = decodeBuildResultValueDocument(
+          rawDocument,
+          `Build ${currentBuild} Output ${currentOutput}`,
+        );
         return {
           build: currentBuild,
           output: currentOutput,
