@@ -165,7 +165,7 @@ Studio keeps three stages of an item's time apart, and reading one for another m
   one outer window alongside its reveal phases.
 
 A projection line connects a source to its realized window, and the projection view is read-only.
-`../../../../docs/guide/studio-temporal-windows.md` is authoritative for what each stage carries.
+`../../../docs/guide/studio-temporal-windows.md` is authoritative for what each stage carries.
 
 When the executed lineage names a Selection or Moment, dragging the realized block may issue
 `timeline.adjust` against that shared semantic identity. Script owns the inverse from semantic Anchor
@@ -176,4 +176,4 @@ read-only.
 Studio is a browser preview **for a person to look at**. It is not a source of images for an
 automated comparison — that is what the local still render above is for.
 
-`../../../../docs/quickstart/preview.md` is authoritative.
+`../../../docs/quickstart/preview.md` is authoritative.

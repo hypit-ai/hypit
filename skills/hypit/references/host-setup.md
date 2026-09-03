@@ -8,7 +8,7 @@ WhisperX service, machine npm packages, and Distribution updates.
 Run this skill-owned probe when diagnosing a machine:
 
 ```text
-node .agents/skills/hypit/scripts/check-environment.mjs
+node skills/hypit/scripts/check-environment.mjs
 ```
 
 ## Install FFmpeg prerequisites on Windows

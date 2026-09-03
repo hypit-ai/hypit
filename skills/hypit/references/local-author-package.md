@@ -45,10 +45,10 @@ frozen before parallel writing — are in this file, and they apply before any o
 
 Then read:
 
-1. `../../../../docs/guide/component-anatomy.md` — the roles every component package fills. Read this
+1. `../../../docs/guide/component-anatomy.md` — the roles every component package fills. Read this
    first; it is what the rest is measured against.
-2. `../../../../docs/guide/author-packages.md`
-3. `../../../../docs/guide/packages.md` and `../../../../docs/guide/conventions.md`
+2. `../../../docs/guide/author-packages.md`
+3. `../../../docs/guide/packages.md` and `../../../docs/guide/conventions.md`
 4. the installed `@hypit/component-kit` README
 
 **Write the package from those docs.** They state each role, what it declares and what it hands the
