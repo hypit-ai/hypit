@@ -12,23 +12,20 @@
         "os": { "use": "@hypit/credential-store-os" }
       },
       "endpoints": {
-        "kie.football-ranking": {
-          "use": "@hypit/provider-kie",
+        "hypihub.football-ranking": {
+          "use": "@hypit/provider-hypihub",
           "pool": "generation",
           "config": {
-            "apiKey": { "store": "os", "key": "KIE_API_KEY" },
-            "defaultConcurrency": 10
+            "baseUrl": "https://hypit.ai",
+            "apiKey": { "store": "os", "key": "hypihub.oauth" },
+            "defaultConcurrency": 4,
+            "requestTimeoutMs": 120000
           }
         },
         "media.football-ranking": {
           "use": "@hypit/provider-media-local",
           "pool": "media",
           "config": { "defaultConcurrency": 2 }
-        },
-        "whisperx.football-ranking": {
-          "use": "@hypit/provider-whisperx-local",
-          "pool": "alignment",
-          "config": { "defaultConcurrency": 1 }
         },
         "hyperframes.football-ranking": {
           "use": "@hypit/provider-hyperframes-local",
