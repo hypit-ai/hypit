@@ -45,6 +45,34 @@ description: Hypit skill 如何把描述或参考视频变成可检查、可恢�
 
 复刻请求中一开始就附带的人物、产品、品牌替换仍属于复刻；只有后续再次提出自然语言修改才进入 Revision。
 
+## 凭据与登录流程
+
+凭据是每条生产路径的环境门禁，不是付费 Build 时才处理的事项。Skill 默认使用 HypiHub，不先询问
+Provider，也不要求用户复制粘贴 API key。
+
+标准顺序：
+
+```text
+选择 Runtime Profile → 检查 HypiHub 凭据 → 缺失时说明并执行 OAuth 登录
+→ 确认登录成功 → hypit runtime up → 检查 WhisperX/其他程序健康
+→ 才能读媒体、调用 Gemini、写 Source 或 Build
+```
+
+```bash
+hypit auth status hypihub.default --runtime hypit.runtime.json
+hypit auth login hypihub.default --runtime hypit.runtime.json
+hypit runtime up
+```
+
+当 status 显示可写的 OS 凭据缺失时，agent 必须说明：浏览器 OAuth 不需要复制 API key，登录本身不会
+提交付费生成；没有有效订阅的账号可以登录后在 [hypit.ai](https://hypit.ai) 购买。然后 agent 直接
+执行 `hypit auth login` 并等待回调成功，不能只把命令交给用户，也不能因为缺 key 改走无凭据 observer。
+
+登录会话保存在本机 OS credential store，可被其他项目和后续会话复用。只有用户明确要求自有 Provider
+时，才配置 `KIE_API_KEY`、Vertex 的两个 Google 变量或 `MIMO_API_KEY` 等，并明确这是非默认路径；
+secret 永不写入 `.svml`、`.svs`、`.svrun`、Runtime Source、状态 JSON 或日志。付费 Build 前必须
+先列出 Provider/凭据来源、披露费用并获得批准；凭据缺失或模型不可用时，回到环境门禁并引导 HypiHub。
+
 ## 共用阶段
 
 ### 1. 环境与持久化启动

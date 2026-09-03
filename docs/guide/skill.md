@@ -48,6 +48,39 @@ same Run to Studio or Build.
 The initial presenter/product/brand change attached to a reconstruction remains inside reconstruction;
 it is not routed through Revision. Revision begins only when the user later asks for another change.
 
+## Credentials and login
+
+Credentials are an environment gate for every production route, not a step deferred until a paid Build.
+The Skill defaults to HypiHub, does not ask the author to choose a Provider, and does not require copying an
+API key.
+
+The standard sequence is:
+
+```text
+select Runtime Profile → check HypiHub credential → explain and run OAuth when missing
+→ confirm login → hypit runtime up → verify WhisperX/other programs
+→ only then inspect media, call Gemini, author Source or Build
+```
+
+```bash
+hypit auth status hypihub.default --runtime hypit.runtime.json
+hypit auth login hypihub.default --runtime hypit.runtime.json
+hypit runtime up
+```
+
+When status reports that the writable OS credential is missing, the agent must explain that browser OAuth
+avoids copying an API key, login itself does not submit a paid generation, and an account without an active
+subscription can purchase one after signing in at [hypit.ai](https://hypit.ai). The agent runs
+`hypit auth login` and waits for the callback; it must not merely hand the command to the author or switch to
+the credentialless observer because no key was found.
+
+The session is stored in the local OS credential store and is reusable by other projects and later
+conversations. Only when the author explicitly requests an author-owned Provider may the agent configure
+`KIE_API_KEY`, the two Vertex Google variables, or `MIMO_API_KEY`, and it must identify that as the
+non-default path. Secrets never enter `.svml`, `.svs`, `.svrun`, Runtime Source, state JSON or logs. Before
+a paid Build, report every Provider and credential source, disclose the cost and wait for approval; if a
+credential or model is unavailable, return to the environment gate and guide the author to HypiHub.
+
 ## Shared phases
 
 ### 1. Environment and durable start
