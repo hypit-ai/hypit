@@ -34,6 +34,13 @@ function buildView(input: {
     if (name === undefined) throw new Error(`Build ${input.build} target ${target.output} has no published Output name`);
     return name;
   }) ?? [];
+  const requests = input.snapshot === undefined ? undefined : {
+    total: input.snapshot.definition.plan.steps.reduce(
+      (total, step) => total + Object.keys(step.needs).length,
+      0,
+    ),
+    completed: input.snapshot.facts.filter((fact) => fact.kind === "need-applied").length,
+  };
   return {
     id: input.build,
     createdAt,
@@ -46,6 +53,7 @@ function buildView(input: {
     ...(input.catalog?.source === undefined ? {} : { source: input.catalog.source }),
     ...(input.catalog?.run === undefined ? {} : { run: input.catalog.run }),
     targets,
+    ...(requests === undefined ? {} : { requests }),
     acceptedRecords: input.snapshot?.state.records.length ?? 0,
     outstandingCommands: input.snapshot?.state.outstanding.length ?? 0,
     operations: input.operations.map((operation) => ({

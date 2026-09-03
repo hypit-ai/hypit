@@ -12,7 +12,7 @@ export type ProjectOption = {
   readonly workspaceRoot?: string;
 };
 
-type AuthorOptions = ProjectOption & RuntimeOption & {
+type SourceOptions = ProjectOption & {
   readonly source: string;
   readonly assetRoots: readonly string[];
   readonly packageRoot?: string;
@@ -20,9 +20,9 @@ type AuthorOptions = ProjectOption & RuntimeOption & {
 };
 
 export type AuthorCommand =
-  | (CommandBase & AuthorOptions & { readonly command: "check" })
-  | (CommandBase & AuthorOptions & { readonly command: "plan" })
-  | (CommandBase & AuthorOptions & {
+  | (CommandBase & SourceOptions & { readonly command: "check" })
+  | (CommandBase & SourceOptions & RuntimeOption & { readonly command: "plan" })
+  | (CommandBase & SourceOptions & RuntimeOption & {
       readonly command: "build";
       readonly follow: boolean;
       readonly maxWaitMs?: number;

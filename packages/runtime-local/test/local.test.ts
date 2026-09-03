@@ -117,6 +117,7 @@ test("a Worker that lost Runtime ownership cannot claim a ready Build", async ()
     await assert.rejects(runtime.workOnce(), /no longer owns this Runtime/u);
     const status = await runtime.inspect("bld_20260902T120000000Z_0000000001");
     assert.equal(status?.activity, "ready");
+    assert.deepEqual(status?.requests, { total: 1, completed: 0 });
     await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

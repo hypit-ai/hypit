@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { resolve } from "node:path";
 
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
 import { orderedBuildId } from "@hypit/protocol";
@@ -18,12 +18,12 @@ import type { CliIo, CliMachineView } from "./output.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
 import { assertPreflight, createCatalogDescriptor, preflightPlan } from "./build-planning.js";
-import { observeBuild } from "./observation.js";
+import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
 import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
 import { isExecutionCommand, runExecutionCommand } from "./commands/execution.js";
 import { inlineValuePreview } from "./runtime-view.js";
-import { resolvePackageRoot } from "./project-context.js";
+import { resolvePackageRoot, resolveProjectRoot } from "./project-context.js";
 import { loadDiscoveredSourcePackages } from "./source-packages.js";
 import {
   clearRuntimeProfile,
@@ -67,14 +67,17 @@ export async function runCli(
     return;
   }
   const args = parseCommand(argv);
-  let selectedRuntimeProjectRoot: string | undefined;
-  const commandProjectRoot = (): string => commandWorkspaceRoot(args)
-    ?? selectedRuntimeProjectRoot
-    ?? ((args.command === "check" || args.command === "plan" || args.command === "build")
-      ? dirname(resolve(args.source))
-      : process.cwd());
-  const packageRootForProject = async (projectRoot = commandProjectRoot()): Promise<string> =>
-    commandPackageRoot(args) ?? await resolvePackageRoot(projectRoot);
+  let resolvedProject: Promise<string> | undefined;
+  const commandProjectRoot = async (): Promise<string> => {
+    const workspaceRoot = commandWorkspaceRoot(args);
+    resolvedProject ??= resolveProjectRoot({
+      ...(workspaceRoot === undefined ? {} : { workspaceRoot }),
+      cwd: process.cwd(),
+    });
+    return await resolvedProject;
+  };
+  const packageRootForProject = async (projectRoot?: string): Promise<string> =>
+    commandPackageRoot(args) ?? await resolvePackageRoot(projectRoot ?? await commandProjectRoot());
   const writeOperational = (
     machine: CliMachineView,
     title: string,
@@ -101,7 +104,8 @@ export async function runCli(
     }
     return await opened;
   };
-  const projectResults = async (projectRoot = commandProjectRoot()) => {
+  const projectResults = async (requestedProjectRoot?: string) => {
+    const projectRoot = requestedProjectRoot ?? await commandProjectRoot();
     const packageRoot = await packageRootForProject(projectRoot);
     return await distribution.openProjectResults(projectRoot, {
       packageRoot,
@@ -117,7 +121,7 @@ export async function runCli(
   }
   if (args.command === "runtime" && args.action === "use") {
     const profile = resolve(args.profile);
-    const selected = await selectRuntimeProfile(args.workspaceRoot ?? process.cwd(), profile);
+    const selected = await selectRuntimeProfile(await commandProjectRoot(), profile);
     writeOperational({
       format: "hypit.cli-runtime-selection@2",
       selected: true,
@@ -130,7 +134,7 @@ export async function runCli(
     return;
   }
   if (args.command === "runtime" && args.action === "unset") {
-    const cleared = await clearRuntimeProfile(args.workspaceRoot ?? process.cwd());
+    const cleared = await clearRuntimeProfile(await commandProjectRoot());
     writeOperational({
       format: "hypit.cli-runtime-selection@2",
       selected: false,
@@ -147,23 +151,14 @@ export async function runCli(
   const runtimeWasExplicit = runtimeProfile !== undefined;
   let runtimeNeedsHint = runtimeWasExplicit;
   if (acceptsRuntimeContext(args) && runtimeProfile === undefined) {
-    const sourceScoped = args.command === "check" || args.command === "plan" || args.command === "build";
-    const start = commandWorkspaceRoot(args)
-      ?? (sourceScoped ? dirname(resolve(args.source)) : process.cwd());
-    const selected = await findRuntimeProfile(start);
+    const selected = await findRuntimeProfile(await commandProjectRoot());
     if (selected !== undefined) {
       runtimeProfile = selected.profile;
-      selectedRuntimeProjectRoot = selected.projectRoot;
-      const cwdFromProject = relative(selected.projectRoot, resolve(process.cwd()));
-      runtimeNeedsHint = cwdFromProject === ".." || cwdFromProject.startsWith(`..${sep}`)
-        || isAbsolute(cwdFromProject);
+      runtimeNeedsHint = false;
     }
   }
-  const runtimeController = async (profile: string, source?: string): Promise<CliRuntimeController> => {
-    const workspaceRoot = commandWorkspaceRoot(args)
-      ?? selectedRuntimeProjectRoot
-      ?? (source === undefined ? process.cwd() : dirname(resolve(source)));
-    const packageRoot = await packageRootForProject(workspaceRoot);
+  const runtimeController = async (profile: string): Promise<CliRuntimeController> => {
+    const packageRoot = await packageRootForProject();
     return await (await runtimeHost(profile, packageRoot)).controller({
       packageRoot,
     });
@@ -174,7 +169,7 @@ export async function runCli(
       runtimeProfile,
       io,
       distribution,
-      projectRoot: args.command === "paths" ? selectedRuntimeProjectRoot ?? process.cwd() : commandProjectRoot(),
+      projectRoot: await commandProjectRoot(),
       packageRootForProject,
       runtimeHost,
       runtimeController,
@@ -187,7 +182,7 @@ export async function runCli(
     try {
       await runProjectResultCommand({
         args,
-        projectRoot: commandProjectRoot(),
+        projectRoot: await commandProjectRoot(),
         repository: results.repository,
         write: writeOperational,
       });
@@ -208,16 +203,9 @@ export async function runCli(
     });
     return;
   }
-  const runtimePaths = runtimeProfile === undefined
-    ? undefined
-    : await (await runtimeHost(runtimeProfile)).resolvePaths();
-  const effectivePackageRoot = args.packageRoot ?? runtimePaths?.packageRoot;
-  const effectiveWorkspaceRoot = args.workspaceRoot
-    ?? selectedRuntimeProjectRoot
-    ?? dirname(resolve(args.source));
+  const effectiveWorkspaceRoot = await commandProjectRoot();
   const projectResultsRoot = effectiveWorkspaceRoot;
-  const sourcePackageRoot = effectivePackageRoot
-    ?? await resolvePackageRoot(effectiveWorkspaceRoot);
+  const sourcePackageRoot = args.packageRoot ?? await resolvePackageRoot(effectiveWorkspaceRoot);
   const loadedPackageSet = distribution.discoverSourcePackages === undefined
     ? undefined
     : await loadDiscoveredSourcePackages(distribution, {
@@ -346,6 +334,8 @@ export async function runCli(
         throw error;
       }
     })();
+    const runSelections = result.selections.filter((selection) =>
+      loadedRun.run.satisfactionNames[selection.output] !== undefined);
     let runtime: CliRuntime | undefined;
     try {
       const catalog = createCatalogDescriptor({
@@ -392,6 +382,31 @@ export async function runCli(
       }
       runtime = await loadRuntime(await runtimeHost(runtimeProfile));
       let built = await runtime.build(request);
+      const externalRequestCount = result.definition.plan.steps.reduce(
+        (total, step) => total + Object.keys(step.needs).length,
+        0,
+      );
+      const suppliedOutputCount = runSelections.length;
+      const workSummary = [
+        `${externalRequestCount} external ${externalRequestCount === 1 ? "request" : "requests"}`,
+        ...(suppliedOutputCount === 0 ? [] : [
+          `${suppliedOutputCount} ${suppliedOutputCount === 1 ? "Output" : "Outputs"} supplied by Run`,
+        ]),
+      ].join(" · ");
+      if (args.follow && "view" in built && !args.presentation.json) {
+        const acceptedView = buildStatusView({ id: built.id, runtime: built.view });
+        const targets = built.view.targets.slice(0, args.limit);
+        writeOperational({
+          format: "hypit.cli-build@3",
+          build: args.title === undefined ? acceptedView : { ...acceptedView, title: args.title },
+        }, "Build submitted", "success", [
+          ["Build", built.id],
+          ...(args.title === undefined ? [] : [["Title", args.title] as const]),
+          [built.view.targets.length === 1 ? "Target" : "Targets", targets.join(", ")
+            + (built.view.targets.length > targets.length ? ` (+${built.view.targets.length - targets.length})` : "")],
+          ["Work", workSummary],
+        ], ["Following accepted work. Ctrl-C stops watching; the Build continues."]);
+      }
       if (args.follow && runtime !== undefined) {
         built = await observeBuild(runtime, built, {
           ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
@@ -399,14 +414,10 @@ export async function runCli(
           readResult: async () => await buildResults.repository.read(built.id),
           ...(args.presentation.json ? {} : {
             onProgress: (progress) => {
-              const operations = Object.entries(progress.operations)
-                .map(([status, count]) => `${count} ${status}`)
-                .join(", ");
-              io.write(`  · ${progress.phase}`
-                + `${operations.length === 0 ? "" : ` · ${operations}`}\n`);
-              if (args.presentation.verbose) {
-                for (const line of progress.activity.slice(0, args.limit)) io.write(`    ${line}\n`);
-              }
+              for (const line of buildProgressLines(progress, {
+                verbose: args.presentation.verbose,
+                limit: args.limit,
+              })) io.write(`${line}\n`);
             },
           }),
         });
@@ -479,16 +490,29 @@ export async function runCli(
               .slice(0, args.limit)
               .map((item) => `Result   ${item.published.name} = ${item.inline}`)),
           ];
-      writeOperational(machine, args.follow
-        ? finished ? "Build finished" : issue !== undefined ? "Result needs attention" : "Build still active"
-        : "Build submitted",
+      const humanTitle = issue !== undefined
+        ? "Result needs attention"
+        : finished
+          ? buildOutcome === "complete"
+            ? "Build complete"
+            : buildOutcome === "failed"
+              ? "Build failed"
+              : buildOutcome === "cancelled" ? "Build cancelled" : "Build finished"
+          : args.follow ? "Build still active" : "Build submitted";
+      writeOperational(machine, humanTitle,
       buildOutcome === "failed" || issue !== undefined ? "error"
         : buildOutcome === "cancelled" || (args.follow && !finished) ? "warning" : "success", [
           ["Build", built.id],
-          ["Work", machine.build.work.state],
-          ...(machine.build.work.outcome === undefined ? [] : [["Decision", machine.build.work.outcome] as const]),
-          ["Result", machine.build.result.state],
-          ["Targets", String(finishedResult?.targets.length ?? targetPublishedOutputs.length)],
+          ...(args.title === undefined ? [] : [["Title", args.title] as const]),
+          ...(!args.follow && !finished ? [
+            [targetPublishedOutputs.length === 1 ? "Target" : "Targets",
+              targetPublishedOutputs.map((item) => item.name).join(", ")] as const,
+            ["Work", workSummary] as const,
+          ] : []),
+          ...(issue === undefined ? [] : [
+            ["Execution", buildOutcome ?? machine.build.work.state] as const,
+            ["Result", "needs attention"] as const,
+          ]),
         ], finished ? finishedLines : issue !== undefined ? [
           `Result   ${issue.scope}: ${issue.message}`,
           `Finish   hypit result finish ${built.id}${runtimeHint}`,

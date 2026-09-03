@@ -1,5 +1,5 @@
 import { mkdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
-import { dirname, relative, resolve } from "node:path";
+import { relative, resolve } from "node:path";
 
 const stateDirectoryName = ".hypit";
 const selectionFileName = "runtime";
@@ -16,26 +16,22 @@ function errorCode(error: unknown): string | undefined {
     : undefined;
 }
 
-async function readSelectionFile(start: string): Promise<{
+async function readSelectionFile(projectRoot: string): Promise<{
   readonly projectRoot: string;
   readonly selectionFile: string;
   readonly value: string;
 } | undefined> {
-  let directory = resolve(start);
-  while (true) {
-    const selectionFile = resolve(directory, stateDirectoryName, selectionFileName);
-    try {
-      return {
-        projectRoot: directory,
-        selectionFile,
-        value: (await readFile(selectionFile, "utf8")).trim(),
-      };
-    } catch (error) {
-      if (errorCode(error) !== "ENOENT") throw error;
-    }
-    const parent = dirname(directory);
-    if (parent === directory) return undefined;
-    directory = parent;
+  const root = resolve(projectRoot);
+  const selectionFile = resolve(root, stateDirectoryName, selectionFileName);
+  try {
+    return {
+      projectRoot: root,
+      selectionFile,
+      value: (await readFile(selectionFile, "utf8")).trim(),
+    };
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return undefined;
+    throw error;
   }
 }
 
@@ -59,19 +55,19 @@ export async function selectRuntimeProfile(projectRoot: string, profile: string)
   return { profile: selectedProfile, projectRoot: root, selectionFile };
 }
 
-/** Find the nearest project-local Runtime selection, starting at a file's directory or cwd. */
-export async function findRuntimeProfile(start: string): Promise<RuntimeProfileSelection | undefined> {
-  const selected = await readSelectionFile(start);
+/** Read only the explicitly resolved project's Runtime selection. */
+export async function findRuntimeProfile(projectRoot: string): Promise<RuntimeProfileSelection | undefined> {
+  const selected = await readSelectionFile(projectRoot);
   if (selected === undefined) return undefined;
   if (selected.value.length === 0) {
     throw new Error(`Runtime selection is empty: ${selected.selectionFile}; run hypit runtime use <profile>`);
   }
-  const projectRoot = await realpath(selected.projectRoot);
-  const candidate = resolve(projectRoot, selected.value);
+  const root = selected.projectRoot;
+  const candidate = resolve(root, selected.value);
   try {
     return {
       profile: await realpath(candidate),
-      projectRoot,
+      projectRoot: root,
       selectionFile: selected.selectionFile,
     };
   } catch (error) {
@@ -85,8 +81,8 @@ export async function findRuntimeProfile(start: string): Promise<RuntimeProfileS
 }
 
 /** Remove only the local pointer. Runtime state, Programs and Builds are untouched. */
-export async function clearRuntimeProfile(start: string): Promise<RuntimeProfileSelection | undefined> {
-  const selected = await readSelectionFile(start);
+export async function clearRuntimeProfile(projectRoot: string): Promise<RuntimeProfileSelection | undefined> {
+  const selected = await readSelectionFile(projectRoot);
   if (selected === undefined) return undefined;
   const profile = resolve(selected.projectRoot, selected.value);
   await unlink(selected.selectionFile);

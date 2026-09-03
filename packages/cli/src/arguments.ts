@@ -48,7 +48,20 @@ const commonOptions = ["--json", "--color", "--no-color", "--verbose", "--debug"
 export function parseCommand(argv: readonly string[]): CliCommand {
   const [command, ...tail] = argv;
   switch (command) {
-    case "check":
+    case "check": {
+      const [source, rest] = requiredPositional(tail, "check requires one Source");
+      const options = commandOptions(command, rest,
+        "--package-root", "--workspace", "--asset-root", "--limit");
+      return {
+        command,
+        source,
+        presentation: options.presentation,
+        assetRoots: options.assetRoots,
+        limit: options.limit,
+        ...optionalProject(options),
+        ...optionalPackageRoot(options),
+      };
+    }
     case "plan": {
       const [source, rest] = requiredPositional(tail, `${command} requires one Source`);
       const options = commandOptions(command, rest,

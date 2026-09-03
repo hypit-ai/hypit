@@ -87,7 +87,8 @@ export async function runProjectResultCommand(input: {
       ["Builds", String(entries.length)],
     ], entries.map((item) => {
       const label = item.title === undefined ? item.build : `${item.title} · ${item.build}`;
-      return `${label}: ${item.outcome} · ${item.output.kind} · ${item.output.type} · ${item.createdAt}`;
+      return `${label}: ${item.outcome} · ${new Date(item.createdAt).toLocaleString()}`
+        + (args.presentation.verbose ? ` · ${item.output.kind} · ${item.output.type}` : "");
     }).concat(page.next === undefined ? [] : [`Older    hypit history ${args.outputName} --before ${page.next}`]));
     return;
   }
@@ -100,23 +101,37 @@ export async function runProjectResultCommand(input: {
       ...(args.outputName === undefined ? {} : { output: args.outputName }),
       limit: args.limit,
     });
+    const focusedOutputs = args.outputName === undefined
+      ? build.outputs.filter((item) => item.target || item.highlighted)
+      : build.outputs;
+    const visibleOutputs = args.presentation.verbose ? build.outputs : focusedOutputs;
+    const outputCount = build.outputs.length + (build.omittedOutputs ?? 0);
+    const hiddenOutputCount = args.outputName === undefined ? outputCount - focusedOutputs.length : 0;
     write({ format: "hypit.cli-inspect@4", build }, "Build Result",
-      manifest.outcome === "failed" ? "error" : "info", [
+      manifest.outcome === "failed" ? "error"
+        : manifest.outcome === "cancelled" ? "warning"
+          : manifest.outcome === "complete" ? "success" : "info", [
         ["Build", build.id],
         ["Created", new Date(build.createdAt).toLocaleString()],
         ...(build.title === undefined ? [] : [["Title", build.title] as const]),
         ["Outcome", build.outcome],
-        ["Targets", String(build.targetCount)],
-        ["Outputs", String(build.outputs.length + (build.omittedOutputs ?? 0))],
+        ...(args.outputName === undefined ? [
+          ["Targets", String(build.targetCount)] as const,
+          ["Outputs", String(outputCount)] as const,
+        ] : []),
       ], [
         ...(build.failure === undefined ? [] : [`Reason    ${build.failure}`]),
         ...(build.note === undefined ? [] : [`Note      ${build.note}`]),
-        ...build.outputs.map((item) => `${item.highlighted ? "★" : item.target ? "Target" : "Output"}    ${item.name} · ${item.type} · ${item.kind}`
-          + `${item.mediaType === undefined ? "" : ` · ${item.mediaType}`}`
-          + `${item.size === undefined ? "" : ` · ${item.size} bytes`}`),
-        ...(build.omittedOutputs === undefined ? [] : [
+        ...visibleOutputs.map((item) => `${item.highlighted ? "★" : item.target ? "Target" : "Output"}    ${item.name}`
+          + (!args.presentation.verbose ? "" : ` · ${item.type} · ${item.kind}`
+            + `${item.mediaType === undefined ? "" : ` · ${item.mediaType}`}`
+            + `${item.size === undefined ? "" : ` · ${item.size} bytes`}`)),
+        ...(!args.presentation.verbose && hiddenOutputCount > 0 ? [
+          `${hiddenOutputCount} other Output${hiddenOutputCount === 1 ? "" : "s"} · use --verbose or --output <name>`,
+        ] : []),
+        ...(args.presentation.verbose && build.omittedOutputs !== undefined ? [
           `${build.omittedOutputs} more Outputs · use --limit <count> or --output <name>`,
-        ]),
+        ] : []),
       ]);
     return;
   }
@@ -157,11 +172,12 @@ export async function runProjectResultCommand(input: {
     kind: exported.kind,
     path: exported.path,
   };
-  write(machine, "Build Output exported", "success", [
-    ["Build", exported.build],
-    ["Output", exported.output],
-    ["Type", machine.type],
-    ["Kind", exported.kind],
-    ["Path", exported.path],
-  ]);
+  const path = projectPath(exported.path, projectRoot);
+  write(machine, `Exported ${exported.output} → ${path}`, "success",
+    args.presentation.verbose ? [
+      ["Build", exported.build],
+      ["Type", machine.type],
+      ["Kind", exported.kind],
+      ["Path", exported.path],
+    ] : []);
 }

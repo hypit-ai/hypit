@@ -71,6 +71,14 @@ async function jsonCommand(args: readonly string[], root: string): Promise<unkno
   return JSON.parse(output);
 }
 
+async function humanCommand(args: readonly string[], root: string): Promise<string> {
+  let output = "";
+  await runCli([...args, "--workspace", root], {
+    write(text) { output += text; },
+  }, resultDistribution());
+  return output;
+}
+
 test("builds, history, inspect and get read project Build Results without opening a Runtime", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-results-"));
   try {
@@ -105,6 +113,14 @@ test("builds, history, inspect and get read project Build Results without openin
     assert.equal(inspected.build.id, "bld_20260902T110000000Z_0000000001");
     assert.equal(inspected.build.title, "episode-stage");
 
+    const humanHistory = await humanCommand(["history", "stage.value"], root);
+    assert.match(humanHistory, /episode-stage/u);
+    assert.doesNotMatch(humanHistory, /example\.result|scalar/u);
+
+    const humanInspect = await humanCommand(["inspect", "bld_20260902T110000000Z_0000000001"], root);
+    assert.match(humanInspect, /Target\s+stage\.value/u);
+    assert.doesNotMatch(humanInspect, /example\.result|scalar/u);
+
     const destination = join(root, "exported.json");
     const exported = await jsonCommand([
       "get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination,
@@ -118,6 +134,13 @@ test("builds, history, inspect and get read project Build Results without openin
       path: destination,
     });
     assert.equal(await readFile(destination, "utf8"), "\"ready\"\n");
+
+    const humanDestination = join(root, "human-exported.json");
+    const humanGet = await humanCommand([
+      "get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", humanDestination,
+    ], root);
+    assert.match(humanGet, /Exported stage\.value → human-exported\.json/u);
+    assert.doesNotMatch(humanGet, /\b(?:Type|Kind|Build)\b|example\.result|scalar/u);
     await assert.rejects(
       jsonCommand(["get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination], root),
       /Export destination .* already exists/u,

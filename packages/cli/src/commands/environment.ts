@@ -38,6 +38,7 @@ export async function runEnvironmentCommand(input: {
   const reportProgramProgress = args.presentation.json
     ? undefined
     : (event: { readonly id: string; readonly phase: "checking" | "installing" | "starting" | "waiting" | "ready" }): void => {
+      if (!args.presentation.verbose && event.phase !== "installing" && event.phase !== "starting") return;
       const verb = {
         checking: "Checking",
         installing: "Installing",
@@ -149,6 +150,11 @@ export async function runEnvironmentCommand(input: {
     const desiredState = args.action === "down" ? !result.programs.some((item) => item.state.state === "ready") : ready;
     const lifecycleOk = args.action === "status" || desiredState;
     const shownPrograms = result.programs.filter((item) => item.state.state !== "ready").slice(0, args.limit);
+    const title = args.action === "up"
+      ? desiredState ? "External programs ready" : "External programs need attention"
+      : args.action === "down"
+        ? desiredState ? "External programs stopped" : "Some external programs are still running"
+        : "External program status";
     write({
       format: "hypit.cli-programs@2",
       action: args.action,
@@ -159,10 +165,12 @@ export async function runEnvironmentCommand(input: {
         ...(args.presentation.verbose && item.action !== undefined ? { action: item.action } : {}),
       })),
       ...(result.programs.length <= args.limit ? {} : { omittedPrograms: result.programs.length - args.limit }),
-    }, `External programs ${args.action}`,
+    }, title,
     args.action === "status" ? ready ? "success" : "info" : lifecycleOk ? "success" : "warning", [
-      ["Programs", String(result.programs.length)],
-      ["Ready", String(result.programs.filter((item) => item.state.state === "ready").length)],
+      ...(!args.presentation.verbose && lifecycleOk && args.action !== "status" ? [] : [
+        ["Programs", String(result.programs.length)] as const,
+        ["Ready", String(result.programs.filter((item) => item.state.state === "ready").length)] as const,
+      ]),
     ], shownPrograms.map((item) => `${item.id}: ${item.state.state}`));
     if (!lifecycleOk) io.setExitCode?.(1);
     return;
@@ -198,10 +206,12 @@ export async function runEnvironmentCommand(input: {
           total: external.programs.length,
           ready: external.programs.filter((item) => item.state.state === "ready").length,
         },
-      }, "Runtime is up", ok ? "success" : "warning", [
-        ["Machine packages", String(prepared.length)],
-        ["Worker", processState.state],
-        ["External programs", String(external.programs.length)],
+      }, ok ? "Runtime deployment ready" : "Runtime deployment needs attention", ok ? "success" : "warning", [
+        ...(!args.presentation.verbose && ok ? [] : [
+          ["Machine packages", String(prepared.length)] as const,
+          ["Worker", processState.state] as const,
+          ["External programs", `${external.programs.filter((item) => item.state.state === "ready").length}/${external.programs.length} ready`] as const,
+        ]),
       ]);
       if (!ok) io.setExitCode?.(1);
       return;
@@ -243,10 +253,10 @@ export async function runEnvironmentCommand(input: {
       runtime = selectedRuntime;
       const activity = await runtime.activity();
       const counts = Object.fromEntries([
-        ["starting", activity.builds.filter((item) => item.activity === "submitting" || item.activity === "ready").length],
-        ["active", activity.builds.filter((item) => item.activity === "running").length],
-        ["waiting", activity.builds.filter((item) => item.activity === "waiting").length],
-        ["decided", activity.builds.filter((item) => item.activity === "saving-result").length],
+        ["submitting", activity.builds.filter((item) => item.activity === "submitting").length],
+        ["working", activity.builds.filter((item) =>
+          item.activity === "ready" || item.activity === "running" || item.activity === "waiting").length],
+        ["savingResult", activity.builds.filter((item) => item.activity === "saving-result").length],
       ]);
       const lanes = summarizeQueueLanes(activity.capacity);
       const ready = worker.state === "running"
@@ -273,14 +283,19 @@ export async function runEnvironmentCommand(input: {
           ...(args.presentation.verbose ? { lanes: lanes.slice(0, args.limit) } : {}),
         },
       };
-      write(machine, "Runtime status", attention ? "warning" : ready ? "success" : "info", [
+      write(machine, attention
+        ? "Runtime deployment needs attention"
+        : ready ? "Runtime deployment ready" : "Runtime Worker stopped",
+      attention ? "warning" : ready ? "success" : "info", [
         ["Worker", worker.state],
-        ["Starting", String(counts.starting ?? 0)],
-        ["Active", String(counts.active ?? 0)],
-        ["Waiting", String(counts.waiting ?? 0)],
-        ["Decided", String(counts.decided ?? 0)],
+        ["Active Builds", String(activity.builds.length)],
         ["Programs", `${external.programs.length - unavailable.length}/${external.programs.length} ready`],
-        ...(args.presentation.verbose ? [["Active requests", String(activity.capacity.length)] as const] : []),
+        ...(args.presentation.verbose ? [
+          ["Submitting", String(counts.submitting ?? 0)] as const,
+          ["Working", String(counts.working ?? 0)] as const,
+          ["Saving Result", String(counts.savingResult ?? 0)] as const,
+          ["Capacity in use", String(activity.capacity.length)] as const,
+        ] : []),
       ], [
         ...unavailable.slice(0, args.limit).map((item) => `${item.id}: ${item.state.state}`),
         ...(args.presentation.verbose ? queueLaneLines(lanes.slice(0, args.limit)) : []),

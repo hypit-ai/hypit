@@ -14,8 +14,8 @@ function capture(
 
 const human = { json: false, color: "auto", verbose: false } as const;
 
-test("author check exposes author-facing Outputs, not graph or resource identities", () => {
-  const output = capture(human, {
+test("author check keeps the default summary compact and reserves Output types for verbose", () => {
+  const presentation = {
     kind: "check-author",
     machine: {
       format: "hypit.cli-check@2",
@@ -29,10 +29,14 @@ test("author check exposes author-facing Outputs, not graph or resource identiti
       outputCount: 1,
       outputs: [{ name: "story", type: "@hypit/narrative@1/Narrative" }],
     },
-  });
+  } as const;
+  const output = capture(human, presentation);
   assert.match(output, /✓ Source is valid/u);
-  assert.match(output, /story\s+@hypit\/narrative@1\/Narrative/u);
+  assert.doesNotMatch(output, /story|@hypit\/narrative/u);
   assert.doesNotMatch(output, /resource|logical-output|res_/u);
+
+  const verbose = capture({ ...human, verbose: true }, presentation);
+  assert.match(verbose, /story\s+@hypit\/narrative@1\/Narrative/u);
 });
 
 test("JSON mode writes exactly the stable command view", () => {
@@ -49,8 +53,8 @@ test("JSON mode writes exactly the stable command view", () => {
   assert.doesNotMatch(output, /Hypit Doctor|\u001b\[/u);
 });
 
-test("plan presents named choices and bounded external request summaries", () => {
-  const output = capture(human, {
+test("plan presents useful choices and readable requests without default graph internals", () => {
+  const presentation = {
     kind: "plan",
     machine: {
       format: "hypit.cli-plan@2",
@@ -61,13 +65,50 @@ test("plan presents named choices and bounded external request summaries", () =>
       steps: 2,
       externalRequestCount: 1,
       externalRequests: [{ operation: "@hypit/media@1/inspect", count: 1 }],
+      preflight: {
+        ok: true,
+        capabilityCount: 1,
+        capabilities: ["@hypit/media@1/inspect"],
+        diagnosticCount: 0,
+        diagnostics: [],
+      },
       choiceCount: 1,
       choices: [{ output: "take.video", candidate: "preview" }],
+      unreached: [{ output: "unused.image", operation: "@hypit/gpt-image@1/request-gpt-image-2" }],
+    },
+  } as const;
+  const output = capture(human, presentation);
+  assert.match(output, /take\.video\s+← preview/u);
+  assert.match(output, /1\s+inspect/u);
+  assert.match(output, /Preflight\s+ready/u);
+  assert.doesNotMatch(output, /Runtime\s+ready/u);
+  assert.doesNotMatch(output, /@hypit\/media|unused\.image|Declared but not reached|logical:|record:|step-/u);
+
+  const verbose = capture({ ...human, verbose: true }, presentation);
+  assert.match(verbose, /1\s+@hypit\/media@1\/inspect/u);
+  assert.match(verbose, /unused\.image/u);
+});
+
+test("run check treats historical reuse as a normal summary", () => {
+  const output = capture(human, {
+    kind: "check-run",
+    machine: {
+      format: "hypit.cli-check@2",
+      sourceKind: "run",
+      ok: true,
+      run: "/project/build.svrun",
+      author: "/project/main.svml",
+      frontend: "@hypit/run-markup@1",
+      targetCount: 1,
+      targets: ["final.video"],
+      candidates: 1,
+      satisfactions: 1,
+      unresolvedHistoricalOutputs: [{ candidate: "previous", build: "bld_previous", output: "take.video" }],
     },
   });
-  assert.match(output, /take\.video\s+← preview/u);
-  assert.match(output, /1\s+@hypit\/media@1\/inspect/u);
-  assert.doesNotMatch(output, /logical:|record:|step-/u);
+  assert.match(output, /Targets\s+final\.video/u);
+  assert.match(output, /Reuse\s+1 historical Output/u);
+  assert.doesNotMatch(output, /unresolved|bld_previous|Candidate/u);
 });
 
 test("help is concise and describes stable rather than complete output", () => {

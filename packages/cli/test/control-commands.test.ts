@@ -163,6 +163,70 @@ test("status reads a finished project Result without a Runtime", async () => {
   assert.deepEqual(calls, ["result.read:build-finished", "result.close"]);
 });
 
+test("finished status defaults to the Result outcome without repeating internal layers", async () => {
+  const distribution = {
+    openProjectResults: async () => ({
+      repository: {
+        async read() {
+          return {
+            format: "hypit.build-result@2",
+            id: "build-finished",
+            source: { path: "main.svml" },
+            targets: ["final.video"],
+            finishedAt: 2,
+            outcome: "complete",
+            outputs: { "final.video": {} },
+          };
+        },
+      },
+      async close() {},
+    }),
+  } as unknown as CliDistribution;
+  let output = "";
+
+  await runCli(["status", "build-finished"], {
+    write(text) { output += text; },
+  }, distribution);
+
+  assert.match(output, /Build complete/u);
+  assert.match(output, /Outcome\s+complete/u);
+  assert.doesNotMatch(output, /\bWork\b|\bDecision\b|\bResult\s+complete/u);
+});
+
+test("status separates execution from Result only while the Result is being saved", async () => {
+  const view = {
+    id: "build-saving",
+    createdAt: 1,
+    activity: "saving-result" as const,
+    outcome: "complete" as const,
+    cancellationRequested: false,
+    targets: ["final.video"],
+    acceptedRecords: 1,
+    outstandingCommands: 0,
+    operations: [],
+  };
+  const distribution = {
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      openControl: async () => ({ async inspect() { return view; }, async close() {} }),
+    }),
+    openProjectResults: async () => ({
+      repository: { async read() { return undefined; } },
+      async close() {},
+    }),
+  } as unknown as CliDistribution;
+  let output = "";
+
+  await runCli(["status", view.id, "--runtime", "/tmp/runtime.json"], {
+    write(text) { output += text; },
+  }, distribution);
+
+  assert.match(output, /Saving Build Result/u);
+  assert.match(output, /Execution\s+complete/u);
+  assert.match(output, /Result\s+saving/u);
+  assert.doesNotMatch(output, /Build complete|Outcome\s+complete/u);
+});
+
 test("status preserves Runtime decision and attention when its Result Store is unavailable", async () => {
   const view = {
     id: "build-result-unavailable",
