@@ -48,46 +48,22 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 
 通常用作 `seedance:ReferenceVideo` 的语音音色参考。
 
-## estimate:Speech
+## 时长是字面量
 
-基于 Script 实际读音文本的确定性语音时长规划。无需外部服务调用——时长根据读音单位和口播密度策略在本地计算。
+生成片段的长度由作者决定，直接写在需要它的元素上。先量稿子，再写数字：
+
+```bash
+hypit measure main.svml --segment hook --language en --pace normal --min 4 --max 15 --rounding round
+# 7s
+```
 
 ```svml
-<estimate:Speech id="hook-duration"
-  source={story.segment.hook.speech}
-  policy={recipes.speech.normal}/>
+<seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt} duration="7">
+  …
+</seedance:ReferenceVideo>
 ```
 
-| 属性 | 必填 | 说明 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `source` | 是 | 要估算的 Script 文本——通常为 `{script.segment.NAME.speech}` |
-| `policy` | 否 | 控制语速和边界的 SVS 语音 Recipe；省略时使用内联参数 |
-
-`policy` 引用一个 SVS Recipe（参见 [SVS 样式表](./styles.md#speech-estimation)）：
-
-```svs
-speech.normal {
-  language: en;
-  pace: normal;
-  min: 4;
-  max: 15;
-  rounding: round;
-}
-```
-
-你也可以直接内联指定估算参数，而不使用 SVS policy：
-
-```svml
-<estimate:Speech id="opening-duration"
-  source={story.segment.opening.speech}
-  language="en" pace="normal" min="4" max="15" rounding="round"/>
-```
-
-英语官方档位为 `slow = 4.2`、`normal = 4.6`、`fast = 5.0` 音节/秒。项目需要档位之间的连续值时，可以用 `rate="4.75"` 代替 `pace`；二者不能同时出现。策略没有隐式值：无论内联还是引用 Recipe，都必须写明 `language`、`min`、`max`、
-`rounding`，并且在 `pace` 和 `rate` 中恰好选择一个。
-
-**输出：** `{hook-duration.duration}`——估算的时长（秒），传递给生成组件。
+`hypit measure` 按口播策略——`language`、`pace`（英语 `slow = 4.2`、`normal = 4.6`、`fast = 5.0` 音节/秒）或数值 `rate`、`min`、`max`、`rounding`——统计 Segment 台词的读音单位，不调用任何外部服务。图里没有任何东西在计算时长，所以 `hypit plan` 在 Build 开始前就是完整的。同一套策略写在 `estimated:SemanticTake` 上或它引用的 SVS Recipe 里（参见 [SVS 样式表](./styles.md#speech-estimation)），用于把 Segment 的词按音节权重铺到预览媒体上。
 
 ## text:Value
 
@@ -162,7 +138,7 @@ Seedance 2.5 复用同样的 Surface，而不是由 Runtime 把别的模型偷�
 
 这个低层组件并不知道它被用来做口播；用途只存在于传入的 Text 中。公共属性包括
 `id`、`model`、`prompt`、`duration`、`resolution`、
-`aspect-ratio`、`generate-audio`；`duration` 可以是字面量或显式 `{estimate.duration}` 边。
+`aspect-ratio`、`generate-audio`；`duration` 是模型范围内的整秒字面量，事先用 `hypit measure` 量好。
 
 可以直接抽取前一段生成视频里的音频，并通过普通图边给后续片段当作参考。这个操作不会把音频提升成语音证据，也不会凭空附加说话人语义：
 
@@ -295,11 +271,10 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 
 ## 组合示例
 
-一个两段拍摄的设置，估算时长进入显式 Text 组装与 Seedance 生成：
+一个两段拍摄的设置，量好的时长写成字面量，显式 Text 组装与 Seedance 生成：
 
 ```svml
 <import as="media" from="@hypit/media@1"/>
-<import as="estimate" from="@hypit/estimate@1"/>
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
 <import as="recipes" source="./recipes.svs"/>
@@ -309,10 +284,6 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 <media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>
 <media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
 
-<estimate:Speech id="hook-duration"
-  source={story.segment.hook.speech} policy={recipes.speech.normal}/>
-<estimate:Speech id="meeting-duration"
-  source={story.segment.meeting.speech} policy={recipes.speech.normal}/>
 <text:Value id="hook-action">Start urgently, then become quieter.</text:Value>
 <text:Value id="meeting-action">Indicate the product, then return to the lens.</text:Value>
 

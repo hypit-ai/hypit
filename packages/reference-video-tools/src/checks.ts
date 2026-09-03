@@ -1097,12 +1097,12 @@ export async function authoringCheck(
       ? `every compared element was looked at over the deterministic estimate-timed preview (${compared}).`
       : `${untimed.length} of ${compared} compared elements have no recorded preview timing basis.`);
   }
-  // On the description route every stand-in is estimate-timed, because `estimate:Speech` is the only
-  // clock there is until the Build synthesizes the speech. Reporting that as a shortfall would name
-  // every element every time and ask for a re-render against a reference that does not exist, so it
-  // is stated once as what it is.
+  // On the description route every stand-in is estimate-timed, because the author's literal durations
+  // are the only clock there is until the Build synthesizes the speech. Reporting that as a shortfall
+  // would name every element every time and ask for a re-render against a reference that does not
+  // exist, so it is stated once as what it is.
   if (compared > 0 && mode === "description") {
-    summary.push(`every ${looking} was made over a stand-in timed by estimate:Speech (${compared}); how each element `
+    summary.push(`every ${looking} was made over a stand-in timed by the Source's literal durations (${compared}); how each element `
       + "sits against the speech the Build synthesizes is settled once that speech exists.");
   }
   if (unresolved.length > 0) {

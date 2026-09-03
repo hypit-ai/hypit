@@ -19,8 +19,12 @@ leaving a fixed-length estimate at the beginning.
 ```svml
 <estimated:SemanticTake id="opening-estimated" narrative={story}
   segment={story.segment.opening} media={opening-media.media}
-  policy={opening-duration.policy}/>
+  language="en" pace="normal" min="4" max="15" rounding="round"/>
 ```
+
+The delivery policy is the element's own: write it inline as above, or name an SVS Recipe with
+`policy={recipes.speech.normal}` carrying the same properties. Nothing else in the graph computes
+it; durations themselves are author literals, measured beforehand with `hypit measure`.
 
 The result has the ordinary `@hypit/speech@1#SemanticTake` type. A Run can therefore choose this
 Build output while real A-roll is unavailable, then later choose the corresponding WhisperX output

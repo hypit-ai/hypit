@@ -23,7 +23,6 @@
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
-  <import as="estimate" from="@hypit/estimate@1"/>
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="space" from="@hypit/spatial@1"/>
   <import as="program" from="@hypit/program-space@1"/>
@@ -48,8 +47,7 @@
     left="12%" top="52%" right="88%" bottom="78%"/>
 
   <wording:Value id="direction">Locked medium close-up in a quiet daylight studio. Spoken dialogue.</wording:Value>
-  <estimate:Speech id="showcase-duration" source={story.segment.showcase.speech} policy={recipes.speech.normal}/>
-  <seedance:TextVideo id="take" model="mini" prompt={direction} duration={showcase-duration.duration} generate-audio="true"/>
+  <seedance:TextVideo id="take" model="mini" prompt={direction} duration="8" generate-audio="true"/>
   <seedance:TextVideo id="motion-a" model="mini" prompt={direction} duration="5"/>
   <seedance:TextVideo id="motion-b" model="mini" prompt={direction} duration="5"/>
 

@@ -48,8 +48,8 @@ reaches an observer, and it does not go in the observation cache. It is identica
 and on the `agent` observer it is the only exact record of the sound. Read it whenever a decision
 depends on when a word is said — placing an on-screen text reveal against the line that triggers it,
 timing a caption, checking that a voice observation matches what was spoken, or judging a Segment's
-natural boundary. It does not set a take's duration: the take is generated and its length comes from
-`estimate:Speech`, as `../script-time.md` requires. Do not run WhisperX by hand and do not ask a model
+natural boundary. It does not set a take's duration: the take is generated and its length is the
+literal the author measured with `hypit measure`, as `../script-time.md` requires. Do not run WhisperX by hand and do not ask a model
 to transcribe.
 
 `transcript` reports `status`, `transcript_ref` and `word_count`. Read the words from

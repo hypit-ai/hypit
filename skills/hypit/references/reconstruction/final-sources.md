@@ -23,8 +23,8 @@ semantic evidence; return to a narrow `observe_reference` question when necessar
 ## Where the Segments fall, and how long each take runs
 
 `../script-time.md` decides both, and it decides them the same way for any program: a Segment is a
-stretch that is spoken as one, the seam goes at a sentence end, and each take's duration comes from
-`estimate:Speech` rather than from any clock.
+stretch that is spoken as one, the seam goes at a sentence end, and each take's duration is the
+literal the author measured with `hypit measure`, not a value read from any clock.
 
 The reference adds one thing to that, and it is a warning rather than a rule. The generated speech
 plays at its own pace, not the reference's: its measured word timings describe how the original

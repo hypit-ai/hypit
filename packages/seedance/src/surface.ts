@@ -12,7 +12,6 @@ import type {
 import { exactModelMediaInputNames, exactModelTextInputName } from "@hypit/model-kit";
 import type { ExactModelEndpoint, ExactModelMediaInput } from "@hypit/model-kit";
 import type { CanonicalValue } from "@hypit/protocol";
-import { speechTypes } from "@hypit/speech";
 import { textTypes, verifyText } from "@hypit/text";
 import type {
   MarkupAttributeValue,
@@ -21,17 +20,8 @@ import type {
   SurfaceResolvedReference,
 } from "@hypit/markup";
 
-import {
-  createSeedanceAssembledGenerationFragment,
-  createSeedanceDurationGenerationFragment,
-} from "./fragment.js";
-import {
-  sealSeedanceDurationProgram,
-  seedanceDurationCompileProducers,
-  seedanceEndpoints,
-  seedancePorts,
-  seedanceTypes,
-} from "./index.js";
+import { createSeedanceAssembledGenerationFragment } from "./fragment.js";
+import { seedanceEndpoints, seedancePorts } from "./index.js";
 import type { SeedanceModel, SeedancePortMap } from "./index.js";
 
 type MediaInput = {
@@ -161,11 +151,11 @@ function enumeratedPort(table: GenerationPortTable, name: string): readonly (str
 function generationSettings(
   element: StructuredElement,
   model: SeedanceModel,
-  suppliedDurationSec?: number,
 ): SeedancePortMap {
   const table = seedancePorts[model];
   const duration = generationPort(table, "duration");
-  const durationSec = suppliedDurationSec ?? integerAttribute(element, "duration");
+  // The author's literal, measured beforehand; the model's declared range is the only check.
+  const durationSec = integerAttribute(element, "duration");
   if (duration.value.kind === "number") {
     const { minimum = 0, maximum = Number.MAX_SAFE_INTEGER } = duration.value;
     if (durationSec < minimum || durationSec > maximum) {
@@ -288,18 +278,6 @@ function assembleMedia(
   return { mediaInputs, records, inputs };
 }
 
-function durationReference(
-  element: StructuredElement,
-  resolveReference: (path: string) => SurfaceResolvedReference | undefined,
-): SurfaceResolvedReference | undefined {
-  if (typeof element.attributes.duration === "string") return undefined;
-  const result = resolved(element, "duration", resolveReference);
-  if (!sameType(result.type, speechTypes.duration)) {
-    throw new Error(`${element.name}.duration must reference a SpeechDuration`);
-  }
-  return result;
-}
-
 function generationOutput(args: {
   readonly element: StructuredElement;
   readonly endpoint: ExactModelEndpoint;
@@ -311,43 +289,6 @@ function generationOutput(args: {
   const { element, endpoint, model, promptSource } = args;
   const id = stringAttribute(element, "id");
   const assembled = assembleMedia(id, endpoint, args.media, element.range);
-  const duration = durationReference(element, args.resolveReference);
-  if (duration !== undefined) {
-    const { duration: _later, ...ports } = generationSettings(element, model, 4);
-    const program = sealSeedanceDurationProgram({
-
-      model,
-      ports,
-    });
-    const programId = `${id}.duration-program`;
-    const fragment = createSeedanceDurationGenerationFragment(
-      endpoint,
-      seedanceDurationCompileProducers[model],
-      assembled.mediaInputs,
-      [{ name: "prompt", port: "prompt" }],
-    );
-    return {
-      records: [{
-        id: programId,
-        type: seedanceTypes.durationProgram,
-        value: { kind: "inline" as const, value: program as unknown as CanonicalValue },
-        range: element.range,
-      }, ...assembled.records],
-      components: [{
-        id,
-        fragment: fragment.id,
-        inputs: {
-          program: { kind: "record" as const, id: programId },
-          duration: duration.ref,
-          [exactModelTextInputName("prompt")]: promptSource.ref,
-          ...assembled.inputs,
-        },
-        outputs: { video: `${id}.video` },
-        range: element.range,
-      }],
-      fragments: [fragment],
-    };
-  }
   const draft = sealGenerationRequestDraft(seedancePorts[model], generationSettings(element, model));
   const fragment = createSeedanceAssembledGenerationFragment(
     endpoint,

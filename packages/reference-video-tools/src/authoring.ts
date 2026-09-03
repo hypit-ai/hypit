@@ -496,7 +496,7 @@ export type RenderElementInput = {
   readonly tokens?: readonly [number, number];
   /**
    * A reference used only for comparison evidence and reference window selection. It never changes
-   * preview timing, which is always the Source's own `estimate:Speech` policy.
+   * preview timing, which is always the Source's own literal durations.
    */
   readonly reference_id?: string;
   /** Optional workspace root used by package-owned preview Sources. */

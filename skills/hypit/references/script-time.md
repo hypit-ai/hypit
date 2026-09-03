@@ -38,16 +38,16 @@ Put it where the speaker would draw breath: at a sentence end, never mid-clause.
 
 ## A take's duration is estimated
 
-Every take is generated, and the generated speech plays at its own pace. So each take's duration comes
-from `estimate:Speech` — the prediction of how long the generated line will be. Write that estimate on
-the take.
+Every take is generated, and the generated speech plays at its own pace. So each take's duration is
+the author's prediction of how long the generated line will be: measure the Segment with
+`hypit measure <source> --segment NAME` before writing the Source, and write the seconds as the
+literal `duration` on the take.
 
 Nothing depends on the estimate being exact. Script Selections bind every placed element to the
 words, and the SemanticTrack places the words where the generated audio actually has them, so a
-take that comes back a little long or short moves the words, not the bindings. This is also what
-lets a program survive the author changing the lines: the estimate recomputes from the new
-words. `estimate:Speech` takes `story.segment.NAME.speech`, so the duration follows the script it is
-asked to predict.
+take that comes back a little long or short moves the words, not the bindings. When the author
+changes the lines, measure again and write the new number; the duration is a decision in the Source,
+not a value the graph recomputes.
 
 ## Bind covering content to the words, not to a frame
 

@@ -91,7 +91,7 @@ specific Provider deployment.
 @hypit/nano-banana           Nano Banana model family
 @hypit/seedream              Seedream model family
 @hypit/mimo-tts              Xiaomi MiMo VoiceDesign model + author Surface
-@hypit/estimate              duration estimation
+@hypit/estimate              creation-time speech measurement (hypit measure) and the estimate policy type
 @hypit/speech                shared speech products
 @hypit/speech-evidence       acoustic evidence products
 @hypit/speech-alignment      speech alignment

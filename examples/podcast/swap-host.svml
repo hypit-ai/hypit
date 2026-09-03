@@ -9,7 +9,6 @@
   <import as="program" from="@hypit/program-space@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
-  <import as="estimate" from="@hypit/estimate@1"/>
   <import as="estimated" from="@hypit/semantic-take-estimate@1"/>
   <import as="speech" from="@hypit/speech-track@1"/>
   <import as="audio-track" from="@hypit/audio-track@1"/>
@@ -197,17 +196,15 @@
   <whisperx:SemanticTake id="arms-are-asking-semantic" narrative={story}
     segment={story.segment.arms-are-asking} media={arms-are-asking-media.media} language="en"/>
 
-  <estimate:Speech id="preview-estimate" source={story.segment.opening-question.speech}
-    policy={recipes.speech.preview}/>
   <estimated:SemanticTake id="opening-estimated" narrative={story}
     segment={story.segment.opening-question} media={opening-media.media}
-    policy={preview-estimate.policy}/>
+    policy={recipes.speech.preview}/>
   <estimated:SemanticTake id="daily-creatine-estimated" narrative={story}
     segment={story.segment.daily-creatine} media={daily-creatine-media.media}
-    policy={preview-estimate.policy}/>
+    policy={recipes.speech.preview}/>
   <estimated:SemanticTake id="arms-are-asking-estimated" narrative={story}
     segment={story.segment.arms-are-asking} media={arms-are-asking-media.media}
-    policy={preview-estimate.policy}/>
+    policy={recipes.speech.preview}/>
 
   <speech:Track id="speech" visual-frame={full-frame}
     visual-appearance={recipes.speech.visual} visual-z="10">

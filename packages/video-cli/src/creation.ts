@@ -3,9 +3,15 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { dirname, extname, join, resolve } from "node:path";
 
-import { findRuntimeProfile } from "@hypit/cli";
+import { findRuntimeProfile, loadDiscoveredSourcePackages } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
 import { MemoryResourceStore } from "@hypit/driver-node";
+import {
+  countSpeechEstimateUnits,
+  estimateSpeechDuration,
+  resolveSpeechEstimateLanguage,
+  speechEstimatePolicyFromAttributes,
+} from "@hypit/estimate";
 import { geminiCapabilities, geminiModels, sealGeminiRequest } from "@hypit/gemini";
 import type { GeminiMediaPart, GeminiModel } from "@hypit/gemini";
 import { verifyGeneratedAudioSet } from "@hypit/generation";
@@ -17,7 +23,7 @@ import type { RuntimeHostCapabilityProvider } from "@hypit/runtime-host-node";
 import { sealSpeechEvidenceAudio } from "@hypit/speech";
 import { speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { AlignedTranscriptEvidence } from "@hypit/speech-evidence";
-import { textTypes } from "@hypit/text";
+import { sealText, textTypes } from "@hypit/text";
 import { whisperXCapabilities, whisperXRequestForEvidenceAudio } from "@hypit/whisperx";
 import type { WhisperXLanguage } from "@hypit/whisperx";
 
@@ -32,7 +38,7 @@ import { videoCliDistribution } from "./distribution.js";
  * chose, and nothing else. Slow paid generation (pictures, clips) is not here: it is a Build.
  */
 
-export const creationCommands = ["observe", "transcribe", "speak"] as const;
+export const creationCommands = ["observe", "transcribe", "speak", "measure"] as const;
 export type CreationCommand = typeof creationCommands[number];
 
 /** The slice of the Runtime host these commands use; tests hand in a fake. */
@@ -469,6 +475,86 @@ async function speak(argv: readonly string[], io: CliIo, environment: CreationEn
 }
 
 // ---------------------------------------------------------------------------------------------------
+// measure
+
+/** The spoken Text of one Script Segment, read from the compiled author source without a Build. */
+async function segmentSpeech(source: string, segment: string): Promise<string> {
+  const projectRoot = await nearestPackageRoot(dirname(source));
+  const loaded = await loadDiscoveredSourcePackages({ ...videoCliDistribution, bootstrapPackages: [] }, {
+    source,
+    workspaceRoot: projectRoot,
+    packageRoot: projectRoot,
+    ...(videoCliDistribution.packageRoot === undefined ? {} : { distributionPackageRoot: videoCliDistribution.packageRoot }),
+  });
+  const compiler = videoCliDistribution.createCompiler({
+    workspaceRoot: projectRoot,
+    packageContributions: loaded.map((item) => item.contribution),
+  });
+  const workspace = await compiler.openFile(source);
+  const compiled = await compiler.compileSource(workspace.entry, workspace);
+  const suffix = `.segment.${segment}.speech`;
+  const record = compiled.program.records.find((item) =>
+    item.type.module.name === "@hypit/text" && item.type.name === "Text" && item.id.endsWith(suffix));
+  assert(record !== undefined, `${source} declares no Segment ${segment} with speech; Segments are named by the Script's <segment id>`);
+  assert(record.value.kind === "inline", `Segment ${segment} speech is not an inline Text`);
+  const text = (record.value.value as { readonly value?: unknown } | null)?.value;
+  assert(typeof text === "string", `Segment ${segment} speech is not Text`);
+  return text;
+}
+
+/**
+ * Measure a script before writing a duration: pronunciation units of the words, at the delivery
+ * policy the author chooses, bounded and rounded the way the author chooses. Pure local work.
+ */
+async function measure(argv: readonly string[], io: CliIo, environment: CreationEnvironment): Promise<void> {
+  const parsed = parseArguments(argv, ["--text", "--segment", "--language", "--pace", "--rate", "--min", "--max", "--rounding", "--padding"]);
+  const inlineText = parsed.options.get("--text");
+  const segment = parsed.options.get("--segment");
+  assert((inlineText === undefined) !== (parsed.positionals.length === 0 && segment === undefined) || (inlineText !== undefined && parsed.positionals.length === 0),
+    "measure takes either --text <text|file>, or a source .svml with --segment <id>");
+  let text: string;
+  let where: { readonly source: string; readonly segment: string } | { readonly text: true };
+  if (inlineText !== undefined) {
+    assert(segment === undefined && parsed.positionals.length === 0, "--text cannot be combined with a source or --segment");
+    text = await textOrFile(inlineText, "--text", environment.cwd);
+    where = { text: true };
+  } else {
+    assert(parsed.positionals.length === 1 && segment !== undefined, "measure a Segment with: hypit measure <source.svml> --segment <id>");
+    const source = resolve(environment.cwd, parsed.positionals[0]!);
+    text = await segmentSpeech(source, segment);
+    where = { source, segment };
+  }
+  const pace = parsed.options.get("--pace");
+  const rate = parsed.options.get("--rate");
+  const policy = speechEstimatePolicyFromAttributes({
+    language: parsed.options.get("--language") ?? "auto",
+    ...(rate === undefined ? { pace: pace ?? "normal" } : { rate }),
+    min: parsed.options.get("--min") ?? "1",
+    max: parsed.options.get("--max") ?? "60",
+    rounding: parsed.options.get("--rounding") ?? "none",
+    ...(parsed.options.get("--padding") === undefined ? {} : { padding: parsed.options.get("--padding") }),
+  }, "hypit measure");
+  const language = resolveSpeechEstimateLanguage(text, policy.language);
+  const units = countSpeechEstimateUnits(text, language);
+  const seconds = estimateSpeechDuration(sealText(text), policy);
+  const view = {
+    format: "hypit.video-cli-measure@1",
+    ...where,
+    characters: text.length,
+    units,
+    language,
+    policy,
+    seconds,
+  };
+  if (parsed.json) { io.write(`${JSON.stringify(view, null, 2)}\n`); return; }
+  const delivery = policy.rate === undefined ? `${policy.pace} pace` : `${policy.rate} units/s`;
+  const bounds = `min ${policy.minimumSec}, max ${policy.maximumSec}, ${policy.rounding}`;
+  io.write(`${seconds}s\n\n  ${units} pronunciation units · ${language} · ${delivery} · ${bounds}\n`
+    + `  ${"segment" in where ? `${where.segment} in ${where.source}` : `${text.length} characters`}\n`
+    + `  Write it as the literal, e.g. duration="${Number.isInteger(seconds) ? seconds : Math.ceil(seconds)}"; a model wants whole seconds inside its range.\n`);
+}
+
+// ---------------------------------------------------------------------------------------------------
 // Entry
 
 export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
@@ -501,11 +587,22 @@ export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
       "For a voice-over video this is the A-roll: speak first, measure, then author B-roll that covers",
       "every passage. Where a real presenter is the A-roll, do not replace them with this.",
     ],
+    measure: [
+      "hypit measure",
+      "Measure a script before writing a duration. Pure local work; no Runtime Profile, no request.",
+      "",
+      "  hypit measure <source.svml> --segment <id> [--language auto|en|zh|ja|es] [--pace slow|normal|fast | --rate <units/s>]",
+      "                [--min <s>] [--max <s>] [--rounding none|round|ceil] [--padding <s>]",
+      "  hypit measure --text <text|file> [same options]",
+      "",
+      "Prints the seconds the words take at that delivery, so the author writes them as the literal",
+      "duration on the Seedance take or StillVideo that carries the line.",
+    ],
   };
   const chosen = topic === undefined ? creationCommands : [topic];
   io.write(`${chosen.map((item) => sections[item].join("\n")).join("\n\n")}\n\n`
-    + "Each command names the Endpoint and its price page before it runs; the Profile comes from --runtime\n"
-    + "or the project's `hypit runtime use` selection.\n");
+    + "observe, transcribe and speak name the Endpoint and its price page before they run; the Profile\n"
+    + "comes from --runtime or the project's `hypit runtime use` selection. measure spends nothing.\n");
 }
 
 export async function runCreationCli(argv: readonly string[], io: CliIo, environment: CreationEnvironment = creationEnvironment()): Promise<void> {
@@ -514,5 +611,6 @@ export async function runCreationCli(argv: readonly string[], io: CliIo, environ
   if (argv.includes("--help")) { writeCreationHelp(io, command); return; }
   if (command === "observe") await observe(argv, io, environment);
   else if (command === "transcribe") await transcribe(argv, io, environment);
-  else await speak(argv, io, environment);
+  else if (command === "speak") await speak(argv, io, environment);
+  else await measure(argv, io, environment);
 }

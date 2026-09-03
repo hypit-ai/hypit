@@ -265,7 +265,7 @@ export const mediaPipelineMarkupSurfaces = [
     },
     {
       name: "still-video", tag: "StillVideo", mode: "structured",
-      outputs: [mediaPipelineTypes.stillVideoRequest, artifactTypes.blob],
+      outputs: [speechTypes.duration, mediaPipelineTypes.stillVideoRequest, artifactTypes.blob],
       vocabulary: {
         summary: "Encodes one authored image as an ordinary silent MP4 Blob on an explicit duration and frame clock.",
         attributes: [
@@ -273,8 +273,8 @@ export const mediaPipelineMarkupSurfaces = [
             summary: "Names the still-video operation and the MP4 Artifact it publishes." },
           { name: "source", kind: "reference", required: true, accepts: [artifactTypes.blob],
             summary: "Selects the authored image whose first decoded frame is held for the full video." },
-          { name: "duration", kind: "reference", required: true, accepts: [speechTypes.duration],
-            summary: "Selects the positive duration used to establish the video's finite frame count." },
+          { name: "duration", kind: "literal", required: true,
+            summary: "Sets the video's length in seconds, such as 6 or 2.5s; the author's decision, measured beforehand with hypit measure." },
           { name: "clock", kind: "reference", required: true, accepts: [programSpaceTypes.clock],
             summary: "Selects the frame clock used by the generated MP4." },
         ],

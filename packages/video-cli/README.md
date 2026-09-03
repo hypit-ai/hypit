@@ -37,11 +37,14 @@ file the caller chose:
 hypit observe <media…> --instruction <text|file> --prompt <text|file> --to notes/frame.md
 hypit transcribe reference.mp4 --to notes/reference.transcript.json [--language en|zh|es]
 hypit speak --text line.txt --voice "warm, unhurried" --to voice/intro.mp3
+hypit measure main.svml --segment hook --language en --pace normal --min 4 --max 15 --rounding round
 ```
 
 `observe` uses the Profile's Gemini Endpoint, `transcribe` its `whisperx-alignment` Endpoint (after
 extracting 16 kHz mono speech audio with ffmpeg), `speak` its MiMo VoiceDesign Endpoint and reports
-the audio's duration so the author can write it as a literal. `--runtime <profile>` names the Profile;
+the audio's duration so the author can write it as a literal. `measure` counts a Segment's pronunciation
+units at a delivery policy and prints the seconds to write as the literal `duration`; it opens no
+Profile and spends nothing. `--runtime <profile>` names the Profile;
 otherwise the project's `hypit runtime use` selection is read. Slow paid generation — pictures and
 clips — is not a creation-time tool: declare it in the Source and go through `plan` and `build`.
 

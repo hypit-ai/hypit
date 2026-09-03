@@ -84,7 +84,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/nano-banana           Nano Banana model family
 @hypit/seedream              Seedream model family
 @hypit/mimo-tts              Xiaomi MiMo VoiceDesign 模型及作者 Surface
-@hypit/estimate              duration estimation
+@hypit/estimate              创作期量稿（hypit measure）与估算策略类型
 @hypit/speech                shared speech products
 @hypit/speech-evidence       acoustic evidence products
 @hypit/speech-alignment      speech alignment

@@ -138,6 +138,31 @@ test("speak writes the audio and its duration so the author can write a literal"
   }
 });
 
+test("measure prints the seconds a line takes so the author can write the literal, without any Profile", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-measure-"));
+  try {
+    const noHost: CreationEnvironment = { cwd: root, openHost: async () => { throw new Error("measure must not open a host"); } };
+    const out = capture();
+    await runCreationCli([
+      "measure", "--text", "Video editing begins with meaning, not a pile of clips on a timeline.",
+      "--language", "en", "--pace", "normal", "--min", "4", "--max", "15", "--rounding", "round", "--json",
+    ], out.io, noHost);
+    const view = JSON.parse(out.text()) as { readonly seconds: number; readonly units: number; readonly language: string };
+    assert.equal(view.units, 20);
+    assert.equal(view.language, "en");
+    assert.equal(view.seconds, 4);
+
+    const human = capture();
+    await runCreationCli(["measure", "--text", "hello world"], human.io, noHost);
+    assert.match(human.text(), /^\d+(\.\d+)?s\n/u);
+    assert.match(human.text(), /duration="/u);
+
+    await assert.rejects(runCreationCli(["measure"], capture().io, noHost), /--text|--segment/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("a Profile that does not serve the capability stops before anything is spent", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-creation-unserved-"));
   try {

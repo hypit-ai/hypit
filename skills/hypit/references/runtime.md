@@ -102,10 +102,9 @@ Studio viewing.
 Use `check` during authoring. `plan` works without a Runtime as a graph-only operation; with the
 project's selected Runtime it performs a cheap, read-only preflight over only unsatisfied Needs and
 returns non-zero when that slice is not ready. It never installs, starts or contacts a remote Store.
-`hypit check <run> --json` and `hypit plan <run> --json` expose Provider-free `estimate:Speech`
-values under `deterministic_durations`; after execution, `hypit inspect <build> --json` reports the
-accepted `SpeechDuration` Records. Read those seconds directly when reviewing generated take length
-or cost instead of probing a mock media file.
+Every take's duration is a literal in the Source, measured beforehand with `hypit measure`; read it
+there when reviewing generated take length or cost. After execution, `hypit inspect <build> --json`
+reports the accepted Records. Never probe a mock media file for a duration.
 
 After Runtime package selection changes, run `runtime up`: this is the explicit provisioning
 boundary for machine npm dependencies, Managed Programs and the detached Worker. Use `doctor` for
