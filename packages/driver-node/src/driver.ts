@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 
 import { reduce, resolveProducer } from "@hypit/core";
 import type { ProducerHandlerResult } from "@hypit/component-kit";
@@ -83,6 +83,11 @@ function failureMessage(error: unknown): string {
     break;
   }
   return [...new Set(parts)].join("; caused by: ");
+}
+
+function operationId(identity: Pick<OperationSnapshot, "build" | "command" | "endpoint" | "pool" | "lane">): string {
+  const key = [identity.build, identity.command, identity.endpoint, identity.pool, identity.lane].join("\u0000");
+  return `op_${createHash("sha256").update(key).digest("hex")}`;
 }
 
 export class NodeDriver {
@@ -312,7 +317,7 @@ export class NodeDriver {
     }
     const fresh = latest === undefined;
     const identity = fresh
-      ? { id: `op_${randomUUID()}`, ...base }
+      ? { id: operationId(base), ...base }
       : latest;
     const endpointContext = {
       command: structuredClone(executable.command),
@@ -333,8 +338,19 @@ export class NodeDriver {
         handle: structuredClone(latest.handle),
       });
     }
-    const write = async (update: OperationUpdate): Promise<OperationSnapshot> =>
-      fresh ? await operations.create({ ...identity, ...update }) : await operations.update(identity.id, update);
+    const write = async (update: OperationUpdate): Promise<OperationSnapshot> => {
+      if (!fresh) return await operations.update(identity.id, update);
+      try {
+        return await operations.create({ ...identity, ...update });
+      } catch (error) {
+        // Another Worker may have started the same Build/Command concurrently. The deterministic
+        // identity makes that write a harmless race: reuse the winner's durable Operation rather
+        // than issuing a second logical Operation to the caller.
+        const existing = await operations.read(identity.id);
+        if (existing !== undefined) return existing;
+        throw error;
+      }
+    };
     if (outcome.status === "pending") {
       const written = await write({
         status: "pending",

@@ -26,6 +26,7 @@ function memoryOperations(): OperationStore {
   const values = new Map<string, OperationSnapshot>();
   return {
     async create(operation) {
+      if (values.has(operation.id)) throw new Error(`Operation ${operation.id} already exists`);
       values.set(operation.id, structuredClone(operation));
       return structuredClone(operation);
     },
@@ -293,6 +294,37 @@ test("an asynchronous Endpoint starts once and is polled until complete", async 
   assert.equal(starts, 1);
   assert.equal(polls, 1);
   assert.equal((await operations.read(pending.operation))?.status, "completed");
+});
+
+test("concurrent first attempts use one stable Operation identity", async () => {
+  const operations = memoryOperations();
+  const operationIds: string[] = [];
+  let starts = 0;
+  let release!: () => void;
+  const bothStarted = new Promise<void>((resolve) => { release = resolve; });
+  const endpoint: AsyncEndpoint = {
+    async start({ operation }) {
+      operationIds.push(operation);
+      starts += 1;
+      if (starts === 2) release();
+      await bothStarted;
+      return { status: "pending", handle: { remoteJob: operation } };
+    },
+    poll() {
+      throw new Error("poll is not part of this race test");
+    },
+  };
+  const first = asyncExecutor(endpoint, operations);
+  const second = asyncExecutor(endpoint, operations);
+  const results = await Promise.all([
+    new LocalBuildScheduler(first).run([{ id: "same-video", state: createGreetingBuild() }]),
+    new LocalBuildScheduler(second).run([{ id: "same-video", state: createGreetingBuild() }]),
+  ]);
+  assert.equal(starts, 2);
+  assert.equal(operationIds.length, 2);
+  assert.equal(operationIds[0], operationIds[1]);
+  assert.equal((await operations.list({ build: "same-video" })).length, 1);
+  assert.equal(results.every(([result]) => result?.status === "paused"), true);
 });
 
 test("wakeAt prevents early polling and Runtime cancellation becomes a terminal Core failure", async () => {
