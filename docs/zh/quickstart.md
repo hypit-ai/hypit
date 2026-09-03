@@ -1,9 +1,7 @@
 ---
-title: 快速开始
+title: 面向 Agent 使用者的快速开始
 description: 无需手写 SVML 或 SVS，通过 Coding Agent 创建、审阅并交付 Hypit 视频。
 ---
-
-# 面向 Agent 使用者的快速开始
 
 你不需要了解 SVML、SVS、JavaScript 或命令行，也可以使用 Hypit 制作视频。你只需用日常语言向 Coding Agent 描述想要的结果；Agent 会通过 `/hypit` skill 准备项目、检查可用组件、创作或复刻视频，并在任何需要付费的 Build 之前，为你打开一个可以审阅的 Studio mock。
 
@@ -33,10 +31,17 @@ npx skills add hypit-ai/hypit -g
 
 ### 复刻一条参考视频
 
-要求 Agent 复刻视频，并提供视频文件路径。你可以把视频文件直接拖进 Coding Agent 窗口；大多数 Agent 会自动把路径填入消息。也可以手动写出路径：
+要求 Agent 复刻视频，并提供本地视频文件路径：
 
 ```text
 /hypit 克隆这条视频：/path/to/video.mp4
+```
+
+你也可以直接提供在线视频平台的链接。Agent 会使用 `yt-dlp` 自动下载视频。例如：
+
+```text
+/hypit 克隆这条视频：https://www.youtube.com/watch?v=VIDEO_ID
+/hypit 克隆这条视频：https://www.instagram.com/reel/REEL_ID/
 ```
 
 如果需要改变内容，也可以一并说明，例如更换主持人、语言、产品、画幅比例、视觉风格或行动号召。参考视频会被当作剪辑结构的证据；Agent 不会只给你一份分析报告，而是会创建一套可以审阅、修改和 Build 的完整视频程序。

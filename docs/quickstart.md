@@ -1,9 +1,7 @@
 ---
-title: Quickstart
+title: Quickstart for Agent users
 description: Create, review and ship Hypit videos from a Coding Agent without writing SVML or SVS by hand.
 ---
-
-# Quickstart for Agent users
 
 You do not need to know SVML, SVS, JavaScript or the command line to make a video with Hypit.
 You describe the result you want to a Coding Agent in ordinary language. The Agent uses the
@@ -45,11 +43,18 @@ You can take either of two paths.
 
 ### Clone a reference video
 
-Ask the Agent to clone a video and provide the file path. You can drag the video file into the
-Coding Agent window; most agents insert its path for you. You can also write the path explicitly:
+Ask the Agent to clone a video and provide its local file path:
 
 ```text
 /hypit clone this video: /path/to/video.mp4
+```
+
+You can also provide a link from an online video platform. The Agent uses `yt-dlp` to download the
+source automatically. For example:
+
+```text
+/hypit clone this video: https://www.youtube.com/watch?v=VIDEO_ID
+/hypit clone this video: https://www.instagram.com/reel/REEL_ID/
 ```
 
 Tell the Agent what should change, if anything: the host, language, product, aspect ratio, visual
