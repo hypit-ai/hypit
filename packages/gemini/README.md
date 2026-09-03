@@ -7,7 +7,7 @@ audio Artifact references. The model package owns the semantic request and exact
 the selected Runtime Endpoint owns credentials, uploads and the service-specific wire format.
 
 ```xml
-<gemini:Generate id="describe" model="gemini-3.7-flash-openai"
+<gemini:Generate id="describe" model="gemini-3.1-pro"
   instruction={instruction} prompt={prompt}>
   <gemini:Reference media={reference-video}/>
 </gemini:Generate>

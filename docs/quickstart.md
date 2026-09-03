@@ -1,220 +1,176 @@
 ---
-title: Quickstart
-description: Install Hypit, compile a complete SVML video graph, and prepare a real Build.
+title: Quickstart for Agent users
+description: Create, review and ship Hypit videos from a Coding Agent without writing SVML or SVS by hand.
 ---
 
-# Quickstart
+You do not need to know SVML, SVS, JavaScript or the command line. Describe your video in ordinary
+language; the Agent uses the `/hypit` skill to create or reconstruct it and provides a Studio mock
+for review before any paid Build.
 
-The author writes a narrated Script with semantic anchors, and the compiler assembles generated
-video, captions, B-roll, text and audio into a finished film.
-Author Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml` extension.
+## What you need
 
-Hypit turns that source into a visible execution graph. Before any model or external service
-runs, you can check the source, choose a Run, and inspect the exact work it would require. This
-page gets you to that first safe plan: it needs no API keys and makes no paid call.
+- A Coding Agent that can use skills, such as Claude Code or Codex.
+- A reference video or a creative brief.
 
-## Install
+## 1. Install the Hypit skill
+
+Install the Hypit skill:
 
 ```bash
-npx skills add hypit-ai/hypit --global
+npx skills add hypit-ai/hypit -g
 ```
 
-This installs the real `skills/hypit/` subtree globally so a new Agent session in any project can find
-it. OpenAgents installs the same subtree directly from the repository. Skill installation and the
-executable Distribution are separate: until the npm package is published, the Skill prepares or
-updates a machine-level checkout at `<home>/hypit` and uses its Node entrypoints. Video projects remain
-independent and may live anywhere.
+Then start a Coding Agent anywhere; the Hypit skill is available globally.
 
-## Use the Hypit skill
+## 2. Describe the video you want
 
-`/hypit` is available from any project directory. Send your agent:
+You can take either of two paths.
+
+### Clone a reference video
+
+Ask the Agent to clone a video and provide its local file path:
 
 ```text
-/hypit Set up my environment, ask for only the API keys required by my Runtime Profile, and guide me through authoring and building my first SVML video.
+/hypit clone this video: /path/to/video.mp4
 ```
 
-It works through the same five steps below, asking you only for what your Runtime Profile actually
-needs. Work through them yourself if you would rather not use an agent.
-
-## 1. Check the selected Distribution
-
-You need Node.js 22+ on macOS 13+ or Windows 10/11 x64.
-
-```bash
-hypit paths --json
-# Before npm publication, the Skill runs:
-node <home>/hypit/bin/hypit.mjs paths --json
-```
-
-The result separates the current project, its `.hypit` state, the machine Program Home and the selected
-Distribution. The Agent prepares a checkout's pinned dependencies at machine scope; it never installs
-them into the video project or uses `npm link`.
-
-The remaining examples abbreviate either executable launcher as `hypit`.
-
-## 2. Compile the example
-
-The linked example includes a Script, two generated-video requests, speech assembly, WhisperX
-alignment, captions, a media Track, text, Film and final rendering.
-
-```bash
-cd /path/to/copied-talking-film-graph-check
-hypit check main.svml
-```
-
-`check` reads the self-described source, loads only its imported packages and prints the public typed
-outputs it declares.
-
-Now compile the Run Source:
-
-```bash
-hypit plan build.svrun
-```
-
-`plan` binds the Author Graph and Run Graph, walks backward from `final.video`, and freezes the
-Operations and external Needs that a Build would use. It never starts a Provider.
-
-Open the three source files next:
-
-- [`main.svml`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/main.svml) — the video;
-- [`recipes.svs`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/recipes.svs) — reusable visual Recipes;
-- [`build.svrun`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/build.svrun) — the requested output.
-
-## 3. Understand the project files
-
-A working video project normally has four authored or configured inputs:
-
-| File | Answers |
-|---|---|
-| `main.svml` | What video are you making? |
-| `recipes.svs` | Which reusable Recipe values does it use? |
-| `build.svrun` | Which outputs and Candidates does this Run select? |
-| `hypit.runtime.json` | Which credentials, Provider endpoints and services execute it? |
-
-The short form is:
+You can also provide a link from an online video platform. The Agent uses `yt-dlp` to download the
+source automatically. For example:
 
 ```text
-SVML says what.
-SVRUN says which.
-Runtime Profile says where.
+/hypit clone this video: https://www.youtube.com/watch?v=VIDEO_ID
+/hypit clone this video: https://www.instagram.com/reel/REEL_ID/
 ```
 
-One `main.svml` may have many `.svrun` files: generate images, render the film, or reuse approved
-shots without changing the authored video.
+Tell the Agent what should change, if anything: the host, language, product, aspect ratio, visual
+style or call to action. The reference is treated as evidence about the editorial structure. The
+Agent does not merely summarize it; it creates an editable program that can be reviewed and built.
 
-## 4. Start your own project
+### Create an original video
 
-Keep project files and generated media outside the installed Hypit Distribution. The global
-`hypit` command works from that independent project directory:
+You can describe an idea just as you would brief a human producer. For example:
 
-```bash
-cd /path/to/my-video
-
-hypit runtime init
-hypit auth login hypihub.default
-hypit doctor
-
-hypit plan build.svrun
+```text
+Create a ranking video with a ranking board that has five rows. The left side labels the rows S, A, B,
+C and D, with a different color for each tier; the right side is for placing the icons assigned to
+each tier. Put Hypit in S tier and explain its advantages. Also include Arcads, Higgsfield, Seedance
+and CapCut. Give each competitor a fair, concise summary of its strengths and weaknesses. Make the
+result clear, energetic and suitable for a short social video.
 ```
 
-`runtime init` creates and selects the official starter Profile without installing anything or
-contacting a service. That Profile uses HypiHub for remote generation, Gemini vision and WhisperX
-alignment, and local Endpoints for media processing and HyperFrames rendering. If the project already
-has an intentional Profile, select it with `hypit runtime use <profile>` instead; initialization never
-overwrites one.
+You can add constraints such as audience, duration, language, tone, brand colors, presenter, platform
+or aspect ratio. The Agent turns the brief into a complete plan and fills in production details from
+the information you provide.
 
-A project with `package.json` owns its third-party packages. A plain creative folder needs no Node
-project and uses official packages from the installed Distribution. Source and exported files remain in the
-project. By default, Build Results live under the project's `.hypit/results`; a project-owned
-`hypit.results.json` may point the same complete Result model at S3. Active execution state and
-temporary Resources always live under the selected Profile's `dataRoot`.
-`runtime use` stores only a local pointer at `.hypit/runtime`. Source imports select author
-packages; the Profile independently selects Credential Stores and Endpoints through their own `use` entries.
-Project resolution happens first. `--workspace` selects it explicitly; otherwise the current
-directory's nearest `package.json` is its boundary, or the current directory itself for a plain
-creative folder. Only that exact project's `.hypit/runtime` is read—Profile filenames are never
-guessed and parent-project selections are never inherited.
+## 3. Provide credentials when the Agent asks
 
-Start from [`examples/talking-film-live`](https://github.com/hypit-ai/hypit/tree/main/examples/talking-film-live) when you need a
-complete Runtime Profile. Copy the source structure, then replace its assets, Script, model choices
-and credentials with your own.
+After you describe the video, the Agent checks which models and services the project needs. If a
+required credential is missing, it will ask you for it and explain what it is used for. You have two
+options:
 
-## 5. Build and retrieve an output
+1. **Use Hypit's recommended Hypit.ai OAuth login.** Tell the Agent to log in through hypit.ai. This
+   single OAuth flow covers all models that Hypit provides through its hosted service, so you do not
+   need to collect separate keys for each model.
+2. **Use your own provider keys.** You can tell the Agent which models to use and provide API keys
+   from the corresponding providers. The Agent will request only the keys needed for this project
+   and will not ask for unrelated credentials.
 
-After reviewing the plan:
+Never paste a secret into a public document or commit it to Git. The Agent stores credentials using
+the configured secure credential store.
 
-```bash
-hypit build build.svrun --follow
+## 4. Let the Agent do the production work
+
+Once you submit the brief, the Agent works through the project automatically without requiring you to
+write source code. It does not ask questions during production; wait for the Studio mock. The exact
+sequence depends on the video, but it generally includes:
+
+1. **Breaking the request into shots.** The Agent identifies the spoken sections, visual beats,
+   transitions, captions, B-roll opportunities and any persistent elements such as a ranking board.
+2. **Analyzing the reference or brief.** For a clone, it uses Gemini and the available media tools to
+   inspect timing, composition, text, speakers and visual continuity. For an original, it resolves
+   the same questions from your description and the selected creative direction.
+3. **Resolving details.** The Agent uses the reference, brief and observation results to settle
+   timing, language, product placement and host treatment automatically.
+4. **Reading existing package declarations.** Before inventing an implementation, it checks the
+   components already available in the project and in Hypit's official packages. This lets it reuse
+   a caption, ranking, presenter, B-roll or rendering component when one already fits.
+5. **Writing a new package when needed.** If the requested visual behavior is genuinely missing, the
+   Agent creates the smallest reusable component required and records how it is used. You do not need
+   to design the package interface yourself.
+6. **Creating the source and checking it.** The Agent writes the SVML/SVS source, creates the needed
+   Run configuration, compiles the graph, and fixes type or layout problems it finds.
+7. **Comparing against a mock.** It produces mock media for unbuilt generations, renders the complete
+   composition in Studio, compares what it sees with the reference or brief, and repairs issues such
+   as incorrect timing, hierarchy, cropping, captions or visual density.
+8. **Applying your requested changes.** After establishing the base video, it applies the changes in
+   your brief, such as replacing the person on screen or adapting the video to your product, then
+   checks the updated result.
+
+## 5. Review the mock Studio
+
+When the first pass is ready, the Agent opens a Studio mock for you. A mock is a review version: it
+uses deterministic stand-ins for media that has not been generated yet, while preserving the real
+timing, layout, captions, transitions and track relationships. It is intended to answer “does this
+video work?” before you pay for the final media and rendering.
+
+Watch the mock from beginning to end. Check the story, the order of the shots, the readability of
+captions, the prominence of the ranking board or product, the rhythm of B-roll, and whether the
+overall tone matches your brief. If something is wrong, describe the problem in ordinary language:
+
+```text
+The board appears too late, the captions are too small, and the B-roll covers the host
+while she is speaking. Please fix those issues and show me the mock again.
 ```
 
-`build` first repeats the same cheap local preflight, then assigns a fresh Build id, stores the Build
-and ensures its Worker is available. It never installs a package or starts a Managed Program. Run
-`hypit runtime up` explicitly when the selected local Runtime is not ready. It prepares local
-dependencies, Programs and the Worker; it does not start or probe HypiHub. `--follow` is only an
-observer; closing it does not stop the Build.
+The Agent edits the source, reruns the relevant checks and returns an updated mock.
 
-Use `check` while editing a source. Use `doctor` to diagnose a new or broken deployment. They are
-safe, but neither is required as a repetitive pre-Build ceremony.
+## 6. Approve and submit the paid Build
 
-```bash
-hypit status <build-id> --watch
+Only after you explicitly approve the mock should you ask for the paid Build:
 
-hypit activity
-
-hypit get <build-id> \
-  --output final.video \
-  --to output/final.mp4
+```text
+The mock is approved. Submit the paid Build and create the final video.
 ```
 
-The Build Result saves every public Author Output completed on the Target route. `get` exports one
-exact named Output to the explicit `--to` destination; Targets do not double as a retention list.
-A Scalar or Resource becomes a file, while a Composite becomes a directory containing `value.json`
-and its referenced Resource files.
+The Agent summarizes the selected models, expected external work and estimated cost before it starts.
+It then submits the Build, follows its progress and reports any provider or runtime issue in plain
+language. A paid Build is the step that performs the real generation, media processing and final
+rendering; the earlier mock does not silently trigger those billable operations.
 
-## Local tools used by real Builds
+## 7. Review the paid result
 
-Install only what your selected Runtime Profile needs:
+When the Build finishes, the Agent opens the resulting video and provides the saved output. Watch
+the final result, not only the Studio mock. Real generated shots can differ from their mock
+stand-ins, so check the generated host, B-roll, audio, captions, transitions, framing and export
+quality. If the result needs a correction, tell the Agent what to change. It will revise the source
+and guide you through another review rather than asking you to edit the rendered MP4 by hand.
 
-| Tool | Needed when |
-|---|---|
-| `ffmpeg` / `ffprobe` | using local media inspection, normalization or muxing |
-| Python 3.10–3.13 and `uv` | using local WhisperX or OpenCV |
-| Chromium | managed automatically by local HyperFrames rendering |
-| API credentials | selecting HypiHub or other remote Endpoints |
+## 8. Request natural-language changes
 
-Upstream npm packages are demand-loaded into the shared machine package home shown by `hypit
-paths`; they are not copied into every project. `runtime up` prepares the exact npm packages required
-by its selected Runtime adapters. When an authored feature needs a package such as one Fontsource
-family, the compiler reports the exact repair command:
+After a successful Build, you can continue directing the project conversationally. You may change
+the host, replace B-roll, alter the ranking-board treatment, translate the script, adjust the tone or
+switch the aspect ratio. For example:
 
-```bash
-hypit packages install @fontsource-variable/inter@5.3.0
+```text
+Keep the script and ranking order, but replace the host with a calm male presenter and make the board
+look like a paper sports magazine.
 ```
 
-For local Python programs:
+The Agent traces each request to the relevant source and component, preserves what you asked it to
+keep, and shows a new mock before another paid Build.
 
-```bash
-uv python install 3.13
-hypit runtime use hypit.runtime.json
-hypit runtime up
-```
+## 9. Create multiple variants in parallel
 
-The Runtime creates a missing managed environment in the machine Program Home and reuses it across
-projects and sessions. Do not run a service's `uv sync` from an author project.
+When you want several versions, first tell the Agent the dimensions that may vary. It will discuss
+the intended directions with you, for example:
 
-Run `hypit doctor hypit.runtime.json` after changing a Runtime Profile or project Result Repository. It reports missing tools,
-credentials and endpoint configuration without executing the graph.
+- one version with a different host;
+- one version translated into Spanish;
+- one version with a product-focused opening;
+- one version with faster cuts and denser B-roll.
 
-## Read next
-
-Follow the authoring path in order, or jump directly to the part you are changing:
-
-| Guide | What you will learn |
-|---|---|
-| [Script](./quickstart/script.md) | Segments, Role Cues, Dual Text, Selections, Moments and text projections |
-| [SVS Stylesheets](./quickstart/styles.md) | Reusable Recipes for captions, media, text and film |
-| [Media & Generation](./quickstart/generation.md) | Images, audio, prompt text and explicit model components |
-| [Timing & Assembly](./quickstart/timing.md) | Speech Track, WhisperX, ProgramSpace and SemanticMap |
-| [Tracks](./quickstart/tracks.md) | Caption, Media, Typography and Audio Tracks |
-| [Film & Rendering](./quickstart/composition.md) | Peer Track composition and explicit rendering |
-| [Run Source & Builds](./quickstart/run.md) | Targets, reuse, Runtime Profiles, Builds and retrieval |
+The Agent confirms the shared parts and the allowed differences before starting. Once you approve the
+directions, it creates a separate project scope for each variant and dispatches child Agents to work
+in parallel. Each child keeps the agreed boundaries, checks its own layout and source, and reports
+back to the main Agent. You receive a clear list of completed variants and any decision that still
+needs your input; you do not have to coordinate the child Agents yourself.
