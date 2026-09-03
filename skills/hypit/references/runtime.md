@@ -57,6 +57,11 @@ one conservative lane. Bind every paid capability HypiHub supports to this Endpo
 including MiMo VoiceDesign. Select KIE, Vertex, official MiMo or another BYOK Provider only when the
 author explicitly asks not to use HypiHub or explicitly selects that Provider.
 
+Bind `@hypit/whisperx#whisperx-alignment` to a HypiHub Endpoint in the same Profile. It uses the same
+`hypihub.oauth` credential and defaults to `victor-upmeet/whisperx`. Keep
+`@hypit/provider-whisperx-local` only as an explicitly selected fallback; do not add it to the default
+Skill-created Profile.
+
 An Author Source importing `@hypit/gemini` remains Provider-neutral. Bind those capabilities to
 `@hypit/provider-hypihub` for HypiHub's upload-backed Gemini endpoint, or to
 `@hypit/provider-vertex` for direct Vertex. Never make this Build-time choice with
@@ -66,8 +71,9 @@ observer, which runs outside a Build.
 Provider-specific input limits are also part of preflight. For the KIE GPT Image 2 route, do not
 submit `4:3`, `3:4` or `4:5`; the route rejects those aspect ratios before upload or paid submission.
 
-The local Providers stay small: `media`, `whisperx` and `hyperframes` are bounded by this machine's
-cores rather than by a remote queue, and raising them buys contention.
+The local Providers stay small: `media` and `hyperframes` are bounded by this machine's cores rather
+than by a remote queue. WhisperX alignment uses the HypiHub lane in the default Skill path; the local
+WhisperX Provider remains available only when an author explicitly selects it.
 
 Set this while writing the Profile. Changing it later needs a Worker restart, and the restart rule
 below makes that costly once a Build is in flight.

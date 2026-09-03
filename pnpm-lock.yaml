@@ -2032,9 +2032,15 @@ importers:
       '@hypit/runtime-kit':
         specifier: workspace:*
         version: link:../runtime-kit
+      '@hypit/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
+      '@hypit/whisperx':
+        specifier: workspace:*
+        version: link:../whisperx
     devDependencies:
       '@hypit/driver-node':
         specifier: workspace:*
@@ -2449,9 +2455,6 @@ importers:
       '@hypit/provider-vertex':
         specifier: workspace:*
         version: link:../provider-vertex
-      '@hypit/provider-whisperx-local':
-        specifier: workspace:*
-        version: link:../provider-whisperx-local
       '@hypit/run-markup':
         specifier: workspace:*
         version: link:../run-markup

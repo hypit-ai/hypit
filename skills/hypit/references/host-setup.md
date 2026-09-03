@@ -78,7 +78,9 @@ do not improvise a Python `pip install` for this managed-program workflow.
 
 ## Let Hypit install and run WhisperX
 
-The project Runtime Profile must select the local WhisperX Endpoint. A minimal endpoint inside the
+The project Runtime Profile may select the local WhisperX Endpoint only when the author explicitly
+chooses the local fallback. The default Skill path uses HypiHub's WhisperX alignment Endpoint. A
+minimal local endpoint inside the
 profile's `runtime.config.endpoints` is:
 
 ```json
@@ -103,7 +105,7 @@ service on `127.0.0.1:8765`, and then starts the Worker. The first start may dow
 Whisper and language-alignment model weights, so it can take substantially longer than later starts.
 Do not run `uv sync` in an author project and do not install the `whisperx` Python package by hand.
 
-`runtime up` printing `Ready whisperx` reports that the service answered its health probe.
+`runtime up` printing `Ready whisperx` reports that the local service answered its health probe.
 
 `runtime up` probes each selected program. It creates that program's environment only when absent or
 unhealthy, then reuses it across projects and sessions. It never runs `uv sync` merely because a new

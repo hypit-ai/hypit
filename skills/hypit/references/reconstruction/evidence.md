@@ -43,7 +43,7 @@ enough detail to draw from the words alone — which is what reconstructing a lo
 since reference frames are never fed to generation.
 
 `transcript` is the verbatim speech of the whole reference with a start and an end for every single
-word, measured locally by WhisperX. It is not an observation: no model wrote it, nothing about it
+word, measured by the selected HypiHub WhisperX alignment Provider. It is not an observation: no model wrote it, nothing about it
 reaches an observer, and it does not go in the observation cache. It is identical on both observers,
 and on the `agent` observer it is the only exact record of the sound. Read it whenever a decision
 depends on when a word is said — placing an on-screen text reveal against the line that triggers it,
@@ -54,11 +54,11 @@ to transcribe.
 
 `transcript` reports `status`, `transcript_ref` and `word_count`. Read the words from
 `transcript_ref`, a JSON file of passages, each with its own `words` array of
-`{ text, start_seconds, end_seconds, score }`. A machine with no WhisperX service running reports
+`{ text, start_seconds, end_seconds, score }`. If the HypiHub WhisperX model is unavailable, the tool reports
 `status: "unavailable"` with a `reason`. Under the Skill's hard environment gate, do not continue from
-that result: run `hypit runtime up` for the project's selected Profile, confirm the service health, and
-prepare the reference again only after it reports ready. `../host-setup.md` covers diagnosing that
-service when starting it is not enough.
+that result: confirm HypiHub OAuth and that the selected model exposes `transcriptions`, then prepare
+the reference again. `../host-setup.md` covers the explicitly selected local fallback when it is not
+enough to rely on the remote endpoint.
 
 When a completed preparation stage must be rerun, use one small `--redo` value:
 

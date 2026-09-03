@@ -41,5 +41,11 @@ Artifacts are uploaded automatically through `POST /v1/files`, then their return
 URLs are used in image and video requests. Uploads are deduplicated by Artifact digest within one
 Runtime operation. Embedded callers may override that transport with `publicAssetUrl`.
 
+The provider also serves `@hypit/whisperx#whisperx-alignment` through HypiHub's synchronous
+`/v1/audio/transcriptions` endpoint using `victor-upmeet/whisperx`. It always requests
+`verbose_json` with both segment- and word-level timestamps, then converts HypiHub's OpenAI-shaped
+seconds into Hypit's 16 kHz sample-domain `AlignedTranscriptEvidence`. Override the model with
+`whisperxModel` only when the HypiHub catalog exposes a compatible replacement.
+
 HypiHub exposes MiMo VoiceDesign by default. Set `audio: false` only when the user explicitly selects
 another VoiceDesign Provider. Hypit does not expose MiMo preset-voice or voice-cloning models.

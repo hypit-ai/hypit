@@ -13,7 +13,9 @@
     "@hypit/protocol": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-kit": "workspace:*",
-    "@hypit/text": "workspace:*"
+    "@hypit/text": "workspace:*",
+    "@hypit/speech-evidence": "workspace:*",
+    "@hypit/whisperx": "workspace:*"
   },
   "devDependencies": {
     "@hypit/driver-node": "workspace:*",

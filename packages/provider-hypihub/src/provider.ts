@@ -6,10 +6,13 @@ import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CapabilityRef } from "@hypit/protocol";
 import { credentialRef } from "@hypit/runtime";
 import type { CredentialRef, ArtifactStore } from "@hypit/runtime";
+import { speechEvidenceTypes } from "@hypit/speech-evidence";
+import { whisperXCapabilities } from "@hypit/whisperx";
 import { sealText } from "@hypit/text";
 import { textTypes } from "@hypit/text";
 import { createHypiHubGeminiGenerator } from "./gemini.js";
 import { hypiHubRouteForCapability, hypiHubRoutes } from "./routes.js";
+import { transcribeWithHypiHub, whisperXAlignmentRequest } from "./whisperx.js";
 
 export const hypiHubProviderModuleRef = { name: "@hypit/provider-hypihub", version: "1" } as const;
 
@@ -23,6 +26,8 @@ export type CreateHypiHubProviderOptions = {
   readonly requestTimeoutMs?: number;
   /** Expose HypiHub VoiceDesign. Defaults to enabled; set false only for an explicit alternate Provider. */
   readonly audio?: boolean;
+  /** HypiHub transcription model used for the WhisperX alignment capability. */
+  readonly whisperxModel?: string;
   readonly fetch?: typeof globalThis.fetch;
   /** Overrides the default POST /v1/files upload for referenced artifacts. */
   readonly publicAssetUrl?: (artifact: BlobRef, artifacts: ArtifactStore) => Promise<string>;
@@ -69,7 +74,7 @@ function jobId(value: Record<string, unknown>): string {
   return id;
 }
 
-async function verifyModelRoute(client: HypiHubClient, apiKey: string, model: string, operation: "images" | "image_edits" | "videos" | "audio_speech"): Promise<void> {
+async function verifyModelRoute(client: HypiHubClient, apiKey: string, model: string, operation: "images" | "image_edits" | "videos" | "audio_speech" | "transcriptions"): Promise<void> {
   const card = await client.json(`/models/${encodeURIComponent(model)}`, apiKey);
   const endpoints = card.endpoints;
   assert(Array.isArray(endpoints) && endpoints.includes(operation),
@@ -140,6 +145,13 @@ class HypiHubClient {
     assert(typeof response.url === "string" && /^https:\/\//iu.test(response.url),
       "HypiHub file upload returned no HTTPS URL");
     return response.url;
+  }
+  async transcribe(body: Record<string, unknown>, apiKey: string): Promise<Record<string, unknown>> {
+    return this.json("/audio/transcriptions", apiKey, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
   }
   async binary(path: string, apiKey: string, body: Record<string, unknown>): Promise<{ readonly bytes: Uint8Array; readonly mediaType: string }> {
     const response = await this.fetcher(`${this.baseUrl}${path}`, { method: "POST", headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -250,6 +262,24 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     const value = await generate({ parts, instruction: request.instruction });
     return { value: { kind: "inline", value: canonicalize(sealText(value)) } };
   };
+  const whisperxEndpoint: ImmediateEndpointHandler = async (context) => {
+    try {
+      const request = whisperXAlignmentRequest(context.need.constraints);
+      const apiKey = credential(context);
+      const model = options.whisperxModel ?? "victor-upmeet/whisperx";
+      await verifyModelRoute(client, apiKey, model, "transcriptions");
+      const evidence = await transcribeWithHypiHub(
+        client,
+        request,
+        context.artifacts,
+        apiKey,
+        model,
+      );
+      return { value: { kind: "inline", value: canonicalize(evidence) } };
+    } catch (error) {
+      throw new Error(guidedMessage(error), { cause: error });
+    }
+  };
   return defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
     credentials: { apiKey: options.apiKey ?? credentialRef("os", "hypihub.oauth") }, credentialInputs: { apiKey: { label: "HypiHub login" } }, defaultConcurrency: options.defaultConcurrency ?? 3,
@@ -266,6 +296,13 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
         handler: geminiEndpoint,
         lane: "gemini",
       })),
+      {
+        capability: whisperXCapabilities.alignment,
+        returns: speechEvidenceTypes.alignedTranscript,
+        lifecycle: "immediate" as const,
+        handler: whisperxEndpoint,
+        lane: "whisperx",
+      },
     ],
   });
 }
