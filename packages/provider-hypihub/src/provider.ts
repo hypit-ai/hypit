@@ -1,4 +1,4 @@
-import type { AsyncEndpoint, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointStartContext, EndpointOutcome, EndpointPriceQuote, EndpointQuoteContext, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
+import type { AsyncEndpoint, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
 import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
 import { geminiCapabilities, geminiModels, verifyGeminiRequest } from "@hypit/gemini";
 import type { GeminiRequest } from "@hypit/gemini";
@@ -58,11 +58,6 @@ function credential(context: EndpointInvocationContext): string {
   assert(typeof value === "string" && value.length > 0, "HypiHub login is unavailable; run hypit auth login for HypiHub");
   return value;
 }
-function quoteCredential(context: EndpointQuoteContext): string {
-  const value = context.credentials.apiKey?.secret;
-  assert(typeof value === "string" && value.length > 0, "HypiHub login is unavailable; run hypit auth login for HypiHub");
-  return value;
-}
 function guidedMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return /API key is unavailable|HypiHub login is unavailable|HTTP (?:401|403|404)\b|not enabled for|model_not_found|no_capable_provider/iu.test(message)
@@ -87,119 +82,11 @@ function jobId(value: Record<string, unknown>): string {
 
 type HypiHubModelOperation = "images" | "image_edits" | "videos" | "audio_speech" | "transcriptions" | "gemini";
 
-async function verifyModelRoute(client: HypiHubClient, apiKey: string, model: string, operation: HypiHubModelOperation): Promise<Record<string, unknown>> {
+async function verifyModelRoute(client: HypiHubClient, apiKey: string, model: string, operation: HypiHubModelOperation): Promise<void> {
   const card = await client.json(`/models/${encodeURIComponent(model)}`, apiKey);
   const endpoints = card.endpoints;
   assert(Array.isArray(endpoints) && endpoints.includes(operation),
     `HypiHub model ${model} is not enabled for ${operation} with this API key`);
-  return card;
-}
-
-function numeric(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
-}
-
-function firstNumber(input: Record<string, unknown>, keys: readonly string[]): number | undefined {
-  for (const key of keys) {
-    const value = numeric(input[key]);
-    if (value !== undefined) return value;
-  }
-  return undefined;
-}
-
-function ratioKey(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const normalized = value.toLowerCase();
-  if (normalized === "1024x1024") return "1k";
-  if (normalized === "2048x2048") return "2k";
-  if (normalized === "3840x2160") return "4k";
-  return normalized;
-}
-
-function ratio(table: unknown, key: string | undefined): number | undefined {
-  if (table === undefined || table === null) return 1;
-  if (typeof table !== "object" || Array.isArray(table)) return undefined;
-  if (key === undefined) return 1;
-  return numeric((table as Record<string, unknown>)[key]);
-}
-
-function modelQuote(
-  card: Record<string, unknown>,
-  input: Record<string, unknown>,
-  options: { readonly quantity?: number; readonly source: string; readonly observedAt: number },
-): EndpointPriceQuote {
-  const pricing = object(card.pricing, "HypiHub model pricing");
-  const mode = pricing.mode;
-  assert(typeof mode === "string" && mode.length > 0, "HypiHub model card has no pricing mode");
-  if (pricing.free === true) return {
-    status: "estimated",
-    amount: 0,
-    currency: "credits",
-    basis: { mode: "free", quantity: options.quantity ?? 1, rate: 0 },
-    source: options.source,
-    observedAt: options.observedAt,
-  };
-  const credits = object(pricing.credits, "HypiHub credit pricing");
-  let quantity: number;
-  let rate: number | undefined;
-  let base: number | undefined;
-  if (mode === "per_image") {
-    quantity = options.quantity ?? firstNumber(input, ["n"]) ?? 1;
-    rate = numeric(credits.base);
-  } else if (mode === "per_request") {
-    quantity = options.quantity ?? 1;
-    rate = numeric(credits.base);
-  } else if (mode === "per_second") {
-    quantity = options.quantity ?? firstNumber(input, ["seconds", "duration_seconds", "duration"]) ?? NaN;
-    rate = numeric(credits.per_second);
-  } else if (mode === "per_audio_second") {
-    quantity = options.quantity ?? NaN;
-    rate = numeric(credits.per_audio_second);
-    base = numeric(credits.base);
-  } else if (mode === "per_k_char") {
-    const text = [input.input, input.text, input.prompt].find((value) => typeof value === "string");
-    quantity = typeof text === "string" ? text.length / 1_000 : NaN;
-    rate = numeric(credits.per_k_char);
-  } else {
-    return { status: "unknown", reason: `HypiHub pricing mode ${mode} cannot be estimated before execution` };
-  }
-  if (!Number.isFinite(quantity) || quantity < 0 || rate === undefined) {
-    return { status: "unknown", reason: `HypiHub model card lacks the inputs required for ${mode} pricing` };
-  }
-  const factors = [
-    ratio(pricing.resolution_ratio, ratioKey(input.resolution)),
-    ratio(pricing.size_ratio, ratioKey(input.size)),
-    ratio(pricing.quality_ratio, ratioKey(input.quality)),
-  ];
-  const flagRatios = pricing.flag_ratio === undefined || pricing.flag_ratio === null
-    ? {}
-    : (typeof pricing.flag_ratio === "object" && !Array.isArray(pricing.flag_ratio)
-        ? pricing.flag_ratio as Record<string, unknown> : undefined);
-  if (flagRatios === undefined) {
-    return { status: "unknown", reason: "HypiHub model card has an invalid flag price table" };
-  }
-  for (const [flag, candidate] of Object.entries(flagRatios)) {
-    if (input[flag] === true) factors.push(numeric(candidate));
-  }
-  if (factors.some((factor) => factor === undefined)) {
-    return { status: "unknown", reason: "HypiHub model card has no price factor for this exact request" };
-  }
-  const multiplier = factors.reduce<number>((value, factor) => value * factor!, 1);
-  const amount = Math.round((((base ?? 0) + quantity * rate) * multiplier) * 10_000) / 10_000;
-  return {
-    status: "estimated",
-    amount,
-    currency: "credits",
-    basis: {
-      mode,
-      quantity,
-      rate,
-      ...(base === undefined ? {} : { base }),
-      ...(multiplier === 1 ? {} : { multiplier }),
-    },
-    source: options.source,
-    observedAt: options.observedAt,
-  };
 }
 
 function dataUrl(bytes: Uint8Array, mediaType: string): string {
@@ -340,43 +227,6 @@ function generationOperation(route: (typeof hypiHubRoutes)[number], input: Recor
     return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value.length > 0;
   });
   return hasReferences ? "image_edits" : "images";
-}
-
-async function quoteHypiHubNeed(
-  client: HypiHubClient,
-  context: EndpointQuoteContext,
-  transcriptionModel: string,
-): Promise<EndpointPriceQuote> {
-  const observedAt = Date.now();
-  const apiKey = quoteCredential(context);
-  if (capabilityKey(context.need.capability) === capabilityKey(whisperXCapabilities.alignment)) {
-    const request = verifyWhisperXAlignmentRequest(context.need.constraints);
-    const card = await verifyModelRoute(client, apiKey, transcriptionModel, "transcriptions");
-    return modelQuote(card, {}, {
-      quantity: request.sampleFrames / 16_000,
-      source: `${client.baseUrl}/models/${encodeURIComponent(transcriptionModel)}`,
-      observedAt,
-    });
-  }
-  if (geminiModels.some((model) => model === context.need.capability.name)
-    && context.need.capability.module.name === geminiCapabilities[geminiModels[0]].module.name
-    && context.need.capability.module.version === geminiCapabilities[geminiModels[0]].module.version) {
-    const model = context.need.capability.name;
-    const card = await verifyModelRoute(client, apiKey, model, "gemini");
-    return modelQuote(card, {}, {
-      source: `${client.baseUrl}/models/${encodeURIComponent(model)}`,
-      observedAt,
-    });
-  }
-  const route = hypiHubRouteForCapability(context.need.capability);
-  if (route === undefined) return { status: "unknown", reason: "HypiHub does not quote this capability" };
-  const compiled = await route.compile(context.need.constraints, async () => "https://quote.invalid/reference");
-  const input = compiled.input as Record<string, unknown>;
-  const card = await verifyModelRoute(client, apiKey, compiled.model, generationOperation(route, input));
-  return modelQuote(card, input, {
-    source: `${client.baseUrl}/models/${encodeURIComponent(compiled.model)}`,
-    observedAt,
-  });
 }
 
 async function complete(client: HypiHubClient, apiKey: string, route: (typeof hypiHubRoutes)[number], id: string, artifacts: ResourceStore): Promise<EndpointOutcome> {
@@ -522,17 +372,14 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       ...hypiHubRoutes
       .filter((route) => options.audio !== false || route.media !== "audio")
       .map((route) => route.media === "audio"
-        ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, lane: route.capability.name,
-            quote: async (context: EndpointQuoteContext) => await quoteHypiHubNeed(client, context, transcriptionModel) }
-        : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, lane: route.capability.name,
-            quote: async (context: EndpointQuoteContext) => await quoteHypiHubNeed(client, context, transcriptionModel) }),
+        ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, lane: route.capability.name }
+        : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, lane: route.capability.name }),
       ...geminiModels.map((model) => ({
         capability: geminiCapabilities[model],
         returns: textTypes.text,
         lifecycle: "immediate" as const,
         handler: geminiEndpoint,
         lane: "gemini",
-        quote: async (context: EndpointQuoteContext) => await quoteHypiHubNeed(client, context, transcriptionModel),
       })),
       {
         capability: whisperXCapabilities.alignment,
@@ -540,7 +387,6 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
         lifecycle: "immediate" as const,
         handler: whisperXEndpoint,
         lane: "transcription",
-        quote: async (context: EndpointQuoteContext) => await quoteHypiHubNeed(client, context, transcriptionModel),
       },
     ],
   });

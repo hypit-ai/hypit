@@ -26,7 +26,6 @@ import {
   openProjectBuildResultRepository,
   parseLocalRuntimeProfile,
   preflightRuntimeConfig,
-  quoteRuntimeConfig,
 } from "@hypit/runtime-local";
 function profile(config: {
   readonly dataRoot?: string;
@@ -260,72 +259,3 @@ test("preflight never runs an Endpoint's active doctor", async () => {
   }
 });
 
-test("Runtime quote selects one exact Endpoint and resolves only its declared credential", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-quote-"));
-  const path = join(root, "hypit.runtime.json");
-  await writeFile(path, JSON.stringify(profile({
-    dataRoot: ".",
-    credentials: { secrets: { use: "example.credentials" } },
-    endpoints: { paid: { use: "example.paid" } },
-  })));
-  const capability = { module: { name: "example.model", version: "1" }, name: "generate" } as const;
-  const returns = { module: { name: "example.value", version: "1" }, name: "Output" } as const;
-  const registry = new RuntimeAdapterRegistry();
-  registry.registerFacet(createRuntimeCredentialStoreAdapterFacet({
-    use: "example.credentials",
-    validate() {},
-    open: () => ({
-      value: {
-        async resolve(ref) {
-          return ref.store === "secrets" && ref.key === "paid.key" ? { secret: "configured" } : undefined;
-        },
-      },
-    }),
-  }));
-  registry.registerFacet(createRuntimeEndpointAdapterFacet({
-    use: "example.paid",
-    activate: (context) => ({
-      endpoint: defineEndpointPackage({
-        module: { name: "example.provider", version: "1" },
-        facet: "paid",
-        instance: context.instance,
-        pool: context.pool ?? context.instance,
-        credentials: { apiKey: credentialRef("secrets", "paid.key") },
-        capabilities: [{
-          capability,
-          returns,
-          lifecycle: "immediate",
-          handler: () => ({ value: { kind: "inline", value: null } }),
-          quote: ({ credentials }) => ({
-            status: "estimated",
-            amount: credentials.apiKey?.secret === "configured" ? 2 : 999,
-            currency: "credits",
-            basis: { mode: "per_request", quantity: 1, rate: 2 },
-            source: "https://prices.example/model",
-            observedAt: 1,
-          }),
-        }],
-      }),
-    }),
-  }));
-  try {
-    const [quote] = await quoteRuntimeConfig(path, [{
-      id: "need:priced",
-      capability,
-      returns,
-      constraints: {},
-      result: "record:priced",
-    }], { registry });
-    assert.equal(quote?.endpoint, "paid");
-    assert.deepEqual(quote?.quote, {
-      status: "estimated",
-      amount: 2,
-      currency: "credits",
-      basis: { mode: "per_request", quantity: 1, rate: 2 },
-      source: "https://prices.example/model",
-      observedAt: 1,
-    });
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});

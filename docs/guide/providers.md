@@ -140,13 +140,6 @@ the Runtime has resolved that Endpoint's declared credential slots. It may make 
 request to the real service, such as reading the authenticated model catalog. It must not be called by
 Build preflight and must never submit generation work.
 
-A paid capability may declare `quote(context)` beside its handler. The quote belongs to the Provider
-because the selected Provider owns the currency, rate card and routing facts. It receives one exact
-`Need`, may read a live rate card, and returns either an estimate with its source and observation time
-or an honest `unknown`; it never submits work. Do not copy changing service prices into Core, model
-packages, the CLI or Skill. A static graph plan does not yet claim a complete total when exact downstream
-Needs are only produced during execution.
-
 ## 5. Declare a Managed Program when needed
 
 If the Provider depends on a warm external program, export its declaration beside the Endpoint.
