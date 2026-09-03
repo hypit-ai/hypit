@@ -90,6 +90,11 @@ hypit get <build-id> \
   --output final.video --to output/final.mp4
 ```
 
+Resolve the project before selecting its Runtime. `--workspace` is explicit; otherwise run from the
+project directory (or one of its package-bounded descendants). `runtime use` writes one exact
+project-local pointer. Never infer a Profile from its filename or let a parent project's selection
+stand in for this project's choice.
+
 The paid-build handoff is defined in `studio-confirmation.md`: show the complete preview-mock Run in
 Studio and obtain acceptance before `hypit build`; after acceptance, Studio for the accepted Run and
 the HyperFrames/final render may start concurrently. The render must not be blocked on the author's
@@ -107,7 +112,8 @@ After Runtime package selection changes, run `runtime up`: this is the explicit 
 boundary for machine npm dependencies, Managed Programs and the detached Worker. Use `doctor` for
 an active full-profile diagnosis and `runtime status` to observe the deployment. `build` repeats the
 cheap preflight and fails before durable submission when deployment is not ready; it never installs
-or starts a Managed Program.
+or starts a Managed Program. If provisioning is already complete and only the Worker is stopped,
+`build` starts that Worker before it submits the Build.
 
 Use `runtime logs` to diagnose the Worker. Use `runtime down` to stop it from advancing active Builds.
 External programs are intentionally independent; stop them only with `programs down`. Saved Build

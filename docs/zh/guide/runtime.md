@@ -188,6 +188,11 @@ hypit runtime logs
 hypit runtime down
 ```
 
+`runtime use` 把一份显式 Profile 绑定到一个已经解析完成的项目。项目来自 `--workspace`，
+或当前目录声明的 package 边界；Runtime 选择不能反过来定义项目。命令只读取
+`<project>/.hypit/runtime`，不会扫描约定文件名，也不会继承父项目的选择。即使几个项目声明
+了等价的外部 Endpoint，它们也必须分别完成选择。
+
 `runtime up` 先让 npm 把所选 Adapter 的精确上游包准备到机器共享目录，再准备 Managed
 Program 并启动本地 Worker。`build` 不做部署：它执行便宜只读预检，只在就绪后提交，并确保
 Worker 可用。`activity`、`cancel` 用来观察和控制活跃工作；`status` 分别读取 Runtime 与 Result，一边失败

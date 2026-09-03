@@ -111,6 +111,9 @@ Distribution 里的官方包。默认情况下，完整 Build Result 位于项�
 不管理 Result，项目根的 `hypit.results.json` 可以把同一套 Result 模型指向 S3。Runtime 活跃状态与临时
 Resource 始终位于所选 Profile 的 `dataRoot`。`runtime use` 只在 `.hypit/runtime` 保存一个本地指针。Source import 选择作者包，
 Profile 则通过 Credential Store 与 Endpoint 各自的 `use` 独立选择环境包。
+项目必须先确定：显式 `--workspace` 直接选择项目，否则以当前目录向上的最近 `package.json`
+为边界；普通创作目录没有该文件时使用当前目录。CLI 只读取该项目自己的 `.hypit/runtime`，
+不会猜测 Profile 文件名，也不会继承父项目的选择。
 
 需要完整 Runtime Profile 时，从
 [`examples/talking-film-live`](https://github.com/hypit-ai/hypit/tree/main/examples/talking-film-live) 的结构开始：复制文件结构，

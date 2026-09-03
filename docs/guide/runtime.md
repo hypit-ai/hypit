@@ -203,6 +203,12 @@ hypit runtime logs
 hypit runtime down
 ```
 
+`runtime use` binds one explicit Profile to one already resolved project. The project comes from
+`--workspace`, or from the current directory's declared package boundary; the selection never
+defines that boundary. Commands read only `<project>/.hypit/runtime`: they do not scan for a
+conventionally named Profile and do not inherit a selection from a parent project. Separate projects
+therefore select separately, even when their Profiles declare equivalent external Endpoints.
+
 `runtime up` asks npm to prepare the selected adapters' exact upstream packages in the shared
 machine home, prepares declared Managed Programs, then starts the local Worker. `build` performs no
 provisioning: it runs cheap read-only preflight, submits work only when ready, and ensures the Worker

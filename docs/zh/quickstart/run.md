@@ -26,21 +26,36 @@ hypit get <build-id> --output final.video --to output/final.mp4
 
 只有 `build` 会真正提交工作。`plan` 是普通预览；`check` 用于编辑源码，`doctor` 用于配置和排查部署。它们都安全，但不是每次 Build 前必须重复的仪式。
 
-一种顺手的项目目录约定是：
+当项目包含多份 Author、Recipe 和 Run Source 时，一种顺手的目录约定是：
 
 ```text
 my-video/
-  main.svml           作者意图
-  styles.svs          可选的作者样式
-  build.svrun         本次 Run 的 Target 与 Candidate 选择
-  assets/             项目自己的输入素材
-  output/             显式导出给人或其他工具的副本
-  hypit.runtime.json  执行环境
+  package.json              项目边界
+  authors/
+    main.svml               一份 Author 入口
+    alternate.svml          确有需要时的另一份 Author 入口
+  recipes/
+    visual.svs              视觉 Recipe
+    generation.svs          生成 Recipe
+  runs/
+    images.svrun            一种执行意图
+    takes.svrun             另一种执行意图
+    final.svrun             最终交付意图
+  assets/                   项目自己的输入素材
+  kits/                     可选的项目内 Recipe Kit
+  packages/                 可选的项目本地 Author 包
+  output/                   显式导出给人或其他工具的副本
+  hypit.runtime.json        执行环境
+  hypit.results.json        可选的 Result 仓库选择
+  .hypit/                   自动产生的本地 Runtime 与 Result 数据
 ```
 
-这只是推荐，不是项目格式。Hypit 只服从 Source import、`<author source="…">`、CLI 参数和
-`get --to` 中明确写出的路径，不要求这些名字，也不会特殊识别 `assets/` 或 `output/`。受管理的
-Result 仓库与它们分开，零配置时仍位于 `.hypit/results`。
+这只是方便人整理内容的推荐，绝不是强制的项目格式。小项目可以把多份 `.svml`、`.svs` 和
+`.svrun` 直接平铺在根目录，其他项目也可以采用不同分组。Hypit 只服从 Source import、
+`<author source="…">`、CLI 参数和 `get --to` 中明确写出的路径，不要求这些名字，也不会特殊识别
+`authors/`、`recipes/`、`runs/`、`assets/` 或 `output/`。每份 Run 选择一份 Author 入口，而这份
+Author Source 的闭包可以显式导入多份 Author 或 Recipe Source。受管理的 Result 仓库与它们分开，
+零配置时仍位于 `.hypit/results`。
 
 Run Source 与 Runtime Profile 不会悄悄改写视频。创作性的模型选择仍然留在 Author Source，或它显式导入的包里。
 
@@ -186,6 +201,9 @@ hypit paths
 
 `runtime use` 只写入 `.hypit/runtime`，不会启动 Worker、创建 Runtime 数据或修改已安装
 包。Profile 结构和完整边界见 [Runtime](../guide/runtime.md)。
+CLI 必须先确定项目：显式 `--workspace` 直接给出边界；否则使用当前目录向上的最近
+`package.json`，普通创作目录没有该文件时就以当前目录为边界。随后只读取这个项目自己的
+`.hypit/runtime`。它不会按约定文件名猜 Profile，也不会从父目录继承另一个项目的选择。
 ## 配置所选凭据
 
 `check` 与 `plan` 不会请求在线 Provider。没有所选 Runtime 的 `plan` 只看图，不需要部署
@@ -249,8 +267,8 @@ hypit runtime use hypit.runtime.json
 hypit plan build.svrun
 ```
 
-Workspace 依次取显式 `--workspace`、所选 `.hypit/runtime` 所在项目和入口 Source 目录。
-Runtime Profile 无权改变这条源码边界。`--package-root` 只定位已经安装的
+Workspace 在 Runtime Profile 之前确定；显式 `--workspace` 可以覆盖它，入口 Source 路径和
+Runtime 选择都无权改变这条源码边界。`--package-root` 只定位已经安装的
 `node_modules`；`--asset-root` 只额外授权读取素材字节。
 
 外部项目通常应提交如下 `.gitignore`：
@@ -320,9 +338,10 @@ Runtime 后只预检这次计划真正需要的 Endpoint、凭据和外部程序
 `plan` 可以完全不带 Runtime；执行过 `hypit runtime use` 后，`plan` 和 `build` 都不必再写
 `--runtime`。`build` 必须能找到所选或显式 Profile。
 
-提交前用 `runtime up` 安装所选上游依赖、准备 Managed Program 并启动 Worker。`build` 只重跑
-便宜的只读预检；任何依赖未就绪都会在提交前失败，绝不在 Build 中安装或启动它。`runtime
-status` 用于观察，`programs up|status|down` 只管理外部程序。
+选择或改变部署后，用 `runtime up` 安装所选上游依赖、准备 Managed Program 并启动 Worker。
+`build` 只重跑便宜的只读预检；任何依赖或 Program 未就绪都会在提交前失败，绝不在 Build
+中准备它们。若部署已经准备完毕而只有 Worker 停止，`build` 会在耐久提交前启动该 Worker。
+`runtime status` 用于观察，`programs up|status|down` 只管理外部程序。
 
 ### 4. 提交 Build
 
