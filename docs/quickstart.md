@@ -3,39 +3,24 @@ title: Quickstart for Agent users
 description: Create, review and ship Hypit videos from a Coding Agent without writing SVML or SVS by hand.
 ---
 
-You do not need to know SVML, SVS, JavaScript or the command line to make a video with Hypit.
-You describe the result you want to a Coding Agent in ordinary language. The Agent uses the
-`/hypit` skill to prepare the project, inspect the available components, create or reconstruct the
-video program, and show you a reviewable Studio mock before anything billable is built.
-
-This page is for people who want to direct a video, not implement its source code. Hypit keeps the
-source editable and reproducible, but the Agent is responsible for writing and checking it. If you
-want to author SVML or SVS yourself, begin with the second page, [Script](./quickstart/script.md),
-after you understand the Agent workflow below.
+You do not need to know SVML, SVS, JavaScript or the command line. Describe your video in ordinary
+language; the Agent uses the `/hypit` skill to create or reconstruct it and provides a Studio mock
+for review before any paid Build.
 
 ## What you need
 
 - A Coding Agent that can use skills, such as Claude Code or Codex.
-- A folder where the Agent can create your video project.
-- A reference video or your creative brief, if you are making an original video.
-
-You do not need to clone the Hypit repository. Install the reusable `/hypit` skill with the command
-in Step 1; the Agent can then prepare the Hypit Distribution for you. When a setup command is
-necessary, the Agent explains what it does and runs it in the project directory.
+- A reference video or a creative brief.
 
 ## 1. Install the Hypit skill
 
-Start a conversation with your Coding Agent in the folder where you want the project to live. Install
-the Hypit skill once with:
+Install the Hypit skill:
 
 ```bash
 npx skills add hypit-ai/hypit -g
 ```
 
-The `-g` option makes the skill available to new Agent sessions in any project folder. You do not
-need to clone the Hypit repository or understand the files this command installs. Once the skill is
-available, start a new Agent conversation in your video project folder and continue with the steps
-below.
+Then start a Coding Agent anywhere; the Hypit skill is available globally.
 
 ## 2. Describe the video you want
 
@@ -73,10 +58,9 @@ and CapCut. Give each competitor a fair, concise summary of its strengths and we
 result clear, energetic and suitable for a short social video.
 ```
 
-You can add any constraints that matter to you: target audience, duration, language, tone, brand
-colors, presenter, platform or aspect ratio. You do not need to decide which package, model,
-caption system or animation primitive implements those choices. The Agent turns the brief into a
-complete plan and asks follow-up questions only when a creative decision cannot be inferred safely.
+You can add constraints such as audience, duration, language, tone, brand colors, presenter, platform
+or aspect ratio. The Agent turns the brief into a complete plan and fills in production details from
+the information you provide.
 
 ## 3. Provide credentials when the Agent asks
 
@@ -96,17 +80,17 @@ the configured secure credential store.
 
 ## 4. Let the Agent do the production work
 
-After you approve the brief, the Agent works through the project without requiring you to write
-source code. The exact sequence depends on the video, but it generally includes:
+Once you submit the brief, the Agent works through the project automatically without requiring you to
+write source code. It does not ask questions during production; wait for the Studio mock. The exact
+sequence depends on the video, but it generally includes:
 
 1. **Breaking the request into shots.** The Agent identifies the spoken sections, visual beats,
    transitions, captions, B-roll opportunities and any persistent elements such as a ranking board.
 2. **Analyzing the reference or brief.** For a clone, it uses Gemini and the available media tools to
    inspect timing, composition, text, speakers and visual continuity. For an original, it resolves
    the same questions from your description and the selected creative direction.
-3. **Asking narrow questions.** Instead of making you fill out a long form, it asks small,
-   answerable questions such as which language to use, whether a product should appear on screen,
-   or which host style to prefer.
+3. **Resolving details.** The Agent uses the reference, brief and observation results to settle
+   timing, language, product placement and host treatment automatically.
 4. **Reading existing package declarations.** Before inventing an implementation, it checks the
    components already available in the project and in Hypit's official packages. This lets it reuse
    a caption, ranking, presenter, B-roll or rendering component when one already fits.
@@ -118,10 +102,6 @@ source code. The exact sequence depends on the video, but it generally includes:
 7. **Comparing against a mock.** It produces mock media for unbuilt generations, renders the complete
    composition in Studio, compares what it sees with the reference or brief, and repairs issues such
    as incorrect timing, hierarchy, cropping, captions or visual density.
-
-This is why the workflow can feel like directing a small production team: the Agent handles shot
-cuts, Gemini analysis, package discovery, source authoring, mock comparison and repairs. You are
-not expected to open an editor, write a component, or run a sequence of build commands yourself.
 
 ## 5. Review the mock Studio
 
@@ -139,8 +119,7 @@ The board appears too late, the captions are too small on a phone, and the B-rol
 while she is speaking. Please fix those issues and show me the mock again.
 ```
 
-The Agent edits the source, reruns the relevant checks and returns an updated mock. You review the
-result again; you do not need to locate the corresponding SVML line.
+The Agent edits the source, reruns the relevant checks and returns an updated mock.
 
 ## 6. Approve and submit the paid Build
 
