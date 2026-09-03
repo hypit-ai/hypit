@@ -92,35 +92,35 @@
 
   <gpt:Image id="pepedoge" prompt={pepedoge-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={doge}/>
-    <gpt:Reference image={pepe}/>
+    <gpt:Reference image={doge.image}/>
+    <gpt:Reference image={pepe.image}/>
   </gpt:Image>
 
   <gpt:Image id="pepe-hold" prompt={pepe-hold-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={pepe}/>
-    <gpt:Reference image={creatine}/>
+    <gpt:Reference image={pepe.image}/>
+    <gpt:Reference image={creatine.image}/>
   </gpt:Image>
 
   <gpt:Image id="doge-hold" prompt={doge-hold-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={doge}/>
-    <gpt:Reference image={creatine}/>
+    <gpt:Reference image={doge.image}/>
+    <gpt:Reference image={creatine.image}/>
   </gpt:Image>
 
   <gpt:Image id="before" prompt={before-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={pepe}/>
+    <gpt:Reference image={pepe.image}/>
   </gpt:Image>
 
   <gpt:Image id="after" prompt={after-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={pepe}/>
+    <gpt:Reference image={pepe.image}/>
   </gpt:Image>
 
   <gpt:Image id="during" prompt={during-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={pepe}/>
+    <gpt:Reference image={pepe.image}/>
   </gpt:Image>
 
   <text:Render id="lifestyle-montage-prompt"
@@ -159,7 +159,7 @@
     prompt={daily-creatine-take-prompt} duration="7"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={pepe-hold.image}/>
-    <seedance:Reference image={doge}/>
+    <seedance:Reference image={doge.image}/>
     <seedance:Reference audio={pepe-voice}/>
     <seedance:Reference audio={doge-voice}/>
   </seedance:ReferenceVideo>

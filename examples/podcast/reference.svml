@@ -105,34 +105,34 @@
 
   <gpt:Image id="split" prompt={split-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={split-hypihub}/>
+    <gpt:Reference image={split-hypihub.image}/>
   </gpt:Image>
 
   <gpt:Image id="guy-hold" prompt={guy-hold-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={guy}/>
-    <gpt:Reference image={creatine}/>
+    <gpt:Reference image={guy.image}/>
+    <gpt:Reference image={creatine.image}/>
   </gpt:Image>
 
   <gpt:Image id="girl-hold" prompt={girl-hold-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={girl}/>
-    <gpt:Reference image={creatine}/>
+    <gpt:Reference image={girl.image}/>
+    <gpt:Reference image={creatine.image}/>
   </gpt:Image>
 
   <gpt:Image id="coffee" prompt={coffee-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={girl-hypihub}/>
+    <gpt:Reference image={girl-hypihub.image}/>
   </gpt:Image>
 
   <gpt:Image id="smoothie" prompt={smoothie-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={girl}/>
+    <gpt:Reference image={girl.image}/>
   </gpt:Image>
 
   <gpt:Image id="pasta" prompt={pasta-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={girl}/>
+    <gpt:Reference image={girl.image}/>
   </gpt:Image>
 
   <text:Render id="lifestyle-montage-prompt"
@@ -171,7 +171,7 @@
     prompt={daily-creatine-take-prompt} duration="8"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={girl-hold.image}/>
-    <seedance:Reference image={guy}/>
+    <seedance:Reference image={guy.image}/>
     <seedance:Reference audio={girl-voice.audio}/>
     <seedance:Reference audio={guy-voice.audio}/>
   </seedance:ReferenceVideo>

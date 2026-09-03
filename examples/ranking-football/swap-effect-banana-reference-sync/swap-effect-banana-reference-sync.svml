@@ -138,13 +138,13 @@
   <seedance:ReferenceVideo id="ronaldo-take" model="mini"
     prompt={ronaldo-prompt} duration="10"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={presenter}/>
+    <seedance:Reference image={presenter.image}/>
     <seedance:Reference audio={presenter-voice}/>
   </seedance:ReferenceVideo>
   <seedance:ReferenceVideo id="messi-take" model="mini"
     prompt={messi-prompt} duration="10"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={presenter}/>
+    <seedance:Reference image={presenter.image}/>
     <seedance:Reference audio={presenter-voice}/>
   </seedance:ReferenceVideo>
 
@@ -204,9 +204,9 @@
   <!-- Preview candidate path: the authored presenter image is formally encoded
        as a silent MP4, normalized through the same waist, then given an honest
        syllable-weighted estimated alignment over its complete frame count. -->
-  <pipeline:StillVideo id="ronaldo-still" source={presenter}
+  <pipeline:StillVideo id="ronaldo-still" source={presenter.image}
     duration={ronaldo-preview-duration.duration} clock={clock}/>
-  <pipeline:StillVideo id="messi-still" source={presenter}
+  <pipeline:StillVideo id="messi-still" source={presenter.image}
     duration={messi-preview-duration.duration} clock={clock}/>
   <pipeline:Normalize id="ronaldo-preview-media" source={ronaldo-still.video}
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
@@ -238,18 +238,18 @@
     appear-sound={ranking-appear-media.media}
     move-sound={ranking-move-media.media}>
     <ranking:ColumnItem id="ronaldo" rank="1" label="Ronaldo"
-      icon={ronaldo-icon} during={story.segment.ronaldo}/>
+      icon={ronaldo-icon.image} during={story.segment.ronaldo}/>
     <ranking:ColumnItem id="messi" rank="2" label="Messi"
-      icon={messi-icon} during={story.segment.messi}/>
-    <ranking:ColumnItem id="yamal" rank="3" label="Yamal" preset="true" icon={yamal-icon}/>
-    <ranking:ColumnItem id="haaland" rank="4" label="Haaland" preset="true" icon={haaland-icon}/>
-    <ranking:ColumnItem id="de-bruyne" rank="5" label="De Bruyne" preset="true" icon={de-bruyne-icon}/>
-    <ranking:ColumnItem id="bellingham" rank="6" label="Bellingham" preset="true" icon={bellingham-icon}/>
-    <ranking:ColumnItem id="kane" rank="7" label="Kane" preset="true" icon={kane-icon}/>
-    <ranking:ColumnItem id="modric" rank="8" label="Modric" preset="true" icon={modric-icon}/>
-    <ranking:ColumnItem id="mbappe" rank="9" label="Mbappe" preset="true" icon={mbappe-icon}/>
-    <ranking:ColumnItem id="neymar" rank="10" label="Neymar" preset="true" icon={neymar-icon}/>
-    <ranking:ColumnItem id="benzema" rank="11" label="Benzema" preset="true" icon={benzema-icon}/>
+      icon={messi-icon.image} during={story.segment.messi}/>
+    <ranking:ColumnItem id="yamal" rank="3" label="Yamal" preset="true" icon={yamal-icon.image}/>
+    <ranking:ColumnItem id="haaland" rank="4" label="Haaland" preset="true" icon={haaland-icon.image}/>
+    <ranking:ColumnItem id="de-bruyne" rank="5" label="De Bruyne" preset="true" icon={de-bruyne-icon.image}/>
+    <ranking:ColumnItem id="bellingham" rank="6" label="Bellingham" preset="true" icon={bellingham-icon.image}/>
+    <ranking:ColumnItem id="kane" rank="7" label="Kane" preset="true" icon={kane-icon.image}/>
+    <ranking:ColumnItem id="modric" rank="8" label="Modric" preset="true" icon={modric-icon.image}/>
+    <ranking:ColumnItem id="mbappe" rank="9" label="Mbappe" preset="true" icon={mbappe-icon.image}/>
+    <ranking:ColumnItem id="neymar" rank="10" label="Neymar" preset="true" icon={neymar-icon.image}/>
+    <ranking:ColumnItem id="benzema" rank="11" label="Benzema" preset="true" icon={benzema-icon.image}/>
   </ranking:Column>
 
   <!-- Every Item consumes a projected Selection window. Later overlapping

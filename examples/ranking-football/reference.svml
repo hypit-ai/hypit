@@ -142,13 +142,13 @@
   <seedance:ReferenceVideo id="ronaldo-take" model="mini"
     prompt={ronaldo-prompt} duration="10"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={presenter}/>
+    <seedance:Reference image={presenter.image}/>
     <seedance:Reference audio={presenter-voice.audio}/>
   </seedance:ReferenceVideo>
   <seedance:ReferenceVideo id="messi-take" model="mini"
     prompt={messi-prompt} duration="10"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={presenter}/>
+    <seedance:Reference image={presenter.image}/>
     <seedance:Reference audio={presenter-voice.audio}/>
   </seedance:ReferenceVideo>
 
@@ -208,9 +208,9 @@
   <!-- Preview candidate path: the authored presenter image is formally encoded
        as a silent MP4, normalized through the same waist, then given an honest
        syllable-weighted estimated alignment over its complete frame count. -->
-  <pipeline:StillVideo id="ronaldo-still" source={presenter}
+  <pipeline:StillVideo id="ronaldo-still" source={presenter.image}
     duration={ronaldo-preview-duration.duration} clock={clock}/>
-  <pipeline:StillVideo id="messi-still" source={presenter}
+  <pipeline:StillVideo id="messi-still" source={presenter.image}
     duration={messi-preview-duration.duration} clock={clock}/>
   <pipeline:Normalize id="ronaldo-preview-media" source={ronaldo-still.video}
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
@@ -242,19 +242,19 @@
     during="program" style={tier-style}
     appear-sound={ranking-appear-media.media}
     move-sound={ranking-move-media.media}>
-    <ranking:TierItem id="yamal" tier="s" preset="true" icon={yamal-icon}/>
-    <ranking:TierItem id="haaland" tier="a" preset="true" icon={haaland-icon}/>
-    <ranking:TierItem id="de-bruyne" tier="b" preset="true" icon={de-bruyne-icon}/>
-    <ranking:TierItem id="bellingham" tier="b" preset="true" icon={bellingham-icon}/>
-    <ranking:TierItem id="kane" tier="c" preset="true" icon={kane-icon}/>
-    <ranking:TierItem id="modric" tier="c" preset="true" icon={modric-icon}/>
-    <ranking:TierItem id="mbappe" tier="d" preset="true" icon={mbappe-icon}/>
-    <ranking:TierItem id="neymar" tier="d" preset="true" icon={neymar-icon}/>
-    <ranking:TierItem id="benzema" tier="d" preset="true" icon={benzema-icon}/>
+    <ranking:TierItem id="yamal" tier="s" preset="true" icon={yamal-icon.image}/>
+    <ranking:TierItem id="haaland" tier="a" preset="true" icon={haaland-icon.image}/>
+    <ranking:TierItem id="de-bruyne" tier="b" preset="true" icon={de-bruyne-icon.image}/>
+    <ranking:TierItem id="bellingham" tier="b" preset="true" icon={bellingham-icon.image}/>
+    <ranking:TierItem id="kane" tier="c" preset="true" icon={kane-icon.image}/>
+    <ranking:TierItem id="modric" tier="c" preset="true" icon={modric-icon.image}/>
+    <ranking:TierItem id="mbappe" tier="d" preset="true" icon={mbappe-icon.image}/>
+    <ranking:TierItem id="neymar" tier="d" preset="true" icon={neymar-icon.image}/>
+    <ranking:TierItem id="benzema" tier="d" preset="true" icon={benzema-icon.image}/>
     <ranking:TierItem id="ronaldo" tier="d" entry="drop"
-      icon={ronaldo-icon} during={story.segment.ronaldo}/>
+      icon={ronaldo-icon.image} during={story.segment.ronaldo}/>
     <ranking:TierItem id="messi" tier="s" entry="drop"
-      icon={messi-icon} during={story.segment.messi}/>
+      icon={messi-icon.image} during={story.segment.messi}/>
   </ranking:TierBoard>
 
   <!-- Every Item consumes a projected Selection window. Later overlapping

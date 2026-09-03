@@ -86,32 +86,32 @@
 
   <gpt:Image id="jocknerd" prompt={jocknerd-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={nerd}/>
-    <gpt:Reference image={jock}/>
+    <gpt:Reference image={nerd.image}/>
+    <gpt:Reference image={jock.image}/>
   </gpt:Image>
 
   <gpt:Image id="jock-hold" prompt={jock-hold-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={jock}/>
-    <gpt:Reference image={cheatgpt-icon}/>
+    <gpt:Reference image={jock.image}/>
+    <gpt:Reference image={cheatgpt-icon.image}/>
   </gpt:Image>
 
   <gpt:Image id="classroom-selfie" prompt={classroom-selfie-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={jock}/>
-    <gpt:Reference image={cheatgpt-icon}/>
+    <gpt:Reference image={jock.image}/>
+    <gpt:Reference image={cheatgpt-icon.image}/>
   </gpt:Image>
 
   <gpt:Image id="library-study" prompt={library-study-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={jock}/>
-    <gpt:Reference image={cheatgpt-icon}/>
+    <gpt:Reference image={jock.image}/>
+    <gpt:Reference image={cheatgpt-icon.image}/>
   </gpt:Image>
 
   <gpt:Image id="wedding-vows" prompt={wedding-vows-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={jock}/>
-    <gpt:Reference image={cheatgpt-icon}/>
+    <gpt:Reference image={jock.image}/>
+    <gpt:Reference image={cheatgpt-icon.image}/>
   </gpt:Image>
 
   <text:Render id="lifestyle-montage-prompt"
@@ -150,7 +150,7 @@
     prompt={daily-cheatgpt-take-prompt} duration="7"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={jock-hold.image}/>
-    <seedance:Reference image={nerd}/>
+    <seedance:Reference image={nerd.image}/>
     <seedance:Reference audio={jock-voice}/>
     <seedance:Reference audio={nerd-voice}/>
   </seedance:ReferenceVideo>
@@ -159,7 +159,7 @@
     prompt={brain-is-asking-take-prompt} duration="7"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={jock-hold.image}/>
-    <seedance:Reference image={nerd}/>
+    <seedance:Reference image={nerd.image}/>
     <seedance:Reference audio={jock-voice}/>
     <seedance:Reference audio={nerd-voice}/>
   </seedance:ReferenceVideo>

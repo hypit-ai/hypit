@@ -35,8 +35,8 @@ module changes the visible graph expansion rather than the document structure:
   aspect-ratio="9:16"
   resolution="2K"
 >
-  <gpt:Reference image={person}/>
-  <gpt:Reference image={product}/>
+  <gpt:Reference image={person.image}/>
+  <gpt:Reference image={product.image}/>
 </gpt:Image>
 ```
 
