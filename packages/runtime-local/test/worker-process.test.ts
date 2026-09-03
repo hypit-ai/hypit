@@ -59,3 +59,33 @@ test("one detached Runtime Worker can be started, observed and stopped", async (
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("concurrent cold starts publish and reuse one Runtime Worker", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-process-race-"));
+  const profile = join(root, "runtime.json");
+  const dataRoot = join(root, ".hypit", "runtimes", "local");
+  await writeFile(profile, JSON.stringify({ format: "hypit.runtime-profile@1" }), "utf8");
+  const program = `
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const index = process.argv.indexOf("--ready-file");
+    const ready = process.argv[index + 1];
+    const count = path.join(path.dirname(ready), "starts");
+    fs.appendFileSync(count, String(process.pid) + "\\n");
+    fs.mkdirSync(path.dirname(ready), { recursive: true });
+    setTimeout(() => fs.writeFileSync(ready, String(process.pid)), 50);
+    process.on("SIGTERM", () => process.exit(0));
+    setInterval(() => {}, 1000);
+  `;
+  try {
+    const results = await Promise.all([
+      ensureRuntimeProcess(profile, dataRoot, { command: process.execPath, args: ["-e", program] }, 5_000),
+      ensureRuntimeProcess(profile, dataRoot, { command: process.execPath, args: ["-e", program] }, 5_000),
+    ]);
+    assert.equal(results[0]?.pid, results[1]?.pid);
+    assert.equal((await readFile(join(dataRoot, "worker", "starts"), "utf8")).trim().split("\n").length, 1);
+  } finally {
+    await stopRuntimeProcess(profile, dataRoot, 5_000).catch(() => undefined);
+    await rm(root, { recursive: true, force: true });
+  }
+});

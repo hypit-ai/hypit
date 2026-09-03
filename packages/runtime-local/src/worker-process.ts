@@ -36,9 +36,71 @@ function paths(dataRoot: string) {
   return {
     root,
     pid: join(root, "worker.json"),
+    lock: join(root, "worker.lock"),
     ready: join(root, "ready"),
     log: join(root, "worker.log"),
   };
+}
+
+async function acquireProcessLock(dataRoot: string, timeoutMs: number) {
+  const location = paths(dataRoot);
+  const deadline = Date.now() + timeoutMs;
+  await mkdir(location.root, { recursive: true });
+  while (true) {
+    let lock;
+    try {
+      lock = await open(location.lock, "wx");
+    } catch (error) {
+      if (!nodeError(error, "EEXIST")) throw error;
+      // A crashed host can leave the lock file behind. Only remove a lock whose owner is
+      // positively known to be gone; an empty/invalid file is treated as held while its writer
+      // finishes publishing the owner record.
+      let owner: unknown;
+      let ownerReadable = true;
+      try {
+        owner = JSON.parse(await readFile(location.lock, "utf8"));
+      } catch (readError) {
+        if (nodeError(readError, "ENOENT")) continue;
+        ownerReadable = false;
+      }
+      const ownerPid = owner !== null && typeof owner === "object" && "pid" in owner
+        && typeof owner.pid === "number" ? owner.pid : undefined;
+      if (ownerPid !== undefined && !processAlive(ownerPid)) {
+        await rm(location.lock, { force: true });
+        continue;
+      }
+      if (!ownerReadable) {
+        // A crash while publishing the tiny owner record can leave malformed JSON. Once that
+        // partial file is older than the lock wait budget it cannot belong to a live acquisition.
+        const age = Date.now() - (await stat(location.lock)).mtimeMs;
+        if (age > timeoutMs) {
+          await rm(location.lock, { force: true });
+          continue;
+        }
+      }
+      if (Date.now() >= deadline) throw new Error(`Timed out waiting for Runtime Worker lock: ${location.lock}`);
+      await new Promise((resolveWait) => setTimeout(resolveWait, 10));
+      continue;
+    }
+    try {
+      await lock.writeFile(JSON.stringify({ pid: process.pid, startedAt: Date.now() }), "utf8");
+      return lock;
+    } catch (error) {
+      await lock.close().catch(() => undefined);
+      await rm(location.lock, { force: true }).catch(() => undefined);
+      throw error;
+    }
+  }
+}
+
+async function withProcessLock<T>(dataRoot: string, timeoutMs: number, action: () => Promise<T>): Promise<T> {
+  const lock = await acquireProcessLock(dataRoot, timeoutMs);
+  try {
+    return await action();
+  } finally {
+    await lock.close();
+    await rm(paths(dataRoot).lock, { force: true });
+  }
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -128,40 +190,41 @@ export async function ensureRuntimeProcess(
   launch: RuntimeWorkerLaunch,
   timeoutMs = 10_000,
 ): Promise<RuntimeProcessState> {
-  const current = await runtimeProcessStatus(profile, dataRoot);
-  if (current.state === "running") return current;
-  const absolute = resolve(profile);
-  const location = paths(dataRoot);
-  await mkdir(location.root, { recursive: true });
-  await rm(location.ready, { force: true });
-  await rotateLog(location.log);
-  const log = await open(location.log, "a");
-  const child = spawn(launch.command, [
-    ...launch.args,
-    "_worker",
-    absolute,
-    "--ready-file",
-    location.ready,
-    ...(launch.workerArgs ?? []),
-  ], {
-    cwd: process.cwd(),
-    // See the managed program start in `programs.ts`: on Windows, detaching costs the console and
-    // every console descendant then gets a window of its own.
-    detached: process.platform !== "win32",
-    windowsHide: true,
-    stdio: ["ignore", log.fd, log.fd],
-    env: process.env,
+  return await withProcessLock(dataRoot, timeoutMs + 1_000, async () => {
+    const current = await runtimeProcessStatus(profile, dataRoot);
+    if (current.state === "running") return current;
+    const absolute = resolve(profile);
+    const location = paths(dataRoot);
+    await rm(location.ready, { force: true });
+    await rotateLog(location.log);
+    const log = await open(location.log, "a");
+    const child = spawn(launch.command, [
+      ...launch.args,
+      "_worker",
+      absolute,
+      "--ready-file",
+      location.ready,
+      ...(launch.workerArgs ?? []),
+    ], {
+      cwd: process.cwd(),
+      // See the managed program start in `programs.ts`: on Windows, detaching costs the console and
+      // every console descendant then gets a window of its own.
+      detached: process.platform !== "win32",
+      windowsHide: true,
+      stdio: ["ignore", log.fd, log.fd],
+      env: process.env,
+    });
+    if (child.pid === undefined) throw new Error("Runtime Worker process has no pid");
+    const startedAt = Date.now();
+    await writeFile(location.pid, JSON.stringify({
+      profile: absolute,
+      pid: child.pid,
+      startedAt,
+    } satisfies ProcessRecord), "utf8");
+    child.unref();
+    await log.close();
+    return await waitForReady(absolute, dataRoot, timeoutMs);
   });
-  if (child.pid === undefined) throw new Error("Runtime Worker process has no pid");
-  const startedAt = Date.now();
-  await writeFile(location.pid, JSON.stringify({
-    profile: absolute,
-    pid: child.pid,
-    startedAt,
-  } satisfies ProcessRecord), "utf8");
-  child.unref();
-  await log.close();
-  return await waitForReady(absolute, dataRoot, timeoutMs);
 }
 
 async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, timeoutMs: number): Promise<RuntimeProcessState> {
@@ -199,7 +262,8 @@ async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, tim
 }
 
 export async function stopRuntimeProcess(profile: string, dataRoot: string, timeoutMs = 10_000): Promise<RuntimeProcessState> {
-  return await stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs);
+  return await withProcessLock(dataRoot, timeoutMs + 1_000,
+    () => stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs));
 }
 
 export async function runtimeProcessLogs(dataRoot: string): Promise<{ readonly path: string; readonly text: string }> {
