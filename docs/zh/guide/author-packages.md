@@ -95,7 +95,7 @@ export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) 
 通用包不要从业务包源码推断写法。使用仓库内的最小完整 fixture：
 `examples/minimal-author-package/packages/example-component/`。它包含完整的
 Surface 返回值、Fragment literal、Manifest ports、Producer 和 activation 形状。
-只有 `inspect_svml_vocabulary` 已证明存在高度相似的结构性 sibling 时，才允许读取该
+只有 `hypit vocabulary` 已证明存在高度相似的结构性 sibling 时，才允许读取该
 sibling 的 README 和实现所需的少数 role 文件，并将其复制为新的 Module；不得比较无关业务包。
 
 ## 5. 声明 Surface 词表与预览图
@@ -126,28 +126,11 @@ vocabulary: {
 }
 ```
 
-凡是读者必须看一眼产出才能理解的 Surface，都要声明 `preview`。这不限于产出 `VisualTrack` 的 Surface：`@hypit/speech-track` 也为 SemanticTrack 声明了预览图，因为它的形态看一眼比读一段描述更快。没有可展示产出的 Surface 可以不声明，例如只负责装配请求的那种。
+凡是读者应该在 Studio 时间轴或目录里一眼认出的 Surface，都要声明 `preview`：它是海报。海报是设计出来的图，不是产出的一帧。它用这一小块位置所允许的最抽象、最形象的方式说明组件是什么，就像电影海报不是电影截屏：`@hypit/ranking` 的 Column 海报是一列名次徽章挨着一列图标，Tier 榜是带字母的几行加图标。把它画成 SVG 随包提交，栅格化成 manifest 在 `preview/` 下指名的 PNG，组件外观演进时海报保持稳定。没有可展示产出的 Surface 可以不声明，例如只负责装配请求的那种。
 
-`appearance` 和 `preview` 回答的是两个不同的问题，谁都替代不了谁：`appearance` 说的是这个元素在所有情况下都会画出什么，预览图给出的是其中一个诚实的实例。
+`appearance` 和 `preview` 回答的是两个不同的问题，谁都替代不了谁：`appearance` 说的是这个元素在所有情况下都会画出什么，海报说的是这个元素是干什么的。
 
-完整词表和预览声明以最小 fixture 为权威示例。生产路线应使用
-`hypit-reference-video-tools inspect_svml_vocabulary` 读取已安装包的公开声明，
-而不是打开业务包源码。
-
-### 预览图怎么产出
-
-预览图是你自己这个组件在本地渲染出来的真实一帧。没有任何工具会替你生成它，而手工画的示意图比没有预览图更糟，因为它冒充了真实产出。
-
-用 `hypit-reference-video-tools render_previews` 渲染 fixture 的 preview Source；新包沿用同一套
-package-owned preview Source，不需要阅读仓库的视觉测试源码。步骤是：
-
-1. 用你自己包的 render 函数，在一个封好的 ProgramSpace 上构造出 Track 值；
-2. `sealComposition({ id, canvas, tracks })`，再用 `@hypit/hyperframes` 的 `compileHyperframesDocument(composition, space)`；
-3. `materializeHyperframesHtml(document, resolve)` 写进一个临时目录，其中 `resolve` 把声明的每个 Artifact（字体、图片）映射到本地文件；
-4. 通过标准的 SVRun → preview-mock → Producer 路径得到真实 Composition；
-5. 找到目标 Present 最长的稳定区间，在固定版本的本地浏览器中 seek 到区间中间帧并截图，提交到 `preview/` 下。
-
-不会为了这一张图生成完整 PNG 序列，也不修改 HyperFrames。若没有至少两帧的稳定区间，就使用该包最长 Present 的中间帧。
+完整词表和预览声明以最小 fixture 为权威示例。`hypit vocabulary <package>` 打印已安装包的公开声明；从这份输出写作，而不是打开别的业务包源码。
 
 ## 6. 编写 activation 描述符
 

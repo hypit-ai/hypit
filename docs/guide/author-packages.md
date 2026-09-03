@@ -157,35 +157,22 @@ vocabulary: {
 }
 ```
 
-Declare a `preview` for every Surface whose result a reader needs to see to understand it. That is
-not only Surfaces producing a `VisualTrack`: `@hypit/speech-track` declares one for its SemanticTrack
-because its shape is easier to see than to describe. Skip it for a Surface with nothing to show, such as one
-that only assembles a request.
+Declare a `preview` for every Surface a reader should recognise at a glance in Studio's timeline or
+in a catalogue: the poster. A poster is a designed picture, not a frame of output. It says what the
+component *is* in the most abstract, most recognisable form the small space allows, the way a film
+poster is not a screenshot of the film: `@hypit/ranking`'s Column poster is a column of rank badges
+beside a column of icons; its Tier board is lettered rows with icons. Draw it as an SVG committed
+beside the package, rasterise it to the PNG the manifest names under `preview/`, and keep it stable
+while the component's look evolves. Skip it for a Surface with nothing to show, such as one that only
+assembles a request.
 
 `appearance` and `preview` answer different questions and neither replaces the other. `appearance`
-says what the element draws in every case; the preview shows one honest instance of it.
+says what the element draws in every case; the poster says what the element is for.
 
 The fixture's manifest is the canonical small vocabulary example. For a close sibling, read that
 package's own README and vocabulary first, then only the role files needed for the changed behavior.
-
-### Producing the preview image
-
-The preview is a real frame of your own component, rendered locally. Nothing generates it for you,
-and a mock-up drawn by hand is worse than no preview at all, because it claims to be output.
-
-Render the fixture's preview Source with
-`hypit-reference-video-tools render_previews <package-dir>`. For a new package, use the same
-package-owned `preview/preview.svml`, `preview/recipes.svs` and `preview/build.svrun` shape, then keep
-one representative frame under `preview/`. The command resolves the package from its explicit
-workspace/package root and the active Distribution fallback; it does not require a
-`packages/<slug>/node_modules` self-link or a manual `npm link`. It compiles the preview Run, lets the
-native preview-mock path satisfy undeclared media, and runs the real Producers. It then finds the
-target Present's longest stable interval and seeks the middle frame in a fixed local browser before
-writing the promised image named by the Surface Manifest. It does not encode a complete PNG sequence,
-and it never changes HyperFrames itself.
-
-If no stable interval has at least two frames, the middle frame of the longest Present is used. This
-keeps the picture representative while avoiding a full render solely to obtain one catalogue image.
+`hypit vocabulary <package>` prints the installed declarations; author from that output rather than
+from another package's source.
 
 ## 6. Write the activation descriptor
 

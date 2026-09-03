@@ -48,6 +48,30 @@ Profile and spends nothing. `--runtime <profile>` names the Profile;
 otherwise the project's `hypit runtime use` selection is read. Slow paid generation — pictures and
 clips — is not a creation-time tool: declare it in the Source and go through `plan` and `build`.
 
+Two more families are local, stateless and spend nothing. `hypit media` prepares what the eyes will
+look at when a whole video is too long or too dense to hand over at once, and `hypit vocabulary`
+prints what a Source may write:
+
+```bash
+hypit media probe reference.mp4
+hypit media cut reference.mp4 --start 12 --end 19.5 --to notes/hook.mp4
+hypit media frames reference.mp4 --at 12.4,13.1 --to notes/hook-frames
+hypit media tile reference.mp4 --start 12 --end 19.5 --to notes/hook-grid.jpg
+hypit media shots reference.mp4
+hypit media fetch https://… --to reference/source.mp4
+hypit vocabulary
+hypit vocabulary @hypit/media-pipeline --tag StillVideo
+hypit vocabulary --visual text
+```
+
+`cut` seeks to the exact frame; `frames` writes one JPEG per named second; `tile` draws four to nine
+frames of a stretch in one grid, never wider than the source, so small type stays legible for an
+observer that reads pictures; `shots` lists where the picture jumps, which is a starting point when
+nothing is known yet and not a shot list; `fetch` turns a link into a file with the pinned yt-dlp.
+Every command writes only what `--to` names and refuses to overwrite. `vocabulary` reads the installed
+manifests: every package with its tags and models, or one package's Surfaces with their attributes,
+children and example, or the value shapes a drawing Producer must emit.
+
 Install the `hypit` Distribution globally once. It resolves its own TypeScript loader and CLI, so it
 neither invokes npm per command nor requires a project to contain Hypit's `package.json`.
 

@@ -11,6 +11,7 @@
   "dependencies": {
     "@hypit/cli": "workspace:*",
     "@hypit/compiler-markup-node": "workspace:*",
+    "@hypit/composition": "workspace:*",
     "@hypit/credential-store-os": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/estimate": "workspace:*",
@@ -18,6 +19,7 @@
     "@hypit/generation": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/mimo-tts": "workspace:*",
+    "@hypit/model-kit": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/provider-hypihub": "workspace:*",
@@ -27,7 +29,9 @@
     "@hypit/speech": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",
     "@hypit/text": "workspace:*",
+    "@hypit/visual-ir": "workspace:*",
     "@hypit/whisperx": "workspace:*",
-    "@hypit/workspace-fs-node": "workspace:*"
+    "@hypit/workspace-fs-node": "workspace:*",
+    "@hypit/yt-dlp": "workspace:*"
   }
 }
