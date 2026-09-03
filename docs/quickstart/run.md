@@ -6,8 +6,9 @@ description: Declaring build targets, reusing results and configuring the runtim
 # Run Source & Builds
 
 The Author Source defines the video. A Run Source chooses which of its public outputs to produce and
-which explicit Candidates, if any, should satisfy them. The Runtime Profile chooses the machine,
-credentials, Provider endpoints and services that execute the resulting plan.
+which explicit Candidates, if any, should satisfy them. The official Distribution supplies the Local
+Runtime; its Profile names the credentials, Provider Endpoints and services available to execute the
+resulting plan.
 
 Select the project Runtime once:
 
@@ -207,10 +208,10 @@ lookup. A black video, preview image or human-supplied result uses the same mech
 
 ## Runtime Profile
 
-The Runtime Profile chooses where Builds execute. It creates named infrastructure instances from
-packages selected by logical `use` names, assigns their exported parts to Runtime roles, and
-configures Provider endpoints and capacity. It never defines the Source Workspace or Author package
-selection.
+The official video Distribution has already chosen the Local Runtime. Its Profile names the
+Credential Stores and Endpoints that local execution may use, together with deployment settings such
+as Endpoint capacity. It never selects the Runtime Host or defines the Source Workspace, Author
+packages or project Result repository.
 
 ```bash
 hypit runtime use hypit.runtime.json
@@ -281,7 +282,7 @@ only with `--workspace`. `--package-root` locates installed packages and never w
 That is the zero-configuration Result repository. The `output/` directory shown earlier is only a
 convenient destination for explicit exports and is not part of Result storage. A project-owned `hypit.results.json` may instead select
 `@hypit/build-result-s3`; commands and historical `build-record` references then use that same
-repository. Runtime working Artifacts remain local and private to the Runtime.
+repository. Temporary Resources remain local and private to the active Runtime.
 
 ### 1. Select a Runtime
 
@@ -290,9 +291,9 @@ cd examples/talking-head-aroll
 hypit runtime use hypit.runtime.json
 ```
 
-Author and Run Sources select their packages through imports. The Runtime Profile selects its Host,
-credential and Endpoint packages through `use`; the project separately owns its Result repository. The installed package manager
-owns their versions.
+Author and Run Sources select their packages through imports. The Local Runtime Profile selects
+Credential Store and Endpoint packages through `use`; the project separately owns its Result
+repository. The installed package manager owns their versions.
 
 ### 2. Diagnose the environment
 
@@ -300,7 +301,7 @@ owns their versions.
 hypit doctor
 ```
 
-Doctor always validates the project's selected Result Store. When a Runtime Profile is selected or
+Doctor always validates the project's selected Result Repository. When a Runtime Profile is selected or
 passed explicitly, it also validates every selected Runtime role, Endpoint configuration, credential
 presence and bounded environment probe. It never starts the Worker or performs a paid request.
 
@@ -408,6 +409,7 @@ hypit runtime logs
 hypit runtime down
 ```
 
-`runtime down` stops the Worker from claiming more Builds but leaves external programs running.
+`runtime down` stops the Worker from advancing Builds but leaves external programs running.
 Use `programs down` only when those programs should also stop. Neither command cancels durable
-Builds or remote Provider work. Starting the same Profile again continues unfinished dispatches.
+Builds or remote Provider work. Starting the same Profile again continues its active Builds from
+their already accepted execution facts.

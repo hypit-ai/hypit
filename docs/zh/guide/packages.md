@@ -34,7 +34,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/source                mandatory Source Header
 @hypit/elaborator            author declarations and Fragment expansion
 @hypit/run                   syntax-neutral Run Graph
-@hypit/validation            semantic admission
+@hypit/validation            semantic validation
 @hypit/host                  opaque Host-facet envelope
 @hypit/workspace             replaceable Source/Asset session
 @hypit/compiler-node         reference Node compiler Host
@@ -169,7 +169,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 2. **领域无关 Core 闭包。** Layer 1 只有 `protocol` 与 `core`，且 `core` 只依赖 `protocol`。
    Compiler 与 Runtime 也可以领域无关，但它们不属于 Core。
 
-3. **CLI 独立性。** `@hypit/cli` 和 `@hypit/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@hypit/script`、`@hypit/seedance`、`@hypit/media-track`、`@hypit/typography-track`、`@hypit/film`）。Source import 按需激活作者包，Runtime Profile 的逻辑 `use` 名称按需激活运行包；两者都不是 CLI 的编译期依赖。
+3. **CLI 独立性。** `@hypit/cli` 和 `@hypit/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@hypit/script`、`@hypit/seedance`、`@hypit/media-track`、`@hypit/typography-track`、`@hypit/film`）。Source import 按需激活作者包，Runtime Profile 的逻辑 `use` 名称按需激活 Credential Store 与 Endpoint 包；两者都不是 CLI 的编译期依赖。
 
 ## 包的结构
 
@@ -223,7 +223,9 @@ packages/example/
 | `author` | Frontend、Surface、Graph Fragment | 仅作者词汇 | 源码中的 `<import>`，经由编译器 Host |
 | `compute` | 确定性 Producer、Type Validator | 纯计算 | 编译器 Host |
 | `endpoint` | 具备特权的外部能力 | 网络、文件系统、进程、凭据 | Runtime Profile |
-| `infrastructure` | Scheduler、Worker 与 Store 实现 | 持久化、调度 | Runtime Profile |
+| `credential-store` | 解析被显式命名的凭据 | 密钥存储 | Runtime Profile |
+| `result-repository` | 已结束的 Build Result | 项目历史存储 | 项目 `hypit.results.json` |
+| `infrastructure` | Runtime Host、Scheduler 与 Worker 实现 | 持久化、调度 | 应用 Distribution |
 | `application` | Studio Track Companion 等特定应用解释 | 仅该应用的 UI/操作 | 显式应用 profile |
 
 源码中的 `<import>` 只会 activate author facet。它绝不授予网络、文件系统、进程、凭据或队列权限。
@@ -231,16 +233,18 @@ packages/example/
 ## 包选择
 
 Hypit 不维护中央包注册表，也不维护自定义包锁。npm 或 pnpm 负责安装、版本与字节完整性。
-系统只有两条显式选择路径：
+每个所有者只有一条明确的选择路径：
 
 | 选择来源 | 被激活的包 |
 |---|---|
+| 应用 Distribution | Runtime Host 与可信启动包 |
 | Source import | Frontend、Surface、Producer、Validator |
-| Runtime Profile 的 `use` | Runtime Host、基础设施与 Provider Endpoint |
+| Runtime Profile 的 `credentials.*.use` / `endpoints.*.use` | Credential Store 与 Provider Endpoint |
+| 项目 Result 配置的 `use` | 一个 Build Result Repository |
 | Studio Profile 的 `companionPackages` | 当前 Studio 会话显式选择的项目 Companion 包 |
 
 Source import 绝不授予网络、文件系统、进程、凭据或队列权限；这些权限只属于 Runtime
-Profile 显式选择的包。
+Host 以及在环境边界被显式选择的包。
 
 ### 逻辑包地址与 Source 发现
 
@@ -257,12 +261,12 @@ Frontend 实现不是物理包格式里的特权字段。它们与 Run Fragment�
 Adapter 一样，通过自己的 Host ABI 发布普通 facet；Frontend 使用
 `hypit.source-frontend@1`，只有 Source Host 会解释它。
 
-Runtime Profile 也遵循同一规则。每个 `use` 选择的是 Runtime Host、Endpoint Adapter 或 Runtime
-Infrastructure ABI 加逻辑名；物理 npm 包只负责声明它提供这个逻辑能力。通用 CLI 不维护
-Provider 注册表；同名的 Endpoint Adapter 与 Runtime
-Infrastructure Adapter 也不会互相冲突。
+Runtime Profile 对它真正拥有的两种 facet 遵循同一规则：每个 `use` 只选择一个 Credential Store
+或 Endpoint Adapter。项目 Result 配置独立选择一个 Repository；应用 Distribution 自己提供 Runtime
+Host，不在该 Host 的 Profile 里重复伪造一次选择。通用 CLI 因而既不维护 Provider 注册表，也不写死
+Result Repository；不同 Adapter 种类仍可使用相同逻辑名而不冲突。
 
-加载器不会下载包，也不会扫描无关依赖来寻找插件。它只加载 Source 或 Runtime Profile
+加载器不会下载包，也不会扫描无关依赖来寻找插件。它只加载 Source、环境配置或应用 Distribution
 明确选择的包，以及这些包 Manifest 精确声明的 Module 依赖。
 
 作者项目拥有独立目录以及自己的 Git/workspace 边界。它的显式项目包从项目自己的

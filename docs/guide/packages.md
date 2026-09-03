@@ -39,7 +39,7 @@ selects its own Frontend in its mandatory header; no central parser knows every 
 @hypit/source                mandatory Source Header
 @hypit/elaborator            author declarations and Fragment expansion
 @hypit/run                   syntax-neutral Run Graph
-@hypit/validation            semantic admission
+@hypit/validation            semantic validation
 @hypit/host                  opaque Host-facet envelope
 @hypit/workspace             replaceable Source/Asset session
 @hypit/compiler-node         reference Node compiler Host
@@ -242,7 +242,9 @@ A physical package may expose independently activated facets:
 | `author` | Frontend, Surface, Graph Fragment | author vocabulary only | source `<import>` through the compiler Host |
 | `compute` | deterministic Producer, Type Validator | pure computation | compiler Host |
 | `endpoint` | privileged external capability | network, filesystem, process, credentials | Runtime Profile |
-| `infrastructure` | Scheduler, Worker and Store implementation | persistence, scheduling | Runtime Profile |
+| `credential-store` | resolves explicitly named credentials | secret storage | Runtime Profile |
+| `result-repository` | completed Build Results | project history storage | project `hypit.results.json` |
+| `infrastructure` | Runtime Host, Scheduler and Worker implementation | persistence, scheduling | application Distribution |
 | `application` | Host-specific interpretation such as a Studio Track Companion | only that application's UI/operations | explicit application profile |
 
 A source `<import>` activates only author facets. It never grants network, filesystem, process,
@@ -251,16 +253,19 @@ credential or queue authority.
 ## Package selection
 
 Hypit does not maintain a package registry or a second package-resolution layer. npm or pnpm
-installs packages and owns their versions and integrity. Hypit has two explicit selection paths:
+installs packages and owns their versions and integrity. Each owner has one explicit selection path:
 
 | Selection | Packages activated |
 |---|---|
+| Application Distribution | Runtime Host and trusted bootstrap packages |
 | Source imports | Frontends, Surfaces, Producers and Validators |
-| Runtime Profile `use` | Runtime Hosts, infrastructure and Provider Endpoints |
+| Runtime Profile `credentials.*.use` / `endpoints.*.use` | Credential Stores and Provider Endpoints |
+| Project Result config `use` | one Build Result Repository |
 | Studio Profile `companionPackages` | project Companion packages selected for that Studio session |
 
 A Source import never grants network, filesystem, process, credential or queue authority. Those
-remain available only to packages explicitly selected by the Runtime Profile.
+remain available only to the Runtime Host and packages explicitly selected at environmental
+boundaries.
 
 ### Logical package addresses and Source discovery
 
@@ -279,15 +284,16 @@ Frontend implementations are not privileged fields in the physical package forma
 the ordinary `hypit.source-frontend@1` Host facet, exactly as Run Fragments, Markup Surfaces and
 Runtime Adapters advertise their own Host ABIs. Only the Source Host interprets that facet.
 
-Runtime Profiles follow the same rule. Each `use` selects a Runtime Host, Endpoint Adapter or
-Runtime Infrastructure ABI plus a logical name. A physical npm package advertises that logical
-offer. The generic CLI therefore
-does not contain a Provider registry, and different Adapter kinds may share
-a logical spelling without colliding.
+Runtime Profiles follow the same rule for the two facets they actually select. Each `use` names one
+Credential Store or Endpoint Adapter offer. Project Result configuration independently selects one
+Repository offer. The application Distribution supplies the Runtime Host itself; it is not repeated
+as a fake selector inside that Host's Profile. The generic CLI therefore contains neither a Provider
+registry nor a hard-coded Result Repository, and different Adapter kinds may share a logical spelling
+without colliding.
 
 The loader never downloads packages and never scans unrelated installed dependencies for plugins.
-It loads only packages selected by Source discovery or the Runtime Profile, plus exact Module
-dependencies declared by those packages.
+It loads only packages selected by Source discovery, environmental configuration or the application
+Distribution, plus exact Module dependencies declared by those packages.
 
 An authored project is a separate directory and Git/workspace boundary. Its explicit packages are
 resolved from its own `packages/` or installation; the active tool Distribution supplies the

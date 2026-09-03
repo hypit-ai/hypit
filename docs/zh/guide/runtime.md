@@ -5,9 +5,6 @@ description: Hypit Source 与 Core 之外的执行边界。
 
 # Runtime
 
-实现审计与仍待处理的问题记录在
-[Runtime 与 Build Result 实现审计](./runtime-build-result-audit.md)。
-
 Hypit 把四个决定分开：
 
 | 所有者 | 决定什么 |
@@ -141,12 +138,12 @@ Build id 精确读取仍能看见 Result draft。
 
 AWS SDK 使用它通常的凭证链；兼容服务还可以配置 `endpoint` 与 `forcePathStyle`。`prefix` 是项目
 边界，每个项目应使用自己的 prefix。S3 只改变完整 Build Result 的存放位置，不会把 Runtime
-SQLite、Provider 容量或临时工作 Artifact 搬进 bucket。
+SQLite、Provider 容量或活跃 Build 的临时 Resource 搬进 bucket。
 
 S3 adapter 会把有序 Build id 可逆地映射成“最新优先”的物理 prefix，因此对象存储可以直接返回有界
 的一页，不需要中央索引或重复 catalog。Result 文件支持按字节范围流式读取，因此 Studio 预览远端
 视频或音频时，不会先把完整文件装进内存。`hypit doctor [profile] --workspace <project>` 会同时主动
-检查 Runtime 和项目选择的 Result Store；存储检查只做一次有上限的只读列表，不扫描历史 Result。
+检查 Runtime 和项目选择的 Result Repository；存储检查只做一次有上限的只读列表，不扫描历史 Result。
 
 Workspace 独立由显式 `--workspace`、Runtime 指针所在项目或入口 Source 目录确定。Runtime 配置
 不能扩大源码读取范围。
