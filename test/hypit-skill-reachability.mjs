@@ -30,7 +30,7 @@ import { dirname, join, posix, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
-const skillRoot = ".agents/skills/hypit";
+const skillRoot = "skills/hypit";
 
 /** A path in one of these is written from the repository root; anything else is relative to its file. */
 const rootRelativePrefixes = ["docs/", "examples/", "packages/", "services/", "test/"];

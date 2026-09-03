@@ -4,14 +4,14 @@ Published docs and installed package declarations are authoritative:
 
 | Need | Read |
 |---|---|
-| Script semantics | `../../../../docs/quickstart/script.md` |
-| SVS Recipes | `../../../../docs/quickstart/styles.md` |
-| Media and Seedance | `../../../../docs/quickstart/generation.md` |
+| Script semantics | `../../../docs/quickstart/script.md` |
+| SVS Recipes | `../../../docs/quickstart/styles.md` |
+| Media and Seedance | `../../../docs/quickstart/generation.md` |
 | Reusable Seedance Prompt Kits | the installed `@hypit/seedance-kits` README and selected Kit |
-| Normalization, alignment and SemanticTrack assembly | `../../../../docs/quickstart/timing.md` |
-| Caption, Media, Text, Audio Tracks | `../../../../docs/quickstart/tracks.md` and installed package READMEs |
-| Film and rendering | `../../../../docs/quickstart/composition.md` |
-| Run Source, durable Runtime, Builds, retrieval, and reuse | `../../../../docs/quickstart/run.md` and `runtime.md` |
+| Normalization, alignment and SemanticTrack assembly | `../../../docs/quickstart/timing.md` |
+| Caption, Media, Text, Audio Tracks | `../../../docs/quickstart/tracks.md` and installed package READMEs |
+| Film and rendering | `../../../docs/quickstart/composition.md` |
+| Run Source, durable Runtime, Builds, retrieval, and reuse | `../../../docs/quickstart/run.md` and `runtime.md` |
 
 Canonical production path:
 
