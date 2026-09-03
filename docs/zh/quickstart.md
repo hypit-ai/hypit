@@ -5,13 +5,9 @@ description: 无需手写 SVML 或 SVS，通过 Coding Agent 创建、审阅并�
 
 # 面向 Agent 使用者的快速开始
 
-你不需要了解 SVML、SVS、JavaScript 或命令行，也可以使用 Hypit 制作视频。你只需用日常语言向
-Coding Agent 描述想要的结果；Agent 会通过 `/hypit` skill 准备项目、检查可用组件、创作或复刻视频，
-并在任何需要付费的 Build 之前，为你打开一个可以审阅的 Studio mock。
+你不需要了解 SVML、SVS、JavaScript 或命令行，也可以使用 Hypit 制作视频。你只需用日常语言向 Coding Agent 描述想要的结果；Agent 会通过 `/hypit` skill 准备项目、检查可用组件、创作或复刻视频，并在任何需要付费的 Build 之前，为你打开一个可以审阅的 Studio mock。
 
-本页面向希望“指导视频创作”而不是亲自编写源码的用户。Hypit 生成的源码仍然可以编辑、复现和继续开发，
-但源码的编写与检查由 Agent 负责。如果你希望亲自编写 SVML 或 SVS，请先了解下面的 Agent 工作流，
-然后从第二个页面 [Script](./quickstart/script.md) 开始。
+本页面向希望“指导视频创作”而不是亲自编写源码的用户。Hypit 生成的源码仍然可以编辑、复现和继续开发，但源码的编写与检查由 Agent 负责。如果你希望亲自编写 SVML 或 SVS，请先了解下面的 Agent 工作流，然后从第二个页面 [Script](./quickstart/script.md) 开始。
 
 ## 你需要准备什么
 
@@ -19,8 +15,7 @@ Coding Agent 描述想要的结果；Agent 会通过 `/hypit` skill 准备项目
 - 一个允许 Agent 创建视频项目的文件夹；
 - 一条用于复刻的视频，或一份用于原创视频的创意简报；
 
-你不需要克隆 Hypit 仓库。先按第一步的命令安装可复用的 `/hypit` skill；之后 Agent 可以替你准备 Hypit
-Distribution。需要执行其他安装命令时，Agent 会先解释命令的作用，再在项目目录中完成操作。
+你不需要克隆 Hypit 仓库。先按第一步的命令安装可复用的 `/hypit` skill；之后 Agent 可以替你准备 Hypit Distribution。需要执行其他安装命令时，Agent 会先解释命令的作用，再在项目目录中完成操作。
 
 ## 第一步：安装 Hypit skill
 
@@ -30,8 +25,7 @@ Distribution。需要执行其他安装命令时，Agent 会先解释命令的�
 npx skills add hypit-ai/hypit -g
 ```
 
-`-g` 选项会让 skill 对任何项目文件夹中的新 Agent 会话都可用。你不需要克隆 Hypit 仓库，也不需要
-理解这条命令安装了哪些文件。skill 可用后，在视频项目文件夹中开启新的 Agent 对话，然后继续下面的步骤。
+`-g` 选项会让 skill 对任何项目文件夹中的新 Agent 会话都可用。你不需要克隆 Hypit 仓库，也不需要理解这条命令安装了哪些文件。skill 可用后，在视频项目文件夹中开启新的 Agent 对话，然后继续下面的步骤。
 
 ## 第二步：描述你想制作的视频
 
@@ -39,40 +33,30 @@ npx skills add hypit-ai/hypit -g
 
 ### 复刻一条参考视频
 
-要求 Agent 复刻视频，并提供视频文件路径。你可以把视频文件直接拖进 Coding Agent 窗口；大多数 Agent
-会自动把路径填入消息。也可以手动写出路径：
+要求 Agent 复刻视频，并提供视频文件路径。你可以把视频文件直接拖进 Coding Agent 窗口；大多数 Agent 会自动把路径填入消息。也可以手动写出路径：
 
 ```text
 /hypit 克隆这条视频：/path/to/video.mp4
 ```
 
-如果需要改变内容，也可以一并说明，例如更换主持人、语言、产品、画幅比例、视觉风格或行动号召。参考视频
-会被当作剪辑结构的证据；Agent 不会只给你一份分析报告，而是会创建一套可以审阅、修改和 Build 的完整视频程序。
+如果需要改变内容，也可以一并说明，例如更换主持人、语言、产品、画幅比例、视觉风格或行动号召。参考视频会被当作剪辑结构的证据；Agent 不会只给你一份分析报告，而是会创建一套可以审阅、修改和 Build 的完整视频程序。
 
 ### 原创一条视频
 
 你可以像给一位真人制片人写 brief 一样描述想法。例如：
 
 ```text
-请制作一条 ranking 视频。视频中有一个 ranking 板子，包含五行：左侧是 S、A、B、C、D 五个等级，
-每个等级使用不同的颜色；右侧用于摆放对应等级的图标。把 Hypit 排到 S 级，并解释它的优势；同时加入
-Arcads、Higgsfield、Seedance 和 CapCut，对每个竞品给出公平而简洁的优点与缺点说明。整体要清晰、
-有活力，适合短视频平台。
+请制作一条 ranking 视频。视频中有一个 ranking 板子，包含五行：左侧是 S、A、B、C、D 五个等级，每个等级使用不同的颜色；右侧用于摆放对应等级的图标。把 Hypit 排到 S 级，并解释它的优势；同时加入 Arcads、Higgsfield、Seedance 和 CapCut，对每个竞品给出公平而简洁的优点与缺点说明。整体要清晰、有活力，适合短视频平台。
 ```
 
-你还可以补充目标受众、时长、语言、语气、品牌色、主持人、发布平台或画幅比例等要求。你不需要决定这些
-要求由哪个 package、模型、字幕系统或动画原语实现。Agent 会把 brief 转换成完整计划；只有在某个创意
-决定无法安全推断时，才会提出简短的补充问题。
+你还可以补充目标受众、时长、语言、语气、品牌色、主持人、发布平台或画幅比例等要求。你不需要决定这些要求由哪个 package、模型、字幕系统或动画原语实现。Agent 会把 brief 转换成完整计划；只有在某个创意决定无法安全推断时，才会提出简短的补充问题。
 
 ## 第三步：按 Agent 提示提供凭据
 
-在你描述视频之后，Agent 会检查项目需要哪些模型和服务。如果缺少必要凭据，Agent 会向你询问，并说明
-该凭据的用途。你可以选择两种方式：
+在你描述视频之后，Agent 会检查项目需要哪些模型和服务。如果缺少必要凭据，Agent 会向你询问，并说明该凭据的用途。你可以选择两种方式：
 
-1. **使用 Hypit 推荐的 hypit.ai OAuth 登录。** 告诉 Agent 通过 hypit.ai 登录。一次 OAuth 登录即可覆盖
-   Hypit 托管服务提供的所有模型，不需要为每个模型分别收集 key。
-2. **使用你自己的 Provider key。** 你可以直接和 Agent 约定要使用哪些模型，并提供相应 Provider 的 API key。
-   Agent 只会索取当前项目需要的 key，不会询问无关凭据。
+1. **使用 Hypit 推荐的 hypit.ai OAuth 登录。** 告诉 Agent 通过 hypit.ai 登录。一次 OAuth 登录即可覆盖 Hypit 托管服务提供的所有模型，不需要为每个模型分别收集 key。
+2. **使用你自己的 Provider key。** 你可以直接和 Agent 约定要使用哪些模型，并提供相应 Provider 的 API key。Agent 只会索取当前项目需要的 key，不会询问无关凭据。
 
 不要把密钥粘贴到公开文档中，也不要提交到 Git。Agent 会使用已配置的安全凭据存储来保存这些凭据。
 
