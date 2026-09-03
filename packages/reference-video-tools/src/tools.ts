@@ -1662,7 +1662,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         ...(fetched === undefined ? {} : { source_url: fetched.url, downloaded: !fetched.cached }),
         pending_observations: pending,
         ...(whisperx?.ok === false
-          ? { whisperx: `${whisperx.reason}. Read .agents/skills/hypit/references/host-setup.md for the failure branches.` }
+          ? { whisperx: `${whisperx.reason}. Read skills/hypit/references/host-setup.md for the failure branches.` }
           : {}),
       };
     },
