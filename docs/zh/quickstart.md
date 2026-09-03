@@ -54,7 +54,8 @@ npx skills add hypit-ai/hypit -g
 你可以像给一位真人制片人写 brief 一样描述想法。例如：
 
 ```text
-请使用下面的 ranking 板子制作一条 ranking 视频。把 Hypit 排到 S 级，并解释它的优势；同时加入
+请制作一条 ranking 视频。视频中有一个 ranking 板子，包含五行：左侧是 S、A、B、C、D 五个等级，
+每个等级使用不同的颜色；右侧用于摆放对应等级的图标。把 Hypit 排到 S 级，并解释它的优势；同时加入
 Arcads、Higgsfield、Seedance 和 CapCut，对每个竞品给出公平而简洁的优点与缺点说明。整体要清晰、
 有活力，适合短视频平台。
 ```

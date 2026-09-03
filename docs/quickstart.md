@@ -61,9 +61,11 @@ Agent does not merely summarize it; it creates an editable program that can be r
 You can describe an idea just as you would brief a human producer. For example:
 
 ```text
-Create a ranking video using the ranking board below. Put Hypit in S tier and explain its advantages.
-Also include Arcads, Higgsfield, Seedance and CapCut. Give each competitor a fair, concise summary
-of its strengths and weaknesses. Make the result clear, energetic and suitable for a short social video.
+Create a ranking video with a ranking board that has five rows. The left side labels the rows S, A, B,
+C and D, with a different color for each tier; the right side is for placing the icons assigned to
+each tier. Put Hypit in S tier and explain its advantages. Also include Arcads, Higgsfield, Seedance
+and CapCut. Give each competitor a fair, concise summary of its strengths and weaknesses. Make the
+result clear, energetic and suitable for a short social video.
 ```
 
 You can add any constraints that matter to you: target audience, duration, language, tone, brand
