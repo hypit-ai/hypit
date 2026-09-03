@@ -206,11 +206,11 @@ export async function runEnvironmentCommand(input: {
           total: external.programs.length,
           ready: external.programs.filter((item) => item.state.state === "ready").length,
         },
-      }, ok ? "Runtime deployment ready" : "Runtime deployment needs attention", ok ? "success" : "warning", [
+      }, ok ? "Local Runtime ready" : "Local Runtime needs attention", ok ? "success" : "warning", [
         ...(!args.presentation.verbose && ok ? [] : [
           ["Machine packages", String(prepared.length)] as const,
           ["Worker", processState.state] as const,
-          ["External programs", `${external.programs.filter((item) => item.state.state === "ready").length}/${external.programs.length} ready`] as const,
+          ["Managed programs", `${external.programs.filter((item) => item.state.state === "ready").length}/${external.programs.length} ready`] as const,
         ]),
       ]);
       if (!ok) io.setExitCode?.(1);
@@ -238,7 +238,7 @@ export async function runEnvironmentCommand(input: {
       });
       write({ format: "hypit.cli-runtime-down@2", worker: worker.state },
         "Runtime Worker is down", "success", [["Worker", worker.state]],
-        ["External programs were left running. Stop them explicitly with hypit programs down."]);
+        ["Managed programs were left running. Stop them explicitly with hypit programs down."]);
       return;
     }
 
@@ -284,8 +284,8 @@ export async function runEnvironmentCommand(input: {
         },
       };
       write(machine, attention
-        ? "Runtime deployment needs attention"
-        : ready ? "Runtime deployment ready" : "Runtime Worker stopped",
+        ? "Local Runtime needs attention"
+        : ready ? "Local Runtime ready" : "Runtime Worker stopped",
       attention ? "warning" : ready ? "success" : "info", [
         ["Worker", worker.state],
         ["Active Builds", String(activity.builds.length)],
@@ -309,7 +309,7 @@ export async function runEnvironmentCommand(input: {
 
   if (args.command === "auth") {
     if (runtimeProfile === undefined) {
-      throw new Error("auth requires a Runtime; run hypit runtime use <profile> or pass --runtime <profile>");
+      throw new Error("auth requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
     }
     const credentialsControl = await (await runtimeHost(runtimeProfile)).openCredentials(args.endpoint);
     try {

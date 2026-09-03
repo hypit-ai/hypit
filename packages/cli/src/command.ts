@@ -94,6 +94,11 @@ export type ExecutionCommand =
 export type RuntimeSelectionCommand =
   | (CommandBase & ProjectOption & {
       readonly command: "runtime";
+      readonly action: "init";
+      readonly profile?: string;
+    })
+  | (CommandBase & ProjectOption & {
+      readonly command: "runtime";
       readonly action: "use";
       readonly profile: string;
     })

@@ -1,45 +1,47 @@
 {
-  "format": "hypit.runtime-profile@1",
-  "runtime": {
-    "use": "@hypit/runtime-local",
-    "config": {
-      "dataRoot": ".hypit/runtimes/local",
-      "artifacts": {
-        "use": "@hypit/artifact-store-fs",
-        "config": { "path": "artifacts" }
-      },
-      "credentials": {
-        "os": { "use": "@hypit/credential-store-os" },
-        "env": { "use": "@hypit/credential-store-env" }
-      },
-      "endpoints": {
-        "kie.football-ranking": {
-          "use": "@hypit/provider-kie",
-          "pool": "generation",
-          "config": {
-            "apiKey": { "store": "env", "key": "KIE_API_KEY" },
-            "defaultConcurrency": 10
-          }
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/runtimes/local",
+  "credentials": {
+    "os": {
+      "use": "@hypit/credential-store-os"
+    },
+    "env": {
+      "use": "@hypit/credential-store-env"
+    }
+  },
+  "endpoints": {
+    "kie.football-ranking": {
+      "use": "@hypit/provider-kie",
+      "pool": "generation",
+      "config": {
+        "apiKey": {
+          "store": "env",
+          "key": "KIE_API_KEY"
         },
-        "media.football-ranking": {
-          "use": "@hypit/provider-media-local",
-          "pool": "media",
-          "config": { "defaultConcurrency": 2 }
-        },
-        "whisperx.football-ranking": {
-          "use": "@hypit/provider-whisperx-local",
-          "pool": "alignment",
-          "config": { "defaultConcurrency": 1 }
-        },
-        "hyperframes.football-ranking": {
-          "use": "@hypit/provider-hyperframes-local",
-          "pool": "render",
-          "config": {
-            "workers": 2,
-            "quality": "standard",
-            "defaultConcurrency": 1
-          }
-        }
+        "defaultConcurrency": 10
+      }
+    },
+    "media.football-ranking": {
+      "use": "@hypit/provider-media-local",
+      "pool": "media",
+      "config": {
+        "defaultConcurrency": 2
+      }
+    },
+    "whisperx.football-ranking": {
+      "use": "@hypit/provider-whisperx-local",
+      "pool": "alignment",
+      "config": {
+        "defaultConcurrency": 1
+      }
+    },
+    "hyperframes.football-ranking": {
+      "use": "@hypit/provider-hyperframes-local",
+      "pool": "render",
+      "config": {
+        "workers": 2,
+        "quality": "standard",
+        "defaultConcurrency": 1
       }
     }
   }

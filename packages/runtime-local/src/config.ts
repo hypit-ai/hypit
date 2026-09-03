@@ -8,11 +8,11 @@ import {
 } from "@hypit/package-loader-node";
 import type { NodePackageSelectionRequest } from "@hypit/package-loader-node";
 import { assertBuildId, canonicalize, canonicalStringify } from "@hypit/protocol";
-import type { CanonicalValue, CapabilityRef } from "@hypit/protocol";
+import type { CanonicalValue, CapabilityRef, Need } from "@hypit/protocol";
 import {
   CompositeCredentialStore,
 } from "@hypit/runtime";
-import type { CredentialStore } from "@hypit/runtime";
+import type { CredentialStore, CredentialValue } from "@hypit/runtime";
 import { FileResourceStore } from "@hypit/resource-store-fs";
 import { FileBuildResultRepository } from "@hypit/build-result";
 import {
@@ -44,7 +44,7 @@ import {
   hypitHostStateRoot,
   prepareHostPackages,
 } from "@hypit/runtime-host-node";
-import type { HostPackageProgress, HostPackageReport } from "@hypit/runtime-host-node";
+import type { HostPackageProgress, HostPackageReport, RuntimeHostNeedQuote } from "@hypit/runtime-host-node";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
 import { createLocalRuntime } from "./runtime.js";
@@ -382,6 +382,15 @@ function capabilityKey(capability: CapabilityRef): string {
   return `${capability.module.name}@${capability.module.version}#${capability.name}`;
 }
 
+function sameRef(
+  left: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
+  right: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
+): boolean {
+  return left.module.name === right.module.name
+    && left.module.version === right.module.version
+    && left.name === right.name;
+}
+
 function adapterContext(
   root: string,
   hostStateRoot: string,
@@ -516,7 +525,7 @@ async function inspectRuntimeConfig(
     ? undefined
     : new Set(options.capabilities.map(capabilityKey));
   const covered = new Set<string>();
-  const credentialEndpoints: RuntimeEndpointActivation[] = [];
+  const selectedEndpoints: Array<{ readonly item: LocalRuntimeAdapterSelection; readonly activation: RuntimeEndpointActivation }> = [];
   for (const item of document.endpoints) {
     let activation: RuntimeEndpointActivation;
     try {
@@ -530,12 +539,7 @@ async function inspectRuntimeConfig(
     }
     if (requested !== undefined && !activation.endpoint.offers.some((offer) => requested.has(capabilityKey(offer.capability)))) continue;
     for (const offer of activation.endpoint.offers) covered.add(capabilityKey(offer.capability));
-    try {
-      diagnostics.push(...(activation.diagnose === undefined ? [] : await activation.diagnose()));
-    } catch (error) {
-      diagnostics.push(diagnostic(error, "RUNTIME_ADAPTER_DOCTOR_FAILED", item.instance));
-    }
-    credentialEndpoints.push(activation);
+    selectedEndpoints.push({ item, activation });
     const program = activation.program;
     if (program === undefined) continue;
     let state: ManagedProgramState;
@@ -562,13 +566,20 @@ async function inspectRuntimeConfig(
       subject: capabilityKey(capability),
     });
   }
-  if (credentialEndpoints.some((item) => item.endpoint.credentials.length > 0)) {
+  if (selectedEndpoints.length > 0) {
     let stores: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
     try {
       stores = await openCredentialStores(document, root, hostStateRoot, registry);
-      for (const activation of credentialEndpoints) {
+      for (const { item, activation } of selectedEndpoints) {
+        const credentials: Record<string, CredentialValue> = {};
+        let missing = false;
         for (const slot of activation.endpoint.credentials) {
-          if (await stores.store.resolve(slot.ref) !== undefined) continue;
+          const value = await stores.store.resolve(slot.ref);
+          if (value !== undefined) {
+            credentials[slot.slot] = value;
+            continue;
+          }
+          missing = true;
           diagnostics.push({
             severity: "error",
             code: "RUNTIME_CREDENTIAL_MISSING",
@@ -578,6 +589,18 @@ async function inspectRuntimeConfig(
                 : `Configure it with: hypit auth login ${slot.endpoint} --runtime ${absolute}`}`,
             subject: `${slot.endpoint}.${slot.slot}`,
           });
+        }
+        if (!options.active || missing || activation.diagnose === undefined) continue;
+        try {
+          const capabilities = (options.capabilities ?? activation.endpoint.offers.map((offer) => offer.capability))
+            .filter((capability) => activation.endpoint.offers
+              .some((offer) => capabilityKey(offer.capability) === capabilityKey(capability)));
+          diagnostics.push(...await activation.diagnose({
+            credentials,
+            capabilities,
+          }));
+        } catch (error) {
+          diagnostics.push(diagnostic(error, "RUNTIME_ADAPTER_DOCTOR_FAILED", item.instance));
         }
       }
     } catch (error) {
@@ -607,6 +630,74 @@ export async function doctorRuntimeConfig(
   options: LoadRuntimeConfigOptions & { readonly capabilities?: readonly CapabilityRef[] } = {},
 ): Promise<RuntimeConfigDoctorResult> {
   return await inspectRuntimeConfig(path, { ...options, active: true });
+}
+
+/** Provider-owned price estimates for exact Needs. This may read remote rate cards but never submits work. */
+export async function quoteRuntimeConfig(
+  path: string,
+  needs: readonly Need[],
+  options: LoadRuntimeConfigOptions = {},
+): Promise<readonly RuntimeHostNeedQuote[]> {
+  if (needs.length === 0) return [];
+  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
+  const registry = options.registry ?? new RuntimeAdapterRegistry();
+  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
+  const endpoints = await activatedEndpoints(document, root, hostStateRoot, registry);
+  let stores: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
+  try {
+    stores = await openCredentialStores(document, root, hostStateRoot, registry);
+    return await Promise.all(needs.map(async (need): Promise<RuntimeHostNeedQuote> => {
+      const matches = endpoints.flatMap(({ activation }) => activation.endpoint.offers
+        .filter((offer) => sameRef(offer.capability, need.capability)
+          && sameRef(offer.returns, need.returns)
+          && (offer.supports?.(need) ?? true))
+        .map((offer) => ({ activation, offer })));
+      const base = { need: need.id, capability: structuredClone(need.capability) };
+      if (matches.length === 0) return {
+        ...base,
+        quote: { status: "unknown", reason: "No selected Endpoint implements this exact Need" },
+      };
+      if (matches.length > 1) return {
+        ...base,
+        quote: {
+          status: "unknown",
+          reason: `Several selected Endpoints implement this Need: ${matches.map((item) => item.offer.endpoint).sort().join(", ")}`,
+        },
+      };
+      const match = matches[0]!;
+      if (match.offer.quote === undefined) return {
+        ...base,
+        endpoint: match.offer.endpoint,
+        quote: { status: "unknown", reason: "The selected Provider does not expose a price estimate" },
+      };
+      const credentials: Record<string, CredentialValue> = {};
+      for (const slot of match.activation.endpoint.credentials) {
+        const value = await stores!.store.resolve(slot.ref);
+        if (value === undefined) return {
+          ...base,
+          endpoint: match.offer.endpoint,
+          quote: { status: "unknown", reason: `${slot.label} is not configured` },
+        };
+        credentials[slot.slot] = value;
+      }
+      try {
+        return {
+          ...base,
+          endpoint: match.offer.endpoint,
+          quote: await match.offer.quote({ need, credentials }),
+        };
+      } catch (error) {
+        return {
+          ...base,
+          endpoint: match.offer.endpoint,
+          quote: { status: "unknown", reason: error instanceof Error ? error.message : String(error) },
+        };
+      }
+    }));
+  } finally {
+    await stores?.close();
+  }
 }
 
 export async function createRuntimeFromConfig(

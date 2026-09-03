@@ -265,9 +265,20 @@ function parseResultCommand(tail: readonly string[]): ProjectResultCommand | Exe
 
 function parseRuntimeCommand(tail: readonly string[]): RuntimeSelectionCommand | RuntimeOperationCommand {
   const [action, ...values] = tail;
-  if (action !== "use" && action !== "unset" && action !== "up" && action !== "down"
+  if (action !== "init" && action !== "use" && action !== "unset" && action !== "up" && action !== "down"
     && action !== "status" && action !== "logs") {
-    throw new Error("runtime takes use, unset, up, down, status or logs");
+    throw new Error("runtime takes init, use, unset, up, down, status or logs");
+  }
+  if (action === "init") {
+    const [profile, rest] = optionalPositional(values);
+    const options = commandOptions("runtime init", rest, "--workspace");
+    return {
+      command: "runtime",
+      action,
+      presentation: options.presentation,
+      ...optionalProject(options),
+      ...(profile === undefined ? {} : { profile }),
+    };
   }
   if (action === "use") {
     const [profile, rest] = requiredPositional(values, "runtime use requires a Runtime Profile");

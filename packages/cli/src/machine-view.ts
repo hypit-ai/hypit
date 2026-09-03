@@ -4,6 +4,7 @@ type ProgramStateView = { readonly id: string; readonly state: string; readonly 
 type AttentionView = { readonly message: string; readonly action?: string };
 
 export type OperationalMachineView =
+  | { readonly format: "hypit.cli-runtime-init@1"; readonly profile: string; readonly project: string; readonly selected: true }
   | { readonly format: "hypit.cli-runtime-selection@2"; readonly selected: boolean; readonly removed?: boolean; readonly profile?: string; readonly project?: string }
   | { readonly format: "hypit.cli-paths@1"; readonly project: string; readonly projectState: string; readonly profile?: string; readonly runtimeData?: string; readonly hostState: string; readonly machinePackages: string; readonly distribution?: string }
   | { readonly format: "hypit.cli-package@2"; readonly action: "install" | "status"; readonly package: string; readonly ready: boolean }

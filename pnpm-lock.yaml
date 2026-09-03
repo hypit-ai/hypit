@@ -2072,9 +2072,15 @@ importers:
       '@hypit/runtime-kit':
         specifier: workspace:*
         version: link:../runtime-kit
+      '@hypit/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
+      '@hypit/whisperx':
+        specifier: workspace:*
+        version: link:../whisperx
     devDependencies:
       '@hypit/driver-node':
         specifier: workspace:*
@@ -2085,6 +2091,9 @@ importers:
       '@hypit/seedance':
         specifier: workspace:*
         version: link:../seedance
+      '@hypit/speech':
+        specifier: workspace:*
+        version: link:../speech
 
   packages/provider-image-opencv-local:
     dependencies:

@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
@@ -117,6 +118,35 @@ export async function runCli(
       args.profile,
       args.packageRoot ?? await packageRootForProject(),
     )).runWorker(args.readyFile, args.workerOwner);
+    return;
+  }
+  if (args.command === "runtime" && args.action === "init") {
+    if (distribution.initialRuntimeProfile === undefined) {
+      throw new Error("This Hypit Distribution does not provide an initial Runtime Profile");
+    }
+    const projectRoot = await commandProjectRoot();
+    const profile = resolve(args.profile ?? resolve(projectRoot, "hypit.runtime.json"));
+    try {
+      await writeFile(profile, `${JSON.stringify(distribution.initialRuntimeProfile, undefined, 2)}\n`, {
+        encoding: "utf8",
+        flag: "wx",
+      });
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+        throw new Error(`Runtime Profile already exists: ${profile}; select it with hypit runtime use or choose another path`);
+      }
+      throw error;
+    }
+    const selected = await selectRuntimeProfile(projectRoot, profile);
+    writeOperational({
+      format: "hypit.cli-runtime-init@1",
+      profile: selected.profile,
+      project: selected.projectRoot,
+      selected: true,
+    }, "Runtime Profile created", "success", [
+      ["Profile", selected.profile],
+      ["Project", selected.projectRoot],
+    ], ["No package was installed, no service was contacted and no Worker was started."]);
     return;
   }
   if (args.command === "runtime" && args.action === "use") {
@@ -310,7 +340,7 @@ export async function runCli(
   }
   if (args.command === "build") {
     if (runtimeProfile === undefined) {
-      throw new Error("build requires a Runtime; run hypit runtime use <profile> or pass --runtime <profile>");
+      throw new Error("build requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
     }
     const buildResults = await projectResults(projectResultsRoot);
     let loadedRun;

@@ -49,3 +49,12 @@ for a submission that never became active and therefore has no Result to save.
 
 Source imports select author packages. Runtime Profile entries select only code allowed to access files,
 credentials, processes or networks. Installing a package changes neither selection.
+
+The lifecycle commands have deliberately narrow meanings:
+
+- `hypit runtime init` writes and selects the Distribution's starter Profile; it performs no setup or
+  network access and never overwrites an existing Profile.
+- `hypit runtime up|down` manages local package preparation, declared local Programs and the Worker.
+  Remote services have no lifecycle for Hypit to start or stop.
+- `hypit doctor` is the active, read-only check. Endpoint-owned diagnostics may authenticate and read a
+  remote capability catalog; normal preflight never does.

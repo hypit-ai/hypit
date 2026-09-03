@@ -4,6 +4,7 @@ import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
 import type { BuildResultRepository } from "@hypit/build-result";
 import type { BuildResultRepositoryLocation } from "@hypit/build-result-kit";
 import type { BuildResultRepositoryDiagnostic } from "@hypit/build-result-kit";
+import type { CanonicalValue } from "@hypit/protocol";
 
 export type CliCompilerOptions = {
   /** Canonical containment boundary for Author and Run Sources plus source assets. */
@@ -24,6 +25,8 @@ export type CliDistribution = {
   readonly packageRoot?: string;
   /** Explicit Host bootstrap packages; never inferred from Source contents. */
   readonly bootstrapPackages: readonly LoadedPackage[];
+  /** Product-owned starter Profile. The generic CLI only writes this explicit value. */
+  readonly initialRuntimeProfile?: CanonicalValue;
   createCompiler(options: CliCompilerOptions): NodeCompiler;
   /**
    * Read the self-described Run Source and its Author Source closure, then return

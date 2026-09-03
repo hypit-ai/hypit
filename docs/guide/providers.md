@@ -135,6 +135,18 @@ start work. It keeps environment names as references until a matching Need is ha
 presence is diagnosed through the generic CredentialStore path; a Provider must not special-case
 environment variables as a secret Store.
 
+An activation may also return `diagnose(context)`. It runs only for an explicit active `doctor`, after
+the Runtime has resolved that Endpoint's declared credential slots. It may make a bounded, read-only
+request to the real service, such as reading the authenticated model catalog. It must not be called by
+Build preflight and must never submit generation work.
+
+A paid capability may declare `quote(context)` beside its handler. The quote belongs to the Provider
+because the selected Provider owns the currency, rate card and routing facts. It receives one exact
+`Need`, may read a live rate card, and returns either an estimate with its source and observation time
+or an honest `unknown`; it never submits work. Do not copy changing service prices into Core, model
+packages, the CLI or Skill. A static graph plan does not yet claim a complete total when exact downstream
+Needs are only produced during execution.
+
 ## 5. Declare a Managed Program when needed
 
 If the Provider depends on a warm external program, export its declaration beside the Endpoint.
@@ -170,10 +182,10 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 ```
 
-`hypit runtime up` prepares, starts and probes declared Managed Programs before starting the
+`hypit runtime up` prepares, starts and probes declared **local** Managed Programs before starting the
 durable Worker. `build` only preflights Programs backing capabilities demanded by its plan and
 fails before submission when one is not ready; it never installs or starts one. Providers that call
-only remote APIs omit `program` entirely.
+only remote APIs omit `program` entirely; Hypit has no `up` or `down` lifecycle for those services.
 
 ## 6. Install
 

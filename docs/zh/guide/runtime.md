@@ -181,6 +181,7 @@ SQLite 或 Credential Store。
 ## 生命周期
 
 ```bash
+hypit runtime init
 hypit runtime use hypit.runtime.json
 hypit runtime up
 hypit runtime status
@@ -188,13 +189,28 @@ hypit runtime logs
 hypit runtime down
 ```
 
+`runtime init` 会把视频 Distribution 提供的起始 Profile 写入 `hypit.runtime.json`，并为已经解析
+出的项目选择它；已有文件一律拒绝覆盖。这只是本地文件操作：不安装包、不连接服务、不索取凭据，
+也不启动 Worker。官方起始 Profile 使用 HypiHub 提供远程生成、Gemini 与 WhisperX，使用本地
+Endpoint 处理媒体并通过 HyperFrames 渲染。这是 Distribution 的开箱选择，不是 Core 规则；使用
+BYOK 或本地 Provider 时可以编辑 Profile 或选择另一份 Profile。
+
 `runtime use` 把一份显式 Profile 绑定到一个已经解析完成的项目。项目来自 `--workspace`，
 或当前目录声明的 package 边界；Runtime 选择不能反过来定义项目。命令只读取
 `<project>/.hypit/runtime`，不会扫描约定文件名，也不会继承父项目的选择。即使几个项目声明
 了等价的外部 Endpoint，它们也必须分别完成选择。
 
-`runtime up` 先让 npm 把所选 Adapter 的精确上游包准备到机器共享目录，再准备 Managed
-Program 并启动本地 Worker。`build` 不做部署：它执行便宜只读预检，只在就绪后提交，并确保
+`runtime up` 先让 npm 把所选 Adapter 的精确上游包准备到机器共享目录，再准备所选的**本地**
+Managed Program 并启动本地 Worker。它不会启动、重启、登录或探测 HypiHub 这类远程 Endpoint。
+`runtime down` 只停止本地 Worker；由 Runtime 管理的本地 Program 会继续可用，直到显式运行
+`programs down`。
+
+`doctor` 才是主动但只读的环境检查。它解析已声明的凭据，并允许每个所选 Endpoint 检查真实
+环境；远程 Provider 因而可以访问一次有界的模型目录或能力接口。登录成功只证明凭据存在，
+doctor 成功才证明该账户此刻可以路由所选 Endpoint 声明的能力。普通 `check`、`plan` 和 Build 预检都不会运行这类
+主动探测，也不会把环境检查偷换成隐藏网络请求。
+
+`build` 不做部署：它执行便宜只读预检，只在就绪后提交，并确保
 Worker 可用。`activity`、`cancel` 用来观察和控制活跃工作；`status` 分别读取 Runtime 与 Result，一边失败
 不会伪造或吞掉另一边的事实。没有 Runtime 时，已完成 Result 也只证明 Result 的 outcome，不能反推 Runtime。
 

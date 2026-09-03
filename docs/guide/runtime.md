@@ -196,12 +196,20 @@ their declared programs. The commands do not open SQLite or Credential Stores.
 ## Lifecycle
 
 ```bash
+hypit runtime init
 hypit runtime use hypit.runtime.json
 hypit runtime up
 hypit runtime status
 hypit runtime logs
 hypit runtime down
 ```
+
+`runtime init` writes the video Distribution's starter Profile to `hypit.runtime.json` and selects
+it for the resolved project. It refuses to overwrite an existing file. This is a local file operation:
+it installs no package, contacts no service, requests no credential and starts no Worker. The official
+starter selects HypiHub for remote generation, Gemini and WhisperX, plus local media processing and
+HyperFrames rendering. This is a Distribution default, not a Core rule; edit the Profile or select a
+different one when using BYOK or local Providers.
 
 `runtime use` binds one explicit Profile to one already resolved project. The project comes from
 `--workspace`, or from the current directory's declared package boundary; the selection never
@@ -210,8 +218,18 @@ conventionally named Profile and do not inherit a selection from a parent projec
 therefore select separately, even when their Profiles declare equivalent external Endpoints.
 
 `runtime up` asks npm to prepare the selected adapters' exact upstream packages in the shared
-machine home, prepares declared Managed Programs, then starts the local Worker. `build` performs no
-provisioning: it runs cheap read-only preflight, submits work only when ready, and ensures the Worker
+machine home, prepares declared **local** Managed Programs, then starts the local Worker. It does not
+start, restart, log into or probe remote Endpoints such as HypiHub. `runtime down` stops only the
+local Worker; separately managed local Programs remain available until `programs down`.
+
+`doctor` is the active read-only environment check. It resolves declared credentials and lets each
+selected Endpoint verify its real environment; a remote Provider may therefore contact its bounded
+catalog or capability endpoint. Login proves only that a credential exists, while a successful doctor
+proves that the selected Endpoint's declared capabilities can be routed by that account at that moment.
+Ordinary `check`, `plan` and Build preflight
+never run these active probes and never turn environment inspection into a hidden network request.
+
+`build` performs no provisioning: it runs cheap read-only preflight, submits work only when ready, and ensures the Worker
 is available. `activity` and `cancel` observe or control active work. `status` reads Runtime and Result as
 independent sources, so failure on one side neither invents nor hides facts on the other. Without a
 Runtime, a finished Result proves only its own outcome.

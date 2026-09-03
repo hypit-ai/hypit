@@ -2,7 +2,7 @@ import type { EndpointPackage } from "@hypit/endpoint-kit";
 import type { HostFacet } from "@hypit/host";
 import type { CanonicalValue } from "@hypit/protocol";
 import { credentialRef } from "@hypit/runtime";
-import type { CredentialRef, CredentialStore } from "@hypit/runtime";
+import type { CredentialRef, CredentialStore, CredentialValue } from "@hypit/runtime";
 
 export const runtimeEndpointAdapterHostAbi = "hypit.runtime-endpoint-adapter-host@1";
 export const runtimeCredentialStoreAdapterHostAbi = "hypit.runtime-credential-store-adapter-host@1";
@@ -63,7 +63,10 @@ export type ManagedProgram = {
 export type RuntimeEndpointActivation = {
   readonly endpoint: EndpointPackage;
   readonly program?: ManagedProgram;
-  readonly diagnose?: () => readonly RuntimeDoctorDiagnostic[] | Promise<readonly RuntimeDoctorDiagnostic[]>;
+  readonly diagnose?: (context: {
+    readonly credentials: Readonly<Record<string, CredentialValue>>;
+    readonly capabilities?: readonly import("@hypit/protocol").CapabilityRef[];
+  }) => readonly RuntimeDoctorDiagnostic[] | Promise<readonly RuntimeDoctorDiagnostic[]>;
 };
 
 export type RuntimeOpened<T> = {

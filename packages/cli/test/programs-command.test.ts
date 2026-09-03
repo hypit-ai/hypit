@@ -163,7 +163,7 @@ test("runtime status keeps scheduling phases out of the default view", async () 
     write(text) { output += text; },
   }, selected);
 
-  assert.match(output, /Runtime deployment ready/u);
+  assert.match(output, /Local Runtime ready/u);
   assert.match(output, /Active Builds\s+0/u);
   assert.doesNotMatch(output, /\bStarting\b|\bWaiting\b|\bDecided\b|Running turn|Capacity in use/u);
 });

@@ -8,14 +8,17 @@ import {
   runtimeConfigString,
 } from "@hypit/runtime-kit";
 
-import { createHypiHubProvider } from "./provider.js";
+import { createHypiHubProvider, diagnoseHypiHubProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@hypit/provider-hypihub",
   activate(context) {
     if (context.pool === undefined) throw new Error("HypiHub Provider Pool is required");
     const config = runtimeConfigObject(context.config, "HypiHub");
-    runtimeConfigExact(config, ["baseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs", "requestTimeoutMs", "audio"], "HypiHub");
+    runtimeConfigExact(config, [
+      "baseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs", "requestTimeoutMs", "audio",
+      "transcriptionModel",
+    ], "HypiHub");
     const baseUrl = runtimeConfigString(config.baseUrl, "HypiHub baseUrl");
     if (baseUrl !== undefined) {
       const url = new URL(baseUrl);
@@ -29,8 +32,8 @@ const adapter = createRuntimeEndpointAdapterFacet({
     const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "HypiHub pollIntervalMs");
     const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "HypiHub requestTimeoutMs");
     const audio = runtimeConfigBoolean(config.audio, "HypiHub audio");
-    return {
-      endpoint: createHypiHubProvider({
+    const transcriptionModel = runtimeConfigString(config.transcriptionModel, "HypiHub transcriptionModel");
+    const options = {
         instance: context.instance,
         pool: context.pool,
         ...(baseUrl === undefined ? {} : { baseUrl }),
@@ -39,7 +42,11 @@ const adapter = createRuntimeEndpointAdapterFacet({
         ...(pollIntervalMs === undefined ? {} : { pollIntervalMs }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
         ...(audio === undefined ? {} : { audio }),
-      }),
+        ...(transcriptionModel === undefined ? {} : { transcriptionModel }),
+      };
+    return {
+      endpoint: createHypiHubProvider(options),
+      diagnose: async (doctor) => await diagnoseHypiHubProvider(options, doctor),
     };
   },
 });

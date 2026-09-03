@@ -1,4 +1,4 @@
-import type { AsyncEndpoint, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
+import type { AsyncEndpoint, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointStartContext, EndpointOutcome, EndpointPriceQuote, EndpointQuoteContext, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
 import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
 import { geminiCapabilities, geminiModels, verifyGeminiRequest } from "@hypit/gemini";
 import type { GeminiRequest } from "@hypit/gemini";
@@ -6,10 +6,19 @@ import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CapabilityRef } from "@hypit/protocol";
 import { credentialRef } from "@hypit/runtime";
 import type { CredentialRef, ResourceStore } from "@hypit/runtime";
+import { sealAlignedTranscriptEvidence, speechEvidenceTypes } from "@hypit/speech-evidence";
 import { sealText } from "@hypit/text";
 import { textTypes } from "@hypit/text";
+import {
+  assertWhisperXEvidenceWav,
+  interpretWhisperXTranscript,
+  verifyWhisperXAlignmentRequest,
+  whisperXCapabilities,
+} from "@hypit/whisperx";
+import type { WhisperXTranscriptResponse } from "@hypit/whisperx";
 import { createHypiHubGeminiGenerator } from "./gemini.js";
 import { hypiHubRouteForCapability, hypiHubRoutes } from "./routes.js";
+import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-kit";
 
 export const hypiHubProviderModuleRef = { name: "@hypit/provider-hypihub", version: "1" } as const;
 
@@ -23,6 +32,8 @@ export type CreateHypiHubProviderOptions = {
   readonly requestTimeoutMs?: number;
   /** Expose HypiHub VoiceDesign. Defaults to enabled; set false only for an explicit alternate Provider. */
   readonly audio?: boolean;
+  /** HypiHub model used for the Provider-neutral WhisperX alignment capability. */
+  readonly transcriptionModel?: string;
   readonly fetch?: typeof globalThis.fetch;
   /** Overrides the default POST /v1/files upload for referenced artifacts. */
   readonly publicAssetUrl?: (artifact: BlobRef, artifacts: ResourceStore) => Promise<string>;
@@ -43,6 +54,11 @@ function apiBaseUrl(value: string): string {
   return `${origin}/v1`;
 }
 function credential(context: EndpointInvocationContext): string {
+  const value = context.credentials.apiKey?.secret;
+  assert(typeof value === "string" && value.length > 0, "HypiHub login is unavailable; run hypit auth login for HypiHub");
+  return value;
+}
+function quoteCredential(context: EndpointQuoteContext): string {
   const value = context.credentials.apiKey?.secret;
   assert(typeof value === "string" && value.length > 0, "HypiHub login is unavailable; run hypit auth login for HypiHub");
   return value;
@@ -69,11 +85,121 @@ function jobId(value: Record<string, unknown>): string {
   return id;
 }
 
-async function verifyModelRoute(client: HypiHubClient, apiKey: string, model: string, operation: "images" | "image_edits" | "videos" | "audio_speech"): Promise<void> {
+type HypiHubModelOperation = "images" | "image_edits" | "videos" | "audio_speech" | "transcriptions" | "gemini";
+
+async function verifyModelRoute(client: HypiHubClient, apiKey: string, model: string, operation: HypiHubModelOperation): Promise<Record<string, unknown>> {
   const card = await client.json(`/models/${encodeURIComponent(model)}`, apiKey);
   const endpoints = card.endpoints;
   assert(Array.isArray(endpoints) && endpoints.includes(operation),
     `HypiHub model ${model} is not enabled for ${operation} with this API key`);
+  return card;
+}
+
+function numeric(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+function firstNumber(input: Record<string, unknown>, keys: readonly string[]): number | undefined {
+  for (const key of keys) {
+    const value = numeric(input[key]);
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+function ratioKey(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.toLowerCase();
+  if (normalized === "1024x1024") return "1k";
+  if (normalized === "2048x2048") return "2k";
+  if (normalized === "3840x2160") return "4k";
+  return normalized;
+}
+
+function ratio(table: unknown, key: string | undefined): number | undefined {
+  if (table === undefined || table === null) return 1;
+  if (typeof table !== "object" || Array.isArray(table)) return undefined;
+  if (key === undefined) return 1;
+  return numeric((table as Record<string, unknown>)[key]);
+}
+
+function modelQuote(
+  card: Record<string, unknown>,
+  input: Record<string, unknown>,
+  options: { readonly quantity?: number; readonly source: string; readonly observedAt: number },
+): EndpointPriceQuote {
+  const pricing = object(card.pricing, "HypiHub model pricing");
+  const mode = pricing.mode;
+  assert(typeof mode === "string" && mode.length > 0, "HypiHub model card has no pricing mode");
+  if (pricing.free === true) return {
+    status: "estimated",
+    amount: 0,
+    currency: "credits",
+    basis: { mode: "free", quantity: options.quantity ?? 1, rate: 0 },
+    source: options.source,
+    observedAt: options.observedAt,
+  };
+  const credits = object(pricing.credits, "HypiHub credit pricing");
+  let quantity: number;
+  let rate: number | undefined;
+  let base: number | undefined;
+  if (mode === "per_image") {
+    quantity = options.quantity ?? firstNumber(input, ["n"]) ?? 1;
+    rate = numeric(credits.base);
+  } else if (mode === "per_request") {
+    quantity = options.quantity ?? 1;
+    rate = numeric(credits.base);
+  } else if (mode === "per_second") {
+    quantity = options.quantity ?? firstNumber(input, ["seconds", "duration_seconds", "duration"]) ?? NaN;
+    rate = numeric(credits.per_second);
+  } else if (mode === "per_audio_second") {
+    quantity = options.quantity ?? NaN;
+    rate = numeric(credits.per_audio_second);
+    base = numeric(credits.base);
+  } else if (mode === "per_k_char") {
+    const text = [input.input, input.text, input.prompt].find((value) => typeof value === "string");
+    quantity = typeof text === "string" ? text.length / 1_000 : NaN;
+    rate = numeric(credits.per_k_char);
+  } else {
+    return { status: "unknown", reason: `HypiHub pricing mode ${mode} cannot be estimated before execution` };
+  }
+  if (!Number.isFinite(quantity) || quantity < 0 || rate === undefined) {
+    return { status: "unknown", reason: `HypiHub model card lacks the inputs required for ${mode} pricing` };
+  }
+  const factors = [
+    ratio(pricing.resolution_ratio, ratioKey(input.resolution)),
+    ratio(pricing.size_ratio, ratioKey(input.size)),
+    ratio(pricing.quality_ratio, ratioKey(input.quality)),
+  ];
+  const flagRatios = pricing.flag_ratio === undefined || pricing.flag_ratio === null
+    ? {}
+    : (typeof pricing.flag_ratio === "object" && !Array.isArray(pricing.flag_ratio)
+        ? pricing.flag_ratio as Record<string, unknown> : undefined);
+  if (flagRatios === undefined) {
+    return { status: "unknown", reason: "HypiHub model card has an invalid flag price table" };
+  }
+  for (const [flag, candidate] of Object.entries(flagRatios)) {
+    if (input[flag] === true) factors.push(numeric(candidate));
+  }
+  if (factors.some((factor) => factor === undefined)) {
+    return { status: "unknown", reason: "HypiHub model card has no price factor for this exact request" };
+  }
+  const multiplier = factors.reduce<number>((value, factor) => value * factor!, 1);
+  const amount = Math.round((((base ?? 0) + quantity * rate) * multiplier) * 10_000) / 10_000;
+  return {
+    status: "estimated",
+    amount,
+    currency: "credits",
+    basis: {
+      mode,
+      quantity,
+      rate,
+      ...(base === undefined ? {} : { base }),
+      ...(multiplier === 1 ? {} : { multiplier }),
+    },
+    source: options.source,
+    observedAt: options.observedAt,
+  };
 }
 
 function dataUrl(bytes: Uint8Array, mediaType: string): string {
@@ -148,6 +274,111 @@ class HypiHubClient {
   }
 }
 
+function cardEndpoints(card: Record<string, unknown> | undefined): readonly string[] {
+  return Array.isArray(card?.endpoints)
+    ? card.endpoints.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+/** Active, read-only HypiHub check used only by doctor. */
+export async function diagnoseHypiHubProvider(
+  options: CreateHypiHubProviderOptions,
+  context: {
+    readonly credentials: Readonly<Record<string, { readonly secret: string }>>;
+    readonly capabilities?: readonly CapabilityRef[];
+  },
+): Promise<readonly RuntimeDoctorDiagnostic[]> {
+  const apiKey = context.credentials.apiKey?.secret;
+  assert(typeof apiKey === "string" && apiKey.length > 0, "HypiHub login is unavailable");
+  const client = new HypiHubClient({
+    baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"),
+    timeout: options.requestTimeoutMs ?? 30_000,
+    fetcher: options.fetch ?? globalThis.fetch,
+  });
+  const response = await client.json("/models", apiKey);
+  assert(Array.isArray(response.data), "HypiHub model catalogue has no data array");
+  const cards = new Map<string, Record<string, unknown>>();
+  for (const value of response.data) {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) continue;
+    const card = value as Record<string, unknown>;
+    if (typeof card.id === "string") cards.set(card.id, card);
+  }
+  const transcriptionModel = options.transcriptionModel?.trim() || "victor-upmeet/whisperx";
+  const diagnostics: RuntimeDoctorDiagnostic[] = [];
+  for (const capability of context.capabilities ?? []) {
+    let available = false;
+    if (capabilityKey(capability) === capabilityKey(whisperXCapabilities.alignment)) {
+      available = cardEndpoints(cards.get(transcriptionModel)).includes("transcriptions");
+    } else if (geminiModels.some((model) => model === capability.name)
+      && capability.module.name === geminiCapabilities[geminiModels[0]].module.name
+      && capability.module.version === geminiCapabilities[geminiModels[0]].module.version) {
+      available = cardEndpoints(cards.get(capability.name)).includes("gemini");
+    } else {
+      const route = hypiHubRouteForCapability(capability);
+      if (route !== undefined) {
+        const acceptable = route.media === "image" ? ["images", "image_edits"]
+          : route.media === "video" ? ["videos"] : ["audio_speech"];
+        available = route.routes.some(({ model }) => cardEndpoints(cards.get(model))
+          .some((endpoint) => acceptable.includes(endpoint)));
+      }
+    }
+    if (!available) diagnostics.push({
+      severity: "error",
+      code: "HYPIHUB_CAPABILITY_UNAVAILABLE",
+      message: `HypiHub login cannot currently route ${capabilityKey(capability)}`,
+      subject: capabilityKey(capability),
+    });
+  }
+  return diagnostics;
+}
+
+function generationOperation(route: (typeof hypiHubRoutes)[number], input: Record<string, unknown>): HypiHubModelOperation {
+  if (route.media === "audio") return "audio_speech";
+  if (route.media === "video") return "videos";
+  const hasReferences = Object.entries(input).some(([key, value]) => {
+    if (!["images", "reference_images", "reference_image_urls", "reference_videos", "reference_audios", "first_frame", "last_frame"].includes(key)) return false;
+    return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value.length > 0;
+  });
+  return hasReferences ? "image_edits" : "images";
+}
+
+async function quoteHypiHubNeed(
+  client: HypiHubClient,
+  context: EndpointQuoteContext,
+  transcriptionModel: string,
+): Promise<EndpointPriceQuote> {
+  const observedAt = Date.now();
+  const apiKey = quoteCredential(context);
+  if (capabilityKey(context.need.capability) === capabilityKey(whisperXCapabilities.alignment)) {
+    const request = verifyWhisperXAlignmentRequest(context.need.constraints);
+    const card = await verifyModelRoute(client, apiKey, transcriptionModel, "transcriptions");
+    return modelQuote(card, {}, {
+      quantity: request.sampleFrames / 16_000,
+      source: `${client.baseUrl}/models/${encodeURIComponent(transcriptionModel)}`,
+      observedAt,
+    });
+  }
+  if (geminiModels.some((model) => model === context.need.capability.name)
+    && context.need.capability.module.name === geminiCapabilities[geminiModels[0]].module.name
+    && context.need.capability.module.version === geminiCapabilities[geminiModels[0]].module.version) {
+    const model = context.need.capability.name;
+    const card = await verifyModelRoute(client, apiKey, model, "gemini");
+    return modelQuote(card, {}, {
+      source: `${client.baseUrl}/models/${encodeURIComponent(model)}`,
+      observedAt,
+    });
+  }
+  const route = hypiHubRouteForCapability(context.need.capability);
+  if (route === undefined) return { status: "unknown", reason: "HypiHub does not quote this capability" };
+  const compiled = await route.compile(context.need.constraints, async () => "https://quote.invalid/reference");
+  const input = compiled.input as Record<string, unknown>;
+  const card = await verifyModelRoute(client, apiKey, compiled.model, generationOperation(route, input));
+  return modelQuote(card, input, {
+    source: `${client.baseUrl}/models/${encodeURIComponent(compiled.model)}`,
+    observedAt,
+  });
+}
+
 async function complete(client: HypiHubClient, apiKey: string, route: (typeof hypiHubRoutes)[number], id: string, artifacts: ResourceStore): Promise<EndpointOutcome> {
   const response = await client.json(`/jobs/${encodeURIComponent(id)}/assets`, apiKey); const items = response.items;
   assert(Array.isArray(items) && items.length > 0, "HypiHub job has no assets"); const blobs: BlobRef[] = [];
@@ -186,15 +417,10 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
         const compiled = await route.compile(context.need.constraints, resolve);
         assert(route.media !== "audio", "HypiHub audio capabilities use an immediate endpoint");
         const input = compiled.input as Record<string, unknown>;
-        const hasReferences = Object.entries(input).some(([key, value]) => {
-          if (!["images", "reference_images", "reference_image_urls", "reference_videos", "reference_audios", "first_frame", "last_frame"].includes(key)) return false;
-          return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value.length > 0;
-        });
-        const path = route.media === "image"
-          ? (hasReferences ? "/images/edits" : "/images/generations")
-          : "/videos";
-        await verifyModelRoute(client, apiKey, compiled.model,
-          path === "/images/edits" ? "image_edits" : path === "/images/generations" ? "images" : "videos");
+        const operation = generationOperation(route, input);
+        const path = operation === "image_edits" ? "/images/edits"
+          : operation === "images" ? "/images/generations" : "/videos";
+        await verifyModelRoute(client, apiKey, compiled.model, operation);
         const response = await client.json(path, apiKey, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": context.operation }, body: JSON.stringify({ model: compiled.model, ...input }) });
         const status = response.status; if (status === "succeeded" || status === "completed") return await complete(client, apiKey, route, jobId(response), context.resources);
         const handle: Handle = { contract: "hypit.hypihub-operation@1", jobId: jobId(response), route: capabilityKey(route.capability), startedAt: Date.now() };
@@ -250,6 +476,34 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     const value = await generate({ parts, instruction: request.instruction });
     return { value: { kind: "inline", value: canonicalize(sealText(value)) } };
   };
+  const transcriptionModel = options.transcriptionModel?.trim() || "victor-upmeet/whisperx";
+  const whisperXEndpoint: ImmediateEndpointHandler = async (context) => {
+    try {
+      const request = verifyWhisperXAlignmentRequest(context.need.constraints);
+      const bytes = await context.resources.get(request.audio.resource);
+      assert(bytes !== undefined && bytes.byteLength === request.audio.size,
+        `WhisperX evidence Artifact ${request.audio.resource} is unavailable or has changed`);
+      assertWhisperXEvidenceWav(bytes, request.sampleFrames);
+      const apiKey = credential(context);
+      await verifyModelRoute(client, apiKey, transcriptionModel, "transcriptions");
+      const copy = new ArrayBuffer(bytes.byteLength);
+      new Uint8Array(copy).set(bytes);
+      const form = new FormData();
+      form.append("model", transcriptionModel);
+      form.append("file", new Blob([copy], { type: request.audio.mediaType }), "alignment-evidence.wav");
+      form.append("response_format", "verbose_json");
+      form.append("language", request.language);
+      form.append("timestamp_granularities[]", "segment");
+      form.append("timestamp_granularities[]", "word");
+      const response = await client.json("/audio/transcriptions", apiKey, { method: "POST", body: form });
+      const evidence = sealAlignedTranscriptEvidence({
+        passages: interpretWhisperXTranscript(response as WhisperXTranscriptResponse, request.sampleFrames),
+      });
+      return { value: { kind: "inline", value: canonicalize(evidence) } };
+    } catch (error) {
+      throw new Error(guidedMessage(error), { cause: error });
+    }
+  };
   return defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
     credentials: { apiKey: options.apiKey ?? credentialRef("os", "hypihub.oauth") },
@@ -268,15 +522,26 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       ...hypiHubRoutes
       .filter((route) => options.audio !== false || route.media !== "audio")
       .map((route) => route.media === "audio"
-        ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, lane: route.capability.name }
-        : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, lane: route.capability.name }),
+        ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, lane: route.capability.name,
+            quote: async (context: EndpointQuoteContext) => await quoteHypiHubNeed(client, context, transcriptionModel) }
+        : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, lane: route.capability.name,
+            quote: async (context: EndpointQuoteContext) => await quoteHypiHubNeed(client, context, transcriptionModel) }),
       ...geminiModels.map((model) => ({
         capability: geminiCapabilities[model],
         returns: textTypes.text,
         lifecycle: "immediate" as const,
         handler: geminiEndpoint,
         lane: "gemini",
+        quote: async (context: EndpointQuoteContext) => await quoteHypiHubNeed(client, context, transcriptionModel),
       })),
+      {
+        capability: whisperXCapabilities.alignment,
+        returns: speechEvidenceTypes.alignedTranscript,
+        lifecycle: "immediate" as const,
+        handler: whisperXEndpoint,
+        lane: "transcription",
+        quote: async (context: EndpointQuoteContext) => await quoteHypiHubNeed(client, context, transcriptionModel),
+      },
     ],
   });
 }
