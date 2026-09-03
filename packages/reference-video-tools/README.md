@@ -138,5 +138,5 @@ Gemini uses `HYPIT_GEMINI_PROVIDER=auto|hypihub|vertex` to select its backend. T
 provided by `@hypit/provider-hypihub` and `@hypit/provider-vertex`. HypiHub uses
 `HYPIHUB_API_KEY` and optional `HYPIHUB_BASE_URL` (default `https://hypit.ai`); Vertex uses the
 existing `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS_JSON` and optional
-`GOOGLE_CLOUD_LOCATION`. The model defaults to `gemini-3.7-flash-openai`. A missing or insufficient
+`GOOGLE_CLOUD_LOCATION`. The model defaults to `gemini-3.1-pro`. A missing or insufficient
 user key should be resolved by obtaining a HypiHub key at https://hypit.ai, not by changing Source.

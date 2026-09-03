@@ -12,7 +12,7 @@ test("Gemini Surface builds one provider-neutral need with ordered media edges",
     element: {
       kind: "element", name: "gemini:Generate",
       attributes: {
-        id: "read", model: "gemini-3.7-flash-openai",
+        id: "read", model: "gemini-3.1-pro",
         instruction: { kind: "reference", path: "instruction" },
         prompt: { kind: "reference", path: "prompt" },
       },
@@ -34,6 +34,6 @@ test("Gemini Surface builds one provider-neutral need with ordered media edges",
   });
   assert.equal(fragmentResult.fragments.length, 1);
   const operation = fragmentResult.fragments[0]!.operations.find((item) => item.id === "generate");
-  assert.deepEqual(operation?.producer, { module: geminiCapabilities["gemini-3.7-flash-openai"].module, name: "request-gemini-3.7-flash-openai" });
+  assert.deepEqual(operation?.producer, { module: geminiCapabilities["gemini-3.1-pro"].module, name: "request-gemini-3.1-pro" });
   assert.deepEqual(fragmentResult.components[0]?.outputs, { text: "read.text" });
 });
