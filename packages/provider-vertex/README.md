@@ -11,6 +11,6 @@ import { createVertexGeminiGenerator } from "@hypit/provider-vertex";
 const generate = createVertexGeminiGenerator({
   project: process.env.GOOGLE_CLOUD_PROJECT!,
   credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON!,
-  model: "gemini-3.7-flash-openai",
+  model: "gemini-3.1-pro",
 });
 ```
