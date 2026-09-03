@@ -31,7 +31,7 @@ jobs:
           asset_paths=$(git ls-tree -r --name-only "$SOURCE_SHA" -- docs/ \
             | jq -R -s 'split("\n")
               | map(select(length > 0))
-              | map(select(test("\\.(png|jpe?g|gif|webp|avif|svg|mp4|webm|mov|mp3|wav|ogg|woff2?|ttf)$"; "i")))')
+              | map(select(test("\\.(png|jpe?g|gif|webp|avif|svg|mp4|webm|mov|m4v|mp3|wav|ogg|woff2?|ttf|otf)$"; "i")))')
           payload=$(jq -n \
             --arg event_type "hypit-docs-updated" \
             --arg source_repo "$SOURCE_REPO" \
