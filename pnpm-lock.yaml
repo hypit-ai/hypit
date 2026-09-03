@@ -2422,9 +2422,6 @@ importers:
       '@hypit/core':
         specifier: workspace:*
         version: link:../core
-      '@hypit/credential-store-os':
-        specifier: workspace:*
-        version: link:../credential-store-os
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
@@ -2458,18 +2455,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/provider-hypihub':
-        specifier: workspace:*
-        version: link:../provider-hypihub
       '@hypit/provider-media-local':
         specifier: workspace:*
         version: link:../provider-media-local
-      '@hypit/provider-vertex':
-        specifier: workspace:*
-        version: link:../provider-vertex
-      '@hypit/provider-whisperx-local':
-        specifier: workspace:*
-        version: link:../provider-whisperx-local
       '@hypit/run-markup':
         specifier: workspace:*
         version: link:../run-markup
@@ -2491,6 +2479,9 @@ importers:
       '@hypit/svs':
         specifier: workspace:*
         version: link:../svs
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
       '@hypit/video-cli':
         specifier: workspace:*
         version: link:../video-cli

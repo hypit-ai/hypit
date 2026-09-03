@@ -7,12 +7,14 @@ import {
   loadNodePackageSelection,
 } from "@hypit/package-loader-node";
 import type { NodePackageSelectionRequest } from "@hypit/package-loader-node";
+import { EndpointRegistry } from "@hypit/driver-node";
+import type { EndpointFulfillment } from "@hypit/endpoint-kit";
 import { assertBuildId, canonicalize, canonicalStringify } from "@hypit/protocol";
-import type { CanonicalValue, CapabilityRef } from "@hypit/protocol";
+import type { CanonicalValue, CapabilityRef, Need } from "@hypit/protocol";
 import {
   CompositeCredentialStore,
 } from "@hypit/runtime";
-import type { CredentialStore, CredentialValue } from "@hypit/runtime";
+import type { CredentialStore, CredentialValue, ResourceStore } from "@hypit/runtime";
 import { FileResourceStore } from "@hypit/resource-store-fs";
 import { FileBuildResultRepository } from "@hypit/build-result";
 import {
@@ -470,6 +472,62 @@ export async function describeRuntimeConfigProviders(
       ...(pricing === undefined ? {} : { pricing: structuredClone(pricing) }),
     };
   });
+}
+
+/**
+ * Execute one immediate Need through the selected Profile, outside any Build.
+ *
+ * This is the creation-time boundary: the same Endpoint activation, capability resolution and
+ * credential resolution a Build uses, with no Build id, Worker, Result or stored state. The caller
+ * owns the ResourceStore, so whatever the Endpoint reads or returns stays in the caller's hands.
+ * Asynchronous capabilities are refused: slow paid generation goes through a Build.
+ */
+export async function invokeRuntimeConfigNeed(
+  path: string,
+  need: Need,
+  resources: ResourceStore,
+  options: LoadRuntimeConfigOptions = {},
+): Promise<EndpointFulfillment> {
+  const { absolute, document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
+  const registry = options.registry ?? new RuntimeAdapterRegistry();
+  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
+  const activations = await activatedEndpoints(document, root, hostStateRoot, registry);
+  const endpoints = new EndpointRegistry();
+  for (const { activation } of activations) await activation.endpoint.install(endpoints);
+  const subject = capabilityKey(need.capability);
+  const resolution = endpoints.resolve(need);
+  if (resolution.status === "missing") {
+    throw new Error(`No Endpoint in ${absolute} serves ${subject}; hypit plan --runtime ${absolute} shows which Endpoint each capability needs`);
+  }
+  if (resolution.status === "ambiguous") {
+    throw new Error(`Several Endpoints in ${absolute} serve ${subject}: ${resolution.endpointIds.join(", ")}; keep exactly one`);
+  }
+  const registration = resolution.registration;
+  if (registration.kind !== "immediate") {
+    throw new Error(`${subject} is an asynchronous capability; creation-time calls only use immediate capabilities, submit a Build for it`);
+  }
+  const activation = activations.find(({ activation: item }) => item.endpoint.instance.id === registration.id)?.activation;
+  if (activation === undefined) throw new Error(`Endpoint ${registration.id} is not declared by ${absolute}`);
+  const stores = await openCredentialStores(document, root, hostStateRoot, registry);
+  try {
+    const credentials: Record<string, CredentialValue> = {};
+    for (const slot of activation.endpoint.credentials) {
+      const value = await stores.store.resolve(slot.ref);
+      if (value === undefined) {
+        throw new Error(`${slot.label} for Endpoint ${slot.endpoint} is not configured. Configure it with: hypit auth login ${slot.endpoint} --runtime ${absolute}`);
+      }
+      credentials[slot.slot] = value;
+    }
+    return await registration.handler({
+      command: { kind: "fulfill-need", id: `command:${need.id}`, need },
+      need,
+      resources,
+      credentials,
+    });
+  } finally {
+    await stores.close();
+  }
 }
 
 function diagnostic(error: unknown, code: string, subject?: string): RuntimeDoctorDiagnostic {

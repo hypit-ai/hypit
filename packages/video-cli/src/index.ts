@@ -16,6 +16,8 @@ export {
 } from "./compiler.js";
 export { videoCliDistribution } from "./distribution.js";
 export { discoverVideoSourcePackages } from "./package-selection.js";
+/** The project's selected Runtime Profile, read the way `hypit` reads it, for tools that run beside the CLI. */
+export { findRuntimeProfile } from "@hypit/cli";
 
 export function runVideoCli(
   argv: readonly string[],

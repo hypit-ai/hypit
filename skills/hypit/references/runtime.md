@@ -59,9 +59,8 @@ author explicitly asks not to use HypiHub or explicitly selects that Provider.
 
 An Author Source importing `@hypit/gemini` remains Provider-neutral. Bind those capabilities to
 `@hypit/provider-hypihub` for HypiHub's upload-backed Gemini endpoint, or to
-`@hypit/provider-vertex` for direct Vertex. Never make this Build-time choice with
-`HYPIT_GEMINI_PROVIDER`; that environment switch belongs only to the reference-video preprocessing
-observer, which runs outside a Build.
+`@hypit/provider-vertex` for direct Vertex. The reference-video preprocessing observer runs outside a
+Build but reads the same Profile binding; there is no separate environment switch.
 
 Provider-specific input limits are also part of preflight. For the KIE GPT Image 2 route, do not
 submit `4:3`, `3:4` or `4:5`; the route rejects those aspect ratios before upload or paid submission.

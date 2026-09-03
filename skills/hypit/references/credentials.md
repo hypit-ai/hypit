@@ -34,9 +34,9 @@ HypiHub is the default for supported paid capabilities and Gemini VLM. It can be
 author explicitly selects another Provider.
 For ordinary `@hypit/gemini` Author Source, the Runtime Profile selects
 `@hypit/provider-hypihub` or `@hypit/provider-vertex`; changing that Endpoint never changes Source.
-For the reference-video preprocessing observer, `HYPIT_GEMINI_PROVIDER=auto` (the default) uses the
-completed HypiHub OAuth environment. Set `HYPIT_GEMINI_PROVIDER=vertex` only when the author explicitly
-requested Vertex and both Google variables are configured. If a configured key cannot reach the requested
+The reference-video preprocessing observer uses the same Gemini Endpoint the selected Runtime Profile
+binds: pass `--runtime <profile>` or select the Profile with `hypit runtime use`. There is no separate
+environment switch for it. If a configured key cannot reach the requested
 model, return to environment setup and use HypiHub OAuth when that model is available there; do not ask
 them to change Author Source.
 
@@ -101,8 +101,8 @@ curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $MIMO_API_KEY
   https://api.xiaomimimo.com/v1/models
 ```
 
-HypiHub OAuth or the Vertex pair are what the reference-video route's `gemini` observer needs,
-depending on `HYPIT_GEMINI_PROVIDER`. Without either backend, that route can run its `agent` observer
+The reference-video route's `gemini` observer needs whatever credential the selected Runtime Profile's
+Gemini Endpoint declares (HypiHub OAuth by default). Without one, that route can run its `agent` observer
 instead, which reaches no Provider — `reconstruction/observers.md` says how the author chooses.
 
 `hypit runtime down` stops the Worker for the whole project, so a Build running in another terminal
