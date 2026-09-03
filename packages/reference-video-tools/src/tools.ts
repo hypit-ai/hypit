@@ -1037,7 +1037,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       ...(projectPackageDirectories.length === 0 && expected.size === 0 ? { note: "no project-owned packages declared" } : {}),
     };
   }
-  const model = options.model ?? process.env.GEMINI_MODEL?.trim() ?? "gemini-3.7-flash-openai";
+  const model = options.model ?? process.env.GEMINI_MODEL?.trim() ?? "gemini-3.1-pro";
   // Pacing is deployment policy, not author intent: it depends on the quota behind the credentials,
   // which the calling agent has no way to know. It is settable here and through the environment, and
   // deliberately not through a CLI flag.

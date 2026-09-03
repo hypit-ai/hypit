@@ -34,8 +34,15 @@ function wav(sampleFrames: number): Uint8Array {
 
 async function serving(response: unknown, run: () => Promise<void>): Promise<void> {
   const original = globalThis.fetch;
-  globalThis.fetch = (async (input: RequestInfo | URL) => new Response(JSON.stringify(String(input).endsWith("/health")
-    ? {
+  const originalApiKey = process.env.HYPIHUB_API_KEY;
+  // The provider call is fully mocked below; give it a deterministic credential so the
+  // tests exercise request shaping and transcript parsing rather than the developer's
+  // local credential store (which is intentionally absent on CI runners).
+  process.env.HYPIHUB_API_KEY = "test-hypihub-key";
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    const body = url.endsWith("/health")
+      ? {
         ok: true,
         protocol: "hypit.whisperx-service@1",
         serviceVersion: "0.1.0",
@@ -45,8 +52,18 @@ async function serving(response: unknown, run: () => Promise<void>): Promise<voi
         compute: "int8",
         batchSize: 8,
       }
-    : response), { headers: { "content-type": "application/json" } })) as typeof fetch;
-  try { await run(); } finally { globalThis.fetch = original; }
+      : url.includes("/models/")
+        ? { name: "victor-upmeet/whisperx", endpoints: ["transcriptions"] }
+        : url.endsWith("/files")
+          ? { url: "https://hypit.ai/test-reference.wav" }
+        : response;
+    return new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+  try { await run(); } finally {
+    globalThis.fetch = original;
+    if (originalApiKey === undefined) delete process.env.HYPIHUB_API_KEY;
+    else process.env.HYPIHUB_API_KEY = originalApiKey;
+  }
 }
 
 test("every word carries its own start and end in seconds, not only the passage around it", async () => {

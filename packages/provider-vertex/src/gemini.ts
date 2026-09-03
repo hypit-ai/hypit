@@ -29,7 +29,7 @@ function parseCredentials(value: Record<string, unknown> | string): Record<strin
 export function createVertexGeminiGenerator(options: VertexGeminiGeneratorOptions) {
   const project = options.project.trim();
   assert(project.length > 0, "Vertex project is empty");
-  const model = options.model?.trim() || "gemini-3.7-flash-openai";
+  const model = options.model?.trim() || "gemini-3.1-pro";
   const client = new GoogleGenAI({
     vertexai: true,
     project,

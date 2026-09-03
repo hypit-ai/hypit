@@ -51,6 +51,18 @@ lookup table.
 calls no visual provider; it returns observation tasks with local pictures and transcript context for
 the calling agent to answer through `record_observation`.
 
+It also produces `transcript`: the verbatim speech of the whole reference with a start and an end for
+every single word. Placing an on-screen text reveal against the line that triggers it needs the time
+of the word, not of the sentence around it, and that question comes up in every reconstruction. The
+speech audio is extracted to `speech.wav` beside the shot media and measured through the
+`@hypit/whisperx#whisperx-alignment` capability. This tool currently instantiates the local WhisperX
+Provider directly; routing it through the selected Runtime Profile is pending.
+The result reports `status`, `transcript_ref` and `word_count`, and the words themselves live in
+`transcript.json` as passages, each with a `words` array of `{ text, start_seconds, end_seconds, score }`.
+The transcript is deterministic local evidence rather than an observation: it is never written to the
+observation cache and nothing about it is sent to Gemini. An unavailable WhisperX Provider reports
+`status: "unavailable"` with the reason and prepares everything else.
+
 Prepared stages are reused until the caller explicitly asks for `--redo ...` or `--reobserve`. This
 is ordinary working data for one reference, not Build history.
 
@@ -77,7 +89,7 @@ Reference observation uses `HYPIT_GEMINI_PROVIDER=auto|hypihub|vertex`. HypiHub 
 `hypihub.oauth` session written by `hypit auth login` from the OS credential store, then falls back to
 `HYPIHUB_API_KEY`; `HYPIHUB_BASE_URL` remains optional. Vertex reads `GOOGLE_CLOUD_PROJECT`,
 `GOOGLE_APPLICATION_CREDENTIALS_JSON` and optional `GOOGLE_CLOUD_LOCATION`. Gemini defaults to
-`gemini-3.7-flash-openai`.
+`gemini-3.1-pro`.
 
 Transcript preparation uses the selected local WhisperX service. Start services through the normal
 Runtime configuration with `hypit runtime up`. `HYPIT_REFERENCE_CONCURRENCY` and
