@@ -29,10 +29,11 @@ component choices and package gaps are decided globally there before any variant
 This route has a hard environment gate. At route entry read `../environment.md` completely and finish
 its environment steps (Distribution, project boundary, credentials, Runtime Profile, all selected
 managed programs, and health checks) before entering the brief, example, vocabulary, Source, preview,
-or Build steps. The local WhisperX Endpoint is one mandatory item and must report `Ready whisperx` (or
-an equivalent successful health check). If no profile exists yet, create a minimal profile with local
-media and WhisperX endpoints, select it, and provision it before continuing; extend that same profile
-later. Do not proceed from a partial or unconfirmed environment, substitute another transcriber, or
+or Build steps. The HypiHub WhisperX alignment Endpoint is one mandatory item and its configured model
+must be reachable with the completed HypiHub OAuth credential. If no profile exists yet, create a
+minimal profile with media, HypiHub and WhisperX alignment endpoints, select it, and provision it
+before continuing; extend that same profile later. Do not proceed from a partial or unconfirmed
+environment, substitute another transcriber, or
 continue because the user asks to bypass setup.
 
 ## Checkpoint and recovery

@@ -113,7 +113,7 @@ You cannot hear the reference, and there is no second source of sound to fall ba
 observations are answered from the two things you do have. Answer them fully; do not leave them short
 and do not put the gap to the author.
 
-- **The transcript says when.** WhisperX measures every word locally on both paths, so the words and
+- **The transcript says when.** The selected HypiHub WhisperX Provider measures every word on both paths, so the words and
   their timings are exact whichever observer reads the pictures. That settles whether anyone is
   speaking at a given moment, and where a word sits. It does not set a take's duration: the take is
   generated and its length comes from `estimate:Speech`, as `../script-time.md` requires.

@@ -12,8 +12,8 @@ approval; context recovery is never approval to repeat it.
 
 Before discovering or copying a batch, read `../environment.md` completely and finish its environment
 checklist. The selected Distribution, project boundary, credentials, Runtime Profile, selected managed
-programs and health checks must be confirmed; the local WhisperX Endpoint must report `Ready whisperx`
-(or an equivalent successful probe). Do not treat source-only delivery or an existing completed base
+programs and health checks must be confirmed; the HypiHub WhisperX alignment Endpoint and its
+configured model must be reachable with the completed HypiHub OAuth credential. Do not treat source-only delivery or an existing completed base
 as a reason to skip this gate.
 
 ## Recovery comes first

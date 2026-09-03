@@ -92,13 +92,14 @@ rerun only the selected full-reference stages.
 It also produces `transcript`: the verbatim speech of the whole reference with a start and an end for
 every single word. Placing an on-screen text reveal against the line that triggers it needs the time
 of the word, not of the sentence around it, and that question comes up in every reconstruction. The
-speech audio is extracted to `speech.wav` beside the shot media and measured by the local WhisperX
-Provider in `@hypit/provider-whisperx-local`, which answers a loopback service on
-`http://127.0.0.1:8765`; start the selected managed service with `hypit runtime up`.
+speech audio is extracted to `speech.wav` beside the shot media and measured by the HypiHub WhisperX
+Provider in `@hypit/provider-hypihub`, which calls the synchronous
+`/v1/audio/transcriptions` route with word and segment timestamps. The selected HypiHub OAuth
+credential must be available before preparation.
 The result reports `status`, `transcript_ref` and `word_count`, and the words themselves live in
 `transcript.json` as passages, each with a `words` array of `{ text, start_seconds, end_seconds, score }`.
 The transcript is deterministic local evidence rather than an observation: it is never written to the
-observation cache and nothing about it is sent to Gemini. A machine with no WhisperX service running
+observation cache and nothing about it is sent to Gemini. An unavailable HypiHub WhisperX endpoint
 reports `status: "unavailable"` with the reason and prepares everything else.
 
 `observe_reference` observes every unfinished shot, or only the shots named by `--shot-id`. Each shot

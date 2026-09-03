@@ -13,8 +13,9 @@ systems. Examples belong to original authoring and variant planning, not reconst
 
 The complete environment is the hard gate. At route entry, read `../environment.md` completely, then
 finish its checklist through the environment steps: Distribution, project boundary, credentials,
-Runtime Profile, all selected managed programs, and health checks. The local WhisperX Endpoint is
-mandatory and must report `Ready whisperx` (or an equivalent successful probe). Do not enter the
+Runtime Profile, all selected managed programs, and health checks. The HypiHub WhisperX alignment
+Endpoint is mandatory and its configured model must be reachable with the completed HypiHub OAuth
+credential. Do not enter the
 observation or authoring steps while any environment item is missing, installing, unhealthy, or
 unconfirmed.
 
@@ -172,7 +173,7 @@ for them again. HypiHub OAuth is the default; only configure an author-owned key
 and this machine does not hold is named. If HypiHub OAuth is not configured, complete that login before
 continuing; do not use `agent` to bypass the environment gate.
 
-Create the project's `hypit.runtime.json` now with at least the local media and WhisperX endpoints,
+Create the project's `hypit.runtime.json` now with at least the local media and HypiHub WhisperX endpoints,
 then select and start it before reference preparation:
 
 ```bash
@@ -224,9 +225,9 @@ hypit-reference-video-tools prepare_reference --video-path <path or link> --obse
 `--video-path` takes a link as readily as a path. The result names the link it fetched under
 `source_url`, which is the only record of which video was reconstructed once the bytes are on disk.
 
-Verify the WhisperX service answered its health probe before running this — a first start can spend
-several minutes loading the model. `../environment.md` says how; `../host-setup.md` covers the
-failure branches.
+Verify the HypiHub WhisperX model answers its model-card probe before running this. The selected
+Runtime Profile and OAuth credential are the source of truth; `../environment.md` says how and
+`../host-setup.md` covers the local fallback's failure branches.
 
 **Read now:** `evidence.md` — what the four whole-reference observations cover, what `transcript` is
 and how to recover it when it reports `status: "unavailable"`, and the `--redo` values.

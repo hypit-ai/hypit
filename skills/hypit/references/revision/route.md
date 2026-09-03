@@ -19,8 +19,9 @@ authoritative.
 
 Before any revision command or project inspection, read `../environment.md` completely and finish its
 environment checklist. The selected Distribution, project boundary, credentials, Runtime Profile,
-selected managed programs and their health checks must all be confirmed; the local WhisperX Endpoint
-must report `Ready whisperx` (or an equivalent successful probe). Do not begin a revision from a
+selected managed programs and their health checks must all be confirmed; the HypiHub WhisperX
+alignment Endpoint and its configured model must be reachable with the completed HypiHub OAuth
+credential. Do not begin a revision from a
 partial, installing, unhealthy or unconfirmed environment, even when the change itself appears
 deterministic or the user asks to bypass setup.
 

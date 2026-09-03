@@ -28,9 +28,9 @@ This document must be read completely before any video-production route continue
 complete only when all of the following are true: a Hypit Distribution is selected; the project
 directory and its package boundary are established; credentials for every capability the route will
 use are resolved; the project's Runtime Profile is selected; `hypit runtime up` has finished installing
-and starting every selected managed program; and every required health check passes. The local
-WhisperX Endpoint is mandatory for video production and must report `Ready whisperx` (or an equivalent
-successful probe).
+and starting every selected managed program; and every required health check passes. The HypiHub
+WhisperX alignment Endpoint is mandatory for video production and its configured transcription model
+must be reachable through the selected HypiHub credential.
 
 Do not inspect media or examples, prepare or observe a reference, freeze a brief, inspect vocabulary,
 write Source, preview, or Build until this checklist is complete. Do not substitute another
@@ -41,7 +41,8 @@ for signing in and does not enter a production route.
 ## Credentials are part of environment setup
 
 Resolve credentials immediately after selecting the Runtime Profile and before inspecting any media,
-examples or references. HypiHub OAuth is the default for paid models and Gemini VLM. Check the selected
+examples or references. HypiHub OAuth is the default for paid models, Gemini VLM and WhisperX
+alignment. Check the selected
 Endpoint:
 
 ```text
@@ -159,10 +160,10 @@ Reconstructing a video given as a link rather than as a file needs `uv` too: `yt
 `services/yt-dlp` and run from there, so the version is the repository's rather than the machine's.
 `prepare_reference` names what is missing when a link is passed without it.
 
-When the Runtime Profile selects the local WhisperX Endpoint, `prepare_reference` probes the service's
-health itself before transcribing, because a first start can spend several minutes loading the model.
-A service that does not answer is reported in the command's result with a pointer to the repair rather
-than silently producing an empty transcript.
+When the Runtime Profile selects the HypiHub WhisperX Endpoint, the provider verifies that the
+configured transcription model exposes the `transcriptions` route before submitting the alignment
+request. A model that is unavailable is reported as a credential/model routing error rather than
+silently producing an empty transcript.
 
 `host-setup.md` holds the host toolchain installations and repairs, and is read when a command
 reports that a service or a binary is unavailable.

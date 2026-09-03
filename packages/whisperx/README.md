@@ -1,8 +1,9 @@
 # @hypit/whisperx
 
 Explicit WhisperX model-family capability for the official speech program. Importing this package
-selects WhisperX; Runtime registration only binds the resulting alignment Need to
-a concrete WhisperX execution endpoint such as a trusted local worker or hosted service.
+selects WhisperX; Runtime registration only binds the resulting alignment Need to a concrete
+execution endpoint. The default Hypit Skill path uses the HypiHub-hosted WhisperX endpoint; the
+trusted local worker remains an explicit fallback.
 
 The package contains no credentials, Python environment or queue. Providers translate the typed
 request directly into provider-neutral `AlignedTranscriptEvidence`. There is no vendor-shaped
@@ -18,5 +19,6 @@ the returned evidence with the one Segment and emits one self-contained `Semanti
 There is no whole-program WhisperX pass. Speech Track only receives already-semantic Takes and later
 translates their local frames when assembling the final ProgramSpace and complete semantic map.
 
-`@hypit/provider-whisperx-local` is the first concrete adapter; it validates and stages those bytes
-unchanged for a warm loopback service.
+`@hypit/provider-hypihub` is the default concrete adapter; it uploads the canonical evidence audio
+and requests verbose JSON with segment- and word-level timestamps. `@hypit/provider-whisperx-local`
+remains available as an explicit local fallback.
