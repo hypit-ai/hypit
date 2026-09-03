@@ -54,7 +54,7 @@ Provider，也不要求用户复制粘贴 API key。
 
 ```text
 选择 Runtime Profile → 检查 HypiHub 凭据 → 缺失时说明并执行 OAuth 登录
-→ 确认登录成功 → hypit runtime up → 检查 WhisperX/其他程序健康
+→ 确认登录成功 → hypit runtime up → 检查 HypiHub 对齐能力/其他程序
 → 才能读媒体、调用 Gemini、写 Source 或 Build
 ```
 
@@ -203,7 +203,7 @@ Studio 打开当前 Run。Studio 确认是付费前对结构的人工确认，�
 
 1. 选择 Distribution、项目根目录和 Runtime Profile，建立 `route_state`。
 2. 在检查 examples 或写 brief 前，检查 `hypihub.default` 的凭据。没有可写的 HypiHub OS 凭据时，说明 OAuth 不需要复制 API key，并由 agent 执行 `hypit auth login hypihub.default --runtime hypit.runtime.json`；无有效订阅的账号可在 hypit.ai 购买。
-3. 运行 `hypit runtime up`，确认 WhisperX 和 Runtime Profile 中的其他程序健康；环境未完成时不能进入 brief、词汇或 Source 阶段。
+3. 运行 `hypit runtime up`，确认 HypiHub WhisperX 对齐模型可通过选定 Endpoint 访问，并确认 Runtime Profile 中的其他程序健康；环境未完成时不能进入 brief、词汇或 Source 阶段。
 4. 组件出现真实词汇缺口时，暂停写 Source，转入“项目本地包”分支：在项目 `packages/<slug>/` 创建包，先写 `package.json` 与 activation，再完成 Manifest、Types、Producers、Validators、Surface/decoder、Fragment、README 和 preview；安装、导入并通过 `validate_local_author_packages`、`preview_check`、`layout_check` 后，才能回到本路线。
 
 ```text
@@ -235,7 +235,7 @@ environment → brief-frozen → examples/格式/craft 决策
 #### 路径入口与前置
 
 1. 先选择项目、Runtime Profile 和 observer，并建立 `route_state`；不要先读取或复制参考视频。
-2. 检查 HypiHub OAuth。凭据缺失时由 agent 说明原因并执行 `hypit auth login hypihub.default --runtime hypit.runtime.json`，然后运行 `hypit runtime up`，确认 WhisperX 已就绪后才能 `prepare_reference`、观察或调用 Gemini。
+2. 检查 HypiHub OAuth。凭据缺失时由 agent 说明原因并执行 `hypit auth login hypihub.default --runtime hypit.runtime.json`，然后确认 HypiHub WhisperX 对齐模型可访问，之后才能 `prepare_reference`、观察或调用 Gemini。
 3. 参考证据完成后再枚举组件。确认词汇缺口时，按原创路径的项目本地包分支实现并验证完整包（`package.json`、activation、Manifest、Types、Producers、Validators、Surface/decoder、Fragment、README、preview），不能修改安装包或直接复制参考素材。
 
 复刻采用严格的“证据优先”顺序：整条复刻路径都禁止读取仓库 `examples/` 下的项目，包括完整的
