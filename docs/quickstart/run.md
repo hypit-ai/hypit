@@ -30,22 +30,37 @@ from any independent video project.
 Only `build` submits work. `plan` is the normal preview. `check` is an editing aid; `doctor` is a
 deployment diagnostic. They are safe to run, but not mandatory ceremony before every Build.
 
-One convenient project layout is:
+One convenient layout for a project with several Author, Recipe and Run Sources is:
 
 ```text
 my-video/
-  main.svml           author meaning
-  styles.svs          optional authored styles
-  build.svrun         this Run's Targets and Candidate choices
-  assets/             project-owned input media
-  output/             explicit exports for people and other tools
-  hypit.runtime.json  execution environment
+  package.json              project boundary
+  authors/
+    main.svml               one Author entry
+    alternate.svml          another Author entry, when genuinely needed
+  recipes/
+    visual.svs              authored visual Recipes
+    generation.svs          authored generation Recipes
+  runs/
+    images.svrun            one executable intention
+    takes.svrun             another executable intention
+    final.svrun             final delivery intention
+  assets/                   project-owned input media
+  kits/                     optional vendored Recipe Kits
+  packages/                 optional project-local Author packages
+  output/                   explicit exports for people and other tools
+  hypit.runtime.json        execution environment
+  hypit.results.json        optional Result repository selection
+  .hypit/                   generated local Runtime and Result data
 ```
 
-This is a convention, not a schema. Hypit uses the paths written in Source imports, `<author
-source="…">`, CLI arguments and `get --to`; it does not require these names or recognize `assets/`
-or `output/` specially. The managed Result repository remains separate under `.hypit/results` by
-default.
+This layout is only a human-facing recommendation, never a required project schema. A small project
+may keep several `.svml`, `.svs` and `.svrun` files flat at its root, and another project may group
+them differently. Hypit uses only the paths written in Source imports, `<author source="…">`, CLI
+arguments and `get --to`; it does not require these names or recognize `authors/`, `recipes/`,
+`runs/`, `assets/` or `output/` specially. Each Run selects one Author entry, while that Author
+Source closure may explicitly import multiple Author or Recipe Sources. The managed Result repository
+remains separate under `.hypit/results` by default.
 
 Run Source and Runtime Profile do not silently rewrite the video. Creative model choices remain in
 the Author Source or in packages that it explicitly imports.
@@ -220,6 +235,10 @@ hypit paths
 
 `runtime use` writes only `.hypit/runtime`. It does not start a Worker, create Runtime data or
 change installed packages. See [Runtime](../guide/runtime.md) for the Profile schema and boundaries.
+The CLI resolves the project first: `--workspace` is an explicit boundary; otherwise the nearest
+`package.json` above the current directory is the boundary, falling back to the current directory
+for a plain creative folder. It then reads only that project's `.hypit/runtime`. It never discovers
+a Profile from a conventional filename or inherits another project's selection from a parent directory.
 
 ## Configure selected credentials
 
@@ -265,8 +284,8 @@ cd /work/my-film
 hypit runtime use hypit.runtime.json
 ```
 
-The Workspace is the selected project or entry Source directory. Override it
-only with `--workspace`. `--package-root` locates installed packages and never widens Source access.
+The Workspace is resolved before the Runtime Profile. Override it explicitly with `--workspace`;
+the entry Source path and Runtime selection never choose it. `--package-root` locates installed packages and never widens Source access.
 `--asset-root` grants read access to additional asset bytes without permitting Source imports there.
 
 ```text
@@ -327,9 +346,11 @@ external-program diagnostics. It never starts external work.
 `plan` may run without a Runtime at all. Both `plan` and `build` may omit `--runtime` after
 `hypit runtime use`; `build` requires either that selection or an explicit Profile.
 
-Use `runtime up` to install selected upstream packages, prepare Managed Programs and start the
-Worker before submission. `build` repeats only the cheap read-only preflight and refuses before
-submission when anything is missing; it never provisions dependencies. `runtime status` observes
+Use `runtime up` after selecting or changing a deployment to install selected upstream packages,
+prepare Managed Programs and start the Worker. `build` repeats only the cheap read-only preflight
+and refuses before submission when a required package or Program is missing; it never provisions
+dependencies. When the deployment is already prepared and only its Worker is stopped, `build`
+starts that Worker before durable submission. `runtime status` observes
 the deployment, while `programs up|status|down` is the narrower lifecycle view for long-lived
 processes declared by Endpoints.
 
