@@ -7,7 +7,7 @@ export {
   emojiRevealSetSchema, emojiRevealStyleSchema, emojiRevealTypes,
 } from "./manifest.js";
 export {
-  appendEmojiRevealItem, assertEmojiRevealHeader, assertEmojiRevealItemSpec, assertEmojiRevealProgram,
+  appendEmojiRevealItem, appendPresetEmojiRevealItem, assertEmojiRevealHeader, assertEmojiRevealItemSpec, assertEmojiRevealProgram,
   assertEmojiRevealSet, assertEmojiRevealStyle, createEmojiRevealSet, finalizeEmojiReveal,
   renderEmojiReveal, sealEmojiRevealHeader, sealEmojiRevealItemSpec,
 } from "./program.js";

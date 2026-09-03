@@ -1,5 +1,5 @@
 import {
-  assertAttributes, assertEmptyElement, textAttribute, type MarkupAttributeValue, type StructuredSurfaceHandler,
+  assertAttributes, assertEmptyElement, optionalTextAttribute, textAttribute, type MarkupAttributeValue, type StructuredSurfaceHandler,
   type SurfaceComponentDraft, type SurfaceRecordDraft, type SurfaceResolvedReference,
 } from "@hypit/markup";
 import { artifactTypes } from "@hypit/artifact";
@@ -31,6 +31,14 @@ function inline<T>(value: SurfaceResolvedReference, label: string): T {
   return value.record.value.value as unknown as T;
 }
 
+function boolean(element: Parameters<StructuredSurfaceHandler>[0]["element"], name: string, fallback: boolean): boolean {
+  const source = optionalTextAttribute(element, name);
+  if (source === undefined) return fallback;
+  if (source === "true") return true;
+  if (source === "false") return false;
+  throw new Error(`${element.name}.${name} must be true or false.`);
+}
+
 export const decodeEmojiRevealStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   assertAttributes(element, ["id", "recipe"]); assertEmptyElement(element);
   const id = textAttribute(element, "id");
@@ -54,7 +62,7 @@ export const decodeEmojiRevealTrackSurface: StructuredSurfaceHandler = ({ elemen
   }];
   const temporalComponents: SurfaceComponentDraft[] = [...outer.components];
   const temporalFragments = [...outer.fragments];
-  const items: { specName: string; iconName: string; activationName: string }[] = [];
+  const items: { specName: string; iconName: string; activationName?: string }[] = [];
   const inputs: Record<string, typeof semantic.ref> = {
     header: { kind: "record", id: headerId }, semantic: semantic.ref, canvas: canvas.ref, style: style.ref,
     placeholder: placeholder.ref, outer: outer.ref,
@@ -64,24 +72,33 @@ export const decodeEmojiRevealTrackSurface: StructuredSurfaceHandler = ({ elemen
   for (const child of element.children) {
     if (child.kind === "text") { if (child.value.trim().length > 0) throw new Error(`${element.name} accepts only Item children.`); continue; }
     if (child.name.split(":").at(-1) !== "Item") throw new Error(`${element.name} accepts only Item children.`);
-    assertAttributes(child, ["id", "icon", "at"]); assertEmptyElement(child);
+    assertAttributes(child, ["id", "icon", "preset", "at"]); assertEmptyElement(child);
     index += 1;
     const itemId = textAttribute(child, "id");
     if (ids.has(itemId)) throw new Error(`${element.name} contains duplicate Item id ${itemId}.`); ids.add(itemId);
-    reference(child.attributes.at, `${child.name}.at`, narrativeTypes.moment, resolveReference);
+    const preset = boolean(child, "preset", false);
+    const timed = child.attributes.at !== undefined;
+    if (preset && timed) throw new Error(`${child.name} cannot combine preset=true with at.`);
+    if (!preset && !timed) throw new Error(`${child.name} requires at unless preset=true.`);
     const icon = reference(child.attributes.icon, `${child.name}.icon`, artifactTypes.blob, resolveReference);
-    const spec = sealEmojiRevealItemSpec({ id: itemId });
-    const activation = createTemporalInstantProjection({
-      id: `${id}.item.${String(index).padStart(4, "0")}.activation`, subjectId: itemId,
-      element: child, semantic, resolveReference, semanticAttribute: "at", projectedAttribute: false,
-    });
-    records.push(...activation.records); temporalComponents.push(...activation.components); temporalFragments.push(...activation.fragments);
+    const spec = sealEmojiRevealItemSpec({ id: itemId, preset });
     const suffix = String(index).padStart(4, "0");
     const specId = `${id}.item.${suffix}.spec`; const specName = `item-${suffix}-spec`;
-    const iconName = `item-${suffix}-icon`; const activationName = `item-${suffix}-activation`;
+    const iconName = `item-${suffix}-icon`;
     records.push({ id: specId, type: emojiRevealTypes.itemSpec, value: { kind: "inline", value: spec as unknown as CanonicalValue }, range: child.range });
-    inputs[specName] = { kind: "record", id: specId }; inputs[iconName] = icon.ref; inputs[activationName] = activation.ref;
-    items.push({ specName, iconName, activationName });
+    inputs[specName] = { kind: "record", id: specId }; inputs[iconName] = icon.ref;
+    if (preset) items.push({ specName, iconName });
+    else {
+      reference(child.attributes.at, `${child.name}.at`, narrativeTypes.moment, resolveReference);
+      const activation = createTemporalInstantProjection({
+        id: `${id}.item.${suffix}.activation`, subjectId: itemId,
+        element: child, semantic, resolveReference, semanticAttribute: "at", projectedAttribute: false,
+      });
+      records.push(...activation.records); temporalComponents.push(...activation.components); temporalFragments.push(...activation.fragments);
+      const activationName = `item-${suffix}-activation`;
+      inputs[activationName] = activation.ref;
+      items.push({ specName, iconName, activationName });
+    }
   }
   if (items.length === 0) throw new Error(`${element.name} requires at least one Item.`);
   const fragment = createEmojiRevealFragment(items);

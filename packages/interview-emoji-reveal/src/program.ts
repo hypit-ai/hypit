@@ -29,6 +29,7 @@ export function sealEmojiRevealItemSpec(value: EmojiRevealItemSpec): EmojiReveal
 }
 export function assertEmojiRevealItemSpec(value: EmojiRevealItemSpec): void {
   identity(value.id, "EmojiRevealItemSpec.id");
+  assert(typeof value.preset === "boolean", "EmojiRevealItemSpec.preset is invalid.");
 }
 
 function assertIconImage(value: BlobRef, label: string): void {
@@ -56,17 +57,31 @@ export function assertEmojiRevealSet(value: EmojiRevealSet): void {
   assert(Array.isArray(value.items), "EmojiRevealSet is invalid.");
   const ids = new Set<string>();
   for (const item of value.items) {
-    assertEmojiRevealItemSpec(item.spec); assertIconImage(item.icon, `Emoji Reveal Item ${item.spec.id} icon`); identity(item.activation.id, "Emoji Reveal activation id");
+    assertEmojiRevealItemSpec(item.spec); assertIconImage(item.icon, `Emoji Reveal Item ${item.spec.id} icon`);
+    if (item.spec.preset) assert(!("activation" in item), `Preset Emoji Reveal Item ${item.spec.id} cannot have an activation.`);
+    else {
+      assert("activation" in item, `Emoji Reveal Item ${item.spec.id} requires an activation.`);
+      identity(item.activation.id, "Emoji Reveal activation id");
+    }
     assert(!ids.has(item.spec.id), `Duplicate Emoji Reveal Item ${item.spec.id}.`); ids.add(item.spec.id);
   }
 }
 
 export function appendEmojiRevealItem(set: EmojiRevealSet, space: ProgramSpace, spec: EmojiRevealItemSpec, icon: BlobRef, activation: TemporalInstant): EmojiRevealSet {
   assertEmojiRevealSet(set); assertProgramSpaceIdentity(space); assertEmojiRevealItemSpec(spec);
+  assert(!spec.preset, `Emoji Reveal Item ${spec.id} with preset=true cannot have an activation.`);
   assertIconImage(icon, `Emoji Reveal Item ${spec.id} icon`);
   assertTemporalInstantFor(activation, { subjectId: spec.id, space });
   assert(!set.items.some((item) => item.spec.id === spec.id), `Duplicate Emoji Reveal Item ${spec.id}.`);
   return { items: [...set.items, { spec: structuredClone(spec), icon: structuredClone(icon), activation: structuredClone(activation) }] };
+}
+
+export function appendPresetEmojiRevealItem(set: EmojiRevealSet, spec: EmojiRevealItemSpec, icon: BlobRef): EmojiRevealSet {
+  assertEmojiRevealSet(set); assertEmojiRevealItemSpec(spec);
+  assert(spec.preset, `Preset Emoji Reveal Item ${spec.id} requires preset=true.`);
+  assertIconImage(icon, `Emoji Reveal Item ${spec.id} icon`);
+  assert(!set.items.some((item) => item.spec.id === spec.id), `Duplicate Emoji Reveal Item ${spec.id}.`);
+  return { items: [...set.items, { spec: structuredClone(spec), icon: structuredClone(icon) }] };
 }
 
 export function finalizeEmojiReveal(
@@ -77,7 +92,13 @@ export function finalizeEmojiReveal(
   assertTemporalWindowFor(outer, { subjectId: header.id, space });
   assert(set.items.length > 0, "Emoji Reveal requires at least one Item.");
   let previous = outer.span.startFrame - 1;
+  let revealStarted = false;
   for (const item of set.items) {
+    if (!("activation" in item)) {
+      assert(!revealStarted, `Preset Emoji Reveal Item ${item.spec.id} cannot appear after a reveal Item.`);
+      continue;
+    }
+    revealStarted = true;
     const frame = item.activation.frame;
     assert(frame >= outer.span.startFrame && frame < outer.span.endFrameExclusive,
       `Emoji Reveal Item ${item.spec.id} must activate inside the Track Window.`);
@@ -99,7 +120,13 @@ export function assertEmojiRevealProgram(value: EmojiRevealProgram): void {
   assert(value.items.length > 0, "EmojiRevealProgram requires Items.");
   assert(value.outer.span.endFrameExclusive > value.outer.span.startFrame, "EmojiRevealProgram outer Window is empty.");
   let previous = value.outer.span.startFrame - 1;
+  let revealStarted = false;
   for (const item of value.items) {
+    if (!("activation" in item)) {
+      assert(!revealStarted, `EmojiRevealProgram preset Item ${item.spec.id} appears after a reveal Item.`);
+      continue;
+    }
+    revealStarted = true;
     assert(item.activation.frame >= value.outer.span.startFrame && item.activation.frame < value.outer.span.endFrameExclusive,
       `Emoji Reveal Item ${item.spec.id} is outside the outer Window.`);
     assert(item.activation.frame > previous, `Emoji Reveal Item ${item.spec.id} is not in strict reveal order.`);
@@ -132,6 +159,14 @@ function questionAnimation(atFrame: number, duration: number): VisualAnimation {
   return { keyframes: [...marks].sort(([left], [right]) => left - right).map(([frame, value]) => ({
     atFrame: frame, easing: "linear", style: [{ name: "opacity", value: value.opacity }, { name: "transform", value: scale(value.scale) }],
   })) };
+}
+
+function settledAnimation(duration: number, visible: boolean): VisualAnimation {
+  const style = [{ name: "opacity", value: visible ? 1 : 0 }, { name: "transform", value: scale(1) }];
+  return { keyframes: [
+    { atFrame: 0, easing: "linear", style },
+    { atFrame: duration, easing: "linear", style },
+  ] };
 }
 
 function iconElement(input: {
@@ -180,7 +215,8 @@ export function renderEmojiReveal(canvas: CanvasSpace, space: ProgramSpace, prog
   }];
   program.items.forEach((item, index) => {
     const x = style.paddingXPx + index * (style.slotSizePx + style.gapPx);
-    const atFrame = item.activation.frame - program.outer.span.startFrame;
+    const preset = !("activation" in item);
+    const atFrame = preset ? 0 : item.activation.frame - program.outer.span.startFrame;
     const parentId = `slot-${index + 1}`;
     elements.push({
       id: parentId, parent: "root", order: 2 + index * 3, kind: "box", style: [
@@ -191,10 +227,10 @@ export function renderEmojiReveal(canvas: CanvasSpace, space: ProgramSpace, prog
     elements.push(
       iconElement({ id: `${parentId}-placeholder`, parent: parentId, order: 3 + index * 3, artifact: program.placeholder,
         x: (style.slotSizePx - style.iconSizePx) / 2, y: (style.slotSizePx - style.iconSizePx) / 2,
-        size: style.iconSizePx, animation: questionAnimation(atFrame, duration) }),
+        size: style.iconSizePx, animation: preset ? settledAnimation(duration, false) : questionAnimation(atFrame, duration) }),
       iconElement({ id: `${parentId}-icon`, parent: parentId, order: 4 + index * 3, artifact: item.icon,
         x: (style.slotSizePx - style.iconSizePx) / 2, y: (style.slotSizePx - style.iconSizePx) / 2,
-        size: style.iconSizePx, animation: revealAnimation(atFrame, duration, style.revealFrames) }),
+        size: style.iconSizePx, animation: preset ? settledAnimation(duration, true) : revealAnimation(atFrame, duration, style.revealFrames) }),
     );
   });
   const track = sealVisualTrack({
