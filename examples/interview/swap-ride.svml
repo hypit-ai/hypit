@@ -5,6 +5,7 @@
   <import as="text" from="@hypit/text@1"/>
   <import as="media" from="@hypit/media@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="program" from="@hypit/program-space@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
@@ -129,9 +130,9 @@
     model="mini" prompt={uber-rule-prompt}
     duration="9"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={interviewer-view}/>
-    <seedance:Reference image={guest-view}/>
-    <seedance:Reference image={shared-view}/>
+    <seedance:Reference image={interviewer-view.image}/>
+    <seedance:Reference image={guest-view.image}/>
+    <seedance:Reference image={shared-view.image}/>
     <seedance:Reference audio={leon-voice}/>
     <seedance:Reference audio={ada-voice}/>
   </seedance:ReferenceVideo>
@@ -140,9 +141,9 @@
     model="mini" prompt={shortcuts-rule-prompt}
     duration="11"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={interviewer-view}/>
-    <seedance:Reference image={guest-view}/>
-    <seedance:Reference image={shared-view}/>
+    <seedance:Reference image={interviewer-view.image}/>
+    <seedance:Reference image={guest-view.image}/>
+    <seedance:Reference image={shared-view.image}/>
     <seedance:Reference audio={leon-voice}/>
     <seedance:Reference audio={ada-voice}/>
   </seedance:ReferenceVideo>
@@ -151,9 +152,9 @@
     model="mini" prompt={first-place-rule-prompt}
     duration="6"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={interviewer-view}/>
-    <seedance:Reference image={guest-view}/>
-    <seedance:Reference image={shared-view}/>
+    <seedance:Reference image={interviewer-view.image}/>
+    <seedance:Reference image={guest-view.image}/>
+    <seedance:Reference image={shared-view.image}/>
     <seedance:Reference audio={leon-voice}/>
     <seedance:Reference audio={ada-voice}/>
   </seedance:ReferenceVideo>
@@ -219,10 +220,10 @@
 
   <emoji:Style id="rule-reveal-style" recipe={recipes.emoji.strip}/>
   <emoji:Track id="rule-reveal" semantic={speech.semantic} canvas={vertical}
-    style={rule-reveal-style} placeholder={rule-placeholder} during="program">
-    <emoji:Item id="uber" icon={uber-icon} at={story.moment.uber}/>
-    <emoji:Item id="shortcuts" icon={shortcuts-icon} at={story.moment.shortcuts}/>
-    <emoji:Item id="first-place" icon={first-place-icon} at={story.moment.first-place}/>
+    style={rule-reveal-style} placeholder={rule-placeholder.image} during="program">
+    <emoji:Item id="uber" icon={uber-icon.image} at={story.moment.uber}/>
+    <emoji:Item id="shortcuts" icon={shortcuts-icon.image} at={story.moment.shortcuts}/>
+    <emoji:Item id="first-place" icon={first-place-icon.image} at={story.moment.first-place}/>
   </emoji:Track>
 
   <screen:Track id="rule-reveal-flashes" semantic={speech.semantic} canvas={vertical}>

@@ -126,13 +126,13 @@
   <seedance:ReferenceVideo id="messi-take" model="mini"
     prompt={messi-prompt} duration="10"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={presenter}/>
+    <seedance:Reference image={presenter.image}/>
     <seedance:Reference audio={presenter-voice}/>
   </seedance:ReferenceVideo>
   <seedance:ReferenceVideo id="ronaldo-take" model="mini"
     prompt={ronaldo-prompt} duration="10"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={presenter}/>
+    <seedance:Reference image={presenter.image}/>
     <seedance:Reference audio={presenter-voice}/>
   </seedance:ReferenceVideo>
 
@@ -183,9 +183,9 @@
   <whisperx:SemanticTake id="ronaldo-semantic" narrative={story}
     segment={story.segment.ronaldo} media={ronaldo-media.media} language="en"/>
 
-  <pipeline:StillVideo id="messi-still" source={presenter}
+  <pipeline:StillVideo id="messi-still" source={presenter.image}
     duration={messi-preview-duration.duration} clock={clock}/>
-  <pipeline:StillVideo id="ronaldo-still" source={presenter}
+  <pipeline:StillVideo id="ronaldo-still" source={presenter.image}
     duration={ronaldo-preview-duration.duration} clock={clock}/>
   <pipeline:Normalize id="messi-preview-media" source={messi-still.video}
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
@@ -217,25 +217,25 @@
     appear-sound={ranking-appear-media.media}
     move-sound={ranking-move-media.media}>
     <ranking:ColumnItem id="ronaldo" rank="1" label="Ronaldo"
-      icon={ronaldo-icon} during={story.segment.ronaldo}/>
+      icon={ronaldo-icon.image} during={story.segment.ronaldo}/>
     <ranking:ColumnItem id="mbappe" rank="2" label="Mbappe"
-      preset="true" icon={mbappe-icon}/>
+      preset="true" icon={mbappe-icon.image}/>
     <ranking:ColumnItem id="haaland" rank="3" label="Haaland"
-      preset="true" icon={haaland-icon}/>
+      preset="true" icon={haaland-icon.image}/>
     <ranking:ColumnItem id="bellingham" rank="4" label="Bellingham"
-      preset="true" icon={bellingham-icon}/>
+      preset="true" icon={bellingham-icon.image}/>
     <ranking:ColumnItem id="de-bruyne" rank="5" label="De Bruyne"
-      preset="true" icon={de-bruyne-icon}/>
+      preset="true" icon={de-bruyne-icon.image}/>
     <ranking:ColumnItem id="yamal" rank="6" label="Yamal"
-      preset="true" icon={yamal-icon}/>
+      preset="true" icon={yamal-icon.image}/>
     <ranking:ColumnItem id="kane" rank="7" label="Kane"
-      preset="true" icon={kane-icon}/>
+      preset="true" icon={kane-icon.image}/>
     <ranking:ColumnItem id="modric" rank="8" label="Modric"
-      preset="true" icon={modric-icon}/>
+      preset="true" icon={modric-icon.image}/>
     <ranking:ColumnItem id="neymar" rank="9" label="Neymar"
-      preset="true" icon={neymar-icon}/>
+      preset="true" icon={neymar-icon.image}/>
     <ranking:ColumnItem id="messi" rank="10" label="Messi"
-      icon={messi-icon} during={story.segment.messi}/>
+      icon={messi-icon.image} during={story.segment.messi}/>
   </ranking:Column>
 
   <media-track:Track id="broll" semantic={speech.semantic} canvas={vertical}>

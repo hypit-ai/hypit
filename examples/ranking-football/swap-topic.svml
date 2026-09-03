@@ -153,13 +153,13 @@
   <seedance:ReferenceVideo id="elon-take" model="mini"
     prompt={elon-prompt} duration="10"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={presenter}/>
+    <seedance:Reference image={presenter.image}/>
     <seedance:Reference audio={presenter-voice}/>
   </seedance:ReferenceVideo>
   <seedance:ReferenceVideo id="sam-take" model="mini"
     prompt={sam-prompt} duration="10"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={presenter}/>
+    <seedance:Reference image={presenter.image}/>
     <seedance:Reference audio={presenter-voice}/>
   </seedance:ReferenceVideo>
 
@@ -226,9 +226,9 @@
   <whisperx:SemanticTake id="sam-semantic" narrative={story}
     segment={story.segment.sam} media={sam-media.media} language="en"/>
 
-  <pipeline:StillVideo id="elon-still" source={presenter}
+  <pipeline:StillVideo id="elon-still" source={presenter.image}
     duration={elon-preview-duration.duration} clock={clock}/>
-  <pipeline:StillVideo id="sam-still" source={presenter}
+  <pipeline:StillVideo id="sam-still" source={presenter.image}
     duration={sam-preview-duration.duration} clock={clock}/>
   <pipeline:Normalize id="elon-preview-media" source={elon-still.video}
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
@@ -260,17 +260,17 @@
     during="program" style={tier-style}
     appear-sound={ranking-appear-media.media}
     move-sound={ranking-move-media.media}>
-    <ranking:TierItem id="jensen" tier="s" preset="true" icon={jensen-icon}/>
-    <ranking:TierItem id="bill" tier="s" preset="true" icon={bill-icon}/>
-    <ranking:TierItem id="jeff" tier="a" preset="true" icon={jeff-icon}/>
-    <ranking:TierItem id="dario" tier="b" preset="true" icon={dario-icon}/>
-    <ranking:TierItem id="jack" tier="b" preset="true" icon={jack-icon}/>
-    <ranking:TierItem id="tim" tier="c" preset="true" icon={tim-icon}/>
-    <ranking:TierItem id="mark" tier="d" preset="true" icon={mark-icon}/>
+    <ranking:TierItem id="jensen" tier="s" preset="true" icon={jensen-icon.image}/>
+    <ranking:TierItem id="bill" tier="s" preset="true" icon={bill-icon.image}/>
+    <ranking:TierItem id="jeff" tier="a" preset="true" icon={jeff-icon.image}/>
+    <ranking:TierItem id="dario" tier="b" preset="true" icon={dario-icon.image}/>
+    <ranking:TierItem id="jack" tier="b" preset="true" icon={jack-icon.image}/>
+    <ranking:TierItem id="tim" tier="c" preset="true" icon={tim-icon.image}/>
+    <ranking:TierItem id="mark" tier="d" preset="true" icon={mark-icon.image}/>
     <ranking:TierItem id="elon" tier="d" entry="drop"
-      icon={elon-icon} during={story.segment.elon}/>
+      icon={elon-icon.image} during={story.segment.elon}/>
     <ranking:TierItem id="sam" tier="s" entry="drop"
-      icon={sam-icon} during={story.segment.sam}/>
+      icon={sam-icon.image} during={story.segment.sam}/>
   </ranking:TierBoard>
 
   <media-track:Track id="broll" semantic={speech.semantic} canvas={vertical}>
