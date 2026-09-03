@@ -171,6 +171,13 @@ Studio 打开当前 Run。Studio 确认是付费前对结构的人工确认，�
 
 ### `original-authoring`（原创制作）
 
+#### 路径入口与前置
+
+1. 选择 Distribution、项目根目录和 Runtime Profile，建立 `route_state`。
+2. 在检查 examples 或写 brief 前，检查 `hypihub.default` 的凭据。没有可写的 HypiHub OS 凭据时，说明 OAuth 不需要复制 API key，并由 agent 执行 `hypit auth login hypihub.default --runtime hypit.runtime.json`；无有效订阅的账号可在 hypit.ai 购买。
+3. 运行 `hypit runtime up`，确认 WhisperX 和 Runtime Profile 中的其他程序健康；环境未完成时不能进入 brief、词汇或 Source 阶段。
+4. 组件出现真实词汇缺口时，暂停写 Source，转入“项目本地包”分支：在项目 `packages/<slug>/` 创建包，先写 `package.json` 与 activation，再完成 Manifest、Types、Producers、Validators、Surface/decoder、Fragment、README 和 preview；安装、导入并通过 `validate_local_author_packages`、`preview_check`、`layout_check` 后，才能回到本路线。
+
 ```text
 environment → brief-frozen → examples/格式/craft 决策
 → vocabulary/component-fit → package-ready → Script 与四个源文件
@@ -196,6 +203,12 @@ environment → brief-frozen → examples/格式/craft 决策
 | 11. 交接 | 创建 estimate 时长的 preview-mock Run，先披露每个付费能力实际使用的 Provider 与凭据来源，再打开 Studio、披露费用，获批准后才 Build。缺少或不可用的 key 引导前往 https://hypit.ai 获取 HypiHub key。 | `preview-mock.md`、`studio-confirmation.md`、`hypit plan/build/status/inspect/get` | Studio 看到的是活的 Film graph；付费 Build 复用已检查的 Run，产出完整交付。 |
 
 ### `reconstruction`（复刻）
+
+#### 路径入口与前置
+
+1. 先选择项目、Runtime Profile 和 observer，并建立 `route_state`；不要先读取或复制参考视频。
+2. 检查 HypiHub OAuth。凭据缺失时由 agent 说明原因并执行 `hypit auth login hypihub.default --runtime hypit.runtime.json`，然后运行 `hypit runtime up`，确认 WhisperX 已就绪后才能 `prepare_reference`、观察或调用 Gemini。
+3. 参考证据完成后再枚举组件。确认词汇缺口时，按原创路径的项目本地包分支实现并验证完整包（`package.json`、activation、Manifest、Types、Producers、Validators、Surface/decoder、Fragment、README、preview），不能修改安装包或直接复制参考素材。
 
 ```text
 environment → reference-prepared → reference-observed
@@ -248,6 +261,12 @@ environment → reference-prepared → reference-observed
 
 ### `revision`（修改）
 
+#### 路径入口与前置
+
+1. 先定位 canonical Run，读取并 reconcile 现有状态；恢复该项目的 Runtime Profile 和凭据，不从聊天记录推断基线。
+2. 普通 Source/Recipe 修改也要保证 Runtime Profile 可解析；若修改会触发付费生成，先确认 HypiHub OAuth 已登录，缺失时由 agent 执行 `hypit auth login`，不能把登录推迟到 Build 前。
+3. 如果修改暴露了组件能力缺口，先切到项目本地包分支完成完整包和 Run 级验证，再继续 Revision；只有能力确实变化时才修改 runtime 或 package。
+
 Revision 可直接接收完成项目，也可接收复刻、原创、旧 Revision 或完成变体：
 
 ```text
@@ -270,6 +289,12 @@ Revision 不调用 VLM 或参考比对；Studio 只是确定性检查通过后�
 | 6. 完成或交接 | 保存最终证据，可选打开 Studio；只有生成输入变化并获费用批准才 Build。 | `revision_state`、`studio-confirmation.md`、`hypit plan/build` | 完成的 Revision 可以继续做变体；下一次修改会创建新的 revision id。 |
 
 ### `variant-expansion`（变体扩展）
+
+#### 路径入口与前置
+
+1. 主 agent 先 reconcile 母项目，确认最终门禁和 Runtime Profile；所有子项目继承这个已确认的环境。
+2. 批次需要付费生成时，先检查 HypiHub OAuth；缺失时由 agent 说明并执行 `hypit auth login`，再运行 `hypit runtime up`。不要让每个子 agent 重复询问登录，也不能用无凭据路径绕过环境门禁。
+3. 新包必须在 staging 中单独完成：`package.json`、activation、Manifest、Types、Producers、Validators、Surface/decoder、Fragment、README、preview，以及包/graph/preview/layout 验证；冻结 digest 后才能注入子项目。
 
 主 agent 在任何子 agent 启动前完成全局决策：
 
