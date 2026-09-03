@@ -10,7 +10,7 @@
     }
   },
   "endpoints": {
-    "kie.football-ranking": {
+    "kie.default": {
       "use": "@hypit/provider-kie",
       "pool": "generation",
       "config": {
@@ -21,21 +21,21 @@
         "defaultConcurrency": 10
       }
     },
-    "media.football-ranking": {
+    "media.local": {
       "use": "@hypit/provider-media-local",
       "pool": "media",
       "config": {
         "defaultConcurrency": 2
       }
     },
-    "whisperx.football-ranking": {
+    "whisperx.local": {
       "use": "@hypit/provider-whisperx-local",
       "pool": "alignment",
       "config": {
         "defaultConcurrency": 1
       }
     },
-    "hyperframes.football-ranking": {
+    "hyperframes.local": {
       "use": "@hypit/provider-hyperframes-local",
       "pool": "render",
       "config": {

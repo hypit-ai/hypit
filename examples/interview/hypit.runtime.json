@@ -7,7 +7,7 @@
     }
   },
   "endpoints": {
-    "hypihub.hypit-interview": {
+    "hypihub.default": {
       "use": "@hypit/provider-hypihub",
       "pool": "generation",
       "config": {
@@ -20,14 +20,14 @@
         "requestTimeoutMs": 120000
       }
     },
-    "media.hypit-interview": {
+    "media.local": {
       "use": "@hypit/provider-media-local",
       "pool": "media",
       "config": {
         "defaultConcurrency": 2
       }
     },
-    "hyperframes.hypit-interview": {
+    "hyperframes.local": {
       "use": "@hypit/provider-hyperframes-local",
       "pool": "render",
       "config": {

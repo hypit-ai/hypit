@@ -10,7 +10,7 @@
     }
   },
   "endpoints": {
-    "hypihub.hypit-podcast": {
+    "hypihub.default": {
       "use": "@hypit/provider-hypihub",
       "pool": "generation",
       "config": {
@@ -23,14 +23,14 @@
         "requestTimeoutMs": 120000
       }
     },
-    "media.hypit-podcast": {
+    "media.local": {
       "use": "@hypit/provider-media-local",
       "pool": "media",
       "config": {
         "defaultConcurrency": 2
       }
     },
-    "hyperframes.hypit-podcast": {
+    "hyperframes.local": {
       "use": "@hypit/provider-hyperframes-local",
       "pool": "render",
       "config": {
