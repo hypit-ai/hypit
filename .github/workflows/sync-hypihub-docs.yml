@@ -1,11 +1,10 @@
-name: Notify HypiHub of documentation updates
+name: Notify HypiHub of documentation and asset updates
 
 on:
   push:
     branches: [main]
     paths:
-      - "docs/*.md"
-      - "docs/**/*.md"
+      - "docs/**"
   workflow_dispatch:
 
 permissions:
@@ -15,6 +14,12 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
       - name: Dispatch documentation sync
         env:
           GH_TOKEN: ${{ secrets.HYPIHUB_SYNC_TOKEN }}
@@ -23,15 +28,21 @@ jobs:
           SOURCE_REF: ${{ github.ref }}
         run: |
           test -n "$GH_TOKEN"
+          asset_paths=$(git ls-tree -r --name-only "$SOURCE_SHA" -- docs/ \
+            | jq -R -s 'split("\n")
+              | map(select(length > 0))
+              | map(select(test("\\.(png|jpe?g|gif|webp|avif|svg|mp4|webm|mov|mp3|wav|ogg|woff2?|ttf)$"; "i")))')
           payload=$(jq -n \
             --arg event_type "hypit-docs-updated" \
             --arg source_repo "$SOURCE_REPO" \
             --arg source_sha "$SOURCE_SHA" \
             --arg source_ref "$SOURCE_REF" \
+            --argjson source_asset_paths "$asset_paths" \
             '{event_type: $event_type, client_payload: {
               source_repo: $source_repo,
               source_sha: $source_sha,
-              source_ref: $source_ref
+              source_ref: $source_ref,
+              source_asset_paths: $source_asset_paths
             }}')
           curl --fail-with-body --silent --show-error \
             --request POST \
