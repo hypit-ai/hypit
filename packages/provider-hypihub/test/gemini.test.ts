@@ -9,7 +9,7 @@ test("HypiHub Gemini uses native wire format for text, image and video parts", a
   let uploads = 0;
   const generate = createHypiHubGeminiGenerator({
     apiKey: "test-key",
-    model: "gemini-3.7-flash",
+    model: "gemini-3.7-flash-openai",
     baseUrl: "https://hypit.ai/v1",
     fetch: async (input, init) => {
       seenUrl = String(input);
@@ -29,7 +29,7 @@ test("HypiHub Gemini uses native wire format for text, image and video parts", a
     { inlineData: { mimeType: "image/png", data: "aW1hZ2U=" } },
     { inlineData: { mimeType: "video/mp4", data: "dmlkZW8=" } },
   ] }), "OK");
-  assert.equal(seenUrl, "https://hypit.ai/v1beta/models/gemini-3.7-flash:generateContent");
+  assert.equal(seenUrl, "https://hypit.ai/v1beta/models/gemini-3.7-flash-openai:generateContent");
   assert.equal(uploads, 2);
   assert.deepEqual(seenBody?.contents, [{ role: "user", parts: [
     { text: "inspect" },

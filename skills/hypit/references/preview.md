@@ -47,4 +47,4 @@ stop it before changing those parameters. Report the exact URL printed after Stu
 Studio is for a person to inspect. Automated comparison uses `render_element` plus
 `compare_reconstruction` or `review_element`.
 
-`../../../../docs/quickstart/preview.md` is authoritative for Studio behavior.
+`<distribution-root>/docs/quickstart/preview.md` is authoritative for Studio behavior.

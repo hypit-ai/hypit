@@ -53,6 +53,9 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 npx skills add hypit-ai/hypit -g
 ```
 
+OpenAgents and other Skill hubs install the same canonical `skills/hypit/` directory. On first use,
+the Skill prepares the executable Hypit Distribution separately; your video project can live anywhere.
+
 ## Examples
 
 ### UGC

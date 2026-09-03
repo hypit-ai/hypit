@@ -16,13 +16,14 @@ page gets you to that first safe plan: it needs no API keys and makes no paid ca
 ## Install
 
 ```bash
-npm install --global hypit
 npx skills add hypit-ai/hypit --global
 ```
 
-The first command installs the reusable Distribution. The second installs the skill globally so a
-new agent session in another project can find it. Ordinary authoring never requires a repository
-clone.
+This installs the real `skills/hypit/` subtree globally so a new Agent session in any project can find
+it. OpenAgents installs the same subtree directly from the repository. Skill installation and the
+executable Distribution are separate: until the npm package is published, the Skill prepares or
+updates a machine-level checkout at `<home>/hypit` and uses its Node entrypoints. Video projects remain
+independent and may live anywhere.
 
 ## Use the Hypit skill
 
@@ -35,16 +36,21 @@ clone.
 It works through the same five steps below, asking you only for what your Runtime Profile actually
 needs. Work through them yourself if you would rather not use an agent.
 
-## 1. Check the installed Distribution
+## 1. Check the selected Distribution
 
 You need Node.js 22+ on macOS 13+ or Windows 10/11 x64.
 
 ```bash
 hypit paths --json
+# Before npm publication, the Skill runs:
+node <home>/hypit/bin/hypit.mjs paths --json
 ```
 
-The result separates the current project, its `.hypit` state, the machine Program Home and the npm
-Distribution. pnpm, Corepack and `npm link` are contributor tools, not user setup.
+The result separates the current project, its `.hypit` state, the machine Program Home and the selected
+Distribution. The Agent prepares a checkout's pinned dependencies at machine scope; it never installs
+them into the video project or uses `npm link`.
+
+The remaining examples abbreviate either executable launcher as `hypit`.
 
 ## 2. Compile the example
 

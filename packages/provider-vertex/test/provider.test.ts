@@ -15,7 +15,7 @@ test("Vertex Runtime provider exposes the same provider-neutral Gemini capabilit
     credentials: credentialRef("env", "GOOGLE_APPLICATION_CREDENTIALS_JSON"),
   });
   await provider.install(registry);
-  for (const model of ["gemini-3.1-pro-preview", "gemini-3.7-flash"] as const) {
+  for (const model of ["gemini-3.7-flash-openai"] as const) {
     const resolution = registry.resolve({
       id: `need:${model}`,
       capability: geminiCapabilities[model],

@@ -3,7 +3,6 @@ import { execFileSync } from "node:child_process";
 import process from "node:process";
 const commands = [
   ["node", ["--version"]],
-  ["hypit", ["paths", "--json"]],
   ["ffmpeg", ["-version"]],
   ["ffprobe", ["-version"]],
   ["uv", ["--version"]],

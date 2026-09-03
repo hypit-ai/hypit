@@ -3,9 +3,14 @@
 Use this workflow whenever a video file or link is the thing to reproduce, including an initial
 presenter/product/brand adaptation requested together with the reference.
 
+The reference is the sole design evidence for this route. Do not inspect Distribution example
+projects, borrow another author project's files or packages, or wire the supplied reference itself
+into a Film, Track, Take or final output. Every visible shot must be newly authored or explicitly
+supplied by the author as replacement material.
+
 ## 1. Prepare and observe the reference
 
-Read `../environment.md`, `credentials.md` and `observers.md`. Ask once whether Gemini or the calling
+Read `../environment.md`, `../credentials.md` and `observers.md`. Ask once whether Gemini or the calling
 agent should read the reference, then run:
 
 ```bash
