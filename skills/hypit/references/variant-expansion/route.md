@@ -47,7 +47,7 @@ Use `--delivery-mode build` only when the author explicitly requested finished v
 batch stages are:
 
 ```text
-baseline-validated → examples-inspected → format-plan-frozen → slate-drafted
+baseline-validated → base-inspected → format-plan-frozen → slate-drafted
 → vocabulary-enumerated → component-plan-frozen → package-gaps-classified
 → workload-disclosed → package-gaps-resolved → slate-frozen → projects-copied
 → variants-dispatched → variants-complete → aggregate-checked
@@ -75,19 +75,19 @@ project leaves this route and starts `../revision/route.md` with `--parent-route
 `variant_check` after Revision has started. Later batch reconciliation validates the immutable check
 that completed the original variant and does not reinterpret Revision edits as batch scope escape.
 
-## 2. Inspect examples and freeze format decisions
+## 2. Inspect the validated base and freeze format decisions
 
-**Read now:** `../brief-intake.md`, then inspect complete projects under the checkout's `examples/`
-directory when it exists. Recover intent, Hook, narrative development and the relationship between
-visuals, audio and text. README clone sets are useful evidence of the intended expansion pattern, but
-their Source, people, products, claims and assets are not templates.
+Do not inspect the checkout's `examples/` directory on this route. The validated base project's complete
+`main.svml`, Recipe Source, Run Source and persisted brief/route evidence are the authority for intent,
+Hook, narrative development and the relationship between visuals, audio and text. Reading an unrelated
+example here can replace the base's format with another project's implementation and confuse child agents.
 
 **Read now:** `../playbooks/index.md`. Select each direction's format from its intent. Read the matching
 format file named by that index completely and the craft files its footer names. Keep the base format
 by default. A switch among ranking, street interview, podcast or another format is a high-change
 direction and must be explicit in the plan.
 
-Persist `format-plan.json`. Each direction entry records its id, quota, example basis and digest,
+Persist `format-plan.json`. Each direction entry records its id, quota, base-project basis and digest,
 playbook path, and frozen Format DNA: Hook, narrative progression, speaker/role grammar, layout system,
 timing model, caption/overlay behavior, audio relationship and what must remain invariant. The
 dispatch step carries that direction entry into each numbered child. Checkpoint
@@ -116,7 +116,7 @@ shared brief and allowed scope inherited by its concrete variants:
 }
 ```
 
-The main agent chooses the directions from the examples and divides the requested count among them.
+The main agent chooses the directions from the validated base and the author's request, then divides the requested count among them.
 `variant_init` expands each direction deterministically into numbered concrete variants (for example,
 `ranking-host-01` through `ranking-host-20`) and persists each generated brief in that child's
 `.hypit/variant-brief.json`. A child may make its concrete creative choice within the direction, but
@@ -238,8 +238,8 @@ projects and refuses conflicting destinations.
 ## 8. Dispatch variant agents in bounded waves
 
 The main agent supplies each variant agent only its copied project and the fixed plan entry for its
-direction. The main
-agent, not the child, has already chosen examples, format, Format DNA, component strategy and scope.
+direction. The main agent, not the child, has already chosen the base-derived format, Format DNA,
+component strategy and scope.
 Checkpoint `variants-dispatched` only after the agents have actually been assigned; route-state files
 created by `variant_init` are not proof of dispatch.
 
@@ -252,8 +252,8 @@ Every variant agent reads:
 4. `../authoring.md`, `../script-time.md` and `../preview.md`;
 5. the assigned package README and inspection evidence.
 
-Checkpoint `guidance-loaded` after those reads. The agent does not rescan examples or replace the
-format/component decision.
+Checkpoint `guidance-loaded` after those reads. The agent does not scan examples or replace the
+base-derived format/component decision.
 
 Vocabulary behavior is fixed:
 
