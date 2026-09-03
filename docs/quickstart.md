@@ -102,6 +102,9 @@ sequence depends on the video, but it generally includes:
 7. **Comparing against a mock.** It produces mock media for unbuilt generations, renders the complete
    composition in Studio, compares what it sees with the reference or brief, and repairs issues such
    as incorrect timing, hierarchy, cropping, captions or visual density.
+8. **Applying your requested changes.** After establishing the base video, it applies the changes in
+   your brief, such as replacing the person on screen or adapting the video to your product, then
+   checks the updated result.
 
 ## 5. Review the mock Studio
 
@@ -115,7 +118,7 @@ captions, the prominence of the ranking board or product, the rhythm of B-roll, 
 overall tone matches your brief. If something is wrong, describe the problem in ordinary language:
 
 ```text
-The board appears too late, the captions are too small on a phone, and the B-roll covers the host
+The board appears too late, the captions are too small, and the B-roll covers the host
 while she is speaking. Please fix those issues and show me the mock again.
 ```
 
