@@ -78,8 +78,8 @@ can be illegible on the picture that will replace it.
 `render_element` delegates this to `@hypit/preview-mock`. The realizer finds every relevant logical
 output in the compiled Author/Run Graph — the takes, stills and slot contents — derives geometry from
 Graph inputs, and materializes them through `@hypit/mock-media` in a temporary Run under
-`.hypit/preview/<run-name>/`. Never `hypit image`, which pays for a generation
-the video will not reuse, and never a placeholder drawn by a script written for the occasion.
+`.hypit/preview/<run-name>/`. Never a paid generation the video will not reuse, and never a
+placeholder drawn by a script written for the occasion.
 
 Geometry follows the fixed Graph policy: Canvas width/height first, then generation aspect-ratio,
 then Canvas fallback; resolution labels such as `720p` and `2K` are not converted to pixels, and
