@@ -22,6 +22,8 @@ npx skills add hypit-ai/hypit -g
 
 Then start a Coding Agent anywhere; the Hypit skill is available globally.
 
+<video controls playsinline preload="metadata" width="100%" src="./quickstart/videos/describe_the_video_you_want.mp4"></video>
+
 ## 2. Describe the video you want
 
 You can take either of two paths.
@@ -62,6 +64,8 @@ You can add constraints such as audience, duration, language, tone, brand colors
 or aspect ratio. The Agent turns the brief into a complete plan and fills in production details from
 the information you provide.
 
+<video controls playsinline preload="metadata" width="100%" src="./quickstart/videos/provide_credentials_when_the_agent_asks.mp4"></video>
+
 ## 3. Provide credentials when the Agent asks
 
 After you describe the video, the Agent checks which models and services the project needs. If a
@@ -77,6 +81,8 @@ options:
 
 Never paste a secret into a public document or commit it to Git. The Agent stores credentials using
 the configured secure credential store.
+
+<video controls playsinline preload="metadata" width="100%" src="./quickstart/videos/let_the_agent_do_the_production_work.mp4"></video>
 
 ## 4. Let the Agent do the production work
 
@@ -106,6 +112,8 @@ sequence depends on the video, but it generally includes:
    your brief, such as replacing the person on screen or adapting the video to your product, then
    checks the updated result.
 
+<video controls playsinline preload="metadata" width="100%" src="./quickstart/videos/review_the_mock_studio.mp4"></video>
+
 ## 5. Review the mock Studio
 
 When the first pass is ready, the Agent opens a Studio mock for you. A mock is a review version: it
@@ -124,6 +132,8 @@ while she is speaking. Please fix those issues and show me the mock again.
 
 The Agent edits the source, reruns the relevant checks and returns an updated mock.
 
+<video controls playsinline preload="metadata" width="100%" src="./quickstart/videos/approve_and_submit_the_paid_build.mp4"></video>
+
 ## 6. Approve and submit the paid Build
 
 Only after you explicitly approve the mock should you ask for the paid Build:
@@ -137,6 +147,8 @@ It then submits the Build, follows its progress and reports any provider or runt
 language. A paid Build is the step that performs the real generation, media processing and final
 rendering; the earlier mock does not silently trigger those billable operations.
 
+<video controls playsinline preload="metadata" width="100%" src="./quickstart/videos/review_the_paid_result.mp4"></video>
+
 ## 7. Review the paid result
 
 When the Build finishes, the Agent opens the resulting video and provides the saved output. Watch
@@ -144,6 +156,8 @@ the final result, not only the Studio mock. Real generated shots can differ from
 stand-ins, so check the generated host, B-roll, audio, captions, transitions, framing and export
 quality. If the result needs a correction, tell the Agent what to change. It will revise the source
 and guide you through another review rather than asking you to edit the rendered MP4 by hand.
+
+<video controls playsinline preload="metadata" width="100%" src="./quickstart/videos/request_natural_language_changes.mp4"></video>
 
 ## 8. Request natural-language changes
 
@@ -158,6 +172,8 @@ look like a paper sports magazine.
 
 The Agent traces each request to the relevant source and component, preserves what you asked it to
 keep, and shows a new mock before another paid Build.
+
+<video controls playsinline preload="metadata" width="100%" src="./quickstart/videos/create_multiple_variants_in_parallel.mp4"></video>
 
 ## 9. Create multiple variants in parallel
 
