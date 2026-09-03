@@ -201,6 +201,13 @@ spending. `hypit build` is submitted only after explicit cost approval.
 
 ### `original-authoring` (original authoring)
 
+#### Route entry and prerequisites
+
+1. Select the Distribution, project root and Runtime Profile, then create `route_state`.
+2. Before inspecting examples or freezing the brief, check the `hypihub.default` credential. If the writable HypiHub OS credential is missing, explain that OAuth avoids copying an API key and run `hypit auth login hypihub.default --runtime hypit.runtime.json`; an account without an active subscription can purchase one at hypit.ai.
+3. Run `hypit runtime up` and confirm WhisperX and every other selected program are healthy. Do not enter brief, vocabulary or Source work before this gate is complete.
+4. When vocabulary inspection proves a real gap, pause Source authoring and enter the project-package branch: create `packages/<slug>/`, write `package.json` and activation first, then implement the Manifest, Types, Producers, Validators, Surface/decoder, Fragment, README and preview. Install, import and pass `validate_local_author_packages`, `preview_check` and `layout_check` before returning to this route.
+
 ```text
 environment → brief-frozen → examples/format/craft decisions
 → vocabulary/component-fit → Script and four sources → source-authored
@@ -228,6 +235,12 @@ edge needed by the Film. It has no reference video, so `brief.json` is the autho
 | 11. Hand off | Create the estimate-timed preview-mock Run, show Studio, disclose cost and Build only after approval. | `preview-mock.md`, `studio-confirmation.md`, `hypit plan/build/status/inspect/get` | Studio sees the live Film graph; the paid Build reuses the checked Run and produces the complete delivery. |
 
 ### `reconstruction` (reconstruction)
+
+#### Route entry and prerequisites
+
+1. Select the project, Runtime Profile and observer and create `route_state`; do not inspect or copy the reference before the environment gate.
+2. Check HypiHub OAuth. If it is missing, explain why and run `hypit auth login hypihub.default --runtime hypit.runtime.json`, then run `hypit runtime up` and confirm WhisperX is ready before `prepare_reference`, observation or Gemini calls.
+3. Enumerate components only after reference evidence is complete. A proven vocabulary gap follows the project-package branch: implement and validate the complete package (`package.json`, activation, Manifest, Types, Producers, Validators, Surface/decoder, Fragment, README and preview). Never edit installed packages or copy reference media directly.
 
 ```text
 environment → reference-prepared → reference-observed
@@ -284,6 +297,12 @@ before any paid generation is possible.
 
 ### `revision` (revision)
 
+#### Route entry and prerequisites
+
+1. Locate the canonical Run, read and reconcile its state, and restore its Runtime Profile and credentials; never infer the baseline from chat memory.
+2. A source-only revision still requires a resolvable Runtime Profile. If the change will trigger paid generation, confirm HypiHub OAuth first and run `hypit auth login` when missing rather than deferring login until Build.
+3. If the change exposes a component gap, enter the project-package branch and complete the package plus Run-scoped validation before continuing Revision; change runtime or package only when capability truly changes.
+
 Revision can start from a directly supplied completed project, a reconstruction, an original project,
 an earlier revision or one completed variant:
 
@@ -308,6 +327,12 @@ reference comparison; Studio is only a display handoff after deterministic check
 | 6. Finish or hand off | Persist final evidence, optionally show Studio, and Build only if generation inputs changed and cost is approved. | `revision_state`, `studio-confirmation.md`, `hypit plan/build` | A completed revision can feed another variant batch; a later request starts a new revision id. |
 
 ### `variant-expansion` (variant expansion)
+
+#### Route entry and prerequisites
+
+1. The main agent reconciles the base project and confirms its final gates and Runtime Profile; every child inherits that settled environment.
+2. If the batch will perform paid generation, check HypiHub OAuth first; when missing, explain and run `hypit auth login`, then `hypit runtime up`. Child agents do not repeatedly ask for login and may not bypass the environment gate with a credentialless path.
+3. Every new package is completed once in staging: `package.json`, activation, Manifest, Types, Producers, Validators, Surface/decoder, Fragment, README and preview, plus package/graph/preview/layout validation. Freeze its digest before injecting it into children.
 
 The main agent makes global decisions before any child agent starts:
 
