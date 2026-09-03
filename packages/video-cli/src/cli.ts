@@ -2,6 +2,8 @@
 import { renderCliError, writeCliHelp } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
 import { creationCommands, isCreationCommand, writeCreationHelp } from "./creation.js";
+import { isMediaCommand, mediaCommands, writeMediaHelp } from "./media.js";
+import { writeVocabularyHelp } from "./vocabulary.js";
 
 const argv = process.argv.slice(2);
 const json = argv.includes("--json");
@@ -64,10 +66,20 @@ async function main(): Promise<void> {
       writeCreationHelp(io, topic);
       return;
     }
+    if (topic === "media") {
+      const sub = argv[0] === "help" ? argv[2] : argv[1];
+      writeMediaHelp(io, isMediaCommand(sub) ? sub : undefined);
+      return;
+    }
+    if (topic === "vocabulary") {
+      writeVocabularyHelp(io);
+      return;
+    }
     writeCliHelp(io, topic);
     if (topic === undefined) {
       io.write(`\nCreation tools (one request through the selected Runtime Profile, no Build)\n${
-        creationCommands.map((item) => `  ${item}`).join("\n")}\n  hypit help <tool> for each\n`);
+        creationCommands.map((item) => `  ${item}`).join("\n")}\n  hypit help <tool> for each\n`
+        + `\nPreparation (local, no request, no state)\n  media ${mediaCommands.join(" | ")}\n  vocabulary\n  hypit help media, hypit help vocabulary\n`);
     }
     return;
   }

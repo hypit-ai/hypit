@@ -2399,94 +2399,6 @@ importers:
         specifier: workspace:*
         version: link:../spatial
 
-  packages/reference-video-tools:
-    dependencies:
-      '@hypit/composition':
-        specifier: workspace:*
-        version: link:../composition
-      '@hypit/core':
-        specifier: workspace:*
-        version: link:../core
-      '@hypit/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-      '@hypit/gemini':
-        specifier: workspace:*
-        version: link:../gemini
-      '@hypit/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../media
-      '@hypit/model-kit':
-        specifier: workspace:*
-        version: link:../model-kit
-      '@hypit/package-loader-node':
-        specifier: workspace:*
-        version: link:../package-loader-node
-      '@hypit/preview-mock':
-        specifier: workspace:*
-        version: link:../preview-mock
-      '@hypit/program-space':
-        specifier: workspace:*
-        version: link:../program-space
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/provider-media-local':
-        specifier: workspace:*
-        version: link:../provider-media-local
-      '@hypit/run-markup':
-        specifier: workspace:*
-        version: link:../run-markup
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@hypit/script':
-        specifier: workspace:*
-        version: link:../script
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@hypit/speech-evidence':
-        specifier: workspace:*
-        version: link:../speech-evidence
-      '@hypit/studio':
-        specifier: workspace:*
-        version: link:../studio
-      '@hypit/svs':
-        specifier: workspace:*
-        version: link:../svs
-      '@hypit/text':
-        specifier: workspace:*
-        version: link:../text
-      '@hypit/video-cli':
-        specifier: workspace:*
-        version: link:../video-cli
-      '@hypit/visual-ir':
-        specifier: workspace:*
-        version: link:../visual-ir
-      '@hypit/whisperx':
-        specifier: workspace:*
-        version: link:../whisperx
-      '@hypit/yt-dlp':
-        specifier: workspace:*
-        version: link:../yt-dlp
-      puppeteer-core:
-        specifier: 25.5.0
-        version: 25.5.0
-      tsx:
-        specifier: 4.21.0
-        version: 4.21.0
-    devDependencies:
-      '@types/node':
-        specifier: 24.10.1
-        version: 24.10.1
-
   packages/render-hyperframes:
     dependencies:
       '@hypit/artifact':
@@ -3373,6 +3285,9 @@ importers:
       '@hypit/compiler-markup-node':
         specifier: workspace:*
         version: link:../compiler-markup-node
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@hypit/credential-store-os':
         specifier: workspace:*
         version: link:../credential-store-os
@@ -3394,6 +3309,9 @@ importers:
       '@hypit/mimo-tts':
         specifier: workspace:*
         version: link:../mimo-tts
+      '@hypit/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
       '@hypit/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
@@ -3421,12 +3339,18 @@ importers:
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
+      '@hypit/visual-ir':
+        specifier: workspace:*
+        version: link:../visual-ir
       '@hypit/whisperx':
         specifier: workspace:*
         version: link:../whisperx
       '@hypit/workspace-fs-node':
         specifier: workspace:*
         version: link:../workspace-fs-node
+      '@hypit/yt-dlp':
+        specifier: workspace:*
+        version: link:../yt-dlp
 
   packages/visual-ir:
     dependencies:

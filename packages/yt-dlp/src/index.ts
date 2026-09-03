@@ -1,1 +1,1 @@
-export { downloadReferenceVideo, isReferenceUrl } from "./download.js";
+export { downloadVideo, isVideoUrl } from "./download.js";

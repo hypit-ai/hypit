@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, resolve } from "node:path";
@@ -28,6 +27,7 @@ import { whisperXCapabilities, whisperXRequestForEvidenceAudio } from "@hypit/wh
 import type { WhisperXLanguage } from "@hypit/whisperx";
 
 import { videoCliDistribution } from "./distribution.js";
+import { runProcess } from "./process.js";
 
 /**
  * Creation-time tools: see a picture, hear a recording, speak a line.
@@ -220,19 +220,8 @@ function mediaType(path: string): string {
   return type;
 }
 
-function run(executable: string, args: readonly string[]): Promise<string> {
-  return new Promise((resolveRun, reject) => {
-    const child = spawn(executable, args, { stdio: ["ignore", "pipe", "pipe"] });
-    const out: Buffer[] = [];
-    const err: Buffer[] = [];
-    child.stdout.on("data", (chunk: Buffer) => out.push(chunk));
-    child.stderr.on("data", (chunk: Buffer) => err.push(chunk));
-    child.on("error", (error) => reject(new Error(`${executable} could not start: ${error.message}`)));
-    child.on("close", (code) => {
-      if (code === 0) resolveRun(Buffer.concat(out).toString("utf8"));
-      else reject(new Error(`${executable} exited with ${code}: ${Buffer.concat(err).toString("utf8").trim()}`));
-    });
-  });
+async function run(executable: string, args: readonly string[]): Promise<string> {
+  return (await runProcess(executable, args)).toString("utf8");
 }
 
 const EVIDENCE_SAMPLE_RATE = 16_000;
