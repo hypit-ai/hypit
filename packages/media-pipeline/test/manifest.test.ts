@@ -126,7 +126,7 @@ test("StillVideo stops at an ordinary MP4 branch before Normalize", async () => 
       attributes: {
         id: "opening-still",
         source: { kind: "reference", path: "opening-head" },
-        duration: { kind: "reference", path: "opening-duration.duration" },
+        duration: "6",
         clock: { kind: "reference", path: "clock" },
       },
       children: [],
@@ -134,14 +134,16 @@ test("StillVideo stops at an ordinary MP4 branch before Normalize", async () => 
     },
     resolveReference: (path) => path === "opening-head"
       ? { path, ref: { kind: "record", id: path }, type: artifactTypes.blob }
-      : path === "opening-duration.duration"
-        ? { path, ref: { kind: "record", id: path }, type: speechTypes.duration }
-        : path === "clock"
-          ? { path, ref: { kind: "record", id: path }, type: programSpaceTypes.clock }
-          : undefined,
+      : path === "clock"
+        ? { path, ref: { kind: "record", id: path }, type: programSpaceTypes.clock }
+        : undefined,
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
   assert.equal(output.fragments[0]?.id, stillVideoFragment.id);
   assert.deepEqual(output.components[0]?.outputs, { video: "opening-still.video" });
+  assert.deepEqual(output.records[0], {
+    id: "opening-still.duration", type: speechTypes.duration, value: { kind: "inline", value: 6 }, range,
+  }, "the literal duration is the author's, published as an ordinary SpeechDuration Record");
+  assert.deepEqual(output.components[0]?.inputs.duration, { kind: "record", id: "opening-still.duration" });
   assert.equal(stillVideoFragment.exports[0]?.type.name, artifactTypes.blob.name);
 });

@@ -1,29 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseStructuredElement } from "@hypit/markup";
-import { sealText, textTypes } from "@hypit/text";
+import { sealText } from "@hypit/text";
 
 import {
   countSpeechEstimateUnits,
-  decodeSpeechEstimateSurface,
   estimateSpeechDuration,
   sealSpeechEstimatePolicy,
+  speechEstimatePolicyFromAttributes,
   speechEstimatePolicyFromRecipe,
 } from "@hypit/estimate";
 
-function estimateSurface(source: string) {
-  return decodeSpeechEstimateSurface({
-    sourceName: "estimate.svml",
-    element: parseStructuredElement({ name: "estimate.svml", text: source }, 0).element,
-    resolveReference: (path) => path === "speech"
-      ? { path, ref: { kind: "record", id: path }, type: textTypes.text }
-      : undefined,
-    resolveAsset: () => { throw new Error("Estimate has no assets"); },
-  });
-}
-
 const normal = sealSpeechEstimatePolicy({
-
   language: "en",
   pace: "normal",
   minimumSec: 4,
@@ -74,7 +61,7 @@ test("a numeric rate gives SVS a continuous author-controlled pace", () => {
   assert.equal(result, 10);
 });
 
-test("optional padding extends speech before bounds and rounding", async () => {
+test("optional padding extends speech before bounds and rounding", () => {
   const source = sealText(Array.from({ length: 23 }, () => "day").join(" "));
   const policy = sealSpeechEstimatePolicy({
     language: "en",
@@ -85,10 +72,6 @@ test("optional padding extends speech before bounds and rounding", async () => {
     paddingSec: 1,
   });
   assert.equal(estimateSpeechDuration(source, policy), 6);
-
-  const output = await estimateSurface('<estimate:Speech id="duration" source={speech} language="en" pace="normal" min="1" max="30" rounding="none" padding="1"/>');
-  const value = output.records[0]!.value;
-  assert.equal(value.kind === "inline" && (value.value as { readonly paddingSec?: number }).paddingSec, 1);
 
   const recipe = speechEstimatePolicyFromRecipe({
     path: "speech.padded",
@@ -105,16 +88,18 @@ test("optional padding extends speech before bounds and rounding", async () => {
   assert.throws(() => sealSpeechEstimatePolicy({ ...policy, paddingSec: -1 }), /invalid/u);
 });
 
-test("the author Surface requires one complete explicit inline policy", async () => {
-  const output = await estimateSurface('<estimate:Speech id="duration" source={speech} language="en" rate="4.75" min="4" max="15" rounding="round"/>');
-  const value = output.records[0]!.value;
-  assert.equal(value.kind, "inline");
-  assert.equal(value.kind === "inline" && (value.value as { readonly rate?: number }).rate, 4.75);
+test("a policy written as attributes reads the same values a Recipe would", () => {
+  const policy = speechEstimatePolicyFromAttributes(
+    { language: "en", rate: "4.75", min: "4", max: "15", rounding: "round" },
+    "estimated:SemanticTake",
+  );
+  assert.equal(policy.rate, 4.75);
+  assert.equal(policy.maximumSec, 15);
   assert.throws(
-    () => estimateSurface('<estimate:Speech id="duration" source={speech} language="en" pace="normal" rate="4.75" min="4" max="15" rounding="round"/>'),
+    () => speechEstimatePolicyFromAttributes({ language: "en", pace: "normal", rate: "4.75", min: "4", max: "15", rounding: "round" }, "x"),
     /exactly one/u,
   );
-  assert.throws(() => estimateSurface('<estimate:Speech id="duration" source={speech} rate="4.75"/>'), /requires/u);
+  assert.throws(() => speechEstimatePolicyFromAttributes({ rate: "4.75" }, "x"), /requires language, min, max, rounding/u);
 });
 
 test("the minimum applies before rounding and the maximum applies after rounding", () => {
@@ -125,7 +110,6 @@ test("the minimum applies before rounding and the maximum applies after rounding
 
 test("an SVS Recipe configures one reusable estimate policy without becoming executable", () => {
   const policy = speechEstimatePolicyFromRecipe({
-
     path: "speech.normal",
     properties: {
       language: "en",
@@ -139,13 +123,11 @@ test("an SVS Recipe configures one reusable estimate policy without becoming exe
   assert.equal(policy.rate, 4.75);
   assert.equal(policy.maximumSec, 15);
   assert.throws(() => speechEstimatePolicyFromRecipe({
-
     path: "speech.ambiguous",
     properties: { pace: "normal", rate: 4.6 },
-  }), /exactly one/u);
+  }), /exactly one|requires/u);
   assert.throws(() => speechEstimatePolicyFromRecipe({
-
     path: "speech.invalid",
     properties: { provider: "unknown-provider" },
-  }), /unknown property provider/u);
+  }), /unknown property/u);
 });

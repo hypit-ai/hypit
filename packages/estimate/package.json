@@ -11,9 +11,6 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/component-kit": "workspace:*",
-    "@hypit/elaborator": "workspace:*",
-    "@hypit/markup": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/speech": "workspace:*",
     "@hypit/svs": "workspace:*",

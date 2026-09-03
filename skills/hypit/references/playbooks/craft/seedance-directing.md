@@ -65,8 +65,8 @@ than relying on an unstated assumption.
   `mini`, `fast` and `standard` take at most 9 images, 3 videos, 3 audio clips and 12 files in total,
   and their reference audio requires at least one visual reference; `2.5` takes more of each and
   imposes neither of those two constraints.
-- Use `estimate:Speech` for speech-driven duration planning; it estimates pronunciation length but
-  does not create measured timing.
+- Use `hypit measure` for speech-driven duration planning and write the seconds as the literal
+  `duration`; it estimates pronunciation length but does not create measured timing.
 
 ## Direct the shot
 

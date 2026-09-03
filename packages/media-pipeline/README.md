@@ -46,8 +46,8 @@ hide the Normalize graph node or turn multiple sources into one opaque batch ope
 A still image becomes ordinary video before it enters that waist:
 
 ```svml
-<media:StillVideo id="opening-still" source={opening-head}
-  duration={opening-duration.duration} clock={clock}/>
+<media:StillVideo id="opening-still" source={opening-head.image}
+  duration="6" clock={clock}/>
 <pipeline:Normalize id="opening-media" source={opening-still.video}
   video="primary-moving" audio="none" span-authority="video" clock={clock}/>
 ```

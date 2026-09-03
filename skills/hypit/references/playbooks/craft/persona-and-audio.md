@@ -35,8 +35,9 @@ Connect only the references a component actually needs.
 
 - The speaking take generates the speech, so a Segment is exactly as long as the take that speaks it.
   There is no second duration to reconcile.
-- Use `estimate:Speech` only to size a generation before it is ordered. Final caption and semantic
-  timing comes from each accepted normalized Take through `whisperx:SemanticTake`.
+- Use `hypit measure` only to size a generation before it is ordered, and write the result as the
+  literal duration. Final caption and semantic timing comes from each accepted normalized Take
+  through `whisperx:SemanticTake`.
 - One continuous voiceover may cover several independently selected visual inserts. Do not cut the
   Script merely because the picture cuts — the inserts are Selections inside the Segment.
 - Preserve Script Segment order when assembling `speech:Take` children.

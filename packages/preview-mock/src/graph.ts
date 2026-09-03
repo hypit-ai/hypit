@@ -1,13 +1,15 @@
 import type { CompiledGraph, Candidate, TypedRecord } from "@hypit/protocol";
 import { findLogicalOutput, findCandidate, findOperation } from "@hypit/compiler-node";
 import type { GraphValueRef, TypeRef } from "@hypit/protocol";
-import { estimateSpeechDuration } from "@hypit/estimate";
-import type { SpeechEstimatePolicy } from "@hypit/estimate";
-import type { Text } from "@hypit/text";
 
 export type MockKind = "image" | "video" | "audio" | "semantic-take";
 export type MockTarget = { readonly output: string; readonly candidate: Candidate; readonly kind: MockKind; readonly inputs: Readonly<Record<string, string>>; readonly durationSeconds?: number };
 
+/**
+ * The longest duration the author wrote anywhere in the graph: a SpeechDuration literal (a still's
+ * length) or the `duration` port of a generation request (a Seedance take). Durations are author
+ * literals, so the preview clock is known before anything runs.
+ */
 export function estimatedProgramDurationSeconds(graph: CompiledGraph, records: readonly TypedRecord[] = []): number | undefined {
   const values: unknown[] = [
     ...records.filter((item) => sameType(item.type, "@hypit/speech", "SpeechDuration")).map((item) => item.value),
@@ -15,12 +17,19 @@ export function estimatedProgramDurationSeconds(graph: CompiledGraph, records: r
       .map((item) => item.root.kind === "value" ? item.root.value.value : undefined),
   ];
   const durations = values.map(inlineNumber).filter((value): value is number => value !== undefined);
-  for (const operation of graph.operations) {
-    if (operation.producer.module.name !== "@hypit/estimate" || operation.producer.name !== "estimate-speech-duration") continue;
-    const duration = estimateOperationDuration(graph, operation, records);
+  for (const record of records) {
+    const duration = requestDuration(record.value.kind === "inline" ? record.value.value : undefined);
     if (duration !== undefined) durations.push(duration);
   }
   return durations.length === 0 ? undefined : Math.max(...durations);
+}
+
+/** The `duration` port of a sealed generation request or draft; nothing else is read as a duration. */
+function requestDuration(value: unknown): number | undefined {
+  if (value === null || typeof value !== "object") return undefined;
+  const ports = (value as { readonly ports?: unknown }).ports;
+  if (ports === null || typeof ports !== "object") return undefined;
+  return inlineDuration((ports as Record<string, unknown>).duration);
 }
 
 function sameType(left: TypeRef | undefined, module: string, name: string): boolean {
@@ -125,24 +134,8 @@ function refOfTypeInOperation(
   return undefined;
 }
 
-function estimateOperationDuration(graph: CompiledGraph, operation: ReturnType<typeof findOperation>, records: readonly TypedRecord[]): number | undefined {
-  if (operation === undefined) return undefined;
-  const speechRef = operation.inputs.speech;
-  const policyRef = operation.inputs.policy;
-  if (speechRef?.kind !== "record" || policyRef?.kind !== "record") return undefined;
-  const speech = recordValue(records, speechRef.id);
-  const policy = recordValue(records, policyRef.id);
-  if (speech === undefined || policy === undefined || typeof speech !== "object" || typeof policy !== "object") return undefined;
-  try {
-    return estimateSpeechDuration(speech as Text, policy as SpeechEstimatePolicy);
-  } catch {
-    return undefined;
-  }
-}
-
-/** Resolve the SpeechDuration belonging to one generation operation, without falling back to the
- * first duration in the graph. Seedance's duration arrives through its internal DurationProgram, so
- * the useful edge may be an operation result rather than a logical output. */
+/** Resolve the duration belonging to one generation operation, without falling back to the first
+ * duration in the graph: a SpeechDuration record, or the literal `duration` port of the request. */
 function durationFromRef(
   graph: CompiledGraph,
   ref: GraphValueRef | undefined,
@@ -163,9 +156,7 @@ function durationFromRef(
   seen.add(ref.operation);
   const operation = findOperation(graph, ref.operation);
   if (operation === undefined) return undefined;
-  const estimated = estimateOperationDuration(graph, operation, records);
-  if (estimated !== undefined) return estimated;
-  for (const name of ["duration", "program", "request", "draft", "speech"]) {
+  for (const name of ["duration", "request", "draft"]) {
     const value = durationFromRef(graph, operation.inputs[name], records, seen);
     if (value !== undefined) return value;
   }

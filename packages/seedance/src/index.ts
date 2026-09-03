@@ -1,25 +1,17 @@
 import {
-  generationObjectSchema,
-  portsObjectSchema,
   sealGenerationPortRequest,
-  sealGenerationRequestDraft,
   sealGenerationPortTable,
-  verifyPortsAgainstTable,
 } from "@hypit/generation";
 import type {
   GenerationPortTable,
   GenerationPortValue,
   GenerationRequest,
-  GenerationRequestDraft,
 } from "@hypit/generation";
 import { artifactTypes } from "@hypit/artifact";
 import type { SurfaceAttributeVocabulary, SurfacePortVocabulary } from "@hypit/markup";
 import { defineExactModelModule } from "@hypit/model-kit";
-import { assertSpeechDurationIdentity, speechDependency, speechTypes } from "@hypit/speech";
-import type { SpeechDuration } from "@hypit/speech";
 import { textTypes } from "@hypit/text";
-import { canonicalize } from "@hypit/protocol";
-import type { ResourceId, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import type { ResourceId } from "@hypit/protocol";
 
 export const seedanceModuleRef = { name: "@hypit/seedance", version: "1" } as const;
 export const seedanceModels = ["seedance-2", "seedance-2-fast", "seedance-2-mini", "seedance-2.5"] as const;
@@ -100,88 +92,6 @@ export function sealSeedanceRequest(model: SeedanceModel, ports: SeedancePortMap
   return sealGenerationPortRequest(seedancePorts[model], ports);
 }
 
-/** One authored generation minus a duration supplied by an explicit graph edge. */
-export type SeedanceDurationProgram = {
-  readonly model: SeedanceModel;
-  readonly ports: SeedancePortMap;
-};
-
-export const seedanceTypes = {
-  durationProgram: { module: seedanceModuleRef, name: "DurationProgram" },
-} satisfies Record<string, TypeRef>;
-
-export const seedanceDurationCompileProducers = Object.fromEntries(
-  seedanceModels.map((model) => [model, {
-    module: seedanceModuleRef,
-    name: `compile-${model}-duration-request`,
-  }]),
-) as Record<SeedanceModel, ProducerRef>;
-
-function assertObject(value: unknown): asserts value is Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Seedance value must be an object");
-  }
-}
-
-export function verifySeedanceDurationProgram(value: unknown): asserts value is SeedanceDurationProgram {
-  assertObject(value);
-  if (!seedanceModels.includes(value.model as SeedanceModel)) {
-    throw new Error("Seedance DurationProgram identity is invalid");
-  }
-  const table = seedancePorts[value.model as SeedanceModel];
-  const later = table.ports
-    .filter((port) => port.value.kind === "media" || port.value.kind === "text")
-    .map((port) => port.name);
-  verifyPortsAgainstTable(table, value.ports, { omit: ["duration", ...later] });
-  const generateAudio = (value.ports as SeedancePortMap).generateAudio;
-}
-
-export function sealSeedanceDurationProgram(value: SeedanceDurationProgram): SeedanceDurationProgram {
-  const result = canonicalize(value) as unknown as SeedanceDurationProgram;
-  verifySeedanceDurationProgram(result);
-  return result;
-}
-
-export function compileSeedanceDurationRequestDraft(
-  program: SeedanceDurationProgram,
-  duration: SpeechDuration,
-): GenerationRequestDraft {
-  verifySeedanceDurationProgram(program);
-  assertSpeechDurationIdentity(duration);
-  // Speech estimation and paid video generation have different clocks.  A short spoken Segment
-  // (including fractional seconds) must remain short for SemanticTake alignment, while the remote
-  // model still requires an integer duration inside its declared range.  Clamp only the generation
-  // request to that legal range; never rewrite the speech estimate itself.
-  const durationPort = seedancePorts[program.model].ports.find((port) => port.name === "duration");
-  const legalDuration = durationPort?.value.kind === "number"
-    ? Math.min(durationPort.value.maximum ?? Number.MAX_SAFE_INTEGER, Math.max(durationPort.value.minimum ?? 0, Math.ceil(duration)))
-    : durationPort?.value.kind === "enum"
-      ? (() => {
-          const allowed = durationPort.value.values.filter((value): value is number => typeof value === "number" && value >= 0);
-          return allowed.find((value) => value >= duration) ?? Math.max(...allowed);
-        })()
-      : Math.ceil(duration);
-  return sealGenerationRequestDraft(seedancePorts[program.model], {
-    ...program.ports,
-    duration: [Number.isFinite(legalDuration) ? legalDuration : Math.ceil(duration)],
-  });
-}
-
-const durationProgramSchema = (model: SeedanceModel): ValueSchema => generationObjectSchema({
-
-  model: { schema: { kind: "literal", value: model } },
-  ports: {
-    schema: portsObjectSchema(seedancePorts[model], {
-      omit: [
-        "duration",
-        ...seedancePorts[model].ports
-          .filter((port) => port.value.kind === "media" || port.value.kind === "text")
-          .map((port) => port.name),
-      ],
-    }),
-  },
-});
-
 const seedanceBaseDefinition = defineExactModelModule({
   module: seedanceModuleRef,
   endpoints: ([
@@ -235,10 +145,9 @@ const seedanceCommonAttributes: readonly SurfaceAttributeVocabulary[] = [
   },
   {
     name: "duration",
-    kind: "expression",
+    kind: "literal",
     required: true,
-    summary: "Sets the length of the video in seconds, either written literally or taken from a SpeechDuration edge.",
-    accepts: [speechTypes.duration],
+    summary: "Sets the length of the video in whole seconds within the model's range; the author's decision, measured beforehand with hypit measure.",
   },
   {
     name: "resolution",
@@ -281,7 +190,6 @@ export const seedanceMarkupSurfaces = [
     tag: "TextVideo",
     mode: "structured",
     outputs: [
-      seedanceTypes.durationProgram,
       ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
         endpoint.draftType,
         ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
@@ -312,7 +220,7 @@ export const seedanceMarkupSurfaces = [
     name: "frame-video",
     tag: "FrameVideo",
     mode: "structured",
-    outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
+    outputs: [...Object.values(seedanceEndpoints).flatMap((endpoint) => [
       endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
     ])],
     vocabulary: {
@@ -347,7 +255,7 @@ export const seedanceMarkupSurfaces = [
     name: "reference-video",
     tag: "ReferenceVideo",
     mode: "structured",
-    outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
+    outputs: [...Object.values(seedanceEndpoints).flatMap((endpoint) => [
       endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
     ])],
     vocabulary: {
@@ -403,65 +311,14 @@ export const seedanceMarkupSurfaces = [
   },
 ] as const;
 
-export const seedanceManifest = {
-  ...seedanceBaseDefinition.manifest,
-  dependencies: [
-    ...seedanceBaseDefinition.manifest.dependencies,
-    speechDependency,
-  ],
-  types: [
-    ...seedanceBaseDefinition.manifest.types,
-    {
-      name: seedanceTypes.durationProgram.name,
-    },
-  ],
-  producers: [
-    ...seedanceBaseDefinition.manifest.producers,
-    ...seedanceModels.map((model) => ({
-      name: seedanceDurationCompileProducers[model].name,
-      inputs: [
-        { name: "program", type: seedanceTypes.durationProgram },
-        { name: "duration", type: speechTypes.duration },
-      ],
-      outputs: [{ name: "draft", type: seedanceEndpointsByModel[model].draftType }],
-      needs: [],
-    })),
-  ],
-} as const;
-export const seedanceComponent = {
-  ...seedanceBaseDefinition.component,
-  producers: [
-    ...seedanceBaseDefinition.component.producers,
-    ...seedanceModels.map((model) => ({
-      producer: seedanceDurationCompileProducers[model],
-      handler: ({ inputs }: { readonly inputs: Readonly<Record<string, { readonly value: import("@hypit/protocol").StoredValue }>> }) => ({
-        outputs: {
-          draft: {
-            kind: "inline" as const,
-            value: canonicalize(compileSeedanceDurationRequestDraft(
-              inputs.program?.value.kind === "inline"
-                ? inputs.program.value.value as unknown as SeedanceDurationProgram
-                : (() => { throw new Error("Seedance DurationProgram must be inline"); })(),
-              inputs.duration?.value.kind === "inline"
-                ? inputs.duration.value.value as unknown as SpeechDuration
-                : (() => { throw new Error("SpeechDuration must be inline"); })(),
-            )),
-          },
-        },
-        needs: {},
-      }),
-    })),
-  ],
-};
-export const seedanceDefinition = {
-  ...seedanceBaseDefinition,
-  manifest: seedanceManifest,
-};
+/** The duration is an author literal on every Seedance Surface, so the manifest is the exact-model module's own. */
+export const seedanceManifest = seedanceBaseDefinition.manifest;
+export const seedanceComponent = seedanceBaseDefinition.component;
+export const seedanceDefinition = seedanceBaseDefinition;
 
 export {
   createSeedanceAssembledGenerationFragment,
   createSeedanceGenerationFragment,
-  createSeedanceDurationGenerationFragment,
 } from "./fragment.js";
 export {
   decodeSeedanceFrameVideoSurface,

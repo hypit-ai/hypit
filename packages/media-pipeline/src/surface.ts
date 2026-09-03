@@ -233,12 +233,10 @@ export const decodeStillVideoSurface: StructuredSurfaceHandler = ({ element, res
   empty(element);
   const id = text(element, "id");
   const source = ref(element.attributes.source, `${element.name}.source`, resolveReference);
-  const duration = typedReference(
-    element.attributes.duration,
-    `${element.name}.duration`,
-    speechTypes.duration,
-    resolveReference,
-  );
+  // The duration is the author's decision, written here; it is published as an ordinary
+  // SpeechDuration Record so the fragment's plan step reads the same value a graph edge would carry.
+  const durationSec = seconds(text(element, "duration"), `${element.name}.duration`, false);
+  const durationId = `${id}.duration`;
   const clock = typedReference(
     element.attributes.clock,
     `${element.name}.clock`,
@@ -246,11 +244,16 @@ export const decodeStillVideoSurface: StructuredSurfaceHandler = ({ element, res
     resolveReference,
   );
   return {
-    records: [],
+    records: [{
+      id: durationId,
+      type: speechTypes.duration,
+      value: { kind: "inline", value: durationSec },
+      range: element.range,
+    }],
     components: [{
       id,
       fragment: stillVideoFragment.id,
-      inputs: { source: source.ref, duration: duration.ref, clock: clock.ref },
+      inputs: { source: source.ref, duration: { kind: "record", id: durationId }, clock: clock.ref },
       outputs: { video: `${id}.video` },
       range: element.range,
     }],

@@ -16,7 +16,7 @@ directory and it is not the author project:
 
 Canonical path:
 
-`Script → estimate:Speech/text → generated or supplied media → normalization → SemanticTake → speech:Track → peer visual/audio Tracks → Film → render:Video`.
+`Script → hypit measure → literal durations on generated or supplied media → normalization → SemanticTake → speech:Track → peer visual/audio Tracks → Film → render:Video`.
 
 Preview uses the same Graph with local mock media and estimate timing. It never edits Author Source and
 never submits paid generation.

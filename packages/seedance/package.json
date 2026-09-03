@@ -16,7 +16,6 @@
     "@hypit/generation": "workspace:*",
     "@hypit/model-kit": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/speech": "workspace:*",
     "@hypit/text": "workspace:*",
     "@hypit/markup": "workspace:*"
   }

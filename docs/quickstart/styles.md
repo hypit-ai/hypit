@@ -267,10 +267,12 @@ continuous author-controlled value.
 Every property is explicit: `language`, `min`, `max`, `rounding`, and exactly
 one of `pace` or `rate` are required. The Estimate package supplies no hidden policy defaults.
 
-Referenced by `estimate:Speech` via the `policy` attribute:
+Referenced by `estimated:SemanticTake` via the `policy` attribute, and used by `hypit measure`
+when the author measures a line before writing its literal duration:
 
 ```svml
-<estimate:Speech id="hook-duration" source={story.segment.hook.speech}
+<estimated:SemanticTake id="hook-estimated" narrative={story}
+  segment={story.segment.hook} media={hook-media.media}
   policy={recipes.speech.normal}/>
 ```
 
@@ -440,7 +442,8 @@ This file is imported once in the `.svml` source and its values are referenced t
 ```svml
 <import as="recipes" source="./recipes.svs"/>
 
-<estimate:Speech id="hook-duration" source={story.segment.hook.speech}
+<estimated:SemanticTake id="hook-estimated" narrative={story}
+  segment={story.segment.hook} media={hook-media.media}
   policy={recipes.speech.normal}/>
 
 <text:Render id="hook-prompt" template={speaker-kit.speaker-v1}

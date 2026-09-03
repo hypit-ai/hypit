@@ -705,9 +705,6 @@ importers:
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@hypit/estimate':
-        specifier: workspace:*
-        version: link:../estimate
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -924,15 +921,6 @@ importers:
 
   packages/estimate:
     dependencies:
-      '@hypit/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@hypit/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1915,9 +1903,6 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@hypit/estimate':
-        specifier: workspace:*
-        version: link:../estimate
       '@hypit/media':
         specifier: workspace:*
         version: link:../media
@@ -2425,9 +2410,6 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@hypit/estimate':
-        specifier: workspace:*
-        version: link:../estimate
       '@hypit/gemini':
         specifier: workspace:*
         version: link:../gemini
@@ -2827,9 +2809,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../speech
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -2914,6 +2893,9 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
+      '@hypit/svs':
+        specifier: workspace:*
+        version: link:../svs
     devDependencies:
       '@hypit/script':
         specifier: workspace:*
@@ -3397,6 +3379,9 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@hypit/estimate':
+        specifier: workspace:*
+        version: link:../estimate
       '@hypit/gemini':
         specifier: workspace:*
         version: link:../gemini

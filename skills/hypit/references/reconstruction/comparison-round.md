@@ -30,7 +30,7 @@ source edge is edited.
 
 ## The render uses estimate timing
 
-`render_element` uses `@hypit/preview-mock` with the Source's `estimate:Speech` timing. `--reference-id`
+`render_element` uses `@hypit/preview-mock` with the Source's literal durations. `--reference-id`
 is reserved for selecting reference evidence and comparison windows, not for constructing mock tracks.
 The comparison still cuts both sides to the same words and refuses a pair whose two halves are different
 lengths. Animated elements are assessed against the deterministic estimate clock used by preview. The

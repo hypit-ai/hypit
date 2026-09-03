@@ -1,9 +1,16 @@
-export { estimateComponent } from "./component.js";
-export { speechEstimateFragment } from "./fragment.js";
-export { estimateManifest, estimateMarkupSurfaces, estimateModuleRef, estimateProducers, estimateTypes, speechEstimatePolicySchema } from "./manifest.js";
-export { assertSpeechEstimatePolicy, countSpeechEstimateUnits, detectSpeechEstimateLanguage, estimateSpeechDuration, resolveSpeechEstimateRate, resolveSpeechEstimateLanguage, sealSpeechEstimatePolicy } from "./program.js";
+export { estimateManifest, estimateModuleRef, estimateTypes, speechEstimatePolicySchema } from "./manifest.js";
 export {
-  decodeSpeechEstimateSurface,
+  speechEstimatePolicyFromAttributes,
   speechEstimatePolicyFromRecipe,
-} from "./surface.js";
+  speechEstimatePolicyProperties,
+} from "./policy.js";
+export {
+  assertSpeechEstimatePolicy,
+  countSpeechEstimateUnits,
+  detectSpeechEstimateLanguage,
+  estimateSpeechDuration,
+  resolveSpeechEstimateLanguage,
+  resolveSpeechEstimateRate,
+  sealSpeechEstimatePolicy,
+} from "./program.js";
 export type * from "./types.js";

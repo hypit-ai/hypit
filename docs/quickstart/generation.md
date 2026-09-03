@@ -13,7 +13,6 @@ Every component shown here must be imported by its package specifier before use:
 ```svml
 <import as="media" from="@hypit/media@1"/>
 <import as="mediaop" from="@hypit/media-pipeline@1"/>
-<import as="estimate" from="@hypit/estimate@1"/>
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
 <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
@@ -50,53 +49,28 @@ Declares an audio Resource from a local file.
 
 Typically used as a voice-timbre reference for `seedance:ReferenceVideo`.
 
-## estimate:Speech
+## Durations are literals
 
-Deterministic speech duration planning from Script pronunciation text. No external service call — the
-duration is computed locally from pronunciation units and a delivery-density policy.
+A generated take's length is the author's decision, written as a literal on the element that needs
+it. Measure the line first, then write the number:
+
+```bash
+hypit measure main.svml --segment hook --language en --pace normal --min 4 --max 15 --rounding round
+# 7s
+```
 
 ```svml
-<estimate:Speech id="hook-duration"
-  source={story.segment.hook.speech}
-  policy={recipes.speech.normal}/>
+<seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt} duration="7">
+  …
+</seedance:ReferenceVideo>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `source` | yes | Script text to estimate — typically `{script.segment.NAME.speech}` |
-| `policy` | no | SVS speech Recipe controlling pace and bounds; omit it to use inline parameters |
-
-The `policy` references an SVS Recipe (see [SVS Stylesheets](./styles.md#speech-estimation)):
-
-```svs
-speech.normal {
-  language: en;
-  pace: normal;
-  min: 4;
-  max: 15;
-  rounding: round;
-}
-```
-
-You can also specify estimation parameters inline instead of using an SVS policy:
-
-```svml
-<estimate:Speech id="opening-duration"
-  source={story.segment.opening.speech}
-  language="en" pace="normal" min="4" max="15" rounding="round"/>
-```
-
-For English, the official pace presets are `slow = 4.2`, `normal = 4.6`, and
-`fast = 5.0` syllables per second. `rate="4.75"` may be used instead of `pace`
-when a project needs a value between the named presets. `pace` and `rate` are
-mutually exclusive.
-
-There are no implicit policy values: `language`, `min`, `max`, `rounding`, and
-exactly one of `pace` or `rate` must be present either inline or in the referenced Recipe.
-
-**Output:** `{hook-duration.duration}` — the estimated duration in seconds, passed to generation
-components.
+`hypit measure` counts pronunciation units of the Segment's speech at a delivery policy — `language`,
+`pace` (`slow = 4.2`, `normal = 4.6`, `fast = 5.0` syllables per second for English) or a numeric
+`rate`, `min`, `max` and `rounding` — with no external call. Nothing in the graph computes a duration,
+so `hypit plan` is complete before a Build starts. The same policy, written on
+`estimated:SemanticTake` or as an SVS Recipe it names (see
+[SVS Stylesheets](./styles.md#speech-estimation)), weights a Segment's words across preview media.
 
 ## text:Value
 
@@ -179,7 +153,8 @@ video and audio references within the model's declared limits.
 The component does not know that this is a talking head. That meaning lives in the supplied Text.
 
 Common attributes are `id`, `model`, `prompt`, `duration`, `resolution`, `aspect-ratio` and
-`generate-audio`. `duration` may be literal or an explicit `{estimate.duration}` edge.
+`generate-audio`. `duration` is a literal in whole seconds inside the model's range, measured
+beforehand with `hypit measure`.
 
 The audio generated in an earlier take can be reused as a later reference through an ordinary graph
 edge. Extraction does not turn it into speech evidence or attach speaker meaning:
@@ -335,11 +310,11 @@ reference media or generation endpoint.
 
 ## Combination example
 
-A two-take setup with estimated durations feeding explicit Text assembly and Seedance generation:
+A two-take setup with measured durations written as literals, explicit Text assembly and Seedance
+generation:
 
 ```svml
 <import as="media" from="@hypit/media@1"/>
-<import as="estimate" from="@hypit/estimate@1"/>
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
 <import as="recipes" source="./recipes.svs"/>
@@ -349,10 +324,6 @@ A two-take setup with estimated durations feeding explicit Text assembly and See
 <media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>
 <media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
 
-<estimate:Speech id="hook-duration"
-  source={story.segment.hook.speech} policy={recipes.speech.normal}/>
-<estimate:Speech id="meeting-duration"
-  source={story.segment.meeting.speech} policy={recipes.speech.normal}/>
 <text:Value id="hook-action">Start urgently, then become quieter.</text:Value>
 <text:Value id="meeting-action">Indicate the product, then return to the lens.</text:Value>
 
