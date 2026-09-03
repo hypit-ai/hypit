@@ -275,9 +275,16 @@ edge needed by the Film. It has no reference video, so `brief.json` is the autho
 2. Check HypiHub OAuth. If it is missing, explain why and run `hypit auth login hypihub.default --runtime hypit.runtime.json`, then run `hypit runtime up` and confirm WhisperX is ready before `prepare_reference`, observation or Gemini calls.
 3. Enumerate components only after reference evidence is complete. A proven vocabulary gap follows the project-package branch: implement and validate the complete package (`package.json`, activation, Manifest, Types, Producers, Validators, Surface/decoder, Fragment, README and preview). Never edit installed packages or copy reference media directly.
 
+Reconstruction is strictly evidence-first: the route never reads repository `examples/` projects, including
+their complete `.svml`, `.svs`, `.svrun`, README, assets or variants. The sole exception is the generic
+`examples/minimal-author-package/` fixture after a real vocabulary gap is proven and the local-package
+workflow requires its contract. The reference video and persisted observations are the source of truth;
+after observation, read only installed package vocabulary and craft guidance required by observed systems.
+Examples belong to original authoring and variant planning, not reconstruction.
+
 ```text
 environment → reference-prepared → reference-observed
-→ examples/format/craft decisions → vocabulary/component-fit
+→ reference/format/craft decisions → vocabulary/component-fit
 → Script and four sources → source-authored → package-ready → script-checked → graph-checked
 → layout-checked → review-planned → preview-rendered → comparison-complete
 → repairs-complete → final-checked → initial-adaptation → final check again
@@ -297,7 +304,7 @@ The reconstruction order is deliberately different from a description-only job:
 | 1. Prepare | Select the observer once, resolve a local file or download/cache a link, and start route state. | `observers.md`, `credentials.md`, `prepare_reference`, `route_state start` | A stable reference id, media metadata and observer choice prevent later turns from rereading a different file or silently changing observers. |
 | 2. Observe the whole video | Run the fixed whole-reference sweep, then read its transcript/alignment, persistent systems, people/voices, visual type and sound context. | `observe_reference`, `evidence.md` | Whole-video evidence establishes what exists throughout the program; it is the basis for reconstructing every shot, not one representative frame. |
 | 3. Resolve structure | Inspect shot boundaries and ask narrow questions where a single frame cannot establish an appearance value, transition or relationship. | `observe_reference --question`, `continuity.md`, `reconstruction/vocabulary.md` | Ambiguities become persisted evidence before Source is authored, so timing and continuity are not guessed from chat memory. |
-| 4. Choose format and components | Read examples/playbooks, enumerate candidate packages, inspect public vocabulary and classify any real package gap. | `brief-intake.md`, `playbooks/index.md`, `list_svml_packages`, `inspect_svml_vocabulary`, `component-fit.json` | The recreated program has a legal component for each observed visual role; installed packages remain immutable. |
+| 4. Choose format and components | Use completed reference evidence and observed systems to enumerate candidate packages and inspect public vocabulary; do not read example projects. Only a proven gap may use `examples/minimal-author-package/` for the generic package contract. | `playbooks/index.md` (as needed), `list_svml_packages`, `inspect_svml_vocabulary`, `component-fit.json` | The recreated program has a legal component for each observed visual role; installed packages remain immutable. |
 | 5. Build a faithful Source | Convert transcript and observations into Script Segments/Takes/Cues, then author all four sources and every graph edge. | `final-sources.md`, `authoring.md`, `script-time.md`, `runtime.md` | The source describes the entire reference timeline, including narration, overlays, B-roll, transitions, audio and Targets. |
 | 6. Prove the baseline | Run Run-scoped vocabulary/package/Cue checks, syntax, graph tracing and realized layout. | `inspect_svml_vocabulary --run`, `validate_local_author_packages`, `validate_script_cues`, `hypit check`, `preview_check`, `layout_check` | No comparison is attempted until the written graph can actually produce every declared Track. |
 | 7. Create the comparison plan | Determine every distinct declaration and every reference stretch it occupies; keep stable intervals and shot boundaries. | `reconstruction_check`, `comparison-round.md`, `element-review.md` | The plan covers the whole video, not only a convenient still; each item has its own reference tokens and render window. |

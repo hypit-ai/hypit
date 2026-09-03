@@ -2,6 +2,13 @@
 
 Read a step, do it, read the next one. Each step names the files it needs; read those at that step.
 
+**Evidence-first rule:** This route never reads the repository's `examples/` projects. Do not open their
+SVML, SVS, SVRun, README, assets or variants at any stage. The sole exception is the generic
+`examples/minimal-author-package/` fixture, and only after a real vocabulary gap is proven and the local
+package workflow requires its contract. The reference video and its persisted evidence are the source of
+truth; after observation, consult only installed package vocabulary and craft guidance for the observed
+systems. Examples belong to original authoring and variant planning, not reconstruction.
+
 ## What this route delivers
 
 The complete environment is the hard gate. At route entry, read `../environment.md` completely, then

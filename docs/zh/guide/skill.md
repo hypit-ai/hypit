@@ -238,9 +238,14 @@ environment → brief-frozen → examples/格式/craft 决策
 2. 检查 HypiHub OAuth。凭据缺失时由 agent 说明原因并执行 `hypit auth login hypihub.default --runtime hypit.runtime.json`，然后运行 `hypit runtime up`，确认 WhisperX 已就绪后才能 `prepare_reference`、观察或调用 Gemini。
 3. 参考证据完成后再枚举组件。确认词汇缺口时，按原创路径的项目本地包分支实现并验证完整包（`package.json`、activation、Manifest、Types、Producers、Validators、Surface/decoder、Fragment、README、preview），不能修改安装包或直接复制参考素材。
 
+复刻采用严格的“证据优先”顺序：整条复刻路径都禁止读取仓库 `examples/` 下的项目，包括完整的
+`.svml`、`.svs`、`.svrun`、README、素材和变体。唯一例外是确认真实词汇缺口、且项目本地包流程明确
+需要通用契约时，才允许读取 `examples/minimal-author-package/`。参考视频及其持久化观察证据是事实来源；
+之后只读取实际需要的安装包词汇和 craft 指南。Examples 属于原创制作和变体规划，不属于复刻。
+
 ```text
 environment → reference-prepared → reference-observed
-→ examples/格式/craft 决策 → vocabulary/component-fit → package-ready
+→ reference/craft 决策 → vocabulary/component-fit → package-ready
 → Script 与四个源文件 → script-checked → source-authored → graph-checked
 → layout-checked → review-planned → preview-rendered → comparison-complete
 → repairs-complete → final-checked → 初始改编 → 再跑 final check
@@ -257,7 +262,7 @@ environment → reference-prepared → reference-observed
 | 1. 准备参考 | 选择一次 observer，接收本地文件或下载并缓存链接视频，启动路线状态。 | `observers.md`、`credentials.md`、`prepare_reference`、`route_state start` | 得到稳定的 reference id、媒体元数据和 observer；恢复时不会换文件或换观察者。 |
 | 2. 观察全片 | 运行固定的全片观察，读取 transcript/alignment、持久视觉系统、人物/声音、视觉类型和声音上下文。 | `observe_reference`、`evidence.md` | 全片证据说明视频中到底有哪些镜头和系统，是重建所有镜头的依据，不是挑一帧模仿。 |
 | 3. 解决结构疑点 | 检查 shot 边界；单帧无法确定外观、转场或关系时，用窄问题补证据。 | `observe_reference --question`、`continuity.md`、`reconstruction/vocabulary.md` | 把歧义写入证据后再写 Source，时间和连续性不靠对话记忆猜。 |
-| 4. 选择格式与组件 | 检查 examples/playbooks，枚举候选包，检查公开词汇，确认是否真的缺包。 | `brief-intake.md`、`playbooks/index.md`、`list_svml_packages`、`inspect_svml_vocabulary`、`component-fit.json` | 每个观察到的视觉角色都有合法组件；安装包保持不可变。 |
+| 4. 选择格式与组件 | 只根据已完成的参考证据和实际观察到的系统，枚举候选包并检查公开词汇；复刻路径禁止读取 examples 项目，只有真实缺口且包流程需要时可读取 `examples/minimal-author-package/`。 | `playbooks/index.md`（仅按需）、`list_svml_packages`、`inspect_svml_vocabulary`、`component-fit.json` | 每个观察到的视觉角色都有合法组件；安装包保持不可变。 |
 | 5. 写出忠实 Source | 把 transcript 和观察结果转成 Script 的 Segment/Take/Cue，再写四个源文件和所有 graph edge。 | `final-sources.md`、`authoring.md`、`script-time.md`、`runtime.md` | Source 描述完整参考时间线，包括旁白、叠加层、B-roll、转场、音频和 Target。 |
 | 6. 证明基线 | 运行 Run 级词汇/包/Cue 检查、语法、graph tracing 和真实布局。 | `inspect_svml_vocabulary --run`、`validate_local_author_packages`、`validate_script_cues`、`hypit check`、`preview_check`、`layout_check` | 只有每条声明的 Track 都确实能产出时，才进入昂贵的视觉比对。 |
 | 7. 生成比对计划 | 找出每种不同声明以及它覆盖的每个参考片段，保留稳定区间和 shot 边界。 | `reconstruction_check`、`comparison-round.md`、`element-review.md` | 计划覆盖整条视频，而不是挑一个好看的静帧；每项都有自己的 reference token 范围和渲染窗口。 |
