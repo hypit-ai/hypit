@@ -26,7 +26,7 @@ function usage(): string {
   return [
     "Usage:",
     "  hypit-reference-video-tools list_svml_packages",
-    "  hypit-reference-video-tools prepare_reference --video-path <path or link> [--observer gemini|agent] [--redo media|transcript|people|voices|systems|places|all]",
+    "  hypit-reference-video-tools prepare_reference --video-path <path or link> [--observer gemini|agent] [--runtime <profile>] [--redo media|transcript|people|voices|systems|places|all]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> [--shot-id <id> ...] [--reobserve]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> --question <text>",
     "  hypit-reference-video-tools observe_reference --reference-id <id> --batch <questions.json>",
@@ -158,9 +158,10 @@ function usage(): string {
     "same bytes and therefore the same reference, and reported back as `source_url`. Everything after",
     "the download reads the file without knowing it was ever a link.",
     "",
-    "--observer picks who reads the reference, once per reference. `gemini` uploads video to the configured Gemini backend.",
-    "With HYPIT_GEMINI_PROVIDER=auto it uses HYPIHUB_API_KEY when present, otherwise GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS_JSON for Vertex.",
-    "If no usable credential is available, sign in to HypiHub with `hypit auth login` at https://hypit.ai or use `agent`. `agent` needs no credentials: it",
+    "--observer picks who reads the reference, once per reference. `gemini` uploads video to the Gemini Endpoint",
+    "the selected Runtime Profile binds (--runtime <profile>, else the project's `hypit runtime use` selection);",
+    "the Profile's whisperx-alignment Endpoint measures the transcript the same way. If that Endpoint's credential",
+    "is missing, sign in with `hypit auth login` or use `agent`. `agent` needs no credentials: it",
     "returns each observation as a task carrying its prompt and one tiled picture per shot, which the",
     "calling agent answers with record_observation. A task whose question needs sound also carries the",
     "words WhisperX measured — `transcript_words` for its own stretch, `transcript_ref` for the whole",
@@ -278,9 +279,10 @@ async function main(): Promise<void> {
     const input = supplied ?? {
       video_path: required(flags, "video-path"),
       ...(observer === undefined ? {} : { observer }),
+      ...(one(flags, "runtime") === undefined ? {} : { runtime: one(flags, "runtime") }),
       ...(one(flags, "redo") === undefined ? {} : { redo: one(flags, "redo") }),
     };
-    result = await tools.prepare_reference(input as { video_path: string; observer?: "gemini" | "agent"; redo?: "media" | "transcript" | "people" | "voices" | "systems" | "places" | "all" });
+    result = await tools.prepare_reference(input as { video_path: string; observer?: "gemini" | "agent"; runtime?: string; redo?: "media" | "transcript" | "people" | "voices" | "systems" | "places" | "all" });
   } else if (command === "observe_reference") {
     // A round of narrow questions is a list, and a list is too long for flags.
     const askFile = one(flags, "batch");
@@ -288,8 +290,10 @@ async function main(): Promise<void> {
       const parsed: unknown = JSON.parse(await readFile(askFile, "utf8"));
       const list = Array.isArray(parsed) ? parsed : (parsed as { questions?: unknown }).questions;
       if (!Array.isArray(list)) throw new Error(`${askFile} must hold a JSON array of {shot_ids, question}, or an object with a "questions" array`);
+      const runtime = one(flags, "runtime");
       result = await tools.observe_reference({
         reference_id: required(flags, "reference-id"),
+        ...(runtime === undefined ? {} : { runtime }),
         questions: list as ObserveReferenceInput["questions"] & object,
       });
       report(`${JSON.stringify(result, null, 2)}\n`);
@@ -299,9 +303,10 @@ async function main(): Promise<void> {
       reference_id: required(flags, "reference-id"),
       ...(many(flags, "shot-id").length === 0 ? {} : { shot_ids: many(flags, "shot-id") }),
       ...(one(flags, "question") === undefined ? {} : { question: one(flags, "question") }),
+      ...(one(flags, "runtime") === undefined ? {} : { runtime: one(flags, "runtime") }),
       ...(flags.get("reobserve") === true ? { reobserve: true } : {}),
     };
-    result = await tools.observe_reference(input as { reference_id: string; shot_ids?: readonly string[]; question?: string; reobserve?: boolean });
+    result = await tools.observe_reference(input as { reference_id: string; shot_ids?: readonly string[]; question?: string; runtime?: string; reobserve?: boolean });
   } else if (command === "record_observation") {
     // A whole sweep's answers at once. Each entry carries its own text, either inline or as a file the
     // answer was written to, which is read here the way --text-file is.
@@ -371,8 +376,10 @@ async function main(): Promise<void> {
       const parsed: unknown = JSON.parse(await readFile(batchFile, "utf8"));
       const list = Array.isArray(parsed) ? parsed : (parsed as { comparisons?: unknown }).comparisons;
       if (!Array.isArray(list)) throw new Error(`${batchFile} must hold a JSON array of comparisons, or an object with a "comparisons" array`);
+      const runtime = one(flags, "runtime");
       result = await tools.compare_reconstruction({
         reference_id: required(flags, "reference-id"),
+        ...(runtime === undefined ? {} : { runtime }),
         comparisons: list as CompareReconstructionInput["comparisons"] & object,
       });
       report(`${JSON.stringify(result, null, 2)}\n`);
@@ -385,6 +392,7 @@ async function main(): Promise<void> {
     const range = segment !== undefined || selection !== undefined || tokens !== undefined;
     const input = supplied ?? {
       reference_id: required(flags, "reference-id"),
+      ...(one(flags, "runtime") === undefined ? {} : { runtime: one(flags, "runtime") }),
       ...(range
         ? {
           run: required(flags, "run"),

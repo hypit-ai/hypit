@@ -14,6 +14,7 @@ import {
   createRuntimeFromConfig,
   describeRuntimeConfigProviders,
   doctorRuntimeConfig,
+  invokeRuntimeConfigNeed,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
   resolveRuntimeConfigPaths,
@@ -132,6 +133,10 @@ export async function openLocalRuntimeHost(
       ...(options?.capabilities === undefined ? {} : { capabilities: options.capabilities }),
     }),
     providers: async (capabilities) => await describeRuntimeConfigProviders(profile, capabilities, {
+      packageRoot: basePackageRoot,
+      ...distribution,
+    }),
+    invoke: async (need, resources) => await invokeRuntimeConfigNeed(profile, need, resources, {
       packageRoot: basePackageRoot,
       ...distribution,
     }),

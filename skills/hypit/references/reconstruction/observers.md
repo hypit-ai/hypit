@@ -10,10 +10,9 @@ without knowing which observer produced it.
 
 ## The two
 
-**`gemini`** uploads the shot clips and the whole reference to the configured Gemini backend. It sees
-motion as motion and hears the sound. With the default `HYPIT_GEMINI_PROVIDER=auto`, the completed
-HypiHub OAuth environment uses HypiHub. Vertex is used only when the author explicitly selected it and
-both Google credentials are configured. Each observation is a paid request; do not silently fall back
+**`gemini`** uploads the shot clips and the whole reference to the Gemini Endpoint the selected Runtime
+Profile binds (HypiHub by default; Vertex only when the author's Profile binds it). It sees motion as
+motion and hears the sound. Each observation is a paid request; do not silently fall back
 to `agent` because a credential is missing.
 
 **`agent`** hands the observations to you. It needs no credentials and reaches no Provider: the CLI

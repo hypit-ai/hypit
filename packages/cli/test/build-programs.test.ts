@@ -124,6 +124,7 @@ function distribution(
       preflight: async () => ({ dataRoot: "/tmp", diagnostics }),
       doctor: async () => ({ dataRoot: "/tmp", diagnostics: [] }),
       providers: async () => [],
+      invoke: async () => { throw new Error("creation-time invocation is not part of this test"); },
       createRuntime: async () => {
         if (execution !== undefined) return execution;
         throw new Error("createRuntime is unavailable");

@@ -1,8 +1,8 @@
 import { access } from "node:fs/promises";
 import { join } from "node:path";
-import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
-import type { Need } from "@hypit/protocol";
-import { createLocalWhisperXProvider } from "@hypit/provider-whisperx-local";
+import { MemoryResourceStore } from "@hypit/driver-node";
+import type { Need, StoredValue } from "@hypit/protocol";
+import type { ResourceStore } from "@hypit/runtime";
 import { sealSpeechEvidenceAudio } from "@hypit/speech";
 import { speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { AlignedTranscriptEvidence } from "@hypit/speech-evidence";
@@ -13,28 +13,12 @@ import { assert, command, readBytes, round, writeJson } from "./media.js";
 import type { Transcript, TranscriptFile, TranscriptPassage, TranscriptWord } from "./types.js";
 
 /**
- * Whether the local WhisperX service answers.
- *
- * The route used to probe the service by hand, as three commands, before `prepare_reference`. The
- * service answers `/health`, which is the same call the Provider makes before transcribing — made
- * early enough to be reported before the minutes a first start spends loading the model. It reports
- * rather than refuses: a machine without the service still prepares everything except the transcript,
- * which `prepareTranscript` leaves recoverable.
+ * One immediate Need executed through the selected Runtime Profile, outside any Build. The Runtime
+ * host provides it; this module never chooses or instantiates a Provider itself, so whichever
+ * Endpoint the Profile binds to `whisperx-alignment` — HypiHub, a local service, anything else —
+ * measures the transcript.
  */
-export async function whisperxHealth(baseUrl = "http://127.0.0.1:8765"): Promise<{ readonly ok: boolean; readonly reason: string }> {
-  const normalized = baseUrl.replace(/\/+$/u, "");
-  try {
-    const response = await fetch(`${normalized}/health`, { signal: AbortSignal.timeout(5_000) });
-    if (!response.ok) return { ok: false, reason: `WhisperX answered ${response.status}` };
-    const body = await response.json().catch(() => undefined) as { readonly ok?: unknown } | null | undefined;
-    if (body === null || typeof body !== "object" || body.ok !== true) {
-      return { ok: false, reason: "WhisperX is up but not ready; a first start spends a few minutes loading the model" };
-    }
-    return { ok: true, reason: "" };
-  } catch {
-    return { ok: false, reason: `WhisperX is not reachable at ${normalized}` };
-  }
-}
+export type InvokeNeed = (need: Need, resources: ResourceStore) => Promise<{ readonly value: StoredValue }>;
 
 // WhisperX measures in samples of the canonical evidence rate and refuses audio of any other shape,
 // so this is both what the audio is extracted at and what its word times are divided by.
@@ -69,10 +53,11 @@ function reason(error: unknown): string {
   return error.cause === undefined ? error.message : `${error.message}: ${reason(error.cause)}`;
 }
 
-/** Ask the local WhisperX Provider for the word times of one canonical evidence WAV. */
+/** Ask the Profile's WhisperX alignment Endpoint for the word times of one canonical evidence WAV. */
 export async function transcribeSpeechAudio(
   audioPath: string,
   language: WhisperXLanguage,
+  invoke: InvokeNeed,
 ): Promise<readonly TranscriptPassage[]> {
   const bytes = await readBytes(audioPath);
   const resources = new MemoryResourceStore();
@@ -85,17 +70,7 @@ export async function transcribeSpeechAudio(
     constraints: whisperXRequestForEvidenceAudio(evidence, { language }),
     result: "record:reference-video-transcript",
   };
-  const registry = new EndpointRegistry();
-  await createLocalWhisperXProvider({ instance: "whisperx.local", pool: "whisperx.local" }).install(registry);
-  const resolved = registry.resolve(need);
-  assert(resolved.status === "resolved", "the local WhisperX Provider does not offer word alignment");
-  assert(resolved.registration.kind === "immediate", "the local WhisperX Provider answers word alignment asynchronously");
-  const fulfillment = await resolved.registration.handler({
-    command: { kind: "fulfill-need", id: "command:reference-video-transcript", need },
-    need,
-    resources,
-    credentials: {},
-  });
+  const fulfillment = await invoke(need, resources);
   assert(fulfillment.value.kind === "inline", "WhisperX returned alignment evidence by reference");
   const aligned = fulfillment.value.value as unknown as AlignedTranscriptEvidence;
   return aligned.passages.map((passage): TranscriptPassage => {
@@ -121,8 +96,8 @@ export async function transcribeSpeechAudio(
 }
 
 /**
- * The verbatim transcript is local, deterministic evidence rather than an observation: it is never
- * cached with the Gemini answers and never sent to Gemini. A machine that is not running WhisperX
+ * The verbatim transcript is deterministic evidence rather than an observation: it is never cached
+ * with the Gemini answers and never sent to Gemini. A Profile whose alignment Endpoint cannot answer
  * still prepares everything else, and is told what did not answer instead of losing the preparation.
  */
 export async function prepareTranscript(
@@ -132,14 +107,15 @@ export async function prepareTranscript(
   hasAudio: boolean,
   language: WhisperXLanguage,
   redo: boolean,
+  invoke: InvokeNeed,
 ): Promise<Transcript> {
   if (!hasAudio) return { status: "unavailable", transcript_ref: null, word_count: 0, reason: "the reference video has no audio track" };
   try {
     const audioPath = join(root, "speech.wav");
     if (redo || await access(audioPath).then(() => false, () => true)) await extractSpeechAudio(videoPath, audioPath);
     // A refused connection says only "fetch failed"; the reader still has to learn what to start.
-    const passages = await transcribeSpeechAudio(audioPath, language)
-      .catch((error: unknown) => { throw new Error(`local WhisperX did not answer: ${reason(error)}`); });
+    const passages = await transcribeSpeechAudio(audioPath, language, invoke)
+      .catch((error: unknown) => { throw new Error(`WhisperX alignment did not answer: ${reason(error)}`); });
     const transcriptPath = join(root, "transcript.json");
     const file: TranscriptFile = { reference_id: reference, audio_ref: audioPath, passages };
     await writeJson(transcriptPath, file);

@@ -18,6 +18,7 @@ export {
   declaredManagedPrograms,
   describeRuntimeConfigProviders,
   doctorRuntimeConfig,
+  invokeRuntimeConfigNeed,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
   parseLocalRuntimeProfile,

@@ -24,6 +24,7 @@ import {
   describeRuntimeConfigProviders,
   doctorProjectBuildResultRepository,
   doctorRuntimeConfig,
+  invokeRuntimeConfigNeed,
   openProjectBuildResultRepository,
   parseLocalRuntimeProfile,
   preflightRuntimeConfig,
@@ -311,6 +312,88 @@ test("Runtime providers name the selected Endpoint and its declared price source
       { capability: render, status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
       { capability: missing, status: "unresolved" },
     ]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("Runtime invoke executes one immediate Need through the selected Endpoint and its credential, outside any Build", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-invoke-"));
+  const path = join(root, "hypit.runtime.json");
+  await writeFile(path, JSON.stringify(profile({
+    dataRoot: ".",
+    credentials: { secrets: { use: "example.credentials" } },
+    endpoints: { paid: { use: "example.paid" }, slow: { use: "example.slow" } },
+  })));
+  const observe = { module: { name: "example.model", version: "1" }, name: "observe" } as const;
+  const generate = { module: { name: "example.model", version: "1" }, name: "generate" } as const;
+  const missing = { module: { name: "example.model", version: "1" }, name: "transcribe" } as const;
+  const returns = { module: { name: "example.value", version: "1" }, name: "Output" } as const;
+  let configured = true;
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeCredentialStoreAdapterFacet({
+    use: "example.credentials",
+    validate() {},
+    open: () => ({
+      value: {
+        async resolve(ref) {
+          return configured && ref.store === "secrets" && ref.key === "paid.key" ? { secret: "configured" } : undefined;
+        },
+      },
+    }),
+  }));
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.paid",
+    activate: (context) => ({
+      endpoint: defineEndpointPackage({
+        module: { name: "example.provider", version: "1" },
+        facet: "paid",
+        instance: context.instance,
+        pool: context.pool ?? context.instance,
+        credentials: { apiKey: credentialRef("secrets", "paid.key") },
+        capabilities: [{
+          capability: observe,
+          returns,
+          lifecycle: "immediate",
+          handler: ({ need, credentials }) => ({
+            value: { kind: "inline", value: { seen: need.constraints, key: credentials.apiKey?.secret ?? null } },
+          }),
+        }],
+      }),
+    }),
+  }));
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.slow",
+    activate: (context) => ({
+      endpoint: defineEndpointPackage({
+        module: { name: "example.slow-provider", version: "1" },
+        facet: "slow",
+        instance: context.instance,
+        pool: context.pool ?? context.instance,
+        capabilities: [{
+          capability: generate,
+          returns,
+          lifecycle: "asynchronous",
+          endpoint: {
+            start: async () => ({ status: "completed" as const, result: { value: { kind: "inline" as const, value: null } } }),
+            poll: async () => ({ status: "completed" as const, result: { value: { kind: "inline" as const, value: null } } }),
+          },
+        }],
+      }),
+    }),
+  }));
+  const resources = { async get() { return undefined; }, async put() { throw new Error("unused"); } } as never;
+  const need = (capability: typeof observe | typeof generate | typeof missing) => ({
+    id: "need:creation-time", capability, returns, constraints: { question: "what happens?" }, result: "record:creation-time",
+  });
+  try {
+    assert.deepEqual(await invokeRuntimeConfigNeed(path, need(observe), resources, { registry }), {
+      value: { kind: "inline", value: { seen: { question: "what happens?" }, key: "configured" } },
+    });
+    await assert.rejects(invokeRuntimeConfigNeed(path, need(missing), resources, { registry }), /No Endpoint in .* serves example\.model@1#transcribe/u);
+    await assert.rejects(invokeRuntimeConfigNeed(path, need(generate), resources, { registry }), /asynchronous capability/u);
+    configured = false;
+    await assert.rejects(invokeRuntimeConfigNeed(path, need(observe), resources, { registry }), /apiKey for Endpoint paid is not configured/u);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
