@@ -57,8 +57,7 @@ to transcribe.
 `{ text, start_seconds, end_seconds, score }`. If the HypiHub WhisperX model is unavailable, the tool reports
 `status: "unavailable"` with a `reason`. Under the Skill's hard environment gate, do not continue from
 that result: confirm HypiHub OAuth and that the selected model exposes `transcriptions`, then prepare
-the reference again. `../host-setup.md` covers the explicitly selected local fallback when it is not
-enough to rely on the remote endpoint.
+the reference again.
 
 When a completed preparation stage must be rerun, use one small `--redo` value:
 

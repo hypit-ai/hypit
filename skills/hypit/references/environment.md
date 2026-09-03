@@ -155,7 +155,7 @@ shell:
 `set -a; [ ! -f <checkout-root>/.env ] || . <checkout-root>/.env; [ ! -f <project-root>/.env ] || . <project-root>/.env; set +a`.
 When these values satisfy the selected observer/Provider, do not ask the author for them again.
 `uv` is required only when the selected Runtime Profile uses a managed Python program such as
-WhisperX or OpenCV.
+OpenCV.
 Reconstructing a video given as a link rather than as a file needs `uv` too: `yt-dlp` is pinned under
 `services/yt-dlp` and run from there, so the version is the repository's rather than the machine's.
 `prepare_reference` names what is missing when a link is passed without it.
@@ -175,17 +175,16 @@ Managed programs are machine-level installations, separate from both Distributio
 - macOS: `~/Library/Application Support/Hypit/programs/`
 - Windows: `%LOCALAPPDATA%\Hypit\programs\`
 
-WhisperX, for example, lives under `programs/whisperx/`; OpenCV under
-`programs/image-opencv/`. Service process records and logs live with the program. Project Build and
-Worker state remains under `<project>/.hypit/`.
+Managed service process records and logs live with the program. Project Build and Worker state remains
+under `<project>/.hypit/`.
 
 Reference-video state sits beside the Distribution, at `.hypit/reference-video-tools/<reference-id>/`.
 Commands may run from any directory; the tool locates this canonical state from the selected
 Distribution. It is keyed by the video, so two reconstructions of one file share
 the observations it cost money to make; each command reports the root it used.
 
-This split is why opening a second project cannot install WhisperX again, and why updating the npm
-Distribution does not overwrite a Python environment or a user's project-local component.
+This split is why updating the npm Distribution does not overwrite a managed program environment or a
+user's project-local component.
 
 The sibling machine npm package home is:
 

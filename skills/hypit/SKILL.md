@@ -70,8 +70,8 @@ managed program installed and healthy. Credential setup is part of this gate: de
 without asking the author to choose, run the login yourself when the selected HypiHub OS credential is
 missing, and continue only after it succeeds. Only when the author explicitly asks to use their own
 provider key may you configure that less-recommended path instead. Run the required Runtime provisioning
-and health checks; the HypiHub WhisperX alignment model must be reachable through the selected Endpoint
-and the profile must report alignment ready. Do this before
+and health checks; the HypiHub WhisperX alignment model must be reachable through the selected Endpoint.
+Do this before
 inspecting media or examples, preparing a reference, choosing an observer, freezing a brief, reading
 vocabulary, writing Source, previewing, or building.
 

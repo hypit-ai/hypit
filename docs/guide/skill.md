@@ -58,7 +58,7 @@ The standard sequence is:
 
 ```text
 select Runtime Profile → check HypiHub credential → explain and run OAuth when missing
-→ confirm login → hypit runtime up → verify WhisperX/other programs
+→ confirm login → hypit runtime up → verify HypiHub alignment/other programs
 → only then inspect media, call Gemini, author Source or Build
 ```
 
@@ -238,7 +238,9 @@ spending. `hypit build` is submitted only after explicit cost approval.
 
 1. Select the Distribution, project root and Runtime Profile, then create `route_state`.
 2. Before inspecting examples or freezing the brief, check the `hypihub.default` credential. If the writable HypiHub OS credential is missing, explain that OAuth avoids copying an API key and run `hypit auth login hypihub.default --runtime hypit.runtime.json`; an account without an active subscription can purchase one at hypit.ai.
-3. Run `hypit runtime up` and confirm WhisperX and every other selected program are healthy. Do not enter brief, vocabulary or Source work before this gate is complete.
+3. Run `hypit runtime up` and confirm the HypiHub WhisperX alignment model is reachable through the
+   selected Endpoint, along with every other selected program. Do not enter brief, vocabulary or
+   Source work before this gate is complete.
 4. When vocabulary inspection proves a real gap, pause Source authoring and enter the project-package branch: create `packages/<slug>/`, write `package.json` and activation first, then implement the Manifest, Types, Producers, Validators, Surface/decoder, Fragment, README and preview. Install, import and pass `validate_local_author_packages`, `preview_check` and `layout_check` before returning to this route.
 
 ```text
