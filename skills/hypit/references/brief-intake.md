@@ -6,7 +6,7 @@ semantics, timing, facts and paid generation inputs.
 
 ## Discover examples, never classify by filename
 
-From the Hypit checkout root, inspect `examples/` when it exists. Enumerate complete projects and
+From the selected Distribution root, inspect `examples/` when it exists. Enumerate complete projects and
 read each candidate's `main.svml`, `recipes.svs`, `build.svrun`, and relevant package README. A
 read-only `hypit check` is allowed. Do not copy its Source, facts, people, assets, prompts or source
 closure into the new project. Directory names, file names and component counts are only search clues.

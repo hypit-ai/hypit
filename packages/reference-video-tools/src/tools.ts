@@ -4,6 +4,8 @@ import { cpus } from "node:os";
 import { deflateSync } from "node:zlib";
 import { basename, dirname, join, resolve } from "node:path";
 import { loadNodePackageSelection, locateNodePackage, physicalPackageName } from "@hypit/package-loader-node";
+import { OsCredentialStore } from "@hypit/credential-store-os";
+import { credentialRef } from "@hypit/runtime";
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface, SurfaceVocabulary } from "@hypit/markup";
 import { exactModelHostAbi } from "@hypit/model-kit";
@@ -434,7 +436,7 @@ function positiveInt(value: number, label: string): number {
 }
 
 async function defaultGenerate(model: string): Promise<GenerateText> {
-  const hypiHubKey = process.env.HYPIHUB_API_KEY?.trim();
+  const hypiHubKey = await resolveHypiHubApiKey();
   const backend = process.env.HYPIT_GEMINI_PROVIDER?.trim().toLowerCase() || "auto";
   if (backend !== "auto" && backend !== "hypihub" && backend !== "vertex") {
     throw new Error("HYPIT_GEMINI_PROVIDER must be auto, hypihub or vertex");
@@ -480,6 +482,18 @@ async function defaultGenerate(model: string): Promise<GenerateText> {
       throw error;
     }
   };
+}
+
+/** Resolve the HypiHub credential written by `hypit auth login`, with env fallback. */
+async function resolveHypiHubApiKey(): Promise<string | undefined> {
+  if (process.platform === "darwin" || process.platform === "win32") {
+    const value = await new OsCredentialStore()
+      .resolve(credentialRef("os", "hypihub.oauth"))
+      .catch(() => undefined);
+    const secret = value?.secret?.trim();
+    if (secret) return secret;
+  }
+  return process.env.HYPIHUB_API_KEY?.trim() || undefined;
 }
 
 const MIME_TYPES: Readonly<Record<string, string>> = {
@@ -1023,7 +1037,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       ...(projectPackageDirectories.length === 0 && expected.size === 0 ? { note: "no project-owned packages declared" } : {}),
     };
   }
-  const model = options.model ?? process.env.GEMINI_MODEL?.trim() ?? "gemini-3.1-pro-preview";
+  const model = options.model ?? process.env.GEMINI_MODEL?.trim() ?? "gemini-3.7-flash-openai";
   // Pacing is deployment policy, not author intent: it depends on the quota behind the credentials,
   // which the calling agent has no way to know. It is settable here and through the environment, and
   // deliberately not through a CLI flag.
@@ -1307,7 +1321,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         ...(fetched === undefined ? {} : { source_url: fetched.url, downloaded: !fetched.cached }),
         pending_observations: pending,
         ...(whisperx?.ok === false
-          ? { whisperx: `${whisperx.reason}. Read .agents/skills/hypit/references/host-setup.md for the failure branches.` }
+          ? { whisperx: `${whisperx.reason}. Read <skill-root>/references/host-setup.md for the failure branches.` }
           : {}),
       };
     },

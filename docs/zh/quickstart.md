@@ -16,12 +16,13 @@ Hypit 把这份源码编译成一张可见的执行图。在任何模型或外�
 ## 安装
 
 ```bash
-npm install --global hypit
 npx skills add hypit-ai/hypit --global
 ```
 
-第一条命令安装可复用的 Distribution；第二条把 skill 全局安装，使以后任何项目里的新 Agent
-会话都能找到它。普通创作不需要克隆仓库。
+这会把真实的 `skills/hypit/` 子目录安装到全局，使任何项目里的新 Agent 会话都能找到它。
+OpenAgents 也直接从仓库安装同一个子目录。Skill 安装和可执行 Distribution 是两件事：在 npm
+包正式发布前，Skill 会在机器级 `<home>/hypit` 准备或更新 checkout，并使用它的 Node 入口。
+视频项目与二者独立，可以位于任意位置。
 
 ## 使用 Hypit skill
 
@@ -33,16 +34,20 @@ npx skills add hypit-ai/hypit --global
 
 它会走下面同样的五个步骤，并且只向你索取 Runtime Profile 实际需要的东西。不想用 Agent 的话，也可以自己依次完成这五步。
 
-## 1. 检查已安装的 Distribution
+## 1. 检查选中的 Distribution
 
 需要 Node.js 22+，桌面系统为 macOS 13+ 或 Windows 10/11 x64。
 
 ```bash
 hypit paths --json
+# npm 发布前，Skill 实际运行：
+node <home>/hypit/bin/hypit.mjs paths --json
 ```
 
-结果会分别给出当前项目、项目 `.hypit` 状态、机器 Program Home 与 npm Distribution。
-pnpm、Corepack 和 `npm link` 只属于贡献者工作流。
+结果会分别给出当前项目、项目 `.hypit` 状态、机器 Program Home 与选中的 Distribution。
+Agent 会在机器级准备 checkout 的锁定依赖，不会把依赖安装到视频项目，也不会使用 `npm link`。
+
+下文统一把两种可执行入口简称为 `hypit`。
 
 ## 2. 编译示例
 

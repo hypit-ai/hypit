@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@hypit/composition": "workspace:*",
+    "@hypit/credential-store-os": "workspace:*",
     "@hypit/core": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/estimate": "workspace:*",
@@ -26,6 +27,7 @@
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/run-markup": "workspace:*",
+    "@hypit/runtime": "workspace:*",
     "@hypit/provider-whisperx-local": "workspace:*",
     "@hypit/provider-media-local": "workspace:*",
     "@hypit/provider-hypihub": "workspace:*",

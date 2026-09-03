@@ -4,16 +4,26 @@
 
 Hypit has three different lifetimes. Never collapse them into one directory.
 
-- The **skill** is agent guidance. Install it globally once so later sessions and unrelated projects
-  can discover the same copy.
-- The **Distribution** is either an already installed machine-wide Hypit package or the Hypit
-  contributor checkout the task is deliberately running from. It owns the CLI, Studio, official
-  packages and packaged Python service source.
+- The **skill** is agent guidance. A Skill hub copies the real `skills/hypit/` subtree into an Agent's
+  global Skill directory so later sessions and unrelated projects can discover it.
+- The **Distribution** is either an already installed machine-wide Hypit package, the machine-level
+  `<home>/hypit` checkout prepared by the Skill while npm publication is unavailable, or a contributor
+  checkout deliberately selected for repository work. It owns the CLI, Studio, official packages and
+  packaged Python service source.
 - The **project** is the author's directory. It owns Sources, assets, project-local packages,
   `hypit.runtime.json`, `.hypit/` Build state and output files.
 
-An ordinary user does not clone the repository and does not run pnpm, Corepack, `npm link`, or a
-service's `uv sync` by hand. A clone is only a contributor checkout.
+Each project is an independent boundary. After selecting the active project, do not inspect another
+author project or use anything from its `packages/` directory. Never copy, import or symlink a
+project-local package across project boundaries. Resolve capabilities from the installed Distribution
+or create the package inside the active project's own `packages/` directory through the local-package
+workflow. Repository examples are read-only references only on routes that explicitly allow them;
+they are never package dependencies.
+
+Installing a Skill does not install the Distribution. OpenAgents and other Skill hubs own the installed
+Skill copy; Hypit owns no second Skill registry and never rewrites that copy. Until the npm package is
+published, the Agent prepares the Distribution checkout and its pinned dependencies once at machine
+scope. The author does not clone it per project, run `npm link`, or run a service's `uv sync` by hand.
 
 ## Environment completion gate
 
@@ -59,23 +69,25 @@ speakers, align who speaks when, and extract voice/timbre and presentation trait
 speaker replication and voice-design decisions. Do not use the credentialless agent observer as a way
 to bypass credential setup.
 
-## Select a Distribution; do not assume registry publication
+## Select or prepare the Distribution
 
-The skill must be global; the skills CLI's default is project-local:
+The Skill must be global. OpenAgents installs it from the repository's real `skills/hypit/` directory;
+with the generic Skills CLI the equivalent command is:
 
 ```text
 npx skills add hypit-ai/hypit --global
 ```
 
-First check for an already installed program:
+First try an already installed program:
 
 ```text
 hypit paths --json
 ```
 
 If that command is missing, do **not** run `npm install --global hypit`: the npm package is not
-currently published. Check whether the current directory or one of its ancestors is a Hypit
-contributor checkout. A checkout has all of these:
+currently published. When the current task is repository development inside a Hypit contributor
+checkout, use that checkout. For ordinary video production use `<home>/hypit` as the machine-level
+Distribution. A valid checkout has all of these:
 
 ```text
 package.json                  (name: "hypit")
@@ -83,32 +95,48 @@ bin/hypit.mjs
 packages/reference-video-tools/bin/reference-video-tools.mjs
 ```
 
-In that checkout, prepare dependencies only when they are absent or stale, using the contributor
-workflow and the pinned lockfile:
+If `<home>/hypit` does not exist, clone the public repository there. If the path exists but is not the
+Hypit checkout, do not overwrite or rename it; report the collision. Never create the checkout inside
+the author project.
+
+```text
+git clone --branch main --single-branch https://github.com/hypit-ai/hypit.git <home>/hypit
+```
+
+At the first production turn in each conversation, fast-forward the selected checkout. Do not reset,
+stash, discard or overwrite local changes. If the pull cannot fast-forward, report the exact checkout
+and stop before production:
+
+```text
+git -C <distribution-root> pull --ff-only origin main
+```
+
+After the first clone or a successful pull, prepare the pinned dependencies from the Distribution
+without changing the author project's working directory:
 
 ```text
 corepack enable
-corepack pnpm install --frozen-lockfile
+corepack pnpm --dir <distribution-root> install --frozen-lockfile
 ```
 
-Then use the checkout entrypoints directly for the rest of the route:
+Then use the Distribution entrypoints directly for the rest of the route:
 
 ```text
-node <checkout>/bin/hypit.mjs paths --json
-node <checkout>/packages/reference-video-tools/bin/reference-video-tools.mjs <subcommand> ...
-node <checkout>/bin/hypit-studio.mjs --run <run> [--runtime <hypit.runtime.json>]
-node <checkout>/bin/hypit-preview-check.mjs <run> [<hypit.runtime.json>]
+node <distribution-root>/bin/hypit.mjs paths --json
+node <distribution-root>/packages/reference-video-tools/bin/reference-video-tools.mjs <subcommand> ...
+node <distribution-root>/bin/hypit-studio.mjs --run <run> [--runtime <hypit.runtime.json>]
+node <distribution-root>/bin/hypit-preview-check.mjs <run> [<hypit.runtime.json>]
 ```
 
 In every reference that abbreviates these as `hypit`, `hypit-reference-video-tools`,
 `hypit-studio` or `hypit-preview-check`, interpret them as the selected launchers above:
 
-| Abbreviation | Contributor checkout launcher |
+| Abbreviation | Checkout Distribution launcher |
 |---|---|
-| `hypit` | `node <checkout>/bin/hypit.mjs` |
-| `hypit-reference-video-tools` | `node <checkout>/packages/reference-video-tools/bin/reference-video-tools.mjs` |
-| `hypit-studio` | `node <checkout>/bin/hypit-studio.mjs` |
-| `hypit-preview-check` | `node <checkout>/bin/hypit-preview-check.mjs` |
+| `hypit` | `node <distribution-root>/bin/hypit.mjs` |
+| `hypit-reference-video-tools` | `node <distribution-root>/packages/reference-video-tools/bin/reference-video-tools.mjs` |
+| `hypit-studio` | `node <distribution-root>/bin/hypit-studio.mjs` |
+| `hypit-preview-check` | `node <distribution-root>/bin/hypit-preview-check.mjs` |
 
 Do not interpret `hypit-studio` as a `studio` subcommand of `hypit`: Studio is a separate entrypoint.
 Do not globally link the checkout, use `npx hypit`, or install dependencies into an author project.
@@ -116,13 +144,13 @@ Run reference-video-tool commands that share reference state from the same worki
 though their launcher lives in the checkout.
 
 When a reference names `<skill-root>`, substitute the installed Hypit skill directory (the directory
-containing `SKILL.md` and `scripts/`); it is not relative to the author's project or checkout.
+containing `<skill-root>/SKILL.md` and `<skill-root>/scripts/`); it is not relative to the author's
+project or checkout.
 
-When a reference names `<skill-root>`, substitute the installed Hypit skill directory (the directory
-containing `SKILL.md` and `scripts/`); it is not relative to the author's project or checkout.
-
-If neither an installed CLI nor a contributor checkout is available, report that no runnable Hypit
-Distribution is present and stop. A registry install is not a recovery path.
+The installed Skill and the selected Distribution have separate update lifecycles. Pulling the
+Distribution does not update an OpenAgents-installed Skill; existing OpenAgents users reinstall the
+Skill when they want a newer workflow. Conversely, reinstalling the Skill does not replace a dirty or
+diverged Distribution checkout.
 
 `hypit paths --json` reports the current project boundary, project state, machine Program Home,
 machine npm package home and selected Distribution. Those paths are facts; no repository locator or
@@ -189,22 +217,14 @@ changes an exact adapter dependency, the next explicit `runtime up` lets npm upd
 
 ## Contributor checkout
 
-Only someone changing Hypit itself clones the repository. A task already running from that checkout
-may also use it as the Distribution when no installed CLI exists, as described above. Follow
-`docs/guide/develop.md` and use its pinned pnpm version and official `pnpm-lock.yaml`. Video-production
-projects in this checkout live under `<checkout-root>/projects/<project-name>/`; they remain independent
-author projects and are not part of the repository workspace globs.
+A task changing Hypit itself uses its current contributor checkout rather than `<home>/hypit`. Follow
+`docs/guide/develop.md` and use the pinned pnpm version and `pnpm-lock.yaml`. A contributor checkout may
+also act as the Distribution for a video-production task, but the author project is still independent:
+it may live anywhere and must never be added to the Hypit workspace or linked into the checkout.
 
-When this checkout is the selected Distribution and the Hypit Skill is loaded for the first time in a
-new conversation, synchronize the complete repository before using it:
-
-```text
-git pull --ff-only origin main
-```
-
-This updates the CLI, packages, services, examples, docs and Skill source together. Never reset or
-overwrite local changes; a pull that cannot fast-forward is a sync conflict and blocks the route until
-it is resolved. Updating only the installed Skill does not make the contributor checkout current.
+The same fast-forward rule applies when a contributor checkout is selected. Updating its repository
+refreshes its CLI, packages, services, examples, docs and canonical Skill source, but does not rewrite a
+separately installed OpenAgents Skill copy.
 
 A project directory carries its own `package.json` with the runtime-safe minimum
 `{ "name": "<project-name>", "version": "0.0.0", "private": true, "type": "module" }`.

@@ -10,6 +10,21 @@ Hypit 把创作、执行和结果分开：
 项目不再维护 route 数据库、revision 历史、恢复游标或批次总状态。可继续工作的依据是项目中
 真实存在的 Source、媒体和报告，而不是另一个系统对 agent 过去操作的复原。
 
+## Skill 安装与执行
+
+`skills/hypit/` 是唯一真实、与 Agent 无关的 Skill 目录。OpenAgents 等 Skill Hub 直接把这个
+子目录安装到对应 Agent 的全局 Skill 目录。仓库内的 `.claude/skills/hypit` 与
+`.codex/skills/hypit` 只是指向同一真身的两条叶子软链；两个上层目录仍然彼此独立，未来可以
+分别容纳各 Agent 私有的 Skill。
+
+安装 Skill 只会安装指导内容，不等于安装可执行的 Hypit Distribution。在 npm 包正式发布前，
+Skill 会选择已有 Hypit checkout，或者在机器级 `<home>/hypit` 准备一份 checkout；更新时只允许
+从 `origin/main` 快进，依赖使用仓库锁定版本，命令通过它的 Node 入口运行。Skill Hub 重新安装
+更新的是指导内容，checkout 拉取更新的是可执行 Distribution，二者都不会暗中覆盖对方。
+
+Skill、Distribution 和视频项目的位置与生命周期相互独立。视频项目可以放在任意位置，不需要
+创建 Skill 软链，也不会被加入 Hypit 仓库 workspace。
+
 ## 从真实需求开始
 
 先判断任务是原创还是参考视频复刻，再查看现有包和它们公开的词汇：
@@ -54,7 +69,8 @@ hypit-reference-video-tools review_element --run ./build.svrun \
 
 ## 参考视频复刻
 
-先准备参考视频：
+这条路径不得查看仓库中的示例项目，也不得把参考视频直接作为 Film、Track 或 Take 的来源。
+先把它作为证据准备好：
 
 ```bash
 hypit-reference-video-tools prepare_reference --video-path ./reference.mp4 --observer agent

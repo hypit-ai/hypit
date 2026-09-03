@@ -130,7 +130,7 @@ test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every med
   const video = await resources.put(new Uint8Array([4, 5, 6]), "video/mp4");
   const request: Need = {
     id: "need:hypihub-gemini",
-    capability: geminiCapabilities["gemini-3.7-flash"],
+    capability: geminiCapabilities["gemini-3.7-flash-openai"],
     returns: textTypes.text,
     constraints: sealGeminiRequest({
       instruction: "Answer briefly.", prompt: "Inspect both references.",

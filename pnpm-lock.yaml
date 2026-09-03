@@ -2413,6 +2413,9 @@ importers:
       '@hypit/core':
         specifier: workspace:*
         version: link:../core
+      '@hypit/credential-store-os':
+        specifier: workspace:*
+        version: link:../credential-store-os
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
@@ -2461,6 +2464,9 @@ importers:
       '@hypit/run-markup':
         specifier: workspace:*
         version: link:../run-markup
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
       '@hypit/script':
         specifier: workspace:*
         version: link:../script

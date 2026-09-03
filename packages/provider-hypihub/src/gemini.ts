@@ -70,7 +70,7 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
   const baseUrl = (options.baseUrl ?? "https://hypit.ai")
     .replace(/\/(?:v1beta|v1)\/?$/iu, "")
     .replace(/\/$/u, "");
-  const model = options.model?.trim() || "gemini-3.1-pro-preview";
+  const model = options.model?.trim() || "gemini-3.7-flash-openai";
   const timeout = options.requestTimeoutMs ?? 120_000;
   const maxRateLimitRetries = options.maxRateLimitRetries ?? 3;
   assert(Number.isSafeInteger(maxRateLimitRetries) && maxRateLimitRetries >= 0,

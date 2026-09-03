@@ -4,7 +4,7 @@ import { textDependency, textTypes } from "@hypit/text";
 
 export const geminiModuleRef = { name: "@hypit/gemini", version: "1" } as const;
 
-export const geminiModels = ["gemini-3.1-pro-preview", "gemini-3.7-flash"] as const;
+export const geminiModels = ["gemini-3.7-flash-openai"] as const;
 export type GeminiModel = typeof geminiModels[number];
 
 export const geminiTypes = {
@@ -48,7 +48,7 @@ export const geminiMarkupSurfaces = [{
         summary: "Selects the media Artifact Gemini reads." }] }],
     ports: [{ name: "text", type: textTypes.text,
       summary: "The generated answer, addressed as `<id>.text`." }],
-    example: `<gemini:Generate id="describe" model="gemini-3.7-flash" instruction={instruction} prompt={prompt}>
+    example: `<gemini:Generate id="describe" model="gemini-3.7-flash-openai" instruction={instruction} prompt={prompt}>
   <gemini:Reference media={reference-video}/>
 </gemini:Generate>`,
     notes: [

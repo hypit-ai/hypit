@@ -73,9 +73,11 @@ depend on a separate state database.
 
 ## Environment
 
-Reference observation uses `HYPIT_GEMINI_PROVIDER=auto|hypihub|vertex`. HypiHub reads
-`HYPIHUB_API_KEY` and optional `HYPIHUB_BASE_URL`; Vertex reads `GOOGLE_CLOUD_PROJECT`,
-`GOOGLE_APPLICATION_CREDENTIALS_JSON` and optional `GOOGLE_CLOUD_LOCATION`.
+Reference observation uses `HYPIT_GEMINI_PROVIDER=auto|hypihub|vertex`. HypiHub first reads the
+`hypihub.oauth` session written by `hypit auth login` from the OS credential store, then falls back to
+`HYPIHUB_API_KEY`; `HYPIHUB_BASE_URL` remains optional. Vertex reads `GOOGLE_CLOUD_PROJECT`,
+`GOOGLE_APPLICATION_CREDENTIALS_JSON` and optional `GOOGLE_CLOUD_LOCATION`. Gemini defaults to
+`gemini-3.7-flash-openai`.
 
 Transcript preparation uses the selected local WhisperX service. Start services through the normal
 Runtime configuration with `hypit runtime up`. `HYPIT_REFERENCE_CONCURRENCY` and

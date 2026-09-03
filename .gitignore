@@ -9,13 +9,12 @@ coverage/
 *.lock.editing
 
 # Ignore local editor state while distributing repository skill-discovery links.
+# The skill itself is a repository source at skills/hypit; what lives here is only the
+# per-agent link that points at it.
 .claude/*
 !.claude/skills
 .codex/*
 !.codex/skills
-.agents/*
-!.agents/skills/
-!.agents/skills/**
 .idea/
 .vscode/
 

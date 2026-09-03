@@ -8,8 +8,12 @@ WhisperX service, machine npm packages, and Distribution updates.
 Run this skill-owned probe when diagnosing a machine:
 
 ```text
-node .agents/skills/hypit/scripts/check-environment.mjs
+node <skill-root>/scripts/check-environment.mjs
 ```
+
+This checks shared host prerequisites only. Check the selected Distribution independently with
+`hypit paths --json` or the checkout launcher defined in `environment.md`; a checkout does not need a
+global `hypit` executable on `PATH`.
 
 ## Install FFmpeg prerequisites on Windows
 
@@ -182,15 +186,15 @@ Updates to an installed, published Distribution remain an explicit package-manag
 ```text
 npm outdated --global hypit
 npm update --global hypit
-npx skills update --global
 ```
 
-Use `hypit --version` to report the installed Distribution. Check npm only when the user asks about
-updates or during deliberate environment maintenance; do not add a Distribution registry request to
-every route. The Hypit Skill itself is different: its `SKILL.md` requires one
-`npx --yes skills update hypit --global --yes` refresh the first time the Skill is loaded in each new
-conversation.
+Use `hypit --version` to report an installed package Distribution. These commands apply only after the
+package is published; do not add a registry request to every route. A checkout Distribution is updated
+only with the fast-forward repository flow in `environment.md` and never through npm.
 
-Do not run those npm commands for a contributor checkout; update it through its repository workflow.
+The installed Skill has a separate lifecycle. OpenAgents or another Skill installer updates its copy;
+pulling a Distribution checkout does not rewrite it, and reinstalling the Skill does not modify the
+checkout.
+
 After updating Hypit, stop an idle Runtime Worker before the next Build so the next process loads the
 new Distribution. Existing project Sources and accepted Build records remain in the project.

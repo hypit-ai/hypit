@@ -36,15 +36,34 @@ Do not repeat a paid Build just because conversation context was compacted. Insp
 Results directly. If a Result exists, use it. If execution is still active, use Runtime status. If
 there is no Result and no active Build, ask before submitting a new paid Build.
 
+Once the active project boundary is selected, read and modify only that project's Sources, assets,
+Runtime Profile, state, outputs and `packages/` directory. Never borrow, copy or link a local package
+from another author project. Use an official package from the selected Distribution or create the
+missing component inside the active project. Distribution examples are read-only inspiration for
+original authoring; reconstruction must follow the supplied reference evidence and must not inspect or
+reuse an example project. A reference video is evidence, never a Film/Track/Take source or final output.
+
 ## Environment and credentials
 
-Use an installed machine-wide CLI when available. In a contributor checkout, use that checkout's
-Node entrypoints; the npm package is not currently published. Read `references/environment.md` before
-the first production command and `references/credentials.md` when credentials are involved.
+Installing this Skill and installing the executable Hypit Distribution are separate operations. A
+Skill hub such as OpenAgents copies the real `skills/hypit/` directory into an Agent's global Skill
+directory; it does not install the CLI. The repository's `.claude/skills/hypit` and
+`.codex/skills/hypit` entries are only contributor-facing leaf links to that same source directory.
 
-When running from a Hypit checkout, put author projects under `<checkout-root>/projects/<name>/`.
-Load an existing checkout-root or project-root `.env` for commands, but never commit it or copy secrets
-into Source, reports or prompts.
+Use an installed machine-wide CLI when available. Until the npm package is published, otherwise use a
+machine-level checkout at `<home>/hypit`: clone `https://github.com/hypit-ai/hypit.git` there when it
+does not exist, fast-forward it from `origin/main` once per conversation, install its pinned workspace
+dependencies, and invoke its Node entrypoints. Never overwrite a different directory, reset local
+changes, or update the installed Skill as a side effect; OpenAgents or the user's Skill installer owns
+that installed copy.
+
+The Distribution checkout and every author project are independent. Keep the checkout at
+`<home>/hypit` and create or use the video project wherever the author requested; never require one to
+contain the other and never add per-project Skill links. Read `references/environment.md` before the
+first production command and `references/credentials.md` when credentials are involved.
+
+Load an existing Distribution-root or project-root `.env` for commands, but never commit it or copy
+secrets into Source, reports or prompts.
 
 For a login-only request, do no project discovery. Use only:
 
@@ -95,7 +114,8 @@ those Results.
 ## Task routing
 
 - Reference video, link, reconstruction or reverse engineering: read
-  `references/reconstruction/route.md` and `references/reconstruction/observers.md`.
+  `references/reconstruction/route.md` and `references/reconstruction/observers.md`. Do not inspect
+  Distribution examples on this route; the reference itself is authoritative.
 - Description, topic, script or format with no reference video: read
   `references/original-authoring/route.md` and `references/brief-intake.md`.
 - A natural-language change to an existing completed project: read `references/revision/route.md`.
