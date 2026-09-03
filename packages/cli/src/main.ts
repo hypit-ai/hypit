@@ -104,6 +104,15 @@ function base64url(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64").replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
 }
 
+function hypiHubOAuthOrigin(): string {
+  const configured = process.env.HYPIHUB_BASE_URL?.trim() || "https://hypit.ai";
+  const url = new URL(configured);
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new Error("HYPIHUB_BASE_URL must be an HTTP(S) URL");
+  }
+  return url.origin;
+}
+
 async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
   const verifier = base64url(randomBytes(32));
   const challenge = base64url(createHash("sha256").update(verifier).digest());
@@ -180,7 +189,8 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
   // after login would therefore bounce straight back to /login forever. The
   // consent page reads that localStorage token and calls /oauth/authorize with
   // the required header.
-  const authorize = new URL("https://hypit.ai/oauth/consent");
+  const oauthOrigin = hypiHubOAuthOrigin();
+  const authorize = new URL("/oauth/consent", oauthOrigin);
   authorize.search = new URLSearchParams({
     response_type: "code", client_id: HYPIHUB_OAUTH_CLIENT_ID, redirect_uri: redirectUri,
     scope: "user:profile user:inference", state, code_challenge: challenge, code_challenge_method: "S256",
@@ -190,7 +200,7 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
   const openerArgs = process.platform === "win32" ? ["/c", "start", "", authorize.toString()] : [authorize.toString()];
   spawn(opener, openerArgs, { stdio: "ignore", detached: true, windowsHide: true }).unref();
   const code = await callback;
-  const tokenResponse = await fetch("https://hypit.ai/oauth/token", {
+  const tokenResponse = await fetch(new URL("/oauth/token", oauthOrigin), {
     method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri, client_id: HYPIHUB_OAUTH_CLIENT_ID, code_verifier: verifier }),
     signal: AbortSignal.timeout(15_000),
