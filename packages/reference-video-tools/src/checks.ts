@@ -1182,12 +1182,12 @@ export async function authoringCheck(
       never_compared: {
         ids: never.map((element) => element.id),
         next: mode === "reconstruction"
-          ? "Read .agents/skills/hypit/references/element-review.md and "
-            + ".agents/skills/hypit/references/reconstruction/comparison-round.md, then for each: "
+          ? "Read skills/hypit/references/element-review.md and "
+            + "skills/hypit/references/reconstruction/comparison-round.md, then for each: "
             + "render the element as the Source configures it, mock the layers a Build has not made, "
             + "and compare the whole stretch blind — one comparison per Segment or Selection it is drawn over."
-          : "Read .agents/skills/hypit/references/element-review.md and "
-            + ".agents/skills/hypit/references/original-authoring/conformance-round.md, then for each: "
+          : "Read skills/hypit/references/element-review.md and "
+            + "skills/hypit/references/original-authoring/conformance-round.md, then for each: "
             + "render the element as the Source configures it, mock the layers a Build has not made, "
             + "and have it read against what this element was asked to be — one review per Segment or "
             + "Selection it is drawn over.",
