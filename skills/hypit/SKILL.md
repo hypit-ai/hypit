@@ -11,6 +11,20 @@ description: Produce a complete video program from a description or reference vi
 > CLIs, Studio, runtime or repository infrastructure, ignore the video-production routes and follow
 > the repository's contributor/development instructions instead.
 
+## Project isolation (hard boundary)
+
+Every author project is an independent workspace. Once the active project boundary is selected, read
+and modify only that project's Sources, assets, Runtime Profile, state, outputs and `packages/`
+directory. Never inspect, import, copy, symlink or otherwise borrow files from another author project,
+including another project's local package. A missing capability must use an installed official package
+or the formal local-package workflow inside the active project; it is never solved by taking a package
+from a sibling project. Repository `examples/` are read-only reference material and may be inspected
+only when the selected route explicitly permits it (currently original authoring); they are not
+dependencies and their local packages must never be reused. The sole reconstruction exception,
+`examples/minimal-author-package/`, is generic contract guidance after a proven gap, not a package to
+install or copy across projects. Reconstruction and variant routes keep their existing stricter
+prohibition on reading repository examples.
+
 ## Session initialization
 
 When this Skill is loaded for the first time in a new conversation, synchronize the complete Hypit
