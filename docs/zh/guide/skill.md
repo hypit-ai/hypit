@@ -329,10 +329,10 @@ Revision 不调用 VLM 或参考比对；Studio 只是确定性检查通过后�
 2. 批次需要付费生成时，先检查 HypiHub OAuth；缺失时由 agent 说明并执行 `hypit auth login`，再运行 `hypit runtime up`。不要让每个子 agent 重复询问登录，也不能用无凭据路径绕过环境门禁。
 3. 新包必须在 staging 中单独完成：`package.json`、activation、Manifest、Types、Producers、Validators、Surface/decoder、Fragment、README、preview，以及包/graph/preview/layout 验证；冻结 digest 后才能注入子项目。
 
-主 agent 在任何子 agent 启动前完成全局决策：
+主 agent 在任何子 agent 启动前完成全局决策；变体直接使用已验证母项目的完整 SVML/SVS/SVRun，不读取仓库 examples：
 
 ```text
-baseline-validated → examples-inspected → format-plan-frozen → slate-drafted
+baseline-validated → base-inspected → format-plan-frozen → slate-drafted
 → vocabulary-enumerated → component-plan-frozen → package-gaps-classified
 → workload-disclosed → package-gaps-resolved → slate-frozen → projects-copied
 → variants-dispatched → variants-complete → aggregate-checked
@@ -342,7 +342,7 @@ baseline-validated → examples-inspected → format-plan-frozen → slate-draft
 具体工作和产物：
 
 1. `variant_state start` 记录母项目、数量、请求和交付模式。
-2. `brief-intake.md`、examples 和 playbooks 生成 `format-plan.json`。
+2. 读取母项目完整 Source、brief/route 证据和 playbooks，生成 `format-plan.json`；不读取仓库 examples。
 3. 主 agent 在 `slate.json` 中写出若干个不重复的变体方向和数量配额，所有配额之和正好为 N；每个方向声明共享 brief 和允许修改的文件范围。`variant_init` 在派发时再确定性展开成带编号的具体变体，因此 100 个变体不需要主 agent 手写 100 个 brief。
 4. `list_svml_packages` 与 `inspect_svml_vocabulary` 形成全局词汇证据和 `component-plan.json`。
 5. 工作量披露快速（只改 SVML）、中等（改 SVS/Run 或切换组件）和新包任务；每种新包只在 staging 开发一次，并以 digest 冻结。
@@ -363,7 +363,7 @@ baseline-copied → brief-frozen → change-scope-frozen → guidance-loaded
 | 步骤 | 主 agent 或子 agent 的工作 | 工具或文档 | 持久化结果与作用 |
 |---|---|---|---|
 | 1. 验证母项目 | 确认父路线/Revision 已通过最终门禁并记录 digest。 | `route_state/revision_state reconcile`、`variant_state start` | 所有子项目从同一个已知良好的 Film graph 出发。 |
-| 2. 决定 Slate | 检查 examples，决定变体方向及数量配额（总和为 N），冻结每个方向的 Format DNA 和允许范围。 | `brief-intake.md`、`playbooks/index.md`、`format-plan.json`、`slate.json` | 创意方向一次全局决定；派发时按方向配额展开唯一编号的子项目。 |
+| 2. 决定 Slate | 根据已验证母项目和用户请求决定变体方向及数量配额（总和为 N），冻结每个方向的 Format DNA 和允许范围；不检查 examples。 | `playbooks/index.md`、母项目 Source/brief、`format-plan.json`、`slate.json` | 创意方向一次全局决定；派发时按方向配额展开唯一编号的子项目。 |
 | 3. 决定词汇和工作量 | 检查包与公开词汇，决定复用/组合/新包，并披露快速、中等、新包数量。 | `list_svml_packages`、`inspect_svml_vocabulary`、`component-plan.json`、`variant_state checkpoint` | 子 agent 启动前用户就知道时间和成本影响，不会做到一半才发现缺包。 |
 | 4. 预先开发新包 | 每个不同缺口只开发一次，在 staging 验证、冻结 digest、标记 ready。 | `route_state --route variant-package`、`local-author-package.md`、`validate_local_author_packages`、`preview_check`、`layout_check` | 多个变体安全复用同一个包，且不会修改安装包。 |
 | 5. 先复制母项目 | 尽可能 copy-on-write，保留作者资产和 Source，删除生成状态/结果和旧 Build 绑定，只注入已 ready 的包。 | `variant_init` | 每个子项目独立、可复现，没有过期的付费产物或生成结果。 |

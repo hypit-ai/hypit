@@ -248,11 +248,13 @@ invalid. Never commit `.env` or copy its secret values into route state, Source,
   creation route.
 - A request for many independent versions after reconstruction, original authoring or revision, or
   from a validated existing project → read `references/variant-expansion/route.md`. The main agent
-  inspects examples, freezes format/Slate/component decisions, enumerates vocabulary, discloses the
-  fast/medium/new-package workload, and resolves package gaps before copying or dispatching variant
-  agents. Initial presenter/product/brand adaptation attached to a reconstruction remains inside the
-  reconstruction route; it is not Revision. Variant expansion defaults to mechanically checked
-  Source and performs no visual review or paid Build unless the author explicitly requests outputs.
+  uses the validated base project's complete SVML/SVS/SVRun, freezes format/Slate/component decisions,
+  enumerates vocabulary, discloses the fast/medium/new-package workload, and resolves package gaps
+  before copying or dispatching variant agents. Do not inspect repository `examples/` on this route;
+  examples are only for an initial original-authoring request. Initial presenter/product/brand
+  adaptation attached to a reconstruction remains inside the reconstruction route; it is not Revision.
+  Variant expansion defaults to mechanically checked Source and performs no visual review or paid Build
+  unless the author explicitly requests outputs.
 - If original authoring or reconstruction created a project-local package, wait until that route is
   complete, read `references/package-promotion.md`, and judge whether the component has clear, high
   reuse value across unrelated videos. Only when that bar is met, ask the author whether they want the

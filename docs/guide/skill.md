@@ -374,10 +374,10 @@ reference comparison; Studio is only a display handoff after deterministic check
 2. If the batch will perform paid generation, check HypiHub OAuth first; when missing, explain and run `hypit auth login`, then `hypit runtime up`. Child agents do not repeatedly ask for login and may not bypass the environment gate with a credentialless path.
 3. Every new package is completed once in staging: `package.json`, activation, Manifest, Types, Producers, Validators, Surface/decoder, Fragment, README and preview, plus package/graph/preview/layout validation. Freeze its digest before injecting it into children.
 
-The main agent makes global decisions before any child agent starts:
+The main agent makes global decisions before any child agent starts; variant expansion uses the validated base's complete SVML/SVS/SVRun and does not inspect repository examples:
 
 ```text
-baseline-validated → examples-inspected → format-plan-frozen → slate-drafted
+baseline-validated → base-inspected → format-plan-frozen → slate-drafted
 → vocabulary-enumerated → component-plan-frozen → package-gaps-classified
 → workload-disclosed → package-gaps-resolved → slate-frozen → projects-copied
 → variants-dispatched → variants-complete → aggregate-checked
@@ -387,7 +387,7 @@ baseline-validated → examples-inspected → format-plan-frozen → slate-draft
 Tools and outputs are:
 
 1. `variant_state start` records the base, count, request and delivery mode.
-2. `brief-intake.md`, examples and playbooks produce `format-plan.json`.
+2. Read the base project's complete sources, brief/route evidence and playbooks to produce `format-plan.json`; do not inspect repository examples.
 3. The main agent writes distinct direction quotas in `slate.json`; their counts add up to N. Each direction carries a shared brief and allowed file scope. `variant_init` expands the quotas into numbered concrete variants when dispatching, so a 100-item batch does not require 100 hand-written briefs.
 4. `list_svml_packages` and `inspect_svml_vocabulary` produce global vocabulary evidence and
    `component-plan.json`.
@@ -414,7 +414,7 @@ The batch is intentionally “copy first, then edit”:
 | Step | Main agent or child work | Tool or document | Durable result and reason |
 |---|---|---|---|
 | 1. Validate base | Confirm the parent creation/revision final gate and record its digest. | `route_state/revision_state reconcile`, `variant_state start` | Every child starts from the same known-good Film graph. |
-| 2. Decide the slate | Inspect examples, choose the expansion directions and quotas whose total is N, and freeze each direction's Format DNA and allowed scope. | `brief-intake.md`, `playbooks/index.md`, `format-plan.json`, `slate.json` | Creative directions are decided once globally; dispatch expands each quota into a unique numbered child brief. |
+| 2. Decide the slate | Use the validated base and the author's request to choose directions and quotas totaling N, and freeze each direction's Format DNA and allowed scope; do not inspect examples. | `playbooks/index.md`, base Source/brief, `format-plan.json`, `slate.json` | Creative directions are decided once globally; dispatch expands each quota into a unique numbered child brief. |
 | 3. Decide vocabulary/workload | Inspect packages and public vocabulary, choose reuse/composition/new package, then disclose fast/medium/new-package counts. | `list_svml_packages`, `inspect_svml_vocabulary`, `component-plan.json`, `variant_state checkpoint` | The author knows the cost/time impact before agents start; no child discovers a package gap halfway through. |
 | 4. Stage new packages | Develop each distinct local package once, validate it in staging, freeze its digest and mark it ready. | `route_state --route variant-package`, `local-author-package.md`, `validate_local_author_packages`, `preview_check`, `layout_check` | Shared package work is reused safely and cannot mutate installed packages. |
 | 5. Copy the base | Clone the project with copy-on-write where possible, retain authored assets/source, remove generated state/results and old Build bindings, inject only ready packages. | `variant_init` | Each child is independent, reproducible and free of stale paid/generated artifacts. |
