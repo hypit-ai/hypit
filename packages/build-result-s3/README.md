@@ -1,8 +1,8 @@
 # `@hypit/build-result-s3`
 
 Opt-in S3-compatible repository for complete project Build Results. It stores Build manifests,
-Composite Value Documents and public Resource files under one project prefix; Runtime working Artifacts remain local
-to the selected Runtime implementation.
+Composite Value Documents and public Resource files under one project prefix; an active Build's
+temporary Resources remain with the selected Runtime implementation.
 
 ```json
 {

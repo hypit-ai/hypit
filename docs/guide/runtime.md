@@ -147,13 +147,13 @@ For an S3-compatible repository:
 The AWS SDK uses its normal credential chain. `endpoint` and `forcePathStyle` are available for
 S3-compatible services. The prefix is the project boundary: each project should have its own
 prefix. S3 changes only where complete Results live; it does not move Runtime SQLite, Provider capacity or
-temporary working Artifacts into the bucket.
+an active Build's temporary Resources into the bucket.
 
 The S3 adapter maps each ordered Build id to a reversible newest-first physical prefix. It can request
 one bounded delimiter page from object storage without a central index or duplicate catalog. Result
 files are streamable by byte range, so
 Studio video/audio requests do not load a whole remote file into memory first. `hypit doctor
-[profile] --workspace <project>` actively checks the selected Result Store as well as the Runtime;
+[profile] --workspace <project>` actively checks the selected Result Repository as well as the Runtime;
 the storage check performs only a bounded read-only listing and does not scan Result history.
 
 The Workspace is resolved independently from the explicit `--workspace`, the project containing the

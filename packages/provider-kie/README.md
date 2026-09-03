@@ -10,7 +10,7 @@ choose another model.
 
 It imports no exact-model package. Every supported Capability contributes one `KieRoute`: exact
 Capability, return Type, request compiler, media/count limits and result packer. All Routes share one
-upload, admission, paid submission, durable Operation polling and download state machine. Model mappings
+upload, paid submission, durable Operation polling, download and working-Resource write path. Model mappings
 generate eleven Routes; Background Removal contributes the twelfth.
 
 ## Supported catalog
@@ -94,7 +94,7 @@ Manifests actually imported by the author document; installing KIE does not add 
 3. Once a `taskId` exists, later Worker polling continues only that same task. Poll/download errors cannot create a new
    paid generation.
 4. Successful result URLs are converted to short-lived download URLs, bounded while streaming,
-   immediately admitted into that Build's working byte area, and removed from durable
+   immediately written into that Build's working byte area, and removed from durable
    result metadata.
 5. The selected Runtime Execution Store owns shared Build capacity. This Provider contributes one KIE
    pool plus exact capability lanes and a conservative create-task interval; it does not introduce Redis or another source of

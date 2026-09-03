@@ -112,8 +112,8 @@ hypit plan build.svrun
 A project with `package.json` owns its third-party packages. A plain creative folder needs no Node
 project and uses official packages from the installed Distribution. Source and exported files remain in the
 project. By default, Build Results live under the project's `.hypit/results`; a project-owned
-`hypit.results.json` may point the same complete Result model at S3. Active execution state always lives under the selected Profile's
-`dataRoot`.
+`hypit.results.json` may point the same complete Result model at S3. Active execution state and
+temporary Resources always live under the selected Profile's `dataRoot`.
 `runtime use` stores only a local pointer at `.hypit/runtime`. Source imports select author
 packages; the Profile independently selects Credential Stores and Endpoints through their own `use` entries.
 
@@ -183,7 +183,7 @@ hypit runtime up
 The Runtime creates a missing managed environment in the machine Program Home and reuses it across
 projects and sessions. Do not run a service's `uv sync` from an author project.
 
-Run `hypit doctor hypit.runtime.json` after changing a Runtime Profile or project Result Store. It reports missing tools,
+Run `hypit doctor hypit.runtime.json` after changing a Runtime Profile or project Result Repository. It reports missing tools,
 credentials and endpoint configuration without executing the graph.
 
 ## Read next

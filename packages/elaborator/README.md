@@ -49,7 +49,7 @@ identity, rejects conflicting media assignments for one written locator and fold
 into Source Closure identity. It does not know whether a Host obtained the bytes from a filesystem,
 browser upload, repository object or remote content store.
 
-Frontend output passes a Host-owned Record admission hook before linking. The hook is permitted to
+Frontend output passes a Host-owned Record validation hook before linking. The hook is permitted to
 reject a Record but is forbidden to rewrite Record identity, Type or value.
 `@hypit/compiler-node` wires this to `@hypit/validation` by default, so authored
 values use the same Type-owner gate as Producer, Provider and provided Candidate values.

@@ -46,8 +46,8 @@ packages or the CLI:
 
 ## 3. Implement the Provider
 
-The Provider handles Commands from the Scheduler: request submission, polling, download and
-admission into the current Build's working byte area.
+The Provider handles Commands from the Scheduler: request submission, polling, download and writing
+the accepted Resource into the current Build's working byte area.
 
 ```typescript
 // src/provider.ts

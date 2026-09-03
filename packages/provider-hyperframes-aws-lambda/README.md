@@ -19,7 +19,7 @@ configuration.
 
 On success the Endpoint requires HyperFrames' plan and completed-frame counts to equal the source
 document, then streams the returned S3 object into the current Build's working byte area.
-The Runtime Profile selects the state machine and deployment settings. The Provider does not repeat
+The Endpoint's Runtime Profile entry selects the AWS state machine and deployment settings. The Provider does not repeat
 the request or selected endpoint as vendor metadata. Container and stream conformance stays in the explicit media
 inspection/mux capabilities, so the orchestrating machine does not acquire a hidden FFmpeg
 dependency.

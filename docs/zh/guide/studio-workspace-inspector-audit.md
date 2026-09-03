@@ -274,7 +274,7 @@ Studio 当前固定读取最近 100 个 Result。后续若需要按当前 Run / 
 - 生成图片再生成 B-roll 视频、最后进入 MediaTrack 的项目；
 - 同一 Run 有多次 Build 历史和失败 Operation 的项目；
 - Ranking Column 等一个根实体带多个可独立选择子实体的复合组件；
-- 本地 Artifact Store 与远端 Artifact Store；
+- 默认文件系统与 S3 Build Result Repository；
 - macOS 与 Windows 项目目录。
 
 调研结果至少要能回答：用户能否快速找到 Source、正在运行的工作、历史真实产物和当前对象的可调参数；能否解释一段素材从何而来；界面是否仍只有一份作者真相；后台是否保持安静；第三方组件是否无需修改 Studio 核心就能被正确组织。

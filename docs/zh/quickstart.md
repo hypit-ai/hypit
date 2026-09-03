@@ -108,8 +108,8 @@ hypit plan build.svrun
 
 含有 `package.json` 的项目负责自己的第三方包；普通创作文件夹不需要成为 Node 项目，直接使用
 Distribution 里的官方包。默认情况下，完整 Build Result 位于项目的 `.hypit/results`；Profile
-不管理 Result，项目根的 `hypit.results.json` 可以把同一套 Result 模型指向 S3。Runtime 活跃状态与临时 Artifact 始终位于所选 Profile 的
-`dataRoot`。`runtime use` 只在 `.hypit/runtime` 保存一个本地指针。Source import 选择作者包，
+不管理 Result，项目根的 `hypit.results.json` 可以把同一套 Result 模型指向 S3。Runtime 活跃状态与临时
+Resource 始终位于所选 Profile 的 `dataRoot`。`runtime use` 只在 `.hypit/runtime` 保存一个本地指针。Source import 选择作者包，
 Profile 则通过 Credential Store 与 Endpoint 各自的 `use` 独立选择环境包。
 
 需要完整 Runtime Profile 时，从
@@ -167,7 +167,7 @@ hypit runtime up
 Runtime 只会在机器 Program Home 中缺少托管环境时创建它，随后被所有项目和会话复用。不要在
 创作项目里手动执行服务的 `uv sync`。
 
-修改 Runtime Profile 或项目 Result Store 后运行 `hypit doctor hypit.runtime.json`。它会报告缺少的工具、凭据和
+修改 Runtime Profile 或项目 Result Repository 后运行 `hypit doctor hypit.runtime.json`。它会报告缺少的工具、凭据和
 Endpoint 配置，但不会执行作者图。
 
 ## 接下来读什么

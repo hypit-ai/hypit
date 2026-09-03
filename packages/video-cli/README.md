@@ -41,8 +41,8 @@ Source because an Author Graph without execution intent is not a Build. The live
 the Script-owned deterministic CaptionDocument alongside real local/remote Endpoints; the CLI never
 fabricates a Target, Candidate or missing fact.
 
-`build` compiles one immutable Build Definition and passes it to the selected Runtime Profile with a fresh,
-automatically assigned Build id. The id begins with its UTC creation time, so repository order is both
+`build` compiles one immutable Build Definition and submits it to the configured Local Runtime with a
+fresh, automatically assigned Build id. The id begins with its UTC creation time, so repository order is both
 stable and visible; its random suffix prevents same-millisecond collisions and says nothing about content.
 Source or Plan identity never reclaims an earlier Build; reuse
 across Builds exists only through explicit Run Source Candidates. JSON Profiles resolve only adapters in their separately

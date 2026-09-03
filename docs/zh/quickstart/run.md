@@ -5,7 +5,8 @@ description: 声明 Build 目标、复用结果以及配置运行时环境。
 
 # Run Source 与 Build
 
-Author Source 定义视频本身。Run Source 从中挑选最终目标，以及是否用明确的 Candidate 来满足它们。Runtime Profile 则选择执行这份计划的机器、凭据、Provider Endpoint 与服务。
+Author Source 定义视频本身。Run Source 从中挑选最终目标，以及是否用明确的 Candidate 来满足它们。
+官方 Distribution 提供 Local Runtime；它的 Profile 声明执行这份计划可用的凭据、Provider Endpoint 与服务。
 
 先为项目选择一次 Runtime：
 
@@ -174,9 +175,9 @@ Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本�
 
 ## Runtime Profile
 
-Runtime Profile 选择 Build 在哪里执行。它通过逻辑 `use` 名称选择包、创建具名
-Infrastructure 实例，再把实例暴露的 part 分配给 Runtime role，并配置 Provider endpoint 与
-容量。Profile 不定义 Source Workspace 或 Author 包选择。
+官方视频 Distribution 已经选择 Local Runtime。它的 Profile 通过逻辑 `use` 名称选择 Credential
+Store 与 Endpoint，并配置 Endpoint 容量等部署参数；它不选择 Runtime Host，也不定义 Source
+Workspace、Author 包或项目 Result Repository。
 
 ```bash
 hypit runtime use hypit.runtime.json
@@ -263,7 +264,7 @@ output/
 和公开 Output，媒体在 `files/`，结构化值在 `values/`。
 
 这是无需配置的默认 Result 仓库。项目根的 `hypit.results.json` 也可以选择 `@hypit/build-result-s3`；历史命令
-与 `.svrun` 中的 `build-record` 会使用同一个仓库。Runtime 临时 Artifact 仍由 Runtime 在本地
+与 `.svrun` 中的 `build-record` 会使用同一个仓库。活跃 Build 的临时 Resource 仍由 Runtime 在本地
 私有管理。
 
 `status`、`builds` 等只读归档命令不会在状态尚不存在时初始化 Runtime 数据库。
@@ -277,7 +278,7 @@ hypit plan /work/my-film/build.svrun --asset-root /work/shared-media
 `--asset-root` 可重复使用，只授权读取素材字节，不允许从那里导入 `.svml/.svs` 源码。该 Host
 选项不进入作者或 Build 身份；真正进入图的是由该文件形成的显式 Resource 值。
 
-Runtime Profile 只选择 Runtime 包与该 Runtime 的封闭配置。完整结构只在
+Runtime Profile 只选择 Credential Store、Endpoint 及其封闭配置。完整结构只在
 [Runtime](../guide/runtime.md) 维护，不在 Quickstart 复制第二份。
 
 ### 1. 选择 Runtime
@@ -287,8 +288,8 @@ cd examples/talking-head-aroll
 hypit runtime use hypit.runtime.json
 ```
 
-Author/Run Source 通过 import 选择作者包，Runtime Profile 通过 `use` 选择环境包；安装、版本
-与完整性由 npm 或 pnpm 负责，不再需要同步另一份包库存。
+Author/Run Source 通过 import 选择作者包；官方视频 Distribution 已经选择 Local Runtime，Profile
+只通过 `use` 选择 Credential Store 与 Endpoint。安装、版本与完整性由 npm 或 pnpm 负责。
 
 ### 2. 诊断环境
 
@@ -296,7 +297,7 @@ Author/Run Source 通过 import 选择作者包，Runtime Profile 通过 `use` �
 hypit doctor
 ```
 
-Doctor 总会校验项目选择的 Result Store；存在已选或显式传入的 Runtime Profile 时，还会校验全部
+Doctor 总会校验项目选择的 Result Repository；存在已选或显式传入的 Runtime Profile 时，还会校验全部
 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测。它不启动 Worker，也不发付费请求。
 
 存在 Profile 时，`doctor` 有意检查完整 Runtime Profile。若只想检查某次 Run 真正需要的环境，请使用带
@@ -392,4 +393,4 @@ hypit runtime down
 
 `runtime down` 只会让 Worker 停止领取新 Build，并保留外部程序；只有确实要停掉这些程序时
 才执行 `programs down`。两条命令都不会取消耐久 Build 或远程 Provider 工作。再次启动同一
-Profile 后，会继续其中尚未完成的执行。
+Profile 后，会从已经接受的执行事实继续推进其中的活跃 Build。

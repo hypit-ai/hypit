@@ -76,7 +76,7 @@ WAV but makes no `SemanticTake`, speaker or alignment claim; it can therefore fe
 reference port directly. Frame extraction supports `first`, `last`, `frame:<index>` and
 `time:<seconds>`. Transform operations are ordered author meaning and never an arbitrary FFmpeg string.
 
-The same package also owns two provider-neutral finalization plans/capabilities:
+The same package also owns two provider-neutral media completion plans/capabilities:
 
 ```text
 Composition -> pure AudioProgramPlan -> render-timeline-audio Need -> TimelineAudio
