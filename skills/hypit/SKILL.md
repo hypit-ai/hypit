@@ -86,6 +86,16 @@ visible shot in a reconstruction must be newly authored as a generated take or a
 author-supplied replacement asset. A source that directly plays the reference is not a reconstruction
 and must be rejected before preview or Build.
 
+**Reconstruction has an evidence-first reading order.** On the reconstruction route, never inspect the
+repository's `examples/` projects at any point. Do not read their complete SVML, SVS, SVRun, README,
+assets or variants: that material can anchor the agent to an unrelated implementation and overwhelm the
+reference evidence. The only permitted `examples/` exception is the
+`examples/minimal-author-package/` fixture, and only after a real vocabulary gap has been proven and
+the local-package workflow explicitly requires its generic contract. First complete the environment
+gate, prepare the reference, run the selected observer and resolve its shot/continuity evidence. Then
+consult only the installed package vocabulary and the specific craft guidance needed by the observed
+systems. Complete examples are for original authoring and variant planning, never reconstruction.
+
 ## Login-only fast path
 
 If the request is only to sign in or authenticate HypiHub (for example, `login to hypit`), treat it as
@@ -210,7 +220,9 @@ invalid. Never commit `.env` or copy its secret values into route state, Source,
   YouTube, Instagram, Bilibili — are the same request; a link is fetched with `yt-dlp` and everything
   after that reads the file. A video with a change attached —
   this one but with our presenter, our product, our brand — is this route too, and the change is made
-  on the finished reconstruction. The path is the whole request: the working directory, the project
+  on the finished reconstruction. **Do not inspect any `examples/` project on this route; the only
+  exception is the generic `examples/minimal-author-package/` fixture after a proven package gap.** The
+  reference evidence is the sole source of truth for reconstruction. The path is the whole request: the working directory, the project
   location and the vocabulary are yours to decide rather than to ask for.
 - Making a video from a description, brief, topic, script or format name, with nothing to copy →
   read `references/original-authoring/route.md`. This is the route whatever shape the request takes —
