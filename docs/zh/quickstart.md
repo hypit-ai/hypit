@@ -3,27 +3,22 @@ title: 面向 Agent 使用者的快速开始
 description: 无需手写 SVML 或 SVS，通过 Coding Agent 创建、审阅并交付 Hypit 视频。
 ---
 
-你不需要了解 SVML、SVS、JavaScript 或命令行，也可以使用 Hypit 制作视频。你只需用日常语言向 Coding Agent 描述想要的结果；Agent 会通过 `/hypit` skill 准备项目、检查可用组件、创作或复刻视频，并在任何需要付费的 Build 之前，为你打开一个可以审阅的 Studio mock。
-
-本页面向希望“指导视频创作”而不是亲自编写源码的用户。Hypit 生成的源码仍然可以编辑、复现和继续开发，但源码的编写与检查由 Agent 负责。如果你希望亲自编写 SVML 或 SVS，请先了解下面的 Agent 工作流，然后从第二个页面 [Script](./quickstart/script.md) 开始。
+你不需要了解 SVML、SVS、JavaScript 或命令行。用日常语言向 Coding Agent 描述视频，Agent 会通过 `/hypit` skill 完成创作或复刻，并在付费 Build 前提供 Studio mock 供你审阅。
 
 ## 你需要准备什么
 
 - 一个能够使用 skill 的 Coding Agent，例如 Claude Code 或 Codex；
-- 一个允许 Agent 创建视频项目的文件夹；
-- 一条用于复刻的视频，或一份用于原创视频的创意简报；
-
-你不需要克隆 Hypit 仓库。先按第一步的命令安装可复用的 `/hypit` skill；之后 Agent 可以替你准备 Hypit Distribution。需要执行其他安装命令时，Agent 会先解释命令的作用，再在项目目录中完成操作。
+- 一条用于复刻的视频，或一份用于原创视频的创意简报。
 
 ## 第一步：安装 Hypit skill
 
-在准备存放项目的文件夹中打开 Coding Agent，然后先安装 Hypit skill：
+先安装 Hypit skill：
 
 ```bash
 npx skills add hypit-ai/hypit -g
 ```
 
-`-g` 选项会让 skill 对任何项目文件夹中的新 Agent 会话都可用。你不需要克隆 Hypit 仓库，也不需要理解这条命令安装了哪些文件。skill 可用后，在视频项目文件夹中开启新的 Agent 对话，然后继续下面的步骤。
+然后在任意处启动 Coding Agent，Hypit skill 将全局可用。
 
 ## 第二步：描述你想制作的视频
 
@@ -54,7 +49,7 @@ npx skills add hypit-ai/hypit -g
 请制作一条 ranking 视频。视频中有一个 ranking 板子，包含五行：左侧是 S、A、B、C、D 五个等级，每个等级使用不同的颜色；右侧用于摆放对应等级的图标。把 Hypit 排到 S 级，并解释它的优势；同时加入 Arcads、Higgsfield、Seedance 和 CapCut，对每个竞品给出公平而简洁的优点与缺点说明。整体要清晰、有活力，适合短视频平台。
 ```
 
-你还可以补充目标受众、时长、语言、语气、品牌色、主持人、发布平台或画幅比例等要求。你不需要决定这些要求由哪个 package、模型、字幕系统或动画原语实现。Agent 会把 brief 转换成完整计划；只有在某个创意决定无法安全推断时，才会提出简短的补充问题。
+你还可以补充目标受众、时长、语言、语气、品牌色、主持人、发布平台或画幅比例等要求。Agent 会把 brief 转换成完整计划，并自行补全制作所需的细节。
 
 ## 第三步：按 Agent 提示提供凭据
 
@@ -67,17 +62,15 @@ npx skills add hypit-ai/hypit -g
 
 ## 第四步：让 Agent 完成制作
 
-你确认 brief 后，Agent 会在不要求你编写源码的情况下推进项目。具体顺序会因视频而不同，但通常包括：
+收到 brief 后，Agent 会在不要求你编写源码的情况下自动推进项目。制作过程中不会询问任何问题，你只需等待 Studio mock。具体顺序会因视频而不同，但通常包括：
 
 1. **拆分镜头。** Agent 识别口播段落、视觉节拍、转场、字幕、B-roll 机会，以及 ranking 板等需要持续保持的元素。
 2. **分析参考视频或 brief。** 复刻路线会使用 Gemini 和可用的媒体工具检查节奏、构图、文字、说话人和视觉连续性；原创路线则根据你的描述和确定的创作方向回答同样的问题。
-3. **提出窄问题。** Agent 不会让你填写一张很长的表格，而是逐个询问容易回答的小问题，例如使用哪种语言、产品是否要出现在画面中，或更倾向哪一种主持人风格。
+3. **自行确定细节。** Agent 会根据参考视频、brief 和观察结果自动确定时机、语言、产品位置和主持人处理方式。
 4. **读取现有 package 声明。** 在自行发明实现之前，Agent 会检查项目和 Hypit 官方 package 中已有的组件。如果已有合适的字幕、ranking、主持人、B-roll 或渲染组件，就直接复用。
 5. **必要时编写新 package。** 如果确实缺少所需的视觉行为，Agent 会创建一个足够小、可复用的新组件，并记录它的使用方式。你不需要自行设计 package 接口。
 6. **编写并检查源码。** Agent 会写出 SVML/SVS 源码，创建所需的 Run 配置，编译视频图，并修复发现的类型或布局问题。
 7. **与 mock 对比。** 对尚未真正生成的素材使用 mock，随后在 Studio 中渲染完整构图；Agent 会把看到的结果与参考视频或 brief 对比，修复时机、层级、裁切、字幕和画面密度等问题。
-
-因此，这个流程更像是在指导一支小型制作团队：切分 shot、Gemini 分析、提出窄问题、查找 package、写源码、生成 mock、进行比对并修复，全部由 Agent 完成。你不需要打开编辑器、编写组件，也不需要自己执行一连串 Build 命令。
 
 ## 第五步：查看 mock Studio
 
@@ -89,7 +82,7 @@ npx skills add hypit-ai/hypit -g
 ranking 板出现得太晚，手机上字幕太小，而且主持人说话时被 B-roll 盖住了。请修复这些问题，再给我看一次 mock。
 ```
 
-Agent 会修改源码，重新执行相关检查，并返回更新后的 mock。你只需再次审阅，不需要自己寻找对应的 SVML 行。
+Agent 会修改源码、重新检查并返回更新后的 mock。
 
 ## 第六步：确认后提交付费 Build
 
