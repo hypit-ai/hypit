@@ -11,9 +11,9 @@
 <p align="center">
   <a href="https://hypit.ai"><strong>Demo</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://docs.hypit.ai/zh/quickstart"><strong>快速开始</strong></a>
+  <a href="https://hypit.ai/quickstart/"><strong>快速开始</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://docs.hypit.ai/zh/guide/develop"><strong>开发指南</strong></a>
+  <a href="https://hypit.ai/develop/"><strong>开发指南</strong></a>
   &nbsp;&bull;&nbsp;
   <a href="./README.md"><strong>English</strong></a>
 </p>
@@ -162,7 +162,7 @@ Agent 会检查环境，只索要这条视频需要的凭据，先给出预览�
 
 在原创或复刻视频时，如果你觉得 Agent 创作的某个组件在无关项目中也有明确且很高的复用价值，它会是很好的贡献候选。你可以让 Agent 把它移入 Hypit 仓库的 `packages/` 文件夹，再提交给我们，发起一个 Pull Request。普通的一次性组件也可以留在项目内部。
 
-[开发指南](https://docs.hypit.ai/zh/guide/develop)说明了前置条件、日常命令和仓库结构。
+[开发指南](https://hypit.ai/develop/)说明了前置条件、日常命令和仓库结构。
 
 <table>
   <tr>

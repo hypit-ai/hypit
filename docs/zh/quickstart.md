@@ -1,183 +1,140 @@
 ---
 title: 快速开始
-description: 安装 Hypit，编译第一张完整的 SVML 视频图，并准备真实 Build。
+description: 无需手写 SVML 或 SVS，通过 Coding Agent 创建、审阅并交付 Hypit 视频。
 ---
 
-# 快速开始
+# 面向 Agent 使用者的快速开始
 
-作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、文字与音频组装成一部完成的影片。
-Author Source 使用 SVML（Semantic Video Markup Language）编写，
-扩展名为 `.svml`。
+你不需要了解 SVML、SVS、JavaScript 或命令行，也可以使用 Hypit 制作视频。你只需用日常语言向
+Coding Agent 描述想要的结果；Agent 会通过 `/hypit` skill 准备项目、检查可用组件、创作或复刻视频，
+并在任何需要付费的 Build 之前，为你打开一个可以审阅的 Studio mock。
 
-Hypit 把这份源码编译成一张可见的执行图。在任何模型或外部服务开始工作之前，你可以先检查源码、
-选择一次 Run，并看清这次 Build 究竟需要执行什么。本页先带你得到第一份安全的 Plan：不需要 API Key，
-也不会产生任何付费请求。
+本页面向希望“指导视频创作”而不是亲自编写源码的用户。Hypit 生成的源码仍然可以编辑、复现和继续开发，
+但源码的编写与检查由 Agent 负责。如果你希望亲自编写 SVML 或 SVS，请先了解下面的 Agent 工作流，
+然后从第二个页面 [Script](./quickstart/script.md) 开始。
 
-## 安装
+## 你需要准备什么
 
-```bash
-npm install --global hypit
-npx skills add hypit-ai/hypit --global
-```
+- 一个能够使用 skill 的 Coding Agent，例如 Claude Code 或 Codex；
+- 一个允许 Agent 创建视频项目的文件夹；
+- 一条用于复刻的视频，或一份用于原创视频的创意简报；
+- 你所选择的模型和服务的凭据。Agent 只会在当前 Runtime Profile 确实需要时索取这些凭据。
 
-第一条命令安装可复用的 Distribution；第二条把 skill 全局安装，使以后任何项目里的新 Agent
-会话都能找到它。普通创作不需要克隆仓库。
+你不需要克隆 Hypit 仓库。Agent 可以替你安装可复用的 `/hypit` skill 和 Hypit Distribution。需要执行
+安装命令时，Agent 会先解释命令的作用，再在项目目录中完成操作。
 
-## 使用 Hypit skill
+## 第一步：使用 Hypit skill 并提供凭据
 
-在任何项目目录下都可以直接使用 `/hypit`。发送给你的 Agent：
-
-```text
-/hypit 配置我的环境，只向我索取当前 Runtime Profile 实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
-```
-
-它会走下面同样的五个步骤，并且只向你索取 Runtime Profile 实际需要的东西。不想用 Agent 的话，也可以自己依次完成这五步。
-
-## 1. 检查已安装的 Distribution
-
-需要 Node.js 22+，桌面系统为 macOS 13+ 或 Windows 10/11 x64。
-
-```bash
-hypit paths --json
-```
-
-结果会分别给出当前项目、项目 `.hypit` 状态、机器 Program Home 与 npm Distribution。
-pnpm、Corepack 和 `npm link` 只属于贡献者工作流。
-
-## 2. 编译示例
-
-链接中的示例包含 Script、两次视频生成需求、Speech Track、WhisperX 对齐、字幕、Media Track、
-文字、Film 与最终渲染。
-
-```bash
-cd /path/to/copied-talking-film-graph-check
-hypit check main.svml
-```
-
-`check` 会读取自描述的源码，只加载源码导入的包，并列出这份 Author Source 声明的公共类型化输出。
-
-接着编译 Run Source：
-
-```bash
-hypit plan build.svrun
-```
-
-`plan` 会连接 Author Graph 和 Run Graph，从 `final.video` 反向找到真正需要的子图，冻结将要使用的
-Operations 与外部 Needs。它绝不会启动 Provider。
-
-现在可以直接打开三份源码阅读：
-
-- [`main.svml`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/main.svml)：视频本身；
-- [`recipes.svs`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/recipes.svs)：可复用的视觉 Recipe；
-- [`build.svrun`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/build.svrun)：这次要求得到的输出。
-
-## 3. 认识项目里的文件
-
-一个实际视频项目通常有四份由人编写或配置的输入：
-
-| 文件 | 回答的问题 |
-|---|---|
-| `main.svml` | 要做的是什么视频？ |
-| `recipes.svs` | 使用哪些可复用的 Recipe 值？ |
-| `build.svrun` | 这一次 Run 要哪些输出、选择哪些 Candidate？ |
-| `hypit.runtime.json` | 在哪台机器、哪些 Store 和 Provider Endpoint 上执行？ |
-
-最短的记法是：
+在准备存放项目的文件夹中打开 Coding Agent，然后要求它使用 Hypit 并登录：
 
 ```text
-SVML 说明做什么。
-SVRUN 说明这次选什么。
-Runtime Profile 说明在哪里做。
+/hypit login
 ```
 
-同一个 `main.svml` 可以对应很多份 `.svrun`：单独生成图片、渲染成片，或者复用已经认可的镜头，
-都不需要修改作者对视频本身的表达。
+skill 会引导你完成登录，并使用已配置的凭据存储安全保存登录信息。你也可以明确要求 Agent 使用自己的
+Provider key，例如：“使用我自己的 KIE 和 Gemini key，不要创建新的账号。”Agent 会判断当前视频真正
+需要哪些 key，说明每个 key 的用途，并避免索取无关凭据。不要把密钥粘贴到公开文档中，也不要提交到 Git。
 
-## 4. 建立自己的项目
+如果尚未安装 skill，可以直接告诉 Agent：
 
-把视频项目和生成产物放在已安装的 Hypit Distribution 之外。全局命令可以在独立项目目录里直接使用
-`hypit`：
-
-```bash
-cd /path/to/my-video
-
-hypit runtime use hypit.runtime.json
-
-hypit plan build.svrun
+```text
+安装 Hypit skill，然后帮我登录并检查环境是否就绪。
 ```
 
-含有 `package.json` 的项目负责自己的第三方包；普通创作文件夹不需要成为 Node 项目，直接使用
-Distribution 里的官方包。Source 与导出的文件留在项目里，Runtime 状态与 Artifact 位于所选 Profile 的
-`dataRoot`。`runtime use` 只在 `.hypit/runtime` 保存一个本地指针。Source import 选择作者包，
-Profile 则通过 `use` 独立选择 Runtime 包。
+Agent 会完成安装和本地环境检查。你不需要记忆包管理器、Runtime Profile 或各个服务的专属配置步骤。
 
-需要完整 Runtime Profile 时，从
-[`examples/talking-film-live`](https://github.com/hypit-ai/hypit/tree/main/examples/talking-film-live) 的结构开始：复制文件结构，
-再换成自己的素材、Script、模型选择和凭据。
+## 第二步：描述你想制作的视频
 
-## 5. Build 并取出结果
+你可以选择以下两种方式之一。
 
-检查并确认计划之后：
+### 复刻一条参考视频
 
-```bash
-hypit build build.svrun --follow
+要求 Agent 复刻视频，并提供视频文件路径。你可以把视频文件直接拖进 Coding Agent 窗口；大多数 Agent
+会自动把路径填入消息。也可以手动写出路径：
+
+```text
+/hypit Clone this video and preserve its pacing, shot structure, captions, B-roll rhythm and sound design:
+/Users/me/Desktop/reference.mp4
 ```
 
-`build` 会先重复同一套便宜的本地预检，再分配新的 Build id、持久化 Build 并确保 Worker
-可用。它不会安装包，也不会启动 Managed Program；部署未就绪时应显式运行
-`hypit runtime up`。`--follow` 只是观察器；关掉它不会停止 Build。
+如果需要改变内容，也可以一并说明，例如更换主持人、语言、产品、画幅比例、视觉风格或行动号召。参考视频
+会被当作剪辑结构的证据；Agent 不会只给你一份分析报告，而是会创建一套可以审阅、修改和 Build 的完整视频程序。
 
-编辑源码时使用 `check`；配置或排查部署时使用 `doctor`。它们都不会提交工作，但也不是每次
-Build 前必须重复的仪式。
+### 根据创意简报原创一条视频
 
-```bash
-hypit status <build-id> --watch
+你可以像给一位真人制片人写 brief 一样描述想法。例如：
 
-hypit queue
-
-hypit get <build-id> \
-  --name final.video \
-  --to output/final.mp4
+```text
+请使用下面的 ranking 板子制作一条 ranking 视频。把 Hypit 排到 S 级，并解释它的优势；同时加入
+Arcads、Higgsfield、Seedance 和 CapCut，对每个竞品给出公平而简洁的优点与缺点说明。整体要清晰、
+有活力，适合短视频平台。
 ```
 
-Runtime 会归档所有已经接受的中间 Record 和媒体。`get` 只负责把某个归档结果复制到便于人查看的位置，
-不会决定哪些中间结果应该被保存。
+你还可以补充目标受众、时长、语言、语气、品牌色、主持人、发布平台或画幅比例等要求。你不需要决定这些
+要求由哪个 package、模型、字幕系统或动画原语实现。Agent 会把 brief 转换成完整计划；只有在某个创意
+决定无法安全推断时，才会提出简短的补充问题。
 
-## 真实 Build 可能使用的本地工具
+## 第三步：让 Agent 完成制作
 
-只安装当前 Runtime Profile 真正选择的部分：
+你确认 brief 后，Agent 会在不要求你编写源码的情况下推进项目。具体顺序会因视频而不同，但通常包括：
 
-| 工具 | 什么时候需要 |
-|---|---|
-| `ffmpeg` / `ffprobe` | 使用本地媒体检查、归一化或 mux 时 |
-| Python 3.10–3.13 与 `uv` | 使用本地 WhisperX 或 OpenCV 时 |
-| Chromium | 本地 HyperFrames 渲染时由 Adapter 管理 |
-| API 凭据 | 选择 KIE、Xiaomi 或 AWS Endpoint 时 |
+1. **拆分镜头。** Agent 识别口播段落、视觉节拍、转场、字幕、B-roll 机会，以及 ranking 板等需要持续保持的元素。
+2. **分析参考视频或 brief。** 复刻路线会使用 Gemini 和可用的媒体工具检查节奏、构图、文字、说话人和视觉连续性；原创路线则根据你的描述和确定的创作方向回答同样的问题。
+3. **提出窄问题。** Agent 不会让你填写一张很长的表格，而是逐个询问容易回答的小问题，例如使用哪种语言、产品是否要出现在画面中，或更倾向哪一种主持人风格。
+4. **读取现有 package 声明。** 在自行发明实现之前，Agent 会检查项目和 Hypit 官方 package 中已有的组件。如果已有合适的字幕、ranking、主持人、B-roll 或渲染组件，就直接复用。
+5. **必要时编写新 package。** 如果确实缺少所需的视觉行为，Agent 会创建一个足够小、可复用的新组件，并记录它的使用方式。你不需要自行设计 package 接口。
+6. **编写并检查源码。** Agent 会写出 SVML/SVS 源码，创建所需的 Run 配置，编译视频图，并修复发现的类型或布局问题。
+7. **与 mock 对比。** 对尚未真正生成的素材使用 mock，随后在 Studio 中渲染完整构图；Agent 会把看到的结果与参考视频或 brief 对比，修复时机、层级、裁切、字幕和画面密度等问题。
 
-准备本地 Python 程序：
+因此，这个流程更像是在指导一支小型制作团队：切分 shot、Gemini 分析、提出窄问题、查找 package、写源码、生成 mock、进行比对并修复，全部由 Agent 完成。你不需要打开编辑器、编写组件，也不需要自己执行一连串 Build 命令。
 
-```bash
-uv python install 3.13
-hypit runtime use hypit.runtime.json
-hypit runtime up
+## 第四步：查看 mock Studio
+
+第一版完成后，Agent 会为你打开 Studio mock。Mock 是审阅版本：尚未生成的媒体会使用确定性的临时素材代替，但真实的时序、布局、字幕、转场和 Track 关系都会保留。它要回答的是“这支视频是否成立”，而不是在你确认之前悄悄执行付费生成或最终渲染。
+
+请从头到尾观看 mock，检查故事是否清楚、镜头顺序是否正确、字幕在手机上是否易读、ranking 板或产品是否突出、B-roll 节奏是否合适，以及整体语气是否符合 brief。如果发现问题，直接用日常语言告诉 Agent：
+
+```text
+ranking 板出现得太晚，手机上字幕太小，而且主持人说话时被 B-roll 盖住了。请修复这些问题，再给我看一次 mock。
 ```
 
-Runtime 只会在机器 Program Home 中缺少托管环境时创建它，随后被所有项目和会话复用。不要在
-创作项目里手动执行服务的 `uv sync`。
+Agent 会修改源码，重新执行相关检查，并返回更新后的 mock。你只需再次审阅，不需要自己寻找对应的 SVML 行。
 
-修改 Runtime Profile 后运行 `hypit doctor hypit.runtime.json`。它会报告缺少的工具、凭据和
-Endpoint 配置，但不会执行作者图。
+## 第五步：确认后提交付费 Build
 
-## 接下来读什么
+只有在你明确确认 mock 后，才要求 Agent 提交付费 Build：
 
-可以按顺序理解完整创作路径，也可以直接进入正在修改的部分：
+```text
+mock 没有问题。请提交付费 Build 并生成最终视频。
+```
 
-| 指南 | 你会学到什么 |
-|---|---|
-| [Script](./quickstart/script.md) | Segment、Role Cue、Dual Text、Selection、Moment 与文字投影 |
-| [SVS 样式表](./quickstart/styles.md) | 字幕、Media、文字与 Film 的可复用 Recipe |
-| [媒体与生成](./quickstart/generation.md) | 图片、音频、Prompt Text 与显式模型组件 |
-| [时序与装配](./quickstart/timing.md) | Speech Track、WhisperX、ProgramSpace 与 SemanticMap |
-| [Tracks](./quickstart/tracks.md) | Caption、Media、Typography 与 Audio Track |
-| [Film 与渲染](./quickstart/composition.md) | 平级 Track 合成与显式渲染 |
-| [Run Source 与 Builds](./quickstart/run.md) | Targets、复用、Runtime Profile、Build 与取回结果 |
+开始之前，Agent 会向你总结将使用的模型、预计执行的外部工作和预估费用。随后它会提交 Build、跟踪进度，并用书面化的语言报告 Provider 或 Runtime 问题。付费 Build 才会执行真实的素材生成、媒体处理和最终渲染；之前的 mock 不会自动触发这些计费操作。
+
+## 第六步：查看付费 Build 的结果
+
+Build 完成后，Agent 会打开最终视频并提供保存后的输出文件。请查看最终结果，而不只是 Studio mock。真实生成的主持人、B-roll 和音频可能与 mock 的临时素材不同，因此要检查画面、字幕、转场、构图、声音和导出质量。如果需要修改，直接告诉 Agent 要改什么。Agent 会修改源码并带你重新审阅，而不是让你手动编辑已经渲染出的 MP4。
+
+## 第七步：继续用自然语言提出修改
+
+Build 成功后，你仍然可以用对话继续指导项目。你可以更换主持人、替换 B-roll、改变 ranking 板的样式、翻译台词、调整语气或切换画幅比例。例如：
+
+```text
+保留台词和排名顺序，但把主持人换成沉稳的男主持。B-roll 改用手持街头素材，ranking 板做成纸质体育杂志风格，并确保 9:16 手机画面上的字幕足够大。
+```
+
+Agent 会把每项要求追踪到对应的源码和组件，保留你要求不变的部分，并在再次付费 Build 前先给你看新的 mock。如果项目支持，你也可以要求切换到另一种主持人服务或 Runtime Profile；Agent 会先说明新增的凭据和费用要求。
+
+## 第八步：并行制作多个变体
+
+如果需要多个版本，先告诉 Agent 哪些维度可以变化。它会与你讨论具体方向，例如：
+
+- 更换主持人的版本；
+- 翻译成西班牙语的版本；
+- 把产品卖点放到开头的版本；
+- 加快剪辑、增加 B-roll 密度的版本。
+
+Agent 会先确认所有版本共用的内容，以及每个版本允许改变的范围。你确认方向后，它会为每个变体创建独立的项目范围，并下发子 Agent 并行制作。每个子 Agent 都会遵守已确认的边界，检查自己的布局和源码，再向主 Agent 汇报。最终你会得到清晰的变体完成列表，以及仍需要你决定的事项；不需要你亲自协调这些子 Agent。
+
+## 如果你想亲自编写 SVML 或 SVS
+
+上面的 Agent 工作流适合作为第一次体验。下一页开始介绍手动编写路径：[Script](./quickstart/script.md) 会说明如何编写第一份 Author Source、连接语义 Segment，并继续学习 SVS Recipe、媒体、时序、Track 和渲染。两种工作流可以随时切换，因为 Agent 生成的仍然是普通、可编辑的 Hypit 源文件。
