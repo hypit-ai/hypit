@@ -140,6 +140,12 @@ the Runtime has resolved that Endpoint's declared credential slots. It may make 
 request to the real service, such as reading the authenticated model catalog. It must not be called by
 Build preflight and must never submit generation work.
 
+A Provider that charges declares where it publishes prices, and nothing more: `pricing: { kind: "page",
+url }` on `defineEndpointPackage`, pointing at the Provider's own public price page. A Provider that
+runs on this machine declares `pricing: { kind: "local" }`. Hypit never copies or interprets prices;
+`hypit plan --runtime <profile>` prints the Endpoint and price page behind each external request so the
+Agent reads the Provider's page before a paid Build. An undeclared price source is reported as unknown.
+
 ## 5. Declare a Managed Program when needed
 
 If the Provider depends on a warm external program, export its declaration beside the Endpoint.

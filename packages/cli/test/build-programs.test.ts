@@ -123,6 +123,7 @@ function distribution(
       }),
       preflight: async () => ({ dataRoot: "/tmp", diagnostics }),
       doctor: async () => ({ dataRoot: "/tmp", diagnostics: [] }),
+      providers: async () => [],
       createRuntime: async () => {
         if (execution !== undefined) return execution;
         throw new Error("createRuntime is unavailable");

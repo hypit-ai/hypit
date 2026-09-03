@@ -168,6 +168,7 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
     facet: "tts",
     instance: options.instance ?? "xiaomi-mimo.default",
     pool: options.pool ?? options.instance ?? "xiaomi-mimo.default",
+    pricing: { kind: "page", url: "https://mimo.mi.com/docs/en-US/pricing" },
     credentials: { apiKey: options.apiKey ?? credentialRef("env", "MIMO_API_KEY") },
     credentialInputs: { apiKey: { label: "Xiaomi MiMo API key" } },
     defaultConcurrency: options.defaultConcurrency ?? 2,

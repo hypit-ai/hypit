@@ -18,7 +18,7 @@ import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliIo, CliMachineView } from "./output.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
-import { assertPreflight, createCatalogDescriptor, preflightPlan } from "./build-planning.js";
+import { assertPreflight, createCatalogDescriptor, describePlanProviders, preflightPlan } from "./build-planning.js";
 import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
 import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
@@ -568,9 +568,9 @@ export async function runCli(
       results: planResults.repository,
     });
     const result = loaded.compiler.planCompilation(loaded);
-    const preflight = runtimeProfile === undefined
-      ? undefined
-      : await preflightPlan(await runtimeHost(runtimeProfile), result.state);
+    const planHost = runtimeProfile === undefined ? undefined : await runtimeHost(runtimeProfile);
+    const preflight = planHost === undefined ? undefined : await preflightPlan(planHost, result.state);
+    const providers = planHost === undefined ? undefined : await describePlanProviders(planHost, result.state);
     const outputNames = Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
       item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : []));
     const externalRequests = new Map<string, number>();
@@ -607,6 +607,10 @@ export async function runCli(
         ...(allChoices.length <= args.limit ? {} : { omittedChoices: allChoices.length - args.limit }),
         ...(allUnreached.length === 0 ? {} : { unreached: allUnreached.slice(0, args.limit) }),
         ...(allUnreached.length <= args.limit ? {} : { omittedUnreached: allUnreached.length - args.limit }),
+        ...(providers === undefined ? {} : {
+          providers: providers.slice(0, args.limit),
+          ...(providers.length <= args.limit ? {} : { omittedProviders: providers.length - args.limit }),
+        }),
         ...(preflight === undefined ? {} : { preflight: {
           ok: preflight.ok,
           capabilityCount: preflight.capabilities.length,

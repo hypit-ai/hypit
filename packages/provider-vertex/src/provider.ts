@@ -53,6 +53,7 @@ export function createVertexProvider(options: CreateVertexProviderOptions) {
     facet: "gemini",
     instance: options.instance ?? "vertex.default",
     pool: options.pool ?? options.instance ?? "vertex.default",
+    pricing: { kind: "page", url: "https://cloud.google.com/vertex-ai/generative-ai/pricing" },
     credentials: {
       project: options.project ?? credentialRef("env", "GOOGLE_CLOUD_PROJECT"),
       credentials: options.credentials ?? credentialRef("env", "GOOGLE_APPLICATION_CREDENTIALS_JSON"),

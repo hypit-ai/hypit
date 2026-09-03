@@ -44,7 +44,7 @@ import {
   hypitHostStateRoot,
   prepareHostPackages,
 } from "@hypit/runtime-host-node";
-import type { HostPackageProgress, HostPackageReport } from "@hypit/runtime-host-node";
+import type { HostPackageProgress, HostPackageReport, RuntimeHostCapabilityProvider } from "@hypit/runtime-host-node";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
 import { createLocalRuntime } from "./runtime.js";
@@ -438,6 +438,38 @@ export async function declaredManagedPrograms(
     if (activation.program !== undefined) programs.push({ instance: entry.instance, program: activation.program });
   }
   return { dataRoot: root, programs };
+}
+
+/** Static Endpoint selection per capability. Reads the Profile and activations only; never a credential or a service. */
+export async function describeRuntimeConfigProviders(
+  path: string,
+  capabilities: readonly CapabilityRef[],
+  options: LoadRuntimeConfigOptions = {},
+): Promise<readonly RuntimeHostCapabilityProvider[]> {
+  if (capabilities.length === 0) return [];
+  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
+  const registry = options.registry ?? new RuntimeAdapterRegistry();
+  await installRuntimeAdapters(registry, packageRoot, endpointPackageSelection(document), options.distributionPackageRoot);
+  const endpoints = await activatedEndpoints(document, root, hostStateRoot, registry);
+  return capabilities.map((capability): RuntimeHostCapabilityProvider => {
+    const matches = endpoints.filter(({ activation }) =>
+      activation.endpoint.offers.some((offer) => sameRef(offer.capability, capability)));
+    const base = { capability: structuredClone(capability) };
+    if (matches.length === 0) return { ...base, status: "unresolved" };
+    if (matches.length > 1) {
+      return { ...base, status: "ambiguous", endpoints: matches.map((item) => item.entry.instance).sort() };
+    }
+    const match = matches[0]!;
+    const pricing = match.activation.endpoint.pricing;
+    return {
+      ...base,
+      status: "resolved",
+      endpoint: match.entry.instance,
+      use: match.entry.use,
+      ...(pricing === undefined ? {} : { pricing: structuredClone(pricing) }),
+    };
+  });
 }
 
 function diagnostic(error: unknown, code: string, subject?: string): RuntimeDoctorDiagnostic {

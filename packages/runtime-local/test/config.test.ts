@@ -21,6 +21,7 @@ import {
   createRuntimeControlFromConfig,
   createRuntimeFromConfig,
   createRuntimeResultControlFromConfig,
+  describeRuntimeConfigProviders,
   doctorProjectBuildResultRepository,
   doctorRuntimeConfig,
   openProjectBuildResultRepository,
@@ -254,6 +255,62 @@ test("preflight never runs an Endpoint's active doctor", async () => {
     await doctorRuntimeConfig(path, { registry });
     assert.equal(activeChecks, 1);
     assert.deepEqual(diagnosedCapabilities, ["observe"]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("Runtime providers name the selected Endpoint and its declared price source without contacting a service", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-providers-"));
+  const path = join(root, "hypit.runtime.json");
+  await writeFile(path, JSON.stringify(profile({
+    dataRoot: ".",
+    endpoints: { paid: { use: "example.paid" }, local: { use: "example.local" } },
+  })));
+  const generate = { module: { name: "example.model", version: "1" }, name: "generate" } as const;
+  const render = { module: { name: "example.render", version: "1" }, name: "render" } as const;
+  const missing = { module: { name: "example.model", version: "1" }, name: "transcribe" } as const;
+  const returns = { module: { name: "example.value", version: "1" }, name: "Output" } as const;
+  const handler = () => ({ value: { kind: "inline" as const, value: null } });
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.paid",
+    activate: (context) => ({
+      endpoint: defineEndpointPackage({
+        module: { name: "example.provider", version: "1" },
+        facet: "paid",
+        instance: context.instance,
+        pool: context.pool ?? context.instance,
+        pricing: { kind: "page", url: "https://prices.example/models" },
+        capabilities: [{ capability: generate, returns, lifecycle: "immediate", handler }],
+      }),
+    }),
+  }));
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.local",
+    activate: (context) => ({
+      endpoint: defineEndpointPackage({
+        module: { name: "example.local-provider", version: "1" },
+        facet: "local",
+        instance: context.instance,
+        pool: context.pool ?? context.instance,
+        pricing: { kind: "local" },
+        capabilities: [{ capability: render, returns, lifecycle: "immediate", handler }],
+      }),
+    }),
+  }));
+  try {
+    assert.deepEqual(await describeRuntimeConfigProviders(path, [generate, render, missing], { registry }), [
+      {
+        capability: generate,
+        status: "resolved",
+        endpoint: "paid",
+        use: "example.paid",
+        pricing: { kind: "page", url: "https://prices.example/models" },
+      },
+      { capability: render, status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
+      { capability: missing, status: "unresolved" },
+    ]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

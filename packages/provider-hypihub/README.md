@@ -45,7 +45,10 @@ Runtime operation. Embedded callers may override that transport with `publicAsse
 
 The default remote alignment model is `victor-upmeet/whisperx`; `transcriptionModel` may select another
 HypiHub model that exposes the `transcriptions` route. `hypit doctor` reads the authenticated model
-catalog to verify configured capabilities; ordinary preflight never makes that request.
+catalog to verify configured capabilities; ordinary preflight never makes that request. The package
+declares HypiHub's public pricing page, `https://hypit.ai/commercial/pricing/`, as its price source;
+`hypit plan --runtime <profile>` prints it beside each request this Endpoint would serve. Per-model
+credit costs are never copied into Hypit.
 
 HypiHub exposes MiMo VoiceDesign by default. Set `audio: false` only when the user explicitly selects
 another VoiceDesign Provider. Hypit does not expose MiMo preset-voice or voice-cloning models.

@@ -95,6 +95,15 @@ export type PlanPreflight = {
   readonly omittedDiagnostics?: number;
 };
 
+export type PlanProvider = {
+  readonly capability: string;
+  readonly status: "resolved" | "unresolved" | "ambiguous";
+  readonly endpoint?: string;
+  readonly use?: string;
+  readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
+  readonly endpoints?: readonly string[];
+};
+
 export type PlanOutput = {
   readonly format: "hypit.cli-plan@2";
   readonly ok: boolean;
@@ -110,6 +119,9 @@ export type PlanOutput = {
   readonly omittedChoices?: number;
   readonly unreached?: readonly { readonly output: string; readonly operation: string }[];
   readonly omittedUnreached?: number;
+  /** Present only when a Runtime Profile was selected; the Endpoint and price page behind each capability. */
+  readonly providers?: readonly PlanProvider[];
+  readonly omittedProviders?: number;
   readonly preflight?: PlanPreflight;
 };
 
@@ -305,6 +317,11 @@ function operationLabel(operation: string): string {
   return name.replace(/^request-/u, "").replaceAll("-", " ");
 }
 
+/** `@hypit/seedance@1#seedance-2-mini` → `@hypit/seedance#seedance-2-mini`; the module version is verbose detail. */
+function capabilityLabel(name: string): string {
+  return name.replace(/@[^@#]+#/u, "#");
+}
+
 function renderPlan(
   view: Extract<CliPresentation, { kind: "plan" }>,
   io: CliIo,
@@ -337,6 +354,28 @@ function renderPlan(
     if ((view.machine.omittedExternalRequests ?? 0) > 0) {
       lines.push(`  ${colors.dim(`${view.machine.omittedExternalRequests} more Operations · use --limit <count>`)}`);
     }
+  }
+  if (view.machine.providers !== undefined) {
+    if (view.machine.providers.length > 0) lines.push("", colors.strong("Providers and price pages"));
+    for (const item of view.machine.providers) {
+      const where = item.status === "resolved"
+        ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})`)}`
+        : item.status === "ambiguous"
+          ? colors.warning(`several selected Endpoints: ${(item.endpoints ?? []).join(", ")}`)
+          : colors.error("no selected Endpoint");
+      const price = item.pricing === undefined
+        ? (item.status === "resolved" ? colors.warning("price source unknown") : undefined)
+        : item.pricing.kind === "local"
+          ? colors.dim("local, no Provider charge")
+          : item.pricing.url;
+      lines.push(`  ${colors.accent(verbose ? item.capability : capabilityLabel(item.capability))}`);
+      lines.push(`    ${where}${price === undefined ? "" : `  ·  ${price}`}`);
+    }
+    if ((view.machine.omittedProviders ?? 0) > 0) {
+      lines.push(`  ${colors.dim(`${view.machine.omittedProviders} more capabilities · use --limit <count>`)}`);
+    }
+  } else if (view.machine.externalRequestCount > 0) {
+    lines.push("", colors.dim("Pass --runtime <profile> to see the Provider and price page behind each external request."));
   }
   const unreached = view.machine.unreached ?? [];
   if (verbose && unreached.length > 0) {
@@ -446,7 +485,8 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "",
       "  hypit plan <run-source> [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>]",
       "",
-      "With --runtime, plan also preflights only the demanded deployment slice.",
+      "With --runtime, plan also preflights only the demanded deployment slice and names the Provider",
+      "and price page behind each external request.",
       "Planning never starts external work.",
     ],
     build: [

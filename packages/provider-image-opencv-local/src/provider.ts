@@ -98,6 +98,7 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
     facet: "raster",
     instance: config.instance ?? "image.opencv.local",
     pool: config.pool ?? config.instance ?? "image.opencv.local",
+    pricing: { kind: "local" },
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,

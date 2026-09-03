@@ -16,6 +16,7 @@ export {
   openProjectBuildResultRepository,
   openBuildResultRepositoryLocation,
   declaredManagedPrograms,
+  describeRuntimeConfigProviders,
   doctorRuntimeConfig,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
