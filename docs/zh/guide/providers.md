@@ -129,6 +129,16 @@ export default hypitPackage;
 capability 和调度事实。Activation 不得解析密钥或环境来源的部署值、访问网络或启动任务；环境变量名会作为引用保留到真正处理匹配 Need 时。凭据是否存在由通用 CredentialStore 路径诊断，
 Provider 不得把环境变量硬编码成特殊的密钥 Store。
 
+Activation 还可以返回 `diagnose(context)`。它只会在用户显式运行主动 `doctor` 时执行，而且
+Runtime 会先解析该 Endpoint 自己声明的凭据槽。它可以对真实服务做一次有界只读请求，例如读取
+已认证账户的模型目录；Build 预检不能调用它，它也绝不能提交生成任务。
+
+付费 capability 可以在 handler 旁声明 `quote(context)`。价格属于 Provider，因为币种、价目和
+真实路由都是所选 Provider 的事实。报价接收一项已经完整形成的准确 `Need`，可以读取实时价目，
+返回带来源和观察时间的估价，或诚实返回 `unknown`；它绝不提交任务。不能把会变动的服务价格
+复制进 Core、模型包、CLI 或 Skill。当下游准确 Need 只能在执行中产生时，静态图 Plan 暂时不能
+假装给出完整总价。
+
 ## 5. 按需声明 Managed Program
 
 如果 Provider 依赖需要保持温热的外部程序，就在 Endpoint 旁边导出它的声明。这里没有第二个
@@ -164,9 +174,9 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 ```
 
-`hypit runtime up` 会准备、启动并探测 Managed Program，然后启动耐久 Worker。`build` 只预检
+`hypit runtime up` 会准备、启动并探测**本地** Managed Program，然后启动耐久 Worker。`build` 只预检
 本次 Plan 所需 Capability 对应的 Program；未就绪时在提交前失败，绝不安装或启动它。只调用
-远程 API 的 Provider 不返回 `program`。
+远程 API 的 Provider 不返回 `program`，Hypit 也没有可以启动或停止这类服务的生命周期。
 
 ## 6. 声明依赖
 

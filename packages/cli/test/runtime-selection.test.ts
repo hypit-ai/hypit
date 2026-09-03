@@ -105,6 +105,48 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
   }
 });
 
+test("runtime init writes and selects the Distribution starter without opening a Runtime", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-init-"));
+  const previous = process.cwd();
+  try {
+    await writeFile(join(root, "package.json"), "{}\n", "utf8");
+    process.chdir(root);
+    let opened = false;
+    const starter = {
+      format: "hypit.runtime-local@1" as const,
+      dataRoot: ".hypit/runtimes/local",
+      credentials: {},
+      endpoints: {},
+    };
+    const distribution = {
+      initialRuntimeProfile: starter,
+      openRuntimeHost: async () => {
+        opened = true;
+        throw new Error("runtime init must not open the Runtime");
+      },
+    } as unknown as CliDistribution;
+    let output = "";
+    await runCli(["runtime", "init", "--workspace", root], {
+      write(text) { output += text; },
+    }, distribution);
+
+    const profile = join(root, "hypit.runtime.json");
+    assert.deepEqual(JSON.parse(await readFile(profile, "utf8")), starter);
+    assert.equal((await findRuntimeProfile(root))?.profile, await realpath(profile));
+    assert.equal(opened, false);
+    assert.match(output, /No package was installed, no service was contacted and no Worker was started/u);
+
+    await assert.rejects(
+      runCli(["runtime", "init", "--workspace", root], { write() {} }, distribution),
+      /Runtime Profile already exists/u,
+    );
+    assert.deepEqual(JSON.parse(await readFile(profile, "utf8")), starter);
+  } finally {
+    process.chdir(previous);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("runtime status without a selected Profile reports the missing context instead of generic usage", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-missing-"));
   const previous = process.cwd();

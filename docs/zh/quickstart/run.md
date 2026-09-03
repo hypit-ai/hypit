@@ -195,9 +195,13 @@ Store 与 Endpoint，并配置 Endpoint 容量等部署参数；它不选择 Run
 Workspace、Author 包或项目 Result Repository。
 
 ```bash
-hypit runtime use hypit.runtime.json
+hypit runtime init
 hypit paths
 ```
+
+`runtime init` 会写入视频 Distribution 提供的起始 `hypit.runtime.json` 并完成选择。它不覆盖
+已有文件，不安装任何东西、不连接服务，也不启动 Worker。项目已有明确 Profile 时，使用
+`hypit runtime use <profile>`；该命令只写入 `.hypit/runtime`。
 
 `runtime use` 只写入 `.hypit/runtime`，不会启动 Worker、创建 Runtime 数据或修改已安装
 包。Profile 结构和完整边界见 [Runtime](../guide/runtime.md)。
@@ -212,7 +216,7 @@ CLI 必须先确定项目：显式 `--workspace` 直接给出边界；否则使�
 
 | 变量 | Provider / 用途 |
 |---|---|
-| HypiHub OAuth | HypiHub 付费生成与 Gemini VLM；运行 `hypit auth login hypihub.default --runtime hypit.runtime.json` 并在 https://hypit.ai 登录 |
+| HypiHub OAuth | HypiHub 付费生成、Gemini VLM 与 WhisperX 对齐；运行 `hypit auth login hypihub.default --runtime hypit.runtime.json` 并在 https://hypit.ai 登录 |
 | `KIE_API_KEY` | 仅在显式选择 KIE Provider 时使用 |
 | `MIMO_API_KEY` | Xiaomi MiMo VoiceDesign；只有明确选择官方 Endpoint 时才需要 |
 
@@ -338,7 +342,8 @@ Runtime 后只预检这次计划真正需要的 Endpoint、凭据和外部程序
 `plan` 可以完全不带 Runtime；执行过 `hypit runtime use` 后，`plan` 和 `build` 都不必再写
 `--runtime`。`build` 必须能找到所选或显式 Profile。
 
-选择或改变部署后，用 `runtime up` 安装所选上游依赖、准备 Managed Program 并启动 Worker。
+选择或改变 Profile 后，用 `runtime up` 安装所选上游依赖、准备本地 Managed Program 并启动
+本地 Worker。它不会启动或探测远程 Endpoint；需要主动只读检查远程能力时使用 `doctor`。
 `build` 只重跑便宜的只读预检；任何依赖或 Program 未就绪都会在提交前失败，绝不在 Build
 中准备它们。若部署已经准备完毕而只有 Worker 停止，`build` 会在耐久提交前启动该 Worker。
 `runtime status` 用于观察，`programs up|status|down` 只管理外部程序。

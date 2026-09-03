@@ -19,6 +19,31 @@ const installedLauncher = process.env.HYPIT_CLI_LAUNCHER;
 export const videoCliDistribution: CliDistribution = {
   packageRoot,
   bootstrapPackages: [],
+  initialRuntimeProfile: {
+    format: "hypit.runtime-local@1",
+    dataRoot: ".hypit/runtimes/local",
+    credentials: {
+      os: { use: "@hypit/credential-store-os" },
+    },
+    endpoints: {
+      "hypihub.default": {
+        use: "@hypit/provider-hypihub",
+        pool: "hypihub.default",
+        config: {
+          baseUrl: "https://hypit.ai",
+          apiKey: { store: "os", key: "hypihub.oauth" },
+        },
+      },
+      "media.local": {
+        use: "@hypit/provider-media-local",
+        pool: "media.local",
+      },
+      "hyperframes.local": {
+        use: "@hypit/provider-hyperframes-local",
+        pool: "hyperframes.local",
+      },
+    },
+  },
   createCompiler: createVideoCompiler,
   discoverSourcePackages: async (path, options) => {
     const { discoverVideoSourcePackages } = await import("./package-selection.js");

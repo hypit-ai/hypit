@@ -106,10 +106,17 @@ Runtime Profile 说明在哪里做。
 ```bash
 cd /path/to/my-video
 
-hypit runtime use hypit.runtime.json
+hypit runtime init
+hypit auth login hypihub.default
+hypit doctor
 
 hypit plan build.svrun
 ```
+
+`runtime init` 会创建并选择官方起始 Profile，但不安装任何东西，也不连接服务。该 Profile 让
+HypiHub 提供远程生成、Gemini 视觉观察和 WhisperX 对齐，让本地 Endpoint 负责媒体处理与
+HyperFrames 渲染。项目已经拥有明确 Profile 时，改用 `hypit runtime use <profile>`；初始化绝不
+覆盖已有文件。
 
 含有 `package.json` 的项目负责自己的第三方包；普通创作文件夹不需要成为 Node 项目，直接使用
 Distribution 里的官方包。默认情况下，完整 Build Result 位于项目的 `.hypit/results`；Profile
@@ -134,7 +141,8 @@ hypit build build.svrun --follow
 
 `build` 会先重复同一套便宜的本地预检，再分配新的 Build id、持久化 Build 并确保 Worker
 可用。它不会安装包，也不会启动 Managed Program；部署未就绪时应显式运行
-`hypit runtime up`。`--follow` 只是观察器；关掉它不会停止 Build。
+`hypit runtime up`。它只准备本地依赖、Program 与 Worker，不会启动或探测 HypiHub。
+`--follow` 只是观察器；关掉它不会停止 Build。
 
 编辑源码时使用 `check`；配置或排查部署时使用 `doctor`。它们都不会提交工作，但也不是每次
 Build 前必须重复的仪式。
@@ -162,7 +170,7 @@ Scalar 与 Resource 导出为文件；Composite 导出为包含 `value.json` 及
 | `ffmpeg` / `ffprobe` | 使用本地媒体检查、归一化或 mux 时 |
 | Python 3.10–3.13 与 `uv` | 使用本地 WhisperX 或 OpenCV 时 |
 | Chromium | 本地 HyperFrames 渲染时由 Adapter 管理 |
-| API 凭据 | 选择 KIE、Xiaomi 或 AWS Endpoint 时 |
+| API 凭据 | 选择 HypiHub 或其他远程 Endpoint 时 |
 
 准备本地 Python 程序：
 

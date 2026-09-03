@@ -229,12 +229,14 @@ as Endpoint capacity. It never selects the Runtime Host or defines the Source Wo
 packages or project Result repository.
 
 ```bash
-hypit runtime use hypit.runtime.json
+hypit runtime init
 hypit paths
 ```
 
-`runtime use` writes only `.hypit/runtime`. It does not start a Worker, create Runtime data or
-change installed packages. See [Runtime](../guide/runtime.md) for the Profile schema and boundaries.
+`runtime init` writes the video Distribution's starter `hypit.runtime.json` and selects it. It refuses
+to overwrite an existing file, installs nothing, contacts no service and starts no Worker. For an
+existing intentional Profile, use `hypit runtime use <profile>`; that command writes only
+`.hypit/runtime`. See [Runtime](../guide/runtime.md) for the Profile schema and boundaries.
 The CLI resolves the project first: `--workspace` is an explicit boundary; otherwise the nearest
 `package.json` above the current directory is the boundary, falling back to the current directory
 for a plain creative folder. It then reads only that project's `.hypit/runtime`. It never discovers
@@ -249,7 +251,7 @@ variables referenced by the selected Runtime Profile:
 
 | Variable | Provider/use |
 |---|---|
-| HypiHub OAuth | HypiHub paid generation and Gemini VLM; run `hypit auth login hypihub.default --runtime hypit.runtime.json` |
+| HypiHub OAuth | HypiHub paid generation, Gemini VLM and WhisperX alignment; run `hypit auth login hypihub.default --runtime hypit.runtime.json` |
 | `KIE_API_KEY` | Explicit KIE Provider only |
 | `MIMO_API_KEY` | Xiaomi MiMo VoiceDesign, only when the official Endpoint is explicitly selected |
 
@@ -346,8 +348,10 @@ external-program diagnostics. It never starts external work.
 `plan` may run without a Runtime at all. Both `plan` and `build` may omit `--runtime` after
 `hypit runtime use`; `build` requires either that selection or an explicit Profile.
 
-Use `runtime up` after selecting or changing a deployment to install selected upstream packages,
-prepare Managed Programs and start the Worker. `build` repeats only the cheap read-only preflight
+Use `runtime up` after selecting or changing a Profile to install selected upstream packages,
+prepare local Managed Programs and start the local Worker. It does not start or probe remote
+Endpoints. Use `doctor` for an active, read-only check of configured remote capabilities. `build`
+repeats only the cheap read-only preflight
 and refuses before submission when a required package or Program is missing; it never provisions
 dependencies. When the deployment is already prepared and only its Worker is stopped, `build`
 starts that Worker before durable submission. `runtime status` observes

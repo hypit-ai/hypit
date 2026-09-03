@@ -1,50 +1,50 @@
 {
-  "format": "hypit.runtime-profile@1",
-  "runtime": {
-    "use": "@hypit/runtime-local",
-    "config": {
-      "dataRoot": ".hypit/runtimes/local",
-      "artifacts": {
-        "use": "@hypit/artifact-store-fs",
-        "config": { "path": "artifacts" }
-      },
-      "credentials": {
-        "env": { "use": "@hypit/credential-store-env" },
-        "os": { "use": "@hypit/credential-store-os" }
-      },
-      "endpoints": {
-        "hypihub.hypit-podcast": {
-          "use": "@hypit/provider-hypihub",
-          "pool": "generation",
-          "config": {
-            "baseUrl": "https://hypit.ai",
-            "apiKey": { "store": "os", "key": "hypihub.oauth" },
-            "defaultConcurrency": 4,
-            "requestTimeoutMs": 120000
-          }
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/runtimes/local",
+  "credentials": {
+    "env": {
+      "use": "@hypit/credential-store-env"
+    },
+    "os": {
+      "use": "@hypit/credential-store-os"
+    }
+  },
+  "endpoints": {
+    "hypihub.hypit-podcast": {
+      "use": "@hypit/provider-hypihub",
+      "pool": "generation",
+      "config": {
+        "baseUrl": "https://hypit.ai",
+        "apiKey": {
+          "store": "os",
+          "key": "hypihub.oauth"
         },
-        "media.hypit-podcast": {
-          "use": "@hypit/provider-media-local",
-          "pool": "media",
-          "config": { "defaultConcurrency": 2 }
-        },
-        "whisperx.hypit-podcast": {
-          "use": "@hypit/provider-whisperx-local",
-          "pool": "alignment",
-          "config": {
-            "expectedModel": "small",
-            "defaultConcurrency": 1
-          }
-        },
-        "hyperframes.hypit-podcast": {
-          "use": "@hypit/provider-hyperframes-local",
-          "pool": "render",
-          "config": {
-            "workers": 2,
-            "quality": "standard",
-            "defaultConcurrency": 1
-          }
-        }
+        "defaultConcurrency": 4,
+        "requestTimeoutMs": 120000
+      }
+    },
+    "media.hypit-podcast": {
+      "use": "@hypit/provider-media-local",
+      "pool": "media",
+      "config": {
+        "defaultConcurrency": 2
+      }
+    },
+    "whisperx.hypit-podcast": {
+      "use": "@hypit/provider-whisperx-local",
+      "pool": "alignment",
+      "config": {
+        "expectedModel": "small",
+        "defaultConcurrency": 1
+      }
+    },
+    "hyperframes.hypit-podcast": {
+      "use": "@hypit/provider-hyperframes-local",
+      "pool": "render",
+      "config": {
+        "workers": 2,
+        "quality": "standard",
+        "defaultConcurrency": 1
       }
     }
   }
