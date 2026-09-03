@@ -5,7 +5,7 @@ import { delimiter, isAbsolute, join, resolve } from "node:path";
 import type { ArtifactAttachment } from "@hypit/workspace";
 import type { BuildResultForward } from "@hypit/build-result";
 import type { BuildResultRepositoryLocation } from "@hypit/build-result-kit";
-import type { BuildDefinition, BuildState, CapabilityRef, Need } from "@hypit/protocol";
+import type { BuildDefinition, BuildState, CapabilityRef } from "@hypit/protocol";
 import type {
   BuildCatalogDescriptor,
   BuildCompletion,
@@ -127,28 +127,6 @@ export type RuntimeHostDoctorResult = {
   readonly diagnostics: readonly RuntimeDoctorDiagnostic[];
 };
 
-export type RuntimeHostNeedQuote = {
-  readonly need: string;
-  readonly capability: CapabilityRef;
-  readonly endpoint?: string;
-  readonly quote:
-    | {
-        readonly status: "estimated";
-        readonly amount: number;
-        readonly currency: string;
-        readonly basis: {
-          readonly mode: string;
-          readonly quantity: number;
-          readonly rate: number;
-          readonly base?: number;
-          readonly multiplier?: number;
-        };
-        readonly source: string;
-        readonly observedAt: number;
-      }
-    | { readonly status: "unknown"; readonly reason: string };
-};
-
 export type ManagedProgramProgress = {
   readonly id: string;
   readonly phase: "checking" | "installing" | "starting" | "waiting" | "ready";
@@ -231,8 +209,6 @@ export type NodeRuntimeHost = {
   doctor(options?: {
     readonly capabilities?: readonly CapabilityRef[];
   }): Promise<RuntimeHostDoctorResult>;
-  /** Ask the selected Provider for the current price of each exact Need; never submits work. */
-  quote(needs: readonly Need[]): Promise<readonly RuntimeHostNeedQuote[]>;
   runWorker(readyFile: string, owner: string): Promise<void>;
 };
 

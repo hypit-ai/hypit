@@ -62,64 +62,6 @@ test("HypiHub declares its own credential acquisition flow", () => {
   assert.equal(credential?.acquisition?.tokenEndpoint, "https://hypit.ai/oauth/token");
 });
 
-test("HypiHub quotes an exact generation Need from the authenticated model card", async () => {
-  const request = need(sealSeedanceRequest("seedance-2-mini", {
-    prompt: ["A presenter turns toward camera."],
-    resolution: ["720p"],
-    aspectRatio: ["16:9"],
-    duration: [5],
-    generateAudio: [false],
-    webSearch: [false],
-  }) as unknown as CanonicalValue);
-  const provider = createHypiHubProvider({ fetch: async (input) => {
-    assert.match(String(input), /\/v1\/models\/bytedance%2Fseedance-2-mini$/u);
-    return Response.json({
-      endpoints: ["videos"],
-      pricing: {
-        mode: "per_second",
-        resolution_ratio: { "480p": 1, "720p": 2.1579 },
-        credits: { per_second: 5.648 },
-      },
-    });
-  } });
-  const offer = provider.offers.find((item) => item.capability.name === "seedance-2-mini");
-  assert.ok(offer?.quote !== undefined);
-  const quote = await offer.quote({ need: request, credentials: { apiKey: { secret: "test-key" } } });
-  assert.deepEqual(quote, {
-    status: "estimated",
-    amount: 60.9391,
-    currency: "credits",
-    basis: { mode: "per_second", quantity: 5, rate: 5.648, multiplier: 2.1579 },
-    source: "https://hypit.ai/v1/models/bytedance%2Fseedance-2-mini",
-    observedAt: quote.status === "estimated" ? quote.observedAt : -1,
-  });
-});
-
-test("HypiHub refuses to underquote an exact request whose price factor is absent", async () => {
-  const request = need(sealSeedanceRequest("seedance-2-mini", {
-    prompt: ["A presenter turns toward camera."],
-    resolution: ["720p"],
-    aspectRatio: ["16:9"],
-    duration: [5],
-    generateAudio: [false],
-    webSearch: [false],
-  }) as unknown as CanonicalValue);
-  const provider = createHypiHubProvider({ fetch: async () => Response.json({
-    endpoints: ["videos"],
-    pricing: {
-      mode: "per_second",
-      resolution_ratio: { "480p": 1 },
-      credits: { per_second: 5.648 },
-    },
-  }) });
-  const offer = provider.offers.find((item) => item.capability.name === "seedance-2-mini");
-  assert.ok(offer?.quote !== undefined);
-  assert.deepEqual(await offer.quote({ need: request, credentials: { apiKey: { secret: "test-key" } } }), {
-    status: "unknown",
-    reason: "HypiHub model card has no price factor for this exact request",
-  });
-});
-
 test("HypiHub doctor checks the authenticated catalogue only when actively invoked", async () => {
   let calls = 0;
   const diagnostics = await diagnoseHypiHubProvider({ fetch: async (input, init) => {

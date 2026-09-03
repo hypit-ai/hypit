@@ -15,7 +15,6 @@ import {
   doctorRuntimeConfig,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
-  quoteRuntimeConfig,
   resolveRuntimeConfigPaths,
 } from "./config.js";
 import {
@@ -130,10 +129,6 @@ export async function openLocalRuntimeHost(
       packageRoot: basePackageRoot,
       ...distribution,
       ...(options?.capabilities === undefined ? {} : { capabilities: options.capabilities }),
-    }),
-    quote: async (needs) => await quoteRuntimeConfig(profile, needs, {
-      packageRoot: basePackageRoot,
-      ...distribution,
     }),
     runWorker: async (readyFile, owner) => {
       const selected = await resolveRuntimeConfigPaths(profile, { packageRoot: basePackageRoot, ...distribution });

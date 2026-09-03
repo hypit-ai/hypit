@@ -19,7 +19,6 @@ export {
   doctorRuntimeConfig,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
-  quoteRuntimeConfig,
   parseLocalRuntimeProfile,
   resolveRuntimeConfigPaths,
 } from "./config.js";

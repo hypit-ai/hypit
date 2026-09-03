@@ -8,7 +8,7 @@ import {
 } from "@hypit/package-loader-node";
 import type { NodePackageSelectionRequest } from "@hypit/package-loader-node";
 import { assertBuildId, canonicalize, canonicalStringify } from "@hypit/protocol";
-import type { CanonicalValue, CapabilityRef, Need } from "@hypit/protocol";
+import type { CanonicalValue, CapabilityRef } from "@hypit/protocol";
 import {
   CompositeCredentialStore,
 } from "@hypit/runtime";
@@ -44,7 +44,7 @@ import {
   hypitHostStateRoot,
   prepareHostPackages,
 } from "@hypit/runtime-host-node";
-import type { HostPackageProgress, HostPackageReport, RuntimeHostNeedQuote } from "@hypit/runtime-host-node";
+import type { HostPackageProgress, HostPackageReport } from "@hypit/runtime-host-node";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
 import { createLocalRuntime } from "./runtime.js";
@@ -630,74 +630,6 @@ export async function doctorRuntimeConfig(
   options: LoadRuntimeConfigOptions & { readonly capabilities?: readonly CapabilityRef[] } = {},
 ): Promise<RuntimeConfigDoctorResult> {
   return await inspectRuntimeConfig(path, { ...options, active: true });
-}
-
-/** Provider-owned price estimates for exact Needs. This may read remote rate cards but never submits work. */
-export async function quoteRuntimeConfig(
-  path: string,
-  needs: readonly Need[],
-  options: LoadRuntimeConfigOptions = {},
-): Promise<readonly RuntimeHostNeedQuote[]> {
-  if (needs.length === 0) return [];
-  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
-  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
-  const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
-  const endpoints = await activatedEndpoints(document, root, hostStateRoot, registry);
-  let stores: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
-  try {
-    stores = await openCredentialStores(document, root, hostStateRoot, registry);
-    return await Promise.all(needs.map(async (need): Promise<RuntimeHostNeedQuote> => {
-      const matches = endpoints.flatMap(({ activation }) => activation.endpoint.offers
-        .filter((offer) => sameRef(offer.capability, need.capability)
-          && sameRef(offer.returns, need.returns)
-          && (offer.supports?.(need) ?? true))
-        .map((offer) => ({ activation, offer })));
-      const base = { need: need.id, capability: structuredClone(need.capability) };
-      if (matches.length === 0) return {
-        ...base,
-        quote: { status: "unknown", reason: "No selected Endpoint implements this exact Need" },
-      };
-      if (matches.length > 1) return {
-        ...base,
-        quote: {
-          status: "unknown",
-          reason: `Several selected Endpoints implement this Need: ${matches.map((item) => item.offer.endpoint).sort().join(", ")}`,
-        },
-      };
-      const match = matches[0]!;
-      if (match.offer.quote === undefined) return {
-        ...base,
-        endpoint: match.offer.endpoint,
-        quote: { status: "unknown", reason: "The selected Provider does not expose a price estimate" },
-      };
-      const credentials: Record<string, CredentialValue> = {};
-      for (const slot of match.activation.endpoint.credentials) {
-        const value = await stores!.store.resolve(slot.ref);
-        if (value === undefined) return {
-          ...base,
-          endpoint: match.offer.endpoint,
-          quote: { status: "unknown", reason: `${slot.label} is not configured` },
-        };
-        credentials[slot.slot] = value;
-      }
-      try {
-        return {
-          ...base,
-          endpoint: match.offer.endpoint,
-          quote: await match.offer.quote({ need, credentials }),
-        };
-      } catch (error) {
-        return {
-          ...base,
-          endpoint: match.offer.endpoint,
-          quote: { status: "unknown", reason: error instanceof Error ? error.message : String(error) },
-        };
-      }
-    }));
-  } finally {
-    await stores?.close();
-  }
 }
 
 export async function createRuntimeFromConfig(

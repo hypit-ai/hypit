@@ -31,33 +31,6 @@ export type EndpointInvocationContext = {
   readonly credentials: Readonly<Record<string, CredentialValue>>;
 };
 
-export type EndpointPriceQuote =
-  | {
-      readonly status: "estimated";
-      readonly amount: number;
-      readonly currency: string;
-      readonly basis: {
-        readonly mode: string;
-        readonly quantity: number;
-        readonly rate: number;
-        readonly base?: number;
-        readonly multiplier?: number;
-      };
-      readonly source: string;
-      readonly observedAt: number;
-    }
-  | { readonly status: "unknown"; readonly reason: string };
-
-export type EndpointQuoteContext = {
-  readonly need: Need;
-  /** Only slots explicitly declared by this configured Endpoint instance are present. */
-  readonly credentials: Readonly<Record<string, CredentialValue>>;
-};
-
-export type EndpointQuoteHandler = (
-  context: EndpointQuoteContext,
-) => Awaitable<EndpointPriceQuote>;
-
 export type ImmediateEndpointHandler = (
   context: EndpointInvocationContext,
 ) => Awaitable<EndpointFulfillment>;
@@ -152,7 +125,6 @@ export type EndpointOffer = {
   readonly returns: TypeRef;
   readonly endpoint: string;
   readonly supports?: (need: Need) => boolean;
-  readonly quote?: EndpointQuoteHandler;
 };
 
 export type EndpointCredentialDescription = {
@@ -168,8 +140,6 @@ type EndpointCapabilityBase = {
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
   readonly supports?: (need: Need) => boolean;
-  /** Provider-owned live or stable price estimate for this exact Need. */
-  readonly quote?: EndpointQuoteHandler;
   /** Stable Provider-local queue lane. Defaults to the capability name. */
   readonly lane?: string;
   /** Lane capacity; the Provider pool keeps its independent total capacity. */
@@ -272,7 +242,6 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     capability: structuredClone(item.capability),
     returns: structuredClone(item.returns),
     ...(item.supports === undefined ? {} : { supports: item.supports }),
-    ...(item.quote === undefined ? {} : { quote: item.quote }),
   }));
   const instance = {
     id: options.instance,
