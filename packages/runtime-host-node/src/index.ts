@@ -127,6 +127,20 @@ export type RuntimeHostDoctorResult = {
   readonly diagnostics: readonly RuntimeDoctorDiagnostic[];
 };
 
+/** The selected Endpoint behind one demanded capability, read from the Profile alone. */
+export type RuntimeHostCapabilityProvider = {
+  readonly capability: CapabilityRef;
+  readonly status: "resolved" | "unresolved" | "ambiguous";
+  /** Configured Endpoint instance that would serve the capability, when exactly one does. */
+  readonly endpoint?: string;
+  /** Provider package the Runtime Profile selected for that Endpoint. */
+  readonly use?: string;
+  /** Where that Provider publishes its prices, as the Provider package declares it. */
+  readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
+  /** Every matching Endpoint instance when the selection is ambiguous. */
+  readonly endpoints?: readonly string[];
+};
+
 export type ManagedProgramProgress = {
   readonly id: string;
   readonly phase: "checking" | "installing" | "starting" | "waiting" | "ready";
@@ -209,6 +223,11 @@ export type NodeRuntimeHost = {
   doctor(options?: {
     readonly capabilities?: readonly CapabilityRef[];
   }): Promise<RuntimeHostDoctorResult>;
+  /**
+   * Which selected Endpoint would serve each capability and where its Provider publishes prices.
+   * Reads the Profile and Endpoint declarations only; never resolves a credential or contacts a service.
+   */
+  providers(capabilities: readonly CapabilityRef[]): Promise<readonly RuntimeHostCapabilityProvider[]>;
   runWorker(readyFile: string, owner: string): Promise<void>;
 };
 

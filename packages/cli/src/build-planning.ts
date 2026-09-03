@@ -43,6 +43,28 @@ function demandedCapabilities(state: BuildState): readonly CapabilityRef[] {
   return [...found.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, value]) => value);
 }
 
+export type PlanProviderView = {
+  readonly capability: string;
+  readonly status: "resolved" | "unresolved" | "ambiguous";
+  readonly endpoint?: string;
+  readonly use?: string;
+  readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
+  readonly endpoints?: readonly string[];
+};
+
+/** Which Endpoint and price page stand behind each demanded capability; reads the Profile only. */
+export async function describePlanProviders(host: NodeRuntimeHost, state: BuildState): Promise<readonly PlanProviderView[]> {
+  const providers = await host.providers(demandedCapabilities(state));
+  return providers.map((item) => ({
+    capability: capabilityName(item.capability),
+    status: item.status,
+    ...(item.endpoint === undefined ? {} : { endpoint: item.endpoint }),
+    ...(item.use === undefined ? {} : { use: item.use }),
+    ...(item.pricing === undefined ? {} : { pricing: item.pricing }),
+    ...(item.endpoints === undefined ? {} : { endpoints: item.endpoints }),
+  }));
+}
+
 export async function preflightPlan(host: NodeRuntimeHost, state: BuildState) {
   const capabilities = demandedCapabilities(state);
   const result = await host.preflight({ capabilities });

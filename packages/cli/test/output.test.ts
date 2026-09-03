@@ -89,6 +89,49 @@ test("plan presents useful choices and readable requests without default graph i
   assert.match(verbose, /unused\.image/u);
 });
 
+test("plan names the Provider and price page behind each request, and points at --runtime when it cannot", () => {
+  const base = {
+    format: "hypit.cli-plan@2",
+    ok: true,
+    run: "/project/build.svrun",
+    targetCount: 1,
+    targets: ["take.video"],
+    steps: 3,
+    externalRequestCount: 2,
+    externalRequests: [{ operation: "@hypit/seedance@1/request-seedance-2-mini", count: 2 }],
+    choiceCount: 0,
+    choices: [],
+  } as const;
+  const without = capture(human, { kind: "plan", machine: base });
+  assert.match(without, /Pass --runtime <profile>/u);
+  assert.doesNotMatch(without, /Providers and price pages/u);
+
+  const output = capture(human, { kind: "plan", machine: { ...base, providers: [
+    {
+      capability: "@hypit/seedance@1#seedance-2-mini",
+      status: "resolved",
+      endpoint: "hypihub.default",
+      use: "@hypit/provider-hypihub",
+      pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
+    },
+    { capability: "@hypit/media@1#inspect", status: "resolved", endpoint: "media.local", use: "@hypit/provider-media-local", pricing: { kind: "local" } },
+    { capability: "@hypit/whisperx@1#whisperx-alignment", status: "resolved", endpoint: "whisperx.remote", use: "@hypit/provider-example" },
+    { capability: "@hypit/gpt-image@1#gpt-image-2", status: "unresolved" },
+  ] } });
+  assert.match(output, /Providers and price pages/u);
+  assert.match(output, /@hypit\/seedance#seedance-2-mini\n\s+hypihub\.default \(@hypit\/provider-hypihub\)\s+·\s+https:\/\/hypit\.ai\/commercial\/pricing\//u);
+  assert.match(output, /media\.local .*·\s+local, no Provider charge/u);
+  assert.match(output, /whisperx\.remote .*·\s+price source unknown/u);
+  assert.match(output, /gpt-image#gpt-image-2\n\s+no selected Endpoint\n/u);
+  assert.doesNotMatch(output, /Pass --runtime/u);
+  assert.doesNotMatch(output, /seedance@1#/u);
+
+  const verbose = capture({ ...human, verbose: true }, { kind: "plan", machine: { ...base, providers: [
+    { capability: "@hypit/seedance@1#seedance-2-mini", status: "ambiguous", endpoints: ["hypihub.default", "kie.default"] },
+  ] } });
+  assert.match(verbose, /@hypit\/seedance@1#seedance-2-mini\n\s+several selected Endpoints: hypihub\.default, kie\.default/u);
+});
+
 test("run check treats historical reuse as a normal summary", () => {
   const output = capture(human, {
     kind: "check-run",

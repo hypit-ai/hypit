@@ -501,6 +501,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     facet: "render",
     instance: config.instance ?? "hyperframes.aws-lambda",
     pool: config.pool ?? config.instance ?? "hyperframes.aws-lambda",
+    pricing: { kind: "page", url: "https://aws.amazon.com/lambda/pricing/" },
     defaultConcurrency: config.defaultConcurrency ?? 2,
     capabilities: [{
       lifecycle: "asynchronous" as const,

@@ -84,6 +84,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
     facet: "media",
     instance: config.instance ?? "media.local",
     pool: config.pool ?? config.instance ?? "media.local",
+    pricing: { kind: "local" },
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [
       {

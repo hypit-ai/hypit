@@ -12,6 +12,7 @@ import {
   createRuntimeResultControlFromConfig,
   createRuntimeCredentialsFromConfig,
   createRuntimeFromConfig,
+  describeRuntimeConfigProviders,
   doctorRuntimeConfig,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
@@ -129,6 +130,10 @@ export async function openLocalRuntimeHost(
       packageRoot: basePackageRoot,
       ...distribution,
       ...(options?.capabilities === undefined ? {} : { capabilities: options.capabilities }),
+    }),
+    providers: async (capabilities) => await describeRuntimeConfigProviders(profile, capabilities, {
+      packageRoot: basePackageRoot,
+      ...distribution,
     }),
     runWorker: async (readyFile, owner) => {
       const selected = await resolveRuntimeConfigPaths(profile, { packageRoot: basePackageRoot, ...distribution });

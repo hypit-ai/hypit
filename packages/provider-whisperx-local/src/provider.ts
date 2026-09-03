@@ -116,6 +116,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     facet: "alignment",
     instance: config.instance ?? "whisperx.local",
     pool: config.pool ?? config.instance ?? "whisperx.local",
+    pricing: { kind: "local" },
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,

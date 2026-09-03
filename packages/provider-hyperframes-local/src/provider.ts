@@ -257,6 +257,7 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
     facet: "render",
     instance: config.instance ?? "hyperframes.local",
     pool: config.pool ?? config.instance ?? "hyperframes.local",
+    pricing: { kind: "local" },
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,

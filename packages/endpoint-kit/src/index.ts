@@ -109,6 +109,15 @@ export interface EndpointRegistrar {
   ): void;
 }
 
+/**
+ * Where the Provider behind an Endpoint publishes its prices. Hypit never copies or interprets the
+ * prices themselves; it only tells the caller where the Provider's own page is, or that the work runs
+ * on this machine without a Provider charge.
+ */
+export type EndpointPricing =
+  | { readonly kind: "page"; readonly url: string }
+  | { readonly kind: "local" };
+
 export type EndpointPackage = {
   readonly instance: {
     readonly id: string;
@@ -117,6 +126,7 @@ export type EndpointPackage = {
   readonly offers: readonly EndpointOffer[];
   /** Host-facing login material declared by this exact configured Endpoint instance. */
   readonly credentials: readonly EndpointCredentialDescription[];
+  readonly pricing?: EndpointPricing;
   install(registry: EndpointRegistrar): Awaitable<void>;
 };
 
@@ -172,6 +182,8 @@ export type DefineEndpointPackageOptions = {
   }>>;
   /** Total capacity shared by every lane under this configured Provider pool. */
   readonly defaultConcurrency?: number;
+  /** The Provider's own price page, or `local` for work that runs on this machine without a charge. */
+  readonly pricing?: EndpointPricing;
   readonly capabilities: readonly EndpointCapability[];
 };
 
@@ -200,6 +212,11 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
   assert(new Set(keys).size === keys.length, "Endpoint package repeats a capability");
   const lanes = options.capabilities.map((item) => item.lane ?? item.capability.name);
   assert(lanes.every((lane) => lane.trim().length > 0), "Endpoint package lane is empty");
+  if (options.pricing?.kind === "page") {
+    let url: URL | undefined;
+    try { url = new URL(options.pricing.url); } catch { url = undefined; }
+    assert(url?.protocol === "https:", "Endpoint pricing page must be an HTTPS URL");
+  }
   const laneConcurrency = new Map<string, number>();
   for (const capability of options.capabilities) {
     const lane = capability.lane ?? capability.capability.name;
@@ -255,6 +272,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     instance,
     offers,
     credentials: credentialDescriptions,
+    ...(options.pricing === undefined ? {} : { pricing: structuredClone(options.pricing) }),
     install(registry) {
       for (const capability of options.capabilities) {
         const lane = capability.lane ?? capability.capability.name;

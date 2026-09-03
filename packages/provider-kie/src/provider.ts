@@ -567,6 +567,7 @@ export function createKieProvider(config: CreateKieProviderOptions) {
     facet: "market",
     instance: config.instance ?? "kie.default",
     pool: config.pool ?? config.instance ?? "kie.default",
+    pricing: { kind: "page", url: "https://kie.ai/pricing" },
     credentials: { apiKey: config.apiKey ?? credentialRef("env", "KIE_API_KEY") },
     credentialInputs: { apiKey: { label: "KIE API key" } },
     defaultConcurrency: config.defaultConcurrency ?? 10,

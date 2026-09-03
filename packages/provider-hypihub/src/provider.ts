@@ -356,6 +356,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   };
   return defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
+    pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
     credentials: { apiKey: options.apiKey ?? credentialRef("os", "hypihub.oauth") },
     credentialInputs: { apiKey: {
       label: "HypiHub login",
