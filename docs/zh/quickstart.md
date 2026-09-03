@@ -20,7 +20,7 @@ npx skills add hypit-ai/hypit -g
 
 然后在任意处启动 Coding Agent，Hypit skill 将全局可用。
 
-<video controls playsinline preload="metadata" width="100%" src="../quickstart/videos/describe_the_video_you_want.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/describe_the_video_you_want.mp4"></video>
 
 ## 2. 描述你想制作的视频
 
@@ -53,7 +53,7 @@ npx skills add hypit-ai/hypit -g
 
 你还可以补充目标受众、时长、语言、语气、品牌色、主持人、发布平台或画幅比例等要求。Agent 会把 brief 转换成完整计划，并自行补全制作所需的细节。
 
-<video controls playsinline preload="metadata" width="100%" src="../quickstart/videos/provide_credentials_when_the_agent_asks.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/provide_credentials_when_the_agent_asks.mp4"></video>
 
 ## 3. 按 Agent 提示提供凭据
 
@@ -64,7 +64,7 @@ npx skills add hypit-ai/hypit -g
 
 不要把密钥粘贴到公开文档中，也不要提交到 Git。Agent 会使用已配置的安全凭据存储来保存这些凭据。
 
-<video controls playsinline preload="metadata" width="100%" src="../quickstart/videos/let_the_agent_do_the_production_work.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/let_the_agent_do_the_production_work.mp4"></video>
 
 ## 4. 让 Agent 完成制作
 
@@ -79,7 +79,7 @@ npx skills add hypit-ai/hypit -g
 7. **与 mock 对比。** 对尚未真正生成的素材使用 mock，随后在 Studio 中渲染完整构图；Agent 会把看到的结果与参考视频或 brief 对比，修复时机、层级、裁切、字幕和画面密度等问题。
 8. **按照要求完成修改。** 基础视频确定后，Agent 会根据你的要求完成定制，例如更换画面中的人物，或替换成你的产品，然后检查修改后的结果。
 
-<video controls playsinline preload="metadata" width="100%" src="../quickstart/videos/review_the_mock_studio.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/review_the_mock_studio.mp4"></video>
 
 ## 5. 查看 mock Studio
 
@@ -93,7 +93,7 @@ ranking 板出现得太晚，字幕太小，而且主持人说话时被 B-roll �
 
 Agent 会修改源码、重新检查并返回更新后的 mock。
 
-<video controls playsinline preload="metadata" width="100%" src="../quickstart/videos/approve_and_submit_the_paid_build.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/approve_and_submit_the_paid_build.mp4"></video>
 
 ## 6. 确认后提交付费 Build
 
@@ -105,13 +105,13 @@ mock 没有问题。请提交付费 Build 并生成最终视频。
 
 开始之前，Agent 会向你总结将使用的模型、预计执行的外部工作和预估费用。随后它会提交 Build、跟踪进度，并用书面化的语言报告 Provider 或 Runtime 问题。付费 Build 才会执行真实的素材生成、媒体处理和最终渲染；之前的 mock 不会自动触发这些计费操作。
 
-<video controls playsinline preload="metadata" width="100%" src="../quickstart/videos/review_the_paid_result.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/review_the_paid_result.mp4"></video>
 
 ## 7. 查看付费 Build 的结果
 
 Build 完成后，Agent 会打开最终视频并提供保存后的输出文件。请查看最终结果，而不只是 Studio mock。真实生成的主持人、B-roll 和音频可能与 mock 的临时素材不同，因此要检查画面、字幕、转场、构图、声音和导出质量。如果需要修改，直接告诉 Agent 要改什么。Agent 会修改源码并带你重新审阅，而不是让你手动编辑已经渲染出的 MP4。
 
-<video controls playsinline preload="metadata" width="100%" src="../quickstart/videos/request_natural_language_changes.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/request_natural_language_changes.mp4"></video>
 
 ## 8. 继续用自然语言提出修改
 
@@ -123,7 +123,7 @@ Build 成功后，你仍然可以用对话继续指导项目。你可以更换�
 
 Agent 会把每项要求追踪到对应的源码和组件，保留你要求不变的部分，并在再次付费 Build 前先给你看新的 mock。
 
-<video controls playsinline preload="metadata" width="100%" src="../quickstart/videos/create_multiple_variants_in_parallel.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/create_multiple_variants_in_parallel.mp4"></video>
 
 ## 9. 并行制作多个变体
 
