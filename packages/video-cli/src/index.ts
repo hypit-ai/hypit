@@ -7,6 +7,7 @@ import {
 import { hypitHostPackageRoot } from "@hypit/runtime-host-node";
 import type { LoadedPackage } from "@hypit/package-loader-node";
 
+import { isCreationCommand, runCreationCli } from "./creation.js";
 import { videoCliDistribution } from "./distribution.js";
 
 export {
@@ -14,6 +15,8 @@ export {
 } from "./compiler.js";
 export { videoCliDistribution } from "./distribution.js";
 export { discoverVideoSourcePackages } from "./package-selection.js";
+export { creationCommands, isCreationCommand, runCreationCli, writeCreationHelp } from "./creation.js";
+export type { CreationCommand, CreationEnvironment, CreationHost } from "./creation.js";
 /** The project's selected Runtime Profile, read the way `hypit` reads it, for tools that run beside the CLI. */
 export { findRuntimeProfile } from "@hypit/cli";
 
@@ -26,6 +29,7 @@ export function runVideoCli(
     ? []
     : [videoCliDistribution.packageRoot]);
   installExternalPackageResolution([hypitHostPackageRoot()]);
+  if (isCreationCommand(argv[0])) return runCreationCli(argv, io);
   return runCli(argv, io, {
     ...videoCliDistribution,
     bootstrapPackages: packages,

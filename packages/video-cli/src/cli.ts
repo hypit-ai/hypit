@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { renderCliError, writeCliHelp } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
+import { creationCommands, isCreationCommand, writeCreationHelp } from "./creation.js";
 
 const argv = process.argv.slice(2);
 const json = argv.includes("--json");
@@ -59,7 +60,15 @@ const io: CliIo = {
 async function main(): Promise<void> {
   if (argv.length === 0 || argv[0] === "help" || argv.includes("--help")) {
     const topic = argv[0] === "help" ? argv[1] : argv.includes("--help") ? argv[0] : undefined;
+    if (isCreationCommand(topic)) {
+      writeCreationHelp(io, topic);
+      return;
+    }
     writeCliHelp(io, topic);
+    if (topic === undefined) {
+      io.write(`\nCreation tools (one request through the selected Runtime Profile, no Build)\n${
+        creationCommands.map((item) => `  ${item}`).join("\n")}\n  hypit help <tool> for each\n`);
+    }
     return;
   }
   const { runVideoCli } = await import("./index.js");
