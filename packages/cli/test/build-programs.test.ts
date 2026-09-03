@@ -21,6 +21,8 @@ const io = { write: () => {} };
 function distribution(
   calls: string[],
   diagnostics: readonly RuntimeDoctorDiagnostic[],
+  authorSource = "./main.svml",
+  execution?: object,
 ): CliDistribution {
   return {
     bootstrapPackages: [{
@@ -29,10 +31,10 @@ function distribution(
         format: "hypit.node-package@1",
         hostFacets: [createRunFrontendHostFacet({
         id: "@hypit/run-markup@1",
-        discover: () => ({ author: { source: "./main.svml" }, imports: [] }),
+        discover: () => ({ author: { source: authorSource }, imports: [] }),
         decode: () => ({ document: {
           format: "hypit.run-document@1",
-          author: { source: "./main.svml" },
+          author: { source: authorSource },
           imports: [],
           targets: [{ output: "result" }],
           candidates: [],
@@ -121,7 +123,10 @@ function distribution(
       }),
       preflight: async () => ({ dataRoot: "/tmp", diagnostics }),
       doctor: async () => ({ dataRoot: "/tmp", diagnostics: [] }),
-      createRuntime: async () => { throw new Error("createRuntime is unavailable"); },
+      createRuntime: async () => {
+        if (execution !== undefined) return execution;
+        throw new Error("createRuntime is unavailable");
+      },
       openControl: async () => ({ inspect: async () => undefined }),
     }),
   } as unknown as CliDistribution;
@@ -166,6 +171,52 @@ test("Build accepts a Result title and never provisions programs after a clean p
     /createRuntime is unavailable/u,
   );
   assert.deepEqual(calls, []);
+});
+
+test("Build confirms durable submission before following stable work progress", async () => {
+  const calls: string[] = [];
+  const source = await runSource();
+  const execution = {
+    async build(request: { readonly id: string }) {
+      calls.push("build");
+      return {
+        id: request.id,
+        state: {
+          targets: [{ output: "result" }],
+          plan: { outputBindings: [] },
+          records: [],
+        },
+        view: {
+          id: request.id,
+          createdAt: Date.now(),
+          activity: "ready",
+          cancellationRequested: false,
+          targets: ["result"],
+          requests: { total: 0, completed: 0 },
+          acceptedRecords: 0,
+          outstandingCommands: 0,
+          operations: [],
+        },
+      };
+    },
+    async close() {},
+  };
+  let output = "";
+
+  await runCli(
+    ["build", source, "--runtime", "/p/hypit.runtime.json", "--follow", "--max-wait-ms", "0"],
+    { write(text) { output += text; } },
+    distribution(calls, [], "./main.svml", execution),
+  );
+
+  assert.deepEqual(calls, ["build"]);
+  const submitted = output.indexOf("Build submitted");
+  const working = output.indexOf("· Working");
+  const active = output.indexOf("Build still active");
+  assert.ok(submitted >= 0 && working > submitted && active > working);
+  assert.match(output, /Target\s+result/u);
+  assert.match(output, /Work\s+0 external requests/u);
+  assert.match(output, /Ctrl-C stops watching; the Build continues\./u);
 });
 
 test("plan preserves the selected work summary but exits non-zero when cheap preflight fails", async () => {

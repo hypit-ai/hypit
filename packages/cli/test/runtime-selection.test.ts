@@ -5,28 +5,59 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 
 import type { CliDistribution } from "../src/distribution.js";
+import { parseCommand } from "../src/arguments.js";
 import { runCli } from "../src/main.js";
+import { resolveProjectRoot } from "../src/project-context.js";
 import type { CliRuntimeControl } from "../src/runtime-port.js";
 import { findRuntimeProfile, selectRuntimeProfile } from "../src/runtime-selection.js";
 
-test("project Runtime selection is a relative local pointer discovered from nested sources", async () => {
+test("check has no Runtime context", () => {
+  assert.throws(
+    () => parseCommand(["check", "main.svml", "--runtime", "runtime.json"]),
+    /--runtime does not apply to check/u,
+  );
+});
+
+test("project resolution precedes exact project Runtime selection", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-selection-"));
   try {
     const nested = join(root, "sources", "chapter");
     const profile = join(root, "runtime", "local.json");
     await mkdir(nested, { recursive: true });
     await mkdir(join(root, "runtime"), { recursive: true });
+    await writeFile(join(root, "package.json"), "{}\n", "utf8");
     await writeFile(profile, "{}\n", "utf8");
 
     const selected = await selectRuntimeProfile(root, profile);
     assert.equal(selected.profile, await realpath(profile));
     assert.equal((await readFile(join(root, ".hypit", "runtime"), "utf8")).trim(), join("runtime", "local.json"));
 
-    const found = await findRuntimeProfile(nested);
+    assert.equal(await findRuntimeProfile(nested), undefined);
+    const project = await resolveProjectRoot({ cwd: nested });
+    assert.equal(project, resolve(root));
+    const found = await findRuntimeProfile(project);
     assert.equal(found?.profile, selected.profile);
     assert.equal(await realpath(found!.projectRoot), selected.projectRoot);
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("a parent Runtime selection never becomes a child project's selection", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "hypit-runtime-parent-"));
+  try {
+    const child = join(parent, "child");
+    const profile = join(parent, "runtime.json");
+    await mkdir(child, { recursive: true });
+    await writeFile(join(child, "package.json"), "{}\n", "utf8");
+    await writeFile(profile, "{}\n", "utf8");
+    await selectRuntimeProfile(parent, profile);
+
+    const project = await resolveProjectRoot({ cwd: child });
+    assert.equal(project, resolve(child));
+    assert.equal(await findRuntimeProfile(project), undefined);
+  } finally {
+    await rm(parent, { recursive: true, force: true });
   }
 });
 

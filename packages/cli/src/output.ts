@@ -232,15 +232,17 @@ function renderAuthorCheck(
   const readable = view.machine.outputs;
   lines.push(...facts([
     ["Source", shortPath(view.machine.source)],
-    ["Frontend", view.machine.frontend],
-    ["Modules", String(view.machine.modules)],
-    ["Units", String(view.machine.units)],
     ["Outputs", String(view.machine.outputCount)],
-    ...(verbose && view.machine.details !== undefined
-      ? [["Values", String(view.machine.details.values.length)] as const] : []),
-    ["Assets", String(view.machine.assets)],
+    ...(verbose ? [
+      ["Frontend", view.machine.frontend] as const,
+      ["Modules", String(view.machine.modules)] as const,
+      ["Units", String(view.machine.units)] as const,
+      ["Assets", String(view.machine.assets)] as const,
+      ...(view.machine.details === undefined
+        ? [] : [["Values", String(view.machine.details.values.length)] as const]),
+    ] : []),
   ], colors));
-  if (readable.length > 0) {
+  if (verbose && readable.length > 0) {
     lines.push("", colors.strong("Outputs"));
     const ordered = [...readable].sort((left, right) => left.name.localeCompare(right.name));
     const width = Math.max(...ordered.map((item) => item.name.length));
@@ -264,54 +266,80 @@ function renderRunCheck(
   view: Extract<CliPresentation, { kind: "check-run" }>,
   io: CliIo,
   colors: Palette,
+  verbose: boolean,
 ): string {
   const lines = [heading("success", "Run source is valid", io, colors), ""];
+  const reuse = (view.machine.unresolvedHistoricalOutputs?.length ?? 0)
+    + (view.machine.omittedHistoricalOutputs ?? 0);
+  const targetSummary = view.machine.targets.length === 0
+    ? String(view.machine.targetCount)
+    : view.machine.targets.join(", ")
+      + (view.machine.targets.length < view.machine.targetCount
+        ? ` (+${view.machine.targetCount - view.machine.targets.length})`
+        : "");
   lines.push(...facts([
     ["Run", shortPath(view.machine.run)],
-    ["Author", shortPath(view.machine.author)],
-    ["Frontend", view.machine.frontend],
-    ["Targets", String(view.machine.targetCount)],
-    ["Candidates", String(view.machine.candidates)],
-    ["Satisfactions", String(view.machine.satisfactions)],
-    ...(view.machine.steps === undefined ? [] : [["Steps", String(view.machine.steps)] as const]),
+    ["Targets", targetSummary],
+    ...(reuse === 0 ? [] : [["Reuse", `${reuse} historical Output${reuse === 1 ? "" : "s"}`] as const]),
+    ...(verbose ? [
+      ["Author", shortPath(view.machine.author)] as const,
+      ["Frontend", view.machine.frontend] as const,
+      ["Candidates", String(view.machine.candidates)] as const,
+      ["Satisfactions", String(view.machine.satisfactions)] as const,
+      ...(view.machine.steps === undefined ? [] : [["Steps", String(view.machine.steps)] as const]),
+    ] : []),
   ], colors));
   const unresolved = view.machine.unresolvedHistoricalOutputs ?? [];
-  if (unresolved.length > 0) {
-    lines.push("", heading("warning", `${unresolved.length} historical Candidate${unresolved.length === 1 ? "" : "s"} unresolved`, io, colors));
+  if (verbose && unresolved.length > 0) {
+    lines.push("", colors.strong("Historical reuse"));
     for (const item of unresolved) lines.push(`  ${item.candidate} ← ${item.build}/${item.output}`);
     if ((view.machine.omittedHistoricalOutputs ?? 0) > 0) {
       lines.push(`  ${colors.dim(`${view.machine.omittedHistoricalOutputs} more · use --limit <count>`)}`);
     }
-    lines.push(`  ${colors.dim("The Run source is valid. plan/build will resolve these Result values.")}`);
   }
   return `${lines.join("\n")}\n`;
+}
+
+function operationLabel(operation: string): string {
+  const name = operation.split("/").at(-1) ?? operation;
+  return name.replace(/^request-/u, "").replaceAll("-", " ");
 }
 
 function renderPlan(
   view: Extract<CliPresentation, { kind: "plan" }>,
   io: CliIo,
   colors: Palette,
+  verbose: boolean,
 ): string {
-  const lines = [heading("success", "Build plan is valid", io, colors), ""];
+  const lines = [heading(view.machine.ok ? "success" : "error",
+    view.machine.ok ? "Build plan is valid" : "Build plan needs attention", io, colors), ""];
+  const targetSummary = view.machine.targets.length === 0
+    ? String(view.machine.targetCount)
+    : view.machine.targets.join(", ")
+      + (view.machine.targets.length < view.machine.targetCount
+        ? ` (+${view.machine.targetCount - view.machine.targets.length})`
+        : "");
   lines.push(...facts([
     ["Run", shortPath(view.machine.run)],
-    ["Targets", String(view.machine.targetCount)],
-    ["Steps", String(view.machine.steps)],
+    ["Targets", targetSummary],
     ["External requests", String(view.machine.externalRequestCount)],
+    ...(view.machine.preflight === undefined ? [] : [[
+      "Preflight", view.machine.preflight.ok ? "ready" : "needs attention",
+    ] as const]),
+    ...(verbose ? [["Steps", String(view.machine.steps)] as const] : []),
   ], colors));
   if (view.machine.externalRequests.length > 0) {
     lines.push("", colors.strong("External requests"));
     const countWidth = Math.max(...view.machine.externalRequests.map((item) => String(item.count).length));
     for (const item of view.machine.externalRequests) {
-      lines.push(`  ${colors.warning(String(item.count).padStart(countWidth))}  ${item.operation}`);
+      lines.push(`  ${colors.warning(String(item.count).padStart(countWidth))}  ${verbose ? item.operation : operationLabel(item.operation)}`);
     }
     if ((view.machine.omittedExternalRequests ?? 0) > 0) {
       lines.push(`  ${colors.dim(`${view.machine.omittedExternalRequests} more Operations · use --limit <count>`)}`);
     }
-    lines.push(`  ${colors.dim("These Needs may reach the Endpoints selected by the Runtime Profile during build.")}`);
   }
   const unreached = view.machine.unreached ?? [];
-  if (unreached.length > 0) {
+  if (verbose && unreached.length > 0) {
     lines.push("", colors.strong("Declared but not reached"));
     const width = Math.max(...unreached.map((item) => item.output.length));
     for (const item of unreached) {
@@ -320,16 +348,16 @@ function renderPlan(
     if ((view.machine.omittedUnreached ?? 0) > 0) {
       lines.push(`  ${colors.dim(`${view.machine.omittedUnreached} more · use --limit <count>`)}`);
     }
-    lines.push(`  ${colors.dim("These Outputs are outside the selected target graph.")}`);
   }
   if (view.machine.preflight !== undefined
-    && (view.machine.preflight.capabilities.length > 0 || view.machine.preflight.diagnostics.length > 0)) {
+    && (view.machine.preflight.diagnostics.length > 0
+      || (verbose && view.machine.preflight.capabilities.length > 0))) {
     lines.push("", colors.strong("Runtime preflight"));
-    for (const capability of view.machine.preflight.capabilities) lines.push(`  ${colors.accent(capability)}`);
-    if ((view.machine.preflight.omittedCapabilities ?? 0) > 0) {
+    if (verbose) for (const capability of view.machine.preflight.capabilities) lines.push(`  ${colors.accent(capability)}`);
+    if (verbose && (view.machine.preflight.omittedCapabilities ?? 0) > 0) {
       lines.push(`  ${colors.dim(`${view.machine.preflight.omittedCapabilities} more capabilities · use --limit <count>`)}`);
     }
-    if (view.machine.preflight.diagnostics.length === 0) {
+    if (verbose && view.machine.preflight.diagnostics.length === 0) {
       lines.push(`  ${colors.success(glyph(io, "✓", "+"))} required deployment slice is ready`);
     } else {
       for (const item of view.machine.preflight.diagnostics) {
@@ -337,8 +365,10 @@ function renderPlan(
         lines.push(`  ${mark} ${item.code}: ${item.message}`);
       }
     }
-    const capabilityCount = view.machine.preflight.capabilityCount;
-    lines.push(`  ${colors.dim(`Runtime base checked; ${capabilityCount} demanded Endpoint ${capabilityCount === 1 ? "capability" : "capabilities"} checked.`)}`);
+    if (verbose) {
+      const capabilityCount = view.machine.preflight.capabilityCount;
+      lines.push(`  ${colors.dim(`${capabilityCount} demanded Endpoint ${capabilityCount === 1 ? "capability" : "capabilities"} checked.`)}`);
+    }
   }
   if (view.machine.choices.length > 0) {
     lines.push("", colors.strong("Run choices"));
@@ -379,9 +409,9 @@ export function writeCliOutput(
     : presentation.kind === "check-author"
       ? renderAuthorCheck(presentation, io, colors, options.verbose)
       : presentation.kind === "check-run"
-        ? renderRunCheck(presentation, io, colors)
+        ? renderRunCheck(presentation, io, colors, options.verbose)
         : presentation.kind === "plan"
-          ? renderPlan(presentation, io, colors)
+          ? renderPlan(presentation, io, colors, options.verbose)
           : renderOperational(presentation, io, colors);
   io.write(output);
 }
@@ -401,7 +431,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("hypit check")),
       colors.dim("Validate one self-described Author Source or Run Source without executing it."),
       "",
-      "  hypit check <source> [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>]",
+      "  hypit check <source> [--workspace <workspace>] [--asset-root <directory>]",
     ],
     doctor: [
       colors.accent(colors.strong("hypit doctor")),
@@ -423,7 +453,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("hypit build")),
       colors.dim("Submit one durable Build and ensure its selected Runtime Worker is available."),
       "",
-      "  hypit build <run-source> [--title <text>] [--runtime <profile>] [--asset-root <directory>] [--follow]",
+      "  hypit build <run-source> [--title <text>] [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>] [--follow]",
       "",
       "  --title <text>            give this Result a human-facing title",
       "  --follow                   observe the Build; the Worker still owns execution",
@@ -439,6 +469,9 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "  hypit runtime status [<profile>]  inspect Worker, active Builds and declared programs",
       "  hypit runtime logs [<profile>] [--lines <count>]",
       "  hypit runtime down [<profile>]    stop the Worker; external programs keep running",
+      "",
+      "The project is resolved first. Selection is read only from that project's .hypit/runtime.",
+      "No Profile filename discovery or parent-project inheritance is performed.",
     ],
     packages: [
       colors.accent(colors.strong("hypit packages")),

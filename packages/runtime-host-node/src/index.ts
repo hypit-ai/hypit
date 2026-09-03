@@ -51,6 +51,8 @@ export type BuildView = {
   readonly source?: { readonly path: string };
   readonly run?: { readonly path: string };
   readonly targets: readonly string[];
+  /** External Needs in the frozen Build Plan and the subset already accepted by Core. */
+  readonly requests?: { readonly total: number; readonly completed: number };
   readonly acceptedRecords: number;
   readonly outstandingCommands: number;
   readonly operations: readonly BuildOperationView[];

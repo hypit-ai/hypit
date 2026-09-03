@@ -54,9 +54,10 @@ export type CliBuildStatusView = {
   readonly id: string;
   readonly title?: string;
   readonly work: {
-    readonly state: "unknown" | "starting" | "active" | "waiting" | "done";
+    readonly state: "unknown" | "submitting" | "working" | "done";
     readonly outcome?: "complete" | "failed" | "cancelled";
     readonly cancellationRequested?: boolean;
+    readonly requests?: { readonly total: number; readonly completed: number };
   };
   readonly result: {
     readonly state: "missing" | "open" | "complete" | "failed" | "cancelled" | "unavailable";
@@ -129,9 +130,8 @@ function orderedOutputNames(manifest: BuildResultManifest): readonly string[] {
 
 function workState(view: BuildView | undefined, result: BuildResultManifest | undefined): CliBuildStatusView["work"]["state"] {
   if (view === undefined) return result?.outcome === undefined ? "unknown" : "done";
-  if (view.activity === "submitting" || view.activity === "ready") return "starting";
-  if (view.activity === "running") return "active";
-  if (view.activity === "waiting") return "waiting";
+  if (view.activity === "submitting") return "submitting";
+  if (view.activity === "ready" || view.activity === "running" || view.activity === "waiting") return "working";
   return "done";
 }
 
@@ -156,6 +156,7 @@ export function buildStatusView(options: {
         ? {}
         : { outcome: options.runtime?.outcome ?? options.result!.outcome }),
       ...(options.runtime?.cancellationRequested === true ? { cancellationRequested: true } : {}),
+      ...(options.runtime?.requests === undefined ? {} : { requests: options.runtime.requests }),
     },
     result: {
       state: resultState,

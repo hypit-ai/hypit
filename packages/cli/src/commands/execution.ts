@@ -2,7 +2,7 @@ import type { BuildResultManifest, BuildResultRepository } from "@hypit/build-re
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
 
 import type { CliCommand, ExecutionCommand } from "../command.js";
-import { buildObservationKey } from "../observation.js";
+import { activityObservationKey, buildProgressLines, observeBuildView } from "../observation.js";
 import type { CliIo } from "../output.js";
 import type { CliRuntimeController } from "../runtime-port.js";
 import { formatOperationProgress, queueLaneLines, summarizeQueueLanes } from "../runtime-view.js";
@@ -43,18 +43,23 @@ export async function runExecutionCommand(input: {
     }
     const finished = result?.outcome !== undefined;
     const build = result === undefined ? null : buildStatusView({ id: result.id, result });
+    const outcome = result?.outcome;
     write({ format: "hypit.cli-status@3", build }, result === undefined
       ? "Build Result not found"
-      : finished ? "Build Result is finished" : "Build Result is unfinished",
-    result === undefined || !finished ? "warning" : "info", [
+      : outcome === "complete" ? "Build complete"
+        : outcome === "failed" ? "Build failed"
+          : outcome === "cancelled" ? "Build cancelled" : "Build Result is open",
+    result === undefined || !finished ? "warning"
+      : outcome === "failed" ? "error"
+        : outcome === "cancelled" ? "warning" : "success", [
       ["Build", args.build],
-      ["Work", build?.work.state ?? "unknown"],
-      ...(build?.work.outcome === undefined ? [] : [["Decision", build.work.outcome] as const]),
-      ["Result", build?.result.state ?? "missing"],
+      ...(build?.title === undefined ? [] : [["Title", build.title] as const]),
+      ...(outcome === undefined ? [] : [["Outcome", outcome] as const]),
+      ...(!finished && result !== undefined ? [["Result", "open"] as const] : []),
       ...(build?.result.outputCount === undefined ? [] : [["Outputs", String(build.result.outputCount)] as const]),
-    ], result === undefined ? [] : [
-      "Result and Runtime are independent facts; select the Runtime to inspect active execution.",
-    ]);
+    ], !finished && result !== undefined
+      ? ["Select the Runtime to inspect active work."]
+      : []);
     if (result === undefined || !finished) io.setExitCode?.(1);
     return;
   }
@@ -98,12 +103,7 @@ export async function runExecutionCommand(input: {
           };
         });
         const lanes = args.presentation.verbose ? summarizeQueueLanes(activity.capacity).slice(0, args.limit) : undefined;
-        const currentView = JSON.stringify({
-          worker: worker.state,
-          builds,
-          activeRequests: activity.capacity.length,
-          ...(lanes === undefined ? {} : { lanes }),
-        });
+        const currentView = activityObservationKey(worker.state, activity.builds);
         if (args.watch && currentView === previous) return;
         previous = currentView;
         const value = {
@@ -115,10 +115,15 @@ export async function runExecutionCommand(input: {
           activeRequests: activity.capacity.length,
           ...(lanes === undefined ? {} : { lanes }),
         };
-        const buildLines = activity.builds.slice(0, args.limit).map((item) =>
-          `${item.id}: ${buildStatusView({ id: item.id, runtime: item }).work.state}`
+        const buildLines = activity.builds.slice(0, args.limit).map((item) => {
+          const requestProgress = item.requests === undefined || item.requests.total === 0
+            ? ""
+            : ` · ${item.requests.completed}/${item.requests.total} steps`;
+          return `${item.id}: ${buildStatusView({ id: item.id, runtime: item }).work.state}`
+            + requestProgress
             + `${item.cancellationRequested ? " · cancelling" : ""}`
-            + `${item.issue === undefined ? "" : ` · ${item.issue.message}`}`);
+            + `${item.issue === undefined ? "" : ` · ${item.issue.message}`}`;
+        });
         const activeOperations = activity.builds.flatMap((item) => item.operations)
           .filter((item) => item.status === "pending");
         const operationLines = args.presentation.verbose
@@ -153,30 +158,19 @@ export async function runExecutionCommand(input: {
       try {
         openedResults = await openProjectResults();
         if (args.watch && view !== undefined && view.issue === undefined) {
-          const startedAt = Date.now();
-          let delayMs = 100;
-          let previous: string | undefined;
           const controller = await runtimeController(runtimeProfile);
-          while (view !== undefined && view.issue === undefined) {
-            const encoded = buildObservationKey(view);
-            if (encoded !== previous && !args.presentation.json) {
-              previous = encoded;
-              io.write(`  · ${view.id}: ${view.activity}`
-                + `${view.operations.length === 0 ? "" : ` · ${view.operations.length} operation(s)`}\n`);
-              delayMs = 100;
-            } else {
-              delayMs = Math.min(1_000, delayMs * 2);
-            }
-            const remaining = args.maxWaitMs === undefined
-              ? undefined
-              : args.maxWaitMs - (Date.now() - startedAt);
-            if (remaining !== undefined && remaining <= 0) break;
-            const worker = await controller.worker.status();
-            if (worker.state !== "running") break;
-            await new Promise((resolveWait) => setTimeout(resolveWait,
-              remaining === undefined ? delayMs : Math.min(delayMs, remaining)));
-            view = await runtime.inspect(args.build);
-          }
+          view = await observeBuildView(runtime, args.build, view, {
+            ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
+            controller,
+            ...(args.presentation.json ? {} : {
+              onProgress: (progress) => {
+                for (const line of buildProgressLines(progress, {
+                  verbose: args.presentation.verbose,
+                  limit: args.limit,
+                })) io.write(`${line}\n`);
+              },
+            }),
+          });
         }
         result = await openedResults.repository.read(args.build);
       } catch (error) {
@@ -186,7 +180,9 @@ export async function runExecutionCommand(input: {
       }
       const found = view !== undefined || result !== undefined;
       const activity = view?.activity;
-      const outcome = result?.outcome ?? view?.outcome;
+      const resultOutcome = result?.outcome;
+      const outcome = resultOutcome ?? view?.outcome;
+      const savingResult = activity === "saving-result" && resultOutcome === undefined;
       const issue = view?.issue;
       const build = !found ? null : buildStatusView({
         id: view?.id ?? result!.id,
@@ -196,34 +192,54 @@ export async function runExecutionCommand(input: {
         verbose: args.presentation.verbose,
         operationLimit: args.limit,
       });
-      write({ format: "hypit.cli-status@3", build }, !found
+      const attention = build?.attention;
+      const humanTitle = !found
         ? "Build not found"
-        : issue !== undefined
+        : attention !== undefined
           ? "Build needs attention"
-          : args.watch
-            ? activity === undefined ? "Build finished" : "Build still active"
-            : "Build status",
+          : savingResult
+            ? "Saving Build Result"
+            : resultOutcome === "complete"
+              ? "Build complete"
+              : resultOutcome === "failed"
+                ? "Build failed"
+                : resultOutcome === "cancelled"
+                  ? "Build cancelled"
+                  : args.watch && activity === undefined ? "Build finished" : "Build active";
+      write({ format: "hypit.cli-status@3", build }, !found
+        ? "Build not found" : humanTitle,
       !found
         ? "warning"
-        : issue !== undefined || resultReadError !== undefined
+        : attention !== undefined
           ? "error"
           : outcome === "failed"
             ? "error"
-            : args.watch && activity !== undefined ? "warning" : "info", [
+            : outcome === "cancelled"
+              ? "warning"
+              : resultOutcome === "complete"
+                ? "success"
+                : args.watch && activity !== undefined ? "warning" : "info", [
           ["Build", args.build],
           ...(build?.title === undefined ? [] : [["Title", build.title] as const]),
-          ["Work", build?.work.state ?? "unknown"],
-          ...(build?.work.outcome === undefined ? [] : [["Decision", build.work.outcome] as const]),
-          ["Result", build?.result.state ?? "missing"],
-          ...(build?.result.outputCount === undefined ? [] : [["Outputs", String(build.result.outputCount)] as const]),
+          ...(attention !== undefined ? [
+            ["Execution", build?.work.outcome ?? build?.work.state ?? "unknown"] as const,
+            ["Result", build?.result.state ?? "missing"] as const,
+          ] : savingResult ? [
+            ["Execution", view?.outcome ?? "complete"] as const,
+            ["Result", "saving"] as const,
+          ] : resultOutcome !== undefined ? [
+            ["Outcome", resultOutcome] as const,
+            ...(build?.result.outputCount === undefined
+              ? [] : [["Outputs", String(build.result.outputCount)] as const]),
+          ] : [["State", build?.work.state ?? "unknown"] as const]),
         ], (build?.operations ?? []).map((operation) => operation.failure !== undefined
           ? `${operation.endpoint}: ${operation.failure.code} — ${operation.failure.message}`
           : operation.progress === undefined
             ? `${operation.endpoint}: ${operation.state}`
             : `${operation.endpoint}: ${formatOperationProgress(operation.progress)}`)
-          .concat(build?.attention === undefined ? [] : [
-            `Attention  ${build.attention.message}`,
-            ...(build.attention.action === undefined ? [] : [`Action     ${build.attention.action}`]),
+          .concat(attention === undefined ? [] : [
+            `Attention  ${attention.message}`,
+            ...(attention.action === undefined ? [] : [`Action     ${attention.action}`]),
           ]));
       if (!found || issue !== undefined || resultReadError !== undefined || outcome === "failed") io.setExitCode?.(1);
       return;
