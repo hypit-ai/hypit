@@ -18,30 +18,20 @@ Coding Agent 描述想要的结果；Agent 会通过 `/hypit` skill 准备项目
 - 一个能够使用 skill 的 Coding Agent，例如 Claude Code 或 Codex；
 - 一个允许 Agent 创建视频项目的文件夹；
 - 一条用于复刻的视频，或一份用于原创视频的创意简报；
-- 你所选择的模型和服务的凭据。Agent 只会在当前 Runtime Profile 确实需要时索取这些凭据。
 
-你不需要克隆 Hypit 仓库。Agent 可以替你安装可复用的 `/hypit` skill 和 Hypit Distribution。需要执行
-安装命令时，Agent 会先解释命令的作用，再在项目目录中完成操作。
+你不需要克隆 Hypit 仓库。先按第一步的命令安装可复用的 `/hypit` skill；之后 Agent 可以替你准备 Hypit
+Distribution。需要执行其他安装命令时，Agent 会先解释命令的作用，再在项目目录中完成操作。
 
-## 第一步：使用 Hypit skill 并提供凭据
+## 第一步：安装 Hypit skill
 
-在准备存放项目的文件夹中打开 Coding Agent，然后要求它使用 Hypit 并登录：
+在准备存放项目的文件夹中打开 Coding Agent，然后先安装 Hypit skill：
 
-```text
-/hypit login
+```bash
+npx skills add hypit-ai/hypit -g
 ```
 
-skill 会引导你完成登录，并使用已配置的凭据存储安全保存登录信息。你也可以明确要求 Agent 使用自己的
-Provider key，例如：“使用我自己的 KIE 和 Gemini key，不要创建新的账号。”Agent 会判断当前视频真正
-需要哪些 key，说明每个 key 的用途，并避免索取无关凭据。不要把密钥粘贴到公开文档中，也不要提交到 Git。
-
-如果尚未安装 skill，可以直接告诉 Agent：
-
-```text
-安装 Hypit skill，然后帮我登录并检查环境是否就绪。
-```
-
-Agent 会完成安装和本地环境检查。你不需要记忆包管理器、Runtime Profile 或各个服务的专属配置步骤。
+`-g` 选项会让 skill 对任何项目文件夹中的新 Agent 会话都可用。你不需要克隆 Hypit 仓库，也不需要
+理解这条命令安装了哪些文件。skill 可用后，在视频项目文件夹中开启新的 Agent 对话，然后继续下面的步骤。
 
 ## 第二步：描述你想制作的视频
 
@@ -53,14 +43,13 @@ Agent 会完成安装和本地环境检查。你不需要记忆包管理器、Ru
 会自动把路径填入消息。也可以手动写出路径：
 
 ```text
-/hypit Clone this video and preserve its pacing, shot structure, captions, B-roll rhythm and sound design:
-/Users/me/Desktop/reference.mp4
+/hypit 克隆这条视频：/path/to/video.mp4
 ```
 
 如果需要改变内容，也可以一并说明，例如更换主持人、语言、产品、画幅比例、视觉风格或行动号召。参考视频
 会被当作剪辑结构的证据；Agent 不会只给你一份分析报告，而是会创建一套可以审阅、修改和 Build 的完整视频程序。
 
-### 根据创意简报原创一条视频
+### 原创一条视频
 
 你可以像给一位真人制片人写 brief 一样描述想法。例如：
 
@@ -74,7 +63,19 @@ Arcads、Higgsfield、Seedance 和 CapCut，对每个竞品给出公平而简洁
 要求由哪个 package、模型、字幕系统或动画原语实现。Agent 会把 brief 转换成完整计划；只有在某个创意
 决定无法安全推断时，才会提出简短的补充问题。
 
-## 第三步：让 Agent 完成制作
+## 第三步：按 Agent 提示提供凭据
+
+在你描述视频之后，Agent 会检查项目需要哪些模型和服务。如果缺少必要凭据，Agent 会向你询问，并说明
+该凭据的用途。你可以选择两种方式：
+
+1. **使用 Hypit 推荐的 hypit.ai OAuth 登录。** 告诉 Agent 通过 hypit.ai 登录。一次 OAuth 登录即可覆盖
+   Hypit 托管服务提供的所有模型，不需要为每个模型分别收集 key。
+2. **使用你自己的 Provider key。** 你可以直接和 Agent 约定要使用哪些模型，并提供相应 Provider 的 API key。
+   Agent 只会索取当前项目需要的 key，不会询问无关凭据。
+
+不要把密钥粘贴到公开文档中，也不要提交到 Git。Agent 会使用已配置的安全凭据存储来保存这些凭据。
+
+## 第四步：让 Agent 完成制作
 
 你确认 brief 后，Agent 会在不要求你编写源码的情况下推进项目。具体顺序会因视频而不同，但通常包括：
 
@@ -88,7 +89,7 @@ Arcads、Higgsfield、Seedance 和 CapCut，对每个竞品给出公平而简洁
 
 因此，这个流程更像是在指导一支小型制作团队：切分 shot、Gemini 分析、提出窄问题、查找 package、写源码、生成 mock、进行比对并修复，全部由 Agent 完成。你不需要打开编辑器、编写组件，也不需要自己执行一连串 Build 命令。
 
-## 第四步：查看 mock Studio
+## 第五步：查看 mock Studio
 
 第一版完成后，Agent 会为你打开 Studio mock。Mock 是审阅版本：尚未生成的媒体会使用确定性的临时素材代替，但真实的时序、布局、字幕、转场和 Track 关系都会保留。它要回答的是“这支视频是否成立”，而不是在你确认之前悄悄执行付费生成或最终渲染。
 
@@ -100,7 +101,7 @@ ranking 板出现得太晚，手机上字幕太小，而且主持人说话时被
 
 Agent 会修改源码，重新执行相关检查，并返回更新后的 mock。你只需再次审阅，不需要自己寻找对应的 SVML 行。
 
-## 第五步：确认后提交付费 Build
+## 第六步：确认后提交付费 Build
 
 只有在你明确确认 mock 后，才要求 Agent 提交付费 Build：
 
@@ -110,21 +111,21 @@ mock 没有问题。请提交付费 Build 并生成最终视频。
 
 开始之前，Agent 会向你总结将使用的模型、预计执行的外部工作和预估费用。随后它会提交 Build、跟踪进度，并用书面化的语言报告 Provider 或 Runtime 问题。付费 Build 才会执行真实的素材生成、媒体处理和最终渲染；之前的 mock 不会自动触发这些计费操作。
 
-## 第六步：查看付费 Build 的结果
+## 第七步：查看付费 Build 的结果
 
 Build 完成后，Agent 会打开最终视频并提供保存后的输出文件。请查看最终结果，而不只是 Studio mock。真实生成的主持人、B-roll 和音频可能与 mock 的临时素材不同，因此要检查画面、字幕、转场、构图、声音和导出质量。如果需要修改，直接告诉 Agent 要改什么。Agent 会修改源码并带你重新审阅，而不是让你手动编辑已经渲染出的 MP4。
 
-## 第七步：继续用自然语言提出修改
+## 第八步：继续用自然语言提出修改
 
 Build 成功后，你仍然可以用对话继续指导项目。你可以更换主持人、替换 B-roll、改变 ranking 板的样式、翻译台词、调整语气或切换画幅比例。例如：
 
 ```text
-保留台词和排名顺序，但把主持人换成沉稳的男主持。B-roll 改用手持街头素材，ranking 板做成纸质体育杂志风格，并确保 9:16 手机画面上的字幕足够大。
+保留台词和排名顺序，但把主持人换成沉稳的男主持，并把 ranking 板做成纸质体育杂志风格。
 ```
 
 Agent 会把每项要求追踪到对应的源码和组件，保留你要求不变的部分，并在再次付费 Build 前先给你看新的 mock。如果项目支持，你也可以要求切换到另一种主持人服务或 Runtime Profile；Agent 会先说明新增的凭据和费用要求。
 
-## 第八步：并行制作多个变体
+## 第九步：并行制作多个变体
 
 如果需要多个版本，先告诉 Agent 哪些维度可以变化。它会与你讨论具体方向，例如：
 
@@ -134,7 +135,3 @@ Agent 会把每项要求追踪到对应的源码和组件，保留你要求不�
 - 加快剪辑、增加 B-roll 密度的版本。
 
 Agent 会先确认所有版本共用的内容，以及每个版本允许改变的范围。你确认方向后，它会为每个变体创建独立的项目范围，并下发子 Agent 并行制作。每个子 Agent 都会遵守已确认的边界，检查自己的布局和源码，再向主 Agent 汇报。最终你会得到清晰的变体完成列表，以及仍需要你决定的事项；不需要你亲自协调这些子 Agent。
-
-## 如果你想亲自编写 SVML 或 SVS
-
-上面的 Agent 工作流适合作为第一次体验。下一页开始介绍手动编写路径：[Script](./quickstart/script.md) 会说明如何编写第一份 Author Source、连接语义 Segment，并继续学习 SVS Recipe、媒体、时序、Track 和渲染。两种工作流可以随时切换，因为 Agent 生成的仍然是普通、可编辑的 Hypit 源文件。
