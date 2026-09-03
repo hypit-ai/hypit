@@ -154,9 +154,7 @@ look like a paper sports magazine.
 ```
 
 The Agent traces each request to the relevant source and component, preserves what you asked it to
-keep, and shows a new mock before another paid Build. You can also ask it to use a different host
-service or Runtime Profile when that is supported by your project; the Agent explains any new
-credential or cost requirement first.
+keep, and shows a new mock before another paid Build.
 
 ## 9. Create multiple variants in parallel
 
