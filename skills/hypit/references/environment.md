@@ -12,6 +12,13 @@ Hypit has three different lifetimes. Never collapse them into one directory.
 - The **project** is the author's directory. It owns Sources, assets, project-local packages,
   `hypit.runtime.json`, `.hypit/` Build state and output files.
 
+Each project is an independent boundary. After selecting the active project, do not inspect another
+author project or use anything from its `packages/` directory. Never copy, import or symlink a
+project-local package across project boundaries. Resolve capabilities from the installed Distribution
+or create the package inside the active project's own `packages/` directory through the local-package
+workflow. Repository examples are read-only references only on routes that explicitly allow them;
+they are never package dependencies.
+
 An ordinary user does not clone the repository and does not run pnpm, Corepack, `npm link`, or a
 service's `uv sync` by hand. A clone is only a contributor checkout.
 
