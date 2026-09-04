@@ -38,15 +38,16 @@ an existing `/v1`/`/v1beta` base is accepted) only when choosing HypiHub. The Ru
 accepts the origin or either versioned base and normalizes it to `/v1`; missing or insufficient user
 credentials should be resolved at [hypit.ai](https://hypit.ai). Referenced image, audio and video
 Artifacts are uploaded automatically. The Provider first sends the file size and SHA-256 to
-`POST /v1/files/uploads`; HypiHub keeps small files on the established `POST /v1/files` route and
-returns a private S3 multipart policy for large files. Large parts are then uploaded concurrently
-through short-lived S3 Transfer Acceleration URLs, so the media bytes do not make an extra trip
+`POST /v1/files/uploads`; the production policy returns private regional-S3 multipart instructions
+for every valid non-empty media file, including files compressed by the tool before upload. Parts
+are uploaded concurrently through short-lived signed URLs, so media bytes do not make an extra trip
 through the HypiHub application server. A failed part alone is retried with a fresh signed URL.
 
 The server owns the size threshold, part size, concurrency, and URL lifetime. Clients do not need
 to duplicate that policy. `uploadPartTimeoutMs` (default five minutes) and `uploadPartAttempts`
 (default three) only control client retry behavior. During a rolling server upgrade, an exact 404
-from the policy endpoint falls back to the established multipart API. Signed S3 URLs are never
+from the policy endpoint falls back to the established multipart API; the server may also select
+that compatibility route when direct upload is disabled. Signed S3 URLs are never
 included in Provider error messages. Uploads remain deduplicated by Artifact digest within one
 Runtime operation. Embedded callers may override the entire transport with `publicAssetUrl`.
 
