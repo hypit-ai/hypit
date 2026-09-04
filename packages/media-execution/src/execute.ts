@@ -111,20 +111,20 @@ export async function executePrepareMedia(env: MediaExecutionEnvironment, constr
     const work = await mkdtemp(join(tmpdir(), "hypit-media-prepare-"));
     try {
       const input = join(work, "source.bin");
-      const output = join(work, "prepared.webp");
+      const output = join(work, "prepared.png");
       await writeFile(input, source);
-      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-frames:v", "1", "-vf", "scale='min(2048,iw)':-2", "-c:v", "libwebp", "-q:v", "75", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
-      return artifactResult(await env.artifacts.putFile(output, "image/webp"));
+      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-frames:v", "1", "-vf", "scale='min(2048,iw)':-2", "-c:v", "png", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
+      return artifactResult(await env.artifacts.putFile(output, "image/png"));
     } finally { await rm(work, { recursive: true, force: true }).catch(() => {}); }
   }
   if (need.source.mediaType.startsWith("audio/")) {
     const work = await mkdtemp(join(tmpdir(), "hypit-media-prepare-"));
     try {
       const input = join(work, "source.bin");
-      const output = join(work, "prepared.m4a");
+      const output = join(work, "prepared.mp3");
       await writeFile(input, source);
-      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-vn", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
-      return artifactResult(await env.artifacts.putFile(output, "audio/mp4"));
+      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-vn", "-c:a", "libmp3lame", "-b:a", "96k", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
+      return artifactResult(await env.artifacts.putFile(output, "audio/mpeg"));
     } finally { await rm(work, { recursive: true, force: true }).catch(() => {}); }
   }
   if (need.source.mediaType.startsWith("video/")) {
