@@ -16,6 +16,8 @@ export type HypiHubGeminiGeneratorOptions = {
   readonly maxRateLimitRetries?: number;
   readonly rateLimitRetryDelayMs?: number;
   readonly fetch?: typeof globalThis.fetch;
+  /** Optional diagnostic sink. Defaults to stderr; messages never include credentials or signed URLs. */
+  readonly logger?: (message: string) => void;
 };
 
 export type HypiHubGeminiGenerateInput = {
@@ -83,12 +85,14 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
   const rateLimitRetryDelayMs = positiveInteger(options.rateLimitRetryDelayMs ?? 2_000,
     "HypiHub Gemini rateLimitRetryDelayMs");
   const fetcher = options.fetch ?? globalThis.fetch;
+  const logger = options.logger ?? ((message: string) => console.error(`[hypihub-gemini] ${message}`));
   const uploader = new HypiHubUploader({
     baseUrl,
     requestTimeoutMs: timeout,
     ...(options.uploadPartTimeoutMs === undefined ? {} : { uploadPartTimeoutMs: options.uploadPartTimeoutMs }),
     ...(options.uploadPartAttempts === undefined ? {} : { uploadPartAttempts: options.uploadPartAttempts }),
     fetch: fetcher,
+    logger: (message) => logger(message),
   });
 
   return async (input: HypiHubGeminiGenerateInput): Promise<string> => {
@@ -98,7 +102,16 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
       try { bytes = new Uint8Array(Buffer.from(encoded, "base64")); }
       catch (error) { throw new Error("HypiHub Gemini inline media is not valid base64", { cause: error }); }
       assert(bytes.byteLength > 0, "HypiHub Gemini inline media is empty");
-      return uploader.upload({ bytes, mediaType: mimeType, purpose: "reference" }, apiKey);
+      const startedAt = Date.now();
+      logger(`media upload started bytes=${bytes.byteLength} mime=${mimeType}`);
+      try {
+        const url = await uploader.upload({ bytes, mediaType: mimeType, purpose: "reference" }, apiKey);
+        logger(`media upload finished bytes=${bytes.byteLength} mime=${mimeType} elapsed=${Date.now() - startedAt}ms`);
+        return url;
+      } catch (error) {
+        logger(`media upload failed bytes=${bytes.byteLength} mime=${mimeType} elapsed=${Date.now() - startedAt}ms reason=${error instanceof Error ? error.message.replace(/https?:\/\/\S+/giu, "[redacted-url]").slice(0, 300) : String(error).slice(0, 300)}`);
+        throw error;
+      }
     };
     // Uploads have their own control-request and per-part timeouts. Start the
     // model-generation timeout only after every media reference is ready.
@@ -106,9 +119,13 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
+      const requestStartedAt = Date.now();
+      logger(`generateContent started model=${model} media_parts=${parts.filter((part) => "fileData" in part).length}`);
       let response: Response | undefined;
       let text = "";
+      let attempts = 0;
       for (let attempt = 0; attempt <= maxRateLimitRetries; attempt += 1) {
+        attempts += 1;
         response = await fetcher(`${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method: "POST",
           signal: controller.signal,
@@ -124,6 +141,7 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
         await new Promise((resolve) => setTimeout(resolve, retryDelay(response!, rateLimitRetryDelayMs, attempt)));
       }
       assert(response !== undefined, "HypiHub Gemini made no request");
+      logger(`generateContent response status=${response.status} elapsed=${Date.now() - requestStartedAt}ms attempts=${attempts}`);
       if (!response.ok) {
         const message = `HypiHub Gemini returned HTTP ${response.status}: ${text.slice(0, 300)}`;
         if (response.status === 401 || response.status === 403 || response.status === 404) {
