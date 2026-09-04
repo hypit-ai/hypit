@@ -29,6 +29,7 @@
     "@hypit/run": "workspace:*",
     "@hypit/seedance": "workspace:*",
     "@hypit/spatial": "workspace:*",
-    "@hypit/speech": "workspace:*"
+    "@hypit/speech": "workspace:*",
+    "@hypit/stand-in": "workspace:*"
   }
 }

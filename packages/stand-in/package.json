@@ -1,0 +1,19 @@
+{
+  "name": "@hypit/stand-in",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@hypit/artifact": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/protocol": "workspace:*"
+  }
+}

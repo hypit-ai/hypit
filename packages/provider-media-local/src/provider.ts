@@ -9,10 +9,12 @@ import {
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
   executeRenderStillVideo,
+  executeDrawStandInCard,
   executeTransformMedia,
 } from "@hypit/media-execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-execution";
 import { mediaPipelineCapabilities } from "@hypit/media-pipeline";
+import { standInCapabilities } from "@hypit/stand-in";
 import { isStreamingResourceStore } from "@hypit/runtime";
 import { speechTypes } from "@hypit/speech";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
@@ -118,6 +120,12 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
         capability: mediaPipelineCapabilities.renderStill,
         returns: artifactTypes.blob,
         handler: operation(executeRenderStillVideo),
+      },
+      {
+        lifecycle: "immediate" as const,
+        capability: standInCapabilities.drawCard,
+        returns: artifactTypes.blob,
+        handler: operation(executeDrawStandInCard),
       },
       {
         lifecycle: "immediate" as const,

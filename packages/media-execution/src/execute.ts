@@ -32,6 +32,7 @@ import {
   } from "@hypit/protocol";
 import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
 
+import { renderStandInCard, standInCardNeed } from "./card.js";
 import { parseMediaInspection } from "./probe.js";
 import {
   compositeAnimatedWebpFrame,
@@ -784,6 +785,41 @@ export async function executeRenderStillVideo(
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+/** Draw a stand-in card for a generated output that has not been generated; a Provider draws, it never generates. */
+export async function executeDrawStandInCard(
+  env: MediaExecutionEnvironment,
+  constraints: CanonicalValue,
+): Promise<MediaOperationResult> {
+  const request = standInCardNeed(constraints);
+  const value = await renderStandInCard({
+    ffmpegPath: env.ffmpegPath,
+    processTimeoutMs: env.processTimeoutMs,
+    runFfmpeg: async (argv) => {
+      await runProcess({
+        executable: env.ffmpegPath,
+        argv,
+        timeoutMs: env.processTimeoutMs,
+        maxStdoutBytes: 64 * 1024,
+        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      });
+    },
+    inspectStreams: async (path) => {
+      const inspected = await outputInspection({
+        path,
+        mediaType: "video/mp4",
+        ffprobePath: env.ffprobePath,
+        timeoutMs: env.processTimeoutMs,
+        maxProbeOutputBytes: env.maxProbeOutputBytes,
+        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      });
+      return inspected.streams;
+    },
+    putBytes: async (bytes, mediaType) => await env.artifacts.put(bytes, mediaType) as unknown as CanonicalValue,
+    putFile: async (path, mediaType) => await env.artifacts.putFile(path, mediaType) as unknown as CanonicalValue,
+  }, request);
+  return artifactResult(value as unknown as BlobRef);
 }
 
 type TransformPlan = {

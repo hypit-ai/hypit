@@ -22,6 +22,7 @@ import {
   selectMediaStreams,
 } from "@hypit/media-pipeline";
 import { canonicalize } from "@hypit/protocol";
+import { standInCapabilities } from "@hypit/stand-in";
 import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@hypit/protocol";
 
 import { createLocalMediaProvider } from "../src/index.js";
@@ -826,4 +827,58 @@ test("local media Provider executes an end-aligned loop from the exact authored 
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+function pngSize(bytes: Uint8Array): { readonly width: number; readonly height: number } {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  assert.equal(Buffer.from(bytes.subarray(1, 4)).toString("ascii"), "PNG");
+  return { width: view.getUint32(16), height: view.getUint32(20) };
+}
+
+test("local media Provider draws a stand-in card as a picture and as an exact silent clip", {
+  skip: !hasMediaBinaries && "ffmpeg is not installed",
+}, async () => {
+  const resources = new MemoryResourceStore();
+  const fulfillBlob = async (request: Need): Promise<Awaited<ReturnType<MemoryResourceStore["put"]>>> => {
+    const provider = await handlerFor(request);
+    const result = await provider.handler({
+      command: { kind: "fulfill-need", id: `command:${request.id}`, need: request },
+      need: request,
+      resources,
+      credentials: {},
+    });
+    assert.equal(result.value.kind, "blob");
+    return result.value as Awaited<ReturnType<MemoryResourceStore["put"]>>;
+  };
+  const picture = await fulfillBlob(need("need:card-image", standInCapabilities.drawCard, artifactTypes.blob, canonicalize({
+    kind: "image", width: 640, height: 400, model: "picture-model", prompt: "A quiet kitchen counter with fresh basil",
+  })));
+  assert.equal(picture.kind, "blob");
+  assert.equal(picture.mediaType, "image/png");
+  const bytes = await resources.get(picture.resource);
+  assert.ok(bytes !== undefined);
+  assert.deepEqual(pngSize(bytes), { width: 640, height: 400 });
+
+  const clip = await fulfillBlob(need("need:card-video", standInCapabilities.drawCard, artifactTypes.blob, canonicalize({
+    kind: "video", width: 320, height: 568, model: "clip-model", prompt: "Locked medium close-up",
+    video: { frameRate: { numerator: 24, denominator: 1 }, frameCount: 12 },
+  })));
+  assert.equal(clip.mediaType, "video/mp4");
+  const inspection = await inspectArtifact(resources, clip);
+  const visual = inspection.streams.find((item) => item.kind === "video");
+  assert.ok(visual !== undefined && visual.kind === "video");
+  assert.equal(inspection.streams.length, 1, "a stand-in clip carries no sound unless the model would have");
+  assert.equal(visual.width, 320);
+  assert.equal(visual.height, 568);
+  assert.equal(visual.decodedUnitCount, 12);
+
+  const spoken = await fulfillBlob(need("need:card-spoken", standInCapabilities.drawCard, artifactTypes.blob, canonicalize({
+    kind: "video", width: 320, height: 568, model: "clip-model", prompt: "Spoken dialogue",
+    video: { frameRate: { numerator: 24, denominator: 1 }, frameCount: 12, audio: "silence" },
+  })));
+  const spokenStreams = (await inspectArtifact(resources, spoken)).streams;
+  const sound = spokenStreams.find((item) => item.kind === "audio");
+  assert.ok(sound !== undefined && sound.kind === "audio", "a model that would have spoken leaves a silent track");
+  assert.equal(sound.sampleRate, 48_000);
+  assert.equal(spokenStreams.length, 2);
 });

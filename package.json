@@ -119,6 +119,7 @@
     "@hypit/semantic-track": "workspace:*",
     "@hypit/semantic-take-estimate": "workspace:*",
     "@hypit/spatial": "workspace:*",
+    "@hypit/stand-in": "workspace:*",
     "@hypit/speech": "workspace:*",
     "@hypit/speech-alignment": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",

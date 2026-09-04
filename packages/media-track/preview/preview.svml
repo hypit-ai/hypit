@@ -9,14 +9,18 @@
      The checked-in Track.png is the package catalogue asset. This Source and its ordinary Run
      preserve how it was authored; regenerating the encoded frame is a normal Build.
 
-     A placeholder shows the Frame treatment and nothing inside it. To show the component holding a
-     picture, commit a sample beside this file and satisfy the generated output in `build.svrun`;
-     the Profile's local media Endpoint still inspects and normalizes it, in Studio as in a Build:
+     A placeholder shows the Frame treatment and nothing inside it. To look at the component before
+     buying its pictures, stand in for each generation in the Run; the card is derived from the
+     model's own draft, and the Profile's local media Endpoint normalizes it, in Studio as in a Build:
 
-       <file id="sample-a" type="@hypit/artifact@1#BlobArtifact" from="./sample-a.mp4" media-type="video/mp4"/>
-       <satisfy output="motion-a.video" candidate="sample-a"/>
+       <import from="@hypit/seedance@1" as="seedance"/>
+       <fragment id="a-card" using="seedance:mini-stand-in">
+         <input name="draft" from="motion-a.draft"/><input name="prompt" from="direction"/><input name="clock" from="clock"/>
+       </fragment>
+       <satisfy output="motion-a.video" candidate="a-card.video"/>
 
-     Candidate selection is explicit in the Run; Studio never replaces missing media itself. -->
+     A committed sample works the same way as a `file` Candidate on `motion-a.video`. Candidate
+     selection is explicit in the Run; Studio never replaces missing media itself. -->
 <svml>
   <import from="@hypit/script@1"/>
   <import as="wording" from="@hypit/text@1"/>

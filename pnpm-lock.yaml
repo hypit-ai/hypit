@@ -234,6 +234,9 @@ importers:
       '@hypit/speech-track-studio':
         specifier: workspace:*
         version: link:packages/speech-track-studio
+      '@hypit/stand-in':
+        specifier: workspace:*
+        version: link:packages/stand-in
       '@hypit/store-sqlite':
         specifier: workspace:*
         version: link:packages/store-sqlite
@@ -1456,6 +1459,9 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
+      '@hypit/stand-in':
+        specifier: workspace:*
+        version: link:../stand-in
 
   packages/grok-imagine:
     dependencies:
@@ -1672,6 +1678,9 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
+      '@hypit/stand-in':
+        specifier: workspace:*
+        version: link:../stand-in
 
   packages/media-pipeline:
     dependencies:
@@ -1828,9 +1837,18 @@ importers:
       '@hypit/host':
         specifier: workspace:*
         version: link:../host
+      '@hypit/program-space':
+        specifier: workspace:*
+        version: link:../program-space
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/run':
+        specifier: workspace:*
+        version: link:../run
+      '@hypit/stand-in':
+        specifier: workspace:*
+        version: link:../stand-in
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -2168,6 +2186,9 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
+      '@hypit/stand-in':
+        specifier: workspace:*
+        version: link:../stand-in
     devDependencies:
       '@hypit/driver-node':
         specifier: workspace:*
@@ -2914,6 +2935,21 @@ importers:
       '@hypit/studio-adapter':
         specifier: workspace:*
         version: link:../studio-adapter
+
+  packages/stand-in:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@hypit/media':
+        specifier: workspace:*
+        version: link:../media
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/store-sqlite:
     dependencies:

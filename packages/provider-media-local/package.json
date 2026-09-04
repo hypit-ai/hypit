@@ -20,7 +20,8 @@
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-kit": "workspace:*",
     "@hypit/runtime-host-node": "workspace:*",
-    "@hypit/speech": "workspace:*"
+    "@hypit/speech": "workspace:*",
+    "@hypit/stand-in": "workspace:*"
   },
   "devDependencies": {
     "@hypit/driver-node": "workspace:*"
