@@ -46,9 +46,10 @@ A project that wants a non-default Result repository owns a separate `hypit.resu
 ```
 
 Submitting a Build stores it and returns. The Worker may advance unrelated Builds together; only the
-resources declared by their Commands constrain execution. The Profile names each Endpoint's
-pool; Endpoint packages declare the model lanes inside it, and those limits govern actual external work. Build identity is not a capacity
-resource and creates no second queue.
+resources declared by their Commands constrain execution. An Endpoint instance owns its capacity by
+default. A Profile `pool` is only for instances that really share one account, deployment or compute
+quota; exact-model limits may narrow it further. Build identity is not a capacity resource and creates
+no second queue.
 Cancellation prevents new work and makes a best effort to cancel an external operation already submitted;
 completed output is never rolled back.
 

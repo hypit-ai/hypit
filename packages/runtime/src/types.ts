@@ -19,7 +19,6 @@ export type RuntimeRunnableCommand = {
   readonly command: CoreCommand;
   /** Every resource is acquired atomically before the command can cause a side effect. */
   readonly resources: readonly RuntimeResourceClaim[];
-  readonly queue?: RuntimeQueueLane;
   /** Asynchronous work retains one shared in-flight reservation while polling. */
   readonly capacityMode?: "active" | "asynchronous";
 };
@@ -27,11 +26,6 @@ export type RuntimeRunnableCommand = {
 export type RuntimeResourceClaim = {
   readonly id: string;
   readonly limit: number;
-};
-
-export type RuntimeQueueLane = {
-  readonly pool: string;
-  readonly lane: string;
 };
 
 export type RuntimeWorkerRunOptions = {

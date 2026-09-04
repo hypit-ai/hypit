@@ -28,7 +28,6 @@ export const videoCliDistribution: CliDistribution = {
     endpoints: {
       "hypihub.default": {
         use: "@hypit/provider-hypihub",
-        pool: "generation",
         config: {
           baseUrl: "https://hypit.ai",
           apiKey: { store: "os", key: "hypihub.oauth" },
@@ -36,11 +35,9 @@ export const videoCliDistribution: CliDistribution = {
       },
       "media.local": {
         use: "@hypit/provider-media-local",
-        pool: "media",
       },
       "hyperframes.local": {
         use: "@hypit/provider-hyperframes-local",
-        pool: "render",
       },
     },
   },

@@ -56,7 +56,7 @@ function operation(_request: Need): string {
   return "operation:kie-test";
 }
 
-test("all KIE capabilities share one asynchronous task engine and differ only by Lane", async () => {
+test("all KIE capabilities share one asynchronous task engine and use exact-model capacity", async () => {
   const provider = createKieProvider({
     fetch: async () => { throw new Error("no request expected"); },
     defaultConcurrency: 8,
@@ -78,7 +78,6 @@ test("all KIE capabilities share one asynchronous task engine and differ only by
   assert.equal(removalResolution.registration.kind, "asynchronous");
   assert.equal(seedResolution.registration.endpoint, removalResolution.registration.endpoint);
   assert.deepEqual(seedResolution.registration.scheduling, {
-    queue: { pool: "kie.default", lane: "seedance-2-mini" },
     resources: [
       { id: "pool:kie.default", limit: 8 },
       { id: "lane:kie.default/seedance-2-mini", limit: 4 },

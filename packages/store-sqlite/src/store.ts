@@ -89,13 +89,11 @@ function operationIdentityFrom(snapshot: OperationSnapshot): OperationIdentity {
     build: snapshot.build,
     command: snapshot.command,
     endpoint: snapshot.endpoint,
-    pool: snapshot.pool,
-    lane: snapshot.lane,
   };
 }
 
 function parseOperationSnapshot(row: Row): OperationSnapshot {
-  for (const field of ["operation_id", "build_id", "command_id", "endpoint_id", "pool_id", "lane_id"] as const) {
+  for (const field of ["operation_id", "build_id", "command_id", "endpoint_id"] as const) {
     assert(typeof row[field] === "string", `SQLite Operation row has no ${field}`);
   }
   assert(typeof row.status === "string", "SQLite Operation row has no status");
@@ -121,8 +119,6 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
     build: row.build_id,
     command: row.command_id,
     endpoint: row.endpoint_id,
-    pool: row.pool_id,
-    lane: row.lane_id,
     status: row.status,
     ...mutable,
   } as OperationSnapshot;
@@ -371,18 +367,17 @@ class SqliteOperationStore implements OperationStore {
         : operation.status === "failed" ? JSON.stringify(operation.failure) : null;
     const result = this.#database.prepare(`
       INSERT INTO hypit_operations (
-        operation_id, build_id, command_id, endpoint_id, pool_id, lane_id, status,
+        operation_id, build_id, command_id, endpoint_id, status,
         payload_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(identity.id, identity.build, identity.command, identity.endpoint, identity.pool, identity.lane,
-      operation.status, payload);
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `).run(identity.id, identity.build, identity.command, identity.endpoint, operation.status, payload);
     if (result.changes !== 1) throw new Error(`Operation ${identity.id} was not created`);
     return copy(operation);
   }
 
   async read(id: string): Promise<OperationSnapshot | undefined> {
     const row = this.#database.prepare(`
-      SELECT operation_id, build_id, command_id, endpoint_id, pool_id, lane_id,
+      SELECT operation_id, build_id, command_id, endpoint_id,
         status, payload_json
       FROM hypit_operations
       WHERE operation_id = ?
@@ -407,7 +402,7 @@ class SqliteOperationStore implements OperationStore {
       values.push(value);
     }
     const rows = this.#database.prepare(`
-      SELECT operation_id, build_id, command_id, endpoint_id, pool_id, lane_id,
+      SELECT operation_id, build_id, command_id, endpoint_id,
         status, payload_json
       FROM hypit_operations
       ${predicates.length === 0 ? "" : `WHERE ${predicates.join(" AND ")}`}
@@ -896,7 +891,6 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
       build: request.build,
       command: request.command,
       resources,
-      ...(request.queue === undefined ? {} : { queue: request.queue }),
       createdAt: request.now,
     };
     return transaction(this.#database, () => {
@@ -924,13 +918,12 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
       }
       this.#database.prepare(`
         INSERT INTO hypit_capacity (
-          build_id, command_id, resources_json, queue_json, created_at
-        ) VALUES (?, ?, ?, ?, ?)
+          build_id, command_id, resources_json, created_at
+        ) VALUES (?, ?, ?, ?)
       `).run(
         reservation.build,
         reservation.command,
         JSON.stringify(reservation.resources),
-        reservation.queue === undefined ? null : JSON.stringify(reservation.queue),
         reservation.createdAt,
       );
       return { status: "acquired", reservation };
@@ -990,9 +983,6 @@ function parseCapacityReservation(row: Row): CapacityReservation {
     build: row.build_id,
     command: row.command_id,
     resources,
-    ...(typeof row.queue_json === "string"
-      ? { queue: JSON.parse(row.queue_json) as NonNullable<CapacityReservation["queue"]> }
-      : {}),
     createdAt: row.created_at,
   };
   return value;
@@ -1044,8 +1034,6 @@ export class SqliteRuntimeState {
         build_id TEXT NOT NULL,
         command_id TEXT NOT NULL,
         endpoint_id TEXT NOT NULL,
-        pool_id TEXT NOT NULL,
-        lane_id TEXT NOT NULL,
         status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed', 'cancelled')),
         payload_json TEXT
       ) STRICT;
@@ -1095,7 +1083,6 @@ export class SqliteRuntimeState {
         build_id TEXT NOT NULL,
         command_id TEXT NOT NULL,
         resources_json TEXT NOT NULL,
-        queue_json TEXT,
         created_at INTEGER NOT NULL,
         PRIMARY KEY (build_id, command_id)
       ) STRICT;

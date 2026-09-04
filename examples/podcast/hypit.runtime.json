@@ -12,7 +12,6 @@
   "endpoints": {
     "hypihub.default": {
       "use": "@hypit/provider-hypihub",
-      "pool": "generation",
       "config": {
         "baseUrl": "https://hypit.ai",
         "apiKey": {
@@ -25,14 +24,12 @@
     },
     "media.local": {
       "use": "@hypit/provider-media-local",
-      "pool": "media",
       "config": {
         "defaultConcurrency": 2
       }
     },
     "hyperframes.local": {
       "use": "@hypit/provider-hyperframes-local",
-      "pool": "render",
       "config": {
         "workers": 2,
         "quality": "standard",

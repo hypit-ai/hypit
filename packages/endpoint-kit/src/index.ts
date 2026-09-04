@@ -79,10 +79,6 @@ export type EndpointScheduling = {
     /** Maximum Commands occupying this active Provider resource across Builds. */
     readonly limit: number;
   }[];
-  readonly queue?: {
-    readonly pool: string;
-    readonly lane: string;
-  };
 };
 
 export type EndpointRegistrationOptions = {
@@ -150,9 +146,9 @@ type EndpointCapabilityBase = {
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
   readonly supports?: (need: Need) => boolean;
-  /** Stable Provider-local queue lane. Defaults to the capability name. */
+  /** Stable Provider-local capacity class. Defaults to the capability name. */
   readonly lane?: string;
-  /** Lane capacity; the Provider pool keeps its independent total capacity. */
+  /** Exact-capability capacity; the Provider pool keeps its independent total capacity. */
   readonly maxConcurrency?: number;
 };
 
@@ -180,7 +176,7 @@ export type DefineEndpointPackageOptions = {
     readonly kind?: "secret" | "json";
     readonly acquisition?: CredentialAcquisition;
   }>>;
-  /** Total capacity shared by every lane under this configured Provider pool. */
+  /** Total capacity shared by every capability under this configured Provider pool. */
   readonly defaultConcurrency?: number;
   /** The Provider's own price page, or `local` for work that runs on this machine without a charge. */
   readonly pricing?: EndpointPricing;
@@ -285,7 +281,6 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
           ...(capability.supports === undefined ? {} : { supports: capability.supports }),
           credentials,
           scheduling: {
-            queue: { pool: options.pool, lane },
             resources: [
               {
                 id: `pool:${options.pool}`,

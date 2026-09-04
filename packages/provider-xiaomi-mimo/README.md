@@ -27,5 +27,5 @@ The Provider always requests final WAV bytes. Streaming is a service transport o
 not part of the author model.
 
 Selecting the Provider in the Runtime Profile activates it independently from author model syntax.
-It declares default concurrency on its pool and exact capability lanes. The shared
-Scheduler owns queuing across Builds; this package does not create a private queue.
+It declares total and exact-capability concurrency resources. The shared Runtime coordinates those
+claims across Builds; this package does not create a private scheduler.

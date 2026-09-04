@@ -147,7 +147,6 @@ class CapacityExecutor implements RuntimeCommandExecutor {
       build: context.build,
       command: descriptor.command.id,
       resources,
-      ...(descriptor.queue === undefined ? {} : { queue: descriptor.queue }),
       now: Date.now(),
     });
     if (acquired.status === "blocked") {

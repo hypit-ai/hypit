@@ -70,7 +70,6 @@ test("one Endpoint definition generates one configured instance and host-neutral
     apiKey: credentialRef("env", "EXAMPLE_API_KEY"),
   });
   assert.deepEqual(registrations[0]?.options.scheduling, {
-    queue: { pool: "example.personal", lane: "text-generation" },
     resources: [
       { id: "pool:example.personal", limit: 3 },
       { id: "lane:example.personal/text-generation", limit: 1 },

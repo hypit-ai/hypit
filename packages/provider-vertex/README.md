@@ -14,7 +14,6 @@ owns the Google GenAI client, credential parsing and the Vertex model ids.
   "endpoints": {
     "vertex.default": {
       "use": "@hypit/provider-vertex",
-      "pool": "generation",
       "config": {
         "project": { "store": "env", "key": "GOOGLE_CLOUD_PROJECT" },
         "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },

@@ -61,8 +61,6 @@ test("SQLite stores verified Build facts and Operation handles across reopen", a
       build: "video",
       command: "command:generation",
       endpoint: "kie.personal",
-      pool: "kie.personal",
-      lane: "fixture.generation",
     };
     const pending = await first.operations.create({ ...operation,
       status: "pending",
@@ -104,8 +102,6 @@ test("SQLite Operation updates preserve a terminal completion", async () => {
       build: "video",
       command: "command:render",
       endpoint: "hyperframes.lambda",
-      pool: "hyperframes.lambda",
-      lane: "fixture.render",
     };
     const completed = await state.operations.create({ ...identity,
       status: "completed",
@@ -254,7 +250,7 @@ test("a new Worker reclaims abandoned turns and Result-writer leases without ext
   }
 });
 
-test("Pool and Lane limits count only asynchronous Operations still in flight", async () => {
+test("shared capacity resources are acquired atomically across Builds", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-hierarchy-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
@@ -266,7 +262,6 @@ test("Pool and Lane limits count only asynchronous Operations still in flight", 
       build: "seedance-a",
       command: "generate:a",
       resources: [pool, seedance],
-      queue: { pool: "kie.main", lane: "seedance-2-mini" },
       now: 100,
     });
     assert.equal(first.status, "acquired");
@@ -275,7 +270,6 @@ test("Pool and Lane limits count only asynchronous Operations still in flight", 
       build: "seedance-b",
       command: "generate:b",
       resources: [pool, seedance],
-      queue: { pool: "kie.main", lane: "seedance-2-mini" },
       now: 102,
     });
     assert.deepEqual(sameRoute, {
@@ -289,10 +283,17 @@ test("Pool and Lane limits count only asynchronous Operations still in flight", 
       build: "minimax-a",
       command: "generate:c",
       resources: [pool, minimax],
-      queue: { pool: "kie.main", lane: "minimax-h3" },
       now: 103,
     });
     assert.equal(otherRoute.status, "acquired");
+
+    const independentProvider = await state.execution.acquireCapacity({
+      build: "vertex-a",
+      command: "observe:a",
+      resources: [{ id: "pool:vertex.main", limit: 1 }],
+      now: 103,
+    });
+    assert.equal(independentProvider.status, "acquired");
 
     if (first.status === "acquired") {
       await state.execution.releaseCapacity(first.reservation.build, first.reservation.command);
@@ -301,7 +302,6 @@ test("Pool and Lane limits count only asynchronous Operations still in flight", 
       build: "seedance-b",
       command: "generate:b",
       resources: [pool, seedance],
-      queue: { pool: "kie.main", lane: "seedance-2-mini" },
       now: 104,
     });
     assert.equal(retried.status, "acquired");

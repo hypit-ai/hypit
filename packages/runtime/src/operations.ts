@@ -8,8 +8,6 @@ export type OperationIdentity = {
   readonly build: string;
   readonly command: string;
   readonly endpoint: string;
-  readonly pool: string;
-  readonly lane: string;
 };
 
 export type OperationCompletion = {
