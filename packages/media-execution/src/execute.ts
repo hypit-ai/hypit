@@ -18,6 +18,7 @@ import {
   verifyMediaTransformProgram,
   type ExtractAudioNeed,
   type ExtractFrameNeed,
+  type PrepareMediaNeed,
   type InspectMediaNeed,
   type MuxMediaNeed,
   type NormalizeMediaNeed,
@@ -92,6 +93,52 @@ export type RenderMockSilenceRequest = {
   readonly channels: 2;
   readonly sampleFrames: number;
 };
+
+function prepareNeed(value: CanonicalValue): PrepareMediaNeed {
+  const item = object(value, "Media preparation need");
+  const source = object(item.source, "Media preparation source");
+  assert(source.kind === "blob" && typeof source.digest === "string"
+    && Number.isSafeInteger(source.size) && (source.size as number) >= 0
+    && typeof source.mediaType === "string", "Media preparation source must be a BlobRef");
+  assert(item.profile === "gemini-reference", "Media preparation profile is unsupported");
+  return { source: source as unknown as BlobRef, profile: "gemini-reference" };
+}
+
+export async function executePrepareMedia(env: MediaExecutionEnvironment, constraints: CanonicalValue): Promise<MediaOperationResult> {
+  const need = prepareNeed(constraints);
+  const source = await sourceBytes(env, need.source);
+  if (need.source.mediaType.startsWith("image/")) {
+    const work = await mkdtemp(join(tmpdir(), "hypit-media-prepare-"));
+    try {
+      const input = join(work, "source.bin");
+      const output = join(work, "prepared.webp");
+      await writeFile(input, source);
+      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-frames:v", "1", "-vf", "scale='min(2048,iw)':-2", "-c:v", "libwebp", "-q:v", "75", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
+      return artifactResult(await env.artifacts.putFile(output, "image/webp"));
+    } finally { await rm(work, { recursive: true, force: true }).catch(() => {}); }
+  }
+  if (need.source.mediaType.startsWith("audio/")) {
+    const work = await mkdtemp(join(tmpdir(), "hypit-media-prepare-"));
+    try {
+      const input = join(work, "source.bin");
+      const output = join(work, "prepared.m4a");
+      await writeFile(input, source);
+      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-vn", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
+      return artifactResult(await env.artifacts.putFile(output, "audio/mp4"));
+    } finally { await rm(work, { recursive: true, force: true }).catch(() => {}); }
+  }
+  if (need.source.mediaType.startsWith("video/")) {
+    const work = await mkdtemp(join(tmpdir(), "hypit-media-prepare-"));
+    try {
+      const input = join(work, "source.bin");
+      const output = join(work, "prepared.mp4");
+      await writeFile(input, source);
+      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-vf", "scale='min(1280,iw)':-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "28", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
+      return artifactResult(await env.artifacts.putFile(output, "video/mp4"));
+    } finally { await rm(work, { recursive: true, force: true }).catch(() => {}); }
+  }
+  throw new Error(`Media preparation does not support ${need.source.mediaType}`);
+}
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

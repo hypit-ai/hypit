@@ -12,6 +12,7 @@
     "@hypit/elaborator": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/text": "workspace:*"
+    "@hypit/text": "workspace:*",
+    "@hypit/media-pipeline": "workspace:*"
   }
 }

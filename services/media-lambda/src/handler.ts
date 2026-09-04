@@ -6,6 +6,7 @@ import {
   executeExtractFrame,
   executeMuxProgramMedia,
   executeNormalizeMedia,
+  executePrepareMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
   executeRenderStillVideo,
@@ -37,6 +38,7 @@ const OPERATIONS: Record<
 > = {
   "inspect": executeInspectMedia,
   "normalize": executeNormalizeMedia,
+  "prepare": executePrepareMedia,
   "transform": executeTransformMedia,
   "extract-audio": executeExtractAudio,
   "extract-frame": executeExtractFrame,
