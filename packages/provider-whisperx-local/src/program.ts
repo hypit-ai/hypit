@@ -3,12 +3,10 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { resolveNodePackageResource } from "@hypit/package-loader-node";
-import { runtimeConfigObject, runtimeConfigString } from "@hypit/runtime-kit";
 import type {
   ManagedProgram,
   ManagedProgramCommand,
   ManagedProgramState,
-  RuntimeAdapterFactoryContext,
 } from "@hypit/runtime-kit";
 import { pythonEnvironmentCommand } from "@hypit/runtime-host-node";
 
@@ -27,14 +25,6 @@ export const localWhisperXManagedProject = join(
   "..",
 );
 
-function configuredCommand(value: unknown, key: string) {
-  if (value === undefined) return undefined;
-  if (!Array.isArray(value) || value.length === 0 || value.some((item) => typeof item !== "string")) {
-    throw new Error(`WhisperX ${key} must be a non-empty array of strings`);
-  }
-  return { command: value[0] as string, args: (value as string[]).slice(1) };
-}
-
 function run(command: ManagedProgramCommand): Promise<{ readonly ok: boolean; readonly output: string }> {
   return new Promise((resolve) => {
     execFile(command.command, [...command.args], {
@@ -51,28 +41,41 @@ function run(command: ManagedProgramCommand): Promise<{ readonly ok: boolean; re
   });
 }
 
-export function localWhisperXProgram(context: RuntimeAdapterFactoryContext): ManagedProgram {
-  const config = runtimeConfigObject(context.config, "local WhisperX");
-  const baseUrl = (runtimeConfigString(config.baseUrl, "WhisperX baseUrl") ?? "http://127.0.0.1:8765")
-    .replace(/\/+$/u, "");
+export type LocalWhisperXProgramOptions = {
+  readonly id: string;
+  readonly hostStateRoot: string;
+  readonly baseUrl: string;
+  readonly expectedModel: string;
+  readonly expectedDevice: string;
+  readonly expectedCompute: string;
+  readonly expectedBatchSize: number;
+  readonly expectedServiceVersion: string;
+  readonly expectedWhisperXVersion: string;
+  readonly serviceCommand?: ManagedProgramCommand;
+};
+
+export function localWhisperXProgram(options: LocalWhisperXProgramOptions): ManagedProgram {
+  const baseUrl = options.baseUrl.replace(/\/+$/u, "");
   const serviceUrl = new URL(baseUrl);
-  const expectedDevice = runtimeConfigString(config.expectedDevice, "WhisperX expectedDevice") ?? "cpu";
   const expected = {
     protocol: "hypit.whisperx-service@1",
-    serviceVersion: runtimeConfigString(config.expectedServiceVersion, "WhisperX expectedServiceVersion") ?? "0.1.0",
-    whisperxVersion: runtimeConfigString(config.expectedWhisperXVersion, "WhisperX expectedWhisperXVersion") ?? "3.8.6",
-    model: runtimeConfigString(config.expectedModel, "WhisperX expectedModel") ?? "small",
-    device: expectedDevice,
-    compute: runtimeConfigString(config.expectedCompute, "WhisperX expectedCompute")
-      ?? (expectedDevice === "cpu" ? "int8" : "float16"),
-    batchSize: typeof config.expectedBatchSize === "number" ? config.expectedBatchSize : 8,
+    serviceVersion: options.expectedServiceVersion,
+    whisperxVersion: options.expectedWhisperXVersion,
+    model: options.expectedModel,
+    device: options.expectedDevice,
+    compute: options.expectedCompute,
+    batchSize: options.expectedBatchSize,
   };
-  const customStart = configuredCommand(config.serviceCommand, "serviceCommand");
+  const customStart = options.serviceCommand;
   const managed = customStart === undefined;
   if (managed && !existsSync(localWhisperXManagedProject)) {
     throw new Error("local WhisperX has no packaged managed runtime; configure serviceCommand explicitly");
   }
-  const stateRoot = join(context.hostStateRoot, "programs", "whisperx");
+  const stateRoot = join(
+    options.hostStateRoot,
+    "programs",
+    `whisperx-${encodeURIComponent(options.id)}-${encodeURIComponent(serviceUrl.host)}`,
+  );
   const environment = join(stateRoot, ".venv");
   const nltkData = join(stateRoot, "nltk_data");
   const serviceEnvironment = {
@@ -116,7 +119,7 @@ export function localWhisperXProgram(context: RuntimeAdapterFactoryContext): Man
       : { state: "mismatch", detail: differs.join("; ") };
   };
   return {
-    id: "whisperx",
+    id: options.id,
     ...(managed ? {
       stateRoot,
       installation: {

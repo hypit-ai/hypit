@@ -109,9 +109,12 @@ test("local HyperFrames Provider exposes one exact visual capability and two sep
 
 test("the selected HyperFrames Provider owns one idempotent browser installation", () => {
   const program = localHyperframesBrowserProgram({
-    hostStateRoot: "/host", dataRoot: "/project", instance: "hyperframes", config: {},
+    id: "hyperframes",
+    nodePath: process.execPath,
+    hyperframesCliPath: "/hyperframes-cli.js",
+    ffprobePath: "ffprobe",
   });
-  assert.equal(program.id, "hyperframes-browser");
+  assert.equal(program.id, "hyperframes");
   assert.equal(program.start, undefined);
   assert.deepEqual(program.installation?.commands[0]?.args.slice(-2), ["browser", "ensure"]);
 });

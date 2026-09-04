@@ -82,7 +82,7 @@ test("program status may report down without failing the observation", async () 
     setExitCode(code) { exitCode = code; },
   }, distribution([], [{
     id: "speech-evidence.local",
-    instances: ["speech.primary"],
+    endpoint: "speech.primary",
     state: { state: "down", detail: "not running" },
   }]));
   assert.equal(exitCode, undefined);
@@ -104,7 +104,7 @@ test("program startup reports actions, not no-op checks", async () => {
             options.onProgress?.({ id: "example", phase: "starting" });
             options.onProgress?.({ id: "example", phase: "waiting" });
             options.onProgress?.({ id: "example", phase: "ready" });
-            return { dataRoot: "/tmp", programs: [{ id: "example", instances: [], state: { state: "ready" } }] };
+            return { dataRoot: "/tmp", programs: [{ id: "example", endpoint: "example", state: { state: "ready" } }] };
           },
         },
       }),
@@ -149,7 +149,7 @@ test("runtime status keeps scheduling phases out of the default view", async () 
         worker: { status: async () => ({ state: "running", profile: path, logPath: "/tmp/worker.log" }) },
         programs: { report: async () => ({
           dataRoot: "/tmp",
-          programs: [{ id: "renderer", instances: [], state: { state: "ready" } }],
+          programs: [{ id: "renderer", endpoint: "renderer", state: { state: "ready" } }],
         }) },
       }),
       openControl: async () => ({

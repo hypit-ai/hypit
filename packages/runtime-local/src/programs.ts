@@ -21,8 +21,8 @@ export type ManagedProgramAction =
 
 export type ManagedProgramReport = {
   readonly id: string;
-  /** Every Endpoint this program serves, so an operator sees what a restart affects. */
-  readonly instances: readonly string[];
+  /** The configured Endpoint that declared this external program. */
+  readonly endpoint: string;
   /** What this call did. Absent when it was only asked to look. */
   readonly action?: ManagedProgramAction;
   readonly state: ManagedProgramState;
@@ -46,15 +46,19 @@ export type ManagedProgramOptions = LoadRuntimeConfigOptions & {
   readonly capabilities?: readonly CapabilityRef[];
 };
 
-/** Two Endpoints may drive the same program; it is brought up once. */
-function distinct(programs: readonly { instance: string; program: ManagedProgram }[]) {
-  const unique = new Map<string, { program: ManagedProgram; instances: string[] }>();
+function independentPrograms(programs: readonly { instance: string; program: ManagedProgram }[]) {
+  const owners = new Map<string, string>();
   for (const item of programs) {
-    const found = unique.get(item.program.id);
-    if (found === undefined) unique.set(item.program.id, { program: item.program, instances: [item.instance] });
-    else found.instances.push(item.instance);
+    const found = owners.get(item.program.id);
+    if (found !== undefined) {
+      throw new Error(
+        `Endpoints ${found} and ${item.instance} declare the same Managed Program ${item.program.id}; `
+        + "each Endpoint must declare its own lifecycle identity",
+      );
+    }
+    owners.set(item.program.id, item.instance);
   }
-  return [...unique.values()];
+  return programs;
 }
 
 function directory(root: string, program: ManagedProgram): string {
@@ -227,11 +231,11 @@ async function waitForReady(program: ManagedProgram, pid: number, maxWaitMs: num
 async function bringUp(
   root: string,
   program: ManagedProgram,
-  instances: readonly string[],
+  endpoint: string,
   maxWaitMs: number,
   onProgress?: (event: ManagedProgramProgress) => void,
 ): Promise<ManagedProgramReport> {
-  const base = { id: program.id, instances };
+  const base = { id: program.id, endpoint };
   onProgress?.({ id: program.id, phase: "checking" });
   const initial = await program.probe();
   if (initial.state === "ready") {
@@ -332,8 +336,8 @@ export async function bringManagedProgramsUp(
   // A fresh Runtime has no data directory yet. External commands may use it as
   // their working directory, so create it before the first install/start.
   await mkdir(dataRoot, { recursive: true });
-  const reports = await Promise.all(distinct(programs).map(async ({ program, instances }) =>
-    await bringUp(dataRoot, program, instances, options.maxWaitMs ?? 300_000, options.onProgress)));
+  const reports = await Promise.all(independentPrograms(programs).map(async ({ instance, program }) =>
+    await bringUp(dataRoot, program, instance, options.maxWaitMs ?? 300_000, options.onProgress)));
   return { dataRoot, programs: reports };
 }
 
@@ -343,8 +347,8 @@ export async function takeManagedProgramsDown(
   options: ManagedProgramOptions = {},
 ): Promise<{ readonly dataRoot: string; readonly programs: readonly ManagedProgramReport[] }> {
   const { dataRoot, programs } = await declaredManagedPrograms(path, options);
-  const reports = await Promise.all(distinct(programs).map(async ({ program, instances }): Promise<ManagedProgramReport> => {
-    const base = { id: program.id, instances };
+  const reports = await Promise.all(independentPrograms(programs).map(async ({ instance, program }): Promise<ManagedProgramReport> => {
+    const base = { id: program.id, endpoint: instance };
     const pid = await readPid(dataRoot, program);
     if (pid === undefined || !processAlive(pid)) {
       if (pid !== undefined) await rm(join(directory(dataRoot, program), "process.pid"), { force: true });
@@ -408,7 +412,7 @@ export async function reportManagedPrograms(
   options: ManagedProgramOptions = {},
 ): Promise<{ readonly dataRoot: string; readonly programs: readonly ManagedProgramReport[] }> {
   const { dataRoot, programs } = await declaredManagedPrograms(path, options);
-  const reports = await Promise.all(distinct(programs).map(async ({ program, instances }): Promise<ManagedProgramReport> => {
+  const reports = await Promise.all(independentPrograms(programs).map(async ({ instance, program }): Promise<ManagedProgramReport> => {
     const state = await program.probe();
     const pid = await readPid(dataRoot, program);
     const logPath = join(directory(dataRoot, program), "program.log");
@@ -421,7 +425,7 @@ export async function reportManagedPrograms(
     }
     return {
       id: program.id,
-      instances,
+      endpoint: instance,
       state,
       ...(pid !== undefined && processAlive(pid) ? { pid } : {}),
       ...(hasLog ? { logPath } : {}),
