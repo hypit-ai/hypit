@@ -94,10 +94,46 @@ function verifyEndpointOptions(options: EndpointOptions): void {
   }
 }
 
+/**
+ * A Need, or the declared shape of one before its constraints exist.
+ *
+ * `plan` resolves capabilities before any request has been built, so it may leave `constraints`
+ * out; an Endpoint's `supports` refinement is then not consulted and several candidates stay
+ * ambiguous until the Profile binds one or the constraints arrive.
+ */
+export type ResolvableNeed = Pick<Need, "capability"> & Partial<Omit<Need, "capability">>;
+
 export class EndpointRegistry implements EndpointRegistrar {
   readonly #registrations: EndpointRegistration[] = [];
   readonly #registrationKeys = new Set<string>();
   readonly #registrationsByCapability = new Map<string, EndpointRegistration[]>();
+  readonly #bindings = new Map<string, string>();
+
+  /**
+   * Decide which Endpoint serves a capability that several Endpoints offer. Providers declare
+   * everything they can do; the deployment that selected them says who does it.
+   */
+  bind(capability: CapabilityRef, endpointId: string): void {
+    if (!endpointId.trim()) throw new Error("binding endpoint id must not be empty");
+    this.#bindings.set(endpointCapabilityKey(capability), endpointId);
+  }
+
+  /** Endpoint instance ids that registered at least one capability. */
+  endpointIds(): readonly string[] {
+    return [...new Set(this.#registrations.map((registration) => registration.id))].sort();
+  }
+
+  /** Capabilities offered by more than one Endpoint, with the ids, for a deployment to bind. */
+  contested(): readonly { readonly capability: CapabilityRef; readonly endpointIds: readonly string[]; readonly bound?: string }[] {
+    const found: { readonly capability: CapabilityRef; readonly endpointIds: readonly string[]; readonly bound?: string }[] = [];
+    for (const [key, registrations] of this.#registrationsByCapability) {
+      const ids = [...new Set(registrations.map((registration) => registration.id))].sort();
+      if (ids.length < 2) continue;
+      const bound = this.#bindings.get(key);
+      found.push({ capability: registrations[0]!.capability, endpointIds: ids, ...(bound === undefined ? {} : { bound }) });
+    }
+    return found.sort((left, right) => endpointCapabilityKey(left.capability).localeCompare(endpointCapabilityKey(right.capability)));
+  }
 
   registerImmediateEndpoint(
     id: string,
@@ -137,16 +173,23 @@ export class EndpointRegistry implements EndpointRegistrar {
     this.#registrationsByCapability.set(endpointCapabilityKey(capability), registrations);
   }
 
-  resolve(need: Need): EndpointResolution {
+  resolve(need: ResolvableNeed): EndpointResolution {
     const key = endpointCapabilityKey(need.capability);
     const registrations = (this.#registrationsByCapability.get(key) ?? []).filter((registration) =>
-      sameRef(registration.returns, need.returns)
-      && (registration.supports?.(need) ?? true));
+      (need.returns === undefined || sameRef(registration.returns, need.returns))
+      && (need.constraints === undefined || (registration.supports?.(need as Need) ?? true)));
+    const bound = this.#bindings.get(key);
+    if (bound !== undefined) {
+      const chosen = registrations.find((registration) => registration.id === bound);
+      // A binding names the Endpoint; an Endpoint that cannot serve this request is a missing one,
+      // reported with the id so the deployment sees which binding to revisit.
+      return chosen === undefined ? { status: "missing", endpointId: bound } : { status: "resolved", registration: chosen };
+    }
     if (registrations.length === 0) return { status: "missing" };
     if (registrations.length > 1) {
       return {
         status: "ambiguous",
-        endpointIds: registrations.map((registration) => registration.id).sort(),
+        endpointIds: [...new Set(registrations.map((registration) => registration.id))].sort(),
       };
     }
     return { status: "resolved", registration: registrations[0]! };

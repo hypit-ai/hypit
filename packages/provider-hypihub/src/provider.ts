@@ -30,8 +30,6 @@ export type CreateHypiHubProviderOptions = {
   readonly defaultConcurrency?: number;
   readonly pollIntervalMs?: number;
   readonly requestTimeoutMs?: number;
-  /** Expose HypiHub VoiceDesign. Defaults to enabled; set false only for an explicit alternate Provider. */
-  readonly audio?: boolean;
   /** HypiHub model used for the Provider-neutral WhisperX alignment capability. */
   readonly transcriptionModel?: string;
   readonly fetch?: typeof globalThis.fetch;
@@ -371,7 +369,6 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     defaultConcurrency: options.defaultConcurrency ?? 4,
     capabilities: [
       ...hypiHubRoutes
-      .filter((route) => options.audio !== false || route.media !== "audio")
       .map((route) => route.media === "audio"
         ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, lane: route.capability.name }
         : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, lane: route.capability.name }),

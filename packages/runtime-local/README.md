@@ -12,12 +12,28 @@ A Runtime Profile selects only the environmental parts that genuinely vary:
   "credentials": {
     "env": { "use": "@hypit/credential-store-env" }
   },
-  "endpoints": {}
+  "endpoints": {},
+  "bindings": {}
 }
 ```
 
 The official video Distribution selects this Runtime implementation before it opens the file. The
 Profile therefore describes only local execution and does not repeat a fake Runtime Host selector.
+
+Providers declare everything they can do and never hide a capability. When two selected Endpoints
+offer the same capability, `bindings` says which one serves it, keyed by the capability
+(`name@version#capability`) and naming an Endpoint instance of this Profile:
+
+```json
+"bindings": {
+  "@hypit/whisperx@1#whisperx-alignment": "whisperx.local"
+}
+```
+
+A capability offered by exactly one Endpoint needs no binding. A contested capability without one is
+reported by `doctor` and `plan` and blocks the Need at Build time; a binding to an Endpoint that does
+not offer the capability is an error. `plan`, creation-time tools and the Build resolve Endpoints
+through the same registry with the same bindings.
 
 A project that wants a non-default Result repository owns a separate `hypit.results.json`:
 
@@ -30,8 +46,8 @@ A project that wants a non-default Result repository owns a separate `hypit.resu
 ```
 
 Submitting a Build stores it and returns. The Worker may advance unrelated Builds together; only the
-resources declared by their Commands constrain execution. Endpoint packages declare the Provider
-pool and model-lane limits that govern actual external work. Build identity is not a capacity
+resources declared by their Commands constrain execution. The Profile names each Endpoint's
+pool; Endpoint packages declare the model lanes inside it, and those limits govern actual external work. Build identity is not a capacity
 resource and creates no second queue.
 Cancellation prevents new work and makes a best effort to cancel an external operation already submitted;
 completed output is never rolled back.

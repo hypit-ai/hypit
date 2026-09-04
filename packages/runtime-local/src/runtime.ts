@@ -94,6 +94,18 @@ async function wait(delayMs: number, signal: AbortSignal | undefined): Promise<v
   });
 }
 
+/** Capability keys are `name@version#capability`; the registry binds by CapabilityRef. */
+export function parseCapabilityKey(key: string): { readonly module: { readonly name: string; readonly version: string }; readonly name: string } {
+  const match = /^(.+)@([^@#]+)#(.+)$/u.exec(key);
+  if (match === null) throw new Error(`${key} is not a capability key of the form name@version#capability`);
+  return { module: { name: match[1]!, version: match[2]! }, name: match[3]! };
+}
+
+/** Providers declare everything they can do; the Profile that selected them says who does it. */
+export function applyEndpointBindings(registry: EndpointRegistry, bindings: Readonly<Record<string, string>> | undefined): void {
+  for (const [key, endpointId] of Object.entries(bindings ?? {})) registry.bind(parseCapabilityKey(key), endpointId);
+}
+
 export async function createLocalRuntime(
   options: CreateLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
@@ -107,6 +119,7 @@ export async function createLocalRuntime(
     registerProducerFacets(producers, component.producers ?? []);
   }
   for (const endpoint of options.endpoints ?? []) await endpoint.install(endpoints);
+  applyEndpointBindings(endpoints, options.bindings);
   const loadedComponentPackages = new Set<string>();
   let componentInstallation = Promise.resolve();
   const installComponentPackages = async (specifiers: readonly string[]): Promise<void> => {

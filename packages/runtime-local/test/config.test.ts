@@ -14,6 +14,7 @@ import {
   createBuildResultRepositoryHostFacet,
 } from "@hypit/build-result-kit";
 import { FileBuildResultRepository } from "@hypit/build-result";
+import { MemoryResourceStore } from "@hypit/driver-node";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import { credentialRef } from "@hypit/runtime";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
@@ -33,12 +34,14 @@ function profile(config: {
   readonly dataRoot?: string;
   readonly credentials?: Readonly<Record<string, unknown>>;
   readonly endpoints?: Readonly<Record<string, unknown>>;
+  readonly bindings?: Readonly<Record<string, string>>;
 } = {}) {
   return {
     format: "hypit.runtime-local@1",
     dataRoot: config.dataRoot ?? ".hypit/runtimes/local",
     credentials: config.credentials ?? {},
     endpoints: config.endpoints ?? {},
+    ...(config.bindings === undefined ? {} : { bindings: config.bindings }),
   };
 }
 
@@ -399,3 +402,90 @@ test("Runtime invoke executes one immediate Need through the selected Endpoint a
   }
 });
 
+
+test("a Profile binds a contested capability to one of its Endpoints, and says so when it cannot", () => {
+  const generateKey = "example.model@1#generate";
+  assert.deepEqual(parseLocalRuntimeProfile(profile({
+    endpoints: { paid: { use: "example.paid" }, local: { use: "example.local" } },
+    bindings: { [generateKey]: "local" },
+  })).bindings, { [generateKey]: "local" });
+  assert.throws(() => parseLocalRuntimeProfile(profile({
+    endpoints: { paid: { use: "example.paid" } },
+    bindings: { [generateKey]: "nowhere" },
+  })), /names nowhere, which is not an Endpoint instance of this Profile \(paid\)/u);
+  assert.throws(() => parseLocalRuntimeProfile(profile({ bindings: { "not a key": "paid" } })), /capability key/u);
+  assert.throws(() => parseLocalRuntimeProfile({ ...profile(), stale: 1, older: 2 }), /does not accept stale, older; it accepts/u);
+  assert.throws(() => parseLocalRuntimeProfile({
+    format: "hypit.runtime-profile@1",
+    runtime: { use: "@hypit/runtime-local", config: {} },
+  }), /retired hypit.runtime-profile@1 shape/u);
+});
+
+test("providers, doctor and invoke share one resolver: a contested capability is ambiguous until the Profile binds it", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-bindings-"));
+  const generate = { module: { name: "example.model", version: "1" }, name: "generate" } as const;
+  const render = { module: { name: "example.render", version: "1" }, name: "render" } as const;
+  const returns = { module: { name: "example.value", version: "1" }, name: "Output" } as const;
+  const generateKey = "example.model@1#generate";
+  const registry = new RuntimeAdapterRegistry();
+  for (const [use, instanceLabel, capability, answer] of [
+    ["example.paid", "paid", generate, "paid"],
+    ["example.other", "other", generate, "other"],
+    ["example.local", "local", render, "local"],
+  ] as const) {
+    registry.registerFacet(createRuntimeEndpointAdapterFacet({
+      use,
+      activate: (context) => ({
+        endpoint: defineEndpointPackage({
+          module: { name: `example.provider.${instanceLabel}`, version: "1" },
+          facet: instanceLabel,
+          instance: context.instance,
+          pool: context.pool ?? context.instance,
+          pricing: { kind: "local" },
+          capabilities: [{ capability, returns, lifecycle: "immediate", handler: () => ({ value: { kind: "inline" as const, value: answer } }) }],
+        }),
+      }),
+    }));
+  }
+  const endpoints = { paid: { use: "example.paid" }, other: { use: "example.other" }, local: { use: "example.local" } };
+  const need = { id: "need:1", capability: generate, returns, constraints: null, result: "record:1" };
+  try {
+    const unbound = join(root, "unbound.json");
+    await writeFile(unbound, JSON.stringify(profile({ dataRoot: ".", endpoints })));
+    assert.deepEqual(await describeRuntimeConfigProviders(unbound, [generate, render], { registry }), [
+      { capability: generate, status: "ambiguous", endpoints: ["other", "paid"] },
+      { capability: render, status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
+    ]);
+    const contested = (await preflightRuntimeConfig(unbound, { registry, capabilities: [generate] })).diagnostics
+      .filter((item) => item.code === "RUNTIME_CAPABILITY_AMBIGUOUS");
+    assert.equal(contested.length, 1);
+    assert.equal(contested[0]!.severity, "error");
+    assert.match(contested[0]!.message, /add "bindings": \{ "example\.model@1#generate": "<instance>" \}/u);
+    // Without a Run, doctor looks at every selected Endpoint and reports the contest as a warning.
+    const idle = (await preflightRuntimeConfig(unbound, { registry })).diagnostics
+      .find((item) => item.code === "RUNTIME_CAPABILITY_AMBIGUOUS");
+    assert.equal(idle?.severity, "warning");
+    await assert.rejects(invokeRuntimeConfigNeed(unbound, need, new MemoryResourceStore(), { registry }), /Say which one does it/u);
+
+    const bound = join(root, "bound.json");
+    await writeFile(bound, JSON.stringify(profile({ dataRoot: ".", endpoints, bindings: { [generateKey]: "other" } })));
+    assert.deepEqual(await describeRuntimeConfigProviders(bound, [generate], { registry }), [
+      { capability: generate, status: "resolved", endpoint: "other", use: "example.other", pricing: { kind: "local" }, binding: "other" },
+    ]);
+    assert.equal((await preflightRuntimeConfig(bound, { registry, capabilities: [generate] })).diagnostics
+      .some((item) => item.code === "RUNTIME_CAPABILITY_AMBIGUOUS"), false);
+    const fulfilled = await invokeRuntimeConfigNeed(bound, need, new MemoryResourceStore(), { registry });
+    assert.deepEqual(fulfilled.value, { kind: "inline", value: "other" });
+
+    const wrong = join(root, "wrong.json");
+    await writeFile(wrong, JSON.stringify(profile({ dataRoot: ".", endpoints, bindings: { [generateKey]: "local" } })));
+    assert.deepEqual(await describeRuntimeConfigProviders(wrong, [generate], { registry }), [
+      { capability: generate, status: "unresolved", binding: "local" },
+    ]);
+    assert.ok((await preflightRuntimeConfig(wrong, { registry, capabilities: [generate] })).diagnostics
+      .some((item) => item.code === "RUNTIME_BINDING_INVALID"));
+    await assert.rejects(invokeRuntimeConfigNeed(wrong, need, new MemoryResourceStore(), { registry }), /binds example\.model@1#generate to local, which does not serve/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

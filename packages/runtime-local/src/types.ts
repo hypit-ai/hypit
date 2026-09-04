@@ -43,6 +43,8 @@ export type CreateLocalRuntimeOptions = {
   /** Load the complete physical package closure named by a claimed Build. */
   readonly loadComponentPackages?: (specifiers: readonly string[]) => Awaitable<readonly LoadedComponentPackage[]>;
   readonly endpoints?: readonly EndpointPackage[];
+  /** Which Endpoint instance serves each capability that several selected Endpoints offer. */
+  readonly bindings?: Readonly<Record<string, string>>;
   readonly close?: () => Awaitable<void>;
 };
 

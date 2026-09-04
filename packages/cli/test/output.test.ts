@@ -129,7 +129,7 @@ test("plan names the Provider and price page behind each request, and points at 
   const verbose = capture({ ...human, verbose: true }, { kind: "plan", machine: { ...base, providers: [
     { capability: "@hypit/seedance@1#seedance-2-mini", status: "ambiguous", endpoints: ["hypihub.default", "kie.default"] },
   ] } });
-  assert.match(verbose, /@hypit\/seedance@1#seedance-2-mini\n\s+several selected Endpoints: hypihub\.default, kie\.default/u);
+  assert.match(verbose, /@hypit\/seedance@1#seedance-2-mini\n\s+hypihub\.default, kie\.default all offer it/u);
 });
 
 test("run check treats historical reuse as a normal summary", () => {

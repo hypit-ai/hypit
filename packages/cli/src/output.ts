@@ -102,6 +102,7 @@ export type PlanProvider = {
   readonly use?: string;
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
   readonly endpoints?: readonly string[];
+  readonly binding?: string;
 };
 
 export type PlanOutput = {
@@ -359,10 +360,12 @@ function renderPlan(
     if (view.machine.providers.length > 0) lines.push("", colors.strong("Providers and price pages"));
     for (const item of view.machine.providers) {
       const where = item.status === "resolved"
-        ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})`)}`
+        ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})${item.binding === undefined ? "" : ", bound in the Profile"}`)}`
         : item.status === "ambiguous"
-          ? colors.warning(`several selected Endpoints: ${(item.endpoints ?? []).join(", ")}`)
-          : colors.error("no selected Endpoint");
+          ? colors.warning(`${(item.endpoints ?? []).join(", ")} all offer it; add "bindings": { "${item.capability}": "<instance>" } to the Profile`)
+          : item.binding === undefined
+            ? colors.error("no selected Endpoint")
+            : colors.error(`bound to ${item.binding}, which does not offer it`);
       const price = item.pricing === undefined
         ? (item.status === "resolved" ? colors.warning("price source unknown") : undefined)
         : item.pricing.kind === "local"

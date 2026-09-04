@@ -50,5 +50,7 @@ declares HypiHub's public pricing page, `https://hypit.ai/commercial/pricing/`, 
 `hypit plan --runtime <profile>` prints it beside each request this Endpoint would serve. Per-model
 credit costs are never copied into Hypit.
 
-HypiHub exposes MiMo VoiceDesign by default. Set `audio: false` only when the user explicitly selects
-another VoiceDesign Provider. Hypit does not expose MiMo preset-voice or voice-cloning models.
+HypiHub declares MiMo VoiceDesign together with every other capability it serves; it never hides
+one. When another selected Endpoint offers the same capability (a local WhisperX, a Vertex Gemini,
+the official MiMo Provider), the Runtime Profile's `bindings` say which Endpoint serves it. Hypit does
+not expose MiMo preset-voice or voice-cloning models.

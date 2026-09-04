@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
+import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { AsyncEndpoint } from "@hypit/endpoint-kit";
 import { geminiCapabilities, sealGeminiRequest } from "@hypit/gemini";
 import type { CanonicalValue, Need } from "@hypit/protocol";
@@ -77,26 +78,37 @@ test("HypiHub doctor checks the authenticated catalogue only when actively invok
   assert.deepEqual(diagnostics, []);
 });
 
-test("HypiHub exposes VoiceDesign by default and permits an explicit alternate audio Provider", async () => {
+test("HypiHub declares VoiceDesign like everything else it can do; who serves it is the Profile's binding", async () => {
   const registry = new EndpointRegistry();
   await createHypiHubProvider({ fetch: async () => { throw new Error("audio must not call fetch"); } }).install(registry);
-  assert.equal(registry.resolve({
+  const need = {
     id: "need:hypihub-audio-default",
     capability: mimoTtsEndpoints.voiceDesign.capability,
     returns: mimoTtsEndpoints.voiceDesign.returns,
     constraints: { ports: {} },
     result: "record:hypihub-audio-default",
-  }).status, "resolved");
+  };
+  assert.equal(registry.resolve(need).status, "resolved");
 
-  const optedOut = new EndpointRegistry();
-  await createHypiHubProvider({ audio: false, fetch: async () => { throw new Error("not reached"); } }).install(optedOut);
-  assert.equal(optedOut.resolve({
-    id: "need:hypihub-audio-opt-in",
-    capability: mimoTtsEndpoints.voiceDesign.capability,
-    returns: mimoTtsEndpoints.voiceDesign.returns,
-    constraints: { ports: {} },
-    result: "record:hypihub-audio-opt-in",
-  }).status, "missing");
+  // A second Endpoint offering the same capability makes the choice the deployment's, not the Provider's.
+  const other = defineEndpointPackage({
+    module: { name: "example.tts", version: "1" },
+    facet: "tts",
+    instance: "mimo.official",
+    pool: "mimo.official",
+    capabilities: [{
+      capability: mimoTtsEndpoints.voiceDesign.capability,
+      returns: mimoTtsEndpoints.voiceDesign.returns,
+      lifecycle: "immediate",
+      handler: () => ({ value: { kind: "inline", value: null } }),
+    }],
+  });
+  await other.install(registry);
+  assert.equal(registry.resolve(need).status, "ambiguous");
+  registry.bind(mimoTtsEndpoints.voiceDesign.capability, "mimo.official");
+  const resolved = registry.resolve(need);
+  assert.equal(resolved.status, "resolved");
+  assert.equal(resolved.status === "resolved" ? resolved.registration.id : undefined, "mimo.official");
 });
 
 test("HypiHub uploads referenced Artifacts once, submits their HTTPS URLs, and persists the result", async () => {
