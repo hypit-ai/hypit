@@ -62,8 +62,8 @@ An Author Source importing `@hypit/gemini` remains Provider-neutral. Bind those 
 `@hypit/provider-vertex` for direct Vertex. The reference-video preprocessing observer runs outside a
 Build but reads the same Profile binding; there is no separate environment switch.
 
-Provider-specific input limits are also part of preflight. For the KIE GPT Image 2 route, do not
-submit `4:3`, `3:4` or `4:5`; the route rejects those aspect ratios before upload or paid submission.
+Provider-specific input limits are also part of preflight. For KIE GPT Image 2, `auto` is 1K-only,
+`1:1` is unavailable at 4K, and `4:5` is 1K-only; `4:3` and `3:4` are valid.
 
 The local Providers stay small: `media`, `whisperx` and `hyperframes` are bounded by this machine's
 cores rather than by a remote queue, and raising them buys contention.

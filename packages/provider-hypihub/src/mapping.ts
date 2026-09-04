@@ -70,6 +70,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
   },
   {
     capability: { module: MINIMAX, name: "minimax-h3" }, result: "video", routes: [
+      { model: "minimax-h3/image-to-video", whenPresent: ["lastFrame"] },
       { model: "minimax-h3/image-to-video", whenPresent: ["firstFrame"] },
       { model: "minimax-h3/reference-to-video", whenPresent: ["referenceImage"] },
       { model: "minimax-h3/reference-to-video", whenPresent: ["referenceVideo"] },
@@ -94,7 +95,6 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
       prompt: { as: "value", field: "prompt" }, duration: { as: "value", field: "seconds" },
       resolution: { as: "value", field: "resolution" }, aspectRatio: { as: "value", field: "aspect_ratio" },
       images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
-      sourceTaskId: { as: "value", field: "source_task_id" },
     },
   },
   {

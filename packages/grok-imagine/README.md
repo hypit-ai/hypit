@@ -16,4 +16,6 @@ optional Runtime implementation.
   aspect-ratio="9:16" resolution="720p"/>
 ```
 
-Continuation via `source-task-id` belongs only to `Video` and requires an explicit reference image.
+Both Surfaces accept up to seven reference images. `Video` accepts 6–30 seconds; `PreviewVideo`
+accepts 1–15 seconds and also offers `auto` aspect ratio. Provider task identifiers are execution
+state, not author inputs, and are deliberately absent from both Surfaces.
