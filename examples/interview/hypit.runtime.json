@@ -18,7 +18,8 @@
           "config": {
             "baseUrl": "https://hypit.ai",
             "apiKey": { "store": "os", "key": "hypihub.oauth" },
-            "defaultConcurrency": 4,
+            "defaultConcurrency": 3,
+            "pollIntervalMs": 10000,
             "requestTimeoutMs": 120000
           }
         },
