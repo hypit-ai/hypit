@@ -14,14 +14,17 @@ test("HypiHub Gemini uses native wire format for text, image and video parts", a
     fetch: async (input, init) => {
       seenUrl = String(input);
       if (seenUrl.endsWith("/v1/files/uploads")) {
-        return Response.json({ upload_mode: "api_multipart" });
-      }
-      if (seenUrl.endsWith("/v1/files")) {
         uploads += 1;
-        assert.equal(init?.method, "POST");
-        assert.ok(init?.body instanceof FormData);
-        return Response.json({ url: `https://hypit.ai/files/ref-${uploads}.png` });
+        return Response.json({ upload_mode: "s3_multipart", upload_id: `up_native_${uploads}`, part_size: 16, part_count: 1, concurrency: 4 });
       }
+      const uploadMatch = /\/v1\/files\/uploads\/(up_native_\d+)\/parts$/u.exec(seenUrl);
+      if (uploadMatch) {
+        const body = JSON.parse(String(init?.body)) as { parts: readonly { checksum_sha256: string }[] };
+        return Response.json({ parts: [{ part_number: 1, url: `https://s3.example/${uploadMatch[1]}`, headers: { "content-length": "5", "x-amz-checksum-sha256": body.parts[0]?.checksum_sha256 } }] });
+      }
+      if (seenUrl.startsWith("https://s3.example/")) return new Response(null, { status: 200, headers: { etag: '"part"' } });
+      const completeMatch = /\/v1\/files\/uploads\/(up_native_\d+)\/complete$/u.exec(seenUrl);
+      if (completeMatch) return Response.json({ url: `https://hypit.ai/files/ref-${completeMatch[1]}.png` });
       seenBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
       return Response.json({ candidates: [{ content: { parts: [{ text: "OK" }] } }] });
     },
@@ -36,8 +39,8 @@ test("HypiHub Gemini uses native wire format for text, image and video parts", a
   assert.equal(uploads, 2);
   assert.deepEqual(seenBody?.contents, [{ role: "user", parts: [
     { text: "inspect" },
-    { fileData: { mimeType: "image/png", fileUri: "https://hypit.ai/files/ref-1.png" } },
-    { fileData: { mimeType: "video/mp4", fileUri: "https://hypit.ai/files/ref-2.png" } },
+    { fileData: { mimeType: "image/png", fileUri: "https://hypit.ai/files/ref-up_native_1.png" } },
+    { fileData: { mimeType: "video/mp4", fileUri: "https://hypit.ai/files/ref-up_native_2.png" } },
   ] }]);
 });
 
@@ -57,15 +60,18 @@ test("HypiHub Gemini retries upstream rate limits without reuploading files", as
     apiKey: "test-key",
     maxRateLimitRetries: 2,
     rateLimitRetryDelayMs: 1,
-    fetch: async (input) => {
+    fetch: async (input, init) => {
       const url = String(input);
       if (url.endsWith("/v1/files/uploads")) {
-        return Response.json({ upload_mode: "api_multipart" });
-      }
-      if (url.endsWith("/v1/files")) {
         uploads += 1;
-        return Response.json({ url: "https://hypit.ai/files/ref" });
+        return Response.json({ upload_mode: "s3_multipart", upload_id: "up_retry", part_size: 16, part_count: 1, concurrency: 4 });
       }
+      if (url.endsWith("/v1/files/uploads/up_retry/parts")) {
+        const body = JSON.parse(String(init?.body)) as { parts: readonly { checksum_sha256: string }[] };
+        return Response.json({ parts: [{ part_number: 1, url: "https://s3.example/retry", headers: { "content-length": "5", "x-amz-checksum-sha256": body.parts[0]?.checksum_sha256 } }] });
+      }
+      if (url === "https://s3.example/retry") return new Response(null, { status: 200, headers: { etag: '"part"' } });
+      if (url.endsWith("/v1/files/uploads/up_retry/complete")) return Response.json({ url: "https://hypit.ai/files/ref" });
       generations += 1;
       return generations < 3
         ? new Response("rate limited", { status: 429, headers: { "retry-after": "0" } })

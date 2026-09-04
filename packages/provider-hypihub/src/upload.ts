@@ -77,7 +77,7 @@ function assertHTTPS(value: string, subject: string): void {
   assert(protocol === "https:", `${subject} must use HTTPS`);
 }
 
-/** Uploads media either through the compatibility form endpoint or directly to private regional S3. */
+/** Uploads media through HypiHub's session-negotiated private regional S3 multipart flow. */
 export class HypiHubUploader {
   readonly baseUrl: string;
   readonly requestTimeout: number;
@@ -127,22 +127,6 @@ export class HypiHubUploader {
     } finally {
       clearTimeout(timer);
     }
-  }
-
-  private async uploadForm(input: HypiHubUploadInput, apiKey: string, digest: string): Promise<string> {
-    const startedAt = Date.now();
-    this.log(`compatibility upload started bytes=${input.bytes.byteLength} mime=${input.mediaType}`);
-    const form = new FormData();
-    const copy = new ArrayBuffer(input.bytes.byteLength);
-    new Uint8Array(copy).set(input.bytes);
-    form.append("file", new Blob([copy], { type: input.mediaType }),
-      input.filename ?? `${digest}.${extension(input.mediaType)}`);
-    form.append("purpose", input.purpose ?? "reference");
-    const response = await this.json("/files", apiKey, { method: "POST", body: form });
-    const url = requiredString(response.url, "HypiHub file upload URL");
-    assert(/^https:\/\//iu.test(url), "HypiHub file upload returned no HTTPS URL");
-    this.log(`compatibility upload completed bytes=${input.bytes.byteLength} elapsed=${this.elapsed(startedAt)}`);
-    return url;
   }
 
   private async signParts(uploadId: string, declarations: readonly PartDeclaration[], apiKey: string): Promise<Map<number, Record<string, unknown>>> {
@@ -312,17 +296,7 @@ export class HypiHubUploader {
       this.log(`upload session request finished elapsed=${this.elapsed(policyStartedAt)}`);
     } catch (error) {
       this.log(`upload session request failed elapsed=${this.elapsed(policyStartedAt)} reason=${this.safeReason(error)}`);
-      if (!(error instanceof HypiHubHTTPError) || error.status !== 404) throw error;
-      this.log("upload session endpoint returned 404; falling back to compatibility upload");
-      const result = await this.uploadForm(input, apiKey, digest);
-      this.log(`upload finished bytes=${input.bytes.byteLength} mime=${input.mediaType} elapsed=${this.elapsed(startedAt)}`);
-      return result;
-    }
-    if (policy.upload_mode === "api_multipart") {
-      this.log("HypiHub selected compatibility upload mode");
-      const result = await this.uploadForm(input, apiKey, digest);
-      this.log(`upload finished bytes=${input.bytes.byteLength} mime=${input.mediaType} elapsed=${this.elapsed(startedAt)}`);
-      return result;
+      throw error;
     }
     assert(policy.upload_mode === "s3_multipart", "HypiHub returned an unknown upload mode");
     const result = await this.uploadDirect(input.bytes, apiKey, policy);

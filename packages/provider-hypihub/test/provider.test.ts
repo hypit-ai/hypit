@@ -73,17 +73,17 @@ test("HypiHub uploads referenced Artifacts once, submits their HTTPS URLs, and p
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       assert.equal(body.bytes, 3);
       assert.equal(typeof body.sha256, "string");
-      return Response.json({ upload_mode: "api_multipart" });
+      return Response.json({ upload_mode: "s3_multipart", upload_id: "up_reference", part_size: 16, part_count: 1, concurrency: 4 });
     }
-    if (url.endsWith("/v1/files")) {
-      assert.equal(init?.method, "POST");
-      assert.equal((init?.headers as Record<string, string>).authorization, "Bearer test-key");
-      assert.ok(init?.body instanceof FormData);
-      assert.equal(init.body.get("purpose"), "reference");
-      const file = init.body.get("file");
-      assert.ok(file instanceof File);
-      assert.equal(file.type, "image/png");
-      assert.deepEqual(new Uint8Array(await file.arrayBuffer()), new Uint8Array([1, 2, 3]));
+    if (url.endsWith("/v1/files/uploads/up_reference/parts")) {
+      const body = JSON.parse(String(init?.body)) as { parts: readonly { checksum_sha256: string }[] };
+      return Response.json({ parts: [{ part_number: 1, url: "https://s3.example/reference", headers: { "content-length": "3", "x-amz-checksum-sha256": body.parts[0]?.checksum_sha256 } }] });
+    }
+    if (url === "https://s3.example/reference") {
+      assert.equal(init?.method, "PUT");
+      return new Response(null, { status: 200, headers: { etag: '"reference"' } });
+    }
+    if (url.endsWith("/v1/files/uploads/up_reference/complete")) {
       return Response.json({ url: "https://hypit.ai/files/as_reference.png" });
     }
     if (url.endsWith("/v1/models/bytedance%2Fseedance-2-mini")) {
@@ -117,11 +117,11 @@ test("HypiHub uploads referenced Artifacts once, submits their HTTPS URLs, and p
   };
   const started = await endpoint.start(common);
   assert.equal(started.status, "pending");
-  assert.equal(calls.filter((url) => url.endsWith("/v1/files")).length, 1);
+  assert.equal(calls.filter((url) => url === "https://s3.example/reference").length, 1);
   if (started.status !== "pending") return;
   const completed = await endpoint.poll({ ...common, handle: started.handle });
   assert.equal(completed.status, "completed");
-  assert.equal(calls.length, 7);
+  assert.equal(calls.length, 9);
 });
 
 test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every media Artifact", async () => {
@@ -144,13 +144,19 @@ test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every med
   await createHypiHubProvider({ fetch: async (input, init) => {
     const url = String(input);
     if (url.endsWith("/v1/files/uploads")) {
-      return Response.json({ upload_mode: "api_multipart" });
+      const uploadId = `up_gemini_${uploads.length + 1}`;
+      return Response.json({ upload_mode: "s3_multipart", upload_id: uploadId, part_size: 16, part_count: 1, concurrency: 4 });
     }
-    if (url.endsWith("/v1/files")) {
-      assert.ok(init?.body instanceof FormData);
-      const file = init.body.get("file");
-      assert.ok(file instanceof File);
-      uploads.push(file.type);
+    const partsMatch = /\/v1\/files\/uploads\/(up_gemini_\d+)\/parts$/u.exec(url);
+    if (partsMatch) {
+      const body = JSON.parse(String(init?.body)) as { parts: readonly { checksum_sha256: string }[] };
+      return Response.json({ parts: [{ part_number: 1, url: `https://s3.example/${partsMatch[1]}`, headers: { "content-length": "3", "x-amz-checksum-sha256": body.parts[0]?.checksum_sha256 } }] });
+    }
+    if (url.startsWith("https://s3.example/")) {
+      return new Response(null, { status: 200, headers: { etag: '"part"' } });
+    }
+    if (/\/v1\/files\/uploads\/up_gemini_\d+\/complete$/u.test(url)) {
+      uploads.push("uploaded");
       return Response.json({ url: `https://hypit.ai/files/${uploads.length}` });
     }
     if (url.includes(":generateContent")) {
@@ -167,7 +173,7 @@ test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every med
     need: request, artifacts, credentials: { apiKey: { secret: "test-key" } },
   });
   assert.deepEqual(result.value, { kind: "inline", value: { value: "provider works" } });
-  assert.deepEqual(uploads, ["image/png", "video/mp4"]);
+  assert.equal(uploads.length, 2);
   assert.deepEqual((generationBody?.contents as readonly unknown[]), [{ role: "user", parts: [
     { text: "Inspect both references." },
     { fileData: { mimeType: "image/png", fileUri: "https://hypit.ai/files/1" } },
