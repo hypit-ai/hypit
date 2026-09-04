@@ -441,6 +441,18 @@ button:focus-visible, textarea:focus-visible {
 .library-empty-icon .icon { width: 21px; height: 21px; }
 .library-empty strong { color: #aeb2ba; font-size: 11px; font-weight: 600; }
 .library-empty p { max-width: 260px; margin: 6px 0 0; color: #666b74; font-size: 9px; line-height: 1.55; }
+.library-older {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 32px;
+  margin-top: 3px;
+  border: 1px solid #292c31;
+  border-radius: 6px;
+  background: #191a1e;
+  color: #858a93;
+  font-size: 9px;
+}
+.library-older:hover { border-color: #3a3d44; background: #202227; color: #d1d4da; }
 
 .code { --code-inline-end: 12px; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .code-toolbar { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
