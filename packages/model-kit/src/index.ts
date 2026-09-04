@@ -27,7 +27,15 @@ import type {
   GenerationPortTable,
   GenerationRequestDraft,
 } from "@hypit/generation";
+import { programSpaceDependency } from "@hypit/program-space";
+import type { ProgramClock } from "@hypit/program-space";
+import { createRunFragmentHostFacet } from "@hypit/run";
+import type { RunFragmentHostFacet } from "@hypit/run";
+import { standInDependency } from "@hypit/stand-in";
 import { textDependency, textTypes } from "@hypit/text";
+
+import { exactModelStandIn, standInCardRequestFromDraft, standInNeed } from "./stand-in.js";
+import type { ExactModelStandIn } from "./stand-in.js";
 import type { Text } from "@hypit/text";
 import {
   canonicalize,
@@ -87,6 +95,8 @@ export type ExactModelEndpoint = {
   readonly textBindings: Readonly<Record<string, ExactModelTextBindingEndpoint>>;
   readonly ports: GenerationPortTable;
   readonly fragment: ReturnType<typeof sealGraphFragment>;
+  /** The drawn stand-in for this model's output; absent for a model whose output is not a picture. */
+  readonly standIn?: ExactModelStandIn;
 };
 
 export type ExactModelMediaBindingEndpoint = {
@@ -125,6 +135,8 @@ export type ExactModelModule<Key extends string = string> = {
   };
   /** Inert declaration of these exact models for Hosts that address one directly. */
   readonly hostFacet: ExactModelHostFacet;
+  /** Run Fragments that stand in for this module's picture outputs, one per model, named `<key>-stand-in`. */
+  readonly runFragmentFacet?: RunFragmentHostFacet;
 };
 
 export const exactModelHostAbi = "hypit.exact-model-host@1";
@@ -372,7 +384,11 @@ export function defineExactModelModule<const Key extends string>(
   assert(new Set(keys).size === keys.length, `${options.module.name} repeats an endpoint key`);
   const models = options.endpoints.map((item) => item.ports.model);
   assert(new Set(models).size === models.length, `${options.module.name} repeats an exact model`);
-  const endpointData = options.endpoints.map((spec) => ({ spec, ...endpointRef(options.module, spec) }));
+  const endpointData = options.endpoints.map((spec) => {
+    const refs = endpointRef(options.module, spec);
+    const standIn = exactModelStandIn({ module: options.module, producerName: spec.producerName, draftType: refs.draftType, ports: spec.ports });
+    return { spec, ...refs, ...(standIn === undefined ? {} : { standIn }) };
+  });
 
   const manifest: ModuleManifest = {
     format: "hypit.module@1",
@@ -382,6 +398,8 @@ export function defineExactModelModule<const Key extends string>(
       { module: generationModuleRef },
       artifactDependency,
       textDependency,
+      standInDependency,
+      programSpaceDependency,
     ],
     types: endpointData.flatMap((item) => [
       {
@@ -437,6 +455,12 @@ export function defineExactModelModule<const Key extends string>(
         outputs: [{ name: "request", type: item.requestType }],
         needs: [],
       },
+      ...(item.standIn === undefined ? [] : [{
+        name: item.standIn.producer.name,
+        inputs: item.standIn.inputs,
+        outputs: [],
+        needs: [standInNeed],
+      }]),
     ]),
   };
 
@@ -467,8 +491,12 @@ export function defineExactModelModule<const Key extends string>(
       textBindings: item.textBindings,
       ports: item.spec.ports,
       fragment,
+      ...(item.standIn === undefined ? {} : { standIn: item.standIn }),
     } satisfies ExactModelEndpoint];
   }));
+
+  const standIns = endpointData.flatMap((item) =>
+    item.standIn === undefined ? [] : [[`${item.spec.key}-stand-in`, item.standIn.fragment] as const]);
 
   return {
     module: { ...options.module },
@@ -551,8 +579,24 @@ export function defineExactModelModule<const Key extends string>(
             needs: {},
           }),
         },
+        ...(item.standIn === undefined ? [] : [{
+          producer: item.standIn.producer,
+          handler: ({ inputs }: ProducerHandlerContext) => {
+            const draft = inlineValue<GenerationRequestDraft>(inputs.draft!.value, `${item.spec.key} draft`);
+            const prompt = inlineValue<Text>(inputs.prompt!.value, `${item.spec.key} stand-in prompt`);
+            const clock = inputs.clock === undefined ? undefined : inlineValue<ProgramClock>(inputs.clock.value, `${item.spec.key} stand-in clock`);
+            const request = standInCardRequestFromDraft({ ports: item.spec.ports, draft, prompt, ...(clock === undefined ? {} : { clock }) });
+            return { outputs: {}, needs: { card: canonicalize(request as unknown as CanonicalValue) } };
+          },
+        }]),
       ]),
     },
+    ...(standIns.length === 0 ? {} : {
+      runFragmentFacet: createRunFragmentHostFacet({
+        name: `${options.module.name}@${options.module.version}`,
+        fragments: Object.fromEntries(standIns),
+      }),
+    }),
   };
 }
 
@@ -664,3 +708,5 @@ export function createExactModelPrimaryGenerationFragment(
     }],
   });
 }
+export { standInCardRequestFromDraft, standInFrameFromDraft } from "./stand-in.js";
+export type { ExactModelStandIn } from "./stand-in.js";

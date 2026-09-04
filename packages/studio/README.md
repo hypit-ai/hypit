@@ -83,7 +83,9 @@ that declare `local` pricing, such as the FFmpeg media Endpoint that inspects an
 normalizes a media file). Resolution is the same as `plan` and a Build use,
 including the Profile's bindings, minus every priced Endpoint; a Need that reaches
 a priced Endpoint or none at all stops Studio with the capability named, and the
-author supplies a Candidate for that output or builds the Run.
+author supplies a Candidate for that output or builds the Run. A stand-in card
+(`@hypit/stand-in`, one `<model>-stand-in` Run Fragment per exact model) is such a
+local Need: the picture a generation would have made, drawn from its draft instead.
 
 Studio and an encoded review use the same ordinary Run. Studio evaluates its
 free display closure in the browser; building that Run evaluates the

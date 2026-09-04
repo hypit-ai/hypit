@@ -41,6 +41,7 @@ import {
 } from "@hypit/seedance";
 import { speechManifest } from "@hypit/speech";
 import { spatialManifest } from "@hypit/spatial";
+import { standInManifest } from "@hypit/stand-in";
 import { svsManifest } from "@hypit/svs";
 import { textManifest } from "@hypit/text";
 
@@ -67,6 +68,7 @@ function fixture() {
     svsManifest,
     speechManifest,
     seedanceManifest,
+    standInManifest,
   ];
   const closure = createResolvedClosure(manifests);
   const gpt = gptImageEndpoints.image!;
