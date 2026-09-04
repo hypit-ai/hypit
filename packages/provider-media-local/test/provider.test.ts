@@ -620,11 +620,11 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
       mediaPipelineCapabilities.renderStill,
       artifactTypes.blob,
       canonicalize({
-        source: extractedFrame,
         request: {
           frameRate: { numerator: 30, denominator: 1 },
           frameCount: 15,
           output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
+          segments: [{ startFrame: 0, endFrameExclusive: 15, source: extractedFrame }],
         },
       }),
     ));
@@ -633,6 +633,26 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
     assert.equal(stillInspection.streams.length, 1);
     assert.equal(stillInspection.streams[0]?.kind, "video");
     assert.equal(stillInspection.streams[0]?.decodedUnitCount, 15);
+
+    const spread = await executeArtifact(need(
+      "need:render-still-spread",
+      mediaPipelineCapabilities.renderStill,
+      artifactTypes.blob,
+      canonicalize({
+        request: {
+          frameRate: { numerator: 30, denominator: 1 },
+          frameCount: 15,
+          output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
+          segments: [
+            { startFrame: 0, endFrameExclusive: 10, source: extractedFrame },
+            { startFrame: 10, endFrameExclusive: 15, source: extractedFrame },
+          ],
+        },
+      }),
+    ));
+    const spreadInspection = await inspectArtifact(resources, spread);
+    assert.equal(spreadInspection.streams.length, 1);
+    assert.equal(spreadInspection.streams[0]?.decodedUnitCount, 15, "two pictures spread over the same frame count");
     const stillSelection = selectMediaStreams(stillInspection, sealMediaSelectionRequest({
       video: { mode: "primary-moving" },
       audio: { mode: "none" },

@@ -67,7 +67,19 @@ export type FrameExtractionRequest = {
   readonly output: { readonly format: "png" };
 };
 
-/** Exact silent video requested from one authored still image. */
+/** How the still video divides its literal duration among its pictures: one weight per picture, in order. */
+export type StillVideoLayout = {
+  readonly weights: readonly number[];
+};
+
+/** One picture's span of the still video, in frames; `source` is bound one picture at a time. */
+export type StillVideoSegment = {
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+  readonly source?: BlobRef;
+};
+
+/** Exact silent video requested from one or more authored still images spread over a literal duration. */
 export type StillVideoRequest = {
   readonly frameRate: MediaRational;
   readonly frameCount: number;
@@ -76,6 +88,7 @@ export type StillVideoRequest = {
     readonly codec: "h264";
     readonly pixelFormat: "yuv420p";
   };
+  readonly segments: readonly StillVideoSegment[];
 };
 
 export type TransformMediaNeed = {
@@ -97,8 +110,8 @@ export type ExtractFrameNeed = {
   readonly output: FrameExtractionRequest["output"];
 };
 
+/** Every segment of the request carries its picture by the time the Need is made. */
 export type RenderStillVideoNeed = {
-  readonly source: BlobRef;
   readonly request: StillVideoRequest;
 };
 

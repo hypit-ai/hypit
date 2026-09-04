@@ -52,10 +52,24 @@ A still image becomes ordinary video before it enters that waist:
   video="primary-moving" audio="none" span-authority="video" clock={clock}/>
 ```
 
-`StillVideo` returns a silent MP4 `BlobArtifact`, not `SynchronizedMedia`. Encoding its first decoded
-image frame is a `render-still-video` Need; inspection and normalization remain the same explicit
-steps used by imported or generated moving video. The Blob can therefore serve B-roll through
-Normalize, or continue into either estimated or measured A-roll semantics afterward.
+Several images spread over one literal duration the same way, each held for its share of the frames:
+
+```svml
+<media:StillVideo id="kitchen-stills" duration="6" clock={clock}>
+  <media:Still source={counter.image}/>
+  <media:Still source={basil.image} weight="2"/>
+  <media:Still source={board.image}/>
+</media:StillVideo>
+```
+
+`StillVideo` returns a silent MP4 `BlobArtifact`, not `SynchronizedMedia`. The Surface publishes the
+duration and the weights as Records; `plan-still-video` divides the whole frame count among the
+pictures (every picture holds at least one frame, the rest go by weight with leftovers to the largest
+remainders, earlier first), `bind-still-video-source` attaches each picture in authored order, and
+encoding is one `render-still-video` Need. Pictures of different sizes are fitted into the first one's
+frame and letterboxed. Inspection and normalization remain the same explicit steps used by imported
+or generated moving video, so the Blob can serve B-roll through Normalize, or continue into either
+estimated or measured A-roll semantics afterward.
 
 Four ordinary author operations reuse that same inspection/execution boundary:
 
