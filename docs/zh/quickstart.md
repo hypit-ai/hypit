@@ -53,14 +53,13 @@ npx skills add hypit-ai/hypit -g
 
 你还可以补充目标受众、时长、语言、语气、品牌色、主持人、发布平台或画幅比例等要求。Agent 会把 brief 转换成完整计划，并自行补全制作所需的细节。
 
-## 3. 按 Agent 提示提供凭据
+## 3. 配置凭据
 
 <video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/provide_credentials_when_the_agent_asks.mp4"></video>
 
-在你描述视频之后，Agent 会检查项目需要哪些模型和服务。如果缺少必要凭据，Agent 会向你询问，并说明该凭据的用途。你可以选择两种方式：
+在你描述视频之后，Agent 会检查项目需要哪些模型和服务。对于 Hypit 托管模型，Hypit 默认使用 HypiHub OAuth。如果缺少该凭据，请告诉 Agent 登录 HypiHub；Agent 会自己运行登录命令、打开浏览器流程，并把会话保存到系统安全凭据存储中。登录本身不会提交付费生成任务。
 
-1. **使用 Hypit 推荐的 hypit.ai OAuth 登录。** 告诉 Agent 通过 hypit.ai 登录。一次 OAuth 登录即可覆盖 Hypit 托管服务提供的所有模型，不需要为每个模型分别收集 key。
-2. **使用你自己的 Provider key。** 你可以直接和 Agent 约定要使用哪些模型，并提供相应 Provider 的 API key。Agent 只会索取当前项目需要的 key，不会询问无关凭据。
+只有在你明确选择自有 Provider 时，才配置它的 API key。Agent 只会请求所选 Runtime Profile 声明的凭据；某个凭据不可用时，不会悄悄切换到其他 Provider。
 
 不要把密钥粘贴到公开文档中，也不要提交到 Git。Agent 会使用已配置的安全凭据存储来保存这些凭据。
 
@@ -68,14 +67,14 @@ npx skills add hypit-ai/hypit -g
 
 <video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/let_the_agent_do_the_production_work.mp4"></video>
 
-收到 brief 后，Agent 会在不要求你编写源码的情况下自动推进项目。制作过程中不会询问任何问题，你只需等待 Studio mock。具体顺序会因视频而不同，但通常包括：
+收到 brief 后，Agent 会在不要求你编写源码的情况下自动推进项目。通常会直接推进到 Studio mock；但如果参考视频或 brief 没有明确重要的剪辑细节，Agent 可能会提出一个聚焦的澄清问题。具体顺序会因视频而不同，但通常包括：
 
 1. **拆分镜头。** Agent 识别口播段落、视觉节拍、转场、字幕、B-roll 机会，以及 ranking 板等需要持续保持的元素。
 2. **分析参考视频或 brief。** 复刻路线会使用 Gemini 和可用的媒体工具检查节奏、构图、文字、说话人和视觉连续性；原创路线则根据你的描述和确定的创作方向回答同样的问题。
 3. **自行确定细节。** Agent 会根据参考视频、brief 和观察结果自动确定时机、语言、产品位置和主持人处理方式。
 4. **读取现有 package 声明。** 在自行发明实现之前，Agent 会检查项目和 Hypit 官方 package 中已有的组件。如果已有合适的字幕、ranking、主持人、B-roll 或渲染组件，就直接复用。
 5. **必要时编写新 package。** 如果确实缺少所需的视觉行为，Agent 会创建一个足够小、可复用的新组件，并记录它的使用方式。你不需要自行设计 package 接口。
-6. **编写并检查源码。** Agent 会写出 SVML/SVS 源码，创建所需的 Run 配置，编译视频图，并修复发现的类型或布局问题。
+6. **编写并检查源码。** Agent 会写出 SVML/SVS 源码，创建所需的 Run 配置，编译视频图，并修复发现的类型或布局问题。使用任何 Managed capability 之前，Agent 还会选择项目 Runtime Profile 并启动本地 Runtime。
 7. **与 mock 对比。** 对尚未真正生成的素材使用 mock，随后在 Studio 中渲染完整构图；Agent 会把看到的结果与参考视频或 brief 对比，修复时机、层级、裁切、字幕和画面密度等问题。
 8. **按照要求完成修改。** 基础视频确定后，Agent 会根据你的要求完成定制，例如更换画面中的人物，或替换成你的产品，然后检查修改后的结果。
 
@@ -103,7 +102,7 @@ Agent 会修改源码、重新检查并返回更新后的 mock。
 mock 没有问题。请提交付费 Build 并生成最终视频。
 ```
 
-开始之前，Agent 会向你总结将使用的模型、预计执行的外部工作和预估费用。随后它会提交 Build、跟踪进度，并用书面化的语言报告 Provider 或 Runtime 问题。付费 Build 才会执行真实的素材生成、媒体处理和最终渲染；之前的 mock 不会自动触发这些计费操作。
+开始之前，Agent 会向你总结所有选定的 Provider、凭据来源、预计执行的外部工作和预估费用，并等待你的确认。确认后它才会提交 Build、跟踪进度，并用书面化的语言报告 Provider 或 Runtime 问题。付费 Build 才会执行真实的素材生成、媒体处理和最终渲染；之前的 mock 不会自动触发这些计费操作。
 
 ## 7. 查看付费 Build 的结果
 
