@@ -14,12 +14,19 @@ import {
   createBuildResultRepositoryHostFacet,
 } from "@hypit/build-result-kit";
 import { FileBuildResultRepository } from "@hypit/build-result";
-import { MemoryResourceStore } from "@hypit/driver-node";
+import { MemoryResourceStore, ProducerRegistry } from "@hypit/driver-node";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import { credentialRef } from "@hypit/runtime";
 import type { CanonicalValue, CapabilityRef, TypeRef } from "@hypit/protocol";
 import type { RuntimeHostProviderQuery } from "@hypit/runtime-host-node";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
+import { TypeValidatorRegistry } from "@hypit/validation";
+import {
+  capabilities as greetingCapabilities,
+  createGreetingBuild,
+  producers as greetingProducerRefs,
+  types as greetingTypes,
+} from "../../core/test/greeting-fixture.js";
 import {
   createRuntimeControlFromConfig,
   createRuntimeFromConfig,
@@ -28,11 +35,45 @@ import {
   doctorProjectBuildResultRepository,
   doctorRuntimeConfig,
   invokeRuntimeConfigNeed,
-  localRuntimeConfigEndpoints,
+  openTransientRuntimeConfigExecution,
   openProjectBuildResultRepository,
   parseLocalRuntimeProfile,
   preflightRuntimeConfig,
 } from "@hypit/runtime-local";
+
+function inlineString(value: unknown): string {
+  if (typeof value !== "string") throw new Error("expected inline string");
+  return value;
+}
+
+function greetingProducers(): ProducerRegistry {
+  const producers = new ProducerRegistry();
+  producers.registerProducer(greetingProducerRefs.makePrompt, ({ inputs }) => {
+    const intent = inputs.intent;
+    if (intent?.value.kind !== "inline" || intent.value.value === null
+      || Array.isArray(intent.value.value) || typeof intent.value.value !== "object") {
+      throw new Error("intent must be an inline object");
+    }
+    return {
+      outputs: {
+        prompt: {
+          kind: "inline",
+          value: `Greet ${inlineString((intent.value.value as Readonly<Record<string, unknown>>).name)}`,
+        },
+      },
+      needs: {},
+    };
+  });
+  producers.registerProducer(greetingProducerRefs.requestText, ({ inputs }) => {
+    const prompt = inputs.prompt;
+    if (prompt?.value.kind !== "inline") throw new Error("prompt must be inline");
+    return {
+      outputs: {},
+      needs: { generation: { prompt: inlineString(prompt.value.value) } },
+    };
+  });
+  return producers;
+}
 function profile(config: {
   readonly dataRoot?: string;
   readonly credentials?: Readonly<Record<string, unknown>>;
@@ -52,9 +93,9 @@ function providerQuery(
   request: string,
   capability: CapabilityRef,
   returns: TypeRef,
-  constraints?: CanonicalValue,
+  constraints: CanonicalValue = null,
 ): RuntimeHostProviderQuery {
-  return { request, capability, returns, ...(constraints === undefined ? {} : { constraints }) };
+  return { request, capability, returns, constraints };
 }
 
 test("Local Runtime Profile names credentials and Endpoints, not project result storage", () => {
@@ -107,6 +148,7 @@ test("Build Result repositories default to the project path and can be selected 
   try {
     const local = await openProjectBuildResultRepository(defaultProject, {
       packageRoot: process.cwd(),
+      defaultSelection: { use: "@hypit/build-result-fs", config: { path: ".hypit/results" } },
     });
     assert.ok(local.repository instanceof FileBuildResultRepository);
     assert.equal(local.location.root, defaultProject);
@@ -117,6 +159,7 @@ test("Build Result repositories default to the project path and can be selected 
 
     const selected = await openProjectBuildResultRepository(selectedProject, {
       resultRegistry: registry,
+      defaultSelection: { use: "unused.default" },
     });
     assert.deepEqual(openedContext, {
       root: selectedProject,
@@ -128,6 +171,7 @@ test("Build Result repositories default to the project path and can be selected 
     });
     const diagnosed = await doctorProjectBuildResultRepository(selectedProject, {
       resultRegistry: registry,
+      defaultSelection: { use: "unused.default" },
     });
     assert.deepEqual(diagnosed.diagnostics, []);
     assert.deepEqual(diagnosedContext, {
@@ -324,46 +368,67 @@ test("Runtime providers name the selected Endpoint and its declared price source
       {
         request: "generate",
         capability: generate,
-        checked: "capability",
         status: "resolved",
         endpoint: "paid",
         use: "example.paid",
         pricing: { kind: "page", url: "https://prices.example/models" },
       },
-      { request: "render", capability: render, checked: "capability", status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
-      { request: "missing", capability: missing, checked: "capability", status: "unresolved" },
+      { request: "render", capability: render, status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
+      { request: "missing", capability: missing, status: "unresolved" },
     ]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test("local Endpoints for display install only local-priced Providers and keep the Profile's bindings", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-local-endpoints-"));
+test("transient execution follows capability opt-in rather than pricing and keeps Profile bindings", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-transient-"));
   const path = join(root, "hypit.runtime.json");
-  const generate = { module: { name: "example.model", version: "1" }, name: "generate" } as const;
-  const render = { module: { name: "example.render", version: "1" }, name: "render" } as const;
-  const returns = { module: { name: "example.value", version: "1" }, name: "Output" } as const;
-  const handler = () => ({ value: { kind: "inline" as const, value: null } });
   await writeFile(path, JSON.stringify(profile({
     dataRoot: ".",
-    endpoints: { paid: { use: "example.paid" }, local: { use: "example.local" }, "local-b": { use: "example.local" } },
-    bindings: { "example.render@1#render": "local", "example.model@1#generate": "paid" },
+    credentials: { secrets: { use: "example.credentials" } },
+    endpoints: { remote: { use: "example.remote" }, local: { use: "example.local" } },
+    bindings: { "example.greeting@0.0.0#generate-greeting-text": "remote" },
   })));
+  let remoteCalls = 0;
+  let localCalls = 0;
   const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeCredentialStoreAdapterFacet({
+    use: "example.credentials",
+    validate() {},
+    open: () => ({
+      value: {
+        async resolve(ref) {
+          return ref.store === "secrets" && ref.key === "remote.key"
+            ? { secret: "available" }
+            : undefined;
+        },
+      },
+    }),
+  }));
   registry.registerFacet(createRuntimeEndpointAdapterFacet({
-    use: "example.paid",
+    use: "example.remote",
     activate: (context) => ({
       endpoint: defineEndpointPackage({
         module: { name: "example.provider", version: "1" },
-        facet: "paid",
+        facet: "remote",
         instance: context.instance,
         pool: context.pool ?? context.instance,
+        credentials: { apiKey: credentialRef("secrets", "remote.key") },
         pricing: { kind: "page", url: "https://prices.example/models" },
-        capabilities: [
-          { capability: generate, returns, lifecycle: "immediate", handler },
-          { capability: render, returns, lifecycle: "immediate", handler },
-        ],
+        capabilities: [{
+          capability: greetingCapabilities.generation,
+          returns: greetingTypes.generated,
+          lifecycle: "immediate",
+          transient: true,
+          supports: (need) => (need.constraints as { readonly prompt?: unknown }).prompt === "Greet Ada",
+          handler: ({ need, credentials }) => {
+            remoteCalls += 1;
+            assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
+            assert.equal(credentials.apiKey?.secret, "available");
+            return { value: { kind: "inline", value: "Hello, Ada!" } };
+          },
+        }],
       }),
     }),
   }));
@@ -376,16 +441,71 @@ test("local Endpoints for display install only local-priced Providers and keep t
         instance: context.instance,
         pool: context.pool ?? context.instance,
         pricing: { kind: "local" },
-        capabilities: [{ capability: render, returns, lifecycle: "immediate", handler }],
+        capabilities: [{
+          capability: greetingCapabilities.generation,
+          returns: greetingTypes.generated,
+          lifecycle: "immediate",
+          handler: () => {
+            localCalls += 1;
+            return { value: { kind: "inline", value: "wrong" } };
+          },
+        }],
       }),
     }),
   }));
   try {
-    const endpoints = await localRuntimeConfigEndpoints(path, { registry });
-    assert.deepEqual(endpoints.endpointIds(), ["local", "local-b"], "a priced Provider is never installed for display");
-    assert.equal(endpoints.resolve({ capability: render, returns }).status, "resolved", "the binding picks one local Endpoint");
-    const bound = endpoints.resolve({ capability: generate, returns });
-    assert.deepEqual(bound, { status: "missing", endpointId: "paid" }, "a capability bound to a priced Endpoint stays unresolved");
+    const execution = await openTransientRuntimeConfigExecution(path, { registry });
+    const completed = await execution.evaluate({
+      state: createGreetingBuild({ targetOutputs: ["generated"] }),
+      producers: greetingProducers(),
+      validators: new TypeValidatorRegistry(),
+      resources: new MemoryResourceStore(),
+    });
+    assert.equal(completed.status, "complete");
+    assert.equal(remoteCalls, 1, "pricing metadata does not exclude an explicitly transient capability");
+    assert.equal(localCalls, 0);
+
+    const unsupportedBase = createGreetingBuild({ targetOutputs: ["generated"] });
+    const grace = (record: (typeof unsupportedBase.records)[number]) => record.id === "intent:root"
+      ? { ...record, value: { kind: "inline" as const, value: { name: "Grace" } } }
+      : record;
+    const unsupported = {
+      ...unsupportedBase,
+      records: unsupportedBase.records.map(grace),
+      program: {
+        ...unsupportedBase.program,
+        records: unsupportedBase.program.records.map(grace),
+      },
+    };
+    const rejected = await execution.evaluate({
+      state: unsupported,
+      producers: greetingProducers(),
+      validators: new TypeValidatorRegistry(),
+      resources: new MemoryResourceStore(),
+    });
+    assert.equal(rejected.status, "paused");
+    assert.equal(remoteCalls, 1, "supports receives the complete Need before a transient handler runs");
+    await execution.close();
+
+    await writeFile(path, JSON.stringify(profile({
+      dataRoot: ".",
+      credentials: { secrets: { use: "example.credentials" } },
+      endpoints: { remote: { use: "example.remote" }, local: { use: "example.local" } },
+      bindings: { "example.greeting@0.0.0#generate-greeting-text": "local" },
+    })));
+    const boundExecution = await openTransientRuntimeConfigExecution(path, { registry });
+    const blocked = await boundExecution.evaluate({
+      state: createGreetingBuild({ targetOutputs: ["generated"] }),
+      producers: greetingProducers(),
+      validators: new TypeValidatorRegistry(),
+      resources: new MemoryResourceStore(),
+    });
+    assert.equal(blocked.status, "paused");
+    assert.match(blocked.blocked[0]?.subject ?? "", /local/u,
+      "a binding to a non-transient Endpoint must not fall back to another Endpoint");
+    assert.equal(remoteCalls, 1);
+    assert.equal(localCalls, 0);
+    await boundExecution.close();
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -414,7 +534,8 @@ test("Runtime provider inspection applies Endpoint supports when the complete re
           capability,
           returns,
           lifecycle: "immediate",
-          supports: (need) => (need.constraints as { readonly allowed?: unknown } | null)?.allowed === true,
+          supports: (need) => (need.constraints as { readonly allowed?: unknown } | null)?.allowed === true
+            && need.pendingInputs?.some((input) => input.role === "image") === true,
           handler: () => ({ value: { kind: "inline", value: null } }),
         }],
       }),
@@ -424,9 +545,14 @@ test("Runtime provider inspection applies Endpoint supports when the complete re
     assert.deepEqual(await describeRuntimeConfigProviders(path, [
       providerQuery("pending-file", capability, returns),
       providerQuery("complete", capability, returns, { allowed: false }),
+      {
+        ...providerQuery("symbolic-resource", capability, returns, { allowed: true }),
+        pendingInputs: [{ input: "reference", role: "image" }],
+      },
     ], { registry }), [
-      { request: "pending-file", capability, checked: "capability", status: "resolved", endpoint: "narrow", use: "example.narrow", pricing: { kind: "local" } },
-      { request: "complete", capability, checked: "request", status: "unresolved" },
+      { request: "pending-file", capability, status: "unresolved" },
+      { request: "complete", capability, status: "unresolved" },
+      { request: "symbolic-resource", capability, status: "resolved", endpoint: "narrow", use: "example.narrow", pricing: { kind: "local" } },
     ]);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -569,8 +695,8 @@ test("providers, doctor and invoke share one resolver: a contested capability is
       providerQuery("generate", generate, returns, null),
       providerQuery("render", render, returns, null),
     ], { registry }), [
-      { request: "generate", capability: generate, checked: "request", status: "ambiguous", endpoints: ["other", "paid"] },
-      { request: "render", capability: render, checked: "request", status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
+      { request: "generate", capability: generate, status: "ambiguous", endpoints: ["other", "paid"] },
+      { request: "render", capability: render, status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
     ]);
     const contested = (await preflightRuntimeConfig(unbound, { registry, capabilities: [generate] })).diagnostics
       .filter((item) => item.code === "RUNTIME_CAPABILITY_AMBIGUOUS");
@@ -586,7 +712,7 @@ test("providers, doctor and invoke share one resolver: a contested capability is
     const bound = join(root, "bound.json");
     await writeFile(bound, JSON.stringify(profile({ dataRoot: ".", endpoints, bindings: { [generateKey]: "other" } })));
     assert.deepEqual(await describeRuntimeConfigProviders(bound, [providerQuery("generate", generate, returns, null)], { registry }), [
-      { request: "generate", capability: generate, checked: "request", status: "resolved", endpoint: "other", use: "example.other", pricing: { kind: "local" }, binding: "other" },
+      { request: "generate", capability: generate, status: "resolved", endpoint: "other", use: "example.other", pricing: { kind: "local" }, binding: "other" },
     ]);
     assert.equal((await preflightRuntimeConfig(bound, { registry, capabilities: [generate] })).diagnostics
       .some((item) => item.code === "RUNTIME_CAPABILITY_AMBIGUOUS"), false);
@@ -596,7 +722,7 @@ test("providers, doctor and invoke share one resolver: a contested capability is
     const wrong = join(root, "wrong.json");
     await writeFile(wrong, JSON.stringify(profile({ dataRoot: ".", endpoints, bindings: { [generateKey]: "local" } })));
     assert.deepEqual(await describeRuntimeConfigProviders(wrong, [providerQuery("generate", generate, returns, null)], { registry }), [
-      { request: "generate", capability: generate, checked: "request", status: "unresolved", binding: "local" },
+      { request: "generate", capability: generate, status: "unresolved", binding: "local" },
     ]);
     assert.ok((await preflightRuntimeConfig(wrong, { registry, capabilities: [generate] })).diagnostics
       .some((item) => item.code === "RUNTIME_BINDING_INVALID"));

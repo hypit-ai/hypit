@@ -576,12 +576,6 @@ importers:
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@hypit/generation':
-        specifier: workspace:*
-        version: link:../generation
-      '@hypit/model-kit':
-        specifier: workspace:*
-        version: link:../model-kit
       '@hypit/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
@@ -1708,6 +1702,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/run':
+        specifier: workspace:*
+        version: link:../run
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
@@ -2502,9 +2499,6 @@ importers:
 
   packages/runtime-local:
     dependencies:
-      '@hypit/build-result':
-        specifier: workspace:*
-        version: link:../build-result
       '@hypit/build-result-fs':
         specifier: workspace:*
         version: link:../build-result-fs
@@ -2548,6 +2542,9 @@ importers:
         specifier: workspace:*
         version: link:../validation
     devDependencies:
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
       '@hypit/credential-store-env':
         specifier: workspace:*
         version: link:../credential-store-env

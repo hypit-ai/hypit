@@ -1,4 +1,5 @@
 import type {
+  EndpointRequest,
   EndpointRegistrar,
   EndpointRegistrationOptions,
   EndpointScheduling,
@@ -10,7 +11,6 @@ import type {
 } from "@hypit/component-kit";
 import type {
   CapabilityRef,
-  Need,
   ProducerRef,
   TypeRef,
 } from "@hypit/protocol";
@@ -91,13 +91,9 @@ function verifyEndpointOptions(options: EndpointOptions): void {
 }
 
 /**
- * A Need, or the declared shape of one before its constraints exist.
- *
- * `plan` resolves capabilities before any request has been built, so it may leave `constraints`
- * out; an Endpoint's `supports` refinement is then not consulted and several candidates stay
- * ambiguous until the Profile binds one or the constraints arrive.
+ * Endpoint selection always receives the complete support-relevant request. Upstream graph values
+ * may still be pending, but the package that declares the request exposes their semantic slots.
  */
-export type ResolvableNeed = Pick<Need, "capability"> & Partial<Omit<Need, "capability">>;
 
 export class EndpointRegistry implements EndpointRegistrar {
   readonly #registrations: EndpointRegistration[] = [];
@@ -194,11 +190,11 @@ export class EndpointRegistry implements EndpointRegistrar {
     this.#registrationsByCapability.set(endpointCapabilityKey(capability), registrations);
   }
 
-  resolve(need: ResolvableNeed): EndpointResolution {
+  resolve(need: EndpointRequest): EndpointResolution {
     const key = endpointCapabilityKey(need.capability);
     const registrations = (this.#registrationsByCapability.get(key) ?? []).filter((registration) =>
-      (need.returns === undefined || sameRef(registration.returns, need.returns))
-      && (need.constraints === undefined || (registration.supports?.(need as Need) ?? true)));
+      sameRef(registration.returns, need.returns)
+      && (registration.supports?.(need) ?? true));
     const bound = this.#bindings.get(key);
     if (bound !== undefined) {
       const chosen = registrations.find((registration) => registration.id === bound);

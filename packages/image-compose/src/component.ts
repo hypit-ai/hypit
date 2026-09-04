@@ -1,7 +1,9 @@
+import { plannedNeedInputs } from "@hypit/component-kit";
 import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-kit";
-import type { BlobRef, StoredValue } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
 import { canonicalize } from "@hypit/protocol";
 import { rasterComposeRequest } from "@hypit/raster";
+import { rasterCapabilities } from "@hypit/raster";
 import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 
 import { imageComposeProducers, imageComposeTypes } from "./manifest.js";
@@ -63,5 +65,36 @@ export const imageComposeComponent = {
   }, {
     type: imageComposeTypes.layerSet,
     handler: ({ value }) => assertImageComposeLayerSet(inline<ImageComposeLayerSet>(value, "ImageComposeLayerSet")),
+  }],
+  plannedNeeds: [{
+    producer: imageComposeProducers.request,
+    port: "image",
+    capability: rasterCapabilities.execute,
+    plan({ state, step }) {
+      const operation = state.plan.steps.find((item) => item.id === step);
+      if (operation === undefined) return undefined;
+      const read = (input: string) => {
+        const record = operation.inputs[input];
+        const value = record === undefined ? undefined : state.records.find((item) => item.id === record)?.value;
+        return value?.kind === "inline" ? value.value : undefined;
+      };
+      const canvas = read("canvas");
+      const options = read("options");
+      if (canvas === undefined || options === undefined) return undefined;
+      return {
+        constraints: { kind: "compose", canvas, options },
+        pendingInputs: plannedNeedInputs(state, step),
+      };
+    },
+    present(specification) {
+      const constraints = specification.constraints as Readonly<Record<string, CanonicalValue>>;
+      const canvas = constraints.canvas as Readonly<Record<string, CanonicalValue>> | undefined;
+      return {
+        fields: typeof canvas?.widthPx === "number" && typeof canvas.heightPx === "number"
+          ? { canvas: [`${canvas.widthPx}×${canvas.heightPx}`] }
+          : {},
+        references: {},
+      };
+    },
   }],
 } satisfies ComponentPackage;

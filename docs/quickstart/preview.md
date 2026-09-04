@@ -7,7 +7,7 @@ description: Open a satisfied Run, inspect its picture and timeline, and edit re
 
 Hypit Studio opens one `.svrun`, traces its Film or Render target back to explainable Semantic and Track projections, and presents four regions: Source at the upper left, Preview in the center, Inspector at the upper right, and Timeline below.
 
-Studio never invokes a Provider or creates a Build. Generated material must already be selected by the Run as a real Candidate, either from a project file or from a Record accepted by an earlier Build and referenced through `<build-record>`. The display closure may contain no unresolved Need. Missing facts fail explicitly; Studio does not guess material or create placeholders.
+Studio never submits generation or creates a Build. Generated material must be selected explicitly by the Run: from a project file, an earlier Build through `<build-record>`, or an ordinary stand-in Fragment selected with `satisfy`. Studio may ask the selected Runtime Profile to execute exact media Needs whose Provider marks them safe for transient authoring, such as inspection and normalization. It does not infer that permission from pricing, choose another Candidate or invent a placeholder. Other Needs fail with their capability named.
 
 ```bash
 hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
@@ -17,7 +17,7 @@ hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
 | Argument | Meaning |
 | --- | --- |
 | `--run <build.svrun>` | Run Source to open. Required. |
-| `--runtime <hypit.runtime.json>` | Optional Runtime Profile used only to show active `BuildView` and Operation information. Historical Results and `<build-record>` come from the project Result Repository. |
+| `--runtime <hypit.runtime.json>` | Runtime Profile used for transient media execution and active `BuildView` information. Historical Results and `<build-record>` still come from the project Result Repository. |
 | `--workspace <directory>` | Source access and writeback boundary; defaults to the Run directory. |
 | `--port <number>` | HTTP port; defaults to `5179`. |
 
@@ -29,8 +29,8 @@ Studio requires:
 
 - a real Film or Render target;
 - a traceable Semantic Track and display Tracks;
-- satisfied material Candidates;
-- a display closure completed by deterministic Producers.
+- explicitly selected material Candidates;
+- a display closure completed by deterministic Producers and transient capabilities declared by their Providers.
 
 Studio refuses a Run that supplies only an opaque finished movie or whose display graph still requires external generation. It edits the current author graph and Tracks; it does not reconstruct a project from final pixels.
 
@@ -67,7 +67,7 @@ Studio exposes two structured author mutations:
 - timeline gestures submit `timeline.adjust`;
 - Inspector fields submit `parameter.adjust`.
 
-They follow the executed lineage selected by the Run to a real SVML or SVS preimage. Studio recompiles with the same Run after a change. It publishes the new picture only on success; on failure it restores the files and reports the domain error. It creates no hidden Build, invokes no Provider, and never turns a Selection into an anonymous frame span.
+They follow the executed lineage selected by the Run to a real SVML or SVS preimage. Studio recompiles with the same Run after a change. It publishes the new picture only on success; on failure it restores the files and reports the domain error. It creates no hidden Build, submits no generation, and never turns a Selection into an anonymous frame span.
 
 The complete selection, projection, consumption and writeback model is documented in [Studio Temporal Lineage](../guide/studio-temporal-windows.md).
 

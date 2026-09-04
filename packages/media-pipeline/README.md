@@ -71,6 +71,11 @@ frame and letterboxed. Inspection and normalization remain the same explicit ste
 or generated moving video, so the Blob can serve B-roll through Normalize, or continue into either
 estimated or measured A-roll semantics afterward.
 
+The package also exposes its one-picture Fragment as
+`@hypit/media-pipeline@1#still-video`, so a Run may select the same ordinary
+StillVideo branch as a Candidate. Its inputs are `duration`, `clock`, `layout`
+and `source-0`; choosing it remains an explicit `candidate` / `satisfy` decision.
+
 Four ordinary author operations reuse that same inspection/execution boundary:
 
 ```xml

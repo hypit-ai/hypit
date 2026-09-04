@@ -12,7 +12,8 @@ import {
 } from "@hypit/generation";
 import type { GenerationArtifactUrlResolver, GenerationRequest } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
-import type { BlobRef, CanonicalValue, CapabilityRef, Need, StoredValue, TypeRef } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue, CapabilityRef, StoredValue, TypeRef } from "@hypit/protocol";
+import type { EndpointRequest } from "@hypit/endpoint-kit";
 
 import { kieModelCatalog, verifyKieModelCatalog } from "./mapping.js";
 import type { KieGenerationWireMapping } from "./mapping.js";
@@ -28,7 +29,7 @@ export type KieRoute = {
   readonly returns: TypeRef;
   readonly media: "image" | "video";
   readonly maxResults: number;
-  readonly supports?: (need: Need) => boolean;
+  readonly supports?: (request: EndpointRequest) => boolean;
   readonly compile: (
     constraints: CanonicalValue,
     resolve: GenerationArtifactUrlResolver,
@@ -80,7 +81,7 @@ const generationRoutes: readonly KieRoute[] = kieGenerationMappings.map((mapping
   media: mapping.result,
   maxResults: mapping.result === "image" ? 16 : 8,
   ...(mapping.unsupportedPortValues === undefined ? {} : {
-    supports: (need: Need) => supportsKieGenerationRequest(
+    supports: (need: EndpointRequest) => supportsKieGenerationRequest(
       mapping,
       need.constraints as unknown as GenerationRequest,
     ),

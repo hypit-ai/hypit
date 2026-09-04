@@ -7,8 +7,8 @@ import {
   loadNodePackageSelection,
 } from "@hypit/package-loader-node";
 import type { NodePackageSelectionRequest } from "@hypit/package-loader-node";
-import { EndpointRegistry } from "@hypit/driver-node";
-import type { EndpointFulfillment, EndpointRegistrar } from "@hypit/endpoint-kit";
+import { EndpointRegistry, NodeDriver } from "@hypit/driver-node";
+import type { EndpointFulfillment, EndpointRegistrar, EndpointScheduling } from "@hypit/endpoint-kit";
 import { assertBuildId, canonicalize, canonicalStringify } from "@hypit/protocol";
 import type { CanonicalValue, CapabilityRef, Need } from "@hypit/protocol";
 import {
@@ -16,7 +16,6 @@ import {
 } from "@hypit/runtime";
 import type { CredentialStore, CredentialValue, ResourceStore } from "@hypit/runtime";
 import { FileResourceStore } from "@hypit/resource-store-fs";
-import { FileBuildResultRepository } from "@hypit/build-result";
 import {
   buildResultRepositoryHostAbi,
   BuildResultRepositoryRegistry,
@@ -26,6 +25,7 @@ import type {
   BuildResultRepositoryDiagnostic,
   BuildResultRepositoryLocation,
   BuildResultRepositoryOpened,
+  BuildResultRepositorySelection,
 } from "@hypit/build-result-kit";
 import {
   isRuntimeAdapterHostFacet,
@@ -46,7 +46,13 @@ import {
   hypitHostStateRoot,
   prepareHostPackages,
 } from "@hypit/runtime-host-node";
-import type { HostPackageProgress, HostPackageReport, RuntimeHostCapabilityProvider, RuntimeHostProviderQuery } from "@hypit/runtime-host-node";
+import type {
+  HostPackageProgress,
+  HostPackageReport,
+  RuntimeHostCapabilityProvider,
+  RuntimeHostProviderQuery,
+  RuntimeHostTransientExecution,
+} from "@hypit/runtime-host-node";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
 import { applyEndpointBindings, createLocalRuntime, parseCapabilityKey } from "./runtime.js";
@@ -305,35 +311,29 @@ export async function openBuildResultRepositoryLocation(
 
 export async function openProjectBuildResultRepository(
   projectRoot: string,
-  options: LoadRuntimeConfigOptions = {},
+  options: LoadRuntimeConfigOptions & {
+    readonly defaultSelection: BuildResultRepositorySelection;
+  },
 ): Promise<BuildResultRepositoryOpened & { readonly location: BuildResultRepositoryLocation }> {
   const root = resolve(projectRoot);
-  const selected = await projectBuildResultLocation(root);
-  const location = selected.location;
-  if (selected.implicit) {
-    return {
-      location,
-      repository: new FileBuildResultRepository(resolve(root, ".hypit/results")),
-    };
-  }
+  const location = await projectBuildResultLocation(root, options.defaultSelection);
   const registry = options.resultRegistry ?? new BuildResultRepositoryRegistry();
   const result = await openBuildResultLocation(location, options, resolve(options.packageRoot ?? root), registry);
   return { ...result, location };
 }
 
-async function projectBuildResultLocation(root: string): Promise<{
-  readonly location: BuildResultRepositoryLocation;
-  readonly implicit: boolean;
-}> {
+async function projectBuildResultLocation(
+  root: string,
+  defaultSelection: BuildResultRepositorySelection,
+): Promise<BuildResultRepositoryLocation> {
   const configPath = resolve(root, "hypit.results.json");
   const text = await readFile(configPath, "utf8").catch((error: unknown) => {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
     throw error;
   });
   let selection: BuildResultRepositoryLocation["selection"];
-  const implicit = text === undefined;
   if (text === undefined) {
-    selection = { use: "@hypit/build-result-fs", config: { path: ".hypit/results" } };
+    selection = defaultSelection;
   } else {
     const item = object(JSON.parse(text), "$results");
     exactKeys(item, ["format", "use", "config"], "$results");
@@ -345,18 +345,20 @@ async function projectBuildResultLocation(root: string): Promise<{
       ...(item.config === undefined ? {} : { config: canonicalize(item.config) }),
     };
   }
-  return { location: { root, selection }, implicit };
+  return { root, selection };
 }
 
 /** Diagnose the project-owned Result Store without reading Result history or mutating storage. */
 export async function doctorProjectBuildResultRepository(
   projectRoot: string,
-  options: LoadRuntimeConfigOptions = {},
+  options: LoadRuntimeConfigOptions & {
+    readonly defaultSelection: BuildResultRepositorySelection;
+  },
 ): Promise<ProjectBuildResultDoctorResult> {
   const root = resolve(projectRoot);
   let location: BuildResultRepositoryLocation | undefined;
   try {
-    location = (await projectBuildResultLocation(root)).location;
+    location = await projectBuildResultLocation(root, options.defaultSelection);
     const registry = options.resultRegistry ?? new BuildResultRepositoryRegistry();
     await installBuildResultAdapter(
       registry,
@@ -484,30 +486,136 @@ async function installedEndpointRegistry(
   return endpoints;
 }
 
+type TransientResourceClaim = EndpointScheduling["resources"][number];
+
+/** In-memory concurrency shared only by evaluations inside one disposable authoring session. */
+class TransientSessionCapacity {
+  readonly #limits = new Map<string, number>();
+  readonly #active = new Map<string, number>();
+  readonly #waiters = new Set<() => void>();
+
+  declare(resources: readonly TransientResourceClaim[]): void {
+    for (const resource of resources) {
+      const previous = this.#limits.get(resource.id);
+      if (previous !== undefined && previous !== resource.limit) {
+        throw new Error(`Transient Runtime resource ${resource.id} has conflicting limits ${previous} and ${resource.limit}`);
+      }
+      this.#limits.set(resource.id, resource.limit);
+    }
+  }
+
+  async run<T>(resources: readonly TransientResourceClaim[], task: () => Promise<T>): Promise<T> {
+    const ordered = [...resources].sort((left, right) => left.id.localeCompare(right.id));
+    while (ordered.some((resource) => (this.#active.get(resource.id) ?? 0) >= resource.limit)) {
+      await new Promise<void>((resolveWait) => this.#waiters.add(resolveWait));
+    }
+    for (const resource of ordered) this.#active.set(resource.id, (this.#active.get(resource.id) ?? 0) + 1);
+    try {
+      return await task();
+    } finally {
+      for (const resource of ordered) {
+        const next = (this.#active.get(resource.id) ?? 1) - 1;
+        if (next === 0) this.#active.delete(resource.id);
+        else this.#active.set(resource.id, next);
+      }
+      const waiters = [...this.#waiters];
+      this.#waiters.clear();
+      for (const wake of waiters) wake();
+    }
+  }
+}
+
 /**
- * The Endpoints a display may execute without a Build. Only Providers that declare `local` pricing
- * are installed, and only their immediate capabilities; the Profile's bindings still apply, so a
- * capability bound to a priced Endpoint resolves to nothing here rather than to a local stand-in.
+ * Open the Profile's disposable authoring execution. Endpoint Providers opt individual immediate
+ * capabilities into this boundary; price and process location are deliberately irrelevant.
  */
-export async function localRuntimeConfigEndpoints(
+export async function openTransientRuntimeConfigExecution(
   path: string,
   options: LoadRuntimeConfigOptions = {},
-): Promise<EndpointRegistry> {
+): Promise<RuntimeHostTransientExecution> {
   const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, endpointPackageSelection(document), options.distributionPackageRoot);
+  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
   const endpoints = new EndpointRegistry();
-  const immediateOnly: EndpointRegistrar = {
-    registerImmediateEndpoint: (...args) => endpoints.registerImmediateEndpoint(...args),
-    registerAsyncEndpoint: () => {},
-  };
-  for (const { activation } of await activatedEndpoints(document, root, hostStateRoot, registry)) {
-    if (activation.endpoint.pricing?.kind !== "local") continue;
-    await activation.endpoint.install(immediateOnly);
+  const capacity = new TransientSessionCapacity();
+  const activations = await activatedEndpoints(document, root, hostStateRoot, registry);
+  for (const { activation } of activations) {
+    let readiness: Promise<void> | undefined;
+    const assertReady = async (): Promise<void> => {
+      const program = activation.program;
+      if (program === undefined) return;
+      readiness ??= program.probe().then((state) => {
+        if (state.state !== "ready") {
+          throw new Error(`Runtime program ${program.id} is ${state.state}: ${state.detail}`);
+        }
+      });
+      try {
+        await readiness;
+      } catch (error) {
+        readiness = undefined;
+        throw error;
+      }
+    };
+    const transientOnly: EndpointRegistrar = {
+      registerImmediateEndpoint(id, capability, returns, handler, registrationOptions) {
+        if (registrationOptions?.transient !== true) return;
+        const resources = registrationOptions.scheduling?.resources ?? [{ id: `endpoint:${id}`, limit: 1 }];
+        capacity.declare(resources);
+        endpoints.registerImmediateEndpoint(id, capability, returns, async (context) => {
+          return await capacity.run(resources, async () => {
+            await assertReady();
+            return await handler(context);
+          });
+        }, registrationOptions);
+      },
+      registerAsyncEndpoint(id, capability, _returns, _endpoint, registrationOptions) {
+        if (registrationOptions?.transient === true) {
+          throw new Error(`Endpoint ${id} declares asynchronous capability ${capabilityKey(capability)} as transient`);
+        }
+      },
+    };
+    await activation.endpoint.install(transientOnly);
   }
   applyEndpointBindings(endpoints, document.bindings);
-  return endpoints;
+  const stores = await openCredentialStores(document, root, hostStateRoot, registry);
+  let closed = false;
+  let activeEvaluations = 0;
+  let closing: Promise<void> | undefined;
+  const idleWaiters = new Set<() => void>();
+  return {
+    async evaluate(input) {
+      if (closed) throw new Error("transient Runtime execution is closed");
+      activeEvaluations += 1;
+      try {
+        return await new NodeDriver({
+          producers: input.producers,
+          validators: input.validators,
+          endpoints,
+          resources: input.resources,
+          credentials: stores.store,
+        }).run(input.state);
+      } finally {
+        activeEvaluations -= 1;
+        if (activeEvaluations === 0) {
+          const waiters = [...idleWaiters];
+          idleWaiters.clear();
+          for (const wake of waiters) wake();
+        }
+      }
+    },
+    async close() {
+      if (closing !== undefined) return await closing;
+      closed = true;
+      closing = (async () => {
+        if (activeEvaluations > 0) {
+          await new Promise<void>((resolveWait) => idleWaiters.add(resolveWait));
+        }
+        await stores.close();
+      })();
+      await closing;
+    },
+  };
 }
 
 /** Static Endpoint selection per capability. Reads the Profile and activations only; never a credential or a service. */
@@ -527,14 +635,14 @@ export async function describeRuntimeConfigProviders(
     const base = {
       request: request.request,
       capability: structuredClone(request.capability),
-      checked: request.constraints === undefined ? "capability" as const : "request" as const,
     };
     const binding = document.bindings[capabilityKey(request.capability)];
     const bound = binding === undefined ? {} : { binding };
     const resolution = endpoints.resolve({
       capability: request.capability,
       returns: request.returns,
-      ...(request.constraints === undefined ? {} : { constraints: request.constraints }),
+      constraints: request.constraints,
+      ...(request.pendingInputs === undefined ? {} : { pendingInputs: request.pendingInputs }),
     });
     if (resolution.status === "missing") return { ...base, status: "unresolved", ...bound };
     if (resolution.status === "ambiguous") return { ...base, status: "ambiguous", endpoints: resolution.endpointIds, ...bound };

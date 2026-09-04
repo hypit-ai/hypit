@@ -110,15 +110,14 @@ test("plan names the Provider and price page behind each request, and points at 
     {
       request: "seedance:one",
       capability: "@hypit/seedance@1#seedance-2-mini",
-      checked: "capability",
       status: "resolved",
       endpoint: "hypihub.default",
       use: "@hypit/provider-hypihub",
       pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
     },
-    { request: "media:one", capability: "@hypit/media@1#inspect", checked: "request", status: "resolved", endpoint: "media.local", use: "@hypit/provider-media-local", pricing: { kind: "local" } },
-    { request: "whisper:one", capability: "@hypit/whisperx@1#whisperx-alignment", checked: "request", status: "resolved", endpoint: "whisperx.remote", use: "@hypit/provider-example" },
-    { request: "image:one", capability: "@hypit/gpt-image@1#gpt-image-2", checked: "request", status: "unresolved" },
+    { request: "media:one", capability: "@hypit/media@1#inspect", status: "resolved", endpoint: "media.local", use: "@hypit/provider-media-local", pricing: { kind: "local" } },
+    { request: "whisper:one", capability: "@hypit/whisperx@1#whisperx-alignment", status: "resolved", endpoint: "whisperx.remote", use: "@hypit/provider-example" },
+    { request: "image:one", capability: "@hypit/gpt-image@1#gpt-image-2", status: "unresolved" },
   ], needs: [{
     request: "seedance:one",
     step: "video::component::presenter.generate",
@@ -126,19 +125,18 @@ test("plan names the Provider and price page behind each request, and points at 
     capability: "@hypit/seedance@1#seedance-2-mini",
     summary: { fields: { prompt: "42 chars", duration: 10, resolution: "720p" }, references: { image: 1 } },
     pending: [{ input: "referenceImages", record: "presenter:image", sourceStep: "presenter.generate", kind: "image" }],
-    checked: "capability",
   }] } });
   assert.match(output, /Providers and price pages/u);
   assert.match(output, /@hypit\/seedance#seedance-2-mini\n\s+hypihub\.default \(@hypit\/provider-hypihub\)\s+·\s+https:\/\/hypit\.ai\/commercial\/pricing\//u);
   assert.match(output, /media\.local .*·\s+local, no Provider charge/u);
   assert.match(output, /whisperx\.remote .*·\s+price source unknown/u);
   assert.match(output, /gpt-image#gpt-image-2\n\s+no selected Endpoint accepts this request\n/u);
-  assert.match(output, /prompt 42 chars · duration 10 · resolution 720p · 1 image reference · file produced during Build/u);
+  assert.match(output, /prompt 42 chars · duration 10 · resolution 720p · 1 image reference · input produced during Build/u);
   assert.doesNotMatch(output, /Pass --runtime/u);
   assert.doesNotMatch(output, /seedance@1#/u);
 
   const verbose = capture({ ...human, verbose: true }, { kind: "plan", machine: { ...base, providers: [
-    { request: "seedance:one", capability: "@hypit/seedance@1#seedance-2-mini", checked: "capability", status: "ambiguous", endpoints: ["hypihub.default", "kie.default"] },
+    { request: "seedance:one", capability: "@hypit/seedance@1#seedance-2-mini", status: "ambiguous", endpoints: ["hypihub.default", "kie.default"] },
   ] } });
   assert.match(verbose, /@hypit\/seedance@1#seedance-2-mini\n\s+hypihub\.default, kie\.default all offer it/u);
 });

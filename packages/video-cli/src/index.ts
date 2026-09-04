@@ -16,6 +16,7 @@ export {
   createVideoCompiler,
 } from "./compiler.js";
 export { videoCliDistribution } from "./distribution.js";
+export { videoStudioCompanionPackages } from "./studio-distribution.js";
 export { discoverVideoSourcePackages } from "./package-selection.js";
 export { creationCommands, isCreationCommand, runCreationCli, writeCreationHelp } from "./creation.js";
 export type { CreationCommand, CreationEnvironment, CreationHost } from "./creation.js";

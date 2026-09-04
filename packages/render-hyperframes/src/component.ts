@@ -1,8 +1,9 @@
+import { plannedNeedInputs } from "@hypit/component-kit";
 import type { ComponentPackage } from "@hypit/component-kit";
 import type { StoredValue } from "@hypit/protocol";
 
 import { hyperframesVisualRequest } from "./product.js";
-import { renderHyperframesProducers } from "./manifest.js";
+import { renderHyperframesCapabilities, renderHyperframesProducers } from "./manifest.js";
 
 /** Declares the visual Need. It contains no renderer, queue, credentials or deployment choice. */
 export const renderHyperframesComponent = {
@@ -14,6 +15,17 @@ export const renderHyperframesComponent = {
         visual: hyperframesVisualRequest(inline(inputs.document!.value, "HyperframesDocument") as never),
       },
     }),
+  }],
+  plannedNeeds: [{
+    producer: renderHyperframesProducers.requestVisual,
+    port: "visual",
+    capability: renderHyperframesCapabilities.renderVisual,
+    plan({ state, step }) {
+      return { constraints: {}, pendingInputs: plannedNeedInputs(state, step) };
+    },
+    present(specification) {
+      return { fields: {}, references: {} };
+    },
   }],
 } satisfies ComponentPackage;
 

@@ -17,3 +17,9 @@ The generic CLI depends only on this port. The official video application select
 rather than replacing the Runtime itself or selecting Build history storage. A second application
 may supply another `NodeRuntimeHost` at its Distribution assembly boundary; no unused Host plugin
 registry or selector is exposed in a local Profile.
+
+The same port lets an authoring application open a disposable transient execution. The caller hands
+over a graph state, deterministic Producers, validators and temporary Resources; the Runtime keeps
+Endpoint selection, handlers and concurrency for that disposable session private and returns the evaluated
+state. This is an execution boundary, not a second Runtime Profile, Build type, cross-Build scheduler or
+preview registry.

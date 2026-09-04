@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { relative } from "node:path";
 
-import type { EndpointRegistry } from "@hypit/driver-node";
 import { markupAuthorFrontendId } from "@hypit/markup";
+import type { RuntimeHostTransientExecution } from "@hypit/runtime-host-node";
 import { svsFrontendId } from "@hypit/svs";
 
 import type { ServedFile } from "./compile.js";
@@ -59,10 +59,10 @@ export async function readStudioSession(input: {
   readonly revision: number;
   readonly sourcePath?: string;
   readonly workspaceRoot: string;
-  readonly endpoints?: EndpointRegistry;
+  readonly transientExecution?: RuntimeHostTransientExecution;
 }): Promise<StudioSession> {
   const source = input.run.source;
-  const inspection = inspectStudioRun(input.registry, source, input.run, input.endpoints);
+  const inspection = inspectStudioRun(input.registry, source, input.run);
   const outputRefs = [
     inspection.filmComposition,
     ...inspection.projections.map((projection) => projection.ref),
@@ -74,7 +74,7 @@ export async function readStudioSession(input: {
     outputRefs,
     compositionRef: inspection.filmComposition,
     projections: inspection.projections,
-    ...(input.endpoints === undefined ? {} : { endpoints: input.endpoints }),
+    ...(input.transientExecution === undefined ? {} : { transientExecution: input.transientExecution }),
   });
   const rendered = renderPreview({
     composition: built.composition,

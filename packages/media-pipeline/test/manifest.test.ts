@@ -3,6 +3,7 @@ import { mediaTypes } from "@hypit/media";
 import { programSpaceTypes } from "@hypit/program-space";
 import { speechTypes } from "@hypit/speech";
 import { svsRecipeType } from "@hypit/svs";
+import { installRunFragmentHostFacets, RunFragmentRegistry } from "@hypit/run";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
@@ -23,6 +24,13 @@ import {
   transformMediaFragment,
   stillVideoFragment,
 } from "../src/index.js";
+import { hypitPackage } from "../src/activation.js";
+
+test("the package exposes StillVideo as an ordinary Run Fragment", () => {
+  const fragments = new RunFragmentRegistry();
+  installRunFragmentHostFacets(hypitPackage.hostFacets, fragments);
+  assert.equal(fragments.resolve("@hypit/media-pipeline@1", "still-video"), stillVideoFragment);
+});
 
 test("the Normalize Surface makes inspection and normalization an explicit author graph branch", async () => {
   const range = { source: "normalize.svml", start: 0, end: 1 };

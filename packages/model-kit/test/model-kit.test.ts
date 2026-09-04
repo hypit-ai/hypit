@@ -117,13 +117,13 @@ test("planning follows the model's declared assembly edges and leaves an upstrea
       { id: "bind-image-one", producer: endpoint.mediaBindings.images!.producer, inputs: { draft: "draft:text", binding: "binding", artifact: "image:upstream-one" }, outputs: { draft: "draft:image-one" }, needs: {} },
       { id: "bind-image-two", producer: endpoint.mediaBindings.images!.producer, inputs: { draft: "draft:image-one", binding: "binding", artifact: "image:upstream-two" }, outputs: { draft: "draft:image-two" }, needs: {} },
       { id: "finalize", producer: endpoint.finalizeProducer, inputs: { draft: "draft:image-two" }, outputs: { request: "request" }, needs: {} },
-      { id: "generate", producer: endpoint.producer, inputs: { request: "request" }, outputs: {}, needs: { image: { id: "need:image" } } },
+      { id: "generate", producer: endpoint.producer, inputs: { request: "request" }, outputs: {}, needs: { generation: { id: "need:image" } } },
       { id: "make-image-one", producer: { module: { name: "@test/upstream", version: "1" }, name: "make" }, inputs: {}, outputs: { image: "image:upstream-one" }, needs: {} },
       { id: "make-image-two", producer: { module: { name: "@test/upstream", version: "1" }, name: "make" }, inputs: {}, outputs: { image: "image:upstream-two" }, needs: {} },
     ] },
   } as unknown as BuildState;
 
-  assert.deepEqual(plannedExactModelRequest(state, "generate", "image", endpoint), {
+  assert.deepEqual(plannedExactModelRequest(state, "generate", "generation", endpoint), {
     model: "graph-native-image",
     ports: { prompt: ["draw the authored scene"] },
     pendingMedia: [
@@ -143,5 +143,26 @@ test("planning follows the model's declared assembly edges and leaves an upstrea
       },
     ],
     complete: false,
+  });
+  const facet = definition.component.plannedNeeds[0]!;
+  const specification = facet.plan({ state, step: "generate", port: "generation" });
+  assert.deepEqual(specification, {
+    constraints: {
+      ports: {
+        images: [
+          { role: "image", slot: "image:upstream-one" },
+          { role: "image", slot: "image:upstream-two" },
+        ],
+        prompt: ["draw the authored scene"],
+      },
+    },
+    pendingInputs: [
+      { input: "images", record: "image:upstream-one", sourceStep: "make-image-one", role: "image" },
+      { input: "images", record: "image:upstream-two", sourceStep: "make-image-two", role: "image" },
+    ],
+  });
+  assert.deepEqual(specification === undefined ? undefined : facet.present?.(specification), {
+    fields: { prompt: ["draw the authored scene"] },
+    references: { image: 2 },
   });
 });

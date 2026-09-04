@@ -19,7 +19,7 @@ export {
   describeRuntimeConfigProviders,
   doctorRuntimeConfig,
   invokeRuntimeConfigNeed,
-  localRuntimeConfigEndpoints,
+  openTransientRuntimeConfigExecution,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
   parseLocalRuntimeProfile,

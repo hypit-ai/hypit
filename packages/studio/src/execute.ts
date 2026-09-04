@@ -1,6 +1,7 @@
-import { EndpointRegistry, MemoryResourceStore, NodeDriver } from "@hypit/driver-node";
+import { MemoryResourceStore, NodeDriver } from "@hypit/driver-node";
 import type { ResourceStore } from "@hypit/runtime";
 import type { BuildState } from "@hypit/protocol";
+import type { RuntimeHostTransientExecution } from "@hypit/runtime-host-node";
 
 import type { StudioDomain } from "./domain.js";
 
@@ -12,26 +13,35 @@ export type Executed = {
 };
 
 /**
- * Run the display closure: deterministic Producers, plus Needs served by the Profile's local
- * Endpoints when the caller hands them in. Nothing priced is ever installed here; a Need that
- * reaches no installed Endpoint is reported as unserved, never guessed at.
+ * Run the display closure: deterministic Producers, plus Needs the Runtime explicitly permits in
+ * a disposable authoring execution. The Runtime owns Endpoint selection and invocation; Studio
+ * never filters Providers or sees their handlers.
  */
-export async function executeDeterministic(
+export async function executeStudioProjection(
   domain: StudioDomain,
   planned: BuildState,
   resources: ResourceStore,
-  endpoints: EndpointRegistry = new EndpointRegistry(),
+  execution?: RuntimeHostTransientExecution,
 ): Promise<Executed> {
-  const result = await new NodeDriver({
-    producers: domain.producers,
-    validators: domain.validators,
-    endpoints,
-    resources,
-  }).run(planned);
+  const result = execution === undefined
+    ? await new NodeDriver({
+        producers: domain.producers,
+        validators: domain.validators,
+        resources,
+      }).run(planned)
+    : await execution.evaluate({
+        state: planned,
+        producers: domain.producers,
+        validators: domain.validators,
+        resources,
+      });
   const counts = new Map<string, number>();
   for (const item of result.blocked) {
-    const need = result.state.needs.find((candidate) => item.subject.includes(candidate.capability.name));
-    const name = need?.capability.name ?? item.subject;
+    const command = result.state.outstanding.find((candidate) => candidate.id === item.command);
+    const capability = command?.kind === "fulfill-need" ? command.need.capability : undefined;
+    const name = capability === undefined
+      ? item.subject
+      : `${capability.module.name}@${capability.module.version}#${capability.name}`;
     counts.set(name, (counts.get(name) ?? 0) + 1);
   }
   return {

@@ -37,7 +37,6 @@ function host(seen: Need[]): CreationHost {
     providers: async (requests) => requests.map((request) => ({
       request: request.request,
       capability: request.capability,
-      checked: request.constraints === undefined ? "capability" as const : "request" as const,
       status: "resolved" as const,
       endpoint: "paid.default",
       use: "@hypit/provider-example",
@@ -154,7 +153,6 @@ test("a Profile that does not serve the capability stops before anything is spen
         providers: async (requests) => requests.map((request) => ({
           request: request.request,
           capability: request.capability,
-          checked: request.constraints === undefined ? "capability" as const : "request" as const,
           status: "unresolved" as const,
         })),
         invoke: async () => { invoked = true; throw new Error("must not be reached"); },

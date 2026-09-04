@@ -1,5 +1,8 @@
 import type {
   ComponentPackage,
+  PlannedNeedFacet,
+  PlannedNeedPresentation,
+  PlannedNeedSpecification,
   ProducerFacet,
   ProducerHandlerContext,
   TypeValidatorFacet,
@@ -122,6 +125,7 @@ export type ExactModelModule<Key extends string = string> = {
   readonly component: ComponentPackage & {
     readonly validators: readonly TypeValidatorFacet[];
     readonly producers: readonly ProducerFacet[];
+    readonly plannedNeeds: readonly PlannedNeedFacet[];
   };
   /** Inert declaration of these exact models for Hosts that address one directly. */
   readonly hostFacet: ExactModelHostFacet;
@@ -358,6 +362,63 @@ export function plannedExactModelRequest(
   };
 }
 
+function exactModelSpecification(planned: PlannedExactModelRequest): PlannedNeedSpecification {
+  const ports = structuredClone(planned.ports) as Record<string, CanonicalValue[]>;
+  for (const resource of planned.pendingMedia) {
+    const items = ports[resource.port] ?? [];
+    items.push(canonicalize({
+      role: resource.role,
+      slot: resource.record,
+      ...(resource.fields === undefined ? {} : { fields: resource.fields }),
+    }));
+    ports[resource.port] = items;
+  }
+  return {
+    constraints: canonicalize({ ports }),
+    pendingInputs: planned.pendingMedia.map((resource) => ({
+      input: resource.port,
+      record: resource.record,
+      ...(resource.sourceStep === undefined ? {} : { sourceStep: resource.sourceStep }),
+      role: resource.role,
+    })),
+  };
+}
+
+function exactModelPresentation(
+  endpoint: ExactModelEndpoint,
+  specification: PlannedNeedSpecification,
+): PlannedNeedPresentation {
+  const request = specification.constraints as { readonly ports?: Readonly<Record<string, readonly CanonicalValue[]>> };
+  const fields: Record<string, readonly CanonicalValue[]> = {};
+  const references: Record<string, number> = {};
+  for (const port of endpoint.ports.ports) {
+    const values = request.ports?.[port.name] ?? [];
+    if (port.value.kind !== "media") {
+      if (values.length > 0) fields[port.name] = structuredClone(values);
+      continue;
+    }
+    for (const value of values) {
+      if (value === null || typeof value !== "object" || Array.isArray(value)) continue;
+      const role = (value as { readonly role?: unknown }).role;
+      if (typeof role === "string") references[role] = (references[role] ?? 0) + 1;
+    }
+  }
+  return { fields, references };
+}
+
+function exactModelPlannedNeedFacet(endpoint: ExactModelEndpoint): PlannedNeedFacet {
+  return {
+    producer: endpoint.producer,
+    port: "generation",
+    capability: endpoint.capability,
+    plan({ state, step, port }) {
+      const planned = plannedExactModelRequest(state, step, port, endpoint);
+      return planned === undefined ? undefined : exactModelSpecification(planned);
+    },
+    present: (specification) => exactModelPresentation(endpoint, specification),
+  };
+}
+
 /**
  * Builds the repetitive nominal shell around an exact model request. The model package still owns
  * every field, constraint and model name; this helper only wires Type -> Producer -> Need -> Fragment.
@@ -552,6 +613,7 @@ export function defineExactModelModule<const Key extends string>(
           }),
         },
       ]),
+      plannedNeeds: Object.values(endpoints).map((endpoint) => exactModelPlannedNeedFacet(endpoint)),
     },
   };
 }

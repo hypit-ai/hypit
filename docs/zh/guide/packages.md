@@ -226,7 +226,7 @@ packages/example/
 | `credential-store` | 解析被显式命名的凭据 | 密钥存储 | Runtime Profile |
 | `result-repository` | 已结束的 Build Result | 项目历史存储 | 项目 `hypit.results.json` |
 | `infrastructure` | Runtime Host、Scheduler 与 Worker 实现 | 持久化、调度 | 应用 Distribution |
-| `application` | Studio Track Companion 等特定应用解释 | 仅该应用的 UI/操作 | 显式应用 profile |
+| `application` | Studio Track Companion 等特定应用解释 | 仅该应用的 UI/操作 | Distribution 或已选 Source 包 |
 
 源码中的 `<import>` 只会 activate author facet。它绝不授予网络、文件系统、进程、凭据或队列权限。
 
@@ -241,7 +241,7 @@ Hypit 不维护中央包注册表，也不维护自定义包锁。npm 或 pnpm �
 | Source import | Frontend、Surface、Producer、Validator |
 | Runtime Profile 的 `credentials.*.use` / `endpoints.*.use` | Credential Store 与 Provider Endpoint |
 | 项目 Result 配置的 `use` | 一个 Build Result Repository |
-| Studio Profile 的 `companionPackages` | 当前 Studio 会话显式选择的项目 Companion 包 |
+| Studio Distribution + 已选 Source 包 | 官方 Companion 与当前 Source 实际使用的项目 Companion |
 
 Source import 绝不授予网络、文件系统、进程、凭据或队列权限；这些权限只属于 Runtime
 Host 以及在环境边界被显式选择的包。

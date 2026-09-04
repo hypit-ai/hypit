@@ -17,7 +17,7 @@ import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliIo, CliMachineView } from "./output.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
-import { assertPreflight, createCatalogDescriptor, describePlanNeeds, describePlanProviders, evaluatePlanNeeds, preflightPlan } from "./build-planning.js";
+import { assertPlannedRequests, assertPreflight, createCatalogDescriptor, describePlanNeeds, describePlanProviders, evaluatePlanNeeds, preflightPlan } from "./build-planning.js";
 import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
 import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
@@ -387,10 +387,14 @@ export async function runCli(
             catalog.publishedOutputs.some((published) => published.ref.id === forward.output)),
         },
       } as const;
-      const controller = await (await runtimeHost(runtimeProfile)).controller({
+      const host = await runtimeHost(runtimeProfile);
+      const controller = await host.controller({
         packageRoot: sourcePackageRoot,
       });
-      const preflight = await preflightPlan(await runtimeHost(runtimeProfile), result.state);
+      const evaluated = await evaluatePlanNeeds(result.definition, packageContributions);
+      const providers = await describePlanProviders(host, evaluated.state, evaluated);
+      assertPlannedRequests(evaluated.state, evaluated, providers);
+      const preflight = await preflightPlan(host, evaluated.state);
       // Build is an execution boundary, not a provisioning command. The cheap
       // preflight must already be clean; `runtime up` is the explicit place for
       // installing or starting declared programs.

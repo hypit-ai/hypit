@@ -5,6 +5,7 @@ import { delimiter, isAbsolute, join, resolve } from "node:path";
 import type { ArtifactAttachment } from "@hypit/workspace";
 import type { BuildResultForward } from "@hypit/build-result";
 import type { BuildResultRepositoryLocation } from "@hypit/build-result-kit";
+import type { DriverRunResult, NodeDriverOptions, ProducerRegistry } from "@hypit/driver-node";
 import type { BuildDefinition, BuildState, CapabilityRef, Need, StoredValue } from "@hypit/protocol";
 import type {
   BuildCatalogDescriptor,
@@ -128,6 +129,21 @@ export type RuntimeHostDoctorResult = {
   readonly diagnostics: readonly RuntimeDoctorDiagnostic[];
 };
 
+/**
+ * Disposable graph evaluation through capabilities that their Providers explicitly allow outside
+ * a Build. The Host owns Endpoint selection, credentials, invocation and session-local concurrency;
+ * callers contribute only deterministic domain Producers, validation and an ephemeral ResourceStore.
+ */
+export type RuntimeHostTransientExecution = {
+  evaluate(input: {
+    readonly state: BuildState;
+    readonly producers: ProducerRegistry;
+    readonly validators: NonNullable<NodeDriverOptions["validators"]>;
+    readonly resources: ResourceStore;
+  }): Promise<DriverRunResult>;
+  close(): void | Promise<void>;
+};
+
 /** The selected Endpoint behind one demanded capability, read from the Profile alone. */
 export type RuntimeHostCapabilityProvider = {
   /** Caller-owned identity for this planned request. */
@@ -144,16 +160,19 @@ export type RuntimeHostCapabilityProvider = {
   readonly endpoints?: readonly string[];
   /** The Endpoint instance the Profile's `bindings` name for this capability, when it names one. */
   readonly binding?: string;
-  /** `request` means Endpoint `supports` checked the complete Need; `capability` is static selection only. */
-  readonly checked: "request" | "capability";
 };
 
 export type RuntimeHostProviderQuery = {
   readonly request: string;
   readonly capability: CapabilityRef;
   readonly returns: import("@hypit/protocol").TypeRef;
-  /** Omitted only while an upstream Resource in the closed Build graph does not exist yet. */
-  readonly constraints?: import("@hypit/protocol").CanonicalValue;
+  /** Complete support-relevant parameters available before the Build. */
+  readonly constraints: import("@hypit/protocol").CanonicalValue;
+  /** Future graph inputs described by the package that owns this request. */
+  readonly pendingInputs?: readonly {
+    readonly input: string;
+    readonly role?: string;
+  }[];
 };
 
 export type ManagedProgramProgress = {
@@ -249,13 +268,8 @@ export type NodeRuntimeHost = {
    * creates no Build, Result or state, and refuses asynchronous capabilities.
    */
   invoke(need: Need, resources: ResourceStore): Promise<{ readonly value: StoredValue }>;
-  /**
-   * The Endpoints a display may execute without a Build: every Endpoint the Profile selects whose
-   * Provider declares `local` pricing, immediate capabilities only, with the Profile's bindings
-   * applied. A capability bound to a priced Endpoint stays unresolved here instead of falling to a
-   * local one, so nothing shown was ever paid for.
-   */
-  localEndpoints(): Promise<import("@hypit/driver-node").EndpointRegistry>;
+  /** Open one disposable authoring execution. It creates no Build, Result or recoverable Operation. */
+  openTransientExecution(): Promise<RuntimeHostTransientExecution>;
   runWorker(readyFile: string, owner: string): Promise<void>;
 };
 
