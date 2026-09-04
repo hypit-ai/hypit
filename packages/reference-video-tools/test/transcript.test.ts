@@ -39,7 +39,7 @@ async function serving(response: unknown, run: () => Promise<void>): Promise<voi
   // tests exercise request shaping and transcript parsing rather than the developer's
   // local credential store (which is intentionally absent on CI runners).
   process.env.HYPIHUB_API_KEY = "test-hypihub-key";
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const body = url.endsWith("/health")
       ? {
@@ -55,10 +55,15 @@ async function serving(response: unknown, run: () => Promise<void>): Promise<voi
       : url.includes("/models/")
         ? { name: "victor-upmeet/whisperx", endpoints: ["transcriptions"] }
         : url.endsWith("/files/uploads")
-          ? { upload_mode: "api_multipart" }
-        : url.endsWith("/files")
+          ? { upload_mode: "s3_multipart", upload_id: "up_transcript", part_size: 100_000, part_count: 1, concurrency: 4 }
+        : url.endsWith("/files/uploads/up_transcript/parts")
+          ? (() => { const parts = JSON.parse(String(init?.body)) as { parts: readonly { part_number: number; bytes: number; checksum_sha256: string }[] }; const part = parts.parts[0]!; return { parts: [{ part_number: part.part_number, url: "https://s3.example/transcript", headers: { "content-length": String(part.bytes), "x-amz-checksum-sha256": part.checksum_sha256 } }] }; })()
+        : url === "https://s3.example/transcript"
+          ? undefined
+        : url.endsWith("/files/uploads/up_transcript/complete")
           ? { url: "https://hypit.ai/test-reference.wav" }
         : response;
+    if (url === "https://s3.example/transcript") return new Response(null, { status: 200, headers: { etag: '"transcript"' } });
     return new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } });
   }) as typeof fetch;
   try { await run(); } finally {
