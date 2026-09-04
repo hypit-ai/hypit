@@ -42,9 +42,9 @@ requests, not in Provider routing.
 Declarative activation names an ordinary CredentialRef, not an environment-specific Provider field:
 
 ```json
-{
+"kie.personal": {
   "use": "@hypit/provider-kie",
-  "instance": "kie.personal",
+  "pool": "generation",
   "config": {
     "apiKey": { "store": "os", "key": "kie.api-key" },
     "defaultConcurrency": 8,

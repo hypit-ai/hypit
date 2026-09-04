@@ -169,7 +169,7 @@ Runtime pointer, or the entry source directory. Runtime configuration cannot wid
 the Worker materializes its state only while advancing it and writes accepted facts back immediately.
 There is no Build concurrency setting and Build identity is not a capacity resource.
 
-Endpoint packages declare the two actual execution queues: one Provider pool and its model lanes.
+The Profile names each Endpoint's pool; the Endpoint package declares the model lanes inside it. Those are the two actual execution queues.
 Work from separate Builds shares those exact external capacities. Each resource has one limit: an
 immediate call releases its slot when it returns, while an asynchronous Operation keeps the same slot
 until it becomes terminal. Unrelated Builds and Commands may advance together.

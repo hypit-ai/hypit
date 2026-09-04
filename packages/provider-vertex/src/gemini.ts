@@ -25,12 +25,32 @@ function parseCredentials(value: Record<string, unknown> | string): Record<strin
   return parsed as Record<string, unknown>;
 }
 
-/** Vertex Gemini VLM generator for text, image and video inline parts. */
-export function createVertexGeminiGenerator(options: VertexGeminiGeneratorOptions) {
+/**
+ * The Vertex publisher id behind each Hypit Gemini capability. The capability names the model the
+ * author chose; the id Vertex serves it under is this Provider's fact. A capability without an
+ * entry is refused rather than sent under a name Vertex may not recognise.
+ */
+const VERTEX_MODEL_IDS: Readonly<Record<string, string>> = {
+  "gemini-3.1-pro": "gemini-3.1-pro-preview",
+};
+
+export function vertexModelId(capabilityName: string): string {
+  const id = VERTEX_MODEL_IDS[capabilityName];
+  if (id === undefined) throw new Error(`Vertex Provider has no published model id for ${capabilityName}`);
+  return id;
+}
+
+export type VertexClientOptions = {
+  readonly project: string;
+  readonly credentials: Record<string, unknown> | string;
+  readonly location?: string;
+  readonly requestTimeoutMs?: number;
+};
+
+export function createVertexClient(options: VertexClientOptions): GoogleGenAI {
   const project = options.project.trim();
   assert(project.length > 0, "Vertex project is empty");
-  const model = options.model?.trim() || "gemini-3.1-pro";
-  const client = new GoogleGenAI({
+  return new GoogleGenAI({
     vertexai: true,
     project,
     location: options.location?.trim() || "global",
@@ -38,7 +58,19 @@ export function createVertexGeminiGenerator(options: VertexGeminiGeneratorOption
       credentials: parseCredentials(options.credentials),
       scopes: ["https://www.googleapis.com/auth/cloud-platform"],
     },
+    httpOptions: { timeout: options.requestTimeoutMs ?? 300_000 },
   });
+}
+
+/** Ask Vertex whether this project can reach the model; the service's own message says why not. */
+export async function probeVertexModel(options: VertexClientOptions, modelId: string): Promise<void> {
+  await createVertexClient(options).models.get({ model: modelId });
+}
+
+/** Vertex Gemini VLM generator for text, image and video inline parts. */
+export function createVertexGeminiGenerator(options: VertexGeminiGeneratorOptions) {
+  const model = options.model?.trim() || vertexModelId("gemini-3.1-pro");
+  const client = createVertexClient(options);
 
   return async (input: VertexGeminiGenerateInput): Promise<string> => {
     const result = await client.models.generateContent({

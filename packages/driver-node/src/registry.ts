@@ -123,6 +123,31 @@ export class EndpointRegistry implements EndpointRegistrar {
     return [...new Set(this.#registrations.map((registration) => registration.id))].sort();
   }
 
+  /**
+   * Shared capacity resources that different registrations size differently. Two Endpoints in one
+   * pool with different concurrency would otherwise only collide inside the scheduler, mid-Build.
+   */
+  capacityConflicts(): readonly { readonly resource: string; readonly limits: readonly number[]; readonly endpointIds: readonly string[] }[] {
+    const limits = new Map<string, Map<number, Set<string>>>();
+    for (const registration of this.#registrations) {
+      for (const resource of registration.scheduling?.resources ?? []) {
+        const byLimit = limits.get(resource.id) ?? new Map<number, Set<string>>();
+        const ids = byLimit.get(resource.limit) ?? new Set<string>();
+        ids.add(registration.id);
+        byLimit.set(resource.limit, ids);
+        limits.set(resource.id, byLimit);
+      }
+    }
+    return [...limits.entries()]
+      .filter(([, byLimit]) => byLimit.size > 1)
+      .map(([resource, byLimit]) => ({
+        resource,
+        limits: [...byLimit.keys()].sort((left, right) => left - right),
+        endpointIds: [...new Set([...byLimit.values()].flatMap((ids) => [...ids]))].sort(),
+      }))
+      .sort((left, right) => left.resource.localeCompare(right.resource));
+  }
+
   /** Capabilities offered by more than one Endpoint, with the ids, for a deployment to bind. */
   contested(): readonly { readonly capability: CapabilityRef; readonly endpointIds: readonly string[]; readonly bound?: string }[] {
     const found: { readonly capability: CapabilityRef; readonly endpointIds: readonly string[]; readonly bound?: string }[] = [];

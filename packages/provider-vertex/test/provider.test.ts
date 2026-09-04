@@ -7,6 +7,7 @@ import { credentialRef } from "@hypit/runtime";
 import { textTypes } from "@hypit/text";
 
 import { createVertexProvider } from "../src/provider.js";
+import { vertexModelId } from "../src/gemini.js";
 
 test("Vertex Runtime provider exposes the same provider-neutral Gemini capabilities", async () => {
   const registry = new EndpointRegistry();
@@ -30,4 +31,9 @@ test("Vertex Runtime provider exposes the same provider-neutral Gemini capabilit
     { slot: "credentials", kind: "json" },
     { slot: "project", kind: "secret" },
   ]);
+});
+
+test("Vertex model ids fail closed", () => {
+  assert.equal(vertexModelId("gemini-3.1-pro"), "gemini-3.1-pro-preview");
+  assert.throws(() => vertexModelId("gemini-99"), /no published model id for gemini-99/u);
 });
