@@ -36,17 +36,18 @@ file the caller chose:
 ```bash
 hypit observe <media…> --instruction <text|file> --prompt <text|file> --to notes/frame.md
 hypit transcribe reference.mp4 --to notes/reference.transcript.json [--language en|zh|es]
-hypit speak --text line.txt --voice "warm, unhurried" --to voice/intro.mp3
 hypit measure main.svml --segment hook --language en --pace normal --min 4 --max 15 --rounding round
 ```
 
-`observe` uses the Profile's Gemini Endpoint, `transcribe` its `whisperx-alignment` Endpoint (after
-extracting 16 kHz mono speech audio with ffmpeg), `speak` its MiMo VoiceDesign Endpoint and reports
-the audio's duration so the author can write it as a literal. `measure` counts a Segment's pronunciation
-units at a delivery policy and prints the seconds to write as the literal `duration`; it opens no
-Profile and spends nothing. `--runtime <profile>` names the Profile;
-otherwise the project's `hypit runtime use` selection is read. Slow paid generation — pictures and
-clips — is not a creation-time tool: declare it in the Source and go through `plan` and `build`.
+`observe` uses the Profile's Gemini Endpoint and `transcribe` its `whisperx-alignment` Endpoint (after
+extracting 16 kHz mono speech audio with ffmpeg). `measure` counts a Segment's pronunciation units at a
+delivery policy and prints the seconds to write as the literal `duration`; it opens no Profile and
+spends nothing. `--runtime <profile>` names the Profile; otherwise the project's `hypit runtime use`
+selection is read. Anything the Author Graph declares as an output is a Build, however quickly it
+comes back: pictures, clips and the spoken A-roll (`@hypit/mimo-tts`) carry the identity of the Source
+that produced them, so they are declared in the Source and go through `plan` and `build`. To hear a
+voice or learn a passage's real length before authoring the rest, build a Run whose target is that
+speech output and reuse it as a Candidate.
 
 Two more families are local, stateless and spend nothing. `hypit media` prepares what the eyes will
 look at when a whole video is too long or too dense to hand over at once, and `hypit vocabulary`
@@ -54,21 +55,26 @@ prints what a Source may write:
 
 ```bash
 hypit media probe reference.mp4
-hypit media cut reference.mp4 --start 12 --end 19.5 --to notes/hook.mp4
-hypit media frames reference.mp4 --at 12.4,13.1 --to notes/hook-frames
+hypit media cut reference.mp4 --start 12 --end 19.5 --label-time --to notes/hook.mp4
+hypit media frames reference.mp4 --at 12.4,13.1 --label-time --to notes/hook-frames
 hypit media tile reference.mp4 --start 12 --end 19.5 --to notes/hook-grid.jpg
-hypit media shots reference.mp4
+hypit media tile reference.mp4 --at 12.4,13.1,14.8 --columns 3 --to notes/exact-grid.jpg
+hypit media tiles reference.mp4 --ranges notes/ranges.json --to notes/grids
+hypit media boundaries reference.mp4
 hypit media fetch https://… --to reference/source.mp4
 hypit vocabulary
 hypit vocabulary @hypit/media-pipeline --tag StillVideo
 hypit vocabulary --visual text
 ```
 
-`cut` seeks to the exact frame; `frames` writes one JPEG per named second; `tile` draws four to nine
-frames of a stretch in one grid, never wider than the source, so small type stays legible for an
-observer that reads pictures; `shots` lists where the picture jumps, which is a starting point when
-nothing is known yet and not a shot list; `fetch` turns a link into a file with the pinned yt-dlp.
-Every command writes only what `--to` names and refuses to overwrite. `vocabulary` reads the installed
+`cut` seeks to the exact frame and can visibly overlay absolute source time on the evidence copy;
+`frames` writes one JPEG per named second and can add the same visible label. `tile` always draws the
+absolute source time below every cell. It accepts either one range sampled evenly or exact `--at`
+times; `tiles` repeats that operation for an ordinary JSON array of `{ start, end, id?, frames? }`
+ranges. Columns, cell width and sample count remain caller choices. `boundaries` reports adjacent-frame
+change candidates and their measured scores; it does not suppress short changes or call them shots.
+`fetch` turns a link into a file with the pinned yt-dlp. Commands that create evidence write only
+what `--to` names and refuse to overwrite. `vocabulary` reads the installed
 manifests: every package with its tags and models, or one package's Surfaces with their attributes,
 children and example, or the value shapes a drawing Producer must emit.
 
