@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { OsCredentialStore } from "@hypit/credential-store-os";
 import { materializeRecord, runVideoCli, videoCliDistribution } from "@hypit/video-cli";
 
 import { videoTestPackages } from "./packages.js";
@@ -74,6 +75,8 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
   const requests: Record<string, unknown>[] = [];
   const realFetch = globalThis.fetch;
   const realKey = process.env.HYPIHUB_API_KEY;
+  const realOsResolve = OsCredentialStore.prototype.resolve;
+  OsCredentialStore.prototype.resolve = async () => undefined;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     calls.push(url);
@@ -125,6 +128,7 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
     }]);
     assert.equal(calls.filter((item) => item.endsWith("/v1/images/generations")).length, 1);
   } finally {
+    OsCredentialStore.prototype.resolve = realOsResolve;
     globalThis.fetch = realFetch;
     if (realKey === undefined) delete process.env.HYPIHUB_API_KEY;
     else process.env.HYPIHUB_API_KEY = realKey;
