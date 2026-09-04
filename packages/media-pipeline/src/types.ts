@@ -18,6 +18,12 @@ export type InspectMediaNeed = {
   readonly source: BlobRef;
 };
 
+/** Deterministic model-reference preparation over one ordinary media Blob. */
+export type PrepareMediaNeed = {
+  readonly source: BlobRef;
+  readonly profile: "gemini-reference";
+};
+
 export type MediaVideoSelector =
   | { readonly mode: "primary-moving" }
   | { readonly mode: "stream-index"; readonly streamIndex: number };

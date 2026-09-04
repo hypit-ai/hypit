@@ -6,6 +6,7 @@ import {
   executeInspectMedia,
   executeMuxProgramMedia,
   executeNormalizeMedia,
+  executePrepareMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
   executeRenderStillVideo,
@@ -97,6 +98,12 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
         capability: mediaPipelineCapabilities.normalize,
         returns: mediaTypes.synchronized,
         handler: operation(executeNormalizeMedia),
+      },
+      {
+        lifecycle: "immediate" as const,
+        capability: mediaPipelineCapabilities.prepare,
+        returns: artifactTypes.blob,
+        handler: operation(executePrepareMedia),
       },
       {
         lifecycle: "immediate" as const,

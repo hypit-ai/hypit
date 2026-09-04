@@ -42,6 +42,7 @@ import type {
   RenderStillVideoNeed,
   StillVideoRequest,
   TransformMediaNeed,
+  PrepareMediaNeed,
 } from "./types.js";
 
 function inline(value: StoredValue, subject: string): CanonicalValue {
@@ -100,6 +101,14 @@ export const mediaPipelineComponent = {
         const source = blob(inputs.source!.value, "Media inspection source");
         const need: InspectMediaNeed = { source };
         return { outputs: {}, needs: { inspection: canonicalize(need) } };
+      },
+    },
+    {
+      producer: mediaPipelineProducers.prepare,
+      handler: ({ inputs }) => {
+        const source = blob(inputs.source!.value, "Media preparation source");
+        const need: PrepareMediaNeed = { source, profile: "gemini-reference" };
+        return { outputs: {}, needs: { artifact: canonicalize(need) } };
       },
     },
     {

@@ -1333,6 +1333,9 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
+      '@hypit/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol

@@ -1,6 +1,7 @@
 import { artifactDependency, artifactTypes } from "@hypit/artifact";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 import { textDependency, textTypes } from "@hypit/text";
+import { mediaPipelineDependency } from "@hypit/media-pipeline";
 
 export const geminiModuleRef = { name: "@hypit/gemini", version: "1" } as const;
 
@@ -62,7 +63,7 @@ export const geminiManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: geminiModuleRef.name,
   version: geminiModuleRef.version,
-  dependencies: [artifactDependency, textDependency],
+  dependencies: [artifactDependency, textDependency, mediaPipelineDependency],
   types: [{ name: geminiTypes.request.name }, { name: geminiTypes.draft.name }],
   capabilities: geminiModels.map((model) => ({ name: model, returns: textTypes.text })),
   producers: [
