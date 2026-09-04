@@ -50,6 +50,7 @@ export type PlanProviderView = {
   readonly use?: string;
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
   readonly endpoints?: readonly string[];
+  readonly binding?: string;
 };
 
 /** Which Endpoint and price page stand behind each demanded capability; reads the Profile only. */
@@ -62,6 +63,7 @@ export async function describePlanProviders(host: NodeRuntimeHost, state: BuildS
     ...(item.use === undefined ? {} : { use: item.use }),
     ...(item.pricing === undefined ? {} : { pricing: item.pricing }),
     ...(item.endpoints === undefined ? {} : { endpoints: item.endpoints }),
+    ...(item.binding === undefined ? {} : { binding: item.binding }),
   }));
 }
 

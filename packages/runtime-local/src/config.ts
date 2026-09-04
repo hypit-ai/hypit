@@ -49,7 +49,7 @@ import {
 import type { HostPackageProgress, HostPackageReport, RuntimeHostCapabilityProvider } from "@hypit/runtime-host-node";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
-import { createLocalRuntime } from "./runtime.js";
+import { applyEndpointBindings, createLocalRuntime, parseCapabilityKey } from "./runtime.js";
 import {
   createLocalRuntimeControl,
 } from "./control.js";
@@ -74,6 +74,12 @@ export type LocalRuntimeProfile = {
   readonly dataRoot: string;
   readonly credentials: readonly LocalRuntimeAdapterSelection[];
   readonly endpoints: readonly LocalRuntimeAdapterSelection[];
+  /**
+   * Capability key (`name@version#capability`) to Endpoint instance, for capabilities that several
+   * selected Endpoints offer. Providers declare everything they can do; this is where the deployment
+   * says who does it.
+   */
+  readonly bindings: Readonly<Record<string, string>>;
 };
 
 export type ProjectBuildResultConfig = {
@@ -133,7 +139,9 @@ function object(value: unknown, subject: string): Record<string, unknown> {
 
 function exactKeys(value: Record<string, unknown>, allowed: readonly string[], subject: string): void {
   const unknown = Object.keys(value).filter((key) => !allowed.includes(key));
-  if (unknown.length > 0) throw new Error(`${subject} does not accept ${unknown[0]}`);
+  if (unknown.length > 0) {
+    throw new Error(`${subject} does not accept ${unknown.join(", ")}; it accepts ${allowed.join(", ")}`);
+  }
 }
 
 function requiredString(value: unknown, subject: string): string {
@@ -161,9 +169,28 @@ function entries(value: unknown, subject: string, poolAllowed = false): readonly
   });
 }
 
+function bindings(value: unknown, endpoints: readonly LocalRuntimeAdapterSelection[]): Readonly<Record<string, string>> {
+  const values = object(value ?? {}, "$runtime.bindings");
+  const instances = new Set(endpoints.map((item) => item.instance));
+  const result: Record<string, string> = {};
+  for (const [key, target] of Object.entries(values).sort(([left], [right]) => left.localeCompare(right))) {
+    parseCapabilityKey(key);
+    const instance = requiredString(target, `$runtime.bindings.${key}`);
+    if (!instances.has(instance)) {
+      throw new Error(`$runtime.bindings.${key} names ${instance}, which is not an Endpoint instance of this Profile (${[...instances].sort().join(", ")})`);
+    }
+    result[key] = instance;
+  }
+  return result;
+}
+
 export function parseLocalRuntimeProfile(value: unknown): LocalRuntimeProfile {
   const item = object(value, "$runtime");
-  exactKeys(item, ["format", "dataRoot", "credentials", "endpoints"], "$runtime");
+  if (item.runtime !== undefined && item.format === "hypit.runtime-profile@1") {
+    throw new Error("This Runtime Profile uses the retired hypit.runtime-profile@1 shape with a nested runtime object. "
+      + "Move runtime.config.dataRoot, credentials and endpoints to the top level and set format to hypit.runtime-local@1.");
+  }
+  exactKeys(item, ["format", "dataRoot", "credentials", "endpoints", "bindings"], "$runtime");
   if (item.format !== "hypit.runtime-local@1") {
     throw new Error("$runtime.format must be hypit.runtime-local@1");
   }
@@ -176,6 +203,7 @@ export function parseLocalRuntimeProfile(value: unknown): LocalRuntimeProfile {
     dataRoot: requiredString(item.dataRoot, "$runtime.dataRoot"),
     credentials,
     endpoints,
+    bindings: bindings(item.bindings, endpoints),
   };
 }
 
@@ -442,6 +470,20 @@ export async function declaredManagedPrograms(
   return { dataRoot: root, programs };
 }
 
+/**
+ * A registry of every selected Endpoint with the Profile's bindings applied: the one resolver that
+ * `plan`, creation-time `invoke` and a Build share, so all three see the same Endpoint for a Need.
+ */
+async function installedEndpointRegistry(
+  document: LocalRuntimeProfile,
+  activations: readonly { readonly entry: LocalRuntimeAdapterSelection; readonly activation: RuntimeEndpointActivation }[],
+): Promise<EndpointRegistry> {
+  const endpoints = new EndpointRegistry();
+  for (const { activation } of activations) await activation.endpoint.install(endpoints);
+  applyEndpointBindings(endpoints, document.bindings);
+  return endpoints;
+}
+
 /** Static Endpoint selection per capability. Reads the Profile and activations only; never a credential or a service. */
 export async function describeRuntimeConfigProviders(
   path: string,
@@ -453,23 +495,24 @@ export async function describeRuntimeConfigProviders(
   const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   await installRuntimeAdapters(registry, packageRoot, endpointPackageSelection(document), options.distributionPackageRoot);
-  const endpoints = await activatedEndpoints(document, root, hostStateRoot, registry);
+  const activations = await activatedEndpoints(document, root, hostStateRoot, registry);
+  const endpoints = await installedEndpointRegistry(document, activations);
   return capabilities.map((capability): RuntimeHostCapabilityProvider => {
-    const matches = endpoints.filter(({ activation }) =>
-      activation.endpoint.offers.some((offer) => sameRef(offer.capability, capability)));
     const base = { capability: structuredClone(capability) };
-    if (matches.length === 0) return { ...base, status: "unresolved" };
-    if (matches.length > 1) {
-      return { ...base, status: "ambiguous", endpoints: matches.map((item) => item.entry.instance).sort() };
-    }
-    const match = matches[0]!;
-    const pricing = match.activation.endpoint.pricing;
+    const binding = document.bindings[capabilityKey(capability)];
+    const bound = binding === undefined ? {} : { binding };
+    const resolution = endpoints.resolve({ capability });
+    if (resolution.status === "missing") return { ...base, status: "unresolved", ...bound };
+    if (resolution.status === "ambiguous") return { ...base, status: "ambiguous", endpoints: resolution.endpointIds, ...bound };
+    const match = activations.find(({ activation }) => activation.endpoint.instance.id === resolution.registration.id);
+    const pricing = match?.activation.endpoint.pricing;
     return {
       ...base,
       status: "resolved",
-      endpoint: match.entry.instance,
-      use: match.entry.use,
+      endpoint: resolution.registration.id,
+      ...(match === undefined ? {} : { use: match.entry.use }),
       ...(pricing === undefined ? {} : { pricing: structuredClone(pricing) }),
+      ...bound,
     };
   });
 }
@@ -493,15 +536,17 @@ export async function invokeRuntimeConfigNeed(
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
   const activations = await activatedEndpoints(document, root, hostStateRoot, registry);
-  const endpoints = new EndpointRegistry();
-  for (const { activation } of activations) await activation.endpoint.install(endpoints);
+  const endpoints = await installedEndpointRegistry(document, activations);
   const subject = capabilityKey(need.capability);
   const resolution = endpoints.resolve(need);
   if (resolution.status === "missing") {
-    throw new Error(`No Endpoint in ${absolute} serves ${subject}; hypit plan --runtime ${absolute} shows which Endpoint each capability needs`);
+    throw new Error(resolution.endpointId === undefined
+      ? `No Endpoint in ${absolute} serves ${subject}; hypit plan --runtime ${absolute} shows which Endpoint each capability needs`
+      : `${absolute} binds ${subject} to ${resolution.endpointId}, which does not serve this request; change that binding`);
   }
   if (resolution.status === "ambiguous") {
-    throw new Error(`Several Endpoints in ${absolute} serve ${subject}: ${resolution.endpointIds.join(", ")}; keep exactly one`);
+    throw new Error(`Several Endpoints in ${absolute} serve ${subject}: ${resolution.endpointIds.join(", ")}. `
+      + `Say which one does it: add "bindings": { "${subject}": "<instance>" } to the Profile`);
   }
   const registration = resolution.registration;
   if (registration.kind !== "immediate") {
@@ -515,7 +560,10 @@ export async function invokeRuntimeConfigNeed(
     for (const slot of activation.endpoint.credentials) {
       const value = await stores.store.resolve(slot.ref);
       if (value === undefined) {
-        throw new Error(`${slot.label} for Endpoint ${slot.endpoint} is not configured. Configure it with: hypit auth login ${slot.endpoint} --runtime ${absolute}`);
+        throw new Error(`${slot.label} for Endpoint ${slot.endpoint} is not configured. ${
+          slot.ref.store === "env"
+            ? `Set ${slot.ref.key} in this process environment.`
+            : `Configure it with: hypit auth login ${slot.endpoint} --runtime ${absolute}`}`);
       }
       credentials[slot.slot] = value;
     }
@@ -615,6 +663,7 @@ async function inspectRuntimeConfig(
     ? undefined
     : new Set(options.capabilities.map(capabilityKey));
   const covered = new Set<string>();
+  const activated: Array<{ readonly item: LocalRuntimeAdapterSelection; readonly activation: RuntimeEndpointActivation }> = [];
   const selectedEndpoints: Array<{ readonly item: LocalRuntimeAdapterSelection; readonly activation: RuntimeEndpointActivation }> = [];
   for (const item of document.endpoints) {
     let activation: RuntimeEndpointActivation;
@@ -627,6 +676,7 @@ async function inspectRuntimeConfig(
       diagnostics.push(diagnostic(error, "RUNTIME_ENDPOINT_CONFIG_INVALID", item.instance));
       continue;
     }
+    activated.push({ item, activation });
     if (requested !== undefined && !activation.endpoint.offers.some((offer) => requested.has(capabilityKey(offer.capability)))) continue;
     for (const offer of activation.endpoint.offers) covered.add(capabilityKey(offer.capability));
     selectedEndpoints.push({ item, activation });
@@ -655,6 +705,34 @@ async function inspectRuntimeConfig(
       message: `No usable Endpoint in this Runtime Profile fulfills ${capabilityKey(capability)}`,
       subject: capabilityKey(capability),
     });
+  }
+  // Who serves a capability that several selected Endpoints offer is the Profile's decision. An
+  // unbound contest is an error for a demanded capability and a warning otherwise; a binding to an
+  // Endpoint that does not offer the capability is always an error.
+  try {
+    const endpoints = await installedEndpointRegistry(document, activated.map(({ item, activation }) => ({ entry: item, activation })));
+    for (const [key, instance] of Object.entries(document.bindings)) {
+      const offered = activated.some(({ item, activation }) =>
+        item.instance === instance && activation.endpoint.offers.some((offer) => capabilityKey(offer.capability) === key));
+      if (!offered && activated.some(({ item }) => item.instance === instance)) diagnostics.push({
+        severity: "error",
+        code: "RUNTIME_BINDING_INVALID",
+        message: `bindings names ${instance} for ${key}, but that Endpoint does not offer it`,
+        subject: key,
+      });
+    }
+    for (const contest of endpoints.contested()) {
+      if (contest.bound !== undefined) continue;
+      const key = capabilityKey(contest.capability);
+      diagnostics.push({
+        severity: requested !== undefined && requested.has(key) ? "error" : "warning",
+        code: "RUNTIME_CAPABILITY_AMBIGUOUS",
+        message: `${contest.endpointIds.join(", ")} all offer ${key}. Say which one does it: add "bindings": { "${key}": "<instance>" } to the Profile`,
+        subject: key,
+      });
+    }
+  } catch (error) {
+    diagnostics.push(diagnostic(error, "RUNTIME_ENDPOINT_INSTALL_FAILED"));
   }
   if (selectedEndpoints.length > 0) {
     let stores: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
@@ -737,6 +815,7 @@ export async function createRuntimeFromConfig(
   const environmentConfig = canonicalStringify({
     credentials: document.credentials,
     endpoints: document.endpoints,
+    bindings: document.bindings,
   });
   let credentials: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
   try {
@@ -774,6 +853,7 @@ export async function createRuntimeFromConfig(
         return collectLoadedNodePackageComponents(loaded);
       },
       endpoints,
+      bindings: document.bindings,
       close: async () => {
         await credentials?.close();
         state.close();

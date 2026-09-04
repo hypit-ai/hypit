@@ -4,4 +4,5 @@ export {
   ProducerRegistry,
   EndpointRegistry,
 } from "./registry.js";
+export type { ResolvableNeed } from "./registry.js";
 export type * from "./types.js";

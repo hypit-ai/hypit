@@ -140,6 +140,8 @@ export type RuntimeHostCapabilityProvider = {
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
   /** Every matching Endpoint instance when the selection is ambiguous. */
   readonly endpoints?: readonly string[];
+  /** The Endpoint instance the Profile's `bindings` name for this capability, when it names one. */
+  readonly binding?: string;
 };
 
 export type ManagedProgramProgress = {

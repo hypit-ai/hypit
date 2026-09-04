@@ -35,12 +35,16 @@ The Profile contains only environmental choices that genuinely vary:
   },
   "endpoints": {
     "media": { "use": "@hypit/provider-media-local" }
-  }
+  },
+  "bindings": {}
 }
 ```
 
 * `credentials` selects stores for explicit credential references.
 * `endpoints` selects exact Provider implementations and their configuration.
+* `bindings` says which Endpoint serves a capability that several selected Endpoints offer, keyed by
+  `name@version#capability` and naming an Endpoint instance. Providers never hide what they can do;
+  this is the deployment's decision, and `doctor` reports a contested capability that lacks one.
 
 The official video Distribution selects the local Runtime before opening this file. The Profile
 does not repeat a `runtime.use` selector that cannot make another choice. Another application may
