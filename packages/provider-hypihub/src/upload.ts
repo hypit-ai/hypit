@@ -46,6 +46,8 @@ export type HypiHubUploaderOptions = {
   readonly uploadPartTimeoutMs?: number;
   readonly uploadPartAttempts?: number;
   readonly fetch: typeof globalThis.fetch;
+  /** Optional diagnostic sink. Defaults to stderr; messages never include credentials or signed URLs. */
+  readonly logger?: (message: string) => void;
 };
 
 export type HypiHubUploadInput = {
@@ -82,6 +84,7 @@ export class HypiHubUploader {
   readonly uploadPartTimeout: number;
   readonly uploadPartAttempts: number;
   readonly fetcher: typeof globalThis.fetch;
+  readonly logger: (message: string) => void;
 
   constructor(options: HypiHubUploaderOptions) {
     this.baseUrl = apiBaseUrl(options.baseUrl);
@@ -92,6 +95,16 @@ export class HypiHubUploader {
       "HypiHub upload part attempts");
     assert(this.uploadPartAttempts <= 8, "HypiHub upload part attempts must be within 1..8");
     this.fetcher = options.fetch;
+    this.logger = options.logger ?? ((message) => console.error(`[hypihub-upload] ${message}`));
+  }
+
+  private log(message: string): void { this.logger(message); }
+
+  private elapsed(startedAt: number): string { return `${Date.now() - startedAt}ms`; }
+
+  private safeReason(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    return message.replace(/https?:\/\/\S+/giu, "[redacted-url]").slice(0, 300);
   }
 
   private async json(path: string, apiKey: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
@@ -117,6 +130,8 @@ export class HypiHubUploader {
   }
 
   private async uploadForm(input: HypiHubUploadInput, apiKey: string, digest: string): Promise<string> {
+    const startedAt = Date.now();
+    this.log(`compatibility upload started bytes=${input.bytes.byteLength} mime=${input.mediaType}`);
     const form = new FormData();
     const copy = new ArrayBuffer(input.bytes.byteLength);
     new Uint8Array(copy).set(input.bytes);
@@ -126,10 +141,13 @@ export class HypiHubUploader {
     const response = await this.json("/files", apiKey, { method: "POST", body: form });
     const url = requiredString(response.url, "HypiHub file upload URL");
     assert(/^https:\/\//iu.test(url), "HypiHub file upload returned no HTTPS URL");
+    this.log(`compatibility upload completed bytes=${input.bytes.byteLength} elapsed=${this.elapsed(startedAt)}`);
     return url;
   }
 
   private async signParts(uploadId: string, declarations: readonly PartDeclaration[], apiKey: string): Promise<Map<number, Record<string, unknown>>> {
+    const startedAt = Date.now();
+    this.log(`part signing started upload=${uploadId} parts=${declarations.length}`);
     const response = await this.json(`/files/uploads/${encodeURIComponent(uploadId)}/parts`, apiKey, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -145,6 +163,7 @@ export class HypiHubUploader {
       signed.set(partNumber, item);
     }
     assert(signed.size === declarations.length, "HypiHub signed an incomplete part set");
+    this.log(`part signing completed upload=${uploadId} parts=${declarations.length} elapsed=${this.elapsed(startedAt)}`);
     return signed;
   }
 
@@ -171,6 +190,8 @@ export class HypiHubUploader {
       }
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.uploadPartTimeout);
+      const startedAt = Date.now();
+      this.log(`part upload started upload=${uploadId} part=${declaration.part_number} bytes=${declaration.bytes} attempt=${attempt + 1}`);
       try {
         const url = requiredString(capability.url, "HypiHub signed upload URL");
         assertHTTPS(url, "HypiHub signed upload URL");
@@ -188,13 +209,16 @@ export class HypiHubUploader {
         const verified = response.headers.get("x-amz-checksum-sha256");
         assert(verified === null || verified === declaration.checksum_sha256,
           `S3 upload part ${declaration.part_number} returned a different checksum`);
+        this.log(`part upload completed upload=${uploadId} part=${declaration.part_number} bytes=${declaration.bytes} attempt=${attempt + 1} elapsed=${this.elapsed(startedAt)}`);
         return {
           part_number: declaration.part_number,
           etag,
           checksum_sha256: declaration.checksum_sha256,
         };
-      } catch {
+      } catch (error) {
+        this.log(`part upload failed upload=${uploadId} part=${declaration.part_number} attempt=${attempt + 1} elapsed=${this.elapsed(startedAt)} reason=${this.safeReason(error)}`);
         if (attempt + 1 < this.uploadPartAttempts) {
+          this.log(`part upload retry scheduled upload=${uploadId} part=${declaration.part_number} next_attempt=${attempt + 2}`);
           await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
         }
       } finally {
@@ -222,6 +246,7 @@ export class HypiHubUploader {
         checksum_sha256: createHash("sha256").update(part).digest("base64"),
       };
     });
+    this.log(`multipart upload negotiated upload=${uploadId} bytes=${bytes.byteLength} part_size=${partSize} parts=${partCount} concurrency=${requestedConcurrency}`);
     try {
       const signed = await this.signParts(uploadId, declarations, apiKey);
       const completed = new Array<CompletedPart>(partCount);
@@ -240,6 +265,8 @@ export class HypiHubUploader {
         }
       };
       await Promise.all(Array.from({ length: Math.min(requestedConcurrency, partCount) }, worker));
+      const completeStartedAt = Date.now();
+      this.log(`multipart complete started upload=${uploadId} parts=${partCount}`);
       const response = await this.json(`/files/uploads/${encodeURIComponent(uploadId)}/complete`, apiKey, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -247,8 +274,10 @@ export class HypiHubUploader {
       });
       const url = requiredString(response.url, "HypiHub direct upload URL");
       assert(/^https:\/\//iu.test(url), "HypiHub direct upload returned no HTTPS URL");
+      this.log(`multipart complete finished upload=${uploadId} parts=${partCount} elapsed=${this.elapsed(completeStartedAt)}`);
       return url;
     } catch (error) {
+      this.log(`multipart upload failed upload=${uploadId} reason=${this.safeReason(error)}`);
       try { await this.json(`/files/uploads/${encodeURIComponent(uploadId)}`, apiKey, { method: "DELETE" }); }
       catch { /* S3 Lifecycle is the final abort fallback. */ }
       throw error;
@@ -257,12 +286,16 @@ export class HypiHubUploader {
 
   async upload(input: HypiHubUploadInput, apiKey: string): Promise<string> {
     assert(input.bytes.byteLength > 0, "HypiHub reference artifact is empty");
+    const startedAt = Date.now();
     const digest = createHash("sha256").update(input.bytes).digest("hex");
+    this.log(`upload started bytes=${input.bytes.byteLength} mime=${input.mediaType} digest=${digest.slice(0, 12)}`);
     if (input.sha256 !== undefined) {
       assert(input.sha256.toLowerCase().replace(/^sha256:/u, "") === digest,
         "HypiHub reference artifact failed its SHA-256 check");
     }
     let policy: Record<string, unknown>;
+    const policyStartedAt = Date.now();
+    this.log(`upload session request started bytes=${input.bytes.byteLength} mime=${input.mediaType}`);
     try {
       policy = await this.json("/files/uploads", apiKey, {
         method: "POST",
@@ -276,12 +309,24 @@ export class HypiHubUploader {
           head_base64: Buffer.from(input.bytes.subarray(0, 512)).toString("base64"),
         }),
       });
+      this.log(`upload session request finished elapsed=${this.elapsed(policyStartedAt)}`);
     } catch (error) {
+      this.log(`upload session request failed elapsed=${this.elapsed(policyStartedAt)} reason=${this.safeReason(error)}`);
       if (!(error instanceof HypiHubHTTPError) || error.status !== 404) throw error;
-      return this.uploadForm(input, apiKey, digest);
+      this.log("upload session endpoint returned 404; falling back to compatibility upload");
+      const result = await this.uploadForm(input, apiKey, digest);
+      this.log(`upload finished bytes=${input.bytes.byteLength} mime=${input.mediaType} elapsed=${this.elapsed(startedAt)}`);
+      return result;
     }
-    if (policy.upload_mode === "api_multipart") return this.uploadForm(input, apiKey, digest);
+    if (policy.upload_mode === "api_multipart") {
+      this.log("HypiHub selected compatibility upload mode");
+      const result = await this.uploadForm(input, apiKey, digest);
+      this.log(`upload finished bytes=${input.bytes.byteLength} mime=${input.mediaType} elapsed=${this.elapsed(startedAt)}`);
+      return result;
+    }
     assert(policy.upload_mode === "s3_multipart", "HypiHub returned an unknown upload mode");
-    return this.uploadDirect(input.bytes, apiKey, policy);
+    const result = await this.uploadDirect(input.bytes, apiKey, policy);
+    this.log(`upload finished bytes=${input.bytes.byteLength} mime=${input.mediaType} elapsed=${this.elapsed(startedAt)}`);
+    return result;
   }
 }
