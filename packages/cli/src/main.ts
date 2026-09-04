@@ -18,7 +18,7 @@ import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliIo, CliMachineView } from "./output.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
-import { assertPreflight, createCatalogDescriptor, describePlanProviders, preflightPlan } from "./build-planning.js";
+import { assertPreflight, createCatalogDescriptor, describePlanNeeds, describePlanProviders, evaluatePlanNeeds, preflightPlan } from "./build-planning.js";
 import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
 import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
@@ -571,6 +571,8 @@ export async function runCli(
     const planHost = runtimeProfile === undefined ? undefined : await runtimeHost(runtimeProfile);
     const preflight = planHost === undefined ? undefined : await preflightPlan(planHost, result.state);
     const providers = planHost === undefined ? undefined : await describePlanProviders(planHost, result.state);
+    const evaluated = await evaluatePlanNeeds(result.definition, packageContributions);
+    const needs = await describePlanNeeds(result.state, evaluated, providers ?? []);
     const outputNames = Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
       item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : []));
     const externalRequests = new Map<string, number>();
@@ -611,6 +613,8 @@ export async function runCli(
           providers: providers.slice(0, args.limit),
           ...(providers.length <= args.limit ? {} : { omittedProviders: providers.length - args.limit }),
         }),
+        needs: needs.slice(0, Math.max(args.limit, 50)),
+        ...(needs.length <= Math.max(args.limit, 50) ? {} : { omittedNeeds: needs.length - Math.max(args.limit, 50) }),
         ...(preflight === undefined ? {} : { preflight: {
           ok: preflight.ok,
           capabilityCount: preflight.capabilities.length,

@@ -567,6 +567,15 @@ importers:
       '@hypit/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@hypit/core':
+        specifier: workspace:*
+        version: link:../core
+      '@hypit/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -588,6 +597,9 @@ importers:
       '@hypit/source':
         specifier: workspace:*
         version: link:../source
+      '@hypit/validation':
+        specifier: workspace:*
+        version: link:../validation
       '@hypit/workspace':
         specifier: workspace:*
         version: link:../workspace
