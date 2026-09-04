@@ -489,3 +489,45 @@ test("providers, doctor and invoke share one resolver: a contested capability is
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("doctor reports two Endpoints that share a pool but size it differently", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-pools-"));
+  const path = join(root, "hypit.runtime.json");
+  await writeFile(path, JSON.stringify(profile({
+    dataRoot: ".",
+    endpoints: {
+      four: { use: "example.four", pool: "generation" },
+      ten: { use: "example.ten", pool: "generation" },
+    },
+  })));
+  const returns = { module: { name: "example.value", version: "1" }, name: "Output" } as const;
+  const registry = new RuntimeAdapterRegistry();
+  for (const [use, name, concurrency] of [["example.four", "four", 4], ["example.ten", "ten", 10]] as const) {
+    registry.registerFacet(createRuntimeEndpointAdapterFacet({
+      use,
+      activate: (context) => ({
+        endpoint: defineEndpointPackage({
+          module: { name: `example.provider.${name}`, version: "1" },
+          facet: name,
+          instance: context.instance,
+          pool: context.pool ?? context.instance,
+          pricing: { kind: "local" },
+          defaultConcurrency: concurrency,
+          capabilities: [{
+            capability: { module: { name: "example.model", version: "1" }, name },
+            returns,
+            lifecycle: "immediate",
+            handler: () => ({ value: { kind: "inline" as const, value: null } }),
+          }],
+        }),
+      }),
+    }));
+  }
+  try {
+    const conflict = (await preflightRuntimeConfig(path, { registry })).diagnostics.find((item) => item.code === "RUNTIME_POOL_CONFLICT");
+    assert.ok(conflict, "the shared pool is reported");
+    assert.match(conflict.message, /four, ten share pool:generation but size it 4 and 10/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

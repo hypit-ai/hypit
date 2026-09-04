@@ -1,13 +1,14 @@
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { EndpointInvocationContext, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
 import { geminiCapabilities, geminiModels, verifyGeminiRequest } from "@hypit/gemini";
+import type { CapabilityRef } from "@hypit/protocol";
+import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-kit";
 import type { GeminiRequest } from "@hypit/gemini";
 import { canonicalize } from "@hypit/protocol";
-import { credentialRef } from "@hypit/runtime";
 import type { CredentialRef } from "@hypit/runtime";
 import { sealText, textTypes } from "@hypit/text";
 
-import { createVertexGeminiGenerator } from "./gemini.js";
+import { createVertexGeminiGenerator, probeVertexModel, vertexModelId } from "./gemini.js";
 
 export const vertexProviderModuleRef = { name: "@hypit/provider-vertex", version: "1" } as const;
 
@@ -27,15 +28,49 @@ function secret(context: EndpointInvocationContext, name: "project" | "credentia
   return value;
 }
 
-/**
- * The Vertex publisher id behind each Hypit Gemini capability. The capability names the model the
- * author chose; the id Vertex serves it under is this Provider's fact, not the author's.
- */
-const VERTEX_MODEL_IDS: Readonly<Record<string, string>> = {
-  "gemini-3.1-pro": "gemini-3.1-pro-preview",
-};
+function capabilityKey(capability: CapabilityRef): string {
+  return `${capability.module.name}@${capability.module.version}#${capability.name}`;
+}
+
+/** Active doctor: can this project reach each declared model on Vertex? Vertex says why when not. */
+export async function diagnoseVertexProvider(
+  options: Pick<CreateVertexProviderOptions, "location" | "requestTimeoutMs">,
+  context: {
+    readonly credentials: Readonly<Record<string, { readonly secret: string }>>;
+    readonly capabilities?: readonly CapabilityRef[];
+  },
+): Promise<readonly RuntimeDoctorDiagnostic[]> {
+  const project = context.credentials.project?.secret ?? "";
+  const credentials = context.credentials.credentials?.secret ?? "";
+  if (project.trim().length === 0 || credentials.trim().length === 0) {
+    return [{ severity: "error", code: "VERTEX_CREDENTIALS_MISSING", message: "Vertex project and credentials are not both configured" }];
+  }
+  const requested = context.capabilities ?? geminiModels.map((model) => geminiCapabilities[model]);
+  const diagnostics: RuntimeDoctorDiagnostic[] = [];
+  for (const capability of requested) {
+    if (!geminiModels.some((model) => capabilityKey(geminiCapabilities[model]) === capabilityKey(capability))) continue;
+    try {
+      await probeVertexModel({
+        project,
+        credentials,
+        ...(options.location === undefined ? {} : { location: options.location }),
+        ...(options.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: options.requestTimeoutMs }),
+      }, vertexModelId(capability.name));
+    } catch (error) {
+      diagnostics.push({
+        severity: "error",
+        code: "VERTEX_MODEL_UNAVAILABLE",
+        message: `${project} cannot reach ${vertexModelId(capability.name)} on Vertex: ${error instanceof Error ? error.message.slice(0, 400) : String(error)}`,
+        subject: capabilityKey(capability),
+      });
+    }
+  }
+  return diagnostics;
+}
 
 export function createVertexProvider(options: CreateVertexProviderOptions) {
+  // Every declared capability must have a Vertex id before anything is registered.
+  for (const model of geminiModels) vertexModelId(model);
   const handler: ImmediateEndpointHandler = async (context) => {
     const request = context.need.constraints as unknown;
     verifyGeminiRequest(request);
@@ -43,7 +78,7 @@ export function createVertexProvider(options: CreateVertexProviderOptions) {
     const generate = createVertexGeminiGenerator({
       project: secret(context, "project"),
       credentials: secret(context, "credentials"),
-      model: VERTEX_MODEL_IDS[context.need.capability.name] ?? context.need.capability.name,
+      model: vertexModelId(context.need.capability.name),
       ...(options.location === undefined ? {} : { location: options.location }),
       ...(options.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: options.requestTimeoutMs }),
     });
@@ -63,8 +98,8 @@ export function createVertexProvider(options: CreateVertexProviderOptions) {
     pool: options.pool ?? options.instance ?? "vertex.default",
     pricing: { kind: "page", url: "https://cloud.google.com/vertex-ai/generative-ai/pricing" },
     credentials: {
-      project: options.project ?? credentialRef("env", "GOOGLE_CLOUD_PROJECT"),
-      credentials: options.credentials ?? credentialRef("env", "GOOGLE_APPLICATION_CREDENTIALS_JSON"),
+      project: options.project,
+      credentials: options.credentials,
     },
     credentialInputs: {
       project: { label: "Google Cloud project" },

@@ -721,6 +721,14 @@ async function inspectRuntimeConfig(
         subject: key,
       });
     }
+    for (const conflict of endpoints.capacityConflicts()) {
+      diagnostics.push({
+        severity: "error",
+        code: "RUNTIME_POOL_CONFLICT",
+        message: `${conflict.endpointIds.join(", ")} share ${conflict.resource} but size it ${conflict.limits.join(" and ")}; give them the same defaultConcurrency or different pools`,
+        subject: conflict.resource,
+      });
+    }
     for (const contest of endpoints.contested()) {
       if (contest.bound !== undefined) continue;
       const key = capabilityKey(contest.capability);

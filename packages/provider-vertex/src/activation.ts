@@ -7,7 +7,7 @@ import {
   runtimeConfigString,
 } from "@hypit/runtime-kit";
 
-import { createVertexProvider } from "./provider.js";
+import { createVertexProvider, diagnoseVertexProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@hypit/provider-vertex",
@@ -22,7 +22,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
     const location = runtimeConfigString(config.location, "Vertex location");
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "Vertex defaultConcurrency");
     const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "Vertex requestTimeoutMs");
-    return { endpoint: createVertexProvider({
+    const options = {
       instance: context.instance,
       pool: context.pool,
       project,
@@ -30,7 +30,11 @@ const adapter = createRuntimeEndpointAdapterFacet({
       ...(location === undefined ? {} : { location }),
       ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
       ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
-    }) };
+    };
+    return {
+      endpoint: createVertexProvider(options),
+      diagnose: async (doctor) => await diagnoseVertexProvider(options, doctor),
+    };
   },
 });
 
