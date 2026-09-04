@@ -233,7 +233,7 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
 }
 
 export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}) {
-  const client = new HypiHubClient({ baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"), timeout: options.requestTimeoutMs ?? 30_000, fetcher: options.fetch ?? globalThis.fetch });
+  const client = new HypiHubClient({ baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"), timeout: options.requestTimeoutMs ?? 300_000, fetcher: options.fetch ?? globalThis.fetch });
   const asyncEndpoint = endpoint(client, options.pollIntervalMs ?? 10_000, 20 * 60_000, options.publicAssetUrl);
   const audioEndpoint: ImmediateEndpointHandler = async (context) => {
     try {
