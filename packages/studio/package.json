@@ -46,7 +46,6 @@
     "@hypit/video-cli": "workspace:*",
     "@hypit/workspace": "workspace:*",
     "@hypit/workspace-fs-node": "workspace:*",
-    "@hypit/provider-media-local": "workspace:*",
     "vite": "5.4.21"
   }
 }

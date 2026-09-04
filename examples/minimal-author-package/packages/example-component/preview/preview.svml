@@ -1,7 +1,7 @@
 <?svml using="@hypit/markup@1"?>
 
-<!-- A complete, self-contained catalogue Source. The generated take is preview-mocked; the
-     remaining deterministic graph is compiled and rendered through the normal Studio path. -->
+<!-- A complete catalogue Source. Its Run is ordinary: Studio can open it once the required media
+     Candidates are supplied, and a normal Build of the same Run can regenerate the catalogue frame. -->
 <svml>
   <import from="@hypit/script@1"/>
   <import as="wording" from="@hypit/text@1"/>

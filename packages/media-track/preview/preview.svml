@@ -6,8 +6,8 @@
      about a project reaches this file, and nothing in it reaches a project. It exists so a reader
      can see the Surface's range in one picture, and so that picture can be made again.
 
-     The generations it declares are never performed. `render_previews` mocks each one
-     and draws the rest, so this stays free to run and free to re-run.
+     The checked-in Track.png is the package catalogue asset. This Source and its ordinary Run
+     preserve how it was authored; regenerating the encoded frame is a normal Build.
 
      A placeholder shows the Frame treatment and nothing inside it. To show the component holding a
      picture, commit a sample beside this file and satisfy the media output in `build.svrun`:
@@ -15,7 +15,7 @@
        <file id="sample-a" type="@hypit/artifact@1#BlobArtifact" from="./sample-a.png" media-type="image/png"/>
        <satisfy output="motion-a-media.media" candidate="sample-a"/>
 
-     Anything the Run satisfies is carried through untouched and never mocked over. -->
+     Candidate selection is explicit in the Run; Studio never replaces missing media itself. -->
 <svml>
   <import from="@hypit/script@1"/>
   <import as="wording" from="@hypit/text@1"/>

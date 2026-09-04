@@ -16,8 +16,8 @@ export async function executeDeterministic(
   domain: StudioDomain,
   planned: BuildState,
   resources: ResourceStore,
-  endpoints: EndpointRegistry = new EndpointRegistry(),
 ): Promise<Executed> {
+  const endpoints = new EndpointRegistry();
   const result = await new NodeDriver({
     producers: domain.producers,
     validators: domain.validators,

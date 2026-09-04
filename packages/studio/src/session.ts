@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import { relative } from "node:path";
-import type { EndpointRegistry } from "@hypit/driver-node";
 
 import { markupAuthorFrontendId } from "@hypit/markup";
 import { svsFrontendId } from "@hypit/svs";
@@ -14,7 +13,7 @@ import type { RunPlan } from "./run.js";
 import type { StudioSnapshot } from "./shared.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { snapshot } from "./snapshot.js";
-import { PREVIEW_LOCAL_MEDIA_CAPABILITIES, inspectStudioRun } from "./studio-preflight.js";
+import { inspectStudioRun } from "./studio-preflight.js";
 import type { StudioViewRequirement } from "./studio-preflight.js";
 import type { StudioSourceFile } from "./parameters.js";
 
@@ -59,14 +58,9 @@ export async function readStudioSession(input: {
   readonly revision: number;
   readonly sourcePath?: string;
   readonly workspaceRoot: string;
-  /** Preview-only local deterministic media endpoints (never paid/external Providers). */
-  readonly endpoints?: EndpointRegistry;
 }): Promise<StudioSession> {
   const source = input.run.source;
-  // The endpoints a preview Run carries are the local deterministic media ones, so the capabilities
-  // they serve are resolved for this session exactly as they are for the startup preflight.
-  const inspection = inspectStudioRun(input.registry, source, input.run,
-    input.endpoints === undefined ? undefined : PREVIEW_LOCAL_MEDIA_CAPABILITIES);
+  const inspection = inspectStudioRun(input.registry, source, input.run);
   const outputRefs = [
     inspection.filmComposition,
     ...inspection.projections.map((projection) => projection.ref),
@@ -78,7 +72,6 @@ export async function readStudioSession(input: {
     outputRefs,
     compositionRef: inspection.filmComposition,
     projections: inspection.projections,
-    ...(input.endpoints === undefined ? {} : { endpoints: input.endpoints }),
   });
   const rendered = renderPreview({
     composition: built.composition,
