@@ -871,7 +871,7 @@ test("local media Provider draws a stand-in card as a picture and as an exact si
     return result.value as Awaited<ReturnType<MemoryResourceStore["put"]>>;
   };
   const picture = await fulfillBlob(need("need:card-image", standInCapabilities.drawCard, artifactTypes.blob, canonicalize({
-    kind: "image", width: 640, height: 400, model: "picture-model", prompt: "A quiet kitchen counter with fresh basil",
+    kind: "image", width: 640, height: 400,
   })));
   assert.equal(picture.kind, "blob");
   assert.equal(picture.mediaType, "image/png");
@@ -880,25 +880,31 @@ test("local media Provider draws a stand-in card as a picture and as an exact si
   assert.deepEqual(pngSize(bytes), { width: 640, height: 400 });
 
   const clip = await fulfillBlob(need("need:card-video", standInCapabilities.drawCard, artifactTypes.blob, canonicalize({
-    kind: "video", width: 320, height: 568, model: "clip-model", prompt: "Locked medium close-up",
+    kind: "video", width: 320, height: 568,
     video: { frameRate: { numerator: 24, denominator: 1 }, frameCount: 12 },
   })));
   assert.equal(clip.mediaType, "video/mp4");
   const inspection = await inspectArtifact(resources, clip);
   const visual = inspection.streams.find((item) => item.kind === "video");
   assert.ok(visual !== undefined && visual.kind === "video");
-  assert.equal(inspection.streams.length, 1, "a stand-in clip carries no sound unless the model would have");
+  assert.equal(inspection.streams.length, 1, "the card request alone decides whether a clip carries silence");
   assert.equal(visual.width, 320);
   assert.equal(visual.height, 568);
   assert.equal(visual.decodedUnitCount, 12);
 
   const spoken = await fulfillBlob(need("need:card-spoken", standInCapabilities.drawCard, artifactTypes.blob, canonicalize({
-    kind: "video", width: 320, height: 568, model: "clip-model", prompt: "Spoken dialogue",
+    kind: "video", width: 320, height: 568,
     video: { frameRate: { numerator: 24, denominator: 1 }, frameCount: 12, audio: "silence" },
   })));
   const spokenStreams = (await inspectArtifact(resources, spoken)).streams;
   const sound = spokenStreams.find((item) => item.kind === "audio");
-  assert.ok(sound !== undefined && sound.kind === "audio", "a model that would have spoken leaves a silent track");
+  assert.ok(sound !== undefined && sound.kind === "audio", "a generic video stand-in can carry a silent track");
   assert.equal(sound.sampleRate, 48_000);
   assert.equal(spokenStreams.length, 2);
+
+  const silence = await fulfillBlob(need("need:stand-in-silence", standInCapabilities.drawSilence, artifactTypes.blob,
+    canonicalize({ sampleRate: 48_000, channels: 2, sampleFrames: 48_000 })));
+  assert.equal(silence.mediaType, "audio/wav");
+  const silenceBytes = await resources.get(silence.resource);
+  assert.equal(silenceBytes?.byteLength, 44 + 48_000 * 4);
 });

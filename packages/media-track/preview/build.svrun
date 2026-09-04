@@ -2,5 +2,24 @@
 
 <svrun version="1">
   <author source="./preview.svml"/>
+  <import from="@hypit/stand-in@1" as="stand-in"/>
   <target output="final.video"/>
+  <fragment id="take-card" using="stand-in:video">
+    <input name="canvas" from="vertical"/>
+    <input name="duration" value="8"/>
+    <input name="clock" from="clock"/>
+  </fragment>
+  <fragment id="motion-a-card" using="stand-in:video">
+    <input name="canvas" from="vertical"/>
+    <input name="duration" value="5"/>
+    <input name="clock" from="clock"/>
+  </fragment>
+  <fragment id="motion-b-card" using="stand-in:video">
+    <input name="canvas" from="vertical"/>
+    <input name="duration" value="5"/>
+    <input name="clock" from="clock"/>
+  </fragment>
+  <satisfy output="take.video" candidate="take-card.video"/>
+  <satisfy output="motion-a.video" candidate="motion-a-card.video"/>
+  <satisfy output="motion-b.video" candidate="motion-b-card.video"/>
 </svrun>

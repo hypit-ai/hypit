@@ -293,6 +293,7 @@ function startSelected(
 ): BuildState {
   const planned = planBuild(program, graph, {
     format: "hypit.run-graph@1",
+    records: [],
     candidates: [],
     operations: [],
     satisfactions,

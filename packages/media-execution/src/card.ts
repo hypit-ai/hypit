@@ -9,11 +9,11 @@ import { verifyStandInCardRequest } from "@hypit/stand-in";
 import type { StandInCardRequest } from "@hypit/stand-in";
 
 /**
- * A stand-in card, drawn from the request the model would have received.
+ * A generic stand-in card, drawn from only the media shape a Run supplies.
  *
  * The card is pixels, not a model call: a flat ground coloured by kind, a thick border, a diagonal
- * STAND-IN watermark, the kind in large type, the model, the frame and duration, an excerpt of the
- * prompt, and for video a running timecode and progress bar. Everything is drawn here with a
+ * STAND-IN watermark, the kind in large type, the frame and duration, and for video a running
+ * timecode and progress bar. Everything is drawn here with a
  * built-in 5x7 bitmap font so the same card comes out of every machine, with or without a font
  * library in its ffmpeg. The PNG is deterministic for a given request.
  */
@@ -215,27 +215,6 @@ function textWidth(value: string, scale: number): number {
   return Math.max(0, [...value].length * ADVANCE * scale - scale);
 }
 
-/** Uppercase, one line per row, at most `maxLines` rows of `maxChars`; the last row ends in an ellipsis. */
-function wrap(value: string, maxChars: number, maxLines: number): readonly string[] {
-  const words = value.replace(/\s+/gu, " ").trim().split(" ").filter((word) => word.length > 0);
-  const lines: string[] = [];
-  let current = "";
-  for (const word of words) {
-    const candidate = current.length === 0 ? word : `${current} ${word}`;
-    if (candidate.length <= maxChars) { current = candidate; continue; }
-    if (current.length > 0) lines.push(current);
-    current = word.length > maxChars ? word.slice(0, maxChars) : word;
-    if (lines.length === maxLines) break;
-  }
-  if (current.length > 0 && lines.length < maxLines) lines.push(current);
-  const truncated = lines.join(" ").length < words.join(" ").length;
-  if (truncated && lines.length > 0) {
-    const last = lines[lines.length - 1]!;
-    lines[lines.length - 1] = `${last.slice(0, Math.max(0, maxChars - 3))}...`;
-  }
-  return lines;
-}
-
 function seconds(video: NonNullable<StandInCardRequest["video"]>): number {
   return video.frameCount * video.frameRate.denominator / video.frameRate.numerator;
 }
@@ -294,18 +273,15 @@ export function drawStandInCard(request: StandInCardRequest): Uint8Array {
   const kindTag = request.kind === "video" ? "NOT YET GENERATED" : "NOT YET GENERATED";
   raster.text(kindTag, width - margin - textWidth(kindTag, tagScale), margin, tagScale, MUTED);
 
-  // Centre block: kind, model, frame and duration, prompt excerpt.
+  // Centre block: only the generic media shape selected by the Run.
   const titleScale = Math.max(4, Math.floor(m / 70));
   const lineScale = Math.max(2, Math.floor(m / 200));
-  const promptScale = Math.max(2, Math.floor(m / 240));
   const title = request.kind.toUpperCase();
   const frameLine = request.video === undefined
     ? `${width} X ${height}`
     : `${width} X ${height}   ${seconds(request.video).toFixed(2)} S   ${(request.video.frameRate.numerator / request.video.frameRate.denominator).toFixed(2)} FPS`;
-  const promptLines = wrap(request.prompt, Math.max(8, Math.floor((width - margin * 2) / (ADVANCE * promptScale))), 4);
   const blockHeight = GLYPH_HEIGHT * titleScale + lineScale * 6
-    + GLYPH_HEIGHT * lineScale * 2 + lineScale * 4
-    + (promptLines.length === 0 ? 0 : lineScale * 8 + promptLines.length * (GLYPH_HEIGHT * promptScale + promptScale * 3));
+    + GLYPH_HEIGHT * lineScale;
   let y = Math.round((height - band - blockHeight) / 2);
   const centred = (value: string, scale: number, color: Rgb): void => {
     raster.text(value, Math.round((width - textWidth(value, scale)) / 2), y, scale, color);
@@ -313,17 +289,30 @@ export function drawStandInCard(request: StandInCardRequest): Uint8Array {
   };
   centred(title, titleScale, TEXT);
   y += lineScale * 6;
-  centred(request.model, lineScale, ACCENT);
-  y += lineScale * 4;
   centred(frameLine, lineScale, MUTED);
-  if (promptLines.length > 0) {
-    y += lineScale * 8;
-    for (const line of promptLines) {
-      centred(line, promptScale, TEXT);
-      y += promptScale * 3;
-    }
-  }
   return raster.png();
+}
+
+export function drawStandInSilence(sampleFrames: number): Uint8Array {
+  if (!Number.isSafeInteger(sampleFrames) || sampleFrames < 1) {
+    throw new Error("Stand-in silence sampleFrames must be a positive integer");
+  }
+  const dataBytes = sampleFrames * 2 * 2;
+  const wav = Buffer.alloc(44 + dataBytes);
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(36 + dataBytes, 4);
+  wav.write("WAVE", 8);
+  wav.write("fmt ", 12);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(2, 22);
+  wav.writeUInt32LE(48_000, 24);
+  wav.writeUInt32LE(48_000 * 4, 28);
+  wav.writeUInt16LE(4, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(dataBytes, 40);
+  return Uint8Array.from(wav);
 }
 
 /** The band a video card carries under its picture: timecode, frame counter and progress bar. */

@@ -14,7 +14,6 @@ export const hypitPackage = {
   components: [grokImagineComponent],
   hostFacets: [
     grokImagineDefinition.hostFacet,
-    ...(grokImagineDefinition.runFragmentFacet === undefined ? [] : [grokImagineDefinition.runFragmentFacet]),
     createMarkupSurfaceHostFacet({
       module: grokImagineModuleRef,
     declaration: grokImagineMarkupSurfaces.find((item) => item.name === "video")!,

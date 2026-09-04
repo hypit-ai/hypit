@@ -221,6 +221,7 @@ export class NodeRunCompiler {
       const localRecordIds = new Set(checkedPlan.selections
         .filter((selection) => selectedLocalSources.has(selection.candidate))
         .map((selection) => selection.record));
+      for (const record of checkedRunGraph.records) localRecordIds.add(record.id);
       for (const record of checkedPlan.initialRecords) {
         if (localRecordIds.has(record.id)) await admitRecord.call(this.#options.authorCompiler, program, record);
       }

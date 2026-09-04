@@ -10,12 +10,13 @@
      preserve how it was authored; regenerating the encoded frame is a normal Build.
 
      A placeholder shows the Frame treatment and nothing inside it. To look at the component before
-     buying its pictures, stand in for each generation in the Run; the card is derived from the
-     model's own draft, and the Profile's local media Endpoint normalizes it, in Studio as in a Build:
+     buying its pictures, select a generic stand-in Candidate in the Run. The Run supplies only the
+     media shape its composition needs; the Profile's local media Endpoint draws and normalizes it,
+     in Studio as in a Build:
 
-       <import from="@hypit/seedance@1" as="seedance"/>
-       <fragment id="a-card" using="seedance:mini-stand-in">
-         <input name="draft" from="motion-a.draft"/><input name="prompt" from="direction"/><input name="clock" from="clock"/>
+       <import from="@hypit/stand-in@1" as="stand-in"/>
+       <fragment id="a-card" using="stand-in:video">
+         <input name="canvas" from="vertical"/><input name="duration" value="5"/><input name="clock" from="clock"/>
        </fragment>
        <satisfy output="motion-a.video" candidate="a-card.video"/>
 

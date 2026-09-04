@@ -13,7 +13,12 @@
   "dependencies": {
     "@hypit/artifact": "workspace:*",
     "@hypit/component-kit": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
     "@hypit/media": "workspace:*",
-    "@hypit/protocol": "workspace:*"
+    "@hypit/program-space": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/run": "workspace:*",
+    "@hypit/spatial": "workspace:*",
+    "@hypit/speech": "workspace:*"
   }
 }

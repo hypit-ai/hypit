@@ -148,6 +148,8 @@ export type BuildPlan = {
 /** The complete execution intent compiled from one `.svrun` source. */
 export type RunGraph = {
   readonly format: "hypit.run-graph@1";
+  /** Literal values authored by this Run and reached only through its selected Fragments. */
+  readonly records: readonly TypedRecord[];
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
   readonly satisfactions: readonly Satisfaction[];
