@@ -175,7 +175,7 @@ test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every med
   ] }]);
 });
 
-test("HypiHub splits a large Artifact across accelerated S3 parts and retries only the failed part", async () => {
+test("HypiHub splits an Artifact across regional S3 parts and retries only the failed part", async () => {
   const artifacts = new MemoryArtifactStore();
   const reference = await artifacts.put(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]), "video/mp4");
   const request = need(sealSeedanceRequest("seedance-2-mini", {
@@ -202,11 +202,11 @@ test("HypiHub splits a large Artifact across accelerated S3 parts and retries on
       signedBatches.push(body.parts.map((part) => part.part_number));
       return Response.json({ parts: body.parts.map((part) => ({
         part_number: part.part_number,
-        url: `https://private.s3-accelerate.amazonaws.com/opaque-part-${part.part_number}?signature=secret`,
+        url: `https://private.s3.ap-east-1.amazonaws.com/opaque-part-${part.part_number}?signature=secret`,
         headers: { "content-length": part.part_number === 3 ? "2" : "5", "x-amz-checksum-sha256": part.checksum_sha256 },
       })) });
     }
-    if (url.startsWith("https://private.s3-accelerate.amazonaws.com/")) {
+    if (url.startsWith("https://private.s3.ap-east-1.amazonaws.com/")) {
       const match = /opaque-part-(\d+)/u.exec(url); assert.ok(match);
       const partNumber = Number(match[1]); const attempt = (putAttempts.get(partNumber) ?? 0) + 1;
       putAttempts.set(partNumber, attempt);

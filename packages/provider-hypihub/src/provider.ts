@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import type { AsyncEndpoint, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
 import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
 import { geminiCapabilities, geminiModels, verifyGeminiRequest } from "@hypit/gemini";
@@ -14,6 +12,7 @@ import { sealText } from "@hypit/text";
 import { textTypes } from "@hypit/text";
 import { createHypiHubGeminiGenerator } from "./gemini.js";
 import { hypiHubRouteForCapability, hypiHubRoutes } from "./routes.js";
+import { HypiHubUploader } from "./upload.js";
 import { transcribeWithHypiHub, whisperXAlignmentRequest } from "./whisperx.js";
 
 export const hypiHubProviderModuleRef = { name: "@hypit/provider-hypihub", version: "1" } as const;
@@ -91,40 +90,27 @@ function dataUrl(bytes: Uint8Array, mediaType: string): string {
   return `data:${mediaType};base64,${Buffer.from(bytes).toString("base64")}`;
 }
 
-function requiredString(value: unknown, subject: string): string {
-  assert(typeof value === "string" && value.length > 0, `${subject} is missing`);
-  return value;
-}
-function requiredInteger(value: unknown, subject: string): number {
-  assert(typeof value === "number" && Number.isSafeInteger(value) && value > 0, `${subject} is invalid`);
-  return value;
-}
-
 async function resolveArtifactInline(artifacts: ArtifactStore, artifact: BlobRef): Promise<string> {
   const bytes = await artifacts.get(artifact.digest);
   assert(bytes !== undefined, `HypiHub reference artifact ${artifact.digest} is unavailable`);
   return dataUrl(bytes, artifact.mediaType);
 }
 
-function mediaExtension(mediaType: string): string {
-  const known: Readonly<Record<string, string>> = {
-    "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp",
-    "video/mp4": "mp4", "video/quicktime": "mov",
-    "audio/mpeg": "mp3", "audio/wav": "wav", "audio/x-wav": "wav", "audio/mp4": "m4a",
-  };
-  return known[mediaType] ?? "bin";
-}
-
 class HypiHubClient {
   readonly baseUrl: string;
   readonly timeout: number;
   readonly fetcher: typeof globalThis.fetch;
-  readonly uploadPartTimeout: number;
-  readonly uploadPartAttempts: number;
+  readonly uploader: HypiHubUploader;
   constructor(options: { readonly baseUrl: string; readonly timeout: number; readonly uploadPartTimeout: number; readonly uploadPartAttempts: number; readonly fetcher: typeof globalThis.fetch }) {
     this.baseUrl = options.baseUrl.replace(/\/$/u, ""); this.timeout = options.timeout;
-    this.uploadPartTimeout = options.uploadPartTimeout; this.uploadPartAttempts = options.uploadPartAttempts;
     this.fetcher = options.fetcher;
+    this.uploader = new HypiHubUploader({
+      baseUrl: this.baseUrl,
+      requestTimeoutMs: this.timeout,
+      uploadPartTimeoutMs: options.uploadPartTimeout,
+      uploadPartAttempts: options.uploadPartAttempts,
+      fetch: this.fetcher,
+    });
   }
   async json(path: string, apiKey: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), this.timeout);
@@ -150,130 +136,16 @@ class HypiHubClient {
     }
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
-  private async uploadForm(artifact: BlobRef, bytes: Uint8Array, apiKey: string): Promise<string> {
-    const filename = `${artifact.digest.slice("sha256:".length)}.${mediaExtension(artifact.mediaType)}`;
-    const form = new FormData();
-    const copy = new ArrayBuffer(bytes.byteLength);
-    new Uint8Array(copy).set(bytes);
-    form.append("file", new Blob([copy], { type: artifact.mediaType }), filename);
-    form.append("purpose", "reference");
-    const response = await this.json("/files", apiKey, { method: "POST", body: form });
-    assert(typeof response.url === "string" && /^https:\/\//iu.test(response.url),
-      "HypiHub file upload returned no HTTPS URL");
-    return response.url;
-  }
-  private async signParts(uploadId: string, declarations: readonly { readonly part_number: number; readonly bytes: number; readonly checksum_sha256: string }[], apiKey: string): Promise<Map<number, Record<string, unknown>>> {
-    const response = await this.json(`/files/uploads/${encodeURIComponent(uploadId)}/parts`, apiKey, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ parts: declarations }),
-    });
-    assert(Array.isArray(response.parts), "HypiHub part signing response has no parts");
-    const signed = new Map<number, Record<string, unknown>>();
-    for (const raw of response.parts) {
-      const item = object(raw, "HypiHub signed upload part");
-      const partNumber = requiredInteger(item.part_number, "HypiHub signed upload part number");
-      requiredString(item.url, "HypiHub signed upload URL");
-      object(item.headers, "HypiHub signed upload headers");
-      signed.set(partNumber, item);
-    }
-    assert(signed.size === declarations.length, "HypiHub signed an incomplete part set");
-    return signed;
-  }
-  private async putPart(uploadId: string, declaration: { readonly part_number: number; readonly bytes: number; readonly checksum_sha256: string }, initial: Record<string, unknown>, body: Uint8Array, apiKey: string): Promise<{ readonly part_number: number; readonly etag: string; readonly checksum_sha256: string }> {
-    let capability = initial;
-    for (let attempt = 0; attempt < this.uploadPartAttempts; attempt += 1) {
-      if (attempt > 0) {
-        const refreshed = await this.signParts(uploadId, [declaration], apiKey);
-        capability = refreshed.get(declaration.part_number) ?? {};
-      }
-      const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), this.uploadPartTimeout);
-      try {
-        const url = requiredString(capability.url, "HypiHub signed upload URL");
-        const headers = object(capability.headers, "HypiHub signed upload headers");
-        // Copy the view into a plain ArrayBuffer so this stays compatible with
-        // both Node's fetch implementation and the DOM BodyInit type.
-        const payload = new ArrayBuffer(body.byteLength);
-        new Uint8Array(payload).set(body);
-        const response = await this.fetcher(url, { method: "PUT", headers: headers as Record<string, string>, body: payload, signal: controller.signal });
-        if (!response.ok) throw new Error(`S3 rejected upload part ${declaration.part_number} with HTTP ${response.status}`);
-        const etag = response.headers.get("etag");
-        assert(etag !== null && etag.length > 0, `S3 upload part ${declaration.part_number} returned no ETag`);
-        const verified = response.headers.get("x-amz-checksum-sha256");
-        assert(verified === null || verified === declaration.checksum_sha256,
-          `S3 upload part ${declaration.part_number} returned a different checksum`);
-        return { part_number: declaration.part_number, etag, checksum_sha256: declaration.checksum_sha256 };
-      } catch {
-        if (attempt + 1 < this.uploadPartAttempts) await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
-      } finally { clearTimeout(timer); }
-    }
-    // Never bubble up a fetch implementation's URL-bearing error: the signed
-    // URL is a short-lived credential and must not enter agent logs/reports.
-    throw new Error(`S3 upload part ${declaration.part_number} failed after ${this.uploadPartAttempts} attempts`);
-  }
-  private async uploadDirect(bytes: Uint8Array, apiKey: string, policy: Record<string, unknown>): Promise<string> {
-    const uploadId = requiredString(policy.upload_id, "HypiHub upload id");
-    const partSize = requiredInteger(policy.part_size, "HypiHub upload part size");
-    const partCount = requiredInteger(policy.part_count, "HypiHub upload part count");
-    const requestedConcurrency = requiredInteger(policy.concurrency, "HypiHub upload concurrency");
-    assert(requestedConcurrency <= 8, "HypiHub upload concurrency exceeds 8");
-    assert(partCount <= 10_000, "HypiHub upload part count exceeds 10000");
-    const concurrency = Math.min(requestedConcurrency, partCount);
-    assert(partCount === Math.ceil(bytes.byteLength / partSize), "HypiHub upload part count differs from the file size");
-    const declarations = Array.from({ length: partCount }, (_, index) => {
-      const start = index * partSize; const part = bytes.subarray(start, Math.min(start + partSize, bytes.byteLength));
-      return { part_number: index + 1, bytes: part.byteLength, checksum_sha256: createHash("sha256").update(part).digest("base64") };
-    });
-    try {
-      const signed = await this.signParts(uploadId, declarations, apiKey);
-      const completed = new Array<{ readonly part_number: number; readonly etag: string; readonly checksum_sha256: string }>(partCount);
-      let cursor = 0;
-      const worker = async (): Promise<void> => {
-        while (cursor < partCount) {
-          const index = cursor; cursor += 1;
-          const declaration = declarations[index];
-          assert(declaration !== undefined, "HypiHub upload part declaration is missing");
-          const start = index * partSize; const body = bytes.subarray(start, Math.min(start + partSize, bytes.byteLength));
-          const capability = signed.get(declaration.part_number);
-          assert(capability !== undefined, `HypiHub upload part ${declaration.part_number} was not signed`);
-          completed[index] = await this.putPart(uploadId, declaration, capability, body, apiKey);
-        }
-      };
-      await Promise.all(Array.from({ length: concurrency }, worker));
-      const response = await this.json(`/files/uploads/${encodeURIComponent(uploadId)}/complete`, apiKey, {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ parts: completed }),
-      });
-      assert(typeof response.url === "string" && /^https:\/\//iu.test(response.url),
-        "HypiHub direct upload returned no HTTPS URL");
-      return response.url;
-    } catch (error) {
-      try { await this.json(`/files/uploads/${encodeURIComponent(uploadId)}`, apiKey, { method: "DELETE" }); } catch { /* S3 lifecycle is the final abort fallback. */ }
-      throw error;
-    }
-  }
   async upload(artifact: BlobRef, artifacts: ArtifactStore, apiKey: string): Promise<string> {
     const bytes = await artifacts.get(artifact.digest);
     assert(bytes !== undefined, `HypiHub reference artifact ${artifact.digest} is unavailable`);
     assert(bytes.byteLength === artifact.size, `HypiHub reference artifact ${artifact.digest} size differs`);
-    const computed = createHash("sha256").update(bytes).digest("hex");
-    const declared = artifact.digest.startsWith("sha256:") ? artifact.digest.slice("sha256:".length) : "";
-    assert(declared === computed, `HypiHub reference artifact ${artifact.digest} failed its SHA-256 check`);
-    const filename = `${computed}.${mediaExtension(artifact.mediaType)}`;
-    let policy: Record<string, unknown>;
-    try {
-      policy = await this.json("/files/uploads", apiKey, {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
-          filename, bytes: bytes.byteLength, mime_type: artifact.mediaType, purpose: "reference",
-          sha256: computed, head_base64: Buffer.from(bytes.subarray(0, 512)).toString("base64"),
-        }),
-      });
-    } catch (error) {
-      // Rolling upgrades remain safe: an older HypiHub has no policy endpoint,
-      // so only its exact 404 falls back to the established multipart route.
-      if (!(error instanceof Error) || !/HypiHub returned HTTP 404:/u.test(error.message)) throw error;
-      return await this.uploadForm(artifact, bytes, apiKey);
-    }
-    if (policy.upload_mode === "api_multipart") return await this.uploadForm(artifact, bytes, apiKey);
-    assert(policy.upload_mode === "s3_multipart", "HypiHub returned an unknown upload mode");
-    return await this.uploadDirect(bytes, apiKey, policy);
+    return this.uploader.upload({
+      bytes,
+      mediaType: artifact.mediaType,
+      purpose: "reference",
+      sha256: artifact.digest,
+    }, apiKey);
   }
   async transcribe(body: Record<string, unknown>, apiKey: string): Promise<Record<string, unknown>> {
     return this.json("/audio/transcriptions", apiKey, {
@@ -388,6 +260,8 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       model: context.need.capability.name,
       ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
       ...(options.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: options.requestTimeoutMs }),
+      ...(options.uploadPartTimeoutMs === undefined ? {} : { uploadPartTimeoutMs: options.uploadPartTimeoutMs }),
+      ...(options.uploadPartAttempts === undefined ? {} : { uploadPartAttempts: options.uploadPartAttempts }),
       ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
       maxRateLimitRetries: 5,
       rateLimitRetryDelayMs: 3_000,
