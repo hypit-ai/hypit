@@ -71,7 +71,7 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
     .replace(/\/(?:v1beta|v1)\/?$/iu, "")
     .replace(/\/$/u, "");
   const model = options.model?.trim() || "gemini-3.1-pro";
-  const timeout = options.requestTimeoutMs ?? 120_000;
+  const timeout = options.requestTimeoutMs ?? 300_000;
   const maxRateLimitRetries = options.maxRateLimitRetries ?? 3;
   assert(Number.isSafeInteger(maxRateLimitRetries) && maxRateLimitRetries >= 0,
     "HypiHub Gemini maxRateLimitRetries must be a non-negative integer");
