@@ -94,7 +94,7 @@ try {
 }
 const source = run.authorSource;
 try {
-  inspectStudioRun(registry, run.source, run);
+  inspectStudioRun(registry, run.source, run, buildLibrary.endpoints);
 } catch (error) {
   await buildLibrary.close();
   throw error;

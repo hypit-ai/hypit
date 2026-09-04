@@ -11,13 +11,17 @@ export type Executed = {
   readonly errors: readonly string[];
 };
 
-/** Run only deterministic Producers; Studio never installs or invokes Provider endpoints. */
+/**
+ * Run the display closure: deterministic Producers, plus Needs served by the Profile's local
+ * Endpoints when the caller hands them in. Nothing priced is ever installed here; a Need that
+ * reaches no installed Endpoint is reported as unserved, never guessed at.
+ */
 export async function executeDeterministic(
   domain: StudioDomain,
   planned: BuildState,
   resources: ResourceStore,
+  endpoints: EndpointRegistry = new EndpointRegistry(),
 ): Promise<Executed> {
-  const endpoints = new EndpointRegistry();
   const result = await new NodeDriver({
     producers: domain.producers,
     validators: domain.validators,

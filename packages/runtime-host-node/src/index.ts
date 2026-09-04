@@ -249,6 +249,13 @@ export type NodeRuntimeHost = {
    * creates no Build, Result or state, and refuses asynchronous capabilities.
    */
   invoke(need: Need, resources: ResourceStore): Promise<{ readonly value: StoredValue }>;
+  /**
+   * The Endpoints a display may execute without a Build: every Endpoint the Profile selects whose
+   * Provider declares `local` pricing, immediate capabilities only, with the Profile's bindings
+   * applied. A capability bound to a priced Endpoint stays unresolved here instead of falling to a
+   * local one, so nothing shown was ever paid for.
+   */
+  localEndpoints(): Promise<import("@hypit/driver-node").EndpointRegistry>;
   runWorker(readyFile: string, owner: string): Promise<void>;
 };
 

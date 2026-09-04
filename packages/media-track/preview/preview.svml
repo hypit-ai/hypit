@@ -10,10 +10,11 @@
      preserve how it was authored; regenerating the encoded frame is a normal Build.
 
      A placeholder shows the Frame treatment and nothing inside it. To show the component holding a
-     picture, commit a sample beside this file and satisfy the media output in `build.svrun`:
+     picture, commit a sample beside this file and satisfy the generated output in `build.svrun`;
+     the Profile's local media Endpoint still inspects and normalizes it, in Studio as in a Build:
 
-       <file id="sample-a" type="@hypit/artifact@1#BlobArtifact" from="./sample-a.png" media-type="image/png"/>
-       <satisfy output="motion-a-media.media" candidate="sample-a"/>
+       <file id="sample-a" type="@hypit/artifact@1#BlobArtifact" from="./sample-a.mp4" media-type="video/mp4"/>
+       <satisfy output="motion-a.video" candidate="sample-a"/>
 
      Candidate selection is explicit in the Run; Studio never replaces missing media itself. -->
 <svml>
