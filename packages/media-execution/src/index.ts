@@ -8,9 +8,10 @@ export {
   executeRenderTimelineAudio,
   executeRenderStillVideo,
   executeDrawStandInCard,
+  executeDrawStandInSilence,
   executeTransformMedia,
 } from "./execute.js";
-export { drawStandInBand, drawStandInCard } from "./card.js";
+export { drawStandInBand, drawStandInCard, drawStandInSilence } from "./card.js";
 export { parseMediaInspection } from "./probe.js";
 export { verifyCompositableSurfaceBytes } from "./surface.js";
 export { probeMediaToolchain } from "./toolchain.js";

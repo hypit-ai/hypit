@@ -4,6 +4,7 @@ import type {
 } from "@hypit/elaborator";
 import type {
   Candidate,
+  CanonicalValue,
   OperationNode,
   RunGraph,
   Satisfaction,
@@ -56,11 +57,17 @@ export type RunBuildRecord = {
   readonly output: string;
 };
 
-export type RunFragmentInput = {
-  readonly name: string;
-  /** Public author-source export. */
-  readonly from: string;
-};
+export type RunFragmentInput =
+  | {
+      readonly name: string;
+      /** Public author-source export. */
+      readonly from: string;
+    }
+  | {
+      readonly name: string;
+      /** An ordinary scalar owned by this Run, typed by the Fragment input declaration. */
+      readonly value: CanonicalValue;
+    };
 
 export type RunFragmentInstance = {
   readonly kind: "fragment";

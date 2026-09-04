@@ -6,7 +6,6 @@ import {
 import { decodeNanoBananaImageSurface, decodeNanoBananaProImageSurface } from "./surface.js";
 export const hypitPackage = { format: "hypit.node-package@1" as const, modules: [{ manifest: nanoBananaManifest }], components: [nanoBananaComponent], hostFacets: [
   nanoBananaDefinition.hostFacet,
-    ...(nanoBananaDefinition.runFragmentFacet === undefined ? [] : [nanoBananaDefinition.runFragmentFacet]),
   createMarkupSurfaceHostFacet({ module: nanoBananaModuleRef,
     declaration: nanoBananaMarkupSurfaces.find((item) => item.name === "image")!, handler: decodeNanoBananaImageSurface }),
   createMarkupSurfaceHostFacet({ module: nanoBananaModuleRef,

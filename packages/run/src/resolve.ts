@@ -3,12 +3,13 @@ import {
   exportRunFragment,
   resolveCompiledSourceExport,
 } from "@hypit/elaborator";
-import { sameType } from "@hypit/protocol";
+import { canonicalize, sameType } from "@hypit/protocol";
 import type {
   Candidate,
   GraphValueRef,
   ModuleRef,
   OperationNode,
+  TypedRecord,
 } from "@hypit/protocol";
 import {
   createProvidedCandidate,
@@ -75,6 +76,7 @@ export async function resolveRunDocument(
   const imports = new Map(document.imports.map((item) => [item.as, item.from]));
   const candidates = new Map<string, Candidate>();
   const operations = new Map<string, OperationNode>();
+  const records = new Map<string, TypedRecord>();
   const addCandidate = (candidate: Candidate): void => {
     if (candidates.has(candidate.id)) throw new Error(`Run Candidate ${candidate.id} is declared twice`);
     candidates.set(candidate.id, candidate);
@@ -150,10 +152,26 @@ export async function resolveRunDocument(
     if (fragment === undefined) {
       throw new Error(`${packageName} exports no Run Fragment ${declaration.using.name}`);
     }
+    const inputDeclarations = new Map(fragment.inputs.map((item) => [item.name, item]));
+    const fragmentInputs = Object.fromEntries(declaration.inputs.map((item): [string, GraphValueRef] => {
+      if ("from" in item) return [item.name, authorRef(context, item.from)];
+      const inputDeclaration = inputDeclarations.get(item.name);
+      if (inputDeclaration === undefined) {
+        throw new Error(`Run Fragment ${declaration.id} binds undeclared input ${item.name}`);
+      }
+      const id = `record:run:${declaration.id}:${item.name}`;
+      if (records.has(id)) throw new Error(`Run Fragment literal ${declaration.id}.${item.name} is declared twice`);
+      records.set(id, {
+        id,
+        type: inputDeclaration.type,
+        value: { kind: "inline", value: canonicalize(item.value) },
+      });
+      return [item.name, { kind: "record", id }];
+    }));
     const instance = elaborateGraphFragment(context.compilation.program, fragment, {
       id: `run:${declaration.id}`,
       fragment: fragment.id,
-      inputs: Object.fromEntries(declaration.inputs.map((item) => [item.name, authorRef(context, item.from)])),
+      inputs: fragmentInputs,
     });
     const contribution = exportRunFragment(instance, declaration.exports);
     for (const candidate of contribution.candidates) addCandidate(candidate);
@@ -179,6 +197,7 @@ export async function resolveRunDocument(
   const resolvedCandidates = [...candidates.values()];
   const resolvedOperations = [...operations.values()];
   const graph = sealRunGraph({
+    records: [...records.values()],
     candidates: resolvedCandidates,
     operations: resolvedOperations,
     satisfactions,

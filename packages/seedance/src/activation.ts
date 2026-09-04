@@ -17,7 +17,6 @@ export const hypitPackage = {
   components: [seedanceComponent],
   hostFacets: [
     seedanceDefinition.hostFacet,
-    ...(seedanceDefinition.runFragmentFacet === undefined ? [] : [seedanceDefinition.runFragmentFacet]),
     createMarkupSurfaceHostFacet({
       module: seedanceModuleRef,
     declaration: seedanceMarkupSurfaces.find((item) => item.name === "text-video")!,

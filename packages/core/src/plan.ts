@@ -133,8 +133,13 @@ function compilePlanning(
   graph: CompiledGraph,
   request: BuildRequest,
   satisfactions: readonly Satisfaction[],
+  runRecords: readonly TypedRecord[],
 ): PlannedExecution {
-  verifyBuildRequest(program, graph, request);
+  const verificationProgram: LinkedProgram = {
+    closure: program.closure,
+    records: [...program.records, ...runRecords],
+  };
+  verifyBuildRequest(verificationProgram, graph, request);
 
   const selectedCandidates = new Map<string, string>();
   for (const satisfaction of satisfactions) {
@@ -156,6 +161,14 @@ function compilePlanning(
   }
 
   const authored = new Map(program.records.map((record) => [record.id, record]));
+  const availableRunRecords = new Map<string, TypedRecord>();
+  for (const record of runRecords) {
+    invariant(!authored.has(record.id), "RUN_RECORD_CONFLICT", `${record.id} conflicts with authored input`, record.id);
+    invariant(!availableRunRecords.has(record.id), "DUPLICATE_RUN_RECORD", `${record.id} is declared twice`, record.id);
+    availableRunRecords.set(record.id, record);
+    authored.set(record.id, record);
+  }
+  const demandedRunRecords = new Set<string>();
   const demandedOperations = new Map<string, OperationNode>();
   const resolvedOutputs = new Map<string, ResolvedSource>();
   const selections = new Map<string, BuildCandidateSelection>();
@@ -178,6 +191,7 @@ function compilePlanning(
     const ref = pending.pop() as GraphValueRef;
     if (ref.kind === "record") {
       invariant(authored.has(ref.id), "UNKNOWN_RECORD", `unknown authored record ${ref.id}`, ref.id);
+      if (availableRunRecords.has(ref.id)) demandedRunRecords.add(ref.id);
       continue;
     }
     if (ref.kind === "operation-result") {
@@ -267,7 +281,16 @@ function compilePlanning(
     record: selection.record,
     type: resolveLogicalOutput(graph, selection.output).type,
   }));
-  const initialRecords = selectedProvidedRecords(program, graph, sortedSelections);
+  const initialRecordsById = new Map<string, TypedRecord>();
+  for (const record of selectedProvidedRecords(program, graph, sortedSelections)) {
+    initialRecordsById.set(record.id, record);
+  }
+  for (const id of demandedRunRecords) {
+    const record = availableRunRecords.get(id)!;
+    invariant(!initialRecordsById.has(id), "RUN_RECORD_CONFLICT", `${id} has multiple sources`, id);
+    initialRecordsById.set(id, record);
+  }
+  const initialRecords = [...initialRecordsById.values()].sort((left, right) => left.id.localeCompare(right.id));
   const plan = planContent(steps, goals, outputBindings);
   verifyBuildPlan(program, initialRecords, plan);
   return { plan, selections: sortedSelections, initialRecords };
@@ -290,7 +313,7 @@ export function planBuild(
     format: "hypit.build-request@1",
     targets: runGraph.targets,
   };
-  return compilePlanning(program, graph, request, runGraph.satisfactions);
+  return compilePlanning(program, graph, request, runGraph.satisfactions, runGraph.records);
 }
 
 /** Author-only planning convenience. Run compilation should call `planBuild`. */
@@ -299,7 +322,7 @@ export function compileBuild(
   graph: CompiledGraph,
   request: BuildRequest,
 ): BuildPlan {
-  return compilePlanning(program, graph, request, []).plan;
+  return compilePlanning(program, graph, request, [], []).plan;
 }
 
 export function verifyBuildPlan(

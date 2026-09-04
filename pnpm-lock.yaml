@@ -1459,9 +1459,6 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
-      '@hypit/stand-in':
-        specifier: workspace:*
-        version: link:../stand-in
 
   packages/grok-imagine:
     dependencies:
@@ -1837,18 +1834,9 @@ importers:
       '@hypit/host':
         specifier: workspace:*
         version: link:../host
-      '@hypit/program-space':
-        specifier: workspace:*
-        version: link:../program-space
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/run':
-        specifier: workspace:*
-        version: link:../run
-      '@hypit/stand-in':
-        specifier: workspace:*
-        version: link:../stand-in
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -2944,12 +2932,27 @@ importers:
       '@hypit/component-kit':
         specifier: workspace:*
         version: link:../component-kit
+      '@hypit/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
       '@hypit/media':
         specifier: workspace:*
         version: link:../media
+      '@hypit/program-space':
+        specifier: workspace:*
+        version: link:../program-space
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/run':
+        specifier: workspace:*
+        version: link:../run
+      '@hypit/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@hypit/speech':
+        specifier: workspace:*
+        version: link:../speech
 
   packages/store-sqlite:
     dependencies:

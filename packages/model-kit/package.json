@@ -13,10 +13,7 @@
     "@hypit/elaborator": "workspace:*",
     "@hypit/generation": "workspace:*",
     "@hypit/host": "workspace:*",
-    "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/run": "workspace:*",
-    "@hypit/stand-in": "workspace:*",
     "@hypit/text": "workspace:*"
   }
 }

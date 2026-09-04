@@ -161,6 +161,54 @@ test("one multi-export Fragment declaration remains one execution", async () => 
   assert.equal(state.plan.steps.filter((item) => item.producer.name === "preview").length, 1);
 });
 
+test("a Run Fragment may own an ordinary literal input", async () => {
+  const compiled = await compileDocument(`<svrun version="1">
+    <author source="./main.svml"/>
+    <import from="@example/run-preview" as="preview"/>
+    <target output="left"/>
+    <fragment id="card" using="preview:shared"><input name="prompt" value="five seconds"/></fragment>
+    <fragment id="unused" using="preview:shared"><input name="prompt" value="not selected"/></fragment>
+    <satisfy output="left" candidate="card.first"/>
+  </svrun>`);
+  const compilation = fixture();
+  const fragments = new RunFragmentRegistry();
+  fragments.register({ name: "@example/run-preview", fragments: { shared: previewFragment() } });
+  const run = await resolveRunDocument(compiled.document, { compilation, fragments });
+  assert.deepEqual(run.graph.records, [
+    {
+      id: "record:run:card:prompt",
+      type: promptType,
+      value: { kind: "inline", value: "five seconds" },
+    },
+    {
+      id: "record:run:unused:prompt",
+      type: promptType,
+      value: { kind: "inline", value: "not selected" },
+    },
+  ]);
+  const state = realize(compilation, run);
+  assert.equal(state.records.find((item) => item.id === "record:run:card:prompt")?.value.kind, "inline");
+  assert.equal(state.records.some((item) => item.id === "record:run:unused:prompt"), false);
+});
+
+test("Run literal syntax decodes numbers and requires one source of value", () => {
+  const parsed = parseRunDocument("duration.svrun", `<svrun version="1">
+    <author source="./main.svml"/>
+    <import from="@example/run-preview" as="preview"/>
+    <target output="left"/>
+    <fragment id="card" using="preview:shared"><input name="prompt" value="5"/></fragment>
+    <satisfy output="left" candidate="card.first"/>
+  </svrun>`);
+  const input = parsed.candidates.find((item) => item.kind === "fragment")?.inputs[0];
+  assert.deepEqual(input, { name: "prompt", value: 5 });
+  assert.throws(() => parseRunDocument("bad.svrun", `<svrun version="1">
+    <author source="./main.svml"/>
+    <import from="@example/run-preview" as="preview"/>
+    <target output="left"/>
+    <fragment id="card" using="preview:shared"><input name="prompt" from="prompt" value="5"/></fragment>
+  </svrun>`), /requires exactly one of from or value/u);
+});
+
 test("a Provided Value is an ordinary zero-input Candidate", async () => {
   const compiled = await compileDocument(`<svrun version="1">
     <author source="./main.svml"/>
