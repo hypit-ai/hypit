@@ -49,6 +49,17 @@ export const synchronizedMediaFragment = sealGraphFragment({
   }],
 });
 
+export const prepareMediaFragment = sealGraphFragment({
+  inputs: [{ name: "source", type: artifactTypes.blob }],
+  operations: [{
+    id: "prepare",
+    producer: mediaPipelineProducers.prepare,
+    inputs: { source: input("source") },
+    result: { kind: "need", name: "artifact" },
+  }],
+  exports: [{ name: "artifact", type: artifactTypes.blob, root: operation("prepare") }],
+});
+
 export const transformMediaFragment = sealGraphFragment({
   inputs: [
     { name: "media", type: mediaTypes.synchronized },

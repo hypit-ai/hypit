@@ -129,6 +129,12 @@ export function createAwsLambdaMediaProvider(config: CreateAwsLambdaMediaProvide
       },
       {
         lifecycle: "immediate" as const,
+        capability: mediaPipelineCapabilities.prepare,
+        returns: artifactTypes.blob,
+        handler: operation("prepare"),
+      },
+      {
+        lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.transform,
         returns: artifactTypes.blob,
         handler: operation("transform"),

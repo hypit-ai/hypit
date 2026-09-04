@@ -2,6 +2,7 @@ import { artifactTypes } from "@hypit/artifact";
 import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation } from "@hypit/elaborator";
 import { textTypes } from "@hypit/text";
+import { mediaPipelineProducers } from "@hypit/media-pipeline";
 
 import type { GeminiModel } from "./manifest.js";
 import { geminiProducers, geminiTypes } from "./manifest.js";
@@ -26,10 +27,17 @@ export function createGeminiFragment(model: GeminiModel, mediaCount: number) {
   }];
   let draft = operation("start-request");
   for (let index = 0; index < mediaCount; index += 1) {
+    const prepareId = `prepare-media-${String(index + 1).padStart(4, "0")}`;
+    operations.push({
+      id: prepareId,
+      producer: mediaPipelineProducers.prepare,
+      inputs: { source: input(`media-${String(index + 1).padStart(4, "0")}`) },
+      result: { kind: "need" as const, name: "artifact" },
+    });
     const id = `bind-media-${String(index + 1).padStart(4, "0")}`;
     operations.push({
       id, producer: geminiProducers.bindMedia,
-      inputs: { draft, media: input(`media-${String(index + 1).padStart(4, "0")}`) },
+      inputs: { draft, media: operation(prepareId) },
       result: { kind: "output" as const, name: "draft" },
     });
     draft = operation(id);
