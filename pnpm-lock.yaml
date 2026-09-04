@@ -3240,9 +3240,6 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
-      '@hypit/mimo-tts':
-        specifier: workspace:*
-        version: link:../mimo-tts
       '@hypit/model-kit':
         specifier: workspace:*
         version: link:../model-kit

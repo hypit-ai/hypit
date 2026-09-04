@@ -53,10 +53,6 @@ function host(seen: Need[]): CreationHost {
           }, request.sampleFrames),
         })) } };
       }
-      if (need.capability.name === "mimo-v2.5-tts-voicedesign") {
-        const artifact = await resources.put(wav(24_000), "audio/wav");
-        return { value: { kind: "inline" as const, value: canonicalize({ audios: [artifact] }) } };
-      }
       const request = need.constraints as { readonly prompt: string; readonly media: readonly unknown[] };
       return { value: { kind: "inline" as const, value: canonicalize(sealVisualObservation(`saw ${request.media.length} media; asked: ${request.prompt}`)) } };
     },
@@ -117,28 +113,6 @@ test("transcribe writes every word in seconds from the Profile's alignment Endpo
     const request = seen[0]!.constraints as unknown as WhisperXAlignmentRequest;
     assert.equal(request.language, "en");
     assert.equal(request.sampleFrames, 32_000);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-test("speak writes the audio and its duration so the author can write a literal", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-speak-"));
-  const seen: Need[] = [];
-  try {
-    await writeFile(join(root, "line.txt"), "Welcome back to the channel.\n", "utf8");
-    const out = capture();
-    await runCreationCli([
-      "speak", "--text", "line.txt", "--voice", "warm, unhurried, mid-thirties", "--to", "voice/intro.wav", "--json",
-    ], out.io, environment(root, seen));
-    const view = JSON.parse(out.text()) as Record<string, unknown>;
-    assert.equal(view.model, "mimo-v2.5-tts-voicedesign");
-    assert.equal(view.mediaType, "audio/wav");
-    assert.equal(view.duration_seconds, 1.5);
-    assert.equal((await readFile(join(root, "voice", "intro.wav"))).byteLength, 44 + 24_000 * 2);
-    const ports = seen[0]!.constraints as { readonly ports?: Record<string, unknown> };
-    assert.equal(JSON.stringify(ports).includes("Welcome back to the channel."), true);
-    assert.equal(JSON.stringify(ports).includes("warm, unhurried"), true);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

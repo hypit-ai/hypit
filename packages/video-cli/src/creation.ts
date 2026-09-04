@@ -13,9 +13,6 @@ import {
 } from "@hypit/estimate";
 import { geminiCapabilities, geminiModels, geminiTypes, sealGeminiRequest, verifyVisualObservation } from "@hypit/gemini";
 import type { GeminiMediaPart, GeminiModel, VisualObservation } from "@hypit/gemini";
-import { verifyGeneratedAudioSet } from "@hypit/generation";
-import type { GeneratedAudioSet } from "@hypit/generation";
-import { mimoTtsEndpoints, sealMimoTtsRequest } from "@hypit/mimo-tts";
 import type { CanonicalValue, CapabilityRef, Need, StoredValue } from "@hypit/protocol";
 import type { ResourceStore } from "@hypit/runtime";
 import type { RuntimeHostCapabilityProvider, RuntimeHostProviderQuery } from "@hypit/runtime-host-node";
@@ -30,15 +27,17 @@ import { videoCliDistribution } from "./distribution.js";
 import { runProcess } from "./process.js";
 
 /**
- * Creation-time tools: see a picture, hear a recording, speak a line.
+ * Creation-time tools: see a picture, hear a recording, measure a script.
  *
  * Each is one immediate Need executed through the selected Runtime Profile, exactly as a Build would
  * resolve it — same Endpoint, same credential, same Provider — without a Build, Result or state. The
  * command names the Endpoint and its price page before it spends anything, writes one file the caller
- * chose, and nothing else. Slow paid generation (pictures, clips) is not here: it is a Build.
+ * chose, and nothing else. Everything the Author Graph declares as an output — pictures, clips, the
+ * spoken A-roll — is a Build, however fast it comes back: an output carries the identity of the Source
+ * that produced it, and a command's file does not.
  */
 
-export const creationCommands = ["observe", "transcribe", "speak", "measure"] as const;
+export const creationCommands = ["observe", "transcribe", "measure"] as const;
 export type CreationCommand = typeof creationCommands[number];
 
 /** The slice of the Runtime host these commands use; tests hand in a fake. */
@@ -273,20 +272,6 @@ async function speechEvidenceBytes(path: string): Promise<{ readonly bytes: Uint
   }
 }
 
-/** Seconds of audio in a file: read from a WAV header, otherwise asked of ffprobe when it is present. */
-async function audioSeconds(path: string, bytes: Uint8Array): Promise<number | undefined> {
-  const shape = wavShape(bytes);
-  if (shape !== undefined && shape.codec === 1 && shape.channels > 0 && shape.sampleRate > 0 && shape.bits > 0) {
-    return round(shape.dataBytes / (shape.channels * (shape.bits / 8)) / shape.sampleRate);
-  }
-  try {
-    const seconds = Number((await run("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path])).trim());
-    return Number.isFinite(seconds) && seconds > 0 ? round(seconds) : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function round(value: number): number { return Number(value.toFixed(3)); }
 function seconds(sample: number | undefined): number | undefined {
   return sample === undefined ? undefined : round(sample / EVIDENCE_SAMPLE_RATE);
@@ -423,56 +408,6 @@ async function transcribe(argv: readonly string[], io: CliIo, environment: Creat
 }
 
 // ---------------------------------------------------------------------------------------------------
-// speak
-
-async function speak(argv: readonly string[], io: CliIo, environment: CreationEnvironment): Promise<void> {
-  const parsed = parseArguments(argv, ["--text", "--voice", "--to", "--runtime", "--workspace"]);
-  assert(parsed.positionals.length === 0, `speak takes no positional arguments; received ${parsed.positionals.join(" ")}`);
-  const text = await textOrFile(required(parsed, "--text", "the words to speak, or a file holding them"), "--text", environment.cwd);
-  const voice = await textOrFile(required(parsed, "--voice", "a description of the voice, or a file holding it"), "--voice", environment.cwd);
-  const to = await destination(parsed, environment.cwd);
-  const endpoint = mimoTtsEndpoints.voiceDesign;
-  assert(endpoint !== undefined, "@hypit/mimo-tts declares no voice-design endpoint");
-  const { profile, host } = await environment.openHost(
-    parsed.options.get("--runtime"),
-    parsed.options.get("--workspace"),
-  );
-  const resources = new MemoryResourceStore();
-  const need: Need = {
-    id: "need:hypit-speak",
-    capability: endpoint.capability,
-    returns: endpoint.returns,
-    constraints: sealMimoTtsRequest("mimo-v2.5-tts-voicedesign", { text: [text], voiceDescription: [voice] }) as unknown as CanonicalValue,
-    result: "record:hypit-speak",
-  };
-  const provider = await selectedProvider(host, need, profile);
-  if (!parsed.json) io.write(`Speaking with ${endpoint.ports.model} through ${providerLine(provider)}\n`);
-  const fulfillment = await host.invoke(need, resources);
-  assert(fulfillment.value.kind === "inline", "the speech came back by reference");
-  verifyGeneratedAudioSet(fulfillment.value.value);
-  const [audio] = (fulfillment.value.value as unknown as GeneratedAudioSet).audios;
-  assert(audio !== undefined, "the model returned no audio");
-  const bytes = await resources.get(audio.resource);
-  assert(bytes !== undefined, `generated audio ${audio.resource} was not stored`);
-  await writeNew(to, bytes);
-  const durationSeconds = await audioSeconds(to, bytes);
-  const view = {
-    format: "hypit.video-cli-speak@1",
-    model: endpoint.ports.model,
-    ...providerView(provider),
-    mediaType: audio.mediaType,
-    bytes: bytes.byteLength,
-    ...(durationSeconds === undefined ? {} : { duration_seconds: durationSeconds }),
-    path: to,
-  };
-  if (parsed.json) io.write(`${JSON.stringify(view, null, 2)}\n`);
-  else {
-    io.write(`✓ Speech written\n\n  ${audio.mediaType} · ${bytes.byteLength} bytes${durationSeconds === undefined ? "" : ` · ${durationSeconds}s`}\n  ${to}\n`);
-    if (durationSeconds === undefined) io.write("  (duration unknown: ffprobe is unavailable; measure the file before writing a literal)\n");
-  }
-}
-
-// ---------------------------------------------------------------------------------------------------
 // measure
 
 /** The spoken Text of one Script Segment, read from the compiled author source without a Build. */
@@ -579,16 +514,6 @@ export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
       "Extracts 16 kHz mono speech audio with ffmpeg and writes every word with its start and end in",
       "seconds. One immediate request; no Build, Result or state.",
     ],
-    speak: [
-      "hypit speak",
-      "Speak a line with the MiMo VoiceDesign Endpoint of the selected Runtime Profile.",
-      "",
-      "  hypit speak --text <text|file> --voice <description|file> --to <audio file> [--runtime <profile>] [--workspace <project>]",
-      "",
-      "Writes the audio and reports its duration, so the author can write that duration as a literal.",
-      "For a voice-over video this is the A-roll: speak first, measure, then author B-roll that covers",
-      "every passage. Where a real presenter is the A-roll, do not replace them with this.",
-    ],
     measure: [
       "hypit measure",
       "Measure a script before writing a duration. Pure local work; no Runtime Profile, no request.",
@@ -604,7 +529,7 @@ export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
   };
   const chosen = topic === undefined ? creationCommands : [topic];
   io.write(`${chosen.map((item) => sections[item].join("\n")).join("\n\n")}\n\n`
-    + "observe, transcribe and speak name the Endpoint and its price page before they run; the Profile\n"
+    + "observe and transcribe name the Endpoint and its price page before they run; the Profile\n"
     + "comes from --runtime or the project's `hypit runtime use` selection. measure spends nothing.\n");
 }
 
@@ -614,6 +539,5 @@ export async function runCreationCli(argv: readonly string[], io: CliIo, environ
   if (argv.includes("--help")) { writeCreationHelp(io, command); return; }
   if (command === "observe") await observe(argv, io, environment);
   else if (command === "transcribe") await transcribe(argv, io, environment);
-  else if (command === "speak") await speak(argv, io, environment);
   else await measure(argv, io, environment);
 }

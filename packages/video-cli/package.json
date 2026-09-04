@@ -18,7 +18,6 @@
     "@hypit/gemini": "workspace:*",
     "@hypit/generation": "workspace:*",
     "@hypit/markup": "workspace:*",
-    "@hypit/mimo-tts": "workspace:*",
     "@hypit/model-kit": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
