@@ -1,6 +1,3 @@
-import { plannedNeeds } from "@hypit/core";
-import type { PlannedNeed } from "@hypit/core";
-import type { EndpointRegistry } from "@hypit/driver-node";
 import type { Candidate } from "@hypit/protocol";
 import { sameType } from "@hypit/protocol";
 import type { StudioFilmCompanion } from "@hypit/studio-adapter";
@@ -51,22 +48,6 @@ function candidateIsMaterialized(candidate: Candidate | undefined): boolean {
     && candidate.root.value.value.kind === "inline";
 }
 
-/**
- * The capabilities of a display closure that no local Endpoint serves. With no Profile every Need
- * is unserved; with one, a Need resolves exactly as `plan` and a Build resolve it, minus every
- * priced Endpoint.
- */
-export function unservedNeeds(needs: readonly PlannedNeed[], endpoints: EndpointRegistry | undefined): readonly string[] {
-  return unique(needs
-    .filter((need) => endpoints?.resolve({ capability: need.capability, returns: need.returns }).status !== "resolved")
-    .map((need) => `${need.capability.module.name}@${need.capability.module.version}#${need.capability.name}`));
-}
-
-function plannedExternalNeeds(base: RunPlan, refs: readonly string[], endpoints: EndpointRegistry | undefined): readonly string[] {
-  const planned = base.plan(base.run, refs);
-  return unservedNeeds(plannedNeeds(planned.state), endpoints);
-}
-
 function localName(value: string): string {
   return value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
 }
@@ -104,7 +85,6 @@ export function inspectStudioRun(
   registry: StudioCompanionRegistry,
   source: CompiledSource,
   base: RunPlan,
-  endpoints?: EndpointRegistry,
 ): StudioInspection {
   const issues: string[] = [];
   if (base.targets.length === 0) issues.push("the Run Source has no target; Studio requires Film or Render");
@@ -199,17 +179,10 @@ export function inspectStudioRun(
   }
 
   if (derived.length > 0) {
-    const needs = plannedExternalNeeds(base, derived.map((projection) => projection.ref), endpoints);
-    if (needs.length > 0) {
-      issues.push(endpoints === undefined
-        ? `the display closure needs ${needs.join(", ")} and no Runtime Profile is selected; select one, or supply Candidates for those outputs`
-        : `the display closure needs ${needs.join(", ")}, which no local Endpoint of the Profile serves; supply Candidates for those outputs or build the Run`);
-    } else {
-      projections.push(...derived.map((projection) => ({
-        ...projection,
-        candidatePolicy: "deterministic-derived" as const,
-      })));
-    }
+    projections.push(...derived.map((projection) => ({
+      ...projection,
+      candidatePolicy: "deterministic-derived" as const,
+    })));
   }
   if (issues.length > 0) throw new StudioPreflightError(issues);
   return {

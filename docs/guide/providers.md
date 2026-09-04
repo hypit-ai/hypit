@@ -145,8 +145,12 @@ url }` on `defineEndpointPackage`, pointing at the Provider's own public price p
 runs on this machine declares `pricing: { kind: "local" }`. Hypit never copies or interprets prices;
 `hypit plan --runtime <profile>` prints the Endpoint behind each request. Local work is marked local;
 Provider work carries the Provider's price page so the Agent can read the source before a paid Build.
-An undeclared price source is reported as unknown. When the complete request already exists, planning
-also applies that Endpoint's ordinary `supports` check; it does not maintain a second selection table.
+An undeclared price source is reported as unknown. Planning applies the selected Endpoint's ordinary
+`supports` check and does not maintain a second selection table. When an upstream file will only exist
+during the Build, the capability package reconstructs the authored
+request parameters and leaves that file as a symbolic Resource slot. The same `supports` predicate still
+runs before the Build is queued. A package that cannot describe the request stops planning instead of
+falling back to capability-only selection.
 
 ## 5. Declare a Managed Program when needed
 

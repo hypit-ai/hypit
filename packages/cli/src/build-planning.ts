@@ -2,11 +2,12 @@ import { resolve } from "node:path";
 
 import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
 import { registerProducerFacets, registerTypeValidatorFacets } from "@hypit/component-kit";
+import type {
+  PlannedNeedFacet,
+  PlannedNeedPresentation,
+  PlannedNeedSpecification,
+} from "@hypit/component-kit";
 import { evaluateProducerPlan, ProducerRegistry } from "@hypit/driver-node";
-import { isMediaPort } from "@hypit/generation";
-import type { GenerationPortTable, GenerationRequestDraft } from "@hypit/generation";
-import { exactModelsFromHostFacets, plannedExactModelRequest } from "@hypit/model-kit";
-import type { ExactModelEndpoint } from "@hypit/model-kit";
 import type { NodePackageContribution } from "@hypit/package-loader-node";
 import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef } from "@hypit/protocol";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
@@ -69,7 +70,6 @@ export type PlanProviderView = {
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
   readonly endpoints?: readonly string[];
   readonly binding?: string;
-  readonly checked: "request" | "capability";
 };
 
 export type PendingPlanInput = {
@@ -87,6 +87,8 @@ export type NeedSummary = {
 
 export type EvaluatedPlanNeed = {
   readonly constraints?: CanonicalValue;
+  /** Package-owned support slots; kept separate from the CLI's compact pending-input view. */
+  readonly pendingInputs: PlannedNeedSpecification["pendingInputs"];
   readonly summary?: NeedSummary;
   readonly pending: readonly PendingPlanInput[];
   readonly issue?: string;
@@ -106,7 +108,6 @@ export type PlanNeedView = {
   readonly summary?: NeedSummary;
   readonly pending: readonly PendingPlanInput[];
   readonly issue?: string;
-  readonly checked?: "request" | "capability";
 };
 
 function mediaKind(mediaType: string): string {
@@ -170,54 +171,39 @@ export function summarizeConstraints(constraints: CanonicalValue): NeedSummary {
   return { fields: summarizeFields(constraints as Record<string, CanonicalValue>), references };
 }
 
-/** Exact-model requests are summarized from the model package's port table, not an object-shape guess. */
-function summarizeExactModel(
-  table: GenerationPortTable,
-  ports: GenerationRequestDraft["ports"],
-  pending: readonly PendingPlanInput[],
-): NeedSummary {
+/** Convert a package-owned request presentation into the compact generic CLI view. */
+function summarizePresentation(presentation: PlannedNeedPresentation): NeedSummary {
   const fields: Record<string, string | number | boolean> = {};
-  const references: Record<string, number> = {};
-  for (const port of table.ports) {
-    const values = ports[port.name] ?? [];
-    if (isMediaPort(port)) {
-      for (const value of values) {
-        if (value === null || typeof value !== "object" || Array.isArray(value)) continue;
-        const role = (value as { readonly role?: unknown }).role;
-        if (role === "image" || role === "video" || role === "audio") references[role] = (references[role] ?? 0) + 1;
-      }
-      continue;
-    }
+  for (const [name, values] of Object.entries(presentation.fields)) {
     const summarized = values.map((value) => scalarSummary(value as CanonicalValue))
       .filter((value): value is string | number | boolean => value !== undefined);
-    if (summarized.length > 0) fields[port.name] = summarized.length === 1 ? summarized[0]! : summarized.map(String).join(", ");
+    if (summarized.length > 0) fields[name] = summarized.length === 1 ? summarized[0]! : summarized.map(String).join(", ");
   }
-  for (const item of pending) {
-    const kind = item.kind ?? "other";
-    references[kind] = (references[kind] ?? 0) + 1;
-  }
-  return { fields, references };
+  return { fields, references: structuredClone(presentation.references) };
 }
 
-function exactModels(contributions: readonly NodePackageContribution[]): readonly ExactModelEndpoint[] {
-  return exactModelsFromHostFacets(contributions.flatMap((item) => item.hostFacets ?? []));
+function plannedNeedFacets(contributions: readonly NodePackageContribution[]): readonly PlannedNeedFacet[] {
+  return contributions.flatMap((contribution) =>
+    (contribution.components ?? []).flatMap((component) => component.plannedNeeds ?? []));
 }
 
-function exactModelFor(
-  models: readonly ExactModelEndpoint[],
+function plannedNeedFacetFor(
+  facets: readonly PlannedNeedFacet[],
   state: BuildState,
   stepId: string,
+  port: string,
   capability: CapabilityRef,
-): ExactModelEndpoint | undefined {
+): PlannedNeedFacet | undefined {
   const step = state.plan.steps.find((item) => item.id === stepId);
   if (step === undefined) return undefined;
-  return models.find((model) => sameRef(model.capability, capability) && sameRef(model.producer, step.producer));
+  return facets.find((facet) => facet.port === port
+    && sameRef(facet.capability, capability)
+    && sameRef(facet.producer, step.producer));
 }
 
 /**
- * Evaluate deterministic Producers only. A missing upstream Resource is kept as its direct graph
- * edge, not described as missing author intent and never found by searching for a request-looking
- * object.
+ * Evaluate deterministic Producers only. A missing upstream value is kept as its direct graph edge,
+ * not described as missing author intent and never found by searching for a request-looking object.
  */
 export async function evaluatePlanNeeds(
   definition: BuildDefinition,
@@ -237,36 +223,42 @@ export async function evaluatePlanNeeds(
   const producedBy = new Map(state.plan.steps.flatMap((step) =>
     Object.values(step.outputs).map((record) => [record, step.id] as const)));
   const records = new Set(state.records.map((record) => record.id));
-  const models = exactModels(contributions);
+  const facets = plannedNeedFacets(contributions);
   const result = new Map<string, EvaluatedPlanNeed>();
 
   for (const planned of plannedNeeds(state)) {
+    const facet = plannedNeedFacetFor(facets, state, planned.step, planned.port, planned.capability);
     const need = known.get(planned.need);
     if (need !== undefined) {
-      const model = exactModelFor(models, state, planned.step, planned.capability);
-      const exact = model === undefined ? undefined : plannedExactModelRequest(state, planned.step, planned.port, model);
+      const specification: PlannedNeedSpecification = { constraints: need.constraints, pendingInputs: [] };
       result.set(planned.need, {
         constraints: need.constraints,
-        summary: model === undefined || exact === undefined
+        pendingInputs: [],
+        summary: facet?.present === undefined
           ? summarizeConstraints(need.constraints)
-          : summarizeExactModel(model.ports, exact.ports, []),
+          : summarizePresentation(facet.present(specification)),
         pending: [],
       });
       continue;
     }
 
-    const model = exactModelFor(models, state, planned.step, planned.capability);
-    const exact = model === undefined ? undefined : plannedExactModelRequest(state, planned.step, planned.port, model);
-    if (model !== undefined && exact !== undefined) {
-      const pending = exact.pendingMedia.map((item): PendingPlanInput => ({
-        input: item.port,
+    const specification = facet?.plan({ state, step: planned.step, port: planned.port });
+    if (facet !== undefined && specification !== undefined) {
+      const pending = specification.pendingInputs.map((item): PendingPlanInput => ({
+        input: item.input,
         record: item.record,
         ...(item.sourceStep === undefined ? {} : { sourceStep: item.sourceStep }),
-        kind: item.role,
+        ...(item.role === undefined ? {} : {
+          kind: item.role === "image" || item.role === "video" || item.role === "audio" ? item.role : "other",
+        }),
       }));
       const issue = evaluation.failures.get(planned.step);
       result.set(planned.need, {
-        summary: summarizeExactModel(model.ports, exact.ports, pending),
+        constraints: specification.constraints,
+        pendingInputs: specification.pendingInputs,
+        summary: facet.present === undefined
+          ? summarizeConstraints(specification.constraints)
+          : summarizePresentation(facet.present(specification)),
         pending,
         ...(issue === undefined ? {} : { issue }),
       });
@@ -282,8 +274,11 @@ export async function evaluatePlanNeeds(
       });
     const issue = evaluation.failures.get(planned.step);
     result.set(planned.need, {
+      pendingInputs: [],
       pending,
-      ...(issue === undefined ? {} : { issue }),
+      issue: issue === undefined
+        ? `Package does not describe the complete request for ${capabilityName(planned.capability)} before Build`
+        : `${issue}; package also does not describe the complete request for ${capabilityName(planned.capability)} before Build`,
     });
   }
   return { state, needs: result };
@@ -295,26 +290,65 @@ export async function describePlanProviders(
   state: BuildState,
   evaluated: EvaluatedPlan,
 ): Promise<readonly PlanProviderView[]> {
-  const requests = plannedNeeds(state).map((planned) => {
-    const constraints = evaluated.needs.get(planned.need)?.constraints;
-    return {
-      request: planned.need,
-      capability: planned.capability,
-      returns: planned.returns,
-      ...(constraints === undefined ? {} : { constraints }),
-    };
+  const planned = plannedNeeds(state);
+  const requests = planned.flatMap((item) => {
+    const plannedRequest = evaluated.needs.get(item.need);
+    const constraints = plannedRequest?.constraints;
+    if (plannedRequest === undefined || constraints === undefined) return [];
+    return [{
+      request: item.need,
+      capability: item.capability,
+      returns: item.returns,
+      constraints,
+      ...(plannedRequest.pendingInputs.length === 0 ? {} : {
+        pendingInputs: plannedRequest.pendingInputs.map((input) => ({
+          input: input.input,
+          ...(input.role === undefined ? {} : { role: input.role }),
+        })),
+      }),
+    }];
   });
-  return (await host.providers(requests)).map((item) => ({
+  const described = (await host.providers(requests)).map((item) => ({
     request: item.request,
     capability: capabilityName(item.capability),
     status: item.status,
-    checked: item.checked,
     ...(item.endpoint === undefined ? {} : { endpoint: item.endpoint }),
     ...(item.use === undefined ? {} : { use: item.use }),
     ...(item.pricing === undefined ? {} : { pricing: item.pricing }),
     ...(item.endpoints === undefined ? {} : { endpoints: item.endpoints }),
     ...(item.binding === undefined ? {} : { binding: item.binding }),
   }));
+  return planned.map((item) => described.find((provider) => provider.request === item.need) ?? {
+    request: item.need,
+    capability: capabilityName(item.capability),
+    status: "unresolved" as const,
+  }).filter((item, index, all) => all.findIndex((candidate) => candidate.request === item.request) === index);
+}
+
+/** Refuse a Build before it is queued when any external request is not fully selectable. */
+export function assertPlannedRequests(
+  state: BuildState,
+  evaluated: EvaluatedPlan,
+  providers: readonly PlanProviderView[],
+): void {
+  const byRequest = new Map(providers.map((item) => [item.request, item]));
+  const problems = plannedNeeds(state).flatMap((planned) => {
+    const issue = evaluated.needs.get(planned.need)?.issue;
+    if (issue !== undefined) return [`${planned.step}.${planned.port}: ${issue}`];
+    const provider = byRequest.get(planned.need);
+    if (provider?.status === "resolved") return [];
+    if (provider?.status === "ambiguous") {
+      return [`${planned.step}.${planned.port}: several Endpoints accept ${capabilityName(planned.capability)}; bind one in the Runtime Profile`];
+    }
+    return [`${planned.step}.${planned.port}: no selected Endpoint accepts the complete ${capabilityName(planned.capability)} request`];
+  });
+  if (problems.length > 0) {
+    throw new Error([
+      `Build has ${problems.length} external request${problems.length === 1 ? "" : "s"} that cannot be submitted:`,
+      ...problems.map((problem) => `  ${problem}`),
+      "No Build was queued and no external request was made.",
+    ].join("\n"));
+  }
 }
 
 export async function preflightPlan(host: NodeRuntimeHost, state: BuildState) {
@@ -356,7 +390,6 @@ export function describePlanNeeds(
       ...(found?.summary === undefined ? {} : { summary: found.summary }),
       pending: found?.pending ?? [],
       ...(found?.issue === undefined ? {} : { issue: found.issue }),
-      ...(provider?.checked === undefined ? {} : { checked: provider.checked }),
     };
   });
 }

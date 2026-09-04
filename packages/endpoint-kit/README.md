@@ -11,5 +11,17 @@ optional best effort `cancel`. Provider-total and exact-capability resource limi
 without changing Core demand. Each resource declares one limit; asynchronous work retains that slot until
 its persisted Operation is terminal.
 
+An individual immediate capability may declare `transient: true`. That permits a Runtime to use the
+same handler in a disposable authoring execution with no Build, Result or recoverable Operation. It is a
+Provider assertion that the call submits no paid generation and creates no external side effect; it is
+independent of pricing metadata and does not promise byte-identical output. The default is Build-only,
+and asynchronous capabilities cannot be transient. Its capacity limits apply within one disposable
+session; capabilities that require durable quota shared with Builds stay Build-only.
+
 Endpoint packages are selected by a Runtime Profile, never activated by author imports. This package
 depends on no Node filesystem, scheduler implementation or video domain.
+
+`supports` receives one complete support description. For an executing Need, concrete graph values
+are already in `constraints`. During pre-Build planning, an upstream value that does not exist yet is
+represented by a semantic `pendingInputs` slot instead. A Provider may use the slot's input and
+media role to enforce support limits, but it never receives graph traversal rules or future bytes.

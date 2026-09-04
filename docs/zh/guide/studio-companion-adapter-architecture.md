@@ -9,18 +9,18 @@ description: 领域组件、Studio Companion 与 Studio 应用之间的三层边
 
 ## 决策
 
-一个领域模块与 Hypit Studio 的关系必须拆成三层：
+一个领域模块与 Hypit Studio 的关系必须拆成三种职责：
 
 ```text
-领域组件包                  Hypit Studio Companion             Studio 应用
-@scope/example-track   <-   @scope/example-track-studio   ->   @hypit/studio
+领域组件实现                  Hypit Studio Companion             Studio 应用
+@scope/example-track   <-   companion facet / -studio 包   ->   @hypit/studio
 ```
 
 - 领域组件包定义“它是什么、怎样运行和渲染”；
 - 独立 Companion 定义“它在 Hypit Studio 中怎样被理解和编辑”；
 - Studio 定义“一个适配包可以使用哪些统一外观、控件和操作”。
 
-领域组件包不得为了支持 Hypit Studio 而承担编辑器语义。Hypit Studio 也不得把多个无关领域模块的解释集中实现。其他 Studio 可以为同一个领域组件提供自己的 Companion，而不修改组件。
+领域组件实现不得为了支持 Hypit Studio 而承担编辑器语义。Hypit Studio 也不得把多个无关领域模块的解释集中实现。其他 Studio 可以为同一个领域组件提供自己的 Companion，而不修改组件。官方发行通常把 Companion 做成独立 `-studio` 包；项目组件也可以在同一个物理 npm 包的独立文件中贡献 Companion facet，职责分离不等于强制多发一个包。
 
 推荐一个领域模块对应一个 Hypit Studio Companion，而不是一个 Surface 标签对应一个包。例如 Ranking 的 Column、Tier 和 Top Three 同属一个领域模块，可以由一个 `ranking-studio` Companion 适配。`<module>-studio` 只是推荐命名，不是自动发现约定。
 
@@ -36,9 +36,9 @@ description: 领域组件、Studio Companion 与 Studio 应用之间的三层边
 - 确定性执行、校验、lowering 和渲染；
 - 对其他消费者同样成立的稳定身份、时间和素材关系。
 
-领域组件包不得：
+领域组件实现不得：
 
-- 依赖 `@hypit/studio` 或 `@hypit/studio-adapter`；
+- 依赖 `@hypit/studio` 或 `@hypit/studio-adapter`；项目物理包中的独立 Companion 文件可以依赖后者；
 - 声明 Studio lane、颜色、图标、Inspector 页面或编辑手势；
 - 添加只为 Studio 服务的 `studioLabel`、`studioGroup` 等领域字段；
 - 知道某个 Studio 是否安装、怎样布局或怎样写回。
@@ -47,7 +47,7 @@ description: 领域组件、Studio Companion 与 Studio 应用之间的三层边
 
 ### Hypit Studio Companion
 
-Companion 是独立安装、独立选择的适配包。它面向一个领域模块和一个 Studio ABI，拥有：
+Companion 是独立职责、显式选择的适配 facet。官方发行通常单独安装它；项目组件可随 Source 已选择的同一个物理包贡献它。它面向一个领域模块和一个 Studio ABI，拥有：
 
 - Track、Surface、输出 Type 的精确匹配；
 - 公共 Program/Schedule 到 Studio entity 的投影；
@@ -75,7 +75,7 @@ Studio 提供受控的编辑器语言，而不是领域组件目录。它拥有�
 
 - session、preflight、snapshot、播放、seek、缩放、滚动和选择；
 - Source、Tasks、Artifacts 与 Preview；
-- Companion 选择、身份限定、冲突检测和显式 replacement；
+- Companion 汇总、身份限定与冲突检测；
 - Source revision、最小修改、失败回退和重新编译；
 - 通用终端 Track 兜底和 Semantic 时间标尺；
 - 统一外观、Inspector 控件和操作执行器。
@@ -99,17 +99,17 @@ Pattern 和 material 可以复合：前者通常来自组件 Surface Preview，�
 
 ## 选择与安装
 
-Companion 选择必须显式，不使用包名猜测或目录扫描：
+Companion 来源必须明确，不使用包名猜测或目录扫描：
 
 - 官方 Hypit Studio Distribution 显式选择它支持的官方 Companion；
-- 项目可以通过可选 Studio Profile 选择项目 Companion 或 replacement；
+- 当前 Source 闭包实际选择的项目包可以在同一个包 contribution 中提供 Companion facet；
 - 其他 Studio Distribution 可以选择完全不同的 Companion；
 - Studio 不扫描 `node_modules`，不看到 `@scope/example-track` 就猜测存在 `@scope/example-track-studio`；
 - 打开 Studio 不联网搜索、静默安装或升级 Companion。
 
 官方 Distribution 中的选择清单只表示“这个应用信任并支持哪些 Companion”，不得包含组件的实体投影、参数表或领域判断。普通用户无需为每个项目重复安装已经存在于机器级 Studio Distribution 中的 Companion。
 
-项目 Profile 是可选的编辑器能力选择，不是 Hypit 项目清单，也不规定 SVML、SVS、SVRun 或素材的目录结构。不得为 Companion 再发明运行锁、摘要、哈希索引或第二份包管理数据库；安装与版本关系由现有包管理和 Distribution 负责。
+项目无需再维护第二份 Studio Profile。Source 选择项目组件包后，同一包的 Companion 自动进入本次会话；没有被 Source 使用的包不会仅因安装在 `node_modules` 中而获得权限。不得为 Companion 再发明运行锁、摘要、索引或第二份包管理数据库；安装与版本关系由现有包管理和 Distribution 负责。
 
 ## 缺少 Companion 时
 
@@ -216,7 +216,7 @@ Studio 只展示当前 Source 中确实存在、可写且被 `inspector` 选中�
 - `comment-sticker-studio`；
 - `screen-overlay-studio`。
 
-每个包只解释对应领域模块。Studio 中的官方列表是 Distribution 的显式选择，不是根据 `-studio` 后缀自动发现；项目 Profile 仍可显式增加项目 Companion 或 replacement。
+每个包只解释对应领域模块。官方列表属于 Distribution，不在 Studio 核心中，也不是根据 `-studio` 后缀自动发现；项目组件的 Companion 则随当前 Source 已选中的项目包进入，不另填一张表。
 
 `film-studio` 与 `script-studio` 是边界 Companion，不投影普通时间线 item。前者避免 Studio
 中心代码认识 `<Film>` 的属性和子节点接法；后者避免 Studio 直接依赖 Script parser/editor。
@@ -226,7 +226,7 @@ Studio 核心只保留跨领域终端协议的通用 VisualTrack、AudioTrack �
 
 ## 历史偏差
 
-2026 年 8 月 20 日的 `74f976ab` 在新 Studio 落地时采用了 centralized video-domain policy。2026 年 8 月 23 日的 `36fa9ab0` 同时引入正确的 Companion ABI、项目 Profile 和错误的官方中央适配包：项目组件被要求使用独立 Companion，官方组件却被整体搬进一个总包。后续文档按当前代码描述包边界，使这个不对称看起来成为稳定设计。
+2026 年 8 月 20 日的 `74f976ab` 在新 Studio 落地时采用了 centralized video-domain policy。2026 年 8 月 23 日的 `36fa9ab0` 引入了有价值的 Companion ABI，但同时增加了重复选择的项目 Profile，并把官方组件整体搬进中央适配包。后续文档按当时代码描述包边界，使两套选择面和官方/项目不对称看起来成为稳定设计。
 
 本文恢复并固定原始原则：外部项目与官方组件遵循同一条 Companion 边界。把代码移出 `packages/studio` 只叫物理分离；只有每个领域模块的 Studio 解释由独立 Companion 拥有，才叫职责分离。
 
@@ -234,11 +234,11 @@ Studio 核心只保留跨领域终端协议的通用 VisualTrack、AudioTrack �
 
 当前实现和后续修改必须同时满足：
 
-1. 领域组件包的依赖和源码中不存在 Studio ABI 或 UI 语义；
+1. 领域组件实现的依赖和源码中不存在 Studio ABI 或 UI 语义；同一项目物理包携带的 Companion 必须位于独立应用 facet；
 2. 一个官方 Companion 不适配多个互不相关的领域模块；
 3. Studio 核心与通用兜底不枚举官方组件名、Surface 名或组件参数；
 4. Companion 只使用公共 Program、Schedule、终端 `subjectId` 与时间谱系；
-5. Companion 包通过显式 Distribution/Profile 选择，不扫描、不猜名、不静默安装；
+5. Companion 包通过 Distribution 或当前 Source 包闭包选择，不扫描、不猜名、不静默安装；
 6. 删除 Companion 只损失丰富编辑能力，不影响检查、构建、复用和渲染；
 7. 删除 Studio 不影响领域组件及其用户项目；
 8. 另一个 Studio 可以为同一组件发布另一套 Companion，无需 fork 组件；

@@ -245,7 +245,7 @@ A physical package may expose independently activated facets:
 | `credential-store` | resolves explicitly named credentials | secret storage | Runtime Profile |
 | `result-repository` | completed Build Results | project history storage | project `hypit.results.json` |
 | `infrastructure` | Runtime Host, Scheduler and Worker implementation | persistence, scheduling | application Distribution |
-| `application` | Host-specific interpretation such as a Studio Track Companion | only that application's UI/operations | explicit application profile |
+| `application` | Host-specific interpretation such as a Studio Track Companion | only that application's UI/operations | Distribution or selected Source package |
 
 A source `<import>` activates only author facets. It never grants network, filesystem, process,
 credential or queue authority.
@@ -261,7 +261,7 @@ installs packages and owns their versions and integrity. Each owner has one expl
 | Source imports | Frontends, Surfaces, Producers and Validators |
 | Runtime Profile `credentials.*.use` / `endpoints.*.use` | Credential Stores and Provider Endpoints |
 | Project Result config `use` | one Build Result Repository |
-| Studio Profile `companionPackages` | project Companion packages selected for that Studio session |
+| Studio Distribution + selected Source packages | official Companions plus project Companions used by that Source closure |
 
 A Source import never grants network, filesystem, process, credential or queue authority. Those
 remain available only to the Runtime Host and packages explicitly selected at environmental

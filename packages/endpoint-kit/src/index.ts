@@ -23,6 +23,24 @@ export type EndpointFulfillment = {
   readonly value: StoredValue;
 };
 
+/** One future input binding whose value does not exist until an upstream graph step runs. */
+export type EndpointInputSlot = {
+  readonly input: string;
+  readonly role?: string;
+};
+
+/**
+ * The complete support-relevant request. Execution-only ids and the result Record are deliberately
+ * absent. Before a Build, future graph values appear as semantic slots; during execution their
+ * concrete values are already present in `constraints` and `pendingInputs` is omitted.
+ */
+export type EndpointRequest = {
+  readonly capability: Need["capability"];
+  readonly returns: Need["returns"];
+  readonly constraints: Need["constraints"];
+  readonly pendingInputs?: readonly EndpointInputSlot[];
+};
+
 export type EndpointInvocationContext = {
   readonly command: FulfillNeedCommand;
   readonly need: Need;
@@ -82,9 +100,16 @@ export type EndpointScheduling = {
 };
 
 export type EndpointRegistrationOptions = {
-  readonly supports?: (need: Need) => boolean;
+  readonly supports?: (request: EndpointRequest) => boolean;
   readonly scheduling?: EndpointScheduling;
   readonly credentials?: Readonly<Record<string, CredentialRef>>;
+  /**
+   * This immediate capability may be evaluated by a disposable authoring session without a
+   * Build, Result or recoverable Operation. The Provider is asserting that doing so submits no
+   * paid generation and creates no externally visible side effect. It is not a byte-for-byte
+   * reproducibility claim.
+   */
+  readonly transient?: true;
 };
 
 /** Minimal structural port implemented by a trusted execution Host. */
@@ -130,7 +155,8 @@ export type EndpointOffer = {
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
   readonly endpoint: string;
-  readonly supports?: (need: Need) => boolean;
+  readonly supports?: (request: EndpointRequest) => boolean;
+  readonly transient?: true;
 };
 
 export type EndpointCredentialDescription = {
@@ -145,7 +171,13 @@ export type EndpointCredentialDescription = {
 type EndpointCapabilityBase = {
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
-  readonly supports?: (need: Need) => boolean;
+  readonly supports?: (request: EndpointRequest) => boolean;
+  /**
+   * Also allow this capability in a disposable, non-Build authoring execution.
+   * The Provider is asserting that it needs no durable or cross-Build capacity
+   * admission; declared limits are still honored within that one session.
+   */
+  readonly transient?: true;
   /** Stable Provider-local capacity class. Defaults to the capability name. */
   readonly capacity?: string;
   /** Exact-capability capacity; the Provider pool keeps its independent total capacity. */
@@ -215,6 +247,8 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
   }
   const capacityConcurrency = new Map<string, number>();
   for (const capability of options.capabilities) {
+    assert(capability.transient !== true || capability.lifecycle === "immediate",
+      `Endpoint capability ${refKey(capability.capability)} cannot be transient and asynchronous`);
     const capacity = capability.capacity ?? capability.capability.name;
     const concurrency = positiveInteger(
       capability.maxConcurrency ?? options.defaultConcurrency ?? 1,
@@ -255,6 +289,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     capability: structuredClone(item.capability),
     returns: structuredClone(item.returns),
     ...(item.supports === undefined ? {} : { supports: item.supports }),
+    ...(item.transient === true ? { transient: true as const } : {}),
   }));
   const instance = {
     id: options.instance,
@@ -279,6 +314,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
         );
         const common: EndpointRegistrationOptions = {
           ...(capability.supports === undefined ? {} : { supports: capability.supports }),
+          ...(capability.transient === true ? { transient: true } : {}),
           credentials,
           scheduling: {
             resources: [

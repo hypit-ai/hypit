@@ -14,6 +14,10 @@ import {
 // package's source directory and never the author's project.
 const packageRoot = resolve(process.env.HYPIT_DISTRIBUTION_ROOT ?? resolve(import.meta.dirname, "../../.."));
 const installedLauncher = process.env.HYPIT_CLI_LAUNCHER;
+const defaultBuildResultRepository = {
+  use: "@hypit/build-result-fs",
+  config: { path: ".hypit/results" },
+} as const;
 
 /** Official video authoring assembly for the generic CLI engine. */
 export const videoCliDistribution: CliDistribution = {
@@ -64,7 +68,11 @@ export const videoCliDistribution: CliDistribution = {
     },
   }),
   openProjectResults: async (projectRoot, options) => {
-    const opened = await openProjectBuildResultRepository(projectRoot, options);
+    const opened = await openProjectBuildResultRepository(projectRoot, {
+      ...options,
+      distributionPackageRoot: options.distributionPackageRoot ?? packageRoot,
+      defaultSelection: defaultBuildResultRepository,
+    });
     return {
       location: opened.location,
       repository: opened.repository,
@@ -72,5 +80,9 @@ export const videoCliDistribution: CliDistribution = {
     };
   },
   diagnoseProjectResults: async (projectRoot, options) =>
-    await doctorProjectBuildResultRepository(projectRoot, options),
+    await doctorProjectBuildResultRepository(projectRoot, {
+      ...options,
+      distributionPackageRoot: options.distributionPackageRoot ?? packageRoot,
+      defaultSelection: defaultBuildResultRepository,
+    }),
 };

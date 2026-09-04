@@ -104,7 +104,6 @@ export type PlanProvider = {
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
   readonly endpoints?: readonly string[];
   readonly binding?: string;
-  readonly checked: "request" | "capability";
 };
 
 export type PlanOutput = {
@@ -151,7 +150,6 @@ export type PlanNeed = {
     readonly kind?: "image" | "video" | "audio" | "other";
   }[];
   readonly issue?: string;
-  readonly checked?: "request" | "capability";
 };
 
 export type CliMachineView = OperationalMachineView;
@@ -359,15 +357,15 @@ const MEASURE = /^(\d+) (words|chars)$/u;
 
 /** Text lengths are ranged across a group rather than splitting otherwise identical requests. */
 function groupKey(need: PlanNeed): string {
-  const pending = need.pending.map((item) => item.kind ?? "file").sort().join(",");
-  if (need.summary === undefined) return `?${pending}|${need.issue ?? ""}|${need.checked ?? ""}`;
+  const pending = need.pending.map((item) => item.kind ?? "value").sort().join(",");
+  if (need.summary === undefined) return `?${pending}|${need.issue ?? ""}`;
   const fields = Object.entries(need.summary.fields)
     .map(([name, value]) => {
       const measured = typeof value === "string" ? MEASURE.exec(value) : null;
       return measured === null ? `${name}=${String(value)}` : `${name}=<${measured[2]}>`;
     });
   const references = Object.entries(need.summary.references).map(([kind, count]) => `${kind}=${count}`);
-  return [...fields, "|", ...references, "|", pending, "|", need.issue ?? "", "|", need.checked ?? ""].join(" ");
+  return [...fields, "|", ...references, "|", pending, "|", need.issue ?? ""].join(" ");
 }
 
 function needSummaryText(needs: readonly PlanNeed[]): string {
@@ -391,7 +389,7 @@ function needSummaryText(needs: readonly PlanNeed[]): string {
     .map(([kind, count]) => `${count} ${kind}`);
   if (references.length > 0) parts.push(`${references.join(" + ")} reference${references.length === 1 && references[0]!.startsWith("1 ") ? "" : "s"}`);
   const pendingCount = first.pending.length;
-  if (pendingCount > 0) parts.push(`${pendingCount === 1 ? "file" : `${pendingCount} files`} produced during Build`);
+  if (pendingCount > 0) parts.push(`${pendingCount === 1 ? "input" : `${pendingCount} inputs`} produced during Build`);
   if (first.issue !== undefined) parts.push(`could not inspect: ${first.issue}`);
   return parts.length === 0 ? "no parameters" : parts.join(" · ");
 }
@@ -405,11 +403,8 @@ function groupedNeedLines(needs: readonly PlanNeed[], colors: Palette, verbose: 
   }
   return [...groups.values()].map((group) => {
     const who = group.length === 1 || verbose ? colors.dim(group.map((need) => stepLabel(need.step)).join(", ")) : "";
-    const verification = verbose && group.some((need) => need.checked === "capability")
-      ? colors.dim("Endpoint selected by capability; file compatibility is checked before the request is sent")
-      : "";
     const count = `×${group.length}`.padStart(4);
-    return `    ${colors.dim(count)}  ${needSummaryText(group)}${who.length === 0 ? "" : `  ${who}`}${verification.length === 0 ? "" : `  ${verification}`}`;
+    return `    ${colors.dim(count)}  ${needSummaryText(group)}${who.length === 0 ? "" : `  ${who}`}`;
   });
 }
 
@@ -422,9 +417,6 @@ function providerGroupKey(provider: PlanProvider): string {
     pricing: provider.pricing,
     endpoints: provider.endpoints,
     binding: provider.binding,
-    // A resolved request belongs under its Endpoint regardless of whether its file already exists.
-    // Keep the distinction on each request for verbose honesty, not as another visible Provider.
-    checked: provider.status === "resolved" ? undefined : provider.checked,
   });
 }
 
@@ -464,12 +456,16 @@ function renderPlan(
     }
     for (const group of groups.values()) {
       const item = group[0]!;
-      const where = item.status === "resolved"
+      const requestIssue = (view.machine.needs ?? [])
+        .find((need) => need.request === item.request)?.issue;
+      const where = requestIssue !== undefined
+        ? colors.error("request is not completely described before Build")
+        : item.status === "resolved"
         ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})${item.binding === undefined ? "" : ", bound in the Profile"}`)}`
         : item.status === "ambiguous"
           ? colors.warning(`${(item.endpoints ?? []).join(", ")} all offer it; add "bindings": { "${item.capability}": "<instance>" } to the Profile`)
           : item.binding === undefined
-            ? colors.error(item.checked === "request" ? "no selected Endpoint accepts this request" : "no selected Endpoint")
+            ? colors.error("no selected Endpoint accepts this request")
             : colors.error(`bound to ${item.binding}, which does not offer it`);
       const price = item.pricing === undefined
         ? (item.status === "resolved" ? colors.warning("price source unknown") : undefined)

@@ -3,10 +3,10 @@ import { fileURLToPath } from "node:url";
 
 import { createServer } from "vite";
 import { findRuntimeProfile, resolveProjectRoot } from "@hypit/cli";
-import { videoCliDistribution } from "@hypit/video-cli";
+import { videoCliDistribution, videoStudioCompanionPackages } from "@hypit/video-cli";
 
 import { openStudioBuildLibrary } from "./src/build-library.js";
-import { loadStudioCompanionRegistry } from "./src/companion-profile.js";
+import { loadStudioCompanionRegistry } from "./src/companion-assembly.js";
 import { loadStudioDomain } from "./src/domain.js";
 import { loadStudioRun } from "./src/run.js";
 import { studioPlugin } from "./src/server.js";
@@ -19,7 +19,6 @@ function usage(message?: string): never {
   process.stderr.write(`Usage:
   hypit-studio --run <build.svrun> [--runtime <hypit.runtime.json>]
     [--port <number>] [--workspace <directory>] [--package-root <directory>]
-    [--studio-profile <hypit.studio.json>]
 
 Studio opens one explicit Run Source, requires a Film/Render target and a
 resolved deterministic semantic projection, and writes only the selected file
@@ -29,6 +28,7 @@ inside that exact Run and Author Source closure.
 }
 
 function argumentsByName(argv: readonly string[]): ReadonlyMap<string, string> {
+  const accepted = new Set(["run", "runtime", "port", "workspace", "package-root"]);
   const result = new Map<string, string>();
   for (let index = 0; index < argv.length; index += 2) {
     const flag = argv[index];
@@ -36,7 +36,9 @@ function argumentsByName(argv: readonly string[]): ReadonlyMap<string, string> {
     if (flag === undefined || !flag.startsWith("--") || value === undefined || value.startsWith("--")) {
       usage(`Malformed argument near ${flag ?? "end of command"}`);
     }
-    result.set(flag.slice(2), value);
+    const name = flag.slice(2);
+    if (!accepted.has(name)) usage(`Unknown option --${name}`);
+    result.set(name, value);
   }
   return result;
 }
@@ -66,19 +68,16 @@ const selectedRuntime = runtimeArgument === undefined
 const runtimePath = runtimeArgument === undefined
   ? selectedRuntime?.profile
   : resolve(invokedFrom, runtimeArgument);
-const studioProfileArgument = values.get("studio-profile");
-const studioProfilePath = studioProfileArgument === undefined ? undefined : resolve(invokedFrom, studioProfileArgument);
 const port = Number(values.get("port") ?? "5179");
 if (!Number.isSafeInteger(port) || port <= 0) usage("--port must be a positive integer");
 
 const distributionPackageRoot = videoCliDistribution.packageRoot ?? resolve(here, "../..");
-const registry = await loadStudioCompanionRegistry({
-  workspaceRoot,
-  packageRoot,
-  distributionPackageRoot,
-  ...(studioProfilePath === undefined ? {} : { profile: studioProfilePath }),
-});
 const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
+const registry = await loadStudioCompanionRegistry({
+  distributionPackageRoot,
+  distributionPackages: videoStudioCompanionPackages,
+  sourcePackages: domain.packages,
+});
 const buildLibrary = await openStudioBuildLibrary(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
 let run;
 try {
@@ -94,7 +93,7 @@ try {
 }
 const source = run.authorSource;
 try {
-  inspectStudioRun(registry, run.source, run, buildLibrary.endpoints);
+  inspectStudioRun(registry, run.source, run);
 } catch (error) {
   await buildLibrary.close();
   throw error;
@@ -118,6 +117,11 @@ const server = await createServer({
     registry,
     ...(buildLibrary === undefined ? {} : { buildLibrary }),
   })],
+});
+server.httpServer?.once("close", () => {
+  void buildLibrary.close().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : String(error));
+  });
 });
 await server.listen();
 server.printUrls();

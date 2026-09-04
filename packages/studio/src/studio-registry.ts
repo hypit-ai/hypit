@@ -153,7 +153,6 @@ export class StudioCompanionRegistry {
   constructor(
     tracks: readonly StudioTrackCompanion[],
     options: {
-      readonly replace?: Readonly<Record<string, string>>;
       readonly films?: readonly StudioFilmCompanion[];
       readonly scripts?: readonly StudioScriptCompanion[];
     } = {},
@@ -176,23 +175,9 @@ export class StudioCompanionRegistry {
         ids.add(companion.id);
       }
     }
-    const kind = new Map<string, "track" | "film" | "script">([
-      ...tracks.map((item) => [item.id, "track"] as const),
-      ...films.map((item) => [item.id, "film"] as const),
-      ...scripts.map((item) => [item.id, "script"] as const),
-    ]);
-    const replacements = options.replace ?? {};
-    for (const [target, replacement] of Object.entries(replacements)) {
-      if (!ids.has(target)) throw new Error(`Studio companion replacement target does not exist: ${target}`);
-      if (!ids.has(replacement)) throw new Error(`Studio companion replacement does not exist: ${replacement}`);
-      if (target === replacement) throw new Error(`Studio companion cannot replace itself: ${target}`);
-      if (kind.get(target) !== kind.get(replacement)) {
-        throw new Error(`Studio companion replacement must keep its kind: ${target} -> ${replacement}`);
-      }
-    }
-    this.#tracks = Object.freeze(tracks.filter((companion) => !(companion.id in replacements)));
-    this.#films = Object.freeze(films.filter((film) => !(film.id in replacements)));
-    this.#scripts = Object.freeze(scripts.filter((script) => !(script.id in replacements)));
+    this.#tracks = Object.freeze([...tracks]);
+    this.#films = Object.freeze(films);
+    this.#scripts = Object.freeze(scripts);
   }
 
   filmCompanionFor(

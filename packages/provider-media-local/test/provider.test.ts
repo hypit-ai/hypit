@@ -187,6 +187,27 @@ async function handlerFor(request: Need): Promise<{ handler: ImmediateEndpointHa
   return { handler: resolution.registration.handler, registration: resolution.registration };
 }
 
+test("local media opts only reusable display materialization into transient execution", () => {
+  const provider = createLocalMediaProvider({});
+  assert.deepEqual(provider.offers.filter((offer) => offer.transient === true)
+    .map((offer) => offer.capability.name), [
+    "inspect-media",
+    "normalize-media",
+    "transform-media",
+    "extract-media-audio",
+    "extract-media-frame",
+    "render-still-video",
+    "draw-card",
+    "draw-silence",
+  ]);
+  assert.deepEqual(provider.offers.filter((offer) => offer.transient !== true)
+    .map((offer) => offer.capability.name), [
+    "project-speech-evidence-audio",
+    "render-timeline-audio",
+    "mux-program-media",
+  ]);
+});
+
 async function inspectArtifact(resources: MemoryResourceStore, source: Awaited<ReturnType<MemoryResourceStore["put"]>>) {
   const constraints = canonicalize({ source });
   const request = need("need:media-inspect", mediaPipelineCapabilities.inspect,

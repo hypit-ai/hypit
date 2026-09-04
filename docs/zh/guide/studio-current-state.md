@@ -17,9 +17,9 @@ hypit-studio --run <project>/build.svrun
               [--runtime <project>/hypit.runtime.json]
 ```
 
-Run 决定读取哪份 Author Source、选择哪些 Candidate，以及哪些已接受 Build Record 被复用。Studio preflight 要求 Film/Render 目标及其显示闭包都能从已满足 Candidate 或确定性 Producer 得到。打开 Studio 不调用 Provider、不创建 Build，也不为未解决的 Need 猜测素材或放置占位。
+Run 决定读取哪份 Author Source、选择哪些 Candidate，以及哪些已接受 Build Record 被复用。Studio preflight 只检查 Film/Render 和可追踪投影结构；执行显示闭包时，确定性 Producer 留在 Studio，真实 Need 交给 Runtime 的临时执行会话。只有 Provider 对具体 immediate capability 明确声明 `transient: true` 才能运行，价格和本地/远程位置都不构成权限。Studio 不创建 Build、不提交生成，也不为未解决的 Need 猜测素材或放置占位。
 
-未显式传 `--runtime` 时，Studio 与 CLI 一样从 Run 所在位置向上寻找最近的 `.hypit/runtime` 选择；该选择所在目录同时成为默认环境边界。未选择 Runtime 时 Source 与 Preview 仍可使用，项目 Result 中已经结束的 Tasks 与 Artifacts 也仍可读取；只有活动 `BuildView` 与 Operation 状态不可用。Studio 不猜测另一个 Runtime。
+未显式传 `--runtime` 时，Studio 与 CLI 一样从 Run 所在位置向上寻找最近的 `.hypit/runtime` 选择；该选择所在目录同时成为默认环境边界。未选择 Runtime 时 Source、项目 Result 中已经结束的 Tasks 与 Artifacts 仍可读取；只有不含外部 Need 的 Preview 可以执行，活动 `BuildView` 与 Operation 状态也不可用。Studio 不猜测另一个 Runtime。
 
 ## 当前四区
 

@@ -1,8 +1,7 @@
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import { buildIdCreatedAt } from "@hypit/protocol";
-import type { EndpointRegistry } from "@hypit/driver-node";
-import type { BuildView, NodeRuntimeHost } from "@hypit/runtime-host-node";
+import type { BuildView, NodeRuntimeHost, RuntimeHostTransientExecution } from "@hypit/runtime-host-node";
 import type { StoredValue, TypeRef } from "@hypit/protocol";
 import type {
   BuildResultFileRange,
@@ -23,8 +22,8 @@ type RuntimeControl = Awaited<ReturnType<NodeRuntimeHost["openControl"]>>;
 export type StudioBuildLibrary = {
   readonly profile?: string;
   readonly runtime?: Pick<RuntimeControl, "activity">;
-  /** The Profile's local Endpoints: what Studio may execute for display without a Build. */
-  readonly endpoints?: EndpointRegistry;
+  /** Runtime-owned, disposable execution for the current authoring session. */
+  readonly transientExecution?: RuntimeHostTransientExecution;
   readonly library: (before?: string) => Promise<StudioLibraryView>;
   readonly resolveHistoricalOutput: (
     build: string,
@@ -232,15 +231,16 @@ export async function openStudioBuildLibrary(
         ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
       });
   const runtime = await host?.openControl({ readOnly: true });
-  let endpoints: EndpointRegistry | undefined;
+  let transientExecution: RuntimeHostTransientExecution | undefined;
   let openedResults: Awaited<ReturnType<typeof videoCliDistribution.openProjectResults>>;
   try {
-    endpoints = await host?.localEndpoints();
+    transientExecution = await host?.openTransientExecution();
     openedResults = await videoCliDistribution.openProjectResults(workspaceRoot, {
       packageRoot,
       ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
     });
   } catch (error) {
+    await transientExecution?.close();
     await runtime?.close();
     throw error;
   }
@@ -248,7 +248,7 @@ export async function openStudioBuildLibrary(
   return {
     ...(resolvedProfile === undefined ? {} : { profile: resolvedProfile }),
     ...(runtime === undefined ? {} : { runtime }),
-    ...(endpoints === undefined ? {} : { endpoints }),
+    ...(transientExecution === undefined ? {} : { transientExecution }),
     async library(before) {
       return await readStudioLibrary({
         ...(resolvedProfile === undefined ? {} : { profile: resolvedProfile }),
@@ -274,6 +274,7 @@ export async function openStudioBuildLibrary(
     },
     async close() {
       await openedResults.close();
+      await transientExecution?.close();
       await runtime?.close();
     },
   };

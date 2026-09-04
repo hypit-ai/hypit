@@ -35,6 +35,14 @@ reported by `doctor` and `plan` and blocks the Need at Build time; a binding to 
 not offer the capability is an error. `plan`, creation-time tools and the Build resolve Endpoints
 through the same registry with the same bindings.
 
+Disposable authoring clients may open one transient execution. It installs only immediate capabilities
+whose Provider explicitly declares `transient: true`, keeps the same Profile bindings and resolves each
+complete Need through its ordinary `supports` predicate. Pricing is informational and is never used as
+an execution permission. The Runtime retains Endpoint handlers, credentials and Program readiness; the
+client supplies its temporary Resources and receives no Endpoint registry. Declared concurrency is shared
+inside that one disposable session only. A Provider that needs durable or cross-Build quota admission must
+not opt that capability into transient execution.
+
 A project that wants a non-default Result repository owns a separate `hypit.results.json`:
 
 ```json
@@ -53,8 +61,10 @@ no second queue.
 Cancellation prevents new work and makes a best effort to cancel an external operation already submitted;
 completed output is never rolled back.
 
-Without `hypit.results.json`, Hypit uses the project's `.hypit/results` directory with no cloud
-account or service. The project may instead select `@hypit/build-result-s3` for a shared repository.
+Without `hypit.results.json`, the official video Distribution selects the filesystem adapter at the
+project's `.hypit/results` directory, with no cloud account or service. Runtime Local opens that default
+through the same adapter registry as an explicit `@hypit/build-result-s3` selection; it contains no
+filesystem Repository shortcut.
 Runtime working Resources remain internal and Build-local; there is no ResourceStore selector. After
 a Result has an outcome, history is read from the selected repository, not Runtime SQLite.
 

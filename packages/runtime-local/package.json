@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@hypit/resource-store-fs": "workspace:*",
-    "@hypit/build-result": "workspace:*",
     "@hypit/build-result-fs": "workspace:*",
     "@hypit/build-result-kit": "workspace:*",
     "@hypit/component-kit": "workspace:*",
@@ -28,6 +27,7 @@
     "@hypit/validation": "workspace:*"
   },
   "devDependencies": {
+    "@hypit/build-result": "workspace:*",
     "@hypit/credential-store-env": "workspace:*"
   }
 }

@@ -146,7 +146,9 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         domain: options.domain,
         registry: options.registry,
         run,
-        ...(options.buildLibrary?.endpoints === undefined ? {} : { endpoints: options.buildLibrary.endpoints }),
+        ...(options.buildLibrary?.transientExecution === undefined
+          ? {}
+          : { transientExecution: options.buildLibrary.transientExecution }),
         revision: attempt,
         sourcePath: relative(options.workspaceRoot, run.authorSource),
         workspaceRoot: options.workspaceRoot,

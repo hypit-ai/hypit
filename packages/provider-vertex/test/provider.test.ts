@@ -17,11 +17,9 @@ test("Vertex Runtime provider exposes the same provider-neutral Gemini capabilit
   await provider.install(registry);
   for (const model of ["gemini-3.1-pro"] as const) {
     const resolution = registry.resolve({
-      id: `need:${model}`,
       capability: geminiCapabilities[model],
       returns: geminiTypes.visualObservation,
       constraints: { instruction: "x", prompt: "x", media: [] },
-      result: `record:${model}`,
     });
     assert.equal(resolution.status, "resolved");
     assert.equal(resolution.registration.kind, "immediate");

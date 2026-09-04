@@ -1,4 +1,5 @@
 import { createMarkupSurfaceHostFacet } from "@hypit/markup";
+import { createRunFragmentHostFacet } from "@hypit/run";
 import {
   decodeSynchronizedMediaSurface,
   decodeStillVideoSurface,
@@ -9,13 +10,17 @@ import {
   mediaPipelineManifest,
   mediaPipelineModuleRef,
   mediaPipelineMarkupSurfaces,
+  stillVideoFragment,
 } from "./index.js";
 
 export const hypitPackage = {
   format: "hypit.node-package@1" as const,
   modules: [{ manifest: mediaPipelineManifest }],
   components: [mediaPipelineComponent],
-  hostFacets: [createMarkupSurfaceHostFacet({
+  hostFacets: [createRunFragmentHostFacet({
+    name: "@hypit/media-pipeline@1",
+    fragments: { "still-video": stillVideoFragment },
+  }), createMarkupSurfaceHostFacet({
     module: mediaPipelineModuleRef,
     declaration: mediaPipelineMarkupSurfaces.find((item) => item.name === "synchronized-media")!,
     handler: decodeSynchronizedMediaSurface,
