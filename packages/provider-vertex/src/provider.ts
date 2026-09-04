@@ -27,6 +27,14 @@ function secret(context: EndpointInvocationContext, name: "project" | "credentia
   return value;
 }
 
+/**
+ * The Vertex publisher id behind each Hypit Gemini capability. The capability names the model the
+ * author chose; the id Vertex serves it under is this Provider's fact, not the author's.
+ */
+const VERTEX_MODEL_IDS: Readonly<Record<string, string>> = {
+  "gemini-3.1-pro": "gemini-3.1-pro-preview",
+};
+
 export function createVertexProvider(options: CreateVertexProviderOptions) {
   const handler: ImmediateEndpointHandler = async (context) => {
     const request = context.need.constraints as unknown;
@@ -35,7 +43,7 @@ export function createVertexProvider(options: CreateVertexProviderOptions) {
     const generate = createVertexGeminiGenerator({
       project: secret(context, "project"),
       credentials: secret(context, "credentials"),
-      model: context.need.capability.name,
+      model: VERTEX_MODEL_IDS[context.need.capability.name] ?? context.need.capability.name,
       ...(options.location === undefined ? {} : { location: options.location }),
       ...(options.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: options.requestTimeoutMs }),
     });
