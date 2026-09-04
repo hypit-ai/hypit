@@ -15,7 +15,18 @@ const adapter = createRuntimeEndpointAdapterFacet({
     if (context.pool === undefined) throw new Error("HypiHub Provider Pool is required");
     const config = runtimeConfigObject(context.config, "HypiHub");
     runtimeConfigExact(config, [
-      "baseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs", "requestTimeoutMs", "transcriptionModel",
+      "baseUrl",
+      "apiKey",
+      "defaultConcurrency",
+      "pollIntervalMs",
+      "requestTimeoutMs",
+      "operationTimeoutMs",
+      "uploadPartTimeoutMs",
+      "uploadPartAttempts",
+      "downloadAttempts",
+      "geminiRateLimitAttempts",
+      "geminiRateLimitRetryDelayMs",
+      "transcriptionModel",
     ], "HypiHub");
     const baseUrl = runtimeConfigString(config.baseUrl, "HypiHub baseUrl");
     if (baseUrl !== undefined) {
@@ -29,6 +40,12 @@ const adapter = createRuntimeEndpointAdapterFacet({
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "HypiHub defaultConcurrency");
     const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "HypiHub pollIntervalMs");
     const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "HypiHub requestTimeoutMs");
+    const operationTimeoutMs = runtimeConfigPositiveInteger(config.operationTimeoutMs, "HypiHub operationTimeoutMs");
+    const uploadPartTimeoutMs = runtimeConfigPositiveInteger(config.uploadPartTimeoutMs, "HypiHub uploadPartTimeoutMs");
+    const uploadPartAttempts = runtimeConfigPositiveInteger(config.uploadPartAttempts, "HypiHub uploadPartAttempts");
+    const downloadAttempts = runtimeConfigPositiveInteger(config.downloadAttempts, "HypiHub downloadAttempts");
+    const geminiRateLimitAttempts = runtimeConfigPositiveInteger(config.geminiRateLimitAttempts, "HypiHub geminiRateLimitAttempts");
+    const geminiRateLimitRetryDelayMs = runtimeConfigPositiveInteger(config.geminiRateLimitRetryDelayMs, "HypiHub geminiRateLimitRetryDelayMs");
     const transcriptionModel = runtimeConfigString(config.transcriptionModel, "HypiHub transcriptionModel");
     const options = {
         instance: context.instance,
@@ -38,6 +55,12 @@ const adapter = createRuntimeEndpointAdapterFacet({
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
         ...(pollIntervalMs === undefined ? {} : { pollIntervalMs }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
+        ...(operationTimeoutMs === undefined ? {} : { operationTimeoutMs }),
+        ...(uploadPartTimeoutMs === undefined ? {} : { uploadPartTimeoutMs }),
+        ...(uploadPartAttempts === undefined ? {} : { uploadPartAttempts }),
+        ...(downloadAttempts === undefined ? {} : { downloadAttempts }),
+        ...(geminiRateLimitAttempts === undefined ? {} : { geminiRateLimitAttempts }),
+        ...(geminiRateLimitRetryDelayMs === undefined ? {} : { geminiRateLimitRetryDelayMs }),
         ...(transcriptionModel === undefined ? {} : { transcriptionModel }),
       };
     return {

@@ -16,6 +16,7 @@ import {
 import type { WhisperXTranscriptResponse } from "@hypit/whisperx";
 import { createHypiHubGeminiGenerator } from "./gemini.js";
 import { hypiHubRouteForCapability, hypiHubRoutes } from "./routes.js";
+import { HypiHubUploader } from "./upload.js";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-kit";
 
 export const hypiHubProviderModuleRef = { name: "@hypit/provider-hypihub", version: "1" } as const;
@@ -28,10 +29,16 @@ export type CreateHypiHubProviderOptions = {
   readonly defaultConcurrency?: number;
   readonly pollIntervalMs?: number;
   readonly requestTimeoutMs?: number;
+  readonly operationTimeoutMs?: number;
+  readonly uploadPartTimeoutMs?: number;
+  readonly uploadPartAttempts?: number;
+  readonly downloadAttempts?: number;
+  readonly geminiRateLimitAttempts?: number;
+  readonly geminiRateLimitRetryDelayMs?: number;
   /** HypiHub model used for the Provider-neutral WhisperX alignment capability. */
   readonly transcriptionModel?: string;
   readonly fetch?: typeof globalThis.fetch;
-  /** Overrides the default POST /v1/files upload for referenced artifacts. */
+  /** Overrides HypiHub's negotiated upload transport for referenced Resources. */
   readonly publicAssetUrl?: (artifact: BlobRef, artifacts: ResourceStore) => Promise<string>;
 };
 
@@ -85,31 +92,31 @@ async function verifyModelRoute(client: HypiHubClient, apiKey: string, model: st
     `HypiHub model ${model} is not enabled for ${operation} with this API key`);
 }
 
-function dataUrl(bytes: Uint8Array, mediaType: string): string {
-  return `data:${mediaType};base64,${Buffer.from(bytes).toString("base64")}`;
-}
-
-async function resolveArtifactInline(artifacts: ResourceStore, artifact: BlobRef): Promise<string> {
-  const bytes = await artifacts.get(artifact.resource);
-  assert(bytes !== undefined, `HypiHub reference artifact ${artifact.resource} is unavailable`);
-  return dataUrl(bytes, artifact.mediaType);
-}
-
-function mediaExtension(mediaType: string): string {
-  const known: Readonly<Record<string, string>> = {
-    "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp",
-    "video/mp4": "mp4", "video/quicktime": "mov",
-    "audio/mpeg": "mp3", "audio/wav": "wav", "audio/x-wav": "wav", "audio/mp4": "m4a",
-  };
-  return known[mediaType] ?? "bin";
-}
-
 class HypiHubClient {
   readonly baseUrl: string;
   readonly timeout: number;
+  readonly downloadAttempts: number;
   readonly fetcher: typeof globalThis.fetch;
-  constructor(options: { readonly baseUrl: string; readonly timeout: number; readonly fetcher: typeof globalThis.fetch }) {
-    this.baseUrl = options.baseUrl.replace(/\/$/u, ""); this.timeout = options.timeout; this.fetcher = options.fetcher;
+  readonly uploader: HypiHubUploader;
+  constructor(options: {
+    readonly baseUrl: string;
+    readonly timeout: number;
+    readonly uploadPartTimeout: number;
+    readonly uploadPartAttempts: number;
+    readonly downloadAttempts: number;
+    readonly fetcher: typeof globalThis.fetch;
+  }) {
+    this.baseUrl = options.baseUrl.replace(/\/$/u, "");
+    this.timeout = options.timeout;
+    this.downloadAttempts = options.downloadAttempts;
+    this.fetcher = options.fetcher;
+    this.uploader = new HypiHubUploader({
+      baseUrl: this.baseUrl,
+      requestTimeoutMs: this.timeout,
+      uploadPartTimeoutMs: options.uploadPartTimeout,
+      uploadPartAttempts: options.uploadPartAttempts,
+      fetch: this.fetcher,
+    });
   }
   async json(path: string, apiKey: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), this.timeout);
@@ -123,14 +130,17 @@ class HypiHubClient {
   }
   async download(url: string): Promise<{ readonly bytes: Uint8Array; readonly mediaType: string }> {
     let lastError: unknown;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < this.downloadAttempts; attempt += 1) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeout);
       try {
-        const response = await this.fetcher(url);
+        const response = await this.fetcher(url, { signal: controller.signal });
         if (!response.ok) throw new Error(`HypiHub asset returned HTTP ${response.status}`);
         return { bytes: new Uint8Array(await response.arrayBuffer()), mediaType: response.headers.get("content-type")?.split(";", 1)[0] ?? "application/octet-stream" };
       } catch (error) {
         lastError = error;
-        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+      } finally {
+        clearTimeout(timer);
       }
     }
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
@@ -139,21 +149,30 @@ class HypiHubClient {
     const bytes = await resources.get(artifact.resource);
     assert(bytes !== undefined, `HypiHub reference artifact ${artifact.resource} is unavailable`);
     assert(bytes.byteLength === artifact.size, `HypiHub reference artifact ${artifact.resource} size differs`);
-    const form = new FormData();
-    const copy = new ArrayBuffer(bytes.byteLength);
-    new Uint8Array(copy).set(bytes);
-    form.append("file", new Blob([copy], { type: artifact.mediaType }),
-      `${artifact.resource}.${mediaExtension(artifact.mediaType)}`);
-    form.append("purpose", "reference");
-    const response = await this.json("/files", apiKey, { method: "POST", body: form });
-    assert(typeof response.url === "string" && /^https:\/\//iu.test(response.url),
-      "HypiHub file upload returned no HTTPS URL");
-    return response.url;
+    return await this.uploader.upload({ bytes, mediaType: artifact.mediaType }, apiKey);
+  }
+  async transcribe(body: Record<string, unknown>, apiKey: string): Promise<Record<string, unknown>> {
+    return await this.json("/audio/transcriptions", apiKey, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
   }
   async binary(path: string, apiKey: string, body: Record<string, unknown>): Promise<{ readonly bytes: Uint8Array; readonly mediaType: string }> {
-    const response = await this.fetcher(`${this.baseUrl}${path}`, { method: "POST", headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" }, body: JSON.stringify(body) });
-    if (!response.ok) throw new Error(`HypiHub returned HTTP ${response.status}: ${(await response.text()).slice(0, 300)}`);
-    return { bytes: new Uint8Array(await response.arrayBuffer()), mediaType: response.headers.get("content-type")?.split(";", 1)[0] ?? "audio/wav" };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeout);
+    try {
+      const response = await this.fetcher(`${this.baseUrl}${path}`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`HypiHub returned HTTP ${response.status}: ${(await response.text()).slice(0, 300)}`);
+      return { bytes: new Uint8Array(await response.arrayBuffer()), mediaType: response.headers.get("content-type")?.split(";", 1)[0] ?? "audio/wav" };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
 
@@ -176,6 +195,9 @@ export async function diagnoseHypiHubProvider(
   const client = new HypiHubClient({
     baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"),
     timeout: options.requestTimeoutMs ?? 30_000,
+    uploadPartTimeout: options.uploadPartTimeoutMs ?? 5 * 60_000,
+    uploadPartAttempts: options.uploadPartAttempts ?? 3,
+    downloadAttempts: options.downloadAttempts ?? 3,
     fetcher: options.fetch ?? globalThis.fetch,
   });
   const response = await client.json("/models", apiKey);
@@ -236,7 +258,7 @@ async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocatio
   const route = hypiHubRouteForCapability(context.need.capability);
   assert(route !== undefined && route.media === "audio", "HypiHub does not implement this exact capability");
   const compiled = await route.compile(context.need.constraints, async (artifact) => publicAssetUrl === undefined
-    ? await resolveArtifactInline(context.resources, artifact)
+    ? await client.upload(artifact, context.resources, credential(context))
     : await publicAssetUrl(artifact, context.resources));
   await verifyModelRoute(client, credential(context), compiled.model, "audio_speech");
   const audio = await client.binary("/audio/speech", credential(context), { model: compiled.model, ...(compiled.input as Record<string, unknown>) });
@@ -293,8 +315,34 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
 }
 
 export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}) {
-  const client = new HypiHubClient({ baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"), timeout: options.requestTimeoutMs ?? 30_000, fetcher: options.fetch ?? globalThis.fetch });
-  const asyncEndpoint = endpoint(client, options.pollIntervalMs ?? 10_000, 20 * 60_000, options.publicAssetUrl);
+  const requestTimeoutMs = options.requestTimeoutMs ?? 300_000;
+  const operationTimeoutMs = options.operationTimeoutMs ?? 20 * 60_000;
+  const uploadPartTimeoutMs = options.uploadPartTimeoutMs ?? 5 * 60_000;
+  const uploadPartAttempts = options.uploadPartAttempts ?? 3;
+  const downloadAttempts = options.downloadAttempts ?? 3;
+  const geminiRateLimitAttempts = options.geminiRateLimitAttempts ?? 4;
+  const geminiRateLimitRetryDelayMs = options.geminiRateLimitRetryDelayMs ?? 2_000;
+  for (const [name, value] of Object.entries({
+    requestTimeoutMs,
+    operationTimeoutMs,
+    uploadPartTimeoutMs,
+    uploadPartAttempts,
+    downloadAttempts,
+    geminiRateLimitAttempts,
+    geminiRateLimitRetryDelayMs,
+  })) {
+    assert(Number.isSafeInteger(value) && value > 0, `HypiHub ${name} must be a positive integer`);
+  }
+  assert(uploadPartAttempts <= 8, "HypiHub uploadPartAttempts must be within 1..8");
+  const client = new HypiHubClient({
+    baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"),
+    timeout: requestTimeoutMs,
+    uploadPartTimeout: uploadPartTimeoutMs,
+    uploadPartAttempts,
+    downloadAttempts,
+    fetcher: options.fetch ?? globalThis.fetch,
+  });
+  const asyncEndpoint = endpoint(client, options.pollIntervalMs ?? 10_000, operationTimeoutMs, options.publicAssetUrl);
   const audioEndpoint: ImmediateEndpointHandler = async (context) => {
     try {
       return await synthesizeAudio(client, context, options.publicAssetUrl);
@@ -308,16 +356,24 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       apiKey: credential(context),
       model: context.need.capability.name,
       ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
-      ...(options.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: options.requestTimeoutMs }),
+      requestTimeoutMs,
+      uploadPartTimeoutMs,
+      uploadPartAttempts,
       ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
-      maxRateLimitRetries: 5,
-      rateLimitRetryDelayMs: 3_000,
+      maxRateLimitRetries: geminiRateLimitAttempts - 1,
+      rateLimitRetryDelayMs: geminiRateLimitRetryDelayMs,
     });
-    const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: request.prompt }];
+    const parts: Array<{ text: string } | { fileData: { mimeType: string; fileUri: string } }> = [{ text: request.prompt }];
+    const uploaded = new Map<string, Promise<string>>();
     for (const item of request.media) {
-      const bytes = await context.resources.get(item.artifact.resource);
-      assert(bytes !== undefined, `HypiHub Gemini reference artifact ${item.artifact.resource} is unavailable`);
-      parts.push({ inlineData: { mimeType: item.artifact.mediaType, data: Buffer.from(bytes).toString("base64") } });
+      let url = uploaded.get(item.artifact.resource);
+      if (url === undefined) {
+        url = options.publicAssetUrl === undefined
+          ? client.upload(item.artifact, context.resources, credential(context))
+          : options.publicAssetUrl(item.artifact, context.resources);
+        uploaded.set(item.artifact.resource, url);
+      }
+      parts.push({ fileData: { mimeType: item.artifact.mediaType, fileUri: await url } });
     }
     const value = await generate({ parts, instruction: request.instruction });
     return { value: { kind: "inline", value: canonicalize(sealVisualObservation(value)) } };
@@ -328,20 +384,20 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       const request = verifyWhisperXAlignmentRequest(context.need.constraints);
       const bytes = await context.resources.get(request.audio.resource);
       assert(bytes !== undefined && bytes.byteLength === request.audio.size,
-        `WhisperX evidence Artifact ${request.audio.resource} is unavailable or has changed`);
+        `WhisperX evidence Resource ${request.audio.resource} is unavailable or has changed`);
       assertWhisperXEvidenceWav(bytes, request.sampleFrames);
       const apiKey = credential(context);
       await verifyModelRoute(client, apiKey, transcriptionModel, "transcriptions");
-      const copy = new ArrayBuffer(bytes.byteLength);
-      new Uint8Array(copy).set(bytes);
-      const form = new FormData();
-      form.append("model", transcriptionModel);
-      form.append("file", new Blob([copy], { type: request.audio.mediaType }), "alignment-evidence.wav");
-      form.append("response_format", "verbose_json");
-      form.append("language", request.language);
-      form.append("timestamp_granularities[]", "segment");
-      form.append("timestamp_granularities[]", "word");
-      const response = await client.json("/audio/transcriptions", apiKey, { method: "POST", body: form });
+      const url = options.publicAssetUrl === undefined
+        ? await client.upload(request.audio, context.resources, apiKey)
+        : await options.publicAssetUrl(request.audio, context.resources);
+      const response = await client.transcribe({
+        model: transcriptionModel,
+        url,
+        response_format: "verbose_json",
+        language: request.language,
+        timestamp_granularities: ["segment", "word"],
+      }, apiKey);
       const evidence = sealAlignedTranscriptEvidence({
         passages: interpretWhisperXTranscript(response as WhisperXTranscriptResponse, request.sampleFrames),
       });

@@ -39,9 +39,17 @@ callers can still use the exported `createHypiHubGeminiGenerator`. Run `hypit au
 an existing `/v1`/`/v1beta` base is accepted) only when choosing HypiHub. The Runtime Provider also
 accepts the origin or either versioned base and normalizes it to `/v1`; missing or insufficient user
 credentials should be resolved at [hypit.ai](https://hypit.ai). Referenced image, audio and video
-Artifacts are uploaded automatically through `POST /v1/files`, then their returned HTTPS capability
-URLs are used in image and video requests. One referenced Resource is uploaded once within one
-Runtime operation. Embedded callers may override that transport with `publicAssetUrl`.
+Resources are uploaded through a session from `POST /v1/files/uploads`, followed by the private
+regional multipart instructions returned by HypiHub. The Provider follows the server-selected part
+size and concurrency, retries only a failed part with a fresh signed URL, completes or cancels that
+one upload, and then passes the returned HTTPS URL to generation, Gemini or transcription. One
+Resource identity is uploaded once within one Runtime operation. Hypit keeps no upload catalog or
+cross-Build cache. Embedded callers may replace this transport with `publicAssetUrl`.
+
+The service currently requires whole-file and per-part SHA-256 values as fields of its signed upload
+protocol. They exist only while transferring bytes; Hypit never uses them as Resource identity,
+Result metadata, lookup keys or reuse evidence. Signed URLs and their query credentials are removed
+from surfaced upload errors.
 
 The default remote alignment model is `victor-upmeet/whisperx`; `transcriptionModel` may select another
 HypiHub model that exposes the `transcriptions` route. `hypit doctor` reads the authenticated model
@@ -54,3 +62,10 @@ HypiHub declares MiMo VoiceDesign together with every other capability it serves
 one. When another selected Endpoint offers the same capability (a local WhisperX, a Vertex Gemini,
 the official MiMo Provider), the Runtime Profile's `bindings` say which Endpoint serves it. Hypit does
 not expose MiMo preset-voice or voice-cloning models.
+
+Execution policy remains local to this Provider. A profile may set `requestTimeoutMs`,
+`operationTimeoutMs`, `uploadPartTimeoutMs`, `uploadPartAttempts`, `downloadAttempts`,
+`geminiRateLimitAttempts` and `geminiRateLimitRetryDelayMs`; defaults are respectively 300 seconds,
+20 minutes, 5 minutes, 3 attempts, 3 attempts, 4 attempts and 2 seconds. `defaultConcurrency`
+controls this Endpoint's shared Runtime capacity. Multipart concurrency is different: HypiHub
+selects it for one upload session, and it does not create a Build queue or a second Runtime pool.
