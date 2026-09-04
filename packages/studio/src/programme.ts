@@ -16,7 +16,6 @@ import type { StudioResolvedTrack, StudioTemporalBinding } from "@hypit/studio-a
 import type { CompiledSource, ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import { executeDeterministic, MemoryResourceStore } from "./execute.js";
-import type { EndpointRegistry } from "@hypit/driver-node";
 import type { RunPlan } from "./run.js";
 import type { StudioViewRequirement } from "./studio-preflight.js";
 import { studioSurfacePreview } from "./surface-preview.js";
@@ -110,8 +109,6 @@ export async function preview(input: {
   readonly outputRefs: readonly string[];
   readonly compositionRef: string;
   readonly projections: readonly StudioViewRequirement[];
-  /** Preview-only endpoint set. Production Studio passes none; preview-mock may pass only local mock media. */
-  readonly endpoints?: EndpointRegistry;
 }): Promise<Preview> {
   const exportsByRef = new Map(input.source.exports.map((item) => [item.ref, item] as const));
   const targets = input.outputRefs.flatMap((ref) => {
@@ -149,7 +146,7 @@ export async function preview(input: {
     },
   };
   const planned = input.run.plan(input.run.run, targets.map((target) => target.ref));
-  const executed = await executeDeterministic(input.domain, planned.state, resources, input.endpoints);
+  const executed = await executeDeterministic(input.domain, planned.state, resources);
   if (executed.unserved.length > 0) {
     throw new Error(
       `Studio projection is unresolved: ${executed.unserved.map((item) => item.capability).join(", ")}`,

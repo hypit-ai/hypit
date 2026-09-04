@@ -79,3 +79,10 @@ attribute names, runtime id prefixes or coincident frame spans.
 Opening Studio never invokes a Provider and never creates a Build. Every
 projection needed for display must already be supplied by the Run or be
 deterministically derivable from those supplied Candidates.
+
+Studio and an encoded review use the same ordinary Run. Studio evaluates its
+deterministic display closure in the browser; building that Run evaluates the
+full target closure and sends the resulting HyperFrames document to the chosen
+render Endpoint. A separate review Run is useful only when the author wants a
+different Candidate selection. Its path and filename carry no execution
+semantics.

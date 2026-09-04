@@ -9,7 +9,6 @@ import { pipeline } from "node:stream/promises";
 import type { Plugin, ViteDevServer } from "vite";
 import type { BuildResultFileRange } from "@hypit/build-result";
 import type { StudioTemporalInstantProjection } from "@hypit/studio-adapter";
-import type { EndpointRegistry } from "@hypit/driver-node";
 
 import type { StudioBuildLibrary } from "./build-library.js";
 import type { ServedFile } from "./compile.js";
@@ -31,7 +30,6 @@ export type StudioPluginOptions = {
   readonly registry: StudioCompanionRegistry;
   readonly workspaceRoot: string;
   readonly buildLibrary?: StudioBuildLibrary;
-  readonly endpoints?: EndpointRegistry;
 };
 
 function json(response: import("node:http").ServerResponse, status: number, value: unknown): void {
@@ -138,7 +136,6 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         domain: options.domain,
         registry: options.registry,
         ...(options.buildLibrary === undefined ? {} : { buildLibrary: options.buildLibrary }),
-        ...(options.endpoints === undefined ? {} : { endpoints: options.endpoints }),
       });
       currentSource = run.authorSource;
       watchSource(options.runPath);
@@ -153,7 +150,6 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         registry: options.registry,
         run,
         ...(options.buildLibrary === undefined ? {} : { buildLibrary: options.buildLibrary }),
-        ...(options.endpoints === undefined ? {} : { endpoints: options.endpoints }),
         revision: attempt,
         sourcePath: relative(options.workspaceRoot, run.authorSource),
         workspaceRoot: options.workspaceRoot,

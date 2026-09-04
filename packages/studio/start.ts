@@ -4,15 +4,13 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import { findRuntimeProfile } from "@hypit/cli";
 import { videoCliDistribution } from "@hypit/video-cli";
-import { EndpointRegistry } from "@hypit/driver-node";
-import { createLocalMediaProvider } from "@hypit/provider-media-local";
 
 import { openStudioBuildLibrary } from "./src/build-library.js";
 import { loadStudioCompanionRegistry } from "./src/companion-profile.js";
 import { loadStudioDomain } from "./src/domain.js";
 import { loadStudioRun } from "./src/run.js";
 import { studioPlugin } from "./src/server.js";
-import { PREVIEW_LOCAL_MEDIA_CAPABILITIES, inspectStudioRun } from "./src/studio-preflight.js";
+import { inspectStudioRun } from "./src/studio-preflight.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -49,7 +47,6 @@ const invokedFrom = process.env.INIT_CWD ?? process.cwd();
 const runArgument = values.get("run");
 if (runArgument === undefined || runArgument.trim().length === 0) usage("Missing --run");
 const runPath = resolve(invokedFrom, runArgument);
-const previewOnly = /[\\/]\.hypit[\\/]preview[\\/]/u.test(runPath);
 const packageRootArgument = values.get("package-root");
 const workspaceArgument = values.get("workspace");
 const requestedWorkspaceRoot = workspaceArgument === undefined
@@ -93,14 +90,8 @@ try {
   throw error;
 }
 const source = run.authorSource;
-// A preview Run has already persisted all mock media as relative file
-// Candidates, but deterministic inspect/normalize/render-media Producers still
-// need the local FFmpeg endpoint.  This is not a paid or external Provider and
-// is never installed for ordinary production Runs.
-const endpoints = previewOnly ? new EndpointRegistry() : undefined;
-if (endpoints !== undefined) await createLocalMediaProvider({}).install(endpoints);
 try {
-  inspectStudioRun(registry, run.source, run, previewOnly ? PREVIEW_LOCAL_MEDIA_CAPABILITIES : undefined);
+  inspectStudioRun(registry, run.source, run);
 } catch (error) {
   await buildLibrary?.close();
   throw error;
@@ -123,7 +114,6 @@ const server = await createServer({
     domain,
     registry,
     ...(buildLibrary === undefined ? {} : { buildLibrary }),
-    ...(endpoints === undefined ? {} : { endpoints }),
   })],
 });
 await server.listen();
