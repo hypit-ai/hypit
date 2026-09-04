@@ -60,7 +60,7 @@ test("all KIE capabilities share one asynchronous task engine and use exact-mode
   const provider = createKieProvider({
     fetch: async () => { throw new Error("no request expected"); },
     defaultConcurrency: 8,
-    laneConcurrency: { "seedance-2-mini": 4 },
+    capabilityConcurrency: { "seedance-2-mini": 4 },
   });
   const registry = new EndpointRegistry();
   await provider.install(registry);
@@ -80,7 +80,7 @@ test("all KIE capabilities share one asynchronous task engine and use exact-mode
   assert.deepEqual(seedResolution.registration.scheduling, {
     resources: [
       { id: "pool:kie.default", limit: 8 },
-      { id: "lane:kie.default/seedance-2-mini", limit: 4 },
+      { id: "capacity:kie.default/seedance-2-mini", limit: 4 },
     ],
   });
 });

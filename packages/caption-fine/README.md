@@ -11,7 +11,8 @@ does not carry a private visual role.
   semantic={speech.semantic} program={captions}/>
 ```
 
-An optional Spatial Region Timeline replaces only the moving placement point:
+An optional Spatial Region Timeline replaces only the moving placement point. The timeline is authored
+numeric input, normally measured from the face before the Build; it is not a face-tracking request:
 
 ```xml
 <space:RegionTimeline id="heads" within={vertical} recipe={tracking.heads.default}/>
@@ -28,6 +29,10 @@ anchor-y: bottom` puts the Caption immediately above a measured region. The Time
 external evidence: Fine does not detect people, associate identities, smooth motion, interpolate
 missing Frames or invoke a Provider. Without `regions`, the ordinary Recipe `x` and `y` behavior is
 unchanged.
+
+This keeps placement inspectable and editable. If a tracked face needs padding or an above-head anchor,
+transform the measured numbers while authoring the Region Timeline, then give Caption the result. Do
+not hide that transformation in a Provider or ask the Build to rediscover the face.
 
 One SVS Recipe freezes three public dimensions:
 

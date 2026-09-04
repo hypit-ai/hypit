@@ -47,7 +47,7 @@ Declarative activation names an ordinary CredentialRef, not an environment-speci
   "config": {
     "apiKey": { "store": "os", "key": "kie.api-key" },
     "defaultConcurrency": 8,
-    "laneConcurrency": {
+    "capabilityConcurrency": {
       "seedance-2.5": 4,
       "gpt-image-2": 3
     }
@@ -67,7 +67,7 @@ const kie = createKieProvider({
   instance: "kie.personal",
   apiKey: credentialRef("env", "KIE_API_KEY"),
   defaultConcurrency: 8,
-  laneConcurrency: {
+  capabilityConcurrency: {
     "seedance-2.5": 4,
     "gpt-image-2": 3,
   },
@@ -75,7 +75,7 @@ const kie = createKieProvider({
 ```
 
 `defaultConcurrency` is the total capacity of this configured KIE Endpoint across all Builds. Each
-optional `laneConcurrency` entry narrows the capacity of one exact KIE model inside that total. By
+optional `capabilityConcurrency` entry narrows the capacity of one exact KIE model inside that total. By
 default the Endpoint instance is the shared-resource identity. Set Profile `pool` only when multiple
 Endpoint instances really use the same account or deployment quota. Another Provider is independent
 unless the Profile explicitly gives it that same real-resource identity.

@@ -16,7 +16,7 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     const config = runtimeConfigObject(context.config, "KIE");
     runtimeConfigExact(config, [
       "apiBaseUrl", "uploadBaseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs",
-      "laneConcurrency", "submissionIntervalMs", "requestTimeoutMs", "maxOperationMs", "maxArtifactBytes",
+      "capabilityConcurrency", "submissionIntervalMs", "requestTimeoutMs", "maxOperationMs", "maxArtifactBytes",
     ], "KIE");
     const apiBaseUrl = runtimeConfigString(config.apiBaseUrl, "KIE apiBaseUrl");
     const uploadBaseUrl = runtimeConfigString(config.uploadBaseUrl, "KIE uploadBaseUrl");
@@ -30,13 +30,13 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     const apiKey = runtimeConfigCredentialRef(config.apiKey, "KIE apiKey");
     if (apiKey === undefined) throw new Error("KIE apiKey CredentialRef is required");
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "KIE defaultConcurrency");
-    const laneConcurrency = config.laneConcurrency === undefined
+    const capabilityConcurrency = config.capabilityConcurrency === undefined
       ? undefined
-      : Object.fromEntries(Object.entries(runtimeConfigObject(config.laneConcurrency, "KIE laneConcurrency"))
-        .map(([lane, value]) => {
-          const concurrency = runtimeConfigPositiveInteger(value, `KIE laneConcurrency.${lane}`);
-          if (concurrency === undefined) throw new Error(`KIE laneConcurrency.${lane} is required`);
-          return [lane, concurrency];
+      : Object.fromEntries(Object.entries(runtimeConfigObject(config.capabilityConcurrency, "KIE capabilityConcurrency"))
+        .map(([capability, value]) => {
+          const concurrency = runtimeConfigPositiveInteger(value, `KIE capabilityConcurrency.${capability}`);
+          if (concurrency === undefined) throw new Error(`KIE capabilityConcurrency.${capability} is required`);
+          return [capability, concurrency];
         }));
     const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "KIE pollIntervalMs");
     const submissionIntervalMs = runtimeConfigPositiveInteger(config.submissionIntervalMs, "KIE submissionIntervalMs");
@@ -51,7 +51,7 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ...(uploadBaseUrl === undefined ? {} : { uploadBaseUrl }),
         apiKey,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
-        ...(laneConcurrency === undefined ? {} : { laneConcurrency }),
+        ...(capabilityConcurrency === undefined ? {} : { capabilityConcurrency }),
         ...(pollIntervalMs === undefined ? {} : { pollIntervalMs }),
         ...(submissionIntervalMs === undefined ? {} : { submissionIntervalMs }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),

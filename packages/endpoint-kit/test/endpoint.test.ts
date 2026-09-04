@@ -47,7 +47,7 @@ test("one Endpoint definition generates one configured instance and host-neutral
       lifecycle: "immediate",
       capability: capabilities.generation,
       returns: types.generated,
-      lane: "text-generation",
+      capacity: "text-generation",
       maxConcurrency: 1,
       handler: () => ({
         value: { kind: "inline", value: "generated" },
@@ -72,7 +72,7 @@ test("one Endpoint definition generates one configured instance and host-neutral
   assert.deepEqual(registrations[0]?.options.scheduling, {
     resources: [
       { id: "pool:example.personal", limit: 3 },
-      { id: "lane:example.personal/text-generation", limit: 1 },
+      { id: "capacity:example.personal/text-generation", limit: 1 },
     ],
   });
 });

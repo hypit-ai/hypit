@@ -69,7 +69,7 @@ export function createMyServiceProvider(options: {
     capabilities: [{
       capability: myCapability,
       returns: myResultType,
-      lane: "generate",
+      capacity: "generate",
       lifecycle: "asynchronous",
       endpoint: myAsyncEndpoint,
     }],
@@ -143,8 +143,10 @@ Build preflight and must never submit generation work.
 A Provider that charges declares where it publishes prices, and nothing more: `pricing: { kind: "page",
 url }` on `defineEndpointPackage`, pointing at the Provider's own public price page. A Provider that
 runs on this machine declares `pricing: { kind: "local" }`. Hypit never copies or interprets prices;
-`hypit plan --runtime <profile>` prints the Endpoint and price page behind each external request so the
-Agent reads the Provider's page before a paid Build. An undeclared price source is reported as unknown.
+`hypit plan --runtime <profile>` prints the Endpoint behind each request. Local work is marked local;
+Provider work carries the Provider's price page so the Agent can read the source before a paid Build.
+An undeclared price source is reported as unknown. When the complete request already exists, planning
+also applies that Endpoint's ordinary `supports` check; it does not maintain a second selection table.
 
 ## 5. Declare a Managed Program when needed
 

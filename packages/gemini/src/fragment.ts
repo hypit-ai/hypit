@@ -40,11 +40,11 @@ export function createGeminiFragment(model: GeminiModel, mediaCount: number) {
   });
   operations.push({
     id: "generate", producer: geminiProducers[model], inputs: { request: operation("finalize-request") },
-    result: { kind: "need" as const, name: "text" },
+    result: { kind: "need" as const, name: "observation" },
   });
   return sealGraphFragment({
     inputs,
     operations,
-    exports: [{ name: "text", type: textTypes.text, root: operation("generate") }],
+    exports: [{ name: "observation", type: geminiTypes.visualObservation, root: operation("generate") }],
   });
 }

@@ -26,6 +26,7 @@ export type {
 export {
   assertGenerationPortTable,
   generationPort,
+  isMediaPort,
   sealGenerationPortTable,
 } from "./ports.js";
 export type {

@@ -5,10 +5,10 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { canonicalize } from "@hypit/protocol";
-import type { CapabilityRef, Need } from "@hypit/protocol";
+import type { Need } from "@hypit/protocol";
 import type { ResourceStore } from "@hypit/runtime";
 import { sealAlignedTranscriptEvidence } from "@hypit/speech-evidence";
-import { sealText } from "@hypit/text";
+import { sealVisualObservation } from "@hypit/gemini";
 import { interpretWhisperXTranscript } from "@hypit/whisperx";
 import type { WhisperXAlignmentRequest } from "@hypit/whisperx";
 
@@ -34,8 +34,14 @@ const page = { kind: "page" as const, url: "https://prices.example/models" };
 /** A host whose Profile serves everything through one paid Endpoint, answering each Need in kind. */
 function host(seen: Need[]): CreationHost {
   return {
-    providers: async (capabilities: readonly CapabilityRef[]) => capabilities.map((capability) => ({
-      capability, status: "resolved" as const, endpoint: "paid.default", use: "@hypit/provider-example", pricing: page,
+    providers: async (requests) => requests.map((request) => ({
+      request: request.request,
+      capability: request.capability,
+      checked: request.constraints === undefined ? "capability" as const : "request" as const,
+      status: "resolved" as const,
+      endpoint: "paid.default",
+      use: "@hypit/provider-example",
+      pricing: page,
     })),
     invoke: async (need: Need, resources: ResourceStore) => {
       seen.push(need);
@@ -52,7 +58,7 @@ function host(seen: Need[]): CreationHost {
         return { value: { kind: "inline" as const, value: canonicalize({ audios: [artifact] }) } };
       }
       const request = need.constraints as { readonly prompt: string; readonly media: readonly unknown[] };
-      return { value: { kind: "inline" as const, value: canonicalize(sealText(`saw ${request.media.length} media; asked: ${request.prompt}`)) } };
+      return { value: { kind: "inline" as const, value: canonicalize(sealVisualObservation(`saw ${request.media.length} media; asked: ${request.prompt}`)) } };
     },
   };
 }
@@ -171,7 +177,12 @@ test("a Profile that does not serve the capability stops before anything is spen
     const unserved: CreationEnvironment = {
       cwd: root,
       openHost: async () => ({ profile: join(root, "hypit.runtime.json"), host: {
-        providers: async (capabilities) => capabilities.map((capability) => ({ capability, status: "unresolved" as const })),
+        providers: async (requests) => requests.map((request) => ({
+          request: request.request,
+          capability: request.capability,
+          checked: request.constraints === undefined ? "capability" as const : "request" as const,
+          status: "unresolved" as const,
+        })),
         invoke: async () => { invoked = true; throw new Error("must not be reached"); },
       } }),
     };

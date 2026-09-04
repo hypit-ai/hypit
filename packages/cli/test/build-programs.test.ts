@@ -217,7 +217,7 @@ test("Build confirms durable submission before following stable work progress", 
   const active = output.indexOf("Build still active");
   assert.ok(submitted >= 0 && working > submitted && active > working);
   assert.match(output, /Target\s+result/u);
-  assert.match(output, /Work\s+0 external requests/u);
+  assert.match(output, /Work\s+0 requests/u);
   assert.match(output, /Ctrl-C stops watching; the Build continues\./u);
 });
 

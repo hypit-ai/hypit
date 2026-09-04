@@ -270,7 +270,7 @@ export class NodeDriver {
         kind: "command-failed",
         command: executable.command.id,
         code: "CANCELLED",
-        message: `Operation ${snapshot.id} was cancelled by the Runtime pool`,
+        message: `Operation ${snapshot.id} was cancelled by the Runtime capacity controller`,
       } as const;
       return {
         status: "completed",

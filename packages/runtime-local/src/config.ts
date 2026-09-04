@@ -46,7 +46,7 @@ import {
   hypitHostStateRoot,
   prepareHostPackages,
 } from "@hypit/runtime-host-node";
-import type { HostPackageProgress, HostPackageReport, RuntimeHostCapabilityProvider } from "@hypit/runtime-host-node";
+import type { HostPackageProgress, HostPackageReport, RuntimeHostCapabilityProvider, RuntimeHostProviderQuery } from "@hypit/runtime-host-node";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
 import { applyEndpointBindings, createLocalRuntime, parseCapabilityKey } from "./runtime.js";
@@ -487,21 +487,29 @@ async function installedEndpointRegistry(
 /** Static Endpoint selection per capability. Reads the Profile and activations only; never a credential or a service. */
 export async function describeRuntimeConfigProviders(
   path: string,
-  capabilities: readonly CapabilityRef[],
+  requests: readonly RuntimeHostProviderQuery[],
   options: LoadRuntimeConfigOptions = {},
 ): Promise<readonly RuntimeHostCapabilityProvider[]> {
-  if (capabilities.length === 0) return [];
+  if (requests.length === 0) return [];
   const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   await installRuntimeAdapters(registry, packageRoot, endpointPackageSelection(document), options.distributionPackageRoot);
   const activations = await activatedEndpoints(document, root, hostStateRoot, registry);
   const endpoints = await installedEndpointRegistry(document, activations);
-  return capabilities.map((capability): RuntimeHostCapabilityProvider => {
-    const base = { capability: structuredClone(capability) };
-    const binding = document.bindings[capabilityKey(capability)];
+  return requests.map((request): RuntimeHostCapabilityProvider => {
+    const base = {
+      request: request.request,
+      capability: structuredClone(request.capability),
+      checked: request.constraints === undefined ? "capability" as const : "request" as const,
+    };
+    const binding = document.bindings[capabilityKey(request.capability)];
     const bound = binding === undefined ? {} : { binding };
-    const resolution = endpoints.resolve({ capability });
+    const resolution = endpoints.resolve({
+      capability: request.capability,
+      returns: request.returns,
+      ...(request.constraints === undefined ? {} : { constraints: request.constraints }),
+    });
     if (resolution.status === "missing") return { ...base, status: "unresolved", ...bound };
     if (resolution.status === "ambiguous") return { ...base, status: "ambiguous", endpoints: resolution.endpointIds, ...bound };
     const match = activations.find(({ activation }) => activation.endpoint.instance.id === resolution.registration.id);
