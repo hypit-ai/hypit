@@ -2,7 +2,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createServer } from "vite";
-import { findRuntimeProfile } from "@hypit/cli";
+import { findRuntimeProfile, resolveProjectRoot } from "@hypit/cli";
 import { videoCliDistribution } from "@hypit/video-cli";
 
 import { openStudioBuildLibrary } from "./src/build-library.js";
@@ -52,14 +52,17 @@ const workspaceArgument = values.get("workspace");
 const requestedWorkspaceRoot = workspaceArgument === undefined
   ? undefined
   : resolve(invokedFrom, workspaceArgument);
-const selectedRuntime = await findRuntimeProfile(requestedWorkspaceRoot ?? dirname(runPath));
-const workspaceRoot = workspaceArgument === undefined
-  ? selectedRuntime?.projectRoot ?? dirname(runPath)
-  : requestedWorkspaceRoot!;
+const workspaceRoot = await resolveProjectRoot({
+  ...(requestedWorkspaceRoot === undefined ? {} : { workspaceRoot: requestedWorkspaceRoot }),
+  cwd: invokedFrom,
+});
 const packageRoot = packageRootArgument === undefined
   ? workspaceRoot
   : resolve(invokedFrom, packageRootArgument);
 const runtimeArgument = values.get("runtime");
+const selectedRuntime = runtimeArgument === undefined
+  ? await findRuntimeProfile(workspaceRoot)
+  : undefined;
 const runtimePath = runtimeArgument === undefined
   ? selectedRuntime?.profile
   : resolve(invokedFrom, runtimeArgument);
@@ -83,17 +86,17 @@ try {
     run: runPath,
     domain,
     registry,
-    ...(buildLibrary === undefined ? {} : { buildLibrary }),
+    buildLibrary,
   });
 } catch (error) {
-  await buildLibrary?.close();
+  await buildLibrary.close();
   throw error;
 }
 const source = run.authorSource;
 try {
   inspectStudioRun(registry, run.source, run);
 } catch (error) {
-  await buildLibrary?.close();
+  await buildLibrary.close();
   throw error;
 }
 const server = await createServer({

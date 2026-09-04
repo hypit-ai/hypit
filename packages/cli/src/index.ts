@@ -4,6 +4,7 @@ export { loadDiscoveredSourcePackages } from "./source-packages.js";
 export { collectRunFrontends, loadRunFile, resolveBuildResultValue } from "./run-file.js";
 export type { LoadedRunFile } from "./run-file.js";
 export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
+export { resolvePackageRoot, resolveProjectRoot } from "./project-context.js";
 export { findRuntimeProfile } from "./runtime-selection.js";
 export { renderCliError, writeCliHelp, writeCliOutput } from "./output.js";
 export type {

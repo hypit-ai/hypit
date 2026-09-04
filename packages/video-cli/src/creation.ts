@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { dirname, extname, join, resolve } from "node:path";
 
-import { findRuntimeProfile, loadDiscoveredSourcePackages } from "@hypit/cli";
+import { findRuntimeProfile, loadDiscoveredSourcePackages, resolveProjectRoot } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
 import { MemoryResourceStore } from "@hypit/driver-node";
 import {
@@ -49,7 +49,10 @@ export type CreationHost = {
 
 export type CreationEnvironment = {
   /** Open the host behind `--runtime`, or behind the project's own selection when none is named. */
-  readonly openHost: (runtime: string | undefined) => Promise<{ readonly profile: string; readonly host: CreationHost }>;
+  readonly openHost: (
+    runtime: string | undefined,
+    workspaceRoot?: string,
+  ) => Promise<{ readonly profile: string; readonly host: CreationHost }>;
   readonly cwd: string;
 };
 
@@ -61,34 +64,26 @@ export function isCreationCommand(value: string | undefined): value is CreationC
   return (creationCommands as readonly string[]).includes(value ?? "");
 }
 
-async function nearestPackageRoot(start: string): Promise<string> {
-  let directory = resolve(start);
-  while (true) {
-    const manifest = resolve(directory, "package.json");
-    if (await stat(manifest).then((item) => item.isFile(), () => false)) return directory;
-    const parent = dirname(directory);
-    if (parent === directory) return resolve(start);
-    directory = parent;
-  }
-}
-
 /** The default environment: the project's Profile, opened through this Distribution's Runtime. */
 export function creationEnvironment(cwd = process.cwd()): CreationEnvironment {
   return {
     cwd,
-    openHost: async (runtime) => {
+    openHost: async (runtime, workspace) => {
+      const projectRoot = await resolveProjectRoot({
+        ...(workspace === undefined ? {} : { workspaceRoot: resolve(cwd, workspace) }),
+        cwd,
+      });
       let profile: string;
       if (runtime !== undefined) {
         profile = resolve(cwd, runtime);
       } else {
-        const projectRoot = await nearestPackageRoot(cwd);
         const selected = await findRuntimeProfile(projectRoot);
         assert(selected !== undefined,
           `No Runtime Profile is selected for ${projectRoot}; run hypit runtime use <profile> there, or pass --runtime <profile>`);
         profile = selected.profile;
       }
       const host = await videoCliDistribution.openRuntimeHost(profile, {
-        packageRoot: await nearestPackageRoot(dirname(profile)),
+        packageRoot: projectRoot,
         ...(videoCliDistribution.packageRoot === undefined ? {} : { distributionPackageRoot: videoCliDistribution.packageRoot }),
       });
       return { profile, host };
@@ -301,7 +296,7 @@ function seconds(sample: number | undefined): number | undefined {
 // observe
 
 async function observe(argv: readonly string[], io: CliIo, environment: CreationEnvironment): Promise<void> {
-  const parsed = parseArguments(argv, ["--instruction", "--prompt", "--model", "--to", "--runtime"]);
+  const parsed = parseArguments(argv, ["--instruction", "--prompt", "--model", "--to", "--runtime", "--workspace"]);
   assert(parsed.positionals.length > 0, "observe requires at least one media file to look at");
   const modelName = parsed.options.get("--model") ?? geminiModels[0];
   assert((geminiModels as readonly string[]).includes(modelName),
@@ -310,7 +305,10 @@ async function observe(argv: readonly string[], io: CliIo, environment: Creation
   const instruction = await textOrFile(required(parsed, "--instruction", "who the observer is and what it returns"), "--instruction", environment.cwd);
   const prompt = await textOrFile(required(parsed, "--prompt", "the question to answer about the media"), "--prompt", environment.cwd);
   const to = await destination(parsed, environment.cwd);
-  const { profile, host } = await environment.openHost(parsed.options.get("--runtime"));
+  const { profile, host } = await environment.openHost(
+    parsed.options.get("--runtime"),
+    parsed.options.get("--workspace"),
+  );
   const capability = geminiCapabilities[model];
   const resources = new MemoryResourceStore();
   const media: GeminiMediaPart[] = [];
@@ -374,13 +372,16 @@ function passagesInSeconds(aligned: AlignedTranscriptEvidence): readonly Transcr
 }
 
 async function transcribe(argv: readonly string[], io: CliIo, environment: CreationEnvironment): Promise<void> {
-  const parsed = parseArguments(argv, ["--language", "--to", "--runtime"]);
+  const parsed = parseArguments(argv, ["--language", "--to", "--runtime", "--workspace"]);
   assert(parsed.positionals.length === 1, "transcribe takes exactly one audio or video file");
   const source = resolve(environment.cwd, parsed.positionals[0]!);
   const language = parsed.options.get("--language") ?? "en";
   assert(language === "en" || language === "zh" || language === "es", "--language must be en, zh or es");
   const to = await destination(parsed, environment.cwd);
-  const { profile, host } = await environment.openHost(parsed.options.get("--runtime"));
+  const { profile, host } = await environment.openHost(
+    parsed.options.get("--runtime"),
+    parsed.options.get("--workspace"),
+  );
   const evidence = await speechEvidenceBytes(source);
   const resources = new MemoryResourceStore();
   const artifact = await resources.put(evidence.bytes, "audio/wav");
@@ -425,14 +426,17 @@ async function transcribe(argv: readonly string[], io: CliIo, environment: Creat
 // speak
 
 async function speak(argv: readonly string[], io: CliIo, environment: CreationEnvironment): Promise<void> {
-  const parsed = parseArguments(argv, ["--text", "--voice", "--to", "--runtime"]);
+  const parsed = parseArguments(argv, ["--text", "--voice", "--to", "--runtime", "--workspace"]);
   assert(parsed.positionals.length === 0, `speak takes no positional arguments; received ${parsed.positionals.join(" ")}`);
   const text = await textOrFile(required(parsed, "--text", "the words to speak, or a file holding them"), "--text", environment.cwd);
   const voice = await textOrFile(required(parsed, "--voice", "a description of the voice, or a file holding it"), "--voice", environment.cwd);
   const to = await destination(parsed, environment.cwd);
   const endpoint = mimoTtsEndpoints.voiceDesign;
   assert(endpoint !== undefined, "@hypit/mimo-tts declares no voice-design endpoint");
-  const { profile, host } = await environment.openHost(parsed.options.get("--runtime"));
+  const { profile, host } = await environment.openHost(
+    parsed.options.get("--runtime"),
+    parsed.options.get("--workspace"),
+  );
   const resources = new MemoryResourceStore();
   const need: Need = {
     id: "need:hypit-speak",
@@ -472,8 +476,7 @@ async function speak(argv: readonly string[], io: CliIo, environment: CreationEn
 // measure
 
 /** The spoken Text of one Script Segment, read from the compiled author source without a Build. */
-async function segmentSpeech(source: string, segment: string): Promise<string> {
-  const projectRoot = await nearestPackageRoot(dirname(source));
+async function segmentSpeech(source: string, segment: string, projectRoot: string): Promise<string> {
   const loaded = await loadDiscoveredSourcePackages({ ...videoCliDistribution, bootstrapPackages: [] }, {
     source,
     workspaceRoot: projectRoot,
@@ -501,7 +504,7 @@ async function segmentSpeech(source: string, segment: string): Promise<string> {
  * policy the author chooses, bounded and rounded the way the author chooses. Pure local work.
  */
 async function measure(argv: readonly string[], io: CliIo, environment: CreationEnvironment): Promise<void> {
-  const parsed = parseArguments(argv, ["--text", "--segment", "--language", "--pace", "--rate", "--min", "--max", "--rounding", "--padding"]);
+  const parsed = parseArguments(argv, ["--text", "--segment", "--language", "--pace", "--rate", "--min", "--max", "--rounding", "--padding", "--workspace"]);
   const inlineText = parsed.options.get("--text");
   const segment = parsed.options.get("--segment");
   assert((inlineText === undefined) !== (parsed.positionals.length === 0 && segment === undefined) || (inlineText !== undefined && parsed.positionals.length === 0),
@@ -515,7 +518,12 @@ async function measure(argv: readonly string[], io: CliIo, environment: Creation
   } else {
     assert(parsed.positionals.length === 1 && segment !== undefined, "measure a Segment with: hypit measure <source.svml> --segment <id>");
     const source = resolve(environment.cwd, parsed.positionals[0]!);
-    text = await segmentSpeech(source, segment);
+    const workspace = parsed.options.get("--workspace");
+    const projectRoot = await resolveProjectRoot({
+      ...(workspace === undefined ? {} : { workspaceRoot: resolve(environment.cwd, workspace) }),
+      cwd: environment.cwd,
+    });
+    text = await segmentSpeech(source, segment, projectRoot);
     where = { source, segment };
   }
   const pace = parsed.options.get("--pace");
@@ -558,7 +566,7 @@ export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
       "Look at pictures, clips or recordings with the Gemini Endpoint of the selected Runtime Profile.",
       "",
       "  hypit observe <media…> --instruction <text|file> --prompt <text|file> --to <file>",
-      "                [--model <gemini model>] [--runtime <profile>]",
+      "                [--model <gemini model>] [--runtime <profile>] [--workspace <project>]",
       "",
       "Writes the observation as text to --to. One immediate request; no Build, Result or state.",
     ],
@@ -566,7 +574,7 @@ export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
       "hypit transcribe",
       "Hear a recording with the whisperx-alignment Endpoint of the selected Runtime Profile.",
       "",
-      "  hypit transcribe <audio|video> --to <transcript.json> [--language en|zh|es] [--runtime <profile>]",
+      "  hypit transcribe <audio|video> --to <transcript.json> [--language en|zh|es] [--runtime <profile>] [--workspace <project>]",
       "",
       "Extracts 16 kHz mono speech audio with ffmpeg and writes every word with its start and end in",
       "seconds. One immediate request; no Build, Result or state.",
@@ -575,7 +583,7 @@ export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
       "hypit speak",
       "Speak a line with the MiMo VoiceDesign Endpoint of the selected Runtime Profile.",
       "",
-      "  hypit speak --text <text|file> --voice <description|file> --to <audio file> [--runtime <profile>]",
+      "  hypit speak --text <text|file> --voice <description|file> --to <audio file> [--runtime <profile>] [--workspace <project>]",
       "",
       "Writes the audio and reports its duration, so the author can write that duration as a literal.",
       "For a voice-over video this is the A-roll: speak first, measure, then author B-roll that covers",
@@ -587,6 +595,7 @@ export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
       "",
       "  hypit measure <source.svml> --segment <id> [--language auto|en|zh|ja|es] [--pace slow|normal|fast | --rate <units/s>]",
       "                [--min <s>] [--max <s>] [--rounding none|round|ceil] [--padding <s>]",
+      "                [--workspace <project>]",
       "  hypit measure --text <text|file> [same options]",
       "",
       "Prints the seconds the words take at that delivery, so the author writes them as the literal",
