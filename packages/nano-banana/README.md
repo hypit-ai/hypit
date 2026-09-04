@@ -17,3 +17,7 @@ Import the model variant you mean and connect prompt and references as ordinary 
 ```
 
 The Surface only lowers this syntax into the package's exact model request. It does not select a Provider.
+
+Nano Banana 2 accepts prompts up to 20,000 characters, up to 14 references and its wider aspect-ratio
+set. Nano Banana Pro accepts prompts up to 10,000 characters, up to eight references and the ratios
+its exact model exposes; the two Surfaces do not share a guessed common request table.

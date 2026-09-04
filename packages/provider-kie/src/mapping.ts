@@ -1,11 +1,6 @@
 import type { CapabilityRef, ModuleRef } from "@hypit/protocol";
 import type { GenerationWireMapping } from "@hypit/generation";
 
-export type KieGenerationWireMapping = GenerationWireMapping & {
-  /** Values advertised by the model vocabulary but refused by this KIE route. */
-  readonly unsupportedPortValues?: Readonly<Record<string, readonly (string | number | boolean)[]>>;
-};
-
 /**
  * How KIE names each model's declared input ports.
  *
@@ -53,6 +48,7 @@ const minimaxMapping: GenerationWireMapping = {
   capability: { module: MINIMAX, name: "minimax-h3" },
   result: "video",
   routes: [
+    { model: "minimax-h3/image-to-video", whenPresent: ["lastFrame"] },
     { model: "minimax-h3/image-to-video", whenPresent: ["firstFrame"] },
     { model: "minimax-h3/reference-to-video", whenPresent: ["referenceImage"] },
     { model: "minimax-h3/reference-to-video", whenPresent: ["referenceVideo"] },
@@ -82,7 +78,6 @@ const grokVideoMapping: GenerationWireMapping = {
     resolution: { as: "value", field: "resolution" },
     duration: { as: "string", field: "duration" },
     images: { as: "urlArray", field: "image_urls" },
-    sourceTaskId: { as: "value", field: "task_id" },
   },
   constants: { mode: "normal" },
 };
@@ -100,7 +95,7 @@ const grokPreviewMapping: GenerationWireMapping = {
   },
 };
 
-const gptImageMapping: KieGenerationWireMapping = {
+const gptImageMapping: GenerationWireMapping = {
   capability: { module: GPT_IMAGE, name: "gpt-image-2" },
   result: "image",
   routes: [
@@ -112,9 +107,6 @@ const gptImageMapping: KieGenerationWireMapping = {
     aspectRatio: { as: "value", field: "aspect_ratio" },
     resolution: { as: "value", field: "resolution" },
     images: { as: "urlArray", field: "input_urls" },
-  },
-  unsupportedPortValues: {
-    aspectRatio: ["4:3", "3:4", "4:5"],
   },
 };
 
@@ -151,7 +143,7 @@ const seedreamMapping: GenerationWireMapping = {
   },
 };
 
-export const kieModelCatalog: readonly KieGenerationWireMapping[] = [
+export const kieModelCatalog: readonly GenerationWireMapping[] = [
   seedanceMapping("seedance-2", "bytedance/seedance-2"),
   seedanceMapping("seedance-2-fast", "bytedance/seedance-2-fast"),
   seedanceMapping("seedance-2-mini", "bytedance/seedance-2-mini"),

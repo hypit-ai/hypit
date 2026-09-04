@@ -65,11 +65,6 @@ function normalizeHypiHubRequest(
   const firstFrame = input.first_frame;
   const lastFrame = input.last_frame;
   const audioRefs = input.reference_audios;
-  const sourceTaskId = input.source_task_id;
-  if (typeof sourceTaskId === "string" && sourceTaskId.length > 0) {
-    throw new Error("HypiHub unified video API does not support video continuation sourceTaskId");
-  }
-
   // References are public HypiHub media inputs, not vendor passthrough. They
   // must remain top-level so Async V2 stages the uploaded capability URLs
   // before choosing an upstream adaptor.
@@ -79,7 +74,6 @@ function normalizeHypiHubRequest(
   delete input.reference_audios;
   delete input.first_frame;
   delete input.last_frame;
-  delete input.source_task_id;
   if (typeof firstFrame === "string" && firstFrame.length > 0) input.first_frame = firstFrame;
   if (typeof lastFrame === "string" && lastFrame.length > 0) input.last_frame = lastFrame;
   if (Array.isArray(imageRefs) && imageRefs.length > 0) input.reference_image_urls = imageRefs;

@@ -28,9 +28,14 @@ routes rather than extra Capabilities.
 | `@hypit/seedream` | `seedream-5-lite` | `seedream/5-lite-{text,image}-to-image` |
 | `@hypit/background-removal` | `remove-background` | `recraft/remove-background` |
 
-KIE's GPT Image 2 endpoints do not accept `4:3`, `3:4` or `4:5`, even though those values are part
-of the model package's general vocabulary. The KIE route rejects those combinations before upload
-or paid submission; use `auto`, `1:1`, `3:2`, `2:3`, `16:9`, `9:16` or `21:9` for this Provider.
+KIE accepts the GPT Image 2 `4:3`, `3:4` and `4:5` ratios. Its restrictions are combinations rather
+than a blacklist: `auto` is 1K-only, `1:1` is unavailable at 4K, and `4:5` is 1K-only. The KIE
+Endpoint checks those exact combinations before upload or paid submission without narrowing the
+model package's Provider-neutral vocabulary.
+
+KIE's Grok Imagine endpoints accept up to seven reference images, but only one at 1080p. This is
+also checked by the KIE Endpoint; the Grok model packages retain their model-level seven-image
+capacity.
 
 There is deliberately no Grok image capability and no MiMo capability in this release. Seedream's
 `nsfwCheck` is explicit author request content; KIE cannot silently enable or disable it. A

@@ -9,19 +9,24 @@ export const nanoBananaModuleRef = { name: "@hypit/nano-banana", version: "1" } 
 export const nanoBananaModels = ["nano-banana-2", "nano-banana-pro"] as const;
 export type NanoBananaModel = typeof nanoBananaModels[number];
 
+const NANO_BANANA_2_RATIOS = ["auto", "1:1", "2:3", "3:2", "1:4", "4:1", "3:4", "4:3", "4:5",
+  "5:4", "1:8", "8:1", "9:16", "16:9", "21:9"] as const;
+const NANO_BANANA_PRO_RATIOS = ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5",
+  "5:4", "9:16", "16:9", "21:9"] as const;
+
 function nanoBananaPortTable(model: NanoBananaModel): GenerationPortTable {
+  const pro = model === "nano-banana-pro";
   return sealGenerationPortTable({
     model,
     result: "image",
     ports: [
-      { name: "prompt", value: { kind: "text", maxChars: 20_000 }, minItems: 1, maxItems: 1 },
-      { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 14 },
+      { name: "prompt", value: { kind: "text", maxChars: pro ? 10_000 : 20_000 }, minItems: 1, maxItems: 1 },
+      { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: pro ? 8 : 14 },
       {
         name: "aspectRatio",
         value: {
           kind: "enum",
-          values: ["auto", "1:1", "2:3", "3:2", "1:4", "4:1", "3:4", "4:3", "4:5",
-            "5:4", "1:8", "8:1", "9:16", "16:9", "21:9"],
+          values: pro ? [...NANO_BANANA_PRO_RATIOS] : [...NANO_BANANA_2_RATIOS],
         },
         minItems: 1,
         maxItems: 1,
@@ -57,43 +62,44 @@ const nanoBananaBaseDefinition = defineExactModelModule({
 
 export const nanoBananaEndpoints = nanoBananaBaseDefinition.endpoints;
 export const nanoBananaComponent = nanoBananaBaseDefinition.component;
-const nanoBananaAttributes: readonly SurfaceAttributeVocabulary[] = [
-  {
-    name: "id",
-    kind: "identifier",
-    required: true,
-    summary: "Names this generation and prefixes the bindings it publishes.",
-  },
-  {
-    name: "prompt",
-    kind: "reference",
-    required: true,
-    summary: "The Text edge describing the picture the model renders.",
-    accepts: [textTypes.text],
-  },
-  {
-    name: "aspect-ratio",
-    kind: "literal",
-    required: true,
-    summary: "The shape of the generated picture.",
-    values: ["auto", "1:1", "2:3", "3:2", "1:4", "4:1", "3:4", "4:3", "4:5",
-      "5:4", "1:8", "8:1", "9:16", "16:9", "21:9"],
-  },
-  {
-    name: "resolution",
-    kind: "literal",
-    required: true,
-    summary: "The size band the model renders at.",
-    values: ["1K", "2K", "4K"],
-  },
-  {
-    name: "output-format",
-    kind: "literal",
-    required: true,
-    summary: "The encoding of the returned image Artifact.",
-    values: ["png", "jpg"],
-  },
-];
+function nanoBananaAttributes(pro: boolean): readonly SurfaceAttributeVocabulary[] {
+  return [
+    {
+      name: "id",
+      kind: "identifier",
+      required: true,
+      summary: "Names this generation and prefixes the bindings it publishes.",
+    },
+    {
+      name: "prompt",
+      kind: "reference",
+      required: true,
+      summary: "The Text edge describing the picture the model renders.",
+      accepts: [textTypes.text],
+    },
+    {
+      name: "aspect-ratio",
+      kind: "literal",
+      required: true,
+      summary: "The shape of the generated picture.",
+      values: pro ? [...NANO_BANANA_PRO_RATIOS] : [...NANO_BANANA_2_RATIOS],
+    },
+    {
+      name: "resolution",
+      kind: "literal",
+      required: true,
+      summary: "The size band the model renders at.",
+      values: ["1K", "2K", "4K"],
+    },
+    {
+      name: "output-format",
+      kind: "literal",
+      required: true,
+      summary: "The encoding of the returned image Artifact.",
+      values: ["png", "jpg"],
+    },
+  ];
+}
 
 const nanoBananaChildren: readonly SurfaceChildVocabulary[] = [
   { tag: "Reference", cardinality: "many",
@@ -104,16 +110,11 @@ const nanoBananaChildren: readonly SurfaceChildVocabulary[] = [
     ] },
 ];
 
-const nanoBananaNotes: readonly string[] = [
-  "The element accepts at most 14 `Reference` children and no text content.",
-  "Every `Reference` is an ordinary image Artifact edge; the Surface copies no runtime media into request metadata.",
-  "The Surface lowers the element into the package's exact model request and selects no Provider.",
-];
-
 const surface = (
   name: "image" | "pro-image",
   tag: "Image" | "ProImage",
   endpoint: (typeof nanoBananaEndpoints)["v2" | "pro"],
+  pro: boolean,
   summary: string,
   example: string,
 ) => ({
@@ -123,7 +124,7 @@ const surface = (
   outputs: [endpoint!.draftType, endpoint!.mediaBindings.images!.type],
   vocabulary: {
     summary,
-    attributes: nanoBananaAttributes,
+    attributes: nanoBananaAttributes(pro),
     children: nanoBananaChildren,
     ports: [{
       name: "image",
@@ -131,12 +132,16 @@ const surface = (
       summary: "The primary generated image, addressed as `<id>.image`.",
     }],
     example,
-    notes: nanoBananaNotes,
+    notes: [
+      `The element accepts at most ${pro ? 8 : 14} \`Reference\` children and no text content.`,
+      "Every `Reference` is an ordinary image Artifact edge; the Surface copies no runtime media into request metadata.",
+      "The Surface lowers the element into the package's exact model request and selects no Provider.",
+    ],
   },
 });
 
 export const nanoBananaMarkupSurfaces = [
-    surface("image", "Image", nanoBananaEndpoints.v2!,
+    surface("image", "Image", nanoBananaEndpoints.v2!, false,
       "Generates one picture with the exact Nano Banana 2 model from a Text prompt and optional reference images.",
       `<nano:Image
   id="draft"
@@ -147,7 +152,7 @@ export const nanoBananaMarkupSurfaces = [
 >
   <nano:Reference image={person.image}/>
 </nano:Image>`),
-    surface("pro-image", "ProImage", nanoBananaEndpoints.pro!,
+    surface("pro-image", "ProImage", nanoBananaEndpoints.pro!, true,
       "Generates one picture with the exact Nano Banana Pro model from a Text prompt and optional reference images.",
       `<nano:ProImage
   id="final"

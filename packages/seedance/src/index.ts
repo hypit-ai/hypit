@@ -46,7 +46,9 @@ function seedancePortTable(model: SeedanceModel): GenerationPortTable {
         name: "resolution",
         value: {
           kind: "enum",
-          values: model === "seedance-2" ? ["480p", "720p", "1080p", "4k"] : ["480p", "720p"],
+          values: model === "seedance-2"
+            ? ["480p", "720p", "1080p", "4k"]
+            : is25 ? ["480p", "720p", "1080p"] : ["480p", "720p"],
         },
         minItems: 1,
         maxItems: 1,
@@ -180,7 +182,7 @@ const seedanceVideoPort: readonly SurfacePortVocabulary[] = [{
 
 const seedanceSettingNotes: readonly string[] = [
   "`resolution` defaults to `720p`, `aspect-ratio` to `9:16` and `generate-audio` to `false`.",
-  "`1080p` and `4k` are offered by `standard` alone; the other variants render at `480p` or `720p`.",
+  "`standard` offers `1080p` and `4k`; `2.5` offers `1080p`; `fast` and `mini` render at `480p` or `720p`.",
   "`duration` is 4 to 15 seconds for `standard`, `fast` and `mini`, and `-1` for automatic or 4 to 30 seconds for `2.5`.",
 ];
 
