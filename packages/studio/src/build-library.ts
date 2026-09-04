@@ -1,9 +1,8 @@
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import { buildIdCreatedAt } from "@hypit/protocol";
 import type { BuildView, NodeRuntimeHost } from "@hypit/runtime-host-node";
 import type { StoredValue, TypeRef } from "@hypit/protocol";
-import { FileBuildResultRepository } from "@hypit/build-result";
 import type {
   BuildResultFileRange,
   BuildResultFileRef,
@@ -23,7 +22,7 @@ type RuntimeControl = Awaited<ReturnType<NodeRuntimeHost["openControl"]>>;
 export type StudioBuildLibrary = {
   readonly profile?: string;
   readonly runtime?: Pick<RuntimeControl, "activity">;
-  readonly library: () => Promise<StudioLibraryView>;
+  readonly library: (before?: string) => Promise<StudioLibraryView>;
   readonly resolveHistoricalOutput: (
     build: string,
     output: string,
@@ -183,16 +182,24 @@ export async function readStudioLibrary(input: {
   readonly workspaceRoot: string;
   readonly runtime?: Pick<RuntimeControl, "activity">;
   readonly results: BuildResultRepository;
+  readonly before?: string;
 }): Promise<StudioLibraryView> {
-  const manifests = (await input.results.browse({ limit: 100 })).results.filter((manifest) =>
+  const page = await input.results.browse({
+    limit: 25,
+    ...(input.before === undefined ? {} : { before: input.before }),
+  });
+  const manifests = page.results.filter((manifest) =>
     isWithin(input.workspaceRoot, manifest.run?.path ?? manifest.source.path)
       || isWithin(input.workspaceRoot, manifest.source.path));
   const resultsByBuild = new Map(manifests.map((manifest) => [manifest.id, manifest]));
-  const active = input.runtime === undefined ? [] : (await input.runtime.activity()).builds;
+  const active = input.runtime === undefined || input.before !== undefined
+    ? []
+    : (await input.runtime.activity()).builds;
   const views = active.filter((view) => buildBelongsTo(input.workspaceRoot, view));
   return {
     environment: resolve(input.workspaceRoot),
     ...(input.profile === undefined ? {} : { runtime: resolve(input.profile) }),
+    ...(page.next === undefined ? {} : { next: page.next }),
     tasks: [
       ...views.map((view) => taskView(
         input.workspaceRoot,
@@ -213,7 +220,7 @@ export async function openStudioBuildLibrary(
   packageRoot: string,
   workspaceRoot: string,
   distributionPackageRoot?: string,
-): Promise<StudioBuildLibrary | undefined> {
+): Promise<StudioBuildLibrary> {
   const resolvedProfile = profile === undefined ? undefined : resolve(profile);
   const host = resolvedProfile === undefined
     ? undefined
@@ -222,23 +229,27 @@ export async function openStudioBuildLibrary(
         ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
       });
   const runtime = await host?.openControl({ readOnly: true });
-  const defaultResultRoot = join(workspaceRoot, ".hypit", "results");
-  const openedResults = videoCliDistribution.openProjectResults === undefined
-    ? undefined
-    : await videoCliDistribution.openProjectResults(workspaceRoot, {
-        packageRoot,
-        ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
-      });
-  const results = openedResults?.repository ?? new FileBuildResultRepository(defaultResultRoot);
+  let openedResults: Awaited<ReturnType<typeof videoCliDistribution.openProjectResults>>;
+  try {
+    openedResults = await videoCliDistribution.openProjectResults(workspaceRoot, {
+      packageRoot,
+      ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
+    });
+  } catch (error) {
+    await runtime?.close();
+    throw error;
+  }
+  const results = openedResults.repository;
   return {
     ...(resolvedProfile === undefined ? {} : { profile: resolvedProfile }),
     ...(runtime === undefined ? {} : { runtime }),
-    async library() {
+    async library(before) {
       return await readStudioLibrary({
         ...(resolvedProfile === undefined ? {} : { profile: resolvedProfile }),
         workspaceRoot,
         ...(runtime === undefined ? {} : { runtime }),
         results,
+        ...(before === undefined ? {} : { before }),
       });
     },
     async resolveHistoricalOutput(build, output) {
@@ -256,7 +267,7 @@ export async function openStudioBuildLibrary(
       };
     },
     async close() {
-      await openedResults?.close();
+      await openedResults.close();
       await runtime?.close();
     },
   };

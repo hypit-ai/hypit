@@ -88,20 +88,17 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   let publishing = 0;
   let requestedRevision = 0;
   let currentSource = options.source;
-  let library: StudioLibraryView | undefined;
   let allowedSourceFiles = new Set<string>();
   const watched = new Map<string, FSWatcher>();
   const watchedFiles = new Set<string>();
   const storyboards = new Map<string, Promise<StudioStoryboard>>();
 
-  const readLibrary = async (): Promise<StudioLibraryView> => {
-    const next = await options.buildLibrary?.library() ?? {
+  const readLibrary = async (before?: string): Promise<StudioLibraryView> => {
+    return await options.buildLibrary?.library(before) ?? {
       environment: options.workspaceRoot,
       tasks: [],
       artifacts: [],
     };
-    library = next;
-    return next;
   };
 
   const watchSource = (path: string): void => {
@@ -578,7 +575,8 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           return;
         }
         if (url.pathname === "/__studio/library") {
-          void readLibrary().then(
+          const before = url.searchParams.get("before") ?? undefined;
+          void readLibrary(before).then(
             (view) => json(response, 200, view),
             (error) => json(response, 500, { error: error instanceof Error ? error.message : String(error) }),
           );

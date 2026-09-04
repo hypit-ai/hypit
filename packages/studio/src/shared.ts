@@ -228,6 +228,8 @@ export type StudioArtifactView = {
 export type StudioLibraryView = {
   readonly environment: string;
   readonly runtime?: string;
+  /** Cursor for the next older page of immutable Build Results. */
+  readonly next?: string;
   readonly tasks: readonly StudioTaskView[];
   readonly artifacts: readonly StudioArtifactView[];
 };

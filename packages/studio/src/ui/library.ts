@@ -147,6 +147,15 @@ function artifactCard(artifact: StudioArtifactView): HTMLElement {
   return link;
 }
 
+function olderButton(load: () => void): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "library-older";
+  button.textContent = "Load older";
+  button.addEventListener("click", load);
+  return button;
+}
+
 export function createLibraryPane(code: CodePane): LibraryPane {
   const element = document.createElement("section");
   element.className = "library";
@@ -202,6 +211,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
   let library: StudioLibraryView | undefined;
   let artifactFilter = "all";
   let refreshing = false;
+  let expanded = false;
 
   const renderSources = (): void => {
     if (snapshot === undefined) return;
@@ -240,15 +250,16 @@ export function createLibraryPane(code: CodePane): LibraryPane {
     context.querySelector("strong")!.textContent = runtime === undefined ? "not selected" : leaf(library!.environment);
     context.title = runtime === undefined ? "No Runtime selected for this environment" : `${library!.environment}\n${runtime}`;
     runtimeContext.append(context);
+    const entries: HTMLElement[] = tasks.map(taskCard);
     if (tasks.length === 0) {
-      taskList.replaceChildren(emptyState("tasks",
+      entries.push(emptyState("tasks",
         runtime === undefined ? "No Runtime selected" : "No builds yet",
         runtime === undefined
           ? "Select one with hypit runtime use, then reopen Studio."
           : "Builds created from this environment will appear here."));
-      return;
     }
-    taskList.replaceChildren(...tasks.map(taskCard));
+    if (library?.next !== undefined) entries.push(olderButton(() => void loadOlder()));
+    taskList.replaceChildren(...entries);
   };
 
   const renderArtifacts = (): void => {
@@ -271,13 +282,14 @@ export function createLibraryPane(code: CodePane): LibraryPane {
     const shown = artifactFilter === "all"
       ? artifacts
       : artifacts.filter((artifact) => artifact.mediaType.startsWith(`${artifactFilter}/`));
+    const entries: HTMLElement[] = shown.map(artifactCard);
     if (shown.length === 0) {
-      artifactGrid.replaceChildren(emptyState("results",
+      entries.push(emptyState("results",
         artifacts.length === 0 ? "No accepted artifacts" : `No ${artifactFilter} artifacts`,
         "Public files appear here when a Build Result contains them."));
-      return;
     }
-    artifactGrid.replaceChildren(...shown.map(artifactCard));
+    if (library?.next !== undefined) entries.push(olderButton(() => void loadOlder()));
+    artifactGrid.replaceChildren(...entries);
   };
 
   const switchTo = (next: LibrarySection): void => {
@@ -297,15 +309,41 @@ export function createLibraryPane(code: CodePane): LibraryPane {
     tab.addEventListener("click", () => switchTo(tab.dataset.libraryTab as LibrarySection));
   }
 
-  const refresh = async (): Promise<void> => {
+  const mergeLibrary = (value: StudioLibraryView, append: boolean): void => {
+    if (library === undefined || (!append && !expanded)) {
+      library = value;
+      return;
+    }
+    const tasks = new Map(library.tasks.map((task) => [task.id, task]));
+    const artifacts = new Map(library.artifacts.map((artifact) => [artifact.id, artifact]));
+    for (const task of value.tasks) tasks.set(task.id, task);
+    for (const artifact of value.artifacts) artifacts.set(artifact.id, artifact);
+    library = {
+      environment: value.environment,
+      ...(value.runtime === undefined ? {} : { runtime: value.runtime }),
+      ...((append || !expanded ? value.next : library.next) === undefined
+        ? {}
+        : { next: append || !expanded ? value.next : library.next }),
+      tasks: [...tasks.values()].sort((left, right) => right.createdAt - left.createdAt || left.id.localeCompare(right.id)),
+      artifacts: [...artifacts.values()].sort((left, right) =>
+        Number(right.highlighted) - Number(left.highlighted)
+          || right.createdAt - left.createdAt
+          || left.output.localeCompare(right.output)
+          || left.valuePath.localeCompare(right.valuePath)),
+    };
+  };
+
+  const refresh = async (before?: string): Promise<void> => {
     if (refreshing) return;
     refreshing = true;
     element.classList.add("is-refreshing");
     try {
-      const response = await fetch("/__studio/library");
+      const query = before === undefined ? "" : `?${new URLSearchParams({ before }).toString()}`;
+      const response = await fetch(`/__studio/library${query}`);
       const value = await response.json() as StudioLibraryView | { readonly error: string };
       if (!response.ok || "error" in value) throw new Error("error" in value ? value.error : "Library unavailable");
-      library = value;
+      mergeLibrary(value, before !== undefined);
+      if (before !== undefined) expanded = true;
       renderTasks();
       renderArtifacts();
     } catch (error) {
@@ -316,6 +354,10 @@ export function createLibraryPane(code: CodePane): LibraryPane {
       refreshing = false;
       element.classList.remove("is-refreshing");
     }
+  };
+
+  const loadOlder = async (): Promise<void> => {
+    if (library?.next !== undefined) await refresh(library.next);
   };
 
   for (const button of Array.from(element.querySelectorAll<HTMLButtonElement>("[data-library-refresh]"))) {

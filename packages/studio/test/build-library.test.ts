@@ -50,7 +50,10 @@ test("Studio library joins this environment's Builds with project Build Result f
     async removeIncomplete() {},
     async updatePresentation() { throw new Error("read-only fixture"); },
     async read(build) { return manifests.find((item) => item.id === build); },
-    async browse() { return { results: manifests }; },
+    async browse(request) {
+      assert.deepEqual(request, { limit: 25 });
+      return { results: manifests, next: relevant.id };
+    },
     async describeOutput(build, output) {
       const manifest = manifests.find((item) => item.id === build);
       const value = manifest?.outputs[output as "final.video"];
@@ -79,6 +82,7 @@ test("Studio library joins this environment's Builds with project Build Result f
     results,
   });
 
+  assert.equal(view.next, relevant.id);
   assert.deepEqual(view.tasks.map((task) => ({
     id: task.id,
     status: task.status,
