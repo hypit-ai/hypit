@@ -5,6 +5,7 @@ export {
 export {
   extractAudioFragment,
   extractFrameFragment,
+  prepareMediaFragment,
   synchronizedMediaFragment,
   stillVideoFragment,
   transformMediaFragment,
@@ -14,7 +15,7 @@ export {
   sealAudioProgramPlan,
   verifyAudioProgramPlan,
 } from "./audio-plan.js";
-export { mediaPipelineCapabilities, mediaPipelineManifest, mediaPipelineMarkupSurfaces, mediaPipelineModuleRef, mediaPipelineProducers, mediaPipelineTypes, audioProgramPlanSchema, mediaSelectionRequestSchema, audioExtractionRequestSchema, frameExtractionRequestSchema, stillVideoRequestSchema, mediaTransformProgramSchema } from "./manifest.js";
+export { mediaPipelineCapabilities, mediaPipelineDependency, mediaPipelineManifest, mediaPipelineMarkupSurfaces, mediaPipelineModuleRef, mediaPipelineProducers, mediaPipelineTypes, audioProgramPlanSchema, mediaSelectionRequestSchema, audioExtractionRequestSchema, frameExtractionRequestSchema, stillVideoRequestSchema, mediaTransformProgramSchema } from "./manifest.js";
 export {
   sealMediaSelectionRequest,
   selectMediaStreams,

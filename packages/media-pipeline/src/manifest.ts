@@ -24,6 +24,7 @@ export const mediaPipelineTypes = {
 } satisfies Record<string, TypeRef>;
 export const mediaPipelineCapabilities = {
   inspect: { module: mediaPipelineModuleRef, name: "inspect-media" },
+  prepare: { module: mediaPipelineModuleRef, name: "prepare-media" },
   normalize: { module: mediaPipelineModuleRef, name: "normalize-media" },
   transform: { module: mediaPipelineModuleRef, name: "transform-media" },
   extractAudio: { module: mediaPipelineModuleRef, name: "extract-media-audio" },
@@ -35,6 +36,7 @@ export const mediaPipelineCapabilities = {
 } satisfies Record<string, CapabilityRef>;
 export const mediaPipelineProducers = {
   inspect: { module: mediaPipelineModuleRef, name: "request-media-inspection" },
+  prepare: { module: mediaPipelineModuleRef, name: "request-media-preparation" },
   select: { module: mediaPipelineModuleRef, name: "select-media-streams" },
   normalize: { module: mediaPipelineModuleRef, name: "request-media-normalization" },
   transform: { module: mediaPipelineModuleRef, name: "request-media-transform" },
@@ -48,6 +50,8 @@ export const mediaPipelineProducers = {
   mux: { module: mediaPipelineModuleRef, name: "request-media-mux" },
   projectMuxed: { module: mediaPipelineModuleRef, name: "project-muxed-media" },
 } satisfies Record<string, ProducerRef>;
+
+export const mediaPipelineDependency = { module: mediaPipelineModuleRef } as const;
 
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const mode = (name: string): ValueSchema => ({
@@ -428,6 +432,7 @@ export const mediaPipelineManifest: ModuleManifest = {
   ],
   capabilities: [
     { name: mediaPipelineCapabilities.inspect.name, returns: mediaTypes.inspection },
+    { name: mediaPipelineCapabilities.prepare.name, returns: artifactTypes.blob },
     { name: mediaPipelineCapabilities.normalize.name, returns: mediaTypes.synchronized },
     { name: mediaPipelineCapabilities.transform.name, returns: artifactTypes.blob },
     { name: mediaPipelineCapabilities.extractAudio.name, returns: artifactTypes.blob },
@@ -447,6 +452,12 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.inspect,
         returns: mediaTypes.inspection,
       }],
+    },
+    {
+      name: mediaPipelineProducers.prepare.name,
+      inputs: [{ name: "source", type: artifactTypes.blob }],
+      outputs: [],
+      needs: [{ name: "artifact", capability: mediaPipelineCapabilities.prepare, returns: artifactTypes.blob }],
     },
     {
       name: mediaPipelineProducers.select.name,

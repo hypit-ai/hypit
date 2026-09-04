@@ -4,6 +4,7 @@ export {
   executeExtractFrame,
   executeMuxProgramMedia,
   executeNormalizeMedia,
+  executePrepareMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
   executeRenderStillVideo,

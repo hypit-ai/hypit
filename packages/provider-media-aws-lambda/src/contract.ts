@@ -14,6 +14,7 @@ export const MEDIA_LAMBDA_RESPONSE = "hypit.media-lambda-response@1";
 
 export const mediaLambdaOperations = [
   "inspect",
+  "prepare",
   "normalize",
   "transform",
   "extract-audio",
