@@ -7,6 +7,7 @@ export {
   extractFrameFragment,
   synchronizedMediaFragment,
   stillVideoFragment,
+  createStillVideoFragment,
   transformMediaFragment,
 } from "./fragment.js";
 export {
@@ -30,12 +31,16 @@ export {
   sealAudioExtractionRequest,
   sealFrameExtractionRequest,
   sealMediaTransformProgram,
+  sealStillVideoLayout,
   sealStillVideoRequest,
+  planStillVideoSegments,
+  bindStillVideoSource,
   selectAudioStream,
   selectVideoStream,
   verifyAudioExtractionRequest,
   verifyFrameExtractionRequest,
   verifyMediaTransformProgram,
+  verifyStillVideoLayout,
   verifyStillVideoRequest,
 } from "./operations.js";
 export type * from "./types.js";

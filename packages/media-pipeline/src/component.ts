@@ -22,7 +22,10 @@ import {
 import {
   selectAudioStream,
   selectVideoStream,
+  bindStillVideoSource,
+  planStillVideoSegments,
   sealStillVideoRequest,
+  verifyStillVideoLayout,
   verifyAudioExtractionRequest,
   verifyFrameExtractionRequest,
   verifyMediaTransformProgram,
@@ -40,6 +43,7 @@ import type {
   ProjectSpeechEvidenceAudioNeed,
   RenderAudioNeed,
   RenderStillVideoNeed,
+  StillVideoLayout,
   StillVideoRequest,
   TransformMediaNeed,
 } from "./types.js";
@@ -84,6 +88,12 @@ export const mediaPipelineComponent = {
       type: mediaPipelineTypes.frameExtractionRequest,
       handler: ({ value }) => {
         verifyFrameExtractionRequest(inline(value, "FrameExtractionRequest"));
+      },
+    },
+    {
+      type: mediaPipelineTypes.stillVideoLayout,
+      handler: ({ value }) => {
+        verifyStillVideoLayout(inline(value, "StillVideoLayout"));
       },
     },
     {
@@ -198,6 +208,8 @@ export const mediaPipelineComponent = {
         const clock = inline(inputs.clock!.value, "ProgramClock") as unknown as ProgramClock;
         assertSpeechDurationIdentity(duration);
         assertProgramClockIdentity(clock);
+        const layout = inline(inputs.layout!.value, "StillVideoLayout") as unknown as StillVideoLayout;
+        verifyStillVideoLayout(layout);
         const frames = Math.round(duration * clock.frameRate.numerator / clock.frameRate.denominator);
         if (!Number.isSafeInteger(frames) || frames < 1) {
           throw new Error("Still video duration does not produce a positive safe frame count");
@@ -206,18 +218,29 @@ export const mediaPipelineComponent = {
           frameRate: clock.frameRate,
           frameCount: frames,
           output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
+          segments: planStillVideoSegments(frames, layout.weights),
         });
         return { outputs: { request: { kind: "inline", value: canonicalize(request) } }, needs: {} };
       },
     },
     {
+      producer: mediaPipelineProducers.bindStill,
+      handler: ({ inputs }) => {
+        const request = inline(inputs.request!.value, "StillVideoRequest") as unknown as StillVideoRequest;
+        const source = blob(inputs.source!.value, "Still video source");
+        const bound = bindStillVideoSource(request, source);
+        return { outputs: { request: { kind: "inline", value: canonicalize(bound) } }, needs: {} };
+      },
+    },
+    {
       producer: mediaPipelineProducers.renderStill,
       handler: ({ inputs }) => {
-        const source = blob(inputs.source!.value, "Still video source");
         const request = inline(inputs.request!.value, "StillVideoRequest") as unknown as StillVideoRequest;
-        if (!source.mediaType.startsWith("image/")) throw new Error("Still video source must be an image Artifact");
         verifyStillVideoRequest(request);
-        const need: RenderStillVideoNeed = { source, request };
+        if (request.segments.some((segment) => segment.source === undefined)) {
+          throw new Error("Still video has a segment without a picture");
+        }
+        const need: RenderStillVideoNeed = { request };
         return { outputs: {}, needs: { video: canonicalize(need) } };
       },
     },

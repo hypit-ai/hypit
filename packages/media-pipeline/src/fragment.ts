@@ -121,29 +121,47 @@ export const extractFrameFragment = sealGraphFragment({
   }],
 });
 
-export const stillVideoFragment = sealGraphFragment({
-  inputs: [
-    { name: "source", type: artifactTypes.blob },
-    { name: "duration", type: speechTypes.duration },
-    { name: "clock", type: programSpaceTypes.clock },
-  ],
-  operations: [
-    {
-      id: "plan",
-      producer: mediaPipelineProducers.planStill,
-      inputs: { duration: input("duration"), clock: input("clock") },
-      result: { kind: "output", name: "request" },
-    },
-    {
-      id: "render",
-      producer: mediaPipelineProducers.renderStill,
-      inputs: { source: input("source"), request: operation("plan") },
-      result: { kind: "need", name: "video" },
-    },
-  ],
-  exports: [{
-    name: "video",
-    type: artifactTypes.blob,
-    root: operation("render"),
-  }],
-});
+/**
+ * A still video over `count` pictures: plan the frame split, bind each picture to its segment in
+ * authored order, render once. The shape depends only on the count, so two elements with the same
+ * number of pictures share one Fragment identity.
+ */
+export function createStillVideoFragment(count: number) {
+  if (!Number.isSafeInteger(count) || count < 1) throw new Error("A still video needs at least one picture");
+  const sources = Array.from({ length: count }, (_, index) => `source-${index}`);
+  return sealGraphFragment({
+    inputs: [
+      { name: "duration", type: speechTypes.duration },
+      { name: "clock", type: programSpaceTypes.clock },
+      { name: "layout", type: mediaPipelineTypes.stillVideoLayout },
+      ...sources.map((name) => ({ name, type: artifactTypes.blob })),
+    ],
+    operations: [
+      {
+        id: "plan",
+        producer: mediaPipelineProducers.planStill,
+        inputs: { duration: input("duration"), clock: input("clock"), layout: input("layout") },
+        result: { kind: "output", name: "request" },
+      },
+      ...sources.map((name, index) => ({
+        id: `bind-${index}`,
+        producer: mediaPipelineProducers.bindStill,
+        inputs: { request: operation(index === 0 ? "plan" : `bind-${index - 1}`), source: input(name) },
+        result: { kind: "output" as const, name: "request" },
+      })),
+      {
+        id: "render",
+        producer: mediaPipelineProducers.renderStill,
+        inputs: { request: operation(`bind-${count - 1}`) },
+        result: { kind: "need", name: "video" },
+      },
+    ],
+    exports: [{
+      name: "video",
+      type: artifactTypes.blob,
+      root: operation("render"),
+    }],
+  });
+}
+
+export const stillVideoFragment = createStillVideoFragment(1);

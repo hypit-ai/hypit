@@ -483,9 +483,9 @@ function extractFrameNeed(value: CanonicalValue): ExtractFrameNeed {
 
 function renderStillVideoNeed(value: CanonicalValue): RenderStillVideoNeed {
   const item = object(value, "RenderStillVideoNeed") as unknown as RenderStillVideoNeed;
-  assert(item.source?.kind === "blob" && item.source.mediaType.startsWith("image/"),
-    "RenderStillVideoNeed source must be an image Artifact");
   verifyStillVideoRequest(item.request);
+  assert(item.request.segments.every((segment) => segment.source?.kind === "blob" && segment.source.mediaType.startsWith("image/")),
+    "RenderStillVideoNeed needs an image Artifact for every segment");
   return item;
 }
 
@@ -729,7 +729,11 @@ export async function executeNormalizeMedia(
   }
 }
 
-/** Encode one authored image into an exact silent CFR video. */
+/**
+ * Encode authored images into an exact silent CFR video. One picture is held for the whole frame
+ * count; several are each held for their planned segment, fitted into the first picture's frame
+ * and letterboxed on black, then concatenated in order.
+ */
 export async function executeRenderStillVideo(
   env: MediaExecutionEnvironment,
   constraints: CanonicalValue,
@@ -737,22 +741,54 @@ export async function executeRenderStillVideo(
   const need = renderStillVideoNeed(constraints);
   const work = await mkdtemp(join(tmpdir(), "hypit-media-still-"));
   try {
-    const input = join(work, "source.image");
     const output = join(work, "still.mp4");
-    await stageArtifact(env, need.source, input);
-    const fps = `${need.request.frameRate.numerator}/${need.request.frameRate.denominator}`;
-    const filter = [
+    const staged = new Map<string, string>();
+    const inputs: string[] = [];
+    for (const segment of need.request.segments) {
+      const source = segment.source!;
+      let path = staged.get(source.resource);
+      if (path === undefined) {
+        path = join(work, `picture-${staged.size}.image`);
+        await stageArtifact(env, source, path);
+        staged.set(source.resource, path);
+      }
+      inputs.push(path);
+    }
+    const { numerator, denominator } = need.request.frameRate;
+    const fps = `${numerator}/${denominator}`;
+    const hold = (frames: number): string => [
       "select=eq(n\\,0)",
       "loop=loop=-1:size=1:start=0",
-      `trim=start_frame=0:end_frame=${need.request.frameCount}`,
-      `setpts=N*${need.request.frameRate.denominator}/(${need.request.frameRate.numerator}*TB)`,
-      "pad=ceil(iw/2)*2:ceil(ih/2)*2:(ow-iw)/2:(oh-ih)/2:color=black",
-      "setsar=1",
+      `trim=start_frame=0:end_frame=${frames}`,
+      `setpts=N*${denominator}/(${numerator}*TB)`,
     ].join(",");
+    let argv: string[];
+    if (need.request.segments.length === 1) {
+      const filter = `${hold(need.request.frameCount)},pad=ceil(iw/2)*2:ceil(ih/2)*2:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1`;
+      argv = ["-y", "-i", inputs[0]!, "-map", "0:v:0", "-an", "-vf", filter];
+    } else {
+      const first = await outputInspection({
+        path: inputs[0]!,
+        mediaType: need.request.segments[0]!.source!.mediaType,
+        ffprobePath: env.ffprobePath,
+        timeoutMs: env.processTimeoutMs,
+        maxProbeOutputBytes: env.maxProbeOutputBytes,
+        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      });
+      const picture = first.streams.find((item): item is MediaVideoStream => item.kind === "video");
+      assert(picture !== undefined, "Still video first picture has no decodable image");
+      const width = Math.ceil(picture.width / 2) * 2;
+      const height = Math.ceil(picture.height / 2) * 2;
+      const chains = need.request.segments.map((segment, index) =>
+        `[${index}:v]${hold(segment.endFrameExclusive - segment.startFrame)},`
+        + `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,format=yuv420p[s${index}]`);
+      const concat = `${need.request.segments.map((_, index) => `[s${index}]`).join("")}concat=n=${need.request.segments.length}:v=1:a=0[v]`;
+      argv = ["-y", ...inputs.flatMap((path) => ["-i", path]), "-filter_complex", `${chains.join(";")};${concat}`, "-map", "[v]", "-an"];
+    }
     await runProcess({
       executable: env.ffmpegPath,
       argv: [
-        "-y", "-i", input, "-map", "0:v:0", "-an", "-vf", filter,
+        ...argv,
         "-frames:v", String(need.request.frameCount), "-r", fps, "-fps_mode", "cfr",
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
         "-movflags", "+faststart", output,
