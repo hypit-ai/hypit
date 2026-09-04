@@ -51,7 +51,6 @@ async function project(program: (root: string) => ManagedProgram) {
     credentials: {},
     endpoints: {
       one: { use: "example.program", pool: "example.local", config: {} },
-      two: { use: "example.program", pool: "example.local", config: {} },
     },
   }));
   const registry = new RuntimeAdapterRegistry();
@@ -126,7 +125,7 @@ function fileBackedProgram(marker: string): ManagedProgram {
   };
 }
 
-test("up starts the program once for every Endpoint that drives it, and down stops it", async () => {
+test("up starts one Endpoint's program and down stops it", async () => {
   const marker = join(await mkdtemp(join(tmpdir(), "hypit-marker-")), "ready");
   const { root, path, options } = await project(() => fileBackedProgram(marker));
   const progress: string[] = [];
@@ -136,8 +135,8 @@ test("up starts the program once for every Endpoint that drives it, and down sto
     maxWaitMs: 20_000,
     onProgress: (event) => progress.push(`${event.id}:${event.phase}`),
   });
-  assert.equal(started.programs.length, 1, "one program, not one per Endpoint");
-  assert.deepEqual(started.programs[0]!.instances, ["one", "two"]);
+  assert.equal(started.programs.length, 1);
+  assert.equal(started.programs[0]!.endpoint, "one");
   assert.equal(started.programs[0]!.action, "started");
   assert.deepEqual(started.programs[0]!.state, { state: "ready" });
   assert.deepEqual(progress, ["example:checking", "example:starting", "example:waiting", "example:ready"]);
@@ -164,7 +163,7 @@ test("up starts the program once for every Endpoint that drives it, and down sto
   await rm(root, { recursive: true, force: true });
 });
 
-test("a program answering with another identity is never joined by a second copy", async () => {
+test("a program answering with another identity is never started beside it", async () => {
   const { path, options } = await project(() => ({
     id: "example",
     start: nodeProgram("process.exit(1);"),

@@ -163,7 +163,7 @@ export type ManagedProgramProgress = {
 
 export type ManagedProgramReport = {
   readonly id: string;
-  readonly instances: readonly string[];
+  readonly endpoint: string;
   readonly action?: "already-running" | "installed" | "started" | "stopped" | "not-ours" | "nothing-to-stop" | "unchanged";
   readonly state:
     | { readonly state: "ready" }

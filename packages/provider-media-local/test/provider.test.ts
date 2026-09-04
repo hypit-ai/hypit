@@ -32,9 +32,11 @@ const hasMediaBinaries = spawnSync("ffmpeg", ["-version"], { stdio: "ignore", wi
 
 test("the local media Provider declares its external toolchain without owning a second daemon", async () => {
   const program = localMediaToolchainProgram({
-    hostStateRoot: "/host", dataRoot: "/project", instance: "media", config: {},
+    id: "media",
+    ffmpegPath: "ffmpeg",
+    ffprobePath: "ffprobe",
   });
-  assert.equal(program.id, "media-ffmpeg-toolchain");
+  assert.equal(program.id, "media");
   assert.equal(program.installation, undefined);
   assert.equal(program.start, undefined);
   const state = await program.probe();

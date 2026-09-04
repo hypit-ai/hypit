@@ -19,6 +19,14 @@ export const localWhisperXProviderModuleRef = {
   name: "@hypit/provider-whisperx-local",
   version: "1",
 } as const;
+export const localWhisperXDefaults = {
+  baseUrl: "http://127.0.0.1:8765",
+  expectedModel: "small",
+  expectedDevice: "cpu",
+  expectedBatchSize: 8,
+  expectedServiceVersion: "0.1.0",
+  expectedWhisperXVersion: "3.8.6",
+} as const;
 export type CreateLocalWhisperXProviderOptions = {
   readonly instance?: string;
   readonly pool?: string;
@@ -93,16 +101,16 @@ function result(value: CanonicalValue): EndpointFulfillment {
 }
 
 export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderOptions) {
-  const baseUrl = new URL(config.baseUrl ?? "http://127.0.0.1:8765");
+  const baseUrl = new URL(config.baseUrl ?? localWhisperXDefaults.baseUrl);
   assert(baseUrl.protocol === "http:" && ["127.0.0.1", "localhost", "::1", "[::1]"].includes(baseUrl.hostname),
     "local WhisperX Provider requires a loopback HTTP service");
   const normalizedBaseUrl = baseUrl.href.replace(/\/+$/u, "");
-  const expectedModel = config.expectedModel ?? "small";
-  const expectedDevice = config.expectedDevice ?? "cpu";
+  const expectedModel = config.expectedModel ?? localWhisperXDefaults.expectedModel;
+  const expectedDevice = config.expectedDevice ?? localWhisperXDefaults.expectedDevice;
   const expectedCompute = config.expectedCompute ?? (expectedDevice === "cpu" ? "int8" : "float16");
-  const expectedBatchSize = positiveInteger(config.expectedBatchSize ?? 8, "expectedBatchSize");
-  const expectedServiceVersion = config.expectedServiceVersion ?? "0.1.0";
-  const expectedWhisperXVersion = config.expectedWhisperXVersion ?? "3.8.6";
+  const expectedBatchSize = positiveInteger(config.expectedBatchSize ?? localWhisperXDefaults.expectedBatchSize, "expectedBatchSize");
+  const expectedServiceVersion = config.expectedServiceVersion ?? localWhisperXDefaults.expectedServiceVersion;
+  const expectedWhisperXVersion = config.expectedWhisperXVersion ?? localWhisperXDefaults.expectedWhisperXVersion;
   assert(expectedModel.trim().length > 0, "expectedModel is empty");
   assert(expectedDevice.trim().length > 0, "expectedDevice is empty");
   assert(expectedCompute.trim().length > 0, "expectedCompute is empty");

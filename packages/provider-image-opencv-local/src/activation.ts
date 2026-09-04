@@ -21,8 +21,13 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     runtimeConfigExact(config, [
       "pythonExecutable", "defaultConcurrency", "processTimeoutMs", "maxInputBytes", "maxOutputBytes",
     ], "local OpenCV image");
-    runtimeConfigString(config.pythonExecutable, "OpenCV pythonExecutable");
-    const deployment = resolveLocalOpenCvDeployment(context);
+    const configuredPython = runtimeConfigString(config.pythonExecutable, "OpenCV pythonExecutable");
+    const deployment = resolveLocalOpenCvDeployment({
+      hostStateRoot: context.hostStateRoot,
+      dataRoot: context.dataRoot,
+      instance: context.instance,
+      ...(configuredPython === undefined ? {} : { pythonExecutable: configuredPython }),
+    });
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "OpenCV defaultConcurrency");
     const processTimeoutMs = runtimeConfigPositiveInteger(config.processTimeoutMs, "OpenCV processTimeoutMs");
     const maxInputBytes = runtimeConfigPositiveInteger(config.maxInputBytes, "OpenCV maxInputBytes");
@@ -37,7 +42,7 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ...(maxInputBytes === undefined ? {} : { maxInputBytes }),
         ...(maxOutputBytes === undefined ? {} : { maxOutputBytes }),
       }),
-      program: localOpenCvProgram(context),
+      program: localOpenCvProgram(context.instance, deployment),
       diagnose: () => diagnoseRuntimeExecutable({
         root: context.dataRoot,
         configured: deployment.pythonExecutable,
