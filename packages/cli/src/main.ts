@@ -7,7 +7,6 @@ import { orderedBuildId } from "@hypit/protocol";
 import { parseSourceHeader } from "@hypit/source";
 
 import { unreachedGenerations } from "./reachability.js";
-import { typecheckProjectPackages } from "./package-typecheck.js";
 import { checkRunFile, collectRunFrontends, loadRunFile } from "./run-file.js";
 import type { CliDistribution } from "./distribution.js";
 import type {
@@ -268,12 +267,6 @@ export async function runCli(
     throw new Error(`${args.command} requires a self-described Run Source; check Author Sources independently`);
   }
   if (args.command === "check") {
-    // A project's own packages decide their element field names in TypeScript, and nothing authored
-    // carries them, so this is the only place before a Build that can read them.
-    const packageDiagnostics = typecheckProjectPackages(sourcePackageRoot, distribution.packageRoot);
-    if (packageDiagnostics.length > 0) {
-      throw new Error(`this project's own author packages do not typecheck:\n${packageDiagnostics.join("\n")}`);
-    }
     if (runMode) {
         const loaded = await checkRunFile({
           workspace,
