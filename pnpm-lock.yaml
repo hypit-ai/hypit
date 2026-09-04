@@ -2460,6 +2460,9 @@ importers:
       '@hypit/build-result-kit':
         specifier: workspace:*
         version: link:../build-result-kit
+      '@hypit/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol

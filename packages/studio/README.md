@@ -76,12 +76,17 @@ endpoint's author authority and direct consumer edge. Common timeline inverses c
 authority rather than Companion declarations. Track Companions never infer semantic sources from SVML
 attribute names, runtime id prefixes or coincident frame spans.
 
-Opening Studio never invokes a Provider and never creates a Build. Every
-projection needed for display must already be supplied by the Run or be
-deterministically derivable from those supplied Candidates.
+Opening Studio never spends and never creates a Build. Its display closure is
+everything the Run makes computable for free: supplied Candidates, deterministic
+Producers, and Needs served by the selected Profile's local Endpoints (Providers
+that declare `local` pricing, such as the FFmpeg media Endpoint that inspects and
+normalizes a media file). Resolution is the same as `plan` and a Build use,
+including the Profile's bindings, minus every priced Endpoint; a Need that reaches
+a priced Endpoint or none at all stops Studio with the capability named, and the
+author supplies a Candidate for that output or builds the Run.
 
 Studio and an encoded review use the same ordinary Run. Studio evaluates its
-deterministic display closure in the browser; building that Run evaluates the
+free display closure in the browser; building that Run evaluates the
 full target closure and sends the resulting HyperFrames document to the chosen
 render Endpoint. A separate review Run is useful only when the author wants a
 different Candidate selection. Its path and filename carry no execution

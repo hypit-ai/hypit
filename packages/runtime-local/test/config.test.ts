@@ -28,6 +28,7 @@ import {
   doctorProjectBuildResultRepository,
   doctorRuntimeConfig,
   invokeRuntimeConfigNeed,
+  localRuntimeConfigEndpoints,
   openProjectBuildResultRepository,
   parseLocalRuntimeProfile,
   preflightRuntimeConfig,
@@ -332,6 +333,59 @@ test("Runtime providers name the selected Endpoint and its declared price source
       { request: "render", capability: render, checked: "capability", status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
       { request: "missing", capability: missing, checked: "capability", status: "unresolved" },
     ]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("local Endpoints for display install only local-priced Providers and keep the Profile's bindings", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-local-endpoints-"));
+  const path = join(root, "hypit.runtime.json");
+  const generate = { module: { name: "example.model", version: "1" }, name: "generate" } as const;
+  const render = { module: { name: "example.render", version: "1" }, name: "render" } as const;
+  const returns = { module: { name: "example.value", version: "1" }, name: "Output" } as const;
+  const handler = () => ({ value: { kind: "inline" as const, value: null } });
+  await writeFile(path, JSON.stringify(profile({
+    dataRoot: ".",
+    endpoints: { paid: { use: "example.paid" }, local: { use: "example.local" }, "local-b": { use: "example.local" } },
+    bindings: { "example.render@1#render": "local", "example.model@1#generate": "paid" },
+  })));
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.paid",
+    activate: (context) => ({
+      endpoint: defineEndpointPackage({
+        module: { name: "example.provider", version: "1" },
+        facet: "paid",
+        instance: context.instance,
+        pool: context.pool ?? context.instance,
+        pricing: { kind: "page", url: "https://prices.example/models" },
+        capabilities: [
+          { capability: generate, returns, lifecycle: "immediate", handler },
+          { capability: render, returns, lifecycle: "immediate", handler },
+        ],
+      }),
+    }),
+  }));
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.local",
+    activate: (context) => ({
+      endpoint: defineEndpointPackage({
+        module: { name: "example.local-provider", version: "1" },
+        facet: "local",
+        instance: context.instance,
+        pool: context.pool ?? context.instance,
+        pricing: { kind: "local" },
+        capabilities: [{ capability: render, returns, lifecycle: "immediate", handler }],
+      }),
+    }),
+  }));
+  try {
+    const endpoints = await localRuntimeConfigEndpoints(path, { registry });
+    assert.deepEqual(endpoints.endpointIds(), ["local", "local-b"], "a priced Provider is never installed for display");
+    assert.equal(endpoints.resolve({ capability: render, returns }).status, "resolved", "the binding picks one local Endpoint");
+    const bound = endpoints.resolve({ capability: generate, returns });
+    assert.deepEqual(bound, { status: "missing", endpointId: "paid" }, "a capability bound to a priced Endpoint stays unresolved");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
