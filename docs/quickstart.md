@@ -64,20 +64,18 @@ You can add constraints such as audience, duration, language, tone, brand colors
 or aspect ratio. The Agent turns the brief into a complete plan and fills in production details from
 the information you provide.
 
-## 3. Provide credentials when the Agent asks
+## 3. Configure credentials
 
 <video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/provide_credentials_when_the_agent_asks.mp4"></video>
 
-After you describe the video, the Agent checks which models and services the project needs. If a
-required credential is missing, it will ask you for it and explain what it is used for. You have two
-options:
+After you describe the video, the Agent checks which models and services the project needs. Hypit
+uses HypiHub OAuth by default for hosted models. If that credential is missing, tell the Agent to
+sign in to HypiHub; the Agent runs the login command, opens the browser flow and stores the session
+in the secure OS credential store. The login itself does not submit a paid generation.
 
-1. **Use Hypit's recommended Hypit.ai OAuth login.** Tell the Agent to log in through hypit.ai. This
-   single OAuth flow covers all models that Hypit provides through its hosted service, so you do not
-   need to collect separate keys for each model.
-2. **Use your own provider keys.** You can tell the Agent which models to use and provide API keys
-   from the corresponding providers. The Agent will request only the keys needed for this project
-   and will not ask for unrelated credentials.
+Only if you explicitly choose an author-owned Provider should you configure its API key instead. The
+Agent requests only the credentials declared by the selected Runtime Profile; it does not silently
+switch Providers because one credential is unavailable.
 
 Never paste a secret into a public document or commit it to Git. The Agent stores credentials using
 the configured secure credential store.
@@ -87,8 +85,9 @@ the configured secure credential store.
 <video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/let_the_agent_do_the_production_work.mp4"></video>
 
 Once you submit the brief, the Agent works through the project automatically without requiring you to
-write source code. It does not ask questions during production; wait for the Studio mock. The exact
-sequence depends on the video, but it generally includes:
+write source code. It normally proceeds to the Studio mock, but may ask a focused clarification when
+the reference or brief does not establish an important editorial detail. The exact sequence depends
+on the video, but it generally includes:
 
 1. **Breaking the request into shots.** The Agent identifies the spoken sections, visual beats,
    transitions, captions, B-roll opportunities and any persistent elements such as a ranking board.
@@ -105,6 +104,8 @@ sequence depends on the video, but it generally includes:
    to design the package interface yourself.
 6. **Creating the source and checking it.** The Agent writes the SVML/SVS source, creates the needed
    Run configuration, compiles the graph, and fixes type or layout problems it finds.
+   It also selects the project Runtime Profile and starts the local Runtime before any managed
+   capability is used.
 7. **Comparing against a mock.** It produces mock media for unbuilt generations, renders the complete
    composition in Studio, compares what it sees with the reference or brief, and repairs issues such
    as incorrect timing, hierarchy, cropping, captions or visual density.
@@ -142,10 +143,11 @@ Only after you explicitly approve the mock should you ask for the paid Build:
 The mock is approved. Submit the paid Build and create the final video.
 ```
 
-The Agent summarizes the selected models, expected external work and estimated cost before it starts.
-It then submits the Build, follows its progress and reports any provider or runtime issue in plain
-language. A paid Build is the step that performs the real generation, media processing and final
-rendering; the earlier mock does not silently trigger those billable operations.
+The Agent summarizes every selected Provider, credential source, expected external work and estimated
+cost before it starts, then waits for your approval. It submits the Build only after approval, follows
+its progress and reports any Provider or Runtime issue in plain language. A paid Build is the step that
+performs the real generation, media processing and final rendering; the earlier mock does not silently
+trigger those billable operations.
 
 ## 7. Review the paid result
 

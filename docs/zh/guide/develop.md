@@ -11,12 +11,13 @@ description: 开始 Hypit 开发工作。
 |---|---|---|
 | Node.js | 22+ | 所有工作 |
 | pnpm | 10.33.x | workspace 管理；由根目录 `packageManager` 字段选择 |
-| Python | 3.10–3.13 | 本地 WhisperX 与 OpenCV Managed Program |
+| Python | 3.10–3.13（OpenCV：3.13） | 本地 WhisperX 与 OpenCV Managed Program |
 | uv | latest | Python 环境管理 |
 | ffmpeg / ffprobe | 较新的稳定版 | 媒体处理 |
 | Chrome / Chromium | 由 HyperFrames 管理 | 本地 HyperFrames 渲染 |
 
-只有 Node.js 与 pnpm 是硬性要求。其余都只在跑真实 Builds 时才需要。
+对于仓库开发，只有 Node.js 与 pnpm 是硬性要求。处理 Managed WhisperX 或 OpenCV 服务时需要
+Python/uv；运行媒体或视觉渲染测试以及真实 Build 时还需要 ffmpeg/ffprobe 和浏览器。
 
 ## 日常工作流
 
@@ -41,7 +42,7 @@ hypit/
 ├── packages/              workspace packages
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources
-├── services/              Python 服务 (whisperx, image-opencv)
+├── services/              Managed 服务与部署适配器（whisperx、image-opencv、yt-dlp、media-lambda）
 ├── test/                  repository boundary tests and shared fixtures
 ├── package.json           root workspace manifest
 ├── pnpm-workspace.yaml    workspace: [packages/*]

@@ -181,7 +181,8 @@ hypit paths
 
 `check` 与 `plan` 不会请求在线 Provider。没有所选 Runtime 的 `plan` 只看图，不需要部署
 凭据；有 Runtime 时，便宜预检会检查本次 Plan 所需凭据是否存在。在运行 `doctor` 或付费/
-外部 `build` 之前，只配置当前 Runtime Profile 实际引用的环境变量：
+外部 `build` 之前，只配置当前 Runtime Profile 实际引用的凭据。默认的 HypiHub 路径使用
+OAuth；会话保存在系统凭据存储中，不需要导出 `HYPIHUB_API_KEY`：
 
 | 变量 | Provider / 用途 |
 |---|---|
@@ -189,7 +190,9 @@ hypit paths
 | `KIE_API_KEY` | 仅在显式选择 KIE Provider 时使用 |
 | `MIMO_API_KEY` | Xiaomi MiMo VoiceDesign；只有明确选择官方 Endpoint 时才需要 |
 
-只执行 Profile 中所选 Endpoint 对应的行。在 macOS/Linux Shell 中：
+下面的环境变量示例只适用于显式选择的 API key 凭据回退路径，或声明了环境变量存储的
+Provider。使用 HypiHub OAuth 时不要设置这些变量，除非 Runtime Profile 明确引用了对应的
+环境变量。在 macOS/Linux Shell 中：
 
 ```bash
 read -r -s HYPIHUB_API_KEY
