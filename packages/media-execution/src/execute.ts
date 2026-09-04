@@ -133,7 +133,7 @@ export async function executePrepareMedia(env: MediaExecutionEnvironment, constr
       const input = join(work, "source.bin");
       const output = join(work, "prepared.mp4");
       await writeFile(input, source);
-      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-vf", "scale='min(1280,iw)':-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "28", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
+      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-vf", "scale='min(1280,iw)':-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "32", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
       return artifactResult(await env.artifacts.putFile(output, "video/mp4"));
     } finally { await rm(work, { recursive: true, force: true }).catch(() => {}); }
   }
