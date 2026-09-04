@@ -176,26 +176,31 @@ function goalsComplete(state: BuildState, records: ReadonlySet<string>): boolean
   return state.plan.goals.every((goal) => records.has(goal.record));
 }
 
+/**
+ * Every command that can run now is outstanding: the ones already issued, plus every Need whose
+ * result is missing and every pending step whose inputs exist. Scheduling is incremental, so a
+ * cheap Producer never waits behind an unrelated external request that happens to share a turn.
+ */
 function schedule(state: BuildState): BuildState {
-  if (state.status !== "active" || state.outstanding.length > 0) return state;
+  if (state.status !== "active") return state;
   const records = new Set(state.records.map((record) => record.id));
 
   if (goalsComplete(state, records)) {
     const complete = {
       ...state,
       status: "complete" as const,
+      outstanding: [],
     };
     return complete;
   }
 
-  const commands: CoreCommand[] = [];
+  const issued = new Set(state.outstanding.map((command) => command.id));
+  const commands: CoreCommand[] = [...state.outstanding];
   for (const need of state.needs) {
     if (records.has(need.result)) continue;
-    commands.push({
-      kind: "fulfill-need",
-      id: commandId("need", need.id),
-      need,
-    });
+    const id = commandId("need", need.id);
+    if (issued.has(id)) continue;
+    commands.push({ kind: "fulfill-need", id, need });
   }
 
   for (const stepState of state.steps) {
@@ -204,9 +209,11 @@ function schedule(state: BuildState): BuildState {
     if (!Object.values(step.inputs).every((id) => records.has(id))) {
       continue;
     }
+    const id = commandId("producer", step.id);
+    if (issued.has(id)) continue;
     commands.push({
       kind: "invoke-producer",
-      id: commandId("producer", step.id),
+      id,
       step: step.id,
       producer: step.producer,
       inputs: step.inputs,

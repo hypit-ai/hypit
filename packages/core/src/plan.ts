@@ -6,11 +6,13 @@ import type {
   CompiledGraph,
   GraphValueRef,
   LinkedProgram,
+  NeedId,
   OperationNode,
   ProducerStep,
   RecordId,
   RunGraph,
   Satisfaction,
+  StepId,
   TypeRef,
   TypedRecord,
 } from "@hypit/protocol";
@@ -67,32 +69,37 @@ type ProducedRecord = {
   readonly step?: string;
 };
 
+/** One external request the exact finite BuildPlan will make: which step asks, through which port. */
 export type PlannedNeed = {
+  readonly step: StepId;
+  readonly port: string;
+  readonly need: NeedId;
+  readonly result: RecordId;
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
 };
 
 const planStepIndexes = new WeakMap<BuildPlan, ReadonlyMap<string, ProducerStep>>();
 
-function plannedNeedKey(need: PlannedNeed): string {
-  const ref = (value: { readonly module: { readonly name: string; readonly version: string }; readonly name: string }) =>
-    `${value.module.name}@${value.module.version}#${value.name}`;
-  return `${ref(need.capability)} -> ${ref(need.returns)}`;
-}
-
-/** External requirements declared by the exact finite BuildPlan. */
+/** Every external requirement of the BuildPlan, one entry per request, in step order. */
 export function plannedNeeds(state: BuildState): readonly PlannedNeed[] {
-  const found = new Map<string, PlannedNeed>();
+  const found: PlannedNeed[] = [];
   for (const step of state.plan.steps) {
     const producer = resolveProducer(state.program.closure, step.producer);
     for (const need of producer.needs) {
-      const item = { capability: need.capability, returns: need.returns };
-      found.set(plannedNeedKey(item), item);
+      const binding = step.needs[need.name];
+      if (binding === undefined) continue;
+      found.push({
+        step: step.id,
+        port: need.name,
+        need: binding.id,
+        result: binding.result,
+        capability: need.capability,
+        returns: need.returns,
+      });
     }
   }
-  return [...found.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([, value]) => structuredClone(value));
+  return structuredClone(found);
 }
 
 function planContent(

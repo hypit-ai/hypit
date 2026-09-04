@@ -123,7 +123,22 @@ export type PlanOutput = {
   /** Present only when a Runtime Profile was selected; the Endpoint and price page behind each capability. */
   readonly providers?: readonly PlanProvider[];
   readonly omittedProviders?: number;
+  /** Every external request the Build will make, in step order, with its parameters when known. */
+  readonly needs?: readonly PlanNeed[];
+  readonly omittedNeeds?: number;
   readonly preflight?: PlanPreflight;
+};
+
+export type PlanNeed = {
+  readonly step: string;
+  readonly port: string;
+  readonly capability: string;
+  readonly endpoint?: string;
+  readonly summary?: {
+    readonly fields: Readonly<Record<string, string | number | boolean>>;
+    readonly references: Readonly<Record<string, number>>;
+  };
+  readonly unknown?: string;
 };
 
 export type CliMachineView = OperationalMachineView;
@@ -323,6 +338,64 @@ function capabilityLabel(name: string): string {
   return name.replace(/@[^@#]+#/u, "#");
 }
 
+/** The author-facing part of a step id: the component and operation, without the Source path. */
+function stepLabel(step: string): string {
+  let decoded = step;
+  try { decoded = decodeURIComponent(step); } catch { /* keep the raw id */ }
+  const marker = "::component::";
+  const at = decoded.lastIndexOf(marker);
+  return at === -1 ? decoded : decoded.slice(at + marker.length);
+}
+
+const WORDS = /^(\d+) words$/u;
+
+/** Parameters that count words are ranged across a group rather than splitting it. */
+function groupKey(need: PlanNeed): string {
+  if (need.summary === undefined) return need.unknown === undefined ? "?" : `?${need.unknown}`;
+  const fields = Object.entries(need.summary.fields)
+    .filter(([, value]) => !(typeof value === "string" && WORDS.test(value)))
+    .map(([name, value]) => `${name}=${String(value)}`);
+  const references = Object.entries(need.summary.references).map(([kind, count]) => `${kind}=${count}`);
+  return [...fields, "|", ...references, "|", need.unknown ?? ""].join(" ");
+}
+
+function needSummaryText(needs: readonly PlanNeed[]): string {
+  const first = needs[0]!;
+  if (first.summary === undefined) return first.unknown === undefined ? "parameters unknown" : `parameters unknown: ${first.unknown}`;
+  const parts: string[] = [];
+  for (const [name, value] of Object.entries(first.summary.fields)) {
+    if (typeof value === "string" && WORDS.test(value)) {
+      const counts = needs.map((need) => Number(WORDS.exec(String(need.summary?.fields[name] ?? "0 words"))?.[1] ?? 0));
+      const low = Math.min(...counts);
+      const high = Math.max(...counts);
+      parts.push(`${name} ${low === high ? low : `${low}–${high}`} words`);
+    } else if (typeof value === "boolean") {
+      parts.push(value ? name : `no ${name}`);
+    } else {
+      parts.push(`${name} ${value}`);
+    }
+  }
+  const references = Object.entries(first.summary.references).sort(([left], [right]) => left.localeCompare(right))
+    .map(([kind, count]) => `${count} ${kind}`);
+  if (references.length > 0) parts.push(`${references.join(" + ")} reference${references.length === 1 && references[0]!.startsWith("1 ") ? "" : "s"}`);
+  if (first.unknown !== undefined) parts.push(first.unknown);
+  return parts.length === 0 ? "no parameters" : parts.join(" · ");
+}
+
+/** One line per distinct request shape, counted; the step names when only one request has that shape. */
+function groupedNeedLines(needs: readonly PlanNeed[], colors: Palette, verbose: boolean): string[] {
+  const groups = new Map<string, PlanNeed[]>();
+  for (const need of needs) {
+    const key = groupKey(need);
+    groups.set(key, [...(groups.get(key) ?? []), need]);
+  }
+  return [...groups.values()].map((group) => {
+    const who = group.length === 1 || verbose ? colors.dim(group.map((need) => stepLabel(need.step)).join(", ")) : "";
+    const count = `×${group.length}`.padStart(4);
+    return `    ${colors.dim(count)}  ${needSummaryText(group)}${who.length === 0 ? "" : `  ${who}`}`;
+  });
+}
+
 function renderPlan(
   view: Extract<CliPresentation, { kind: "plan" }>,
   io: CliIo,
@@ -373,6 +446,7 @@ function renderPlan(
           : item.pricing.url;
       lines.push(`  ${colors.accent(verbose ? item.capability : capabilityLabel(item.capability))}`);
       lines.push(`    ${where}${price === undefined ? "" : `  ·  ${price}`}`);
+      lines.push(...groupedNeedLines((view.machine.needs ?? []).filter((need) => need.capability === item.capability), colors, verbose));
     }
     if ((view.machine.omittedProviders ?? 0) > 0) {
       lines.push(`  ${colors.dim(`${view.machine.omittedProviders} more capabilities · use --limit <count>`)}`);
