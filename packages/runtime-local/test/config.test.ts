@@ -17,6 +17,8 @@ import { FileBuildResultRepository } from "@hypit/build-result";
 import { MemoryResourceStore } from "@hypit/driver-node";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import { credentialRef } from "@hypit/runtime";
+import type { CanonicalValue, CapabilityRef, TypeRef } from "@hypit/protocol";
+import type { RuntimeHostProviderQuery } from "@hypit/runtime-host-node";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 import {
   createRuntimeControlFromConfig,
@@ -43,6 +45,15 @@ function profile(config: {
     endpoints: config.endpoints ?? {},
     ...(config.bindings === undefined ? {} : { bindings: config.bindings }),
   };
+}
+
+function providerQuery(
+  request: string,
+  capability: CapabilityRef,
+  returns: TypeRef,
+  constraints?: CanonicalValue,
+): RuntimeHostProviderQuery {
+  return { request, capability, returns, ...(constraints === undefined ? {} : { constraints }) };
 }
 
 test("Local Runtime Profile names credentials and Endpoints, not project result storage", () => {
@@ -304,16 +315,64 @@ test("Runtime providers name the selected Endpoint and its declared price source
     }),
   }));
   try {
-    assert.deepEqual(await describeRuntimeConfigProviders(path, [generate, render, missing], { registry }), [
+    assert.deepEqual(await describeRuntimeConfigProviders(path, [
+      providerQuery("generate", generate, returns),
+      providerQuery("render", render, returns),
+      providerQuery("missing", missing, returns),
+    ], { registry }), [
       {
+        request: "generate",
         capability: generate,
+        checked: "capability",
         status: "resolved",
         endpoint: "paid",
         use: "example.paid",
         pricing: { kind: "page", url: "https://prices.example/models" },
       },
-      { capability: render, status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
-      { capability: missing, status: "unresolved" },
+      { request: "render", capability: render, checked: "capability", status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
+      { request: "missing", capability: missing, checked: "capability", status: "unresolved" },
+    ]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("Runtime provider inspection applies Endpoint supports when the complete request is available", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-provider-supports-"));
+  const path = join(root, "hypit.runtime.json");
+  await writeFile(path, JSON.stringify(profile({
+    dataRoot: ".",
+    endpoints: { narrow: { use: "example.narrow" } },
+  })));
+  const capability = { module: { name: "example.model", version: "1" }, name: "generate" } as const;
+  const returns = { module: { name: "example.value", version: "1" }, name: "Output" } as const;
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.narrow",
+    activate: (context) => ({
+      endpoint: defineEndpointPackage({
+        module: { name: "example.narrow-provider", version: "1" },
+        facet: "narrow",
+        instance: context.instance,
+        pool: context.pool ?? context.instance,
+        pricing: { kind: "local" },
+        capabilities: [{
+          capability,
+          returns,
+          lifecycle: "immediate",
+          supports: (need) => (need.constraints as { readonly allowed?: unknown } | null)?.allowed === true,
+          handler: () => ({ value: { kind: "inline", value: null } }),
+        }],
+      }),
+    }),
+  }));
+  try {
+    assert.deepEqual(await describeRuntimeConfigProviders(path, [
+      providerQuery("pending-file", capability, returns),
+      providerQuery("complete", capability, returns, { allowed: false }),
+    ], { registry }), [
+      { request: "pending-file", capability, checked: "capability", status: "resolved", endpoint: "narrow", use: "example.narrow", pricing: { kind: "local" } },
+      { request: "complete", capability, checked: "request", status: "unresolved" },
     ]);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -452,9 +511,12 @@ test("providers, doctor and invoke share one resolver: a contested capability is
   try {
     const unbound = join(root, "unbound.json");
     await writeFile(unbound, JSON.stringify(profile({ dataRoot: ".", endpoints })));
-    assert.deepEqual(await describeRuntimeConfigProviders(unbound, [generate, render], { registry }), [
-      { capability: generate, status: "ambiguous", endpoints: ["other", "paid"] },
-      { capability: render, status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
+    assert.deepEqual(await describeRuntimeConfigProviders(unbound, [
+      providerQuery("generate", generate, returns, null),
+      providerQuery("render", render, returns, null),
+    ], { registry }), [
+      { request: "generate", capability: generate, checked: "request", status: "ambiguous", endpoints: ["other", "paid"] },
+      { request: "render", capability: render, checked: "request", status: "resolved", endpoint: "local", use: "example.local", pricing: { kind: "local" } },
     ]);
     const contested = (await preflightRuntimeConfig(unbound, { registry, capabilities: [generate] })).diagnostics
       .filter((item) => item.code === "RUNTIME_CAPABILITY_AMBIGUOUS");
@@ -469,8 +531,8 @@ test("providers, doctor and invoke share one resolver: a contested capability is
 
     const bound = join(root, "bound.json");
     await writeFile(bound, JSON.stringify(profile({ dataRoot: ".", endpoints, bindings: { [generateKey]: "other" } })));
-    assert.deepEqual(await describeRuntimeConfigProviders(bound, [generate], { registry }), [
-      { capability: generate, status: "resolved", endpoint: "other", use: "example.other", pricing: { kind: "local" }, binding: "other" },
+    assert.deepEqual(await describeRuntimeConfigProviders(bound, [providerQuery("generate", generate, returns, null)], { registry }), [
+      { request: "generate", capability: generate, checked: "request", status: "resolved", endpoint: "other", use: "example.other", pricing: { kind: "local" }, binding: "other" },
     ]);
     assert.equal((await preflightRuntimeConfig(bound, { registry, capabilities: [generate] })).diagnostics
       .some((item) => item.code === "RUNTIME_CAPABILITY_AMBIGUOUS"), false);
@@ -479,8 +541,8 @@ test("providers, doctor and invoke share one resolver: a contested capability is
 
     const wrong = join(root, "wrong.json");
     await writeFile(wrong, JSON.stringify(profile({ dataRoot: ".", endpoints, bindings: { [generateKey]: "local" } })));
-    assert.deepEqual(await describeRuntimeConfigProviders(wrong, [generate], { registry }), [
-      { capability: generate, status: "unresolved", binding: "local" },
+    assert.deepEqual(await describeRuntimeConfigProviders(wrong, [providerQuery("generate", generate, returns, null)], { registry }), [
+      { request: "generate", capability: generate, checked: "request", status: "unresolved", binding: "local" },
     ]);
     assert.ok((await preflightRuntimeConfig(wrong, { registry, capabilities: [generate] })).diagnostics
       .some((item) => item.code === "RUNTIME_BINDING_INVALID"));

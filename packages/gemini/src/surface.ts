@@ -66,7 +66,7 @@ export const decodeGeminiGenerateSurface: StructuredSurfaceHandler = ({ element,
         prompt: prompt.ref,
         ...Object.fromEntries(media.map((item, index) => [`media-${String(index + 1).padStart(4, "0")}`, item.ref])),
       },
-      outputs: { text: `${id}.text` },
+      outputs: { observation: `${id}.observation` },
       range: element.range,
     }],
   };

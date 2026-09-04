@@ -66,6 +66,33 @@ exact font → caption-fine:Style → caption:Program
 Add `{captions.track}` to `film:Film` as one peer Visual Track. If the format intentionally has no
 captions, omit the Caption components entirely.
 
+## Moving captions consume finished numeric regions
+
+When a caption follows a speaker, measure the face or head before the Build and write the useful
+normalized boxes into an SVS `RegionTimeline`. Intersect that track with the Role's speaking spans:
+the Role has `[x, y, width, height]` only on Frames where that person is speaking and `null` elsewhere.
+Then pass the authored timeline directly to Fine:
+
+```svs
+heads.default {
+  frame-count: 3;
+  tracks: [
+    {"id":"WIFE","regions":[[0.12,0.09,0.20,0.26],null,[0.13,0.10,0.20,0.26]]}
+  ];
+}
+```
+
+```svml
+<space:RegionTimeline id="heads" within={vertical} recipe={tracking.heads.default}/>
+<caption-fine:Track id="captions" document={story.caption}
+  semantic={speech.semantic} program={caption-program} regions={heads}/>
+```
+
+The numbers are authoring evidence, regardless of which observation tool measured them. Adjusting a
+box upward or outward is an ordinary pre-Build data transformation. Do not add face detection,
+tracking, identity association or box expansion to the production graph; Caption should receive the
+final placement evidence rather than rediscovering the face while paid work is running.
+
 ## A Fine Caption Recipe writes eleven keys or it throws
 
 `caption-fine:Style` requires `align`, `background`, `fill`, `line-height`, `padding`, `radius`,

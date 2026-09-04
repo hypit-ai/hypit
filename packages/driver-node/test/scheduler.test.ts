@@ -193,7 +193,7 @@ function asyncExecutor(
       scheduling: {
         resources: [
           { id: "pool:fixture.account", limit: 1 },
-          { id: "lane:fixture.account/generation", limit: 1 },
+          { id: "capacity:fixture.account/generation", limit: 1 },
         ],
       },
     },

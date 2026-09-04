@@ -66,7 +66,7 @@ export function createMyServiceProvider(options: {
     capabilities: [{
       capability: myCapability,
       returns: myResultType,
-      lane: "generate",
+      capacity: "generate",
       lifecycle: "asynchronous",
       endpoint: myAsyncEndpoint,
     }],
@@ -133,7 +133,7 @@ Activation 还可以返回 `diagnose(context)`。它只会在用户显式运行�
 Runtime 会先解析该 Endpoint 自己声明的凭据槽。它可以对真实服务做一次有界只读请求，例如读取
 已认证账户的模型目录；Build 预检不能调用它，它也绝不能提交生成任务。
 
-收费的 Provider 只声明一件事：价格发布在哪里。在 `defineEndpointPackage` 上写 `pricing: { kind: "page", url }`，指向 Provider 自己的公开价格页；在本机运行的 Provider 声明 `pricing: { kind: "local" }`。Hypit 不复制也不解释价格；`hypit plan --runtime <profile>` 会在每个外部请求旁打印承接它的 Endpoint 和价格页，Agent 在付费 Build 之前去 Provider 自己的页面读价。未声明价格来源的会被报告为未知。
+收费的 Provider 只声明一件事：价格发布在哪里。在 `defineEndpointPackage` 上写 `pricing: { kind: "page", url }`，指向 Provider 自己的公开价格页；在本机运行的 Provider 声明 `pricing: { kind: "local" }`。Hypit 不复制也不解释价格；`hypit plan --runtime <profile>` 会列出每个请求的 Endpoint，本地工作明确标成本地，Provider 工作附带它自己的价格页，Agent 在付费 Build 之前去原始页面读价。未声明价格来源的会被报告为未知。当完整请求已经存在时，Plan 也会执行同一个 Endpoint 的普通 `supports` 检查，不维护第二张选择表。
 
 ## 5. 按需声明 Managed Program
 

@@ -41,7 +41,7 @@ function operationEvent(operation: OperationSnapshot): CommandResult | undefined
     kind: "command-failed",
     command: operation.command,
     code: "CANCELLED",
-    message: `Operation ${operation.id} was cancelled by the Runtime pool`,
+    message: `Operation ${operation.id} was cancelled by the Runtime capacity controller`,
   };
 }
 

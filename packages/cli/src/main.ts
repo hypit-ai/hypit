@@ -412,13 +412,13 @@ export async function runCli(
       }
       runtime = await loadRuntime(await runtimeHost(runtimeProfile));
       let built = await runtime.build(request);
-      const externalRequestCount = result.definition.plan.steps.reduce(
+      const requestCount = result.definition.plan.steps.reduce(
         (total, step) => total + Object.keys(step.needs).length,
         0,
       );
       const suppliedOutputCount = runSelections.length;
       const workSummary = [
-        `${externalRequestCount} external ${externalRequestCount === 1 ? "request" : "requests"}`,
+        `${requestCount} ${requestCount === 1 ? "request" : "requests"}`,
         ...(suppliedOutputCount === 0 ? [] : [
           `${suppliedOutputCount} ${suppliedOutputCount === 1 ? "Output" : "Outputs"} supplied by Run`,
         ]),
@@ -569,19 +569,12 @@ export async function runCli(
     });
     const result = loaded.compiler.planCompilation(loaded);
     const planHost = runtimeProfile === undefined ? undefined : await runtimeHost(runtimeProfile);
-    const preflight = planHost === undefined ? undefined : await preflightPlan(planHost, result.state);
-    const providers = planHost === undefined ? undefined : await describePlanProviders(planHost, result.state);
     const evaluated = await evaluatePlanNeeds(result.definition, packageContributions);
-    const needs = await describePlanNeeds(result.state, evaluated, providers ?? []);
+    const preflight = planHost === undefined ? undefined : await preflightPlan(planHost, evaluated.state);
+    const providers = planHost === undefined ? undefined : await describePlanProviders(planHost, evaluated.state, evaluated);
+    const needs = describePlanNeeds(evaluated.state, evaluated, providers ?? []);
     const outputNames = Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
       item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : []));
-    const externalRequests = new Map<string, number>();
-    for (const step of result.definition.plan.steps) {
-      const count = Object.keys(step.needs).length;
-      if (count === 0) continue;
-      const operation = `${step.producer.module.name}@${step.producer.module.version}/${step.producer.name}`;
-      externalRequests.set(operation, (externalRequests.get(operation) ?? 0) + count);
-    }
     const allChoices = result.selections.flatMap((selection) => {
       const output = outputNames[selection.output];
       const candidate = loaded.run.satisfactionNames[selection.output];
@@ -589,29 +582,34 @@ export async function runCli(
     });
     const allUnreached = unreachedGenerations(result.compilation.author.graph, result.state, outputNames)
       .map((item) => ({ output: item.name, operation: item.producer }));
-    const requestViews = [...externalRequests.entries()].sort(([left], [right]) => left.localeCompare(right))
-      .map(([operation, count]) => ({ operation, count }));
     const targets = loaded.run.document.targets.map((item) => item.output);
+    const unresolvedRequestCount = providers?.filter((item) => item.status !== "resolved").length ?? 0;
+    const localRequestCount = providers?.filter((item) => item.status === "resolved" && item.pricing?.kind === "local").length ?? 0;
+    const providerRequestCount = providers === undefined ? undefined : providers.length - localRequestCount - unresolvedRequestCount;
+    const requestIssueCount = needs.filter((item) => item.issue !== undefined).length;
     writeCliOutput(io, args.presentation, {
       kind: "plan",
       machine: {
-        format: "hypit.cli-plan@2",
-        ok: preflight?.ok ?? true,
+        format: "hypit.cli-plan@3",
+        ok: (preflight?.ok ?? true) && unresolvedRequestCount === 0 && requestIssueCount === 0,
         run: projectPath(loaded.path, effectiveWorkspaceRoot),
         targetCount: targets.length,
         targets: targets.slice(0, args.limit),
         steps: result.definition.plan.steps.length,
-        externalRequestCount: requestViews.reduce((total, item) => total + item.count, 0),
-        externalRequests: requestViews.slice(0, args.limit),
-        ...(requestViews.length <= args.limit ? {} : { omittedExternalRequests: requestViews.length - args.limit }),
+        requestCount: needs.length,
+        requestIssueCount,
+        ...(providerRequestCount === undefined ? {} : { providerRequestCount }),
+        ...(providers === undefined ? {} : { localRequestCount, unresolvedRequestCount }),
         choiceCount: allChoices.length,
         choices: allChoices.slice(0, args.limit),
         ...(allChoices.length <= args.limit ? {} : { omittedChoices: allChoices.length - args.limit }),
         ...(allUnreached.length === 0 ? {} : { unreached: allUnreached.slice(0, args.limit) }),
         ...(allUnreached.length <= args.limit ? {} : { omittedUnreached: allUnreached.length - args.limit }),
         ...(providers === undefined ? {} : {
-          providers: providers.slice(0, args.limit),
-          ...(providers.length <= args.limit ? {} : { omittedProviders: providers.length - args.limit }),
+          providers: providers.slice(0, Math.max(args.limit, 50)),
+          ...(providers.length <= Math.max(args.limit, 50)
+            ? {}
+            : { omittedProviders: providers.length - Math.max(args.limit, 50) }),
         }),
         needs: needs.slice(0, Math.max(args.limit, 50)),
         ...(needs.length <= Math.max(args.limit, 50) ? {} : { omittedNeeds: needs.length - Math.max(args.limit, 50) }),
@@ -630,7 +628,7 @@ export async function runCli(
         } }),
       },
     });
-    if (preflight !== undefined && !preflight.ok) io.setExitCode?.(1);
+    if ((preflight !== undefined && !preflight.ok) || unresolvedRequestCount > 0 || requestIssueCount > 0) io.setExitCode?.(1);
   } finally {
     await planResults?.close();
   }

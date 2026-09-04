@@ -130,6 +130,8 @@ export type RuntimeHostDoctorResult = {
 
 /** The selected Endpoint behind one demanded capability, read from the Profile alone. */
 export type RuntimeHostCapabilityProvider = {
+  /** Caller-owned identity for this planned request. */
+  readonly request: string;
   readonly capability: CapabilityRef;
   readonly status: "resolved" | "unresolved" | "ambiguous";
   /** Configured Endpoint instance that would serve the capability, when exactly one does. */
@@ -142,6 +144,16 @@ export type RuntimeHostCapabilityProvider = {
   readonly endpoints?: readonly string[];
   /** The Endpoint instance the Profile's `bindings` name for this capability, when it names one. */
   readonly binding?: string;
+  /** `request` means Endpoint `supports` checked the complete Need; `capability` is static selection only. */
+  readonly checked: "request" | "capability";
+};
+
+export type RuntimeHostProviderQuery = {
+  readonly request: string;
+  readonly capability: CapabilityRef;
+  readonly returns: import("@hypit/protocol").TypeRef;
+  /** Omitted only while an upstream Resource in the closed Build graph does not exist yet. */
+  readonly constraints?: import("@hypit/protocol").CanonicalValue;
 };
 
 export type ManagedProgramProgress = {
@@ -230,7 +242,7 @@ export type NodeRuntimeHost = {
    * Which selected Endpoint would serve each capability and where its Provider publishes prices.
    * Reads the Profile and Endpoint declarations only; never resolves a credential or contacts a service.
    */
-  providers(capabilities: readonly CapabilityRef[]): Promise<readonly RuntimeHostCapabilityProvider[]>;
+  providers(requests: readonly RuntimeHostProviderQuery[]): Promise<readonly RuntimeHostCapabilityProvider[]>;
   /**
    * Execute one immediate Need through the selected Endpoint and its credentials, outside any Build.
    * The creation-time boundary for observation, transcription and other quick capabilities; it

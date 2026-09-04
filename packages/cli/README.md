@@ -15,6 +15,13 @@ Human output is compact by default. `--json` emits a stable, bounded command vie
 compiler, Runtime or Repository objects. `--verbose` adds bounded operational detail; it never turns
 the command into an internal state dump.
 
+`plan` lists every Endpoint request in the frozen Build graph. Exact-model packages expose their own
+port tables and request-assembly edges, so the CLI can show authored prompt, duration and generation
+settings without searching arbitrary records for a request-shaped object. When an input file will be
+made by an earlier Build step, that direct graph edge stays symbolic until the file exists; the rest
+of the request is still shown. A complete request is resolved through the same Endpoint Registry as
+the Build, including the Endpoint's `supports` check.
+
 The implementation follows those same boundaries: `command.ts` defines the exact semantic command
 union, while argument parsing and option ownership live in `arguments.ts`; project Result
 browsing/export lives under `commands/results.ts`; Runtime,

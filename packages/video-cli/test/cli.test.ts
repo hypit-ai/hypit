@@ -56,7 +56,7 @@ test("provider-free example plans from installed Source packages", async () => {
     readonly steps: number;
     readonly targets: readonly string[];
   };
-  assert.equal(plan.format, "hypit.cli-plan@2");
+  assert.equal(plan.format, "hypit.cli-plan@3");
   assert.equal(plan.steps > 0, true);
   assert.equal(plan.targets.length, 1);
 });

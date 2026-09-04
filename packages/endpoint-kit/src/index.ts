@@ -147,7 +147,7 @@ type EndpointCapabilityBase = {
   readonly returns: TypeRef;
   readonly supports?: (need: Need) => boolean;
   /** Stable Provider-local capacity class. Defaults to the capability name. */
-  readonly lane?: string;
+  readonly capacity?: string;
   /** Exact-capability capacity; the Provider pool keeps its independent total capacity. */
   readonly maxConcurrency?: number;
 };
@@ -206,24 +206,24 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
   assert(options.capabilities.length > 0, "Endpoint package declares no capability");
   const keys = options.capabilities.map((item) => refKey(item.capability));
   assert(new Set(keys).size === keys.length, "Endpoint package repeats a capability");
-  const lanes = options.capabilities.map((item) => item.lane ?? item.capability.name);
-  assert(lanes.every((lane) => lane.trim().length > 0), "Endpoint package lane is empty");
+  const capacities = options.capabilities.map((item) => item.capacity ?? item.capability.name);
+  assert(capacities.every((capacity) => capacity.trim().length > 0), "Endpoint package capacity class is empty");
   if (options.pricing?.kind === "page") {
     let url: URL | undefined;
     try { url = new URL(options.pricing.url); } catch { url = undefined; }
     assert(url?.protocol === "https:", "Endpoint pricing page must be an HTTPS URL");
   }
-  const laneConcurrency = new Map<string, number>();
+  const capacityConcurrency = new Map<string, number>();
   for (const capability of options.capabilities) {
-    const lane = capability.lane ?? capability.capability.name;
+    const capacity = capability.capacity ?? capability.capability.name;
     const concurrency = positiveInteger(
       capability.maxConcurrency ?? options.defaultConcurrency ?? 1,
       `${capability.capability.name} maxConcurrency`,
     );
-    const previous = laneConcurrency.get(lane);
+    const previous = capacityConcurrency.get(capacity);
     assert(previous === undefined || previous === concurrency,
-      `Endpoint package lane ${lane} has conflicting concurrency limits`);
-    laneConcurrency.set(lane, concurrency);
+      `Endpoint package capacity ${capacity} has conflicting concurrency limits`);
+    capacityConcurrency.set(capacity, concurrency);
   }
   const credentials = Object.fromEntries(Object.entries(options.credentials ?? {})
     .sort(([left], [right]) => left.localeCompare(right))
@@ -271,11 +271,11 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     ...(options.pricing === undefined ? {} : { pricing: structuredClone(options.pricing) }),
     install(registry) {
       for (const capability of options.capabilities) {
-        const lane = capability.lane ?? capability.capability.name;
+        const capacity = capability.capacity ?? capability.capability.name;
         const authorityConcurrency = positiveInteger(options.defaultConcurrency ?? 1, "defaultConcurrency");
-        const laneConcurrency = positiveInteger(
+        const exactConcurrency = positiveInteger(
           capability.maxConcurrency ?? authorityConcurrency,
-          `${lane} maxConcurrency`,
+          `${capacity} maxConcurrency`,
         );
         const common: EndpointRegistrationOptions = {
           ...(capability.supports === undefined ? {} : { supports: capability.supports }),
@@ -287,8 +287,8 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
                 limit: authorityConcurrency,
               },
               {
-                id: `lane:${options.pool}/${lane}`,
-                limit: laneConcurrency,
+                id: `capacity:${options.pool}/${capacity}`,
+                limit: exactConcurrency,
               },
             ],
           },

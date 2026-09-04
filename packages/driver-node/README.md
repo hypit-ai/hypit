@@ -15,4 +15,4 @@ Immediate endpoints run once. Asynchronous endpoints start a task, store its han
 the selected endpoint. Cancellation is best effort and never rolls back completed work.
 
 The Driver validates returned values before offering a command result to Core. It does not load
-packages, parse source files, own the build queue or know any video vocabulary.
+packages, parse source files, own the active Build work set or know any video vocabulary.

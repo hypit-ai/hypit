@@ -10,6 +10,7 @@ export type GeminiModel = typeof geminiModels[number];
 export const geminiTypes = {
   request: { module: geminiModuleRef, name: "GeminiRequest" },
   draft: { module: geminiModuleRef, name: "GeminiRequestDraft" },
+  visualObservation: { module: geminiModuleRef, name: "VisualObservation" },
 } satisfies Record<string, TypeRef>;
 
 export const geminiCapabilities = Object.fromEntries(geminiModels.map((model) => [model, {
@@ -46,8 +47,8 @@ export const geminiMarkupSurfaces = [{
       summary: "Attaches one image, video or audio Artifact to the request in authored order.",
       attributes: [{ name: "media", kind: "reference", required: true, accepts: [artifactTypes.blob],
         summary: "Selects the media Artifact Gemini reads." }] }],
-    ports: [{ name: "text", type: textTypes.text,
-      summary: "The generated answer, addressed as `<id>.text`." }],
+    ports: [{ name: "observation", type: geminiTypes.visualObservation,
+      summary: "What Gemini observed, addressed as `<id>.observation`; it is not generation Prompt Text." }],
     example: `<gemini:Generate id="describe" model="gemini-3.1-pro" instruction={instruction} prompt={prompt}>
   <gemini:Reference media={reference-video}/>
 </gemini:Generate>`,
@@ -63,8 +64,12 @@ export const geminiManifest: ModuleManifest = {
   name: geminiModuleRef.name,
   version: geminiModuleRef.version,
   dependencies: [artifactDependency, textDependency],
-  types: [{ name: geminiTypes.request.name }, { name: geminiTypes.draft.name }],
-  capabilities: geminiModels.map((model) => ({ name: model, returns: textTypes.text })),
+  types: [
+    { name: geminiTypes.request.name },
+    { name: geminiTypes.draft.name },
+    { name: geminiTypes.visualObservation.name },
+  ],
+  capabilities: geminiModels.map((model) => ({ name: model, returns: geminiTypes.visualObservation })),
   producers: [
     {
       name: geminiProducers.start.name,
@@ -88,7 +93,7 @@ export const geminiManifest: ModuleManifest = {
       name: geminiProducers[model].name,
       inputs: [{ name: "request", type: geminiTypes.request }],
       outputs: [],
-      needs: [{ name: "text", capability: geminiCapabilities[model], returns: textTypes.text }],
+      needs: [{ name: "observation", capability: geminiCapabilities[model], returns: geminiTypes.visualObservation }],
     })),
   ],
 };

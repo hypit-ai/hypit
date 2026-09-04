@@ -255,8 +255,8 @@ test("shared capacity resources are acquired atomically across Builds", async ()
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
     const pool = { id: "pool:kie.main", limit: 2 };
-    const seedance = { id: "lane:kie.main/seedance-2-mini", limit: 1 };
-    const minimax = { id: "lane:kie.main/minimax-h3", limit: 2 };
+    const seedance = { id: "capacity:kie.main/seedance-2-mini", limit: 1 };
+    const minimax = { id: "capacity:kie.main/minimax-h3", limit: 2 };
 
     const first = await state.execution.acquireCapacity({
       build: "seedance-a",

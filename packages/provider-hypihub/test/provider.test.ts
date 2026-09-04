@@ -4,10 +4,9 @@ import test from "node:test";
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { AsyncEndpoint } from "@hypit/endpoint-kit";
-import { geminiCapabilities, sealGeminiRequest } from "@hypit/gemini";
+import { geminiCapabilities, geminiTypes, sealGeminiRequest } from "@hypit/gemini";
 import type { CanonicalValue, Need } from "@hypit/protocol";
 import { mimoTtsEndpoints } from "@hypit/mimo-tts";
-import { textTypes } from "@hypit/text";
 import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
 import { sealSpeechEvidenceAudio } from "@hypit/speech";
 import { speechEvidenceTypes } from "@hypit/speech-evidence";
@@ -183,7 +182,7 @@ test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every med
   const request: Need = {
     id: "need:hypihub-gemini",
     capability: geminiCapabilities["gemini-3.1-pro"],
-    returns: textTypes.text,
+    returns: geminiTypes.visualObservation,
     constraints: sealGeminiRequest({
       instruction: "Answer briefly.", prompt: "Inspect both references.",
       media: [{ artifact: image }, { artifact: video }],
@@ -215,7 +214,7 @@ test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every med
     command: { kind: "fulfill-need", id: "command:hypihub-gemini", need: request },
     need: request, resources, credentials: { apiKey: { secret: "test-key" } },
   });
-  assert.deepEqual(result.value, { kind: "inline", value: { value: "provider works" } });
+  assert.deepEqual(result.value, { kind: "inline", value: { text: "provider works" } });
   assert.deepEqual(uploads, ["image/png", "video/mp4"]);
   assert.deepEqual((generationBody?.contents as readonly unknown[]), [{ role: "user", parts: [
     { text: "Inspect both references." },

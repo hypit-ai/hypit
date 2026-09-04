@@ -96,6 +96,7 @@ export type PlanPreflight = {
 };
 
 export type PlanProvider = {
+  readonly request: string;
   readonly capability: string;
   readonly status: "resolved" | "unresolved" | "ambiguous";
   readonly endpoint?: string;
@@ -103,18 +104,22 @@ export type PlanProvider = {
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
   readonly endpoints?: readonly string[];
   readonly binding?: string;
+  readonly checked: "request" | "capability";
 };
 
 export type PlanOutput = {
-  readonly format: "hypit.cli-plan@2";
+  readonly format: "hypit.cli-plan@3";
   readonly ok: boolean;
   readonly run: string;
   readonly targetCount: number;
   readonly targets: readonly string[];
   readonly steps: number;
-  readonly externalRequestCount: number;
-  readonly externalRequests: readonly { readonly operation: string; readonly count: number }[];
-  readonly omittedExternalRequests?: number;
+  readonly requestCount: number;
+  readonly requestIssueCount: number;
+  /** Present when a Runtime Profile was selected. */
+  readonly providerRequestCount?: number;
+  readonly localRequestCount?: number;
+  readonly unresolvedRequestCount?: number;
   readonly choiceCount: number;
   readonly choices: readonly { readonly output: string; readonly candidate: string }[];
   readonly omittedChoices?: number;
@@ -130,6 +135,7 @@ export type PlanOutput = {
 };
 
 export type PlanNeed = {
+  readonly request: string;
   readonly step: string;
   readonly port: string;
   readonly capability: string;
@@ -138,7 +144,14 @@ export type PlanNeed = {
     readonly fields: Readonly<Record<string, string | number | boolean>>;
     readonly references: Readonly<Record<string, number>>;
   };
-  readonly unknown?: string;
+  readonly pending: readonly {
+    readonly input: string;
+    readonly record: string;
+    readonly sourceStep?: string;
+    readonly kind?: "image" | "video" | "audio" | "other";
+  }[];
+  readonly issue?: string;
+  readonly checked?: "request" | "capability";
 };
 
 export type CliMachineView = OperationalMachineView;
@@ -328,11 +341,6 @@ function renderRunCheck(
   return `${lines.join("\n")}\n`;
 }
 
-function operationLabel(operation: string): string {
-  const name = operation.split("/").at(-1) ?? operation;
-  return name.replace(/^request-/u, "").replaceAll("-", " ");
-}
-
 /** `@hypit/seedance@1#seedance-2-mini` → `@hypit/seedance#seedance-2-mini`; the module version is verbose detail. */
 function capabilityLabel(name: string): string {
   return name.replace(/@[^@#]+#/u, "#");
@@ -347,38 +355,44 @@ function stepLabel(step: string): string {
   return at === -1 ? decoded : decoded.slice(at + marker.length);
 }
 
-const WORDS = /^(\d+) words$/u;
+const MEASURE = /^(\d+) (words|chars)$/u;
 
-/** Parameters that count words are ranged across a group rather than splitting it. */
+/** Text lengths are ranged across a group rather than splitting otherwise identical requests. */
 function groupKey(need: PlanNeed): string {
-  if (need.summary === undefined) return need.unknown === undefined ? "?" : `?${need.unknown}`;
+  const pending = need.pending.map((item) => item.kind ?? "file").sort().join(",");
+  if (need.summary === undefined) return `?${pending}|${need.issue ?? ""}|${need.checked ?? ""}`;
   const fields = Object.entries(need.summary.fields)
-    .filter(([, value]) => !(typeof value === "string" && WORDS.test(value)))
-    .map(([name, value]) => `${name}=${String(value)}`);
+    .map(([name, value]) => {
+      const measured = typeof value === "string" ? MEASURE.exec(value) : null;
+      return measured === null ? `${name}=${String(value)}` : `${name}=<${measured[2]}>`;
+    });
   const references = Object.entries(need.summary.references).map(([kind, count]) => `${kind}=${count}`);
-  return [...fields, "|", ...references, "|", need.unknown ?? ""].join(" ");
+  return [...fields, "|", ...references, "|", pending, "|", need.issue ?? "", "|", need.checked ?? ""].join(" ");
 }
 
 function needSummaryText(needs: readonly PlanNeed[]): string {
   const first = needs[0]!;
-  if (first.summary === undefined) return first.unknown === undefined ? "parameters unknown" : `parameters unknown: ${first.unknown}`;
   const parts: string[] = [];
-  for (const [name, value] of Object.entries(first.summary.fields)) {
-    if (typeof value === "string" && WORDS.test(value)) {
-      const counts = needs.map((need) => Number(WORDS.exec(String(need.summary?.fields[name] ?? "0 words"))?.[1] ?? 0));
+  for (const [name, value] of Object.entries(first.summary?.fields ?? {})) {
+    const measured = typeof value === "string" ? MEASURE.exec(value) : null;
+    if (measured !== null) {
+      const unit = measured[2]!;
+      const counts = needs.map((need) => Number(MEASURE.exec(String(need.summary?.fields[name] ?? `0 ${unit}`))?.[1] ?? 0));
       const low = Math.min(...counts);
       const high = Math.max(...counts);
-      parts.push(`${name} ${low === high ? low : `${low}–${high}`} words`);
+      parts.push(`${name} ${low === high ? low : `${low}–${high}`} ${unit}`);
     } else if (typeof value === "boolean") {
       parts.push(value ? name : `no ${name}`);
     } else {
       parts.push(`${name} ${value}`);
     }
   }
-  const references = Object.entries(first.summary.references).sort(([left], [right]) => left.localeCompare(right))
+  const references = Object.entries(first.summary?.references ?? {}).sort(([left], [right]) => left.localeCompare(right))
     .map(([kind, count]) => `${count} ${kind}`);
   if (references.length > 0) parts.push(`${references.join(" + ")} reference${references.length === 1 && references[0]!.startsWith("1 ") ? "" : "s"}`);
-  if (first.unknown !== undefined) parts.push(first.unknown);
+  const pendingCount = first.pending.length;
+  if (pendingCount > 0) parts.push(`${pendingCount === 1 ? "file" : `${pendingCount} files`} produced during Build`);
+  if (first.issue !== undefined) parts.push(`could not inspect: ${first.issue}`);
   return parts.length === 0 ? "no parameters" : parts.join(" · ");
 }
 
@@ -391,8 +405,26 @@ function groupedNeedLines(needs: readonly PlanNeed[], colors: Palette, verbose: 
   }
   return [...groups.values()].map((group) => {
     const who = group.length === 1 || verbose ? colors.dim(group.map((need) => stepLabel(need.step)).join(", ")) : "";
+    const verification = verbose && group.some((need) => need.checked === "capability")
+      ? colors.dim("Endpoint selected by capability; file compatibility is checked before the request is sent")
+      : "";
     const count = `×${group.length}`.padStart(4);
-    return `    ${colors.dim(count)}  ${needSummaryText(group)}${who.length === 0 ? "" : `  ${who}`}`;
+    return `    ${colors.dim(count)}  ${needSummaryText(group)}${who.length === 0 ? "" : `  ${who}`}${verification.length === 0 ? "" : `  ${verification}`}`;
+  });
+}
+
+function providerGroupKey(provider: PlanProvider): string {
+  return JSON.stringify({
+    capability: provider.capability,
+    status: provider.status,
+    endpoint: provider.endpoint,
+    use: provider.use,
+    pricing: provider.pricing,
+    endpoints: provider.endpoints,
+    binding: provider.binding,
+    // A resolved request belongs under its Endpoint regardless of whether its file already exists.
+    // Keep the distinction on each request for verbose honesty, not as another visible Provider.
+    checked: provider.status === "resolved" ? undefined : provider.checked,
   });
 }
 
@@ -413,31 +445,31 @@ function renderPlan(
   lines.push(...facts([
     ["Run", shortPath(view.machine.run)],
     ["Targets", targetSummary],
-    ["External requests", String(view.machine.externalRequestCount)],
+    ["Requests", String(view.machine.requestCount)],
+    ...(view.machine.requestIssueCount === 0 ? [] : [["Request issues", String(view.machine.requestIssueCount)] as const]),
+    ...(view.machine.providerRequestCount === undefined ? [] : [["Provider requests", String(view.machine.providerRequestCount)] as const]),
+    ...(view.machine.localRequestCount === undefined ? [] : [["Local requests", String(view.machine.localRequestCount)] as const]),
+    ...((view.machine.unresolvedRequestCount ?? 0) === 0 ? [] : [["Unresolved", String(view.machine.unresolvedRequestCount)] as const]),
     ...(view.machine.preflight === undefined ? [] : [[
       "Preflight", view.machine.preflight.ok ? "ready" : "needs attention",
     ] as const]),
     ...(verbose ? [["Steps", String(view.machine.steps)] as const] : []),
   ], colors));
-  if (view.machine.externalRequests.length > 0) {
-    lines.push("", colors.strong("External requests"));
-    const countWidth = Math.max(...view.machine.externalRequests.map((item) => String(item.count).length));
-    for (const item of view.machine.externalRequests) {
-      lines.push(`  ${colors.warning(String(item.count).padStart(countWidth))}  ${verbose ? item.operation : operationLabel(item.operation)}`);
-    }
-    if ((view.machine.omittedExternalRequests ?? 0) > 0) {
-      lines.push(`  ${colors.dim(`${view.machine.omittedExternalRequests} more Operations · use --limit <count>`)}`);
-    }
-  }
   if (view.machine.providers !== undefined) {
     if (view.machine.providers.length > 0) lines.push("", colors.strong("Providers and price pages"));
-    for (const item of view.machine.providers) {
+    const groups = new Map<string, PlanProvider[]>();
+    for (const provider of view.machine.providers) {
+      const key = providerGroupKey(provider);
+      groups.set(key, [...(groups.get(key) ?? []), provider]);
+    }
+    for (const group of groups.values()) {
+      const item = group[0]!;
       const where = item.status === "resolved"
         ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})${item.binding === undefined ? "" : ", bound in the Profile"}`)}`
         : item.status === "ambiguous"
           ? colors.warning(`${(item.endpoints ?? []).join(", ")} all offer it; add "bindings": { "${item.capability}": "<instance>" } to the Profile`)
           : item.binding === undefined
-            ? colors.error("no selected Endpoint")
+            ? colors.error(item.checked === "request" ? "no selected Endpoint accepts this request" : "no selected Endpoint")
             : colors.error(`bound to ${item.binding}, which does not offer it`);
       const price = item.pricing === undefined
         ? (item.status === "resolved" ? colors.warning("price source unknown") : undefined)
@@ -446,13 +478,23 @@ function renderPlan(
           : item.pricing.url;
       lines.push(`  ${colors.accent(verbose ? item.capability : capabilityLabel(item.capability))}`);
       lines.push(`    ${where}${price === undefined ? "" : `  ·  ${price}`}`);
-      lines.push(...groupedNeedLines((view.machine.needs ?? []).filter((need) => need.capability === item.capability), colors, verbose));
+      const requests = new Set(group.map((provider) => provider.request));
+      lines.push(...groupedNeedLines((view.machine.needs ?? []).filter((need) => requests.has(need.request)), colors, verbose));
     }
     if ((view.machine.omittedProviders ?? 0) > 0) {
-      lines.push(`  ${colors.dim(`${view.machine.omittedProviders} more capabilities · use --limit <count>`)}`);
+      lines.push(`  ${colors.dim(`${view.machine.omittedProviders} more requests · use --limit <count>`)}`);
     }
-  } else if (view.machine.externalRequestCount > 0) {
-    lines.push("", colors.dim("Pass --runtime <profile> to see the Provider and price page behind each external request."));
+  } else if (view.machine.requestCount > 0) {
+    const byCapability = new Map<string, PlanNeed[]>();
+    for (const need of view.machine.needs ?? []) {
+      byCapability.set(need.capability, [...(byCapability.get(need.capability) ?? []), need]);
+    }
+    if (byCapability.size > 0) lines.push("", colors.strong("Requests"));
+    for (const [capability, needs] of byCapability) {
+      lines.push(`  ${colors.accent(verbose ? capability : capabilityLabel(capability))}`);
+      lines.push(...groupedNeedLines(needs, colors, verbose));
+    }
+    lines.push("", colors.dim("Pass --runtime <profile> to see the Endpoint and price page behind each request."));
   }
   const unreached = view.machine.unreached ?? [];
   if (verbose && unreached.length > 0) {

@@ -39,7 +39,7 @@ export type CreateKieProviderOptions = {
   /** Total in-flight capacity shared by every KIE lane. */
   readonly defaultConcurrency?: number;
   /** Optional KIE lane limits keyed by capability name, for example seedance-2.5. */
-  readonly laneConcurrency?: Readonly<Record<string, number>>;
+  readonly capabilityConcurrency?: Readonly<Record<string, number>>;
   readonly pollIntervalMs?: number;
   readonly submissionIntervalMs?: number;
   readonly requestTimeoutMs?: number;
@@ -535,10 +535,10 @@ function endpoint(options: {
 
 export function createKieProvider(config: CreateKieProviderOptions) {
   verifyKieRoutes();
-  const laneNames = new Set(kieRoutes.map((route) => route.capability.name));
-  const laneConcurrency = Object.fromEntries(Object.entries(config.laneConcurrency ?? {}).map(([lane, limit]) => {
-    if (!laneNames.has(lane)) throw new Error(`unknown KIE concurrency lane ${lane}`);
-    return [lane, positiveInteger(limit, `${lane} laneConcurrency`)];
+  const capacityNames = new Set(kieRoutes.map((route) => route.capability.name));
+  const capabilityConcurrency = Object.fromEntries(Object.entries(config.capabilityConcurrency ?? {}).map(([capability, limit]) => {
+    if (!capacityNames.has(capability)) throw new Error(`unknown KIE capacity ${capability}`);
+    return [capability, positiveInteger(limit, `${capability} capabilityConcurrency`)];
   }));
   const apiBaseUrl = baseUrl(config.apiBaseUrl ?? "https://api.kie.ai", "apiBaseUrl");
   const uploadBaseUrl = baseUrl(config.uploadBaseUrl ?? "https://kieai.redpandaai.co", "uploadBaseUrl");
@@ -574,10 +574,10 @@ export function createKieProvider(config: CreateKieProviderOptions) {
     capabilities: kieRoutes.map((route) => ({
       capability: route.capability,
       returns: route.returns,
-      lane: route.capability.name,
-      ...(laneConcurrency[route.capability.name] === undefined
+      capacity: route.capability.name,
+      ...(capabilityConcurrency[route.capability.name] === undefined
         ? {}
-        : { maxConcurrency: laneConcurrency[route.capability.name] }),
+        : { maxConcurrency: capabilityConcurrency[route.capability.name] }),
       lifecycle: "asynchronous" as const,
       endpoint: providerEndpoint,
       ...(route.supports === undefined ? {} : { supports: route.supports }),

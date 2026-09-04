@@ -10,7 +10,9 @@ import {
 import {
   createExactModelPrimaryGenerationFragment,
   defineExactModelModule,
+  plannedExactModelRequest,
 } from "@hypit/model-kit";
+import type { BuildState } from "@hypit/protocol";
 import { sealText } from "@hypit/text";
 
 const ports = sealGenerationPortTable({
@@ -95,4 +97,51 @@ test("the dynamic Fragment exposes every Text and media edge as an explicit sema
     "request-graph-native-image",
     "select-primary-image",
   ]);
+});
+
+test("planning follows the model's declared assembly edges and leaves an upstream file symbolic", () => {
+  const endpoint = definition.endpoints.image!;
+  const mediaPort = ports.ports.find((port) => port.name === "images");
+  assert.ok(mediaPort?.value.kind === "media");
+  const state = {
+    records: [
+      { id: "draft:initial", type: endpoint.draftType, value: { kind: "inline", value: sealGenerationRequestDraft(ports, {}) } },
+      { id: "prompt", type: { module: { name: "@hypit/text", version: "1" }, name: "Text" }, value: { kind: "inline", value: sealText("draw the authored scene") } },
+      { id: "binding", type: endpoint.mediaBindings.images!.type, value: { kind: "inline", value: sealGenerationMediaBinding(mediaPort as never, { role: "image" }) } },
+      // Deliberately request-shaped, but not connected to the declared assembly chain.
+      { id: "decoy", type: endpoint.requestType, value: { kind: "inline", value: { ports: { prompt: ["wrong"] } } } },
+    ],
+    needs: [],
+    plan: { steps: [
+      { id: "bind-text", producer: endpoint.textBindings.prompt!.producer, inputs: { draft: "draft:initial", text: "prompt" }, outputs: { draft: "draft:text" }, needs: {} },
+      { id: "bind-image-one", producer: endpoint.mediaBindings.images!.producer, inputs: { draft: "draft:text", binding: "binding", artifact: "image:upstream-one" }, outputs: { draft: "draft:image-one" }, needs: {} },
+      { id: "bind-image-two", producer: endpoint.mediaBindings.images!.producer, inputs: { draft: "draft:image-one", binding: "binding", artifact: "image:upstream-two" }, outputs: { draft: "draft:image-two" }, needs: {} },
+      { id: "finalize", producer: endpoint.finalizeProducer, inputs: { draft: "draft:image-two" }, outputs: { request: "request" }, needs: {} },
+      { id: "generate", producer: endpoint.producer, inputs: { request: "request" }, outputs: {}, needs: { image: { id: "need:image" } } },
+      { id: "make-image-one", producer: { module: { name: "@test/upstream", version: "1" }, name: "make" }, inputs: {}, outputs: { image: "image:upstream-one" }, needs: {} },
+      { id: "make-image-two", producer: { module: { name: "@test/upstream", version: "1" }, name: "make" }, inputs: {}, outputs: { image: "image:upstream-two" }, needs: {} },
+    ] },
+  } as unknown as BuildState;
+
+  assert.deepEqual(plannedExactModelRequest(state, "generate", "image", endpoint), {
+    model: "graph-native-image",
+    ports: { prompt: ["draw the authored scene"] },
+    pendingMedia: [
+      {
+        port: "images",
+        role: "image",
+        record: "image:upstream-one",
+        sourceStep: "make-image-one",
+        available: false,
+      },
+      {
+        port: "images",
+        role: "image",
+        record: "image:upstream-two",
+        sourceStep: "make-image-two",
+        available: false,
+      },
+    ],
+    complete: false,
+  });
 });

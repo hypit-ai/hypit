@@ -8,8 +8,11 @@ renderer, Provider or Core behavior.
 The package exposes self-described `Canvas`, `Point`, `Path`, `Extent`, `RegionTimeline`, `Frame`,
 `AnchoredFrame` and `AspectFrame` author Surfaces plus pure geometry functions and fixed-port Producers.
 
-`RegionTimeline` accepts already measured data rather than running a detector. One SVS Recipe holds
-the exact ProgramSpace frame count and named tracks whose array positions are Frames:
+`RegionTimeline` accepts already measured data rather than running a detector. Face detection and
+tracking belong to reference observation before authoring: inspect the footage, keep the useful boxes
+as ordinary numbers, and pass that finished timeline to Caption. A Build never starts a detector to
+discover its own layout. One SVS Recipe holds the exact ProgramSpace frame count and named tracks whose
+array positions are Frames:
 
 ```svs
 heads.default {

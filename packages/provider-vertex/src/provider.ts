@@ -1,12 +1,11 @@
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { EndpointInvocationContext, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
-import { geminiCapabilities, geminiModels, verifyGeminiRequest } from "@hypit/gemini";
+import { geminiCapabilities, geminiModels, geminiTypes, sealVisualObservation, verifyGeminiRequest } from "@hypit/gemini";
 import type { CapabilityRef } from "@hypit/protocol";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-kit";
 import type { GeminiRequest } from "@hypit/gemini";
 import { canonicalize } from "@hypit/protocol";
 import type { CredentialRef } from "@hypit/runtime";
-import { sealText, textTypes } from "@hypit/text";
 
 import { createVertexGeminiGenerator, probeVertexModel, vertexModelId } from "./gemini.js";
 
@@ -89,7 +88,7 @@ export function createVertexProvider(options: CreateVertexProviderOptions) {
       parts.push({ inlineData: { mimeType: item.artifact.mediaType, data: Buffer.from(bytes).toString("base64") } });
     }
     const value = await generate({ parts, instruction: typed.instruction });
-    return { value: { kind: "inline", value: canonicalize(sealText(value)) } };
+    return { value: { kind: "inline", value: canonicalize(sealVisualObservation(value)) } };
   };
   return defineEndpointPackage({
     module: vertexProviderModuleRef,
@@ -108,10 +107,10 @@ export function createVertexProvider(options: CreateVertexProviderOptions) {
     defaultConcurrency: options.defaultConcurrency ?? 4,
     capabilities: geminiModels.map((model) => ({
       capability: geminiCapabilities[model],
-      returns: textTypes.text,
+      returns: geminiTypes.visualObservation,
       lifecycle: "immediate" as const,
       handler,
-      lane: model,
+      capacity: model,
     })),
   });
 }

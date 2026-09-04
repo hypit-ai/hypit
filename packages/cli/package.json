@@ -15,6 +15,8 @@
     "@hypit/core": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/elaborator": "workspace:*",
+    "@hypit/generation": "workspace:*",
+    "@hypit/model-kit": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/run": "workspace:*",

@@ -1,10 +1,18 @@
 import { resolve } from "node:path";
 
 import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
+import { registerProducerFacets, registerTypeValidatorFacets } from "@hypit/component-kit";
+import { evaluateProducerPlan, ProducerRegistry } from "@hypit/driver-node";
+import { isMediaPort } from "@hypit/generation";
+import type { GenerationPortTable, GenerationRequestDraft } from "@hypit/generation";
+import { exactModelsFromHostFacets, plannedExactModelRequest } from "@hypit/model-kit";
+import type { ExactModelEndpoint } from "@hypit/model-kit";
+import type { NodePackageContribution } from "@hypit/package-loader-node";
+import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef } from "@hypit/protocol";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
 import { plannedNeeds } from "@hypit/runtime";
 import type { BuildCatalogDescriptor } from "@hypit/runtime";
-import type { BuildState, CapabilityRef } from "@hypit/protocol";
+import { TypeValidatorRegistry } from "@hypit/validation";
 
 export function createCatalogDescriptor(options: {
   readonly source: string;
@@ -38,12 +46,22 @@ function capabilityName(capability: CapabilityRef): string {
   return `${capability.module.name}@${capability.module.version}#${capability.name}`;
 }
 
+function sameRef(
+  left: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
+  right: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
+): boolean {
+  return left.module.name === right.module.name
+    && left.module.version === right.module.version
+    && left.name === right.name;
+}
+
 function demandedCapabilities(state: BuildState): readonly CapabilityRef[] {
   const found = new Map(plannedNeeds(state).map((need) => [capabilityName(need.capability), need.capability]));
   return [...found.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, value]) => value);
 }
 
 export type PlanProviderView = {
+  readonly request: string;
   readonly capability: string;
   readonly status: "resolved" | "unresolved" | "ambiguous";
   readonly endpoint?: string;
@@ -51,14 +69,246 @@ export type PlanProviderView = {
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
   readonly endpoints?: readonly string[];
   readonly binding?: string;
+  readonly checked: "request" | "capability";
 };
 
-/** Which Endpoint and price page stand behind each demanded capability; reads the Profile only. */
-export async function describePlanProviders(host: NodeRuntimeHost, state: BuildState): Promise<readonly PlanProviderView[]> {
-  const providers = await host.providers(demandedCapabilities(state));
-  return providers.map((item) => ({
+export type PendingPlanInput = {
+  readonly input: string;
+  readonly record: string;
+  readonly sourceStep?: string;
+  readonly kind?: "image" | "video" | "audio" | "other";
+};
+
+/** A reading of one request's authored parameters, never a second request payload. */
+export type NeedSummary = {
+  readonly fields: Readonly<Record<string, string | number | boolean>>;
+  readonly references: Readonly<Record<string, number>>;
+};
+
+export type EvaluatedPlanNeed = {
+  readonly constraints?: CanonicalValue;
+  readonly summary?: NeedSummary;
+  readonly pending: readonly PendingPlanInput[];
+  readonly issue?: string;
+};
+
+export type EvaluatedPlan = {
+  readonly state: BuildState;
+  readonly needs: ReadonlyMap<string, EvaluatedPlanNeed>;
+};
+
+export type PlanNeedView = {
+  readonly request: string;
+  readonly step: string;
+  readonly port: string;
+  readonly capability: string;
+  readonly endpoint?: string;
+  readonly summary?: NeedSummary;
+  readonly pending: readonly PendingPlanInput[];
+  readonly issue?: string;
+  readonly checked?: "request" | "capability";
+};
+
+function mediaKind(mediaType: string): string {
+  const prefix = mediaType.split("/")[0] ?? "";
+  return prefix === "image" || prefix === "video" || prefix === "audio" ? prefix : "other";
+}
+
+function countReferences(value: CanonicalValue, references: Record<string, number>): void {
+  if (value === null || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const item of value) countReferences(item, references);
+    return;
+  }
+  const record = value as Record<string, CanonicalValue>;
+  if (typeof record.resource === "string" && typeof record.mediaType === "string") {
+    const kind = mediaKind(record.mediaType);
+    references[kind] = (references[kind] ?? 0) + 1;
+    return;
+  }
+  for (const item of Object.values(record)) countReferences(item, references);
+}
+
+function textMeasure(value: string): string {
+  const trimmed = value.trim();
+  const words = trimmed.split(/\s+/u).filter(Boolean);
+  const cjk = [...trimmed].filter((character) =>
+    /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(character)).length;
+  if (cjk > 0 && words.length <= 1) return `${cjk} chars`;
+  return `${words.length} words`;
+}
+
+function scalarSummary(value: CanonicalValue): string | number | boolean | undefined {
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    return value.length <= 40 && !value.includes("\n") ? value : textMeasure(value);
+  }
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Record<string, CanonicalValue>;
+    if (typeof record.text === "string" && Object.keys(record).length <= 2) return scalarSummary(record.text);
+  }
+  return undefined;
+}
+
+function summarizeFields(source: Readonly<Record<string, CanonicalValue>>): Readonly<Record<string, string | number | boolean>> {
+  const fields: Record<string, string | number | boolean> = {};
+  for (const [name, value] of Object.entries(source)) {
+    const values = Array.isArray(value) ? value : [value];
+    const scalars = values.map(scalarSummary).filter((item): item is string | number | boolean => item !== undefined);
+    if (scalars.length > 0) fields[name] = scalars.length === 1 ? scalars[0]! : scalars.map(String).join(", ");
+  }
+  return fields;
+}
+
+/** Generic requests are summarized only from their declared top-level constraints. */
+export function summarizeConstraints(constraints: CanonicalValue): NeedSummary {
+  const references: Record<string, number> = {};
+  countReferences(constraints, references);
+  if (constraints === null || typeof constraints !== "object" || Array.isArray(constraints)) {
+    return { fields: {}, references };
+  }
+  return { fields: summarizeFields(constraints as Record<string, CanonicalValue>), references };
+}
+
+/** Exact-model requests are summarized from the model package's port table, not an object-shape guess. */
+function summarizeExactModel(
+  table: GenerationPortTable,
+  ports: GenerationRequestDraft["ports"],
+  pending: readonly PendingPlanInput[],
+): NeedSummary {
+  const fields: Record<string, string | number | boolean> = {};
+  const references: Record<string, number> = {};
+  for (const port of table.ports) {
+    const values = ports[port.name] ?? [];
+    if (isMediaPort(port)) {
+      for (const value of values) {
+        if (value === null || typeof value !== "object" || Array.isArray(value)) continue;
+        const role = (value as { readonly role?: unknown }).role;
+        if (role === "image" || role === "video" || role === "audio") references[role] = (references[role] ?? 0) + 1;
+      }
+      continue;
+    }
+    const summarized = values.map((value) => scalarSummary(value as CanonicalValue))
+      .filter((value): value is string | number | boolean => value !== undefined);
+    if (summarized.length > 0) fields[port.name] = summarized.length === 1 ? summarized[0]! : summarized.map(String).join(", ");
+  }
+  for (const item of pending) {
+    const kind = item.kind ?? "other";
+    references[kind] = (references[kind] ?? 0) + 1;
+  }
+  return { fields, references };
+}
+
+function exactModels(contributions: readonly NodePackageContribution[]): readonly ExactModelEndpoint[] {
+  return exactModelsFromHostFacets(contributions.flatMap((item) => item.hostFacets ?? []));
+}
+
+function exactModelFor(
+  models: readonly ExactModelEndpoint[],
+  state: BuildState,
+  stepId: string,
+  capability: CapabilityRef,
+): ExactModelEndpoint | undefined {
+  const step = state.plan.steps.find((item) => item.id === stepId);
+  if (step === undefined) return undefined;
+  return models.find((model) => sameRef(model.capability, capability) && sameRef(model.producer, step.producer));
+}
+
+/**
+ * Evaluate deterministic Producers only. A missing upstream Resource is kept as its direct graph
+ * edge, not described as missing author intent and never found by searching for a request-looking
+ * object.
+ */
+export async function evaluatePlanNeeds(
+  definition: BuildDefinition,
+  contributions: readonly NodePackageContribution[],
+): Promise<EvaluatedPlan> {
+  const producers = new ProducerRegistry();
+  const validators = new TypeValidatorRegistry();
+  for (const contribution of contributions) {
+    for (const component of contribution.components ?? []) {
+      registerProducerFacets(producers, component.producers ?? []);
+      registerTypeValidatorFacets(validators, component.validators ?? []);
+    }
+  }
+  const evaluation = await evaluateProducerPlan(definition, producers, validators);
+  const state = evaluation.state;
+  const known = new Map(state.needs.map((need) => [need.id, need]));
+  const producedBy = new Map(state.plan.steps.flatMap((step) =>
+    Object.values(step.outputs).map((record) => [record, step.id] as const)));
+  const records = new Set(state.records.map((record) => record.id));
+  const models = exactModels(contributions);
+  const result = new Map<string, EvaluatedPlanNeed>();
+
+  for (const planned of plannedNeeds(state)) {
+    const need = known.get(planned.need);
+    if (need !== undefined) {
+      const model = exactModelFor(models, state, planned.step, planned.capability);
+      const exact = model === undefined ? undefined : plannedExactModelRequest(state, planned.step, planned.port, model);
+      result.set(planned.need, {
+        constraints: need.constraints,
+        summary: model === undefined || exact === undefined
+          ? summarizeConstraints(need.constraints)
+          : summarizeExactModel(model.ports, exact.ports, []),
+        pending: [],
+      });
+      continue;
+    }
+
+    const model = exactModelFor(models, state, planned.step, planned.capability);
+    const exact = model === undefined ? undefined : plannedExactModelRequest(state, planned.step, planned.port, model);
+    if (model !== undefined && exact !== undefined) {
+      const pending = exact.pendingMedia.map((item): PendingPlanInput => ({
+        input: item.port,
+        record: item.record,
+        ...(item.sourceStep === undefined ? {} : { sourceStep: item.sourceStep }),
+        kind: item.role,
+      }));
+      const issue = evaluation.failures.get(planned.step);
+      result.set(planned.need, {
+        summary: summarizeExactModel(model.ports, exact.ports, pending),
+        pending,
+        ...(issue === undefined ? {} : { issue }),
+      });
+      continue;
+    }
+
+    const step = state.plan.steps.find((item) => item.id === planned.step);
+    const pending = step === undefined ? [] : Object.entries(step.inputs)
+      .filter(([, record]) => !records.has(record))
+      .map(([input, record]): PendingPlanInput => {
+        const sourceStep = producedBy.get(record);
+        return { input, record, ...(sourceStep === undefined ? {} : { sourceStep }) };
+      });
+    const issue = evaluation.failures.get(planned.step);
+    result.set(planned.need, {
+      pending,
+      ...(issue === undefined ? {} : { issue }),
+    });
+  }
+  return { state, needs: result };
+}
+
+/** Resolve every planned request independently; concrete constraints exercise Endpoint `supports`. */
+export async function describePlanProviders(
+  host: NodeRuntimeHost,
+  state: BuildState,
+  evaluated: EvaluatedPlan,
+): Promise<readonly PlanProviderView[]> {
+  const requests = plannedNeeds(state).map((planned) => {
+    const constraints = evaluated.needs.get(planned.need)?.constraints;
+    return {
+      request: planned.need,
+      capability: planned.capability,
+      returns: planned.returns,
+      ...(constraints === undefined ? {} : { constraints }),
+    };
+  });
+  return (await host.providers(requests)).map((item) => ({
+    request: item.request,
     capability: capabilityName(item.capability),
     status: item.status,
+    checked: item.checked,
     ...(item.endpoint === undefined ? {} : { endpoint: item.endpoint }),
     ...(item.use === undefined ? {} : { use: item.use }),
     ...(item.pricing === undefined ? {} : { pricing: item.pricing }),
@@ -87,221 +337,26 @@ export function assertPreflight(preflight: Awaited<ReturnType<typeof preflightPl
   ].join("\n"));
 }
 
-// ---------------------------------------------------------------------------------------------------
-// The complete bill of needs: every request the Build will make, with its parameters known before
-// anything is paid for.
-
-import { BuildMachine } from "@hypit/core";
-import { registerProducerFacets, registerTypeValidatorFacets } from "@hypit/component-kit";
-import { EndpointRegistry, MemoryResourceStore, NodeDriver, ProducerRegistry } from "@hypit/driver-node";
-import type { NodePackageContribution } from "@hypit/package-loader-node";
-import type { BuildDefinition, CanonicalValue } from "@hypit/protocol";
-import { TypeValidatorRegistry } from "@hypit/validation";
-
-/** A reading of one request's parameters, taken from the values the request actually carries. */
-export type NeedSummary = {
-  /** Scalar parameters by their own names: numbers, short strings, booleans, and `N words` for prose. */
-  readonly fields: Readonly<Record<string, string | number | boolean>>;
-  /** Referenced media counted by kind (image, video, audio, other). */
-  readonly references: Readonly<Record<string, number>>;
-};
-
-export type PlanNeedView = {
-  readonly step: string;
-  readonly port: string;
-  readonly capability: string;
-  readonly endpoint?: string;
-  /** Present when the request's parameters were computed at plan time. */
-  readonly summary?: NeedSummary;
-  /** Why the parameters are not known yet, when they are not. */
-  readonly unknown?: string;
-};
-
-function mediaKind(mediaType: string): string {
-  const prefix = mediaType.split("/")[0] ?? "";
-  return prefix === "image" || prefix === "video" || prefix === "audio" ? prefix : "other";
-}
-
-function countReferences(value: CanonicalValue, references: Record<string, number>): void {
-  if (value === null || typeof value !== "object") return;
-  if (Array.isArray(value)) {
-    for (const item of value) countReferences(item, references);
-    return;
-  }
-  const record = value as Record<string, CanonicalValue>;
-  if (typeof record.resource === "string" && typeof record.mediaType === "string") {
-    const kind = mediaKind(record.mediaType);
-    references[kind] = (references[kind] ?? 0) + 1;
-    return;
-  }
-  for (const item of Object.values(record)) countReferences(item, references);
-}
-
-function scalarSummary(value: CanonicalValue): string | number | boolean | undefined {
-  if (typeof value === "number" || typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    const words = value.trim().split(/\s+/u).filter((word) => word.length > 0).length;
-    return value.length <= 40 && !value.includes("\n") ? value : `${words} words`;
-  }
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-    const record = value as Record<string, CanonicalValue>;
-    if (typeof record.text === "string" && Object.keys(record).length <= 2) return scalarSummary(record.text);
-  }
-  return undefined;
-}
-
-/**
- * Read a request's parameters off the request itself: every scalar it carries under its own name,
- * every referenced Artifact counted by kind. No model-specific field list lives here; a request
- * shaped as `{ ports }` (an exact-model generation request) reads each port, anything else reads its
- * top-level fields.
- */
-export function summarizeConstraints(constraints: CanonicalValue): NeedSummary {
-  const fields: Record<string, string | number | boolean> = {};
-  const references: Record<string, number> = {};
-  countReferences(constraints, references);
-  if (constraints === null || typeof constraints !== "object" || Array.isArray(constraints)) return { fields, references };
-  const record = constraints as Record<string, CanonicalValue>;
-  const ports = record.ports;
-  const source = ports !== null && typeof ports === "object" && !Array.isArray(ports)
-    ? ports as Record<string, CanonicalValue>
-    : record;
-  for (const [name, value] of Object.entries(source)) {
-    const values = Array.isArray(value) ? value : [value];
-    const scalars = values.map(scalarSummary).filter((item): item is string | number | boolean => item !== undefined);
-    if (scalars.length === 0) continue;
-    fields[name] = scalars.length === 1 ? scalars[0]! : scalars.map(String).join(", ");
-  }
-  return { fields, references };
-}
-
-/**
- * Run the plan's Producers that need nothing from outside, so every external request exists with
- * its exact constraints before the Build is submitted. Producers that would need an external result,
- * or bytes this planning pass does not hold, are left as they are; their requests stay unknown and
- * say why. Nothing here contacts a Provider or spends anything.
- */
-export async function evaluatePlanNeeds(
-  definition: BuildDefinition,
-  contributions: readonly NodePackageContribution[],
-): Promise<ReadonlyMap<string, { readonly constraints?: CanonicalValue; readonly unknown?: string }>> {
-  const producers = new ProducerRegistry();
-  const validators = new TypeValidatorRegistry();
-  for (const contribution of contributions) {
-    for (const component of contribution.components ?? []) {
-      registerProducerFacets(producers, component.producers ?? []);
-      registerTypeValidatorFacets(validators, component.validators ?? []);
-    }
-  }
-  const driver = new NodeDriver({ producers, endpoints: new EndpointRegistry(), resources: new MemoryResourceStore(), validators });
-  const machine = new BuildMachine(definition);
-  const failed = new Map<string, string>();
-  let blockedProducers = new Map<string, string>();
-  for (let round = 0; round < 10_000; round += 1) {
-    const prepared = driver.prepare(machine.view());
-    blockedProducers = new Map(prepared.blocked
-      .filter((item) => item.reason === "missing-producer")
-      .map((item) => [item.command, `no Producer for ${item.subject} is loaded at plan time`]));
-    const runnable = prepared.runnable.filter((item) =>
-      item.command.kind === "invoke-producer" && !failed.has(item.command.id));
-    if (runnable.length === 0) break;
-    let advanced = false;
-    for (const descriptor of runnable) {
-      let result: Awaited<ReturnType<NodeDriver["executeCommand"]>>;
-      try {
-        result = await driver.executeCommand(prepared.state, descriptor, { build: "plan" });
-      } catch (error) {
-        failed.set(descriptor.command.id, error instanceof Error ? error.message : String(error));
-        continue;
-      }
-      if (result.status !== "completed" || result.event.kind === "command-failed") {
-        failed.set(descriptor.command.id, result.status === "completed" && result.event.kind === "command-failed"
-          ? result.event.message
-          : "the step did not complete at plan time");
-        continue;
-      }
-      machine.evaluate(result.event);
-      machine.commit();
-      advanced = true;
-      break;
-    }
-    if (!advanced) break;
-  }
-  const state = machine.view();
-  const known = new Map(state.needs.map((need) => [need.id, need]));
-  const stepFailures = new Map<string, string>();
-  for (const [command, message] of [...blockedProducers, ...failed]) {
-    const step = state.plan.steps.find((item) => command.endsWith(item.id))?.id ?? command;
-    stepFailures.set(step, message);
-  }
-  const result = new Map<string, { readonly constraints?: CanonicalValue; readonly unknown?: string }>();
-  for (const planned of plannedNeeds(state)) {
-    const need = known.get(planned.need);
-    if (need !== undefined) {
-      result.set(planned.need, { constraints: need.constraints });
-      continue;
-    }
-    const failure = stepFailures.get(planned.step);
-    const step = state.plan.steps.find((item) => item.id === planned.step);
-    const draft = step === undefined ? undefined : requestDraft(state, step);
-    result.set(planned.need, {
-      ...(draft === undefined ? {} : { constraints: draft }),
-      unknown: failure === undefined
-        ? (draft === undefined ? "depends on an earlier external result" : "references come from an earlier external result")
-        : `its step could not run at plan time: ${failure}`,
-    });
-  }
-  return result;
-}
-
-/**
- * When a request step cannot run yet because a reference it needs is still to be generated, the
- * author's own parameters already exist upstream: the request draft the step's inputs were built
- * from. Walk from the step's missing inputs to the steps that produce them, and read the first
- * present record shaped as a request (`{ ports }`). The media it would attach is what is pending.
- */
-function requestDraft(state: BuildState, step: BuildState["plan"]["steps"][number]): CanonicalValue | undefined {
-  const records = new Map(state.records.map((item) => [item.id, item]));
-  const producedBy = new Map(state.plan.steps.flatMap((item) => Object.values(item.outputs).map((id) => [id, item] as const)));
-  const seen = new Set<string>();
-  const queue = [step];
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    if (seen.has(current.id)) continue;
-    seen.add(current.id);
-    for (const id of Object.values(current.inputs)) {
-      const record = records.get(id);
-      if (record !== undefined) {
-        const value = record.value;
-        if (value.kind === "inline" && value.value !== null && typeof value.value === "object"
-          && !Array.isArray(value.value) && "ports" in value.value) return value.value;
-        continue;
-      }
-      const producer = producedBy.get(id);
-      if (producer !== undefined) queue.push(producer);
-    }
-  }
-  return undefined;
-}
-
-/** Every request in step order, with the Endpoint behind it and its parameters when known. */
-export async function describePlanNeeds(
+/** Every request in step order, joined to its own Endpoint resolution. */
+export function describePlanNeeds(
   state: BuildState,
-  evaluated: ReadonlyMap<string, { readonly constraints?: CanonicalValue; readonly unknown?: string }>,
+  evaluated: EvaluatedPlan,
   providers: readonly PlanProviderView[],
-): Promise<readonly PlanNeedView[]> {
-  const endpoints = new Map(providers.map((item) => [item.capability, item.endpoint]));
+): readonly PlanNeedView[] {
+  const endpoint = new Map(providers.map((item) => [item.request, item]));
   return plannedNeeds(state).map((planned) => {
-    const capability = capabilityName(planned.capability);
-    const endpoint = endpoints.get(capability);
-    const found = evaluated.get(planned.need);
+    const provider = endpoint.get(planned.need);
+    const found = evaluated.needs.get(planned.need);
     return {
+      request: planned.need,
       step: planned.step,
       port: planned.port,
-      capability,
-      ...(endpoint === undefined ? {} : { endpoint }),
-      ...(found?.constraints === undefined ? {} : { summary: summarizeConstraints(found.constraints) }),
-      ...(found?.unknown === undefined ? {} : { unknown: found.unknown }),
+      capability: capabilityName(planned.capability),
+      ...(provider?.endpoint === undefined ? {} : { endpoint: provider.endpoint }),
+      ...(found?.summary === undefined ? {} : { summary: found.summary }),
+      pending: found?.pending ?? [],
+      ...(found?.issue === undefined ? {} : { issue: found.issue }),
+      ...(provider?.checked === undefined ? {} : { checked: provider.checked }),
     };
   });
 }

@@ -11,18 +11,18 @@ import {
   resolveSpeechEstimateLanguage,
   speechEstimatePolicyFromAttributes,
 } from "@hypit/estimate";
-import { geminiCapabilities, geminiModels, sealGeminiRequest } from "@hypit/gemini";
-import type { GeminiMediaPart, GeminiModel } from "@hypit/gemini";
+import { geminiCapabilities, geminiModels, geminiTypes, sealGeminiRequest, verifyVisualObservation } from "@hypit/gemini";
+import type { GeminiMediaPart, GeminiModel, VisualObservation } from "@hypit/gemini";
 import { verifyGeneratedAudioSet } from "@hypit/generation";
 import type { GeneratedAudioSet } from "@hypit/generation";
 import { mimoTtsEndpoints, sealMimoTtsRequest } from "@hypit/mimo-tts";
 import type { CanonicalValue, CapabilityRef, Need, StoredValue } from "@hypit/protocol";
 import type { ResourceStore } from "@hypit/runtime";
-import type { RuntimeHostCapabilityProvider } from "@hypit/runtime-host-node";
+import type { RuntimeHostCapabilityProvider, RuntimeHostProviderQuery } from "@hypit/runtime-host-node";
 import { sealSpeechEvidenceAudio } from "@hypit/speech";
 import { speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { AlignedTranscriptEvidence } from "@hypit/speech-evidence";
-import { sealText, textTypes } from "@hypit/text";
+import { sealText } from "@hypit/text";
 import { whisperXCapabilities, whisperXRequestForEvidenceAudio } from "@hypit/whisperx";
 import type { WhisperXLanguage } from "@hypit/whisperx";
 
@@ -43,7 +43,7 @@ export type CreationCommand = typeof creationCommands[number];
 
 /** The slice of the Runtime host these commands use; tests hand in a fake. */
 export type CreationHost = {
-  providers(capabilities: readonly CapabilityRef[]): Promise<readonly RuntimeHostCapabilityProvider[]>;
+  providers(requests: readonly RuntimeHostProviderQuery[]): Promise<readonly RuntimeHostCapabilityProvider[]>;
   invoke(need: Need, resources: ResourceStore): Promise<{ readonly value: StoredValue }>;
 };
 
@@ -166,9 +166,14 @@ function capabilityName(capability: CapabilityRef): string {
 }
 
 /** Which Endpoint will serve this call and where its Provider publishes prices, before spending. */
-async function selectedProvider(host: CreationHost, capability: CapabilityRef, profile: string): Promise<RuntimeHostCapabilityProvider> {
-  const [provider] = await host.providers([capability]);
-  const subject = capabilityName(capability);
+async function selectedProvider(host: CreationHost, need: Need, profile: string): Promise<RuntimeHostCapabilityProvider> {
+  const [provider] = await host.providers([{
+    request: need.id,
+    capability: need.capability,
+    returns: need.returns,
+    constraints: need.constraints,
+  }]);
+  const subject = capabilityName(need.capability);
   assert(provider !== undefined && provider.status !== "unresolved",
     `No Endpoint in ${profile} serves ${subject}; hypit plan --runtime ${profile} shows which Endpoint each capability needs`);
   assert(provider.status !== "ambiguous",
@@ -307,8 +312,6 @@ async function observe(argv: readonly string[], io: CliIo, environment: Creation
   const to = await destination(parsed, environment.cwd);
   const { profile, host } = await environment.openHost(parsed.options.get("--runtime"));
   const capability = geminiCapabilities[model];
-  const provider = await selectedProvider(host, capability, profile);
-  if (!parsed.json) io.write(`Observing with ${model} through ${providerLine(provider)}\n`);
   const resources = new MemoryResourceStore();
   const media: GeminiMediaPart[] = [];
   for (const item of parsed.positionals) {
@@ -318,14 +321,16 @@ async function observe(argv: readonly string[], io: CliIo, environment: Creation
   const need: Need = {
     id: "need:hypit-observe",
     capability,
-    returns: textTypes.text,
+    returns: geminiTypes.visualObservation,
     constraints: sealGeminiRequest({ instruction, prompt, media }) as unknown as CanonicalValue,
     result: "record:hypit-observe",
   };
+  const provider = await selectedProvider(host, need, profile);
+  if (!parsed.json) io.write(`Observing with ${model} through ${providerLine(provider)}\n`);
   const fulfillment = await host.invoke(need, resources);
   assert(fulfillment.value.kind === "inline", "the observation came back by reference");
-  const text = (fulfillment.value.value as { readonly value?: unknown } | null)?.value;
-  assert(typeof text === "string", "the observation is not Text");
+  verifyVisualObservation(fulfillment.value.value);
+  const text = (fulfillment.value.value as unknown as VisualObservation).text;
   await writeNew(to, `${text}\n`);
   const view = {
     format: "hypit.video-cli-observe@1",
@@ -376,8 +381,6 @@ async function transcribe(argv: readonly string[], io: CliIo, environment: Creat
   assert(language === "en" || language === "zh" || language === "es", "--language must be en, zh or es");
   const to = await destination(parsed, environment.cwd);
   const { profile, host } = await environment.openHost(parsed.options.get("--runtime"));
-  const provider = await selectedProvider(host, whisperXCapabilities.alignment, profile);
-  if (!parsed.json) io.write(`Transcribing through ${providerLine(provider)}\n`);
   const evidence = await speechEvidenceBytes(source);
   const resources = new MemoryResourceStore();
   const artifact = await resources.put(evidence.bytes, "audio/wav");
@@ -389,6 +392,8 @@ async function transcribe(argv: readonly string[], io: CliIo, environment: Creat
     constraints: whisperXRequestForEvidenceAudio(audio, { language: language as WhisperXLanguage }),
     result: "record:hypit-transcribe",
   };
+  const provider = await selectedProvider(host, need, profile);
+  if (!parsed.json) io.write(`Transcribing through ${providerLine(provider)}\n`);
   const fulfillment = await host.invoke(need, resources);
   assert(fulfillment.value.kind === "inline", "the transcript came back by reference");
   const passages = passagesInSeconds(fulfillment.value.value as unknown as AlignedTranscriptEvidence);
@@ -428,8 +433,6 @@ async function speak(argv: readonly string[], io: CliIo, environment: CreationEn
   const endpoint = mimoTtsEndpoints.voiceDesign;
   assert(endpoint !== undefined, "@hypit/mimo-tts declares no voice-design endpoint");
   const { profile, host } = await environment.openHost(parsed.options.get("--runtime"));
-  const provider = await selectedProvider(host, endpoint.capability, profile);
-  if (!parsed.json) io.write(`Speaking with ${endpoint.ports.model} through ${providerLine(provider)}\n`);
   const resources = new MemoryResourceStore();
   const need: Need = {
     id: "need:hypit-speak",
@@ -438,6 +441,8 @@ async function speak(argv: readonly string[], io: CliIo, environment: CreationEn
     constraints: sealMimoTtsRequest("mimo-v2.5-tts-voicedesign", { text: [text], voiceDescription: [voice] }) as unknown as CanonicalValue,
     result: "record:hypit-speak",
   };
+  const provider = await selectedProvider(host, need, profile);
+  if (!parsed.json) io.write(`Speaking with ${endpoint.ports.model} through ${providerLine(provider)}\n`);
   const fulfillment = await host.invoke(need, resources);
   assert(fulfillment.value.kind === "inline", "the speech came back by reference");
   verifyGeneratedAudioSet(fulfillment.value.value);
