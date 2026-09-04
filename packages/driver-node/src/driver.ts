@@ -65,7 +65,6 @@ type Executable =
       readonly command: FulfillNeedCommand;
       readonly endpointId: string;
       readonly resources: readonly import("@hypit/runtime").RuntimeResourceClaim[];
-      readonly queue?: import("@hypit/runtime").RuntimeQueueLane;
       readonly registration: EndpointRegistration;
     };
 
@@ -214,7 +213,6 @@ export class NodeDriver {
           id: `endpoint:${registration.id}`,
           limit: 1,
         }],
-        ...(registration.scheduling?.queue === undefined ? {} : { queue: registration.scheduling.queue }),
         registration,
       },
     };
@@ -294,13 +292,10 @@ export class NodeDriver {
     if (executable.registration.kind !== "asynchronous") throw new Error("Endpoint is not asynchronous");
     const operations = this.operations;
     if (operations === undefined) throw new Error("asynchronous Endpoint requires OperationStore");
-    if (executable.queue === undefined) throw new Error("asynchronous Endpoint has no Provider pool/lane");
     const base = {
       build: context.build,
       command: executable.command.id,
       endpoint: executable.endpointId,
-      pool: executable.queue.pool,
-      lane: executable.queue.lane,
     } as const;
     const history = await operations.list({
       build: base.build,
@@ -481,7 +476,6 @@ export class NodeDriver {
       runnable: classifications.flatMap(({ executable }) => executable === undefined ? [] : [{
         command: executable.command,
         resources: executable.resources,
-        ...(("queue" in executable && executable.queue !== undefined) ? { queue: executable.queue } : {}),
         capacityMode: "endpointId" in executable && executable.registration.kind === "asynchronous"
           ? "asynchronous"
           : "active",

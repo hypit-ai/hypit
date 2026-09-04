@@ -44,7 +44,6 @@ Declarative activation names an ordinary CredentialRef, not an environment-speci
 ```json
 "kie.personal": {
   "use": "@hypit/provider-kie",
-  "pool": "generation",
   "config": {
     "apiKey": { "store": "os", "key": "kie.api-key" },
     "defaultConcurrency": 8,
@@ -75,11 +74,13 @@ const kie = createKieProvider({
 });
 ```
 
-`defaultConcurrency` is the total KIE pool capacity shared by all Builds. Each optional
-`laneConcurrency` entry limits one exact KIE model lane inside that total. There is no cross-Provider
-`seedance` family queue: another Provider owns another pool and its own independently named
-lanes. A task acquires its pool and lane capacity together, so it is queued once rather than
-copied between parent and child queues.
+`defaultConcurrency` is the total capacity of this configured KIE Endpoint across all Builds. Each
+optional `laneConcurrency` entry narrows the capacity of one exact KIE model inside that total. By
+default the Endpoint instance is the shared-resource identity. Set Profile `pool` only when multiple
+Endpoint instances really use the same account or deployment quota. Another Provider is independent
+unless the Profile explicitly gives it that same real-resource identity.
+One task acquires its total and model-specific capacity claims atomically. These are shared-resource
+limits, not parent and child queues.
 
 An advanced embedding adds `kie` to its Endpoint list beside a complete, explicit set of Runtime
 service packages and selections. The `.svml` Module Closure separately contains only the model
@@ -96,8 +97,8 @@ Manifests actually imported by the author document; installing KIE does not add 
 4. Successful result URLs are converted to short-lived download URLs, bounded while streaming,
    immediately written into that Build's working byte area, and removed from durable
    result metadata.
-5. The selected Runtime Execution Store owns shared Build capacity. This Provider contributes one KIE
-   pool plus exact capability lanes and a conservative create-task interval; it does not introduce Redis or another source of
+5. The selected Runtime Execution Store owns shared capacity across Builds. This Provider contributes
+   one KIE-total claim plus narrower exact-capability claims and a conservative create-task interval; it does not introduce Redis or another source of
    Build truth.
 
 The automated suite uses an adversarial fake KIE service. It covers submission ambiguity,

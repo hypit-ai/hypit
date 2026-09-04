@@ -13,4 +13,4 @@ Adapter's declared configuration, `programs up` installs it only when the machin
 healthy environment; the Endpoint, program probe and doctor all resolve the shared `.venv`
 interpreter. An explicit `pythonExecutable` selects an operator-managed compatible environment and
 suppresses the managed installation. The Endpoint call and
-inner image work share the configured pool/lane resources; no separate queue is hidden in this package.
+inner image work share the configured capacity resources; no separate scheduler is hidden in this package.

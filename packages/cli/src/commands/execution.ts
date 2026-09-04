@@ -5,7 +5,7 @@ import type { CliCommand, ExecutionCommand } from "../command.js";
 import { activityObservationKey, buildProgressLines, observeBuildView } from "../observation.js";
 import type { CliIo } from "../output.js";
 import type { CliRuntimeController } from "../runtime-port.js";
-import { formatOperationProgress, queueLaneLines, summarizeQueueLanes } from "../runtime-view.js";
+import { formatOperationProgress } from "../runtime-view.js";
 import { buildStatusView } from "../view.js";
 import type { OperationalWriter } from "./types.js";
 
@@ -102,7 +102,6 @@ export async function runExecutionCommand(input: {
             ...(status.attention === undefined ? {} : { attention: status.attention }),
           };
         });
-        const lanes = args.presentation.verbose ? summarizeQueueLanes(activity.capacity).slice(0, args.limit) : undefined;
         const currentView = activityObservationKey(worker.state, activity.builds);
         if (args.watch && currentView === previous) return;
         previous = currentView;
@@ -113,7 +112,6 @@ export async function runExecutionCommand(input: {
           builds,
           ...(activity.builds.length <= args.limit ? {} : { omittedBuilds: activity.builds.length - args.limit }),
           activeRequests: activity.capacity.length,
-          ...(lanes === undefined ? {} : { lanes }),
         };
         const buildLines = activity.builds.slice(0, args.limit).map((item) => {
           const requestProgress = item.requests === undefined || item.requests.total === 0
@@ -139,7 +137,6 @@ export async function runExecutionCommand(input: {
         ], [
           ...buildLines,
           ...(operationLines.length === 0 ? [] : ["Operations:", ...operationLines]),
-          ...(args.presentation.verbose ? queueLaneLines(lanes ?? []) : []),
         ]);
       };
       if (!args.watch) await writeActivity();

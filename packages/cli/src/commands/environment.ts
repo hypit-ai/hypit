@@ -11,7 +11,6 @@ import { writeCliOutput } from "../output.js";
 import type { CliIo } from "../output.js";
 import { hypitHostStateRoot, hypitProjectStateRoot } from "../paths.js";
 import type { CliRuntimeController } from "../runtime-port.js";
-import { queueLaneLines, summarizeQueueLanes } from "../runtime-view.js";
 import type { OperationalWriter } from "./types.js";
 
 export function isEnvironmentCommand(args: CliCommand): args is EnvironmentCommand {
@@ -258,7 +257,6 @@ export async function runEnvironmentCommand(input: {
           item.activity === "ready" || item.activity === "running" || item.activity === "waiting").length],
         ["savingResult", activity.builds.filter((item) => item.activity === "saving-result").length],
       ]);
-      const lanes = summarizeQueueLanes(activity.capacity);
       const ready = worker.state === "running"
         && external.programs.every((item) => item.state.state === "ready");
       const active = activity.builds.length;
@@ -280,7 +278,6 @@ export async function runEnvironmentCommand(input: {
         },
         capacity: {
           active: activity.capacity.length,
-          ...(args.presentation.verbose ? { lanes: lanes.slice(0, args.limit) } : {}),
         },
       };
       write(machine, attention
@@ -298,7 +295,6 @@ export async function runEnvironmentCommand(input: {
         ] : []),
       ], [
         ...unavailable.slice(0, args.limit).map((item) => `${item.id}: ${item.state.state}`),
-        ...(args.presentation.verbose ? queueLaneLines(lanes.slice(0, args.limit)) : []),
       ]);
     } finally {
       if (runtime !== undefined) await runtime.close();

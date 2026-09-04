@@ -9,10 +9,6 @@ export type CapacityReservation = {
   readonly build: string;
   readonly command: string;
   readonly resources: readonly CapacityResourceClaim[];
-  readonly queue?: {
-    readonly pool: string;
-    readonly lane: string;
-  };
   readonly createdAt: number;
 };
 
@@ -20,7 +16,6 @@ export type CapacityAcquireRequest = {
   readonly build: string;
   readonly command: string;
   readonly resources: readonly CapacityResourceClaim[];
-  readonly queue?: CapacityReservation["queue"];
   readonly now: number;
 };
 

@@ -12,7 +12,6 @@
   "endpoints": {
     "kie.default": {
       "use": "@hypit/provider-kie",
-      "pool": "generation",
       "config": {
         "apiKey": {
           "store": "env",
@@ -23,21 +22,18 @@
     },
     "media.local": {
       "use": "@hypit/provider-media-local",
-      "pool": "media",
       "config": {
         "defaultConcurrency": 2
       }
     },
     "whisperx.local": {
       "use": "@hypit/provider-whisperx-local",
-      "pool": "alignment",
       "config": {
         "defaultConcurrency": 1
       }
     },
     "hyperframes.local": {
       "use": "@hypit/provider-hyperframes-local",
-      "pool": "render",
       "config": {
         "workers": 2,
         "quality": "standard",

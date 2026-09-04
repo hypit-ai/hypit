@@ -48,8 +48,6 @@ function memoryOperations(): OperationStore {
         build: current.build,
         command: current.command,
         endpoint: current.endpoint,
-        pool: current.pool,
-        lane: current.lane,
         ...structuredClone(update),
       } as OperationSnapshot;
       values.set(id, next);
@@ -193,7 +191,6 @@ function asyncExecutor(
     endpoint,
     {
       scheduling: {
-        queue: { pool: "fixture.account", lane: "generation" },
         resources: [
           { id: "pool:fixture.account", limit: 1 },
           { id: "lane:fixture.account/generation", limit: 1 },

@@ -47,10 +47,6 @@ function verifyScheduling(scheduling: EndpointScheduling | undefined): void {
     return resource.id;
   });
   if (new Set(ids).size !== ids.length) throw new Error("scheduling resources contain duplicate ids");
-  if (scheduling.queue !== undefined
-    && (scheduling.queue.pool.trim().length === 0 || scheduling.queue.lane.trim().length === 0)) {
-    throw new Error("scheduling queue pool and lane must not be empty");
-  }
 }
 
 export function producerRegistryKey(ref: ProducerRef): string {

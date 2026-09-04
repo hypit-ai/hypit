@@ -9,7 +9,7 @@ content identity or hidden output metadata.
 
 There are deliberately two concurrency controls:
 
-- `defaultConcurrency` limits whole render requests admitted by Runtime pool/lane resources.
+- `defaultConcurrency` limits whole render requests admitted by the Endpoint's Runtime capacity resource.
 - `workers` controls HyperFrames' parallel Chrome frame workers inside one admitted render.
 
 The Provider owns both controls because they are deployment policy, not author intent. It never
