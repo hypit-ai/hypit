@@ -54,6 +54,8 @@ async function serving(response: unknown, run: () => Promise<void>): Promise<voi
       }
       : url.includes("/models/")
         ? { name: "victor-upmeet/whisperx", endpoints: ["transcriptions"] }
+        : url.endsWith("/files/uploads")
+          ? { upload_mode: "api_multipart" }
         : url.endsWith("/files")
           ? { url: "https://hypit.ai/test-reference.wav" }
         : response;
