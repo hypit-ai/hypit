@@ -10,6 +10,9 @@ import {
 import {
   isStreamingArtifactStore,
 } from "@hypit/runtime";
+import { materializeBuild } from "@hypit/core";
+import { reduce } from "@hypit/core";
+import type { Need } from "@hypit/protocol";
 import { TypeValidatorRegistry } from "@hypit/validation";
 
 import { createLocalRuntimeArchiveControl, createLocalRuntimeArtifactAccess } from "./control.js";
@@ -18,10 +21,15 @@ import { createDurableLocalWorker } from "./worker.js";
 import type {
   CreateLocalRuntimeOptions,
   LocalBuildOptions,
+  LocalBuildQuote,
   LocalBuildRequest,
   LocalBuildSubmission,
   LocalRuntime,
 } from "./types.js";
+
+type PricingEndpoint = import("@hypit/endpoint-kit").EndpointPackage & {
+  quoteMany?: (needs: readonly Need[], credentials: import("@hypit/runtime").CredentialStore) => Promise<LocalBuildQuote>;
+};
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -111,6 +119,58 @@ export async function createLocalRuntime(
   const artifacts = createLocalRuntimeArtifactAccess({
     artifactStore: options.artifactStore,
   });
+  const quoteBuild = async (request: LocalBuildRequest): Promise<LocalBuildQuote> => {
+    await installComponentPackages(request.componentPackages ?? []);
+    const dryDriver = new NodeDriver({
+      producers,
+      endpoints: new EndpointRegistry(),
+      artifacts: options.artifactStore,
+      credentials: options.credentialStore,
+      validators,
+    });
+    let state = materializeBuild(request.definition, []);
+    while (true) {
+      if (state.outstanding.length > 0) state = { ...state, outstanding: [] };
+      const prepared = dryDriver.prepare(state);
+      const producer = prepared.runnable.find((item) => item.command.kind === "invoke-producer");
+      if (producer === undefined) {
+        state = prepared.state;
+        break;
+      }
+      const execution = await dryDriver.executeCommand(prepared.state, producer, { build: "quote" });
+      if (execution.status !== "completed") throw new Error("Build quote expansion reached a non-local operation");
+      state = reduce(prepared.state, execution.event);
+    }
+    if (state.status === "failed") {
+      throw new Error(state.diagnostics.at(-1)?.message ?? "Build quote expansion failed");
+    }
+    if (state.steps.some((step) => step.status === "pending")) {
+      throw new Error("Build quote is not fully determined before a paid result");
+    }
+    const grouped = new Map<PricingEndpoint, Need[]>();
+    for (const need of state.needs) {
+      const endpoint = (options.endpoints ?? []).find((item) => item.offers.some((offer) =>
+        offer.capability.module.name === need.capability.module.name
+        && offer.capability.module.version === need.capability.module.version
+        && offer.capability.name === need.capability.name
+        && offer.returns.module.name === need.returns.module.name
+        && offer.returns.module.version === need.returns.module.version
+        && offer.returns.name === need.returns.name)) as PricingEndpoint | undefined;
+      if (endpoint === undefined || endpoint.quoteMany === undefined) {
+        throw new Error(`No pricing service is available for ${need.capability.name}`);
+      }
+      grouped.set(endpoint, [...grouped.get(endpoint) ?? [], need]);
+    }
+    const quotes = await Promise.all([...grouped.entries()].map(([endpoint, needs]) =>
+      endpoint.quoteMany!(needs, options.credentialStore)));
+    return {
+      format: "hypit.build-quote@1",
+      status: "complete",
+      totalCredits: quotes.reduce((total, quote) => total + quote.totalCredits, 0),
+      totalUsd: quotes.reduce((total, quote) => total + quote.totalUsd, 0),
+      items: quotes.flatMap((quote) => quote.items),
+    };
+  };
   const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
     for (const item of request.attachments ?? []) {
       if (await options.artifactStore.has(item.artifact.digest)) continue;
@@ -190,6 +250,7 @@ export async function createLocalRuntime(
     ...archive,
     ...artifacts,
     ...credentialControl,
+    quoteBuild,
     build: runBuild,
     async workOnce() {
       return await worker.runOnce();

@@ -23,6 +23,19 @@ export type RuntimeHostBuildSubmission = {
   readonly dispatch: BuildDispatchSnapshot;
 };
 
+export type RuntimeBuildQuote = {
+  readonly format: "hypit.build-quote@1";
+  readonly status: "complete";
+  readonly totalCredits: number;
+  readonly totalUsd: number;
+  readonly items: readonly {
+    readonly request: string;
+    readonly model: string;
+    readonly estimatedCredits: number;
+    readonly estimatedUsd: number;
+  }[];
+};
+
 export type RuntimeHostStatus = {
   readonly build: BuildSnapshot | undefined;
   readonly catalog: BuildCatalogEntry | undefined;
@@ -73,6 +86,10 @@ export type RuntimeHostCredentialControl = {
 };
 
 export type RuntimeHostExecution = RuntimeHostArchive & RuntimeHostArtifactAccess & RuntimeHostCredentialControl & {
+  quoteBuild(request: {
+    readonly definition: BuildDefinition;
+    readonly componentPackages?: readonly string[];
+  }): Promise<RuntimeBuildQuote>;
   build(request: {
     readonly id: string;
     readonly definition: BuildDefinition;

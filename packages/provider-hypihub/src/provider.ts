@@ -14,6 +14,7 @@ import { createHypiHubGeminiGenerator } from "./gemini.js";
 import { hypiHubRouteForCapability, hypiHubRoutes } from "./routes.js";
 import { HypiHubUploader } from "./upload.js";
 import { transcribeWithHypiHub, whisperXAlignmentRequest } from "./whisperx.js";
+import { createHypiHubPricingClient } from "./pricing.js";
 
 export const hypiHubProviderModuleRef = { name: "@hypit/provider-hypihub", version: "1" } as const;
 
@@ -293,9 +294,10 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       throw new Error(guidedMessage(error), { cause: error });
     }
   };
-  return defineEndpointPackage({
+  const apiKey = options.apiKey ?? credentialRef("os", "hypihub.oauth");
+  const endpointPackage = defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
-    credentials: { apiKey: options.apiKey ?? credentialRef("os", "hypihub.oauth") }, credentialInputs: { apiKey: { label: "HypiHub login" } }, defaultConcurrency: options.defaultConcurrency ?? 3,
+    credentials: { apiKey }, credentialInputs: { apiKey: { label: "HypiHub login" } }, defaultConcurrency: options.defaultConcurrency ?? 3,
     capabilities: [
       ...hypiHubRoutes
       .filter((route) => options.audio !== false || route.media !== "audio")
@@ -318,4 +320,5 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       },
     ],
   });
+  return Object.assign(endpointPackage, createHypiHubPricingClient({ client, apiKey }));
 }

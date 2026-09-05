@@ -31,6 +31,27 @@ After the route-specific final check passes, but before submitting any paid Buil
    intended result are acceptable for paid generation.
 5. Do not submit `hypit build` until the author explicitly accepts and confirms the cost.
 
+Before asking for that confirmation, when the author asks how many credits or how much money the Build
+will use, obtain one complete quote for the exact Run and Runtime Profile:
+
+```bash
+hypit quote <run-source> --runtime <profile>
+```
+
+The Agent calls this one high-level command. It must not call HypiHub `/v1/pricing/quote` itself for
+each request, ask the author to calculate individual requests, or estimate from a prompt. The Runtime
+compiles the Run, expands deterministic local Producers in memory, collects every resulting paid Need,
+and the selected HypiHub Provider submits the corresponding pricing requests and aggregates the total
+credits, USD amount and per-request details. Seedance reference-video requests are quoted with the
+`reference_video` pricing flag automatically.
+
+`hypit quote` is read-only with respect to Build execution: it does not submit a Build, create durable
+Build/Dispatch/Operation state, start a Worker, or consume generated media. Use its returned total as
+the amount presented to the author, together with the selected Provider and credential source, then ask
+for confirmation before running `hypit build`. If the quote cannot be completed because a required
+pricing service or credential is unavailable, report that the cost is unknown and do not submit the
+paid Build.
+
 If the author does not accept, do not Build. Capture the requested change and enter `revision/route.md`.
 Revision edits Source/Recipe/Run and reruns deterministic gates; it does not ask an agent or VLM to
 judge the picture.

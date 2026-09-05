@@ -14,6 +14,7 @@ import type {
   RuntimeHostArchive,
   RuntimeHostArtifactAccess,
   RuntimeHostBuildSubmission,
+  RuntimeBuildQuote,
   RuntimeHostCredentialControl,
   RuntimeHostExecution,
 } from "@hypit/runtime-host-node";
@@ -57,6 +58,7 @@ export type CreateLocalCredentialControlOptions = {
 export type LocalBuildRequest = Parameters<RuntimeHostExecution["build"]>[0];
 export type LocalBuildOptions = Parameters<RuntimeHostExecution["build"]>[1];
 export type LocalBuildSubmission = RuntimeHostBuildSubmission;
+export type LocalBuildQuote = RuntimeBuildQuote;
 
 export type LocalRuntime = RuntimeHostExecution & {
   workOnce(): Promise<BuildDispatchSnapshot | undefined>;
