@@ -81,7 +81,7 @@ export function createMyServiceProvider(options: {
 - `packages/provider-hyperframes-local/` — 本地 Chrome 渲染
 - `packages/provider-hyperframes-aws-lambda/` — 异步 Step Functions/Lambda 渲染
 - `packages/provider-media-aws-lambda/` — 通过共享 ffmpeg 执行体完成同步 Lambda 媒体操作
-- `packages/provider-xiaomi-mimo/` — 不依赖 MiMo 模型包的官方即时 VoiceDesign API
+- `packages/provider-xiaomi-mimo/` — 不依赖 MiMo 模型包的官方即时音色设计与音色克隆 API
 
 ## 4. 编写 activation 描述符
 
@@ -220,4 +220,4 @@ hypit doctor hypit.runtime.json
 | `provider-hyperframes-aws-lambda` | 远程异步任务：按 Operation 自行暂存、Step Functions 轮询与结果流式回收 |
 | `provider-image-opencv-local` | 本地 Python：有界的 OpenCV/NumPy，配合锁定的 Python 环境 |
 | `provider-media-aws-lambda` | 远程同步 Lambda：与本地媒体相同的九项能力 |
-| `provider-xiaomi-mimo` | 远程即时 API：把精确 MiMo VoiceDesign 请求落成持久化音频 Artifact |
+| `provider-xiaomi-mimo` | 远程即时 API：把精确 MiMo 音色设计与音色克隆请求落成持久化音频 Resource |

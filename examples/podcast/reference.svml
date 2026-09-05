@@ -3,7 +3,7 @@
 <svml>
   <import from="@hypit/script@1"/>
   <import as="asset" from="@hypit/media@1"/>
-  <import as="mimo" from="@hypit/mimo-tts@1"/>
+  <import as="mimo" from="@hypit/mimo-speech@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
@@ -163,7 +163,7 @@
     prompt={opening-take-prompt} duration="4"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={split.image}/>
-    <seedance:Reference audio={guy-voice.audio}/>
+    <seedance:Reference audio={guy-voice.reference}/>
   </seedance:ReferenceVideo>
 
   <seedance:ReferenceVideo id="daily-creatine-take" model="mini"
@@ -171,8 +171,8 @@
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={girl-hold.image}/>
     <seedance:Reference image={guy.image}/>
-    <seedance:Reference audio={girl-voice.audio}/>
-    <seedance:Reference audio={guy-voice.audio}/>
+    <seedance:Reference audio={girl-voice.reference}/>
+    <seedance:Reference audio={guy-voice.reference}/>
   </seedance:ReferenceVideo>
 
   <seedance:ReferenceVideo id="arms-are-asking-take" model="mini"
@@ -180,8 +180,8 @@
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={girl-hold.image}/>
     <seedance:Reference image={guy-hold.image}/>
-    <seedance:Reference audio={girl-voice.audio}/>
-    <seedance:Reference audio={guy-voice.audio}/>
+    <seedance:Reference audio={girl-voice.reference}/>
+    <seedance:Reference audio={guy-voice.reference}/>
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="720" height="1280"/>

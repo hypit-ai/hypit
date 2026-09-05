@@ -58,14 +58,27 @@ declares HypiHub's public pricing page, `https://hypit.ai/commercial/pricing/`, 
 `hypit plan --runtime <profile>` prints it beside each request this Endpoint would serve. Per-model
 credit costs are never copied into Hypit.
 
-HypiHub declares MiMo VoiceDesign together with every other capability it serves; it never hides
-one. When another selected Endpoint offers the same capability (a local WhisperX, a Vertex Gemini,
-the official MiMo Provider), the Runtime Profile's `bindings` say which Endpoint serves it. Hypit does
-not expose MiMo preset-voice or voice-cloning models.
+HypiHub declares MiMo Voice Design and Voice Clone together with every other capability it serves; it
+never hides one. Voice Design produces an accepted voice-reference Resource, and Voice Clone uses
+that reference to produce independent speech. Hypit does not expose MiMo preset voices. When another
+selected Endpoint offers the same capability (a local WhisperX, a Vertex Gemini, or the official MiMo
+Provider), the Runtime Profile's `bindings` say which Endpoint serves it.
 
 Execution policy remains local to this Provider. A profile may set `requestTimeoutMs`,
 `operationTimeoutMs`, `uploadPartTimeoutMs`, `uploadPartAttempts`, `downloadAttempts`,
 `geminiRateLimitAttempts` and `geminiRateLimitRetryDelayMs`; defaults are respectively 300 seconds,
 20 minutes, 5 minutes, 3 attempts, 3 attempts, 4 attempts and 2 seconds. `defaultConcurrency`
-controls this Endpoint's shared Runtime capacity. Multipart concurrency is different: HypiHub
+controls the total shared capacity of this Profile's HypiHub pool. Optional `capabilityConcurrency`
+sets narrower group limits, for example `{ "seedance-2-mini": 2, "gemini": 3, "transcription": 1 }`.
+Image/video/speech groups use the exact capability name; all Gemini capabilities share `gemini`, and
+WhisperX uses `transcription`. These limits coordinate this Runtime's requests; HypiHub remains
+responsible for service-wide account limits. Immediate speech/Gemini/transcription slots cover the
+active HTTP invocation, while asynchronous image/video slots remain held until the remote job ends.
+
+For asynchronous jobs, a polling error retains the same job and its capacity. An operation deadline
+records failure but continues observing remote termination without downloading the output. Unknown
+submission acknowledgements are never automatically resubmitted. Runtime bindings never switch from
+a user's own Provider to HypiHub after a key, quota or transport failure.
+
+Multipart concurrency is different: HypiHub
 selects it for one upload session, and it does not create a Build queue or a second Runtime pool.

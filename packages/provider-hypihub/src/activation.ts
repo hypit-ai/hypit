@@ -18,6 +18,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
       "baseUrl",
       "apiKey",
       "defaultConcurrency",
+      "capabilityConcurrency",
       "pollIntervalMs",
       "requestTimeoutMs",
       "operationTimeoutMs",
@@ -47,12 +48,17 @@ const adapter = createRuntimeEndpointAdapterFacet({
     const geminiRateLimitAttempts = runtimeConfigPositiveInteger(config.geminiRateLimitAttempts, "HypiHub geminiRateLimitAttempts");
     const geminiRateLimitRetryDelayMs = runtimeConfigPositiveInteger(config.geminiRateLimitRetryDelayMs, "HypiHub geminiRateLimitRetryDelayMs");
     const transcriptionModel = runtimeConfigString(config.transcriptionModel, "HypiHub transcriptionModel");
+    const capabilityConcurrency = config.capabilityConcurrency === undefined ? undefined : Object.fromEntries(
+      Object.entries(runtimeConfigObject(config.capabilityConcurrency, "HypiHub capabilityConcurrency"))
+        .map(([name, value]) => [name, runtimeConfigPositiveInteger(value, `HypiHub ${name} capacity`)!]),
+    );
     const options = {
         instance: context.instance,
         pool: context.pool,
         ...(baseUrl === undefined ? {} : { baseUrl }),
         apiKey,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
+        ...(capabilityConcurrency === undefined ? {} : { capabilityConcurrency }),
         ...(pollIntervalMs === undefined ? {} : { pollIntervalMs }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
         ...(operationTimeoutMs === undefined ? {} : { operationTimeoutMs }),
