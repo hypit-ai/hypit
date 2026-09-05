@@ -6,6 +6,7 @@ import type {
   CoreCommand,
   CompiledGraph,
   CommandResult,
+  CommandId,
   FulfillNeedCommand,
   InvokeProducerCommand,
   LinkedProgram,
@@ -23,6 +24,16 @@ import { planBuild, producerStep, verifyBuildPlan } from "./plan.js";
 
 function commandId(kind: "producer" | "need", subject: string): string {
   return `${kind}:${subject}`;
+}
+
+function needCommand(need: Need): FulfillNeedCommand {
+  return { kind: "fulfill-need", id: commandId("need", need.id), need };
+}
+
+/** Resolve an issued Need's Command even after the Build has stopped scheduling work. */
+export function resolveNeedCommand(state: BuildState, id: CommandId): FulfillNeedCommand | undefined {
+  const need = state.needs.find((item) => needCommand(item).id === id);
+  return need === undefined ? undefined : needCommand(need);
 }
 
 function withoutCommand(state: BuildState, id: string): readonly CoreCommand[] {
@@ -198,9 +209,9 @@ function schedule(state: BuildState): BuildState {
   const commands: CoreCommand[] = [...state.outstanding];
   for (const need of state.needs) {
     if (records.has(need.result)) continue;
-    const id = commandId("need", need.id);
-    if (issued.has(id)) continue;
-    commands.push({ kind: "fulfill-need", id, need });
+    const command = needCommand(need);
+    if (issued.has(command.id)) continue;
+    commands.push(command);
   }
 
   for (const stepState of state.steps) {

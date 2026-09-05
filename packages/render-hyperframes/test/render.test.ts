@@ -45,6 +45,7 @@ import {
   renderHyperframesCapabilities,
   renderHyperframesComponent,
   renderHyperframesFragment,
+  createRenderHyperframesFragment,
   renderHyperframesManifest,
   renderHyperframesMarkupSurfaces,
   renderHyperframesModuleRef,
@@ -332,7 +333,8 @@ function source(text: string): AuthorSourceUnit {
   };
 }
 
-test("the final rendered video is an ordinary BlobArtifact that can feed another author component", async () => {
+for (const selectedRange of [false, true]) {
+test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordinary BlobArtifact for downstream components`, async () => {
   const sourceClosure = createResolvedClosure([
     ...videoContractManifests,
     hyperframesManifest,
@@ -374,7 +376,7 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
       <import as="render" from="@hypit/render-hyperframes@1"/>
       <import as="media" from="@hypit/media-pipeline@1"/>
       <fixture:Composition/>
-      <render:Video id="final" composition={composition} semantic={semantic}/>
+      <render:Video id="final" composition={composition} semantic={semantic} ${selectedRange ? 'start-frame="15" end-frame-exclusive="45"' : ""}/>
       <media:ExtractFrame id="poster" source={final.video} video="primary-moving" at="last"/>
     </svml>`),
     closure: sourceClosure,
@@ -392,12 +394,37 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
   assert.deepEqual(state.plan.steps.map((step) => step.producer.name).sort(), [
     "project-program-space",
     hyperframesProducers.compile.name,
-    renderHyperframesProducers.requestVisual.name,
+    selectedRange ? renderHyperframesProducers.requestVisualRange.name : renderHyperframesProducers.requestVisual.name,
     mediaPipelineProducers.planAudio.name,
-    mediaPipelineProducers.renderAudio.name,
+    selectedRange ? mediaPipelineProducers.renderAudioRange.name : mediaPipelineProducers.renderAudio.name,
     mediaPipelineProducers.mux.name,
     mediaPipelineProducers.projectMuxed.name,
     mediaPipelineProducers.inspect.name,
     mediaPipelineProducers.extractFrame.name,
   ].sort());
+});
+}
+
+
+test("selected render frames reach both visual and audio Needs through the ordinary Build graph", async () => {
+  const range = { startFrame: 15, endFrameExclusive: 45 };
+  const rangeRecord = await admitRecord(closure, sealRecord({ id: "selection", type: mediaTypes.frameRange,
+    value: stored(range) }), validatorRegistry());
+  const program = link(closure, [compositionRecord, semanticRecord, rangeRecord]);
+  const fragment = createRenderHyperframesFragment(true);
+  const selected = elaborateGraphFragment(program, fragment, {
+    id: "selected", fragment: fragment.id, inputs: {
+      composition: { kind: "record", id: compositionRecord.id },
+      semantic: { kind: "record", id: semanticRecord.id },
+      range: { kind: "record", id: rangeRecord.id },
+    },
+  });
+  const selectedGraph = sealCompiledGraph(bindAuthorFragment(selected, { video: "selected.video" }));
+  const result = await new NodeDriver({ producers: producerRegistry(), validators: validatorRegistry() }).run(
+    start(program, selectedGraph, sealBuildRequest({ targets: [{ output: "selected.video" }] })),
+  );
+  assert.equal(result.state.needs.length, 2);
+  for (const need of result.state.needs) assert.deepEqual((need.constraints as { range: unknown }).range, range);
+  assert.throws(() => hyperframesVisualRequest(compileHyperframesDocument(composition, space),
+    { range: { startFrame: 0, endFrameExclusive: 61 } }), /frame range/);
 });

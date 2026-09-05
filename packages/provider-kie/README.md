@@ -84,8 +84,13 @@ optional `capabilityConcurrency` entry narrows the capacity of one exact KIE mod
 default the Endpoint instance is the shared-resource identity. Set Profile `pool` only when multiple
 Endpoint instances really use the same account or deployment quota. Another Provider is independent
 unless the Profile explicitly gives it that same real-resource identity.
-One task acquires its total and model-specific capacity claims atomically. These are shared-resource
+One Need execution acquires its total and model-specific capacity claims atomically. These are shared-resource
 limits, not parent and child queues.
+
+`submissionIntervalMs` spaces submissions within one Provider instance. It is a frequency limit,
+not a concurrency slot, and is not shared across separate instances by the `pool` setting.
+Polling errors retain the task and its capacity. A local operation deadline records failure and
+continues observing termination; unsupported cancellation cannot release a still-running task.
 
 An advanced embedding adds `kie` to its Endpoint list beside a complete, explicit set of Runtime
 service packages and selections. The `.svml` Module Closure separately contains only the model

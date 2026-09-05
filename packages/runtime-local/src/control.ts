@@ -49,7 +49,8 @@ function buildView(input: {
     ...(input.execution?.attention === undefined ? {} : {
       issue: { scope: input.execution.attention.step, message: input.execution.attention.error },
     }),
-    cancellationRequested: input.execution?.cancellation !== undefined,
+    cancellationRequested: input.execution?.stop?.cause === "user-cancelled",
+    ...(input.execution?.stop === undefined ? {} : { stop: input.execution.stop }),
     ...(input.catalog?.source === undefined ? {} : { source: input.catalog.source }),
     ...(input.catalog?.run === undefined ? {} : { run: input.catalog.run }),
     targets,
@@ -105,7 +106,8 @@ export function createLocalRuntimeControl(
     },
     async cancel(build, reason) {
       if (await options.executionStore.read(build) === undefined) return undefined;
-      await options.executionStore.requestCancellation(build, reason);
+      await options.executionStore.requestStop(build, { cause: "user-cancelled",
+        ...(reason === undefined ? {} : { reason }) });
       return await inspect(build);
     },
     close() {

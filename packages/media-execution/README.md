@@ -2,6 +2,12 @@
 
 Shared FFmpeg execution body for Hypit media Providers.
 
+Timeline-audio requests accept an optional `range: { startFrame, endFrameExclusive }` on the
+original programme clock. Only overlapping clips are read. Loop phase, tempo, gain and fades
+are evaluated in their original clip coordinates before trimming and rebasing the selected mix.
+The output remains 48 kHz stereo PCM. At rational frame rates, its sample count is rounded from
+the selected frame count; reconciling that zero-based clock can trim or pad one boundary sample.
+
 `@hypit/media-pipeline` owns provider-neutral Needs, plans and result contracts. This package
 owns the byte-level implementations of the eight current operations:
 

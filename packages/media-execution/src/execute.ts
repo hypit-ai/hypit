@@ -4,7 +4,7 @@ import { createReadStream } from "node:fs";
 import { mkdtemp, open, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mediaTypes, sealMediaInspection, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
+import { verifyMediaFrameRange, mediaFrameRangeSamples, mediaTypes, sealMediaInspection, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
 import type { MediaAudioStream, MediaInspection, MediaRational, MediaStream, MediaStreamSelection, MediaTimestamp, MediaVideoStream, MuxedMedia, RenderedVisual, SynchronizedMedia, TimelineAudio } from "@hypit/media";
 import type { ProgramSpace } from "@hypit/program-space";
 import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleBoundary, speechTypes } from "@hypit/speech";
@@ -503,6 +503,7 @@ function evidenceAudioNeed(value: CanonicalValue): ProjectSpeechEvidenceAudioNee
 function renderAudioNeed(value: CanonicalValue): RenderAudioNeed {
   const item = object(value, "RenderAudioNeed") as unknown as RenderAudioNeed;
   verifyAudioProgramPlan(item.plan);
+  if (item.range !== undefined) verifyMediaFrameRange(item.range, item.plan.frameCount);
   return item;
 }
 
@@ -534,9 +535,12 @@ function atempo(rate: number): string[] {
   return filters;
 }
 
-function audioClipFilter(clip: AudioProgramClip, inputIndex: number, outputIndex: number): string {
+function audioClipFilter(clip: AudioProgramClip, inputIndex: number, outputIndex: number,
+  window: { readonly startSample: number; readonly endSampleExclusive: number }): string {
   const length = clip.targetEndSampleExclusive - clip.targetStartSample;
   const sourceLength = clip.sourceEndSampleExclusive - clip.sourceStartSample;
+  const left = Math.max(window.startSample, clip.targetStartSample);
+  const right = Math.min(window.endSampleExclusive, clip.targetEndSampleExclusive);
   const filters = [
     `atrim=start_sample=${clip.sourceStartSample}:end_sample=${clip.sourceEndSampleExclusive}`,
     "asetpts=PTS-STARTPTS",
@@ -554,7 +558,10 @@ function audioClipFilter(clip: AudioProgramClip, inputIndex: number, outputIndex
     ...(clip.fadeOutSamples === 0 ? [] : [
       `afade=t=out:start_sample=${length - clip.fadeOutSamples}:nb_samples=${clip.fadeOutSamples}`,
     ]),
-    `adelay=${clip.targetStartSample}S:all=1`,
+    // Crop after tempo, looping and envelopes, keeping their original phase.
+    `atrim=start_sample=${left - clip.targetStartSample}:end_sample=${right - clip.targetStartSample}`,
+    "asetpts=N/SR/TB",
+    `adelay=${left - window.startSample}S:all=1`,
   ];
   return `[${inputIndex}:a:0]${filters.join(",")}[clip${outputIndex}]`;
 }
@@ -1145,10 +1152,15 @@ export async function executeRenderTimelineAudio(
 ): Promise<MediaOperationResult> {
   const need = renderAudioNeed(constraints);
   const plan: AudioProgramPlan = need.plan;
+  const window = need.range === undefined
+    ? { startSample: 0, endSampleExclusive: plan.sampleFrames, sampleFrames: plan.sampleFrames }
+    : mediaFrameRangeSamples(need.range, plan.frameRate);
+  const clips = plan.clips.filter((clip) => clip.targetStartSample < window.endSampleExclusive
+    && clip.targetEndSampleExclusive > window.startSample);
   const work = await mkdtemp(join(tmpdir(), "hypit-media-audio-"));
   try {
     const artifacts = new Map<string, { source: BlobRef; path: string; inputIndex: number; sampleFrames: number }>();
-    for (const clip of plan.clips) {
+    for (const clip of clips) {
       const existing = artifacts.get(clip.artifact.resource);
       if (existing !== undefined) {
         assert(existing.sampleFrames === clip.sourceSampleFrames,
@@ -1179,20 +1191,20 @@ export async function executeRenderTimelineAudio(
     const output = join(work, "program.wav");
     const argv = ["-y"];
     for (const item of artifacts.values()) argv.push("-i", item.path);
-    if (plan.clips.length === 0) {
+    if (clips.length === 0) {
       argv.push(
         "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
-        "-af", `atrim=start_sample=0:end_sample=${plan.sampleFrames},asetpts=N/SR/TB`,
+        "-af", `atrim=start_sample=0:end_sample=${window.sampleFrames},asetpts=N/SR/TB`,
       );
     } else {
-      const chains = plan.clips.map((clip, index) => {
+      const chains = clips.map((clip, index) => {
         const inputIndex = artifacts.get(clip.artifact.resource)!.inputIndex;
-        return audioClipFilter(clip, inputIndex, index);
+        return audioClipFilter(clip, inputIndex, index, window);
       });
-      const labels = plan.clips.map((_clip, index) => `[clip${index}]`).join("");
+      const labels = clips.map((_clip, index) => `[clip${index}]`).join("");
       chains.push(
-        `${labels}amix=inputs=${plan.clips.length}:duration=longest:dropout_transition=0:normalize=0,`
-        + `apad=whole_len=${plan.sampleFrames},atrim=start_sample=0:end_sample=${plan.sampleFrames},`
+        `${labels}amix=inputs=${clips.length}:duration=longest:dropout_transition=0:normalize=0,`
+        + `apad=whole_len=${window.sampleFrames},atrim=start_sample=0:end_sample=${window.sampleFrames},`
         + "asetpts=N/SR/TB[out]",
       );
       argv.push("-filter_complex", chains.join(";"), "-map", "[out]");
@@ -1214,11 +1226,11 @@ export async function executeRenderTimelineAudio(
       maxProbeOutputBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
-    assert(audio.decodedSampleFrames === plan.sampleFrames,
+    assert(audio.decodedSampleFrames === window.sampleFrames,
       "Rendered TimelineAudio sample count differs from its plan");
     const value: TimelineAudio = sealTimelineAudio({
       artifact,
-      sampleFrames: plan.sampleFrames,
+      sampleFrames: window.sampleFrames,
     });
     return inlineResult(canonicalize(value));
   } finally {

@@ -32,6 +32,23 @@ contract can feed the render Surface. Conversely, targeting Composition never de
 rendering exists only when the author declares and the Build targets the video output.
 
 `@hypit/provider-hyperframes-local` is the first concrete visual implementation. It stages the
-document's exact `BlobRef` dependencies, lets HyperFrames partition the finite frame domain across
+document's exact `BlobRef` dependencies, partitions the requested frame domain across
 configured Chrome workers, emits a silent MP4 and rejects output unless ffprobe proves one H.264
 stream with the declared canvas, rational frame rate and frame count.
+
+Select a contiguous interval using zero-based, half-open frame bounds:
+
+```xml
+<render:Video id="preview" composition={main.composition} semantic={speech.semantic}
+  start-frame="240" end-frame-exclusive="360"/>
+```
+
+At 30 fps this renders seconds 8–12, with 120 output frames. Write both bounds, or omit both to
+render the whole programme. The HTML and animation clock remain unchanged. Visual and audio Needs
+receive the same range; mux consumes their selected outputs. `workers` belongs in the local
+Provider's Runtime configuration.
+
+In TypeScript, `hyperframesVisualRequest(document, { range })` constructs the visual request;
+`createRenderHyperframesFragment(true)` accepts a `MediaFrameRange` input and connects it to visual
+and audio requests. The AWS Lambda Provider currently declines range requests. Selection limits
+final rendering work; it does not prune upstream generation dependencies.

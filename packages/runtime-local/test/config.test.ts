@@ -732,7 +732,7 @@ test("providers, doctor and invoke share one resolver: a contested capability is
   }
 });
 
-test("doctor reports two Endpoints that share a pool but size it differently", async () => {
+test("doctor reports inconsistent limits for shared pools and capacity resources", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-pools-"));
   const path = join(root, "hypit.runtime.json");
   await writeFile(path, JSON.stringify(profile({
@@ -759,6 +759,7 @@ test("doctor reports two Endpoints that share a pool but size it differently", a
             capability: { module: { name: "example.model", version: "1" }, name },
             returns,
             lifecycle: "immediate",
+            resources: [{ id: "capacity:generation/browsers", limit: concurrency }],
             handler: () => ({ value: { kind: "inline" as const, value: null } }),
           }],
         }),
@@ -766,9 +767,13 @@ test("doctor reports two Endpoints that share a pool but size it differently", a
     }));
   }
   try {
-    const conflict = (await preflightRuntimeConfig(path, { registry })).diagnostics.find((item) => item.code === "RUNTIME_POOL_CONFLICT");
-    assert.ok(conflict, "the shared pool is reported");
-    assert.match(conflict.message, /four, ten share pool:generation but size it 4 and 10/u);
+    const conflicts = (await preflightRuntimeConfig(path, { registry })).diagnostics.filter((item) => item.code === "RUNTIME_POOL_CONFLICT");
+    for (const resource of ["pool:generation", "capacity:generation/browsers"]) {
+      const conflict = conflicts.find((item) => item.subject === resource);
+      assert.ok(conflict, `the shared resource ${resource} is reported`);
+      assert.equal(conflict.message,
+        `four, ten share ${resource} but size it 4 and 10; use the same limit for this shared resource or different pools`);
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }

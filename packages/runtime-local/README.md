@@ -58,8 +58,25 @@ resources declared by their Commands constrain execution. An Endpoint instance o
 default. A Profile `pool` is only for instances that really share one account, deployment or compute
 quota; exact-model limits may narrow it further. Build identity is not a capacity resource and creates
 no second queue.
-Cancellation prevents new work and makes a best effort to cancel an external operation already submitted;
-completed output is never rolled back.
+Claims may carry `units` (default 1): one render Need can occupy one request slot and four browser
+slots at once. The same admission rule applies to total Provider capacity, exact models, and local
+compute resources. SQLite retains the weighted reservation across Worker turns and restarts. This
+coordinates Builds sharing this Runtime's Execution Store; it does not enforce a service's quotas
+across other machines. Request-frequency limits are a separate Provider policy.
+
+Runtime first persists a `stop` request for either user cancellation or execution failure. Its first
+cause and reason are retained; repeated cancellation cannot replace a recorded failure. The Worker
+resumes that stop after a restart without starting new Needs or storing control flags in Operation
+failure codes. It requests cancellation of already submitted Operations once.
+If cancellation is only accepted or unsupported, Runtime polls the same remote work until it ends,
+retaining its capacity and working Resources. A failed Build also settles unfinished Operations before
+writing its final Result and cleaning up. Completed output is never rolled back. An unknown submission
+acknowledgement remains visible as `submission-unknown`; it needs external confirmation, not an automatic
+retry, expiry or forced release.
+
+HypiHub can be the explicitly selected gateway for users without their own service keys. A bound
+Provider's authentication, quota or transport error never changes that selection. Separate Kie and
+HypiHub accounts use separate pools even when they implement the same model.
 
 Without `hypit.results.json`, the official video Distribution selects the filesystem adapter at the
 project's `.hypit/results` directory, with no cloud account or service. Runtime Local opens that default

@@ -11,3 +11,5 @@ export { compositableSurfaceSchema, fontArtifactSchema, fontStackSchema, mediaIn
 export { assertCompositableSurfaceRef, assertFontArtifactRef, assertFontStackRef } from "./render.js";
 export type * from "./render.js";
 export type * from "./types.js";
+export { verifyMediaFrameRange, mediaFrameRangeSamples } from "./frame-range.js";
+export type { MediaFrameRange } from "./frame-range.js";

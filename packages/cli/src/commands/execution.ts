@@ -119,7 +119,7 @@ export async function runExecutionCommand(input: {
             : ` · ${item.requests.completed}/${item.requests.total} steps`;
           return `${item.id}: ${buildStatusView({ id: item.id, runtime: item }).work.state}`
             + requestProgress
-            + `${item.cancellationRequested ? " · cancelling" : ""}`
+            + `${item.stop?.cause === "execution-failed" ? " · stopping after failure" : item.cancellationRequested ? " · cancelling" : ""}`
             + `${item.issue === undefined ? "" : ` · ${item.issue.message}`}`;
         });
         const activeOperations = activity.builds.flatMap((item) => item.operations)
@@ -303,15 +303,17 @@ export async function runExecutionCommand(input: {
       requested: active?.cancellationRequested === true,
       build,
     };
+    const alreadyStopping = active?.stop?.cause === "execution-failed";
     const title = active === undefined && finished === undefined
       ? "Build not found"
-      : active === undefined ? "Build already finished" : "Build cancellation requested";
+      : active === undefined ? "Build already finished"
+        : alreadyStopping ? "Build already stopping after failure" : "Build cancellation requested";
     write(machine, title,
-      active === undefined && finished === undefined ? "warning" : active === undefined ? "info" : "success", [
+      active === undefined && finished === undefined ? "warning" : active === undefined || alreadyStopping ? "info" : "success", [
         ["Build", args.build], ...(build === null ? [] : [["Work", build.work.state] as const]),
       ], active === undefined && finished?.outcome !== undefined
         ? [`No running work was changed; this Build is already ${finished.outcome}.`]
-        : []);
+        : alreadyStopping ? [active.stop!.reason ?? "Waiting for submitted work to finish."] : []);
     if (active === undefined && finished === undefined) io.setExitCode?.(1);
   } finally {
     await runtime.close();

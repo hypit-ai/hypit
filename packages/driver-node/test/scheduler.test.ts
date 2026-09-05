@@ -325,8 +325,10 @@ test("a persisted submitting Operation is never submitted again after its caller
 
   const [resumed] = await new LocalBuildScheduler(asyncExecutor(endpoint, operations))
     .run([{ id: "submission-window", state: interrupted!.state }]);
-  assert.equal(resumed?.status, "failed");
-  assert.equal(resumed?.state.diagnostics.at(-1)?.code, "SUBMISSION_UNKNOWN");
+  assert.equal(resumed?.status, "paused");
+  const [unknown] = await operations.list({ build: "submission-window" });
+  assert.equal(unknown?.status, "pending");
+  assert.equal(unknown?.failure?.code, "SUBMISSION_UNKNOWN");
   assert.equal(starts, 0);
 });
 
@@ -366,4 +368,44 @@ test("wakeAt prevents early polling and Runtime cancellation becomes a terminal 
   const [cancelled] = await scheduler.run([{ id: "cancel-video", state: early!.state }]);
   assert.equal(cancelled?.status, "failed");
   assert.equal(cancelled?.state.diagnostics.at(-1)?.code, "CANCELLED");
+});
+
+test("request quantities govern concurrent admission, independent of whole-Need count", async () => {
+  const producerRegistry = new ProducerRegistry();
+  registerGreetingProducers(producerRegistry);
+  const endpoints = new EndpointRegistry();
+  let active = 0, maximum = 0;
+  endpoints.registerImmediateEndpoint("weighted", capabilities.generation, types.generated, async () => {
+    active += 4; maximum = Math.max(maximum, active);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    active -= 4;
+    return { value: { kind: "inline", value: "done" } };
+  }, { scheduling: { resources: [{ id: "browsers", limit: 6 }], unitsForRequest: () => ({ browsers: 4 }) } });
+  const results = await new LocalBuildScheduler(new NodeDriver({ producers: producerRegistry, endpoints }))
+    .run(["a", "b"].map((id) => ({ id, state: createGreetingBuild() })));
+  assert.ok(results.every((result) => result.status === "complete"));
+  assert.equal(maximum, 4, "two four-worker requests cannot fit in six slots");
+});
+
+test("a poll transport error keeps the same Operation until its remote work finishes", async () => {
+  const operations = memoryOperations();
+  let starts = 0, unavailable = true;
+  const endpoint: AsyncEndpoint = {
+    start() { starts++; return { status: "pending", handle: { job: "one" } }; },
+    poll() {
+      if (unavailable) throw new Error("connection lost");
+      return { status: "completed", result: { value: { kind: "inline", value: "done" } } };
+    },
+  };
+  const scheduler = new LocalBuildScheduler(asyncExecutor(endpoint, operations));
+  const [first] = await scheduler.run([{ id: "poll-error", state: createGreetingBuild() }]);
+  const [second] = await scheduler.run([{ id: "poll-error", state: first!.state }]);
+  const [operation] = await operations.list({ build: "poll-error" });
+  assert.equal(operation?.status, "pending");
+  assert.equal(operation?.progress?.phase, "poll-unavailable");
+  unavailable = false;
+  await operations.update(operation!.id, { status: "pending", handle: operation!.handle! });
+  const [third] = await scheduler.run([{ id: "poll-error", state: second!.state }]);
+  assert.equal(third?.status, "complete");
+  assert.equal(starts, 1);
 });

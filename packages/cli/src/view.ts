@@ -57,6 +57,7 @@ export type CliBuildStatusView = {
     readonly state: "unknown" | "submitting" | "working" | "done";
     readonly outcome?: "complete" | "failed" | "cancelled";
     readonly cancellationRequested?: boolean;
+    readonly stop?: BuildView["stop"];
     readonly requests?: { readonly total: number; readonly completed: number };
   };
   readonly result: {
@@ -156,6 +157,7 @@ export function buildStatusView(options: {
         ? {}
         : { outcome: options.runtime?.outcome ?? options.result!.outcome }),
       ...(options.runtime?.cancellationRequested === true ? { cancellationRequested: true } : {}),
+      ...(options.runtime?.stop === undefined ? {} : { stop: options.runtime.stop }),
       ...(options.runtime?.requests === undefined ? {} : { requests: options.runtime.requests }),
     },
     result: {

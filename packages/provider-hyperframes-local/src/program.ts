@@ -24,6 +24,7 @@ export function localHyperframesBrowserProgram(
     readonly nodePath: string;
     readonly hyperframesCliPath: string;
     readonly ffprobePath: string;
+    readonly ffmpegPath?: string;
   },
 ): ManagedProgram {
   const probeBrowser = async (): Promise<ManagedProgramState> => {
@@ -48,7 +49,7 @@ export function localHyperframesBrowserProgram(
     async probe(): Promise<ManagedProgramState> {
       const browser = await probeBrowser();
       if (browser.state !== "ready") return browser;
-      const media = await probeMediaToolchain({ ffprobePath: input.ffprobePath });
+      const media = await probeMediaToolchain({ ffprobePath: input.ffprobePath, ...(input.ffmpegPath === undefined ? {} : { ffmpegPath: input.ffmpegPath }) });
       return media.state === "ready"
         ? { state: "ready" }
         : { state: media.state, detail: media.detail };

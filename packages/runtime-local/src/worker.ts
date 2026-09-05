@@ -76,7 +76,7 @@ class CapacityExecutor implements RuntimeCommandExecutor {
     const execution = await this.#options.stores.execution.read(build);
     assert(execution?.turn?.owner === this.#owner && execution.decision === undefined,
       `Build ${build} is not owned by this Worker turn`);
-    assert(execution.cancellation === undefined, `Build ${build} is being cancelled`);
+    assert(execution.stop === undefined, `Build ${build} is stopping`);
   }
 
   async #executeOnce(
@@ -166,10 +166,10 @@ class CapacityExecutor implements RuntimeCommandExecutor {
       }
       return result;
     } catch (error) {
-      await this.#options.stores.execution.releaseCapacity(
-        acquired.reservation.build,
-        acquired.reservation.command,
-      ).catch(() => undefined);
+      const operations = await this.#options.stores.operations.list({ build: context.build, command: descriptor.command.id });
+      if (!operations.some((operation) => operation.status === "pending")) {
+        await this.#options.stores.execution.releaseCapacity(context.build, descriptor.command.id);
+      }
       throw error;
     }
   }
@@ -195,54 +195,57 @@ class DurableLocalWorker {
     this.#executorWithCapacity = new CapacityExecutor(executor, options, this.#owner);
   }
 
-  async #cancel(execution: BuildExecutionSnapshot): Promise<WorkerTurnResult> {
+  async #finishResult(execution: BuildExecutionSnapshot, outcome: import("@hypit/runtime").BuildOutcome): Promise<WorkerTurnResult> {
+    await this.#options.stores.execution.releaseBuildCapacity(execution.build);
+    const decided = await this.#options.stores.execution.decide(execution.build, this.#owner, outcome);
+    return await this.#options.resultWriter.completeResult(decided);
+  }
+
+  async #settle(execution: BuildExecutionSnapshot): Promise<WorkerTurnResult> {
+    assert(execution.stop !== undefined, `Build ${execution.build} has no stop request`);
     const snapshot = await this.#options.stores.builds.read(execution.build);
     assert(snapshot !== undefined, `Build ${execution.build} has no durable execution state`);
-    const operations = await this.#options.stores.operations.list({ build: execution.build });
-    const active = operations
-      .filter((item) => item.status === "pending" && item.handle !== undefined);
-    for (const operation of active) {
-      if (this.#executor.cancelOperation !== undefined) {
-        await this.#executor.cancelOperation(snapshot.state, operation).catch(() => undefined);
-      } else {
-        await this.#options.stores.operations.update(operation.id, { status: "cancelled" });
+    for (const operation of await this.#options.stores.operations.list({ build: execution.build })) {
+      if (operation.status !== "pending") continue;
+      const settled = await this.#executor.cancelOperation?.(snapshot.state, operation).catch(() => undefined);
+      if (settled !== undefined && settled.status !== "pending") {
+        await this.#options.stores.execution.releaseCapacity(execution.build, operation.command);
       }
     }
-    await this.#options.stores.execution.releaseBuildCapacity(execution.build);
-    const decided = await this.#options.stores.execution.decide(
-      execution.build,
-      this.#owner,
-      "cancelled",
-      execution.cancellation?.reason ?? "cancelled by Runtime",
-    );
-    return await this.#options.resultWriter.completeResult(decided);
+    const pending = (await this.#options.stores.operations.list({ build: execution.build }))
+      .filter((operation) => operation.status === "pending");
+    if (pending.length > 0) {
+      const now = Date.now();
+      return await this.#options.stores.execution.releaseTurn(execution.build, this.#owner,
+        Math.min(...pending.map((operation) => Math.max(now + 100, operation.wakeAt ?? now + 1_000))), execution.stop);
+    }
+    return await this.#finishResult(execution, execution.stop.cause === "user-cancelled" ? "cancelled" : "failed");
+  }
+
+  async #stopFailed(execution: BuildExecutionSnapshot, reason: string): Promise<WorkerTurnResult> {
+    const stopped = await this.#options.stores.execution.requestStop(execution.build, { cause: "execution-failed", reason });
+    return await this.#settle(stopped);
   }
 
   async #finish(execution: BuildExecutionSnapshot, result: ScheduledBuildResult): Promise<WorkerTurnResult> {
     const current = await this.#options.stores.execution.read(execution.build);
     assert(current?.turn?.owner === this.#owner && current.decision === undefined,
       `Execution ${execution.build} is no longer owned by this Worker turn`);
-    if (current.cancellation !== undefined) return await this.#cancel(current);
+    if (current.stop !== undefined) return await this.#settle(current);
     if (result.status === "complete") {
-      await this.#options.stores.execution.releaseBuildCapacity(execution.build);
-      const decided = await this.#options.stores.execution.decide(execution.build, this.#owner, "complete");
-      return await this.#options.resultWriter.completeResult(decided);
+      return await this.#finishResult(execution, "complete");
     }
     if (result.status === "failed" || result.outcomes.some((item) => item.status === "error")) {
       const reason = result.outcomes.find((item) => item.status === "error")?.message
         ?? result.state.diagnostics.at(-1)?.message
         ?? "Core Build failed";
-      await this.#options.stores.execution.releaseBuildCapacity(execution.build);
-      const decided = await this.#options.stores.execution.decide(execution.build, this.#owner, "failed", reason);
-      return await this.#options.resultWriter.completeResult(decided);
+      return await this.#stopFailed(execution, reason);
     }
     const pending = result.outcomes.filter((item) => item.status === "pending");
     const deferred = result.outcomes.filter((item) => item.status === "deferred");
     if (pending.length === 0 && deferred.length === 0 && result.blocked.length > 0) {
       const reason = result.blocked.map((item) => `${item.reason}: ${item.subject}`).join(", ");
-      await this.#options.stores.execution.releaseBuildCapacity(execution.build);
-      const decided = await this.#options.stores.execution.decide(execution.build, this.#owner, "failed", reason);
-      return await this.#options.resultWriter.completeResult(decided);
+      return await this.#stopFailed(execution, reason);
     }
     const now = Date.now();
     const wakeAt = Math.min(...[
@@ -254,16 +257,12 @@ class DurableLocalWorker {
       this.#owner,
       Number.isFinite(wakeAt) ? wakeAt : now,
     );
-    return released.cancellation === undefined ? released : await this.#cancel(released);
+    return released;
   }
 
   async #fail(execution: BuildExecutionSnapshot, error: unknown): Promise<WorkerTurnResult> {
-    const current = await this.#options.stores.execution.read(execution.build);
-    if (current?.cancellation !== undefined) return await this.#cancel(current);
     const reason = error instanceof Error ? error.message : String(error);
-    await this.#options.stores.execution.releaseBuildCapacity(execution.build);
-    const decided = await this.#options.stores.execution.decide(execution.build, this.#owner, "failed", reason);
-    return await this.#options.resultWriter.completeResult(decided);
+    return await this.#stopFailed(execution, reason);
   }
 
   async #runClaimed(executions: readonly BuildExecutionSnapshot[]): Promise<readonly WorkerTurnResult[]> {
@@ -272,8 +271,8 @@ class DurableLocalWorker {
     for (const execution of executions) {
       assert(execution.turn?.owner === this.#owner && execution.decision === undefined,
         `Execution ${execution.build} was not claimed by this Worker turn`);
-      if (execution.cancellation !== undefined) {
-        finished.push(await this.#cancel(execution));
+      if (execution.stop !== undefined) {
+        finished.push(await this.#settle(execution));
         continue;
       }
       try {

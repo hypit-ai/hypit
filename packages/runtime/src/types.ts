@@ -23,10 +23,7 @@ export type RuntimeRunnableCommand = {
   readonly capacityMode?: "active" | "asynchronous";
 };
 
-export type RuntimeResourceClaim = {
-  readonly id: string;
-  readonly limit: number;
-};
+export type RuntimeResourceClaim = import("./capacity.js").CapacityResourceClaim;
 
 export type RuntimeWorkerRunOptions = {
   readonly idlePollMs: number;

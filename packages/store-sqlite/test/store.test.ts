@@ -173,8 +173,8 @@ test("Execution stores scheduling facts, one decision and independent operator a
     assert.equal(await state.submissions.read("queued-build"), undefined);
     assert.deepEqual((await state.execution.read("queued-build"))?.result, result);
 
-    const cancelling = await state.execution.requestCancellation("queued-build", "no longer needed");
-    assert.equal(cancelling.cancellation?.reason, "no longer needed");
+    const cancelling = await state.execution.requestStop("queued-build", { cause: "user-cancelled", reason: "no longer needed" });
+    assert.equal(cancelling.stop?.reason, "no longer needed");
     const claimed = await state.execution.claim("worker-a", Date.now());
     assert.equal(claimed?.turn?.owner, "worker-a");
     const decided = await state.execution.decide("queued-build", "worker-a", "cancelled", "no longer needed");
@@ -309,4 +309,52 @@ test("shared capacity resources are acquired atomically across Builds", async ()
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test("weighted capacity admits 4 + 2 workers atomically and survives reopening", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-weighted-capacity-"));
+  const path = join(directory, "runtime.sqlite");
+  let state = new SqliteRuntimeState(path);
+  try {
+    const claim = (build: string, units: number) => state.execution.acquireCapacity({ build, command: "render",
+      resources: [{ id: "pool:render", limit: 3 }, { id: "capacity:render/browsers", limit: 6, units }], now: 100 });
+    assert.equal((await claim("four", 4)).status, "acquired");
+    assert.equal((await claim("two", 2)).status, "acquired");
+    assert.equal((await claim("one", 1)).status, "blocked");
+    assert.equal((await state.execution.listCapacity()).length, 2, "blocked requests must acquire no partial resources");
+    state.close();
+    state = new SqliteRuntimeState(path);
+    assert.equal((await claim("one", 1)).status, "blocked");
+    const restored = await state.execution.listCapacity();
+    assert.equal(restored.find((item) => item.build === "four")?.resources.find((item) => item.id.endsWith("/browsers"))?.units, 4);
+    assert.equal(restored.find((item) => item.build === "two")?.resources.find((item) => item.id.endsWith("/browsers"))?.units, 2);
+    await state.execution.releaseCapacity("two", "render");
+    assert.equal((await claim("three", 3)).status, "blocked");
+    assert.equal((await claim("one", 1)).status, "acquired");
+    await assert.rejects(claim("impossible", 7), /needs 7 units/);
+  } finally { state.close(); await rm(directory, { recursive: true, force: true }); }
+});
+
+
+test("stop requests preserve their first cause, wake an unaware turn, and retain polling delays", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-stop-request-"));
+  const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
+  try {
+    await state.execution.create({ build: "stopping", componentPackages: [], result: resultLocation });
+    await state.execution.claim("worker");
+    const stop = { cause: "execution-failed" as const, reason: "original failure" };
+    await state.execution.requestStop("stopping", stop);
+    assert.deepEqual((await state.execution.requestStop("stopping", { cause: "user-cancelled", reason: "later" })).stop, stop);
+    const wakeAt = Date.now() + 60_000;
+    const unaware = await state.execution.releaseTurn("stopping", "worker", wakeAt);
+    assert.ok(unaware.wakeAt <= Date.now(), "a stop received during execution must be processed promptly");
+    await state.execution.claim("worker");
+    const settling = await state.execution.releaseTurn("stopping", "worker", wakeAt, stop);
+    assert.equal(settling.wakeAt, wakeAt, "a turn that already handled stop must respect its next poll time");
+    await state.execution.requestStop("stopping", { cause: "user-cancelled" });
+    assert.equal((await state.execution.read("stopping"))?.wakeAt, wakeAt);
+    await state.execution.claim("worker", wakeAt);
+    assert.deepEqual((await state.execution.decide("stopping", "worker", "cancelled", "later")).decision,
+      { outcome: "failed", reason: "original failure" });
+  } finally { state.close(); await rm(directory, { recursive: true, force: true }); }
 });

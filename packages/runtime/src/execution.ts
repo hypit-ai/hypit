@@ -21,6 +21,12 @@ export type BuildExecutionDecision = {
   readonly reason?: string;
 };
 
+/** A durable instruction to stop launching work, independent of remote Operation termination. */
+export type BuildExecutionStop = {
+  readonly cause: "user-cancelled" | "execution-failed";
+  readonly reason?: string;
+};
+
 export type BuildExecutionAttention = {
   readonly step: "result" | "cleanup";
   readonly error: string;
@@ -37,14 +43,15 @@ export type BuildResultWriteLease = BuildExecutionTurn;
  * The complete active Runtime root for one Build.
  *
  * It has no persisted lifecycle phase. Scheduling is derived from `wakeAt` and `turn`; the one
- * immutable execution conclusion is `decision`; operator attention is an independent fact.
+ * immutable execution conclusion is `decision`; `stop` records why new work must stop while
+ * existing Operations settle. Operator attention is an independent fact.
  */
 export type BuildExecutionSnapshot = BuildExecutionRequest & {
   readonly createdAt: number;
   readonly wakeAt: number;
   readonly turn?: BuildExecutionTurn;
   readonly resultWrite?: BuildResultWriteLease;
-  readonly cancellation?: { readonly reason?: string };
+  readonly stop?: BuildExecutionStop;
   readonly decision?: BuildExecutionDecision;
   readonly attention?: BuildExecutionAttention;
 };
@@ -73,10 +80,12 @@ export type BuildExecutionStore = {
   claim(owner: string, now?: number): Promise<BuildExecutionSnapshot | undefined>;
   /** A new owning Worker clears turns left by the previous process; no external action is repeated here. */
   reclaimTurns(now?: number): Promise<readonly string[]>;
-  releaseTurn(build: string, owner: string, wakeAt: number): Promise<BuildExecutionSnapshot>;
+  /** An unobserved stop wakes the next turn immediately; a settling turn may wait for its next poll. */
+  releaseTurn(build: string, owner: string, wakeAt: number, observedStop?: BuildExecutionStop): Promise<BuildExecutionSnapshot>;
   /** Freeze the one conclusion. An execution with a decision can never be claimed again. */
   decide(build: string, owner: string, outcome: BuildOutcome, reason?: string): Promise<BuildExecutionSnapshot>;
-  requestCancellation(build: string, reason?: string): Promise<BuildExecutionSnapshot>;
+  /** Record the first stop request. Repeated requests cannot replace its cause or reason. */
+  requestStop(build: string, stop: BuildExecutionStop): Promise<BuildExecutionSnapshot>;
   setAttention(build: string, attention: BuildExecutionAttention | undefined): Promise<BuildExecutionSnapshot>;
   claimResultWrite(build: string, owner: string, now?: number): Promise<BuildExecutionSnapshot | undefined>;
   releaseResultWrite(build: string, owner: string): Promise<BuildExecutionSnapshot>;

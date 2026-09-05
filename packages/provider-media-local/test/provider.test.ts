@@ -929,3 +929,41 @@ test("local media Provider draws a stand-in card as a picture and as an exact si
   const silenceBytes = await resources.get(silence.resource);
   assert.equal(silenceBytes?.byteLength, 44 + 48_000 * 4);
 });
+
+
+test("audio range preserves loop phase, tempo and intersected fades from the full programme", { skip: !hasMediaBinaries }, async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-audio-range-"));
+  try {
+    const resources = new MemoryResourceStore();
+    const source = await resources.put(rampWav(4800), "audio/wav");
+    const plan = sealAudioProgramPlan({
+      frameRate: { numerator: 30, denominator: 1 }, frameCount: 60,
+      sampleRate: 48000, sampleFrames: 96000,
+      clips: [{ id: "loop", artifact: source, targetStartSample: 0, targetEndSampleExclusive: 96000,
+        sourceSampleFrames: 4800, sourceStartSample: 0, sourceEndSampleExclusive: 4800,
+        sourceLoop: true, sourcePhaseSample: 1700, playbackRate: 1.25, pitch: "preserve", gain: 0.8,
+        fadeInSamples: 48000, fadeOutSamples: 30000 }], mix: { normalize: false, limiter: "none" },
+    });
+    const pcm = async (name: string, range?: { startFrame: number; endFrameExclusive: number }) => {
+      const value = await fulfillInline(resources, need(`need:${name}`, mediaPipelineCapabilities.renderAudio,
+        mediaTypes.timelineAudio, canonicalize({ plan, ...(range === undefined ? {} : { range }) })));
+      verifyTimelineAudio(value);
+      const audio = value as unknown as TimelineAudio;
+      const path = join(root, `${name}.wav`), raw = join(root, `${name}.raw`);
+      await writeFile(path, (await resources.get(audio.artifact.resource))!);
+      await run("ffmpeg", ["-v", "error", "-y", "-i", path, "-f", "s16le", raw]);
+      return { bytes: await readFile(raw), samples: audio.sampleFrames };
+    };
+    const full = await pcm("full");
+    const range = await pcm("range", { startFrame: 15, endFrameExclusive: 45 });
+    assert.equal(range.samples, 48000);
+    const expected = full.bytes.subarray(24000 * 4, 72000 * 4);
+    assert.equal(range.bytes.length, expected.length);
+    let maximumError = 0;
+    for (let offset = 0; offset < expected.length; offset += 2) {
+      maximumError = Math.max(maximumError, Math.abs(range.bytes.readInt16LE(offset) - expected.readInt16LE(offset)));
+    }
+    // Different final filter block boundaries can round float PCM to the adjacent s16 value.
+    assert.ok(maximumError <= 1, `Selected audio differs by ${maximumError} PCM units`);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

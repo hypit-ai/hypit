@@ -8,8 +8,17 @@ limits, then installs handlers into a Host registrar.
 
 Immediate endpoints return a result directly. Asynchronous endpoints implement `start`, `poll` and
 optional best effort `cancel`. Provider-total and exact-capability resource limits control concurrency
-without changing Core demand. Each resource declares one limit; asynchronous work retains that slot until
-its persisted Operation is terminal.
+without changing Core demand. Each resource declares a `limit` and optional `units` (default 1).
+A capability may add `resources` and a pure `unitsForRequest(request)` resolver for quantities of
+already declared resources. Runtime admits all claims atomically for one `fulfill-need` Command.
+
+For asynchronous work, `failed` means the external job has ended or submission was definitely rejected.
+Transport errors and local deadlines cannot prove that. Return `pending` with the same handle;
+a pending `failure` records a local deadline while Runtime waits for remote termination. A poll with
+`settling: true` observes the existing job and returns `settled` when it ends, without downloading output.
+`cancel` returning `accepted`, `unsupported` or `too-late` does not release capacity. Only confirmed
+cancellation or observed termination does. A lost submission acknowledgement may remain pending without
+a handle; it must not trigger automatic resubmission or an automatic capacity release.
 
 An individual immediate capability may declare `transient: true`. That permits a Runtime to use the
 same handler in a disposable authoring execution with no Build, Result or recoverable Operation. It is a

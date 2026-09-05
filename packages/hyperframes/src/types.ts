@@ -28,7 +28,7 @@ export type HyperframesDocument = HyperframesFrameDomain & {
   readonly html: string;
 };
 
-/** Runtime-local work unit; chunk selection is never author intent or a Core object. */
+/** A half-open interval on the document frame clock, also used for local worker partitions. */
 export type HyperframesFrameSpan = {
   readonly startFrame: number;
   readonly endFrameExclusive: number;

@@ -761,6 +761,7 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
     row("programs up|status|down", "manage declared external programs only"),
     row("packages install|status", "manage pinned upstream packages in the machine home"),
     row("activity [--watch]", "inspect active Builds and shared capacity"),
+    row("cancel <build-id>", "withdraw one active Build"),
     row("paths", "show physical state locations"),
     row("auth status|login|logout", "manage Endpoint credentials"),
     "",

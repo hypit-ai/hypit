@@ -945,3 +945,89 @@ test("project local runtime remembers the complete package closure across increm
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+for (const cancellation of ["accepted", "unsupported", "failed-build", "host-failure"] as const) {
+  test(`unconfirmed ${cancellation} retains capacity and work until remote termination`, async () => {
+    const directory = await mkdtemp(join(tmpdir(), "hypit-settlement-"));
+    let fixture = projectRuntimeFixture(directory);
+    let failRead = false;
+    let remoteActive = 0, starts = 0, cancels = 0, finished = false;
+    const provider = defineEndpointPackage({ module: providerModule, facet: "generation", instance: "settlement",
+      pool: "shared", defaultConcurrency: 1, capabilities: [{ capability: capabilities.generation, returns: types.generated,
+        lifecycle: "asynchronous", endpoint: {
+          start() { starts++; remoteActive++; return { status: "pending", handle: { job: starts }, wakeAt: Date.now() + 60_000 }; },
+          poll(context) {
+            assert.equal(context.settling, true);
+            if (!finished) return { status: "pending", handle: context.handle, wakeAt: Date.now() };
+            remoteActive--; return { status: "settled" };
+          },
+          cancel() { cancels++; return { status: cancellation === "accepted" ? "accepted" : "unsupported" }; },
+        } }] });
+    const openRuntime = () => createLocalRuntime({ ...fixture, endpoints: [provider],
+      buildStore: {
+        create: (...args) => fixture.buildStore.create(...args),
+        append: (...args) => fixture.buildStore.append(...args),
+        read: async (build) => {
+          if (failRead) { failRead = false; throw new Error("Runtime read interrupted"); }
+          return await fixture.buildStore.read(build);
+        },
+      }, components: [{ producers: [
+      { producer: producers.makePrompt, handler: () => ({ outputs: { prompt: { kind: "inline", value: "hello" } }, needs: {} }) },
+      { producer: producers.requestText, handler: () => ({ outputs: {}, needs: { generation: { prompt: "hello" } } }) },
+    ] }] });
+    let runtime = await openRuntime();
+    try {
+      const first = "bld_20260905T120000001Z_0000000001";
+      const second = "bld_20260905T120000002Z_0000000001";
+      const initial = createGreetingBuild({ targetOutputs: ["generated"] });
+      await runtime.build(durableBuildRequest(directory, first, initial));
+      await runtime.workOnce();
+      if (cancellation === "failed-build" || cancellation === "host-failure") {
+        if (cancellation === "failed-build") {
+          const snapshot = (await fixture.buildStore.read(first))!;
+          const { BuildMachine } = await import("@hypit/core");
+          const machine = new BuildMachine(snapshot.definition, snapshot.facts);
+          const operation = (await fixture.operationStore.list({ build: first }))[0]!;
+          const fact = machine.evaluate({ kind: "command-failed", command: operation.command, code: "EXAMPLE_FAILURE", message: "a sibling failed" });
+          assert.ok(fact); await fixture.buildStore.append(first, fact);
+        } else { failRead = true; }
+        await fixture.executionStore.claim("test-wake", Date.now() + 60_001);
+        await fixture.executionStore.releaseTurn(first, "test-wake", Date.now());
+      } else { await runtime.cancel(first); }
+      await runtime.workOnce();
+      assert.equal((await fixture.operationStore.list({ build: first }))[0]?.status, "pending");
+      assert.equal((await fixture.executionStore.listCapacity()).length, 1);
+      assert.equal((await fixture.executionStore.read(first))?.decision, undefined);
+      const stopped = (await fixture.executionStore.read(first))!.stop!;
+      const isFailure = cancellation === "failed-build" || cancellation === "host-failure";
+      assert.equal(stopped.cause, isFailure ? "execution-failed" : "user-cancelled");
+      assert.equal((await fixture.operationStore.list({ build: first }))[0]?.failure, undefined,
+        "Build stopping must not overwrite the remote Operation's own failure");
+      await runtime.cancel(first, "second cancellation must not replace the first stop");
+      await runtime.cancel(first, "third cancellation");
+      assert.deepEqual((await fixture.executionStore.read(first))?.stop, stopped);
+      await runtime.close();
+      fixture = projectRuntimeFixture(directory);
+      runtime = await openRuntime();
+      assert.deepEqual((await fixture.executionStore.read(first))?.stop, stopped);
+      assert.deepEqual((await runtime.inspect(first))?.stop, stopped);
+      await runtime.build(durableBuildRequest(directory, second, initial));
+      await runtime.workOnce();
+      assert.equal(starts, 1, "the next Need must not start while the cancelled remote work still occupies its slot");
+      assert.equal(remoteActive, 1);
+      finished = true;
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      const completion = await runtime.workOnce();
+      assert.ok(completion !== undefined && "outcome" in completion);
+      assert.equal(completion.outcome, isFailure ? "failed" : "cancelled");
+      assert.equal(completion.reason, stopped.reason);
+      assert.equal((await fixture.operationStore.list({ build: first })).length, 0);
+      assert.equal(remoteActive, 0);
+      assert.equal(cancels, 1, "cancel is attempted once across polling turns");
+      await new Promise((resolve) => setTimeout(resolve, 260));
+      await runtime.workOnce();
+      assert.equal(starts, 2);
+      assert.equal(remoteActive, 1);
+    } finally { await runtime.close(); await rm(directory, { recursive: true, force: true }); }
+  });
+}

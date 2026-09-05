@@ -1,3 +1,4 @@
+import type { MediaFrameRange } from "@hypit/media";
 import { plannedNeedInputs } from "@hypit/component-kit";
 import type { ComponentPackage } from "@hypit/component-kit";
 import type { StoredValue } from "@hypit/protocol";
@@ -7,17 +8,18 @@ import { renderHyperframesCapabilities, renderHyperframesProducers } from "./man
 
 /** Declares the visual Need. It contains no renderer, queue, credentials or deployment choice. */
 export const renderHyperframesComponent = {
-  producers: [{
-    producer: renderHyperframesProducers.requestVisual,
+  producers: [renderHyperframesProducers.requestVisual, renderHyperframesProducers.requestVisualRange].map((producer) => ({
+    producer,
     handler: ({ inputs }) => ({
       outputs: {},
       needs: {
-        visual: hyperframesVisualRequest(inline(inputs.document!.value, "HyperframesDocument") as never),
+        visual: hyperframesVisualRequest(inline(inputs.document!.value, "HyperframesDocument") as never,
+          inputs.range === undefined ? {} : { range: inline(inputs.range.value, "MediaFrameRange") as MediaFrameRange }),
       },
     }),
-  }],
-  plannedNeeds: [{
-    producer: renderHyperframesProducers.requestVisual,
+  })),
+  plannedNeeds: [renderHyperframesProducers.requestVisual, renderHyperframesProducers.requestVisualRange].map((producer) => ({
+    producer,
     port: "visual",
     capability: renderHyperframesCapabilities.renderVisual,
     plan({ state, step }) {
@@ -26,7 +28,7 @@ export const renderHyperframesComponent = {
     present(specification) {
       return { fields: {}, references: {} };
     },
-  }],
+  })),
 } satisfies ComponentPackage;
 
 function inline(value: StoredValue, subject: string): unknown {

@@ -9,12 +9,14 @@ import type {
   CommandResult,
 } from "@hypit/protocol";
 import { assertBuildId } from "@hypit/protocol";
+import { capacityUnits } from "@hypit/runtime";
 import type {
   PendingBuildCommit,
   PendingBuildSubmission,
   PendingBuildStore,
   BuildExecutionRequest,
   BuildExecutionSnapshot,
+  BuildExecutionStop,
   BuildExecutionStore,
   BuildCatalog,
   BuildCatalogDescriptor,
@@ -102,12 +104,16 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
         readonly handle: unknown;
         readonly wakeAt?: number;
         readonly progress?: OperationSnapshot["progress"];
+        readonly failure?: OperationSnapshot["failure"];
+        readonly cancellationRequested?: true;
       } : undefined;
   const mutable = row.status === "pending"
     ? {
         handle: pending!.handle,
         ...(pending!.wakeAt === undefined ? {} : { wakeAt: pending!.wakeAt }),
         ...(pending!.progress === undefined ? {} : { progress: pending!.progress }),
+        ...(pending!.failure === undefined ? {} : { failure: pending!.failure }),
+        ...(pending!.cancellationRequested === undefined ? {} : { cancellationRequested: true as const }),
       }
     : row.status === "completed"
       ? { completion: payload }
@@ -320,9 +326,9 @@ class SqlitePendingBuildStore implements PendingBuildStore {
         INSERT INTO hypit_executions (
           build_id, component_packages_json, result_location_json, created_at, wake_at,
           turn_owner, turn_acquired_at, result_writer_owner, result_writer_acquired_at,
-          cancel_requested, cancellation_reason,
+          stop_cause, stop_reason,
           decision_outcome, decision_reason, attention_step, attention_error
-        ) VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL)
+        ) VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
       `).run(
         request.build,
         JSON.stringify(request.componentPackages),
@@ -361,6 +367,8 @@ class SqliteOperationStore implements OperationStore {
           handle: operation.handle,
           ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
           ...(operation.progress === undefined ? {} : { progress: operation.progress }),
+          ...(operation.failure === undefined ? {} : { failure: operation.failure }),
+          ...(operation.cancellationRequested === undefined ? {} : { cancellationRequested: true as const }),
         })
       : operation.status === "completed"
         ? JSON.stringify(operation.completion)
@@ -421,6 +429,8 @@ class SqliteOperationStore implements OperationStore {
           handle: update.handle,
           ...(update.wakeAt === undefined ? {} : { wakeAt: update.wakeAt }),
           ...(update.progress === undefined ? {} : { progress: update.progress }),
+          ...(update.failure === undefined ? {} : { failure: update.failure }),
+          ...(update.cancellationRequested === undefined ? {} : { cancellationRequested: true as const }),
         })
       : update.status === "completed"
         ? JSON.stringify(update.completion)
@@ -434,9 +444,11 @@ class SqliteOperationStore implements OperationStore {
     const mutable = update.status === "pending"
       ? {
           status: "pending" as const,
-          handle: copy(update.handle),
+          ...(update.handle === undefined ? {} : { handle: copy(update.handle) }),
           ...(update.wakeAt === undefined ? {} : { wakeAt: update.wakeAt }),
           ...(update.progress === undefined ? {} : { progress: copy(update.progress) }),
+          ...(update.failure === undefined ? {} : { failure: copy(update.failure) }),
+          ...(update.cancellationRequested === undefined ? {} : { cancellationRequested: true as const }),
         }
       : update.status === "completed"
         ? { status: "completed" as const, completion: copy(update.completion) }
@@ -649,9 +661,10 @@ function parseExecutionSnapshot(row: Row): BuildExecutionSnapshot {
     ...(typeof row.result_writer_owner === "string" ? {
       resultWrite: { owner: row.result_writer_owner, acquiredAt: row.result_writer_acquired_at as number },
     } : {}),
-    ...(row.cancel_requested === 1 ? {
-      cancellation: {
-        ...(typeof row.cancellation_reason === "string" ? { reason: row.cancellation_reason } : {}),
+    ...(row.stop_cause === "user-cancelled" || row.stop_cause === "execution-failed" ? {
+      stop: {
+        cause: row.stop_cause,
+        ...(typeof row.stop_reason === "string" ? { reason: row.stop_reason } : {}),
       },
     } : {}),
     ...(typeof row.decision_outcome === "string" ? {
@@ -686,9 +699,9 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
       INSERT INTO hypit_executions (
         build_id, component_packages_json, result_location_json, created_at, wake_at,
         turn_owner, turn_acquired_at, result_writer_owner, result_writer_acquired_at,
-        cancel_requested, cancellation_reason,
+        stop_cause, stop_reason,
         decision_outcome, decision_reason, attention_step, attention_error
-      ) VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL)
+      ) VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
     `).run(request.build, JSON.stringify(request.componentPackages), JSON.stringify(request.result), now, now);
     return {
       ...copy(request),
@@ -734,7 +747,7 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
     });
   }
 
-  async releaseTurn(build: string, owner: string, wakeAt: number): Promise<BuildExecutionSnapshot> {
+  async releaseTurn(build: string, owner: string, wakeAt: number, observedStop?: BuildExecutionStop): Promise<BuildExecutionSnapshot> {
     nonNegativeInteger(wakeAt, "Execution wakeAt");
     return transaction(this.#database, () => {
       const row = this.#database.prepare("SELECT * FROM hypit_executions WHERE build_id = ?").get(build) as Row | undefined;
@@ -742,12 +755,11 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
       const current = parseExecutionSnapshot(row);
       assert(current.decision === undefined, `Execution ${build} already has a decision`);
       assert(current.turn?.owner === owner, `Execution ${build} is not owned by ${owner}`);
-      if (current.cancellation !== undefined) return current;
       this.#database.prepare(`
         UPDATE hypit_executions
         SET turn_owner = NULL, turn_acquired_at = NULL, wake_at = ?
         WHERE build_id = ? AND turn_owner = ?
-      `).run(wakeAt, build, owner);
+      `).run(current.stop !== undefined && observedStop === undefined ? Math.min(wakeAt, Date.now()) : wakeAt, build, owner);
       return parseExecutionSnapshot(
         this.#database.prepare("SELECT * FROM hypit_executions WHERE build_id = ?").get(build) as Row,
       );
@@ -764,10 +776,9 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
       const row = this.#database.prepare("SELECT * FROM hypit_executions WHERE build_id = ?").get(build) as Row | undefined;
       if (row === undefined) throw new Error(`Execution ${build} does not exist`);
       const current = parseExecutionSnapshot(row);
-      const effective = current.cancellation === undefined ? outcome : "cancelled";
-      const effectiveReason = effective === "cancelled"
-        ? current.cancellation?.reason ?? reason
-        : reason;
+      const effective = current.stop === undefined ? outcome
+        : current.stop.cause === "user-cancelled" ? "cancelled" : "failed";
+      const effectiveReason = current.stop === undefined ? reason : current.stop.reason;
       if (current.decision !== undefined) {
         assert(current.decision.outcome === effective && current.decision.reason === effectiveReason,
           `Execution ${build} already has a different decision`);
@@ -863,20 +874,20 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
     });
   }
 
-  async requestCancellation(build: string, reason?: string): Promise<BuildExecutionSnapshot> {
+  async requestStop(build: string, stop: BuildExecutionStop): Promise<BuildExecutionSnapshot> {
     const now = Date.now();
     return transaction(this.#database, () => {
       const row = this.#database.prepare("SELECT * FROM hypit_executions WHERE build_id = ?").get(build) as Row | undefined;
       if (row === undefined) throw new Error(`Execution ${build} does not exist`);
       const current = parseExecutionSnapshot(row);
-      if (current.cancellation !== undefined) return current;
+      if (current.stop !== undefined) return current;
       if (current.decision !== undefined) return current;
       this.#database.prepare(`
         UPDATE hypit_executions
         SET wake_at = CASE WHEN turn_owner IS NULL THEN ? ELSE wake_at END,
-            cancellation_reason = ?, cancel_requested = 1
+            stop_reason = ?, stop_cause = ?
         WHERE build_id = ?
-      `).run(now, reason ?? null, build);
+      `).run(now, stop.reason ?? null, stop.cause, build);
       return parseExecutionSnapshot(
         this.#database.prepare("SELECT * FROM hypit_executions WHERE build_id = ?").get(build) as Row,
       );
@@ -887,6 +898,8 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
     nonNegativeInteger(request.now, "Capacity acquisition time");
     assert(request.resources.length > 0, "Capacity resources are empty");
     const resources = [...request.resources].sort((left, right) => left.id.localeCompare(right.id));
+    assert(new Set(resources.map((resource) => resource.id)).size === resources.length, "Capacity resources repeat an id");
+    for (const resource of resources) capacityUnits(resource);
     const reservation: CapacityReservation = {
       build: request.build,
       command: request.command,
@@ -902,12 +915,12 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
       }
       for (const resource of resources) {
         const count = this.#database.prepare(`
-          SELECT COUNT(DISTINCT capacity.rowid) AS count
+          SELECT COALESCE(SUM(COALESCE(json_extract(claim.value, '$.units'), 1)), 0) AS count
           FROM hypit_capacity AS capacity, json_each(capacity.resources_json) AS claim
           WHERE json_extract(claim.value, '$.id') = ?
         `).get(resource.id) as Row;
         assert(typeof count.count === "number", `SQLite Capacity count for ${resource.id} is invalid`);
-        if (count.count >= resource.limit) {
+        if (count.count + capacityUnits(resource) > resource.limit) {
           return {
             status: "blocked",
             availableAt: request.now + 250,
@@ -977,7 +990,10 @@ function parseCapacityReservation(row: Row): CapacityReservation {
   const resources = storedResources.map((resource) => {
     assert(typeof resource.id === "string", "SQLite Capacity resource has no id");
     assert(typeof resource.limit === "number", `SQLite Capacity resource ${resource.id} has no limit`);
-    return { id: resource.id, limit: positiveInteger(resource.limit, `resource ${resource.id} limit`) };
+    const claim = { id: resource.id, limit: positiveInteger(resource.limit, `resource ${resource.id} limit`),
+      ...(resource.units === undefined ? {} : { units: positiveInteger(resource.units as number, `resource ${resource.id} units`) }) };
+    capacityUnits(claim);
+    return claim;
   });
   const value = {
     build: row.build_id,
@@ -1065,8 +1081,8 @@ export class SqliteRuntimeState {
         turn_acquired_at INTEGER,
         result_writer_owner TEXT,
         result_writer_acquired_at INTEGER,
-        cancel_requested INTEGER NOT NULL DEFAULT 0 CHECK (cancel_requested IN (0, 1)),
-        cancellation_reason TEXT,
+        stop_cause TEXT CHECK (stop_cause IS NULL OR stop_cause IN ('user-cancelled', 'execution-failed')),
+        stop_reason TEXT,
         decision_outcome TEXT CHECK (
           decision_outcome IS NULL OR decision_outcome IN ('complete', 'failed', 'cancelled')
         ),
@@ -1115,6 +1131,8 @@ export class SqliteRuntimeState {
       if (row === undefined) throw new Error(`Execution ${build} does not exist`);
       const current = parseExecutionSnapshot(row);
       assert(current.decision !== undefined, `Execution ${build} has no decision`);
+      const pending = this.#database.prepare("SELECT operation_id FROM hypit_operations WHERE build_id = ? AND status = 'pending' LIMIT 1").get(build);
+      assert(pending === undefined, `Build ${build} still has unsettled external work`);
       this.#database.prepare("DELETE FROM hypit_capacity WHERE build_id = ?").run(build);
       this.#database.prepare("DELETE FROM hypit_operations WHERE build_id = ?").run(build);
       this.#database.prepare("DELETE FROM hypit_command_executions WHERE build_id = ?").run(build);
