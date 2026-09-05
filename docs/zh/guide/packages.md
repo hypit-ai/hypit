@@ -83,7 +83,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/gpt-image             GPT Image model family
 @hypit/nano-banana           Nano Banana model family
 @hypit/seedream              Seedream model family
-@hypit/mimo-tts              Xiaomi MiMo VoiceDesign 模型及作者 Surface
+@hypit/mimo-speech           Xiaomi MiMo 音色设计与音色克隆模型及作者 Surface
 @hypit/estimate              创作期量稿（hypit measure）与估算策略类型
 @hypit/speech                shared speech products
 @hypit/speech-evidence       acoustic evidence products
@@ -124,7 +124,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/provider-hyperframes-aws-lambda asynchronous distributed rendering
 @hypit/provider-image-opencv-local   本地 OpenCV 光栅执行
 @hypit/provider-media-aws-lambda     synchronous AWS media execution
-@hypit/provider-xiaomi-mimo           Xiaomi 官方 MiMo VoiceDesign API
+@hypit/provider-xiaomi-mimo           Xiaomi 官方 MiMo 音色设计与音色克隆 API
 ```
 
 ### Layer 6：Runtime

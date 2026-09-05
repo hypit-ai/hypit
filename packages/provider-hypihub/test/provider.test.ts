@@ -6,7 +6,7 @@ import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { AsyncEndpoint } from "@hypit/endpoint-kit";
 import { geminiCapabilities, geminiTypes, sealGeminiRequest } from "@hypit/gemini";
 import type { CanonicalValue, Need } from "@hypit/protocol";
-import { mimoTtsEndpoints } from "@hypit/mimo-tts";
+import { mimoSpeechEndpoints, sealMimoSpeechRequest } from "@hypit/mimo-speech";
 import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
 import { sealSpeechEvidenceAudio } from "@hypit/speech";
 import { speechEvidenceTypes } from "@hypit/speech-evidence";
@@ -77,17 +77,17 @@ test("HypiHub doctor checks the authenticated catalogue only when actively invok
   assert.deepEqual(diagnostics, []);
 });
 
-test("HypiHub declares VoiceDesign like everything else it can do; who serves it is the Profile's binding", async () => {
+test("HypiHub declares both MiMo speech capabilities; who serves them is the Profile's binding", async () => {
   const registry = new EndpointRegistry();
   await createHypiHubProvider({ fetch: async () => { throw new Error("audio must not call fetch"); } }).install(registry);
-  const need = {
-    id: "need:hypihub-audio-default",
-    capability: mimoTtsEndpoints.voiceDesign.capability,
-    returns: mimoTtsEndpoints.voiceDesign.returns,
+  const needs = Object.values(mimoSpeechEndpoints).map((endpoint) => ({
+    id: `need:hypihub-${endpoint.key}`,
+    capability: endpoint.capability,
+    returns: endpoint.returns,
     constraints: { ports: {} },
-    result: "record:hypihub-audio-default",
-  };
-  assert.equal(registry.resolve(need).status, "resolved");
+    result: `record:hypihub-${endpoint.key}`,
+  }));
+  assert.ok(needs.every((item) => registry.resolve(item).status === "resolved"));
 
   // A second Endpoint offering the same capability makes the choice the deployment's, not the Provider's.
   const other = defineEndpointPackage({
@@ -96,18 +96,83 @@ test("HypiHub declares VoiceDesign like everything else it can do; who serves it
     instance: "mimo.official",
     pool: "mimo.official",
     capabilities: [{
-      capability: mimoTtsEndpoints.voiceDesign.capability,
-      returns: mimoTtsEndpoints.voiceDesign.returns,
+      capability: mimoSpeechEndpoints.voiceDesign.capability,
+      returns: mimoSpeechEndpoints.voiceDesign.returns,
       lifecycle: "immediate",
       handler: () => ({ value: { kind: "inline", value: null } }),
     }],
   });
   await other.install(registry);
-  assert.equal(registry.resolve(need).status, "ambiguous");
-  registry.bind(mimoTtsEndpoints.voiceDesign.capability, "mimo.official");
-  const resolved = registry.resolve(need);
+  assert.equal(registry.resolve(needs[0]!).status, "ambiguous");
+  registry.bind(mimoSpeechEndpoints.voiceDesign.capability, "mimo.official");
+  const resolved = registry.resolve(needs[0]!);
   assert.equal(resolved.status, "resolved");
   assert.equal(resolved.status === "resolved" ? resolved.registration.id : undefined, "mimo.official");
+});
+
+test("HypiHub stores both preview JSON and ordinary speech JSON as audio Resources", async () => {
+  const resources = new MemoryResourceStore();
+  const voiceReference = await resources.put(new Uint8Array([1, 2, 3, 4]), "audio/wav");
+  const submitted: Record<string, unknown>[] = [];
+  const provider = createHypiHubProvider({
+    publicAssetUrl: async (artifact) => {
+      assert.equal(artifact.resource, voiceReference.resource);
+      return "https://hypit.ai/assets/voice.wav";
+    },
+    fetch: async (input, init) => {
+      const url = String(input);
+      if (url.includes("/models/")) return Response.json({ endpoints: ["audio_speech"] });
+      assert.match(url, /\/audio\/speech$/u);
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      submitted.push(body);
+      const data = Buffer.from([9, 8, 7, submitted.length]).toString("base64");
+      return submitted.length === 1
+        ? Response.json({ object: "audio.voice_previews", previews: [{ b64_json: data, mime_type: "audio/wav" }] })
+        : Response.json({ object: "audio.speech", b64_json: data, mime_type: "audio/wav" });
+    },
+  });
+  const registry = new EndpointRegistry();
+  await provider.install(registry);
+  const cases = [
+    {
+      endpoint: mimoSpeechEndpoints.voiceDesign,
+      constraints: sealMimoSpeechRequest("mimo-v2.5-tts-voicedesign", {
+        text: ["A short voice sample."], voiceDescription: ["Warm and confident."],
+      }),
+    },
+    {
+      endpoint: mimoSpeechEndpoints.voiceClone,
+      constraints: sealMimoSpeechRequest("mimo-v2.5-tts-voiceclone", {
+        text: ["Independent narration."], instruction: ["Quietly direct."],
+        voiceReference: [{ role: "audio", artifact: voiceReference }],
+      }),
+    },
+  ];
+  for (const [index, item] of cases.entries()) {
+    const request = {
+      id: `need:hypihub-speech-${index}`,
+      capability: item.endpoint.capability,
+      returns: item.endpoint.returns,
+      constraints: item.constraints as unknown as CanonicalValue,
+      result: `record:hypihub-speech-${index}`,
+    };
+    const resolution = registry.resolve(request);
+    assert.equal(resolution.status, "resolved");
+    assert.equal(resolution.registration.kind, "immediate");
+    const result = await resolution.registration.handler({
+      command: { kind: "fulfill-need", id: `command:hypihub-speech-${index}`, need: request },
+      need: request,
+      resources,
+      credentials: { apiKey: { secret: "test-key" } },
+    });
+    assert.equal(result.value.kind, "inline");
+    const set = result.value.kind === "inline" ? result.value.value as Record<string, unknown> : {};
+    const audios = set.audios as Array<{ resource: `res_${string}` }>;
+    assert.equal(await resources.has(audios[0]!.resource), true);
+  }
+  assert.equal(submitted[0]!.output, "b64_json");
+  assert.deepEqual(submitted[1]!.reference_audio, ["https://hypit.ai/assets/voice.wav"]);
+  assert.equal(submitted[1]!.prompt, "Quietly direct.");
 });
 
 test("HypiHub uploads one referenced Resource once and submits its HTTPS URL", async () => {
@@ -217,7 +282,7 @@ test("HypiHub uploads one referenced Resource once and submits its HTTPS URL", a
   assert.deepEqual(signedBatches, [[1, 2, 3], [2]]);
   assert.deepEqual([...partAttempts.entries()].sort(), [[1, 1], [2, 2], [3, 1]]);
   if (started.status !== "pending") return;
-  const completed = await endpoint.poll({ ...common, handle: started.handle });
+  const completed = await endpoint.poll({ ...common, handle: started.handle! });
   assert.equal(completed.status, "completed");
 });
 
@@ -457,4 +522,53 @@ test("HypiHub fulfills the Provider-neutral WhisperX alignment capability", asyn
     ],
     chars: [],
   }] } });
+});
+
+test("HypiHub exposes model groups beneath its own total capacity", async () => {
+  const registry = new EndpointRegistry();
+  await createHypiHubProvider({ pool: "hub-account", defaultConcurrency: 8,
+    capabilityConcurrency: { "seedance-2-mini": 2, gemini: 3, transcription: 1 } }).install(registry);
+  const requests = [
+    need({}),
+    { ...need({}), capability: Object.values(geminiCapabilities)[0]!, returns: geminiTypes.visualObservation },
+    { ...need({}), capability: whisperXCapabilities.alignment, returns: speechEvidenceTypes.alignedTranscript },
+  ];
+  for (const [index, request] of requests.entries()) {
+    const selected = registry.resolve(request);
+    assert.equal(selected.status, "resolved");
+    assert.deepEqual(selected.registration.scheduling?.resources, [
+      { id: "pool:hub-account", limit: 8 },
+      { id: `capacity:hub-account/${["seedance-2-mini", "gemini", "transcription"][index]}`, limit: [2, 3, 1][index] },
+    ]);
+  }
+  assert.throws(() => createHypiHubProvider({ capabilityConcurrency: { invented: 1 } }), /unknown HypiHub capacity/);
+});
+
+test("HypiHub polling errors and local deadlines retain remote work until settlement", async () => {
+  const request = need({});
+  let unavailable = true, status = "running", requests = 0;
+  const registry = new EndpointRegistry();
+  await createHypiHubProvider({ pollIntervalMs: 0, operationTimeoutMs: 10,
+    fetch: async (url) => {
+      requests++; assert.match(String(url), /\/jobs\/test$/);
+      if (unavailable) throw new Error("offline");
+      return Response.json({ status });
+    } }).install(registry);
+  const selected = registry.resolve(request);
+  assert.equal(selected.status, "resolved"); assert.equal(selected.registration.kind, "asynchronous");
+  const endpoint = selected.registration.endpoint;
+  const common = { command: { kind: "fulfill-need", id: "need:test", need: request } as const,
+    need: request, resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test" } }, operation: "op:test",
+    handle: { contract: "hypit.hypihub-operation@1", jobId: "test",
+      route: `${request.capability.module.name}@${request.capability.module.version}#${request.capability.name}`, startedAt: 0 } };
+  const timedOut = await endpoint.poll(common);
+  assert.equal(timedOut.status, "pending");
+  assert.equal(timedOut.status === "pending" && timedOut.failure?.code, "HYPIHUB_OPERATION_TIMEOUT");
+  assert.equal(requests, 0);
+  assert.equal((await endpoint.poll({ ...common, settling: true })).status, "pending");
+  unavailable = false;
+  assert.equal((await endpoint.poll({ ...common, settling: true })).status, "pending");
+  status = "completed";
+  assert.deepEqual(await endpoint.poll({ ...common, settling: true }), { status: "settled" });
+  assert.equal(requests, 3, "settling must only query the existing job and never download or submit");
 });

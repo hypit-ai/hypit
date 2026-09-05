@@ -114,9 +114,9 @@ importers:
       '@hypit/media-track-studio':
         specifier: workspace:*
         version: link:packages/media-track-studio
-      '@hypit/mimo-tts':
+      '@hypit/mimo-speech':
         specifier: workspace:*
-        version: link:packages/mimo-tts
+        version: link:packages/mimo-speech
       '@hypit/minimax-h3':
         specifier: workspace:*
         version: link:packages/minimax-h3
@@ -1772,7 +1772,7 @@ importers:
         specifier: workspace:*
         version: link:../studio-adapter
 
-  packages/mimo-tts:
+  packages/mimo-speech:
     dependencies:
       '@hypit/artifact':
         specifier: workspace:*
@@ -1936,6 +1936,12 @@ importers:
 
   packages/provider-hyperframes-local:
     dependencies:
+      '@hyperframes/engine':
+        specifier: 0.7.101
+        version: 0.7.101
+      '@hyperframes/producer':
+        specifier: 0.7.101
+        version: 0.7.101
       '@hypit/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -2013,9 +2019,9 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@hypit/mimo-tts':
+      '@hypit/mimo-speech':
         specifier: workspace:*
-        version: link:../mimo-tts
+        version: link:../mimo-speech
       '@hypit/seedance':
         specifier: workspace:*
         version: link:../seedance
@@ -2262,9 +2268,9 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@hypit/mimo-tts':
+      '@hypit/mimo-speech':
         specifier: workspace:*
-        version: link:../mimo-tts
+        version: link:../mimo-speech
 
   packages/ranking:
     dependencies:

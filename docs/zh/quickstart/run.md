@@ -218,7 +218,7 @@ CLI 必须先确定项目：显式 `--workspace` 直接给出边界；否则使�
 |---|---|
 | HypiHub OAuth | HypiHub 付费生成、Gemini VLM 与 WhisperX 对齐；运行 `hypit auth login hypihub.default --runtime hypit.runtime.json` 并在 https://hypit.ai 登录 |
 | `KIE_API_KEY` | 仅在显式选择 KIE Provider 时使用 |
-| `MIMO_API_KEY` | Xiaomi MiMo VoiceDesign；只有明确选择官方 Endpoint 时才需要 |
+| `MIMO_API_KEY` | Xiaomi MiMo 音色设计或音色克隆；只有明确选择官方 Endpoint 时才需要 |
 
 只执行 Profile 中所选 Endpoint 对应的行。在 macOS/Linux Shell 中：
 

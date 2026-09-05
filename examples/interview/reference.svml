@@ -4,7 +4,7 @@
   <import from="@hypit/script@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="media" from="@hypit/media@1"/>
-  <import as="mimo" from="@hypit/mimo-tts@1"/>
+  <import as="mimo" from="@hypit/mimo-speech@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="program" from="@hypit/program-space@1"/>
@@ -133,8 +133,8 @@
     <seedance:Reference image={interviewer-view.image}/>
     <seedance:Reference image={guest-view.image}/>
     <seedance:Reference image={shared-view.image}/>
-    <seedance:Reference audio={boy-voice.audio}/>
-    <seedance:Reference audio={wife-voice.audio}/>
+    <seedance:Reference audio={boy-voice.reference}/>
+    <seedance:Reference audio={wife-voice.reference}/>
   </seedance:ReferenceVideo>
 
   <seedance:ReferenceVideo id="real-estate-rule-take"
@@ -144,8 +144,8 @@
     <seedance:Reference image={interviewer-view.image}/>
     <seedance:Reference image={guest-view.image}/>
     <seedance:Reference image={shared-view.image}/>
-    <seedance:Reference audio={boy-voice.audio}/>
-    <seedance:Reference audio={wife-voice.audio}/>
+    <seedance:Reference audio={boy-voice.reference}/>
+    <seedance:Reference audio={wife-voice.reference}/>
   </seedance:ReferenceVideo>
 
   <seedance:ReferenceVideo id="bitcoin-rule-take"
@@ -155,8 +155,8 @@
     <seedance:Reference image={interviewer-view.image}/>
     <seedance:Reference image={guest-view.image}/>
     <seedance:Reference image={shared-view.image}/>
-    <seedance:Reference audio={boy-voice.audio}/>
-    <seedance:Reference audio={wife-voice.audio}/>
+    <seedance:Reference audio={boy-voice.reference}/>
+    <seedance:Reference audio={wife-voice.reference}/>
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="720" height="1280"/>

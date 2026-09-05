@@ -140,7 +140,7 @@ test("HypiHub uses ref_video_url for one video and the public array for multiple
   });
 });
 
-test("HypiHub MiMo TTS mappings use the public audio speech fields", async () => {
+test("HypiHub MiMo Speech mappings use the public audio speech fields", async () => {
   const voiceDesign = hypiHubRoutes.find((item) => item.capability.name === "mimo-v2.5-tts-voicedesign");
   assert.ok(voiceDesign);
   const result = await voiceDesign.compile({
@@ -148,4 +148,20 @@ test("HypiHub MiMo TTS mappings use the public audio speech fields", async () =>
   }, resolve);
   assert.equal(result.model, "mimo-v2.5-tts-voicedesign");
   assert.deepEqual(result.input, { input: "hello", voice_description: "warm and calm" });
+
+  const voiceClone = hypiHubRoutes.find((item) => item.capability.name === "mimo-v2.5-tts-voiceclone");
+  assert.ok(voiceClone);
+  const cloned = await voiceClone.compile({
+    ports: {
+      text: ["hello again"],
+      instruction: ["quiet and direct"],
+      voiceReference: [{ role: "audio", artifact: { ...image, mediaType: "audio/wav" } }],
+    },
+  }, resolveAudio);
+  assert.equal(cloned.model, "mimo-v2.5-tts-voiceclone");
+  assert.deepEqual(cloned.input, {
+    input: "hello again",
+    prompt: "quiet and direct",
+    reference_audio: ["data:audio/wav;base64,AQID"],
+  });
 });

@@ -253,7 +253,7 @@ variables referenced by the selected Runtime Profile:
 |---|---|
 | HypiHub OAuth | HypiHub paid generation, Gemini VLM and WhisperX alignment; run `hypit auth login hypihub.default --runtime hypit.runtime.json` |
 | `KIE_API_KEY` | Explicit KIE Provider only |
-| `MIMO_API_KEY` | Xiaomi MiMo VoiceDesign, only when the official Endpoint is explicitly selected |
+| `MIMO_API_KEY` | Xiaomi MiMo Voice Design or Voice Clone, only when the official Endpoint is explicitly selected |
 
 Run only the lines for the Endpoints in your Profile. In macOS/Linux shells:
 

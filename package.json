@@ -86,7 +86,7 @@
     "@hypit/media-pipeline": "workspace:*",
     "@hypit/media-track": "workspace:*",
     "@hypit/media-track-studio": "workspace:*",
-    "@hypit/mimo-tts": "workspace:*",
+    "@hypit/mimo-speech": "workspace:*",
     "@hypit/minimax-h3": "workspace:*",
     "@hypit/nano-banana": "workspace:*",
     "@hypit/narrative": "workspace:*",

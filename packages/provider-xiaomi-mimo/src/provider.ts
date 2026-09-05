@@ -4,15 +4,14 @@ import {
   generationTypes,
   sealGeneratedAudioSet,
 } from "@hypit/generation";
-import type { GenerationRequest } from "@hypit/generation";
-import { canonicalize } from "@hypit/protocol";
+import type { GenerationMediaValue, GenerationRequest } from "@hypit/generation";
 import type { CanonicalValue, CapabilityRef } from "@hypit/protocol";
 import { credentialRef } from "@hypit/runtime";
 import type { CredentialRef } from "@hypit/runtime";
 
 export const xiaomiMimoProviderModuleRef = { name: "@hypit/provider-xiaomi-mimo", version: "1" } as const;
-const mimoModelModule = { name: "@hypit/mimo-tts", version: "1" } as const;
-const modelNames = ["mimo-v2.5-tts-voicedesign"] as const;
+const mimoModelModule = { name: "@hypit/mimo-speech", version: "1" } as const;
+const modelNames = ["mimo-v2.5-tts-voicedesign", "mimo-v2.5-tts-voiceclone"] as const;
 type Model = typeof modelNames[number];
 
 const capabilities = Object.fromEntries(modelNames.map((name) => [name, {
@@ -30,6 +29,7 @@ export type CreateXiaomiMimoProviderOptions = {
   readonly defaultConcurrency?: number;
   readonly requestTimeoutMs?: number;
   readonly maxResponseBytes?: number;
+  readonly maxVoiceReferenceBase64Bytes?: number;
   readonly fetch?: Fetch;
 };
 
@@ -52,7 +52,9 @@ function normalizeBaseUrl(value: string): string {
 function request(value: CanonicalValue, model: Model): GenerationRequest {
   const result = value as unknown as GenerationRequest;
   assert(result.ports !== null && typeof result.ports === "object", "Xiaomi MiMo request has no ports");
-  const allowed = new Set(["text", "voiceDescription"]);
+  const allowed = model === "mimo-v2.5-tts-voicedesign"
+    ? new Set(["text", "voiceDescription"])
+    : new Set(["text", "instruction", "voiceReference"]);
   assert(Object.keys(result.ports).every((name) => allowed.has(name)),
     `${model} request contains an unsupported port`);
   return result;
@@ -72,6 +74,32 @@ function credential(context: EndpointInvocationContext): string {
   const value = context.credentials.apiKey?.secret;
   assert(value !== undefined && value.length > 0, "Xiaomi MiMo API key is unavailable");
   return value;
+}
+
+async function readVoiceReference(
+  context: EndpointInvocationContext,
+  req: GenerationRequest,
+  maxBase64Bytes: number,
+): Promise<string> {
+  const values = req.ports.voiceReference;
+  assert(values?.length === 1, "MiMo Voice Clone requires exactly one voiceReference");
+  const value = values[0] as GenerationMediaValue;
+  assert(value.role === "audio", "MiMo Voice Clone voiceReference must be audio");
+  const supported = new Set(["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav"]);
+  assert(supported.has(value.artifact.mediaType), "Xiaomi MiMo accepts only MP3 or WAV voice references");
+  const encodedSize = 4 * Math.ceil(value.artifact.size / 3);
+  assert(encodedSize <= maxBase64Bytes,
+    `MiMo voice reference exceeds the configured ${maxBase64Bytes}-byte Base64 limit`);
+  const bytes = await context.resources.get(value.artifact.resource);
+  assert(bytes !== undefined, `MiMo voice reference ${value.artifact.resource} is unavailable`);
+  assert(bytes.byteLength === value.artifact.size, "MiMo voice reference size differs from its BlobRef");
+  const mediaType = value.artifact.mediaType === "audio/x-wav"
+    ? "audio/wav"
+    : value.artifact.mediaType === "audio/mp3" ? "audio/mpeg" : value.artifact.mediaType;
+  const encoded = Buffer.from(bytes).toString("base64");
+  assert(Buffer.byteLength(encoded, "utf8") <= maxBase64Bytes,
+    `MiMo voice reference exceeds the configured ${maxBase64Bytes}-byte Base64 limit`);
+  return `data:${mediaType};base64,${encoded}`;
 }
 
 function parseAudio(text: string, maxAudioBytes: number): Uint8Array {
@@ -127,6 +155,10 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
   const apiBaseUrl = normalizeBaseUrl(options.apiBaseUrl ?? "https://api.xiaomimimo.com/v1");
   const requestTimeoutMs = positiveInteger(options.requestTimeoutMs ?? 180_000, "requestTimeoutMs");
   const maxResponseBytes = positiveInteger(options.maxResponseBytes ?? 64 * 1024 * 1024, "maxResponseBytes");
+  const maxVoiceReferenceBase64Bytes = positiveInteger(
+    options.maxVoiceReferenceBase64Bytes ?? 10_000_000,
+    "maxVoiceReferenceBase64Bytes",
+  );
   const fetcher = options.fetch ?? globalThis.fetch;
   const endpointCapabilities = modelNames.map((model) => ({
     capability: capabilities[model],
@@ -135,10 +167,15 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
     handler: async (context: EndpointInvocationContext) => {
       const req = request(context.need.constraints, model);
       const text = scalar(req, model, "text")!;
-      const messages: Array<{ role: "user" | "assistant"; content: string }> = [
-        { role: "user", content: scalar(req, model, "voiceDescription")! },
-      ];
+      const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
       const audio: Record<string, CanonicalValue> = { format: "wav" };
+      if (model === "mimo-v2.5-tts-voicedesign") {
+        messages.push({ role: "user", content: scalar(req, model, "voiceDescription")! });
+      } else {
+        const instruction = scalar(req, model, "instruction", false);
+        if (instruction !== undefined) messages.push({ role: "user", content: instruction });
+        audio.voice = await readVoiceReference(context, req, maxVoiceReferenceBase64Bytes);
+      }
       messages.push({ role: "assistant", content: text });
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(new Error("Xiaomi MiMo request timed out")), requestTimeoutMs);
@@ -165,7 +202,7 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
 
   return defineEndpointPackage({
     module: xiaomiMimoProviderModuleRef,
-    facet: "tts",
+    facet: "speech",
     instance: options.instance ?? "xiaomi-mimo.default",
     pool: options.pool ?? options.instance ?? "xiaomi-mimo.default",
     pricing: { kind: "page", url: "https://mimo.mi.com/docs/en-US/pricing" },
