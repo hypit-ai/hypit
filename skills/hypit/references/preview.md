@@ -102,9 +102,9 @@ extension writes one still from the middle of it.
 
 A whole round is one call: `--batch <renders.json>`, an array of `{element, segment|selection|tokens,
 out}` inheriting the Run, and the `renders` array `reconstruction_check` returns is exactly that.
-The program is realized and drawn once for the whole round, into one mp4 of the whole mocked
-program, then the entries are processed serially and cut from it. Asking for eight windows therefore
-costs one full draw and eight cuts without concurrent workers racing over the shared `preview.svrun`.
+The mocked program is realized and built once for the whole round, into one film, then the entries
+are processed serially and cut out of it. Asking for eight windows therefore costs one Build and
+eight cuts without concurrent workers racing over the shared `preview.svrun`.
 The picture does not depend on `--element` — it is everything the Source places over those words — so
 two elements over one stretch share the render as well.
 
