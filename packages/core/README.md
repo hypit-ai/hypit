@@ -14,5 +14,9 @@ reconstructs the current view, emits the next commands and accepts their results
 `Output -> Record` bindings and Targets. Graphs, satisfactions and Candidate identities end at the
 planning boundary.
 
+`resolveNeedCommand(state, commandId)` resolves the Command belonging to an existing Need, including
+when a stopped Build has no outstanding work. Core owns this identity rule; execution adapters do not
+parse Command IDs. The query does not schedule or execute work.
+
 Core does not parse source files, load packages, execute components, call providers, store artifact
 bytes or know what a video is. Those responsibilities remain in compiler and runtime packages.

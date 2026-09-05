@@ -40,11 +40,15 @@ export function buildProgressView(view: CliBuildView, now = Date.now()): BuildPr
     ...(view.requests === undefined ? {} : { requests: view.requests }),
     phases: progressPhases(view),
     elapsedMs: Math.max(0, now - view.createdAt),
-    details: view.operations
-      .filter((item) => item.status === "pending")
+    details: [
+      ...(view.stop === undefined ? [] : [view.stop.cause === "execution-failed"
+        ? `Build stopping after failure${view.stop.reason === undefined ? "" : `: ${view.stop.reason}`}`
+        : `Build cancelling${view.stop.reason === undefined ? "" : `: ${view.stop.reason}`}`]),
+      ...view.operations.filter((item) => item.status === "pending")
       .map((item) => `${item.endpoint}: ${item.progress === undefined
         ? item.status
         : formatOperationProgress(item.progress)}`),
+    ],
   };
 }
 
@@ -55,6 +59,7 @@ export function buildObservationKey(view: CliBuildView): string {
     outcome: view.outcome,
     issue: view.issue,
     cancellationRequested: view.cancellationRequested,
+    stop: view.stop,
     requests: view.requests,
     phases: progressPhases(view),
   });

@@ -1,5 +1,6 @@
 import { BuildMachine, reduce } from "@hypit/core";
 import type { BuildState } from "@hypit/protocol";
+import { capacityUnits } from "./capacity.js";
 
 import type {
   BuildSchedulerOptions,
@@ -96,6 +97,7 @@ export class LocalBuildScheduler {
     let cursor = 0;
 
     const resourceLimit = (resource: RuntimeRunnableCommand["resources"][number]): number => {
+      capacityUnits(resource);
       const proposed = positiveInteger(resource.limit, `resource ${resource.id} limit`);
       const previous = resourceDefaults.get(resource.id);
       if (previous !== undefined && previous !== proposed) {
@@ -142,7 +144,7 @@ export class LocalBuildScheduler {
       const counts = new Map<string, number>();
       for (const item of active.values()) {
         for (const resource of item.command.resources) {
-          counts.set(resource.id, (counts.get(resource.id) ?? 0) + 1);
+          counts.set(resource.id, (counts.get(resource.id) ?? 0) + capacityUnits(resource));
         }
       }
       return counts;
@@ -158,90 +160,97 @@ export class LocalBuildScheduler {
       active.set(key, { build, command, promise });
     };
 
-    while (true) {
-      const ready = await preparations();
-      const counts = resourceCounts();
+    try {
+      while (true) {
+        const ready = await preparations();
+        const counts = resourceCounts();
 
-      while (builds.length > 0) {
-        let selected = false;
-        for (let offset = 0; offset < builds.length; offset += 1) {
-          const index = (cursor + offset) % builds.length;
-          const build = builds[index]!;
-          const command = (ready.get(build.id) ?? []).find((candidate) =>
-            candidate.resources.every((resource) =>
-              (counts.get(resource.id) ?? 0) < resourceLimit(resource)));
-          if (command === undefined) continue;
-          ready.set(build.id, (ready.get(build.id) ?? []).filter((item) =>
-            item.command.id !== command.command.id));
-          launch(build, command);
-          for (const resource of command.resources) {
-            counts.set(resource.id, (counts.get(resource.id) ?? 0) + 1);
+        while (builds.length > 0) {
+          let selected = false;
+          for (let offset = 0; offset < builds.length; offset += 1) {
+            const index = (cursor + offset) % builds.length;
+            const build = builds[index]!;
+            const command = (ready.get(build.id) ?? []).find((candidate) =>
+              candidate.resources.every((resource) =>
+                (counts.get(resource.id) ?? 0) + capacityUnits(resource) <= resourceLimit(resource)));
+            if (command === undefined) continue;
+            ready.set(build.id, (ready.get(build.id) ?? []).filter((item) =>
+              item.command.id !== command.command.id));
+            launch(build, command);
+            for (const resource of command.resources) {
+              counts.set(resource.id, (counts.get(resource.id) ?? 0) + capacityUnits(resource));
+            }
+            cursor = (index + 1) % builds.length;
+            selected = true;
+            break;
           }
-          cursor = (index + 1) % builds.length;
-          selected = true;
-          break;
+          if (!selected) break;
         }
-        if (!selected) break;
+
+        if (active.size === 0) break;
+        const settled = await Promise.race([...active.values()].map((item) => item.promise));
+        active.delete(settled.key);
+        const build = settled.build;
+        if (settled.execution === undefined) {
+          build.stopped = true;
+          build.outcomes.push({
+            command: settled.command.command.id,
+            kind: settled.command.command.kind,
+            resources: settled.command.resources.map((resource) => resource.id),
+            status: "error",
+            message: settled.error instanceof Error ? settled.error.message : String(settled.error),
+          });
+          continue;
+        }
+        if (settled.execution.status === "pending") {
+          build.stopped = true;
+          build.outcomes.push({
+            command: settled.command.command.id,
+            kind: settled.command.command.kind,
+            resources: settled.command.resources.map((resource) => resource.id),
+            status: "pending",
+            operation: settled.execution.operation,
+            ...(settled.execution.wakeAt === undefined ? {} : { wakeAt: settled.execution.wakeAt }),
+          });
+          continue;
+        }
+        if (settled.execution.status === "deferred") {
+          build.stopped = true;
+          build.outcomes.push({
+            command: settled.command.command.id,
+            kind: settled.command.command.kind,
+            resources: settled.command.resources.map((resource) => resource.id),
+            status: "deferred",
+            wakeAt: settled.execution.wakeAt,
+            message: settled.execution.reason,
+          });
+          continue;
+        }
+        const event = settled.execution.event;
+        try {
+          await accept(build, event);
+          build.outcomes.push({
+            command: settled.command.command.id,
+            kind: settled.command.command.kind,
+            resources: settled.command.resources.map((resource) => resource.id),
+            status: "completed",
+          });
+        } catch (error) {
+          build.stopped = true;
+          build.outcomes.push({
+            command: settled.command.command.id,
+            kind: settled.command.command.kind,
+            resources: settled.command.resources.map((resource) => resource.id),
+            status: "error",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
 
-      if (active.size === 0) break;
-      const settled = await Promise.race([...active.values()].map((item) => item.promise));
-      active.delete(settled.key);
-      const build = settled.build;
-      if (settled.execution === undefined) {
-        build.stopped = true;
-        build.outcomes.push({
-          command: settled.command.command.id,
-          kind: settled.command.command.kind,
-          resources: settled.command.resources.map((resource) => resource.id),
-          status: "error",
-          message: settled.error instanceof Error ? settled.error.message : String(settled.error),
-        });
-        continue;
-      }
-      if (settled.execution.status === "pending") {
-        build.stopped = true;
-        build.outcomes.push({
-          command: settled.command.command.id,
-          kind: settled.command.command.kind,
-          resources: settled.command.resources.map((resource) => resource.id),
-          status: "pending",
-          operation: settled.execution.operation,
-          ...(settled.execution.wakeAt === undefined ? {} : { wakeAt: settled.execution.wakeAt }),
-        });
-        continue;
-      }
-      if (settled.execution.status === "deferred") {
-        build.stopped = true;
-        build.outcomes.push({
-          command: settled.command.command.id,
-          kind: settled.command.command.kind,
-          resources: settled.command.resources.map((resource) => resource.id),
-          status: "deferred",
-          wakeAt: settled.execution.wakeAt,
-          message: settled.execution.reason,
-        });
-        continue;
-      }
-      const event = settled.execution.event;
-      try {
-        await accept(build, event);
-        build.outcomes.push({
-          command: settled.command.command.id,
-          kind: settled.command.command.kind,
-          resources: settled.command.resources.map((resource) => resource.id),
-          status: "completed",
-        });
-      } catch (error) {
-        build.stopped = true;
-        build.outcomes.push({
-          command: settled.command.command.id,
-          kind: settled.command.command.kind,
-          resources: settled.command.resources.map((resource) => resource.id),
-          status: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
+    } catch (error) {
+      // Do not let a classification/configuration error release capacity beneath other active calls.
+      await Promise.allSettled([...active.values()].map((item) => item.promise));
+      throw error;
     }
 
     return builds.map((build) => ({

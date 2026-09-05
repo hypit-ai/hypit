@@ -158,6 +158,9 @@ export function createLocalResultWriter(
       `Execution ${execution.build} Result writer is not owned by this process`);
     let step: "result" | "cleanup" = "result";
     try {
+      const operations = await options.operationStore.list({ build: execution.build });
+      assert(!operations.some((operation) => operation.status === "pending"),
+        `Build ${execution.build} still has unsettled external work`);
       await finishResult(execution);
       step = "cleanup";
       await Promise.resolve(options.clearBuildResources?.(execution.build));

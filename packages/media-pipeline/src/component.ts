@@ -1,3 +1,4 @@
+import { verifyMediaFrameRange } from "@hypit/media";
 import { mediaComponent } from "@hypit/media";
 import { plannedNeedInputs } from "@hypit/component-kit";
 import type { ComponentPackage, PlannedNeedFacet } from "@hypit/component-kit";
@@ -312,6 +313,17 @@ export const mediaPipelineComponent = {
       },
     },
     {
+      producer: mediaPipelineProducers.renderAudioRange,
+      handler: ({ inputs }) => {
+        const plan = inline(inputs.plan!.value, "AudioProgramPlan");
+        verifyAudioProgramPlan(plan);
+        const range = inline(inputs.range!.value, "MediaFrameRange");
+        verifyMediaFrameRange(range, plan.frameCount);
+        const need: RenderAudioNeed = { plan, range };
+        return { outputs: {}, needs: { audio: canonicalize(need) } };
+      },
+    },
+    {
       producer: mediaPipelineProducers.mux,
       handler: ({ inputs }) => {
         const visual = inline(inputs.visual!.value, "RenderedVisual");
@@ -352,6 +364,7 @@ export const mediaPipelineComponent = {
       { media: "audio" },
     ),
     plannedMediaNeed(mediaPipelineProducers.renderAudio, "audio", mediaPipelineCapabilities.renderAudio, { plan: "audio" }),
+    plannedMediaNeed(mediaPipelineProducers.renderAudioRange, "audio", mediaPipelineCapabilities.renderAudio, { plan: "audio" }),
     plannedMediaNeed(mediaPipelineProducers.mux, "media", mediaPipelineCapabilities.mux, { visual: "video", audio: "audio" }),
   ],
 } satisfies ComponentPackage;

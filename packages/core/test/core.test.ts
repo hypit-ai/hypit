@@ -4,6 +4,7 @@ import {
   BuildMachine,
   defineBuild,
   reduce,
+  resolveNeedCommand,
 } from "@hypit/core";
 import type {
   CommandResult,
@@ -143,4 +144,16 @@ test("scheduling is incremental: a ready Producer runs while an unrelated Need i
   const assembleSide = state.outstanding.find((item): item is InvokeProducerCommand =>
     item.kind === "invoke-producer" && item.producer.name === "assemble");
   assert.ok(assembleSide, "the side chain's next Producer was scheduled behind the outstanding Need");
+});
+
+
+test("Core resolves an existing Need Command after failure without restarting scheduling", () => {
+  const { state, command } = reachNeed();
+  assert.deepEqual(resolveNeedCommand(state, command.id), command);
+  const failed = reduce(state, { kind: "command-failed", command: command.id, code: "EXAMPLE", message: "stopped" });
+  assert.equal(failed.status, "failed");
+  assert.equal(failed.outstanding.length, 0);
+  assert.deepEqual(resolveNeedCommand(failed, command.id), command);
+  assert.equal(resolveNeedCommand(failed, "absent-command"), undefined);
+  assert.equal(failed.outstanding.length, 0);
 });

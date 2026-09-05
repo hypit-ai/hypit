@@ -568,3 +568,26 @@ test("cancelling a completed Build reports that no cancellation was requested", 
     },
   });
 });
+
+test("cancelling an already failed execution preserves and reports its stop reason", async () => {
+  const stop = { cause: "execution-failed", reason: "Original execution failure" } as const;
+  const active = {
+    id: "build-stopping", createdAt: 1, activity: "waiting", cancellationRequested: false, stop,
+    targets: [], acceptedRecords: 0, outstandingCommands: 0, operations: [],
+  } as const;
+  const control = { async cancel() { return active; }, async close() {} } as unknown as CliRuntimeControl;
+  const distribution = {
+    openRuntimeHost: async (path: string) => ({ profile: path, openControl: async () => control }),
+  } as unknown as CliDistribution;
+  let output = "";
+  await runCli(["cancel", "build-stopping", "--runtime", "/tmp/runtime.json", "--json"],
+    { write: (text) => { output += text; } }, distribution);
+  const result = JSON.parse(output);
+  assert.equal(result.requested, false);
+  assert.deepEqual(result.build.work.stop, stop);
+  output = "";
+  await runCli(["cancel", "build-stopping", "--runtime", "/tmp/runtime.json"],
+    { write: (text) => { output += text; } }, distribution);
+  assert.match(output, /already stopping after failure/);
+  assert.match(output, /Original execution failure/);
+});

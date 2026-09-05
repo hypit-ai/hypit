@@ -47,6 +47,7 @@ export const mediaPipelineProducers = {
   projectSpeechEvidenceAudio: { module: mediaPipelineModuleRef, name: "request-speech-evidence-audio" },
   planAudio: { module: mediaPipelineModuleRef, name: "compile-audio-program" },
   renderAudio: { module: mediaPipelineModuleRef, name: "request-audio-render" },
+  renderAudioRange: { module: mediaPipelineModuleRef, name: "request-audio-range" },
   mux: { module: mediaPipelineModuleRef, name: "request-media-mux" },
   projectMuxed: { module: mediaPipelineModuleRef, name: "project-muxed-media" },
 } satisfies Record<string, ProducerRef>;
@@ -612,6 +613,16 @@ export const mediaPipelineManifest: ModuleManifest = {
     {
       name: mediaPipelineProducers.renderAudio.name,
       inputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }],
+      outputs: [],
+      needs: [{
+        name: "audio",
+        capability: mediaPipelineCapabilities.renderAudio,
+        returns: mediaTypes.timelineAudio,
+      }],
+    },
+    {
+      name: mediaPipelineProducers.renderAudioRange.name,
+      inputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }, { name: "range", type: mediaTypes.frameRange }],
       outputs: [],
       needs: [{
         name: "audio",

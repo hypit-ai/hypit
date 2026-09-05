@@ -9,10 +9,12 @@ import {
 import type { NodePackageSelectionRequest } from "@hypit/package-loader-node";
 import { EndpointRegistry, NodeDriver } from "@hypit/driver-node";
 import type { EndpointFulfillment, EndpointRegistrar, EndpointScheduling } from "@hypit/endpoint-kit";
+import { endpointResourceClaims } from "@hypit/endpoint-kit";
 import { assertBuildId, canonicalize, canonicalStringify } from "@hypit/protocol";
 import type { CanonicalValue, CapabilityRef, Need } from "@hypit/protocol";
 import {
   CompositeCredentialStore,
+  capacityUnits,
 } from "@hypit/runtime";
 import type { CredentialStore, CredentialValue, ResourceStore } from "@hypit/runtime";
 import { FileResourceStore } from "@hypit/resource-store-fs";
@@ -496,6 +498,7 @@ class TransientSessionCapacity {
 
   declare(resources: readonly TransientResourceClaim[]): void {
     for (const resource of resources) {
+      capacityUnits(resource);
       const previous = this.#limits.get(resource.id);
       if (previous !== undefined && previous !== resource.limit) {
         throw new Error(`Transient Runtime resource ${resource.id} has conflicting limits ${previous} and ${resource.limit}`);
@@ -506,15 +509,16 @@ class TransientSessionCapacity {
 
   async run<T>(resources: readonly TransientResourceClaim[], task: () => Promise<T>): Promise<T> {
     const ordered = [...resources].sort((left, right) => left.id.localeCompare(right.id));
-    while (ordered.some((resource) => (this.#active.get(resource.id) ?? 0) >= resource.limit)) {
+    for (const resource of ordered) capacityUnits(resource);
+    while (ordered.some((resource) => (this.#active.get(resource.id) ?? 0) + capacityUnits(resource) > resource.limit)) {
       await new Promise<void>((resolveWait) => this.#waiters.add(resolveWait));
     }
-    for (const resource of ordered) this.#active.set(resource.id, (this.#active.get(resource.id) ?? 0) + 1);
+    for (const resource of ordered) this.#active.set(resource.id, (this.#active.get(resource.id) ?? 0) + capacityUnits(resource));
     try {
       return await task();
     } finally {
       for (const resource of ordered) {
-        const next = (this.#active.get(resource.id) ?? 1) - 1;
+        const next = (this.#active.get(resource.id) ?? capacityUnits(resource)) - capacityUnits(resource);
         if (next === 0) this.#active.delete(resource.id);
         else this.#active.set(resource.id, next);
       }
@@ -563,7 +567,9 @@ export async function openTransientRuntimeConfigExecution(
         const resources = registrationOptions.scheduling?.resources ?? [{ id: `endpoint:${id}`, limit: 1 }];
         capacity.declare(resources);
         endpoints.registerImmediateEndpoint(id, capability, returns, async (context) => {
-          return await capacity.run(resources, async () => {
+          const claims = registrationOptions.scheduling === undefined ? resources
+            : endpointResourceClaims(registrationOptions.scheduling, context.need);
+          return await capacity.run(claims, async () => {
             await assertReady();
             return await handler(context);
           });
@@ -867,7 +873,7 @@ async function inspectRuntimeConfig(
       diagnostics.push({
         severity: "error",
         code: "RUNTIME_POOL_CONFLICT",
-        message: `${conflict.endpointIds.join(", ")} share ${conflict.resource} but size it ${conflict.limits.join(" and ")}; give them the same defaultConcurrency or different pools`,
+        message: `${conflict.endpointIds.join(", ")} share ${conflict.resource} but size it ${conflict.limits.join(" and ")}; use the same limit for this shared resource or different pools`,
         subject: conflict.resource,
       });
     }

@@ -441,6 +441,7 @@ function endpoint(options: {
   };
   return {
     async start(context) {
+      let submitting = false;
       try {
         const route = kieRouteForCapability(context.need.capability);
         if (route === undefined) throw new KieError("KIE_UNSUPPORTED_CAPABILITY", "KIE does not implement this exact capability");
@@ -455,6 +456,7 @@ function endpoint(options: {
         };
         const task = await route.compile(context.need.constraints, resolve);
         await options.gate.enter();
+        submitting = true;
         const taskId = await options.client.createTask(task, key);
         const handle: KieHandle = {
           taskId,
@@ -465,6 +467,11 @@ function endpoint(options: {
           phase: "submitted",
         });
       } catch (error) {
+        if (submitting && !(error instanceof KieError && ["KIE_SUBMISSION_REJECTED", "KIE_RATE_LIMITED"].includes(error.code))) {
+          return { status: "pending", wakeAt: options.now() + 30_000,
+            progress: { phase: "submission-unknown" }, failure: { code: "SUBMISSION_UNKNOWN",
+              message: "KIE submission acknowledgement is unknown; the same Build will not submit again" } };
+        }
         return failure(error);
       }
     },
@@ -473,15 +480,17 @@ function endpoint(options: {
       try {
         handle = readHandle(context.handle, context);
       } catch (error) {
-        return failure(error);
+        throw error;
       }
+      let remoteEnded = false;
       try {
         const route = kieRouteForCapability(context.need.capability);
         if (route === undefined || route.key !== handle.routeKey) {
           throw new KieError("KIE_HANDLE_INVALID", "KIE handle capability differs");
         }
-        if (options.now() - handle.startedAt >= options.maxOperationMs) {
-          throw new KieError("KIE_OPERATION_TIMEOUT", "KIE task exceeded its operation deadline");
+        if (!context.settling && options.now() - handle.startedAt >= options.maxOperationMs) {
+          return { ...wakeAfter(canonicalize(handle), options.pollIntervalMs, options.now(), { phase: "settling" }),
+            failure: { code: "KIE_OPERATION_TIMEOUT", message: "KIE task exceeded its operation deadline; waiting for remote termination" } };
         }
         const key = secret(context);
         const data = await options.client.taskInfo(handle.taskId, key);
@@ -491,6 +500,8 @@ function endpoint(options: {
             phase: state,
           });
         }
+        remoteEnded = state === "fail" || state === "success";
+        if (remoteEnded && context.settling) return { status: "settled" };
         if (state === "fail") {
           const vendorCode = typeof data.failCode === "string" && data.failCode.length > 0 ? data.failCode : "unknown";
           const vendorMessage = typeof data.failMsg === "string" && data.failMsg.length > 0
@@ -527,7 +538,8 @@ function endpoint(options: {
           result: { value: result },
         };
       } catch (error) {
-        return failure(error);
+        if (remoteEnded) return failure(error);
+        return wakeAfter(canonicalize(handle), options.pollIntervalMs, options.now(), { phase: "poll-unavailable" });
       }
     },
   };

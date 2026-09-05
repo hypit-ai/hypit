@@ -10,6 +10,7 @@ import type { BuildDefinition, BuildState, CapabilityRef, Need, StoredValue } fr
 import type {
   BuildCatalogDescriptor,
   BuildCompletion,
+  BuildExecutionStop,
   CapacityReservation,
   CredentialAcquisition,
   CredentialRef,
@@ -50,6 +51,7 @@ export type BuildView = {
   readonly outcome?: BuildCompletion["outcome"];
   readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
   readonly cancellationRequested: boolean;
+  readonly stop?: BuildExecutionStop;
   readonly source?: { readonly path: string };
   readonly run?: { readonly path: string };
   readonly targets: readonly string[];

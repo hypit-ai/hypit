@@ -14,7 +14,7 @@ import type {
   ProducerRef,
   TypeRef,
 } from "@hypit/protocol";
-import { verifyCredentialRef } from "@hypit/runtime";
+import { capacityUnits, verifyCredentialRef } from "@hypit/runtime";
 
 import type {
   ProducerHandler,
@@ -40,6 +40,7 @@ function verifyScheduling(scheduling: EndpointScheduling | undefined): void {
   if (scheduling === undefined) return;
   if (scheduling.resources.length === 0) throw new Error("scheduling resources must not be empty");
   const ids = scheduling.resources.map((resource) => {
+    capacityUnits(resource);
     if (resource.id.trim().length === 0) throw new Error("scheduling resource id must not be empty");
     if (!Number.isSafeInteger(resource.limit) || resource.limit < 1) {
       throw new Error(`scheduling resource ${resource.id} limit must be a positive safe integer`);

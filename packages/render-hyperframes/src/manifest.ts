@@ -21,6 +21,7 @@ export const renderHyperframesCapabilities = {
   renderVisual: { module: renderHyperframesModuleRef, name: "render-visual" },
 } satisfies Record<string, CapabilityRef>;
 export const renderHyperframesProducers = {
+  requestVisualRange: { module: renderHyperframesModuleRef, name: "request-visual-range" },
   requestVisual: { module: renderHyperframesModuleRef, name: "request-visual-render" },
 } satisfies Record<string, ProducerRef>;
 
@@ -28,7 +29,7 @@ export const renderHyperframesMarkupSurfaces = [{
     name: "video",
     tag: "Video",
     mode: "structured",
-    outputs: [],
+    outputs: [mediaTypes.frameRange],
     vocabulary: {
       summary:
         "Renders one Composition on one SemanticTrack into a final video, publishing the muxed result as a BlobArtifact.",
@@ -41,6 +42,8 @@ export const renderHyperframesMarkupSurfaces = [{
         { name: "semantic", kind: "reference", required: true,
           accepts: [semanticTrackTypes.track],
           summary: "Selects the SemanticTrack whose derived duration and frame rate every rendered Product is bound to." },
+        { name: "start-frame", kind: "literal", required: false, summary: "First original programme frame to render; requires end-frame-exclusive." },
+        { name: "end-frame-exclusive", kind: "literal", required: false, summary: "First excluded frame; requires start-frame." },
       ],
       ports: [
         { name: "video", type: artifactTypes.blob,
@@ -48,7 +51,7 @@ export const renderHyperframesMarkupSurfaces = [{
       ],
       example: '<render:Video id="final" composition={main.composition} semantic={speech.semantic}/>',
       notes: [
-        "All three attributes are required; the element accepts no children and no text content.",
+        "id, composition and semantic are required; write both frame bounds to select a range; the element accepts no children and no text content.",
         "The visual render, the audio render and the mux are three separate Needs, each realized by a Provider this package does not choose.",
         "The published Artifact carries no duration or lineage metadata, so a consumer that needs stream facts requests explicit media inspection.",
       ],
@@ -77,6 +80,16 @@ export const renderHyperframesManifest: ModuleManifest = {
     {
       name: renderHyperframesProducers.requestVisual.name,
       inputs: [{ name: "document", type: hyperframesTypes.document }],
+      outputs: [],
+      needs: [{
+        name: "visual",
+        capability: renderHyperframesCapabilities.renderVisual,
+        returns: mediaTypes.renderedVisual,
+      }],
+    },
+    {
+      name: renderHyperframesProducers.requestVisualRange.name,
+      inputs: [{ name: "document", type: hyperframesTypes.document }, { name: "range", type: mediaTypes.frameRange }],
       outputs: [],
       needs: [{
         name: "visual",

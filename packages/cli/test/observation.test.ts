@@ -94,3 +94,11 @@ test("Runtime activity ignores capacity leases but observes Build progress", () 
     activityObservationKey("running", [other, running]),
   );
 });
+
+
+test("watch output observes a Build stop independently of remote Operation failures", () => {
+  const running = view("waiting", 1, 0);
+  const stopping = { ...running, stop: { cause: "execution-failed" as const, reason: "Runtime interrupted" } };
+  assert.notEqual(buildObservationKey(stopping), buildObservationKey(running));
+  assert.ok(buildProgressView(stopping).details.includes("Build stopping after failure: Runtime interrupted"));
+});

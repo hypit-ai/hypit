@@ -25,6 +25,7 @@ export {
   admitBuildResult,
   defineBuild,
   materializeBuild,
+  resolveNeedCommand,
   reduce,
   start,
 } from "./reducer.js";

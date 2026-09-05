@@ -9,6 +9,7 @@ export {
 } from "./credentials.js";
 export type * from "./credentials.js";
 export type * from "./capacity.js";
+export { capacityUnits } from "./capacity.js";
 export { buildExecutionActivity } from "./execution.js";
 export type * from "./execution.js";
 export type * from "./environment.js";

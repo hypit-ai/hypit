@@ -40,14 +40,20 @@ export type OperationSnapshot = OperationIdentity & {
   readonly progress?: OperationProgress;
   readonly completion?: OperationCompletion;
   readonly failure?: OperationFailure;
+  /** A cancel call was attempted; subsequent turns only observe the same external work. */
+  readonly cancellationRequested?: true;
 };
 
 export type OperationUpdate =
   | {
       readonly status: "pending";
-      readonly handle: CanonicalValue;
+      /** Missing only when submission acknowledgement is unknown; never resubmit automatically. */
+      readonly handle?: CanonicalValue;
       readonly wakeAt?: number;
       readonly progress?: OperationProgress;
+      /** Local execution failed, but remote settlement has not yet been confirmed. */
+      readonly failure?: OperationFailure;
+      readonly cancellationRequested?: true;
     }
   | {
       readonly status: "completed";

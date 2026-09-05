@@ -373,6 +373,9 @@ function renderElement(
         `data-playback-rate="${sampledPlaybackRate(segment.rate, element.sampling!.sourceFrameRate, context.programNumerator, context.programDenominator)}"`,
         `data-hypit-source-frame="${run.sourceFrame.numerator}/${run.sourceFrame.denominator}"`,
         `data-hypit-source-rate="${segment.rate.numerator}/${segment.rate.denominator}"`,
+        `data-hypit-start-frame="${startFrame}"`,
+        `data-hypit-end-frame="${startFrame + durationFrames}"`,
+        `data-hypit-source-fps="${element.sampling!.sourceFrameRate.numerator}/${element.sampling!.sourceFrameRate.denominator}"`,
         `style="${escapeHtml(inlineStyle)}"`,
         attributes(element.attributes).trim(),
         "muted",
@@ -401,7 +404,9 @@ function renderElement(
       `height="${element.surface.height}"`,
     ].join(" ");
     if (element.surface.timing.kind === "still") return `<img ${common} ${surface} src="${source}"/>`;
-    return `<video ${common} ${surface} muted playsinline src="${source}"></video>`;
+    const timing = element.surface.timing;
+    const exact = `data-hypit-start-frame="${context.presentStartFrame}" data-hypit-end-frame="${context.presentStartFrame + timing.frameCount}" data-hypit-source-frame="0/1" data-hypit-source-rate="1/1" data-hypit-source-fps="${timing.frameRate.numerator}/${timing.frameRate.denominator}"`;
+    return `<video ${common} ${surface} ${exact} muted playsinline src="${source}"></video>`;
   }
 
   const media = [
@@ -413,7 +418,8 @@ function renderElement(
   ].filter(Boolean).join(" ");
   const source = escapeHtml(hyperframesResourceUri(element.artifact.resource));
   if (element.kind === "image") return `<img ${common} ${media} src="${source}"/>`;
-  return `<video ${common} ${media} src="${source}">${descendants}</video>`;
+  const exact = `data-hypit-start-frame="${context.presentStartFrame}" data-hypit-end-frame="${context.presentStartFrame + context.presentDurationFrames}" data-hypit-source-frame="0/1" data-hypit-source-rate="1/1" data-hypit-source-fps="${context.programNumerator}/${context.programDenominator}"`;
+  return `<video ${common} ${media} ${exact} src="${source}">${descendants}</video>`;
 }
 
 function renderVisualPresent(

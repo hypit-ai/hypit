@@ -14,8 +14,9 @@ import type {
   CredentialValue,
   OperationFailure,
   OperationProgress,
+  CapacityResourceClaim,
 } from "@hypit/runtime";
-import { verifyCredentialRef } from "@hypit/runtime";
+import { capacityUnits, verifyCredentialRef } from "@hypit/runtime";
 
 export type Awaitable<T> = T | Promise<T>;
 
@@ -56,10 +57,13 @@ export type ImmediateEndpointHandler = (
 export type EndpointOutcome =
   | {
       readonly status: "pending";
-      readonly handle: CanonicalValue;
+      readonly handle?: CanonicalValue;
       readonly wakeAt?: number;
       readonly progress?: OperationProgress;
+      readonly failure?: OperationFailure;
     }
+  /** Only returned to a settling poll, after the external work has stopped. No output is downloaded. */
+  | { readonly status: "settled" }
   | { readonly status: "completed"; readonly result: EndpointFulfillment }
   | { readonly status: "failed"; readonly failure: OperationFailure };
 
@@ -71,6 +75,8 @@ export type EndpointStartContext = EndpointInvocationContext & {
 export type EndpointPollContext = EndpointStartContext & {
   /** Provider task state returned by start(). */
   readonly handle: CanonicalValue;
+  /** Observe termination without creating work, enforcing a local deadline, or downloading results. */
+  readonly settling?: true;
 };
 
 /**
@@ -92,12 +98,23 @@ export type AsyncEndpoint = {
 
 /** Endpoint scheduling. It never changes Core demand. */
 export type EndpointScheduling = {
-  readonly resources: readonly {
-    readonly id: string;
-    /** Maximum Commands occupying this active Provider resource across Builds. */
-    readonly limit: number;
-  }[];
+  readonly resources: readonly CapacityResourceClaim[];
+  /** Pure request-dependent quantities for already declared resources. */
+  readonly unitsForRequest?: (request: EndpointRequest) => Readonly<Record<string, number>>;
 };
+
+export function endpointResourceClaims(scheduling: EndpointScheduling, request: EndpointRequest): readonly CapacityResourceClaim[] {
+  const quantities = scheduling.unitsForRequest?.(request) ?? {};
+  for (const id of Object.keys(quantities)) {
+    if (!scheduling.resources.some((resource) => resource.id === id)) throw new Error(`Undeclared capacity resource ${id}`);
+  }
+  return scheduling.resources.map((resource) => {
+    const units = quantities[resource.id];
+    const claim = units === undefined ? resource : { ...resource, units };
+    capacityUnits(claim);
+    return claim;
+  });
+}
 
 export type EndpointRegistrationOptions = {
   readonly supports?: (request: EndpointRequest) => boolean;
@@ -169,6 +186,8 @@ export type EndpointCredentialDescription = {
 };
 
 type EndpointCapabilityBase = {
+  readonly resources?: readonly CapacityResourceClaim[];
+  readonly unitsForRequest?: EndpointScheduling["unitsForRequest"];
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
   readonly supports?: (request: EndpointRequest) => boolean;
@@ -317,6 +336,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
           ...(capability.transient === true ? { transient: true } : {}),
           credentials,
           scheduling: {
+            ...(capability.unitsForRequest === undefined ? {} : { unitsForRequest: capability.unitsForRequest }),
             resources: [
               {
                 id: `pool:${options.pool}`,
@@ -326,6 +346,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
                 id: `capacity:${options.pool}/${capacity}`,
                 limit: exactConcurrency,
               },
+              ...(capability.resources ?? []),
             ],
           },
         };

@@ -210,6 +210,9 @@ function context(request: Need, resources: ResourceStore) {
 }
 
 test("the Lambda Endpoint declines frame domains and requirements it cannot preserve", () => {
+  assert.equal(supportsAwsLambdaHyperframes(hyperframesVisualRequest(documentFixture(30), {
+    range: { startFrame: 3, endFrameExclusive: 6 },
+  })), false, "a range must not silently become a whole-document render");
   assert.equal(supportsAwsLambdaHyperframes(hyperframesVisualRequest(documentFixture(24))), true);
   assert.equal(supportsAwsLambdaHyperframes(hyperframesVisualRequest(documentFixture(30))), true);
   assert.equal(supportsAwsLambdaHyperframes(hyperframesVisualRequest(documentFixture(60))), true);
@@ -307,7 +310,7 @@ test("one submission is polled and streams the output into the ResourceStore", a
 
   const completed = await endpoint.poll({
     ...common,
-    handle: started.handle,
+    handle: started.handle!,
   });
   assert.equal(completed.status, "completed", JSON.stringify(completed));
   assert.equal(streamed, 2, "the remote object should use the streaming ResourceStore facet");
@@ -340,7 +343,7 @@ test("running render progress is projected without exposing the private handle",
   if (started.status !== "pending") return;
   const running = await endpoint.poll({
     ...common,
-    handle: started.handle,
+    handle: started.handle!,
   });
   assert.equal(running.status, "pending");
   if (running.status === "pending") {
@@ -360,7 +363,7 @@ test("cancellation stops the submitted execution", async () => {
   if (started.status !== "pending") return;
   await endpoint.cancel({
     ...common,
-    handle: started.handle,
+    handle: started.handle!,
   });
   assert.equal(state.stopped.length, 1);
 });
