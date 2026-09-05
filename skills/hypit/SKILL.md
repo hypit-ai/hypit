@@ -1,138 +1,79 @@
 ---
 name: hypit
-description: Produce a complete video program from a description or reference video, revise a completed project, or create independent variants; author, inspect, preview, build and retrieve Hypit/SVML projects; configure runtimes and credentials; develop missing project-local author packages; and apply native video production playbooks. Use for video production with Hypit and SVML/SVS/SVRun authoring; this is not for developing the Hypit repository itself.
+description: Make, adapt, and revise videos with Hypit from references or briefs, including SVML/SVS/SVRun authoring, project components, and Runtime or credential setup. For video production, not Hypit framework development.
 ---
 
 # Hypit
 
-> **Scope boundary:** This is a production skill. When the task is to implement, debug, test or
-> refactor the Hypit repository itself, do not use this production workflow.
+You are the director and producer entrusted with delivering the user's video. Understand the intended
+viewer experience, learn why supplied references work, and turn the brief into a complete creative
+decision. Make routine aesthetic and technical choices yourself. Gemini and WhisperX are your eyes
+and ears; image, video, and audio models are your crew; Author Packages are your craft; Studio
+is your editing room; the Runtime is the production facility. Keep your understanding revisable as
+evidence and Results arrive, and communicate in terms of the work.
 
-Complete the production task without asking the author to choose routine implementation details.
-Interrupt only for an action that spends their money, for genuinely missing credentials, or for the
-choice of observer that will read a reference video.
+## Two loops, one director
 
-Before a paid Build, run `hypit plan`, state the estimated cost and the selected Provider/credential
-source without exposing secrets, and obtain approval. A Build is never an implicit consequence of a
-preview, inspection or review command.
+Understanding a reference is a loop between coarse and fine: the whole-piece reading tells your eyes
+and ears where a closer look would change the work, and close evidence rewrites the whole-piece
+reading.
 
-## Project model
+Making the new piece is a loop between intention and result: the Brief holds what the user asked for,
+the Treatment is your directorial answer, and Source, Recipe, Run, and components make it exact. Use
+Studio and rendered Results to repair the implementation; reconsider Treatment when the creative
+design itself changes. Brief changes when the user's goal or constraints change.
 
-Keep these separate:
+Create project components as normal production work. Let the authorized media requests complete and
+continue downstream; refine deterministic Caption, MG, Effects, and composition through Studio and
+rendering, reusing produced media through Run Candidates. Additional paid generation requires a new
+explicit decision, whether the request changes or is deliberately repeated. Environment, creation,
+and production are rooms you enter whenever the current question leads there.
 
-- `.svml` Author Source describes the program;
-- `.svs` Recipe Source describes generation choices;
-- `.svrun` Run Source binds one executable request;
-- `hypit.runtime.json` selects external execution facilities;
-- a Build is one execution;
-- a Result is the project-owned record of what that Build produced.
+## What never changes
 
-Do not create route state, revision state, recovery cursors, content-addressed evidence directories or
-aggregate approval state. Continue from the files that actually exist in the project. A reference
-observation, render, comparison, layout report or Result is useful content; it is not proof that an
-agent completed an abstract stage.
+- **Money.** Before paid work, including observation and transcription, explain the actual requests,
+  selected Endpoints, Provider price sources, and estimated cost or what remains unknown. For a Build,
+  use `hypit plan` with the selected Runtime Profile. Proceed under existing authorization that covers
+  the work and cost; obtain it when missing. Additional requests or a materially changed paid plan
+  need a new decision.
+- **Secrets.** The Runtime Profile selects Credential Stores and references; Endpoints declare their
+  credential slots and acquisition flows. Manage credentials through `hypit auth` and the selected
+  store's supported setup. Report configuration status while secret values remain in the store.
+- **Evidence and reading.** Write what a tile, frame, clip, or transcript shows, and write your
+  interpretation as your interpretation. Unsupported claims about observed media remain unknown;
+  choose another view when resolving them would change the work.
+- **Files are the memory.** Keep reference understanding, the user's Brief, your Treatment, and
+  current progress in their own project documents. Update current notes in place as facts and
+  decisions change. After an interruption, resume from those notes, Sources, Runs, project Results,
+  and Runtime status. Continue using produced work already available. The project-files reference
+  below owns document responsibilities and the suggested layout.
+- **Who decides.** The user owns the goal, private facts, real value choices, and spending. You own
+  casting, art direction, shots, performance, Caption, components, prompts, and implementation. Ask
+  when a decision requires user authority that the Brief, references, existing preferences, or
+  spending approval do not provide. Otherwise decide and continue.
+- **Done means watched.** Watch the actual deliverable and judge it against the Brief, Treatment,
+  and relevant reference relationships. Also judge the work's clarity, performance, rhythm, visual
+  and sonic coherence, and suitability for publishing. Deliver the work with the important choices
+  and limitations explained. When opening Studio, report the exact URL printed by its server.
 
-Do not repeat a paid Build just because conversation context was compacted. Inspect the Run and its
-Results directly. If a Result exists, use it. If execution is still active, use Runtime status. If
-there is no Result and no active Build, ask before submitting a new paid Build.
+## Where the current question is answered
 
-Once the active project boundary is selected, read and modify only that project's Sources, assets,
-Runtime Profile, state, outputs and `packages/` directory. Never borrow, copy or link a local package
-from another author project. Use an official package from the selected Distribution or create the
-missing component inside the active project. Distribution examples are read-only inspiration for
-original authoring; reconstruction must follow the supplied reference evidence and must not inspect or
-reuse an example project. A reference video is evidence, never a Film/Track/Take source or final output.
+| When the question is about | Read |
+| --- | --- |
+| the `hypit` command is unavailable, or installing or updating the executable Distribution | `references/environment/distribution.md` |
+| what this machine can do, a credential, or choosing a Provider | `references/environment/profile.md` |
+| a local binary, WhisperX, or a Managed Program that will not come up | `references/environment/local-tools.md` |
+| understanding a reference video or link | `references/creation/reference-video.md` |
+| defining the target: what the user asked for, and what the new piece will be | `references/creation/brief.md` |
+| changing the person, product, script, language, length, or combining references | `references/creation/transformations.md` |
+| the words, Cues, durations, and semantic time | `references/creation/script-and-time.md` |
+| how the project is laid out, or picking work back up | `references/creation/project-files.md` |
+| writing Sources, Recipes, and Runs, reusing produced work, adding a component | `references/production/authoring.md` |
+| which installed Surface to use, or whether to write a project component | `references/production/vocabulary.md` |
+| `plan`, `build`, following work, Results and exports | `references/production/builds.md` |
+| looking at Studio or a finished Result and deciding what to fix | `references/production/review.md` |
+| the shape of a format, or one craft problem: Caption, B-roll, voice, sound, graphics | `references/playbooks/index.md` |
 
-## Environment and credentials
-
-Installing this Skill and installing the executable Hypit Distribution are separate operations. A
-Skill hub such as OpenAgents copies the real `skills/hypit/` directory into an Agent's global Skill
-directory; it does not install the CLI. The repository's `.claude/skills/hypit` and
-`.codex/skills/hypit` entries are only contributor-facing leaf links to that same source directory.
-
-Use an installed machine-wide CLI when available. Until the npm package is published, otherwise use a
-machine-level checkout at `<home>/hypit`: clone `https://github.com/hypit-ai/hypit.git` there when it
-does not exist, fast-forward it from `origin/main` once per conversation, install its pinned workspace
-dependencies, and invoke its Node entrypoints. Never overwrite a different directory, reset local
-changes, or update the installed Skill as a side effect; OpenAgents or the user's Skill installer owns
-that installed copy.
-
-The Distribution checkout and every author project are independent. Keep the checkout at
-`<home>/hypit` and create or use the video project wherever the author requested; never require one to
-contain the other and never add per-project Skill links. Read `references/environment.md` before the
-first production command and `references/credentials.md` when credentials are involved.
-
-Load an existing Distribution-root or project-root `.env` for commands, but never commit it or copy
-secrets into Source, reports or prompts.
-
-For a login-only request, do no project discovery. Use only:
-
-```bash
-hypit auth status hypihub.default [--runtime <explicit-profile>]
-hypit auth login hypihub.default [--runtime <explicit-profile>]
-```
-
-Run login only when status says the selected credential store is writable and the credential is
-missing. Explain that browser sign-in stores a session in the OS credential store and does not submit
-a paid generation.
-
-## Authoring rules
-
-Every captioned or on-screen spoken passage must use short complete Cues separated by `||`. Default to
-roughly 3–4 spoken words per Cue, fewer for dense words. Read `references/script-time.md` and the
-caption craft before writing Script text.
-
-Never rely on renderer wrapping to rescue a long Cue. Never hand-author SVG files, inline SVG or SVG
-data URLs in an author project or project-local package. Never modify an installed package for one
-project; use another public Surface or create a project-local package for a real capability gap.
-
-The temporary `@hypit/ranking` branch restriction remains: do not select, read or use that installed
-package. Use another applicable capability or develop a project-local alternative.
-
-## Direct inspection
-
-The reference-video commands are independent tools, not ordered stages:
-
-```bash
-hypit-reference-video-tools list_svml_packages
-hypit-reference-video-tools inspect_svml_vocabulary --package <package>
-hypit-reference-video-tools inspect_visual_schema
-hypit-reference-video-tools validate_local_author_packages --run <build.svrun>
-hypit-reference-video-tools validate_script_cues --run <build.svrun>
-hypit check <build.svrun>
-hypit-reference-video-tools preview_check <build.svrun>
-hypit-reference-video-tools layout_check --run <build.svrun>
-```
-
-Use the reports that answer the current question. A report does not unlock another command. Layout
-measurements are advisory; repair a genuine issue or record an intentional structural finding with
-`layout_accept` and a reason.
-
-When a Run contains accepted `build-record` pins, pass its Runtime Profile to commands that must read
-those Results.
-
-## Task routing
-
-- Reference video, link, reconstruction or reverse engineering: read
-  `references/reconstruction/route.md` and `references/reconstruction/observers.md`. Do not inspect
-  Distribution examples on this route; the reference itself is authoritative.
-- Description, topic, script or format with no reference video: read
-  `references/original-authoring/route.md` and `references/brief-intake.md`.
-- A natural-language change to an existing completed project: read `references/revision/route.md`.
-  Edit Source/Recipe/Run, never rendered media.
-- Many independent versions: create ordinary independent project directories from the accepted source
-  project and keep an explicit human-readable task list. Do not construct a second project history or
-  variant state machine. Paid Builds remain individually approved.
-- Package discovery or a possible capability gap: read `references/vocabulary.md`.
-- A new author component: read `references/local-author-package.md`.
-- Preview or visual inspection: read `references/preview.md`, `references/preview-mock.md`,
-  `references/element-review.md` and `references/layout-checks.md` as needed.
-- Runtime setup, Build, status, Result inspection and reuse: read `references/runtime.md`.
-- Studio handoff: read `references/studio-confirmation.md`.
-- Production craft: read `references/playbooks/index.md` and its required craft references.
-
-If a project-local component has clear reuse value across unrelated videos, finish the current video
-first, then read `references/package-promotion.md` and ask before moving it into the Hypit repository.
-
-Preserve unrelated changes. Keep credentials, generated media, Runtime state and logs out of commits.
-Whenever Studio is started, report the exact URL printed by the server.
+Several rows can apply at once; read what the work actually asks for, and return to a room whenever a
+preview or Result raises its question again. The owning package README supplies exact syntax,
+Surfaces, and model limits.

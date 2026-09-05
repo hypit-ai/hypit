@@ -46,8 +46,7 @@ event is genuinely independent of speech. The final accepted speech alignment lo
 events in real media; a measured reading duration is not a substitute for it.
 
 Repeated visual states can share a coherent sound vocabulary. Variation is useful when the dramatic
-function changes, not merely because another asset is available. `sfx.md` owns the finer judgment of
-individual effect choice and timing.
+function changes, not merely because another asset is available.
 
 ## Preserve continuity through edits
 
