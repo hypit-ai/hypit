@@ -2629,6 +2629,9 @@ importers:
       '@hypit/component-kit':
         specifier: workspace:*
         version: link:../component-kit
+      '@hypit/core':
+        specifier: workspace:*
+        version: link:../core
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
@@ -2660,9 +2663,6 @@ importers:
       '@hypit/artifact-store-fs':
         specifier: workspace:*
         version: link:../artifact-store-fs
-      '@hypit/core':
-        specifier: workspace:*
-        version: link:../core
       '@hypit/credential-store-env':
         specifier: workspace:*
         version: link:../credential-store-env
