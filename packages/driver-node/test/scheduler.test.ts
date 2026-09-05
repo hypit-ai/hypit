@@ -246,6 +246,51 @@ test("independent paid commands inside one Build may fill the same resource with
     record.type.name === types.generated.name).length, 2);
 });
 
+test("a terminal failure keeps its diagnostic while an in-flight sibling settles", async () => {
+  const operations = memoryOperations();
+  const producers = new ProducerRegistry();
+  const endpoints = new EndpointRegistry();
+  registerGreetingProducers(producers);
+  let calls = 0;
+  const endpoint: AsyncEndpoint = {
+    async start() {
+      calls += 1;
+      if (calls === 1) {
+        return {
+          status: "failed",
+          failure: { code: "PROVIDER_REJECTED", message: "the first provider request was rejected" },
+        };
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 20));
+      return {
+        status: "completed",
+        result: { value: { kind: "inline", value: "late sibling result" } },
+      };
+    },
+    poll() {
+      throw new Error("completed fixture operations are not polled");
+    },
+  };
+  endpoints.registerAsyncEndpoint(
+    "generation.parallel",
+    capabilities.generation,
+    types.generated,
+    endpoint,
+    { scheduling: { resources: [{ id: "pool:fixture.account", limit: 2 }] } },
+  );
+
+  const [result] = await new LocalBuildScheduler(new NodeDriver({ producers, endpoints, operations })).run([{
+    id: "parallel-failure",
+    state: createParallelGreetingBuild(),
+  }]);
+
+  assert.equal(calls, 2);
+  assert.equal(result?.status, "failed");
+  assert.equal(result?.state.diagnostics.at(-1)?.code, "PROVIDER_REJECTED");
+  assert.match(result?.state.diagnostics.at(-1)?.message ?? "", /first provider request was rejected/);
+  assert.equal(result?.outcomes.some((outcome) => outcome.status === "error"), false);
+});
+
 test("an asynchronous Endpoint starts once and is polled until complete", async () => {
   const operations = memoryOperations();
   let starts = 0;

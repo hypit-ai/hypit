@@ -191,6 +191,10 @@ export class LocalBuildScheduler {
         const settled = await Promise.race([...active.values()].map((item) => item.promise));
         active.delete(settled.key);
         const build = settled.build;
+        // A command may finish after a concurrently running sibling has already made the
+        // Build terminal. Its capacity has been released, but no later completion, failure or
+        // deferral belongs to Core's outstanding commands or may replace the first outcome.
+        if (build.state.status === "failed" || build.state.status === "complete") continue;
         if (settled.execution === undefined) {
           build.stopped = true;
           build.outcomes.push({

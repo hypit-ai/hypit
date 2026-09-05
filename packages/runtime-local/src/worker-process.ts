@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import { SqliteRuntimeState } from "@hypit/store-sqlite";
 import { canonicalStringify } from "@hypit/protocol";
 
 import { processAlive, stopProcessTree } from "./process-control.js";
@@ -54,16 +53,6 @@ function paths(dataRoot: string) {
   };
 }
 
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return false;
-    throw error;
-  }
-}
-
 async function rotateLog(path: string): Promise<void> {
   let size = 0;
   try {
@@ -99,27 +88,6 @@ async function profileConfig(profile: string): Promise<string> {
   return canonicalStringify(JSON.parse(await readFile(resolve(profile), "utf8")));
 }
 
-async function activeLease(dataRoot: string) {
-  const state = new SqliteRuntimeState(join(resolve(dataRoot), "runtime.sqlite"), { readOnly: true });
-  try {
-    return await state.workerLease.read();
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("no such table: hypit_worker_lease")) return undefined;
-    throw error;
-  } finally {
-    state.close();
-  }
-}
-
-async function releaseLease(dataRoot: string, owner: string, pid: number): Promise<void> {
-  const state = new SqliteRuntimeState(join(resolve(dataRoot), "runtime.sqlite"));
-  try {
-    await state.workerLease.release(owner, pid);
-  } finally {
-    state.close();
-  }
-}
-
 async function readyOwner(path: string): Promise<string | undefined> {
   try {
     const value = (await readFile(path, "utf8")).trim();
@@ -136,11 +104,7 @@ export async function runtimeProcessStatus(
 ): Promise<RuntimeProcessState> {
   const location = paths(dataRoot);
   const current = await record(profile, dataRoot);
-  const lease = current === undefined ? undefined : await activeLease(dataRoot);
-  const ready = current === undefined ? undefined : await readyOwner(location.ready);
-  if (current === undefined || !processAlive(current.pid)
-    || lease?.owner !== current.owner || lease.pid !== current.pid || lease.expiresAt <= Date.now()
-    || ready !== current.owner) {
+  if (current === undefined || !processAlive(current.pid)) {
     return { state: "stopped", profile: resolve(profile), logPath: location.log };
   }
   return {
@@ -187,6 +151,7 @@ async function acquireLaunch(path: string, timeoutMs: number): Promise<() => Pro
 async function waitForReady(
   profile: string,
   dataRoot: string,
+  owner: string,
   timeoutMs: number,
 ): Promise<RuntimeProcessState> {
   const location = paths(dataRoot);
@@ -202,13 +167,24 @@ async function waitForReady(
       }
       throw new Error(`Runtime Worker exited before becoming ready${log.length === 0 ? "" : `: ${log.trim().split("\n").at(-1)}`}`);
     }
-    if (await exists(location.ready)) {
-      const state = await runtimeProcessStatus(profile, dataRoot);
-      if (state.state === "running") return state;
+    if (current.owner !== owner) {
+      throw new Error("Runtime Worker record changed while waiting for the Worker to become ready");
+    }
+    if (await readyOwner(location.ready) === owner) {
+      return await runtimeProcessStatus(profile, dataRoot);
     }
     await new Promise((resolveWait) => setTimeout(resolveWait, 10));
   }
   throw new Error(`Runtime Worker did not become ready within ${timeoutMs}ms; log: ${location.log}`);
+}
+
+async function waitForProcessExit(pid: number, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() <= deadline) {
+    if (!processAlive(pid)) return true;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 20));
+  }
+  return !processAlive(pid);
 }
 
 export async function ensureRuntimeProcess(
@@ -217,28 +193,20 @@ export async function ensureRuntimeProcess(
   launch: RuntimeWorkerLaunch,
   timeoutMs = 10_000,
 ): Promise<RuntimeProcessState> {
-  const current = await runtimeProcessStatus(profile, dataRoot);
-  if (current.state === "running") {
-    if (current.configuration === "changed") {
-      throw new Error("Runtime Profile changed while its Worker is running; stop and start the Worker to activate it");
-    }
-    return current;
-  }
   const absolute = resolve(profile);
   const location = paths(dataRoot);
   await mkdir(location.root, { recursive: true });
   const releaseLaunch = await acquireLaunch(location.launch, timeoutMs);
   try {
-    const raced = await runtimeProcessStatus(profile, dataRoot);
-    if (raced.state === "running") {
-      if (raced.configuration === "changed") {
+    const current = await runtimeProcessStatus(profile, dataRoot);
+    if (current.state === "running") {
+      if (current.configuration === "changed") {
         throw new Error("Runtime Profile changed while its Worker is running; stop and start the Worker to activate it");
       }
-      return raced;
+      return current;
     }
     const stale = await record(profile, dataRoot).catch(() => undefined);
     if (stale !== undefined && !processAlive(stale.pid)) {
-      await releaseLease(dataRoot, stale.owner, stale.pid).catch(() => undefined);
       await rm(location.pid, { force: true });
       await rm(location.ready, { force: true });
     }
@@ -278,10 +246,19 @@ export async function ensureRuntimeProcess(
       } satisfies ProcessRecord), "utf8");
       child.unref();
       try {
-        return await waitForReady(absolute, dataRoot, timeoutMs);
+        const ready = await waitForReady(absolute, dataRoot, owner, timeoutMs);
+        if (ready.configuration === "changed") {
+          throw new Error("Runtime Profile changed while its Worker was starting; start it again to activate the new Profile");
+        }
+        return ready;
       } catch (error) {
-        await stopProcessTree(child.pid, true).catch(() => "gone");
-        await releaseLease(dataRoot, owner, child.pid).catch(() => undefined);
+        const stopped = await stopProcessTree(child.pid, true).catch(() => "denied" as const);
+        if (stopped === "denied" || !await waitForProcessExit(child.pid, 2_000)) {
+          throw new Error(
+            `Runtime Worker ${child.pid} failed to become ready and is still running; stop it explicitly before retrying`,
+            { cause: error },
+          );
+        }
         const saved = await record(profile, dataRoot).catch(() => undefined);
         if (saved?.owner === owner) {
           await rm(location.pid, { force: true });
@@ -297,21 +274,10 @@ export async function ensureRuntimeProcess(
   }
 }
 
-export async function runtimeProcessOwnsCurrentProfile(
-  profile: string,
-  dataRoot: string,
-  owner: string,
-): Promise<boolean> {
-  const current = await record(profile, dataRoot);
-  return current?.owner === owner && current.profileConfig === await profileConfig(profile);
-}
-
 async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, timeoutMs: number): Promise<RuntimeProcessState> {
   const current = await record(profile, dataRoot);
   const location = paths(dataRoot);
-  const lease = current === undefined ? undefined : await activeLease(dataRoot);
-  if (current === undefined || !processAlive(current.pid)
-    || lease?.owner !== current.owner || lease.pid !== current.pid) {
+  if (current === undefined || !processAlive(current.pid)) {
     await rm(location.pid, { force: true });
     await rm(location.ready, { force: true });
     return { state: "stopped", profile: resolve(profile), logPath: location.log };
@@ -339,12 +305,18 @@ async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, tim
   }
   await rm(location.pid, { force: true });
   await rm(location.ready, { force: true });
-  await releaseLease(dataRoot, current.owner, current.pid).catch(() => undefined);
   return { state: "stopped", profile: resolve(profile), logPath: location.log };
 }
 
 export async function stopRuntimeProcess(profile: string, dataRoot: string, timeoutMs = 10_000): Promise<RuntimeProcessState> {
-  return await stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs);
+  const location = paths(dataRoot);
+  await mkdir(location.root, { recursive: true });
+  const releaseLaunch = await acquireLaunch(location.launch, timeoutMs);
+  try {
+    return await stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs);
+  } finally {
+    await releaseLaunch();
+  }
 }
 
 export async function runtimeProcessLogs(dataRoot: string): Promise<{ readonly path: string; readonly text: string }> {

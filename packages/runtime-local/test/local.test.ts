@@ -102,19 +102,19 @@ function durableBuildRequest(
   } as const;
 }
 
-test("a Worker that lost Runtime ownership cannot claim a ready Build", async () => {
+test("a Worker does not claim a Build when the pinned Runtime environment differs", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-worker-owner-"));
   const initial = createGreetingBuild();
   try {
     const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
       assertEnvironment: () => {
-        throw new Error("Runtime Worker no longer owns this Runtime");
+        throw new Error("Runtime Profile no longer matches this Worker's active environment");
       },
     });
     await runtime.build(durableBuildRequest(directory, "bld_20260902T120000000Z_0000000001", initial));
 
-    await assert.rejects(runtime.workOnce(), /no longer owns this Runtime/u);
+    await assert.rejects(runtime.workOnce(), /no longer matches this Worker's active environment/u);
     const status = await runtime.inspect("bld_20260902T120000000Z_0000000001");
     assert.equal(status?.activity, "ready");
     assert.deepEqual(status?.requests, { total: 1, completed: 0 });

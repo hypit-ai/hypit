@@ -11,6 +11,7 @@ import { compileHyperframesDocument } from "@hypit/hyperframes";
 import { sealProgramSpace } from "@hypit/program-space";
 import type { BlobRef } from "@hypit/protocol";
 import { renderHyperframesVisual } from "../src/index.js";
+import { resolveExecutionOptions } from "../src/render.js";
 import { hypitPackage } from "../src/activation.js";
 import type { RuntimeEndpointAdapterImplementation } from "@hypit/runtime-kit";
 import { endpointResourceClaims } from "@hypit/endpoint-kit";
@@ -41,6 +42,17 @@ function documentFor(artifact: BlobRef) {
   return compileHyperframesDocument(sealComposition({ id: "range-video",
     canvas: { width: 64, height: 64, clearColor: "#000000" }, tracks: [track] }), space);
 }
+
+test("the render deadline is global while stage deadlines are explicit deployment policy", () => {
+  const defaults = resolveExecutionOptions({});
+  assert.equal(defaults.processTimeoutMs, 30 * 60_000);
+  assert.equal(defaults.initializationTimeoutMs, undefined);
+  assert.equal(defaults.frameTimeoutMs, undefined);
+
+  const explicit = resolveExecutionOptions({ initializationTimeoutMs: 31_000, frameTimeoutMs: 16_000 });
+  assert.equal(explicit.initializationTimeoutMs, 31_000);
+  assert.equal(explicit.frameTimeoutMs, 16_000);
+});
 
 test("source selection retains loop, hold and fractional-speed sampling and shares decoded frames", () => {
   const document = documentFor({ kind: "blob", resource: "res_range_source", size: 1, mediaType: "video/mp4" });

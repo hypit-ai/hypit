@@ -4,8 +4,7 @@ import type {
   RuntimeWorkerLaunch,
 } from "@hypit/runtime-host-node";
 import { hypitHostStateRoot } from "@hypit/runtime-host-node";
-import { join, resolve } from "node:path";
-import { SqliteRuntimeState } from "@hypit/store-sqlite";
+import { resolve } from "node:path";
 
 import {
   createRuntimeControlFromConfig,
@@ -28,7 +27,6 @@ import {
 import {
   ensureRuntimeProcess,
   markRuntimeProcessReady,
-  runtimeProcessOwnsCurrentProfile,
   runtimeProcessLogs,
   runtimeProcessStatus,
   stopRuntimeProcess,
@@ -146,67 +144,25 @@ export async function openLocalRuntimeHost(
       ...distribution,
     }),
     runWorker: async (readyFile, owner) => {
-      const selected = await resolveRuntimeConfigPaths(profile, { packageRoot: basePackageRoot, ...distribution });
-      const leaseState = new SqliteRuntimeState(join(selected.dataRoot, "runtime.sqlite"));
-      const leaseMs = 30_000;
-      const acquiredAt = Date.now();
-      const acquired = await leaseState.workerLease.acquire({
-        owner,
-        pid: process.pid,
-        acquiredAt,
-        expiresAt: acquiredAt + leaseMs,
-      });
-      if (!acquired) {
-        leaseState.close();
-        throw new Error("another Runtime Worker owns this Runtime");
-      }
       let runtime: Awaited<ReturnType<typeof createRuntimeFromConfig>> | undefined;
       const abort = new AbortController();
       const stop = (): void => abort.abort();
       process.once("SIGTERM", stop);
       process.once("SIGINT", stop);
-      let renewal = Promise.resolve();
-      const heartbeat = setInterval(() => {
-        renewal = renewal.then(async () => {
-          if (!await runtimeProcessOwnsCurrentProfile(profile, selected.dataRoot, owner)) {
-            abort.abort(new Error("Runtime Profile changed; this Worker stopped before using mixed configuration"));
-            return;
-          }
-          const renewed = await leaseState.workerLease.renew(owner, process.pid, Date.now() + leaseMs);
-          if (!renewed) abort.abort(new Error("Runtime Worker ownership was lost"));
-        }).catch((error: unknown) => abort.abort(error));
-      }, 5_000);
       try {
-        const assertExecutionOwner = async (): Promise<void> => {
-          const lease = await leaseState.workerLease.read();
-          if (lease?.owner !== owner || lease.pid !== process.pid || lease.expiresAt <= Date.now()) {
-            throw new Error("Runtime Worker no longer owns this Runtime");
-          }
-        };
         runtime = await createRuntimeFromConfig(profile, {
           packageRoot: basePackageRoot,
           ...distribution,
-          assertExecutionOwner,
         });
         await runtime.work({
           idlePollMs: 250,
           signal: abort.signal,
-          ready: async () => {
-            await assertExecutionOwner();
-            if (!await runtimeProcessOwnsCurrentProfile(profile, selected.dataRoot, owner)) {
-              throw new Error("Runtime Profile changed while the Worker was starting");
-            }
-            await markRuntimeProcessReady(readyFile, owner);
-          },
+          ready: async () => await markRuntimeProcessReady(readyFile, owner),
         });
       } finally {
-        clearInterval(heartbeat);
-        await renewal.catch(() => undefined);
         process.removeListener("SIGTERM", stop);
         process.removeListener("SIGINT", stop);
         await runtime?.close();
-        await leaseState.workerLease.release(owner, process.pid).catch(() => undefined);
-        leaseState.close();
       }
     },
   };

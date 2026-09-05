@@ -34,8 +34,6 @@ import type {
   OperationSnapshot,
   OperationStore,
   OperationUpdate,
-  RuntimeWorkerLease,
-  RuntimeWorkerLeaseStore,
   RuntimeEnvironmentStore,
 } from "@hypit/runtime";
 
@@ -527,71 +525,6 @@ class SqliteCommandExecutionStore implements CommandExecutionStore {
   }
 }
 
-class SqliteRuntimeWorkerLeaseStore implements RuntimeWorkerLeaseStore {
-  readonly #database: DatabaseSync;
-
-  constructor(database: DatabaseSync) {
-    this.#database = database;
-  }
-
-  async read(): Promise<RuntimeWorkerLease | undefined> {
-    const row = this.#database.prepare("SELECT * FROM hypit_worker_lease WHERE singleton = 1").get() as Row | undefined;
-    if (row === undefined) return undefined;
-    assert(typeof row.owner_id === "string" && typeof row.pid === "number"
-      && typeof row.acquired_at === "number" && typeof row.expires_at === "number",
-    "SQLite Runtime Worker lease is invalid");
-    return {
-      owner: row.owner_id,
-      pid: row.pid,
-      acquiredAt: row.acquired_at,
-      expiresAt: row.expires_at,
-    };
-  }
-
-  async acquire(request: RuntimeWorkerLease): Promise<boolean> {
-    positiveInteger(request.pid, "Runtime Worker pid");
-    nonNegativeInteger(request.acquiredAt, "Runtime Worker acquisition time");
-    assert(request.owner.trim().length > 0, "Runtime Worker owner is empty");
-    assert(Number.isSafeInteger(request.expiresAt) && request.expiresAt > request.acquiredAt,
-      "Runtime Worker lease expiration is invalid");
-    return transaction(this.#database, () => {
-      const row = this.#database.prepare(
-        "SELECT owner_id, pid, expires_at FROM hypit_worker_lease WHERE singleton = 1",
-      ).get() as Row | undefined;
-      if (row !== undefined) {
-        assert(typeof row.owner_id === "string" && typeof row.pid === "number"
-          && typeof row.expires_at === "number", "SQLite Runtime Worker lease is invalid");
-        if (row.owner_id === request.owner && row.pid === request.pid) return true;
-        if (row.expires_at > request.acquiredAt) return false;
-      }
-      this.#database.prepare(`
-        INSERT INTO hypit_worker_lease (singleton, owner_id, pid, acquired_at, expires_at)
-        VALUES (1, ?, ?, ?, ?)
-        ON CONFLICT(singleton) DO UPDATE SET
-          owner_id = excluded.owner_id,
-          pid = excluded.pid,
-          acquired_at = excluded.acquired_at,
-          expires_at = excluded.expires_at
-      `).run(request.owner, request.pid, request.acquiredAt, request.expiresAt);
-      return true;
-    });
-  }
-
-  async renew(owner: string, pid: number, expiresAt: number): Promise<boolean> {
-    const result = this.#database.prepare(`
-      UPDATE hypit_worker_lease SET expires_at = ?
-      WHERE singleton = 1 AND owner_id = ? AND pid = ?
-    `).run(expiresAt, owner, pid);
-    return result.changes === 1;
-  }
-
-  async release(owner: string, pid: number): Promise<void> {
-    this.#database.prepare(
-      "DELETE FROM hypit_worker_lease WHERE singleton = 1 AND owner_id = ? AND pid = ?",
-    ).run(owner, pid);
-  }
-}
-
 class SqliteRuntimeEnvironmentStore implements RuntimeEnvironmentStore {
   readonly #database: DatabaseSync;
 
@@ -1011,7 +944,6 @@ export class SqliteRuntimeState {
   readonly commandExecutions: CommandExecutionStore;
   readonly execution: BuildExecutionStore;
   readonly catalog: BuildCatalog;
-  readonly workerLease: RuntimeWorkerLeaseStore;
   readonly environment: RuntimeEnvironmentStore;
   readonly submissions: PendingBuildStore;
   readonly #database: DatabaseSync;
@@ -1102,13 +1034,6 @@ export class SqliteRuntimeState {
         created_at INTEGER NOT NULL,
         PRIMARY KEY (build_id, command_id)
       ) STRICT;
-      CREATE TABLE IF NOT EXISTS hypit_worker_lease (
-        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-        owner_id TEXT NOT NULL,
-        pid INTEGER NOT NULL,
-        acquired_at INTEGER NOT NULL,
-        expires_at INTEGER NOT NULL
-      ) STRICT;
       CREATE TABLE IF NOT EXISTS hypit_runtime_environment (
         singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
         config_json TEXT NOT NULL
@@ -1119,7 +1044,6 @@ export class SqliteRuntimeState {
     this.commandExecutions = new SqliteCommandExecutionStore(database);
     this.execution = new SqliteBuildExecutionStore(database);
     this.catalog = new SqliteBuildCatalog(database);
-    this.workerLease = new SqliteRuntimeWorkerLeaseStore(database);
     this.environment = new SqliteRuntimeEnvironmentStore(database);
     this.submissions = new SqlitePendingBuildStore(database);
   }
