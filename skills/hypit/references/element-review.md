@@ -125,7 +125,7 @@ A mock lives only in this render. It is never written into the Source, and no ga
 ### The derived Run carries the mocks, and nothing else changes
 
 The mocks are substituted into a Run that names the project's own Source. The whole program is drawn
-and the window is cut out of the frames afterwards, so every element the Source places is present and
+and the window is cut out of it afterwards, so every element the Source places is present and
 drawn wherever the Source puts it — what is on screen over the words being looked at is what the
 delivery will put there.
 

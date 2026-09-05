@@ -390,7 +390,7 @@ hypit-reference-video-tools render_element projects/<name>/build.svrun --batch r
 ```
 
 `comparison-round.md` uses preview-mock estimate timing; `--reference-id` selects comparison evidence, not mock timing.
-The program is realized once into a shared preview frame cache and entries are cut serially, so render
+The program is realized and drawn once into one mp4 and entries are cut from it serially, so render
 the whole list in one `--batch` call; the batch does not run concurrent preview staging workers.
 
 Keep `.hypit/layout-check.json` beside the round. Its realized stable-state measurements remain
