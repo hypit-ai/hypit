@@ -3,8 +3,6 @@ import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 import { createHash } from "node:crypto";
-import { createRequire } from "node:module";
-import { cpus } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,8 +21,11 @@ import { preview } from "@hypit/studio/src/programme.js";
 import { loadStudioRun } from "@hypit/studio/src/run.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 import { realizePreviewMock } from "@hypit/preview-mock";
-import { EndpointRegistry } from "@hypit/driver-node";
+import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
+import { mediaTypes } from "@hypit/media";
 import { createLocalMediaProvider } from "@hypit/provider-media-local";
+import { createLocalHyperframesProvider } from "@hypit/provider-hyperframes-local";
+import { renderHyperframesCapabilities } from "@hypit/render-hyperframes";
 
 import { assert, ensureDir } from "./media.js";
 import type { TranscriptFile } from "./types.js";
@@ -667,6 +668,32 @@ export async function realizeAuthoringPreview(input: {
   }
 }
 
+const realizedPreviews = new Map<string, Promise<RealizedAuthoringPreview>>();
+
+/**
+ * Realize one Run once within this process, and let every later caller await that one realization.
+ *
+ * A round is one call per window, and each one realized the same Source again: the same compile, the
+ * same Producers, the same mock media encoded over the bytes already sitting in the store. Only the
+ * draw was held to one run, so eight windows over one program paid for eight realizations of it.
+ *
+ * Between processes this holds nothing, for the reason `once` holds nothing: the realization root is
+ * named after the Author SVML and the Run alone, so an edited Recipe or project-local package lands
+ * in the same directory, and a new process is where that edit has to be picked up.
+ */
+async function realizedOnce(input: {
+  readonly run: string;
+  readonly runtime?: string;
+  readonly package_root?: string;
+}): Promise<RealizedAuthoringPreview> {
+  const key = JSON.stringify([resolve(invokedFrom(), input.run), input.runtime ?? "", input.package_root ?? ""]);
+  const held = realizedPreviews.get(key);
+  if (held !== undefined) return await held;
+  const started = realizeAuthoringPreview(input);
+  realizedPreviews.set(key, started);
+  try { return await started; } catch (error) { realizedPreviews.delete(key); throw error; }
+}
+
 /** Materialize a realized composition and its served artifacts without opening a browser. */
 export async function stageAuthoringPreview(realized: Pick<RealizedAuthoringPreview, "built" | "previewMock">): Promise<{
   readonly stage: string;
@@ -724,7 +751,7 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const segmentArgument = input.segment;
   const selectionArgument = input.selection;
   const tokensArgument = input.tokens === undefined ? undefined : tokenWindow(input.tokens, "tokens");
-  const realized = await realizeAuthoringPreview({
+  const realized = await realizedOnce({
     run,
     ...(input.package_root === undefined ? {} : { package_root: input.package_root }),
   });
@@ -778,58 +805,66 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   }
 
   const clip = /\.(mp4|mov|webm)$/iu.test(outPath);
-  const stage = join(compareRoot, "stage");
-  const frames = join(compareRoot, "frames");
-  // Staged and drawn once per Run and clock, however many windows are asked for.
+  const program = join(compareRoot, "program.mp4");
+  // The whole program, drawn once per Run and clock, however many windows are asked for.
   //
-  // The picture does not depend on the element or the window — the whole program is drawn and the
-  // window is cut out of these frames — so a round of eight looks over one Source is one browser
-  // render and eight ffmpeg cuts. Rendering per entry would draw the same program eight times.
+  // The picture does not depend on the element or the window — every window is cut out of this one
+  // file — so a round of eight looks over one Source is one render and eight ffmpeg cuts. Rendering
+  // per entry would draw the same program eight times.
   //
-  // The staged document is written inside the same run for the same reason the derived Run is: every
-  // entry compiles the identical document to the identical path, `writeFile` truncates before it
-  // writes, and the runtime is reading that path. An entry staging `index.html` while the runtime
-  // loads it hands the runtime a file with no timeline in it, reported as
-  // `Composition has zero duration`.
+  // Drawn through the Provider a Build renders with, rather than by driving the HyperFrames CLI from
+  // here. The staging layout, the browser flags and the output check belong to the render path, and a
+  // preview that spawns its own copy of them is a second renderer to keep in step with the first: it
+  // was already staging the document by a different file naming and drawing with flags the delivery
+  // never takes. What preview still owns is the Run it draws — the mocked, estimate-timed one — not
+  // how that Run is drawn.
   await once(`draw:${renderKey}`, async () => {
-    // Compile and materialize through the same no-media staging helper used by layout_check.
-    await stageAuthoringPreview({ built, previewMock });
-
-    await rm(frames, { recursive: true, force: true });
-    await mkdir(frames, { recursive: true });
-    // The runtime ships with the tree, not with the project. Resolving it against the package root
-    // finds nothing whenever those two differ, which is every project that installs packages of its own.
-    const hyperframesCli = createRequire(join(repositoryRoot(), "packages/provider-hyperframes-local/package.json"))
-      .resolve("hyperframes/bin/hyperframes.mjs");
-    const drawn = spawnSync(process.execPath, [
-      hyperframesCli, "render", stage,
-      "--format", "png-sequence", "--output", frames, "--fps", String(frameRate),
-      "--workers", String(Math.max(1, cpus().length - 2)),
-      // Halves the time and lands on the same pixels — verified frame for frame against a run without
-      // it, PSNR reporting no error at all. The flag is marked experimental upstream; that is the
-      // reason to check the pixels, which is done, rather than the reason to draw twice as long.
-      "--experimental-fast-capture", "--no-best-effort", "--quiet",
-    ], { encoding: "utf8", windowsHide: true, timeout: 600_000 });
-    assert(drawn.status === 0, `the HyperFrames runtime refused: ${(drawn.stderr ?? "").trim().slice(-2000)}`);
+    const document = compileHyperframesDocument(built.composition, built.space as ProgramSpace);
+    // The endpoint reads what the document names out of a store, so the served bytes are put in one.
+    // They are the same bytes under the same digests, which is what makes the lookup find them.
+    const artifacts = new MemoryArtifactStore();
+    for (const file of built.served.values()) await artifacts.put(file.bytes, file.mediaType);
+    const endpoints = new EndpointRegistry();
+    // `auto` leaves the GPU decision to the runtime, which is what this render had before it went
+    // through the Provider. The delivery default asks for hardware, and a preview is drawn on
+    // whatever machine is authoring rather than on a render host chosen to have one.
+    await createLocalHyperframesProvider({ browserGpu: "auto" }).install(endpoints);
+    const need = {
+      id: "preview-visual",
+      capability: renderHyperframesCapabilities.renderVisual,
+      returns: mediaTypes.renderedVisual,
+      constraints: { document } as never,
+      result: "preview-visual",
+    };
+    const registration = endpoints.resolve(need);
+    assert(registration.status === "resolved" && registration.registration.kind === "immediate",
+      "the local HyperFrames render endpoint did not resolve");
+    const drawn = await registration.registration.handler({
+      command: { kind: "fulfill-need", id: need.id, need }, need, artifacts, credentials: {},
+    });
+    assert(drawn.value.kind === "inline", "the HyperFrames endpoint returned no inline RenderedVisual");
+    const rendered = drawn.value.value as { readonly artifact?: { readonly digest?: `sha256:${string}` } };
+    const digest = rendered.artifact?.digest;
+    assert(digest !== undefined, "the HyperFrames endpoint returned a RenderedVisual with no Artifact");
+    const bytes = await artifacts.get(digest);
+    assert(bytes !== undefined, `the HyperFrames endpoint kept no bytes for ${digest}`);
+    await writeFile(program, bytes);
   });
 
-  const written = (await readdir(frames)).filter((name) => name.endsWith(".png")).sort();
-  assert(written.length > 0, "the HyperFrames runtime wrote no frames");
-  const first = Math.min(window.startFrame, written.length - 1);
-  const last = Math.min(window.endFrameExclusive, written.length);
-  // The runtime draws with an alpha channel and leaves unpainted area transparent. What a viewer is
-  // under is the Film's own clear colour, so it is composited in here rather than left to whatever
-  // opens the file: a reference clip is opaque, and an observer handed a transparent counterpart reads
-  // the difference as design when it came from the encoding.
-  const clear = built.canvas?.clearColor ?? "#000000";
-  const background = `color=c=${clear.replace("#", "0x")}:s=${canvas.width}x${canvas.height}:r=${frameRate}`;
+  const first = Math.min(window.startFrame, programFrames - 1);
+  const last = Math.min(window.endFrameExclusive, programFrames);
+  // The Film's own clear colour is already under the picture: the document paints it on the root and
+  // on the body, and an mp4 carries no alpha for anything to show through. Nothing is composited in
+  // here, which is what the alpha of a PNG sequence used to need.
+  const at = clip ? first : Math.min(first + Math.floor((last - first) / 2), programFrames - 1);
   const count = Math.max(1, clip ? last - first : 1);
   const encoded = spawnSync("ffmpeg", [
     "-hide_banner", "-loglevel", "error", "-y",
-    "-f", "lavfi", "-i", background,
-    "-framerate", String(frameRate), "-start_number", String(clip ? first : Math.min(first + Math.floor((last - first) / 2), written.length - 1)),
-    "-i", join(frames, "frame_%06d.png"),
-    "-filter_complex", "[0][1]overlay=shortest=1[v]", "-map", "[v]",
+    "-i", program,
+    // Sought on the output rather than the input, so the cut opens on the frame the window names
+    // instead of the keyframe before it. The windows are frame ranges and the comparison trims both
+    // sides by frames, so a cut that slid to a keyframe would put the two sides out of step.
+    "-ss", String(at / frameRate),
     "-frames:v", String(count),
     ...(clip ? ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20"] : []),
     outPath,
