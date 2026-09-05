@@ -1,4 +1,4 @@
 interface:
   display_name: "Hypit"
-  short_description: "Build SVML videos and reconstruct reference videos with CLI tools"
-  default_prompt: "Use $hypit and route from SKILL.md. For reference-video reconstruction, read references/reconstruction/route.md and follow its numbered steps, reading the files each step names at the step that names them."
+  short_description: "Direct and deliver videos from references or briefs"
+  default_prompt: "Use $hypit to make or revise the video from my brief and any supplied references."

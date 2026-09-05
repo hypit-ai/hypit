@@ -75,9 +75,9 @@ description does not reveal how the speech was produced.
 - In a mixed work, each passage can use the relationship that serves it, while recurring people keep
   their accepted Voice References.
 
-Use `formats/narration-led-demo.md` when independent narration actually organizes a work or
-substantial passage. Use the relevant presenter, interview, podcast, or call Format when people
-perform their lines on camera, even if other layers cover them for part of the edit.
+Use `../formats/narration-led-demo.md` when independent narration actually organizes a work or
+substantial passage. `../index.md` routes to available Format and Craft knowledge for the work's
+other relationships.
 
 ## Give real performance real semantic time
 
@@ -96,5 +96,5 @@ or delivery.
 Review covered passages with their picture and with the underlying speech source made clear. A clean
 mix cannot rescue the wrong performer, and a good voice sample cannot rescue an unconvincing Take.
 Use `sound-mix.md` for music, effects, ambience, gain, and the completed mix. Use
-`generated-dependencies.md` for the broader question of which accepted media should directly
-condition another generation.
+`../../creation/transformations.md` for the broader question of which useful shots and identity
+references should directly condition another generation.
