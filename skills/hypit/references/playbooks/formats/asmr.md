@@ -46,6 +46,6 @@ the visible event, including headphones and ordinary speakers. Pin accepted firs
 and audio Records with `.svrun` `build-record` and `satisfy`.
 
 Read `../craft/image-prompt-style.md`, `../craft/seedance-directing.md`, `../craft/b-roll.md`,
-`../craft/persona-and-audio.md`, and `../craft/sfx.md`.
+`../craft/voice-and-performance.md`, and `../craft/sfx.md`.
 
 That list is complete, and the always-read craft in `../index.md` applies regardless of format.

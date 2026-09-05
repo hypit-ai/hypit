@@ -38,6 +38,6 @@ live listener reaction, UI stability, and generated text. Pin every accepted lay
 `.svrun` `build-record` and `satisfy`.
 
 Read `../craft/seedance-directing.md`, `../craft/captions.md`, `../craft/overlays.md`, and
-`../craft/persona-and-audio.md`.
+`../craft/voice-and-performance.md`.
 
 That list is complete, and the always-read craft in `../index.md` applies regardless of format.

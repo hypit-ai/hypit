@@ -51,7 +51,7 @@ lighting. Then review every take for voice assignment, exact words, lip-sync, re
 camera selection, and identity. Pin accepted views and takes through `.svrun` `build-record` and
 `satisfy`.
 
-Read `../craft/seedance-directing.md`, `../craft/persona-and-audio.md`, `../craft/captions.md`,
+Read `../craft/seedance-directing.md`, `../craft/voice-and-performance.md`, `../craft/captions.md`,
 and `../craft/b-roll.md`.
 
 That list is complete, and the always-read craft in `../index.md` applies regardless of format.
