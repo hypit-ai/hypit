@@ -611,6 +611,7 @@ function assertCommandOptions(args: ParsedArgs): void {
       break;
     case "check":
     case "plan":
+    case "quote":
       add("--runtime", "--package-root", "--workspace", "--asset-root");
       break;
     case "build":
@@ -643,6 +644,7 @@ function usage(): string {
     "  hypit queue [--runtime profile.json] [--watch]",
     "  hypit check <self-described-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
     "  hypit plan <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
+    "  hypit quote <run-source> --runtime profile.json",
     "  hypit build <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow]",
     "  hypit status <build-id> [--runtime profile.json] [--watch]",
     "  hypit builds [--runtime profile.json]",
@@ -952,7 +954,7 @@ export async function runCli(
   let selectedRuntimeProjectRoot: string | undefined;
   const commandProjectRoot = (): string => args.workspaceRoot
     ?? selectedRuntimeProjectRoot
-    ?? ((args.command === "check" || args.command === "plan" || args.command === "build")
+    ?? ((args.command === "check" || args.command === "plan" || args.command === "build" || args.command === "quote")
       && args.file !== undefined
       ? dirname(resolve(args.file))
       : process.cwd());
@@ -1052,7 +1054,7 @@ export async function runCli(
   const runtimeWasExplicit = args.runtime !== undefined || positionalRuntime;
   let runtimeNeedsHint = runtimeWasExplicit;
   if (args.runtime === undefined && !positionalRuntime) {
-    const sourceScoped = args.command === "check" || args.command === "plan" || args.command === "build";
+    const sourceScoped = args.command === "check" || args.command === "plan" || args.command === "build" || args.command === "quote";
     const start = sourceScoped && args.file !== undefined ? dirname(resolve(args.file)) : process.cwd();
     const selected = await findRuntimeProfile(start);
     if (selected !== undefined) {
@@ -1064,7 +1066,7 @@ export async function runCli(
     }
   }
   const known = args.command === "check" || args.command === "plan"
-    || args.command === "build" || args.command === "status" || args.command === "builds"
+    || args.command === "build" || args.command === "quote" || args.command === "status" || args.command === "builds"
     || args.command === "history"
     || args.command === "inspect" || args.command === "get" || args.command === "cancel"
     || args.command === "doctor" || args.command === "programs"
@@ -1862,7 +1864,7 @@ export async function runCli(
       : `No trusted Author or Run compiler accepts Frontend ${sourceHeader.using}`;
     throw new Error(message);
   }
-  if ((args.command === "plan" || args.command === "build") && !runMode) {
+  if ((args.command === "plan" || args.command === "build" || args.command === "quote") && !runMode) {
     throw new Error(`${args.command} requires a self-described Run Source; check Author Sources independently`);
   }
   if (args.command === "check") {
@@ -1917,6 +1919,47 @@ export async function runCli(
       });
       return;
     }
+  }
+  if (args.command === "quote") {
+    if (args.runtime === undefined) {
+      throw new Error("quote requires a Runtime; run hypit runtime use <profile> or pass --runtime <profile>");
+    }
+    const archive = lazyRuntimeArchive(await runtimeHost(args.runtime));
+    let loadedRun;
+    try {
+      loadedRun = await loadRunFile({
+        workspace,
+        authorCompiler: compiler,
+        frontends: runFrontends,
+        packageContributions,
+        runtime: archive,
+      });
+    } finally {
+      await archive.close();
+    }
+    const result = loadedRun.compiler.planCompilation(loadedRun);
+    const preflight = await preflightPlan(await runtimeHost(args.runtime), result.state);
+    assertPreflight(preflight);
+    const runtime = await loadRuntime(await runtimeHost(args.runtime));
+    try {
+      const quote = await runtime.quoteBuild({
+        definition: result.definition,
+        ...(loadedPackageSet === undefined ? {} : {
+          componentPackages: loadedPackageSet
+            .filter((item) => (item.contribution.components?.length ?? 0) > 0)
+            .map((item) => item.specifier),
+        }),
+      });
+      writeOperational(quote, "Build quote", "success", [
+        ["Credits", String(quote.totalCredits)],
+        ["USD", `$${quote.totalUsd}`],
+        ["Requests", String(quote.items.length)],
+      ], quote.items.map((item) =>
+        `${item.request}  ${item.model}  ${item.estimatedCredits} credits  $${item.estimatedUsd}`));
+    } finally {
+      await runtime.close();
+    }
+    return;
   }
   if (args.command === "build") {
     if (args.runtime === undefined) {
