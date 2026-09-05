@@ -60,6 +60,6 @@ image, clip, audio source, and the SemanticTrack with `.svrun` `build-record` an
 only failed beats.
 
 Read `../craft/image-prompt-style.md`, `../craft/b-roll.md`, `../craft/overlays.md`,
-`../craft/persona-and-audio.md`, and `../craft/sfx.md`.
+`../craft/voice-and-performance.md`, and `../craft/sfx.md`.
 
 That list is complete, and the always-read craft in `../index.md` applies regardless of format.

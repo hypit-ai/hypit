@@ -12,7 +12,7 @@ variables used by the selected Runtime Profile:
 | `GOOGLE_CLOUD_PROJECT` | Google Vertex project with Vertex AI enabled |
 | `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Vertex credential JSON contents, not a path |
 | HypiHub OAuth login | HypiHub default paid provider for generation and Gemini VLM; run `hypit auth login hypihub.default --runtime hypit.runtime.json` and sign in at [hypit.ai](https://hypit.ai) |
-| `MIMO_API_KEY` | Xiaomi MiMo VoiceDesign only when the user explicitly selects the official Provider |
+| `MIMO_API_KEY` | Xiaomi MiMo Voice Design or Voice Clone when the user explicitly selects the official Provider |
 
 Before any paid Build, report the selected Provider and credential source for every paid capability in
 the Runtime Profile. Say the variable/store and endpoint (for example, `@hypit/provider-kie` using
