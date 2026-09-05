@@ -2449,9 +2449,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/provider-hyperframes-local':
-        specifier: workspace:*
-        version: link:../provider-hyperframes-local
       '@hypit/provider-hypihub':
         specifier: workspace:*
         version: link:../provider-hypihub
@@ -2461,9 +2458,6 @@ importers:
       '@hypit/provider-vertex':
         specifier: workspace:*
         version: link:../provider-vertex
-      '@hypit/render-hyperframes':
-        specifier: workspace:*
-        version: link:../render-hyperframes
       '@hypit/run-markup':
         specifier: workspace:*
         version: link:../run-markup

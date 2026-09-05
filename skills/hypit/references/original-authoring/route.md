@@ -217,7 +217,7 @@ hypit-reference-video-tools authoring_check projects/<name>/build.svrun
 ```
 
 Its `plan` is the list: each entry an element and a word range, with the reason. Feed it to
-`render_element --batch` — the program is drawn once and every entry is cut out of that one render.
+`render_element --batch` — the program is built once and every entry is cut out of that one film.
 
 Keep `.hypit/layout-check.json` with the renders. The reader still decides whether visible text or
 marks fit the intent and whether any measured offset, overlap or bleed is deliberate.
