@@ -21,11 +21,8 @@ import { preview } from "@hypit/studio/src/programme.js";
 import { loadStudioRun } from "@hypit/studio/src/run.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 import { realizePreviewMock } from "@hypit/preview-mock";
-import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
-import { mediaTypes } from "@hypit/media";
+import { EndpointRegistry } from "@hypit/driver-node";
 import { createLocalMediaProvider } from "@hypit/provider-media-local";
-import { createLocalHyperframesProvider } from "@hypit/provider-hyperframes-local";
-import { renderHyperframesCapabilities } from "@hypit/render-hyperframes";
 
 import { assert, ensureDir } from "./media.js";
 import type { TranscriptFile } from "./types.js";
@@ -484,8 +481,8 @@ async function once(key: string, work: () => Promise<void>): Promise<void> {
 export type RenderElementInput = {
   /**
    * A round of renders, run together. Each entry names its own element, stretch and output and
-   * inherits `run` and `reference_id`. The full preview is realized and drawn once; entries then cut
-   * their own windows from that shared frame cache in order.
+   * inherits `run` and `reference_id`. The preview is realized and built once; entries then cut
+   * their own windows out of that one film in order.
    */
   readonly renders?: readonly RenderElementInput[];
   /** Required for one render; a round carries them per entry and inherits `run` from the outer input. */
@@ -501,6 +498,11 @@ export type RenderElementInput = {
    * preview timing, which is always the Source's own `estimate:Speech` policy.
    */
   readonly reference_id?: string;
+  /**
+   * The Runtime Profile the preview Build runs under. Defaults to the project's own
+   * `hypit.runtime.json`, beside the Run.
+   */
+  readonly runtime?: string;
   /** Optional workspace root used by package-owned preview Sources. */
   readonly package_root?: string;
 };
@@ -753,10 +755,11 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const tokensArgument = input.tokens === undefined ? undefined : tokenWindow(input.tokens, "tokens");
   const realized = await realizedOnce({
     run,
+    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
     ...(input.package_root === undefined ? {} : { package_root: input.package_root }),
   });
   const {
-    runPath, built, previewMock, programFrames, frameOfToken, selections, segmentTokenCounts,
+    runPath, runRoot, built, previewMock, programFrames, frameOfToken, selections, segmentTokenCounts,
   } = realized;
   const renderKey = createHash("sha256").update(`${resolve(runPath)}\u0000${input.reference_id ?? ""}`).digest("hex").slice(0, 12);
   const compareRoot = previewMock.root;
@@ -806,49 +809,35 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
 
   const clip = /\.(mp4|mov|webm)$/iu.test(outPath);
   const program = join(compareRoot, "program.mp4");
-  // The whole program, drawn once per Run and clock, however many windows are asked for.
+  // The mocked program, built once per Run and clock, however many windows are asked for.
   //
   // The picture does not depend on the element or the window — every window is cut out of this one
-  // file — so a round of eight looks over one Source is one render and eight ffmpeg cuts. Rendering
-  // per entry would draw the same program eight times.
+  // film — so a round of eight looks over one Source is one Build and eight ffmpeg cuts.
   //
-  // Drawn through the Provider a Build renders with, rather than by driving the HyperFrames CLI from
-  // here. The staging layout, the browser flags and the output check belong to the render path, and a
-  // preview that spawns its own copy of them is a second renderer to keep in step with the first: it
-  // was already staging the document by a different file naming and drawing with flags the delivery
-  // never takes. What preview still owns is the Run it draws — the mocked, estimate-timed one — not
-  // how that Run is drawn.
+  // It is an ordinary Build of an ordinary Run. `preview.svrun` names a target and satisfies every
+  // generation with a mock file, so the only Needs it reaches are the local ones a Runtime Profile
+  // already configures, and what draws it is the render path itself rather than a preview's copy of
+  // it. The Source is the mocked one; the flow is the delivery's.
   await once(`draw:${renderKey}`, async () => {
-    const document = compileHyperframesDocument(built.composition, built.space as ProgramSpace);
-    // The endpoint reads what the document names out of a store, so the served bytes are put in one.
-    // They are the same bytes under the same digests, which is what makes the lookup find them.
-    const artifacts = new MemoryArtifactStore();
-    for (const file of built.served.values()) await artifacts.put(file.bytes, file.mediaType);
-    const endpoints = new EndpointRegistry();
-    // `auto` leaves the GPU decision to the runtime, which is what this render had before it went
-    // through the Provider. The delivery default asks for hardware, and a preview is drawn on
-    // whatever machine is authoring rather than on a render host chosen to have one.
-    await createLocalHyperframesProvider({ browserGpu: "auto" }).install(endpoints);
-    const need = {
-      id: "preview-visual",
-      capability: renderHyperframesCapabilities.renderVisual,
-      returns: mediaTypes.renderedVisual,
-      constraints: { document } as never,
-      result: "preview-visual",
+    const hypit = join(repositoryRoot(), "bin", "hypit.mjs");
+    const profile = input.runtime === undefined ? join(runRoot, "hypit.runtime.json") : resolve(cwd, input.runtime);
+    assert(existsSync(profile), `the preview Build needs a Runtime Profile; ${profile} does not exist`);
+    const hypitRun = (argv: readonly string[]): string => {
+      const done = spawnSync(process.execPath, [hypit, ...argv, "--runtime", profile, "--json"],
+        { cwd: runRoot, encoding: "utf8", windowsHide: true, timeout: 3_600_000 });
+      assert(done.status === 0, `hypit ${argv[0]} refused: ${(done.stdout || done.stderr || "").trim().slice(-2000)}`);
+      return done.stdout ?? "";
     };
-    const registration = endpoints.resolve(need);
-    assert(registration.status === "resolved" && registration.registration.kind === "immediate",
-      "the local HyperFrames render endpoint did not resolve");
-    const drawn = await registration.registration.handler({
-      command: { kind: "fulfill-need", id: need.id, need }, need, artifacts, credentials: {},
-    });
-    assert(drawn.value.kind === "inline", "the HyperFrames endpoint returned no inline RenderedVisual");
-    const rendered = drawn.value.value as { readonly artifact?: { readonly digest?: `sha256:${string}` } };
-    const digest = rendered.artifact?.digest;
-    assert(digest !== undefined, "the HyperFrames endpoint returned a RenderedVisual with no Artifact");
-    const bytes = await artifacts.get(digest);
-    assert(bytes !== undefined, `the HyperFrames endpoint kept no bytes for ${digest}`);
-    await writeFile(program, bytes);
+    // The Author Source sits above the derived Run, so the workspace is the project rather than the
+    // preview directory the Run was written into.
+    const built = JSON.parse(hypitRun(["build", previewMock.previewRun, "--workspace", runRoot, "--follow"])) as {
+      readonly build?: string;
+      readonly goals?: readonly { readonly value?: { readonly digest?: string; readonly mediaType?: string } }[];
+    };
+    const goal = built.goals?.find((item) => item.value?.mediaType?.startsWith("video/"));
+    assert(built.build !== undefined && goal?.value?.digest !== undefined,
+      `the preview Build produced no video: ${JSON.stringify(built).slice(0, 2000)}`);
+    hypitRun(["get", built.build, "--artifact", goal.value.digest, "--to", program]);
   });
 
   const first = Math.min(window.startFrame, programFrames - 1);

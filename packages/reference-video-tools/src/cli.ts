@@ -52,8 +52,8 @@ function usage(): string {
     "  hypit-reference-video-tools review_element --run <build.svrun> --element <id> --segment <id>|--selection <id>|--tokens <from:to> --video <path>|--image <path> --intent-file <path> [--question <scope>]",
     "  hypit-reference-video-tools review_element --run <build.svrun> --batch <reviews.json>",
     "  hypit-reference-video-tools record_review --run <build.svrun> --review-id <id> --text <text>|--text-file <path>",
-    "  hypit-reference-video-tools render_element <build.svrun> --element <id> --out <path.png|path.mp4> [--segment <id>] [--selection <id>] [--tokens <from:to>] [--reference-id <id>]",
-    "  hypit-reference-video-tools render_element <build.svrun> --batch <renders.json> [--reference-id <id>]",
+    "  hypit-reference-video-tools render_element <build.svrun> --element <id> --out <path.png|path.mp4> [--segment <id>] [--selection <id>] [--tokens <from:to>] [--reference-id <id>] [--runtime <hypit.runtime.json>]",
+    "  hypit-reference-video-tools render_element <build.svrun> --batch <renders.json> [--reference-id <id>] [--runtime <hypit.runtime.json>]",
     "  hypit-reference-video-tools render_previews <package-dir> [...]",
     "  hypit-reference-video-tools preview_check <build.svrun> [<hypit.runtime.json>]",
     "  hypit-reference-video-tools layout_check --run <build.svrun> [--runtime <hypit.runtime.json>]",
@@ -625,6 +625,7 @@ async function main(): Promise<void> {
       result = await tools.render_element({
         ...(operands[0] === undefined ? {} : { run: operands[0] }),
         ...(one(flags, "reference-id") === undefined ? {} : { reference_id: one(flags, "reference-id") }),
+        ...(one(flags, "runtime") === undefined ? {} : { runtime: one(flags, "runtime") }),
         renders: list,
       } as RenderElementInput);
       report(`${JSON.stringify(result, null, 2)}\n`);
@@ -640,6 +641,7 @@ async function main(): Promise<void> {
       ...(one(flags, "selection") === undefined ? {} : { selection: one(flags, "selection") }),
       ...(tokenRange(one(flags, "tokens")) === undefined ? {} : { tokens: tokenRange(one(flags, "tokens")) }),
       ...(one(flags, "reference-id") === undefined ? {} : { reference_id: one(flags, "reference-id") }),
+      ...(one(flags, "runtime") === undefined ? {} : { runtime: one(flags, "runtime") }),
     };
     result = await tools.render_element(input as RenderElementInput);
   } else if (command === "render_previews") {
