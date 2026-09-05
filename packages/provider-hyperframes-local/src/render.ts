@@ -40,8 +40,12 @@ export function resolveExecutionOptions(options: HyperframesExecutionOptions) {
     quality, browserGpu,
     ffmpegPath: options.ffmpegPath ?? "ffmpeg",
     ffprobePath: options.ffprobePath ?? "ffprobe",
-    initializationTimeoutMs: positiveInteger(options.initializationTimeoutMs ?? 30_000, "initializationTimeoutMs"),
-    frameTimeoutMs: positiveInteger(options.frameTimeoutMs ?? 15_000, "frameTimeoutMs"),
+    initializationTimeoutMs: options.initializationTimeoutMs === undefined
+      ? undefined
+      : positiveInteger(options.initializationTimeoutMs, "initializationTimeoutMs"),
+    frameTimeoutMs: options.frameTimeoutMs === undefined
+      ? undefined
+      : positiveInteger(options.frameTimeoutMs, "frameTimeoutMs"),
     processTimeoutMs: positiveInteger(options.processTimeoutMs ?? 30 * 60_000, "processTimeoutMs"),
     maxProcessOutputBytes: positiveInteger(options.maxProcessOutputBytes ?? 4 * 1024 * 1024, "maxProcessOutputBytes"),
     maxRenderedBytes: positiveInteger(options.maxRenderedBytes ?? 16 * 1024 * 1024 * 1024, "maxRenderedBytes"),
@@ -79,16 +83,21 @@ export async function renderHyperframesVisual(
     }
     return promise;
   };
-  const stage = async <T>(subject: string, timeoutMs: number, run: () => Promise<T>): Promise<T> => {
+  const stage = async <T>(subject: string, timeoutMs: number | undefined, run: () => Promise<T>): Promise<T> => {
     signal.throwIfAborted();
-    const timeout = setTimeout(() => controller.abort(new Error(`HyperFrames ${subject} timed out after ${timeoutMs} ms`)), timeoutMs);
+    const timeout = timeoutMs === undefined
+      ? undefined
+      : setTimeout(() => controller.abort(new Error(`HyperFrames ${subject} timed out after ${timeoutMs} ms`)), timeoutMs);
     let onAbort: () => void = () => {};
     const stopped = new Promise<never>((_, reject) => {
       onAbort = () => reject(signal.reason);
       signal.addEventListener("abort", onAbort, { once: true });
     });
     try { return await Promise.race([run(), stopped]); }
-    finally { clearTimeout(timeout); signal.removeEventListener("abort", onAbort); }
+    finally {
+      if (timeout !== undefined) clearTimeout(timeout);
+      signal.removeEventListener("abort", onAbort);
+    }
   };
   let server: Awaited<ReturnType<typeof createFileServer>> | undefined;
   // Closing pages interrupts an in-flight capture as well as the next loop iteration.

@@ -108,8 +108,6 @@ export type LoadRuntimeConfigOptions = {
   readonly distributionPackageRoot?: string;
   /** Persistent machine/user state. Defaults to the platform Hypit state root. */
   readonly hostStateRoot?: string;
-  /** Worker-only ownership check performed before reclaiming or claiming execution. */
-  readonly assertExecutionOwner?: () => Promise<void> | void;
 };
 
 export type RuntimeConfigDoctorResult = {
@@ -988,7 +986,6 @@ export async function createRuntimeFromConfig(
       commandExecutionStore: state.commandExecutions,
       assertEnvironment: async () => {
         await state.environment.assert(environmentConfig);
-        await options.assertExecutionOwner?.();
       },
       executionStore: state.execution,
       removeActiveBuild: async (build) => await state.removeActiveBuild(build),

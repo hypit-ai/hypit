@@ -42,10 +42,12 @@ const visual = await renderHyperframesVisual(
 Omit `range` for the complete document. Ranges are zero-based and half-open on the original
 programme clock. At 30 fps, `[240, 360)` returns 120 frames covering seconds 8–12.
 `onProgress` reports preparation, worker ranges, browser PIDs, completion and elapsed time.
-`signal` cancels capture and encoding; `processTimeoutMs` bounds the operation.
-`initializationTimeoutMs` (30 seconds by default) and `frameTimeoutMs` (15 seconds) bound each
-worker's initialization and individual frame capture. Errors name the worker and stage/frame.
-A completed worker closes its Chrome immediately. A timeout aborts the other workers and awaits cleanup.
+`signal` cancels capture and encoding; `processTimeoutMs` bounds the complete operation and defaults
+to 30 minutes. Deployments may additionally set `initializationTimeoutMs` or `frameTimeoutMs` when
+they have a measured stage deadline. Stage deadlines are otherwise unset: a busy machine must not
+turn one slow Chrome start or frame into a false render failure while the operation deadline remains.
+An explicit stage-timeout error names the worker and stage/frame, aborts sibling workers and awaits
+cleanup. A completed worker closes its Chrome immediately.
 
 One call stages the HTML and assets once, merges overlapping source-frame extraction windows,
 and shares decoded PNGs across workers. Each worker initializes its own page and captures its
