@@ -3,12 +3,14 @@ import test from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { MemoryResourceStore, alphaSize, ffmpegBytes, normalizeTestVideo, testMediaEnvironment, transparentVideoFixture, writeTestArtifact } from "../../../test/alpha-video-fixture.js";
+import { MemoryResourceStore, alphaSize, ffmpegBytes, hasMediaBinaries, normalizeTestVideo, testMediaEnvironment, transparentVideoFixture, writeTestArtifact } from "../../../test/alpha-video-fixture.js";
 import { executeExtractFrame } from "../src/index.js";
 import { canonicalize } from "@hypit/protocol";
 
 for (const format of ["webm", "webm-vp8", "mov"] as const) {
-  test(`Normalize preserves transparent and translucent pixels, motion and audio from ${format}`, async () => {
+  test(`Normalize preserves transparent and translucent pixels, motion and audio from ${format}`, {
+    skip: !hasMediaBinaries && "ffmpeg and ffprobe are not installed",
+  }, async () => {
     const directory = await mkdtemp(join(tmpdir(), "hypit-alpha-normalize-"));
     try {
       const resources = new MemoryResourceStore();

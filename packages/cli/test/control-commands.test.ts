@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { resolve } from "node:path";
 import test from "node:test";
 
 import type { CliDistribution } from "../src/distribution.js";
@@ -389,6 +390,7 @@ test("command options fail closed instead of being silently ignored", async () =
 });
 
 test("doctor diagnoses project Results without requiring a Runtime Profile", async () => {
+  const projectRoot = resolve("/tmp/hypit-project");
   const calls: string[] = [];
   const distribution = {
     async diagnoseProjectResults(projectRoot: string) {
@@ -401,14 +403,14 @@ test("doctor diagnoses project Results without requiring a Runtime Profile", asy
     },
   } as unknown as CliDistribution;
   let output = "";
-  await runCli(["doctor", "--workspace", "/tmp/hypit-project", "--json"], {
+  await runCli(["doctor", "--workspace", projectRoot, "--json"], {
     write(text) { output += text; },
   }, distribution);
-  assert.deepEqual(calls, ["results:/tmp/hypit-project"]);
+  assert.deepEqual(calls, [`results:${projectRoot}`]);
   assert.deepEqual(JSON.parse(output), {
     format: "hypit.cli-doctor@3",
     ok: true,
-    project: "/tmp/hypit-project",
+    project: projectRoot,
     diagnosticCount: 0,
     diagnostics: [],
   });
