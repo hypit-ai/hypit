@@ -55,7 +55,7 @@ A generated take's length is the author's decision, written as a literal on the 
 it. Measure the line first, then write the number:
 
 ```bash
-hypit measure main.svml --segment hook --language en --pace normal --min 4 --max 15 --rounding round
+hypit measure main.svml --segment hook --language en --pace normal --rounding round
 # 7s
 ```
 
@@ -67,7 +67,7 @@ hypit measure main.svml --segment hook --language en --pace normal --min 4 --max
 
 `hypit measure` counts pronunciation units of the Segment's speech at a delivery policy — `language`,
 `pace` (`slow = 4.2`, `normal = 4.6`, `fast = 5.0` syllables per second for English) or a numeric
-`rate`, `min`, `max` and `rounding` — with no external call. Nothing in the graph computes a duration,
+`rate` and `rounding` — with no external call. Nothing in the graph computes a duration,
 so `hypit plan` is complete before a Build starts. The same policy, written on
 `estimated:SemanticTake` or as an SVS Recipe it names (see
 [SVS Stylesheets](./styles.md#speech-estimation)), weights a Segment's words across preview media.
@@ -187,9 +187,9 @@ installed Hypit Distribution from project source.
 Read the
 [`@hypit/seedance-kits` guide](https://github.com/hypit-ai/hypit/blob/main/packages/seedance-kits/README.md)
 and the [selected Kit source](https://github.com/hypit-ai/hypit/tree/main/packages/seedance-kits/kits)
-before authoring. Use an official Kit whenever its format matches. Keep generation instructions and
-dynamic prompt slots in English; preserve the authored language only for dialogue that must be
-spoken verbatim. Write a freeform English prompt only when none of the seven Kits applies.
+before choosing one. A Kit is useful when its shot assumptions and wording serve the intended
+performance. You can also write prompt Text directly or author a project Kit. Choose the prompt
+language for the selected model, keeping dialogue in the language it should be spoken.
 
 ```svml
 <import as="text" from="@hypit/text@1"/>

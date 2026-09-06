@@ -209,10 +209,10 @@
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
   <estimated:SemanticTake id="ronaldo-preview" narrative={story}
     segment={story.segment.ronaldo} media={ronaldo-preview-media.media}
-    language="en" pace="normal" min="4" max="15" rounding="round"/>
+    language="en" pace="normal" rounding="round"/>
   <estimated:SemanticTake id="messi-preview" narrative={story}
     segment={story.segment.messi} media={messi-preview-media.media}
-    language="en" pace="normal" min="4" max="15" rounding="round"/>
+    language="en" pace="normal" rounding="round"/>
 
   <speech:Track id="speech" visual-frame={speech-frame}
     visual-appearance={recipes.speech.visual} visual-z="0">

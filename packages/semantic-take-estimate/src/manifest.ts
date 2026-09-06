@@ -29,14 +29,12 @@ export const semanticTakeEstimateMarkupSurfaces = [{
       { name: "media", kind: "reference", required: true, accepts: [mediaTypes.synchronized],
         summary: "Selects the already normalized SynchronizedMedia whose exact frame domain receives the estimate." },
       { name: "policy", kind: "reference", required: false, accepts: [svsRecipeType],
-        summary: "Selects an SVS Recipe carrying the delivery policy (language, pace or rate, min, max, rounding), in place of the inline attributes.",
+        summary: "Selects an SVS Recipe carrying the delivery policy (language, pace or rate, rounding), in place of the inline attributes.",
         recipe: [
           { name: "language", required: true, summary: "Selects the counting rules the Segment is read with, or detects them.", values: ["auto", "en", "zh", "ja", "es"] },
           { name: "pace", required: false, summary: "Selects a named delivery density.", values: ["slow", "normal", "fast"] },
           { name: "rate", required: false, summary: "Sets the delivery density in pronunciation units per second, in place of pace." },
-          { name: "min", required: true, summary: "Sets the shortest duration in seconds the estimate may assume." },
-          { name: "max", required: true, summary: "Sets the longest duration in seconds the estimate may assume." },
-          { name: "rounding", required: true, summary: "Selects how a bounded duration is rounded.", values: ["none", "round", "ceil"] },
+          { name: "rounding", required: true, summary: "Selects how an estimated duration is rounded.", values: ["none", "round", "ceil"] },
         ] },
       { name: "language", kind: "literal", required: false, values: ["auto", "en", "zh", "ja", "es"],
         summary: "Selects the counting rules the Segment is read with, or detects them from its Text." },
@@ -44,12 +42,8 @@ export const semanticTakeEstimateMarkupSurfaces = [{
         summary: "Selects a named delivery density for the chosen language." },
       { name: "rate", kind: "literal", required: false,
         summary: "Sets the delivery density in pronunciation units per second, in place of pace." },
-      { name: "min", kind: "literal", required: false,
-        summary: "Sets the shortest duration in seconds the estimate may assume." },
-      { name: "max", kind: "literal", required: false,
-        summary: "Sets the longest duration in seconds the estimate may assume." },
       { name: "rounding", kind: "literal", required: false, values: ["none", "round", "ceil"],
-        summary: "Selects how a bounded duration is rounded." },
+        summary: "Selects how an estimated duration is rounded." },
     ],
     ports: [
       { name: "take", type: speechTypes.semanticTake,
@@ -59,7 +53,7 @@ export const semanticTakeEstimateMarkupSurfaces = [{
     ],
     example: `<estimated:SemanticTake id="opening-estimated" narrative={story}
   segment={story.segment.opening} media={opening-media.media}
-  language="en" pace="normal" min="4" max="15" rounding="round"/>`,
+  language="en" pace="normal" rounding="round"/>`,
     notes: [
       "The policy is the element's own: write it inline or name an SVS Recipe with policy; never both.",
       "This package does not measure audio and never claims WhisperX or other acoustic evidence.",

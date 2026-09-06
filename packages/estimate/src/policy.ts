@@ -8,7 +8,7 @@ import type {
   SpeechEstimateRounding,
 } from "./types.js";
 
-const POLICY_PROPERTIES = ["language", "pace", "rate", "min", "max", "rounding", "padding"] as const;
+const POLICY_PROPERTIES = ["language", "pace", "rate", "rounding", "padding"] as const;
 
 /** The property names an estimate policy is written with, in an SVS Recipe or as element attributes. */
 export const speechEstimatePolicyProperties: readonly string[] = POLICY_PROPERTIES;
@@ -20,7 +20,7 @@ function policyFrom(
   const allowed = new Set<string>(POLICY_PROPERTIES);
   const unknown = Object.keys(properties).filter((name) => !allowed.has(name));
   if (unknown.length > 0) throw new Error(`${subject} contains unknown property ${unknown[0]}`);
-  const missing = ["language", "min", "max", "rounding"].filter((name) => properties[name] === undefined);
+  const missing = ["language", "rounding"].filter((name) => properties[name] === undefined);
   if (missing.length > 0) throw new Error(`${subject} requires ${missing.join(", ")}`);
   const string = (name: string): string => {
     const value = properties[name];
@@ -44,8 +44,6 @@ function policyFrom(
   }
   const common = {
     language: string("language") as SpeechEstimateLanguage,
-    minimumSec: finite("min"),
-    maximumSec: finite("max"),
     rounding: string("rounding") as SpeechEstimateRounding,
     ...(properties.padding !== undefined ? { paddingSec: finite("padding") } : {}),
   } as const;

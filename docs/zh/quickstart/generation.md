@@ -53,7 +53,7 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 生成片段的长度由作者决定，直接写在需要它的元素上。先量稿子，再写数字：
 
 ```bash
-hypit measure main.svml --segment hook --language en --pace normal --min 4 --max 15 --rounding round
+hypit measure main.svml --segment hook --language en --pace normal --rounding round
 # 7s
 ```
 
@@ -63,7 +63,7 @@ hypit measure main.svml --segment hook --language en --pace normal --min 4 --max
 </seedance:ReferenceVideo>
 ```
 
-`hypit measure` 按口播策略——`language`、`pace`（英语 `slow = 4.2`、`normal = 4.6`、`fast = 5.0` 音节/秒）或数值 `rate`、`min`、`max`、`rounding`——统计 Segment 台词的读音单位，不调用任何外部服务。图里没有任何东西在计算时长，所以 `hypit plan` 在 Build 开始前就是完整的。同一套策略写在 `estimated:SemanticTake` 上或它引用的 SVS Recipe 里（参见 [SVS 样式表](./styles.md#speech-estimation)），用于把 Segment 的词按音节权重铺到预览媒体上。
+`hypit measure` 按口播策略——`language`、`pace`（英语 `slow = 4.2`、`normal = 4.6`、`fast = 5.0` 音节/秒）或数值 `rate`、`rounding`——统计 Segment 台词的读音单位，不调用任何外部服务。图里没有任何东西在计算时长，所以 `hypit plan` 在 Build 开始前就是完整的。同一套策略写在 `estimated:SemanticTake` 上或它引用的 SVS Recipe 里（参见 [SVS 样式表](./styles.md#speech-estimation)），用于把 Segment 的词按音节权重铺到预览媒体上。
 
 ## text:Value
 
@@ -165,7 +165,7 @@ Endpoint，不会改变作者图。
 
 创作前阅读
 [`@hypit/seedance-kits` 指南](https://github.com/hypit-ai/hypit/blob/main/packages/seedance-kits/README.md)
-和 [所选 Kit 源文件](https://github.com/hypit-ai/hypit/tree/main/packages/seedance-kits/kits)。格式匹配时优先使用官方 Kit。生成指令与动态 prompt slot 必须使用英语；只有需要逐字说出的对白保留作者原语言。七个 Kit 都不适用时，才编写自由格式的英语 prompt。
+和 [所选 Kit 源文件](https://github.com/hypit-ai/hypit/tree/main/packages/seedance-kits/kits)，判断它的镜头假设和措辞是否适合当前表演。也可以直接编写 prompt Text，或创作项目自己的 Kit。提示词语言按所选模型决定，对白使用实际需要说出的语言。
 
 ```svml
 <import as="text" from="@hypit/text@1"/>

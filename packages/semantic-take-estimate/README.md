@@ -19,7 +19,7 @@ leaving a fixed-length estimate at the beginning.
 ```svml
 <estimated:SemanticTake id="opening-estimated" narrative={story}
   segment={story.segment.opening} media={opening-media.media}
-  language="en" pace="normal" min="4" max="15" rounding="round"/>
+  language="en" pace="normal" rounding="round"/>
 ```
 
 The delivery policy is the element's own: write it inline as above, or name an SVS Recipe with
@@ -54,7 +54,7 @@ The package also registers `@hypit/semantic-take-estimate@1#semantic-take` as a 
 | `policy` | `@hypit/estimate@1#SpeechEstimatePolicy` |
 
 Its export is `take`, an ordinary SemanticTake. The policy is a typed value with `language`,
-`pace` or `rate`, `minimumSec`, `maximumSec`, `rounding` and optional `paddingSec`.
+`pace` or `rate`, `rounding` and optional `paddingSec`.
 The Author Surface publishes its authored policy as `<id>.policy`. For an Author entry containing
 the `opening-estimated` declaration above, a Run can use:
 

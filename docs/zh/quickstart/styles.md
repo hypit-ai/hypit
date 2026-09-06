@@ -241,8 +241,6 @@ text.title {
 speech.normal {
   language: en;
   pace: normal;
-  min: 4;
-  max: 15;
   rounding: round;
 }
 ```
@@ -252,11 +250,9 @@ speech.normal {
 | `language` | 语言代码（如 `en`） |
 | `pace` | 语速：`slow`、`normal`、`fast` |
 | `rate` | 正数的每秒读音单位数；不能和 `pace` 同时使用 |
-| `min` | 最小时长（秒） |
-| `max` | 最大时长（秒） |
 | `rounding` | 取整模式：`none`、`round`、`ceil` |
 
-英语三个具名档位分别解析为每秒 `4.2`、`4.6`、`5.0` 个音节。项目需要连续可调值时，用数值 `rate` 代替 `pace`。所有属性都必须显式提供：`language`、`min`、`max`、`rounding`，并且在 `pace` 与
+英语三个具名档位分别解析为每秒 `4.2`、`4.6`、`5.0` 个音节。项目需要连续可调值时，用数值 `rate` 代替 `pace`。所有属性都必须显式提供：`language`、`rounding`，并且在 `pace` 与
 `rate` 中恰好选择一个。Estimate 包不会补充隐藏策略默认值。
 
 通过 `estimated:SemanticTake` 的 `policy` 属性引用；作者写字面量时长之前用 `hypit measure` 量稿，用的也是同一套策略：
@@ -379,8 +375,6 @@ Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多
   speech.normal {
     language: en;
     pace: normal;
-    min: 4;
-    max: 15;
     rounding: round;
   }
 

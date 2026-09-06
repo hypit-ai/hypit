@@ -440,10 +440,10 @@ async function segmentSpeech(source: string, segment: string, projectRoot: strin
 
 /**
  * Measure a script before writing a duration: pronunciation units of the words, at the delivery
- * policy the author chooses, bounded and rounded the way the author chooses. Pure local work.
+ * policy and rounding the author chooses. Pure local work.
  */
 async function measure(argv: readonly string[], io: CliIo, environment: CreationEnvironment): Promise<void> {
-  const parsed = parseArguments(argv, ["--text", "--segment", "--language", "--pace", "--rate", "--min", "--max", "--rounding", "--padding", "--workspace"]);
+  const parsed = parseArguments(argv, ["--text", "--segment", "--language", "--pace", "--rate", "--rounding", "--padding", "--workspace"]);
   const inlineText = parsed.options.get("--text");
   const segment = parsed.options.get("--segment");
   assert((inlineText === undefined) !== (parsed.positionals.length === 0 && segment === undefined) || (inlineText !== undefined && parsed.positionals.length === 0),
@@ -470,8 +470,6 @@ async function measure(argv: readonly string[], io: CliIo, environment: Creation
   const policy = speechEstimatePolicyFromAttributes({
     language: parsed.options.get("--language") ?? "auto",
     ...(rate === undefined ? { pace: pace ?? "normal" } : { rate }),
-    min: parsed.options.get("--min") ?? "1",
-    max: parsed.options.get("--max") ?? "60",
     rounding: parsed.options.get("--rounding") ?? "none",
     ...(parsed.options.get("--padding") === undefined ? {} : { padding: parsed.options.get("--padding") }),
   }, "hypit measure");
@@ -489,10 +487,9 @@ async function measure(argv: readonly string[], io: CliIo, environment: Creation
   };
   if (parsed.json) { io.write(`${JSON.stringify(view, null, 2)}\n`); return; }
   const delivery = policy.rate === undefined ? `${policy.pace} pace` : `${policy.rate} units/s`;
-  const bounds = `min ${policy.minimumSec}, max ${policy.maximumSec}, ${policy.rounding}`;
-  io.write(`${seconds}s\n\n  ${units} pronunciation units · ${language} · ${delivery} · ${bounds}\n`
+  io.write(`${seconds}s\n\n  ${units} pronunciation units · ${language} · ${delivery} · rounding ${policy.rounding}\n`
     + `  ${"segment" in where ? `${where.segment} in ${where.source}` : `${text.length} characters`}\n`
-    + `  Write it as the literal, e.g. duration="${Number.isInteger(seconds) ? seconds : Math.ceil(seconds)}"; a model wants whole seconds inside its range.\n`);
+    + "  Choose the request duration from this estimate, the intended performance, and the selected model's supported values.\n");
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -523,12 +520,12 @@ export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
       "Measure a script before writing a duration. Pure local work; no Runtime Profile, no request.",
       "",
       "  hypit measure <source.svml> --segment <id> [--language auto|en|zh|ja|es] [--pace slow|normal|fast | --rate <units/s>]",
-      "                [--min <s>] [--max <s>] [--rounding none|round|ceil] [--padding <s>]",
+      "                [--rounding none|round|ceil] [--padding <s>]",
       "                [--workspace <project>]",
       "  hypit measure --text <text|file> [same options]",
       "",
-      "Prints the seconds the words take at that delivery, so the author writes them as the literal",
-      "duration on the Seedance take or StillVideo that carries the line.",
+      "Prints the estimated seconds at that delivery. Use them to shape the passage and choose a",
+      "literal duration for the intended performance and selected model.",
     ],
   };
   const chosen = topic === undefined ? creationCommands : [topic];
