@@ -409,10 +409,11 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
         executionName: executionName(context.operation),
       });
       const handle = makeHandle(context, site, render, startedAt);
-      return wakeAfter(canonicalize(handle), pollIntervalMs, now(), { phase: "submitted" });
+      const receipt = { id: handle.executionArn };
+      await context.checkpoint?.({ handle: canonicalize(handle), receipt });
+      return { ...wakeAfter(canonicalize(handle), pollIntervalMs, now(), { phase: "submitted" }), receipt };
     } catch (error) {
-      return { status: "pending", wakeAt: now() + 30_000, progress: { phase: "submission-unknown" },
-        failure: { code: "SUBMISSION_UNKNOWN", message: "HyperFrames submission acknowledgement is unknown; the same Build will not submit again" } };
+      return implementationFailure("HYPERFRAMES_SUBMISSION_FAILED", error);
     }
   };
 
@@ -435,9 +436,8 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       } catch (error) {
         throw error;
       }
-      if (!context.settling && now() - handle.startedAt >= maxOperationMs) {
-        return { ...wakeAfter(canonicalize(handle), pollIntervalMs, now(), { phase: "settling" }),
-          failure: { code: "HYPERFRAMES_OPERATION_TIMEOUT", message: "HyperFrames deadline exceeded; waiting for remote termination" } };
+      if (now() - handle.startedAt >= maxOperationMs) {
+        return implementationFailure("HYPERFRAMES_OPERATION_TIMEOUT", new Error("HyperFrames deadline exceeded"));
       }
       let document: HyperframesDocument;
       let progress: HyperframesLambdaProgress;
@@ -449,12 +449,12 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
           region,
         });
       } catch (error) {
-        return wakeAfter(canonicalize(handle), pollIntervalMs, now(), { phase: "poll-unavailable" });
+        return implementationFailure("HYPERFRAMES_POLL_FAILED", error);
       }
       try {
         verifyProgress(progress, document);
       } catch (error) {
-        return wakeAfter(canonicalize(handle), pollIntervalMs, now(), { phase: "poll-unavailable" });
+        return implementationFailure("HYPERFRAMES_POLL_FAILED", error);
       }
       const next = { ...handle, polls: handle.polls + 1 };
       if (progress.status === "RUNNING") {
@@ -465,7 +465,6 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
           unit: "frames",
         });
       }
-      if (context.settling) return { status: "settled" };
       if (progress.status !== "SUCCEEDED") {
         const details = progress.errors.map((item) => `${item.state}: ${item.error}: ${item.cause}`).join("; ");
         return implementationFailure(`HYPERFRAMES_${progress.status}`,

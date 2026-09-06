@@ -111,7 +111,7 @@ export async function runExecutionCommand(input: {
           worker: worker.state,
           builds,
           ...(activity.builds.length <= args.limit ? {} : { omittedBuilds: activity.builds.length - args.limit }),
-          activeRequests: activity.capacity.length,
+          capacity: activity.capacity,
         };
         const buildLines = activity.builds.slice(0, args.limit).map((item) => {
           const requestProgress = item.requests === undefined || item.requests.total === 0
@@ -230,10 +230,10 @@ export async function runExecutionCommand(input: {
               ? [] : [["Outputs", String(build.result.outputCount)] as const]),
           ] : [["State", build?.work.state ?? "unknown"] as const]),
         ], (build?.operations ?? []).map((operation) => operation.failure !== undefined
-          ? `${operation.endpoint}: ${operation.failure.code} — ${operation.failure.message}`
+          ? `${operation.endpoint}${operation.receipt === undefined ? "" : ` · task ${operation.receipt.id}`}: ${operation.failure.code} — ${operation.failure.message}`
           : operation.progress === undefined
-            ? `${operation.endpoint}: ${operation.state}`
-            : `${operation.endpoint}: ${formatOperationProgress(operation.progress)}`)
+            ? `${operation.endpoint}${operation.receipt === undefined ? "" : ` · task ${operation.receipt.id}`}: ${operation.state}`
+            : `${operation.endpoint}${operation.receipt === undefined ? "" : ` · task ${operation.receipt.id}`}: ${formatOperationProgress(operation.progress)}`)
           .concat(attention === undefined ? [] : [
             `Attention  ${attention.message}`,
             ...(attention.action === undefined ? [] : [`Action     ${attention.action}`]),

@@ -11,16 +11,7 @@ import {
   LocalBuildScheduler,
 } from "@hypit/runtime";
 import type { OperationSnapshot, OperationStore, OperationUpdate } from "@hypit/runtime";
-import {
-  createResolvedClosure,
-  link,
-  sealBuildRequest,
-  sealCompiledGraph,
-  sealRecord,
-  start,
-} from "@hypit/core";
-
-import { capabilities, createGreetingBuild, manifest, producers as greetingProducers, types } from "../../core/test/greeting-fixture.js";
+import { capabilities, createGreetingBuild, createParallelGreetingBuild, producers as greetingProducers, types } from "../../core/test/greeting-fixture.js";
 
 function memoryOperations(): OperationStore {
   const values = new Map<string, OperationSnapshot>();
@@ -44,79 +35,20 @@ function memoryOperations(): OperationStore {
       if (current === undefined) throw new Error(`Operation ${id} does not exist`);
       if (["completed", "failed", "cancelled"].includes(current.status)) return structuredClone(current);
       const next = {
+        ...current,
         id: current.id,
         build: current.build,
         command: current.command,
         endpoint: current.endpoint,
         ...structuredClone(update),
       } as OperationSnapshot;
+      if (update.status !== "pending" || update.wakeAt === undefined) delete (next as { wakeAt?: number }).wakeAt;
       values.set(id, next);
       return structuredClone(next);
     },
   };
 }
 
-function createParallelGreetingBuild(generationCount = 2) {
-  const generations = ["a", "b", "c"].slice(0, generationCount);
-  const closure = createResolvedClosure([manifest]);
-  const authored = sealRecord({
-    id: "intent:root",
-    type: types.intent,
-    value: { kind: "inline", value: { name: "Ada" } },
-  });
-  const program = link(closure, [authored]);
-  const graph = sealCompiledGraph({
-    outputs: [
-      {
-        id: "prompt",
-        type: types.prompt,
-        primary: "make-prompt",
-      },
-      ...generations.map((suffix) => ({
-        id: `generated-${suffix}`,
-        type: types.generated,
-        primary: `generate-${suffix}`,
-      })),
-    ],
-    candidates: [
-      {
-        id: "make-prompt",
-        type: types.prompt,
-        root: { kind: "operation", result: { kind: "operation-result", operation: "make-prompt" } },
-      },
-      ...generations.map((suffix) => ({
-        id: `generate-${suffix}`,
-        type: types.generated,
-        root: {
-          kind: "operation" as const,
-          result: { kind: "operation-result" as const, operation: `generate-${suffix}` },
-        },
-      })),
-    ],
-    operations: [
-      {
-        id: "make-prompt",
-        producer: greetingProducers.makePrompt,
-        inputs: { intent: { kind: "record", id: "intent:root" } },
-        result: { kind: "output", name: "prompt", record: "prompt:root" },
-      },
-      ...generations.map((suffix) => ({
-        id: `generate-${suffix}`,
-        producer: greetingProducers.requestText,
-        inputs: { prompt: { kind: "logical-output" as const, id: "prompt" } },
-        result: {
-          kind: "need" as const,
-          name: "generation",
-          id: `need:generation-${suffix}`,
-          record: `generated:${suffix}`,
-        },
-      })),
-    ],
-  });
-  return start(program, graph, sealBuildRequest({
-    targets: generations.map((suffix) => ({ output: `generated-${suffix}` })),
-  }));
-}
 
 function configuredExecutor(options: {
   readonly resource: string;
@@ -246,7 +178,7 @@ test("independent paid commands inside one Build may fill the same resource with
     record.type.name === types.generated.name).length, 2);
 });
 
-test("a terminal failure keeps its diagnostic while an in-flight sibling settles", async () => {
+test("a failure stops new work and preserves a result from an already running sibling", async () => {
   const operations = memoryOperations();
   const producers = new ProducerRegistry();
   const endpoints = new EndpointRegistry();
@@ -281,7 +213,7 @@ test("a terminal failure keeps its diagnostic while an in-flight sibling settles
 
   const [result] = await new LocalBuildScheduler(new NodeDriver({ producers, endpoints, operations })).run([{
     id: "parallel-failure",
-    state: createParallelGreetingBuild(),
+    state: createParallelGreetingBuild(3),
   }]);
 
   assert.equal(calls, 2);
@@ -289,6 +221,8 @@ test("a terminal failure keeps its diagnostic while an in-flight sibling settles
   assert.equal(result?.state.diagnostics.at(-1)?.code, "PROVIDER_REJECTED");
   assert.match(result?.state.diagnostics.at(-1)?.message ?? "", /first provider request was rejected/);
   assert.equal(result?.outcomes.some((outcome) => outcome.status === "error"), false);
+  assert.deepEqual(result?.state.records.find((record) => record.type.name === types.generated.name)?.value,
+    { kind: "inline", value: "late sibling result" });
 });
 
 test("an asynchronous Endpoint starts once and is polled until complete", async () => {
@@ -336,45 +270,27 @@ test("an asynchronous Endpoint starts once and is polled until complete", async 
   assert.equal((await operations.read(pending.operation))?.status, "completed");
 });
 
-test("a persisted submitting Operation is never submitted again after its caller stops", async () => {
-  const durable = memoryOperations();
-  let interruptCreate = true;
-  const operations: OperationStore = {
-    ...durable,
-    async create(operation) {
-      const stored = await durable.create(operation);
-      if (interruptCreate) {
-        interruptCreate = false;
-        throw new Error("caller stopped after the Operation row was stored");
-      }
-      return stored;
-    },
-  };
+test("a submission error ends its attempt and a new Build can submit normally", async () => {
+  const operations = memoryOperations();
   let starts = 0;
   const endpoint: AsyncEndpoint = {
     start() {
-      starts += 1;
-      return { status: "pending", handle: { remoteJob: "must-not-exist" } };
+      starts++;
+      if (starts === 1) throw new Error("submission timed out without a receipt");
+      return { status: "pending", handle: { job: "second" }, receipt: { id: "second" } };
     },
-    poll() {
-      throw new Error("an unacknowledged Operation cannot be polled");
-    },
+    poll() { return { status: "completed", result: { value: { kind: "inline", value: "done" } } }; },
   };
-  const [interrupted] = await new LocalBuildScheduler(asyncExecutor(endpoint, operations))
-    .run([{ id: "submission-window", state: createGreetingBuild() }]);
-  assert.equal(interrupted?.status, "paused");
-  assert.equal(starts, 0);
-  const [stored] = await operations.list({ build: "submission-window" });
-  assert.equal(stored?.status, "pending");
-  assert.equal(stored?.handle, undefined);
-
-  const [resumed] = await new LocalBuildScheduler(asyncExecutor(endpoint, operations))
-    .run([{ id: "submission-window", state: interrupted!.state }]);
-  assert.equal(resumed?.status, "paused");
-  const [unknown] = await operations.list({ build: "submission-window" });
-  assert.equal(unknown?.status, "pending");
-  assert.equal(unknown?.failure?.code, "SUBMISSION_UNKNOWN");
-  assert.equal(starts, 0);
+  const scheduler = new LocalBuildScheduler(asyncExecutor(endpoint, operations));
+  const [failed] = await scheduler.run([{ id: "first", state: createGreetingBuild() }]);
+  assert.equal(failed?.status, "failed");
+  assert.equal((await operations.list({ build: "first" }))[0]?.status, "failed");
+  await scheduler.run([{ id: "first", state: failed!.state }]);
+  assert.equal(starts, 1);
+  const [next] = await scheduler.run([{ id: "second", state: createGreetingBuild() }]);
+  const [completed] = await scheduler.run([{ id: "second", state: next!.state }]);
+  assert.equal(completed?.status, "complete");
+  assert.equal(starts, 2);
 });
 
 test("wakeAt prevents early polling and Runtime cancellation becomes a terminal Core failure", async () => {
@@ -432,25 +348,22 @@ test("request quantities govern concurrent admission, independent of whole-Need 
   assert.equal(maximum, 4, "two four-worker requests cannot fit in six slots");
 });
 
-test("a poll transport error keeps the same Operation until its remote work finishes", async () => {
+test("a poll transport error fails once and retains the acknowledged receipt", async () => {
   const operations = memoryOperations();
-  let starts = 0, unavailable = true;
+  let starts = 0, polls = 0;
   const endpoint: AsyncEndpoint = {
-    start() { starts++; return { status: "pending", handle: { job: "one" } }; },
-    poll() {
-      if (unavailable) throw new Error("connection lost");
-      return { status: "completed", result: { value: { kind: "inline", value: "done" } } };
-    },
+    start() { starts++; return { status: "pending", handle: { job: "one" }, receipt: { id: "one" } }; },
+    poll() { polls++; throw new Error("connection lost"); },
   };
   const scheduler = new LocalBuildScheduler(asyncExecutor(endpoint, operations));
   const [first] = await scheduler.run([{ id: "poll-error", state: createGreetingBuild() }]);
   const [second] = await scheduler.run([{ id: "poll-error", state: first!.state }]);
   const [operation] = await operations.list({ build: "poll-error" });
-  assert.equal(operation?.status, "pending");
-  assert.equal(operation?.progress?.phase, "poll-unavailable");
-  unavailable = false;
-  await operations.update(operation!.id, { status: "pending", handle: operation!.handle! });
-  const [third] = await scheduler.run([{ id: "poll-error", state: second!.state }]);
-  assert.equal(third?.status, "complete");
+  assert.equal(second?.status, "failed");
+  assert.equal(operation?.status, "failed");
+  assert.equal(operation?.receipt?.id, "one");
+  assert.match(operation!.failure!.message, /connection lost/);
+  await scheduler.run([{ id: "poll-error", state: second!.state }]);
   assert.equal(starts, 1);
+  assert.equal(polls, 1);
 });

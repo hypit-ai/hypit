@@ -154,6 +154,24 @@ export type BuildResultOutput = {
   readonly value: BuildResultOutputValue;
 };
 
+/** Non-secret execution facts at the end of this attempt. Pending means the remote outcome was not observed. */
+export type BuildResultOperation = {
+  readonly operation: string;
+  readonly need?: { readonly id: string; readonly capability: TypeRef };
+  readonly createdAt?: number;
+  readonly acknowledgedAt?: number;
+  readonly endedAt?: number;
+  readonly progress?: { readonly phase: string; readonly completed?: number; readonly total?: number; readonly unit?: string };
+  readonly cancellation?: { readonly outcome: "confirmed" | "accepted" | "unsupported" | "too-late" | "failed"; readonly message?: string };
+  readonly command: string;
+  readonly endpoint: string;
+  readonly pool?: string;
+  readonly credentials?: Readonly<Record<string, { readonly store: string; readonly key: string }>>;
+  readonly receipt?: { readonly id: string; readonly url?: string };
+  readonly status: "pending" | "completed" | "failed" | "cancelled";
+  readonly failure?: { readonly code: string; readonly message: string };
+};
+
 export type BuildResultManifest = {
   readonly format: "hypit.build-result@2";
   /** Injected from the Repository address; `result.json` does not repeat its containing Build id. */
@@ -171,6 +189,7 @@ export type BuildResultManifest = {
   readonly outcome?: BuildResultOutcome;
   readonly failure?: string;
   readonly outputs: Readonly<Record<string, BuildResultOutput>>;
+  readonly operations?: readonly BuildResultOperation[];
 };
 
 export type FinishedBuildResultManifest = BuildResultManifest & {
@@ -250,6 +269,7 @@ export type BuildResultSync = {
 };
 
 export type BuildResultFinish = {
+  readonly operations?: readonly BuildResultOperation[];
   readonly outcome: BuildResultOutcome;
   readonly failure?: string;
 };

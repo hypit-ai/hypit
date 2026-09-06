@@ -274,7 +274,6 @@ test("shared capacity resources are acquired atomically across Builds", async ()
     });
     assert.deepEqual(sameRoute, {
       status: "blocked",
-      availableAt: 352,
       reason: "resource-in-flight",
       resource: seedance.id,
     });
@@ -335,8 +334,27 @@ test("weighted capacity admits 4 + 2 workers atomically and survives reopening",
   } finally { state.close(); await rm(directory, { recursive: true, force: true }); }
 });
 
+test("an execution already holding capacity is claimed before fresh work", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-capacity-claim-order-"));
+  const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
+  try {
+    await state.execution.create({ build: "fresh", componentPackages: [], result: resultLocation }, { now: 100 });
+    await state.execution.create({ build: "in-flight", componentPackages: [], result: resultLocation }, { now: 101 });
+    assert.equal((await state.execution.acquireCapacity({
+      build: "in-flight",
+      command: "remote",
+      resources: [{ id: "pool:generation", limit: 2 }],
+      now: 102,
+    })).status, "acquired");
+    assert.equal((await state.execution.claim("worker", 200))?.build, "in-flight");
+  } finally {
+    state.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
-test("stop requests preserve their first cause, wake an unaware turn, and retain polling delays", async () => {
+
+test("stop requests preserve their first cause and promptly wake the final execution turn", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-stop-request-"));
   const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
   try {
@@ -347,14 +365,59 @@ test("stop requests preserve their first cause, wake an unaware turn, and retain
     assert.deepEqual((await state.execution.requestStop("stopping", { cause: "user-cancelled", reason: "later" })).stop, stop);
     const wakeAt = Date.now() + 60_000;
     const unaware = await state.execution.releaseTurn("stopping", "worker", wakeAt);
-    assert.ok(unaware.wakeAt <= Date.now(), "a stop received during execution must be processed promptly");
+    assert.ok(unaware.wakeAt! <= Date.now(), "a stop received during execution must be processed promptly");
     await state.execution.claim("worker");
-    const settling = await state.execution.releaseTurn("stopping", "worker", wakeAt, stop);
-    assert.equal(settling.wakeAt, wakeAt, "a turn that already handled stop must respect its next poll time");
-    await state.execution.requestStop("stopping", { cause: "user-cancelled" });
-    assert.equal((await state.execution.read("stopping"))?.wakeAt, wakeAt);
-    await state.execution.claim("worker", wakeAt);
     assert.deepEqual((await state.execution.decide("stopping", "worker", "cancelled", "later")).decision,
       { outcome: "failed", reason: "original failure" });
+  } finally { state.close(); await rm(directory, { recursive: true, force: true }); }
+});
+
+test("shared action rates spend tokens on admission, independently of occupancy and pool", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-rates-"));
+  const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
+  try {
+    const rate = { id: "rate:account/submit", limit: 2, periodMs: 1_000 };
+    const slot = { id: "action:account/submit", limit: 1 };
+    const acquire = (build: string, now: number) => state.execution.acquireCapacity({ build, command: "submit", resources: [slot, rate], now });
+    assert.equal((await acquire("a", 0)).status, "acquired");
+    assert.equal((await acquire("blocked", 0)).status, "blocked");
+    await state.execution.releaseCapacity("a", "submit");
+    assert.equal((await acquire("b", 0)).status, "acquired", "blocked work spends no rate tokens");
+    await state.execution.releaseCapacity("b", "submit");
+    const limited = await acquire("c", 0);
+    assert.equal(limited.status, "blocked");
+    assert.equal(limited.status === "blocked" && limited.availableAt, 500);
+    assert.equal((await state.execution.acquireCapacity({ build: "other", command: "submit",
+      resources: [{ ...rate, id: "rate:other-account/submit" }], now: 0 })).status, "acquired");
+    assert.equal((await acquire("c", 500)).status, "acquired", "rate replenishes with time, not release");
+  } finally { state.close(); await rm(directory, { recursive: true, force: true }); }
+});
+
+test("a resource release before parking is observed and later releases wake a fitting waiter", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-capacity-wakeup-"));
+  const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
+  const resource = { id: "browsers", limit: 2 };
+  const destination = { root: directory, selection: { use: "@hypit/build-result-fs" } };
+  try {
+    for (const [now, build] of ["holder", "waiter", "later"].entries()) {
+      await state.execution.create({ build, componentPackages: [], result: destination }, { now });
+    }
+    await state.execution.acquireCapacity({ build: "holder", command: "render", resources: [{ ...resource, units: 2 }], now: Date.now() });
+    assert.equal((await state.execution.claim("owner"))?.build, "holder");
+    await state.execution.releaseTurn("holder", "owner", Date.now() + 60_000);
+    assert.equal((await state.execution.claim("owner"))?.build, "waiter");
+    assert.equal((await state.execution.acquireCapacity({ build: "waiter", command: "render", resources: [resource], now: Date.now() })).status, "blocked");
+    await state.execution.releaseCapacity("holder", "render");
+    const parked = await state.execution.releaseTurn("waiter", "owner", undefined);
+    assert.ok(parked.wakeAt !== undefined && parked.wakeAt <= Date.now());
+    assert.equal((await state.execution.acquireCapacity({ build: "waiter", command: "render", resources: [{ ...resource, units: 2 }], now: Date.now() })).status, "acquired");
+    await state.execution.claim("waiter-owner");
+    await state.execution.releaseTurn("waiter", "waiter-owner", Date.now() + 60_000);
+    assert.equal((await state.execution.claim("later-owner"))?.build, "later");
+    assert.equal((await state.execution.acquireCapacity({ build: "later", command: "render", resources: [resource], now: Date.now() })).status, "blocked");
+    await state.execution.releaseTurn("later", "later-owner", undefined);
+    assert.equal(await state.execution.claim("idle"), undefined);
+    await state.execution.releaseCapacity("waiter", "render");
+    assert.equal((await state.execution.claim("next"))?.build, "later");
   } finally { state.close(); await rm(directory, { recursive: true, force: true }); }
 });

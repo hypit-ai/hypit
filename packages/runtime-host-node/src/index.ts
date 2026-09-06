@@ -37,6 +37,9 @@ export type RuntimeHostBuildSubmission = RuntimeHostActiveBuildSubmission | Runt
 export type BuildActivity = "submitting" | "ready" | "running" | "waiting" | "saving-result";
 
 export type BuildOperationView = {
+  readonly id?: string;
+  readonly receipt?: import("@hypit/runtime").OperationReceipt;
+  readonly wakeAt?: number;
   readonly endpoint: string;
   readonly status: OperationSnapshot["status"];
   readonly progress?: OperationSnapshot["progress"];

@@ -1,6 +1,7 @@
 import {
   createRuntimeEndpointAdapterFacet,
   runtimeConfigCredentialRef,
+  runtimeConfigActionLimits,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
@@ -16,7 +17,7 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     const config = runtimeConfigObject(context.config, "KIE");
     runtimeConfigExact(config, [
       "apiBaseUrl", "uploadBaseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs",
-      "capabilityConcurrency", "submissionIntervalMs", "requestTimeoutMs", "maxOperationMs", "maxArtifactBytes",
+      "capabilityConcurrency", "actionLimits", "requestTimeoutMs", "maxOperationMs", "maxArtifactBytes",
     ], "KIE");
     const apiBaseUrl = runtimeConfigString(config.apiBaseUrl, "KIE apiBaseUrl");
     const uploadBaseUrl = runtimeConfigString(config.uploadBaseUrl, "KIE uploadBaseUrl");
@@ -39,7 +40,7 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
           return [capability, concurrency];
         }));
     const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "KIE pollIntervalMs");
-    const submissionIntervalMs = runtimeConfigPositiveInteger(config.submissionIntervalMs, "KIE submissionIntervalMs");
+    const actionLimits = runtimeConfigActionLimits(config.actionLimits);
     const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "KIE requestTimeoutMs");
     const maxOperationMs = runtimeConfigPositiveInteger(config.maxOperationMs, "KIE maxOperationMs");
     const maxArtifactBytes = runtimeConfigPositiveInteger(config.maxArtifactBytes, "KIE maxArtifactBytes");
@@ -53,7 +54,7 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
         ...(capabilityConcurrency === undefined ? {} : { capabilityConcurrency }),
         ...(pollIntervalMs === undefined ? {} : { pollIntervalMs }),
-        ...(submissionIntervalMs === undefined ? {} : { submissionIntervalMs }),
+        ...(actionLimits === undefined ? {} : { actionLimits }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
         ...(maxOperationMs === undefined ? {} : { maxOperationMs }),
         ...(maxArtifactBytes === undefined ? {} : { maxArtifactBytes }),

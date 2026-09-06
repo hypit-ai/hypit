@@ -31,6 +31,7 @@ import { SqliteRuntimeState } from "@hypit/store-sqlite";
 import {
   capabilities,
   createGreetingBuild,
+  createParallelGreetingBuild,
   manifest as greetingManifest,
   producers,
   types,
@@ -457,6 +458,49 @@ test("a failed Build keeps public Outputs completed before removing active Runti
   }
 });
 
+for (const phase of ["submit", "poll"] as const) {
+  test(`a ${phase} failure retains an already received sibling Output in the final Result`, async () => {
+    const directory = await mkdtemp(join(tmpdir(), "hypit-local-sibling-result-"));
+    const initial = createParallelGreetingBuild();
+    let starts = 0;
+    let polls = 0;
+    const components: ComponentPackage = { producers: [
+      { producer: producers.makePrompt, handler: () => ({ outputs: { prompt: { kind: "inline", value: "hello" } }, needs: {} }) },
+      { producer: producers.requestText, handler: () => ({ outputs: {}, needs: { generation: {} } }) },
+    ] };
+    const finish = async (id: number) => {
+      if (id === 1) return { status: "failed" as const, failure: { code: "EXAMPLE_FAILURE", message: "first request failed" } };
+      await new Promise<void>((resolve) => setTimeout(resolve, 10));
+      return { status: "completed" as const, result: { value: { kind: "inline" as const, value: "retained sibling output" } } };
+    };
+    const endpoint = defineEndpointPackage({
+      module: providerModule, facet: "generation", instance: "generation.siblings", pool: "generation.siblings", defaultConcurrency: 2,
+      capabilities: [{ lifecycle: "asynchronous", capability: capabilities.generation, returns: types.generated, endpoint: {
+        start() {
+          const id = ++starts;
+          return phase === "submit" ? finish(id) : { status: "pending", handle: { id }, receipt: { id: `task-${id}` }, wakeAt: Date.now() };
+        },
+        poll({ handle }) { polls++; return finish((handle as { id: number }).id); },
+      } }],
+    });
+    const runtime = await createLocalRuntime({ ...projectRuntimeFixture(directory), components: [components], endpoints: [endpoint] });
+    try {
+      const id = "bld_20260906T110000000Z_0000000001";
+      await runtime.build(durableBuildRequest(directory, id, initial));
+      assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
+      const result = await new FileBuildResultRepository(join(directory, "results")).read(id);
+      assert.equal(result?.failure, "first request failed");
+      assert.deepEqual(result?.outputs["target.2"]?.value, { kind: "inline", value: "retained sibling output" });
+      assert.equal(starts, 2);
+      assert.equal(polls, phase === "submit" ? 0 : 2);
+      assert.equal((await runtime.activity()).builds.length, 0);
+    } finally {
+      await runtime.close();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+}
+
 test("an interrupted Result write finishes explicitly without rerunning the Build", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-result-retry-"));
   const initial = createGreetingBuild({ generationRealization: "placeholder" });
@@ -718,6 +762,9 @@ test("a selected historical file is staged once before its Build becomes active"
 
 test("one local Worker admits later Builds while preserving shared Endpoint capacity", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000011Z_0000000001uilds-"));
+  const fixture = projectRuntimeFixture(directory);
+  let activeBuildReads = 0;
+  let mostBuildReads = 0;
   let unrestrictedActive = 0;
   let mostUnrestricted = 0;
   let limitedActive = 0;
@@ -783,7 +830,22 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
   });
   try {
     const runtime = await createLocalRuntime({
-      ...projectRuntimeFixture(directory),
+      ...fixture,
+      buildStore: {
+        create: (...args) => fixture.buildStore.create(...args),
+        append: (...args) => fixture.buildStore.append(...args),
+        read: async (...args) => {
+          activeBuildReads += 1;
+          mostBuildReads = Math.max(mostBuildReads, activeBuildReads);
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          try {
+            return await fixture.buildStore.read(...args);
+          } finally {
+            activeBuildReads -= 1;
+          }
+        },
+        remove: (...args) => fixture.buildStore.remove!(...args),
+      },
       components: [components],
       endpoints: [endpoint],
     });
@@ -947,20 +1009,16 @@ test("project local runtime remembers the complete package closure across increm
 });
 
 for (const cancellation of ["accepted", "unsupported", "failed-build", "host-failure"] as const) {
-  test(`unconfirmed ${cancellation} retains capacity and work until remote termination`, async () => {
+  test(`${cancellation} finishes the Build with receipts without waiting for remote termination`, async () => {
     const directory = await mkdtemp(join(tmpdir(), "hypit-settlement-"));
     let fixture = projectRuntimeFixture(directory);
     let failRead = false;
-    let remoteActive = 0, starts = 0, cancels = 0, finished = false;
+    let remoteActive = 0, starts = 0, cancels = 0, polls = 0;
     const provider = defineEndpointPackage({ module: providerModule, facet: "generation", instance: "settlement",
       pool: "shared", defaultConcurrency: 1, capabilities: [{ capability: capabilities.generation, returns: types.generated,
         lifecycle: "asynchronous", endpoint: {
-          start() { starts++; remoteActive++; return { status: "pending", handle: { job: starts }, wakeAt: Date.now() + 60_000 }; },
-          poll(context) {
-            assert.equal(context.settling, true);
-            if (!finished) return { status: "pending", handle: context.handle, wakeAt: Date.now() };
-            remoteActive--; return { status: "settled" };
-          },
+          start() { starts++; remoteActive++; return { status: "pending", handle: { job: starts }, receipt: { id: `job-${starts}` }, wakeAt: Date.now() + 60_000 }; },
+          poll() { polls++; throw new Error("stopped Builds must not poll"); },
           cancel() { cancels++; return { status: cancellation === "accepted" ? "accepted" : "unsupported" }; },
         } }] });
     const openRuntime = () => createLocalRuntime({ ...fixture, endpoints: [provider],
@@ -994,40 +1052,132 @@ for (const cancellation of ["accepted", "unsupported", "failed-build", "host-fai
         await fixture.executionStore.claim("test-wake", Date.now() + 60_001);
         await fixture.executionStore.releaseTurn(first, "test-wake", Date.now());
       } else { await runtime.cancel(first); }
-      await runtime.workOnce();
-      assert.equal((await fixture.operationStore.list({ build: first }))[0]?.status, "pending");
-      assert.equal((await fixture.executionStore.listCapacity()).length, 1);
-      assert.equal((await fixture.executionStore.read(first))?.decision, undefined);
-      const stopped = (await fixture.executionStore.read(first))!.stop!;
-      const isFailure = cancellation === "failed-build" || cancellation === "host-failure";
-      assert.equal(stopped.cause, isFailure ? "execution-failed" : "user-cancelled");
-      assert.equal((await fixture.operationStore.list({ build: first }))[0]?.failure, undefined,
-        "Build stopping must not overwrite the remote Operation's own failure");
-      await runtime.cancel(first, "second cancellation must not replace the first stop");
-      await runtime.cancel(first, "third cancellation");
-      assert.deepEqual((await fixture.executionStore.read(first))?.stop, stopped);
-      await runtime.close();
-      fixture = projectRuntimeFixture(directory);
-      runtime = await openRuntime();
-      assert.deepEqual((await fixture.executionStore.read(first))?.stop, stopped);
-      assert.deepEqual((await runtime.inspect(first))?.stop, stopped);
-      await runtime.build(durableBuildRequest(directory, second, initial));
-      await runtime.workOnce();
-      assert.equal(starts, 1, "the next Need must not start while the cancelled remote work still occupies its slot");
-      assert.equal(remoteActive, 1);
-      finished = true;
-      await new Promise((resolve) => setTimeout(resolve, 120));
       const completion = await runtime.workOnce();
+      const isFailure = cancellation === "failed-build" || cancellation === "host-failure";
       assert.ok(completion !== undefined && "outcome" in completion);
       assert.equal(completion.outcome, isFailure ? "failed" : "cancelled");
-      assert.equal(completion.reason, stopped.reason);
-      assert.equal((await fixture.operationStore.list({ build: first })).length, 0);
-      assert.equal(remoteActive, 0);
-      assert.equal(cancels, 1, "cancel is attempted once across polling turns");
-      await new Promise((resolve) => setTimeout(resolve, 260));
+      assert.equal((await fixture.executionStore.listCapacity()).length, 0);
+      assert.equal(await runtime.inspect(first), undefined);
+      const result = await new FileBuildResultRepository(join(directory, "results")).read(first);
+      assert.equal(result?.outcome, completion.outcome);
+      assert.equal(result?.operations?.[0]?.receipt?.id, "job-1");
+      assert.equal(result?.operations?.[0]?.status, isFailure ? "pending" : "cancelled");
+      assert.equal(polls, 0);
+      assert.equal(cancels, isFailure ? 0 : 1);
+      assert.equal(remoteActive, 1, "local termination does not pretend the cloud task stopped");
+      await runtime.build(durableBuildRequest(directory, second, initial));
       await runtime.workOnce();
-      assert.equal(starts, 2);
-      assert.equal(remoteActive, 1);
+      assert.equal(starts, 2, "a new Build can perform its own execution attempt");
     } finally { await runtime.close(); await rm(directory, { recursive: true, force: true }); }
   });
 }
+
+test("100 durable Builds share task and download capacity without spinning on waiting graphs", { timeout: 30_000 }, async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-concurrent-builds-"));
+  const fixture = projectRuntimeFixture(directory);
+  let reads = 0, starts = 0, polls = 0, activeTasks = 0, peakTasks = 0, downloads = 0, peakDownloads = 0;
+  const checks = new Map<number, number>();
+  const provider = defineEndpointPackage({
+    module: providerModule, facet: "generation", instance: "concurrent", pool: "shared-account",
+    defaultConcurrency: 8,
+    actionLimits: { submit: { concurrency: 2 }, collect: { concurrency: 2 } },
+    capabilities: [{ capability: capabilities.generation, returns: types.generated, lifecycle: "asynchronous", endpoint: {
+      async start() {
+        const id = starts++;
+        activeTasks++;
+        peakTasks = Math.max(peakTasks, activeTasks);
+        await new Promise((resolve) => setTimeout(resolve, 2));
+        if (id % 10 === 0) {
+          activeTasks--;
+          throw new Error("submission timeout without receipt");
+        }
+        return { status: "pending", handle: { id }, receipt: { id: `remote-${id}` }, wakeAt: Date.now() + 3 };
+      },
+      poll({ handle }) {
+        polls++;
+        const { id } = handle as { id: number };
+        const count = (checks.get(id) ?? 0) + 1;
+        checks.set(id, count);
+        if (id % 10 === 1) {
+          activeTasks--;
+          throw new Error("poll transport failed");
+        }
+        if (count < 10) return { status: "pending", handle, wakeAt: Date.now() + 3 };
+        activeTasks--;
+        return { status: "ready", handle };
+      },
+      async collect({ handle }) {
+        const { id } = handle as { id: number };
+        downloads++;
+        peakDownloads = Math.max(peakDownloads, downloads);
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 40));
+          if (id % 10 === 2) throw new Error("download failed");
+          return { status: "completed", result: { value: { kind: "inline", value: `generated-${id}` } } };
+        } finally { downloads--; }
+      },
+    } }],
+  });
+  const runtime = await createLocalRuntime({
+    ...fixture,
+    buildStore: {
+      ...fixture.buildStore,
+      create: (...args) => fixture.buildStore.create(...args),
+      append: (...args) => fixture.buildStore.append(...args),
+      read: (...args) => { reads++; return fixture.buildStore.read(...args); },
+    },
+    endpoints: [provider],
+    components: [{ producers: [
+      { producer: producers.makePrompt, handler: () => ({ outputs: { prompt: { kind: "inline", value: "hello" } }, needs: {} }) },
+      { producer: producers.requestText, handler: () => ({ outputs: {}, needs: { generation: { prompt: "hello" } } }) },
+    ] }],
+  });
+  const controller = new AbortController();
+  let work: Promise<void> | undefined;
+  try {
+    const ids: string[] = [];
+    for (let index = 0; index < 100; index++) {
+      const id = `bld_20260906T120000000Z_${String(index).padStart(10, "0")}`;
+      ids.push(id);
+      const request = durableBuildRequest(directory, id, createGreetingBuild({ targetOutputs: ["generated"] }));
+      // Persist a sizeable authored input so polling a whole graph has a measurable cost.
+      const program = request.definition.program;
+      await runtime.build({ ...request, definition: { ...request.definition, program: { ...program,
+        records: program.records.map((record) => record.id === "intent:root"
+          ? { ...record, value: { kind: "inline" as const, value: { name: "x".repeat(64 * 1024) } } } : record),
+      } } });
+    }
+    reads = 0;
+    const begun = Date.now();
+    let timerAt = 0;
+    const timer = setTimeout(() => { timerAt = Date.now() - begun; }, 100);
+    const deadline = setTimeout(() => controller.abort(), 20_000);
+    try {
+      work = runtime.work({ idlePollMs: 2, signal: controller.signal });
+      while ((await fixture.executionStore.list()).length > 0 && !controller.signal.aborted) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      controller.abort();
+      await work;
+    } finally { clearTimeout(deadline); clearTimeout(timer); }
+    assert.equal((await fixture.executionStore.list()).length, 0, "every attempt must finish, including failures");
+    assert.equal((await fixture.executionStore.listCapacity()).length, 0);
+    assert.equal(starts, 100, "each Build submits once");
+    assert.ok(peakTasks <= 8 && peakTasks > 1, `remote task concurrency: ${peakTasks}`);
+    assert.ok(peakDownloads === 2, `download concurrency: ${peakDownloads}`);
+    assert.ok(timerAt > 0 && timerAt < 1_000, `100 ms timer ran at ${timerAt} ms`);
+    assert.ok(reads < 800, `waiting Builds should not reload their graphs on every poll: ${reads} reads`);
+    const results = new FileBuildResultRepository(join(directory, "results"));
+    const manifests = await Promise.all(ids.map((id) => results.read(id)));
+    assert.equal(manifests.filter((item) => item?.outcome === "complete").length, 70);
+    assert.equal(manifests.filter((item) => item?.outcome === "failed").length, 30);
+    assert.equal(manifests.filter((item) => item?.operations?.[0]?.receipt !== undefined).length, 90);
+    assert.ok(manifests.filter((item) => item?.outcome === "failed").every((item) => item!.failure !== undefined));
+    t.diagnostic(`100 Builds; ${reads} graph reads; ${polls} polls; task peak ${peakTasks}; download peak ${peakDownloads}; 100 ms timer at ${timerAt} ms; ${Date.now() - begun} ms total`);
+  } finally {
+    controller.abort();
+    await work;
+    await runtime.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});

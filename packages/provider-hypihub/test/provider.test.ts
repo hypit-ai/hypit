@@ -282,7 +282,10 @@ test("HypiHub uploads one referenced Resource once and submits its HTTPS URL", a
   assert.deepEqual(signedBatches, [[1, 2, 3], [2]]);
   assert.deepEqual([...partAttempts.entries()].sort(), [[1, 1], [2, 2], [3, 1]]);
   if (started.status !== "pending") return;
-  const completed = await endpoint.poll({ ...common, handle: started.handle! });
+  const ready = await endpoint.poll({ ...common, handle: started.handle! });
+  assert.equal(ready.status, "ready");
+  if (ready.status !== "ready") return;
+  const completed = await endpoint.collect!({ ...common, handle: ready.handle });
   assert.equal(completed.status, "completed");
 });
 
@@ -544,15 +547,14 @@ test("HypiHub exposes model groups beneath its own total capacity", async () => 
   assert.throws(() => createHypiHubProvider({ capabilityConcurrency: { invented: 1 } }), /unknown HypiHub capacity/);
 });
 
-test("HypiHub polling errors and local deadlines retain remote work until settlement", async () => {
+test("HypiHub polling errors and operation deadlines fail without settlement polling", async () => {
   const request = need({});
-  let unavailable = true, status = "running", requests = 0;
+  let requests = 0;
   const registry = new EndpointRegistry();
-  await createHypiHubProvider({ pollIntervalMs: 0, operationTimeoutMs: 10,
+  await createHypiHubProvider({ pollIntervalMs: 0, operationTimeoutMs: 60_000,
     fetch: async (url) => {
       requests++; assert.match(String(url), /\/jobs\/test$/);
-      if (unavailable) throw new Error("offline");
-      return Response.json({ status });
+      throw new Error("offline");
     } }).install(registry);
   const selected = registry.resolve(request);
   assert.equal(selected.status, "resolved"); assert.equal(selected.registration.kind, "asynchronous");
@@ -562,13 +564,11 @@ test("HypiHub polling errors and local deadlines retain remote work until settle
     handle: { contract: "hypit.hypihub-operation@1", jobId: "test",
       route: `${request.capability.module.name}@${request.capability.module.version}#${request.capability.name}`, startedAt: 0 } };
   const timedOut = await endpoint.poll(common);
-  assert.equal(timedOut.status, "pending");
-  assert.equal(timedOut.status === "pending" && timedOut.failure?.code, "HYPIHUB_OPERATION_TIMEOUT");
+  assert.equal(timedOut.status, "failed");
+  assert.equal(timedOut.status === "failed" && timedOut.failure.code, "HYPIHUB_OPERATION_TIMEOUT");
   assert.equal(requests, 0);
-  assert.equal((await endpoint.poll({ ...common, settling: true })).status, "pending");
-  unavailable = false;
-  assert.equal((await endpoint.poll({ ...common, settling: true })).status, "pending");
-  status = "completed";
-  assert.deepEqual(await endpoint.poll({ ...common, settling: true }), { status: "settled" });
-  assert.equal(requests, 3, "settling must only query the existing job and never download or submit");
+  const offline = await endpoint.poll({ ...common, handle: { ...common.handle, startedAt: Date.now() } });
+  assert.equal(offline.status, "failed");
+  assert.match(offline.status === "failed" ? offline.failure.message : "", /offline/);
+  assert.equal(requests, 1);
 });

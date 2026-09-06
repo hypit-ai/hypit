@@ -58,7 +58,10 @@ function buildView(input: {
     acceptedRecords: input.snapshot?.state.records.length ?? 0,
     outstandingCommands: input.snapshot?.state.outstanding.length ?? 0,
     operations: input.operations.map((operation) => ({
+      id: operation.id,
       endpoint: operation.endpoint,
+      ...(operation.receipt === undefined ? {} : { receipt: operation.receipt }),
+      ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
       status: operation.status,
       ...(operation.progress === undefined ? {} : { progress: operation.progress }),
       ...(operation.failure === undefined ? {} : { failure: operation.failure }),

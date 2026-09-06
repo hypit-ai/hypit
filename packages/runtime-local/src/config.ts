@@ -871,7 +871,7 @@ async function inspectRuntimeConfig(
       diagnostics.push({
         severity: "error",
         code: "RUNTIME_POOL_CONFLICT",
-        message: `${conflict.endpointIds.join(", ")} share ${conflict.resource} but size it ${conflict.limits.join(" and ")}; use the same limit for this shared resource or different pools`,
+        message: `${conflict.endpointIds.join(", ")} share ${conflict.resource} but size it ${conflict.settings.join(" and ")}; use the same limit and period for this shared resource or different pools`,
         subject: conflict.resource,
       });
     }

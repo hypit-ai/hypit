@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { setImmediate } from "node:timers/promises";
 import type { BuildState } from "@hypit/protocol";
 import type {
   ResourceStore,
@@ -12,6 +13,7 @@ import type {
   RuntimeWorkerRunOptions,
 } from "@hypit/runtime";
 import { LocalBuildScheduler } from "@hypit/runtime";
+import { BuildMachine } from "@hypit/core";
 
 type LocalWorkerOptions = {
   readonly stores: {
@@ -86,7 +88,9 @@ class CapacityExecutor implements RuntimeCommandExecutor {
   ): Promise<RuntimeExecutionResult> {
     const store = this.#options.stores.executions;
     if (descriptor.capacityMode === "asynchronous") {
-      return await this.#delegate.executeCommand(state, descriptor, context);
+      return await this.#delegate.executeCommand(state, descriptor, {
+        ...context, releaseOperationCapacity: () => this.#options.stores.execution.releaseCapacity(context.build, descriptor.command.id),
+      });
     }
     const begun = await store.begin(context.build, descriptor.command.id);
     if (!begun.created) {
@@ -120,6 +124,12 @@ class CapacityExecutor implements RuntimeCommandExecutor {
     }
   }
 
+  async #releaseAfter(result: RuntimeExecutionResult, build: string, command: string): Promise<boolean> {
+    if (result.status !== "pending") return true;
+    const [operation] = await this.#options.stores.operations.list({ build, command });
+    return operation?.remoteEnded === true || operation?.submission === "queued";
+  }
+
   async executeCommand(
     state: BuildState,
     descriptor: RuntimeRunnableCommand,
@@ -127,22 +137,14 @@ class CapacityExecutor implements RuntimeCommandExecutor {
   ): Promise<RuntimeExecutionResult> {
     const resources = descriptor.resources;
     await this.#assertRunning(context.build);
+    if (descriptor.capacityMode === "asynchronous") {
+      const [operation] = await this.#options.stores.operations.list({ build: context.build, command: descriptor.command.id });
+      if (operation?.remoteEnded) return await this.#executeOnce(state, descriptor, context);
+    }
     if (resources.length === 0) {
       return await this.#executeOnce(state, descriptor, context);
     }
-    // An asynchronous command keeps its capacity reservation while it is
-    // being polled. Do not count that same build/command against itself on a
-    // later execution turn; the reservation is intentionally retained until
-    // the Operation reaches a terminal state.
-    const reservation = (await this.#options.stores.execution.listCapacity())
-      .find((item) => item.build === context.build && item.command === descriptor.command.id);
-    if (reservation !== undefined) {
-      const result = await this.#executeOnce(state, descriptor, context);
-      if (result.status !== "pending") {
-        await this.#options.stores.execution.releaseCapacity(context.build, descriptor.command.id);
-      }
-      return result;
-    }
+    // acquireCapacity also returns the reservation already held by this command.
     const acquired = await this.#options.stores.execution.acquireCapacity({
       build: context.build,
       command: descriptor.command.id,
@@ -152,13 +154,13 @@ class CapacityExecutor implements RuntimeCommandExecutor {
     if (acquired.status === "blocked") {
       return {
         status: "deferred",
-        wakeAt: acquired.availableAt,
+        ...(acquired.availableAt === undefined ? {} : { wakeAt: acquired.availableAt }),
         reason: `${acquired.reason}:${acquired.resource}`,
       };
     }
     try {
       const result = await this.#executeOnce(state, descriptor, context);
-      if (result.status !== "pending") {
+      if (await this.#releaseAfter(result, context.build, descriptor.command.id)) {
         await this.#options.stores.execution.releaseCapacity(
           acquired.reservation.build,
           acquired.reservation.command,
@@ -188,6 +190,7 @@ class DurableLocalWorker {
   readonly #options: LocalWorkerOptions;
   readonly #executorWithCapacity: CapacityExecutor;
   readonly #owner = randomUUID();
+  #buildRead = Promise.resolve();
 
   constructor(executor: RuntimeCommandExecutor, options: LocalWorkerOptions) {
     this.#executor = executor;
@@ -195,43 +198,73 @@ class DurableLocalWorker {
     this.#executorWithCapacity = new CapacityExecutor(executor, options, this.#owner);
   }
 
-  async #finishResult(execution: BuildExecutionSnapshot, outcome: import("@hypit/runtime").BuildOutcome): Promise<WorkerTurnResult> {
+  async #readBuild(build: string): Promise<import("@hypit/runtime").BuildSnapshot | undefined> {
+    const previous = this.#buildRead;
+    let release!: () => void;
+    this.#buildRead = new Promise<void>((resolve) => { release = resolve; });
+    await previous;
+    try {
+      // Hydrating a persisted Definition + Facts performs substantial JSON parsing on
+      // Node's one JavaScript thread. Serializing only this hydration avoids a thundering
+      // memory spike; work started from the snapshots remains concurrent under its own
+      // declared capacity.
+      return await this.#options.stores.builds.read(build);
+    } finally {
+      release();
+    }
+  }
+
+  async #finishResult(execution: BuildExecutionSnapshot, outcome: import("@hypit/runtime").BuildOutcome, reason?: string): Promise<WorkerTurnResult> {
     await this.#options.stores.execution.releaseBuildCapacity(execution.build);
-    const decided = await this.#options.stores.execution.decide(execution.build, this.#owner, outcome);
+    const decided = await this.#options.stores.execution.decide(execution.build, this.#owner, outcome, reason);
     return await this.#options.resultWriter.completeResult(decided);
   }
 
-  async #settle(execution: BuildExecutionSnapshot): Promise<WorkerTurnResult> {
+  async #finishStopped(execution: BuildExecutionSnapshot): Promise<WorkerTurnResult> {
     assert(execution.stop !== undefined, `Build ${execution.build} has no stop request`);
-    const snapshot = await this.#options.stores.builds.read(execution.build);
-    assert(snapshot !== undefined, `Build ${execution.build} has no durable execution state`);
-    for (const operation of await this.#options.stores.operations.list({ build: execution.build })) {
-      if (operation.status !== "pending") continue;
-      const settled = await this.#executor.cancelOperation?.(snapshot.state, operation).catch(() => undefined);
-      if (settled !== undefined && settled.status !== "pending") {
-        await this.#options.stores.execution.releaseCapacity(execution.build, operation.command);
+    const operations = await this.#options.stores.operations.list({ build: execution.build });
+    const received = operations.filter((operation) => operation.status === "pending" && operation.completion !== undefined);
+    if (received.length > 0 || execution.stop.cause === "user-cancelled") {
+      const snapshot = await this.#readBuild(execution.build);
+      assert(snapshot !== undefined, `Build ${execution.build} has no execution state`);
+      const machine = new BuildMachine(snapshot.definition, snapshot.facts);
+      for (const operation of received) {
+        let event: import("@hypit/protocol").CommandResult | undefined;
+        try {
+          event = await this.#executor.acceptOperation?.(machine.view(), operation);
+        } catch (error) {
+          await this.#options.stores.operations.update(operation.id, {
+            status: "failed", failure: { code: "INVALID_ENDPOINT_RESULT", message: error instanceof Error ? error.message : String(error) },
+          });
+          continue;
+        }
+        if (event === undefined || event.kind === "command-failed") continue;
+        const fact = machine.evaluate(event);
+        if (fact !== undefined) {
+          await this.#options.stores.builds.append(execution.build, fact);
+          machine.commit();
+        }
+      }
+      if (execution.stop.cause === "user-cancelled") {
+        for (const operation of await this.#options.stores.operations.list({ build: execution.build })) {
+          if (operation.status === "pending") await this.#executor.cancelOperation?.(machine.view(), operation);
+        }
       }
     }
-    const pending = (await this.#options.stores.operations.list({ build: execution.build }))
-      .filter((operation) => operation.status === "pending");
-    if (pending.length > 0) {
-      const now = Date.now();
-      return await this.#options.stores.execution.releaseTurn(execution.build, this.#owner,
-        Math.min(...pending.map((operation) => Math.max(now + 100, operation.wakeAt ?? now + 1_000))), execution.stop);
-    }
-    return await this.#finishResult(execution, execution.stop.cause === "user-cancelled" ? "cancelled" : "failed");
+    return await this.#finishResult(execution,
+      execution.stop.cause === "user-cancelled" ? "cancelled" : "failed", execution.stop.reason);
   }
 
   async #stopFailed(execution: BuildExecutionSnapshot, reason: string): Promise<WorkerTurnResult> {
     const stopped = await this.#options.stores.execution.requestStop(execution.build, { cause: "execution-failed", reason });
-    return await this.#settle(stopped);
+    return await this.#finishStopped(stopped);
   }
 
   async #finish(execution: BuildExecutionSnapshot, result: ScheduledBuildResult): Promise<WorkerTurnResult> {
     const current = await this.#options.stores.execution.read(execution.build);
     assert(current?.turn?.owner === this.#owner && current.decision === undefined,
       `Execution ${execution.build} is no longer owned by this Worker turn`);
-    if (current.stop !== undefined) return await this.#settle(current);
+    if (current.stop !== undefined) return await this.#finishStopped(current);
     if (result.status === "complete") {
       return await this.#finishResult(execution, "complete");
     }
@@ -247,15 +280,19 @@ class DurableLocalWorker {
       const reason = result.blocked.map((item) => `${item.reason}: ${item.subject}`).join(", ");
       return await this.#stopFailed(execution, reason);
     }
-    const now = Date.now();
     const wakeAt = Math.min(...[
-      ...pending.map((item) => item.wakeAt ?? now + 1_000),
-      ...deferred.map((item) => item.wakeAt ?? now + 1_000),
+      ...pending.flatMap((item) => item.wakeAt === undefined ? [] : [item.wakeAt]),
+      ...deferred.flatMap((item) => item.wakeAt === undefined ? [] : [item.wakeAt]),
     ]);
+    const operations = await this.#options.stores.operations.list({ build: execution.build });
+    const waiting = operations.filter((item) => item.status === "pending" && item.request !== undefined && item.submission !== "queued");
+    const commands = new Set(waiting.map((item) => item.command));
+    const onlyOperations = this.#executor.prepare(result.state).runnable.every((item) => commands.has(item.command.id));
     const released = await this.#options.stores.execution.releaseTurn(
       execution.build,
       this.#owner,
-      Number.isFinite(wakeAt) ? wakeAt : now,
+      Number.isFinite(wakeAt) ? wakeAt : undefined,
+      onlyOperations && waiting.length > 0 ? waiting.map((item) => item.id) : undefined,
     );
     return released;
   }
@@ -265,23 +302,56 @@ class DurableLocalWorker {
     return await this.#stopFailed(execution, reason);
   }
 
-  async #runClaimed(executions: readonly BuildExecutionSnapshot[]): Promise<readonly WorkerTurnResult[]> {
+  async #runClaimed(
+    executions: readonly BuildExecutionSnapshot[],
+    hydrated?: () => void,
+  ): Promise<readonly WorkerTurnResult[]> {
     const finished: WorkerTurnResult[] = [];
     const runnable: { readonly execution: BuildExecutionSnapshot; readonly snapshot: import("@hypit/runtime").BuildSnapshot }[] = [];
     for (const execution of executions) {
       assert(execution.turn?.owner === this.#owner && execution.decision === undefined,
         `Execution ${execution.build} was not claimed by this Worker turn`);
       if (execution.stop !== undefined) {
-        finished.push(await this.#settle(execution));
+        finished.push(await this.#finishStopped(execution));
         continue;
       }
       try {
+        if (execution.operationWait !== undefined && this.#executor.advanceOperation !== undefined) {
+          const pending = await Promise.all(execution.operationWait.map((id) => this.#options.stores.operations.read(id)));
+          // Only snapshot hydration is serialized; network actions can overlap across Builds.
+          hydrated?.();
+          const actions = await Promise.allSettled(pending.map(async (operation) => {
+            if (operation === undefined) throw new Error(`Build ${execution.build} lost a waiting Operation`);
+            const result = await this.#executor.advanceOperation!(operation);
+            if (result.remoteEnded || result.status !== "pending") {
+              await this.#options.stores.execution.releaseCapacity(execution.build, result.command);
+            }
+            return result;
+          }));
+          const advanced = actions.map((action) => {
+            if (action.status === "rejected") throw action.reason;
+            return action.value;
+          });
+          const failed = advanced.find((item) => item.status === "failed");
+          if (failed !== undefined) {
+            finished.push(await this.#stopFailed(execution, failed.failure!.message));
+            continue;
+          }
+          if (advanced.every((item) => item.status === "pending" && item.completion === undefined)) {
+            const wake = Math.min(...advanced.flatMap((item) => item.wakeAt === undefined ? [] : [item.wakeAt]));
+            finished.push(await this.#options.stores.execution.releaseTurn(execution.build, this.#owner,
+              Number.isFinite(wake) ? wake : undefined, execution.operationWait));
+            continue;
+          }
+        }
         await this.#options.installComponentPackages(execution.componentPackages);
-        const snapshot = await this.#options.stores.builds.read(execution.build);
+        const snapshot = await this.#readBuild(execution.build);
         assert(snapshot !== undefined, `Execution ${execution.build} has no Build Definition`);
         runnable.push({ execution, snapshot });
       } catch (error) {
         finished.push(await this.#fail(execution, error));
+      } finally {
+        hydrated?.();
       }
     }
     if (runnable.length === 0) return finished;
@@ -324,6 +394,7 @@ class DurableLocalWorker {
     // The Runtime Host admits one Worker process. Any stored turn owner therefore belongs to the
     // previous process; clearing it changes no external fact and performs no Result action.
     await this.#options.assertEnvironment?.();
+    await this.#options.stores.execution.reclaimActionCapacity();
     await this.#options.stores.execution.reclaimTurns(Date.now());
     await this.#options.stores.execution.reclaimResultWrites();
     for (const execution of await this.#options.stores.execution.list()) {
@@ -338,21 +409,31 @@ class DurableLocalWorker {
     try {
       while (options.signal?.aborted !== true) {
         await this.#options.assertEnvironment?.();
-        while (true) {
+        while (!Boolean(options.signal?.aborted)) {
           const execution = await this.#options.stores.execution.claim(this.#owner, Date.now());
           if (execution === undefined) break;
+          let markHydrated!: () => void;
+          const hydration = new Promise<void>((resolve) => { markHydrated = resolve; });
           let task: Promise<void>;
-          task = this.#runClaimed([execution])
+          task = this.#runClaimed([execution], markHydrated)
             .then(() => undefined)
             .finally(() => active.delete(task));
           active.add(task);
+          // The next Build may execute concurrently, but its persisted snapshot is
+          // not hydrated until this one has left the single-threaded JSON boundary.
+          await Promise.race([hydration, task]);
+          // Awaiting synchronous stores only drains microtasks. Let sockets, timers and
+          // stop signals run before claiming another piece of ready work.
+          await setImmediate();
         }
-        await Promise.race([
-          ...active,
-          pause(options.idlePollMs, options.signal),
-        ]).catch((error: unknown) => {
-          if (options.signal?.aborted !== true) throw error;
-        });
+        const idle = new AbortController();
+        const signal = options.signal === undefined ? idle.signal : AbortSignal.any([idle.signal, options.signal]);
+        try {
+          await Promise.race([...active, pause(options.idlePollMs, signal)]);
+        } catch (error) {
+          if (!Boolean(options.signal?.aborted)) throw error;
+        } finally { idle.abort(); }
+
       }
     } finally {
       await Promise.allSettled(active);

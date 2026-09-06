@@ -87,13 +87,14 @@ export function createLocalResultWriter(
       await options.buildStore.append(build, fact);
       machine.commit();
     };
-    for (const receipt of await options.commandExecutionStore.list(build)) {
-      if (receipt.status === "completed" && receipt.event !== undefined) await accept(receipt.event);
-    }
-    for (const operation of await options.operationStore.list({ build })) {
-      const event = operationEvent(operation);
-      if (event !== undefined) await accept(event);
-    }
+    const events = [
+      ...(await options.commandExecutionStore.list(build)).flatMap((receipt) =>
+        receipt.status === "completed" && receipt.event !== undefined ? [receipt.event] : []),
+      ...(await options.operationStore.list({ build })).flatMap((operation) => operationEvent(operation) ?? []),
+    ];
+    // Preserve already validated sibling outputs before a failure closes Core's outstanding work.
+    for (const event of events.filter((event) => event.kind !== "command-failed")) await accept(event);
+    for (const event of events.filter((event) => event.kind === "command-failed")) await accept(event);
     const accepted = await options.buildStore.read(build);
     assert(accepted !== undefined, `Build ${build} disappeared while accepting stored results`);
     return accepted;
@@ -134,7 +135,23 @@ export function createLocalResultWriter(
         await syncResult(execution, snapshot.state);
         const reopened = await openWriter(execution);
         try {
+          const operations = (await options.operationStore.list({ build: execution.build })).map((operation) => {
+            return {
+              ...(operation.request === undefined ? {} : { need: { id: operation.request.need.id, capability: operation.request.need.capability } }),
+              ...(operation.createdAt === undefined ? {} : { createdAt: operation.createdAt }),
+              ...(operation.acknowledgedAt === undefined ? {} : { acknowledgedAt: operation.acknowledgedAt }),
+              ...(operation.endedAt === undefined ? {} : { endedAt: operation.endedAt }),
+              ...(operation.progress === undefined ? {} : { progress: operation.progress }),
+              ...(operation.cancellation === undefined ? {} : { cancellation: operation.cancellation }),
+              operation: operation.id, command: operation.command, endpoint: operation.endpoint, status: operation.status,
+              ...(operation.pool === undefined ? {} : { pool: operation.pool }),
+              ...(operation.credentials === undefined ? {} : { credentials: operation.credentials }),
+              ...(operation.receipt === undefined ? {} : { receipt: operation.receipt }),
+              ...(operation.failure === undefined ? {} : { failure: operation.failure }),
+            };
+          });
           await reopened.writer.finish({
+            operations,
             outcome: execution.decision.outcome,
             ...(execution.decision.reason === undefined ? {} : { failure: execution.decision.reason }),
           });
@@ -158,9 +175,6 @@ export function createLocalResultWriter(
       `Execution ${execution.build} Result writer is not owned by this process`);
     let step: "result" | "cleanup" = "result";
     try {
-      const operations = await options.operationStore.list({ build: execution.build });
-      assert(!operations.some((operation) => operation.status === "pending"),
-        `Build ${execution.build} still has unsettled external work`);
       await finishResult(execution);
       step = "cleanup";
       await Promise.resolve(options.clearBuildResources?.(execution.build));

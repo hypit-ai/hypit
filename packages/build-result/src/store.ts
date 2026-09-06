@@ -422,6 +422,7 @@ export class FileBuildResult {
     const updated: BuildResultManifest = {
       ...manifest,
       outcome: input.outcome,
+      ...(input.operations === undefined ? {} : { operations: input.operations }),
       finishedAt: manifest.finishedAt ?? now,
       ...(input.failure === undefined ? {} : { failure: input.failure }),
     };

@@ -1,3 +1,4 @@
+import { endpointActions } from "@hypit/endpoint-kit";
 import type { EndpointPackage } from "@hypit/endpoint-kit";
 import type { HostFacet } from "@hypit/host";
 import type { CanonicalValue } from "@hypit/protocol";
@@ -280,3 +281,27 @@ export function runtimeConfigCredentialRef(
   assert(store !== undefined && key !== undefined, `${subject} requires store and key`);
   return credentialRef(store, key);
 }
+
+/** Common Profile representation for short action occupancy and rate budgets. */
+export function runtimeConfigActionLimits(value: CanonicalValue | undefined): import("@hypit/endpoint-kit").EndpointActionLimits | undefined {
+  if (value === undefined) return undefined;
+  const actions = runtimeConfigObject(value, "actionLimits");
+  runtimeConfigExact(actions, endpointActions, "actionLimits");
+  return Object.fromEntries(Object.entries(actions).map(([action, raw]) => {
+    const limit = runtimeConfigObject(raw, `actionLimits.${action}`);
+    runtimeConfigExact(limit, ["concurrency", "rate"], `actionLimits.${action}`);
+    const concurrency = runtimeConfigPositiveInteger(limit.concurrency, `${action} concurrency`);
+    let rate: { limit: number; periodMs: number } | undefined;
+    if (limit.rate !== undefined) {
+      const item = runtimeConfigObject(limit.rate, `${action} rate`);
+      runtimeConfigExact(item, ["limit", "periodMs"], `${action} rate`);
+      const units = runtimeConfigPositiveInteger(item.limit, `${action} rate.limit`);
+      const periodMs = runtimeConfigPositiveInteger(item.periodMs, `${action} rate.periodMs`);
+      if (units === undefined || periodMs === undefined) throw new Error(`${action} rate requires limit and periodMs`);
+      rate = { limit: units, periodMs };
+    }
+    return [action, { ...(concurrency === undefined ? {} : { concurrency }), ...(rate === undefined ? {} : { rate }) }];
+  }));
+}
+
+export { requestDeadline } from "./request-deadline.js";

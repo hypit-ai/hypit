@@ -1,3 +1,4 @@
+import { requestDeadline } from "@hypit/runtime-kit";
 import type { AsyncEndpoint, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
 import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
 import { geminiCapabilities, geminiModels, geminiTypes, sealVisualObservation, verifyGeminiRequest } from "@hypit/gemini";
@@ -27,6 +28,7 @@ export type CreateHypiHubProviderOptions = {
   readonly baseUrl?: string;
   readonly apiKey?: CredentialRef;
   readonly defaultConcurrency?: number;
+  readonly actionLimits?: import("@hypit/endpoint-kit").EndpointActionLimits;
   readonly capabilityConcurrency?: Readonly<Record<string, number>>;
   readonly pollIntervalMs?: number;
   readonly requestTimeoutMs?: number;
@@ -124,28 +126,27 @@ class HypiHubClient {
     });
   }
   async json(path: string, apiKey: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
-    const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), this.timeout);
+    const deadline = requestDeadline(this.timeout);
     try {
-      const response = await this.fetcher(`${this.baseUrl}${path}`, { ...init, signal: controller.signal, headers: { authorization: `Bearer ${apiKey}`, ...(init.headers ?? {}) } });
-      const text = await response.text(); let body: unknown = {};
+      const response = await deadline.wait(this.fetcher(`${this.baseUrl}${path}`, { ...init, signal: deadline.signal, headers: { authorization: `Bearer ${apiKey}`, ...(init.headers ?? {}) } }));
+      const text = await deadline.wait(response.text()); let body: unknown = {};
       if (!response.ok) throw new HypiHubHttpError(response.status, `HypiHub returned HTTP ${response.status}: ${text.slice(0, 300)}`);
       try { body = text.length === 0 ? {} : JSON.parse(text); } catch { throw new Error(`HypiHub returned invalid JSON (${response.status})`); }
       return object(body, "HypiHub response");
-    } finally { clearTimeout(timer); }
+    } finally { deadline.finish(); }
   }
   async download(url: string): Promise<{ readonly bytes: Uint8Array; readonly mediaType: string }> {
     let lastError: unknown;
     for (let attempt = 0; attempt < this.downloadAttempts; attempt += 1) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.timeout);
+      const deadline = requestDeadline(this.timeout);
       try {
-        const response = await this.fetcher(url, { signal: controller.signal });
+        const response = await deadline.wait(this.fetcher(url, { signal: deadline.signal }));
         if (!response.ok) throw new Error(`HypiHub asset returned HTTP ${response.status}`);
-        return { bytes: new Uint8Array(await response.arrayBuffer()), mediaType: response.headers.get("content-type")?.split(";", 1)[0] ?? "application/octet-stream" };
+        return { bytes: new Uint8Array(await deadline.wait(response.arrayBuffer())), mediaType: response.headers.get("content-type")?.split(";", 1)[0] ?? "application/octet-stream" };
       } catch (error) {
         lastError = error;
       } finally {
-        clearTimeout(timer);
+        deadline.finish();
       }
     }
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
@@ -164,16 +165,15 @@ class HypiHubClient {
     });
   }
   async speech(apiKey: string, body: Record<string, unknown>): Promise<readonly { readonly bytes: Uint8Array; readonly mediaType: string }[]> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeout);
+    const deadline = requestDeadline(this.timeout);
     try {
-      const response = await this.fetcher(`${this.baseUrl}/audio/speech`, {
+      const response = await deadline.wait(this.fetcher(`${this.baseUrl}/audio/speech`, {
         method: "POST",
         headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
         body: JSON.stringify({ ...body, output: "b64_json" }),
-        signal: controller.signal,
-      });
-      const bytes = new Uint8Array(await response.arrayBuffer());
+        signal: deadline.signal,
+      }));
+      const bytes = new Uint8Array(await deadline.wait(response.arrayBuffer()));
       if (!response.ok) {
         throw new Error(`HypiHub returned HTTP ${response.status}: ${Buffer.from(bytes).toString("utf8").slice(0, 300)}`);
       }
@@ -205,7 +205,7 @@ class HypiHubClient {
         return await this.download(item.url);
       }));
     } finally {
-      clearTimeout(timer);
+      deadline.finish();
     }
   }
 }
@@ -303,8 +303,6 @@ async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocatio
 function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs: number, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]): AsyncEndpoint {
   return {
     async start(context: EndpointStartContext) {
-      let submitting = false;
-      let remoteEnded = false;
       try {
         const route = hypiHubRouteForCapability(context.need.capability);
         assert(route !== undefined, "HypiHub does not implement this exact capability"); const apiKey = credential(context);
@@ -325,46 +323,46 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
         const path = operation === "image_edits" ? "/images/edits"
           : operation === "images" ? "/images/generations" : "/videos";
         await verifyModelRoute(client, apiKey, compiled.model, operation);
-        submitting = true;
         const response = await client.json(path, apiKey, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": context.operation }, body: JSON.stringify({ model: compiled.model, ...input }) });
         const status = response.status;
-        remoteEnded = status === "succeeded" || status === "completed";
-        if (remoteEnded) return await complete(client, apiKey, route, jobId(response), context.resources);
+        const remoteEnded = status === "succeeded" || status === "completed";
         const handle: Handle = { contract: "hypit.hypihub-operation@1", jobId: jobId(response), route: capabilityKey(route.capability), startedAt: Date.now() };
-        return wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "submitted" });
+        const receipt = { id: handle.jobId };
+        await context.checkpoint?.({ handle: canonicalize(handle), receipt, ...(remoteEnded ? { remoteEnded: true as const } : {}) });
+        return remoteEnded ? { status: "ready", handle: canonicalize(handle), receipt }
+          : { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "submitted" }), receipt };
       } catch (error) {
-        if (submitting && !remoteEnded && !(error instanceof HypiHubHttpError && error.status >= 400 && error.status < 500)) {
-          return { status: "pending", wakeAt: Date.now() + 30_000, progress: { phase: "submission-unknown" },
-            failure: { code: "SUBMISSION_UNKNOWN", message: "HypiHub submission acknowledgement is unknown; the same Build will not submit again" } };
-        }
         return failure(error);
       }
     },
     async poll(context: EndpointPollContext) {
-      let remoteEnded = false;
       try {
         const handle = object(context.handle, "HypiHub handle") as unknown as Handle; const route = hypiHubRouteForCapability(context.need.capability);
         assert(route !== undefined && handle.contract === "hypit.hypihub-operation@1" && handle.route === capabilityKey(route.capability), "HypiHub handle is invalid");
-        if (!context.settling && Date.now() - handle.startedAt > maxOperationMs) {
-          return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "settling" }),
-            failure: { code: "HYPIHUB_OPERATION_TIMEOUT", message: "HypiHub operation timed out; waiting for remote termination" } };
+        if (Date.now() - handle.startedAt > maxOperationMs) {
+          return { status: "failed",
+            failure: { code: "HYPIHUB_OPERATION_TIMEOUT", message: "HypiHub operation timed out" } };
         }
         const job = await client.json(`/jobs/${encodeURIComponent(handle.jobId)}`, credential(context)); const status = job.status;
         if (status === "queued" || status === "running" || status === "in_progress") return wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: String(status) });
-        remoteEnded = ["failed", "queue_expired", "cancelled", "succeeded", "completed"].includes(String(status));
-        if (remoteEnded && context.settling) return { status: "settled" };
         if (status === "failed" || status === "queue_expired" || status === "cancelled") {
           const detail = [job.error, job.message, job.reason, job.detail]
             .find((value) => typeof value === "string" && value.length > 0);
           throw new Error(`HypiHub job ${status}${typeof detail === "string" ? `: ${detail}` : ""}`);
         }
         if (status !== "succeeded" && status !== "completed") throw new Error(`HypiHub returned unknown job status ${String(status)}`);
-        return await complete(client, credential(context), route, handle.jobId, context.resources);
+        return { status: "ready", handle: context.handle, receipt: { id: handle.jobId } };
       } catch (error) {
-        if (remoteEnded) return failure(error);
-        return wakeAfter(context.handle, pollIntervalMs, Date.now(), { phase: "poll-unavailable" });
+        return failure(error);
       }
     },
+    async collect(context) {
+      const handle = object(context.handle, "HypiHub handle") as unknown as Handle;
+      const route = hypiHubRouteForCapability(context.need.capability);
+      assert(route !== undefined && handle.route === capabilityKey(route.capability), "HypiHub collection route differs");
+      return await complete(client, credential(context), route, handle.jobId, context.resources);
+    },
+
   };
 }
 
@@ -481,6 +479,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       },
     } },
     defaultConcurrency: options.defaultConcurrency ?? 4,
+    ...(options.actionLimits === undefined ? {} : { actionLimits: options.actionLimits }),
     capabilities: [
       ...hypiHubRoutes
       .map((route) => route.media === "audio"

@@ -62,17 +62,27 @@ Claims may carry `units` (default 1): one render Need can occupy one request slo
 slots at once. The same admission rule applies to total Provider capacity, exact models, and local
 compute resources. SQLite retains the weighted reservation across Worker turns and restarts. This
 coordinates Builds sharing this Runtime's Execution Store; it does not enforce a service's quotas
-across other machines. Request-frequency limits are a separate Provider policy.
+across other machines. Short-action limits are described below.
 
-Runtime first persists a `stop` request for either user cancellation or execution failure. Its first
-cause and reason are retained; repeated cancellation cannot replace a recorded failure. The Worker
-resumes that stop after a restart without starting new Needs or storing control flags in Operation
-failure codes. It requests cancellation of already submitted Operations once.
-If cancellation is only accepted or unsupported, Runtime polls the same remote work until it ends,
-retaining its capacity and working Resources. A failed Build also settles unfinished Operations before
-writing its final Result and cleaning up. Completed output is never rolled back. An unknown submission
-acknowledgement remains visible as `submission-unknown`; it needs external confirmation, not an automatic
-retry, expiry or forced release.
+A failed request ends that Build's execution attempt. Runtime saves completed public Outputs and
+non-secret Operation receipts with the failed Result, including any remote status still unknown.
+It accepts results from calls already in progress before finalizing, without starting further work
+or polling unfinished remote jobs.
+It then releases local reservations. Submission timeouts with no receipt remain recorded failures;
+a new Run and Build can request the remaining work. No original-Build reconciliation is required.
+An explicit cancellation stops new work and makes one best-effort remote cancellation call when
+supported; its acknowledgement is recorded separately from the local cancelled outcome.
+
+`defaultConcurrency` and exact-model limits govern managed Need occupancy. Asynchronous Providers can
+also expose `actionLimits` for `submit`, `poll` and `collect`; each action supports `concurrency` and
+`rate: { limit, periodMs }`. These action budgets share the same Runtime store and real `pool` identity.
+Rate permits replenish with time and are not returned when an action finishes. Rate counts admitted
+actions, not every HTTP request a Provider may make inside one action. Cloud services own their actual
+account-wide limits, including tasks submitted elsewhere or still running after a local failure.
+
+The Worker yields to sockets and timers between graph reads. Resource waiters are awakened as capacity
+becomes available; known Operations are polled from their own lightweight records. Graph hydration is
+serialized, while network actions and local work remain concurrent under their declared limits.
 
 HypiHub can be the explicitly selected gateway for users without their own service keys. A bound
 Provider's authentication, quota or transport error never changes that selection. Separate Kie and

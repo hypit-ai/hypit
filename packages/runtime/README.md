@@ -21,8 +21,13 @@ The scheduler never changes graph meaning. Targets and candidates are fixed befo
 resource limits only control when an already selected command may run.
 
 
-A Build's `stop` records `user-cancelled` or `execution-failed` and an optional reason. The first request
-is retained across turns and restarts; repeated requests cannot replace it. It prohibits new work,
-but says nothing about whether an external Operation has ended. Only after those Operations settle
-does the Runtime freeze `decision` and finish the Result. Operation failures keep their own meaning;
-error codes do not carry Build control state.
+A Build's `stop` records `user-cancelled` or `execution-failed` and an optional reason. The first
+cause is retained. Runtime stops launching work, saves the attempt's outcome, completed Outputs and
+available Operation receipts, then releases its local reservations. Pending remote work can remain
+pending in the Result: ending local execution does not assert that a cloud task was cancelled.
+A later attempt is a new Build with explicit Run Candidates for reusable Outputs or retrieved files.
+
+Capacity claims describe occupancy; action rate budgets describe admissions over time. An asynchronous
+Operation holds its declared occupancy while Runtime manages the remote task. Its submit, poll and
+collect actions can have separate concurrency and rate limits. Waiting claims park until a resource
+release or their next eligible time; polling does not require rematerializing the whole Build.

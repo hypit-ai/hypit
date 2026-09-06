@@ -41,12 +41,24 @@ export type RuntimePreparation = {
 export type RuntimeExecutionContext = {
   /** Stable Run-local identity; two identical BuildRequests may still be distinct Builds. */
   readonly build: string;
+  /** Release only the asynchronous Operation's occupancy after its remote end is confirmed. */
+  readonly releaseOperationCapacity?: () => Promise<void>;
+};
+
+export type RuntimeActionResult<T> =
+  | { readonly status: "completed"; readonly value: T }
+  | Extract<RuntimeExecutionResult, { readonly status: "deferred" }>;
+
+/** One short action; occupancy ends with the call, while rate consumption remains. */
+export type RuntimeActionExecutor = {
+  run<T>(request: { readonly build: string; readonly command: string; readonly action: string;
+    readonly resources: readonly RuntimeResourceClaim[] }, execute: () => Promise<T>): Promise<RuntimeActionResult<T>>;
 };
 
 export type RuntimeExecutionResult =
   | { readonly status: "completed"; readonly event: CommandResult }
   | { readonly status: "pending"; readonly operation: string; readonly wakeAt?: number }
-  | { readonly status: "deferred"; readonly wakeAt: number; readonly reason: string };
+  | { readonly status: "deferred"; readonly wakeAt?: number; readonly reason: string };
 
 /** Minimal execution port used by a Scheduler. `prepare` is the sole command-generation boundary. */
 export type RuntimeCommandExecutor = {
@@ -60,6 +72,9 @@ export type RuntimeCommandExecutor = {
     state: BuildState,
     operation: OperationSnapshot,
   ): Promise<OperationSnapshot>;
+  advanceOperation?(operation: OperationSnapshot): Promise<OperationSnapshot>;
+  /** Validate an already received result without invoking a Producer or contacting an Endpoint. */
+  acceptOperation?(state: BuildState, operation: OperationSnapshot): Promise<CommandResult | undefined>;
 };
 
 /** Build-local byte resources. Location, retention and transport are Runtime policy. */

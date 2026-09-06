@@ -24,6 +24,7 @@ import type {
   BuildSnapshot,
   BuildStore,
   CapacityAcquire,
+  CapacityResourceClaim,
   CapacityAcquireRequest,
   CapacityReservation,
   CommandExecutionBegin,
@@ -98,34 +99,16 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
   }
   assert(typeof row.status === "string", "SQLite Operation row has no status");
   const payload = typeof row.payload_json === "string" ? JSON.parse(row.payload_json) as unknown : undefined;
-  const pending = row.status === "pending" ? payload as {
-        readonly handle: unknown;
-        readonly wakeAt?: number;
-        readonly progress?: OperationSnapshot["progress"];
-        readonly failure?: OperationSnapshot["failure"];
-        readonly cancellationRequested?: true;
-      } : undefined;
-  const mutable = row.status === "pending"
-    ? {
-        handle: pending!.handle,
-        ...(pending!.wakeAt === undefined ? {} : { wakeAt: pending!.wakeAt }),
-        ...(pending!.progress === undefined ? {} : { progress: pending!.progress }),
-        ...(pending!.failure === undefined ? {} : { failure: pending!.failure }),
-        ...(pending!.cancellationRequested === undefined ? {} : { cancellationRequested: true as const }),
-      }
-    : row.status === "completed"
-      ? { completion: payload }
-      : row.status === "failed"
-        ? { failure: payload }
-        : {};
   return {
-    id: row.operation_id,
-    build: row.build_id,
-    command: row.command_id,
-    endpoint: row.endpoint_id,
-    status: row.status,
-    ...mutable,
+    id: row.operation_id, build: row.build_id, command: row.command_id,
+    endpoint: row.endpoint_id, status: row.status,
+    ...(payload as object ?? {}),
   } as OperationSnapshot;
+}
+
+function operationPayload(operation: OperationSnapshot): string {
+  const { id: _id, build: _build, command: _command, endpoint: _endpoint, status: _status, ...facts } = operation;
+  return JSON.stringify(facts);
 }
 
 function copy<T>(value: T): T {
@@ -360,17 +343,7 @@ class SqliteOperationStore implements OperationStore {
 
   async create(operation: OperationSnapshot): Promise<OperationSnapshot> {
     const identity = operationIdentityFrom(operation);
-    const payload = operation.status === "pending"
-      ? JSON.stringify({
-          handle: operation.handle,
-          ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
-          ...(operation.progress === undefined ? {} : { progress: operation.progress }),
-          ...(operation.failure === undefined ? {} : { failure: operation.failure }),
-          ...(operation.cancellationRequested === undefined ? {} : { cancellationRequested: true as const }),
-        })
-      : operation.status === "completed"
-        ? JSON.stringify(operation.completion)
-        : operation.status === "failed" ? JSON.stringify(operation.failure) : null;
+    const payload = operationPayload(operation);
     const result = this.#database.prepare(`
       INSERT INTO hypit_operations (
         operation_id, build_id, command_id, endpoint_id, status,
@@ -422,39 +395,17 @@ class SqliteOperationStore implements OperationStore {
     const current = await this.read(id);
     if (current === undefined) throw new Error(`Operation ${id} does not exist`);
     if (current.status === "completed" || current.status === "failed" || current.status === "cancelled") return current;
-    const payload = update.status === "pending"
-      ? JSON.stringify({
-          handle: update.handle,
-          ...(update.wakeAt === undefined ? {} : { wakeAt: update.wakeAt }),
-          ...(update.progress === undefined ? {} : { progress: update.progress }),
-          ...(update.failure === undefined ? {} : { failure: update.failure }),
-          ...(update.cancellationRequested === undefined ? {} : { cancellationRequested: true as const }),
-        })
-      : update.status === "completed"
-        ? JSON.stringify(update.completion)
-        : update.status === "failed" ? JSON.stringify(update.failure) : null;
+    const next = { ...current, ...copy(update) } as OperationSnapshot;
+    // Progress and timers describe the next action; acknowledgement and request
+    // facts survive success/failure until the Result has saved the receipt.
+    if (update.status !== "pending" || update.wakeAt === undefined) delete (next as { wakeAt?: number }).wakeAt;
     const result = this.#database.prepare(`
-      UPDATE hypit_operations
-      SET status = ?, payload_json = ?
-      WHERE operation_id = ?
-    `).run(update.status, payload, id);
+      UPDATE hypit_operations SET status = ?, payload_json = ? WHERE operation_id = ?
+    `).run(next.status, operationPayload(next), id);
     if (result.changes !== 1) throw new Error(`Operation ${id} disappeared during update`);
-    const mutable = update.status === "pending"
-      ? {
-          status: "pending" as const,
-          ...(update.handle === undefined ? {} : { handle: copy(update.handle) }),
-          ...(update.wakeAt === undefined ? {} : { wakeAt: update.wakeAt }),
-          ...(update.progress === undefined ? {} : { progress: copy(update.progress) }),
-          ...(update.failure === undefined ? {} : { failure: copy(update.failure) }),
-          ...(update.cancellationRequested === undefined ? {} : { cancellationRequested: true as const }),
-        }
-      : update.status === "completed"
-        ? { status: "completed" as const, completion: copy(update.completion) }
-        : update.status === "failed"
-          ? { status: "failed" as const, failure: copy(update.failure) }
-          : { status: "cancelled" as const };
-    return { ...operationIdentityFrom(current), ...mutable };
+    return next;
   }
+
 }
 
 function parseCommandExecution(row: Row): CommandExecutionReceipt {
@@ -570,7 +521,7 @@ class SqliteRuntimeEnvironmentStore implements RuntimeEnvironmentStore {
 
 function parseExecutionSnapshot(row: Row): BuildExecutionSnapshot {
   assert(typeof row.created_at === "number", "SQLite Execution creation time is invalid");
-  assert(typeof row.wake_at === "number", "SQLite Execution wake time is invalid");
+  assert(row.wake_at === null || typeof row.wake_at === "number", "SQLite Execution wake time is invalid");
   assert((row.turn_owner === null && row.turn_acquired_at === null)
     || (typeof row.turn_owner === "string" && typeof row.turn_acquired_at === "number"),
   "SQLite Execution turn is invalid");
@@ -587,7 +538,8 @@ function parseExecutionSnapshot(row: Row): BuildExecutionSnapshot {
   return {
     ...parseExecutionRequest(row, "Execution"),
     createdAt: row.created_at,
-    wakeAt: row.wake_at,
+    ...(typeof row.wake_at === "number" ? { wakeAt: row.wake_at } : {}),
+    ...(typeof row.operation_wait_json === "string" ? { operationWait: JSON.parse(row.operation_wait_json) as string[] } : {}),
     ...(typeof row.turn_owner === "string" ? {
       turn: { owner: row.turn_owner, acquiredAt: row.turn_acquired_at as number },
     } : {}),
@@ -661,9 +613,12 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
     nonNegativeInteger(now, "Execution claim time");
     return transaction(this.#database, () => {
       const row = this.#database.prepare(`
-        SELECT build_id FROM hypit_executions
+        SELECT execution.build_id FROM hypit_executions AS execution
         WHERE decision_outcome IS NULL AND turn_owner IS NULL AND wake_at <= ?
-        ORDER BY wake_at ASC, created_at ASC, build_id ASC
+        ORDER BY EXISTS (
+          SELECT 1 FROM hypit_capacity AS capacity
+          WHERE capacity.build_id = execution.build_id
+        ) DESC, wake_at ASC, created_at ASC, execution.build_id ASC
         LIMIT 1
       `).get(now) as Row | undefined;
       if (row === undefined) return undefined;
@@ -680,19 +635,27 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
     });
   }
 
-  async releaseTurn(build: string, owner: string, wakeAt: number, observedStop?: BuildExecutionStop): Promise<BuildExecutionSnapshot> {
-    nonNegativeInteger(wakeAt, "Execution wakeAt");
+  async releaseTurn(build: string, owner: string, wakeAt: number | undefined, operationWait?: readonly string[]): Promise<BuildExecutionSnapshot> {
+    if (wakeAt !== undefined) nonNegativeInteger(wakeAt, "Execution wakeAt");
     return transaction(this.#database, () => {
       const row = this.#database.prepare("SELECT * FROM hypit_executions WHERE build_id = ?").get(build) as Row | undefined;
       if (row === undefined) throw new Error(`Execution ${build} does not exist`);
       const current = parseExecutionSnapshot(row);
       assert(current.decision === undefined, `Execution ${build} already has a decision`);
       assert(current.turn?.owner === owner, `Execution ${build} is not owned by ${owner}`);
+      // A release can race this turn. Recheck parked claims in this transaction so
+      // that a notification received before releaseTurn is not lost.
+      const now = Date.now();
+      const readyWait = current.stop === undefined && (this.#database.prepare(
+        "SELECT resources_json FROM hypit_resource_waits WHERE build_id = ?",
+      ).all(build) as Row[]).some((wait) => this.#blocked(JSON.parse(wait.resources_json as string), now) === undefined);
+      const next = current.stop !== undefined || readyWait
+        ? Math.min(wakeAt ?? now, now) : wakeAt;
       this.#database.prepare(`
         UPDATE hypit_executions
-        SET turn_owner = NULL, turn_acquired_at = NULL, wake_at = ?
+        SET turn_owner = NULL, turn_acquired_at = NULL, wake_at = ?, operation_wait_json = ?
         WHERE build_id = ? AND turn_owner = ?
-      `).run(current.stop !== undefined && observedStop === undefined ? Math.min(wakeAt, Date.now()) : wakeAt, build, owner);
+      `).run(next ?? null, readyWait || operationWait === undefined ? null : JSON.stringify(operationWait), build, owner);
       return parseExecutionSnapshot(
         this.#database.prepare("SELECT * FROM hypit_executions WHERE build_id = ?").get(build) as Row,
       );
@@ -827,63 +790,116 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
     });
   }
 
-  async acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire> {
-    nonNegativeInteger(request.now, "Capacity acquisition time");
-    assert(request.resources.length > 0, "Capacity resources are empty");
-    const resources = [...request.resources].sort((left, right) => left.id.localeCompare(right.id));
-    assert(new Set(resources.map((resource) => resource.id)).size === resources.length, "Capacity resources repeat an id");
-    for (const resource of resources) capacityUnits(resource);
-    const reservation: CapacityReservation = {
-      build: request.build,
-      command: request.command,
-      resources,
-      createdAt: request.now,
-    };
-    return transaction(this.#database, () => {
-      const existing = this.#database.prepare(
-        "SELECT * FROM hypit_capacity WHERE build_id = ? AND command_id = ?",
-      ).get(reservation.build, reservation.command) as Row | undefined;
-      if (existing !== undefined) {
-        return { status: "acquired", reservation: parseCapacityReservation(existing) };
-      }
-      for (const resource of resources) {
+  #rate(resource: CapacityResourceClaim, now: number): number {
+    const row = this.#database.prepare("SELECT * FROM hypit_rates WHERE resource_id = ?").get(resource.id) as Row | undefined;
+    if (row === undefined) return resource.limit;
+    assert(row.limit_units === resource.limit && row.period_ms === resource.periodMs,
+      `Shared rate ${resource.id} has conflicting limit or periodMs`);
+    return Math.min(resource.limit, (row.tokens as number)
+      + Math.max(0, now - (row.updated_at as number)) * resource.limit / resource.periodMs!);
+  }
+
+  #blocked(resources: readonly CapacityResourceClaim[], now: number): Extract<CapacityAcquire, { status: "blocked" }> | undefined {
+    for (const resource of resources) {
+      const units = capacityUnits(resource);
+      if (resource.periodMs !== undefined) {
+        const tokens = this.#rate(resource, now);
+        if (tokens + 1e-9 < units) return {
+          status: "blocked", availableAt: now + Math.ceil((units - tokens) * resource.periodMs / resource.limit),
+          reason: "rate-limit", resource: resource.id,
+        };
+      } else {
         const count = this.#database.prepare(`
           SELECT COALESCE(SUM(COALESCE(json_extract(claim.value, '$.units'), 1)), 0) AS count
           FROM hypit_capacity AS capacity, json_each(capacity.resources_json) AS claim
           WHERE json_extract(claim.value, '$.id') = ?
         `).get(resource.id) as Row;
-        assert(typeof count.count === "number", `SQLite Capacity count for ${resource.id} is invalid`);
-        if (count.count + capacityUnits(resource) > resource.limit) {
-          return {
-            status: "blocked",
-            availableAt: request.now + 250,
-            reason: "resource-in-flight",
-            resource: resource.id,
-          };
-        }
+        if ((count.count as number) + units > resource.limit) return {
+          status: "blocked", reason: "resource-in-flight", resource: resource.id,
+        };
       }
-      this.#database.prepare(`
-        INSERT INTO hypit_capacity (
-          build_id, command_id, resources_json, created_at
-        ) VALUES (?, ?, ?, ?)
-      `).run(
-        reservation.build,
-        reservation.command,
-        JSON.stringify(reservation.resources),
-        reservation.createdAt,
-      );
+    }
+    return undefined;
+  }
+
+  async acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire> {
+    nonNegativeInteger(request.now, "Resource acquisition time");
+    assert(request.resources.length > 0, "Resources are empty");
+    const resources = [...request.resources].sort((left, right) => left.id.localeCompare(right.id));
+    assert(new Set(resources.map((resource) => resource.id)).size === resources.length, "Resources repeat an id");
+    for (const resource of resources) capacityUnits(resource);
+    return transaction(this.#database, () => {
+      const existing = this.#database.prepare(
+        "SELECT * FROM hypit_capacity WHERE build_id = ? AND command_id = ?",
+      ).get(request.build, request.command) as Row | undefined;
+      if (existing !== undefined) return { status: "acquired", reservation: parseCapacityReservation(existing) };
+      const blocked = this.#blocked(resources, request.now);
+      if (blocked !== undefined) {
+        this.#database.prepare(`
+          INSERT INTO hypit_resource_waits (build_id, command_id, resource_id, resources_json) VALUES (?, ?, ?, ?)
+          ON CONFLICT(build_id, command_id) DO UPDATE SET resource_id = excluded.resource_id, resources_json = excluded.resources_json
+        `).run(request.build, request.command, blocked.resource, JSON.stringify(resources));
+        return blocked;
+      }
+      for (const resource of resources) {
+        if (resource.periodMs === undefined) continue;
+        this.#database.prepare(`
+          INSERT INTO hypit_rates (resource_id, limit_units, period_ms, tokens, updated_at) VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT(resource_id) DO UPDATE SET tokens = excluded.tokens, updated_at = excluded.updated_at
+        `).run(resource.id, resource.limit, resource.periodMs, this.#rate(resource, request.now) - capacityUnits(resource), request.now);
+      }
+      const reservation: CapacityReservation = {
+        build: request.build, command: request.command, createdAt: request.now,
+        resources: resources.filter((resource) => resource.periodMs === undefined),
+        lifetime: request.lifetime ?? "operation",
+      };
+      if (reservation.resources.length > 0) this.#database.prepare(`
+        INSERT INTO hypit_capacity (build_id, command_id, resources_json, created_at, lifetime) VALUES (?, ?, ?, ?, ?)
+      `).run(request.build, request.command, JSON.stringify(reservation.resources), request.now, reservation.lifetime!);
+      this.#database.prepare("DELETE FROM hypit_resource_waits WHERE build_id = ? AND command_id = ?").run(request.build, request.command);
+      this.#wakeAvailableWaiter();
       return { status: "acquired", reservation };
     });
   }
 
+  #release(build: string, command?: string): void {
+    const where = command === undefined ? "build_id = ?" : "build_id = ? AND command_id = ?";
+    const args = command === undefined ? [build] : [build, command];
+    this.#database.prepare(`DELETE FROM hypit_capacity WHERE ${where}`).run(...args);
+    if (command === undefined) this.#database.prepare("DELETE FROM hypit_resource_waits WHERE build_id = ?").run(build);
+    this.#wakeAvailableWaiter();
+  }
+
+  #wakeAvailableWaiter(): void {
+    const now = Date.now();
+    const waits = this.#database.prepare(`
+      SELECT waits.build_id, waits.resources_json FROM hypit_resource_waits AS waits
+      JOIN hypit_executions AS execution ON execution.build_id = waits.build_id
+      WHERE execution.decision_outcome IS NULL AND execution.stop_cause IS NULL
+        AND execution.turn_owner IS NULL AND (execution.wake_at IS NULL OR execution.wake_at > ?)
+      ORDER BY execution.created_at, waits.rowid
+    `).all(now) as Row[];
+    for (const wait of waits) {
+      if (this.#blocked(JSON.parse(wait.resources_json as string), now) !== undefined) continue;
+      this.#database.prepare("UPDATE hypit_executions SET wake_at = ?, operation_wait_json = NULL WHERE build_id = ?")
+        .run(now, wait.build_id as string);
+      break;
+    }
+  }
+
   async releaseCapacity(build: string, command: string): Promise<void> {
-    this.#database.prepare(
-      "DELETE FROM hypit_capacity WHERE build_id = ? AND command_id = ?",
-    ).run(build, command);
+    transaction(this.#database, () => this.#release(build, command));
+  }
+
+  async reclaimActionCapacity(): Promise<void> {
+    transaction(this.#database, () => {
+      const rows = this.#database.prepare("SELECT build_id, command_id FROM hypit_capacity WHERE lifetime = 'action'").all() as Row[];
+      for (const row of rows) this.#release(row.build_id as string, row.command_id as string);
+    });
   }
 
   async releaseBuildCapacity(build: string): Promise<void> {
-    this.#database.prepare("DELETE FROM hypit_capacity WHERE build_id = ?").run(build);
+    transaction(this.#database, () => this.#release(build));
   }
 
   async reclaimTurns(now = Date.now()): Promise<readonly string[]> {
@@ -932,6 +948,7 @@ function parseCapacityReservation(row: Row): CapacityReservation {
     build: row.build_id,
     command: row.command_id,
     resources,
+    lifetime: row.lifetime as "action" | "operation",
     createdAt: row.created_at,
   };
   return value;
@@ -1008,7 +1025,8 @@ export class SqliteRuntimeState {
         component_packages_json TEXT NOT NULL,
         result_location_json TEXT NOT NULL,
         created_at INTEGER NOT NULL,
-        wake_at INTEGER NOT NULL,
+        wake_at INTEGER,
+        operation_wait_json TEXT,
         turn_owner TEXT,
         turn_acquired_at INTEGER,
         result_writer_owner TEXT,
@@ -1032,7 +1050,17 @@ export class SqliteRuntimeState {
         command_id TEXT NOT NULL,
         resources_json TEXT NOT NULL,
         created_at INTEGER NOT NULL,
+        lifetime TEXT NOT NULL CHECK (lifetime IN ('action', 'operation')),
         PRIMARY KEY (build_id, command_id)
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS hypit_resource_waits (
+        build_id TEXT NOT NULL, command_id TEXT NOT NULL, resource_id TEXT NOT NULL,
+        resources_json TEXT NOT NULL, PRIMARY KEY (build_id, command_id)
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS hypit_resource_waiters ON hypit_resource_waits (resource_id);
+      CREATE TABLE IF NOT EXISTS hypit_rates (
+        resource_id TEXT PRIMARY KEY, limit_units INTEGER NOT NULL, period_ms INTEGER NOT NULL,
+        tokens REAL NOT NULL, updated_at INTEGER NOT NULL
       ) STRICT;
       CREATE TABLE IF NOT EXISTS hypit_runtime_environment (
         singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
@@ -1055,9 +1083,8 @@ export class SqliteRuntimeState {
       if (row === undefined) throw new Error(`Execution ${build} does not exist`);
       const current = parseExecutionSnapshot(row);
       assert(current.decision !== undefined, `Execution ${build} has no decision`);
-      const pending = this.#database.prepare("SELECT operation_id FROM hypit_operations WHERE build_id = ? AND status = 'pending' LIMIT 1").get(build);
-      assert(pending === undefined, `Build ${build} still has unsettled external work`);
       this.#database.prepare("DELETE FROM hypit_capacity WHERE build_id = ?").run(build);
+      this.#database.prepare("DELETE FROM hypit_resource_waits WHERE build_id = ?").run(build);
       this.#database.prepare("DELETE FROM hypit_operations WHERE build_id = ?").run(build);
       this.#database.prepare("DELETE FROM hypit_command_executions WHERE build_id = ?").run(build);
       this.#database.prepare("DELETE FROM hypit_build_facts WHERE build_id = ?").run(build);

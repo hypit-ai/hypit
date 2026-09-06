@@ -210,7 +210,7 @@ test("a structurally valid but semantically invalid Producer value never enters 
     validators: registry(),
   }).run(outputBuild(linked));
 
-  assert.equal(result.status, "paused");
+  assert.equal(result.status, "failed");
   assert.match(result.outcomes[0]?.message ?? "", /measurement must be even/u);
   assert.equal(result.state.records.some((record) => record.id === "measurement:root"), false);
 });
@@ -273,7 +273,7 @@ test("Endpoint results pass the same Type-owner validation gate as Producer resu
   assert.equal(valid.state.records[0]?.value.kind, "inline");
 
   const invalid = await providerBuild(7);
-  assert.equal(invalid.status, "paused");
+  assert.equal(invalid.status, "failed");
   assert.match(invalid.outcomes.at(-1)?.message ?? "", /measurement must be even/u);
   assert.equal(invalid.state.records.some((record) => record.id === "measurement:endpoint"), false);
 });

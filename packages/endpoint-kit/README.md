@@ -12,13 +12,34 @@ without changing Core demand. Each resource declares a `limit` and optional `uni
 A capability may add `resources` and a pure `unitsForRequest(request)` resolver for quantities of
 already declared resources. Runtime admits all claims atomically for one `fulfill-need` Command.
 
-For asynchronous work, `failed` means the external job has ended or submission was definitely rejected.
-Transport errors and local deadlines cannot prove that. Return `pending` with the same handle;
-a pending `failure` records a local deadline while Runtime waits for remote termination. A poll with
-`settling: true` observes the existing job and returns `settled` when it ends, without downloading output.
-`cancel` returning `accepted`, `unsupported` or `too-late` does not release capacity. Only confirmed
-cancellation or observed termination does. A lost submission acknowledgement may remain pending without
-a handle; it must not trigger automatic resubmission or an automatic capacity release.
+Asynchronous execution moves forward through `start`, `poll`, and optional `collect`. `start` returns
+a task handle; `pending` means an acknowledged task is still running. `ready` records remote completion
+and hands its artifacts to `collect`, allowing download capacity to differ from task capacity.
+An Endpoint may return `completed` directly when no separate collection is needed.
+
+A `failed` outcome or thrown error ends the local execution attempt. This does not assert that the
+remote job ended. A submission timeout with no receipt is a failure, not a pending task to reconcile.
+`context.checkpoint` saves an acknowledgement before subsequent work; public `receipt` fields contain
+non-secret task identifiers suitable for inspection and Result retention. Opaque `handle` remains
+Provider-owned execution data. Explicit cancellation is best effort; `accepted`, `unsupported` and
+`too-late` are recorded acknowledgements, not proof of remote termination.
+
+For asynchronous capabilities, `actionLimits` configures `submit`, `poll` and `collect` separately:
+
+```ts
+actionLimits: {
+  submit: { concurrency: 2, rate: { limit: 1, periodMs: 200 } },
+  poll: { concurrency: 8 },
+  collect: { concurrency: 2 },
+}
+```
+
+These are example deployment choices, not model limits. `defineEndpointPackage` scopes their resource
+identities to the declared pool; custom `actions` can instead supply explicit shared resource claims.
+`concurrency` holds units until that action returns. A rate budget starts with `limit` permits,
+replenishes `limit` permits per `periodMs`, and spends one permit per admitted action. One action may
+make several HTTP requests; Provider transport policy owns those individual requests. Whole-operation
+resources describe occupancy. Core contains neither these phases nor any Provider names.
 
 An individual immediate capability may declare `transient: true`. That permits a Runtime to use the
 same handler in a disposable authoring execution with no Build, Result or recoverable Operation. It is a
