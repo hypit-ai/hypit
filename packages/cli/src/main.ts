@@ -100,6 +100,8 @@ const HYPIHUB_OAUTH_CLIENT_ID = "hyc_d5d5e8e7131b0c877756e66c";
 // mark shipped by hypit.ai (rather than a hand-drawn approximation).
 const HYPIHUB_MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="158.2 -39.5 415.6 415.6" aria-hidden="true"><defs><linearGradient id="hypit-callback-mark" x1="246.21386109" y1="324.13157352" x2="485.13742708" y2="22.56333286" gradientTransform="translate(0 337.46521538) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e83f5f"/><stop offset=".14" stop-color="#e94765"/><stop offset=".33" stop-color="#ec5774"/><stop offset=".56" stop-color="#f1738c"/><stop offset=".8" stop-color="#f599af"/><stop offset=".88" stop-color="#f6a9bd"/></linearGradient></defs><path d="M549.67231627,138.36559516c-9.03995973-13.04594537-23.93013015-20.81603972-39.78785439-20.81603972h-141.20754521c-18.56362718,0-37.6714659,11.24702323-44.746216,28.41986963l-42.72053713,114.61681504c-6.9538001,17.00658197-6.86310202,36.35627455,3.35595582,51.63954686,10.26440688,15.34370695,29.26643886,24.41388399,47.72425931,24.41388399h129.97565371c21.3451426,0,40.66461787-13.42386941,48.13240067-33.40849469l44.88226312-120.28567569c5.54794526-14.87508482,3.46179716-31.53396006-5.57816258-44.56481984v-.03021732h-.03021732v.01513172ZM471.42693057,288.67353473c-1.42099809,3.80945775-5.12464911,6.3793597-9.19111551,6.3793597h-126.15104116c-6.56075586,0-10.09811937-4.23273084-11.32261265-6.03165297s-3.77924044-6.69680298-1.26981925-12.7587194l36.05396299-100.13473985c3.46177409-9.59927994,12.21450786-16.43213004,22.40334838-16.96123293.49886251-.03021732,1.01283367-.03021732,1.54193656-.03021732h113.996991s18.91133391,2.14662887,14.04367038,22.08585897l-40.10529767,107.46647552h0l-.00002307-.01513172ZM251.97398813,265.21202671s-33.80152739-17.52055313-26.69654845-49.3720026l44.85202273-124.30679305c7.22590587-20.02997431,26.24304651-33.39336296,47.54284008-33.39336296h143.64135391c9.44810109,0,18.29153294,4.58043756,23.74873399,12.30520594l20.99748201,29.75019271h-170.7763187c-13.15175211,0-24.92787822,8.17828184-29.50831579,20.51372816l-53.80126132,144.51816352h0l.00001153-.01513172ZM201.25658839,207.07215861s-33.81664758-17.52055313-26.69655421-49.3720026l44.8520285-124.30679305C226.65308874,13.36338865,245.67022938,0,266.95491429,0h135.9166086c9.44810109,0,18.29153294,4.58043756,23.74875705,12.30520594l20.99745894,29.75019271h-163.02130994c-13.15130994,0-24.92786669,8.17828184-29.50831579,20.51372816l-53.80126132,144.51816352h-.03022885l-.0000346-.01513172Z" fill="url(#hypit-callback-mark)"/></svg>`;
 
+const HYPIHUB_LOCKUP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="114 130 788 241" role="img" aria-label="Hypit"><defs><linearGradient id="hypit-callback-lockup" x1="118.78" x2="386.84" y1="378.43" y2="137.38" gradientTransform="matrix(1 0 0 -1 0 511.89)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e43c5d"/><stop offset=".38" stop-color="#ea526f"/><stop offset=".72" stop-color="#f07c99"/><stop offset="1" stop-color="#f7a4b8"/></linearGradient></defs><g shape-rendering="geometricPrecision"><path d="M310.66 160.93c-.11.4-.33.56-.58.58-23.87-.02-114.7-.03-120.02-.04-8.05.21-14.87 5.88-17.86 13.17-1.38 3.95-20.44 57.36-25.89 72.7-3.22 8.91-6.95 18.53-9.03 25.14-.87 2.5-1.3 4.04-2.47 6.29-.23.33-.53.39-.86.3-.77-.3-1.46-.83-2.17-1.39-.94-.73-2.78-2.19-3.88-3.05-3.24-2.55-6.07-5.88-8.6-9.15-3.46-5.41-5.68-11.75-5.16-18.23.06-1.76.51-4.11.94-5.67.93-2.56 10.02-27.39 10.72-29.32 4.89-13.79 13.04-36.57 18.15-50.97 1.09-2.96 1.84-5.44 2.8-7.68 1.7-3.91 4.13-7.75 6.92-10.84 2.25-2.28 4.78-4.88 7.46-6.56 1.4-.83 3.97-2.25 4.99-2.84 3.05-1.31 6.24-2.55 9.5-3.16 7.77-1.02 38.07-.25 71.45-.48h19.95c9.65.15 9.66-.37 15.01.41 5.51 1.23 10.94 4.51 14.11 9.22 3.37 4.92 8.43 12.29 11.82 17.23.62.9.56.84 1.47 2.01.53.62 1.19 1.46 1.24 2.23v.1Zm41.06 41.23c-.25.41-.89.29-1.35.35-2.04.05-4.86.03-6.24.05H227.56c-1.83.29-4.08.48-5.73 1.18-5.82 2-10.57 6.92-12.89 12.6-.55 1.6-22.93 63.76-30.21 84.06-3.58 9.96-4.34 12.16-5.7 15.76-.7 1.61-1.25 4.34-2.58 3.89-1.61-.78-3.53-2.1-4.96-3.24-9.31-6.87-16.12-17.47-15.01-29.41.19-1.63.75-3.51 1.1-5.1 8.05-22.1 30.67-83.79 32.45-88.72 1.11-1.9 2.53-5 4.02-6.81 1.94-2.43 4.3-5.24 6.75-7.18 4.35-3.66 9.46-6.07 15.01-7.38 7.46-1.26 6.66-.61 18.58-.77h90.67c3.49.14 6.77.65 9.87 2.33 3.22 1.66 6.07 3.85 7.99 6.92 2.87 4.06 8.15 11.33 11.09 15.46.85 1.18 1.22 1.68 2.17 3.13.55.8 1.41 1.92 1.56 2.79l-.02.08Zm38.12 46.63c.02 3.69-.63 7.28-1.53 10.84-6 16.22-22.2 59.62-23.31 62.82-2.67 6.92-6.5 18.84-9.63 26.34-1.7 3.78-4.48 7.33-7.19 10.33-1.27 1.27-3.74 3.16-4.98 4.27-4.17 3.4-9.69 5.26-14.57 6.56-6.96 1.59-61.96.37-92.69.77-7.67-.06-10.39.09-12.46-.03-2.56-.1-5.4-.31-7.76-1.08-2.37-.94-5.02-1.46-7.27-2.77-1-.57-2.08-1.09-3.01-1.71-2.56-2.13-5.43-3.79-7.67-6.55-2.28-2.16-3.26-4.12-4.97-6.61-.96-1.18-1.3-2.48-2.06-3.94-1.27-2.24-1.85-5.11-2.6-7.59-.63-1.85-.52-4.17-.79-5.99-.28-3.34.41-6.87 1.14-10.18 8.74-23.29 21.09-57.59 32.44-89.21 2.42-4.56 5.64-9.82 9.86-13.14 5.18-4.52 11.48-7.69 18.32-8.6 5.39-.94 66.78-.07 95.79-.32 6.14.04 10.06-.19 15.43.44 1.94.29 4.47 1.19 6.2 1.62 13.82 5.3 23.24 18.8 23.33 33.61v.15ZM220.88 328.8c-.27 7.25 5.04 12.24 11.93 13.2 5.58-.1 15.42.09 23.46.02 23.46.02 56.16.05 57.91.04 4.64-.47 9.3-2.58 12.31-6.19 2.24-2.72 3.71-5.64 4.76-9.04 7.02-20.01 12.27-34.65 22.44-62.6 1.56-4.69 2.13-4.78 2.28-7.8.99-6.37-4.35-11.99-10.61-12.36-18.22-.01-76.4.07-81.69.05-7.23.22-14.21 4.96-17.01 11.72-1.72 4.89-18.34 50.28-23.21 63.81-.77 2.54-2.52 6-2.58 8.95v.19Z" style="fill:url(#hypit-callback-lockup);fill-rule:evenodd"/><path d="M555.24 320.16c-.55 3.23-3.65 5.01-7.46 4.91-5.99-.16-13.34 1.13-14.08-5.53-.16-14.42.08-47.48-.16-53.42.22-17.79-11.26-23.26-27.47-21.89-7.61.72-15.88.88-22.2 5.11-.52.35-1.15 1.16-1.15 1.79-.08 6.14.02 30.38-.03 48.56-.1 8.89.2 13.7-.15 20.64-1.09 5.75-12.82 3.19-17.26 3.42-2.06-.2-3.78-2.03-3.88-4.02-.17-33.96.02-105.52.1-131.98.36-5.05 6.8-5.06 10.43-4.91 5.18.21 10-.16 10.76 4.98.25 5.49-.43 30.49.22 39.38.14.87.8.95 1.65.85 6.91-1.63 13.86-2.66 21.23-3 66.85-5.11 46.59 49.58 49.49 94.94l-.03.16Zm346.41-80.1c-.14 2.75-2.6 4.86-5.34 4.59-6.31.31-17.87-.56-24.11.36-.69.1-1.28.57-1.51 1.22-.26.72-.29 1.62-.27 2.31.03 12.64-.17 35.19.03 42.22.63 27.55 30.41 6.34 31.25 20.24.07 2.37.02 5.42 0 7.87-.03 1.48-.31 3.08-1.43 4.13-.99.95-2.38 1.35-3.71 1.58-3.4.51-7 .8-10.51.93-49.72 1.78-35.1-41.32-37.37-78.06-.07-1.73-1.25-2.68-2.83-2.69-2.45-.13-5.24.16-7.8-.18-3.37-.24-4.46-3.22-4.29-6.7-.02-2.35-.15-5.12.18-7.35.67-4.3 3.04-4.32 8.8-4.34 1.75-.14 4.52.47 5.57-1.21.33-.57.37-1.3.39-1.97.08-3.93.04-10.31.06-13.9-.28-3.06 1.13-6.5 4.53-6.93 3.5-.44 7.22-.11 10.65-.17 1.78.01 3.7.35 4.97 1.71 1.23 1.25 1.44 2.93 1.44 4.55.05 3.48.11 9.73.16 13.85 0 1.48-.07 3.95 1.94 3.91 4.82.11 16.65 0 23.71.15 1.12.04 2.22.18 3.21.75 2.43 1.31 2.34 4.16 2.38 6.73.01 2.03.06 4.38-.07 6.23l-.02.18Zm-117.27 36.27c-.23 47.23-29.07 51.94-69.17 48.21-1.9-.24-4.48-.62-6.28-.84-1.3-.22-2.34.08-2.56 1.45-.22 9.43.04 29.51-.05 34.07-.15 3.47-3.46 4.79-6.7 4.44-3.25-.07-7.23-.01-10.12-.1-4.34-.3-4.6-3.92-4.4-7.57-.01-23.85-.02-109.9-.01-116.39.05-1.04 0-2.63.03-3.78.05-2.71-.31-5.91 1.35-7.67 1.01-1.1 2.34-1.51 3.59-1.56 10.21-.61 28.15-1.49 40.65-1.65 36.75-.94 54.73 13.33 53.67 51.22zm-117.56-46.27c.17 24.75.36 83.75-.3 92.96 0 .05 0 .1-.02.15-1.09 8.11-3.9 16.49-8.37 23.38-14.55 23.93-48.13 20.6-72.13 16.3-.2-.04-.4-.1-.58-.2-5.06-2.74-1.29-11.21.21-14.8.92-2.2 2.54-4.3 5.06-3.97 20.07 3.37 50.19 6.39 53.47-19.85.19-1.49-1.31-2.62-2.7-2.05-.77.32-1.54.69-2.17.76-9.23 2.91-18.62 2.96-28.13 2.67-49.16-.91-36.15-46.16-38-86.52v-.13c.26-4.87-1.67-12.44 4.66-12.49 4.46.04 9.35-.51 13.7.27.19.03.38.09.56.18 3.67 1.85 2.2 6.55 2.5 9.93.52 15.29-1.06 37.13.68 53.65 1.9 18.82 25.67 16.8 39.31 13.93 3.36-.89 8.01-2.24 10.22-4.95.26-.32.38-.74.38-1.16.01-8.49-.06-63.1-.04-67.53.03-3.32 2.96-4.69 5.74-4.76 3.12-.08 14.69-1.94 15.92 4.08l.03.16Zm154.97 86c.21 4.49-.98 8.18-6.27 7.81-3.87-.21-8.4.51-12.11-.32-.12-.03-.23-.06-.34-.1-1.49-.56-2.8-1.99-2.93-3.32.3-8.89-.72-79.96.29-90.39.02-.2.06-.39.14-.57 1.93-3.99 7.3-3.44 10.8-3.36 4.13.1 9.51-.41 10.23 4.5.53 20.05-.01 63.66.19 85.59zm-115.06-12.74c1.74 1.18 4.35.93 6.42 1.43 6.02.96 12.61 1.25 18.37 1.3 15.64.46 29.04-3.94 30.5-21.62.61-10.29 1.46-22.68-4.73-31.63-.06-.08-.12-.16-.18-.23-8.24-9.47-21.67-8.4-33.46-8.2-5.14.17-10.6.43-15.18.72-.12 0-.25.02-.39.04-.97.13-1.7.97-1.69 1.95.07 7.71-.72 44.89.26 56.15l.07.09Z" style="fill-rule:evenodd;fill:currentColor"/><circle cx="812.93" cy="198.21" r="15.07" style="fill:#e83d5d"/></g></svg>`;
+
 function base64url(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64").replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
 }
@@ -250,39 +252,59 @@ function oauthCallbackPage(success: boolean): string {
     <link rel="icon" href="${favicon}">
     <title>${title}</title>
     <style>
-      :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      * { box-sizing: border-box; }
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center; color: #18181b; background: #f7f6f3; }
-      main { width: min(100% - 48px, 560px); padding: 48px 42px 52px; border: 1px solid #e2dfdb; border-radius: 16px; background: #fff; box-shadow: 0 18px 50px rgba(24,24,27,.08); }
-      .brand { display: inline-flex; align-items: center; gap: 10px; color: #18181b; font-size: 18px; font-weight: 650; letter-spacing: -.04em; }
-      .brand svg { width: 28px; height: 28px; }
-      .wordmark { background: linear-gradient(110deg, #e83f5f, #f6a9bd); -webkit-background-clip: text; background-clip: text; color: transparent; }
-      .mark { width: 58px; height: 58px; margin: 72px 0 28px; display: grid; place-items: center; border: 1px solid #ddd9d5; border-radius: 14px; background: #fff; color: #e83f5f; }
-      .mark.success { color: #e83f5f; }
-      .mark.error { color: #c73d45; border-color: #e2c9c9; background: #fffafa; }
-      h1 { margin: 0; font-size: clamp(26px, 7vw, 34px); line-height: 1.08; letter-spacing: -.035em; }
-      p { margin: 14px 0 0; color: #66636a; font-size: 15px; line-height: 1.6; }
-      @media (prefers-color-scheme: dark) {
-        body { color: #f7f2f4; background: #111114; }
-        .brand { color: #f7f2f4; }
-        main { border-color: #3a3036; background: #19171b; box-shadow: 0 24px 70px rgba(0,0,0,.36); }
-        .mark { border-color: #3a3036; background: #19171b; }
-        .mark.error { border-color: #6b3f40; background: #291d1e; }
-        p { color: #bdb3b8; }
+      :root {
+        color-scheme: light dark;
+        --accent: #de3b67;
+        --ink: #1b1a18;
+        --muted: #6b6963;
+        --line: #d1cdc7;
+        --line-soft: #e5e2dd;
+        --paper: #fff;
+        --gutter: 80px;
+        --shell-max: 1440px;
+        --bad: #b8352a;
+        --r-sm: 8px;
+        font-family: "Hanken Grotesk", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       }
+      * { box-sizing: border-box; }
+      html { min-width: 320px; }
+      body { min-height: 100vh; margin: 0; display: flex; flex-direction: column; color: var(--ink); background: var(--paper); -webkit-font-smoothing: antialiased; }
+      .site-header { height: 64px; flex: 0 0 64px; border-bottom: 1px solid var(--line-soft); }
+      .shell { width: 100%; max-width: var(--shell-max); margin: 0 auto; padding-inline: var(--gutter); }
+      .header-inner { height: 100%; display: flex; align-items: center; }
+      .brand { display: inline-flex; align-items: center; color: var(--ink); }
+      .brand svg { width: 66px; height: 20px; }
+      main { flex: 1 1 auto; display: grid; place-items: center; padding: clamp(64px, 11vh, 144px) var(--gutter) clamp(72px, 12vh, 160px); }
+      .hero { width: min(100%, 720px); text-align: center; }
+      .status { display: flex; align-items: center; justify-content: center; margin-bottom: 28px; color: var(--accent); }
+      .status.error { color: var(--bad); }
+      .mark { width: 56px; height: 56px; display: grid; place-items: center; border: 1px solid currentColor; border-radius: var(--r-sm); }
+      .mark svg { width: 32px; height: 32px; }
+      h1 { margin: 0; color: var(--ink); font-size: clamp(38px, 5vw, 62px); font-weight: 600; line-height: 1.18; letter-spacing: -2px; }
+      p { max-width: 540px; margin: 20px auto 0; color: var(--muted); font-size: clamp(17px, 1.6vw, 22px); font-weight: 400; line-height: 1.5; }
+      @media (prefers-color-scheme: dark) {
+        :root { --paper: #14110f; --ink: #e9e5db; --muted: #e9e5dba8; --line: #e9e5db33; --line-soft: #e9e5db1c; --accent: #de3c66; --bad: #ef8378; }
+      }
+      @media (max-width: 767px) { :root { --gutter: 20px; } main { padding-top: 64px; padding-bottom: 80px; } }
+      @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
     </style>
   </head>
   <body>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <div class="brand" aria-label="Hypit">${HYPIHUB_LOCKUP_SVG}</div>
+      </div>
+    </header>
     <main>
-      <div class="brand" aria-label="Hypit">
-        ${HYPIHUB_MARK_SVG}
-        <span class="wordmark">hypit</span>
-      </div>
-      <div class="mark ${tone}" aria-hidden="true">
-        ${success ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="m5 12 4 4L19 6"/></svg>' : '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M6 6 18 18M18 6 6 18"/></svg>'}
-      </div>
-      <h1>${heading}</h1>
-      <p>${message}</p>
+      <section class="hero" aria-labelledby="callback-heading">
+        <div class="status ${tone}">
+          <span class="mark" aria-hidden="true">
+            ${success ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg>'}
+          </span>
+        </div>
+        <h1 id="callback-heading">${heading}</h1>
+        <p>${message}</p>
+      </section>
     </main>
   </body>
 </html>`;
