@@ -1,5 +1,17 @@
 import { createHash } from "node:crypto";
 
+import type { HypiHubAuth } from "./oauth.js";
+
+type UploadAuth = HypiHubAuth | string;
+
+async function uploadToken(auth: UploadAuth): Promise<string> {
+  return typeof auth === "string" ? auth : await auth.token();
+}
+
+function uploadCanRefresh(auth: UploadAuth): boolean {
+  return typeof auth !== "string" && auth.canRefresh();
+}
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
@@ -107,15 +119,19 @@ export class HypiHubUploader {
     return message.replace(/https?:\/\/\S+/giu, "[redacted-url]").slice(0, 300);
   }
 
-  private async json(path: string, apiKey: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
+  private async json(path: string, auth: UploadAuth, init: RequestInit = {}, retryAuth = true): Promise<Record<string, unknown>> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.requestTimeout);
     try {
       const response = await this.fetcher(`${this.baseUrl}${path}`, {
         ...init,
         signal: controller.signal,
-        headers: { authorization: `Bearer ${apiKey}`, ...(init.headers ?? {}) },
+        headers: { authorization: `Bearer ${await uploadToken(auth)}`, ...(init.headers ?? {}) },
       });
+      if (response.status === 401 && retryAuth && uploadCanRefresh(auth)) {
+        await (auth as HypiHubAuth).refresh();
+        return await this.json(path, auth, init, false);
+      }
       const text = await response.text();
       let body: unknown = {};
       try { body = text.length === 0 ? {} : JSON.parse(text); }
@@ -129,10 +145,10 @@ export class HypiHubUploader {
     }
   }
 
-  private async signParts(uploadId: string, declarations: readonly PartDeclaration[], apiKey: string): Promise<Map<number, Record<string, unknown>>> {
+  private async signParts(uploadId: string, declarations: readonly PartDeclaration[], auth: UploadAuth): Promise<Map<number, Record<string, unknown>>> {
     const startedAt = Date.now();
     this.log(`part signing started upload=${uploadId} parts=${declarations.length}`);
-    const response = await this.json(`/files/uploads/${encodeURIComponent(uploadId)}/parts`, apiKey, {
+    const response = await this.json(`/files/uploads/${encodeURIComponent(uploadId)}/parts`, auth, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ parts: declarations }),
@@ -165,11 +181,11 @@ export class HypiHubUploader {
     return { "content-length": contentLength, "x-amz-checksum-sha256": checksum };
   }
 
-  private async putPart(uploadId: string, declaration: PartDeclaration, initial: Record<string, unknown>, body: Uint8Array, apiKey: string): Promise<CompletedPart> {
+  private async putPart(uploadId: string, declaration: PartDeclaration, initial: Record<string, unknown>, body: Uint8Array, auth: UploadAuth): Promise<CompletedPart> {
     let capability = initial;
     for (let attempt = 0; attempt < this.uploadPartAttempts; attempt += 1) {
       if (attempt > 0) {
-        const refreshed = await this.signParts(uploadId, [declaration], apiKey);
+        const refreshed = await this.signParts(uploadId, [declaration], auth);
         capability = refreshed.get(declaration.part_number) ?? {};
       }
       const controller = new AbortController();
@@ -213,7 +229,7 @@ export class HypiHubUploader {
     throw new Error(`S3 upload part ${declaration.part_number} failed after ${this.uploadPartAttempts} attempts`);
   }
 
-  private async uploadDirect(bytes: Uint8Array, apiKey: string, policy: Record<string, unknown>): Promise<string> {
+  private async uploadDirect(bytes: Uint8Array, auth: UploadAuth, policy: Record<string, unknown>): Promise<string> {
     const uploadId = requiredString(policy.upload_id, "HypiHub upload id");
     const partSize = requiredInteger(policy.part_size, "HypiHub upload part size");
     const partCount = requiredInteger(policy.part_count, "HypiHub upload part count");
@@ -232,7 +248,7 @@ export class HypiHubUploader {
     });
     this.log(`multipart upload negotiated upload=${uploadId} bytes=${bytes.byteLength} part_size=${partSize} parts=${partCount} concurrency=${requestedConcurrency}`);
     try {
-      const signed = await this.signParts(uploadId, declarations, apiKey);
+      const signed = await this.signParts(uploadId, declarations, auth);
       const completed = new Array<CompletedPart>(partCount);
       let cursor = 0;
       const worker = async (): Promise<void> => {
@@ -245,13 +261,13 @@ export class HypiHubUploader {
           const body = bytes.subarray(start, Math.min(start + partSize, bytes.byteLength));
           const capability = signed.get(declaration.part_number);
           assert(capability !== undefined, `HypiHub upload part ${declaration.part_number} was not signed`);
-          completed[index] = await this.putPart(uploadId, declaration, capability, body, apiKey);
+          completed[index] = await this.putPart(uploadId, declaration, capability, body, auth);
         }
       };
       await Promise.all(Array.from({ length: Math.min(requestedConcurrency, partCount) }, worker));
       const completeStartedAt = Date.now();
       this.log(`multipart complete started upload=${uploadId} parts=${partCount}`);
-      const response = await this.json(`/files/uploads/${encodeURIComponent(uploadId)}/complete`, apiKey, {
+      const response = await this.json(`/files/uploads/${encodeURIComponent(uploadId)}/complete`, auth, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ parts: completed }),
@@ -262,13 +278,13 @@ export class HypiHubUploader {
       return url;
     } catch (error) {
       this.log(`multipart upload failed upload=${uploadId} reason=${this.safeReason(error)}`);
-      try { await this.json(`/files/uploads/${encodeURIComponent(uploadId)}`, apiKey, { method: "DELETE" }); }
+      try { await this.json(`/files/uploads/${encodeURIComponent(uploadId)}`, auth, { method: "DELETE" }); }
       catch { /* S3 Lifecycle is the final abort fallback. */ }
       throw error;
     }
   }
 
-  async upload(input: HypiHubUploadInput, apiKey: string): Promise<string> {
+  async upload(input: HypiHubUploadInput, auth: UploadAuth): Promise<string> {
     assert(input.bytes.byteLength > 0, "HypiHub reference artifact is empty");
     const startedAt = Date.now();
     const digest = createHash("sha256").update(input.bytes).digest("hex");
@@ -281,7 +297,7 @@ export class HypiHubUploader {
     const policyStartedAt = Date.now();
     this.log(`upload session request started bytes=${input.bytes.byteLength} mime=${input.mediaType}`);
     try {
-      policy = await this.json("/files/uploads", apiKey, {
+      policy = await this.json("/files/uploads", auth, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -299,7 +315,7 @@ export class HypiHubUploader {
       throw error;
     }
     assert(policy.upload_mode === "s3_multipart", "HypiHub returned an unknown upload mode");
-    const result = await this.uploadDirect(input.bytes, apiKey, policy);
+    const result = await this.uploadDirect(input.bytes, auth, policy);
     this.log(`upload finished bytes=${input.bytes.byteLength} mime=${input.mediaType} elapsed=${this.elapsed(startedAt)}`);
     return result;
   }

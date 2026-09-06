@@ -10,6 +10,7 @@ import type {
 import type {
   ArtifactStore,
   CredentialRef,
+  CredentialStore,
   CredentialValue,
   OperationFailure,
   OperationProgress,
@@ -28,6 +29,8 @@ export type EndpointInvocationContext = {
   readonly artifacts: ArtifactStore;
   /** Only slots explicitly declared by this configured Endpoint instance are present. */
   readonly credentials: Readonly<Record<string, CredentialValue>>;
+  /** Selected CredentialStore, when the Host can persist refreshed credentials. */
+  readonly credentialStore?: CredentialStore;
 };
 
 export type ImmediateEndpointHandler = (
