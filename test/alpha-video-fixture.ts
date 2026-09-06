@@ -11,11 +11,17 @@ import { selectMediaStreams } from "@hypit/media-pipeline";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 
+export const hasMediaBinaries = spawnSync("ffmpeg", ["-version"], {
+  stdio: "ignore", windowsHide: true,
+}).status === 0 && spawnSync("ffprobe", ["-version"], {
+  stdio: "ignore", windowsHide: true,
+}).status === 0;
+
 export function ffmpegBytes(args: string[], input?: Uint8Array): Buffer {
   const result = spawnSync("ffmpeg", ["-v", "error", "-y", ...args], {
-    ...(input === undefined ? {} : { input }), maxBuffer: 16 * 1024 * 1024,
+    ...(input === undefined ? {} : { input }), maxBuffer: 16 * 1024 * 1024, windowsHide: true,
   });
-  assert.equal(result.status, 0, result.stderr.toString());
+  assert.equal(result.status, 0, result.stderr?.toString() ?? result.error?.message ?? "ffmpeg failed");
   return result.stdout;
 }
 
