@@ -3,6 +3,8 @@ export type * from "./catalog.js";
 export {
   CompositeCredentialStore,
   credentialRef,
+  decodeOAuth2Credential,
+  encodeOAuth2Credential,
   isWritableCredentialStore,
   writableCredentialStore,
   verifyCredentialRef,

@@ -62,6 +62,12 @@ test("HypiHub declares its own credential acquisition flow", () => {
   assert.equal(credential?.acquisition?.tokenEndpoint, "https://hypit.ai/oauth/token");
 });
 
+test("HypiHub derives credential acquisition from its configured service origin", () => {
+  const [credential] = createHypiHubProvider({ baseUrl: "https://gateway.example.test/v1" }).credentials;
+  assert.equal(credential?.acquisition?.authorizationEndpoint, "https://gateway.example.test/oauth/consent");
+  assert.equal(credential?.acquisition?.tokenEndpoint, "https://gateway.example.test/oauth/token");
+});
+
 test("HypiHub doctor checks the authenticated catalogue only when actively invoked", async () => {
   let calls = 0;
   const diagnostics = await diagnoseHypiHubProvider({ fetch: async (input, init) => {

@@ -16,7 +16,9 @@ function Find-Credential {
   try {
     return $vault.Retrieve([string]$request.service, [string]$request.account)
   } catch {
-    if ($_.Exception.HResult -eq $notFound) { return $null }
+    if ($_.Exception.HResult -eq $notFound -or $_.Exception.InnerException.HResult -eq $notFound) {
+      return $null
+    }
     throw
   }
 }

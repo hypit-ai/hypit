@@ -3,11 +3,23 @@ import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 
 import type { CredentialAcquisition } from "@hypit/runtime";
+import { encodeOAuth2Credential } from "@hypit/runtime";
 
 import type { CliIo } from "./output.js";
 
 function base64url(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64").replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
+}
+
+function positiveNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function tokenExpiry(value: { readonly expires_at?: unknown; readonly expires_in?: unknown }): number | undefined {
+  const absolute = positiveNumber(value.expires_at);
+  if (absolute !== undefined) return absolute > 10_000_000_000 ? absolute : absolute * 1_000;
+  const seconds = positiveNumber(value.expires_in);
+  return seconds === undefined ? undefined : Date.now() + seconds * 1_000;
 }
 
 /** Acquire one OAuth credential from the exact data declared by its Endpoint package. */
@@ -93,11 +105,23 @@ export async function acquireOAuthCredential(
   });
   const body = await tokenResponse.text();
   if (!tokenResponse.ok) throw new Error(`OAuth token exchange failed (${tokenResponse.status}): ${body.slice(0, 200)}`);
-  const parsed = JSON.parse(body) as { access_token?: unknown };
+  const parsed = JSON.parse(body) as {
+    readonly access_token?: unknown;
+    readonly refresh_token?: unknown;
+    readonly expires_at?: unknown;
+    readonly expires_in?: unknown;
+  };
   if (typeof parsed.access_token !== "string" || parsed.access_token.length === 0) {
     throw new Error("OAuth token response contained no access token");
   }
-  return parsed.access_token;
+  const expiresAt = tokenExpiry(parsed);
+  return encodeOAuth2Credential({
+    accessToken: parsed.access_token,
+    ...(typeof parsed.refresh_token === "string" && parsed.refresh_token.length > 0
+      ? { refreshToken: parsed.refresh_token }
+      : {}),
+    ...(expiresAt === undefined ? {} : { expiresAt }),
+  });
 }
 
 function callbackPage(success: boolean): string {

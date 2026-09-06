@@ -43,12 +43,17 @@ export type EndpointRequest = {
   readonly pendingInputs?: readonly EndpointInputSlot[];
 };
 
+export type EndpointCredential = CredentialValue & {
+  /** Narrow write authority for this declared slot only, when its selected Store is writable. */
+  readonly replace?: (value: CredentialValue) => Promise<void>;
+};
+
 export type EndpointInvocationContext = {
   readonly command: FulfillNeedCommand;
   readonly need: Need;
   readonly resources: ResourceStore;
   /** Only slots explicitly declared by this configured Endpoint instance are present. */
-  readonly credentials: Readonly<Record<string, CredentialValue>>;
+  readonly credentials: Readonly<Record<string, EndpointCredential>>;
 };
 
 export type ImmediateEndpointHandler = (
