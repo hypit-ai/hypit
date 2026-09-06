@@ -28,6 +28,14 @@ const seedance = (name: string, model: string): GenerationWireMapping => ({
 });
 
 export const hypiHubMappings: readonly GenerationWireMapping[] = [
+  {
+    capability: { module: { name: "@hypit/volcengine-matting", version: "1" }, name: "matte-portrait-video" },
+    result: "video", routes: [{ model: "matte-portrait-video" }],
+    fields: {
+      source: { as: "url", field: "ref_video_url" },
+      format: { as: "value", field: "format", whenAbsent: "WEBM" },
+    },
+  },
   seedance("seedance-2", "bytedance/seedance-2"),
   seedance("seedance-2-fast", "bytedance/seedance-2-fast"),
   seedance("seedance-2-mini", "bytedance/seedance-2-mini"),

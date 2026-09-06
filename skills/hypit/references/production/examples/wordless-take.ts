@@ -1,6 +1,6 @@
-import type { SynchronizedMedia } from "@hypit/media";
-import type { Narrative, NarrativeExcerpt } from "@hypit/narrative";
-import { materializeSemanticTake } from "@hypit/speech";
+import type { SynchronizedMedia } from "hypit/media";
+import type { Narrative, NarrativeExcerpt } from "hypit/narrative";
+import { materializeSemanticTake } from "hypit/speech";
 
 // Expose this adapter through a project Producer/Surface with a take output.
 export function wordlessTake(

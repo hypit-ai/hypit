@@ -19,8 +19,13 @@ own built files and assets. At execution time the active Hypit Distribution supp
 public subpaths. This keeps one framework implementation in the process and prevents a component
 tarball from carrying private copies of Core.
 
-The minimal independent fixture is
+The Distribution includes the small package example at
 [`examples/minimal-author-package/packages/example-component`](../../examples/minimal-author-package/packages/example-component).
-It can remain a project workspace package, or its owner can publish the same package name and install
-that release in another project through npm or a private registry. Neither path changes the logical
-Module import written by the Source.
+Copy it into the video's `packages/`, give it the owner's package and Module name, and follow its
+README to select the installed Hypit release as its development dependency. It includes the Manifest,
+Surface, Fragment, Producer, activation, preview and TypeScript build configuration. It can stay in
+the project or be packed and installed in another project without changing its logical Module import.
+
+For a component that follows speech, [Ranking](../ranking/README.md) traces the complete semantic
+path from a Selection or Moment through projection, schedule and drawing to a Studio Companion.
+Its implementation illustrates those relationships; a new component owns its own visual behavior.

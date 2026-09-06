@@ -1,6 +1,23 @@
-# `@hypit/endpoint-kit`
+# `hypit/endpoint-kit`
 
 SDK for packages that fulfill exact external capabilities.
+
+External Provider packages import this public subpath from the `hypit` Distribution. Use `hypit` as
+a development dependency, compile the Provider to JavaScript, and ship its code plus any ordinary
+runtime dependencies. The active Distribution supplies this API when loading the package.
+No Hypit checkout is needed to develop or install the extension.
+
+```ts
+import { defineEndpointPackage } from "hypit/endpoint-kit";
+import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "hypit/endpoint-kit";
+import { generationTypes, compileWireRequest, sealGeneratedImageSet } from "hypit/generation";
+```
+
+For an existing model, name its exact versioned Capability and expected result Type. Map its request
+ports into the service's wire format; the Provider need not import the model's implementation.
+`hypit/generation` supplies the common generated-media values and optional wire-mapping helpers.
+One Provider can implement multiple capabilities, and another Provider can implement those same
+capabilities. The Profile selects the implementation used by a project.
 
 An endpoint can call a vendor API, local process, Lambda function, device or human service. An
 endpoint package declares the capabilities it fulfills, its result types, credentials and scheduling

@@ -618,6 +618,32 @@ export async function executeInspectMedia(
   }
 }
 
+async function sourceVideoEncoding(env: MediaExecutionEnvironment, path: string, streamIndex: number) {
+  const bytes = await runProcess({
+    executable: env.ffprobePath,
+    argv: ["-v", "error", "-print_format", "json", "-show_streams", "-show_pixel_formats", path],
+    timeoutMs: env.processTimeoutMs, maxStdoutBytes: env.maxProbeOutputBytes,
+    ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+  });
+  const probe = JSON.parse(Buffer.from(bytes).toString("utf8")) as {
+    streams: { index: number; codec_name?: string; pix_fmt?: string; tags?: Record<string, string> }[];
+    pixel_formats: { name: string; flags: { alpha: number } }[];
+  };
+  const stream = probe.streams.find((item) => item.index === streamIndex);
+  assert(stream !== undefined, `Media source has no video stream ${streamIndex}`);
+  const pixelFormat = probe.pixel_formats.find((item) => item.name === stream.pix_fmt);
+  assert(pixelFormat !== undefined, `Media source pixel format ${String(stream.pix_fmt)} is unknown`);
+  const alphaTag = Object.entries(stream.tags ?? {}).find(([key]) => key.toLowerCase() === "alpha_mode")?.[1];
+  const alpha = pixelFormat.flags.alpha === 1 || alphaTag === "1" || alphaTag === "straight";
+  // FFmpeg's native VP8/VP9 decoders discard the WebM alpha sidecar.
+  const decoder = !alpha ? undefined
+    : stream.codec_name === "vp9" ? "libvpx-vp9" : stream.codec_name === "vp8" ? "libvpx" : undefined;
+  return {
+    alpha,
+    inputArgs: decoder === undefined ? [] : [`-c:${streamIndex}`, decoder],
+  };
+}
+
 export async function executeNormalizeMedia(
   env: MediaExecutionEnvironment,
   constraints: CanonicalValue,
@@ -635,7 +661,11 @@ export async function executeNormalizeMedia(
     let visualWidth: number | undefined;
     let visualHeight: number | undefined;
     if (plan.video !== undefined) {
-      const output = join(work, "visual.mp4");
+      const encoding = animation === undefined
+        ? await sourceVideoEncoding(env, input, plan.video.index)
+        : { alpha: true, inputArgs: [] };
+      const outputType = encoding.alpha ? "video/webm" : "video/mp4";
+      const output = join(work, encoding.alpha ? "visual.webm" : "visual.mp4");
       const fps = `${need.frameRate.numerator}/${need.frameRate.denominator}`;
       const filter = [
         "setpts=PTS-STARTPTS",
@@ -649,20 +679,24 @@ export async function executeNormalizeMedia(
         "setsar=1",
       ].join(",");
       const visualInput = animation === undefined
-        ? ["-autorotate", "-i", input, "-map", `0:${plan.video.index}`]
+        ? [...encoding.inputArgs, "-autorotate", "-i", input, "-map", `0:${plan.video.index}`]
         : ["-f", "concat", "-safe", "0", "-i", await animatedWebpConcat(env, animation, work), "-map", "0:v:0"];
+      // The execution format must retain the source's alpha while materializing
+      // the program clock. Both encodings publish the same SynchronizedMedia type.
+      const encoderArgs = encoding.alpha
+        ? ["-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-lossless", "1", "-auto-alt-ref", "0"]
+        : ["-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-movflags", "+faststart"];
       await runProcess({
         executable: env.ffmpegPath,
         argv: ["-y", ...visualInput, "-an", "-vf", filter,
-          "-frames:v", String(plan.frameCount), "-fps_mode", "cfr", "-c:v", "libx264",
-          "-preset", "veryfast", "-pix_fmt", "yuv420p", "-movflags", "+faststart", output],
+          "-frames:v", String(plan.frameCount), "-fps_mode", "cfr", ...encoderArgs, output],
         timeoutMs: env.processTimeoutMs,
         maxStdoutBytes: 64 * 1024,
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       });
       const inspected = await outputInspection({
         path: output,
-        mediaType: "video/mp4",
+        mediaType: outputType,
         ffprobePath: env.ffprobePath,
         timeoutMs: env.processTimeoutMs,
         maxProbeOutputBytes: env.maxProbeOutputBytes,
@@ -674,7 +708,7 @@ export async function executeNormalizeMedia(
       assert(visual.sampleAspectRatio.numerator === 1 && visual.sampleAspectRatio.denominator === 1
         && visual.rotationDegrees === 0,
       "Normalized visual retains non-square samples or display rotation");
-      visualArtifact = await env.artifacts.putFile(output, "video/mp4");
+      visualArtifact = await env.artifacts.putFile(output, outputType);
       visualWidth = visual.width;
       visualHeight = visual.height;
     }
@@ -1045,6 +1079,7 @@ export async function executeExtractFrame(
     const input = join(work, "source.bin");
     const output = join(work, "frame.png");
     await stageArtifact(env, need.source, input);
+    const encoding = await sourceVideoEncoding(env, input, need.streamIndex);
     const selection = need.at.kind === "first"
       ? "eq(n\\,0)"
       : need.at.kind === "last"
@@ -1055,7 +1090,7 @@ export async function executeExtractFrame(
     await runProcess({
       executable: env.ffmpegPath,
       argv: [
-        "-y", "-i", input, "-map", `0:${need.streamIndex}`, "-an",
+        "-y", ...encoding.inputArgs, "-i", input, "-map", `0:${need.streamIndex}`, "-an",
         "-vf", `setpts=PTS-STARTPTS,select=${selection}`,
         "-frames:v", "1", "-fps_mode", "vfr", "-c:v", "png", output,
       ],

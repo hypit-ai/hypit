@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { createServer } from "vite";
 import { findRuntimeProfile, resolveProjectRoot } from "@hypit/cli";
+import { resolveDistributionPackageImport } from "@hypit/package-loader-node";
 import { videoCliDistribution, videoStudioCompanionPackages } from "@hypit/video-cli";
 
 import { openStudioBuildLibrary } from "./src/build-library.js";
@@ -98,6 +99,13 @@ try {
   await buildLibrary.close();
   throw error;
 }
+const distributionImports = {
+  name: "hypit-distribution-imports",
+  enforce: "pre" as const,
+  resolveId(specifier: string): string | undefined {
+    return resolveDistributionPackageImport(distributionPackageRoot, specifier);
+  },
+};
 const server = await createServer({
   configFile: false,
   root: here,
@@ -109,7 +117,7 @@ const server = await createServer({
     // available for Source and material previews.
     fs: { allow: [workspaceRoot, packageRoot, distributionPackageRoot, here] },
   },
-  plugins: [studioPlugin({
+  plugins: [distributionImports, studioPlugin({
     source,
     runPath,
     workspaceRoot,

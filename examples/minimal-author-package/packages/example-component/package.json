@@ -12,12 +12,15 @@
     ".": "./dist/index.js",
     "./preview": "./preview/preview.svml"
   },
-  "hypit": { "activation": "./dist/activation.js" },
+  "hypit": {
+    "activation": "./dist/activation.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepack": "pnpm build"
+    "prepack": "npm run build"
   },
   "devDependencies": {
+    "@types/node": "24.10.1",
     "hypit": "workspace:*",
     "typescript": "5.9.3"
   }

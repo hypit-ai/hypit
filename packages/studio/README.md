@@ -67,9 +67,9 @@ project nor its packages are added to the Hypit Distribution or contributor work
 The Host resolves selected project packages from the project first and official
 `@hypit/*` imports from the read-only tool Distribution. The `@hypit/*`
 namespace is Distribution-owned and cannot be shadowed by a project install.
-Companion manifests may declare `@hypit/studio-adapter` as a peer dependency for
-editor/package-manager clarity; the active tool Distribution supplies that ABI at
-runtime, so the project does not install or lock another copy.
+External Companions compile against `hypit/studio-adapter` and the other public `hypit/*`
+subpaths, with `hypit` as a development dependency. The active Distribution supplies those APIs
+at runtime. Ship the Companion's compiled JavaScript with its component package.
 
 The companion owns what its Track means: matching, required same-Surface values,
 entities, lane range, finite chrome, title and ordered text/material layers,

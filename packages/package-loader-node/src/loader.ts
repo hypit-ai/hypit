@@ -175,15 +175,15 @@ export class NodePackageSelectionMissingError extends Error {
 
 /**
  * Resolve the ordinary upstream npm dependencies of Distribution packages.
- * Internal @hypit dependencies are followed to their manifests; no project
- * package is copied into the machine dependency home.
+ * Internal @hypit dependencies are followed to their manifests. Other selected
+ * packages belong to their project's package manager, including their dependencies.
  */
 export async function distributionExternalPackageRequirements(
   specifiers: readonly string[],
   distributionRoot: string,
 ): Promise<readonly { readonly name: string; readonly version: string; readonly specifier: string }[]> {
   const root = resolve(distributionRoot);
-  const queue = [...new Set(specifiers)].sort();
+  const queue = [...new Set(specifiers.filter((name) => name.startsWith("@hypit/")))].sort();
   const visited = new Set<string>();
   const external = new Map<string, string>();
   while (queue.length > 0) {

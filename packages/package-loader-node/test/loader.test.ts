@@ -58,7 +58,7 @@ test("loads an explicitly selected installed package", async () => {
   }
 });
 
-test("Distribution requirements follow internal packages and return only exact upstream npm packages", async () => {
+test("Distribution requirements leave project packages to npm and follow internal dependencies", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-distribution-requirements-"));
   try {
     await projectPackage(root, "@hypit/provider-example", `{
@@ -73,11 +73,12 @@ test("Distribution requirements follow internal packages and return only exact u
       "example-transport": "1.2.3",
     });
     assert.deepEqual(await distributionExternalPackageRequirements(
-      ["@hypit/provider-example"], root,
+      ["@hypit/provider-example", "@studio/provider-art", "another-provider"], root,
     ), [
       { name: "example-sdk", version: "2.3.4", specifier: "example-sdk@2.3.4" },
       { name: "example-transport", version: "1.2.3", specifier: "example-transport@1.2.3" },
     ]);
+    assert.deepEqual(await distributionExternalPackageRequirements(["@studio/provider-art"], root), []);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

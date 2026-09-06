@@ -1,5 +1,9 @@
 # `@hypit/caption`
 
+External components use `hypit/caption` from their `hypit` development dependency. The package
+owns the types and helpers below; Source imports retain the `@hypit/caption@1` Module identity.
+
+
 The deterministic Caption contract. Script emits one `CaptionDocument` containing display words,
 N:M alignment units and authored `||` cue breaks. Caption applies Styles to complete units selected
 by a Role or a semantic Selection, then joins those units to a `SemanticTrack` for frame timing.
