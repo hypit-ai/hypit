@@ -20,6 +20,8 @@ npx skills add hypit-ai/hypit -g
 
 然后在任意处启动 Coding Agent，Hypit skill 将全局可用。
 
+### **👉 [免费获得 100 个人物形象，每个都拥有独特音色。](https://drive.google.com/drive/u/2/folders/18J9Fz7mkU3OQNJ-2Res3eIyFQ2cemIK5)**
+
 ## 2. 描述你想制作的视频
 
 <video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/describe_the_video_you_want.mp4"></video>
