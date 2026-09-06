@@ -1,5 +1,6 @@
 import type { Need } from "@hypit/protocol";
 import type { CredentialRef, CredentialStore } from "@hypit/runtime";
+import type { HypiHubAuth } from "./oauth.js";
 
 import { hypiHubRouteForCapability } from "./routes.js";
 
@@ -19,7 +20,7 @@ export type HypiHubBuildQuote = {
 };
 
 type HypiHubPricingTransport = {
-  json(path: string, apiKey: string, init?: RequestInit): Promise<Record<string, unknown>>;
+  json(path: string, auth: HypiHubAuth, init?: RequestInit): Promise<Record<string, unknown>>;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -42,7 +43,7 @@ function capabilityKey(need: Need): string {
 
 async function quoteNeed(
   transport: HypiHubPricingTransport,
-  apiKey: string,
+  auth: HypiHubAuth,
   need: Need,
 ): Promise<HypiHubQuoteItem> {
   const route = hypiHubRouteForCapability(need.capability);
@@ -57,7 +58,7 @@ async function quoteNeed(
   if (typeof input.resolution === "string") dimensions.resolution = input.resolution;
   const hasReferenceVideo = typeof input.ref_video_url === "string"
     || (Array.isArray(input.reference_videos) && input.reference_videos.length > 0);
-  const response = await transport.json("/pricing/quote", apiKey, {
+  const response = await transport.json("/pricing/quote", auth, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -80,6 +81,7 @@ async function quoteNeed(
 export function createHypiHubPricingClient(options: {
   readonly client: HypiHubPricingTransport;
   readonly apiKey: CredentialRef;
+  readonly auth: (secret: string, credentials: CredentialStore) => HypiHubAuth;
 }): {
   quoteMany(needs: readonly Need[], credentials: CredentialStore): Promise<HypiHubBuildQuote>;
 } {
@@ -97,7 +99,8 @@ export function createHypiHubPricingClient(options: {
       const credential = await credentials.resolve(options.apiKey);
       assert(credential !== undefined && credential.secret.length > 0,
         "HypiHub login is unavailable; run hypit auth login for HypiHub");
-      const items = await Promise.all(needs.map((need) => quoteNeed(options.client, credential.secret, need)));
+      const auth = options.auth(credential.secret, credentials);
+      const items = await Promise.all(needs.map((need) => quoteNeed(options.client, auth, need)));
       return {
         format: "hypit.build-quote@1",
         status: "complete",

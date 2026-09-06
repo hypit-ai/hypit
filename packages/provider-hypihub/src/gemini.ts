@@ -1,11 +1,13 @@
 import type { GeminiInlinePart } from "@hypit/gemini";
 import { HypiHubUploader } from "./upload.js";
+import type { HypiHubAuth } from "./oauth.js";
 
 export type HypiHubGeminiPart = GeminiInlinePart
   | { readonly fileData: { readonly mimeType?: string; readonly fileUri: string } };
 
 export type HypiHubGeminiGeneratorOptions = {
   readonly apiKey: string;
+  readonly auth?: HypiHubAuth;
   readonly model?: string;
   readonly baseUrl?: string;
   readonly requestTimeoutMs?: number;
@@ -105,7 +107,7 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
       const startedAt = Date.now();
       logger(`media upload started bytes=${bytes.byteLength} mime=${mimeType}`);
       try {
-        const url = await uploader.upload({ bytes, mediaType: mimeType, purpose: "reference" }, apiKey);
+        const url = await uploader.upload({ bytes, mediaType: mimeType, purpose: "reference" }, options.auth ?? apiKey);
         logger(`media upload finished bytes=${bytes.byteLength} mime=${mimeType} elapsed=${Date.now() - startedAt}ms`);
         return url;
       } catch (error) {
@@ -124,12 +126,13 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
       let response: Response | undefined;
       let text = "";
       let attempts = 0;
+      let refreshedAuth = false;
       for (let attempt = 0; attempt <= maxRateLimitRetries; attempt += 1) {
         attempts += 1;
         response = await fetcher(`${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method: "POST",
           signal: controller.signal,
-          headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
+          headers: { "x-goog-api-key": options.auth === undefined ? apiKey : await options.auth.token(), "content-type": "application/json" },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: input.instruction }] },
             contents: [{ role: "user", parts }],
@@ -137,6 +140,12 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
           }),
         });
         text = await response.text();
+        if (response.status === 401 && !refreshedAuth && options.auth?.canRefresh()) {
+          refreshedAuth = true;
+          await options.auth.refresh();
+          attempt -= 1;
+          continue;
+        }
         if (response.status !== 429 || attempt === maxRateLimitRetries) break;
         await new Promise((resolve) => setTimeout(resolve, retryDelay(response!, rateLimitRetryDelayMs, attempt)));
       }
@@ -144,7 +153,7 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
       logger(`generateContent response status=${response.status} elapsed=${Date.now() - requestStartedAt}ms attempts=${attempts}`);
       if (!response.ok) {
         const message = `HypiHub Gemini returned HTTP ${response.status}: ${text.slice(0, 300)}`;
-        if (response.status === 401 || response.status === 403 || response.status === 404) {
+        if (response.status === 401) {
           throw new Error(`${message}. Sign in to HypiHub at https://hypit.ai with hypit auth login`);
         }
         throw new Error(message);

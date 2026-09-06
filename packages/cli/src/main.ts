@@ -207,9 +207,24 @@ async function hypiHubOAuthLogin(io: CliIo): Promise<string> {
   });
   const body = await tokenResponse.text();
   if (!tokenResponse.ok) throw new Error(`HypiHub OAuth token exchange failed (${tokenResponse.status}): ${body.slice(0, 200)}`);
-  const parsed = JSON.parse(body) as { access_token?: unknown };
+  const parsed = JSON.parse(body) as {
+    access_token?: unknown;
+    refresh_token?: unknown;
+    expires_in?: unknown;
+    expires_at?: unknown;
+  };
   if (typeof parsed.access_token !== "string" || parsed.access_token.length === 0) throw new Error("HypiHub OAuth returned no access token");
-  return parsed.access_token;
+  const expiresAt = typeof parsed.expires_at === "number" && Number.isFinite(parsed.expires_at)
+    ? (parsed.expires_at > 10_000_000_000 ? parsed.expires_at : parsed.expires_at * 1_000)
+    : typeof parsed.expires_in === "number" && Number.isFinite(parsed.expires_in) && parsed.expires_in > 0
+      ? Date.now() + parsed.expires_in * 1_000
+      : undefined;
+  return JSON.stringify({
+    format: "hypit.hypihub-oauth@1",
+    accessToken: parsed.access_token,
+    ...(typeof parsed.refresh_token === "string" && parsed.refresh_token.length > 0 ? { refreshToken: parsed.refresh_token } : {}),
+    ...(expiresAt === undefined ? {} : { expiresAt }),
+  });
 }
 
 /**
