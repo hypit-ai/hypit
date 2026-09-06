@@ -251,6 +251,10 @@ export async function runCli(
   const compiler = distribution.createCompiler({
     ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
     ...(args.assetRoots.length === 0 ? {} : { assetRoots: args.assetRoots }),
+    packageRoot: sourcePackageRoot,
+    ...(distribution.packageRoot === undefined
+      ? {}
+      : { distributionPackageRoot: distribution.packageRoot }),
     packageContributions,
   });
   const workspace = await compiler.openFile(args.source);

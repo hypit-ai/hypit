@@ -11,6 +11,10 @@ export type CliCompilerOptions = {
   readonly workspaceRoot?: string;
   /** Additional Host-authorized asset roots. These never widen Source imports. */
   readonly assetRoots?: readonly string[];
+  /** Project-owned package resolution boundary for package Source imports. */
+  readonly packageRoot?: string;
+  /** Read-only application Distribution that owns the reserved @hypit namespace. */
+  readonly distributionPackageRoot?: string;
   readonly packageContributions: readonly NodePackageContribution[];
 };
 
@@ -37,6 +41,8 @@ export type CliDistribution = {
    */
   discoverSourcePackages?(path: string, options?: {
     readonly workspaceRoot?: string;
+    readonly packageRoot?: string;
+    readonly distributionPackageRoot?: string;
     /** Exact packages already trusted for the current fixed-point discovery pass. */
     readonly packages?: readonly LoadedPackage[];
   }): Promise<{

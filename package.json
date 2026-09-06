@@ -4,6 +4,20 @@
   "description": "Hypit video authoring Distribution for AI agents",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
+  "exports": {
+    "./artifact": "./packages/artifact/src/index.ts",
+    "./author-kit": "./packages/author-kit/src/index.ts",
+    "./composition": "./packages/composition/src/index.ts",
+    "./media": "./packages/media/src/index.ts",
+    "./program-space": "./packages/program-space/src/index.ts",
+    "./semantic-track": "./packages/semantic-track/src/index.ts",
+    "./spatial": "./packages/spatial/src/index.ts",
+    "./studio-adapter": "./packages/studio-adapter/src/index.ts",
+    "./svs": "./packages/svs/src/index.ts",
+    "./temporal": "./packages/temporal/src/index.ts",
+    "./temporal-markup": "./packages/temporal-markup/src/index.ts",
+    "./visual-ir": "./packages/visual-ir/src/index.ts"
+  },
   "bin": {
     "hypit": "./bin/hypit.mjs",
     "hypit-studio": "./bin/hypit-studio.mjs"
@@ -51,6 +65,7 @@
   },
   "devDependencies": {
     "@hypit/artifact": "workspace:*",
+    "@hypit/author-kit": "workspace:*",
     "@hypit/resource-store-fs": "workspace:*",
     "@hypit/resource-store-s3": "workspace:*",
     "@hypit/build-result": "workspace:*",
@@ -77,6 +92,7 @@
     "@hypit/generation": "workspace:*",
     "@hypit/gemini": "workspace:*",
     "@hypit/gpt-image": "workspace:*",
+    "@hypit/gpt-image-kits": "workspace:*",
     "@hypit/grok-imagine": "workspace:*",
     "@hypit/hyperframes": "workspace:*",
     "@hypit/image-compose": "workspace:*",

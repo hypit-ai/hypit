@@ -1,0 +1,15 @@
+{
+  "name": "@hypit/gpt-image-kits",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./phone-ugc-v1": "./kits/phone-ugc-v1.svs"
+  },
+  "files": ["kits", "README.md"],
+  "devDependencies": {
+    "@hypit/svs": "workspace:*",
+    "@hypit/text": "workspace:*"
+  }
+}

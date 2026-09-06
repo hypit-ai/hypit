@@ -14,6 +14,7 @@ import { runVocabularyCli } from "./vocabulary.js";
 
 export {
   createVideoCompiler,
+  createVideoWorkspace,
 } from "./compiler.js";
 export { videoCliDistribution } from "./distribution.js";
 export { videoStudioCompanionPackages } from "./studio-distribution.js";

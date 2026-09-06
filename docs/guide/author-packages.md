@@ -22,40 +22,41 @@ must not be added to the Style record merely to describe its role.
 mkdir -p packages/my-component/src
 ```
 
+Create it inside the video project. Use the owner's package scope; `@hypit/*` belongs to the active
+Distribution.
+
 ## 2. Write package.json
 
 ```json
 {
-  "name": "@hypit/my-component",
+  "name": "@your-studio/my-component",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
+  "files": ["dist", "preview", "README.md"],
+  "exports": { ".": "./dist/index.js" },
   "hypit": {
-    "activation": "./src/activation.ts"
+    "activation": "./dist/activation.js"
   },
-  "dependencies": {
-    "@hypit/protocol": "workspace:*",
-    "@hypit/elaborator": "workspace:*",
-    "@hypit/markup": "workspace:*"
+  "devDependencies": {
+    "hypit": "^0.1.0",
+    "typescript": "^5.9.0"
   }
 }
 ```
 
-Add only the dependencies your package actually imports. See
-[Package architecture](./packages.md) for layer rules.
+The package uses public `hypit/*` subpaths while it is developed and publishes only its own compiled
+files. See [Package architecture](./packages.md) for layer rules.
 
 ## 3. Define the Module Manifest
 
 In `src/index.ts`, declare your Module's identity, Types and Producers:
 
 ```typescript
-import type { ModuleManifest, ModuleRef } from "@hypit/protocol";
+import type { ModuleManifest, ModuleRef } from "hypit/author-kit";
 
 export const myComponentModuleRef: ModuleRef = {
-  name: "@hypit/my-component",
+  name: "@your-studio/my-component",
   version: "1",
 };
 
@@ -92,7 +93,7 @@ The Surface handler decodes the Markup Frontend's XML elements into typed author
 
 ```typescript
 // src/surface.ts
-import type { StructuredSurfaceHandler } from "@hypit/markup";
+import type { StructuredSurfaceHandler } from "hypit/author-kit";
 
 export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   const id = textAttribute(element, "id");
@@ -178,7 +179,7 @@ from another package's source.
 
 ```typescript
 // src/activation.ts
-import { createMarkupSurfaceHostFacet } from "@hypit/markup";
+import { createMarkupSurfaceHostFacet } from "hypit/author-kit";
 import {
   myComponentManifest,
   myComponentMarkupSurfaces,
@@ -204,20 +205,21 @@ export default hypitPackage;
 ```
 
 The Module automatically offers its exact `manifest.name@manifest.version`, so authors import
-`@hypit/my-component@1` without a duplicate alias declaration. Use optional `specifiers` only
+`@your-studio/my-component@1` without a duplicate alias declaration. Use optional `specifiers` only
 when the package intentionally owns a genuinely different logical alias. The Surface declaration
 determines the accepted tag (`<mine:Widget>` when imported as `mine`). It is a Markup Host facet,
 not part of the semantic Module Manifest or Core.
 
-## 7. Declare package dependencies
+## 7. Build the package
 
-```json
-"dependencies": {
-  "@hypit/protocol": "workspace:*"
-}
+```bash
+pnpm build
 ```
 
-pnpm workspace links resolve the package. No root path registry is involved.
+Use `hypit/author-kit` for the framework-facing declarations and the relevant public domain subpaths,
+such as `hypit/composition`, for the values the component consumes or produces. The active
+Distribution supplies those same APIs while loading the compiled activation; the component tarball
+does not bundle a second copy of Hypit.
 
 ## 8. Install
 
@@ -234,7 +236,7 @@ Manifest are loaded from its installed dependencies.
 ```xml
 <?svml using="@hypit/markup@1"?>
 <svml>
-  <import as="mine" from="@hypit/my-component@1"/>
+  <import as="mine" from="@your-studio/my-component@1"/>
 
   <mine:Widget id="demo" during={story.selection.example}/>
 </svml>

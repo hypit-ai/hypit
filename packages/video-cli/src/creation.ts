@@ -420,6 +420,10 @@ async function segmentSpeech(source: string, segment: string, projectRoot: strin
   });
   const compiler = videoCliDistribution.createCompiler({
     workspaceRoot: projectRoot,
+    packageRoot: projectRoot,
+    ...(videoCliDistribution.packageRoot === undefined
+      ? {}
+      : { distributionPackageRoot: videoCliDistribution.packageRoot }),
     packageContributions: loaded.map((item) => item.contribution),
   });
   const workspace = await compiler.openFile(source);
