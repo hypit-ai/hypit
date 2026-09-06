@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
@@ -38,7 +38,9 @@ test("a named package answers with its own Surfaces only", async () => {
   assert.equal(still!.tag, "StillVideo");
   const vocabulary = still!.vocabulary as { attributes: readonly { name: string }[] };
   assert.ok(vocabulary.attributes.some((attribute) => attribute.name === "duration"));
-  assert.match(still!.readme ?? "", /media-pipeline\/README\.md$/);
+  assert.ok(still!.readme !== undefined);
+  assert.equal(basename(still!.readme), "README.md");
+  assert.equal(basename(dirname(still!.readme)), "media-pipeline");
 });
 
 test("the visual schema prints every shape and refuses an unknown one", () => {
