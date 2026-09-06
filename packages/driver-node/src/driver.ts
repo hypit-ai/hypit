@@ -324,6 +324,7 @@ export class NodeDriver {
       need: structuredClone(executable.command.need),
       artifacts: this.artifacts,
       credentials: await this.#endpointCredentials(executable.registration),
+      ...(this.credentials === undefined ? {} : { credentialStore: this.credentials }),
       operation: identity.id,
     };
     let outcome: EndpointOutcome;
@@ -438,6 +439,7 @@ export class NodeDriver {
         need: structuredClone(executable.command.need),
         artifacts: this.artifacts,
         credentials: await this.#endpointCredentials(executable.registration),
+        ...(this.credentials === undefined ? {} : { credentialStore: this.credentials }),
       });
       return { status: "completed", event: await this.#endpointEvent(state, executable, result) };
     } catch (error) {
@@ -511,6 +513,7 @@ export class NodeDriver {
       need: structuredClone(executable.command.need),
       artifacts: this.artifacts,
       credentials: await this.#endpointCredentials(executable.registration),
+      ...(this.credentials === undefined ? {} : { credentialStore: this.credentials }),
       operation: current.id,
       handle: structuredClone(current.handle as NonNullable<typeof current.handle>),
     };

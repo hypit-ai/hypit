@@ -30,6 +30,13 @@ the OS credential store, and opening login does not itself submit a paid generat
 `hypit auth login <endpoint> --runtime <profile>` itself. This opens the browser login and waits for
 the callback; do not ask the author to run the command or paste a key. Resume only after it succeeds.
 
+After a successful HypiHub OAuth login, the client stores the access token together with the refresh token
+and expiry metadata in the selected writable CredentialStore. The HypiHub Provider refreshes the access
+token before expiry, retries one request after an upstream `401`, and persists a rotated refresh token when
+the server returns one. A raw API key or legacy token has no refresh token and remains static; after it
+expires, ask the author to sign in again. Do not interpret `403`, `404`, or model-routing errors as an
+authentication failure unless the response is explicitly an unauthorized-token error.
+
 HypiHub is the default for supported paid capabilities and Gemini VLM. It can be replaced only when the
 author explicitly selects another Provider.
 For ordinary `@hypit/gemini` Author Source, the Runtime Profile selects
