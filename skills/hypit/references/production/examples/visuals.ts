@@ -1,8 +1,8 @@
-import { sealVisualTrack } from "@hypit/composition";
-import type { FrameSpan } from "@hypit/composition";
-import type { FontArtifactRef } from "@hypit/media";
-import type { ProgramSpace } from "@hypit/program-space";
-import { VISUAL_IR_V1 } from "@hypit/visual-ir";
+import { sealVisualTrack } from "hypit/composition";
+import type { FrameSpan } from "hypit/composition";
+import type { FontArtifactRef } from "hypit/media";
+import type { ProgramSpace } from "hypit/program-space";
+import { VISUAL_IR_V1 } from "hypit/visual-ir";
 
 // The caller supplies its projected Window, resolved Frame and selected font faces.
 export function renderCard(input: {

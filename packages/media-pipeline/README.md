@@ -27,6 +27,11 @@ optional visual Artifact plus intrinsic extent, and optional audio Artifact. Str
 authority choice and the trim/pad ledger remain in Selection and execution instead of travelling
 through every consumer.
 
+Normalization preserves transparency in the selected visual stream. The executing Provider owns
+the intermediate encoding; both opaque and transparent pictures use the same SynchronizedMedia
+value. A later SemanticTake adds Script timing while retaining that prepared media. A visual
+overlay can instead enter Media Track directly.
+
 This package is the shared execution vocabulary. Speech authoring makes the boundary explicit:
 `<pipeline:Normalize>` produces one `SynchronizedMedia`, then a speech provider and deterministic
 alignment produce one `SemanticTake`. Media Track consumes that prepared value; it never owns an

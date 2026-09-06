@@ -7,6 +7,11 @@ Surface it decodes the exact bytes and checks declared dimensions, still/frame t
 opaque/straight-alpha facts. These checks validate the typed rendering input; they do not create
 content identity or hidden output metadata.
 
+Normalized transparent videos from Speech Track or Media Track use the ordinary video path.
+The engine decodes them to PNG frames with alpha, then Chrome blends them with lower layers and
+the authored Canvas background. PNG is the intermediate capture format; it does not ask to erase
+the Film's background. The returned MP4 contains the completed composition.
+
 Runtime configuration separates work size from shared capacity:
 
 - `defaultConcurrency` limits whole render requests admitted by the Endpoint's Runtime capacity resource.

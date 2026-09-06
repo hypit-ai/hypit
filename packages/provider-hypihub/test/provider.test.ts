@@ -11,6 +11,7 @@ import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
 import { sealSpeechEvidenceAudio } from "@hypit/speech";
 import { speechEvidenceTypes } from "@hypit/speech-evidence";
 import { whisperXCapabilities, whisperXRequestForEvidenceAudio } from "@hypit/whisperx";
+import { portraitMattingEndpoint, sealPortraitMattingRequest } from "@hypit/volcengine-matting";
 
 import { createHypiHubProvider, diagnoseHypiHubProvider } from "../src/provider.js";
 
@@ -32,6 +33,57 @@ async function endpointFor(request: Need, fetch: typeof globalThis.fetch): Promi
   assert.equal(resolution.registration.kind, "asynchronous");
   return resolution.registration.endpoint;
 }
+
+test("HypiHub portrait matting uses the video job lifecycle and stores transparent output", async () => {
+  const resources = new MemoryResourceStore();
+  const source = await resources.put(new Uint8Array([1, 2, 3]), "video/mp4");
+  const request: Need = {
+    id: "need:portrait-matting", capability: portraitMattingEndpoint.capability, returns: portraitMattingEndpoint.returns,
+    constraints: sealPortraitMattingRequest({ source: [{ role: "video", artifact: source }] }) as unknown as CanonicalValue,
+    result: "record:cutout",
+  };
+  let submissions = 0;
+  const registry = new EndpointRegistry();
+  await createHypiHubProvider({
+    publicAssetUrl: async (artifact) => { assert.equal(artifact.resource, source.resource); return "https://media.example.test/source.mp4"; },
+    pollIntervalMs: 0,
+    fetch: async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/models/matte-portrait-video")) return Response.json({ endpoints: ["videos"] });
+      if (url.endsWith("/videos")) {
+        submissions++;
+        assert.deepEqual(JSON.parse(String(init?.body)), {
+          model: "matte-portrait-video", ref_video_url: "https://media.example.test/source.mp4", format: "WEBM",
+        });
+        return Response.json({ id: "job_cutout", status: "queued" });
+      }
+      if (url.endsWith("/jobs/job_cutout")) return Response.json({ id: "job_cutout", status: "succeeded" });
+      if (url.endsWith("/jobs/job_cutout/assets")) return Response.json({ items: [{ url: "https://media.example.test/cutout.webm" }] });
+      if (url.endsWith("/cutout.webm")) return new Response(new Uint8Array([4, 5, 6]), { headers: { "content-type": "video/webm" } });
+      throw new Error(`Unexpected request ${url}`);
+    },
+  }).install(registry);
+  const resolution = registry.resolve(request);
+  assert.equal(resolution.status, "resolved");
+  assert.equal(resolution.registration.kind, "asynchronous");
+  const endpoint = resolution.registration.endpoint;
+  const context = { command: { kind: "fulfill-need" as const, id: "command:cutout", need: request },
+    need: request, resources, credentials: { apiKey: { secret: "test-key" } }, operation: "operation:cutout" };
+  const started = await endpoint.start(context);
+  assert.equal(started.status, "pending");
+  if (started.status !== "pending") return;
+  const ready = await endpoint.poll({ ...context, handle: started.handle! });
+  assert.equal(ready.status, "ready");
+  if (ready.status !== "ready") return;
+  const result = await endpoint.collect!({ ...context, handle: ready.handle });
+  assert.equal(result.status, "completed");
+  if (result.status !== "completed") return;
+  assert.equal(result.result.value.kind, "inline");
+  assert.equal(submissions, 1);
+  const artifact = (result.result.value as unknown as { kind: "inline"; value: { videos: [typeof source] } }).value.videos[0];
+  assert.equal(artifact.mediaType, "video/webm");
+  assert.deepEqual(await resources.get(artifact.resource), new Uint8Array([4, 5, 6]));
+});
 
 function wav(sampleFrames: number): Uint8Array {
   const bytes = new Uint8Array(44 + sampleFrames * 2);

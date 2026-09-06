@@ -190,6 +190,12 @@ export async function renderHyperframesVisual(
         const browserPid = session.browser.process()?.pid;
         options.onProgress?.({ phase: "worker-initializing", worker, range: task, browserPid, elapsedMs: elapsedMs() });
         await stage(`worker ${worker} initialization`, config.initializationTimeoutMs, () => engine.initializeSession(activeSession));
+        // HyperFrames' PNG capture clears the page/composition backgrounds for
+        // standalone transparent exports. Here PNGs are intermediate frames of
+        // a Film, whose authored Canvas background still belongs in the image.
+        await activeSession.page.evaluate(() => {
+          globalThis.document.getElementById("__hf_transparent_bg__")?.remove();
+        });
         options.onProgress?.({ phase: "worker-start", worker, range: task, browserPid, elapsedMs: elapsedMs() });
         for (let frame = task.startFrame; frame < task.endFrameExclusive; frame++) {
           signal.throwIfAborted();

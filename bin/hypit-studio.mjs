@@ -15,16 +15,6 @@ const {
   installExternalPackageResolution,
 } = await import("../packages/package-loader-node/src/distribution-resolution.ts");
 installDistributionPackageResolution([distributionRoot]);
-const {
-  hypitHostPackageRoot,
-  prepareHostPackages,
-} = await import("../packages/runtime-host-node/src/index.ts");
-const machinePackages = hypitHostPackageRoot();
-installExternalPackageResolution([machinePackages]);
-await prepareHostPackages(["vite@5.4.21"], {
-  root: machinePackages,
-  onProgress(event) {
-    if (event.phase === "installing") process.stderr.write(`Installing ${event.specifier} for Studio...\n`);
-  },
-});
+const { hypitHostPackageRoot } = await import("../packages/runtime-host-node/src/index.ts");
+installExternalPackageResolution([hypitHostPackageRoot()]);
 await import("../packages/studio/start.ts");

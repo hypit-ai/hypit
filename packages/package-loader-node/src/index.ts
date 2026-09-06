@@ -11,6 +11,7 @@ export {
 export {
   installDistributionPackageResolution,
   installExternalPackageResolution,
+  resolveDistributionPackageImport,
 } from "./distribution-resolution.js";
 export {
   locateNodePackage,

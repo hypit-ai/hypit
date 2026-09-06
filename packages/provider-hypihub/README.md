@@ -12,6 +12,17 @@ admits them into the current Build's working byte area. Image references use Hyp
 for one video). First/last-frame images use `first_frame` and `last_frame`. It also
 exports a small Gemini-native VLM generator for callers that previously used Vertex.
 
+For moving portraits, [Volcengine Matting](../volcengine-matting/README.md) maps
+`@hypit/volcengine-matting@1#matte-portrait-video` to `POST /v1/videos` with
+`model: "matte-portrait-video"`, `ref_video_url` and `format` (`WEBM` by default, or `MOV`).
+Both formats carry transparency. The source video uses the same upload transport as other video
+references; the returned job uses the same polling and asset collection lifecycle. The selected
+account's `/v1/models` establishes availability. The processed video enters ordinary Normalize,
+then either semantic alignment for a Script performance or Media Track for B-roll.
+
+The existing [Background Removal](../background-removal/README.md) package handles single images
+through KIE Recraft. This Provider does not bind that separate image capability either.
+
 Runtime Profile example:
 
 ```json

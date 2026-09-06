@@ -21,6 +21,7 @@
     "@hypit/driver-node": "workspace:*",
     "@hypit/mimo-speech": "workspace:*",
     "@hypit/seedance": "workspace:*",
-    "@hypit/speech": "workspace:*"
+    "@hypit/speech": "workspace:*",
+    "@hypit/volcengine-matting": "workspace:*"
   }
 }

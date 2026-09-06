@@ -19,6 +19,18 @@ import type {
 } from "@hypit/runtime";
 import { capacityUnits, verifyCredentialRef } from "@hypit/runtime";
 
+export type { CanonicalValue, CapabilityRef, ModuleRef, StoredValue, TypeRef } from "@hypit/protocol";
+export type {
+  CapacityResourceClaim,
+  CredentialAcquisition,
+  CredentialRef,
+  CredentialValue,
+  OperationFailure,
+  OperationProgress,
+  OperationReceipt,
+  ResourceStore,
+} from "@hypit/runtime";
+
 export type Awaitable<T> = T | Promise<T>;
 
 export type EndpointFulfillment = {

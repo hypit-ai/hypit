@@ -1,5 +1,9 @@
 # `@hypit/speech`
 
+External components use `hypit/speech` from their `hypit` development dependency. The package
+owns the types and helpers below; Source imports retain the `@hypit/speech@1` Module identity.
+
+
 Public contracts for speech duration, normalized semantic Takes and provider-neutral evidence audio.
 A `SemanticTake` contains one normalized media product, one authored Segment, its words and local
 frame anchors. Ordered Takes are assembled by `@hypit/speech-track` into a `SemanticTrack`, which is
