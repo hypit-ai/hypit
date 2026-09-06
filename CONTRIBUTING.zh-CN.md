@@ -19,17 +19,17 @@ corepack enable
 pnpm install --frozen-lockfile
 ```
 
-运行真实 Build 还需要 Python 3.10–3.13、uv、ffmpeg 和 Chromium，各自的用途见[开发指南](https://docs.hypit.ai/zh/guide/develop)。
+运行真实 Build 还需要 Python 3.10–3.13、uv、ffmpeg 和 Chromium，各自的用途见[开发指南](https://hypit.ai/zh/guide/develop/)。
 
 ## 进行改动
 
 | 改动范围 | 文档 |
 | --- | --- |
-| 新增 Author 包 | [添加 Author 包](https://docs.hypit.ai/zh/guide/author-packages) |
-| 新增 Provider | [添加 Provider](https://docs.hypit.ai/zh/guide/providers) |
-| 编译、Run 与 Build | [Runtime](https://docs.hypit.ai/zh/guide/runtime) |
-| 命名、模块边界、wire 数据 | [代码规范](https://docs.hypit.ai/zh/guide/conventions) |
-| 测试与依赖环境的测试套件 | [测试](https://docs.hypit.ai/zh/guide/testing) |
+| 新增 Author 包 | [添加 Author 包](https://hypit.ai/zh/guide/author-packages/) |
+| 新增 Provider | [添加 Provider](https://hypit.ai/zh/guide/providers/) |
+| 编译、Run 与 Build | [Runtime](https://hypit.ai/zh/guide/runtime/) |
+| 命名、模块边界、wire 数据 | [代码规范](https://hypit.ai/zh/guide/conventions/) |
+| 测试与依赖环境的测试套件 | [测试](https://hypit.ai/zh/guide/testing/) |
 
 中英文档分别位于 `docs/` 和 `docs/zh/`，改动一侧的页面时，请一并改动对应的另一侧。
 
