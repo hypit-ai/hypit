@@ -94,6 +94,10 @@ The target may intentionally change person, product, brand, language, or visual 
 whether the transformed element performs the same useful role, not whether its pixels match. When the
 target's Treatment deliberately changes the role too, the Treatment is the authority.
 
+For a supplied person or product, compare the new appearances with those actual references as well
+as the intended camera image. Judge recognizable identity, appeal, and how naturally the new subject
+inhabits the piece; check that dialogue, demonstrations, and graphic details make sense for this target.
+
 Fresh visual attention is useful when familiarity hides an obvious problem. Another observer can be
 asked a neutral, bounded question about the actual media, while the commissioned Agent remains
 responsible for combining that evidence with the Brief, Treatment, and graph.
@@ -107,7 +111,6 @@ responsible for combining that evidence with the Brief, Treatment, and graph.
 | Composition, authored parameters, or semantic/clock relation is wrong | Author Source or Recipe |
 | The wrong file, earlier Output, or stand-in is selected | Run Source |
 | A reusable visual role cannot express or render its intended design | the project Author Package |
-| Word timing does not describe the produced speech | the Take's transcription or alignment evidence |
 
 Use the smallest correction that changes the failed fact and preserve existing work around it. Review
 again when that correction produces new visible or audible evidence. A request for different paid

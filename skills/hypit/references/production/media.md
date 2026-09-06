@@ -90,7 +90,7 @@ it a duration, so the resulting SemanticTake has the Segment's start/end anchors
 It enters the same Speech Track assembly as a spoken Take.
 
 [wordless-take.ts](examples/wordless-take.ts) shows the adapter: it calls `materializeSemanticTake`
-from `@hypit/speech` with the authored Segment, normalized media, a start at frame zero and an end at
+from `hypit/speech` with the authored Segment, normalized media, a start at frame zero and an end at
 the media's frame count. A project Surface can expose it with `narrative`, `segment` and `media`
 inputs and one `take` output. [Track authoring](track-authoring.md) explains that package wiring.
 
@@ -135,3 +135,6 @@ Use graph operations for repeatable preparation belonging to the production. `hy
 are useful for inspection and deliberately exported evidence. Image geometry changes, compositing
 and cutouts have separate installed vocabulary in `@hypit/image-transform`, `@hypit/image-compose`
 and `@hypit/background-removal`; select the operation that matches the asset's intended use.
+When the composition calls for isolating a subject from its background, read
+[insets and background removal](../playbooks/craft/compositing.md#inset-cutout-and-flattened-composite-are-distinct-choices)
+for the choice of treatment and how its processed media returns to this preparation flow.

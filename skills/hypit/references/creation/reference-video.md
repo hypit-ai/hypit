@@ -40,6 +40,34 @@ them:
 - `boundaries` offers possible visual-change locations for navigation;
 - `fetch` turns a supported link into a local source file.
 
+For example, these commands preserve original-media time while exposing different evidence:
+
+```bash
+hypit transcribe references/ad/source.mp4 \
+  --to references/ad/transcript.json
+
+hypit media tile references/ad/source.mp4 --start 0 --end 12 \
+  --to references/ad/evidence/opening.jpg
+
+hypit media cut references/ad/source.mp4 --start 6.8 --end 8.4 --label-time \
+  --to references/ad/evidence/list-change.mp4
+
+hypit media frames references/ad/source.mp4 --at 6.9,7.3,7.8 --label-time \
+  --to references/ad/evidence/list-frames
+
+hypit observe references/ad/source.mp4 \
+  --instruction "Observe the supplied work and report evidence relevant to the question." \
+  --prompt "How do the picture, Caption, MG and sound establish and pay off the hook?" \
+  --to references/ad/drafts/whole-piece-observation.md
+```
+
+`transcribe` writes word evidence used beside `TIMELINE.md`. Media commands write only the clips,
+frames or grids named by `--to`; keep the ones worth reopening under `evidence/`. An `observe` report
+is an observer's account, not the reference archive itself. Read it against the media, then write the
+connected whole-piece judgment in `ANALYSIS.md` and locatable facts in `TIMELINE.md`. A narrower
+question can instead use one clip, grid or frame as its input. The command forms are composable; the
+current uncertainty decides which of them is useful.
+
 No evidence form is a substitute for every other one. A still cannot establish movement or sound. A
 single representative frame cannot establish entry, exit, replacement, or persistence. A long video
 pass can lose small text and rapid order. A tile shows sampled order but may miss what happens between
@@ -98,6 +126,12 @@ description need not repeat the citation in every sentence. When a fact remains 
 question that would change the work.
 
 ## Preserve time without turning it into target code
+
+Look for the editorial intention behind timing. A portrait may arrive when a player is named, an
+icon may settle when a verdict lands, and the next speaker's voice may begin while the previous
+picture remains. Explain those relationships from the actual evidence. For the target, prefer
+Selections for meaningful spans and Moments for events, then let the accepted Takes locate them.
+If the new product changes the argument, reconsider the picture or reveal that serves it as well.
 
 Reference time establishes order, overlap, duration, and relation to spoken words. Record both the
 original seconds and the meaningful relation: a picture illustrates the word `videos`, a reveal lands

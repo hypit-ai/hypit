@@ -1,14 +1,13 @@
 # `@hypit/audio-track`
 
-Official provider-free Audio Track authoring package.
+Place music, ambience and sound effects in the assembled video. A reveal sound can follow a Script
+Moment; music can occupy a Segment or the program; an explicitly timed sound can use clock placement.
+Performance audio normally comes from [Speech Track](../speech-track/README.md) and can continue
+under these independent sounds and [Media Track](../media-track/README.md) coverage.
 
-It consumes explicitly selected and normalized `SynchronizedMedia`, resolves Program, Selection or
-Moment windows through `@hypit/temporal`, applies exact source trim and one-shot, loop or bounded
-pitch-preserving stretch occupancy, and lowers independent items to one ordinary peer `AudioTrack`.
-
-The public audio waist uses one exact 48 kHz sample mapping. It contains no Provider, queue, path,
-Narrative identity, privileged speech lane, automatic extraction, loudness normalization or hidden
-mixing behavior. Local and remote media Endpoints execute the same `AudioProgramPlan`.
+Each Clip consumes normalized audio-bearing media and a projected Window. Gain, fades, trim and
+playback express the mix. Normalization preserves the source level; choose the balance and any
+music ducking for the actual performance. The resulting `.track` is a peer AudioTrack in Film.
 
 ## Authoring clips
 

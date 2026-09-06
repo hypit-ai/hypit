@@ -44,6 +44,7 @@ unless the decision has changed.
 | Read | When the work's shape includes |
 | --- | --- |
 | [UGC and talking-head performance](formats/talking-head.md) | one person directly addressing the viewer, with natural edited performance |
+| [Short drama](formats/short-drama.md) | characters, relationships, actions and changing dramatic settings carrying the story as rich A-roll |
 | [Two-person podcast](formats/two-person-podcast.md) | complementary host views, conversational reactions, product interaction or lifestyle coverage |
 | [Street interview](formats/street-interview.md) | a motivated encounter, guest/interviewer/shared views, reveals or tracked Caption |
 | [Ranking and listicle](formats/ranking-listicle.md) | a persistent comparison or board whose state changes with the argument |

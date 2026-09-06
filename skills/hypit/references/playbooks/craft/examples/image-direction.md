@@ -1,19 +1,20 @@
 # Image direction examples
 
 Read this alongside [Directing generated images](../image-direction.md) when learning the actual
-prompt language and aesthetic choices behind Hypit's phone-video images.
+prompt language and aesthetic choices for phone-video images.
 
-The record-store case pairs its exact English production prompt with the supplied output; its public
-WebP viewing copy preserves the original 1152 × 2048 dimensions. The other three pictured cases pair
-their supplied outputs with faithful English translations of the Chinese production prompts; those
-copies preserve the original 1520 × 2688 dimensions. Framing is consolidated into `shot`, and output
-orientation is moved to the external model settings. The translated English versions illustrate the
-direction but have not themselves been submitted as generation requests.
+The record-store case pairs its exact English production prompt with its output. The other three
+pictured cases pair their outputs with faithful English translations of the Chinese production
+prompts. Framing is consolidated into `shot`, and output orientation is moved to the external model
+settings. The translations illustrate the direction; only a shown output establishes what a submitted
+prompt produced.
 
 In each prompt, the first paragraph comes from the Kit's fixed capture block, the next is the
-`shot` input, and the remaining paragraphs are the `direction` input. These examples use no reference
-media. A different work can connect references and explain their roles through the optional
-`references` input. The Kit's README in the Distribution owns the exact SVML assembly.
+`shot` input, and the remaining paragraphs are the `direction` input. The pictured character studies
+use no reference media; the supplied-presenter variation below adds an identity reference. A work can
+explain connected images through the optional `references` input.
+[Directing generated images](../image-direction.md#use-a-concrete-capture-direction)
+shows the SVML assembly.
 
 The suggested settings for these prompts are `aspect-ratio="9:16"` and `resolution="2K"` on
 `gpt:Image`. These are external model settings; the prompt describes the composition within that
@@ -57,17 +58,14 @@ may call for flowing hair, workwear, a bustling outdoor setting, or another pale
 clothing, walnut shelves, and two beauty comparisons are not a reusable formula for an attractive
 woman. Keep the aesthetic direction forceful while making its visible details belong to the new person.
 
-In the saved result, her face draws attention between the black bob, green knit, and wooden shelves.
+In the result, her face draws attention between the black bob, green knit, and wooden shelves.
 The knit stitches, headphone surfaces, silver hoops, and reflections on the record sleeves give
 different materials their own visible character. Small highlights are visible on her nose and lips.
-These are observations of this output. Its prompt does not separately request skin highlights,
-record-sleeve reflections, or visible knit stitches.
 
 The direct gaze, open mouth, microphone, and forward gesturing hand make the frame read as an ongoing
 conversation. The turntable occupies the lower left, while the records and handwritten recommendation
 cards make the shop legible around her. The camera sits slightly above her eye line, while one
-shoulder meets the right edge of the image. The original request remains intact below so that
-intention and output can be compared.
+shoulder meets the right edge of the image. The complete prompt follows.
 
 Complete English prompt:
 
@@ -82,6 +80,33 @@ Her hair is cut into a neat chin-length bob. She wears a jade-green knitted polo
 
 The jade-green clothing gives her definition against the walnut surroundings. The shop has ordinary interior lighting: her face is clearly lit, while the shelves retain natural shadows and readable detail. It feels like a favorite local record-store owner taking a moment to tell you which album you should take home.
 ```
+
+### The record-store shot with a supplied presenter
+
+Imagine the user supplies a portrait of an adult woman with a bob, glasses, and broad shoulders,
+and asks to appear in the record-store setup. Her photo supplies identity; the styling and direction develop her into a striking,
+music-literate host. The capture language, strong appeal, comfortable framing, and coordinated palette
+carry forward. Her glasses become part of that composed presence.
+
+Connect the portrait as the first `gpt:Reference` image. The reference sentence below can live in the
+Kit's `references` input; the rest continues to use `shot` and `direction`.
+
+```text
+A photograph with the texture of real iPhone footage, captured as a single frame from a video actually shot on an iPhone. The image looks real, without an oily, overprocessed finish, and has the texture of video footage. The background is clearly visible, with no depth-of-field blur. Skin texture is natural and fine, the lighting is natural, and the image is coherent and free of visual artifacts.
+
+Generate a half-body image of the presenter inside an independent record shop in Shanghai. She sits slightly to the right, comfortably near the camera, with her face level and directed toward it. A turntable on a low cabinet enters the lower-left part of the frame beside her chair. Her shoulders and upper body remain clearly visible.
+
+She holds a small handheld microphone while speaking to the camera, her free hand gesturing naturally. She has the effortless confidence of someone who recognizes a record from its first two seconds. She looks exceptionally beautiful and charismatic, with the cool, discerning presence of an independent film actress. Her broad shoulders and excellent head-to-shoulder proportions give her a strong presence in the frame.
+
+Her bob and glasses complement a jade-green knitted polo, small silver hoop earrings, and over-ear headphones resting around her neck. Behind her are walnut record shelves, a few displayed album sleeves, and a handwritten recommendation card tucked into a record bin.
+
+The jade-green clothing gives her definition against the walnut surroundings. The shop has ordinary interior lighting: her face is clearly lit, while the shelves retain natural shadows and readable detail. It feels like a favorite local record-store owner taking a moment to tell you which album you should take home.
+
+Use the person in reference image 1 as the presenter, preserving her recognizable identity.
+```
+
+Another supplied person may invite warmer energy, sharper humor, or different styling and colors.
+Look at that image and direct its appeal within the target work, using the same image craft.
 
 ## Mob Wife: strong glamour in a captured world
 
@@ -101,7 +126,7 @@ A photograph with the texture of real iPhone footage, captured as a single frame
 
 Generate a close half-body image of a Latina woman in her thirties, seated slightly to the right and near the camera. Keep her body within the frame. Her face is directed straight ahead without any tilt or rotation, and the lower part of her body is visible and unobstructed.
 
-She holds a handheld microphone in one hand and speaks to the camera, while her other hand gestures. Her commanding attitude says, “Stay out of my husband's business.” She is exceptionally beautiful, with the intense beauty of a top Italian actress and the stunning appeal of a young Monica Bellucci. She has broad shoulders, excellent head-to-shoulder proportions, and a larger-than-life presence.
+She holds a handheld microphone in one hand and speaks to the camera, while her other hand gestures. Her commanding attitude says, “Stay out of my husband's business.” She is exceptionally beautiful, with the intense beauty of a top Italian actress and the stunning appeal of an iconic Italian screen star in her youth. She has broad shoulders, excellent head-to-shoulder proportions, and a larger-than-life presence.
 
 She wears a leopard-print fur coat over a black low-cut top, several chunky gold chains layered around her neck, and large gold hoop earrings. Her long nails are deep red. Her dark-brown hair falls in voluminous waves; she wears classic red lipstick and bold but clean eye makeup. She sits in a leather booth in an expensive-looking Italian restaurant. An oil painting hangs on the wall behind her, a bar is visible farther back, and candles stand on a nearby windowsill.
 

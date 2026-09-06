@@ -3,6 +3,9 @@
 Read this when turning useful visual references and Script into living speech, interaction or
 silent action. The image establishes who and where; motion makes something happen to them.
 
+Seedance 2 Mini at `720p` is the usual recommendation for capable, affordable generated performance.
+Choose another model or resolution when the work's visual or performance needs call for it.
+
 ## Give each input its own responsibility
 
 | Input | Responsibility |
@@ -13,9 +16,54 @@ silent action. The image establishes who and where; motion makes something happe
 | Kit Recipe | recurring camera, edit, pace and performance choices |
 | Action direction | this passage's attitude, attention, physical interaction and motivated cuts |
 
-The `@hypit/seedance-kits` README owns template assembly and reference order. The exact model module
-owns invocation modes, duration and media limits. Kits produce ordinary Text; the Source connects
-that Text and explicit references to a model request. Action does not secretly add those references.
+Seedance exposes three distinct request shapes:
+
+| Surface | Inputs and use |
+| --- | --- |
+| `seedance:TextVideo` | Text alone; useful when the intended world does not need visual identity or composition references. |
+| `seedance:FrameVideo` | A required first frame and optional last frame for literal endpoint control. |
+| `seedance:ReferenceVideo` | One or more image, video, or audio references that guide identity, world, voice, motion, or camera language without declaring literal endpoints. |
+
+Most controlled Hypit production starts from useful generated images and uses reference generation.
+That reflects the work's need for identity, scene, composition, and repeatable visual relationships;
+it does not remove the other request shapes when their meaning fits. A last frame belongs only when
+the shot genuinely needs to arrive at that exact image.
+
+Kits produce ordinary Text; the Source connects that Text and explicit references to the selected
+request shape. Action does not secretly add references. The reusable package Sources are:
+
+| Import | Intended prompt relationship |
+| --- | --- |
+| `@hypit/seedance-kits/speaker` | One visible speaker, one character-and-scene image, and one voice reference. |
+| `@hypit/seedance-kits/broll` | A silent visual event or montage. |
+| `@hypit/seedance-kits/podcast` | Two conversation views and their two voices. |
+| `@hypit/seedance-kits/call` | Two video-call reverse views. |
+| `@hypit/seedance-kits/street-interview` | Interviewer, guest, shared view, and two voices. |
+| `@hypit/seedance-kits/motion-reference` | Preserve the subject while transferring body motion. |
+| `@hypit/seedance-kits/camera-reference` | Preserve the subject while transferring camera language. |
+
+A speaking Take can be assembled directly from the installed Source:
+
+```svml
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
+<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
+
+<text:Render id="hook-prompt" template={speaker-kit.speaker-v1}
+  recipe={look.speaker.host}>
+  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
+  <text:Set name="action" text={hook-action}/>
+</text:Render>
+
+<seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt}
+  duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  <seedance:Reference image={presenter}/>
+  <seedance:Reference audio={voice}/>
+</seedance:ReferenceVideo>
+```
+
+The selected model vocabulary supplies its current duration, reference-count, format, and media
+limits. The Kit does not own those limits or the request's explicit media edges.
 
 Use the Script's `.dialogue` Text rather than retyping dialogue into action. Map Role names to the
 Kit's A/B identities where necessary. Preserve one recurring voice reference per character when
@@ -58,15 +106,20 @@ operation and align the resulting edited media; a prompt choice is not a determi
 
 ## Size the request around the delivery
 
-Use `hypit measure` on the adopted Segment before writing its duration. Estimate the desired pace,
-then account for the interaction and any intentional pause. Check the selected model's actual range
-with `hypit vocabulary @hypit/seedance`; Mini in these examples accepts 4–15 whole seconds. This is
-a bound on those requests, not on all video models or the finished video's duration.
+Use `hypit measure` on the target Segment at its intended pace, accounting for interaction and pauses.
+[Script and time](../../creation/script-and-time.md#measure-before-choosing-durations) explains the
+command, rounding, and how estimates inform the writing. The original video's seconds help explain
+its rhythm; the target's delivery determines how much generated media this passage needs.
 
-If a passage is too dense, tighten it or divide it at a natural stage. Avoid filling the maximum
-duration merely because it is available. A short question, an answer with a reaction, and a payoff
-can have different lengths. After production, use actual normalized media and alignment for time;
-the estimate never supplies the final word anchors.
+Read the selected model's supported whole-second duration values with
+`hypit vocabulary @hypit/seedance`. They constrain one generation request; the finished work and its
+individual edited beats can have other lengths.
+
+An estimate outside that range is a useful creative question. A brief question and its answer might
+share one Take; a line might gain a few useful words or a natural reaction; a long exchange might
+divide where the thought turns. Find the shape that serves the passage, then choose a supported
+integer duration for the intended performance. After production, actual normalized media and
+alignment supply its timing and word anchors.
 
 Watch the result for the decisions that matter: engaged performance, correct speaking identity,
 legible interaction, intentional cuts and the right degree of energy. Correct words alone do not

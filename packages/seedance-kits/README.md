@@ -3,9 +3,10 @@
 Data-only authoring Kits for recurring Seedance semantics. They are `TextTemplate` source modules,
 not model wrappers, Providers or new execution nodes.
 
-Vendor the selected `.svs` file into the video project (for example `./kits/speaker-v1.svs`). This
-keeps its bytes inside the project's Source Closure and Workspace boundary; a project must not
-reach back into the installed Distribution through `../../packages/...`.
+Import a selected public Source from the installed package, for example
+`@hypit/seedance-kits/speaker`. The package manager or active Distribution owns the installed
+version; Source Closure reads that Source and its relative dependencies without copying it into the
+video project or reaching through a physical `../../packages/...` path.
 
 Each Kit is rendered by the domain-neutral `text:Render` Surface. Its Text output then feeds one of
 the three low-level `@hypit/seedance` invocation modes. Reference media and duration remain
@@ -14,7 +15,7 @@ ordinary explicit graph edges:
 ```svml
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="broll-kit" source="./kits/broll-v1.svs"/>
+<import as="broll-kit" source="@hypit/seedance-kits/broll"/>
 
 <text:Render id="broll-prompt" template={broll-kit.broll-v1} recipe={recipes.broll}>
   <text:Set name="story" text={copy.broll}/>
@@ -31,7 +32,7 @@ Speaker uses the same graph vocabulary. The Kit assumes `@image1` is the visible
 `@audio1` is the voice-timbre reference; it owns no media counting or generation wrapper:
 
 ```svml
-<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
 
 <text:Render id="hook-prompt"
   template={speaker-kit.speaker-v1}
@@ -71,8 +72,9 @@ this passage's attitude, attention, interaction and any motivated cuts admitted 
 Do not retype the complete spoken text into action or treat each Role turn as a required new Take.
 For B-roll, `story` carries the silent visual events rather than spoken dialogue.
 
-These files are project-vendored authoring material. Adapt a project copy when the production needs
-a different prompt structure; a Kit is not a Core restriction or a hidden media-generation wrapper.
+These files are reusable packaged authoring material. When one production needs a different prompt
+structure, author a project-local Text Template and import that Source explicitly rather than
+modifying the installed package. A Kit is not a Core restriction or a hidden media-generation wrapper.
 Reference order, duration, audio generation and output aspect ratio remain explicit on the model
 Surface. Setting a prompt option cannot create a media reference or execute a postprocess.
 

@@ -60,8 +60,8 @@ the corresponding screen or conversational interaction instead of a physical han
 
 ## An opening can establish both people at once
 
-A top/bottom split screen can immediately reveal the pair before the first question finishes. In
-the worked example, the man speaks above while the woman below looks down, adjusts her seat and
+A top/bottom split screen can immediately reveal the pair before the first question finishes. The
+speaker can occupy one panel while the listener in the other looks down, adjusts their seat and
 looks back up. Those small silent actions establish a conversation already in progress.
 
 ```text

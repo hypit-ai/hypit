@@ -25,7 +25,7 @@ it toward whoever speaks; extending it to the guest is not handing over ownershi
 
 ## Cut toward the person who matters now
 
-In the worked piece, guest answers favor the guest close view. A brief neutral interviewer question
+Guest answers can favor the guest close view. A brief neutral interviewer question
 can stay in the shared view; disbelief or an emotionally important challenge earns the interviewer
 close view. This directs attention rather than alternating cameras on a timer.
 
@@ -44,7 +44,7 @@ At the end, return attention to the guest and let them begin to turn away after 
 These small actions imply life outside the clip. They work because of their cause, not because
 every interview must contain the same bag check and exit direction.
 
-For the worked opening, action alongside the Script can make the causal sequence concrete:
+For example, action alongside the Script can make an opening's causal sequence concrete:
 
 ```text
 BOY is interviewer A; WIFE is guest B. Open in the shared reference setup. She is looking into her
@@ -64,7 +64,7 @@ finger poses. The performer should seem to respond, not execute an animation che
 
 ## Make a reveal one event across several layers
 
-The example's answer Moment updates one slot in an emoji strip, starts a short sound and triggers
+A single answer Moment can update one slot in an emoji strip, start a short sound and trigger
 a colored flash. Earlier answers remain visible; future answers remain question marks. Reuse the
 same Script Moment for these consumers so a changed delivery still makes the reveal land together.
 
@@ -78,9 +78,9 @@ own reveals; its implementation owns the resulting persistent state. See
 
 ## Caption can follow the guest's head
 
-The worked interview first produced its speaking footage with ordinary Caption placement. Face
-detection on the produced footage then supplied boxes; the author expanded them to head regions
-and rendered again with Caption anchored above those regions, reusing the paid media.
+When tracked placement serves the work, produce the speaking footage with ordinary Caption placement
+available first. Face detection on that footage can then supply boxes; expand the chosen person's
+boxes to head regions and render again with Caption anchored above them, reusing the paid media.
 
 Use [Caption tracking](../craft/caption-tracking.md) when this placement serves the piece. It is a
 specific production loop with an external measurement step, not a required first step for interviews.

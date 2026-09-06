@@ -18,9 +18,9 @@ item events. Multiple frames can intentionally tile the Canvas; coverage does no
 full-frame clip or a universally lowest A-roll Track.
 
 A still, a designed background or a moving shot can each be correct. Choose from the intended work
-and observed reference, not a rule that every unclassified region must contain generated motion.
-A fallback layer is useful when it is actually the designed background; it does not by itself
-repair an unintended gap in the foreground.
+and observed reference. A fallback layer works when it is the designed background; an unintended
+foreground gap belongs to the boundary, transition, source duration, or component schedule that
+exposed it.
 
 Use Studio and local frame-range rendering around suspected boundaries to inspect the actual
 composition. Check the first and last visible frames of neighboring items, source exhaustion and

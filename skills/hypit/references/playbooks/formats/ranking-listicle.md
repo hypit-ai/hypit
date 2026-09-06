@@ -7,8 +7,8 @@ current person, evidence and performance explain the next one. It can combine wi
 ## Make the board's state tell the story
 
 Decide what is already established when the clip opens and what the viewer will see decided now.
-A partially filled board can imply an ongoing ranking. In the football example, preset players
-occupy their rows from the beginning while the two spoken passages introduce the active players.
+A partially filled board can imply an ongoing ranking: preset subjects occupy their rows from the
+beginning while the spoken passages introduce the subjects being judged now.
 
 Keep these notions separate when reading a component's vocabulary:
 
@@ -23,9 +23,9 @@ this component.
 
 ## Arrange the person and the argument together
 
-Reserve useful space while drawing the host. The example places the person toward the right,
-uses the left for the active player's icon, and gives the lower region to the board and evidence.
-This is an authored composition; another ranking can have another layout. A setting detail can
+Reserve useful space while drawing the host. One composition can place the person toward the right,
+use the left for the active subject's icon, and give the lower region to the board and evidence.
+Another ranking can use another layout. A setting detail can
 balance an offset host so they do not look artificially pushed aside for graphics.
 
 Speech supplies attitude and explanation. Caption follows its reading rhythm. Static or moving
@@ -53,8 +53,8 @@ Whichever source is useful, inspect identity, exact version, resolution, crop, p
 the final displayed size. Builds consume the selected project file or generated Output; sourcing is
 an authoring decision rather than work repeated on every Run.
 
-Supporting B-roll has a different job. In the football example, generated comic inserts interpret the
-commentary while player icons identify the board entries. Each insert chooses the visual language its
+Supporting B-roll has a different job. Generated comic inserts can interpret the commentary while
+icons identify the board entries. Each insert chooses the visual language its
 joke needs; a parody interface or a theatrical still need not inherit the presenter's phone-camera
 Kit. A factual screenshot or product proof instead gets its authority from the fact it displays.
 

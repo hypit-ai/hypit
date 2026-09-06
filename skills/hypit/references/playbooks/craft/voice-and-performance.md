@@ -10,9 +10,10 @@ carries the words, mouth movement, gesture, gaze, delivery, and picture together
 image establishes the person in a useful shot, an accepted Voice Reference establishes how they
 sound, and the video direction tells the performer what to say and do.
 
-A-roll is a role in the work, not a rectangle or stack position. The same performance remains A-roll
-when its picture is cropped, keyed, moved into a corner, placed above a board, or temporarily covered
-by B-roll or MG. The viewer may stop seeing the speaker while continuing to hear the same performance.
+A-roll is the performance carrying the main Script and establishing its semantic timeline. Its
+SemanticTake retains that role when the picture becomes a circular inset, a moving cutout over a
+demonstration, or a full-frame presenter. The same performance remains A-roll when temporarily
+covered by B-roll or MG. The viewer may stop seeing the speaker while continuing to hear the same performance.
 The covering B-roll may even show the same person doing a silent lifestyle action. Seeing a person while
 hearing words does not by itself identify that picture as their speaking Take or create a new speech source.
 

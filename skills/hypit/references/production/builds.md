@@ -26,12 +26,12 @@ hypit inspect <build-id>
 
 Use the original project and Runtime Profile for activity, status and cancellation; pass
 `--runtime <profile>` when it is not the project's selected Profile. `builds` and `inspect` read
-project-owned Results without a Runtime argument. An empty activity view in another Runtime does
-not establish that the original submission stopped.
+project-owned Results without a Runtime argument. Read active execution from the Runtime Profile
+that received the Build.
 
 Use the known Build id. If it was not returned, use project activity and Results to identify the
-submission from its Run, Source and submission time; the latest unrelated Build is not its identity.
-Follow active work with `status --watch` and reuse completed Outputs. A closed terminal or interrupted
+submission from its Run, Source and submission time. Follow active work with `status --watch` and
+reuse completed Outputs. A closed terminal or interrupted
 observation is distinct from a failed Provider request inside the Build. Finishing an incomplete
 Result is covered below and does not require regenerating media.
 
@@ -42,11 +42,9 @@ its usable Outputs through `build-record` and `satisfy`, then submit a new Build
 work. The next attempt's choices belong in that Run; the earlier Build retains its failure.
 
 When a Provider task-submission request times out without a task ID or another usable receipt,
-report the request failure and the absence of a receipt. The available information cannot distinguish
-a request that never created a task from one whose acknowledgement was lost. Record that uncertainty
-and proceed with a new submission through a new Build under the user's spending authority. Establishing
-the unknown remote outcome is not a prerequisite for continuing, and there is no receipt to recover
-or query. Keep any Outputs already available from the attempt selected in the new Run.
+the Result can establish the request failure and absence of a receipt, while the remote outcome remains
+unknown. A later submission is a new Build and a new spending decision; proceed under the user's
+authority and select any Outputs already available from the earlier attempt in its Run.
 
 When a usable receipt does exist and gives access to a generated asset, the Agent can retrieve that
 asset as an ordinary project file and select it with `file` and `satisfy` in the new Run. This supplies
@@ -212,19 +210,21 @@ Result storage belongs to the video project. The official default is the filesys
 `.hypit/results`. An explicit `hypit.results.json` selects an adapter with the envelope
 `format: "hypit.build-results@1"`, `use` and adapter-owned `config`. Read the installed
 `@hypit/build-result-fs` README for a custom filesystem path, or `@hypit/build-result-s3` for bucket,
-prefix, deployment options and its credential setup. Do not put this selection into the Runtime
-Profile or assume a generation Endpoint's credentials also configure S3.
+prefix, deployment options and its credential setup. `hypit.results.json` owns Result storage;
+the Runtime Profile owns execution, and the S3 adapter owns its credentials.
 
 `hypit paths` locates the project; `hypit doctor` checks its selected repository, even without a
 Runtime Profile. Result listing, export, history and Studio's finished library read that repository.
-If expected Results are absent, first check the project and repository selection rather than
-regenerating media or searching Runtime SQLite as a history database.
+If expected Results are absent, first check the selected project and Result repository.
 
 A submitted Build retains the repository destination captured at submission. Changing the project
 selection while it runs does not redirect its eventual Result. Use the original destination to
 find that Result; changing a selection does not migrate earlier history. Preserve any Result that
 still supplies a Run Candidate: exported files are optional copies, and explicit reuse may still
 reference Resources in the original Result.
+
+[Project handoff](../creation/project-files.md#hand-over-an-editable-production) explains carrying
+those Results and the authored work to another machine or collaborator.
 
 ## Reload changed execution code deliberately
 

@@ -7,6 +7,12 @@ and project package ownership. [Caption authoring](caption-authoring.md) covers 
 
 ## Start with the author-visible behavior
 
+Prefer semantic inputs when the component responds to the video's meaning. A comparison can occupy
+a Selection; a verdict can trigger a Moment; the whole board can live for a Segment. Expose those
+choices on the Surface and pass their projected Windows or Instants to the implementation. This
+keeps the component useful when a new performance changes the pace. Clock-based inputs remain
+appropriate for behavior whose intention is an explicit time or duration.
+
 Write a small intended Source use before implementing it. A new score strip might have one Style,
 an outer Window, preset scores and score-changing Moments. Decide whether its items appear briefly,
 remain after activation, replace a previous state, or rearrange the layout. Those differences define
@@ -29,14 +35,15 @@ repeated updates or simultaneous events.
 ## Keep selection, projection and consumption distinct
 
 Script names meaning: a Selection, Segment or Moment. The semantic timeline supplies where that
-meaning occurred in the produced media. Temporal projection resolves it into an Instant or Window
-in the program's frame space. The consuming component then decides what to do there.
+meaning occurred in the produced media. The consuming component's Surface lowers its authored timing
+form into a projection subgraph, which resolves an Instant or Window in the program's frame space.
+The component's own Fragment and Producers then decide what to do with that value.
 
 ```text
 Script Selection / Segment / Moment + SemanticTrack
-                         ↓ temporal projection
+                         ↓ component Surface creates projection
                 ProgramSpace + Window / Instant
-                         ↓ component consumption
+                         ↓ component Fragment / Producer consumption
               media occupancy, graphic state, sound or effect
 ```
 
@@ -47,8 +54,9 @@ moves the event without asking each component to search for a word or inspect th
 For a Window consumer, `during={story.selection.example}` can take both semantic boundaries.
 `at={story.moment.answer} for="8f"` starts a short effect at a Moment. An Instant consumer may accept
 `at={story.moment.answer}` with no duration because it owns a state transition. Read the actual
-Surface: identical-looking `at` attributes do not imply identical consumption. The owning
-`@hypit/temporal-markup` README describes shared author forms; `@hypit/temporal` describes their values.
+Surface: identical-looking `at` attributes do not imply identical consumption. [Script and semantic
+time](../creation/script-and-time.md#bind-meaning-to-script-identities) describes the shared author
+forms; the component chooses which of them fit its behavior.
 
 ## Separate lifetime, activation and persistent state
 
@@ -87,6 +95,12 @@ the relevant implementation, rather than depending on a monorepo example directo
 `@hypit/interview-emoji-reveal` demonstrates persistent Moment-driven state; `@hypit/ranking`
 demonstrates reveal Windows and settled rows; `@hypit/media-track` demonstrates occupancy and Handoffs.
 
+Ranking provides a complete example in the installed Distribution. Its `packages/ranking/README.md`
+links the relevant files: `surface.ts` projects authored time, `fragment.ts` connects typed inputs,
+`schedule.ts` computes reveal and settled spans, `render.ts` draws them, and
+`packages/ranking-studio/src/index.ts` turns the same program into editor entities. Follow the part
+that answers the current question. A new component may use fewer operations or different state.
+
 The Surface exposes author intent and lowers its supported temporal forms through shared projection
 helpers such as `createTemporalWindowProjection` and `createTemporalInstantProjection`. The Fragment
 wires those projections, explicit ProgramSpace/Canvas and authored values into the component's
@@ -120,7 +134,7 @@ Validate the temporal forms the component actually accepts. The answer strip, fo
 that `at` references a Moment before using the shared helper; it intentionally does not accept a
 Selection boundary. Keep a child `subjectId` meaningful to the component while qualifying graph ids
 by the owning Track so two instances cannot collide. The exact helper options live in
-`@hypit/temporal-markup`.
+`hypit/temporal-markup`.
 
 Project ProgramSpace from the SemanticTrack once within the Fragment. Domain Producers then receive
 that space and traced Windows/Instants, alongside Canvas/Frame, Style and explicit content inputs.
@@ -129,11 +143,10 @@ pattern: each operation retains declared ports, and every child's media remains 
 
 For persistent state, reason about a requested frame directly. For example: outside the outer Window,
 draw nothing; inside it, each slot shows its preset/activated answer or its placeholder. Apply an
-entrance motion relative to that slot's activation frame. Do not increment a mutable browser counter
-or rely on having rendered every preceding frame. Studio scrubbing and partial or concurrent rendering
-must yield the same state from the same inputs.
+entrance motion relative to that slot's activation frame. Deriving state directly from declared inputs
+and the requested frame keeps Studio scrubbing and partial or concurrent rendering deterministic.
 
-Emit the public VisualTrack representation through `@hypit/composition` and `@hypit/visual-ir`.
+Emit the public VisualTrack representation through `hypit/composition` and `hypit/visual-ir`.
 [Component visuals](component-visuals.md) explains Presents, element trees, local animation,
 prepared surfaces and a complete drawing function. [Spatial layout](spatial.md) explains incoming
 Frames, and [Fonts and text](fonts-and-text.md) explains font resources.

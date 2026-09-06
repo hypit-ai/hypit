@@ -10,8 +10,9 @@ Image generation and reference-conditioned video generation form one directing s
 creates a credible person, space, object, composition, and visual language; the video model lets that
 world perform, move, and be photographed over time. Choose the audience's first impression as part
 of that production purpose: who or what draws attention, what presence it has, and what encounter
-the viewer feels invited into. For invented social-video presenters, actively choose an attractive,
-distinctive presence suited to the work. Make the intended appeal as clear as the required framing.
+the viewer feels invited into. For social-video presenters, actively direct an attractive, distinctive
+presence suited to the work. Make the intended appeal as clear as the required framing, whether the
+person is invented or supplied by the user.
 
 Generate an image when the work needs to establish or change visible facts. Reuse an existing image
 when it already supplies them; some shots can proceed directly to video generation.
@@ -28,6 +29,11 @@ Judge the world the image creates. A person, animal, meme character, mermaid, or
 inhabit the photographic language of recorded footage when its materials, light, camera, and
 surroundings behave as if they were physically present.
 
+GPT Image 2 is the usual recommendation for this work. Favor `2K` for a picture that will appear
+full-screen or establish a full-screen video shot. `1K` is often sufficient for a smaller inset or
+graphic asset. Choose from its eventual visible size, cropping, detail, and cost; another resolution
+or model can suit a particular image better.
+
 ## Use a concrete capture direction
 
 For social-native photographic work, direct the model toward a recognizable capture process rather
@@ -36,11 +42,16 @@ describes the result as one frame cut from video actually shot on an iPhone: rea
 overprocessed finish, carrying video texture, with readable background,
 fine skin and material texture, natural-looking lighting, and an intact image.
 
-That description combines a familiar social-video camera language, believable surfaces, and enough
+Actual GPT Image 2 generations show that the complete wording repeatedly moves results toward the
+visible character of ordinary phone-video frames. Preserve it as tested model-specific direction,
+without turning an inference about the model's learned visual associations into a claim about its
+undisclosed training data. Another model or visual form calls for evidence from its own results.
+
+The direction combines a familiar social-video camera language, believable surfaces, and enough
 background information to establish a real place that can continue into a moving shot. Choose the
 subject's styling and the way the camera records it separately: a glamorous, carefully dressed person
 can appear in casually recorded phone footage. Extraordinary beauty or fantastical subject matter
-does not require a beauty-campaign or illustrated capture style.
+can still inhabit this captured visual world.
 
 The capture language describes how the picture looks, not a prop that must appear in it. Add a
 specific material or lighting direction when the shot needs that fact.
@@ -55,8 +66,23 @@ parameter names and supported values.
 For this capture language, import `@hypit/gpt-image-kits/phone-ugc-v1`. Its fixed
 English capture paragraph preserves the production method, while `shot` and `direction` carry the
 current image and optional `references` text explains the connected media. The Source export enters
-the production's Source Closure directly. The installed package README owns its exact assembly,
-inputs and working example.
+the production's Source Closure directly:
+
+```svml
+<import as="text" from="@hypit/text@1"/>
+<import as="ugc" source="@hypit/gpt-image-kits/phone-ugc-v1"/>
+
+<text:Render id="portrait-prompt" template={ugc.phone-ugc-v1}>
+  <text:Set name="shot" text={portrait-shot}/>
+  <text:Set name="direction" text={portrait-direction}/>
+  <text:Set name="references" text={portrait-references}/>
+</text:Render>
+```
+
+`shot` and `direction` are required; omit the `references` Set when no media reference is connected.
+The resulting `{portrait-prompt}` is ordinary Text. Pass it to the selected image Surface and connect
+the actual reference images there as explicit graph inputs; explaining a reference in Text does not
+create that media edge.
 
 [Image direction examples](examples/image-direction.md) pairs the record-store portrait with its
 English production prompt and observations of the result, alongside three supplied case images with
@@ -117,9 +143,16 @@ that casting idea visible form. The transferable choice is this coherence: anoth
 different beauty language, styling, and surroundings, without acquiring a fixed number of comparisons
 or a required idol-and-actress formula.
 
-When the user supplies the exact private person, pet, product, or character they want, the reference
-owns that identity. Describe observable production-relevant qualities and the intended new shot
-without replacing the supplied identity with a prose reconstruction.
+When the user supplies the person, pet, product, or character they want, look at the image and use it
+as the identity reference. "Use the person in reference image 1 as the presenter" can be enough to
+establish that relationship. The full capture direction, attraction, framing, proportions, setting,
+and palette still do their work. Keep the aesthetic direction confident and specific to this subject.
+
+Notice what can make this person compelling in the intended shot: their hair, styling, silhouette,
+or expression may suggest a particular presence. Develop that appeal through the image's wardrobe,
+light, color, and vibe, keeping the supplied identity recognizable. Choose which of the photo's
+other details belong in the new scene. The [supplied-presenter variation](examples/image-direction.md#the-record-store-shot-with-a-supplied-presenter)
+shows how much of a complete prompt can carry forward with that change.
 
 ## Let the setting belong to the subject
 
@@ -145,6 +178,13 @@ Describe the setting from the camera view that will actually be used. Another us
 from that image while showing the naturally different part of the same place. The work needs camera
 images that do a real job. An independent location image is useful when the work needs that location
 on its own; otherwise the actual camera view can establish both the person and the place.
+
+Across related views, distinguish the shared world from what this camera sees. The shared world can
+carry a warm dessert-shop atmosphere, natural afternoon light, textured materials and the social
+relationship between two hosts. One view may see the window and table while the reverse view sees the
+counter and another group of ordinary objects. The background then feels continuous without becoming
+a copied backdrop. In a short drama, the same judgment lets a location carry character, mood and plot
+while each useful camera image remains authored for its own view.
 
 Write fluent natural-language direction, with exact props and relationships singular and clear.
 Separate mutually exclusive visual states into the images the work needs. Preserve dominant facts
@@ -173,7 +213,7 @@ relationship. A product-use image needs the hands, product, and contact geometry
 continue from. B-roll may begin with a more specific action because the visual event itself carries
 the passage.
 
-The original character-image series uses half-body views with the person modestly near the camera,
+For a reusable presenter image, a half-body view can place the person modestly near the camera, with
 the face level and directed straight ahead, a handheld microphone, and clear shoulders and arms.
 Direct distance and proportions together: “She sits slightly nearer the camera in a comfortable
 half-body composition, with broad shoulders and excellent head-to-shoulder proportions.” The face
@@ -281,15 +321,10 @@ lamps within the room. Let texture and small irregularities survive. The goal is
 image dark, flat, or underproduced; it is to make polish arise from a believable captured world.
 
 “The lighting is natural” means the light belongs convincingly to the scene. It can come from
-daylight, room fixtures, or the practical lights of a night location. Do not automatically translate
-it into a bright daytime interior. A readable background needs focus and useful detail, not the same
-illumination as the face. A large open doorway, pale surroundings, and added daylight can collectively
-suggest an airy, uniformly lit scene even when no individual color is called “bright.”
-
-For a workshop that should retain an interior feeling, direct a clearly exposed face and a room
-with its own gentle shadows and visible detail. Choose wardrobe, wall colors, light sources, and
-the area they occupy together. Preserve the intended beauty; solve excessive brightness through
-the scene's tonal relationships instead of compensating with damaged skin or an all-black palette.
+daylight, room fixtures, or the practical lights of a night location. Give the face the exposure it
+needs while letting the setting retain its own readable detail, shadows, materials, and tonal depth.
+Choose wardrobe, surroundings, and light as one relationship so a polished, beautiful subject still
+feels physically present in that place.
 
 ## Give references clear responsibilities
 

@@ -9,9 +9,10 @@ Provider, media generation, or activation hook.
 Use this template for images that should feel like frames from phone-shot social video: a creator,
 an interview view, a lifestyle or product-use shot, or even an imagined person or animal inhabiting
 a photographed world. It favors natural-looking lighting, fine texture, and a readable background
-without depth-of-field blur. These are the chosen capture assumptions of this Kit, rather than
-requirements imposed by GPT Image. A different capture language can use a different template or
-authored Text.
+without depth-of-field blur. On GPT Image 2, this complete wording has repeatedly steered generated
+images toward the visible character of ordinary phone-video frames. That is production evidence about
+the model's behavior, not an API requirement or a universal rule for other models and visual forms.
+A different capture language can use a different template or authored Text.
 
 The capture paragraph is a versioned English text block and remains unchanged whenever this Kit is
 selected. Its skin wording is part of that whole capture direction, including for an animal or

@@ -17,15 +17,18 @@ Name what the element must do in the work before choosing its implementation. Us
 Query the likely package owners:
 
 ```bash
+hypit vocabulary
 hypit vocabulary @hypit/caption-fine
 hypit vocabulary @hypit/media-pipeline --tag StillVideo
 hypit vocabulary --visual text
 ```
 
-The command reports installed package declarations, Surface attributes, children, ports, examples,
-and designed previews. The package README supplies exact syntax and behavior. When the question
-requires more detail, inspect the relevant implementation and public API. An existing component can
-also provide a useful implementation example for a new project package.
+With no package argument, the command lists every package visible to the current Distribution and
+project together with its tags and models. Use that inventory when the role is clear but the owner is
+not. A focused package query then reports Surface attributes, children, ports, examples, and designed
+previews. The package README supplies exact behavior that is local to that installed implementation.
+When the question requires more detail, inspect the relevant implementation and exported API. An
+existing component can also provide a useful implementation example for a new project package.
 
 Run Fragment libraries have a separate interface. A package such as `@hypit/stand-in` can provide
 useful Candidates while declaring no Markup Surfaces. Read [Runs](runs.md) and the library's
@@ -63,6 +66,11 @@ Read the installed `hypit/author-kit` README for the public package boundary and
 for an implementation example. Give the new package its own Module identity and use the project
 owner's scope; the selected Distribution owns the reserved `@hypit/*` namespace.
 
+TypeScript imports use public SDK paths such as `hypit/author-kit`, `hypit/composition`,
+`hypit/text`, `hypit/caption` or `hypit/studio-adapter`. Source imports instead name logical Modules,
+such as `@hypit/caption@1`. When learning from installed official source, translate its internal
+workspace imports to the corresponding public SDK paths in the project package.
+
 Describe the Surface's role, attributes and outputs with a small valid example so a future author
 can select it. A visual preview makes its appearance recognizable; Studio shows the actual
 configuration used in a production.
@@ -86,8 +94,8 @@ reserved `@hypit/*` packages come from the selected Distribution. It does not sc
 tree for possible components.
 
 Keep a new component project-local while it serves this work. If its owner later wants to use it
-across projects, publish it as an ordinary versioned npm or private-registry package and pin it in the
+across projects, send a versioned tarball or publish an npm/private-registry release and pin it in the
 consumer project's `package.json` and lockfile. Sharing changes where the same package is installed;
 it does not change the component model or require a Hypit-specific registry.
 
-[Sharing an Author Package](component-sharing.md) owns the packaging, identity and upgrade details.
+[Sharing a project package](component-sharing.md) owns the packaging, identity and upgrade details.

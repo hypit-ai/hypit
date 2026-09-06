@@ -1,107 +1,37 @@
-# 视频创作工作方式
+# 与 Agent 一起制作视频
 
-Hypit 把创作、执行和结果分开：
+把参考视频、创作 Brief，或两者一起交给 Agent。你可以提供人物照片、产品、Logo 或已有素材，并说明新视频要达到什么目标。Agent 理解这些材料，形成创意方案，再让画面、表演、图形、声音和剪辑共同服务于作品。
 
-- Source、Recipe、Run 描述要做什么；
-- Runtime 执行一次 Build；
-- Result 记录这次 Build 实际产生了什么；
-- reference-video-tools 帮助作者理解、预览和检查内容，不管理 Build 历史或项目历史。
-
-项目不再维护 route 数据库、revision 历史、恢复游标或批次总状态。可继续工作的依据是项目中
-真实存在的 Source、媒体和报告，而不是另一个系统对 agent 过去操作的复原。
-
-## Skill 安装与执行
-
-`skills/hypit/` 是唯一真实、与 Agent 无关的 Skill 目录。OpenAgents 等 Skill Hub 直接把这个
-子目录安装到对应 Agent 的全局 Skill 目录。仓库内的 `.claude/skills/hypit` 与
-`.codex/skills/hypit` 只是指向同一真身的两条叶子软链；两个上层目录仍然彼此独立，未来可以
-分别容纳各 Agent 私有的 Skill。
-
-安装 Skill 只会安装指导内容，不等于安装可执行的 Hypit Distribution。在 npm 包正式发布前，
-Skill 会选择已有 Hypit checkout，或者在机器级 `<home>/hypit` 准备一份 checkout；更新时只允许
-从 `origin/main` 快进，依赖使用仓库锁定版本，命令通过它的 Node 入口运行。Skill Hub 重新安装
-更新的是指导内容，checkout 拉取更新的是可执行 Distribution，二者都不会暗中覆盖对方。
-
-Skill、Distribution 和视频项目的位置与生命周期相互独立。视频项目可以放在任意位置，不需要
-创建 Skill 软链，也不会被加入 Hypit 仓库 workspace。
-
-## 从真实需求开始
-
-先判断任务是原创还是参考视频复刻，再查看现有包和它们公开的词汇：
+## 安装 Skill
 
 ```bash
-hypit-reference-video-tools list_svml_packages
-hypit-reference-video-tools inspect_svml_vocabulary --package <package>
-hypit-reference-video-tools inspect_visual_schema
+npx skills add hypit-ai/hypit -g
 ```
 
-现有 Surface 能表达需要的视觉角色时直接复用。只有确实缺能力时才开发项目本地 author
-package，不能为了一个项目去修改已安装包。
+Skill 提供制作知识，可执行的 `hypit` 包提供命令、组件、Runtime 和 Studio。Agent 可以找到已有的可执行安装，或准备选定的发行版本。Skill、可执行程序和视频项目各有自己的位置，也通过各自的安装渠道更新。
 
-## 原创视频
+## 发展作品
 
-用最小的 Source、Recipe、Run 表达需求，然后分别查看它们的真实情况：
+理解参考片会在整片与细节之间往返：开头为什么抓人，表演怎样推进论述，画面、字幕、图形和声音各自发挥什么作用。观察、转写、针对性的帧和短片，为这些判断提供证据。
 
-```bash
-hypit-reference-video-tools validate_local_author_packages --run ./build.svrun
-hypit-reference-video-tools validate_script_cues --run ./build.svrun
-hypit check ./build.svrun
-hypit-reference-video-tools preview_check ./build.svrun
-hypit-reference-video-tools layout_check --run ./build.svrun
-```
+制作目标片会在意图与可见结果之间往返。换人物或产品，可能同时影响剧本、表演、场景和收尾，也会改变参考图片。Agent 围绕新的目标想清楚这些关系，再通过 Studio 和渲染结果细化作品。
 
-这些命令是相互独立的报告，不会互相批准或解锁。只有报告和设计需求共同说明存在实际问题时
-才修改项目。布局测量只是候选提示；有意的几何关系可以用 `layout_accept` 写下理由。这个理由
-关联的是可读的结构发现名称，不是整个项目快照。
+目标、私有事实和花费由你决定。Agent 在这个方向内承担日常创作与技术选择。付费请求开始前，它会说明所选服务、请求数量，以及 Provider 提供的价格信息。
 
-需要看具体视觉时，直接渲染相关元素和时间窗口，再按照明确的创作意图阅读结果：
+## 保持项目可编辑
 
-```bash
-hypit-reference-video-tools render_element ./build.svrun \
-  --element title --segment intro --out ./review/title-intro.mp4
-hypit-reference-video-tools review_element --run ./build.svrun \
-  --element title --segment intro --video ./review/title-intro.mp4 \
-  --intent-file ./review/title-intent.md
-```
+作品保存在普通项目文件里：
 
-`authoring_check` 可以汇总画面覆盖、播放策略和已经记录的 review，但它不是项目状态，也不是
-提交 Build 的前置条件。
+- 参考笔记解释原片的整体结构和可定位细节。
+- Brief 与 Treatment 分别记录用户目标和 Agent 的创意方案。
+- `.svml` 表达 Script、媒体、组件和合成；`.svs` 保存可复用的 Recipe。
+- `.svrun` 选择 Author Source、已有 Output 和本次执行的目标。
+- Build Result 留存实际产物与本次执行的事实。
 
-## 参考视频复刻
+项目组件是视频制作的一部分。它们与项目一起保存，可以表达新的视觉角色、Caption 样式族或图形行为。需要跨项目共享时，可以通过所有者自己的 scope 发布普通的版本化包。
 
-这条路径不得查看仓库中的示例项目，也不得把参考视频直接作为 Film、Track 或 Take 的来源。
-先把它作为证据准备好：
+修改作品时，Run 可以复用已有 Result 中仍适用的 Output，也包括失败 Build 在失败前已经产出的可用素材。新的 Build 执行修改后的 Run。Studio 显示这份作品，并把支持的编辑写回 Source；Agent 对照目标审看实际成片。
 
-```bash
-hypit-reference-video-tools prepare_reference --video-path ./reference.mp4 --observer agent
-hypit-reference-video-tools observe_reference --reference-id <reference-id>
-```
-
-拆出的镜头、代表帧、逐词转录和观察结果保存在 `.hypit/reference-video-tools/`。它们本身就是
-有用内容。使用 `agent` observer 时，`record_observation` 负责填写明确返回的待回答观察。
-
-根据画面、文字和时间信息创作项目。需要比较时，把相关元素在相同 Script 窗口中渲染出来：
-
-```bash
-hypit-reference-video-tools render_element ./build.svrun \
-  --element ranking --segment list --reference-id <reference-id> \
-  --out ./review/ranking-list.mp4
-hypit-reference-video-tools compare_reconstruction \
-  --reference-id <reference-id> --run ./build.svrun --segment list \
-  --video ./review/ranking-list.mp4 --element ranking
-```
-
-每次明确发起的比较都是一次新的观察。工具不会根据文件摘要静默复用旧答案。
-`reconstruction_check` 只汇总哪些内容看过、哪些没看过，不持有工作流游标。
-
-## Build 与复用
-
-外部生成涉及费用时先运行 `hypit plan`；用户需要执行时再运行 `hypit build`。Build 的公开输出
-进入它自己的 Result。组件公开输出端口产生的中间图片、视频或结构值也会保存，因此后续工作
-可以直接指向它们，不需要把 Run target 偷换成所有中间值的清单。
-
-即使 Run 文件完全没变，多次 Build 仍然得到互相独立的 Result。重要的 Result 和输出使用
-Result presentation 命令赋予人类名称，不建立内容摘要、中心 artifact 表或隐藏历史系统。
-
-批量变体使用普通项目目录和调用者明确维护的任务清单。复制、调度和命名属于调用者或专门的
-批处理工具；reference-video-tools 不再维护第二套 variant 状态机。
+[快速开始](../quickstart.md) 介绍文件格式和命令。
+[Run 与 Build](../quickstart/run.md) 介绍执行和产物复用。
+[Studio](../quickstart/preview.md) 介绍交互预览与编辑。

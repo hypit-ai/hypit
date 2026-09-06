@@ -26,7 +26,7 @@ reuse the same semantic and media outputs through the Run.
 
 ## Start with the Fine family's real expressive range
 
-The UGC, podcast and interview examples use `@hypit/caption-fine`. Fine supports exact fonts,
+UGC, podcast and interview work can use `@hypit/caption-fine`. Fine supports exact fonts,
 placement and anchors, wrapping, Cue boxes, active-word treatment, lead/tail and motion through
 explicit Style Recipes. Role overrides can distinguish podcast hosts; a tracked head can supply a
 moving placement point without changing the verbal pipeline.
@@ -61,8 +61,8 @@ Choose font, size, width, line height, contrast and motion together. If a Cue ov
 its authored grouping and its actual Style; do not assume every overflow has the same cause. Lead,
 tail and handoff shape visibility while karaoke follows semantic word timing.
 
-Treat Caption, icons, flashes and other graphics as a composition. The interview's guest color and
-answer accents work together without coloring every system identically. Check readability across
+Treat Caption, icons, flashes and other graphics as a composition. A guest color and answer accents
+can work together without coloring every system identically. Check readability across
 light and dark frames, avoid hiding the important face or product, and allow enough space above a
 tracked head for the whole Cue rather than only its anchor.
 

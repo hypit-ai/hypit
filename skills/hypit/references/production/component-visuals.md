@@ -33,7 +33,7 @@ and states; the drawing output makes them explicit.
 ## A working drawing function
 
 [visuals.ts](examples/visuals.ts) contains `renderCard`, a complete pure drawing function using
-`sealVisualTrack` from `@hypit/composition`. It receives a projected span and a resolved Frame,
+`sealVisualTrack` from `hypit/composition`. It receives a projected span and a resolved Frame,
 draws a colored box with exact-font text, and optionally fades in relative to the Present's start.
 Its colors, size, padding, layer and entrance duration are supplied by the caller.
 
@@ -48,7 +48,7 @@ then publish the Track through the Fragment and Surface as described in
 [Track authoring](track-authoring.md#connect-the-implementation-at-its-real-boundaries). Surface outputs
 map the Fragment's export name to a public Source name such as `answers.track`.
 
-Use `programSpaceFrameCount` from `@hypit/program-space` for the full program's frame count and
+Use `programSpaceFrameCount` from `hypit/program-space` for the full program's frame count and
 `assertVisualTrackIdentity(track, space)` to check a produced Track against that space. Direct seeking
 and range rendering evaluate the same declared keyframes at the requested frame.
 
@@ -63,10 +63,10 @@ hypit vocabulary --visual visual-track
 hypit vocabulary --visual text
 ```
 
-Visual styles use the supported CSS-shaped property vocabulary. Motion currently interpolates
-`opacity`, `transform`, `filter` and `clip-path` through frame-indexed keyframes. Media sampling
-separately describes which source frame to show at each part of a Present; it is needed for timed
-video playback, trims, loops and holds. Existing Media Track is useful when that is the whole role.
+Visual styles and Motion use the installed CSS-shaped property vocabulary; query the relevant visual
+shapes above for their supported values. Motion uses frame-indexed keyframes. Media sampling separately
+describes which source frame to show at each part of a Present; it is needed for timed video playback,
+trims, loops and holds. Existing Media Track is useful when that is the whole role.
 
 Carry asset and font references through declared inputs. Source assets can be resolved at the
 Surface's asset boundary; generated media remains a graph reference until its Producer runs.

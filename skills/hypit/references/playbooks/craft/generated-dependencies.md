@@ -12,10 +12,28 @@ Reference count and graph depth are consequences of those needs, not production 
 | Podcast | Main host view supplies the complementary host view; each host view plus product supplies its own product-holding variation. |
 | Lifestyle montage | Each scene derives independently from the main character reference, with a logo/product added where needed. |
 | Three-view interview | Shared two-person image supplies both close views; all Takes reuse that view set. |
+| Short drama | A small set of camera images establishes each dramatic setting; its Takes reuse those views until the story needs new visible facts. |
 
 A first useful camera image can establish person and location together. Another view can grow
 directly from it when that parent already supplies the difficult facts. Describe what changes and
 what matters to preserve.
+
+The first image in a dramatic setting may contain one person or several. Within that setting,
+complementary views can retain the shared atmosphere, light and spatial relationship while showing
+the different background sector visible to each camera. Those useful views can support several Takes;
+a modest change of performance or framing does not require another image edge.
+
+A meaningfully new setting can begin with an actual camera image in that world, connected to the
+authoritative character, product or continuing prop references it needs. Each setting can branch from
+those closest facts while leaving incidental objects from previous scenes behind. This keeps the graph
+shallow as a consequence of clear reference responsibilities.
+
+A supplied portrait can enter the first useful camera image, with the full capture and art direction
+the target needs. In a podcast where only the second host changes, the first view supplies the shared
+place and the user's portrait supplies the new second host. In a street interview, supplied identities
+can enter the shared two-person image before its close views are derived. A product image enters the
+views where it appears, such as a host's product-holding variation. Use the existing image directly
+when it already serves the intended shot.
 
 Reference responsibilities can differ. A lifestyle image may preserve identity and physique while
 changing clothes, camera and setting. A product-holding variation may preserve nearly the whole
@@ -25,6 +43,11 @@ rule. See [the worked image examples](examples/conversation-images.md).
 For multiple references, connect actual image edges and explain their roles. “Reference 2” means the
 second image in that request; reference numbers are request-local. A description of a reference cannot
 supply a missing image.
+
+When adapting an existing production, keep useful views that still fit. A reverse angle that inherited
+only the room may remain usable after the other host's face changes. A shared image containing that
+host needs the new identity. Judge the visible relationship and carry the resulting reuse choices
+into [Run Candidates](../../production/authoring.md#reuse-produced-work-explicitly).
 
 ## Let edited Takes meet through their shared world
 

@@ -1,6 +1,7 @@
 # `@hypit/caption-fine`
 
-The uniform-flow Caption family. It renders authored Cues whose tokens all obey the same layout,
+The fine-grained, uniform-flow Caption family. Recipes control placement, typography, Paint,
+active-word treatment and motion. It renders authored Cues whose tokens all obey the same layout,
 type, Paint and motion rules. Spoken time and token order may change the state of that rule; a token
 does not carry a private visual role.
 
@@ -52,9 +53,10 @@ ordinary parameter edits, but Cue rectangles remain read-only semantic evidence.
 
 Cue grouping is authored by Script segments, turns, Style changes and `||`; it is not delegated to
 an LLM. Fine rejects word-specific Style runs. A caption whose Cue contains structural roles or
-relationships—an emphasis group with another font and layout, alternating full-frame inversion, or
-one clause tearing through another—belongs in a separate Caption family that consumes the common
-Caption contract. It is not a Fine preset.
+relationships—such as an independently arranged oversized keyword and supporting phrase—can use
+a new project Caption family. Reuse the common [Caption document, Program and timing](../caption/README.md),
+and implement the new schedule and rendering behavior in that package. This is ordinary component
+authorship; different colors or fonts alone can remain Fine Style choices.
 
 ```svs
 caption.primary {
@@ -72,3 +74,6 @@ caption.primary {
   lead-frames: 4; tail-frames: 4; handoff: cut;
 }
 ```
+
+The [Fine Studio Companion](../caption-fine-studio/src/index.ts) reads the same schedule and per-Cue
+Style references. It presents the actual Cue timing and exposes supported Style edits in the Inspector.
