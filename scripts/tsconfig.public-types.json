@@ -1,0 +1,19 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "rootDir": "..",
+    "outDir": "../dist/public-source",
+    "incremental": false
+  },
+  "include": [
+    "../packages/*/src/**/*.ts"
+  ],
+  "exclude": [
+    "../packages/*/test/**/*.ts"
+  ]
+}

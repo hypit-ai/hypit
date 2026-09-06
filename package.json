@@ -135,7 +135,7 @@
     "test:image-opencv": "node test/run.mjs image-opencv",
     "hypit": "node bin/hypit.mjs",
     "studio": "pnpm --filter @hypit/studio exec node --import tsx start.ts",
-    "prepare": "npm run build:public-types"
+    "prepack": "npm run build:public-types"
   },
   "engines": {
     "node": ">=22.12.0"
@@ -229,7 +229,6 @@
     "@hypit/visual-ir": "workspace:*",
     "@hypit/volcengine-matting": "workspace:*",
     "@hypit/whisperx": "workspace:*",
-    "@rollup/plugin-node-resolve": "16.0.3",
     "@types/node": "24.10.1",
     "rollup": "4.62.4",
     "rollup-plugin-dts": "6.2.3",

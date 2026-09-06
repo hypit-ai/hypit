@@ -1,14 +1,17 @@
+import { spawn } from "node:child_process";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-
-import { nodeResolve } from "@rollup/plugin-node-resolve";
-import { rollup } from "rollup";
-import { dts } from "rollup-plugin-dts";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(await readFile(resolve(packageRoot, "package.json"), "utf8"));
 const outputRoot = resolve(packageRoot, "dist/public");
+const declarationRoot = resolve(packageRoot, "dist/public-source");
+const worker = resolve(packageRoot, "scripts/build-public-type-entry.mjs");
+const publicTypeConfig = resolve(packageRoot, "scripts/tsconfig.public-types.json");
+const require = createRequire(import.meta.url);
+const typescriptCli = require.resolve("typescript/bin/tsc");
 
 function publicEntryTarget(name, declared) {
   if (typeof declared === "string") {
@@ -35,29 +38,53 @@ const entries = Object.entries(manifest.exports ?? {}).map(([name, declared]) =>
     || relativeOutput.startsWith(`..${sep}`) || isAbsolute(relativeOutput)) {
     throw new Error(`${name} writes outside dist/public`);
   }
-  return { name, input, output };
+  const relativeInput = relative(packageRoot, input);
+  if (relativeInput === "" || relativeInput === ".."
+    || relativeInput.startsWith(`..${sep}`) || isAbsolute(relativeInput)
+    || !relativeInput.endsWith(".ts")) {
+    throw new Error(`${name} reads outside the Distribution TypeScript sources`);
+  }
+  const declarationInput = resolve(
+    declarationRoot,
+    `${relativeInput.slice(0, -3)}.d.ts`,
+  );
+  return { name, input: declarationInput, output };
 });
 
+function run(label, executable, args) {
+  return new Promise((fulfill, reject) => {
+    const child = spawn(executable, args, {
+      cwd: packageRoot,
+      stdio: "inherit",
+    });
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
+      if (code === 0) {
+        fulfill();
+        return;
+      }
+      reject(new Error(
+        signal === null
+          ? `${label} exited with code ${String(code)}`
+          : `${label} was terminated by ${signal}`,
+      ));
+    });
+  });
+}
+
 await rm(outputRoot, { recursive: true, force: true });
+await rm(declarationRoot, { recursive: true, force: true });
 await mkdir(outputRoot, { recursive: true });
 
-for (const entry of entries) {
-  const bundle = await rollup({
-    input: entry.input,
-    onwarn(warning, warn) {
-      if (warning.code === "UNRESOLVED_IMPORT") {
-        throw new Error(`${entry.name}: ${warning.message}`);
-      }
-      warn(warning);
-    },
-    plugins: [
-      nodeResolve({ extensions: [".ts", ".d.ts", ".js"] }),
-      dts({ respectExternal: false }),
-    ],
-  });
-  try {
-    await bundle.write({ file: entry.output, format: "es" });
-  } finally {
-    await bundle.close();
+try {
+  await run("TypeScript declaration emit", process.execPath, [
+    typescriptCli,
+    "-p",
+    publicTypeConfig,
+  ]);
+  for (const entry of entries) {
+    await run(`${entry.name} type build`, process.execPath, [worker, JSON.stringify(entry)]);
   }
+} finally {
+  await rm(declarationRoot, { recursive: true, force: true });
 }
