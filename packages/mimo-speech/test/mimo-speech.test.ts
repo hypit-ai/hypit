@@ -76,7 +76,9 @@ test("VoiceDesign publishes one reusable voice reference", async () => {
   const result = await decodeMimoVoiceDesignSurface(context(`<mimo:VoiceDesign id="host" speech={story.segment.opening.speech}>
     A clear, confident young woman with a grounded conversational tone.
   </mimo:VoiceDesign>`));
-  assert.deepEqual(result.components[0]!.outputs, { reference: "host.reference" });
+  assert.deepEqual(result.components[0]!.outputs, { audio: "host.reference" });
+  const exported = result.fragments[0]!.exports.find((item) => item.name === "audio");
+  assert.deepEqual(exported?.type, artifactTypes.blob);
   assert.deepEqual(result.components[0]!.inputs["speech:text"], {
     kind: "record",
     id: "story.segment.opening.speech",

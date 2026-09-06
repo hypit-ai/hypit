@@ -146,7 +146,7 @@ function output(
       id,
       fragment: fragment.id,
       inputs,
-      outputs: { [outputName]: `${id}.${outputName}` },
+      outputs: { audio: `${id}.${outputName}` },
       range: element.range,
     }],
     fragments: [fragment],
