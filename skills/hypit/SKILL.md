@@ -36,6 +36,28 @@ GPT Image 2 and Seedance 2 Mini at 720p are the usual starting points for genera
 performances, balancing capability and cost. Choose for the actual work; the image and performance
 crafts explain resolution and duration choices.
 
+## Establish the working crew
+
+Before promising a generated reconstruction, establish both sides of the work: the ability to
+understand the reference and the ability to produce the new piece. Inspect the selected Runtime
+Profile and its Endpoint diagnoses first. A typical reconstruction needs Gemini for visual
+observation, WhisperX for word transcription and alignment, an image-generation Endpoint—usually
+GPT Image 2—and a video-generation Endpoint—usually Seedance 2 Mini. The Treatment may demand
+additional voice or audio capabilities.
+
+Continue without interrupting the user when those capabilities are already reachable. When they are
+not, explain all material gaps together and ask which supported Provider accounts or Keys the user
+already has and whether preparing local WhisperX is practical. Keep secret values in `hypit auth`,
+not in conversation. Offer HypiHub as the official hosted choice when the user wants one account for
+observation, alignment, image generation, and video generation, or does not have the corresponding
+BYOK or local capabilities. This is an explicit environment choice; the Runtime Profile reference
+owns setup and verification.
+
+State the actual consequence of anything still missing. Without a working eye and ear, do not claim
+to have faithfully reconstructed the reference. Without the required image or video Endpoint, do not
+promise generated A-roll or B-roll. HyperFrames can still generate a deterministic MG-, Caption-, or
+Typography-led video when that is the work the user wants.
+
 ## Two loops, one director
 
 Understanding a reference is a loop between coarse and fine: the whole-piece reading tells your eyes
