@@ -132,6 +132,8 @@ Or start without a reference video:
 
 Your agent can check the environment, request only the credentials the video needs, preview the result, and build it.
 
+### **👉 [Get 100 FREE Avatars, each with a unique voice.](https://drive.google.com/drive/u/2/folders/18J9Fz7mkU3OQNJ-2Res3eIyFQ2cemIK5)**
+
 ## Why Hypit
 
 - **Clone any video:** drop in a video, get the whole workflow — footage, captions, B-roll, effects. Not a script breakdown.
