@@ -623,6 +623,38 @@ test("an asset root widens bytes without widening Source imports", async () => {
   }), (error: unknown) => error instanceof WorkspaceError && error.code === "SOURCE_OUTSIDE_ROOT");
 });
 
+test("a Host-resolved Source keeps relative imports inside its own read boundary", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "hypit-external-source-"));
+  const project = join(parent, "project");
+  const packageRoot = join(parent, "package");
+  await mkdir(project);
+  await mkdir(packageRoot);
+  const entryPath = join(project, "main.svml");
+  const kitPath = join(packageRoot, "kit.svs");
+  const childPath = join(packageRoot, "child.svs");
+  const outsidePath = join(parent, "outside.svs");
+  await writeFile(entryPath, "entry", "utf8");
+  await writeFile(kitPath, "kit", "utf8");
+  await writeFile(childPath, "child", "utf8");
+  await writeFile(outsidePath, "outside", "utf8");
+  const workspace = await new NodeFilesystemWorkspace({
+    root: project,
+    externalSourceResolver(_importer, request) {
+      assert.equal(request.from, "@acme/kits/example");
+      return { root: packageRoot, source: kitPath };
+    },
+  }).open(entryPath);
+  const kit = await workspace.resolveSource(workspace.entry, {
+    from: "@acme/kits/example",
+    alias: "kit",
+  });
+  assert.equal((await workspace.resolveSource(kit, { from: "./child.svs", alias: "child" })).text, "child");
+  await assert.rejects(
+    async () => await workspace.resolveSource(kit, { from: "../outside.svs", alias: "outside" }),
+    (error: unknown) => error instanceof WorkspaceError && error.code === "SOURCE_OUTSIDE_ROOT",
+  );
+});
+
 test("filesystem and in-memory Workspaces load identical asset bytes", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-workspace-equivalence-"));
   const file = join(root, "main.svml");

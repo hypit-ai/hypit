@@ -19,39 +19,40 @@ description: 添加新的作者层组件的分步指南。
 mkdir -p packages/my-component/src packages/my-component/test
 ```
 
+在视频项目中创建它，并从一开始使用所有者自己的 scope；`@hypit/*` 由当前 Distribution 拥有。
+
 ## 2. 编写 package.json
 
 ```json
 {
-  "name": "@hypit/my-component",
+  "name": "@your-studio/my-component",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
+  "files": ["dist", "preview", "README.md"],
+  "exports": { ".": "./dist/index.js" },
   "hypit": {
-    "activation": "./src/activation.ts"
+    "activation": "./dist/activation.js"
   },
-  "dependencies": {
-    "@hypit/protocol": "workspace:*",
-    "@hypit/elaborator": "workspace:*",
-    "@hypit/markup": "workspace:*"
+  "devDependencies": {
+    "hypit": "^0.1.0",
+    "typescript": "^5.9.0"
   }
 }
 ```
 
-只添加你的包实际导入的依赖。分层规则参见 [包架构](./packages.md)。
+开发时使用公开的 `hypit/*` subpath，发布物只包含组件自己的编译文件。分层规则参见
+[包架构](./packages.md)。
 
 ## 3. 定义 Module Manifest
 
 在 `src/index.ts` 中声明你的 Module 的身份、Type 和 Producer：
 
 ```typescript
-import type { ModuleManifest, ModuleRef } from "@hypit/protocol";
+import type { ModuleManifest, ModuleRef } from "hypit/author-kit";
 
 export const myComponentModuleRef: ModuleRef = {
-  name: "@hypit/my-component",
+  name: "@your-studio/my-component",
   version: "1",
 };
 
@@ -82,7 +83,7 @@ Surface handler 把 Markup Frontend 的 XML 元素解码成带类型的作者声
 
 ```typescript
 // src/surface.ts
-import type { StructuredSurfaceHandler } from "@hypit/markup";
+import type { StructuredSurfaceHandler } from "hypit/author-kit";
 
 export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) => {
   // Read attributes and children from the XML element
@@ -136,7 +137,7 @@ vocabulary: {
 
 ```typescript
 // src/activation.ts
-import { createMarkupSurfaceHostFacet } from "@hypit/markup";
+import { createMarkupSurfaceHostFacet } from "hypit/author-kit";
 import {
   myComponentManifest,
   myComponentMarkupSurfaces,
@@ -161,17 +162,16 @@ export const hypitPackage = {
 export default hypitPackage;
 ```
 
-Module 会自动提供精确的 `manifest.name@manifest.version`，所以作者直接导入 `@hypit/my-component@1`，无需再声明一份重复别名。只有包确实拥有另一个逻辑名称时才使用可选的 `specifiers`。Surface declaration 决定可接受的标签（以 `mine` 导入时即为 `<mine:Widget>`）。它属于 Markup Host facet，不属于语义 Module Manifest，更不属于 Core。
+Module 会自动提供精确的 `manifest.name@manifest.version`，所以作者直接导入 `@your-studio/my-component@1`，无需再声明一份重复别名。只有包确实拥有另一个逻辑名称时才使用可选的 `specifiers`。Surface declaration 决定可接受的标签（以 `mine` 导入时即为 `<mine:Widget>`）。它属于 Markup Host facet，不属于语义 Module Manifest，更不属于 Core。
 
-## 7. 声明包依赖
+## 7. 编译包
 
-```json
-"dependencies": {
-  "@hypit/protocol": "workspace:*"
-}
+```bash
+pnpm build
 ```
 
-pnpm 工作区链接负责解析包，不需要根路径注册表。
+框架声明从 `hypit/author-kit` 导入；组件使用的领域值从 `hypit/composition` 等所属
+subpath 导入。加载 activation 时由当前 Distribution 提供这些 API，组件 tarball 不携带另一份 Hypit。
 
 ## 8. 安装
 
@@ -186,7 +186,7 @@ pnpm install --frozen-lockfile
 ```xml
 <?svml using="@hypit/markup@1"?>
 <svml>
-  <import as="mine" from="@hypit/my-component@1"/>
+  <import as="mine" from="@your-studio/my-component@1"/>
 
   <mine:Widget id="demo" during={story.selection.example}/>
 </svml>

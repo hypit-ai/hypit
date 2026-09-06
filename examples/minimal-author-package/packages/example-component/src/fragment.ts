@@ -1,8 +1,8 @@
-import { compositionTypes } from "@hypit/composition";
-import { artifactTypes } from "@hypit/artifact";
-import { sealGraphFragment } from "@hypit/elaborator";
-import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
-import { programSpaceTypes } from "@hypit/program-space";
+import { compositionTypes } from "hypit/composition";
+import { artifactTypes } from "hypit/artifact";
+import { sealGraphFragment } from "hypit/author-kit";
+import { semanticTrackProducers, semanticTrackTypes } from "hypit/semantic-track";
+import { programSpaceTypes } from "hypit/program-space";
 import { exampleProducers } from "./manifest.js";
 import { exampleTypes } from "./manifest.js";
 

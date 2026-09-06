@@ -22,10 +22,12 @@ embedding application must register the manifests and matching Frontend/Surface 
 has chosen to trust.
 
 `NodeCompiler` requires the host-neutral `Workspace` contract. The reference CLI explicitly selects
-`@hypit/workspace-fs-node`, where relative recursive Source imports are confined to one canonical
-root, symlink escapes are rejected and each edge is locked to the first bytes read for that
-compilation. A browser, Git, memory or remote Host can supply another Workspace without
-changing Frontends, Surfaces, Source Closure identity or Core.
+`@hypit/workspace-fs-node`, where every recursive Source import is confined to the canonical root
+that owns the importing SourceUnit, symlink escapes are rejected and each edge is locked to the
+first bytes read for that compilation. The Host may explicitly mount another Source root; the
+Compiler sees only the resulting Workspace units and does not know whether that root came from an
+installed data package, Git, memory or another source. Another Host can supply a different
+Workspace without changing Frontends, Surfaces, Source Closure identity or Core.
 
 The Workspace session owns a separate Source Asset capability. A Frontend/Surface may request an
 asset and assign its exact media type, but it never receives a path, filesystem handle or ambient

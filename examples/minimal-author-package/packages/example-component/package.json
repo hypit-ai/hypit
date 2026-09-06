@@ -3,21 +3,22 @@
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "hypit": { "activation": "./src/activation.ts" },
-  "dependencies": {
-    "@hypit/artifact": "workspace:*",
-    "@hypit/component-kit": "workspace:*",
-    "@hypit/composition": "workspace:*",
-    "@hypit/elaborator": "workspace:*",
-    "@hypit/media": "workspace:*",
-    "@hypit/markup": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/program-space": "workspace:*",
-    "@hypit/semantic-track": "workspace:*",
-    "@hypit/svs": "workspace:*",
-    "@hypit/temporal": "workspace:*",
-    "@hypit/temporal-markup": "workspace:*",
-    "@hypit/visual-ir": "workspace:*"
+  "files": [
+    "dist",
+    "preview",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./preview": "./preview/preview.svml"
+  },
+  "hypit": { "activation": "./dist/activation.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "pnpm build"
+  },
+  "devDependencies": {
+    "hypit": "workspace:*",
+    "typescript": "5.9.3"
   }
 }

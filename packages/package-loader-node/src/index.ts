@@ -16,9 +16,11 @@ export {
   locateNodePackage,
   resolveNodePackageExecutable,
   resolveNodePackageResource,
+  resolveNodePackageSource,
 } from "./location.js";
 export type {
   LocatedNodePackage,
+  LocatedNodePackageSource,
   LocateNodePackageOptions,
 } from "./location.js";
 export type * from "./types.js";

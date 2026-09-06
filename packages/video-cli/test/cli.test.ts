@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -59,4 +59,42 @@ test("provider-free example plans from installed Source packages", async () => {
   assert.equal(plan.format, "hypit.cli-plan@3");
   assert.equal(plan.steps > 0, true);
   assert.equal(plan.targets.length, 1);
+});
+
+test("check compiles a data-only package Source export without a project copy", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-package-source-"));
+  try {
+    const kitRoot = join(root, "packages", "image-kits");
+    await mkdir(join(kitRoot, "kits"), { recursive: true });
+    await writeFile(join(kitRoot, "package.json"), JSON.stringify({
+      name: "@acme/image-kits",
+      version: "1.0.0",
+      type: "module",
+      exports: { "./ugc-v1": "./kits/ugc-v1.svs" },
+    }), "utf8");
+    await writeFile(join(kitRoot, "kits", "ugc-v1.svs"), `<?svml using="@hypit/text/svs@1"?>
+<sheet version="1" id="ugc-v1">
+  text-template.ugc-v1 { separator: paragraph; }
+  text-template.ugc-v1.block.direction { kind: slot; order: 10; slot: direction; optional: false; }
+</sheet>`, "utf8");
+    const source = join(root, "main.svml");
+    await writeFile(source, `<?svml using="@hypit/markup@1"?>
+<svml>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="kit" source="@acme/image-kits/ugc-v1"/>
+  <text:Value id="direction">A useful photographed scene.</text:Value>
+  <text:Render id="prompt" template={kit.ugc-v1}>
+    <text:Set name="direction" text={direction}/>
+  </text:Render>
+</svml>`, "utf8");
+    let output = "";
+    await runCli(["check", source, "--workspace", root], {
+      write: (text) => { output += text; },
+    });
+    const checked = JSON.parse(output) as { readonly sourceKind: string; readonly units: number };
+    assert.equal(checked.sourceKind, "author");
+    assert.equal(checked.units, 2);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

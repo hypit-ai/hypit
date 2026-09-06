@@ -11,6 +11,13 @@ export type LocatedNodePackage = {
   };
 };
 
+export type LocatedNodePackageSource = {
+  readonly specifier: string;
+  readonly package: string;
+  readonly root: string;
+  readonly source: string;
+};
+
 export type LocateNodePackageOptions = {
   /** File or module URL whose owning package is requesting the dependency. */
   readonly from: string | URL;
@@ -57,6 +64,23 @@ function packageName(value: string): string {
     : parts.length === 1 && segment(value);
   if (!valid) throw new Error(`${value} must be one exact npm package name`);
   return value;
+}
+
+function packageSourceAddress(value: string): { readonly name: string; readonly subpath: string } {
+  if (value.startsWith(".") || value.startsWith("/") || value.startsWith("#") || value.includes(":")) {
+    throw new Error(`${value} must be one npm package Source export`);
+  }
+  const parts = value.split("/");
+  const name = value.startsWith("@")
+    ? parts.length >= 2 ? `${parts[0]}/${parts[1]}` : ""
+    : parts[0] ?? "";
+  const subpath = value.startsWith("@") ? parts.slice(2).join("/") : parts.slice(1).join("/");
+  packageName(name);
+  if (subpath.length > 0
+    && subpath.split("/").some((part) => part.length === 0 || part === "." || part === "..")) {
+    throw new Error(`${value} has an invalid package Source export path`);
+  }
+  return { name, subpath };
 }
 
 function fromPath(value: string | URL): string {
@@ -196,6 +220,40 @@ export function resolveNodePackageResource(
   options: LocateNodePackageOptions,
 ): string {
   return packageFile(locateNodePackage(name, options), relativePath, `${name} resource path`);
+}
+
+/**
+ * Resolve one explicitly imported Source through the owning package's standard `exports` map.
+ * This reads package data only; it never imports `hypit.activation` or executes package code.
+ */
+export function resolveNodePackageSource(
+  specifier: string,
+  options: LocateNodePackageOptions,
+): LocatedNodePackageSource {
+  const address = packageSourceAddress(specifier);
+  const located = locateNodePackage(address.name, options);
+  const manifestPath = join(located.root, "package.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+    readonly name?: unknown;
+    readonly exports?: unknown;
+  };
+  if (manifest.name !== address.name) throw new Error(`${manifestPath} does not describe ${address.name}`);
+  const key = address.subpath.length === 0 ? "." : `./${address.subpath}`;
+  let declared: unknown;
+  if (typeof manifest.exports === "string") {
+    if (key === ".") declared = manifest.exports;
+  } else if (manifest.exports !== null && typeof manifest.exports === "object" && !Array.isArray(manifest.exports)) {
+    declared = (manifest.exports as Readonly<Record<string, unknown>>)[key];
+  }
+  if (typeof declared !== "string") {
+    throw new Error(`${address.name} does not export Source ${key}`);
+  }
+  return {
+    specifier,
+    package: address.name,
+    root: located.root,
+    source: packageFile(located, declared, `${address.name} Source export ${key}`),
+  };
 }
 
 /** Resolve a command from the package's standard npm `bin` declaration. */
