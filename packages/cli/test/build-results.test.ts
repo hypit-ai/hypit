@@ -496,3 +496,30 @@ test("build-record selects one exact Result Output without leaking its storage a
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("a failed Result exposes task receipts and credential references without a Runtime", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-receipts-"));
+  const id = "bld_20260906T110000000Z_0000000001";
+  try {
+    const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
+      id, source: { path: "main.svml" }, targets: [], publishedOutputs: [],
+    });
+    const operation = {
+      operation: "op-1", command: "need-1", endpoint: "selected-account", pool: "my-pool",
+      need: { id: "generation-1", capability: valueType },
+      credentials: { apiKey: { store: "os", key: "personal-api-key" } },
+      receipt: { id: "remote-task-1" }, status: "failed" as const,
+      failure: { code: "DOWNLOAD_FAILED", message: "network timed out" },
+      createdAt: 1, acknowledgedAt: 2,
+    };
+    await result.finish({ outcome: "failed", failure: "download failed", operations: [operation] });
+    const inspected = await jsonCommand(["inspect", id], root) as {
+      build: { outcome: string; operations: unknown[] };
+    };
+    assert.equal(inspected.build.outcome, "failed");
+    assert.deepEqual(inspected.build.operations, [operation]);
+    const human = await humanCommand(["inspect", id], root);
+    assert.match(human, /remote-task-1/);
+    assert.match(human, /DOWNLOAD_FAILED/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

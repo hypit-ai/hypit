@@ -87,30 +87,29 @@ unless the Profile explicitly gives it that same real-resource identity.
 One Need execution acquires its total and model-specific capacity claims atomically. These are shared-resource
 limits, not parent and child queues.
 
-`submissionIntervalMs` spaces submissions within one Provider instance. It is a frequency limit,
-not a concurrency slot, and is not shared across separate instances by the `pool` setting.
-Polling errors retain the task and its capacity. A local operation deadline records failure and
-continues observing termination; unsupported cancellation cannot release a still-running task.
+Optional `actionLimits` uses the shared Endpoint vocabulary for `submit`, `poll` and `collect`.
+For example, `submit: { rate: { limit: 1, periodMs: 200 } }` admits one start action every 200 ms,
+with an initial burst of one. It is shared by instances in the same pool. A start includes reference
+preparation and submission; this is an action-admission limit, not a timestamp guarantee for each
+HTTP request. `collect: { concurrency: 2 }` separately bounds concurrent result downloads.
+Polling transport errors and operation deadlines fail the attempt and retain the task receipt.
 
 An advanced embedding adds `kie` to its Endpoint list beside a complete, explicit set of Runtime
 service packages and selections. The `.svml` Module Closure separately contains only the model
 Manifests actually imported by the author document; installing KIE does not add author intent.
 
-## Paid-operation law
+## Task execution and receipts
 
-1. Reference `BlobRef`s are read from the current Build's working byte area and uploaded through KIE's file
-   stream API. KIE temporary URLs never enter author source or generated Product identity.
-2. A successful `createTask` response is persisted as one asynchronous Operation. Because KIE does not document an
-   idempotency key, an ambiguous network/5xx submission is not automatically retried.
-3. Once a `taskId` exists, later Worker polling continues only that same task. Poll/download errors cannot create a new
-   paid generation.
-4. Successful result URLs are converted to short-lived download URLs, bounded while streaming,
-   immediately written into that Build's working byte area, and removed from durable
-   result metadata.
-5. The selected Runtime Execution Store owns shared capacity across Builds. This Provider contributes
-   one KIE-total claim plus narrower exact-capability claims and a conservative create-task interval; it does not introduce Redis or another source of
-   Build truth.
+Reference Resources are uploaded before `createTask`. An acknowledged task ID is saved immediately;
+normal polling uses that same ID. Submission, polling or collection errors end the attempt with the
+actual error. A timeout without an ID records the missing acknowledgement; the next attempt can be a
+new Build. No failure changes the selected Endpoint or account.
 
-The automated suite uses an adversarial fake KIE service. It covers submission ambiguity,
-continuation of accepted tasks, polling, bounded downloads and failures without spending money or
-requiring deployment credentials.
+On success, poll reports artifacts ready and `collect` downloads them into the Build's working byte
+area. The Result retains completed public Outputs and non-secret task receipts after active Runtime
+state is removed. A task receipt identifies `/api/v1/jobs/recordInfo?taskId=<id>` on the configured
+KIE API base URL; the selected credential reference supplies access without storing the key in Result.
+These records support inspection and explicit reuse in a new Run, not restarting the old Build.
+
+The automated tests exercise submission errors, accepted-task polling, full-response deadlines and
+bounded downloads against fake services, without paid generation.

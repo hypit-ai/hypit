@@ -121,6 +121,10 @@ export async function runProjectResultCommand(input: {
         ] : []),
       ], [
         ...(build.failure === undefined ? [] : [`Reason    ${build.failure}`]),
+        ...(build.operations ?? []).map((operation) =>
+          `${operation.endpoint}: ${operation.status}${operation.receipt === undefined ? "" : ` · task ${operation.receipt.id}`}`
+          + (operation.failure === undefined ? "" : ` · ${operation.failure.code}: ${operation.failure.message}`)),
+        ...(build.omittedOperations === undefined ? [] : [`${build.omittedOperations} more execution receipts · use --limit <count>`]),
         ...(build.note === undefined ? [] : [`Note      ${build.note}`]),
         ...visibleOutputs.map((item) => `${item.highlighted ? "★" : item.target ? "Target" : "Output"}    ${item.name}`
           + (!args.presentation.verbose ? "" : ` · ${item.type} · ${item.kind}`

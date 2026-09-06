@@ -73,12 +73,18 @@ sets narrower group limits, for example `{ "seedance-2-mini": 2, "gemini": 3, "t
 Image/video/speech groups use the exact capability name; all Gemini capabilities share `gemini`, and
 WhisperX uses `transcription`. These limits coordinate this Runtime's requests; HypiHub remains
 responsible for service-wide account limits. Immediate speech/Gemini/transcription slots cover the
-active HTTP invocation, while asynchronous image/video slots remain held until the remote job ends.
+active HTTP invocation, while asynchronous image/video slots cover remote work until completion or local execution failure.
 
-For asynchronous jobs, a polling error retains the same job and its capacity. An operation deadline
-records failure but continues observing remote termination without downloading the output. Unknown
-submission acknowledgements are never automatically resubmitted. Runtime bindings never switch from
-a user's own Provider to HypiHub after a key, quota or transport failure.
+For asynchronous image/video jobs, `actionLimits` configures the common `submit`, `poll` and `collect`
+admission budgets. Each accepts `concurrency` and `rate: { limit, periodMs }`, shared by the pool.
+These limits count lifecycle actions; Provider-specific upload parts and HTTP requests remain inside
+those actions. Synchronous speech, Gemini and transcription retain their ordinary request capacity.
+
+A submission, polling or collection error ends the local attempt. Known job IDs and credential
+references remain available in Result receipts; a timeout with no ID is recorded as such. A job can
+be inspected at `/jobs/<id>` and its generated assets at `/jobs/<id>/assets` on the selected API base.
+The next production attempt uses a new Run and Build. Runtime bindings never switch from a user's
+own Provider to HypiHub after a key, quota or transport failure.
 
 Multipart concurrency is different: HypiHub
 selects it for one upload session, and it does not create a Build queue or a second Runtime pool.

@@ -21,7 +21,7 @@ export type OperationalMachineView =
   | { readonly format: "hypit.cli-result-edit@3"; readonly build: string; readonly title: string | null; readonly note: string | null; readonly highlightedOutputCount: number; readonly highlightedOutputs: readonly string[]; readonly omittedHighlightedOutputs?: number }
   | { readonly format: "hypit.cli-get@4"; readonly build: string; readonly output: string; readonly type: string; readonly kind: "scalar" | "resource" | "composite"; readonly path: string }
   | { readonly format: "hypit.cli-status@3"; readonly build: CliBuildStatusView | null }
-  | { readonly format: "hypit.cli-activity@2"; readonly at: number; readonly worker: string; readonly builds: readonly { readonly id: string; readonly work: CliBuildStatusView["work"]; readonly outcome?: string; readonly attention?: AttentionView }[]; readonly omittedBuilds?: number; readonly activeRequests: number }
+  | { readonly format: "hypit.cli-activity@2"; readonly at: number; readonly worker: string; readonly builds: readonly { readonly id: string; readonly work: CliBuildStatusView["work"]; readonly outcome?: string; readonly attention?: AttentionView }[]; readonly omittedBuilds?: number; readonly capacity: readonly import("@hypit/runtime").CapacityReservation[] }
   | { readonly format: "hypit.cli-result-discard@2"; readonly build: string; readonly discarded: boolean }
   | { readonly format: "hypit.cli-result-finish@2"; readonly build: string; readonly found?: false; readonly outcome?: string; readonly attention?: AttentionView }
   | { readonly format: "hypit.cli-cancel@3"; readonly requested: boolean; readonly build: CliBuildStatusView | null }

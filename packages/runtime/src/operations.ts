@@ -1,7 +1,28 @@
 import type {
   CanonicalValue,
   StoredValue,
+  FulfillNeedCommand,
 } from "@hypit/protocol";
+import type { CredentialRef } from "./credentials.js";
+
+/** Provider-authored, non-secret acknowledgement suitable for Results and user inspection. */
+export type OperationReceipt = {
+  readonly id: string;
+  readonly url?: string;
+};
+
+export type OperationFacts = {
+  readonly createdAt?: number;
+  readonly acknowledgedAt?: number;
+  readonly endedAt?: number;
+  /** The exact request needed to advance this Operation without materializing its Build. */
+  readonly request?: FulfillNeedCommand;
+  readonly credentials?: Readonly<Record<string, CredentialRef>>;
+  readonly pool?: string;
+  readonly receipt?: OperationReceipt;
+  readonly remoteEnded?: true;
+  readonly submission?: "queued" | "started" | "accepted";
+};
 
 export type OperationIdentity = {
   readonly id: string;
@@ -33,34 +54,33 @@ export type OperationProgress = {
   readonly unit?: string;
 };
 
-export type OperationSnapshot = OperationIdentity & {
+export type OperationSnapshot = OperationIdentity & OperationFacts & {
   readonly status: OperationUpdate["status"];
   readonly handle?: CanonicalValue;
   readonly wakeAt?: number;
   readonly progress?: OperationProgress;
   readonly completion?: OperationCompletion;
   readonly failure?: OperationFailure;
-  /** A cancel call was attempted; subsequent turns only observe the same external work. */
-  readonly cancellationRequested?: true;
+  /** Last acknowledgement of an explicit, best-effort cancellation request. */
+  readonly cancellation?: { readonly outcome: "confirmed" | "accepted" | "unsupported" | "too-late" | "failed"; readonly message?: string };
 };
 
-export type OperationUpdate =
+export type OperationUpdate = OperationFacts & (
   | {
       readonly status: "pending";
-      /** Missing only when submission acknowledgement is unknown; never resubmit automatically. */
+      /** Candidate awaits Build-boundary validation. */
+      readonly completion?: OperationCompletion;
+      /** Provider-owned task state once submission is acknowledged. */
       readonly handle?: CanonicalValue;
       readonly wakeAt?: number;
       readonly progress?: OperationProgress;
-      /** Local execution failed, but remote settlement has not yet been confirmed. */
-      readonly failure?: OperationFailure;
-      readonly cancellationRequested?: true;
     }
   | {
       readonly status: "completed";
       readonly completion: OperationCompletion;
     }
   | { readonly status: "failed"; readonly failure: OperationFailure }
-  | { readonly status: "cancelled" };
+  | { readonly status: "cancelled"; readonly cancellation?: OperationSnapshot["cancellation"] });
 
 export type OperationQuery = {
   readonly build?: string;

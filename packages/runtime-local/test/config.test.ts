@@ -771,8 +771,9 @@ test("doctor reports inconsistent limits for shared pools and capacity resources
     for (const resource of ["pool:generation", "capacity:generation/browsers"]) {
       const conflict = conflicts.find((item) => item.subject === resource);
       assert.ok(conflict, `the shared resource ${resource} is reported`);
-      assert.equal(conflict.message,
-        `four, ten share ${resource} but size it 4 and 10; use the same limit for this shared resource or different pools`);
+      assert.match(conflict.message, /4 concurrent and 10 concurrent/);
+      assert.match(conflict.message, /same limit.*different pools/);
+      assert.doesNotMatch(conflict.message, /defaultConcurrency/);
     }
   } finally {
     await rm(root, { recursive: true, force: true });

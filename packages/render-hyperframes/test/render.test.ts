@@ -305,7 +305,7 @@ test("a render Product with another frame domain is rejected by the explicit dow
     endpoints,
     validators: validatorRegistry(),
   }).run(build());
-  assert.equal(result.status, "paused");
+  assert.equal(result.status, "failed");
   assert.match(result.outcomes.at(-1)?.message ?? "", /different presentation durations/u);
 });
 

@@ -15,6 +15,7 @@ import type {
   OperationFailure,
   OperationProgress,
   CapacityResourceClaim,
+  OperationReceipt,
 } from "@hypit/runtime";
 import { capacityUnits, verifyCredentialRef } from "@hypit/runtime";
 
@@ -54,29 +55,54 @@ export type ImmediateEndpointHandler = (
   context: EndpointInvocationContext,
 ) => Awaitable<EndpointFulfillment>;
 
-export type EndpointOutcome =
+export type EndpointCheckpoint = {
+  readonly handle: CanonicalValue;
+  readonly receipt?: OperationReceipt;
+  readonly remoteEnded?: true;
+};
+
+export const endpointActions = ["submit", "poll", "collect"] as const;
+export type EndpointAction = typeof endpointActions[number];
+export type EndpointActionLimits = Partial<Readonly<Record<EndpointAction, {
+  readonly concurrency?: number;
+  readonly rate?: { readonly limit: number; readonly periodMs: number };
+}>>>;
+
+export function actionResourceClaims(pool: string, limits: EndpointActionLimits): NonNullable<EndpointScheduling["actions"]> {
+  return Object.fromEntries(Object.entries(limits).map(([action, limit]) => {
+    if (!endpointActions.includes(action as EndpointAction)) throw new Error(`Unknown Endpoint action ${action}`);
+    const resources: CapacityResourceClaim[] = [
+      ...(limit.concurrency === undefined ? [] : [{ id: `action:${pool}/${action}`, limit: limit.concurrency }]),
+      ...(limit.rate === undefined ? [] : [{ id: `rate:${pool}/${action}`, ...limit.rate }]),
+    ];
+    resources.forEach(capacityUnits);
+    return [action, resources];
+  }));
+}
+
+export type EndpointOutcome = (
   | {
       readonly status: "pending";
-      readonly handle?: CanonicalValue;
+      readonly handle: CanonicalValue;
       readonly wakeAt?: number;
       readonly progress?: OperationProgress;
-      readonly failure?: OperationFailure;
     }
-  /** Only returned to a settling poll, after the external work has stopped. No output is downloaded. */
-  | { readonly status: "settled" }
   | { readonly status: "completed"; readonly result: EndpointFulfillment }
-  | { readonly status: "failed"; readonly failure: OperationFailure };
+  | { readonly status: "failed"; readonly failure: OperationFailure }
+  /** Remote work ended; collect its existing artifacts in a separate short action. */
+  | { readonly status: "ready"; readonly handle: CanonicalValue }
+) & { readonly receipt?: OperationReceipt };
 
 export type EndpointStartContext = EndpointInvocationContext & {
   /** Runtime-local identifier used to poll or cancel this submission. */
   readonly operation: string;
+  /** Persist acknowledgement before doing further work. Secret values never belong in a receipt. */
+  readonly checkpoint?: (checkpoint: EndpointCheckpoint) => Promise<void>;
 };
 
 export type EndpointPollContext = EndpointStartContext & {
   /** Provider task state returned by start(). */
   readonly handle: CanonicalValue;
-  /** Observe termination without creating work, enforcing a local deadline, or downloading results. */
-  readonly settling?: true;
 };
 
 /**
@@ -86,7 +112,7 @@ export type EndpointPollContext = EndpointStartContext & {
  */
 export type EndpointCancelOutcome =
   | { readonly status: "confirmed" }
-  | { readonly status: "accepted"; readonly wakeAt?: number }
+  | { readonly status: "accepted" }
   | { readonly status: "unsupported" }
   | { readonly status: "too-late" };
 
@@ -94,11 +120,13 @@ export type AsyncEndpoint = {
   start(context: EndpointStartContext): Awaitable<EndpointOutcome>;
   poll(context: EndpointPollContext): Awaitable<EndpointOutcome>;
   cancel?(context: EndpointPollContext): Awaitable<EndpointCancelOutcome>;
+  collect?(context: EndpointPollContext): Awaitable<EndpointOutcome>;
 };
 
 /** Endpoint scheduling. It never changes Core demand. */
 export type EndpointScheduling = {
   readonly resources: readonly CapacityResourceClaim[];
+  readonly actions?: Partial<Readonly<Record<EndpointAction, readonly CapacityResourceClaim[]>>>;
   /** Pure request-dependent quantities for already declared resources. */
   readonly unitsForRequest?: (request: EndpointRequest) => Readonly<Record<string, number>>;
 };
@@ -117,6 +145,7 @@ export function endpointResourceClaims(scheduling: EndpointScheduling, request: 
 }
 
 export type EndpointRegistrationOptions = {
+  readonly pool?: string;
   readonly supports?: (request: EndpointRequest) => boolean;
   readonly scheduling?: EndpointScheduling;
   readonly credentials?: Readonly<Record<string, CredentialRef>>;
@@ -229,6 +258,8 @@ export type DefineEndpointPackageOptions = {
   }>>;
   /** Total capacity shared by every capability under this configured Provider pool. */
   readonly defaultConcurrency?: number;
+  readonly actions?: EndpointScheduling["actions"];
+  readonly actionLimits?: EndpointActionLimits;
   /** The Provider's own price page, or `local` for work that runs on this machine without a charge. */
   readonly pricing?: EndpointPricing;
   readonly capabilities: readonly EndpointCapability[];
@@ -255,6 +286,8 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
   assert(options.instance.trim().length > 0, "Endpoint instance is empty");
   assert(options.pool.trim().length > 0, "Endpoint Provider Pool is empty");
   assert(options.capabilities.length > 0, "Endpoint package declares no capability");
+  assert(options.actions === undefined || options.actionLimits === undefined,
+    "Endpoint package must choose actions or actionLimits, not both");
   const keys = options.capabilities.map((item) => refKey(item.capability));
   assert(new Set(keys).size === keys.length, "Endpoint package repeats a capability");
   const capacities = options.capabilities.map((item) => item.capacity ?? item.capability.name);
@@ -314,6 +347,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     id: options.instance,
     pool: options.pool,
   };
+  const actions = options.actions ?? (options.actionLimits === undefined ? undefined : actionResourceClaims(options.pool, options.actionLimits));
   const offers: readonly EndpointOffer[] = fulfills.map((item) => ({
     ...item,
     endpoint: options.instance,
@@ -332,10 +366,12 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
           `${capacity} maxConcurrency`,
         );
         const common: EndpointRegistrationOptions = {
+          pool: options.pool,
           ...(capability.supports === undefined ? {} : { supports: capability.supports }),
           ...(capability.transient === true ? { transient: true } : {}),
           credentials,
           scheduling: {
+            ...(capability.lifecycle !== "asynchronous" || actions === undefined ? {} : { actions }),
             ...(capability.unitsForRequest === undefined ? {} : { unitsForRequest: capability.unitsForRequest }),
             resources: [
               {

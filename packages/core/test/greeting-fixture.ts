@@ -188,3 +188,65 @@ export function createGreetingBuild(options?: {
   });
   return start(program, graph, request);
 }
+
+export function createParallelGreetingBuild(generationCount = 2) {
+  const generations = ["a", "b", "c"].slice(0, generationCount);
+  const closure = createResolvedClosure([manifest]);
+  const authored = sealRecord({
+    id: "intent:root",
+    type: types.intent,
+    value: { kind: "inline", value: { name: "Ada" } },
+  });
+  const program = link(closure, [authored]);
+  const graph = sealCompiledGraph({
+    outputs: [
+      {
+        id: "prompt",
+        type: types.prompt,
+        primary: "make-prompt",
+      },
+      ...generations.map((suffix) => ({
+        id: `generated-${suffix}`,
+        type: types.generated,
+        primary: `generate-${suffix}`,
+      })),
+    ],
+    candidates: [
+      {
+        id: "make-prompt",
+        type: types.prompt,
+        root: { kind: "operation", result: { kind: "operation-result", operation: "make-prompt" } },
+      },
+      ...generations.map((suffix) => ({
+        id: `generate-${suffix}`,
+        type: types.generated,
+        root: {
+          kind: "operation" as const,
+          result: { kind: "operation-result" as const, operation: `generate-${suffix}` },
+        },
+      })),
+    ],
+    operations: [
+      {
+        id: "make-prompt",
+        producer: producers.makePrompt,
+        inputs: { intent: { kind: "record", id: "intent:root" } },
+        result: { kind: "output", name: "prompt", record: "prompt:root" },
+      },
+      ...generations.map((suffix) => ({
+        id: `generate-${suffix}`,
+        producer: producers.requestText,
+        inputs: { prompt: { kind: "logical-output" as const, id: "prompt" } },
+        result: {
+          kind: "need" as const,
+          name: "generation",
+          id: `need:generation-${suffix}`,
+          record: `generated:${suffix}`,
+        },
+      })),
+    ],
+  });
+  return start(program, graph, sealBuildRequest({
+    targets: generations.map((suffix) => ({ output: `generated-${suffix}` })),
+  }));
+}

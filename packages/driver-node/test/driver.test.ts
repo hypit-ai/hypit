@@ -230,7 +230,7 @@ test("Core still owns scheduling when Driver has every implementation", async ()
   assert.equal(result.status, "complete");
 });
 
-test("a direct Driver caller can retry one failed Handler without replaying completed producers", async () => {
+test("a direct Driver failure ends its state and a new attempt starts independently", async () => {
   const { producers, endpoints, calls } = configuredRegistry();
   let attempts = 0;
   endpoints.registerImmediateEndpoint("example:unstable", capabilities.generation, types.generated, () => {
@@ -244,11 +244,28 @@ test("a direct Driver caller can retry one failed Handler without replaying comp
 
   const driver = new NodeDriver({ producers, endpoints });
   const paused = await driver.run(createGreetingBuild());
-  assert.equal(paused.status, "paused");
+  assert.equal(paused.status, "failed");
   assert.match(paused.outcomes.at(-1)?.message ?? "", /temporary outage/u);
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 0, fulfill: 1 });
 
-  const completed = await driver.run(paused.state);
+  assert.equal((await driver.run(paused.state)).status, "failed");
+  assert.equal(calls.fulfill, 1);
+  const completed = await driver.run(createGreetingBuild());
   assert.equal(completed.status, "complete");
-  assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 1, fulfill: 2 });
+  assert.deepEqual(calls, { prompt: 2, request: 2, assemble: 1, fulfill: 2 });
+});
+
+test("shared action-rate declarations conflict when their periods differ", () => {
+  const registry = new EndpointRegistry();
+  for (const [id, periodMs] of [["a", 100], ["b", 200]] as const) {
+    registry.registerAsyncEndpoint(id, capabilities.generation, types.generated, {
+      start: () => ({ status: "pending", handle: { id } }),
+      poll: () => ({ status: "completed", result: { value: { kind: "inline", value: "done" } } }),
+    }, { scheduling: { resources: [{ id: "pool:shared", limit: 10 }],
+      actions: { submit: [{ id: "rate:shared/submit", limit: 1, periodMs }] } } });
+  }
+  const [conflict] = registry.capacityConflicts();
+  assert.equal(conflict?.resource, "rate:shared/submit");
+  assert.deepEqual(conflict?.endpointIds, ["a", "b"]);
+  assert.deepEqual(conflict?.settings, ["1 per 100 ms", "1 per 200 ms"]);
 });

@@ -1,3 +1,4 @@
+import { requestDeadline } from "@hypit/runtime-kit";
 import type {
   AsyncEndpoint,
   EndpointPollContext,
@@ -41,7 +42,7 @@ export type CreateKieProviderOptions = {
   /** Optional KIE lane limits keyed by capability name, for example seedance-2.5. */
   readonly capabilityConcurrency?: Readonly<Record<string, number>>;
   readonly pollIntervalMs?: number;
-  readonly submissionIntervalMs?: number;
+  readonly actionLimits?: import("@hypit/endpoint-kit").EndpointActionLimits;
   readonly requestTimeoutMs?: number;
   readonly maxOperationMs?: number;
   readonly maxArtifactBytes?: number;
@@ -112,36 +113,6 @@ function mediaExtension(mediaType: string): string {
   return known[mediaType] ?? "bin";
 }
 
-function delay(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-class IntervalGate {
-  #tail = Promise.resolve();
-  #nextAt = 0;
-  readonly #intervalMs: number;
-  readonly #now: () => number;
-
-  constructor(intervalMs: number, now: () => number) {
-    this.#intervalMs = intervalMs;
-    this.#now = now;
-  }
-
-  async enter(): Promise<void> {
-    const previous = this.#tail;
-    let release!: () => void;
-    this.#tail = new Promise<void>((resolve) => { release = resolve; });
-    await previous;
-    try {
-      const wait = Math.max(0, this.#nextAt - this.#now());
-      if (wait > 0) await delay(wait);
-      this.#nextAt = this.#now() + this.#intervalMs;
-    } finally {
-      release();
-    }
-  }
-}
-
 type KieClientOptions = {
   readonly apiBaseUrl: string;
   readonly uploadBaseUrl: string;
@@ -157,55 +128,68 @@ class KieClient {
     this.#options = options;
   }
 
-  async #fetch(url: string, init: RequestInit): Promise<Response> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(new Error("KIE request timed out")), this.#options.requestTimeoutMs);
+  async #open(url: string, init: RequestInit): Promise<{
+    readonly response: Response;
+    readonly wait: <T>(work: Promise<T>) => Promise<T>;
+    readonly finish: () => void;
+  }> {
+    const deadline = requestDeadline(this.#options.requestTimeoutMs, () => new KieError("KIE_REQUEST_TIMEOUT", "KIE request timed out"));
+    const { wait, finish } = deadline;
     try {
-      return await this.#options.fetch(url, { ...init, signal: controller.signal });
+      const response = await wait(this.#options.fetch(url, { ...init, signal: deadline.signal }));
+      return { response, wait, finish };
     } catch (error) {
+      finish();
+      if (error instanceof KieError) throw error;
       throw new KieError("KIE_NETWORK_ERROR", error instanceof Error ? error.message : "KIE network request failed");
-    } finally {
-      clearTimeout(timer);
     }
   }
 
   async #json(url: string, init: RequestInit): Promise<Record<string, unknown>> {
-    const response = await this.#fetch(url, init);
-    if (!response.ok) {
-      throw new KieError("KIE_HTTP_ERROR", `KIE returned HTTP ${response.status}`, { status: response.status });
-    }
-    const limit = 2_000_000;
-    const reader = response.body?.getReader();
-    let text: string;
-    if (reader === undefined) {
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      if (bytes.byteLength > limit) throw new KieError("KIE_RESPONSE_TOO_LARGE", "KIE JSON response is too large");
-      text = new TextDecoder().decode(bytes);
-    } else {
-      const decoder = new TextDecoder();
-      let size = 0;
-      let decoded = "";
-      try {
-        while (true) {
-          const item = await reader.read();
-          if (item.done) break;
-          size += item.value.byteLength;
-          if (size > limit) {
-            await reader.cancel();
-            throw new KieError("KIE_RESPONSE_TOO_LARGE", "KIE JSON response is too large");
-          }
-          decoded += decoder.decode(item.value, { stream: true });
-        }
-        text = decoded + decoder.decode();
-      } finally {
-        reader.releaseLock();
-      }
-    }
+    const opened = await this.#open(url, init);
     try {
-      return object(JSON.parse(text), "KIE response");
+      const response = opened.response;
+      if (!response.ok) {
+        throw new KieError("KIE_HTTP_ERROR", `KIE returned HTTP ${response.status}`, { status: response.status });
+      }
+      const limit = 2_000_000;
+      const reader = response.body?.getReader();
+      let text: string;
+      if (reader === undefined) {
+        const bytes = new Uint8Array(await opened.wait(response.arrayBuffer()));
+        if (bytes.byteLength > limit) throw new KieError("KIE_RESPONSE_TOO_LARGE", "KIE JSON response is too large");
+        text = new TextDecoder().decode(bytes);
+      } else {
+        const decoder = new TextDecoder();
+        let size = 0;
+        let decoded = "";
+        try {
+          while (true) {
+            const item = await opened.wait(reader.read());
+            if (item.done) break;
+            size += item.value.byteLength;
+            if (size > limit) {
+              await reader.cancel();
+              throw new KieError("KIE_RESPONSE_TOO_LARGE", "KIE JSON response is too large");
+            }
+            decoded += decoder.decode(item.value, { stream: true });
+          }
+          text = decoded + decoder.decode();
+        } finally {
+          reader.releaseLock();
+        }
+      }
+      try {
+        return object(JSON.parse(text), "KIE response");
+      } catch (error) {
+        if (error instanceof KieError) throw error;
+        throw new KieError("KIE_INVALID_JSON", "KIE returned invalid JSON");
+      }
     } catch (error) {
       if (error instanceof KieError) throw error;
-      throw new KieError("KIE_INVALID_JSON", "KIE returned invalid JSON");
+      throw new KieError("KIE_NETWORK_ERROR", error instanceof Error ? error.message : "KIE network request failed");
+    } finally {
+      opened.finish();
     }
   }
 
@@ -346,44 +330,63 @@ class KieClient {
     mediaType: string;
   }> {
     const url = await this.#downloadUrl(original, apiKey);
-    const response = await this.#fetch(url, { method: "GET" });
-    if (!response.ok) throw new KieError("KIE_DOWNLOAD_FAILED", `KIE artifact download returned HTTP ${response.status}`);
-    const declared = Number(response.headers.get("content-length"));
-    if (Number.isFinite(declared) && declared > this.#options.maxArtifactBytes) {
-      throw new KieError("KIE_ARTIFACT_TOO_LARGE", "KIE result exceeds the configured artifact limit");
-    }
-    const header = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
-    const fallback = expected === "image" ? "image/png" : "video/mp4";
-    const mediaType = header === undefined || header === "application/octet-stream" ? fallback : header;
-    if (!mediaType.startsWith(`${expected}/`)) {
-      throw new KieError("KIE_RESULT_MEDIA_MISMATCH", `KIE returned ${mediaType} for ${expected} generation`);
-    }
-    const maximum = this.#options.maxArtifactBytes;
-    const chunks = response.body === null
-      ? (async function* () {
-          const bytes = new Uint8Array(await response.arrayBuffer());
-          if (bytes.byteLength > maximum) throw new KieError("KIE_ARTIFACT_TOO_LARGE", "KIE result is too large");
-          yield bytes;
-        })()
-      : (async function* () {
-          const reader = response.body!.getReader();
-          let size = 0;
-          try {
-            while (true) {
-              const item = await reader.read();
-              if (item.done) break;
-              size += item.value.byteLength;
-              if (size > maximum) {
-                await reader.cancel();
-                throw new KieError("KIE_ARTIFACT_TOO_LARGE", "KIE result is too large");
-              }
-              yield item.value;
+    const opened = await this.#open(url, { method: "GET" });
+    let handedOff = false;
+    try {
+      const response = opened.response;
+      if (!response.ok) throw new KieError("KIE_DOWNLOAD_FAILED", `KIE artifact download returned HTTP ${response.status}`);
+      const declared = Number(response.headers.get("content-length"));
+      if (Number.isFinite(declared) && declared > this.#options.maxArtifactBytes) {
+        throw new KieError("KIE_ARTIFACT_TOO_LARGE", "KIE result exceeds the configured artifact limit");
+      }
+      const header = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+      const fallback = expected === "image" ? "image/png" : "video/mp4";
+      const mediaType = header === undefined || header === "application/octet-stream" ? fallback : header;
+      if (!mediaType.startsWith(`${expected}/`)) {
+        throw new KieError("KIE_RESULT_MEDIA_MISMATCH", `KIE returned ${mediaType} for ${expected} generation`);
+      }
+      const maximum = this.#options.maxArtifactBytes;
+      const finish = opened.finish;
+      const chunks = response.body === null
+        ? (async function* () {
+            try {
+              const bytes = new Uint8Array(await opened.wait(response.arrayBuffer()));
+              if (bytes.byteLength > maximum) throw new KieError("KIE_ARTIFACT_TOO_LARGE", "KIE result is too large");
+              yield bytes;
+            } catch (error) {
+              if (error instanceof KieError) throw error;
+              throw new KieError("KIE_NETWORK_ERROR", error instanceof Error ? error.message : "KIE result download failed");
+            } finally {
+              finish();
             }
-          } finally {
-            reader.releaseLock();
-          }
-        })();
-    return { chunks, mediaType };
+          })()
+        : (async function* () {
+            const reader = response.body!.getReader();
+            let size = 0;
+            try {
+              while (true) {
+                const item = await opened.wait(reader.read());
+                if (item.done) break;
+                size += item.value.byteLength;
+                if (size > maximum) {
+                  await reader.cancel();
+                  throw new KieError("KIE_ARTIFACT_TOO_LARGE", "KIE result is too large");
+                }
+                yield item.value;
+              }
+            } catch (error) {
+              if (error instanceof KieError) throw error;
+              throw new KieError("KIE_NETWORK_ERROR", error instanceof Error ? error.message : "KIE result download failed");
+            } finally {
+              reader.releaseLock();
+              finish();
+            }
+          })();
+      handedOff = true;
+      return { chunks, mediaType };
+    } finally {
+      if (!handedOff) opened.finish();
+    }
   }
 }
 
@@ -424,7 +427,6 @@ function readHandle(value: CanonicalValue | undefined, context: EndpointPollCont
 
 function endpoint(options: {
   readonly client: KieClient;
-  readonly gate: IntervalGate;
   readonly pollIntervalMs: number;
   readonly maxOperationMs: number;
   readonly now: () => number;
@@ -441,7 +443,6 @@ function endpoint(options: {
   };
   return {
     async start(context) {
-      let submitting = false;
       try {
         const route = kieRouteForCapability(context.need.capability);
         if (route === undefined) throw new KieError("KIE_UNSUPPORTED_CAPABILITY", "KIE does not implement this exact capability");
@@ -455,23 +456,16 @@ function endpoint(options: {
           return promise;
         };
         const task = await route.compile(context.need.constraints, resolve);
-        await options.gate.enter();
-        submitting = true;
         const taskId = await options.client.createTask(task, key);
         const handle: KieHandle = {
           taskId,
           routeKey: route.key,
           startedAt: options.now(),
         };
-        return wakeAfter(canonicalize(handle), options.pollIntervalMs, options.now(), {
-          phase: "submitted",
-        });
+        const receipt = { id: taskId };
+        await context.checkpoint?.({ handle: canonicalize(handle), receipt });
+        return { ...wakeAfter(canonicalize(handle), options.pollIntervalMs, options.now(), { phase: "submitted" }), receipt };
       } catch (error) {
-        if (submitting && !(error instanceof KieError && ["KIE_SUBMISSION_REJECTED", "KIE_RATE_LIMITED"].includes(error.code))) {
-          return { status: "pending", wakeAt: options.now() + 30_000,
-            progress: { phase: "submission-unknown" }, failure: { code: "SUBMISSION_UNKNOWN",
-              message: "KIE submission acknowledgement is unknown; the same Build will not submit again" } };
-        }
         return failure(error);
       }
     },
@@ -482,15 +476,13 @@ function endpoint(options: {
       } catch (error) {
         throw error;
       }
-      let remoteEnded = false;
       try {
         const route = kieRouteForCapability(context.need.capability);
         if (route === undefined || route.key !== handle.routeKey) {
           throw new KieError("KIE_HANDLE_INVALID", "KIE handle capability differs");
         }
-        if (!context.settling && options.now() - handle.startedAt >= options.maxOperationMs) {
-          return { ...wakeAfter(canonicalize(handle), options.pollIntervalMs, options.now(), { phase: "settling" }),
-            failure: { code: "KIE_OPERATION_TIMEOUT", message: "KIE task exceeded its operation deadline; waiting for remote termination" } };
+        if (options.now() - handle.startedAt >= options.maxOperationMs) {
+          throw new KieError("KIE_OPERATION_TIMEOUT", "KIE task exceeded its operation deadline");
         }
         const key = secret(context);
         const data = await options.client.taskInfo(handle.taskId, key);
@@ -500,8 +492,6 @@ function endpoint(options: {
             phase: state,
           });
         }
-        remoteEnded = state === "fail" || state === "success";
-        if (remoteEnded && context.settling) return { status: "settled" };
         if (state === "fail") {
           const vendorCode = typeof data.failCode === "string" && data.failCode.length > 0 ? data.failCode : "unknown";
           const vendorMessage = typeof data.failMsg === "string" && data.failMsg.length > 0
@@ -511,37 +501,46 @@ function endpoint(options: {
         if (state !== "success") throw new KieError("KIE_TASK_STATE_INVALID", "KIE returned an unknown task state");
         const urls = resultUrls(data);
         if (urls.length > route.maxResults) throw new KieError("KIE_RESULT_COUNT_EXCEEDED", "KIE returned too many result artifacts");
-        const artifacts: BlobRef[] = [];
-        for (const url of urls) {
-          const downloaded = await options.client.download(url, route.media, key);
-          if (isStreamingResourceStore(context.resources)) {
-            artifacts.push(await context.resources.putStream(downloaded.chunks, downloaded.mediaType));
-          } else {
-            const chunks: Uint8Array[] = [];
-            let size = 0;
-            for await (const chunk of downloaded.chunks) {
-              chunks.push(Uint8Array.from(chunk));
-              size += chunk.byteLength;
-            }
-            const bytes = new Uint8Array(size);
-            let offset = 0;
-            for (const chunk of chunks) {
-              bytes.set(chunk, offset);
-              offset += chunk.byteLength;
-            }
-            artifacts.push(await context.resources.put(bytes, downloaded.mediaType));
-          }
-        }
-        const result = route.packageResult(artifacts);
-        return {
-          status: "completed",
-          result: { value: result },
-        };
+        return { status: "ready", handle: canonicalize({ ...handle, urls }), receipt: { id: handle.taskId } };
       } catch (error) {
-        if (remoteEnded) return failure(error);
-        return wakeAfter(canonicalize(handle), options.pollIntervalMs, options.now(), { phase: "poll-unavailable" });
+        return failure(error);
       }
     },
+    async collect(context) {
+      readHandle(context.handle, context);
+      const route = kieRouteForCapability(context.need.capability)!;
+      const raw = object(context.handle, "KIE handle");
+      const urls = raw.urls;
+      if (!Array.isArray(urls) || !urls.every((url) => typeof url === "string")) throw new KieError("KIE_HANDLE_INVALID", "KIE collection has no artifact addresses");
+      const key = secret(context);
+      const artifacts: BlobRef[] = [];
+      for (const url of urls) {
+        const downloaded = await options.client.download(url, route.media, key);
+        if (isStreamingResourceStore(context.resources)) {
+          artifacts.push(await context.resources.putStream(downloaded.chunks, downloaded.mediaType));
+        } else {
+          const chunks: Uint8Array[] = [];
+          let size = 0;
+          for await (const chunk of downloaded.chunks) {
+            chunks.push(Uint8Array.from(chunk));
+            size += chunk.byteLength;
+          }
+          const bytes = new Uint8Array(size);
+          let offset = 0;
+          for (const chunk of chunks) {
+            bytes.set(chunk, offset);
+            offset += chunk.byteLength;
+          }
+          artifacts.push(await context.resources.put(bytes, downloaded.mediaType));
+        }
+      }
+      const result = route.packageResult(artifacts);
+      return {
+        status: "completed",
+        result: { value: result },
+      };
+    },
+
   };
 }
 
@@ -555,7 +554,6 @@ export function createKieProvider(config: CreateKieProviderOptions) {
   const apiBaseUrl = baseUrl(config.apiBaseUrl ?? "https://api.kie.ai", "apiBaseUrl");
   const uploadBaseUrl = baseUrl(config.uploadBaseUrl ?? "https://kieai.redpandaai.co", "uploadBaseUrl");
   const pollIntervalMs = nonNegativeInteger(config.pollIntervalMs ?? 3_000, "pollIntervalMs");
-  const submissionIntervalMs = nonNegativeInteger(config.submissionIntervalMs ?? 500, "submissionIntervalMs");
   const requestTimeoutMs = positiveInteger(config.requestTimeoutMs ?? 30_000, "requestTimeoutMs");
   const maxOperationMs = positiveInteger(config.maxOperationMs ?? 20 * 60_000, "maxOperationMs");
   const maxArtifactBytes = positiveInteger(config.maxArtifactBytes ?? 512 * 1024 * 1024, "maxArtifactBytes");
@@ -569,7 +567,6 @@ export function createKieProvider(config: CreateKieProviderOptions) {
   });
   const providerEndpoint = endpoint({
     client,
-    gate: new IntervalGate(submissionIntervalMs, now),
     pollIntervalMs,
     maxOperationMs,
     now,
@@ -583,6 +580,7 @@ export function createKieProvider(config: CreateKieProviderOptions) {
     credentials: { apiKey: config.apiKey ?? credentialRef("env", "KIE_API_KEY") },
     credentialInputs: { apiKey: { label: "KIE API key" } },
     defaultConcurrency: config.defaultConcurrency ?? 10,
+    ...(config.actionLimits === undefined ? {} : { actionLimits: config.actionLimits }),
     capabilities: kieRoutes.map((route) => ({
       capability: route.capability,
       returns: route.returns,

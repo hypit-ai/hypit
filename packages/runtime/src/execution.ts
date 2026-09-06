@@ -44,11 +44,14 @@ export type BuildResultWriteLease = BuildExecutionTurn;
  *
  * It has no persisted lifecycle phase. Scheduling is derived from `wakeAt` and `turn`; the one
  * immutable execution conclusion is `decision`; `stop` records why new work must stop while
- * existing Operations settle. Operator attention is an independent fact.
+ * the Result is written. Operator attention is an independent fact.
  */
 export type BuildExecutionSnapshot = BuildExecutionRequest & {
   readonly createdAt: number;
-  readonly wakeAt: number;
+  /** Absent when waiting for a resource release. */
+  readonly wakeAt?: number;
+  /** Only these Operations can advance the Build until their next outcome. */
+  readonly operationWait?: readonly string[];
   readonly turn?: BuildExecutionTurn;
   readonly resultWrite?: BuildResultWriteLease;
   readonly stop?: BuildExecutionStop;
@@ -64,7 +67,7 @@ export function buildExecutionActivity(
 ): BuildExecutionActivity {
   if (execution.decision !== undefined) return "saving-result";
   if (execution.turn !== undefined) return "running";
-  return execution.wakeAt > now ? "waiting" : "ready";
+  return execution.wakeAt === undefined || execution.wakeAt > now ? "waiting" : "ready";
 }
 
 /** Ephemeral acknowledgement returned after active Runtime state has been removed. */
@@ -80,8 +83,8 @@ export type BuildExecutionStore = {
   claim(owner: string, now?: number): Promise<BuildExecutionSnapshot | undefined>;
   /** A new owning Worker clears turns left by the previous process; no external action is repeated here. */
   reclaimTurns(now?: number): Promise<readonly string[]>;
-  /** An unobserved stop wakes the next turn immediately; a settling turn may wait for its next poll. */
-  releaseTurn(build: string, owner: string, wakeAt: number, observedStop?: BuildExecutionStop): Promise<BuildExecutionSnapshot>;
+  /** An unobserved stop wakes the next turn immediately to finish the attempt. */
+  releaseTurn(build: string, owner: string, wakeAt: number | undefined, operationWait?: readonly string[]): Promise<BuildExecutionSnapshot>;
   /** Freeze the one conclusion. An execution with a decision can never be claimed again. */
   decide(build: string, owner: string, outcome: BuildOutcome, reason?: string): Promise<BuildExecutionSnapshot>;
   /** Record the first stop request. Repeated requests cannot replace its cause or reason. */
@@ -94,6 +97,7 @@ export type BuildExecutionStore = {
   acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire>;
   releaseCapacity(build: string, command: string): Promise<void>;
   releaseBuildCapacity(build: string): Promise<void>;
+  reclaimActionCapacity(): Promise<void>;
   listCapacity(): Promise<readonly CapacityReservation[]>;
 };
 

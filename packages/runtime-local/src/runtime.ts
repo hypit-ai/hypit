@@ -1,3 +1,4 @@
+import { createActionExecutor } from "./actions.js";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import {
@@ -148,6 +149,7 @@ export async function createLocalRuntime(
     ...(options.resourceStoreForBuild === undefined ? {} : { resourcesForBuild: options.resourceStoreForBuild }),
     credentials: options.credentialStore,
     operations: options.operationStore,
+    actions: createActionExecutor(options.executionStore),
     validators,
   });
   const resultWriter = createLocalResultWriter({

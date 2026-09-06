@@ -1,5 +1,5 @@
 import { BuildMachine, reduce } from "@hypit/core";
-import type { BuildState } from "@hypit/protocol";
+import type { BuildState, CommandResult } from "@hypit/protocol";
 import { capacityUnits } from "./capacity.js";
 
 import type {
@@ -19,6 +19,8 @@ type MutableBuild = {
   readonly outcomes: SchedulerExecutionOutcome[];
   blocked: ScheduledBuildResult["blocked"];
   stopped: boolean;
+  failure?: Extract<CommandResult, { readonly kind: "command-failed" }>;
+  readonly attempted: Set<string>;
 };
 
 type ActiveResult = {
@@ -90,6 +92,7 @@ export class LocalBuildScheduler {
         outcomes: [],
         blocked: [],
         stopped: false,
+        attempted: new Set(),
       });
     }
     const active = new Map<string, ActiveCommand>();
@@ -107,7 +110,7 @@ export class LocalBuildScheduler {
       return proposed;
     };
 
-    const accept = async (build: MutableBuild, event: import("@hypit/protocol").CommandResult): Promise<void> => {
+    const accept = async (build: MutableBuild, event: CommandResult): Promise<void> => {
       if (this.#buildStore === undefined || build.machine === undefined) {
         build.state = reduce(build.state, event);
         await this.#onStateChange?.(build.id, build.state);
@@ -135,7 +138,7 @@ export class LocalBuildScheduler {
         build.state = prepared.state;
         build.blocked = prepared.blocked;
         ready.set(build.id, prepared.runnable.filter((item) =>
-          !active.has(buildCommandKey(build.id, item.command.id))));
+          !active.has(buildCommandKey(build.id, item.command.id)) && !build.attempted.has(item.command.id)));
       }
       return ready;
     };
@@ -191,9 +194,6 @@ export class LocalBuildScheduler {
         const settled = await Promise.race([...active.values()].map((item) => item.promise));
         active.delete(settled.key);
         const build = settled.build;
-        // A command may finish after a concurrently running sibling has already made the
-        // Build terminal. Its capacity has been released, but no later completion, failure or
-        // deferral belongs to Core's outstanding commands or may replace the first outcome.
         if (build.state.status === "failed" || build.state.status === "complete") continue;
         if (settled.execution === undefined) {
           build.stopped = true;
@@ -207,7 +207,7 @@ export class LocalBuildScheduler {
           continue;
         }
         if (settled.execution.status === "pending") {
-          build.stopped = true;
+          build.attempted.add(settled.command.command.id);
           build.outcomes.push({
             command: settled.command.command.id,
             kind: settled.command.command.kind,
@@ -219,20 +219,27 @@ export class LocalBuildScheduler {
           continue;
         }
         if (settled.execution.status === "deferred") {
-          build.stopped = true;
+          build.attempted.add(settled.command.command.id);
           build.outcomes.push({
             command: settled.command.command.id,
             kind: settled.command.command.kind,
             resources: settled.command.resources.map((resource) => resource.id),
             status: "deferred",
-            wakeAt: settled.execution.wakeAt,
+            ...(settled.execution.wakeAt === undefined ? {} : { wakeAt: settled.execution.wakeAt }),
             message: settled.execution.reason,
           });
           continue;
         }
         const event = settled.execution.event;
         try {
-          await accept(build, event);
+          if (event.kind === "command-failed") {
+            // Stop launching work immediately, but accept results of calls already running
+            // before the failure clears Core's outstanding commands. No pending job is polled.
+            build.stopped = true;
+            build.failure ??= event;
+          } else {
+            await accept(build, event);
+          }
           build.outcomes.push({
             command: settled.command.command.id,
             kind: settled.command.command.kind,
@@ -249,6 +256,10 @@ export class LocalBuildScheduler {
             message: error instanceof Error ? error.message : String(error),
           });
         }
+      }
+
+      for (const build of builds) {
+        if (build.failure !== undefined) await accept(build, build.failure);
       }
 
     } catch (error) {

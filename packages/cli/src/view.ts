@@ -48,6 +48,8 @@ export type CliBuildResultView = {
   readonly outputs: readonly CliOutputView[];
   readonly omittedOutputs?: number;
   readonly failure?: string;
+  readonly operations?: BuildResultManifest["operations"];
+  readonly omittedOperations?: number;
 };
 
 export type CliBuildStatusView = {
@@ -66,6 +68,8 @@ export type CliBuildStatusView = {
   };
   readonly attention?: { readonly message: string; readonly action?: string };
   readonly operations?: readonly {
+    readonly id?: string;
+    readonly receipt?: { readonly id: string; readonly url?: string };
     readonly endpoint: string;
     readonly state: string;
     readonly progress?: {
@@ -172,11 +176,13 @@ export function buildStatusView(options: {
           }
         : { message: options.resultReadError! },
     }),
-    ...(!options.verbose || options.runtime === undefined ? {} : {
-      operations: options.runtime.operations
+    ...(!options.verbose ? {} : {
+      operations: (options.runtime?.operations ?? options.result?.operations ?? [])
         .filter((item) => item.status !== "completed")
         .slice(0, options.operationLimit ?? 20)
         .map((item) => ({
+          ...("operation" in item ? { id: item.operation } : item.id === undefined ? {} : { id: item.id }),
+          ...(item.receipt === undefined ? {} : { receipt: item.receipt }),
           endpoint: item.endpoint,
           state: item.status,
           ...(item.progress === undefined ? {} : { progress: item.progress }),
@@ -216,5 +222,7 @@ export async function buildResultView(
     outputs,
     ...(selected.length === allNames.length ? {} : { omittedOutputs: allNames.length - selected.length }),
     ...(manifest.failure === undefined ? {} : { failure: manifest.failure }),
+    ...(manifest.operations === undefined ? {} : { operations: manifest.operations.slice(0, options.limit) }),
+    ...((manifest.operations?.length ?? 0) <= options.limit ? {} : { omittedOperations: manifest.operations!.length - options.limit }),
   };
 }

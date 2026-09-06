@@ -35,14 +35,14 @@ async function endpointFor(
   request: Need,
   fetch: typeof globalThis.fetch,
   now = () => 1_000,
+  requestTimeoutMs = 1_000,
 ): Promise<{ endpoint: AsyncEndpoint; registration: EndpointRegistration }> {
   const registry = new EndpointRegistry();
   const provider = createKieProvider({
     fetch,
     now,
     pollIntervalMs: 0,
-    submissionIntervalMs: 0,
-    requestTimeoutMs: 1_000,
+    requestTimeoutMs,
     maxOperationMs: 60_000,
   });
   await provider.install(registry);
@@ -161,10 +161,13 @@ test("KIE uploads referenced resources, polls one task, and persists generated b
   assert.deepEqual(started.status === "pending" && started.progress, { phase: "submitted" });
   assert.equal(calls.length, 2);
   assert.equal(started.status === "pending" && (started.handle as Record<string, unknown>).taskId, "task_seedance_test");
-  const completed = await endpoint.poll({
+  const ready = await endpoint.poll({
     ...common,
     handle: started.handle!,
   });
+  assert.equal(ready.status, "ready");
+  if (ready.status !== "ready") return;
+  const completed = await endpoint.collect!({ ...common, handle: ready.handle });
   assert.equal(completed.status, "completed");
   assert.equal(calls.length, 5);
   if (completed.status !== "completed") return;
@@ -215,9 +218,12 @@ test("KIE fulfills generic Background Removal with the documented Recraft wire m
   const started = await endpoint.start(common);
   assert.equal(started.status, "pending");
   if (started.status !== "pending") return;
-  const completed = await endpoint.poll({
+  const ready = await endpoint.poll({
     ...common, handle: started.handle!,
   });
+  assert.equal(ready.status, "ready");
+  if (ready.status !== "ready") return;
+  const completed = await endpoint.collect!({ ...common, handle: ready.handle });
   assert.equal(completed.status, "completed");
   if (completed.status !== "completed") return;
   assert.equal(completed.result.value.kind, "blob");
@@ -225,29 +231,49 @@ test("KIE fulfills generic Background Removal with the documented Recraft wire m
   assert.equal(calls.length, 5);
 });
 
-test("KIE keeps a timed-out task reserved while observing its actual remote end", async () => {
+test("KIE polling errors and operation deadlines are terminal request failures", async () => {
   const request = need({});
-  let now = 0, unavailable = false, state = "generating", submissions = 0;
-  const { endpoint } = await endpointFor(request, async (url) => {
-    if (String(url).includes("createTask")) { submissions++; throw new Error("no submission expected"); }
-    if (unavailable) throw new Error("offline");
-    return Response.json({ code: 200, data: { state } });
+  let now = 0, requests = 0;
+  const { endpoint } = await endpointFor(request, async () => {
+    requests++; throw new Error("offline");
   }, () => now);
+  const { kieRouteForCapability } = await import("../src/routes.js");
   const common = { command: { kind: "fulfill-need", id: "need:test", need: request } as const,
     need: request, resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test" } }, operation: "op:test",
-    handle: { taskId: "existing", routeKey: "seedance-2-mini", startedAt: 0 } };
-  // Use the route's actual private handle format, obtained without any external call.
-  const { kieRouteForCapability } = await import("../src/routes.js");
-  common.handle.routeKey = kieRouteForCapability(request.capability)!.key;
-  unavailable = true;
-  assert.equal((await endpoint.poll(common)).status, "pending");
+    handle: { taskId: "existing", routeKey: kieRouteForCapability(request.capability)!.key, startedAt: 0 } };
+  const offline = await endpoint.poll(common);
+  assert.equal(offline.status, "failed");
+  assert.match(offline.status === "failed" ? offline.failure.message : "", /offline/);
   now = 60_001;
   const timedOut = await endpoint.poll(common);
-  assert.equal(timedOut.status, "pending");
-  assert.equal(timedOut.status === "pending" && timedOut.failure?.code, "KIE_OPERATION_TIMEOUT");
-  unavailable = false;
-  assert.equal((await endpoint.poll({ ...common, settling: true })).status, "pending");
-  state = "success";
-  assert.deepEqual(await endpoint.poll({ ...common, settling: true }), { status: "settled" });
-  assert.equal(submissions, 0);
+  assert.equal(timedOut.status, "failed");
+  assert.equal(timedOut.status === "failed" && timedOut.failure.code, "KIE_OPERATION_TIMEOUT");
+  assert.equal(requests, 1, "an expired operation does no further network work");
+});
+
+test("KIE request timeout covers a response body that never finishes", async () => {
+  const request = need({});
+  const { endpoint } = await endpointFor(request, async () => {
+    // Some gateways return headers and then leave a body open without reacting
+    // to AbortSignal. The Provider deadline must still release the Build turn.
+    const stream = new ReadableStream<Uint8Array>({ start() {} });
+    return new Response(stream, { status: 200, headers: { "content-type": "application/json" } });
+  }, () => 1_000, 20);
+  const { kieRouteForCapability } = await import("../src/routes.js");
+  const startedAt = Date.now();
+  const outcome = await endpoint.poll({
+    command: { kind: "fulfill-need", id: "need:body-timeout", need: request },
+    need: request,
+    resources: new MemoryResourceStore(),
+    credentials: { apiKey: { secret: "test" } },
+    operation: "op:body-timeout",
+    handle: {
+      taskId: "existing",
+      routeKey: kieRouteForCapability(request.capability)!.key,
+      startedAt: 1_000,
+    },
+  });
+  assert.equal(outcome.status, "failed");
+  assert.equal(outcome.status === "failed" && outcome.failure.code, "KIE_REQUEST_TIMEOUT");
+  assert.ok(Date.now() - startedAt < 500, "poll returns after the configured network timeout");
 });

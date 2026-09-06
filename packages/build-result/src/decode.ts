@@ -129,6 +129,55 @@ export function decodeBuildResultJson(value: Uint8Array, subject: string): unkno
   }
 }
 
+function progressNumber(value: unknown, subject: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) throw new Error(`${subject} must be non-negative`);
+  return value;
+}
+
+function operationReceipts(value: unknown, subject: string): NonNullable<BuildResultManifest["operations"]> {
+  if (!Array.isArray(value)) throw new Error(`${subject} must be an array`);
+  return value.map((raw) => {
+    const item = object(raw, subject);
+    const status = item.status;
+    if (status !== "pending" && status !== "completed" && status !== "failed" && status !== "cancelled") throw new Error(`${subject} has an invalid Operation status`);
+    const need = item.need === undefined ? undefined : object(item.need, `${subject}.need`);
+    const progress = item.progress === undefined ? undefined : object(item.progress, `${subject}.progress`);
+    const cancellation = item.cancellation === undefined ? undefined : object(item.cancellation, `${subject}.cancellation`);
+    if (cancellation !== undefined && !["confirmed", "accepted", "unsupported", "too-late", "failed"].includes(String(cancellation.outcome))) {
+      throw new Error(`${subject} has an invalid cancellation acknowledgement`);
+    }
+    const receipt = item.receipt === undefined ? undefined : object(item.receipt, `${subject}.receipt`);
+    const failure = item.failure === undefined ? undefined : object(item.failure, `${subject}.failure`);
+    const credentials = item.credentials === undefined ? undefined : Object.fromEntries(Object.entries(object(item.credentials, `${subject}.credentials`)).map(([slot, rawRef]) => {
+      const ref = object(rawRef, `${subject}.credential`);
+      return [slot, { store: text(ref.store, "credential store"), key: text(ref.key, "credential reference") }];
+    }));
+    return {
+      ...(need === undefined ? {} : { need: { id: text(need.id, "Need id"), capability: typeRef(need.capability, "Need capability") } }),
+      ...(item.createdAt === undefined ? {} : { createdAt: optionalTime(item.createdAt, "Operation createdAt")! }),
+      ...(item.acknowledgedAt === undefined ? {} : { acknowledgedAt: optionalTime(item.acknowledgedAt, "Operation acknowledgedAt")! }),
+      ...(item.endedAt === undefined ? {} : { endedAt: optionalTime(item.endedAt, "Operation endedAt")! }),
+      ...(progress === undefined ? {} : { progress: {
+        phase: text(progress.phase, "Operation phase"),
+        ...(progress.completed === undefined ? {} : { completed: progressNumber(progress.completed, "Operation completed units") }),
+        ...(progress.total === undefined ? {} : { total: progressNumber(progress.total, "Operation total units") }),
+        ...(progress.unit === undefined ? {} : { unit: text(progress.unit, "Operation unit") }),
+      } }),
+      ...(cancellation === undefined ? {} : { cancellation: {
+        outcome: cancellation.outcome as "confirmed" | "accepted" | "unsupported" | "too-late" | "failed",
+        ...(cancellation.message === undefined ? {} : { message: text(cancellation.message, "Cancellation error") }),
+      } }),
+      operation: text(item.operation, "Operation id"), command: text(item.command, "Operation command"),
+      endpoint: text(item.endpoint, "Operation Endpoint"), status,
+      ...(item.pool === undefined ? {} : { pool: text(item.pool, "Operation pool") }),
+      ...(credentials === undefined ? {} : { credentials }),
+      ...(receipt === undefined ? {} : { receipt: { id: text(receipt.id, "Remote receipt id"),
+        ...(receipt.url === undefined ? {} : { url: text(receipt.url, "Remote receipt URL") }) } }),
+      ...(failure === undefined ? {} : { failure: { code: text(failure.code, "Operation failure code"), message: text(failure.message, "Operation failure message") } }),
+    };
+  });
+}
+
 /** Decode one Result document and attach the Build identity supplied by its repository address. */
 export function decodeBuildResultManifest(
   value: unknown,
@@ -170,6 +219,7 @@ export function decodeBuildResultManifest(
     ...(outcome === undefined ? {} : { outcome }),
     ...(failure === undefined ? {} : { failure }),
     outputs: outputs(item.outputs, `${subject}.outputs`),
+    ...(item.operations === undefined ? {} : { operations: operationReceipts(item.operations, `${subject}.operations`) }),
   };
 }
 

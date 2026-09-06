@@ -22,6 +22,26 @@ The Runtime Profile configures these controls through the Provider because they 
 renders program audio; `@hypit/provider-media-local` separately prepares `TimelineAudio` and muxes
 the final media.
 
+For a Runtime Profile, place `pool` on the Endpoint entry and these Provider settings inside
+`config`. This is an illustrative entry to merge into the Profile's existing `endpoints`:
+
+```json
+"hyperframes.local": {
+  "use": "@hypit/provider-hyperframes-local",
+  "pool": "local-render",
+  "config": {
+    "workers": 4,
+    "defaultConcurrency": 2,
+    "browserCapacity": 6
+  }
+}
+```
+
+This configuration admits one 4-worker request at a time under its 6-browser budget even though
+the whole-request limit is 2. Two 4-worker requests would need 8 browser slots. Choose budgets from
+the actual machine and shared workloads; the example is not an automatic tuning recommendation.
+Reload the Runtime Worker after changing its Profile and restart Studio if it uses that Profile.
+
 `browserGpu` picks Chrome's rasterizer and defaults to `hardware`. Set `software` without a usable
 GPU, or `auto` to let the engine decide. Capture uses screenshots and independent browser processes;
 the CLI's automatic worker and drawElement policies do not override the count.

@@ -39,15 +39,16 @@ function sameRef(
 function verifyScheduling(scheduling: EndpointScheduling | undefined): void {
   if (scheduling === undefined) return;
   if (scheduling.resources.length === 0) throw new Error("scheduling resources must not be empty");
-  const ids = scheduling.resources.map((resource) => {
-    capacityUnits(resource);
-    if (resource.id.trim().length === 0) throw new Error("scheduling resource id must not be empty");
-    if (!Number.isSafeInteger(resource.limit) || resource.limit < 1) {
-      throw new Error(`scheduling resource ${resource.id} limit must be a positive safe integer`);
-    }
-    return resource.id;
-  });
-  if (new Set(ids).size !== ids.length) throw new Error("scheduling resources contain duplicate ids");
+  for (const resources of [scheduling.resources, ...Object.values(scheduling.actions ?? {})]) {
+    const ids = resources.map((resource) => {
+      capacityUnits(resource);
+      return resource.id;
+    });
+    if (new Set(ids).size !== ids.length) throw new Error("scheduling resources contain duplicate ids");
+  }
+  if (scheduling.resources.some((resource) => resource.periodMs !== undefined)) {
+    throw new Error("Rate budgets apply to Endpoint actions; whole-operation resources declare occupancy");
+  }
 }
 
 export function producerRegistryKey(ref: ProducerRef): string {
@@ -120,25 +121,25 @@ export class EndpointRegistry implements EndpointRegistrar {
    * Shared capacity resources that different registrations size differently. Two Endpoints in one
    * pool with different concurrency would otherwise only collide inside the scheduler, mid-Build.
    */
-  capacityConflicts(): readonly { readonly resource: string; readonly limits: readonly number[]; readonly endpointIds: readonly string[] }[] {
-    const limits = new Map<string, Map<number, Set<string>>>();
+  capacityConflicts(): readonly { readonly resource: string; readonly limits: readonly number[]; readonly settings: readonly string[]; readonly endpointIds: readonly string[] }[] {
+    const resources = new Map<string, Map<string, { limit: number; endpoints: Set<string> }>>();
     for (const registration of this.#registrations) {
-      for (const resource of registration.scheduling?.resources ?? []) {
-        const byLimit = limits.get(resource.id) ?? new Map<number, Set<string>>();
-        const ids = byLimit.get(resource.limit) ?? new Set<string>();
-        ids.add(registration.id);
-        byLimit.set(resource.limit, ids);
-        limits.set(resource.id, byLimit);
+      const scheduling = registration.scheduling;
+      for (const resource of [...(scheduling?.resources ?? []), ...Object.values(scheduling?.actions ?? {}).flat()]) {
+        const settings = resource.periodMs === undefined ? `${resource.limit} concurrent` : `${resource.limit} per ${resource.periodMs} ms`;
+        const variants = resources.get(resource.id) ?? new Map();
+        const variant = variants.get(settings) ?? { limit: resource.limit, endpoints: new Set<string>() };
+        variant.endpoints.add(registration.id);
+        variants.set(settings, variant);
+        resources.set(resource.id, variants);
       }
     }
-    return [...limits.entries()]
-      .filter(([, byLimit]) => byLimit.size > 1)
-      .map(([resource, byLimit]) => ({
-        resource,
-        limits: [...byLimit.keys()].sort((left, right) => left - right),
-        endpointIds: [...new Set([...byLimit.values()].flatMap((ids) => [...ids]))].sort(),
-      }))
-      .sort((left, right) => left.resource.localeCompare(right.resource));
+    return [...resources.entries()].filter(([, variants]) => variants.size > 1).map(([resource, variants]) => ({
+      resource,
+      limits: [...new Set([...variants.values()].map((variant) => variant.limit))].sort((a, b) => a - b),
+      settings: [...variants.keys()].sort((a, b) => a.localeCompare(b, "en", { numeric: true })),
+      endpointIds: [...new Set([...variants.values()].flatMap((variant) => [...variant.endpoints]))].sort(),
+    })).sort((a, b) => a.resource.localeCompare(b.resource));
   }
 
   /** Capabilities offered by more than one Endpoint, with the ids, for a deployment to bind. */
