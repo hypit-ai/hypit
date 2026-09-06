@@ -18,8 +18,6 @@ export const speechEstimatePolicySchema: ValueSchema = {
     language: { schema: { kind: "string", enum: ["auto", "en", "zh", "ja", "es"] } },
     pace: { schema: { kind: "string", enum: ["slow", "normal", "fast"] }, optional: true },
     rate: { schema: { kind: "number", minimum: 0.000001 }, optional: true },
-    minimumSec: { schema: number },
-    maximumSec: { schema: number },
     rounding: { schema: { kind: "string", enum: ["none", "round", "ceil"] } },
     paddingSec: { schema: number, optional: true },
   },

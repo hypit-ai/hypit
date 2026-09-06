@@ -56,9 +56,9 @@ are generated; normalization, alignment, Caption and Film composition are explic
 
 ```bash
 hypit check reference.svrun
-hypit measure reference.svml --segment opening-question --language en --pace fast --min 4 --max 15 --rounding ceil
-hypit measure reference.svml --segment daily-creatine --language en --pace fast --min 4 --max 15 --rounding ceil
-hypit measure reference.svml --segment arms-are-asking --language en --pace fast --min 4 --max 15 --rounding ceil
+hypit measure reference.svml --segment opening-question --language en --pace fast --rounding ceil
+hypit measure reference.svml --segment daily-creatine --language en --pace fast --rounding ceil
+hypit measure reference.svml --segment arms-are-asking --language en --pace fast --rounding ceil
 hypit plan reference.svrun --runtime ./hypit.runtime.json
 ```
 

@@ -29,9 +29,9 @@ photographic image prompt stands in for this purpose-made graphic artwork.
 
 ```bash
 hypit check reference.svrun
-hypit measure reference.svml --segment manifest-rule --language en --pace fast --min 4 --max 15 --rounding ceil
-hypit measure reference.svml --segment real-estate-rule --language en --pace fast --min 4 --max 15 --rounding ceil
-hypit measure reference.svml --segment bitcoin-rule --language en --pace fast --min 4 --max 15 --rounding ceil
+hypit measure reference.svml --segment manifest-rule --language en --pace fast --rounding ceil
+hypit measure reference.svml --segment real-estate-rule --language en --pace fast --rounding ceil
+hypit measure reference.svml --segment bitcoin-rule --language en --pace fast --rounding ceil
 hypit plan reference.svrun --runtime ./hypit.runtime.json
 ```
 

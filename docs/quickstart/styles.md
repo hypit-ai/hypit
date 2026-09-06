@@ -246,8 +246,6 @@ Parameters for deterministic speech duration estimation.
 speech.normal {
   language: en;
   pace: normal;
-  min: 4;
-  max: 15;
   rounding: round;
 }
 ```
@@ -257,14 +255,12 @@ speech.normal {
 | `language` | Language code (e.g. `en`) |
 | `pace` | Speaking pace: `slow`, `normal`, `fast` |
 | `rate` | Positive pronunciation units per second; mutually exclusive with `pace` |
-| `min` | Minimum duration in seconds |
-| `max` | Maximum duration in seconds |
 | `rounding` | Rounding mode: `none`, `round`, `ceil` |
 
 The English named presets resolve to `4.2`, `4.6`, and `5.0` syllables per
 second. Use a numeric `rate` in place of `pace` when the project needs a
 continuous author-controlled value.
-Every property is explicit: `language`, `min`, `max`, `rounding`, and exactly
+Every property is explicit: `language`, `rounding`, and exactly
 one of `pace` or `rate` are required. The Estimate package supplies no hidden policy defaults.
 
 Referenced by `estimated:SemanticTake` via the `policy` attribute, and used by `hypit measure`
@@ -404,8 +400,6 @@ A complete `recipes.svs` file for a four-take talking-head project:
   speech.normal {
     language: en;
     pace: normal;
-    min: 4;
-    max: 15;
     rounding: round;
   }
 

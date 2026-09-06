@@ -54,8 +54,6 @@ const media = sealSynchronizedMedia({
 const policy = sealSpeechEstimatePolicy({
   language: "en",
   pace: "normal",
-  minimumSec: 1,
-  maximumSec: 30,
   rounding: "none",
 });
 

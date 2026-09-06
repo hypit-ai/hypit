@@ -3,6 +3,6 @@
 <sheet version="1">
   film.vertical { background: #09090B; }
   speech.visual { fit: cover; }
-  speech.normal { language: en; pace: normal; min: 4; max: 30; rounding: round; }
+  speech.normal { language: en; pace: normal; rounding: round; }
   media.aroll { video: primary-moving; audio: default; span-authority: video; }
 </sheet>

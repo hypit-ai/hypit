@@ -124,7 +124,7 @@ test("measure prints the seconds a line takes so the author can write the litera
     const out = capture();
     await runCreationCli([
       "measure", "--text", "Video editing begins with meaning, not a pile of clips on a timeline.",
-      "--language", "en", "--pace", "normal", "--min", "4", "--max", "15", "--rounding", "round", "--json",
+      "--language", "en", "--pace", "normal", "--rounding", "round", "--json",
     ], out.io, noHost);
     const view = JSON.parse(out.text()) as { readonly seconds: number; readonly units: number; readonly language: string };
     assert.equal(view.units, 20);
@@ -134,7 +134,13 @@ test("measure prints the seconds a line takes so the author can write the litera
     const human = capture();
     await runCreationCli(["measure", "--text", "hello world"], human.io, noHost);
     assert.match(human.text(), /^\d+(\.\d+)?s\n/u);
-    assert.match(human.text(), /duration="/u);
+    assert.match(human.text(), /Choose the request duration/u);
+
+    for (const [text, seconds] of [["Hello.", 2 / 4.6], [Array.from({ length: 460 }, () => "day").join(" "), 100]] as const) {
+      const measured = capture();
+      await runCreationCli(["measure", "--text", text, "--language", "en", "--rounding", "none", "--json"], measured.io, noHost);
+      assert.ok(Math.abs(JSON.parse(measured.text()).seconds - seconds) < 1e-9);
+    }
 
     await assert.rejects(runCreationCli(["measure"], capture().io, noHost), /--text|--segment/u);
   } finally {

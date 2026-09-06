@@ -28,8 +28,8 @@ With a configured Runtime and installed Distribution, run from this directory:
 
 ```bash
 hypit check reference.svrun
-hypit measure reference.svml --segment ronaldo --language en --pace fast --min 4 --max 15 --rounding ceil
-hypit measure reference.svml --segment messi --language en --pace fast --min 4 --max 15 --rounding ceil
+hypit measure reference.svml --segment ronaldo --language en --pace fast --rounding ceil
+hypit measure reference.svml --segment messi --language en --pace fast --rounding ceil
 hypit plan reference.svrun --runtime ./hypit.runtime.json
 ```
 

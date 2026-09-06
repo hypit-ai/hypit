@@ -231,10 +231,10 @@
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
   <estimated:SemanticTake id="elon-preview" narrative={story}
     segment={story.segment.elon} media={elon-preview-media.media}
-    language="en" pace="normal" min="4" max="15" rounding="round"/>
+    language="en" pace="normal" rounding="round"/>
   <estimated:SemanticTake id="sam-preview" narrative={story}
     segment={story.segment.sam} media={sam-preview-media.media}
-    language="en" pace="normal" min="4" max="15" rounding="round"/>
+    language="en" pace="normal" rounding="round"/>
 
   <speech:Track id="speech" visual-frame={speech-frame}
     visual-appearance={recipes.speech.visual} visual-z="0">
