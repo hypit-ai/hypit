@@ -45,10 +45,6 @@ function normalizeHypiHubRequest(
 ): { readonly model: string; readonly input: CanonicalValue } {
   const input = { ...(request.input as Record<string, unknown>) };
   if (mapping.result === "image") {
-    const resolution = input.size;
-    if (resolution === "1K") input.size = "1024x1024";
-    else if (resolution === "2K") input.size = "2048x2048";
-    else if (resolution === "4K") input.size = "3840x2160";
     return { model: request.model, input: canonicalize(input) };
   }
 

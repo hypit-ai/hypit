@@ -48,7 +48,9 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     fields: {
       prompt: { as: "value", field: "prompt" },
       aspectRatio: { as: "value", field: "aspect_ratio" },
-      resolution: { as: "value", field: "size", whenAbsent: "1024x1024" },
+      // `size` carries the 1K/2K/4K tier verbatim; the upstream reads it beside
+      // `aspect_ratio` to choose the pixel dimensions.
+      resolution: { as: "value", field: "size", whenAbsent: "1K" },
       images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
     },
   },
