@@ -1,30 +1,71 @@
-# Ranking-listicle format
+# Ranking and listicle
 
-Use a progressive ranking or list to reveal an ordered set while speech and evidence explain why
-each item belongs where it is placed. The format is a narrative pattern; the concrete visual board
-comes from the vocabulary/component-fit decision, not from a required package or tag.
+A ranking makes an argument through comparison. The board remembers earlier judgments while the
+current person, evidence and performance explain the next one. It can combine with
+[UGC performance](talking-head.md), independent narration or another presentation form.
 
-## Plan the story
+## Make the board's state tell the story
 
-- Open with a clear question, claim or ranking criterion.
-- Give every item a stable id, an explicit order or tier, one evidence beat and a concise reveal.
-- Keep order, labels, icon/image treatment and evidence relationships stable across the list.
-- Build toward a decisive top-ranked reveal and close with the implication or CTA.
+Decide what is already established when the clip opens and what the viewer will see decided now.
+A partially filled board can imply an ongoing ranking. In the football example, preset players
+occupy their rows from the beginning while the two spoken passages introduce the active players.
 
-## Author the sources
+Keep these notions separate when reading a component's vocabulary:
 
-1. Create the semantic speech chain and one outer ranking window.
-2. Declare exact fonts and the package-owned Style selected during vocabulary inspection.
-3. Use the selected ranking/list component and its documented timing/placement vocabulary; do not
-   invent attributes or copy a removed component's timing model.
-4. Connect semantic timing, the outer window, explicit placement, Style and the complete ordered
-   item set. Reveal timing must come from the component's admitted Moment/Selection inputs.
-5. Add the visual output to `film:Film`; keep proof clips or screenshots on a separate media track.
-6. Add the Caption pipeline when spoken words should be captioned, then route the delivery through
-   `.svrun`.
+- the outer Window is when the board exists;
+- a preset item is part of its initial state;
+- a newly activated item enters at an authored event or passage the component accepts;
+- the component owns how that activation changes the board and how long the resulting state stays.
 
-## Review and reuse
+A ranking item's activation Selection need not mean the item vanishes when the Selection ends.
+Read the package's actual consumption semantics. Here, `preset` means initial board content owned by
+this component.
 
-Check item identity and order, reveal timing, labels, icon assets, evidence alignment, safe zones,
-stack order and optional sounds. Read `../craft/captions.md`, `../craft/overlays.md`,
-`../craft/b-roll.md` and `../craft/sfx.md`; the always-read craft in `../index.md` applies too.
+## Arrange the person and the argument together
+
+Reserve useful space while drawing the host. The example places the person toward the right,
+uses the left for the active player's icon, and gives the lower region to the board and evidence.
+This is an authored composition; another ranking can have another layout. A setting detail can
+balance an offset host so they do not look artificially pushed aside for graphics.
+
+Speech supplies attitude and explanation. Caption follows its reading rhythm. Static or moving
+B-roll can illustrate a joke, comparison or claim on overlapping Selections. The board should remain
+understandable through the appearance and disappearance of those inserts.
+
+Some graphic systems publish both picture and sound. Use their peer outputs deliberately when the
+board already owns its drop or movement sound; an extra Audio Track is useful for distinct sounds,
+not for accidentally duplicating an existing event.
+
+## Give each picture the information role it needs
+
+An icon may identify the actual subject being ranked, establish an initial board state, carry the new
+theme of an adaptation or turn a comment into a visual joke. Decide what the viewer must recognize or
+believe before choosing how to make it.
+
+Use a supplied or found asset when its exact current identity, wording, version or factual authority
+matters; record the source and relevant use conditions. A familiar player, company, product, app,
+meme or public symbol can also be painted by a broadly informed image model when recognizable visual
+meaning is the need. Connect an exact reference when the model cannot reliably own the important
+fact. In reconstruction, preserve the icon's function and the recognition on which the original
+depends. In adaptation, a new subject or visual theme may call for a different icon altogether.
+
+Whichever source is useful, inspect identity, exact version, resolution, crop, padding and transparency at
+the final displayed size. Builds consume the selected project file or generated Output; sourcing is
+an authoring decision rather than work repeated on every Run.
+
+Supporting B-roll has a different job. In the football example, generated comic inserts interpret the
+commentary while player icons identify the board entries. Each insert chooses the visual language its
+joke needs; a parody interface or a theatrical still need not inherit the presenter's phone-camera
+Kit. A factual screenshot or product proof instead gets its authority from the fact it displays.
+
+## Choose the representation the argument needs
+
+A tier board, ordered column and comparison chart have different state and motion. Inspect a plausible
+Surface and use its public inputs. When the work needs a new structure or reveal behavior, create a
+project Track rather than modifying an installed package or forcing unrelated attributes onto it.
+
+Watch the current claim, the icon's movement, the board state and the supporting image together.
+Their timing can reinforce the same idea without all starting on the same frame. Use a shared
+Moment when several layers truly represent one event, and a Selection when a passage owns an interval.
+See [B-roll](../craft/b-roll.md), [Caption](../craft/captions.md), and
+[Track authoring](../../production/track-authoring.md) for those local decisions.

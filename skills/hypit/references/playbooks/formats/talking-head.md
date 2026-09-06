@@ -1,61 +1,65 @@
-# Talking-head format
+# UGC and talking-head performance
 
-Use one recurring presenter identity for a sequence of direct-to-camera speech takes, then add
-captions, B-roll, and editorial typography as peer Tracks.
+A compelling person speaks to the viewer. Their attitude carries the piece; Caption, evidence and MG
+help the viewer follow it. A ranking board is one possible companion, not a requirement of UGC.
+For that relationship, combine this page with [Ranking](ranking-listicle.md).
 
-## Author the SVML program
+## One useful image can carry the whole performance
 
-1. Write one Script with a strong opening Segment and 2–3 following Segments for context, evidence,
-   mechanism, payoff, or CTA. Keep each generated speaking take inside the selected model's declared range; 8–12 seconds is
-   a useful target when the delivery remains natural.
-2. Run `hypit measure` for each Segment before generation and write the literal durations.
-3. Vendor `speaker-v1.svs`. Put stable `composition-stability`, `camera-motion`, `edit-rhythm`,
-   `performance`, and `gesture` choices in an SVS Recipe.
-4. Render each take prompt with `copy:Render`; connect the Segment dialogue and one short English
-   action direction through `copy:Set`.
-5. Generate each take with `seedance:ReferenceVideo generate-audio="true"`, one accepted full
-   presenter/scene image, and the intended voice reference. Keep reference order identical across
-   the shot group.
-6. Normalize each accepted take, create one `whisperx:SemanticTake` from that media and its Script
-   Segment, then assemble those Semantic Takes in Script order with `speech:Track`.
-7. Add the exact-font Caption chain when captions are wanted: `caption-fine:Style` →
-   Script-owned `CaptionDocument`/`caption:Program` → `caption-fine:Track`.
-8. Add B-roll through `media-track:Track`, editorial copy through `typo:Track`, then assemble with
-   `film:Film` and render with `render:Video`.
+Make a character-and-scene image with the presence, camera distance, posture and available graphic
+space the video needs. [Image direction](../craft/image-direction.md) owns that craft. A person placed
+slightly right can leave room for an icon on the left; a table or the direction of their seated body
+can make that composition feel inhabited. Choose it for this layout, not as a universal UGC pose.
 
-## Direct the presenter
+Use that same image and the person's recurring voice reference for every ordinary talking Take.
+The Ranking example does exactly this for both player passages. Each Take returns to the same useful
+visual premise and contributes another piece of the edited performance.
 
-- Keep face, apparent age, hair, wardrobe, room, light direction, lens feel, and framing envelope
-  stable across A-roll.
-- Put spoken words only in the Script-derived dialogue slot. Put visible performance in the action
-  slot: gaze changes, brows, nods, compact gestures, posture, breath, or one motivated object action.
-- Let each Segment finish one thought. Do not fragment a sentence merely to manufacture more cuts.
-- Keep hands inside the established frame and away from the face unless contact is the authored
-  action. Preserve every prop's count, support, label, and starting position.
-- Use B-roll for a genuine change of place, proof, mechanism, or emotional state. Do not make the
-  presenter identity drift to create variety.
+Natural cuts are part of the desired result. A small change in pose between passages can make the
+video feel like a creator's edited recording. Stable character-and-scene references can support each
+Take independently because this work wants edited speech rather than an unbroken simulated recording.
 
-## Handle screens and reverse views
+## Use the tested Speaker Kit when its shape fits
 
-When the presenter-facing shot is paired with a device-facing proof shot, define both camera
-positions before generating either image. The two opposing views must show different background
-sectors and different dominant landmark sets. Reusing the same wall, window, or furniture group is
-an automatic rejection. Preserve the same room, presenter, device, lighting logic, and eye line.
+For a single presenter returning to one useful camera image through natural edited cuts, `speaker-v1`
+from `@hypit/seedance-kits` is a tested fit. It combines that character-and-scene image, one voice
+reference, Script dialogue, a Recipe for recurring direction, and optional action Text for the passage.
+Read the package README for assembly and the selected template for its actual choices. A work whose
+camera, cast, or performance relationship differs can use another Kit or ordinary authored direction.
 
-Use supplied UI media whenever exact interface content matters. Keep explanatory text on
-`typo:Track`, not inside the generated shot.
+In the worked Ranking example, its Recipe combines stable framing with
+`edit-rhythm: pause-trim-jump-cuts`. The camera can
+stay fixed while the edit removes dead pauses and the performer remains expressive. This is a prompt
+instruction to the generator; it does not run an automatic trimming operation on the returned file.
 
-## Review and reuse
+Action supplies what the scene means to this person. For a teasing ranking host, amused disbelief,
+a knowing look and a compact dismissive gesture are more useful than a limb-by-limb animation plan.
+Give a few actions a reason: a shrug dismisses an argument; a quick lean makes a punchline personal.
+Let speech, Caption or MG carry exact numbers while the hand makes a readable emphatic gesture.
 
-- Review the full-resolution presenter image before any speaking take.
-- Review every A-roll take for identity, lip-sync, exact words, voice assignment, stable background,
-  hands, props, and generated text.
-- Review B-roll independently, then review the joined Film for pacing, semantic timing, caption
-  collisions, and audio clarity.
-- Pin every accepted image and take in the next Build with `.svrun` `build-record` and `satisfy`.
+One useful action direction, alongside Script dialogue, is:
 
-Read `../craft/image-prompt-style.md`, `../craft/seedance-directing.md`,
-`../craft/voice-and-performance.md`, `../craft/captions.md`, `../craft/b-roll.md`, and
-`../craft/overlays.md`.
+```text
+Play this as an affectionate roast from someone who knows the subject well. Start with amused
+certainty, let the comparison earn a brief disbelieving look, and land the last line with a small
+knowing shrug. The free hand makes relaxed emphatic gestures; keep the microphone easy and steady.
+```
 
-That list is complete, and the always-read craft in `../index.md` applies regardless of format.
+This illustrates attitude and a few visible beats; it does not prescribe every creator's personality.
+See [Directing generated performance](../craft/seedance-directing.md) for listeners, gestures and cuts.
+
+## Let speech and graphics do different work
+
+Write natural stages in Script and measure each Segment before choosing a literal generation
+duration. A Segment can contain several edited shots, Caption Cue Breaks, graphic changes and
+speaking turns. Choose its boundaries and length from the performance it carries.
+
+Normalize the produced speaking media, align its own audio to its Segment, and assemble the
+SemanticTakes. Keep that performance's sound when B-roll covers its picture. Place evidence on
+Selections and reveals on the component's declared timing inputs. A persistent board can continue
+through a cut while the current portrait, evidence image and Caption change.
+
+Watch whether the person feels engaged and whether the visual layers support that engagement.
+Stable identity and a coherent setting matter; identical pose at every seam does not. A static
+expression, mechanically repeated gestures or relentless intensity can undermine the result even
+when every requested word is present.

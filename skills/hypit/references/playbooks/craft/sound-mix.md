@@ -43,10 +43,20 @@ event that gives it meaning: contact, arrival, state change, reveal, transition,
 
 Use Script Selections and Moments when the sound belongs to spoken meaning. Use clock time when the
 event is genuinely independent of speech. The final accepted speech alignment locates semantic
-events in real media; a measured reading duration is not a substitute for it.
+events in the produced media; a measured reading duration is not a substitute for it.
 
 Repeated visual states can share a coherent sound vocabulary. Variation is useful when the dramatic
 function changes, not merely because another asset is available.
+
+Layer an impact, click or whoosh when their combination gives the event a useful character; adding
+every available effect to every cut quickly exhausts the listener. A tactile process can instead
+depend on delicate contact and material texture. Preserve those small sounds and match their onset
+to the visible action rather than burying them under a generic impact.
+
+An independent sound can use an Audio Clip at a Script Moment with a deliberate duration. A sound
+intrinsic to a Media Item or Sequence transition can use that component's enter, exit or Handoff
+trigger. The component owns that event relationship. [Tracks](../../production/tracks.md) gives a
+Clip example; `@hypit/audio-track` and `@hypit/media-track` own exact playback and trigger syntax.
 
 ## Preserve continuity through edits
 
@@ -63,7 +73,8 @@ the intended handoff rather than hide an unexplained discontinuity.
 
 First establish that each important source is the right performance or sound. Then hear speech with
 the surrounding layers, the densest passage, every structural transition, and the opening and close.
-Finally listen to the complete Film without stopping on both headphones and ordinary speakers.
+Finally listen to the complete Film without stopping. Use the available listening setup that represents
+the delivery, and compare headphones with ordinary speakers when translation between them matters.
 
 Judge cumulative pace and fatigue as well as isolated clarity. Repair the owning layer: performance
 problems in the speech source, semantic placement in Source, event design in the effect, arrangement

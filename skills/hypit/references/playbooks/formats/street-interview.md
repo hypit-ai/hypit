@@ -1,57 +1,89 @@
-# Street-interview format
+# Street interview
 
-Use explicit interviewer, guest and shared street views, two Script Roles, and a microphone handoff.
-Write camera changes and performance together in each take's action, in the order they occur.
+An interviewer encounters someone with their own life, asks something, and receives an answer worth
+watching. The guest usually carries the story; the interviewer helps the viewer discover it.
 
-## Author the SVML program
+## Establish the encounter, then derive attention
 
-1. Write Script turns with explicit interviewer and guest Role Cues. Render the Kit dialogue so the
-   interviewer is `A:` and the guest is `B:`.
-2. Prepare three accepted final views in order: image 1 for interviewer A, image 2 for guest B, and
-   image 3 for their shared scene and full spatial relationship.
-3. Prepare two clean voice references in the same order: audio 1 for A, audio 2 for B.
-4. Vendor `street-interview-v1.svs`. Select `framing`, `pacing`, `performance`, `reaction`, and
-   `gesture` in an SVS Recipe.
-5. For each Script Segment, use `copy:Render` with dialogue plus an English action that states the
-   camera and performance sequence directly, then call `seedance:ReferenceVideo
-   generate-audio="true"` with all three views and both voices.
-6. Normalize each accepted Segment take, produce its `whisperx:SemanticTake`, assemble the results
-   with `speech:Track`, then add Caption, Media, Typography, and Audio Tracks as needed.
-7. Assemble peer Tracks in `film:Film`, render with `render:Video`, and use separate `.svrun`
-   Sources with explicit Targets for review and delivery.
+For the three-view method, generate a shared image containing both people and their real spatial
+relationship. Derive the guest close view and interviewer close view directly from it. In the
+interviewer view, retaining part of the guest at the opposite edge keeps the exchange legible.
+The guest looks toward the interviewer, and the interviewer looks back across the same screen axis.
 
-## Preserve the street-interview grammar
+```text
+shared street scene ──> guest close view
+                    └─> interviewer close view, retaining part of guest
+```
 
-- Select the shared, interviewer or guest reference directly in the action whenever the camera
-  changes. Preserve the authored camera side, background sector and spatial relationship of the
-  selected view.
-- Only the active Role moves their mouth. The listener remains alive through eye focus, breath,
-  posture, nods, and an appropriate silent reaction.
-- A always holds the same microphone. On A lines it remains near A; on B lines A extends it toward B
-  through a believable wrist/arm movement. The microphone must not duplicate or switch hands
-  without an authored action.
-- Let each answer complete one natural idea. Compact handoffs are useful, but intelligibility wins
-  over speed.
-- In the opening take, include about one second of silent surprise before the first authored line;
-  budget it inside the generated duration and do not add unauthored words.
+The [worked image directions](../craft/examples/conversation-images.md#street-interview-views)
+show how little the derived prompts need to add once the shared image is doing its job.
 
-## Add proof and editorial layers
+`street-interview-v1` uses this supplied set: interviewer A, guest B, shared view, then the two voices
+in A/B order. All ordinary Takes reuse it. Its three-view limit is the design of this Kit, not a
+restriction on every street interview or on Hypit. The interviewer keeps the microphone and moves
+it toward whoever speaks; extending it to the guest is not handing over ownership.
 
-- Place B-roll and proof media with `media-track:Item` during Script Selections. Let the spoken setup
-  begin before the picture enters and let the next spoken beat begin before the picture exits when a
-  J-cut/L-cut improves continuity.
-- Use the complete Caption chain with one program-wide Planner. Use `typo:Track` for titles, names,
-  questions, or CTA copy.
-- Keep exact signs, product labels, and device UI as supplied physical media. Do not ask Seedance to
-  add editorial cards or captions.
+## Cut toward the person who matters now
 
-## Review and reuse
+In the worked piece, guest answers favor the guest close view. A brief neutral interviewer question
+can stay in the shared view; disbelief or an emotionally important challenge earns the interviewer
+close view. This directs attention rather than alternating cameras on a timer.
 
-Review speaker/voice assignment, lip-sync, microphone position, listener silence, identities,
-street continuity, reaction timing, text hygiene, and caption placement. Pin accepted scene images
-and takes with `.svrun` `build-record` and `satisfy` before downstream assembly.
+Action can specify cuts between the Kit's supplied setups. Several questions and answers fit in one
+Segment and one generated Take. Keep the chosen framing behavior within each setup and let the cut
+move directly to the next; an invented travel shot between cameras changes the scene's grammar.
 
-Read `../craft/seedance-directing.md`, `../craft/voice-and-performance.md`, `../craft/captions.md`,
-and `../craft/b-roll.md`.
+## Give the encounter a before and an after
 
-That list is complete, and the always-read craft in `../index.md` applies regardless of format.
+At the opening, the guest is occupied with something plausible: looking into a bag, checking an
+object, or looking down. The interviewer takes a small step forward and asks; the guest looks up
+or turns toward them in response. Begin the exchange naturally rather than imposing a fixed silent
+delay before every line.
+
+At the end, return attention to the guest and let them begin to turn away after the final thought.
+These small actions imply life outside the clip. They work because of their cause, not because
+every interview must contain the same bag check and exit direction.
+
+For the worked opening, action alongside the Script can make the causal sequence concrete:
+
+```text
+BOY is interviewer A; WIFE is guest B. Open in the shared reference setup. She is looking into her
+bag as he takes a small step toward her and begins the question. She looks up toward him in response.
+Cut directly to her supplied close view for her answer. Use the shared view for his brief follow-up,
+and his supplied close view when the surprising answer earns his disbelief. Keep the reaction
+interested and spontaneous rather than theatrical; he continues to hold and position the microphone.
+```
+
+On the final passage, a short additional direction can return to her close view and let her begin
+turning away after the punchline. The opening and ending actions belong to those actual passages;
+intermediate Takes carry the behavior of their own exchange.
+
+For the middle, give a few readable gestures a purpose: amused certainty, a compact shrug, a glance
+that registers a surprising answer. Avoid exaggerated emotion, constant motion and exact numerical
+finger poses. The performer should seem to respond, not execute an animation checklist.
+
+## Make a reveal one event across several layers
+
+The example's answer Moment updates one slot in an emoji strip, starts a short sound and triggers
+a colored flash. Earlier answers remain visible; future answers remain question marks. Reuse the
+same Script Moment for these consumers so a changed delivery still makes the reveal land together.
+
+Design Caption colors, placeholder and answer icons, flash colors and sound character as one visual
+and rhythmic treatment. An icon's role can supply an accent color; not every layer needs the same
+color. Use actual image assets when matching icon shape and color matters.
+
+This answer strip is a normal project component. Its outer Window owns visibility; child Moments
+own reveals; its implementation owns the resulting persistent state. See
+[Track authoring](../../production/track-authoring.md) for that distinction and other Track roles.
+
+## Caption can follow the guest's head
+
+The worked interview first produced its speaking footage with ordinary Caption placement. Face
+detection on the produced footage then supplied boxes; the author expanded them to head regions
+and rendered again with Caption anchored above those regions, reusing the paid media.
+
+Use [Caption tracking](../craft/caption-tracking.md) when this placement serves the piece. It is a
+specific production loop with an external measurement step, not a required first step for interviews.
+Fixed interviewer Caption and tracked guest Caption can coexist. Fine styles handle these examples;
+a new structural Caption treatment can be a project Caption family using the shared Script,
+Caption data and semantic timing.

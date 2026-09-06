@@ -1,49 +1,42 @@
-# Visual continuity
+# Visual continuity across edited views
 
-## Encode continuity in SVML
+Continuity lets the viewer believe the people, place and action persist through a cut. It does not
+require the cut to disappear. Use [reference relationships](generated-dependencies.md) for the graph
+and this page when a visible change makes the shared world hard to understand.
 
-- Declare recurring anchors as explicit `media:Image`/`media:Audio` assets or accepted generated
-  outputs. Reuse the same Artifact edges; do not redraw identity from prose for every take.
-- Generate the location once and derive its other views from that image, rather than describing the
-  room again per take; every part of a shot split by the duration ceiling references that same
-  accepted image, so the parts generate in parallel rather than in a chain.
-  `generated-dependencies.md` states both, and the reverse-view geometry below is what decides how
-  many views a location needs.
-- Keep one authoritative reference set and one stable Recipe for a continuous shot group. Split a
-  group only for a genuine edit or the selected model's duration ceiling; preserve camera, room, wardrobe,
-  light, props, action state, and reference order across its parts.
-- Put each stable physical fact in both the reference image and the relevant prompt contract. Prefer
-  simple, symmetric props when a distinctive feature repeatedly duplicates or mutates.
+## Preserve the relationship, change the view
 
-## Enforce shot/reverse-shot geometry
+Complementary podcast views share a location, lighting logic and conversation axis. A host on the
+right looks toward the partner on the left; the partner's view reverses that attention. Microphone
+entry, furniture and background help explain the two camera positions. The second view shows another
+sector of the location rather than a mirrored duplicate of the first image.
 
-Treat reverse-view geometry as a hard acceptance rule, not a stylistic suggestion.
+A plausible reverse view can be derived from the first host image because it already establishes the
+person, setting and conversation axis. If the second image breaks the relationship, revise the
+image or prompt responsible; a problem in one branch does not automatically invalidate both hosts.
 
-1. Name camera positions A and B, their facing directions, and the background sector/landmarks that
-   each position must see before generating either image.
-2. For opposing positions, require different main background sectors and different dominant
-   landmarks. The room, people, lighting logic, and key props remain continuous, but the background
-   behind the subject must not be the same or a cosmetic crop of the same wall.
-   The two views must show different background sectors and different landmark sets.
-   In short: opposing views must show different backgrounds.
-3. Reject both images if they show the same main background, the same landmark arrangement, or a
-   mirrored duplicate. Regenerate before either image enters downstream generation.
+In an interview, the shared image establishes both people and the microphone relationship. Derive
+the close views from it. Keeping a piece of the guest in the interviewer closeup can preserve the
+sense of their proximity without needing another establishing shot.
 
-Use explicit English geometry such as:
+## Preserve the facts this cut depends on
 
-`Camera A faces the subject with the window wall behind them. Camera B is the opposite reverse view from the subject's position, with the counter and blackboard wall behind the device. The two views show different sides of the same room.`
+Identity, wardrobe, setting and recurring voice often remain stable across a conversation. Pose,
+hands, shoulders and expression can change naturally at an edit while the cut remains coherent.
 
-For a person-facing/device-facing pair, the person-facing image shows what is behind the person;
-the device-facing reverse image shows what is behind the device. Writing only “cafe interior” or
-“office interior” for both views is a continuity failure.
+Props sometimes require a more specific account: a phone remains in the same hand, a product passes
+to the partner, or the microphone is extended toward a reply. State the meaningful possession or
+direction clearly. Avoid exhaustive hand choreography when a simple interaction communicates it.
 
-## Review each accepted group
+Physical text already on a microphone, product or sign belongs to the filmed world. Preserve it when
+it matters; editorial Caption and MG remain separately authored composition.
 
-- Compare identity, face angle, eye line, wardrobe, lighting direction, room layout, camera height,
-  lens feel, prop count, handed tasks, and action state across every image/take in the group.
-- Keep camera movement within the selected Kit Recipe. Do not introduce a new room, camera, outfit,
-  or unexplained object inside a reference-locked take.
-- Let only the active Script Role speak. Keep listeners visibly alive through breath, gaze, and
-  reaction without invented dialogue.
-- Keep supplied physical text attached to its product, screen, document, or sign; put editorial text
-  on explicit Tracks.
+## Inspect the cut in context
+
+Look at the images together, then the actual moving exchange. Check gaze and spatial relationships,
+who speaks, who listens, and whether prop changes have a cause. An isolated beautiful frame cannot
+prove that an exchange works. A coherent reference pair likewise does not guarantee perfect motion.
+
+Let the intended edit determine what must match. A lifestyle cut can deliberately change clothes
+and location while retaining the same person; a product variation in the same camera has a different
+preservation burden. Carry only the necessary facts into the next prompt.

@@ -3,6 +3,9 @@
 Read this when opening Studio, judging an encoded Result, comparing a reconstruction with its
 reference, or deciding where a visible problem should be repaired.
 
+[Studio](studio.md) explains launch, session reuse, displayed information, Source writeback and
+project Companions. [Builds and Results](builds.md) explains retrieval and explicit Output reuse.
+
 ## Review the work the Run actually selects
 
 Open Studio with the ordinary Run intended for the work. That Run binds the Author Source, Targets,
@@ -11,12 +14,12 @@ A separate review Run is useful when its Candidate selection is intentionally di
 
 Studio renders the selected display closure with deterministic Producers and the exact capabilities
 that the Runtime Provider declares safe for transient authoring. It submits no Build and no paid
-generation. When a selected route still needs external generation, use an existing file or Build
+generation. When that closure still needs external generation, use an existing file or Build
 Output, or explicitly select a stand-in when only shape and time are under review.
 
 A stand-in can establish layout, duration, cuts, and downstream wiring. Its visible marking reminds
 the reviewer that it cannot establish subject identity, performance, shot composition, texture,
-continuity, or the interaction between real media and graphics.
+continuity, or the interaction between the selected production media and graphics.
 
 ## Separate legality from judgment
 
@@ -25,7 +28,7 @@ configured composition displays. A completed Build can establish what the select
 produced. Creative review asks a different question: does this visible and audible work perform the
 Treatment and the useful relationships learned from the reference?
 
-Look at the complete vertical film as well as the components inside it. A component that looks
+Look at the complete Film at its intended delivery size as well as the components inside it. A component that looks
 attractive in isolation may still cover a face, compete with a Hook, arrive on the wrong word, or
 break the piece's rhythm.
 
@@ -45,14 +48,16 @@ Use whichever view can answer the current question:
 - Once a numeric interval is known, a range render can inspect the corresponding frames of the same
   HyperFrames program. The range may come from the playhead, authored clock time, or an existing
   Result; HyperFrames does not need to know whether language helped the Agent locate it.
+  [Rendering](rendering.md#choose-a-render-interval-in-frames) gives the frame-bound syntax and the
+  relationship to upstream Candidate reuse.
 - On an encoded Result, focused media operations such as frames, cut, and tile can expose exact
-  pixels, adjacent frames, or a short passage without turning those observations into project state.
+  pixels, adjacent frames, or a short passage.
 - Watch the whole deliverable when the question concerns Hook clarity, story movement, pace, payoff,
   CTA, performance, continuity, or whether A-roll, B-roll, Caption, MG, Effects, and Audio cooperate.
 
-These views are complementary tools, not review stages. A component name alone does not prove that a
-particular state is stable or that a change occurs at a guessed time; Studio or actual media supplies
-that evidence.
+Choose and combine these views according to the current question. A component name alone does not
+prove that a particular state is stable or that a change occurs at a guessed time; Studio or actual
+media supplies that evidence.
 
 Inspect the visible and audible relationships that could change the work:
 

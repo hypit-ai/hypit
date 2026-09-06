@@ -10,11 +10,13 @@ ears, and local media commands to prepare a closer view. The tools report eviden
 events across time, resolves contradictions, explains why they matter, and decides what to inspect
 next.
 
-Begin by watching the whole piece and reading its word-level transcript. Form a provisional account
-of:
+Begin by watching the whole piece. Spoken language carries most work Hypit is asked to clone, so obtain
+and read its word-level transcript and use it as the normal time spine. If the piece is genuinely
+speechless, establish that spine from its actions, visual changes, music, effects and silence. Form a
+provisional account of:
 
 - the Hook, story movement, payoff, and intended viewer response;
-- who speaks, whether speech is on camera or voice-over, and the roles of A-roll and B-roll;
+- how speech or silence carries the piece, who speaks when present, and the roles of A-roll and B-roll;
 - the persistent and recurring Caption, Typography, MG, Effect, and Audio systems;
 - changes, accumulations, replacements, reveals, cover relationships, and callbacks;
 - the few relationships that make the piece recognizably itself.
@@ -89,18 +91,21 @@ spoken display system: words, Cues, speaker or role, activation, placement, and 
 independent visual writing such as a title, label, step, or poster text. UI and MG may contain text of
 their own. Classify by function instead of collapsing everything visible into a generic text track.
 
-Every observation sentence should identify its material in natural language: “tile 004 shows…”, “the
-0:12.4 frame shows…”, “the 0:12–0:14 clip shows…”, or “the WhisperX transcript gives…”. Several
-materials may support one conclusion. When a fact remains unsettled, name the question that would
-change the work.
+Name the material for an important observed fact when its provenance will help another Agent trust,
+reopen or correct it: “tile 004 shows…”, “the 0:12.4 frame shows…”, “the 0:12–0:14 clip shows…”, or
+“the WhisperX transcript gives…”. Several materials may support one conclusion. Ordinary connected
+description need not repeat the citation in every sentence. When a fact remains unsettled, name the
+question that would change the work.
 
 ## Preserve time without turning it into target code
 
 Reference time establishes order, overlap, duration, and relation to spoken words. Record both the
 original seconds and the meaningful relation: a picture illustrates the word `videos`, a reveal lands
-after a pause, a Caption Cue spans a phrase, or an effect continues through a cut. Word-level evidence
-is essential because it lets the director identify what an event means. Read `script-and-time.md` when
-turning those observed relationships into the target's Script identities and timing.
+after a pause, a Caption Cue spans a phrase, or an effect continues through a cut. In the usual spoken
+work, word-level evidence lets the director identify what an event means and later bind it to Script.
+A genuinely speechless work locates meaning through action, visual change, music, effects and silence
+instead. Read `script-and-time.md` when turning those observed relationships into the target's Script
+identities and timing.
 
 ## Keep the archive complete and revisable
 

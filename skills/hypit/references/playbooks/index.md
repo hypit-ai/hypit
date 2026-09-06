@@ -22,8 +22,18 @@ not need a matching playbook before it can be understood or made.
 
 | Read | When the current question concerns |
 | --- | --- |
+| [Directing generated images](craft/image-direction.md) | phone-video realism, character presence, image prompts, materials and palette, or preparing a useful visual reference |
 | [Voice and performance](craft/voice-and-performance.md) | who performs speech, recurring voice identity, A-roll under coverage, or genuinely independent narration |
+| [Directing generated performance](craft/seedance-directing.md) | using a video Kit, directing attitude and small actions, natural cuts, listeners, or sizing Takes |
+| [Reference relationships](craft/generated-dependencies.md) | deciding which images or Takes should depend on which references |
+| [Visual continuity](craft/visual-continuity.md) | complementary camera views, gaze, prop state, or what must remain coherent through a cut |
+| [B-roll](craft/b-roll.md) | exact cue coverage versus montage, short display windows, source playback, J-cuts, or adjacent Selections |
+| [Frame coverage](craft/frame-coverage.md) | an unintended exposure, gap, crop or transition at a visual boundary |
+| [Caption](craft/captions.md) | speech-linked text, reading rhythm, Fine styles, or a new Caption family |
+| [Caption tracking](craft/caption-tracking.md) | measuring produced footage and placing Caption above a moving head without regenerating the media |
 | [Sound and mix](craft/sound-mix.md) | the relationship among speech, music, ambience, effects, loudness, ducking, and continuity |
+| [Graphic composition](craft/graphic-compositions.md) | visual hierarchy, boards, graphic state, editable structure, component boundaries or coordinated palette and reveals |
+| [Compositing](craft/compositing.md) | overlays, picture-in-picture, cutouts, screen evidence, container versus content motion, or live call layouts |
 
 Read every craft whose question genuinely appears in the work, including questions discovered after
 a Studio preview or completed Result. Repeated use of the same craft does not require rereading it
@@ -33,6 +43,10 @@ unless the decision has changed.
 
 | Read | When the work's shape includes |
 | --- | --- |
+| [UGC and talking-head performance](formats/talking-head.md) | one person directly addressing the viewer, with natural edited performance |
+| [Two-person podcast](formats/two-person-podcast.md) | complementary host views, conversational reactions, product interaction or lifestyle coverage |
+| [Street interview](formats/street-interview.md) | a motivated encounter, guest/interviewer/shared views, reveals or tracked Caption |
+| [Ranking and listicle](formats/ranking-listicle.md) | a persistent comparison or board whose state changes with the argument |
 | [Narration-led work](formats/narration-led-demo.md) | independent narration organizing products, hands, screens, demonstrations, montage, or MG |
 
 A format page is useful when its relationships illuminate this work. It is not a category the

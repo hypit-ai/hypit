@@ -3,6 +3,9 @@
 Read this when a project needs an execution environment, a credential, another Provider, or an
 explanation of what the current machine can actually do.
 
+[System relationships](../production/system.md) explains how authored work reaches these facilities;
+[rendering](../production/rendering.md) explains picture, audio and frame-range requests.
+
 ## Start from the work's capabilities
 
 The environment is sufficient relative to the work, not as a global state. Read the Brief,
@@ -47,6 +50,80 @@ The Profile itself contains only environmental choices:
 Read each selected Provider README for its accepted configuration and capability support. Installing
 a package only makes it available; a Profile entry selects it.
 
+## Connect Model, capability, Need and Endpoint
+
+These names describe different facts about the same work:
+
+| Term | Meaning in production |
+| --- | --- |
+| Model Package | Owns the authored request and result semantics, including the exact model choice and supported input form. It does not choose an account or service URL. |
+| Capability | The versioned operation an implementation must support. Generation, rendering, media processing and alignment all have capabilities. |
+| Need | One concrete external request produced by the selected graph, with its capability and actual inputs. One Build can produce many Needs. |
+| Provider Package | Implements capabilities through a vendor API or local process, including credentials, invocation, polling, resource transfer, capacity and diagnostics. |
+| Endpoint | One configured instance of that Provider, using a particular account or deployment. Several instances may use the same Provider package. |
+| Binding | The Profile's explicit choice among Endpoints offering the same capability. |
+| Runtime Worker | Advances submitted Builds, reserves shared capacity for their Needs and follows submitted external operations. |
+
+For example, an authored video request determines what to generate. The Run can satisfy its output
+with an existing Result so that generation is no longer demanded. If it remains demanded, the Model
+produces a Need; the Profile resolves its capability to one Endpoint; the Provider maps that request
+to the chosen service. The same author semantics can therefore work through BYOK or HypiHub when
+both implement the exact capability, without putting those account choices into SVML.
+
+A binding key is the complete `name@version#capability`, not a guessed vendor model label. For
+example, this Profile fragment selects local alignment when multiple Endpoints offer it:
+
+```json
+"bindings": {
+  "@hypit/whisperx@1#whisperx-alignment": "whisperx.local"
+}
+```
+
+That Endpoint must actually be declared and support the capability. A single eligible Endpoint
+needs no binding; multiple unbound choices are an error. Use the Model and Provider READMEs and
+`plan` to establish actual support rather than inferring compatibility from similar model names.
+
+## Set capacity at the resource it describes
+
+The Runtime Worker and HyperFrames `workers` are different things. The Worker schedules many Builds;
+HyperFrames workers are independent Chrome processes within one active render Need. There is no
+per-Build worker count or extra Build-wide concurrency limit to coordinate all models.
+
+| Control | What it limits |
+| --- | --- |
+| Endpoint total concurrency, commonly `config.defaultConcurrency` | Simultaneous requests across Builds using that resource |
+| A Provider's exact-model limit, where supported | A narrower quota within its total capacity; read that Provider's accepted configuration |
+| Endpoint `pool` | Shared resource identity for instances using the same real account, deployment or compute budget |
+| Endpoint action limits, where supported | Concurrent `submit`, `poll` or `collect` calls and starts admitted within a time period; these are distinct from remote tasks in progress |
+| HyperFrames `config.workers` | Chrome processes requested by one render; this is work size |
+| HyperFrames `config.browserCapacity` | Chrome slots shared by render Needs; each reserves its actual worker count alongside one request slot |
+
+For example, two local render Endpoint instances using 4 and 2 workers can share a pool with
+request capacity 2 and browser capacity 6. Both fit together. With browser capacity 4, one waits;
+a single request larger than the configured browser capacity is a configuration error. These are
+illustrative budgets, not universal machine recommendations. Increasing workers can increase memory,
+decode and I/O pressure; inspect actual progress before attributing every delay to capacity contention.
+The selected frame range belongs to the render request, while worker policy belongs to the Endpoint.
+
+Configure these choices in the Runtime Profile's Endpoint entries, using each Provider's documented
+fields. All instances sharing a resource must agree on its limit; use different pools for genuinely
+independent resources. Kie and HypiHub use the same capacity-reservation mechanism, but separate
+accounts do not share a pool merely because they offer the same model.
+
+Capacity reservations coordinate Builds sharing the same Runtime Execution Store. They are not a
+cross-machine account quota service. An accepted asynchronous Operation retains its task-capacity claim
+while it is pending, including between polls and across a Worker restart. Each short `submit`, `poll` or
+`collect` call can separately consume action concurrency and rate; the call releases its concurrency when
+it ends while a rate budget continues for its declared period. If an Endpoint action fails, that Operation
+and Build attempt fail and their local capacity claims are released; any receipt, last remote status and
+error remain evidence. Disconnecting a CLI observer does not change any of these facts. Studio's permitted
+transient work has session-local concurrency and does not consume durable Build capacity claims.
+
+Read the installed `@hypit/runtime-local` README for the shared model and the selected
+`@hypit/provider-hyperframes-local`, `@hypit/provider-kie` or `@hypit/provider-hypihub` README for
+accepted settings. Use `hypit activity` to inspect actual claims. After changing a Profile, follow
+[Worker reload guidance](../production/builds.md#reload-changed-execution-code-deliberately).
+
 ## Begin with the Distribution starter
 
 From the project directory:
@@ -84,15 +161,16 @@ cost, privacy, setup time, or control.
 - For speech alignment, offer local WhisperX when the machine and the user's available setup time
   make it practical. Explain that its first preparation may install a runtime and download model
   weights; `local-tools.md` owns the bounded setup and repair guidance.
-- Offer HypiHub as the official hosted route when the user prefers one hosted account or does not
+- Offer HypiHub as the official hosted option when the user prefers one hosted account or does not
   have the corresponding BYOK or local capability. Authentication and available quota still need to
   be established for the selected account.
 - Image, video, voice, and audio production each require an actual selected Endpoint for the exact
   authored model. An observation Endpoint does not imply a generation Endpoint, and vice versa.
 
 HypiHub is a convenient selected Provider, not an automatic fallback. Moving from BYOK or local
-execution to HypiHub changes the Profile or its binding explicitly; it never happens because another
-Endpoint failed. Ask for a user decision only when the alternatives have a meaningful consequence,
+execution to HypiHub changes the Profile or its binding explicitly; an authentication error, exhausted
+quota, rate limit or service failure never authorizes that switch or a different billing account.
+Ask for a user decision only when the alternatives have a meaningful consequence,
 not merely because several equivalent implementations exist.
 
 ## Put secrets behind credential references

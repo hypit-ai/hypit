@@ -15,12 +15,6 @@ hypit programs status
 hypit doctor
 ```
 
-The Skill also ships a small host probe:
-
-```bash
-node <skill-root>/scripts/check-environment.mjs
-```
-
 Read the failing Endpoint's message and package README before changing the machine. The Profile says
 which local implementation was selected; another project's working service is not evidence that this
 Profile selects it.
