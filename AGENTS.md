@@ -23,7 +23,7 @@ Hypit 的用户通常也是组件作者。新视频经常需要新的视觉角�
 - 写一个新组件是在做视频。
 - 改变组件如何被写、加载、执行或兼容，才是在开发 Hypit。
 
-正常使用包括 `.svml`、`.svs`、`.svrun`、assets、runtime profiles、Results，以及项目内 `packages/` 中组件自己的 TypeScript、Manifest、Surface、Producer、Fragment 和 preview。框架开发包括 Author Package 公共 API、Core、Compiler、Runtime、Result、Provider、CLI、Studio、Package Loader 和公共协议的改变。
+正常使用包括 `.svml`、`.svs`、`.svrun`、assets、runtime profiles、Results，以及项目内 `packages/` 中组件自己的 TypeScript、Manifest、Surface、Producer、Fragment 和 preview。通过现有公共接口编写并显式选择项目 Model 或 Provider，也属于包扩展。框架开发是改变这些公共接口、Core、Compiler、Runtime、Result、CLI、Studio、Package Loader 或共享协议的行为。
 
 不要把“只有证明现有 Surface 完全无法表达后才能创建组件”设成审批流程。应先了解和复用已有能力，但遇到真正新的视觉角色、结构或语义时，可以直接创建项目组件。
 
@@ -37,11 +37,11 @@ Hypit 的用户通常也是组件作者。新视频经常需要新的视觉角�
 - `docs/public/` 的展示资源；
 - `docs/` 下参与 VitePress 站点的所有 Markdown，包括 quickstart、guide 和中文内容。
 
-第一轮尽量不改产品门面。公开站点只在实现已经成立后做最小事实修正，不承载包清单、内部状态机、阶段性审计或当前实现快照。
+公开站点说明已经成立的产品能力与用法，不承载包清单、内部状态机、阶段性审计或当前实现快照。
 
 ### 视频制作与组件创作知识
 
-`.agents/skills/hypit/` 面向实际制作，负责：
+`skills/hypit/` 面向实际制作，负责：
 
 - 编写和修改 Sources、Recipes、Runs；
 - 素材、运行配置、Result 和输出复用；
@@ -69,13 +69,10 @@ Skill 不应指导修改 Hypit 框架，也不应依赖公共开发指南作为�
 
 不要建立 Hypit Registry、组件数据库、自动扫描/安装机制或 Hypit 专用 package lock。不要把项目组件“提升进 Hypit 主仓库”作为默认流程，也不要为一次视频修改已经安装的官方包。
 
-## 后续实施顺序（需逐步获得用户确认）
+## 文档维护
 
-1. 建立简短的框架开发参考，明确视频/组件创作与框架开发的边界。
-2. 重写 production Skill：把项目组件创作放回主流程；删除“promotion into Hypit repo”；增加按需读取的组件分享说明。
-3. 建立仓库外组件可使用的稳定、小型公共 Author API，避免独立包依赖一串内部 workspace 包。
-4. 增加一个不依赖 workspace、可 pack、安装、加载和显式升级的独立组件示例及验证。
-5. 更新 package/service README 和 examples 的局部事实。
-6. 最后仅对公共站点做必要事实修正；阶段性 audit/current-state 文档提取有效事实后删除，不建立 archive 坟场。
+Skill 入口保留受托导演的判断方式、长期责任和按当前问题读取的路由。Creation 负责参考理解与目标设计，Production 负责系统使用与组件创作，Environment 负责安装和执行环境；Format 解释整片关系，Craft 解释局部创作判断，Prompt Kit 由所属包维护准确模板。
 
-明确不做：先重写根 README 或产品叙事；建立中央组件服务；自动安装未知代码；维护公开的精确包/API 总清单；在用户逐步确认之前自动开始整批重构。
+共享 Skill 与 Kit 文案使用英语；Agent 与用户交流时使用用户的语言。具体作品的事实与决定留在项目文档、Source、Run 和 Result 中。
+
+框架的跨包原则留在本页，准确接口与局部实现留在 package/service README 和代码附近。临时审计完成后，把仍有用的事实并入其所有者，再删除审计材料。文档围绕问题、设计理由和用法展开，技术判断独立于贡献者身份。
