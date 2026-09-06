@@ -1,12 +1,65 @@
 # Planning, Builds, and Results
 
 Read this when inspecting the work selected by a Run, obtaining spending authority, submitting a
-Build, following active work, or retrieving completed public Outputs.
+Build, continuing after a failed attempt, following work after an observer disconnects, or retrieving
+completed Outputs.
+
+[Runs](runs.md) owns Candidate syntax and substitutes. [System relationships](system.md) explains
+how the selected graph becomes a Build, and [rendering](rendering.md) covers whole or partial video outputs.
+
+## Reuse available Outputs and identify active Builds
+
+For a revision, identify the relevant Run and its completed Outputs, then preserve the still-useful
+ones with `build-record` and `satisfy`. Keep unrelated Candidate selections. [Authoring](authoring.md#reuse-produced-work-explicitly)
+explains which media or SemanticTake Output to keep without freezing the downstream edit. A failed
+Build can still supply completed Outputs; a missing exported file is not evidence of missing media.
+
+If the CLI or observation tool loses its reply while submitting or following a Build, inspect the
+local Runtime and project Results: the Worker may already be executing that Build.
+
+```bash
+hypit activity
+hypit status <build-id>
+hypit builds
+hypit inspect <build-id>
+```
+
+Use the original project and Runtime Profile for activity, status and cancellation; pass
+`--runtime <profile>` when it is not the project's selected Profile. `builds` and `inspect` read
+project-owned Results without a Runtime argument. An empty activity view in another Runtime does
+not establish that the original submission stopped.
+
+Use the known Build id. If it was not returned, use project activity and Results to identify the
+submission from its Run, Source and submission time; the latest unrelated Build is not its identity.
+Follow active work with `status --watch` and reuse completed Outputs. A closed terminal or interrupted
+observation is distinct from a failed Provider request inside the Build. Finishing an incomplete
+Result is covered below and does not require regenerating media.
+
+## Continue after a failed attempt
+
+A failed Build leaves the work and evidence produced by that attempt. Prepare a new Run that selects
+its usable Outputs through `build-record` and `satisfy`, then submit a new Build for the remaining
+work. The next attempt's choices belong in that Run; the earlier Build retains its failure.
+
+When a Provider task-submission request times out without a task ID or another usable receipt,
+report the request failure and the absence of a receipt. The available information cannot distinguish
+a request that never created a task from one whose acknowledgement was lost. Record that uncertainty
+and proceed with a new submission through a new Build under the user's spending authority. Establishing
+the unknown remote outcome is not a prerequisite for continuing, and there is no receipt to recover
+or query. Keep any Outputs already available from the attempt selected in the new Run.
+
+When a usable receipt does exist and gives access to a generated asset, the Agent can retrieve that
+asset as an ordinary project file and select it with `file` and `satisfy` in the new Run. This supplies
+the file Output; downstream preparation and alignment still run when needed. A completed SemanticTake
+can instead be reused directly through its existing Result Output.
+
+Use `status <build-id> --verbose` for active task receipts and `inspect <build-id> --json` for the
+finished Result's execution records. They include the Endpoint, Need identity, credential references,
+known task ID, and the recorded error or last progress. Secret values stay in their Credential Store.
 
 ## Plan the selected Run
 
-`authoring.md` owns the meaning of Target, Candidate, and Satisfaction. This page begins after the Run
-has expressed that execution intention.
+Plan the actual Run after its reuse choices and requested changes are expressed:
 
 ```bash
 hypit check path/to/build.svrun
@@ -23,10 +76,16 @@ Provider's declared price page or that its price source is unknown. Hypit does n
 tables or manufacture a total. Use the linked Provider source together with the plan's real request
 counts and authored parameters when a cost judgment is needed.
 
+Read the remaining Needs against this change. A Caption or MG-only revision should keep its existing
+media generation satisfied; replacing selected B-roll should leave the unchanged performance satisfied.
+Rendering and other required processing may still appear as Needs. Explain each new media request
+from the user's goal or an explicit generation decision. If a request appears because a Candidate was
+lost or never selected, repair the Run and plan again before asking to spend or submitting work.
+
 Before new paid work, tell the user which requests and Provider Endpoints the plan selected and link
 their price sources. Existing explicit authorization for that described work is sufficient; otherwise
-obtain authorization before `build`. A later plan that materially changes the paid requests needs a
-new decision.
+obtain authorization before `build`. Authorization to correct downstream work does not silently extend
+to regenerating unchanged media. Additional paid work outside the authorized scope needs a new decision.
 
 ## Submit one durable Build
 
@@ -35,8 +94,9 @@ hypit build path/to/build.svrun --title first-cut --follow
 ```
 
 Every invocation creates a fresh time-ordered Build id and one independent Result, even when the Run
-did not change. The optional title is a human-facing Result label; it does not replace the Build id or
-alter Source identity.
+did not change. Cross-Build reuse requires explicit Run Candidates; repeating the same command does
+not resume the earlier Build or automatically select its Outputs. The optional title is a human-facing
+Result label; it does not replace the Build id or alter Source identity.
 
 Build performs a cheap preflight and submits only when the selected deployment slice is ready. It
 does not install packages or start a missing Managed Program. When the environment has already been
@@ -69,6 +129,13 @@ can advance together.
 Immediate work releases its capacity when it returns. An asynchronous Provider operation keeps its
 claim while that same accepted operation is being polled to completion. A Worker restart continues
 stored Provider operations rather than submitting their paid request again.
+When an action fails, the attempt ends and local reservations are released. Any last-observed remote
+status remains evidence, rather than a condition the old Build must resolve before the next attempt.
+
+Providers that expose `actionLimits` can separately limit asynchronous `submit`, `poll` and `collect`
+actions through `concurrency` and `rate: { limit, periodMs }`. These budgets share the Profile's pool.
+Task occupancy, overlapping network actions and starts permitted per time period are different quantities;
+`activity --json` exposes the actual resource claims. Provider-local documentation owns available settings.
 
 ## Separate active work from Result outcome
 
@@ -93,11 +160,15 @@ Producer, resubmit generation, or choose another Candidate. Use it only for the 
 `status`. `hypit result discard <build-id>` applies only to an incomplete submission that never became
 active and has no Result to finish.
 
-Cancel active work explicitly:
+When the user asks to stop submitted work, cancel that exact Build explicitly:
 
 ```bash
 hypit cancel <build-id> --reason "superseded by the corrected Run"
 ```
+
+Check the reported state afterward. Detaching the observer does not send this cancellation, and a
+cancellation request cannot undo already completed Provider work. Preserve completed usable Outputs
+and leave unrelated Builds alone.
 
 Stopping a Worker is different from cancellation. `runtime down` pauses advancement of all active
 Builds in that project Runtime; their durable facts remain available for the next Worker.
@@ -134,6 +205,26 @@ hypit result edit <build-id> --title "podcast take · coral captions" \
 The title, note, and highlights live in that Result manifest. They do not rename its public Outputs
 or create a project-wide history index. Reuse still names the exact Build id and Output through the
 Run mechanism in `authoring.md`.
+
+## Select the Result repository deliberately
+
+Result storage belongs to the video project. The official default is the filesystem repository at
+`.hypit/results`. An explicit `hypit.results.json` selects an adapter with the envelope
+`format: "hypit.build-results@1"`, `use` and adapter-owned `config`. Read the installed
+`@hypit/build-result-fs` README for a custom filesystem path, or `@hypit/build-result-s3` for bucket,
+prefix, deployment options and its credential setup. Do not put this selection into the Runtime
+Profile or assume a generation Endpoint's credentials also configure S3.
+
+`hypit paths` locates the project; `hypit doctor` checks its selected repository, even without a
+Runtime Profile. Result listing, export, history and Studio's finished library read that repository.
+If expected Results are absent, first check the project and repository selection rather than
+regenerating media or searching Runtime SQLite as a history database.
+
+A submitted Build retains the repository destination captured at submission. Changing the project
+selection while it runs does not redirect its eventual Result. Use the original destination to
+find that Result; changing a selection does not migrate earlier history. Preserve any Result that
+still supplies a Run Candidate: exported files are optional copies, and explicit reuse may still
+reference Resources in the original Result.
 
 ## Reload changed execution code deliberately
 

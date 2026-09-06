@@ -1,122 +1,119 @@
+# B-roll and semantic coverage
 
-# B-roll craft
+B-roll adds evidence, association, humor or another view over the passage that carries the speech.
+It can be a photograph, an illustration, a screenshot, generated motion or existing footage.
+Choose the material for what the viewer needs to understand, not from a rule that every noun needs
+its own video generation. Keep the speaking performance's sound when covering its picture.
 
-B-roll is authored visual evidence, context, or emotional progression outside the primary speaking
-take. Every insert must earn its place in the story and remain independent from editorial text and
-program audio.
+## Let people live inside B-roll
 
-## Full-screen B-roll of the same speaker
+B-roll is defined by what the picture contributes, not by whether a person appears in it. Creator-led
+social video commonly covers a speaking performance with the same person's life: working, studying,
+driving, exercising, travelling, using a product or reacting inside another situation. These shots can
+make the work feel inhabited and socially credible while remaining B-roll.
 
-A reference may cover the whole frame with the same speaker in a second location while their voice
-continues: the picture cuts away to the person whose voice is heard, shown silent in another setting.
-This is B-roll, and the base stays the primary take. `../../reconstruction/continuity.md` owns the rule — the picture that
-shows the speaker saying the words is the base, whoever else fills the frame. Author the second
-location exactly like any other B-roll: vendor `broll-v1.svs`, one shot per beat, placed over the
-Script Selection with `during=`.
+A person visible while words are heard is not by itself evidence that the pictured clip produced those
+words. Read the whole passage: the picture may be a silent lifestyle action covering audio from the
+underlying A-roll, or it may be another visible speaking performance whose own delivery carries the
+line. Preserve those as separate sound and picture relationships. [Voice and performance](voice-and-performance.md)
+owns the choice of speech source.
 
-The speaking kit's scene contract governs the base take, and applies only to it.
-`street-interview-v1`'s "SINGLE-SCENE CONTRACT" keeps both people in the same street scene; a covering
-cutaway in a classroom, an office or a product room is a separate picture and a separate kit. B-roll
-carries its own `duration` on the generation, so the speech take's length does not bound it.
+## Decide how closely the pictures follow the words
 
-## See it before you generate it
+**Exact correspondence** is useful when the reference or explanation depends on a particular image
+being present for a particular claim. Give each scene a Selection and its own media input. A short
+window can play just the needed beginning or authored source trim of a longer generated clip.
+The selected model's minimum generation length does not set a minimum display length.
 
-Where a cutaway lands, how long it holds, and whether its Frame sits in the right part of the
-picture are all decided by the Source, not by the footage. Hypit Studio answers all three without a
-generation, provided the Run satisfies the material it places: cut points come from the aligned
-`SemanticTrack`, so where a cutaway falls against the speech is measured rather than guessed.
+**A montage over a thought** is useful when several scenes collectively communicate a habit, history
+or attitude. The podcast example supplies three lifestyle images to one short B-roll request,
+directs the scene order, and places the result over one broader Selection. Each noun need not land
+on a cut for the idea to read. This trades precise correspondence for a compact, lively sequence;
+it is not a substitute when reconstruction requires the original's exact correspondence.
 
-Satisfy the B-roll outputs in the Run Source with whatever footage you already have before expecting
-to see the placement: an Item whose material no Candidate supplies makes the whole Run unopenable.
+The B-roll Kit's `story` Text directs scene order and a few meaningful actions. Select compatible
+edit choices for that story. A multi-scene montage with cuts should not also ask for one uninterrupted
+shot; if each scene should be continuous internally, say that explicitly. Keep motion understated
+when posture, context and a small action already communicate the event.
 
-Do this after placing a Selection and before paying for a generation. Startup and arguments are in
-`docs/quickstart/preview.md`; for how to see placed items against their real frames, read
-`../../preview.md` and start Studio.
+## Distinguish generated length, source sampling and display window
 
-## Choose the story beats first
+A Selection determines where an Item is active in the program. Its Recipe determines which source
+frames it samples there. They are separate decisions. `@hypit/media-track` owns exact playback and
+trim syntax; moving inputs are explicitly normalized before entering the Track.
 
-- Write the shot list before writing prompts. Give every shot one clear job: establish context, show
-  a problem, demonstrate failed effort, reveal a mechanism, provide proof, or deliver a payoff.
-- A useful product arc is **problem → failed effort → mechanism/product → payoff**, but the number of
-  beats follows the actual story rather than a fixed template.
-- Adjacent shots must contribute different information. Change the location, camera relationship,
-  action, prop relationship, evidence, or emotional state; a cosmetic crop is not a new shot.
-- Decide whether each beat needs generated motion, a supplied image, a supplied video, or an authored
-  graphic before choosing components.
+For the natural moving coverage discussed here, prefer one native-speed pass: `playback: once-start`.
+Give a montage enough room to finish when all its scenes matter. A Selection slightly longer than
+the actual clip is fine when returning to the underlying picture at the clip's end is intended.
+A shorter Selection deliberately cuts the clip off. Do not fill the extra time with a frozen tail,
+repetition or automatic retiming merely to occupy every frame of that Selection.
 
-## Author generated B-roll in SVML
+- `once-start` plays from the beginning at native speed. A shorter window cuts the source off; a
+  longer window outlasts the material and can reveal what lies beneath.
+- `stretch` retimes the selected source range across the whole window. A shorter window compresses
+  all scenes; a longer one slows them. Very brief scenes may read as a flash even if sampled.
+- `hold-start` plays once, then freezes the last frame if the Window is longer. This frozen tail is
+  usually distracting in natural lifestyle coverage. Hold, loop and stretch belong to an explicitly
+  intended freeze, repetition or retiming effect, rather than the default treatment of these clips.
+- A durationless still has no playback or source trim. Its Item's window determines its presence;
+  authored spatial motion can move it without pretending it is generated video.
 
-1. Put the reference-frame prompt in an English `copy:Value` and generate the image with an explicit
-   image Surface such as `gpt:Image`.
-2. Vendor `broll-v1.svs`, choose the stable material/story/edit/camera/motion axes in an SVS Recipe,
-   and put only the shot-specific micro-story in an English `copy:Value`.
-3. Render the Kit with `copy:Render` and connect the story through `copy:Set`.
-4. Generate through `seedance:ReferenceVideo` with `generate-audio="false"` and explicit ordered
-   references.
-5. Place shots with `media-track:Track` and `media-track:Item` or `media-track:Sequence`.
+For example, take a five-second montage whose last scene starts at 3.5 seconds. If a window lasts
+three seconds, `once-start` never reaches that scene. A 5.2-second Window permits the entire clip to
+play at native speed, including the last scene's 1.5 seconds. For the remaining 0.2 seconds the clip
+no longer covers the picture beneath; it does not hold its last frame. These numbers illustrate
+the relationship, not a required montage duration or a fixed amount of extra room.
 
-```svml
-<copy:Value id="demo-story">
-  The hand places the device on the desk, wakes the screen, and pauses as the result becomes visible.
-</copy:Value>
+## Let picture and speech hand over at different moments
 
-<copy:Render id="demo-prompt"
-  template={broll-kit.broll-v1} recipe={recipes.broll.screen-demo}>
-  <copy:Set name="story" text={demo-story}/>
-</copy:Render>
+A montage can stay up after its subject finishes speaking. In the podcast example, the partner
+starts responding while the last lifestyle picture is still visible, and their camera returns
+later. This incoming voice before its picture forms a J-cut relationship and gives the montage room.
+The B-roll does not need to contain that speech: the speaking Track's audio already continues beneath.
 
-<seedance:ReferenceVideo id="demo-motion" model="mini"
-  prompt={demo-prompt} duration="6" resolution="720p"
-  aspect-ratio="9:16" generate-audio="false">
-  <seedance:Reference image={demo-frame.image}/>
-</seedance:ReferenceVideo>
+Choose the endpoint by the thought, reaction and visual reading time. Extending coverage across a
+Role turn is legal; a Selection can also cross a Segment boundary. Avoid cutting the final scene
+short just to make the visual endpoint coincide with the original speaker's last word.
+
+## Join adjacent coverage on the same boundary
+
+For separate clips that should cover a passage without briefly exposing the A-roll, both sides of
+each shared boundary must select the same instant. Default markers close on the previous word's end
+and open on the next word's start, leaving their intervening pause uncovered.
+
+```text
+@coffee my coffee @/coffee ~@smoothie my smoothie @/smoothie
 ```
 
-Use the model limits and prompt rules in `seedance-directing.md`. Generated B-roll supplies pictures
-only; narration, music, and effects remain explicit audio contributions.
+Here both sides meet at the end of “coffee”; the smoothie picture owns the pause. Alternatively:
 
-## Design the image and motion prompt as one package
+```text
+@coffee my coffee @/coffee~ @smoothie my smoothie @/smoothie
+```
 
-- The image prompt establishes every visible fact: subject, identity, location, wardrobe, props,
-  object count, camera geometry, emotion, and initial physical state.
-- The video story adds only motion over those established facts. Audit every person, object,
-  relationship, and emotional starting point in the video text against the accepted image.
-- Direct one or two readable events with macro action and small facial/postural feedback. Do not add
-  a new room, person, outfit, prop, or unexplained camera angle during the shot.
-- Give every manipulated object a plausible starting contact and short motion envelope. Preserve its
-  count, shape, label, and distinctive physical features throughout the take.
-- When a document, device screen, receipt, or product label must stay unchanged, use a continuous-shot
-  edit language and a reference-locked camera treatment.
+Both sides now meet at the start of the next “my”; the coffee picture owns the pause. Keep both
+sides left-affine or both right-affine at each join. `||` may also sit between those phrases, but it
+only authors Caption grouping and cannot close a visual gap. The `@hypit/script` README owns the
+complete marker grammar.
 
-## Place B-roll by authored meaning
+These joins handle internal pauses. If coverage must also include lead-in or trailing silence,
+choose outer boundaries that cover those edges through the Track's actual timing vocabulary.
+Inspect media exhaustion, fades and component visibility too: touching windows alone cannot make
+an exhausted or transparent visual cover the frame. See [Frame coverage](frame-coverage.md).
 
-- Mark the intended spoken range as a Script `Selection`, pass `semantic={speech.semantic}` to the
-  Track, then use `during={story.selection.NAME}` on the Media Item.
-- For a point event, declare a Script `Moment` and use `at={story.moment.NAME}` with an explicit `for`.
-- For intentionally absolute edits, use `during="program"` or explicit `start` and `end` expressions
-  in the shared SemanticTrack frame domain.
-- A Selection is one contiguous range. Author separate named Selections and Media Items when the same
-  insert should appear again later.
-- Create J-cuts and L-cuts in the Script boundaries: let narration establish a few words before the
-  B-roll opens, and let speech continue before or after the picture returns. Do not make every visual
-  cut start and end exactly with a complete spoken sentence.
+## When the pictures carry the whole passage
 
-## Protect screens, text, and reverse views
+The same media tools can form a music-led montage or a tactile process film with no underlying
+speaking picture. Then the images are the main sequence rather than coverage. Choose cuts from the
+visual argument, musical phrase or physical action; a fixed hook/detail/CTA shot count is not a
+requirement. Adjacent images should earn their change through a new view, information, attitude or
+rhythm. A closer crop can be a meaningful beat when it reveals something the wider shot did not.
 
-- Keep physical UI and product text attached to the screen, label, document, or sign. Put editorial
-  titles, arrows, comparisons, and cards on `typo:Track` or `media-track:Track`.
-- When exact UI or brand artwork matters, use the supplied asset as authored media rather than asking
-  a generator to recreate it.
-- A person-facing view and its device-facing reverse view must satisfy the explicit geometry rules in
-  `visual-continuity.md`: opposing camera positions require different background sectors and different
-  dominant landmark sets. The same main background is an automatic rejection.
-- Follow `screen-demo.md` for context/proof pairs and physically possible screen orientation.
+For quiet material or ASMR-like work, the contact point, texture, action and sound can carry attention.
+Keep the decisive action visible and let small changes finish; camera movement and extra cuts should
+serve that sensation. Synchronized generated sound, recorded sound or separately authored sound can
+each be appropriate. [Sound and mix](sound-mix.md) covers their relationship.
 
-## Accept and reuse shots
-
-- Review each generated image before its video, then review each video before Track assembly.
-- Reject identity drift, same-background reverse views, impossible contact, duplicated props,
-  unstable screen content, unwanted text, broken end frames, or motion that does not start from the
-  accepted reference.
-- Pin accepted image and video outputs in the next `.svrun` with `build-record` and `satisfy`, so
-  only failed shots are regenerated.
+When a work is genuinely speech-free, its visual, musical and action relationships still need
+authored semantic boundaries. [Media preparation](../../production/media.md#wordless-passages-use-media-boundaries)
+owns how actual media supplies them.

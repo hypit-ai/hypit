@@ -1,13 +1,20 @@
 # Script and semantic time
 
-Read this when writing the target's words, balancing delivery across generated Takes, or attaching
-pictures, Captions, MG, Effects, and Audio to what is said. For exact grammar and component attributes,
-use the selected Distribution's Script, Timing, and Track documentation and the owning package READMEs.
+Read this when structuring Script, balancing spoken delivery across generated Takes, or attaching
+pictures, Captions, MG, Effects, and Audio to what is said. It also explains how a passage with no
+spoken words receives semantic boundaries. The installed `@hypit/script` vocabulary
+and package README supply exact marker spellings and parsing details.
+
+[Source syntax](../production/source-syntax.md) covers the surrounding imports, references, Recipes
+and Runs; [Tracks](../production/tracks.md) covers the consumers of Script meaning.
+[Media preparation](../production/media.md) explains connecting actual footage to a Segment, and
+[Runs](../production/runs.md) explains choosing estimated timing for a layout study.
 
 ## Script is the target's sole verbal authority
 
 `<script>` contains the words the target video will say. It contains no reference timecodes, media,
-styling, prompts, or provider decisions. Brief may preserve required claims and Treatment may describe
+visual Style parameters, prompts, or provider decisions. Semantic word attributes such as
+`useful{emphasis}` can identify a word's role for a Caption family. Brief may preserve required claims and Treatment may describe
 the purpose of a passage, but the adopted wording appears in Source only once.
 
 Use Script's distinct authoring concepts for distinct jobs:
@@ -29,10 +36,25 @@ Use Script's distinct authoring concepts for distinct jobs:
 
 Here `||` authors two reading Cues while `proof` remains one semantic range that other layers can use.
 
-Choose Segment boundaries from speech and production continuity, not from every picture cut. One
-continuous narration can carry many B-roll changes through Selections. When the actual speaking Take
-must change, when a speaker or delivery boundary is intentional, or when a model limit requires a
-seam, make the seam deliberate and place it where the performance can sustain it.
+Script also represents passages without speech:
+
+```svml
+<script id="story">
+  <empty></empty>
+</script>
+```
+
+`empty` is an ordinary Segment name; a name such as `product-detail` can express the passage's role.
+No words does not mean no semantics: the Segment retains its identity and start/end anchors. Its
+associated normalized media determines the duration, and its SemanticTake has an empty word array.
+The same SemanticTrack and Track timing vocabulary apply to a wordless passage or an entire
+speech-free piece. The empty tag itself declares neither a zero-length interval nor a duration.
+
+Choose Segment boundaries from natural production passages and delivery length, not from every
+picture cut. One Segment and Take can carry several speaking turns, camera cuts or a split-screen
+conversation. One continuous narration can carry many B-roll changes through Selections. Edited UGC
+can deliberately use several Takes driven by the same character-and-scene image; a natural cut is
+often part of its appeal. A Role change or `||` does not require another generation.
 
 ## Author Caption rhythm, not a word-count rule
 
@@ -49,7 +71,7 @@ being forced into spoken Caption Cues.
 
 ## Measure before choosing durations
 
-Generated Takes require a literal `duration`, so measure the adopted wording before choosing that
+For generated speaking Takes that require a literal `duration`, measure the adopted wording before choosing that
 number. `hypit measure` counts a Segment's pronunciation units and reports how many seconds they need
 at an author-chosen pace or numeric rate:
 
@@ -72,6 +94,9 @@ media to request. The aligned words answer where Caption, B-roll, MG, and Effect
 media. Alignment measures real word positions inside that media envelope; it does not reproduce an
 estimated distribution of words.
 
+For a wordless Segment, choose the requested duration from the action, music or visual rhythm.
+Speech-rate measurement has no role there; the resulting media still determines its Segment span.
+
 ## Bind meaning to Script identities
 
 For a picture, Caption treatment, MG state, sound, or effect that belongs to spoken meaning, author a
@@ -80,8 +105,9 @@ seconds for genuinely clock-based or speechless design.
 
 Selections may overlap or cross. Default markers are already exact: `@videos videos @/videos` opens
 at the word's start and closes at that same word's end. Script also offers explicit left/right affinity
-when the design intentionally includes an adjacent gap or structural boundary. Read the selected
-Distribution's `docs/quickstart/script.md` for the current marker spellings.
+when the design intentionally includes an adjacent gap or structural boundary. The `@hypit/script`
+package README owns the marker spellings. For adjacent B-roll that should not reveal the underlying
+picture, use the shared-boundary examples in [B-roll craft](../playbooks/craft/b-roll.md).
 
 Reference archives keep original seconds and explain which original words or content events an item
 serves. The target Source names the intended relation against the target Script. After the target's

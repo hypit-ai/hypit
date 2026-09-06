@@ -1,0 +1,22 @@
+<?svml using="@hypit/run-markup@1"?>
+<svrun version="1">
+  <author source="./production.svml"/>
+  <import as="stand-in" from="@hypit/stand-in@1"/>
+  <import as="estimate" from="@hypit/semantic-take-estimate@1"/>
+  <target output="main.composition"/>
+
+  <fragment id="card" using="stand-in:video">
+    <input name="canvas" from="canvas"/>
+    <input name="duration" value="5"/>
+    <input name="clock" from="clock"/>
+  </fragment>
+  <satisfy output="performance.video" candidate="card.video"/>
+
+  <fragment id="timing" using="estimate:semantic-take">
+    <input name="narrative" from="story"/>
+    <input name="segment" from="story.segment.opening"/>
+    <input name="media" from="performance-media.media"/>
+    <input name="policy" from="estimated.policy"/>
+  </fragment>
+  <satisfy output="opening-semantic.take" candidate="timing.take"/>
+</svrun>

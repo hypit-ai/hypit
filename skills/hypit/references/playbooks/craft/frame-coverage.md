@@ -1,82 +1,28 @@
-# Every instant has a picture, authored or not
+# Coverage at visual boundaries
 
-A Source is written as a list of placements. A delivery is a picture at every frame. The two are not
-the same shape, and the difference is where this whole class of defect lives.
+At a boundary, ask what the viewer should see before, during and after it. An intentional return to
+the speaker is an edit; an accidental one-frame exposure between inserts is a defect. Coverage is
+about the intended picture, not just the absence of black pixels.
 
-Nothing is ever absent. An instant no Track covers is not blank — it is filled by whatever lies
-beneath, and the viewer sees that with exactly the weight of everything that was chosen. Which wrong
-thing appears is decided by what happened to be underneath: the Film's background, a layer placed
-behind, the shot before. So one defect wears several faces — a black gap, a flash of the wrong picture, a panel that
-blinks out and returns — and reading them as separate problems is how they get fixed one at a time,
-for ever.
+Several independent decisions can expose the layer below:
 
-## Audit edges, not placements
+- adjacent semantic windows may leave the inter-word pause unclaimed;
+- a source may finish before its Item's window;
+- entry or exit opacity may reveal the underlying picture during a transition;
+- a component may draw only during each item activation when its background should persist;
+- a spatial frame or crop may leave an unintended part of the Canvas uncovered.
 
-Every interval has two edges. An edge you chose is an edit. **An edge you inherited is a hole**, and
-an interval inherits its edges whenever its length comes from something other than your decision:
+[B-roll craft](b-roll.md) explains the first two. Fix the responsible boundary, sampling choice,
+transition or component schedule. A persistent MG board needs an outer visibility window as well as
+item events. Multiple frames can intentionally tile the Canvas; coverage does not require one
+full-frame clip or a universally lowest A-roll Track.
 
-- a window derived from speech, which starts and stops with words and therefore excludes the silence
-  around and between them;
-- a still image has no duration-bearing timeline and must not receive a `playback` value; the
-  playback check applies only to moving/generated media whose material can end before its window;
-- an insert, whose material ends where the generator stopped rather than where its window does — and
-  then draws nothing for the rest of it, because `playback` defaults to `once-start`, so whatever it
-  was covering is alone again mid-phrase. This is the one edge on the list a machine can find before a Build:
-  `reconstruction_check` reads each Recipe and refuses the default on generated material.
-  `generated-dependencies.md` says what to set instead. The Segment's own picture has no such edge —
-  the take that speaks it is the take that draws it, so the two lengths are one number;
-- a blend, whose frames are edges of partial coverage — a one-frame fade is one frame on which the
-  layer beneath is half visible, and naming the Recipe for a cut does not make it one;
-- a schedule inside a component, which draws only where its own Program says to and stops between.
+A still, a designed background or a moving shot can each be correct. Choose from the intended work
+and observed reference, not a rule that every unclassified region must contain generated motion.
+A fallback layer is useful when it is actually the designed background; it does not by itself
+repair an unintended gap in the foreground.
 
-The list is not the point and will never be complete. The question is, and it is the same question
-every time: **for each edge, did I choose this instant, and what becomes visible on the other side of
-it?** Anything derived answers "no" to the first half.
-
-## Fix the interval; a layer underneath is not a repair
-
-Putting something beneath a hole changes which wrong picture is shown. It does not close the hole,
-and it makes the defect quieter rather than absent, which is harder to find. The interval is what has
-to change: the window that ends early is lengthened, the material that runs out is replaced with
-material that lasts, the stretch nothing claims is claimed by whatever the reference shows there.
-
-**A stretch is moving footage unless the shot's own observation says its background is static.** That
-is the default, and it is not a judgement to make from the Source or to measure off the reference:
-the third visual question already asks whether the picture moves, and a held photograph or card that
-only appears and disappears is still however long it is on screen. Read the answer for that shot. No
-answer means moving.
-
-Nothing that came out of an ffmpeg filter can stand in for that answer. A filter reads the whole
-composited frame, so a reference whose background is frozen under a moving overlay measures as
-moving, and one measured as moving proves nothing about the background — which is the only thing the
-question is about.
-
-So a still spanning the program is never right: it would need every shot's observation to say the
-background is static. Neither is one held under a voiceover because the take beneath it was too
-short — that stretch has a length, and the take is what has to reach it.
-
-The picture that goes wrong this way reads as an edit rather than as a fault, and the reconstruction
-looks finished while the same edges are still wrong. Nothing downstream catches it either: a still
-has no timeline, so it takes no `playback` and the pre-Build check does not apply to it, and Gate 4
-measures black, which a still removes.
-
-The preview mocks the comparison round renders under an element never reach the Source. They exist in
-that render and nowhere else — the Source never names them, and the checks that decide
-coverage read the Source's Recipes and bindings rather than any picture. A mock cannot quiet a hole
-it is structurally unable to reach.
-
-## Measure it; the eye is the wrong instrument
-
-Two of these are settled before a Build, from the Source alone, and neither needs a threshold.
-Whether every word carries a picture is a yes or no per word: `reconstruction_check` resolves each
-Frame to where it actually sits, collects the ones drawn over each word, and names the words whose
-pictures leave part of the Canvas unpainted. Whether the material lasts its window is the `playback`
-reading above.
-
-The pictures over a word are read **together**. One filling the Canvas is the ordinary case; several
-tiling it is the other one, and it is just as covered. A `until={story.moment.X}` shortens what an
-element claims, so a picture that leaves half way through the program answers for the words before
-that Moment and not the ones after.
-
-Anything `reconstruction_check` reports under `coverage.gaps` is an inherited edge. Take it back to
-the interval that produced it rather than to the layer that revealed it.
+Use Studio and local frame-range rendering around suspected boundaries to inspect the actual
+composition. Check the first and last visible frames of neighboring items, source exhaustion and
+transition frames. Script and Recipes explain the cause, but their names alone cannot prove what
+was drawn.

@@ -1,142 +1,77 @@
-# Graphic compositions and material
+# Directing graphic composition
 
-This file decides what a picture *is* before anything decides which component draws it. It applies to
-original authoring and to reconstruction equally.
+Read this for boards, comparisons, charts, titles, cards, diagrams and designed visual fields.
+Start with what the viewer should understand or feel. A graphic can explain, organize, set a tone,
+punctuate a joke or create delight; it does not have to justify itself as literal information alone.
 
-## A base picture is a depicted scene
+## Compose an idea, not a stack of decorations
 
-- A base picture is a depicted scene: a place, a person, an object, or a world with its own space,
-  light and camera. Live action and animation both qualify — a drawn or rendered world is a scene.
-- A designed graphic field is never a base picture. Ruled or gridded paper, document sheets, flat or
-  gradient colour, blurred wallpaper, boards, canvases, panels and slide backdrops exist so that
-  authored elements can sit on them. They are the surface of a composition, not a place.
-- Judge by what the surface is *for*, not by how convincing it looks. A photographed desk with a real
-  notebook on it is a scene. A full screen of paper that exists only so words can appear on it is a
-  graphic composition, however good the paper texture is.
-- Never send a designed field to a video generation model as a shot, and never author one as a base
-  Track. A scene generator asked for a backdrop returns unreproducible footage in place of content
-  you could have timed, edited and corrected.
+Decide what the eye should find first, what supports it and what changes at the next meaningful beat.
+Use scale, spacing, grouping, contrast, color and motion to express that hierarchy. A ranking's rows,
+an interview's unanswered slots and a product comparison's two sides communicate relationships even
+before the viewer reads the words.
 
-## A full-screen graphic composition is one component
+Coordinate the whole frame. A presenter's position can leave space for a board; the same accent can
+connect Caption, an answer icon, a question mark and a reveal flash. Treat palette, occupied area and
+brightness together. A large pale panel behind pale clothing can flatten the shot even when each
+element looks attractive alone. [Image direction](image-direction.md) explains planning that space
+into the source picture; [compositing](compositing.md) covers the layer relationships.
 
-- When the whole picture is a designed field carrying authored content — a list, a ranking, a
-  leaderboard, a chart, a score, a quiz, a code sheet, a card wall, a title board — that whole
-  picture is one self-contained composition. It owns its background surface, its elements, its
-  reveal and its motion.
-- Author it as one component that owns all of it. Never as a generated base plus a separate text or
-  overlay Track: that split makes the background unreproducible and scatters one visual system
-  across unrelated tags with no shared timing.
-- Text drawn over a depicted scene stays an overlay on that scene. Only a picture whose entire field
-  is designed becomes a composition of its own. A framed graphic occupying part of a scene is an
-  inserted element, and the same ownership rule applies inside its frame.
-- **A designed field is still one composition when it covers only part of the frame.** A ranking
-  down the left third, a leaderboard across the bottom half, a scoreboard band over a live shot —
-  each is a designed field carrying authored content, and each is one component that owns its own
-  surface, its rows and its reveal, sitting on a Frame that is not the whole Canvas. It does not
-  become an overlay because it is small, and it does not need a visible border or card edge to be a
-  field: a slab of colour holding rows is a surface. The question is never how much of the frame it
-  covers, but whether what it covers is designed or depicted.
-- If no installed package owns the composition, that is a real vocabulary gap. Read
-  `../../local-author-package.md` and build the package. Do not approximate it with tags that own a
-  different role.
+Motion should make a change legible: arrival, replacement, accumulation, comparison, reaction or
+completion. Entry is not the whole design. Decide what remains after it, how later elements join,
+and how the system leaves the frame. A settled board may carry more meaning than its animation.
 
-## Material and structure are sourced differently
+## Put the right facts in editable structure
 
-Every visible thing is either depicted material or drawn structure.
+Use authored text, exact fonts, geometry and state when wording, alignment, timing, data or repeated
+visual relationships need control. Use supplied, found or generated media for photographs, artwork,
+textures, product imagery and other material whose picture is itself the content. A real screenshot
+or finished graphic can remain media; recreating every pixel as a component is not automatically useful.
 
-- **Depicted material** is what a picture must show: scenes, people, products, textures, paper and
-  backdrop surfaces, artwork, screenshots, and any picture sitting inside a frame, card, device or
-  inset.
-- **Drawn structure** is what the composition computes: text content, exact font, size, weight, line
-  height, spacing, alignment, colour, stroke colour and width, shadow colour, offset, blur and
-  opacity, glow, emphasis or active-item treatment, frame geometry, borders, corner radius, padding,
-  stack order, placement, and reveal or typing rhythm.
+The boundary follows the work. A sign photographed in a scene belongs to that scene. A score that
+must change on a spoken answer is editable graphic state. A textured paper field may be drawn,
+procedurally made, found or generated; choose according to its intended appearance, theming and
+editing needs.
 
-  That list is also the checklist for accepting a package: `../../vocabulary.md` requires every one of
-  these that changes what the viewer sees to be resolved before a component is chosen, and a property
-  with nowhere to land in the declared vocabulary is what makes a gap.
+An icon, portrait, interface or other picture can identify a subject, carry a theme, show a factual
+state or deliver a visual joke. Choose its source from the information the viewer needs. When exact
+current wording, data, UI, private identity or a particular brand asset is itself evidence, use the
+authoritative supplied or found material and record its source and relevant use conditions.
 
-Never bake drawn structure into generated material. A generated picture of text cannot be re-timed,
-re-read or corrected, and its wording drifts. A card, inset, phone, browser or screenshot element is
-not one picture: its inner picture is material, its frame and entry are structure.
+For a familiar public icon, person, object, meme or place whose job is visual recognition or creative
+adaptation, a broadly informed image model can paint the needed material directly or from references;
+a found asset is another ordinary choice. Judge whether the result carries the intended identity and
+graphic role. Reconstruction preserves the useful recognizability and relationship; adaptation may
+replace it with a new theme. Provenance alone does not make one image more visually truthful than
+another. Keep generated prompts and reference edges in Source so their creative intent stays editable.
 
-### A page scrolling inside a frame is a frame that does not move
+## Choose a component boundary around shared behavior
 
-The frame and its inner picture are two things, so they move independently, and the one that is moving
-has to be named. A screen recording — a phone app being scrolled, a browser page running past, a
-document paged through — is **a frame sitting still while its contents travel**. The device stays
-exactly where it is: same position, same size, same corner radius, same edge, frame after frame.
+A ranking board often deserves one component because its rows share layout, state and transitions.
+A label and an independent photo can remain peer Tracks. A composition may occupy the entire Canvas
+or only a corner; size does not decide the boundary, and a full-screen composition need not become
+one enormous component.
 
-Read the wrong way round, this becomes an element that slides up and down the canvas, and that is the
-misreading to watch for: nothing in the reference translated, and the reconstruction has a phone
-sliding about the screen. The evidence separating them is the frame's own edge. Track the border,
-the corners and the outer rectangle across the stretch: if they hold their position, the frame is
-fixed and everything that moved was inside it.
+Group elements when their shared layout, state or semantic behavior would otherwise have to be
+reimplemented across unrelated tags. Keep independently useful layers separate when ordinary
+composition already expresses the relationship. A new shared visual role can be a project component.
 
-Author it that way. The frame is a fixed `space:Frame` at the position and size the reference holds it
-at, and the inner picture is **one still image** of the page, placed inside it. Do not generate a video
-of a scrolling page and do not animate the inner picture past the frame: a still of the page at the
-moment the reference dwells on is what the viewer reads, it is fully controlled, and it costs one
-image. `generated-dependencies.md` says the same thing from the take side — a stretch whose picture
-does not move is authored as a still rather than asked of a video model.
+The package owns reusable mechanics, default chrome and any bundled assets that belong to its
+identity. Source and Recipe supply this work's text, media, palette, placement and events. A surface
+may also accept an authored theme or background when customization is part of its design.
 
-What is worth reproducing is any state the reference shows and the still cannot: a selected row, a
-badge, a check mark. Those are drawn structure over the still, on the words where the reference shows
-them, rather than a reason to make the whole thing move.
+## Expose meaningful control
 
-## A component's own surface belongs to the component
+A useful Surface offers the content and relationships an author needs: rows or slots, labels,
+icons, a Frame, Styles, outer visibility, reveal Selections or Moments, and initial state where it
+makes sense. Avoid hardcoding this video's number of answers, speaker side, product or palette into
+reusable behavior. Expose a useful range rather than every internal pixel or animation calculation.
 
-Depicted material divides again, and getting this wrong produces a component that cannot draw
-itself.
+`preset` means content already present in the initial state of a component that supports it. It is
+not a substitute for a Style and not a generic timing escape. A reveal Window, a point activation
+and an outer lifetime are different controls. [Track authoring](../../production/track-authoring.md)
+explains their implementation.
 
-- **Component-owned surface** is the chrome a composition always shows: its paper, board, panel,
-  ruled lines, grain, texture, default backdrop. It is part of the component's identity. It ships
-  **inside the package as an ordinary file**, exactly as the package's preview image does, and is
-  read with `readFile(new URL("../assets/…", import.meta.url))`.
-- **Source-supplied material** is content that differs between videos: photographs, screenshots,
-  thumbnails, product shots, character images.
-
-The test is one question: **would two different videos using this component show the same picture
-there?** If yes, it belongs to the package. If they would show different pictures, it is an edge the
-source supplies.
-
-The two are also *obtained* differently, and this is where the line is most often crossed. A
-component draws its own chrome in code: its Surface, Producer and Fragment render the paper, board,
-panel or backdrop, and the preview image its Surface owes is captured from that rendering.
-Source-supplied material is **declared in the Source as a generation** — `<gpt:Image prompt={…}/>`
-fed by a `copy:Value` that holds its description — so the picture and the words that produce it live
-together and can be reread, corrected, planned and rebuilt through `hypit plan` and `hypit build`.
-Generating that material yourself and pointing `media:Image src=` at the file throws the description
-away and leaves a picture nobody can regenerate; `media:Image` is for material the author already had.
-
-Never make a component's own surface a required input, and never make it a generated raster either.
-A component whose chrome arrives from the graph cannot render on its own, cannot produce the preview
-image its Surface owes, and forces every project that installs it to obtain a picture that was never
-theirs to choose. A component whose chrome is an image-model texture committed into the package
-cannot be adjusted, themed or regenerated by anyone who did not run that generation. If you find
-yourself writing a Run Source whose only purpose is to produce a component's own texture, or reaching
-for an image model to make one, the chrome is in the wrong place: draw it in the component.
-
-A package is installed vocabulary. `.svml`, `.svs` and `.svrun` are documents that use it. A package
-that needs one of those documents in order to draw itself has inverted that relationship.
-
-## Missing material must be generated
-
-- Decide first whether the picture is component-owned surface or source-supplied material. A
-  component's own surface is generated once while the package is being authored and committed as a
-  file inside it; the rest of this section is about source-supplied material.
-- Source depicted material in this order: material supplied for the task or already in the project;
-  an Artifact the project already produces; otherwise generation.
-- If a required picture does not exist, generating it is mandatory. Do not substitute flat colour, an
-  empty frame, a placeholder, a stand-in borrowed from elsewhere, or a silently emptied element. A
-  picture inside a card is part of the work, not decoration.
-- Generate it with `gpt:Image`, reading that package's README for its ports. Surveying what is
-  installed before doing something you already know how to do costs time and buys nothing; the
-  listing `../../vocabulary.md` documents exists for finding a capability you did not know was there,
-  not for confirming a familiar one.
-- Static material is generated as an image. Generate video only when the element is a moving depicted
-  scene.
-- Generate one material per depicted thing, at the aspect ratio it will be used at, carrying only
-  what it depicts. Keep captions, labels, arrows, badges and titles out of the prompt; the
-  composition draws those.
-- Pin accepted Records for reuse. `../../authoring.md` says how a Record is named in the Run Source.
+Judge the configured work at delivery size: the opening state, the changing state, the settled state
+and the exit. Check hierarchy, reading time, collisions and whether a sound or flash helps the event
+land. Improve the visual idea when polished animation still fails to make the relationship clear.

@@ -1,83 +1,74 @@
-# Seedance directing
+# Directing generated performance
 
-## Build the prompt inputs
+Read this when turning useful visual references and Script into living speech, interaction or
+silent action. The image establishes who and where; motion makes something happen to them.
 
-1. Vendor one matching Kit into the project's `./kits/` directory. `../../seedance-kits.md` lists the
-   seven shipped Kits, the dynamic slots each one requires and the ordered references it expects.
-2. Import generic Text as `copy` and the vendored Kit under its own alias.
-3. Put stable creative choices in a named SVS Recipe.
-4. Render the Kit with `copy:Render`; connect only dynamic `dialogue`, `action`, `story`, or
-   `direction` slots through `copy:Set`.
-5. Feed the rendered Text to one explicit Seedance Surface and keep every reference edge visible.
+## Give each input its own responsibility
 
-**A take with `generate-audio="true"` says whatever its prompt carries, so trace that prompt back to
-the words before authoring the take.** Follow the edge from the take's `prompt=` to the `copy:Render`
-that produced it, and confirm one of that Render's `copy:Set` slots carries the Segment's `dialogue`.
-A prompt bound straight to a `copy:Value` holding a performance direction reaches the model with no
-words in it: the model invents its own, and the take sounds fluent while saying nothing the Script
-holds.
+| Input | Responsibility |
+| --- | --- |
+| Character-and-scene references | appearance, setting, framing and the physical state to preserve |
+| Recurring voice references | the intended speaker's voice identity |
+| Script dialogue projection | the exact words and speaking turns |
+| Kit Recipe | recurring camera, edit, pace and performance choices |
+| Action direction | this passage's attitude, attention, physical interaction and motivated cuts |
 
-That state survives every structural check. `hypit check`, `preview_check` and `plan` all pass,
-because the graph is legal and complete — the prompt is a Text and the take consumes it.
-`whisperx:SemanticTake` then fits the Segment's words onto whatever audio arrived, so the Caption
-Track renders the Script over speech that shares none of it and every downstream measurement stays
-clean. Reading the Source is what finds it. `../../seedance-kits.md` names the slot the words travel
-through.
+The `@hypit/seedance-kits` README owns template assembly and reference order. The exact model module
+owns invocation modes, duration and media limits. Kits produce ordinary Text; the Source connects
+that Text and explicit references to a model request. Action does not secretly add those references.
 
-Write every user-authored image/video generation instruction in English. Verbatim dialogue may retain
-the Script's authored language; do not translate or paraphrase quoted Script lines inside prompts.
+Use the Script's `.dialogue` Text rather than retyping dialogue into action. Map Role names to the
+Kit's A/B identities where necessary. Preserve one recurring voice reference per character when
+voice continuity matters. See [Voice and performance](voice-and-performance.md) for A-roll versus
+genuinely independent narration.
 
-Choose the Kit by meaning:
+## Direct the reason for a gesture
 
-| Use | Kit | Expected ordered references |
-|---|---|---|
-| one speaking person | `speaker-v1` | image 1 = person/scene; audio 1 = voice when used |
-| silent B-roll | `broll-v1` | one or more authored images |
-| two-person podcast | `podcast-v1` | images 1/2 = final A/B views; audio 1/2 = A/B voices |
-| video call | `call-v1` | images 1/2 = reversed call layouts; audio 1/2 = A/B voices |
-| street interview | `street-interview-v1` | images 1/2/3 = interviewer/guest/shared views; audio 1/2 = interviewer/guest |
-| body-motion transfer | `motion-reference-v1` | image 1 = subject; video 1 = motion reference |
-| camera-language transfer | `camera-reference-v1` | image 1 = subject; video 1 = camera reference |
+Start with the social situation and attitude: affectionate ridicule, candid surprise, dry confidence,
+playful skepticism. Then choose a few visible actions that communicate it. A restrained lean, an
+open-palmed explanation, a knowing shrug or a short glance can carry more than elaborate choreography.
+Vibe alone may leave an important interaction unspecified; describe the decisive action when the
+story needs a handoff, a look toward a partner or an exit.
 
-Use `seedance:TextVideo` for prompt-only generation, `seedance:FrameVideo` for first/optional-last
-frame control, and `seedance:ReferenceVideo` for image/video/audio references. Do not duplicate the
-Kit's fixed reference, role, voice, microphone, camera, or text-hygiene blocks in freeform prose.
-Set `generate-audio="false"` for silent B-roll and set it deliberately for speaking formats rather
-than relying on an unstated assumption.
+Natural emphatic gestures are usually more reliable than asking fingers to display an exact number.
+Let speech, Caption or MG convey the quantity while pointing and hand actions serve the performance.
 
-## Respect model contracts
+Silence still has behavior. A listener can settle in the chair, notice the object, glance down and
+look back up, breathe or smile while keeping their mouth out of the speaking performance. Pick small
+actions that follow the exchange.
 
-- **`mini` is the model, unless the author named another one.** Write `model="mini"` on every take
-  and do not reach for `fast`, `standard` or `2.5` on your own judgement: a video is many takes, most
-  of them are regenerated more than once, so the tier multiplies the whole bill for a difference that
-  costs more to find than it is worth. Take an instruction to use a particular model literally when
-  one is given, and otherwise never raise the tier and never stop to ask which to use.
-- The other values are `fast`, `standard` and `2.5`. `mini`, `fast` and `2.5` all render at 480p or
-  720p only; `standard` alone also supports 1080p/4k, which is the one reason to name it — a delivery
-  that genuinely requires 1080p, recorded as the deliberate choice it is. What `2.5` buys is
-  duration and reference capacity, not resolution.
-- Keep duration an integer inside the selected model's declared range, and read that range from the
-  model rather than from memory: they differ, and one accepts far longer takes than the others.
-  Invalid values fail closed.
-- Never generate from a prompt alone, and never author a take shorter than the floor.
-  `generated-dependencies.md` says what to do with a stretch too short to be a take.
-- Respect the ReferenceVideo caps, which the selected model declares along with its duration range.
-  `mini`, `fast` and `standard` take at most 9 images, 3 videos, 3 audio clips and 12 files in total,
-  and their reference audio requires at least one visual reference; `2.5` takes more of each and
-  imposes neither of those two constraints.
-- Use `hypit measure` for speech-driven duration planning and write the seconds as the literal
-  `duration`; it estimates pronunciation length but does not create measured timing.
+An encounter also has edges. Someone being interrupted can first be busy; someone finishing can
+begin to leave. Those small causes make the clip feel like a piece of life rather than a pose that
+starts and stops at the encoder's boundaries.
 
-## Direct the shot
+## Choose cuts as part of the performance
 
-- Write one or two readable events: a macro action plus small eye, brow, breath, smile, concern, or
-  posture feedback. Do not choreograph frame-by-frame poses.
-- Start from the reference pose, objects, emotion, camera, and room. Add only motion that follows from
-  visible facts already established by the image.
-- Give objects a physical motion envelope: known starting support/contact, short believable travel,
-  and stable count/shape. Avoid teleporting, flying, multiplying, or detaching props.
-- Tie speech actions to Script order. Quote only exact Script words; otherwise refer to semantic beats
-  such as opening, reversal, evidence, and verdict.
-- Keep faces readable and hands away from the face unless contact is the authored action.
-- Keep editorial subtitles, titles, cards, stickers, and floating text out of Seedance. Preserve only
-  physical labels/UI already attached to referenced objects.
+UGC can benefit from pause-trim jump cuts. A podcast can cut with the speaker or toward a meaningful
+reaction. A street interview can favor the guest and use the interviewer close view for surprise.
+Stable camera framing, expressive acting and frequent edits are compatible choices.
+
+One Take can contain multiple shots, several speaking turns or a split-screen composition. One
+Segment is not one speaker turn or one camera shot. Conversely, several UGC Takes can use the same
+character-and-scene image and meet at natural editorial cuts. A genuinely continuous shot calls for
+the model mode and direction that preserve that action. See [Reference relationships](generated-dependencies.md).
+
+The Speaker Kit's `pause-trim-jump-cuts` requests an edited rhythm from the model. It does not inspect
+or trim the returned media. If a produced pause actually needs editing, use an explicit media
+operation and align the resulting edited media; a prompt choice is not a deterministic postprocess.
+
+## Size the request around the delivery
+
+Use `hypit measure` on the adopted Segment before writing its duration. Estimate the desired pace,
+then account for the interaction and any intentional pause. Check the selected model's actual range
+with `hypit vocabulary @hypit/seedance`; Mini in these examples accepts 4–15 whole seconds. This is
+a bound on those requests, not on all video models or the finished video's duration.
+
+If a passage is too dense, tighten it or divide it at a natural stage. Avoid filling the maximum
+duration merely because it is available. A short question, an answer with a reaction, and a payoff
+can have different lengths. After production, use actual normalized media and alignment for time;
+the estimate never supplies the final word anchors.
+
+Watch the result for the decisions that matter: engaged performance, correct speaking identity,
+legible interaction, intentional cuts and the right degree of energy. Correct words alone do not
+establish that the scene works. Continue the authorized production and revise a visible problem at
+its owner.

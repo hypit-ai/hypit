@@ -13,7 +13,8 @@ sound, and the video direction tells the performer what to say and do.
 A-roll is a role in the work, not a rectangle or stack position. The same performance remains A-roll
 when its picture is cropped, keyed, moved into a corner, placed above a board, or temporarily covered
 by B-roll or MG. The viewer may stop seeing the speaker while continuing to hear the same performance.
-Changing the visible projection does not by itself create a new speech source.
+The covering B-roll may even show the same person doing a silent lifestyle action. Seeing a person while
+hearing words does not by itself identify that picture as their speaking Take or create a new speech source.
 
 Read the whole work or passage before choosing the source of speech. A recurring presenter, podcast
 speaker, interview participant, or host normally continues to carry their own lines through visual
