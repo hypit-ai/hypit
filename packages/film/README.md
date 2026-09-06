@@ -16,9 +16,30 @@ remains order-independent because the public contract canonicalizes Tracks and v
 belongs to each Present's absolute stacking key.
 
 The official Structured Surface validates an imported generic SVS Recipe into a nominal
-`FilmProgram`, receives CanvasSpace and ProgramSpace through separate explicit edges, type-checks
+`FilmProgram`, receives CanvasSpace and SemanticTrack through separate explicit edges, projects
+ProgramSpace from that SemanticTrack, type-checks
 each `<film:Track source={...}/>` reference and generates the finite fold. CanvasSpace is the only
 dimension truth, ProgramSpace is the only frame-rate truth, and FilmProgram owns only assembly
 identity and clear color.
 Child order is organizational: Track and Present identity, timing and absolute stacking remain in
 their own typed values. Final rendering is a separate author package and capability.
+
+For example, after the named inputs are declared:
+
+```svml
+<film:Film id="main" canvas={vertical} semantic={speech.semantic}
+  appearance={recipes.film.vertical}>
+  <film:Track source={speech.visual}/>
+  <film:Track source={speech.audio}/>
+  <film:Track source={coverage.visual}/>
+  <film:Track source={captions.track}/>
+  <film:Track source={music.track}/>
+</film:Film>
+```
+
+The public output is `main.composition`. Including a visual output does not automatically include
+its sibling audio output. An opaque upper layer can cover a performance while its audio continues;
+reordering these children is not how an author changes that visual stacking.
+
+The `appearance` Recipe uses `background`, for example `film.vertical { background: #18212A; }`.
+The compiled FilmProgram's field is `clearColor`; it is not a Recipe key named `clear-color`.

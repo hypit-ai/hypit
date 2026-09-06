@@ -38,5 +38,38 @@ estimated Build product:
 <satisfy output="opening-semantic.take" candidate="opening-preview"/>
 ```
 
-This is ordinary Run candidate selection. There is no preview-specific `SemanticTake` subtype and
-Studio still opens only after every required output has an actual candidate with no unresolved Need.
+This is ordinary Run candidate selection. Studio can evaluate deterministic work and the immediate
+capabilities that the selected Provider permits for transient execution. Other required media work
+can be completed through a Build and selected from its Result.
+
+## Run Fragment
+
+The package also registers `@hypit/semantic-take-estimate@1#semantic-take` as a Run Fragment:
+
+| Input | Type |
+| --- | --- |
+| `narrative` | `@hypit/narrative@1#Narrative` |
+| `segment` | `@hypit/narrative@1#NarrativeExcerpt` |
+| `media` | `@hypit/media@1#SynchronizedMedia` |
+| `policy` | `@hypit/estimate@1#SpeechEstimatePolicy` |
+
+Its export is `take`, an ordinary SemanticTake. The policy is a typed value with `language`,
+`pace` or `rate`, `minimumSec`, `maximumSec`, `rounding` and optional `paddingSec`.
+The Author Surface publishes its authored policy as `<id>.policy`. For an Author entry containing
+the `opening-estimated` declaration above, a Run can use:
+
+```svrun
+<import as="estimate" from="@hypit/semantic-take-estimate@1"/>
+<fragment id="timing" using="estimate:semantic-take">
+  <input name="narrative" from="story"/>
+  <input name="segment" from="story.segment.opening"/>
+  <input name="media" from="opening-media.media"/>
+  <input name="policy" from="opening-estimated.policy"/>
+</fragment>
+<satisfy output="opening-semantic.take" candidate="timing.take"/>
+```
+
+This selects estimated timing for the measured Take while retaining the required prepared-media
+dependency and any Run choice for its source bytes. The estimate allocates the media's complete
+frame count; it neither generates nor normalizes that media. It requires spoken Tokens. A wordless
+Segment uses actual media boundaries directly when materializing its SemanticTake.

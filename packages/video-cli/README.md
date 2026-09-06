@@ -6,7 +6,10 @@ are activated only by explicit Source imports or Profile `use` entries.
 
 Every Frontend, Surface, deterministic Producer and Validator is activated from Source imports.
 Installing a new author package therefore does not require a video CLI or Core release. Source
-imports never grant network, credential or process authority.
+imports never grant network, credential or process authority. A data-only package can also export a
+reusable Source directly, for example
+`<import as="ugc" source="@hypit/gpt-image-kits/phone-ugc-v1"/>`; resolving that Source does not
+activate package code.
 
 From any project:
 

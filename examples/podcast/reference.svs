@@ -1,0 +1,152 @@
+<?svml using="@hypit/svs@1"?>
+
+<sheet version="1" id="reference">
+  broll.calm-ugc-montage {
+    material-mode: practical-real;
+    story-shape: montage-sequence;
+    edit-language: jump-cut-beats;
+    camera-language: reference-locked;
+    motion-intensity: readable;
+  }
+
+  podcast.daily-creatine {
+    framing: locked-view;
+    edit-language: speaker-cuts;
+    pacing: compact;
+    performance: natural-banter;
+    reaction: subtle-listening;
+    gesture: natural;
+  }
+
+  podcast.arms-are-asking {
+    framing: locked-view;
+    edit-language: speaker-cuts;
+    pacing: compact;
+    performance: natural-banter;
+    reaction: subtle-listening;
+    gesture: natural;
+  }
+
+  speech.visual {
+    fit: cover;
+  }
+
+  media.lifestyle {
+    stack-order: 40;
+    fit: cover;
+    playback: once-start;
+    clip: frame;
+  }
+
+  caption.original-girl {
+    stack-order: 70;
+    x: 0.5;
+    y: 0.5;
+    width: 0.88;
+    height: 0.18;
+    anchor-x: center;
+    anchor-y: center;
+    align: center;
+    block-align: center;
+    inline-size: fixed;
+    wrap: word;
+    max-lines: 2;
+    max-words-per-line: 4;
+    line-height: 1.16;
+    letter-spacing: -0.8;
+    word-gap: 12;
+    size: 52;
+    text-transform: uppercase;
+    fill: #FFFFFF;
+    stroke-color: #170A20;
+    stroke-width: 3;
+    shadow-color: #000000;
+    shadow-opacity: 0.82;
+    shadow-x: 4;
+    shadow-y: 5;
+    shadow-blur: 4;
+    shadow-spread: 1;
+    glow-color: #F16BFF;
+    glow-opacity: 0.42;
+    glow-blur: 10;
+    glow-spread: 1;
+    background: #00000000;
+    padding: "0";
+    radius: 0;
+    karaoke: current;
+    karaoke-transition: step;
+    active-fill: #F16BFF;
+    active-stroke-color: #170A20;
+    active-stroke-width: 3;
+    active-glow-color: #F16BFF;
+    active-glow-opacity: 0.96;
+    active-glow-blur: 14;
+    active-glow-spread: 2;
+    active-response: none;
+    cue-enter: pop;
+    cue-enter-frames: 4;
+    cue-exit: fade;
+    cue-exit-frames: 2;
+    lead-frames: 2;
+    tail-frames: 10;
+    handoff: cut;
+  }
+
+  caption.original-guy {
+    stack-order: 70;
+    x: 0.5;
+    y: 0.5;
+    width: 0.88;
+    height: 0.18;
+    anchor-x: center;
+    anchor-y: center;
+    align: center;
+    block-align: center;
+    inline-size: fixed;
+    wrap: word;
+    max-lines: 2;
+    max-words-per-line: 4;
+    line-height: 1.16;
+    letter-spacing: -0.8;
+    word-gap: 12;
+    size: 52;
+    text-transform: uppercase;
+    fill: #FFFFFF;
+    stroke-color: #170A20;
+    stroke-width: 3;
+    shadow-color: #000000;
+    shadow-opacity: 0.82;
+    shadow-x: 4;
+    shadow-y: 5;
+    shadow-blur: 4;
+    shadow-spread: 1;
+    glow-color: #77D9FF;
+    glow-opacity: 0.42;
+    glow-blur: 10;
+    glow-spread: 1;
+    background: #00000000;
+    padding: "0";
+    radius: 0;
+    karaoke: current;
+    karaoke-transition: step;
+    active-fill: #77D9FF;
+    active-stroke-color: #170A20;
+    active-stroke-width: 3;
+    active-glow-color: #77D9FF;
+    active-glow-opacity: 0.96;
+    active-glow-blur: 14;
+    active-glow-spread: 2;
+    active-response: none;
+    cue-enter: pop;
+    cue-enter-frames: 4;
+    cue-exit: fade;
+    cue-exit-frames: 2;
+    lead-frames: 2;
+    tail-frames: 10;
+    handoff: cut;
+  }
+
+  film.vertical {
+    background: #000000;
+  }
+</sheet>

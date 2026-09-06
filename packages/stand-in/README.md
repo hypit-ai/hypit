@@ -21,3 +21,18 @@ materializes their deterministic files. Model packages do not know these Fragmen
 Remove the `satisfy` line to select the Source's primary Candidate again. The card carries a
 diagonal STAND-IN watermark, its kind, frame and duration and — for video — a running timecode and
 progress bar, so a cut that lands on the wrong frame remains visible.
+
+## Fragment inputs and exports
+
+| Fragment | Inputs | Export |
+| --- | --- | --- |
+| `image` | `canvas`: CanvasSpace | `image`: BlobArtifact |
+| `video` | `canvas`: CanvasSpace, `duration`: SpeechDuration in seconds, `clock`: ProgramClock | `video`: BlobArtifact |
+| `silence` | `duration`: SpeechDuration in seconds | `audio`: BlobArtifact |
+
+`from` on a Run input refers to a public value of the Author entry; literal duration can use
+`value="5"`. The card/silence capability still needs a selected media Provider. Studio can use it
+when that Provider admits it for transient execution. An estimated SemanticTake is a separate
+choice supplied by `@hypit/semantic-take-estimate` after normalization.
+
+These are Run Fragments, so this package has no Markup Surface entries in `hypit vocabulary`.

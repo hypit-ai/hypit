@@ -13,9 +13,10 @@ an explicit `SpatialFrame` input from `@hypit/spatial`; neither is hidden in the
 Recipe. The package exposes semantic typography rather than a rendering callback, arbitrary CSS or
 cross-Track access.
 
-The provider-free `<text:Track>` Surface validates `.svs` Recipes, accepts Program, Selection,
+The provider-free `<typo:Track>` Surface validates `.svs` Recipes, accepts Program, Selection,
 Moment or explicit point-expression timing plus explicit Point/Frame/Path edges, and produces the
-same TypographyTrackProgram without changing Core or Film. `<text:Mask>` is a separate component that
+same TypographyTrackProgram without changing Core or Film. The current Track Surface requires
+`semantic` and derives ProgramSpace from it, including for explicit clock expressions. `<typo:Mask>` is a separate component that
 consumes one authored Text Program and one owned still Surface; advanced/multiline/Path masks fail
 closed and materialize through an independent package.
 
@@ -25,10 +26,10 @@ Content has two explicit author forms:
 <import as="copy" from="@hypit/text@1"/>
 <import as="typo" from="@hypit/typography-track@1"/>
 
-<copy:Value id="headline">Intent, not timelines.</copy:Value>
+<copy:Value id="headline-copy">A useful idea, clearly shown.</copy:Value>
 
 <typo:Track id="titles" semantic={speech.semantic}>
-  <typo:Area id="headline" content={headline}
+  <typo:Area id="headline" content={headline-copy}
     placement={layout.headline} style={title-style} during="program"/>
 
   <typo:Area id="editorial" placement={layout.editorial}
