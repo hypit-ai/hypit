@@ -44,13 +44,16 @@ test("HypiHub Gemini uses native wire format for text, image and video parts", a
   ] }]);
 });
 
-test("HypiHub Gemini points unavailable models to HypiHub", async () => {
+test("HypiHub Gemini reports unavailable models without misdiagnosing authentication", async () => {
   const generate = createHypiHubGeminiGenerator({
     apiKey: "test-key",
     fetch: async () => new Response("missing", { status: 404 }),
   });
-  await assert.rejects(() => generate({ instruction: "x", parts: [{ text: "x" }] }),
-    /sign in to HypiHub at https:\/\/hypit\.ai with hypit auth login/iu);
+  await assert.rejects(() => generate({ instruction: "x", parts: [{ text: "x" }] }), (error) => {
+    assert.match(String(error), /HTTP 404/iu);
+    assert.doesNotMatch(String(error), /auth login/iu);
+    return true;
+  });
 });
 
 test("HypiHub Gemini retries upstream rate limits without reuploading files", async () => {

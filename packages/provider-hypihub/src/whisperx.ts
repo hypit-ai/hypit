@@ -3,6 +3,7 @@ import type { AlignedTranscriptEvidence, SpeechTranscriptPassage } from "@hypit/
 import type { ArtifactStore } from "@hypit/runtime";
 import { whisperXCapabilities } from "@hypit/whisperx";
 import type { WhisperXAlignmentRequest } from "@hypit/whisperx";
+import type { HypiHubAuth } from "./oauth.js";
 
 type RawWord = { readonly word?: unknown; readonly text?: unknown; readonly start?: unknown; readonly end?: unknown; readonly score?: unknown };
 type RawSegment = { readonly start?: unknown; readonly end?: unknown; readonly words?: unknown };
@@ -87,25 +88,25 @@ export function whisperXAlignmentRequest(value: unknown): WhisperXAlignmentReque
 
 export async function transcribeWithHypiHub(
   client: {
-    upload(artifact: WhisperXAlignmentRequest["audio"], artifacts: ArtifactStore, apiKey: string): Promise<string>;
-    transcribe(body: Record<string, unknown>, apiKey: string): Promise<HypiHubWhisperXResponse>;
+    upload(artifact: WhisperXAlignmentRequest["audio"], artifacts: ArtifactStore, auth: HypiHubAuth): Promise<string>;
+    transcribe(body: Record<string, unknown>, auth: HypiHubAuth): Promise<HypiHubWhisperXResponse>;
   },
   request: WhisperXAlignmentRequest,
   artifacts: ArtifactStore,
-  apiKey: string,
+  auth: HypiHubAuth,
   model: string,
 ): Promise<AlignedTranscriptEvidence> {
   const bytes = await artifacts.get(request.audio.digest);
   assert(bytes !== undefined && bytes.byteLength === request.audio.size,
     `HypiHub WhisperX evidence Artifact ${request.audio.digest} is unavailable or has changed`);
-  const url = await client.upload(request.audio, artifacts, apiKey);
+  const url = await client.upload(request.audio, artifacts, auth);
   return interpretHypiHubWhisperXResponse(await client.transcribe({
     model,
     url,
     language: request.language,
     response_format: "verbose_json",
     timestamp_granularities: ["word", "segment"],
-  }, apiKey), request.sampleFrames);
+  }, auth), request.sampleFrames);
 }
 
 export { speechEvidenceTypes, whisperXCapabilities };
