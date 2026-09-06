@@ -9,6 +9,7 @@ import {
   EndpointRegistry,
 } from "@hypit/driver-node";
 import { credentialRef } from "@hypit/runtime";
+import type { WritableCredentialStore } from "@hypit/runtime";
 
 import { capabilities, createGreetingBuild, producers as greetingProducers, types } from "../../core/test/greeting-fixture.js";
 
@@ -145,6 +146,37 @@ test("an Endpoint receives only declared credential slots and secrets never ente
   const completed = await driver.run(createGreetingBuild());
   assert.equal(completed.status, "complete");
   assert.equal(JSON.stringify(completed.state).includes("top-secret-value"), false);
+});
+
+test("a writable credential gives its Endpoint authority to replace only that declared slot", async () => {
+  const { producers, endpoints } = configuredRegistry();
+  let stored = "old-secret";
+  endpoints.registerImmediateEndpoint(
+    "example:credential-rotation",
+    capabilities.generation,
+    types.generated,
+    async ({ credentials }) => {
+      assert.equal(typeof credentials.apiKey?.replace, "function");
+      await credentials.apiKey!.replace!({ secret: "new-secret" });
+      assert.equal("credentialStore" in credentials.apiKey!, false);
+      return { value: { kind: "inline", value: "Credentialed result" } };
+    },
+    { credentials: { apiKey: credentialRef("test", "endpoint-key") } },
+  );
+  const credentialStore: WritableCredentialStore = {
+    owns(ref) { return ref.store === "test"; },
+    async resolve() { return { secret: stored }; },
+    async put(_ref, value) { stored = value.secret; },
+    async delete() { return false; },
+  };
+  const driver = new NodeDriver({
+    producers,
+    endpoints,
+    credentials: credentialStore,
+  });
+  const completed = await driver.run(createGreetingBuild());
+  assert.equal(completed.status, "complete");
+  assert.equal(stored, "new-secret");
 });
 
 test("Endpoint capabilities may narrow themselves with typed Need constraints", async () => {

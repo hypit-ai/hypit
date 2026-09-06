@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { reduce, resolveNeedCommand, resolveProducer } from "@hypit/core";
 import type { ProducerHandlerResult } from "@hypit/component-kit";
-import type { EndpointFulfillment, EndpointOutcome } from "@hypit/endpoint-kit";
+import type { EndpointCredential, EndpointFulfillment, EndpointOutcome } from "@hypit/endpoint-kit";
 import { endpointResourceClaims } from "@hypit/endpoint-kit";
 import type {
   BuildState,
@@ -28,6 +28,7 @@ import type {
   RuntimePreparation,
   RuntimeRunnableCommand,
 } from "@hypit/runtime";
+import { writableCredentialStore } from "@hypit/runtime";
 
 import { MemoryResourceStore } from "./resources.js";
 import {
@@ -115,13 +116,13 @@ export class NodeDriver {
 
   async #endpointCredentials(
     registration: EndpointRegistration,
-  ): Promise<Readonly<Record<string, CredentialValue>>> {
+  ): Promise<Readonly<Record<string, EndpointCredential>>> {
     const requested = registration.credentials ?? {};
     if (Object.keys(requested).length === 0) return {};
     if (this.credentials === undefined) {
       throw new Error(`Endpoint ${registration.id} requires a CredentialStore`);
     }
-    const resolved: Record<string, CredentialValue> = {};
+    const resolved: Record<string, EndpointCredential> = {};
     for (const slot of Object.keys(requested).sort()) {
       const ref = requested[slot]!;
       const key = JSON.stringify([ref.store, ref.key]);
@@ -134,7 +135,13 @@ export class NodeDriver {
       if (value === undefined) {
         throw new Error(`Endpoint ${registration.id} credential ${slot} is unavailable from ${ref.store}:${ref.key}`);
       }
-      resolved[slot] = value;
+      const writable = await writableCredentialStore(this.credentials, ref);
+      resolved[slot] = {
+        ...value,
+        ...(writable === undefined ? {} : {
+          replace: async (replacement: CredentialValue) => await writable.put(ref, replacement),
+        }),
+      };
     }
     return resolved;
   }
