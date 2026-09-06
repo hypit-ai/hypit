@@ -132,7 +132,7 @@ Only after you explicitly approve the mock should you ask for the paid Build:
 The mock is approved. Submit the paid Build and create the final video.
 ```
 
-The Agent summarizes the selected models, expected external work and estimated cost before it starts.
+The Agent summarizes the selected models, expected external work and Provider pricing information before it starts.
 It then submits the Build, follows its progress and reports any provider or runtime issue in plain
 language. A paid Build is the step that performs the real generation, media processing and final
 rendering; the earlier mock does not silently trigger those billable operations.

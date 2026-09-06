@@ -26,8 +26,8 @@ window can play just the needed beginning or authored source trim of a longer ge
 The selected model's minimum generation length does not set a minimum display length.
 
 **A montage over a thought** is useful when several scenes collectively communicate a habit, history
-or attitude. The podcast example supplies three lifestyle images to one short B-roll request,
-directs the scene order, and places the result over one broader Selection. Each noun need not land
+or attitude. Several lifestyle images can feed one short B-roll request whose direction owns their
+scene order, while the result covers one broader Selection. Each noun need not land
 on a cut for the idea to read. This trades precise correspondence for a compact, lively sequence;
 it is not a substitute when reconstruction requires the original's exact correspondence.
 
@@ -66,9 +66,9 @@ the relationship, not a required montage duration or a fixed amount of extra roo
 
 ## Let picture and speech hand over at different moments
 
-A montage can stay up after its subject finishes speaking. In the podcast example, the partner
-starts responding while the last lifestyle picture is still visible, and their camera returns
-later. This incoming voice before its picture forms a J-cut relationship and gives the montage room.
+A montage can stay up after its subject finishes speaking. A partner can start responding while the
+last lifestyle picture is still visible, with their camera returning later. This incoming voice
+before its picture forms a J-cut relationship and gives the montage room.
 The B-roll does not need to contain that speech: the speaking Track's audio already continues beneath.
 
 Choose the endpoint by the thought, reaction and visual reading time. Extending coverage across a
@@ -93,8 +93,8 @@ Here both sides meet at the end of “coffee”; the smoothie picture owns the p
 
 Both sides now meet at the start of the next “my”; the coffee picture owns the pause. Keep both
 sides left-affine or both right-affine at each join. `||` may also sit between those phrases, but it
-only authors Caption grouping and cannot close a visual gap. The `@hypit/script` README owns the
-complete marker grammar.
+only authors Caption grouping and cannot close a visual gap. [Script and semantic time](../../creation/script-and-time.md#bind-meaning-to-script-identities)
+contains the complete marker grammar.
 
 These joins handle internal pauses. If coverage must also include lead-in or trailing silence,
 choose outer boundaries that cover those edges through the Track's actual timing vocabulary.

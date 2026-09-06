@@ -121,6 +121,37 @@ was not adopted; it does not need to be copied into `drafts/`.
 When an output is deliberately exported into the project, place it according to its new role. It may
 become an `asset`, a `draft`, or direct input to another production.
 
+## Hand over an editable production
+
+A finished MP4 is a viewing deliverable. To continue making the piece, the recipient also needs the
+authored work and the produced values that its Runs select:
+
+- Sources, Recipes, Runs, project notes and referenced input assets, keeping their relative layout;
+- project component source or installed-release dependencies, `package.json`, its lockfile and any
+  tarballs referenced by `file:` dependencies;
+- the completed Results used by `build-record` Candidates, including their media and Composite value
+  documents, plus the project Result repository selection;
+- the intended Runtime configuration, with account access configured on the receiving machine through
+  its own Credential Store.
+
+For the default filesystem repository, preserving `.hypit/results/` intact with the project is the
+straightforward handoff. Include the hidden directory and keep its date/Build subdirectories. Some
+Results forward an Output to its original owning Build, so copying only the latest Build directory
+can omit media still in use. A custom filesystem or S3 repository needs the corresponding files or
+access and an explicit destination selection; changing `hypit.results.json` does not move them.
+
+The recipient installs the selected Distribution and project dependencies, configures their Runtime,
+and inspects the received Results. Planning the intended Run shows whether its reuse choices still
+resolve and what new work remains. Active execution stays with the originating Runtime until that
+attempt ends; an editable handoff carries authored work and required Results rather than the originating
+Runtime's execution state.
+
+`hypit get` is useful when handing over a particular output. Exported image/video/audio files can be
+selected as file Candidates. A Composite export contains `value.json` and its resource files for
+inspection and transport; that document uses the Result value format, whereas a Run `<value>` accepts
+a StoredValue wrapper. To retain a SemanticTake's structured reuse, keep its Result available and use
+`build-record`. [Builds and Results](../production/builds.md) explains repository selection and export.
+
 ## Resume from present facts
 
 After interruption or context compaction, read the current Brief, Treatment, reference archive,
@@ -129,7 +160,6 @@ Results and Runtime status. Continue from usable outputs already present; loss o
 is not a reason to submit the same paid work again.
 
 A command interruption or missing reply can leave the Worker running. [Builds](../production/builds.md)
-explains how to identify active work and continue through a new Run after a failed attempt, including
-a Provider submission timeout with no receipt.
+explains how to identify active work and continue through a new Run after a failed attempt.
 Completed Outputs remain in Results without being exported as files. Keep or add their Run Candidates
 when revising downstream work; neither the notes nor an unchanged output name selects them automatically.

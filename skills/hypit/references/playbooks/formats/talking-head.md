@@ -12,8 +12,8 @@ slightly right can leave room for an icon on the left; a table or the direction 
 can make that composition feel inhabited. Choose it for this layout, not as a universal UGC pose.
 
 Use that same image and the person's recurring voice reference for every ordinary talking Take.
-The Ranking example does exactly this for both player passages. Each Take returns to the same useful
-visual premise and contributes another piece of the edited performance.
+Each Take can return to the same useful visual premise and contribute another piece of the edited
+performance.
 
 Natural cuts are part of the desired result. A small change in pose between passages can make the
 video feel like a creator's edited recording. Stable character-and-scene references can support each
@@ -24,10 +24,11 @@ Take independently because this work wants edited speech rather than an unbroken
 For a single presenter returning to one useful camera image through natural edited cuts, `speaker-v1`
 from `@hypit/seedance-kits` is a tested fit. It combines that character-and-scene image, one voice
 reference, Script dialogue, a Recipe for recurring direction, and optional action Text for the passage.
-Read the package README for assembly and the selected template for its actual choices. A work whose
-camera, cast, or performance relationship differs can use another Kit or ordinary authored direction.
+[Directing generated performance](../craft/seedance-directing.md) shows its assembly and reference
+relationship. Read the selected installed template for its actual Recipe choices. A work whose camera,
+cast, or performance relationship differs can use another Kit or ordinary authored direction.
 
-In the worked Ranking example, its Recipe combines stable framing with
+A fitting Speaker Recipe can combine stable framing with
 `edit-rhythm: pause-trim-jump-cuts`. The camera can
 stay fixed while the edit removes dead pauses and the performer remains expressive. This is a prompt
 instruction to the generator; it does not run an automatic trimming operation on the returned file.

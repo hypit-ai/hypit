@@ -1,7 +1,7 @@
 # Caption above a moving head
 
 Use this when following a person's head adds character or keeps Caption clear of the image. The
-street-interview example uses external face measurements, authored head regions and Fine's existing
+relationship uses external face measurements, authored head regions and Fine's existing
 placement input. The detector measures evidence; the author decides the Caption design.
 
 ## Produce the footage that will actually be measured
@@ -23,16 +23,19 @@ The worked method used Google Video Intelligence. Its face feature can return bo
 for this placement task. Use the installed tool or the provider's
 [face-detection example](https://docs.cloud.google.com/video-intelligence/docs/samples/video-detect-faces)
 for actual invocation and existing authorization for any paid request. Another suitable detector or
-manual measurement can supply the same authored data.
+manual measurement can supply the same authored data. The stable Hypit input is the resulting
+RegionTimeline, so detector invocation can remain an external, project-side preparation step.
 
 GVI's timestamped boxes are observations, not Script Roles or ready-to-use Hypit head tracks. Its
 [response schema](https://docs.cloud.google.com/video-intelligence/docs/reference/rest/v1/AnnotateVideoResponse#TimestampedObject)
 expresses `timeOffset` relative to the input video and the rectangle as `normalizedBoundingBox`.
 Use all relevant observations, not just the first box printed by a sample program.
 
-Associate each visible person with the intended Role by inspecting the footage. A detection id is
-not a global person identity, and a cut can create another track for the same guest. In a shared
-shot, selecting the largest face alone can attach the guest's Caption to the interviewer.
+Treat the returned face tracks as candidate observations. Inspect representative frames from each
+track and associate useful fragments with the intended Script Role. A detector track is not a global
+person identity: a cut can split one guest across several tracks, and one shared shot can contain
+several people. Combine the fragments that visibly belong to the Role in final program time. Selecting
+the first or largest face alone can attach the guest's Caption to the interviewer.
 
 ## Author one head region per final program frame
 
@@ -51,11 +54,15 @@ Transform the useful observations into ordinary project data, with these decisio
 - **Missing observations:** make any interpolation or smoothing an explicit external preparation
   choice within a continuous shot and the same person. Inspect it, stop at cuts and occlusion, and
   write `null` when no usable region exists. Fine does not invent a missing box.
+- **Role visibility:** intersect the assembled head regions with the turns where that Role is intended
+  to own Caption, including only any lead or tail deliberately wanted at the boundary. Write `null`
+  through other speakers' turns and other intervals. This prevents a correctly detected face from
+  becoming placement evidence for Caption that does not belong to that person.
 
-The final array has exactly one box or `null` per program frame, including frames where the Role is
-absent. Caption already follows the Role's spoken Cues; the region track supplies position, not a
-second speech detector. Additional visibility choices, such as hiding that Role's Caption under
-B-roll, can be authored with null regions or the appropriate Caption selection behavior.
+The final array has exactly one box or `null` per program frame. Caption already follows the Role's
+spoken Cues; the region track supplies measured position and an explicit visibility boundary, not a
+second speech detector. Other composition choices, such as hiding that Role's Caption under B-roll,
+can use the same authored null regions or the appropriate Caption selection behavior.
 
 For example, this is a three-frame data-shape illustration, not a ready timeline for a real video:
 

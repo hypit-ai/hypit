@@ -1,9 +1,21 @@
 # Transforming a reference into a target
 
-Read this when a request changes, combines, shortens, restyles, or extends reference material. Several
-transformations usually apply at once, and unfamiliar work can introduce a new one in plain language.
+Read this when a user brings a reference and asks for their own version: their face, their product,
+a different story, or another audience. Several changes can belong to one creative intention.
+
+Look at the supplied material and think about the reference together with the user's request. What
+makes the original compelling, and how can that appeal belong to this new person or product? Keep
+the reference's particular humor, visual relationships, and rhythm in view as you develop the target.
+The reference archive describes the original; Brief records the user's intention; Treatment explains
+how the new piece will work. Useful discoveries can change any part of that understanding as the work
+develops.
 
 ## Preserve the role, then recreate the form
+
+Recreate the reference's semantic timing intentions in the target. If a ranking portrait appears
+when a player is introduced and settles with the judgment, bind those events to the target's own
+Script. A different speaker or rewritten argument will change the seconds; the relationship can
+remain. Keep an explicit clock interval when that interval itself is part of the intended design.
 
 Before replacing an object, understand the role it plays in the work. A presenter may also appear as
 an avatar, a voice, a B-roll subject, a phone image, and the identity inside an MG system. A product
@@ -34,24 +46,42 @@ Useful transformation lenses include:
 These lenses are prompts for thought, not fields to complete. Follow the relationships the actual work
 contains.
 
-## Example: replace the presenter with a supplied cat
+## "Make this with my face"
 
-Suppose the user supplies a video, `assets/miso.jpg`, and says, “replace the person with this cat.”
+Suppose the user supplies a portrait and a football Ranking video. The jokes concern the players, so
+the spoken argument and comic reveals may already suit the new presenter. Bring the user into the
+camera image with the reference's teasing confidence, useful framing, and room for the board. Keep
+the full [image craft](../playbooks/craft/image-direction.md), directing the supplied person's appeal
+and presence with the same care as an invented character. That image can carry all ordinary talking
+Takes and supply the person's other appearances.
 
-The reference archive records the original work without the cat. The Brief records the faithful
-adaptation and the cat image as the user's private identity authority. The Agent identifies what the
-presenter does throughout the piece: speaking A-roll, lifestyle B-roll, voice, Caption ownership,
-avatar, product interaction, screen image, or MG state. Treatment decides how the cat performs those
-same functions and which systems actually need to change.
+A joke about the original presenter's appearance or personal story needs another look: decide how
+its setup and payoff fit the new casting and Brief. The new person may invite a different delivery or
+a better version of the joke. A supplied pet might express the same confidence through a planted
+pose, gaze, or comic authority. Let the new character make the work feel inhabited.
 
-The cat image can directly condition the first real A-roll camera image. Once accepted, that camera
-image is both usable artwork and a strong visual precedent for other real angles and Takes. It is
-enough to start; the next shots can grow from it together with any product or Logo authority they
-need.
+The portrait supplies visual identity; [voice direction](../playbooks/craft/voice-and-performance.md)
+uses supplied audio or a voice chosen for the target performance. The original photo's setting and
+pose may give way to the shot the video needs. Use [reference relationships](../playbooks/craft/generated-dependencies.md)
+to decide where the supplied image enters that production.
 
-If “real pet behaving naturally” and “fully anthropomorphic host” would produce materially different
-works and the supplied evidence does not favor either, ask once. Otherwise the commissioned Agent
-makes the routine directing choice and validates it by looking at the generated work.
+## "Use my product"
+
+Suppose a podcast recommends a bottled product, while the user wants to promote their budgeting app
+and supplies receipt scanning as its real benefit. The casual recommendation, skeptical partner, and
+satisfying demonstration can still carry the exchange. The opening split screen, complementary
+views, and speaker-colored Caption may still give it its recognizable shape.
+
+The new conversation might turn on "You expect me to type every coffee?" A phone demonstration of
+scanning a receipt answers that objection. Now the host holds a phone, the covering footage shows the
+app in use, and the graphic reveal supports the same moment of understanding. Script, action, imagery,
+and CTA grow from what this product actually offers. Supplied product images and UI establish its
+appearance; the user's facts and relevant product material establish its claims. Resolve important
+gaps from available material or with the user while continuing to develop the creative idea.
+
+When both person and product change, consider their relationship together: why this person recommends
+it, how the partner responds, and what makes the encounter engaging. Treatment holds that creative
+answer; Source expresses its words, references, and semantic relationships.
 
 ## Treat generation as ordinary production
 

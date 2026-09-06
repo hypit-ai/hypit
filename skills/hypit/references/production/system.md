@@ -7,6 +7,12 @@ supports an idea, and which words or events a Caption, graphic or sound follows.
 let the production survive revision. When a performance becomes longer, a graphic attached to the
 same phrase can still appear with that phrase.
 
+Semantic authoring is the preferred starting point for a Hypit production, including a clone.
+Understand which idea, question, answer or action each layer serves. Express that relationship in
+the target's Script and components, then project it through the new media. For example, a product
+picture follows the explanation of its benefit and a graphic settles when the speaker gives the
+verdict. The reference's seconds locate evidence; the target's actual performance supplies its time.
+
 ## Script gives meaning; media gives it time
 
 Script names the work's Segments, words, Selections and Moments. A Segment identifies a passage;
@@ -17,6 +23,14 @@ Once the media exists, normalization gives it a shared frame clock. A **Semantic
 that media with one Script Segment and records its word and boundary positions in local frames.
 Speech Track assembles the Takes, translating their positions into a **SemanticTrack** for the
 complete program. Its **ProgramSpace** supplies the program's time axis.
+
+In spoken work, the performance carrying the main Script is the A-roll. A single presenter, a
+conversation with several speakers, and an independent narration can each carry this spine.
+Covering the speaker with B-roll does not change whose words establish time. Speech Track assembles
+the relevant Takes into one semantic timeline while exposing their picture and sound separately.
+The speaker can occupy a small circular inset or appear as a cutout above a full-screen demonstration.
+That speaking performance still supplies the SemanticTake. A-roll describes this semantic role;
+screen area and stacking belong to its visual presentation.
 
 This is how “show the proof while she explains the result” becomes a precise interval in the
 produced video. A wordless Segment works through the same relationship: its media supplies the

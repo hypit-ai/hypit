@@ -67,10 +67,11 @@ handlers inspect imported values and earlier declarations during decoding. Graph
 XML body order, schedule execution.
 
 Different bodies have different readers. Script uses its own prose grammar; structured components
-declare their permitted attributes and children; Text has its own literal/template forms. JSX,
-HTML, CSS and callback syntax have no meaning unless the receiving package explicitly declares that
-language. Consult `@hypit/markup`, `@hypit/script` and the receiving package when punctuation or
-escaping is significant.
+declare their permitted attributes and children; Text has its own literal/template forms. In
+structured Markup, use the receiving Surface's declared attributes, children, literals, Recipes and
+reference expressions, and escape `&`, `<`, `>`, `"`, and `'` as `&amp;`, `&lt;`, `&gt;`,
+`&quot;`, and `&apos;`; comments use `<!-- ... -->` outside raw bodies. Script owns the punctuation
+inside its raw body, as described in [Script and time](../creation/script-and-time.md).
 
 ## Recipes are named values
 
@@ -88,6 +89,24 @@ Imported as `look`, this rule is `{look.media.cover}`. Recipe rule names use dot
 `media.cover`. Rules do not inherit or cascade. Scalars, strict JSON arrays and strict JSON objects are
 supported; each consumer owns the allowed properties, defaults and units. A Caption Style's Recipe
 is not interchangeable with Media appearance merely because both have a color or size.
+
+Every property ends with `;`. `null`, booleans, finite numbers, and simple bare words are scalar
+values. Quote strings whose punctuation could be read as SVS syntax. Arrays and objects use strict
+JSON, including quoted keys and strings:
+
+```svs
+caption.host {
+  enabled: true;
+  color: "#ff6f61";
+  padding: [12, 18];
+  motion: {"kind":"spring","amount":0.12};
+  enter: 8f;
+}
+```
+
+Units such as `8f`, `250ms`, and `50%` remain strings until the consuming package interprets them.
+Recipe values do not evaluate graph references. Media, fonts, semantic ranges, and other graph
+values remain explicit Source inputs to the component that consumes them.
 
 Some packages, such as TextTemplate, explicitly define parameter precedence. That local behavior
 does not create global SVS inheritance. A Prompt Kit remains a reusable text program; image
@@ -137,7 +156,7 @@ Result name and the current Logical Output name can differ. A raw MP4 file is a 
 an aligned SemanticTake. Select Candidates by their real nominal Type and creative meaning, retaining
 normalization or alignment where still needed. [Runs](runs.md) explains complete Candidate forms,
 Fragment inputs and exports; [Authoring](authoring.md) owns the creative reuse decisions;
-`@hypit/run-markup` owns the complete Run grammar.
+the installed Fragment package owns its own input and export names.
 
 `hypit check <run>` checks Source and graph legality. `hypit plan <run> --runtime <profile>` exposes
 the selected graph and external requests without submitting them. A legal document can still describe a

@@ -241,10 +241,10 @@ tiles but has weaker evidence about complete motion and long-range sequence. Wit
 semantic attachment to real spoken words is unavailable. State those differences in the language of
 the requested work.
 
-When an installed Provider does not support the user's service or local deployment, say so and offer
-integration as a separate framework or deployment task. A new protocol normally needs a Provider;
-genuinely new author-facing request semantics also need a Model Package. Keep SVML unaware of the
-service and leave the package implementation to the Hypit repository's framework documentation.
+When the user brings another model, service, or Key, use
+[Models and Providers](model-and-provider.md) to distinguish credential setup, Endpoint configuration,
+and a package extension. A project can install or author its own Provider or Model through the public
+package APIs. The actual service protocol determines whether an existing Provider is reusable.
 
 ## Prepare the selected environment
 

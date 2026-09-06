@@ -1,120 +1,55 @@
-# Video authoring workflow
+# Making videos with an Agent
 
-Hypit keeps authoring, execution and results separate:
+Give your Agent a reference video, a brief, or both. You can bring a face, product, logo, or existing
+footage and explain what the new video should achieve. The Agent studies the material, develops a
+creative direction, and makes the pictures, performances, graphics, sound, and edits work together.
 
-- Source, Recipe and Run describe what should be made.
-- Runtime executes one Build from those inputs.
-- Result records what that Build actually produced.
-- Reference-video tools help an author understand and inspect content; they do not own Build or
-  project history.
-
-There is no route database, revision history, recovery cursor or aggregate project state. Work is
-recoverable because the authored files and useful media/report files are ordinary project content,
-not because a second system reconstructs an agent's past actions.
-
-## Skill installation and execution
-
-`skills/hypit/` is the one real, agent-neutral Skill directory. OpenAgents and other Skill hubs install
-that subtree into their Agent's global Skill directory. Repository checkouts expose the same source to
-Claude Code and Codex through the two leaf links `.claude/skills/hypit` and `.codex/skills/hypit`; the
-parent Skill directories remain independent so either Agent can also have private Skills.
-
-The installed Skill is guidance, not the executable Hypit Distribution. Until the npm package is
-published, the Skill selects an existing Hypit checkout or prepares a machine-level checkout at
-`<home>/hypit`, updates it only by fast-forwarding `origin/main`, installs its pinned dependencies and
-uses its Node entrypoints. A Skill-hub reinstall updates the installed guidance; pulling the checkout
-updates the executable Distribution. Neither silently rewrites the other.
-
-The Skill, Distribution and video project have independent locations and lifetimes. A video project
-may live anywhere, needs no Skill link, and is never added to the Hypit repository workspace.
-
-## Start from the request
-
-Decide whether the task is original authoring or reconstruction from a reference. Then inspect the
-available packages and the public vocabulary they expose:
+## Install the Skill
 
 ```bash
-hypit-reference-video-tools list_svml_packages
-hypit-reference-video-tools inspect_svml_vocabulary --package <package>
-hypit-reference-video-tools inspect_visual_schema
+npx skills add hypit-ai/hypit -g
 ```
 
-Reuse an existing Surface when it expresses the requested visual role. Develop a project-local author
-package only when there is a real missing capability. Do not mutate an installed package to make one
-project pass.
+The Skill supplies production knowledge. The executable `hypit` package supplies the commands,
+components, Runtime, and Studio. Your Agent can locate an existing executable installation or prepare
+the selected release. The Skill, executable, and video project have independent locations and update
+through their own installation channels.
 
-## Original authoring
+## Develop the work
 
-Write the smallest Source, Recipe and Run that express the request. Inspect them directly:
+Understanding a reference moves between the whole piece and the details that explain it: why the
+opening catches attention, how a performance carries the argument, and what pictures, captions,
+graphics, and sound contribute. Observation, transcription, and focused frames or clips supply the
+evidence for that judgment.
 
-```bash
-hypit-reference-video-tools validate_local_author_packages --run ./build.svrun
-hypit-reference-video-tools validate_script_cues --run ./build.svrun
-hypit check ./build.svrun
-hypit-reference-video-tools preview_check ./build.svrun
-hypit-reference-video-tools layout_check --run ./build.svrun
-```
+Making the target moves between intention and visible results. Replacing a presenter or product can
+change the script, performance, setting, and payoff as well as the reference images. The Agent works
+through those consequences with the new goal in mind, then uses Studio and rendered media to refine
+the result.
 
-These commands are independent reports. One does not approve or unlock another. Fix an actual issue
-because the report and the requested design justify the change. A layout candidate may be annotated
-as intentional with `layout_accept`; the annotation is keyed by the structural finding name, not by a
-snapshot of the whole project.
+You decide the goal, private facts, and spending. The Agent handles ordinary creative and technical
+choices within that direction. Before paid requests, it explains the selected services, request
+quantities, and the pricing information supplied by their Providers.
 
-For a visual review, render the element and window that matter, then read the result against an
-explicit statement of intent:
+## Keep the project editable
 
-```bash
-hypit-reference-video-tools render_element ./build.svrun \
-  --element title --segment intro --out ./review/title-intro.mp4
-hypit-reference-video-tools review_element --run ./build.svrun \
-  --element title --segment intro --video ./review/title-intro.mp4 \
-  --intent-file ./review/title-intent.md
-```
+The project keeps the work in ordinary files:
 
-`authoring_check` can summarize coverage, playback and recorded reviews, but it is not project state
-and is not required to submit a Build.
+- Reference notes explain the source video's structure and locatable details.
+- Brief and Treatment describe the user's goal and the Agent's creative answer.
+- `.svml` describes the Script, media, components, and composition; `.svs` holds reusable Recipes.
+- `.svrun` selects the Author Source, existing Outputs, and the targets for one execution.
+- Build Results retain produced Outputs and the facts of that execution.
 
-## Reconstruction
+Project components are part of making a video. They live with the project and can express a new
+visual role, Caption family, or graphic behavior. A component that needs cross-project reuse can be
+published as an ordinary versioned package under its owner's scope.
 
-Do not inspect repository example projects on this route and never use the supplied reference as a
-Film, Track or Take source. Prepare it once as evidence:
+When revising the work, the Run can reuse suitable Outputs from earlier Results, including useful
+media produced before a Build failed. A new Build executes the revised Run. Studio displays the
+selected work and writes supported edits back to its Source files; the Agent reviews the actual
+finished video against the intended result.
 
-```bash
-hypit-reference-video-tools prepare_reference --video-path ./reference.mp4 --observer agent
-hypit-reference-video-tools observe_reference --reference-id <reference-id>
-```
-
-The prepared shot clips, frames, transcript and observations live under
-`.hypit/reference-video-tools/`. They are useful source material. `record_observation` fills an
-explicit pending observation when the `agent` observer is used.
-
-Author the project from the observed picture, words and timing. Render the element over the same
-Script window and compare it directly:
-
-```bash
-hypit-reference-video-tools render_element ./build.svrun \
-  --element ranking --segment list --reference-id <reference-id> \
-  --out ./review/ranking-list.mp4
-hypit-reference-video-tools compare_reconstruction \
-  --reference-id <reference-id> --run ./build.svrun --segment list \
-  --video ./review/ranking-list.mp4 --element ranking
-```
-
-Every explicit comparison is a new observation. The tool does not hash a render and silently reuse an
-older answer. `reconstruction_check` summarizes what has and has not been looked at; it does not own a
-workflow cursor.
-
-## Build and reuse
-
-Run `hypit plan` before paid generation when cost or external services matter. Run `hypit build` only
-when the user wants the Build. The Build's public outputs are saved into its Result. Intermediate
-component outputs that are public ports are saved as well, so later work can point at useful images,
-videos or structured values without changing the Run target into a list of every intermediate value.
-
-Repeated Builds are distinct Results even when the Run files are unchanged. Give important Results
-and outputs human names through the Result presentation commands instead of inventing a content hash,
-central artifact table or hidden project history.
-
-For bulk variants, use ordinary project directories and an explicit task list chosen by the caller.
-Copying, scheduling and naming those projects belongs to that caller or a dedicated batch tool; the
-reference-video package does not maintain a second variant state machine.
+[Quickstart](../quickstart.md) introduces the file formats and commands.
+[Runs and Builds](../quickstart/run.md) explains execution and Output reuse.
+[Studio](../quickstart/preview.md) explains interactive preview and editing.

@@ -37,7 +37,7 @@
     segment={story.segment.opening} media={performance-media.media} language="en"/>
   <estimate:SemanticTake id="estimated" narrative={story}
     segment={story.segment.opening} media={performance-media.media}
-    language="en" pace="normal" min="4" max="15" rounding="round"/>
+    language="en" pace="normal" rounding="round"/>
   <speech:Track id="speech" visual-frame={full}
     visual-appearance={look.media.performance} visual-z="0">
     <speech:Take source={opening-semantic.take}/>

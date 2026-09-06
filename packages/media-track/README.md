@@ -1,29 +1,19 @@
 # `@hypit/media-track`
 
-Official provider-free Media Item and Sequence authoring package.
+Place images, prepared video or compositable surfaces over the semantic timeline. B-roll is a common
+use: the picture can illustrate a phrase while the A-roll's speech continues. The same Track can
+present a speaking A-roll as an inset or a prepared transparent cutout; its SemanticTake continues
+to establish semantic time. The choice of visual component does not determine the performance's role.
+Items have independent Windows; a Sequence owns one visual slot whose Members replace each other
+through Handoffs.
 
-The domain computation consumes explicit ProgramSpace and CanvasSpace. The current Markup `Track`
-requires `semantic` and `canvas`; its Fragment projects ProgramSpace from that SemanticTrack, even
-when an Item uses clock expressions. Each independently timed `Item` receives an explicit SpatialFrame and either
-one direct source or ordered Paint/sample layers. A visual source is always named by its actual
-form: `image`, prepared `media`, or compositable `surface`. Moving video must be prepared by an
-explicit Media Pipeline `Normalize` Operation before it enters the Track; the Track never guesses a
-stream, frame rate or audio policy. `Sequence` owns an ordered replacement surface with explicit
-activation points and pairwise Handoffs. Package-owned Recipes cover fitting, source occupancy,
-frame Paint, clipping, borders, shadows, lifecycle motion and sampling motion.
+The Markup Track takes `semantic` and `canvas`. Its Surface projects authored Selections, Moments,
+Segments or clock expressions into Windows and Instants. The component consumes those projected
+times with Frames, media and appearance; the Fragment obtains ProgramSpace from the SemanticTrack.
 
-Ordinary Items consume projected `TemporalWindow` values. Sequence Member activations and the
-Sequence terminal consume projected `TemporalInstant` values instead; the Sequence component owns
-only the schedule and handoff consumption that follows those points. All domain Producers receive
-ProgramSpace explicitly and do not locate semantic sources themselves.
-
-Visual and audio are separate deterministic projections. A visual-only Track exports only
-`VisualTrack`; selecting one source layer's audio or adding explicit enter/exit/handoff sounds also
-exports a peer `AudioTrack`. Speech Track reuses the same lowering laws through a deliberately
-restricted internal projection.
-
-The package lowers only track composition. It does not add Media, B-roll or Provider meaning to Core,
-Film, Composition or HyperFrames. “B-roll” is an editorial use of an ordinary Item or Sequence.
+Moving media enters after [normalization](../media-pipeline/README.md), with the intended streams and
+frame clock already selected. Still images use their actual intrinsic Extent. Placement, fitting,
+sampling and motion remain separate authored choices.
 
 ## Author Items and replacement Sequences
 

@@ -51,11 +51,47 @@ product capability by itself.
 
 ## Inset, cutout and flattened composite are distinct choices
 
-A rectangular image or normalized video can be placed directly as a Media Item. A still portrait
-can use background removal when a cutout is intended. A deterministic image composition can flatten
-several layers into a reusable still when that frozen result is the useful artifact. If a cutout
-belongs inside that still, removal precedes composition; neither operation is mandatory for an
-ordinary inset or for a source that already has suitable transparency.
+A rectangular image or normalized video can be placed directly as a Media Item. A circular inset
+is a geometric crop: use a square Frame and a rounded clip whose radius is half that square's side,
+or an authored clip Path. The camera background remains inside the circle. A cutout instead follows
+the person's silhouette and needs suitable transparency in the source.
+
+A speaking person in either presentation remains A-roll when their performance carries the main
+Script. A large screen recording can occupy the background while a small presenter above it supplies
+the semantic timeline. Choose placement and stacking for the viewer's attention; preserve the
+performance's semantic timing and route its speech once.
+
+When the intended composition needs an isolated silhouette, a still portrait can use
+[image background removal](../../production/image-operations.md#remove-a-background). A moving subject
+needs video background removal or a suitable key/matte for the changing silhouette.
+Choose from what the selected capability actually accepts and returns. Removing the background from
+one reference image does not establish transparency in the generated video, and a frozen portrait
+cutout does not supply the speaking motion of a live presenter.
+
+Matting changes the picture, not the clip's role in the work. Apply removal to the generated or
+supplied clip, then
+[normalize the processed video](../../production/media.md#prepare-moving-media-on-the-program-clock).
+The normalized result continues into Script alignment and a SemanticTake when it carries the A-roll.
+For B-roll, use that normalized result directly in Media Track. Transparency belongs to the picture
+and needs to survive normalization; the semantic step belongs to the performance's role in the work.
+
+The Source selects an installed video-matting Surface, and the Runtime Profile selects the Endpoint
+that performs it. For the official portrait-matting Model, use
+`hypit vocabulary @hypit/volcengine-matting --tag Portrait` for the installed Surface, output and
+format values; its package README owns current Model and Provider availability. Normalize the returned
+video while preserving alpha, then consume it according to its role in this work.
+
+The semantic step keeps the prepared picture and adds the Script's timing; transparency does not
+require another kind of Take or Track. Choose which role the cutout serves in this work:
+
+| Role | Consume the prepared output |
+| --- | --- |
+| A speaking performance establishing semantic time | `cutout-media.media` → SemanticTake → Speech Track; include its visual and audio outputs in Film. |
+| A visual overlay on an existing semantic timeline | `cutout-media.media` → a Media Item's `media` input; select its Window and include the Track's visual output in Film. |
+
+A deterministic image composition can flatten several layers into a reusable still when that frozen
+result is the useful artifact. If a cutout belongs inside it, removal precedes composition. An ordinary
+inset or a source with suitable transparency already has the material it needs.
 
 Inspect cutout edges against the final background: hair, fingers, translucent edges, holes, halos
 and color spill. Match light and color when the layers should read as one scene; an intentionally

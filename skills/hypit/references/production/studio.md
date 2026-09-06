@@ -19,8 +19,7 @@ Films need separate Runs or sessions.
 
 Open the URL actually printed by the process and retain it with the Run it serves. The default
 requested port is 5179; `--port` selects another, and an occupied port can cause Vite to choose a
-different one. A guessed localhost link does not establish a running session. Reuse an existing
-session when it serves the intended project and Run rather than starting another for each edit.
+different one. Reuse an existing session when it serves the intended project and Run.
 
 Studio watches the Run and its loaded Author/Recipe Sources and recompiles them after changes.
 Changing package code, adding a package import, changing Companion activation, or selecting another
@@ -88,6 +87,10 @@ Source-selected project package's activation. The Distribution supplies official
 project package can supply its own without editing Studio or adding a Studio Profile. Installing an
 otherwise unselected package does not activate a plugin. The installed `@hypit/studio-adapter`
 README gives the exact ABI, a minimal Companion and the activation wiring.
+
+An external Companion imports `hypit/studio-adapter` and the relevant public `hypit/*` domain APIs,
+with `hypit` as a development dependency. Ship the compiled Companion with the component. Its
+Source-selected activation contributes the editor facet alongside the component's existing facets.
 
 Expose meaningful deterministic schedule/program outputs when the Companion needs more than the
 terminal Track. Ask for exact same-Surface output ports through `requiredValues`, or follow one

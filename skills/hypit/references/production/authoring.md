@@ -14,7 +14,7 @@ and [Caption authoring](caption-authoring.md) explain creating a new project com
 Begin with the work the Treatment describes, not with a package inventory. Identify:
 
 - the Script passages and speaking roles;
-- the A-roll and B-roll Takes that carry those passages;
+- the A-roll performances that give those passages semantic time, and the B-roll that supports them;
 - the Caption, Typography, MG, Effect, and Audio systems that act with them;
 - the semantic relations that should follow words, phrases, pauses, or content events;
 - the genuinely clock-based events;
@@ -116,6 +116,8 @@ submitting the same paid media requests again. The following examples locate the
 | --- | --- | --- |
 | Caption appearance, MG, an Effect or composition changes | Existing media and SemanticTakes whose Script identities and timing still apply | The changed visual systems and render |
 | Only some B-roll images must change | The existing performance, voice and all other still-useful media | The deliberately replaced images and their downstream composition |
+| The presenter changes while the spoken argument still fits | Unaffected B-roll, icons, music and other media that still serve the target | The new presenter images, affected performances, their normalization and semantic timing, and downstream composition |
+| A new product changes the demonstration or claims | Views and media whose content still fits the new Treatment | The affected product views, performance, Script-dependent timing and visual treatment |
 | The same video needs different normalization or semantic timing | Its generated video Output, or normalized media when that still applies | The affected normalization or alignment and downstream consumers |
 | New spoken wording requires a new performance | Unaffected Takes and other still-useful inputs | The changed performance and the timing derived from it |
 
@@ -125,6 +127,10 @@ while its Narrative, Segment, token and anchor identities and timing still descr
 Script and media. A Script edit does not automatically invalidate every Take; inspect what changed.
 Do not satisfy a changed Track or final composition with its old rendered Output, which would hide
 the current edit. Type compatibility alone cannot establish that an old performance or timing still fits.
+
+After a person or product swap, review existing Candidate selections against the new target. A Run
+that still selects the old presenter's Take will keep that person on screen even after the image
+prompt changes. Preserve unrelated work while selecting or generating the media the adaptation needs.
 
 For example, correcting three wrong B-roll selections means replacing those selections while keeping
 the produced performance. Inspect the resulting plan: the new image requests may be intended; a new

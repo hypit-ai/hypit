@@ -11,6 +11,23 @@ way. The selected dependencies determine the work that remains.
 For example, changing a title can keep the performance and its timing while producing a new final
 video. The Source describes the changed title; the Run keeps the produced Take.
 
+One Run uses these author-facing declarations:
+
+| Declaration | Role |
+| --- | --- |
+| `<author source="./main.svml"/>` | Select the Run's one Author entry. |
+| `<import as="stand-in" from="@hypit/stand-in@1"/>` | Make one installed Run Fragment library available. |
+| `<target output="final.video"/>` | Demand one public Author Output; several Targets may be declared. |
+| `<file .../>` | Admit one project file as a typed zero-input Candidate. |
+| `<build-record .../>` | Admit one exact public Output from one earlier Build Result. |
+| `<value .../>` | Admit a serialized typed value from a JSON file. |
+| `<fragment ...>...</fragment>` | Instantiate a package Fragment whose exports become Candidates. |
+| `<satisfy output="..." candidate="..."/>` | Select one declared Candidate for one Author Logical Output. |
+
+The required order is Header, `<svrun>`, one `author`, then Fragment imports, followed by Targets and
+Candidate declarations. Runtime Profiles, Provider options, credentials, and output destinations are
+not Run declarations.
+
 ## Select the Output that the current work needs
 
 ```svrun
@@ -132,10 +149,15 @@ serialized value as a Candidate. The file contains a StoredValue wrapper, for ex
 Use `build-record` for structured Outputs already held in Results, where their associated media
 resources can be resolved with them.
 
+A Composite export's `value.json` is a Result value document with separate resource bindings, not
+this StoredValue wrapper. [Project handoff](../creation/project-files.md#hand-over-an-editable-production)
+explains retaining its Result for structured reuse in another project location.
+
 Fragment input `value` supplies a scalar: number, boolean, null or text. Structured inputs use
 `from` to reference typed Author values. Exports are addressed as `instance.export`; optional
 `<export name="video"/>` children choose which exports the instance exposes. Selecting an export
 includes the computations that it requires.
 
-The package's Run Fragment documentation gives its inputs and exports. Surface vocabulary queries
-describe Markup tags; a Fragment-only package can therefore have no entries in that query.
+The installed package's Run Fragment documentation gives its package-specific inputs and exports.
+Surface vocabulary queries describe Markup tags; a Fragment-only package can therefore have no
+entries in that query.
