@@ -140,6 +140,8 @@ OpenAgents 等 Skill Hub 安装的是同一个 `skills/hypit/` 真目录。首�
 
 Agent 会检查环境，只索要这条视频需要的凭据，先给出预览，再执行构建。
 
+### **👉 [免费获得 100 个拥有独特音色的 AI 人物形象](https://drive.google.com/drive/u/2/folders/18J9Fz7mkU3OQNJ-2Res3eIyFQ2cemIK5)**
+
 ## 为什么选择 Hypit
 
 - **真的能 Clone：** 丢一条视频进来，拿到整份 workflow —— 画面、字幕、B-roll、特效。不是拆解脚本。

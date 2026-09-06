@@ -44,4 +44,3 @@ export function createSeedanceAssembledGenerationFragment(
 ) {
   return createExactModelPrimaryGenerationFragment(endpoint, mediaInputs, textInputs);
 }
-
