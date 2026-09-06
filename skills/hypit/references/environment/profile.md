@@ -153,9 +153,12 @@ choose a Profile from a familiar filename or from another project above it.
 ## Choose the practical capability path with the user
 
 Inspect the selected Profile, configured credentials, and current Endpoint diagnoses before asking
-the user to set up anything. Keep a working choice. When a required capability is missing, explain
-the consequence in the language of the work and present only the choices that materially differ in
-cost, privacy, setup time, or control.
+the user to set up anything. For a typical generated reconstruction, assess visual observation,
+word alignment, image generation, and video generation together so that solving one missing
+capability does not conceal another. Keep a working choice. When capabilities are missing, explain
+all material consequences in the language of the work and ask once which supported Provider accounts
+or Keys the user already has and whether local WhisperX is practical. Present only choices that
+materially differ in cost, privacy, setup time, or control.
 
 - Use a supported BYOK Provider when the user already has that account and wants to use it.
 - For speech alignment, offer local WhisperX when the machine and the user's available setup time
@@ -232,14 +235,15 @@ exist:
 - select a supported Provider using the user's own account;
 - use the official HypiHub Endpoint when the user has chosen and authenticated it;
 - use a local implementation such as WhisperX when the machine can support it;
-- reshape the production around accepted existing media and deterministic components;
+- use deterministic HyperFrames components when an MG-, Caption-, or Typography-led piece genuinely
+  fits the user's intent;
 - stop before promising a reconstruction that needs unavailable observation or generation.
 
-With no generation account, a project can still arrange supplied media, Script, Caption, MG, audio,
-and HyperFrames output. Without reliable visual observation, the Agent can inspect prepared frames and
-tiles but has weaker evidence about complete motion and long-range sequence. Without alignment,
-semantic attachment to real spoken words is unavailable. State those differences in the language of
-the requested work.
+With no image or video generation account, HyperFrames can still generate deterministic MG, Caption,
+and Typography when that form fits the requested work; it does not replace generated A-roll or B-roll.
+Without reliable visual observation, the Agent can inspect prepared frames and tiles but has weaker
+evidence about complete motion and long-range sequence. Without alignment, semantic attachment to real
+spoken words is unavailable. State those differences in the language of the requested work.
 
 When the user brings another model, service, or Key, use
 [Models and Providers](model-and-provider.md) to distinguish credential setup, Endpoint configuration,
