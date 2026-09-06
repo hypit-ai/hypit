@@ -60,6 +60,8 @@ OpenAgents 等 Skill Hub 安装的是同一个 `skills/hypit/` 真目录。首�
 
 ### UGC
 
+[Generation source](examples/ranking-football/reference.svml) · [Run and production notes](examples/ranking-football/README.md)
+
 <table>
   <tr>
     <th width="16%">参考视频</th>
@@ -80,6 +82,8 @@ OpenAgents 等 Skill Hub 安装的是同一个 `skills/hypit/` 真目录。首�
 
 ### 播客
 
+[Generation source](examples/podcast/reference.svml) · [Run and production notes](examples/podcast/README.md)
+
 <table>
   <tr>
     <th width="16%">参考视频</th>
@@ -99,6 +103,8 @@ OpenAgents 等 Skill Hub 安装的是同一个 `skills/hypit/` 真目录。首�
 </table>
 
 ### 街头采访
+
+[Generation source](examples/interview/reference.svml) · [Run and production notes](examples/interview/README.md)
 
 <table>
   <tr>

@@ -20,8 +20,8 @@
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
   <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
-  <import as="recipes" source="./recipes.svs"/>
-  <import as="tracking" source="./tracking.svs"/>
+  <import as="recipes" source="./reference.svs"/>
+  <import as="image-kit" source="@hypit/gpt-image-kits/phone-ugc-v1"/>
   <import as="interview-kit" source="./kits/street-interview-v1.svs"/>
 
   <script id="story">
@@ -51,36 +51,91 @@
     </bitcoin-rule>
   </script>
 
-  <text:Value id="interviewer-view-prompt">A photograph with the texture of real iPhone footage. Generate a vertical street-interview frame, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. The interviewer is a light-skinned young man with a long side-parted brown hairstyle, a strong nose and jaw, broad shoulders, a purple graphic T-shirt, and a backward American-flag cap. He holds one Hypit microphone toward the guest.</text:Value>
-  <gpt:Image id="interviewer-view" prompt={interviewer-view-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="guest-view-prompt">A photograph with the texture of real iPhone footage. Generate a vertical street-interview frame, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. The guest is a light-medium-skinned young woman with a soft oval face, dark almond-shaped eyes, long dark wavy hair, and a defined shoulder line. She wears sunglasses on her head, a black faux-fur jacket over a leopard-print dress, a cross necklace, and carries a structured handbag.</text:Value>
-  <gpt:Image id="guest-view" prompt={guest-view-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="shared-view-prompt">A photograph with the texture of real iPhone footage. Generate a vertical street-interview frame, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Show the light-skinned young interviewer and the light-medium-skinned young woman together beside the blue Lamborghini, preserving their facial features, hair, clothing, microphone, handbag, and left-right relationship.</text:Value>
+  <text:Value id="shared-view-shot">
+    Generate a close street-interview photograph showing two people from roughly mid-thigh upward.
+    The guest stands just left of center, partly facing the camera and looking toward the interviewer on the right.
+    Keep their faces, gestures and the handheld microphone readable, with comfortable room around them.
+  </text:Value>
+  <text:Value id="shared-view-direction">
+    On an affluent New York street, a matte sky-blue Lamborghini is parked at the curb with its nose toward
+    the left. Its badge is visible low in the frame between the two people standing near the front of the car.
+    The guest has a glamorous mob-wife presence. She is about twenty, exceptionally beautiful, with
+    Japanese-Italian features, very fair skin and the refined, striking beauty of a Hollywood leading actress.
+    Her long black hair falls in loose waves. Sunglasses rest on her head. She wears an expensive-looking dark
+    fur coat over a leopard-print strapless short dress, a gold-set cross necklace, and a luxurious structured
+    Hermes handbag on her left arm. Her hands rest naturally near her bag, leaving room for an easy gesture.
+    The interviewer is a handsome, cheerful young American college student in profile on the right.
+    He has tousled curls spilling from a backward American-flag baseball cap, a purple designer graphic T-shirt,
+    a studded belt and fashionable flared jeans. He holds one microphone marked HYPIT toward her mouth.
+    The stone facades, railings and trees establish a real neighborhood. No other people are in the frame.
+  </text:Value>
+  <text:Render id="shared-view-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="shot" text={shared-view-shot}/>
+    <text:Set name="direction" text={shared-view-direction}/>
+  </text:Render>
   <gpt:Image id="shared-view" prompt={shared-view-prompt} aspect-ratio="9:16" resolution="2K"/>
+
+  <text:Value id="guest-view-shot">
+    Create a closer camera view centered on the woman from the reference. She looks toward the right side of the frame.
+  </text:Value>
+  <text:Value id="guest-view-direction">
+    Preserve her face, black hair, sunglasses, fur coat, leopard-print dress, jewelry and handbag.
+    Keep the same street, car and natural light from this new camera position.
+    The interviewer's microphone enters from the right toward her mouth; her face and upper body remain clearly visible.
+  </text:Value>
+  <text:Value id="guest-view-references">
+    Use the first image as the complete identity and scene reference. This is another view of the same interview.
+  </text:Value>
+  <text:Render id="guest-view-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="shot" text={guest-view-shot}/>
+    <text:Set name="direction" text={guest-view-direction}/>
+    <text:Set name="references" text={guest-view-references}/>
+  </text:Render>
+  <gpt:Image id="guest-view" prompt={guest-view-prompt} aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={shared-view.image}/>
+  </gpt:Image>
+
+  <text:Value id="interviewer-view-shot">
+    Create a closer camera view centered on the man from the reference, slightly larger in frame.
+    He continues looking left and holding the microphone in the same interviewing pose.
+    Keep part of the woman's body visible along the left edge.
+  </text:Value>
+  <text:Value id="interviewer-view-direction">
+    Preserve his handsome face, tousled curls, backward cap, purple shirt and the same street and car.
+    Keep the natural light and the left-right relationship between the two people coherent.
+  </text:Value>
+  <text:Value id="interviewer-view-references">
+    Use the first image as the identity and scene reference. Preserve the woman at the edge so this view remains part of their shared space.
+  </text:Value>
+  <text:Render id="interviewer-view-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="shot" text={interviewer-view-shot}/>
+    <text:Set name="direction" text={interviewer-view-direction}/>
+    <text:Set name="references" text={interviewer-view-references}/>
+  </text:Render>
+  <gpt:Image id="interviewer-view" prompt={interviewer-view-prompt} aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={shared-view.image}/>
+  </gpt:Image>
+
   <text:Value id="boy-voice-sample">Hey yo! Is this Lamborghini yours?</text:Value>
   <mimo:VoiceDesign id="boy-voice" speech={boy-voice-sample}>
     A young American man with a bright, casual street-interviewer delivery; energetic, lightly raspy, confident, and conversational, with quick natural pacing.
   </mimo:VoiceDesign>
-  <text:Value id="wife-voice-sample">Mmm hmm. Give me three rules to make your first million.</text:Value>
+  <text:Value id="wife-voice-sample">That's manifesting, baby.</text:Value>
   <mimo:VoiceDesign id="wife-voice" speech={wife-voice-sample}>
     A young woman with a playful, self-assured delivery; warm, expressive, slightly husky, and flirtatious, with crisp conversational English.
   </mimo:VoiceDesign>
   <media:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
   <media:Audio id="rule-reveal-sound" src="./assets/rule-reveal.wav"/>
-  <text:Value id="rule-placeholder-prompt">A clean, colorful 3D question-mark icon centered on a simple light background, with crisp edges and no readable text.</text:Value>
-  <gpt:Image id="rule-placeholder" prompt={rule-placeholder-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="manifest-icon-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. A carefully framed photorealistic image with the subject centered and the required object or pose clearly visible. Keep the background concise and unobtrusive.</text:Value>
-  <gpt:Image id="manifest-icon" prompt={manifest-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
-  <text:Value id="real-estate-icon-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. A carefully framed photorealistic image with the subject centered and the required object or pose clearly visible. Keep the background concise and unobtrusive.</text:Value>
-  <gpt:Image id="real-estate-icon" prompt={real-estate-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
-  <text:Value id="bitcoin-icon-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. A carefully framed photorealistic image with the subject centered and the required object or pose clearly visible. Keep the background concise and unobtrusive.</text:Value>
-  <gpt:Image id="bitcoin-icon" prompt={bitcoin-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
+  <!-- Prepared reveal artwork shares the palette of the Caption and flashes. -->
+  <media:Image id="rule-placeholder" src="./assets/emoji-reveal/rendered/question-mark.png"/>
+  <media:Image id="manifest-icon" src="./assets/emoji-reveal/rendered/sparkles.png"/>
+  <media:Image id="real-estate-icon" src="./assets/emoji-reveal/rendered/building-estate.png"/>
+  <media:Image id="bitcoin-icon" src="./assets/emoji-reveal/rendered/currency-bitcoin.png"/>
 
   <text:Value id="manifest-rule-action">
     BOY is interviewer A, the young man holding the microphone. WIFE is guest B, the woman holding her bag beside the Lamborghini. Preserve their identities, outfits, props, left-right relationship, and the street location throughout.
-    Throughout the entire take, BOY's long fringe hangs naturally over both eyes and keeps them fully concealed in every camera setup, head turn, gesture, and expression. Both eyes remain invisible behind his hair for the whole clip.
-    Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for BOY's “Hey yo! Is this Lamborghini yours?” WIFE initially looks down while checking her bag. As BOY asks the question, he takes one step forward toward her. Hearing him, WIFE is briefly startled, then raises her head and looks at BOY.
-    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “Mmm hmm.” WIFE pouts slightly and nods.
+    Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for BOY's “Hey yo! Is this Lamborghini yours?” WIFE initially looks down while checking her bag. As BOY asks the question, he takes one step forward toward her. Hearing him, WIFE notices him, raises her head and looks at BOY with casual curiosity.
+    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “Mmm hmm.” WIFE gives a small knowing smile and nods.
     Hard cut directly to the exact shared camera setup from @image3 and hold that complete frame for BOY's “Give me three rules to make your first million.” BOY speaks with natural explanatory hand gestures.
     Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “OK, the first one is manifest.” WIFE tilts her head and rests one hand lightly against her chin.
     Hard cut directly to the exact BOY camera setup from @image1 and hold that complete frame for “You manifested a Lamborghini?” BOY makes a visibly surprised hand gesture while asking.
@@ -89,7 +144,6 @@
 
   <text:Value id="real-estate-rule-action">
     BOY is interviewer A, the young man holding the microphone. WIFE is guest B, the woman holding her bag beside the Lamborghini. Preserve their identities, outfits, props, left-right relationship, and the street location throughout.
-    Throughout the entire take, BOY's long fringe hangs naturally over both eyes and keeps them fully concealed in every camera setup, head turn, gesture, and expression. Both eyes remain invisible behind his hair for the whole clip.
     Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for BOY's “Did it really work?” BOY uses a natural questioning hand gesture.
     Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “No. But rule two did.” WIFE shakes her head on “No,” then looks at BOY meaningfully as she delivers the second sentence.
     Hard cut directly to the exact shared camera setup from @image3 and hold that complete frame for BOY's short line, “Say it.”
@@ -100,11 +154,10 @@
 
   <text:Value id="bitcoin-rule-action">
     BOY is interviewer A, the young man holding the microphone. WIFE is guest B, the woman holding her bag beside the Lamborghini. Preserve their identities, outfits, props, left-right relationship, and the street location throughout.
-    Throughout the entire take, BOY's long fringe hangs naturally over both eyes and keeps them fully concealed in every camera setup, head turn, gesture, and expression. Both eyes remain invisible behind his hair for the whole clip.
     Begin in the exact shared two-person camera setup from @image3 and hold that complete frame for BOY's “Wait what?” BOY makes a questioning hand gesture.
-    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “Bitcoin. I pressed the wrong button in twenty twelve and made six figures.” WIFE raises one finger while explaining, then makes a broad emphatic hand gesture to show how much money she made.
+    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “Bitcoin. I pressed the wrong button in twenty twelve and made six figures.” WIFE explains with an easy, open-hand gesture and a small satisfied smile.
     Hard cut directly to the exact BOY camera setup from @image1 and hold that complete frame for “So you accidentally bought Bitcoin?” BOY reacts with astonished disbelief.
-    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “That's manifesting, baby.” WIFE tilts her head with a cheeky, flirtatious attitude, then turns to her left at the end of the line as if preparing to walk away.
+    Hard cut directly to the exact WIFE camera setup from @image2 and hold that complete frame for “That's manifesting, baby.” WIFE gives a cheeky, self-assured smile, then turns to her left at the end of the line as if preparing to walk away.
   </text:Value>
 
   <text:Render id="manifest-rule-prompt"
@@ -128,7 +181,7 @@
 
   <seedance:ReferenceVideo id="manifest-rule-take"
     model="mini" prompt={manifest-rule-prompt}
-    duration="10"
+    duration="11"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={interviewer-view.image}/>
     <seedance:Reference image={guest-view.image}/>
@@ -160,14 +213,9 @@
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="720" height="1280"/>
-  <space:RegionTimeline id="wife-heads" within={vertical}
-    recipe={tracking.heads.wife}/>
   <space:Frame id="full-frame" within={vertical}
     left="0%" top="0%" right="100%" bottom="100%"/>
   <program:Clock id="clock" frame-rate="30"/>
-
-  <!-- Preview-only timing policy used by the local mock Run. The paid path
-       continues to use the WhisperX SemanticTake declarations above. -->
 
   <pipeline:Normalize id="soundtrack-media" source={soundtrack}
     video="none" audio="default" span-authority="audio" clock={clock}/>
@@ -219,14 +267,14 @@
     <caption:Use role="WIFE" style={caption-wife-style}/>
   </caption:Program>
   <caption-fine:Track id="captions" document={story.caption}
-    semantic={speech.semantic} program={caption-program} regions={wife-heads}/>
+    semantic={speech.semantic} program={caption-program}/>
 
   <emoji:Style id="rule-reveal-style" recipe={recipes.emoji.strip}/>
   <emoji:Track id="rule-reveal" semantic={speech.semantic} canvas={vertical}
-    style={rule-reveal-style} placeholder={rule-placeholder.image} during="program">
-    <emoji:Item id="manifest" icon={manifest-icon.image} at={story.moment.manifest}/>
-    <emoji:Item id="real-estate" icon={real-estate-icon.image} at={story.moment.real-estate}/>
-    <emoji:Item id="bitcoin" icon={bitcoin-icon.image} at={story.moment.bitcoin}/>
+    style={rule-reveal-style} placeholder={rule-placeholder} during="program">
+    <emoji:Item id="manifest" icon={manifest-icon} at={story.moment.manifest}/>
+    <emoji:Item id="real-estate" icon={real-estate-icon} at={story.moment.real-estate}/>
+    <emoji:Item id="bitcoin" icon={bitcoin-icon} at={story.moment.bitcoin}/>
   </emoji:Track>
 
   <screen:Track id="rule-reveal-flashes" semantic={speech.semantic} canvas={vertical}>

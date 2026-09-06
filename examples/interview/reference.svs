@@ -1,0 +1,134 @@
+<?svml using="@hypit/svs@1"?>
+
+<sheet version="1" id="reference">
+  interview.street {
+    framing: locked-scene;
+    pacing: compact;
+    performance: natural-street;
+    reaction: active;
+    gesture: compact;
+  }
+
+  speech.visual {
+    fit: cover;
+  }
+
+  caption.boy {
+    stack-order: 70;
+    x: 0.5;
+    y: 0.63;
+    width: 0.88;
+    height: 0.22;
+    anchor-x: center;
+    anchor-y: center;
+    align: center;
+    block-align: center;
+    inline-size: fixed;
+    wrap: word;
+    max-lines: 2;
+    max-words-per-line: 4;
+    line-height: 1.08;
+    letter-spacing: -0.6;
+    word-gap: 12;
+    size: 58;
+    text-transform: uppercase;
+    fill: #FFFFFF;
+    stroke-color: #120F0A;
+    stroke-width: 3;
+    shadow-color: #000000;
+    shadow-opacity: 0.95;
+    shadow-x: 5;
+    shadow-y: 8;
+    shadow-blur: 10;
+    shadow-spread: 2;
+    glow-color: #FFFFFF;
+    glow-opacity: 0.94;
+    glow-blur: 26;
+    glow-spread: 4;
+    background: #00000000;
+    padding: "0";
+    radius: 0;
+    karaoke: off;
+    cue-enter: spring;
+    cue-enter-frames: 4;
+    cue-enter-start-scale: 0.75;
+    cue-exit: none;
+    cue-exit-frames: 0;
+    atom-reveal: all;
+    lead-frames: 0;
+    tail-frames: 3;
+    handoff: cut;
+  }
+
+  caption.wife {
+    stack-order: 70;
+    x: 0.5;
+    y: 0.63;
+    width: 0.88;
+    height: 0.22;
+    anchor-x: center;
+    anchor-y: bottom;
+    align: center;
+    block-align: center;
+    inline-size: fixed;
+    wrap: word;
+    max-lines: 2;
+    max-words-per-line: 4;
+    line-height: 1.08;
+    letter-spacing: -0.6;
+    word-gap: 12;
+    size: 58;
+    text-transform: uppercase;
+    fill: #FFABD4;
+    stroke-color: #2A1022;
+    stroke-width: 3;
+    shadow-color: #000000;
+    shadow-opacity: 0.95;
+    shadow-x: 5;
+    shadow-y: 8;
+    shadow-blur: 10;
+    shadow-spread: 2;
+    glow-color: #FFABD4;
+    glow-opacity: 0.94;
+    glow-blur: 26;
+    glow-spread: 4;
+    background: #00000000;
+    padding: "0";
+    radius: 0;
+    karaoke: off;
+    cue-enter: spring;
+    cue-enter-frames: 4;
+    cue-enter-start-scale: 0.75;
+    cue-exit: none;
+    cue-exit-frames: 0;
+    atom-reveal: all;
+    lead-frames: 0;
+    tail-frames: 3;
+    handoff: cut;
+  }
+
+  emoji.strip {
+    center-x: 0.5;
+    top-y: 0.07;
+    slot-size: 72;
+    slot-gap: 10;
+    padding-x: 18;
+    padding-y: 14;
+    background: #FFFDF7;
+    border-color: #161616;
+    border-width: 4;
+    radius: 22;
+    shadow-color: #000000B8;
+    shadow-x: 9;
+    shadow-y: 10;
+    shadow-blur: 0;
+    shadow-spread: 0;
+    icon-size: 54;
+    reveal-frames: 6;
+    stack-order: 66;
+  }
+
+  film.vertical {
+    background: #000000;
+  }
+</sheet>

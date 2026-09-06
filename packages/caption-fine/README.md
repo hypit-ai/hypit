@@ -12,7 +12,9 @@ does not carry a private visual role.
 ```
 
 An optional Spatial Region Timeline replaces only the moving placement point. The timeline is authored
-numeric input, normally measured from the face before the Build; it is not a face-tracking request:
+numeric input, measured from the actual footage before the composition pass that consumes it;
+it is not a face-tracking request. A prior Build may produce that footage with ordinary fixed Caption,
+and a later Run can reuse the same media and alignment while changing placement:
 
 ```xml
 <space:RegionTimeline id="heads" within={vertical} recipe={tracking.heads.default}/>
@@ -20,7 +22,7 @@ numeric input, normally measured from the face before the Build; it is not a fac
   semantic={speech.semantic} program={captions} regions={heads}/>
 ```
 
-Every Cue must carry one Script Role. When the Region Timeline contains a measured region for that
+With `regions`, every Cue must carry one Script Role. When the Region Timeline contains a measured region for that
 Role and Frame, the Track places the Cue at the region's top center. When that Role has a Track but
 the current Frame is `null`, the Cue is not rendered: absence of evidence never becomes a guessed
 position. A Role with no Track uses the Style's authored `x` and `y`, so unrelated speakers remain

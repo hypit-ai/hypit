@@ -60,6 +60,8 @@ the Skill prepares the executable Hypit Distribution separately; your video proj
 
 ### UGC
 
+[Generation source](examples/ranking-football/reference.svml) · [Run and production notes](examples/ranking-football/README.md)
+
 <table>
   <tr>
     <th width="16%">Reference</th>
@@ -80,6 +82,8 @@ the Skill prepares the executable Hypit Distribution separately; your video proj
 
 ### Podcast
 
+[Generation source](examples/podcast/reference.svml) · [Run and production notes](examples/podcast/README.md)
+
 <table>
   <tr>
     <th width="16%">Reference</th>
@@ -99,6 +103,8 @@ the Skill prepares the executable Hypit Distribution separately; your video proj
 </table>
 
 ### Street Interview
+
+[Generation source](examples/interview/reference.svml) · [Run and production notes](examples/interview/README.md)
 
 <table>
   <tr>
