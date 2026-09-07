@@ -24,6 +24,11 @@ The Kit supplies the capture paragraph once. Set the output aspect ratio, such a
 model; do not spend prompt attention repeating it. Without the Kit, prepend the paragraph to the
 selected direction. Connect the stated reference images as actual model inputs.
 
+These renditions preserve complete production directions as evidence, including additional
+time-of-day, brightness, exposure, or lighting language that belonged to those particular shots.
+For a new phone-video image, begin with the current Craft and the Kit, then carry such direction when
+the intended scene itself needs that visible fact.
+
 ## Restaurant podcast views
 
 ### Main host: establish a person and a place together
@@ -62,8 +67,8 @@ entry and visible background sector change. “Symmetrical” describes the conv
 not a horizontally flipped copy of the same wall.
 
 ```text
-Generate a complementary half-body podcast photograph, with the pose and composition corresponding
-to the reference from the opposite side. The person now sits toward the left and looks right.
+Generate a fully symmetrical counterpart to the reference podcast half-body photograph, keeping the
+pose and composition correspondingly symmetrical. The person now sits toward the left and looks right.
 The microphone extends from the right and still reads HYPIT. Keep the lighting natural.
 
 The setting is still outside the same Korean restaurant, but the background contains a different
@@ -145,11 +150,6 @@ The laptop is light-colored, and the logo on its back is the logo from reference
 The room has a warm, modern Korean interior. Real afternoon sunlight illuminates the home with
 bright golden light, and her face also has believable natural illumination.
 ```
-
-These cases intentionally use different exposure situations. Their light/dark and color words are
-preserved as authored choices. [Image direction](../image-direction.md) explains how to judge the
-combined palette and large bright areas when making a new image while retaining a scene's intended
-light.
 
 ## Optional split-screen opening
 

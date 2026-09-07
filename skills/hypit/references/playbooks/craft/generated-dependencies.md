@@ -19,9 +19,9 @@ directly from it when that parent already supplies the difficult facts. Describe
 what matters to preserve.
 
 The first image in a dramatic setting may contain one person or several. Within that setting,
-complementary views can retain the shared atmosphere, light and spatial relationship while showing
-the different background sector visible to each camera. Those useful views can support several Takes;
-a modest change of performance or framing does not require another image edge.
+complementary views can retain the shared atmosphere, palette, materials and spatial relationship
+while showing the different background sector visible to each camera. Those useful views can support
+several Takes; a modest change of performance or framing does not require another image edge.
 
 A meaningfully new setting can begin with an actual camera image in that world, connected to the
 authoritative character, product or continuing prop references it needs. Each setting can branch from

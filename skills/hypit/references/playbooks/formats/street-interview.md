@@ -9,6 +9,9 @@ For the three-view method, generate a shared image containing both people and th
 relationship. Derive the guest close view and interviewer close view directly from it. In the
 interviewer view, retaining part of the guest at the opposite edge keeps the exchange legible.
 The guest looks toward the interviewer, and the interviewer looks back across the same screen axis.
+That attention and a comfortable microphone position give the reusable views their
+[idle state](../craft/image-direction.md#choose-an-idle-state-for-the-encounter). Opening, reaction
+and departure actions can then develop from this encounter in their respective video passages.
 
 ```text
 shared street scene ──> guest close view

@@ -1,9 +1,10 @@
 # Script and semantic time
 
-Read this when structuring Script, balancing spoken delivery across generated Takes, or attaching
-pictures, Captions, MG, Effects, and Audio to what is said. It also explains how a passage with no
-spoken words receives semantic boundaries. This page contains the stable author-facing Script
-spellings; the installed `@hypit/script` package owns parser edge cases.
+Read this before writing or revising `<script>`, when balancing spoken delivery across generated
+Takes, or when attaching pictures, Captions, MG, Effects, and Audio to what is said. It also explains
+how a passage with no spoken words receives semantic boundaries. This page contains the complete
+stable author-facing Script vocabulary; the installed `@hypit/script` package owns parser validation
+and edge cases.
 
 [Source syntax](../production/source-syntax.md) covers the surrounding imports, references, Recipes
 and Runs; [Tracks](../production/tracks.md) covers the consumers of Script meaning.
@@ -22,7 +23,8 @@ Use Script's distinct authoring concepts for distinct jobs:
 - a **Segment** is a named structural passage whose accepted media can become one SemanticTake;
 - a **Role Cue** says who speaks a turn without creating a character or choosing a voice;
 - **Dual Text** gives one authored unit separate display and pronunciation text;
-- `||` places an authored **Caption Cue Break** between complete Alignment Units;
+- `||` says that one on-screen **Caption Cue** hands off to the next after a complete Alignment Unit;
+- a **word attribute** gives a Caption family an authored role on one displayed word;
 - a **Selection** names a semantic range;
 - a **Moment** names a semantic point.
 
@@ -35,26 +37,44 @@ Use Script's distinct authoring concepts for distinct jobs:
 ```
 
 Here the viewer reads `Hypit` while the performance says `hi pit`. The pair is one indivisible
-Alignment Unit. `||` starts a new Caption Cue after it, `proof` remains one semantic range, and
-`claim` is a semantic point that other layers can use.
+Alignment Unit. `||` ends one on-screen Caption Cue after that unit and lets the next Cue begin with
+`work`; `proof` remains one semantic range, and `claim` is a semantic point that other layers can use.
+
+A Cue is a timed block of displayed speech, not a line of text. Its Caption family and Recipe may
+wrap that block over one or more lines, reveal or highlight its words, and give the block an entrance,
+exit or handoff. Segment boundaries, Role turns and Caption Style changes already separate Cues.
+Use `||` when the same Segment, turn and Style still needs another deliberate reading handoff. The
+[Caption craft](../playbooks/craft/captions.md#design-cue-rhythm-with-the-caption-system) owns how the
+picture, language, family and Recipe shape that decision.
 
 The author-facing forms are:
 
 | Form | Meaning |
 | --- | --- |
-| `<opening>...</opening>` | A Segment named `opening`. |
+| `<opening>...</opening>` | A Segment named `opening`; all spoken prose belongs inside a Segment. |
+| `<pause/>` | A self-closing Segment with identity and boundaries but no words. |
 | `<HOST>` | A Role Cue inside the current Segment; it applies until another Role Cue or the Segment end. |
 | `<display text \| spoken text>` | One Dual Text unit with separate visible and pronounced wording. |
-| `||` | A Caption Cue Break between complete Alignment Units. |
-| `word{emphasis,keyword}` | Flat attributes on one complete display word for a Caption family to interpret. |
+| `< \| spoken text>` | Spoken words that keep semantic timing while contributing no visible Caption words. |
+| `||` | A Caption Cue handoff between complete Alignment Units. |
+| `word{emphasis,keyword}` | Boolean attributes on one complete display word for a Caption family to interpret. |
+| `word{importance=2,tone=warm}` | Named string, number or boolean attribute values on that display word. |
 | `@proof ... @/proof` | A Selection: one named semantic range. |
 | `@claim!` | A Moment: one named semantic point. |
 
-A Role Cue is optional, and closing a Segment resets its Role. A Segment can contain several Role
-turns without requiring several generated Takes. Dual Text can contain several visible or spoken
-words on either side; its display side feeds Caption and its spoken side feeds pronunciation. Place
-Cue Breaks around the complete unit, never inside it. Inside Dual Text's display side, use `\@` when
-the visible text itself needs an at-sign.
+A Script contains one or more uniquely named lower-case Segments. A paired Segment carries prose;
+the self-closing form carries a wordless passage. A Role Cue is a bare turn marker rather than a
+paired element: the next Role Cue begins the next turn, and closing the Segment ends the final turn
+and resets its Role. When a Segment uses Roles, place the first Role before that Segment's first
+spoken text. One Segment can contain several Role turns without requiring several generated Takes.
+
+Dual Text can contain several visible or spoken words on either side; its display side feeds Caption
+and its spoken side feeds pronunciation. An empty display side intentionally omits those spoken words
+from Caption while keeping them in the Narrative and semantic timing. Selections and Moments can be
+placed on the spoken side because that side owns the speech anchors. Place Cue Breaks around the
+complete Dual Text unit, not inside it. Attributes for a displayed Dual Text word belong on the
+display side before the pipe. Inside that display side, use `\@` when the visible text itself needs an
+at-sign.
 
 Script comments use ordinary Markup comments outside the prose:
 
@@ -64,10 +84,18 @@ Script comments use ordinary Markup comments outside the prose:
 ```
 
 Reserved Script punctuation remains literal when escaped: `\@` produces `@`, `\<` produces `<`,
-`\>` produces `>`, `\|` produces `|`, and `\\` produces `\`. Inside Dual Text, the first
-unescaped `|` separates display from pronunciation; write `\|` for a literal pipe and `\|\|` for
-two literal pipes. These escapes belong to Script prose, while structured Source attributes and
-elements use the Markup escaping described in [Source syntax](../production/source-syntax.md).
+`\{` produces `{`, `\}` produces `}`, `\|` produces `|`, and `\\` produces `\`. A plain `>` needs
+no escape in ordinary prose; inside Dual Text, `\>` keeps it from closing that unit. A single `|` in
+ordinary prose is literal; `||` is the Caption Cue handoff. Inside Dual Text, the first unescaped `|`
+separates display from pronunciation; write `\|` for a literal pipe and `\|\|` for two literal pipes.
+These escapes belong to Script prose, while structured Source attributes and elements use the Markup
+escaping described in [Source syntax](../production/source-syntax.md).
+
+Script derives speech tokens from words and numbers. Punctuation remains attached to the displayed
+word it belongs with and does not create another speech time unit. CJK prose commonly contributes
+one Han, Hiragana or Katakana character per lexical unit; compounds, decimal numbers and the spoken
+side of Dual Text preserve their own lexical structure. This is why Cue breaks, word attributes and
+semantic markers attach to complete authored units instead of punctuation or visual line positions.
 
 ## Use the Script's deliberate projections
 
@@ -107,19 +135,6 @@ conversation. One continuous narration can carry many B-roll changes through Sel
 can deliberately use several Takes driven by the same character-and-scene image; a natural cut is
 often part of its appeal. A Role change or `||` does not require another generation.
 
-## Author Caption rhythm, not a word-count rule
-
-Caption Cues express how the viewer should read the displayed speech. Break them at natural phrase,
-emphasis, speaker, layout, and motion boundaries. A large display or rapid word-by-word system may
-need very small Cues; a restrained lower Caption may hold a longer phrase. Inspect the actual style and
-canvas.
-
-Keep `||` between complete Alignment Units; it cannot split Dual Text. Script emits one
-`CaptionDocument` containing display words, alignment units, attributes, and authored Cue breaks but
-no seconds or frames. Caption packages later join that document to actual semantic timing. Independent
-titles, labels, steps, and poster text normally belong to Typography, Text Track, UI, or MG rather than
-being forced into spoken Caption Cues.
-
 ## Measure before choosing durations
 
 For a new or revised A-roll performance, choose time from the target's words, delivery, and action.
@@ -145,8 +160,8 @@ Let that estimate inform the shape of the passage. A short line may belong with 
 benefit from a little fuller wording, or leave room for a meaningful action. A long passage may read
 better with tighter copy or a split at a natural change of thought. Preserve the intended meaning and
 energy while finding a performable shape, then measure the affected wording again. The
-[Seedance craft](../playbooks/craft/seedance-directing.md#size-the-request-around-the-delivery) applies
-this judgment to its model range.
+[Generated video direction](../playbooks/craft/video-direction.md#size-the-request-around-the-delivery)
+applies this judgment to the selected model's request range.
 
 Measurement balances the intended speaking density and sizes generation; it supplies no timeline
 anchors. Once a Take is accepted, normalize it, align its actual speech to its Script Segment, and
@@ -176,6 +191,17 @@ adjacent semantic boundary:
 | `@/name~` | Close a Selection at the next word's start. |
 | `@name!` | Place a Moment at the next word's start. |
 | `~@name!` | Place a Moment at the previous word's end. |
+
+Markers may sit between or outside Segments when the meaning crosses structural passages. For
+example, this Selection owns the complete Script program rather than borrowing the first and last
+word boundaries:
+
+```svml
+~@whole
+<opening><HOST>First thought.</opening>
+<answer><HOST>Final answer.</answer>
+@/whole~
+```
 
 At a Script or Segment edge, the corresponding structural boundary remains available even when
 there is no neighboring word. Thus `@videos videos @/videos` covers exactly that word. For adjacent

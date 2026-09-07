@@ -1,72 +1,185 @@
 # Directing generated images
 
-Read this when an image must establish a person, place, product, visual world, or useful camera view
-for the production. Read `../../creation/transformations.md` when deciding what a supplied
-identity or product changes across the work.
+Read this when creating a person, place, product, B-roll image, or camera view for a video.
+An image establishes the world that a reference-conditioned video model can bring to life.
 
-## Begin with the world the image must establish
+For the phone-shot social videos Hypit most often makes, the useful direction is compact and vivid:
+strong character appeal, a recognizable cultural or social presence, a clothing vibe, a few telling
+objects, and a clear color relationship. A short direction can be very specific; its force comes
+from what it chooses.
+Aim for the visible credibility of actual phone footage, including with invented people and
+fantastical subjects. Judge the generated picture against that photographic goal.
 
-Image generation and reference-conditioned video generation form one directing system. The image
-creates a credible person, space, object, composition, and visual language; the video model lets that
-world perform, move, and be photographed over time. Choose the audience's first impression as part
-of that production purpose: who or what draws attention, what presence it has, and what encounter
-the viewer feels invited into. For social-video presenters, actively direct an attractive, distinctive
-presence suited to the work. Make the intended appeal as clear as the required framing, whether the
-person is invented or supplied by the user.
+## Compress the idea into decisive anchors
 
-Generate an image when the work needs to establish or change visible facts. Reuse an existing image
-when it already supplies them; some shots can proceed directly to video generation.
+Think from the intended picture down to the choices that make it visible. What will this image do
+in the video? What makes the person compelling, and what encounter are we looking at? Let that
+whole-picture intention guide the casting, attitude, styling, setting, color and camera relationship.
+The prompt expresses those decisions in the language of a picture.
 
-For the social-native videos Hypit most often makes, a photographic frame with the texture of real
-phone footage is a strong default. Presenter-led UGC, podcasts, street interviews, lifestyle B-roll,
-product demonstrations, and many comic or fantastical subjects all benefit from beginning inside a
-specific captured world. The Brief, Treatment, or reference work can instead call for illustration,
-animation, designed graphics, studio product photography, archival imagery, or another visual form.
+Compression preserves the force of the idea. "As beautiful as a top Korean girl-group idol" carries
+a strong casting direction; "sweet, slightly rebellious, casually sharing her take with a friend"
+gives a speaking presence. Blunt bangs, a spiked cap and a goth T-shirt make that presence specific.
+A metaphor or cultural reference is useful when it evokes visible qualities the model can develop.
+Choose one that serves this person, then add the few details that distinguish this picture.
 
-Treat photographic credibility as an ordinary production goal. The intended result belongs to the
-same visible category as a plausible captured frame, rather than to a separate “AI-looking” category.
-Judge the world the image creates. A person, animal, meme character, mermaid, or imagined location can
-inhabit the photographic language of recorded footage when its materials, light, camera, and
-surroundings behave as if they were physically present.
+Give each anchor the scope it needs: goth can describe the girl's styling while a Korean café
+supplies the setting. A few objects can establish the encounter and its colors together. Let the
+model complete incidental detail from those choices. Keep precise facts that the work depends on:
+recognizable identity, an exact product, HYPIT lettering, gaze toward a partner, or room for an icon.
+"Beautiful composition" would leave an intended rightward placement unstated.
 
-GPT Image 2 is the usual recommendation for this work. Favor `2K` for a picture that will appear
-full-screen or establish a full-screen video shot. `1K` is often sufficient for a smaller inset or
-graphic asset. Choose from its eventual visible size, cropping, detail, and cost; another resolution
-or model can suit a particular image better.
+Judge the wording by how clearly it evokes the intended image. Preserve the full chosen capture
+paragraph and strong attraction language; omit detail that adds no useful direction. Group related
+choices so they are easy to revise. The [café example](examples/image-direction.md#goth-girl-outside-a-korean-cafe)
+shows one compact arrangement; a derived view can say even less when its reference already supplies
+the person and world.
+
+For these phone-video portraits, four paragraphs give the direction a clear shape:
+
+| Paragraph | Directing question | What to express |
+| --- | --- | --- |
+| Capture | What kind of photographed image is this? | The Kit's full fixed iPhone-video paragraph. |
+| Encounter | How is this person relating to the viewer or another person? | Framing, centered or offset placement, standing or seated posture, a useful idle state, speaking or listening action, and a vivid social attitude, chosen for this scene. |
+| Person | Why would the audience want to watch this particular person? | Explicitly strong attraction, cultural or social character, intended proportions, and a few distinctive hair, makeup and wardrobe choices. |
+| Place | What actual place does this camera view belong to? | A recognizable setting, its visible construction, a few signs of use, and colors carried by its materials and objects. |
+
+Think about these relationships together. The encounter determines gaze; the person's clothing
+participates in the place's palette; a side table can explain the composition. Fluent paragraphs
+carry those choices. The Kit assembles the encounter as `shot` and the person and place as
+`direction`; reference responsibilities remain in its optional `references` text.
+
+## Make the person immediately compelling
+
+For an invented social-video presenter, actively cast someone the audience will want to watch.
+State the strength and kind of attraction directly: exceptionally beautiful, stunningly handsome,
+Korean girl-group idol beauty, a commanding mob wife, or a round orange cat with a boss's authority.
+Heritage, subculture, profession, and attitude can quickly give that appeal a particular character.
+Choose the ones that make this person come to mind.
+
+For an attractive invented human presenter in this style, explicitly direct a small face,
+**broad shoulders and excellent head-to-shoulder proportions**. These choices carry across seated,
+standing, centered and offset views. Narrow, pinched shoulders under a large-looking head can make
+the portrait feel doll-like. Preserve the physique of a supplied person or a deliberately different
+character, developing the appeal of that person.
+
+A few visible choices can carry the look: blunt bangs and long straight black hair, feline eye
+makeup, a spiked cap, and a goth T-shirt. Describe the clothing vibe and its memorable details.
+Exceptional beauty and strong styling fit naturally inside real phone footage.
+
+Keep the language forceful when revising. "As beautiful as a top Korean girl-group idol" directs
+appearance; "idol-level polish" directs grooming. Preserve the intended beauty, attitude and cultural
+meaning when carrying a successful direction into a new prompt.
+
+Vibe is useful when it brings a person or scene immediately to mind: "Stay out of my husband's
+business," "a cat with born-to-be-the-boss authority," or "she recognizes a record from its first
+two seconds." Write that feeling into the image. Production reasoning belongs in the Treatment;
+the prompt gives the model a person, an action, and a world it can picture.
+
+## Establish the place with a few details
+
+Give the camera a view into a recognizable, constructed place. A wooden café shopfront with a
+recessed entrance and tables along the pavement implies surfaces, depth and a way the place is used.
+In a record shop, shelves turning into an aisle and a nearby browsing bin can do the same work.
+Choose the few features that make this particular view come to mind.
+
+Surface texture and spatial structure contribute different things. Grain or plaster texture can
+give a surface variation while the whole background still reads as one flat plane. A door recess,
+window bay, shelving return or relationship between furniture and the room can establish how that
+space continues. Describe the useful feature directly. A broad wall can belong naturally to this
+view, with its material, edges and relationship to the surrounding architecture.
+
+The setting can support, contrast with, or simply coexist with the person's style. A striking goth
+girl can sit in an ordinary classroom. A glamorous woman can sit in a restaurant. Ordinary places
+often make a distinctive person more striking. Choose surroundings that suit the intended encounter;
+styling alone does not determine a person's profession, room, or lifestyle.
+
+A useful detail can do several jobs: a table on the left balances a person on the right and gives
+the scene a nearby surface; a half-eaten dessert suggests a visit already underway and carries a
+color accent; an undersized cat tree makes a cat CEO funny.
+
+## Give the frame a clear color relationship
+
+Consider the person and background together: skin, hair, clothing, furniture, and the surfaces around
+them. Choose which colors occupy the larger areas, which support them, and which appear as small
+accents. Give those colors real places in the image. Coral plaster walls, an oak desk, a group of blue
+posters, and a small green plant describe both a palette and a room.
+
+Consider the relative areas of color, the variety in detail, and where attention goes in the whole
+image. A wooden shopfront, a red awning and leafy plants give colors both a role and a physical form.
+Larger, quieter surfaces can sit beside smaller areas of detail. Color contrast and material changes
+can give the person prominence. Express that balance through the chosen clothing, construction and
+objects.
+
+Name hues without adding brightness instructions to them. Purple, coral red, blue, and green already
+give direction; casual additions such as "bright," "deep," "dark," or "light" can change the overall
+image when only a hue was intended. The Kit supplies the natural-lighting premise. Add a particular
+time, weather condition, or light event when the intended scene actually needs it.
+
+For this photographic style, prefer colored, textured materials over broad white or flat gray areas:
+colored plaster, wood, fabric, and foliage can supply surface variation and a more deliberate palette.
+Choose what complements the subject. A texture adjective alone does little for a weak color pairing.
+Cream clothing against an extensive white background once washed the person into the setting; navy
+clothing gave her definition. Treat wardrobe and surroundings as a combination.
+
+When exact white, gray, or black belongs to a product, uniform, or chosen outfit, preserve that fact
+and let the surrounding colors and materials support it. A concise material cue can give a large
+surface variation. Ordinary surfaces can otherwise keep their naturally rendered detail.
+
+## Frame the image for what it will become
+
+Choose placement, stance and framing from what this scene needs to show. A centered person can
+address the viewer directly; an offset person can share the picture with a product, a partner or MG.
+Standing or sitting describes posture. A standing presenter can still have a close half-body view,
+and a seated person can appear in a wider composition. Choose each relationship deliberately.
+
+For a face-led speaking image, a close half-body view is a useful starting point: make the face and
+gestures easy to read while retaining the shoulders and upper body. Keep a comfortable camera
+distance and natural-looking proportions. Use a wider view when the work needs an outfit, a bodily
+action or more of the surrounding encounter. Describe the intended visible area of the body so the
+crop supports that purpose.
+
+Off-center placement can feel natural through the scene itself: put a desk to the person's left,
+or let their thighs angle toward it. Seat and leg details can help establish posture without asking
+for a wider full-body view. Keep the intended visible body within the frame.
+
+Compose for the later video. A Ranking icon on the left may call for a person on the right, with
+their face near the upper right. Describe that placement and the actual room in the image prompt.
+Author the later icon or MG in its own component. Faces, hands, microphones, and products need room
+to remain readable when those layers appear. [Compositing](compositing.md) owns the layer relationship.
+
+## Choose an idle state for the encounter
+
+For a camera image reused across speaking Takes, idle means a comfortable, readable state from which
+the person can keep performing different passages. Give them a recognizable attitude, an engaged
+speaking or listening presence, and a natural relationship to their microphone or prop. "Holding a
+handheld microphone and speaking, with the free hand gesturing naturally" already brings the image
+to life. Save a particular punchline reaction for the passage that earns it.
+
+Choose face and body direction from whom the person is addressing:
+
+| Intended camera relationship | Useful reusable image direction |
+| --- | --- |
+| Speaking directly to the viewer | Face the lens straight ahead, with no head tilt or rotation. This keeps the face readable and gives later passages a settled frontal view to grow from. |
+| Talking with a podcast partner | Turn and look toward the partner, keeping the face usefully visible from this camera. Complementary views preserve the pair's screen positions, gaze and microphone relationship. |
+| Interviewer and guest attending to each other | Preserve their shared spatial relationship in the two-person view and its close views. Each person's attention follows the exchange. |
+
+The intended relationship decides the pose, including when a format contains more than one kind of
+shot. Idle leaves room for expression and motion in the generated performance. An image meant to
+establish a particular laugh, glance down or other story moment can show that moment directly.
+For reusable views, direct opening and closing actions in the relevant video passage: a guest can
+look down before noticing the interviewer, then turn toward them. A character-and-scene reference
+supplies visual facts; the selected generation mode determines whether it is a literal first frame.
+See [video direction](video-direction.md) and the
+[conversation images](examples/conversation-images.md) for those relationships.
 
 ## Use a concrete capture direction
 
-For social-native photographic work, direct the model toward a recognizable capture process rather
-than asking abstractly for “photorealism” or “high quality.” The phone-video capture direction
-describes the result as one frame cut from video actually shot on an iPhone: real without an oily,
-overprocessed finish, carrying video texture, with readable background,
-fine skin and material texture, natural-looking lighting, and an intact image.
-
-Actual GPT Image 2 generations show that the complete wording repeatedly moves results toward the
-visible character of ordinary phone-video frames. Preserve it as tested model-specific direction,
-without turning an inference about the model's learned visual associations into a claim about its
-undisclosed training data. Another model or visual form calls for evidence from its own results.
-
-The direction combines a familiar social-video camera language, believable surfaces, and enough
-background information to establish a real place that can continue into a moving shot. Choose the
-subject's styling and the way the camera records it separately: a glamorous, carefully dressed person
-can appear in casually recorded phone footage. Extraordinary beauty or fantastical subject matter
-can still inhabit this captured visual world.
-
-The capture language describes how the picture looks, not a prop that must appear in it. Add a
-specific material or lighting direction when the shot needs that fact.
-
-When the model exposes aspect ratio, resolution, or output dimensions as request parameters, treat
-those parameters as their authority. Numeric ratios and resolution labels usually need no repetition
-in the descriptive prompt. Keep directional camera or orientation language when it materially clarifies
-composition, then spend the remaining attention on the actual shot: camera distance, subject placement,
-what remains visible, and how the subject relates to the setting. The model package owns the exact
-parameter names and supported values.
-
-For this capture language, import `@hypit/gpt-image-kits/phone-ugc-v1`. Its fixed
-English capture paragraph preserves the production method, while `shot` and `direction` carry the
-current image and optional `references` text explains the connected media. The Source export enters
-the production's Source Closure directly:
+For this photographic style, use the full iPhone-video capture paragraph from
+`@hypit/gpt-image-kits/phone-ugc-v1`. It describes a frame from video actually shot on an iPhone,
+with natural lighting, fine skin texture, and a clearly readable background. This wording comes
+from successful production use with GPT Image 2. Keep it intact when selecting this Kit; put the
+current picture's framing in `shot` and its character, setting, colors, and vibe in `direction`.
 
 ```svml
 <import as="text" from="@hypit/text@1"/>
@@ -79,308 +192,50 @@ the production's Source Closure directly:
 </text:Render>
 ```
 
-`shot` and `direction` are required; omit the `references` Set when no media reference is connected.
-The resulting `{portrait-prompt}` is ordinary Text. Pass it to the selected image Surface and connect
-the actual reference images there as explicit graph inputs; explaining a reference in Text does not
-create that media edge.
+`shot` and `direction` are required. Omit the optional `references` Set when no reference is used.
+The slots assemble ordinary prompt text. Group related choices into short paragraphs: the café
+example gathers framing and action in `shot`, then casting and styling, followed by setting and
+color, in `direction`. This keeps each relationship easy to see and revise. Pass the resulting
+`{portrait-prompt}` to the image Surface and connect any actual reference images there.
 
-[Image direction examples](examples/image-direction.md) pairs the record-store portrait with its
-English production prompt and observations of the result, alongside three supplied case images with
-faithful English translations of their production prompts. Use these when the capture language,
-aesthetic specificity, or relationship between character and scene choices is unfamiliar. Each case
-identifies what its evidence covers.
+GPT Image 2 is the usual choice. Favor `2K` for a full-screen picture or video reference; `1K` often
+suffices for an inset or small graphic. Set aspect ratio and resolution on the model's parameters.
+The prompt can concentrate on composition inside that shape. Illustration, animation, product
+photography, and other visual forms can use the capture language appropriate to their own goal.
 
-Within one production, use a prompt language the selected model handles well and keep reusable capture
-wording consistent.
-Preserve aesthetic force, social meaning and specific facts when translating: confident praise, a
-familiar cultural type and a vivid attitude retain their full strength. Keep dialogue, visible text,
-names and other literal wording in the language the work requires.
+A fantastical subject can still look physically present in this photographed world. For a mermaid,
+wet hair, shells, a coral reef, and a few fish can establish the scene. "She looks as though she is
+really sitting underwater" reaffirms the intended feeling. The [complete examples](examples/image-direction.md)
+show the capture paragraph with the goth café, record shop, mob wife, cat CEO, and mermaid.
 
-## Direct a person from identity and presence
+## Let references supply the facts they own
 
-Begin with the kind of person the audience should recognize, the role they play, and the presence
-they bring to camera. A social archetype, subculture, profession, attitude, or compact piece of
-character language can coordinate face, styling, posture, environment, and props more effectively
-than an inventory of facial measurements.
+Look at a supplied face or character before writing. "Use the person in reference image 1" establishes
+identity; direct their attraction, clothing, setting, colors, and camera view with the same care as an
+invented subject. Develop the features and presence that make this particular person compelling while
+keeping them recognizable. Their identity comes from the reference and the user's description.
 
-When on-camera attraction, charisma, beauty, handsomeness, strength, cuteness, awkwardness, age, or
-comic authority matters, state it directly and with conviction. A direction such as “exceptionally
-beautiful, with the presence of a top Korean girl-group idol,” “the striking beauty and commanding
-presence of a leading Italian film actress,”
-or “a round orange cat with effortless CEO authority” gives the model an overall aesthetic target.
-Support it with a few visible anchors that distinguish this character. Let millimeter-level anatomy
-remain subordinate to the intended person and the camera image.
+A product reference can supply the exact product; a parent camera image can supply a person and room.
+Explain what carries forward and what changes. Another view of the same place may show different
+objects because the camera faces a different direction. Preserve the capture language on that view.
+An image used for identity does not automatically fix the next video's literal first frame.
 
-Photographic credibility can coexist with exceptional beauty, precise makeup, excellent skin and
-strong styling. Preserve the requested appeal; natural texture describes how the captured surface
-reads, while the person remains as polished, attractive or distinctive as the direction requires.
+Choose references for the facts the work needs: a user's face, an exact product, a logo, a particular
+room or a continuing character. Keep the dependency tree shallow where one parent already supplies
+the needed facts. Familiar things can be described directly when recognizable meaning is enough.
+Connect reference images as real model inputs; prose alone does not create those edges.
+[Reference relationships](generated-dependencies.md) and [conversation examples](examples/conversation-images.md)
+cover multi-view work. [Transformations](../../creation/transformations.md) covers what a face or product
+swap changes across the video.
 
-For the attractive, invented presenters in this photographic style, explicitly direct **broad
-shoulders and excellent head-to-shoulder proportions**. Overly narrow, pinched shoulders beneath a
-disproportionately large head can make a generated half-body portrait feel flimsy or doll-like even
-when the face is convincing. This is a useful whole-figure direction, alongside strong beauty or
-handsomeness, rather than a request for anatomical measurements. Preserve the actual physique of a
-supplied person and any different body type intentionally chosen for the character.
+## Judge the picture by its intended appeal
 
-Express the intended appeal in the character's own terms:
-
-- For an appealing older character, state distinguished beauty or handsomeness, vitality, and the
-  presence of someone who was strikingly good-looking in youth. Age remains part of the person.
-- For an animal, choose the imposing, cute, or comic presence the role needs. A lustrous coat and
-  handsome proportions can serve a majestic animal; the orange-cat CEO's round face, large belly,
-  straining suit, and undersized cat tree give its authority a comic form.
-- For a recognizable Meme character, preserve its defining features, silhouette, and proportions.
-  Express appeal within that character's visual identity while giving it the requested capture language.
-
-Use wardrobe, grooming, jewelry, makeup, silhouette, and memorable details to reinforce
-the same identity. They should belong to one person rather than read as unrelated fashionable items.
-A beauty comparison can establish the strength of the appeal and another phrase its particular
-character; a role-specific disposition makes that person socially present. In the
-[record-store example](examples/image-direction.md#shanghai-record-store-owner-one-coherent-person),
-idol-level beauty, an independent film actress's cool presence, and effortless musical expertise
-describe compatible qualities of one woman. The bob, knitted polo, headphones, and shop then give
-that casting idea visible form. The transferable choice is this coherence: another person may need
-different beauty language, styling, and surroundings, without acquiring a fixed number of comparisons
-or a required idol-and-actress formula.
-
-When the user supplies the person, pet, product, or character they want, look at the image and use it
-as the identity reference. "Use the person in reference image 1 as the presenter" can be enough to
-establish that relationship. The full capture direction, attraction, framing, proportions, setting,
-and palette still do their work. Keep the aesthetic direction confident and specific to this subject.
-
-Notice what can make this person compelling in the intended shot: their hair, styling, silhouette,
-or expression may suggest a particular presence. Develop that appeal through the image's wardrobe,
-light, color, and vibe, keeping the supplied identity recognizable. Choose which of the photo's
-other details belong in the new scene. The [supplied-presenter variation](examples/image-direction.md#the-record-store-shot-with-a-supplied-presenter)
-shows how much of a complete prompt can carry forward with that change.
-
-## Let the setting belong to the subject
-
-A useful camera image normally creates the person and their setting together. The setting is not an
-empty plate waiting for a subject to be inserted. It reveals who this person is, what they are doing,
-and what kind of video the audience believes they are watching.
-
-Choose a small number of details that carry that relationship: condensation on an iced latte in a
-Korean-style café, a product diagram on a startup whiteboard, a cat tree that is visibly too small for
-an orange-cat CEO, drying flowers on a textured wall, or worn candles inside a real stone chapel.
-Favor details that connect choices across the image. The record-store owner's turntable belongs to
-her work and gives the composition a physical counterweight; a handwritten recommendation card
-expresses how she runs the shop. Make the details that define this person, place, and shot explicit,
-then leave incidental particulars open for the model to resolve within that direction.
-
-Give the scene a relationship to its viewer when that relationship matters: the owner is taking a
-moment to recommend an album to you. A compact line like this conveys ease, expertise, and personal
-attention without prescribing a smile or a precise gesture. After describing the visible details,
-a closing vibe sentence can bring the whole image back to the intended encounter or atmosphere,
-rather than repeating a list of props or adding unrelated style adjectives.
-
-Describe the setting from the camera view that will actually be used. Another useful angle can grow
-from that image while showing the naturally different part of the same place. The work needs camera
-images that do a real job. An independent location image is useful when the work needs that location
-on its own; otherwise the actual camera view can establish both the person and the place.
-
-Across related views, distinguish the shared world from what this camera sees. The shared world can
-carry a warm dessert-shop atmosphere, natural afternoon light, textured materials and the social
-relationship between two hosts. One view may see the window and table while the reverse view sees the
-counter and another group of ordinary objects. The background then feels continuous without becoming
-a copied backdrop. In a short drama, the same judgment lets a location carry character, mood and plot
-while each useful camera image remains authored for its own view.
-
-Write fluent natural-language direction, with exact props and relationships singular and clear.
-Separate mutually exclusive visual states into the images the work needs. Preserve dominant facts
-across related images, including the chosen capture language on derived views: an identity reference
-and a capture direction do different jobs.
-
-## Frame the image for what it will become
-
-A camera image can establish identity, space, composition, and capture language together. A portrait
-used only for identity or a product reference used only for geometry does not also dictate camera
-position, pose, or setting. State which facts the downstream shot should inherit. A reference is not
-necessarily its literal first frame; exact endpoint control is a separate shot decision.
-
-For recurring presenter images, favor a sustainable presence: relaxed confidence, attentive curiosity,
-or effortless authority. This is the useful idle principle. Give the video room to perform the line,
-gesture, or emotional change instead of fixing the person in a blink, peak grimace, or contorted pose.
-Describe a disposition, such as warmth or a compelling gaze, instead of choreographing a raised
-eyebrow, narrowed eyes, a grin, a head tilt, or a precise hand gesture. For these reusable speaking
-images, “speaking to the camera, with the free hand gesturing naturally” gives enough direction.
-Idle retains the character's emotional presence while leaving the later performance room to change.
-
-For a presenter image, that may be a clear face, readable upper body, handheld microphone, natural
-gaze, and a posture with room for gesture. For a podcast reverse view, eye line and microphone entry
-matter more than front-facing symmetry. A selfie needs a physically credible phone-camera
-relationship. A product-use image needs the hands, product, and contact geometry that the action will
-continue from. B-roll may begin with a more specific action because the visual event itself carries
-the passage.
-
-For a reusable presenter image, a half-body view can place the person modestly near the camera, with
-the face level and directed straight ahead, a handheld microphone, and clear shoulders and arms.
-Direct distance and proportions together: “She sits slightly nearer the camera in a comfortable
-half-body composition, with broad shoulders and excellent head-to-shoulder proportions.” The face
-should be readable while the shoulders and upper body still establish the person. Repeatedly
-intensifying “close” can instead favor a face-dominated crop. Asking to keep the body in frame means
-preserving the intended visible silhouette, not widening the shot until the whole body fits.
-
-Choose left, center, or right placement from the intended camera view and eventual composition.
-Off-center placement can be a direct camera decision; it needs no added prop to explain it. When a
-table, chair, partner or product truly belongs in the generated scene, its geometry can also motivate
-the person's posture, gaze or contact and contribute balance inside the frame. Choose those objects
-for the physical scene's own story, while camera composition reserves room needed by the editorial
-layout. Describe the person and setting as one actual camera image.
-
-Give gaze, posture, touch, and other interaction only to people or objects that actually belong in
-the generated image. A later Caption, icon, product card, or other MG can influence framing and the
-subject's placement, but it is not an object in the character's physical world. Keep the person
-engaged with the camera or with the real scene, and direct the generated setting as the complete,
-natural place it should be on its own.
-
-Use seat and leg details when they explain that relationship. A brief direction such as “her thighs
-angle toward the table on her left” can be useful; a catalog of shoes or clothing outside the intended
-crop can compete with the framing. A foreground table, visible feet or lower-body detail belongs when
-it serves the scene and leaves the face, microphone and important gesture area readable.
-
-Apply that speaking-reference solution when the work has the same need. A side-on conversation,
-product action, or full-body shot needs its own gaze, hand occupancy, contact, and composition.
-A specific starting action is useful when the shot is actually about that action.
-
-Compose for the final stack. A Ranking icon planned for the left can call for a presenter toward the
-right while the presenter continues speaking to the camera or acting inside the real scene. The same
-person may remain on that side across every related shot. Keep the face, microphone, and useful
-gesture area clear of the overlay's actual footprint and movement. The rest of the source image still
-belongs to its real setting. Position and scale follow this work's visual hierarchy. [Compositing](compositing.md)
-distinguishes the generated scene, camera composition and later editorial layers.
-
-Translate that layout into visible image direction: describe subject placement, camera framing, and
-the real setting. Author the MG separately in its component. The image prompt describes the pixels
-this request should produce; downstream editorial content stays in the downstream composition. Carry
-the intended placement into the generated performance without inventing an interaction with that
-later layer. Frame the face at a height compatible with a face-following Caption. If a board covers
-the lower frame, place the performer in the region that remains visible. If a product or screen is
-part of the generated scene and must be read, give it enough scale and a credible relationship to the
-person.
-
-## Make imagined subjects physically present
-
-Fictional content does not imply an illustrated or computer-generated finish. Place the extraordinary
-subject inside an ordinary physical camera world. The mermaid prompt establishes wet hair, shells,
-real pearls, coral, fish, light entering the water, and shells scattered on the sandy seabed. These
-specific states and surroundings make the intended world concrete.
-
-Describe the fantastical facts positively and give the physical directions the scene needs. Familiar
-material names and a few decisive states can be sufficient; explicit grain, reflection, wear, and
-contact instructions belong where they resolve an actual ambiguity or serve the shot. The result can
-remain strange, funny, or impossible while feeling as though somebody pointed a phone at it.
-
-For this photographic fantasy method, finish by reaffirming the subject's physical presence in the
-specific place: “The image looks real, as though this woman is actually sitting underwater.” This
-repeats the intended reading of the whole image after its fantastical details.
-
-## Direct color through material and atmosphere
-
-Compose the palette across the whole frame. Consider the visible area and relative lightness of
-skin, hair, clothing, furniture, and background together. Decide where the person should separate
-from the setting, which colors belong together, and where the eye should settle. Material texture
-alone cannot give a poorly coordinated palette a clear subject or believable tonal depth.
-
-In one portrait, a cream knit against a white background made the image feel too bright and washed
-out; navy clothing gave the person definition against the light surroundings. This is a relationship
-between wardrobe and setting, not a rule against cream or white. For an intentionally pale, luminous
-image, direct the tonal separation, skin color,
-surface variation, and lighting that keep it convincing. When exact wardrobe or brand colors are
-fixed, make the adjustable surroundings work with them.
-
-For these character portraits, two anchor colors can establish a compact palette that supports the
-overall atmosphere. Let incidental colors belong to that whole; this does not require every object
-to use exactly one of two colors.
-
-Then name useful hues and materials. Coral fabric, charcoal wood paneling, weathered brass, or cream
-plaster carries color together with physical response. A few relevant material cues support the
-overall direction; every surface does not need its own grain, seam, defect, or texture instruction.
-
-In palette descriptions, name hues without casually adding brightness modifiers such as “bright,”
-“dark,” “deep,” or “light.” These words can steer the whole image's lighting when only a color was
-intended. Describe the wanted lighting separately.
-
-For white or black areas whose exact color is not essential, prefer a light- or dark-toned material
-with visible surface variation. This is a deliberate alternative to an extreme black/white field,
-not a reason to attach brightness modifiers to every hue. When exact black or white is required,
-keep it and use a concise material or texture cue to give the area visible variation.
-
-| Palette shorthand to improve | A material-led direction |
-| --- | --- |
-| deep purple and pure black | purple fabric and charcoal wood panels |
-| cream clothing against an extensive white background, when it washes out the intended image | give the subject definition through wardrobe and background together, such as a navy knit against light plaster |
-| a pure white wall | light-toned textured plaster |
-| a required black jacket | black leather with visible grain |
-
-These examples teach authored choices, not automatic word substitutions. Exact product, wardrobe,
-makeup, and brand facts remain exact. Preserve the actual wording when documenting an existing result;
-apply the current palette judgment when directing a new image. Surface detail supports the image;
-avoid turning the correction into an inventory of defects or a demand for roughness.
-
-When an image feels washed out or its color balance feels wrong, identify what is visible: large pale
-areas merging, missing highlight detail, flattened skin color, or a color cast. These observations
-point to different adjustments; an overly pale palette alone does not establish a white-balance
-fault. Keep wardrobe and set design, exposure and lighting, and color balance distinct in the
-diagnosis, then make them serve the same image.
-
-Light belongs to the same physical description. State the source and broad relationship that matter:
-soft window light from camera left, ordinary overhead office light, overcast street light, or warm
-lamps within the room. Let texture and small irregularities survive. The goal is not to make every
-image dark, flat, or underproduced; it is to make polish arise from a believable captured world.
-
-“The lighting is natural” means the light belongs convincingly to the scene. It can come from
-daylight, room fixtures, or the practical lights of a night location. Give the face the exposure it
-needs while letting the setting retain its own readable detail, shadows, materials, and tonal depth.
-Choose wardrobe, surroundings, and light as one relationship so a polished, beautiful subject still
-feels physically present in that place.
-
-## Give references clear responsibilities
-
-Use references when the image needs a fact that public visual knowledge or prose cannot reliably own,
-or when exactness itself matters: the user's identity, a private or obscure product, a particular
-current logo, proprietary UI, or a camera image already used by the work. A familiar public icon,
-person, meme, object or place can be generated directly when recognizable visual meaning is enough.
-State what each reference contributes and what the new image may change. Choose it because it owns a
-needed fact, not merely because it was generated most recently. A new view can inherit the same room
-while showing a different arrangement of its objects in the frame.
-
-Keep the relationship shallow and useful. The first actual A-roll camera image often establishes the
-person, setting, camera culture, and art direction together. Another A-roll view can use it to retain
-the person and world while changing eye line and camera position. A B-roll image can share the person
-or product when continuity matters. One useful image can constrain several later images and Takes.
-
-The Source owns the exact Resource edges. The Treatment explains why this work preserves or changes
-the relationship. Model documentation owns reference count, media support, aspect, resolution, and
-other request limits.
-
-[Conversation image examples](examples/conversation-images.md) show this distinction in complete
-podcast and interview directions: a complementary host view, product-holding variations, independent
-lifestyle scenes and two close views derived from one shared encounter. Use
-[Reference relationships](generated-dependencies.md) when deciding which parent each image needs.
-
-## Judge visible causes, not provenance
-
-Look at the generated image as the intended audience will see it and as the downstream video model
-will use it. Consider whether the intended appeal and personality actually come through, whether
-the subject draws attention within the whole frame, and whether the image supports the next shot.
-Name the visible cause of a weak result:
-
-| Visible result | Revisit |
-| --- | --- |
-| an interchangeable polished face | the character's role, presence, and aesthetic direction |
-| an oversized-looking head above pinched shoulders | shoulder breadth, head-to-shoulder proportions, and the camera framing |
-| a beauty campaign instead of social footage | the capture direction, light, texture, and camera relationship |
-| an empty showroom or decorative collage | the few setting details that reveal the subject's world |
-| flat dark or light regions | material, surface variation, palette, and local lighting |
-| a pale subject merging into a pale setting, or an overall washed-out image | the relative lightness and visible area of clothing and background, skin color, and exposure |
-| implausible hands, gaze, microphone, phone, or product contact | the physical relationship and framing |
-| identity, product, or room drift across useful views | the selected reference and its stated responsibility |
-| a strong still that cannot support the intended motion or overlays | the shot's downstream role and performable state |
-
-Authorized image outputs continue downstream through the relationships declared in Source. When
-looking at an existing image or Result, use this table to diagnose the visible problem. If a result
-cannot serve the user's goal, identify the owning direction or reference decision. Additional paid
-generation is an explicit production decision under `../../production/authoring.md` and the user's
-spending authority. Build quality into the direction and reuse produced media during deterministic
-refinement.
+Look first at whether this is the person and feeling the work needs. Then check framing, proportions,
+color relationships, and the visible interactions the video will depend on. Read the background as
+a place: does its construction and use come through, and does the person feel situated in it? When
+a view feels like a flat backdrop, reconsider the view and its spatial anchors before adding surface
+adjectives or more props. A well-described room
+does not compensate for weak casting. When revising, change the choice responsible for the weak
+result; retain the choices that already work. Keep produced images that remain useful to the work
+with their exact prompts and model settings so the next direction begins from actual production
+evidence.

@@ -32,8 +32,17 @@ for the target's words and intention. Selections can carry an explanation or com
 carry an answer or payoff. This is Hypit's strong production prior. Use explicit clock timing where
 the work calls for it, and use named wordless Segments when action or silence carries the passage.
 
+Creative direction and installed expression answer different questions. When the work needs a
+generated picture or video, A-roll, B-roll, Caption, MG, voice or sound relationship, read the Craft
+that owns what it should accomplish. Then use installed vocabulary and package-local documentation
+for the exact Surface, inputs and limits. Knowing how to call a model or component does not supply the
+directing judgment, and Craft does not replace the installed declaration.
+Treat existing project prompts and Recipes as earlier directing choices. Compare their assumptions
+with the current Brief, Treatment and relevant Craft, and carry them forward while the same artistic
+relationship still serves this work.
+
 GPT Image 2 and Seedance 2 Mini at 720p are the usual starting points for generated pictures and
-performances, balancing capability and cost. Choose for the actual work; the image and performance
+performances, balancing capability and cost. Choose for the actual work; the image and video
 crafts explain resolution and duration choices.
 
 ## Establish the working crew
@@ -127,8 +136,16 @@ close behind the work.
 | understanding a reference video or link | `references/creation/reference-video.md` |
 | defining the target: what the user asked for, and what the new piece will be | `references/creation/brief.md` |
 | cloning with supplied faces or products, changing the Script, language, length, or combining references | `references/creation/transformations.md` |
-| estimating speech duration with `hypit measure`, Script syntax, Cues, Selections, Moments, and semantic time | `references/creation/script-and-time.md` |
+| writing or revising `<script>`: Segments, Roles, Dual Text, `||` Caption Cues, word attributes, Selections, Moments, empty passages, or measured delivery | `references/creation/script-and-time.md` |
 | project layout, picking work back up, or handing an editable production to someone else | `references/creation/project-files.md` |
+| directing a generated person, setting, product, B-roll image, camera view, visual reference or image prompt | `references/playbooks/craft/image-direction.md` |
+| directing generated video, visible performance, silent action, camera behavior, cuts or request duration | `references/playbooks/craft/video-direction.md` |
+| deciding who is A-roll, recurring voice identity, covered performance or independent narration | `references/playbooks/craft/voice-and-performance.md` |
+| designing B-roll coverage, montage, short display windows or editorial handoffs | `references/playbooks/craft/b-roll.md` |
+| designing Caption reading rhythm, styling, placement or a new Caption family | `references/playbooks/craft/captions.md` |
+| designing MG, a board, cards, graphic state, hierarchy, palette or reveals | `references/playbooks/craft/graphic-compositions.md` |
+| deciding which generated images or videos should depend on which references | `references/playbooks/craft/generated-dependencies.md` |
+| directing music, sound effects, ambience, gain, ducking or the completed mix | `references/playbooks/craft/sound-mix.md` |
 | writing Sources, Recipes, and Runs, reusing produced work, adding a component | `references/production/authoring.md` |
 | imports, output references, literal values or Recipe rules | `references/production/source-syntax.md` |
 | assembling reusable prompt wording or authoring a Prompt Kit | `references/production/prompt-kits.md` |
@@ -148,7 +165,7 @@ close behind the work.
 | opening Studio, understanding its views and edits, or adding a component Companion | `references/production/studio.md` |
 | Film assembly, picture and sound, final rendering or a selected frame interval | `references/production/rendering.md` |
 | judging the preview or finished Result and deciding what to fix | `references/production/review.md` |
-| the shape of a format, or one craft problem: image direction, Caption, B-roll, voice, sound, graphics | `references/playbooks/index.md` |
+| recognizing a whole-work format, combining formats, or discovering another directing Craft | `references/playbooks/index.md` |
 
 Several rows can apply at once; read what the work actually asks for, and return to a room whenever a
 preview or Result raises its question again. These references explain production use; installed

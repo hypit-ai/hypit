@@ -96,6 +96,33 @@ the final layout. Editorial graphics remain separate layers and are not objects 
 person to see, touch or point toward. [Image direction](image-direction.md#frame-the-image-for-what-it-will-become)
 owns the camera-image wording; [Spatial layout](../../production/spatial.md) owns Frame, fit and crop.
 
+### Prepare a moving cutout plate
+
+When the intended A-roll presentation is a moving cutout, a chroma-backed camera image is a useful
+way to prepare the performance. Direct the person's identity, appeal, styling, framing, visible body
+extent and performable presence with the same care as another A-roll image. Give that photographed
+world a continuous, evenly lit chroma backdrop whose color separates clearly from the person's hair,
+clothing, skin, microphone and other carried objects. Green is a common starting point; another flat
+chroma color can provide better separation when green belongs to the subject.
+
+This image is a production plate for the speaking performance. Use it as the actual image reference
+for the video generation, direct the person's Script delivery and physical performance, and keep the
+backdrop visually stable through the clip. The resulting moving video then follows one relationship:
+
+```text
+chroma-backed camera image
+       → generated speaking performance
+       → moving-video matting
+       → alpha-preserving normalization
+       → SemanticTake
+       → Speech Track cutout presentation
+```
+
+The chroma backdrop establishes subject separation rather than the final story setting. The final
+background, screen, B-roll or MG belongs to the editorial composite, where it can change without
+regenerating the accepted performance. [Image direction](image-direction.md) still owns the person's
+identity, framing and useful performance state; the matting section below owns the processed video.
+
 ## Inset, cutout and flattened composite are distinct choices
 
 A speaking rectangular inset, circular inset or normalized cutout can be presented directly by

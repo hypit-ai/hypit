@@ -1,73 +1,82 @@
 # Image direction examples
 
-Read this alongside [Directing generated images](../image-direction.md) when learning the actual
-prompt language and aesthetic choices for phone-video images.
+Read these with [Directing generated images](../image-direction.md) for complete phone-video image
+directions and visual examples.
 
-The record-store case pairs its exact English production prompt with its output. The other three
-pictured cases pair their outputs with faithful English translations of the Chinese production
-prompts. Framing is consolidated into `shot`, and output orientation is moved to the external model
-settings. The translations illustrate the direction; only a shown output establishes what a submitted
-prompt produced.
+The first paragraph is the Kit's fixed capture direction. The rest describes the picture in ordinary
+language and can be assembled through its `shot` and `direction` slots. Use `aspect-ratio="9:16"`
+and usually `resolution="2K"` on `gpt:Image` for these full-screen portraits. The [Craft](../image-direction.md#use-a-concrete-capture-direction)
+shows the Kit assembly. Existing production wording, including particular lighting choices, remains
+with the result it describes.
 
-In each prompt, the first paragraph comes from the Kit's fixed capture block, the next is the
-`shot` input, and the remaining paragraphs are the `direction` input. The pictured character studies
-use no reference media; the supplied-presenter variation below adds an identity reference. A work can
-explain connected images through the optional `references` input.
-[Directing generated images](../image-direction.md#use-a-concrete-capture-direction)
-shows the SVML assembly.
+## Goth girl outside a Korean cafe
 
-The suggested settings for these prompts are `aspect-ratio="9:16"` and `resolution="2K"` on
-`gpt:Image`. These are external model settings; the prompt describes the composition within that
-shape without repeating it.
+![Goth presenter outside a Korean café, with a wooden shopfront, red architectural details, plants and grape bingsu](https://hypit.s3.us-east-1.amazonaws.com/assets/skills/hypit/image-direction/v1/goth-korean-cafe.webp)
 
-The frontal half-body view and microphone belong to this series of versatile speaking images.
-Speaking and loosely gesturing describe an ongoing presence, leaving the later video to direct the
-particular line and gesture. Carry the capture language into another useful shot without
-automatically carrying this staging. Read examples whose directing question is relevant.
+Production example: the prompt below was used directly to generate the shown image.
 
-## Shanghai record-store owner: one coherent person
+The intended picture is a striking, sweet-but-rebellious goth girl casually talking to the viewer
+outside a Korean café. Idol beauty sets the strength of attraction; blunt bangs, feline makeup,
+jewelry and a spiked cap give it a particular character. Textured wood, coral-red accents and plants
+establish the place and palette. The half-eaten bingsu on the left both balances her rightward position
+and suggests a café visit already underway.
+
+In the result, wood belongs to a shopfront with openings and a recessed entrance. Sidewalk
+seating, plants and the foreground dessert establish different distances and a café in use. The red
+architectural detail and green foliage give color a physical role. Much of the background is still
+wall: its construction and relationship to the rest of the place make it convincing. These are useful
+qualities to seek in another setting, with the few spatial anchors that belong to that new view.
+
+The [four paragraph roles](../image-direction.md#compress-the-idea-into-decisive-anchors) are visible
+here. In the Kit, use the second paragraph for `shot` and the final two for `direction`.
+
+Production prompt:
+
+```text
+A photograph with the texture of real iPhone footage, captured as a single frame from a video actually shot on an iPhone. The image looks real, without an oily, overprocessed finish, and has the texture of video footage. The background is clearly visible, with no depth-of-field blur. Skin texture is natural and fine, the lighting is natural, and the image is coherent and free of visual artifacts.
+
+Generate a vertical close half-body photo of an exceptionally beautiful young woman sitting slightly to the right, near the camera, with her body kept within the frame. She holds a handheld microphone and speaks to the camera, her free hand making a conversational gesture. She has a sweet, slightly rebellious charm, as though casually sharing her take with a friend. Her face is in the upper-middle part of the frame, slightly to the right.
+
+She looks Japanese-American and is extraordinarily beautiful, like a top Korean girl-group idol. She has a very small face, very broad shoulders, excellent head-to-shoulder proportions and very fair skin. Her hair is long, black and straight, with blunt bangs. She wears soft goth makeup with a captivating feline look around the eyes, beautiful silver earrings, a choker and layered necklaces. She wears a black goth-style T-shirt and a baseball cap decorated with silver spikes, with HYPIT in uppercase Gothic lettering.
+
+She is seated outside a relaxed street-side café in Korea. Behind her are beautifully textured wooden exterior walls with a pronounced grain, coral-red architectural accents, some green plants and a few other tables. A half-eaten grape bingsu sits on the table in the lower-left corner. Wood brown forms the main backdrop, with coral red and leafy green as accents.
+```
+
+For subsequent reusable frontal speaking images, the
+[idle guidance](../image-direction.md#choose-an-idle-state-for-the-encounter) adds an explicit pose:
+"Her face points straight toward the lens, with no head tilt or rotation."
+
+### A centered standing version
+
+This variation demonstrates the paragraph roles and has not been generated.
+
+Keep the capture and casting paragraphs above. The person can keep her strong appeal, proportions
+and speaking attitude while a new encounter paragraph places her standing in the center. Update the
+place paragraph to match that stance. A close half-body crop still suits this speaking image.
+
+Replacement encounter and place paragraphs:
+
+```text
+Generate a close half-body photo of an exceptionally beautiful young woman standing in the center of the frame, comfortably near the camera, with her shoulders and upper body visible. Her face points straight toward the lens, with no head tilt or rotation. She holds a handheld microphone and speaks to the camera, her free hand gesturing naturally. She has a sweet, slightly rebellious charm, as though casually sharing her take with a friend.
+
+She stands outside a relaxed street-side café in Korea. The wooden shopfront has a recessed entrance, coral-red architectural details and green plants beside the doorway. A café table beside her holds a half-eaten grape bingsu, with a few other seats farther along the pavement.
+```
+
+The four paragraphs keep their roles; the scene determines their particular framing and objects.
+
+## Shanghai record-store owner
 
 ![Shanghai record-store owner: green knit, bob, and headphones in a working record shop](https://hypit.s3.us-east-1.amazonaws.com/assets/skills/hypit/image-direction/v1/shanghai-record-store.webp)
 
-The casting idea is a beautiful woman with distinctive taste, at ease in a place she knows deeply.
-The following choices explain the prompt's directing intent as a whole.
+Here the striking beauty and cool music-lover presence have a different expression: a bob, jade-green
+knit, headphones, and a few record-shop details. Green clothing and walnut shelves distinguish the
+person from the setting; the lower-left turntable balances her rightward placement. Recognizing a
+record from its first two seconds gives her confidence a vivid social meaning.
 
-- **Beauty with a particular character.** “Exceptionally beautiful” and “the striking appeal of a
-  top girl-group idol” state the strength of the desired appeal. “The cool presence of an independent
-  film actress” gives it a particular character. These describe complementary qualities of one person;
-  they do not request a collage of different faces. “Shanghai” locates her social world, but the city
-  name alone does not supply this casting direction.
-- **Expertise expressed as presence.** Recognizing a record from its first two seconds conveys ease,
-  confidence, and a relationship to music without prescribing a facial pose. The closing sentence
-  makes her someone giving a personal recommendation to the viewer. That relationship gives the
-  image a more specific human intention than a beautiful person simply occupying a shop.
-- **Styling and surroundings that agree.** The neat bob, knitted polo, silver hoops, and headphones
-  support her composed, music-literate persona. Album sleeves and a handwritten recommendation card
-  make this her working shop. Each detail helps the same person become legible.
-- **A palette that lets her stand out.** Jade-green clothing and walnut shelves establish distinct
-  subject and setting colors. The face stays clearly lit while the shelves retain shadows and detail.
-  Color, material, and lighting work together; there is no request to brighten the whole room.
-- **A body situated in the room.** The lower-left turntable gives the rightward placement a physical
-  reason. Comfortable proximity, visible shoulders and upper body, and explicit head-to-shoulder
-  proportions work together to keep her present without asking for an extreme close-up. The fixed
-  iPhone-video paragraph supplies the capture language for this highly attractive, deliberately styled
-  person.
+The complete prompt below belongs to this particular portrait. Carry that decisiveness into another
+character while choosing the face, clothing, setting, and colors that suit the new image.
 
-For a different character, carry forward the relationship between these choices. A different persona
-may call for flowing hair, workwear, a bustling outdoor setting, or another palette. A bob, green
-clothing, walnut shelves, and two beauty comparisons are not a reusable formula for an attractive
-woman. Keep the aesthetic direction forceful while making its visible details belong to the new person.
-
-In the result, her face draws attention between the black bob, green knit, and wooden shelves.
-The knit stitches, headphone surfaces, silver hoops, and reflections on the record sleeves give
-different materials their own visible character. Small highlights are visible on her nose and lips.
-
-The direct gaze, open mouth, microphone, and forward gesturing hand make the frame read as an ongoing
-conversation. The turntable occupies the lower left, while the records and handwritten recommendation
-cards make the shop legible around her. The camera sits slightly above her eye line, while one
-shoulder meets the right edge of the image. The complete prompt follows.
-
-Complete English prompt:
+Complete prompt:
 
 ```text
 A photograph with the texture of real iPhone footage, captured as a single frame from a video actually shot on an iPhone. The image looks real, without an oily, overprocessed finish, and has the texture of video footage. The background is clearly visible, with no depth-of-field blur. Skin texture is natural and fine, the lighting is natural, and the image is coherent and free of visual artifacts.
@@ -112,21 +121,20 @@ Look at that image and direct its appeal within the target work, using the same 
 
 ![Mob Wife: strong glamour in a captured world](https://hypit.s3.us-east-1.amazonaws.com/assets/skills/hypit/image-direction/v1/mob-wife.webp)
 
-The beauty comparison and the attitude give this person a vivid social presence. Fur, layered gold,
-red lips, leather seating, and an expensive restaurant reinforce it. The production prompt
-names these materials without adding instructions for leather grain, fabric folds, or metal
-reflections. Its final sentence places her in the social world of a mob wife meeting her girlfriends.
+The beauty comparison and "Stay out of my husband's business" give this person a vivid presence.
+Fur, layered gold, red lips, and an expensive restaurant reinforce it. Simple material names leave
+the model room to render their ordinary surfaces. Red and gold establish the room's atmosphere.
 The deep-red nails and dark-brown hair below preserve the production prompt that belongs to this
 example. Apply the current palette guidance when directing a new image.
 
-Complete English prompt:
+Complete prompt:
 
 ```text
 A photograph with the texture of real iPhone footage, captured as a single frame from a video actually shot on an iPhone. The image looks real, without an oily, overprocessed finish, and has the texture of video footage. The background is clearly visible, with no depth-of-field blur. Skin texture is natural and fine, the lighting is natural, and the image is coherent and free of visual artifacts.
 
 Generate a close half-body image of a Latina woman in her thirties, seated slightly to the right and near the camera. Keep her body within the frame. Her face is directed straight ahead without any tilt or rotation, and the lower part of her body is visible and unobstructed.
 
-She holds a handheld microphone in one hand and speaks to the camera, while her other hand gestures. Her commanding attitude says, “Stay out of my husband's business.” She is exceptionally beautiful, with the intense beauty of a top Italian actress and the stunning appeal of an iconic Italian screen star in her youth. She has broad shoulders, excellent head-to-shoulder proportions, and a larger-than-life presence.
+She holds a handheld microphone in one hand and speaks to the camera, while her other hand gestures. Her commanding attitude says, “Stay out of my husband's business.” She is exceptionally beautiful, with the intense beauty of a top Italian actress in her youth. She has broad shoulders, excellent head-to-shoulder proportions, and a larger-than-life presence.
 
 She wears a leopard-print fur coat over a black low-cut top, several chunky gold chains layered around her neck, and large gold hoop earrings. Her long nails are deep red. Her dark-brown hair falls in voluminous waves; she wears classic red lipstick and bold but clean eye makeup. She sits in a leather booth in an expensive-looking Italian restaurant. An oil painting hangs on the wall behind her, a bar is visible farther back, and candles stand on a nearby windowsill.
 
@@ -138,12 +146,10 @@ The restaurant's background palette is mainly red and gold. It feels like an ups
 ![Orange-cat CEO: comic authority through body and setting](https://hypit.s3.us-east-1.amazonaws.com/assets/skills/hypit/image-direction/v1/orange-cat-ceo.webp)
 
 The boss's authority organizes the picture. A round face, large belly, crooked tie, straining suit
-buttons, and undersized cat tree make that authority funny. The actual prompt obtains its character
-appeal through those relationships; it adds no general handsome-animal requirement or individual-fur
-detail. It names a leather chair and a gray-and-orange textured office palette without cataloging
-fabric weave or leather grain. The capture paragraph supplies the photographic premise.
+buttons, and undersized cat tree make that authority funny. A leather chair, office window, laptop,
+and mug establish the workplace; gray and orange establish the palette.
 
-Complete English prompt:
+Complete prompt:
 
 ```text
 A photograph with the texture of real iPhone footage, captured as a single frame from a video actually shot on an iPhone. The image looks real, without an oily, overprocessed finish, and has the texture of video footage. The background is clearly visible, with no depth-of-field blur. Skin texture is natural and fine, the lighting is natural, and the image is coherent and free of visual artifacts.
@@ -162,12 +168,10 @@ The office's background design combines gray and orange textures. It looks like 
 ![Mermaid: an impossible subject in a photographed world](https://hypit.s3.us-east-1.amazonaws.com/assets/skills/hypit/image-direction/v1/mermaid.webp)
 
 The mermaid identity, explicit beauty, and friendly curiosity direct the person. Wet hair, shells,
-real pearls, shafts of underwater sunlight, and sand place her in a specific physical world. The
-actual prompt names those states and objects, then finishes by saying that she really appears to be
-sitting underwater. It leaves ordinary surface behavior for the model to resolve, without adding
-separate instructions about shell texture or contact against the skin.
+pearls, coral, and fish establish the underwater world. Sea blue and coral orange give it a color
+relationship. The final sentence reaffirms that she appears to be physically sitting underwater.
 
-Complete English prompt:
+Complete prompt:
 
 ```text
 A photograph with the texture of real iPhone footage, captured as a single frame from a video actually shot on an iPhone. The image looks real, without an oily, overprocessed finish, and has the texture of video footage. The background is clearly visible, with no depth-of-field blur. Skin texture is natural and fine, the lighting is natural, and the image is coherent and free of visual artifacts.

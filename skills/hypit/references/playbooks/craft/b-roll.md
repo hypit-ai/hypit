@@ -115,5 +115,5 @@ serve that sensation. Synchronized generated sound, recorded sound or separately
 each be appropriate. [Sound and mix](sound-mix.md) covers their relationship.
 
 When a work is genuinely speech-free, its visual, musical and action relationships still need
-authored semantic boundaries. [Media preparation](../../production/media.md#wordless-passages-use-media-boundaries)
+authored semantic boundaries. [Media preparation](../../production/media.md#empty-segments-use-their-media-boundaries)
 owns how actual media supplies them.

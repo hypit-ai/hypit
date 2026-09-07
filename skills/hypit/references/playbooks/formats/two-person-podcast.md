@@ -10,6 +10,10 @@ complementary view: opposite screen position and gaze, microphone entering from 
 and another visible sector of the same location. The first host view establishes the shared world;
 the complementary view changes what the other camera can see.
 
+These [idle views](../craft/image-direction.md#choose-an-idle-state-for-the-encounter) hold an easy
+conversational posture: each host turns toward their partner, with their face readable from the
+chosen camera. Their attitude is already present and can develop through different speaking turns.
+
 The worked restaurant example has this reference structure:
 
 ```text
@@ -22,8 +26,9 @@ both host views ──────────> optional split-screen opening im
 
 Most new views are one hop from their useful parent. Derive lifestyle scenes from the main host,
 not from one another. Product-holding views inherit their own host's camera and add the actual
-product reference. Preserve gaze, lighting and microphone placement while changing the intended
-prop state. File imports are valid inputs even when those images were generated outside Source.
+product reference. Preserve gaze, the established setting and microphone placement while changing
+the intended prop state. File imports are valid inputs even when those images were generated outside
+Source.
 
 [Podcast and interview image examples](../craft/examples/conversation-images.md) preserve the
 concrete English production directions and explain what each reference is responsible for.
