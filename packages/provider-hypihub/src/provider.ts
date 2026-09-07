@@ -243,6 +243,19 @@ function cardEndpoints(card: Record<string, unknown> | undefined): readonly stri
     : [];
 }
 
+/** The catalogue's own names for a card: its id and its canonical name. */
+function cardIdentifiers(card: Record<string, unknown>): readonly string[] {
+  return [card.id, card.canonical_name].filter((name): name is string => typeof name === "string");
+}
+
+/** The additional model names a card answers to. HypiHub publishes the per-operation
+ *  routing names used by the Provider mapping table as aliases of one canonical card. */
+function cardAliases(card: Record<string, unknown>): readonly string[] {
+  return Array.isArray(card.aliases)
+    ? card.aliases.filter((name): name is string => typeof name === "string")
+    : [];
+}
+
 /** Active, read-only HypiHub check used only by doctor. */
 export async function diagnoseHypiHubProvider(
   options: CreateHypiHubProviderOptions,
@@ -269,11 +282,15 @@ export async function diagnoseHypiHubProvider(
   });
   const response = await client.json("/models", auth);
   assert(Array.isArray(response.data), "HypiHub model catalogue has no data array");
-  const cards = new Map<string, Record<string, unknown>>();
+  const catalogue: Record<string, unknown>[] = [];
   for (const value of response.data) {
     if (value === null || typeof value !== "object" || Array.isArray(value)) continue;
-    const card = value as Record<string, unknown>;
-    if (typeof card.id === "string") cards.set(card.id, card);
+    catalogue.push(value as Record<string, unknown>);
+  }
+  const cards = new Map<string, Record<string, unknown>>();
+  for (const card of catalogue) for (const name of cardIdentifiers(card)) cards.set(name, card);
+  for (const card of catalogue) for (const alias of cardAliases(card)) {
+    if (!cards.has(alias)) cards.set(alias, card);
   }
   const transcriptionModel = options.transcriptionModel?.trim() || "victor-upmeet/whisperx";
   const diagnostics: RuntimeDoctorDiagnostic[] = [];
