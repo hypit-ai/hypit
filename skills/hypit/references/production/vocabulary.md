@@ -23,10 +23,16 @@ hypit vocabulary @hypit/media-pipeline --tag StillVideo
 hypit vocabulary --visual text
 ```
 
+Use a focused package and tag query before the first use of an unfamiliar Surface in the current
+production. Query it again when the selected package or Distribution changes, or when `hypit check`
+shows that an assumed declaration is not the installed one. Once the declaration is established in
+the current context, ordinary edits do not require repeating the same query.
+
 With no package argument, the command lists every package visible to the current Distribution and
 project together with its tags and models. Use that inventory when the role is clear but the owner is
 not. A focused package query then reports Surface attributes, children, ports, examples, and designed
-previews. The package README supplies exact behavior that is local to that installed implementation.
+previews, including the logical Module import when one physical package contributes several Modules.
+The package README supplies exact behavior that is local to that installed implementation.
 When the question requires more detail, inspect the relevant implementation and exported API. An
 existing component can also provide a useful implementation example for a new project package.
 

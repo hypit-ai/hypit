@@ -24,6 +24,28 @@ Author those relationships explicitly. Script Selections and Moments carry meani
 speech into real time. Track and Film elements arrange the resulting picture and sound. One Source
 carries the whole creative program; its cuts are relationships inside that program.
 
+When a role first leads to an installed Surface in the current work, query its actual declaration
+before writing the element:
+
+```bash
+hypit vocabulary @hypit/gpt-image --tag Image
+```
+
+Use the logical Module import, tag, attributes, children, ports, and output paths that this project's
+selected installation reports. Query again when the selected package or Distribution has changed, or
+when an error shows that the assumed declaration is no longer the installed one; an already
+established Surface does not need to be rediscovered for every edit. After writing one coherent
+Source or Run change, check that actual entry:
+
+```bash
+hypit check authors/main.svml
+```
+
+`vocabulary` establishes what the selected package declares. `check` resolves the real Source closure
+and verifies its imports, references, types, outputs, and Run choices. `plan` resolves the current
+Run's required capabilities; `hypit doctor` actively diagnoses the selected Profile and account
+reachability. Those are execution questions rather than additional authoring checks.
+
 When observation has already produced useful authored data—such as a per-frame region sequence for
 placing Caption above a moving head—keep that data in Source or Recipe and pass it through the
 component's declared input. It is part of the chosen production design, just like a Frame or Style.
