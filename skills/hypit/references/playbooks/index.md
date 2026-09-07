@@ -23,7 +23,7 @@ not need a matching playbook before it can be understood or made.
 | Read | When the current question concerns |
 | --- | --- |
 | [Directing generated images](craft/image-direction.md) | phone-video realism, character presence, image prompts, materials and palette, or preparing a useful visual reference |
-| [Voice and performance](craft/voice-and-performance.md) | who performs speech, recurring voice identity, A-roll under coverage, or genuinely independent narration |
+| [Voice and performance](craft/voice-and-performance.md) | how Segment performances create semantic time, who is A-roll, recurring voice identity, visual A-roll presentations, or genuinely independent narration |
 | [Directing generated performance](craft/seedance-directing.md) | using a video Kit, directing attitude and small actions, natural cuts, listeners, or sizing Takes |
 | [Reference relationships](craft/generated-dependencies.md) | deciding which images or Takes should depend on which references |
 | [Visual continuity](craft/visual-continuity.md) | complementary camera views, gaze, prop state, or what must remain coherent through a cut |
@@ -33,11 +33,18 @@ not need a matching playbook before it can be understood or made.
 | [Caption tracking](craft/caption-tracking.md) | measuring produced footage and placing Caption above a moving head without regenerating the media |
 | [Sound and mix](craft/sound-mix.md) | the relationship among speech, music, ambience, effects, loudness, ducking, and continuity |
 | [Graphic composition](craft/graphic-compositions.md) | visual hierarchy, boards, graphic state, editable structure, component boundaries or coordinated palette and reveals |
-| [Compositing](craft/compositing.md) | overlays, picture-in-picture, cutouts, screen evidence, container versus content motion, or live call layouts |
+| [Compositing](craft/compositing.md) | physical scene versus camera framing and editorial layers, overlays, picture-in-picture, cutouts, screen evidence, or live call layouts |
 
 Read every craft whose question genuinely appears in the work, including questions discovered after
 a Studio preview or completed Result. Repeated use of the same craft does not require rereading it
 unless the decision has changed.
+
+## Examples
+
+| Read | When a concrete directing example would help |
+| --- | --- |
+| [Image direction examples](craft/examples/image-direction.md) | complete phone-video prompts, their visible results, and the aesthetic relationships behind them |
+| [Conversation image examples](craft/examples/conversation-images.md) | complementary podcast and interview views, product references, lifestyle B-roll, and changing camera relationships |
 
 ## Formats
 

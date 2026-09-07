@@ -1,7 +1,10 @@
 # Spatial layout
 
 Read this when positioning or fitting media, text or a project component. Timing is explained in
-[Script and time](../creation/script-and-time.md); it is independent of these coordinates.
+[Script and time](../creation/script-and-time.md); it is independent of these coordinates. Read
+[Compositing](../playbooks/craft/compositing.md#keep-physical-camera-and-editorial-space-distinct)
+when deciding the relationship among the generated scene, camera framing and later visual layers;
+this page owns their exact authoring geometry.
 
 ## Canvas, extent and destination
 

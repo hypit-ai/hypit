@@ -135,6 +135,12 @@ is assigned by the downstream Source relationships just like any other video. Ad
 frame count and progress ruler; the guide is one display treatment and says nothing about later Film
 placement.
 
+StillVideo itself is not a preview state. A held image intended to remain in the Film is ordinary
+production media. When a Run uses a held image only in place of a future moving shot, that Candidate
+is temporary: keep the actual image as evidence while it is useful, then select the produced video
+when the question depends on motion, performance or changing overlap.
+[Runs](runs.md#use-the-most-representative-visual-evidence-available) owns that choice.
+
 ## Edit bytes at an explicit point in the graph
 
 ```svml

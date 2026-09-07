@@ -8,22 +8,39 @@ An image operation publishes another ordinary image Output. The resulting image 
 a Media Track, another image operation, or any compatible project component. The operation belongs
 in Source when that transformation is part of the reproducible production relationship.
 
-## Compose several images on one canvas
+## Flatten a fixed still-image arrangement
 
-Use Image Compose when the work needs a flattened picture made from explicitly positioned layers:
+Image Compose has one narrow job: preserve a deliberately rigid two-dimensional arrangement of
+existing still images and publish it as one PNG. A comparison board, contact sheet or intentionally
+hard-edged collage can need exactly that operation.
+
+Declare the Canvas and every rectangular destination explicitly:
 
 ```svml
+<import as="space" from="@hypit/spatial@1"/>
 <import as="compose" from="@hypit/image-compose@1"/>
 
-<compose:Image id="card" canvas={portrait} background="#00000000">
-  <compose:Layer source={background.image} frame={full} fit="cover"/>
-  <compose:Layer source={product.image} frame={product-frame} fit="contain"/>
+<space:Canvas id="comparison-canvas" width="2048" height="1024"/>
+<space:Frame id="before-panel" within={comparison-canvas}
+  left="0%" top="0%" right="50%" bottom="100%"/>
+<space:Frame id="after-panel" within={comparison-canvas}
+  left="50%" top="0%" right="100%" bottom="100%"/>
+
+<compose:Image id="comparison" canvas={comparison-canvas} background="#EEEAE2FF">
+  <compose:Layer source={before.image} frame={before-panel} fit="contain"/>
+  <compose:Layer source={after.image} frame={after-panel} fit="contain"/>
 </compose:Image>
 ```
 
 Child order is paint order. Each Layer keeps the source image, destination Frame, fit and optional
-opacity explicit. `{card.image}` is a flattened image, not a Track; use a visual component instead
-when the layers need independent timing or motion in the final video.
+opacity explicit. `fit` accepts `contain`, `cover` and `stretch`; `interpolation` selects the raster
+resampling filter. The background is `#RRGGBBAA`, so `#00000000` is transparent. The published
+`{comparison.image}` is one flattened PNG rather than a Track.
+
+Image Compose does not understand people, objects or camera space. It cannot reconcile perspective,
+depth, lighting, subject scale, background continuity or a natural seam. When several references
+should become one coherent camera image, direct the image model to create that image. When the layers
+must remain independently timed, clipped, moved or revised in the video, keep them in Tracks and Film.
 
 ## Apply a reusable correction program
 

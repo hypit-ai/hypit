@@ -48,7 +48,7 @@ export const imageComposeMarkupSurfaces = [{
     name: "image", tag: "Image", mode: "structured",
     outputs: [imageComposeTypes.options, imageComposeTypes.layerSpec, artifactTypes.blob],
     vocabulary: {
-      summary: "Paints ordered image Layers onto one Canvas and publishes the composed picture as an image Artifact.",
+      summary: "Flattens ordered still-image Layers at explicit rectangular Frames into one PNG Artifact.",
       attributes: [
         { name: "id", kind: "identifier", required: true,
           summary: "Names this composition so its image can be referenced elsewhere in the Source." },
@@ -78,14 +78,15 @@ export const imageComposeMarkupSurfaces = [{
         { name: "image", type: artifactTypes.blob,
           summary: "The composed picture, a PNG." },
       ],
-      example: `<compose:Image id="card" canvas={portrait} background="#00000000">
-  <compose:Layer source={background.image} frame={full} fit="cover"/>
-  <compose:Layer source={product.image} frame={product-frame} fit="contain"/>
+      example: `<compose:Image id="comparison" canvas={comparison-canvas} background="#EEEAE2FF">
+  <compose:Layer source={before.image} frame={before-panel} fit="contain"/>
+  <compose:Layer source={after.image} frame={after-panel} fit="contain"/>
 </compose:Image>`,
       notes: [
         "`background` is written as `#RRGGBBAA` and defaults to `#00000000`.",
         "The composition requires at least one Layer and holds at most 64.",
         "Child order is paint order, and a Frame that extends beyond the Canvas is clipped.",
+        "The operation performs rectangular raster placement only; it does not redesign a scene or create timed layers.",
       ],
     },
   }] as const;

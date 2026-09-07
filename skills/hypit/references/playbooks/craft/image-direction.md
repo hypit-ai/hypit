@@ -164,7 +164,7 @@ Choose a small number of details that carry that relationship: condensation on a
 Korean-style café, a product diagram on a startup whiteboard, a cat tree that is visibly too small for
 an orange-cat CEO, drying flowers on a textured wall, or worn candles inside a real stone chapel.
 Favor details that connect choices across the image. The record-store owner's turntable belongs to
-her work and gives her rightward placement a spatial reason; a handwritten recommendation card
+her work and gives the composition a physical counterweight; a handwritten recommendation card
 expresses how she runs the shop. Make the details that define this person, place, and shot explicit,
 then leave incidental particulars open for the model to resolve within that direction.
 
@@ -221,12 +221,18 @@ should be readable while the shoulders and upper body still establish the person
 intensifying “close” can instead favor a face-dominated crop. Asking to keep the body in frame means
 preserving the intended visible silhouette, not widening the shot until the whole body fits.
 
-Choose left, center, or right placement from the scene and the eventual composition. A slight offset
-can give the image a casually captured quality, but it should have a spatial reason. A small table
-entering the lower-left corner can balance a person on the right; a chair or thighs angled toward
-the left can establish the same relationship through posture. Describe where the person sits in the
-place, rather than merely moving a centered portrait toward an edge. The balancing area remains a
-real part of the setting, with its own objects and texture.
+Choose left, center, or right placement from the intended camera view and eventual composition.
+Off-center placement can be a direct camera decision; it needs no added prop to explain it. When a
+table, chair, partner or product truly belongs in the generated scene, its geometry can also motivate
+the person's posture, gaze or contact and contribute balance inside the frame. Choose those objects
+for the physical scene's own story, while camera composition reserves room needed by the editorial
+layout. Describe the person and setting as one actual camera image.
+
+Give gaze, posture, touch, and other interaction only to people or objects that actually belong in
+the generated image. A later Caption, icon, product card, or other MG can influence framing and the
+subject's placement, but it is not an object in the character's physical world. Keep the person
+engaged with the camera or with the real scene, and direct the generated setting as the complete,
+natural place it should be on its own.
 
 Use seat and leg details when they explain that relationship. A brief direction such as “her thighs
 angle toward the table on her left” can be useful; a catalog of shoes or clothing outside the intended
@@ -237,18 +243,21 @@ Apply that speaking-reference solution when the work has the same need. A side-o
 product action, or full-body shot needs its own gaze, hand occupancy, contact, and composition.
 A specific starting action is useful when the shot is actually about that action.
 
-Compose for the final stack. A Ranking icon on the left can call for a presenter toward the right;
-the same person may remain on that side across every related shot. Keep the face, microphone, and
-useful gesture area clear of the overlay's actual footprint and movement. A lower-left table can
-balance the shot while leaving an upper-left icon area available. Position and scale depend on the
-work, not a fixed left/right alternation or a universal percentage.
+Compose for the final stack. A Ranking icon planned for the left can call for a presenter toward the
+right while the presenter continues speaking to the camera or acting inside the real scene. The same
+person may remain on that side across every related shot. Keep the face, microphone, and useful
+gesture area clear of the overlay's actual footprint and movement. The rest of the source image still
+belongs to its real setting. Position and scale follow this work's visual hierarchy. [Compositing](compositing.md)
+distinguishes the generated scene, camera composition and later editorial layers.
 
-Translate that layout into visible image direction: describe subject placement and usable background
-space. Author the MG separately in its component; mentioning a future icon is not a request to paint
-it into the source image. Carry the intended spatial relationship into the downstream performance.
-If Caption follows a face, leave usable space around the head. If a board covers the lower frame,
-place the performer in the region that remains visible. If a product or screen must be read, give
-it enough scale and a credible relationship to the person.
+Translate that layout into visible image direction: describe subject placement, camera framing, and
+the real setting. Author the MG separately in its component. The image prompt describes the pixels
+this request should produce; downstream editorial content stays in the downstream composition. Carry
+the intended placement into the generated performance without inventing an interaction with that
+later layer. Frame the face at a height compatible with a face-following Caption. If a board covers
+the lower frame, place the performer in the region that remains visible. If a product or screen is
+part of the generated scene and must be read, give it enough scale and a credible relationship to the
+person.
 
 ## Make imagined subjects physically present
 

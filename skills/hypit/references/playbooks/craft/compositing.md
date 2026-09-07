@@ -4,6 +4,21 @@ Read this when several visual contributions share a frame: a persistent board ov
 a live inset, a cutout, a screen inside a device or a designed background carrying media and text.
 [Tracks](../../production/tracks.md) owns the authoring mechanics; this page owns the visible relationship.
 
+## Keep physical, camera and editorial space distinct
+
+One finished frame can relate three kinds of space:
+
+| Space | What it owns |
+| --- | --- |
+| Physical scene | The people, setting and objects actually recorded or generated; gaze, touch and physical interaction belong here. |
+| Camera composition | The viewpoint, framing, subject placement, scale and crop through which that scene is seen. |
+| Editorial composite | The Caption, MG, inset, mask and other Tracks placed over or around the source picture, including their stack order. |
+
+The final design can make these spaces answer one another without merging them. A later overlay can
+influence the camera composition chosen for a source picture, but it does not become an object inside
+that picture's physical scene. The source remains a complete image of its world; the overlay remains
+an authored layer in the final composition.
+
 ## Give the layers room together
 
 Decide which information leads at each beat. A small inset can still dominate through movement,
@@ -11,15 +26,16 @@ contrast or a face; a large quiet field can support the main action. Keep necess
 gestures, product labels and readable text clear of persistent graphics.
 
 Plan composition before generating the base image when a long-lived overlay reserves part of it.
-Describe a natural scene that leaves the useful area free, such as a person to the right with a table
-on the left. Keep the intended graphic out of that scene prompt when it will be authored separately.
-The smallest owning response to a collision may be a new crop, a moved overlay, simpler content or a
-newly framed picture.
+Frame the subject and anything that must remain readable outside the overlay's planned footprint while
+directing the whole image as a complete natural scene. Keep the intended graphic out of that scene
+prompt when it will be authored separately. The smallest owning response to a collision may be a new
+crop, a moved overlay, simpler content or a newly framed picture.
 
 Canvas dimensions, intrinsic media extent, destination Frame and fit/crop are separate facts. Check
 the result of all of them, not just the Frame coordinates. A tall cutout can consume most of a
 vertical Canvas even when its width seems modest. Stack order is explicit inside Tracks, not the
-order they happen to appear in Film.
+order they happen to appear in Film. [Spatial layout](../../production/spatial.md) owns the exact
+Frames and fitting once the intended relationship is known.
 
 ## Distinguish container motion from content motion
 
@@ -49,17 +65,49 @@ Inspect at delivery size. Glare, tiny lettering, crop, moving fingers or caption
 fact the insert was meant to show. A plausible-looking product interaction is not evidence of a real
 product capability by itself.
 
+## Choose an A-roll presentation
+
+The performance carrying a spoken Segment remains A-roll across several common visual
+presentations. Choose the source shape and final Frame from the intended relationship, the reference
+evidence, and the feeling of the shot rather than from a fixed layout recipe.
+
+| Presentation | Useful starting judgment |
+| --- | --- |
+| Full-frame | A `9:16` character-and-scene image and reference-generated performance are the common fit for vertical creator footage. Frame the face, body and real setting for the later composite. |
+| Upper or lower split | A square camera image and performance often cover a `9:8` half of a vertical Canvas cleanly, with a small top/bottom crop. A close, intimate phone view may instead be a vertically generated performance whose other half is covered. |
+| Foreground cutout | A vertical performance often preserves a natural amount of the speaking body. Remove its background, normalize the alpha-bearing result, and use that same prepared performance as the SemanticTake. |
+| Circular picture-in-picture | A square source with the face near its own center is a useful starting point. Give Speech Track a square Frame and rounded clip whose radius is half the side; its semantic, visual and audio outputs remain one assembly. |
+| Audio-only A-roll | The performance contributes semantic time and sound but no picture. Another Track fills the Segment with the intended demonstration, POV, B-roll, Typography or MG. |
+
+For a non-overlapping upper/lower split, equal stacking order can express two peer regions; the
+Frames themselves keep them separate. Other unambiguous stack choices can serve the same picture.
+Use Content Fit to map the source into its destination Frame rather than changing the source's
+semantic role.
+
+When reconstructing an apparent half-screen presenter, the final rectangle alone does not reveal its
+source shape. Inspect camera distance, intimacy, body crop, background coverage and related views. A
+close phone feeling can support the reading that a vertical performance is partly covered; a flatter,
+more distant composition can support a native square view. These are useful priors, while the actual
+visual evidence and intended target composition decide.
+
+The source image and video direction describe a complete physical scene and camera view. Position a
+face high or low, left or right, through framing and meaningful scene relationships when that serves
+the final layout. Editorial graphics remain separate layers and are not objects for the generated
+person to see, touch or point toward. [Image direction](image-direction.md#frame-the-image-for-what-it-will-become)
+owns the camera-image wording; [Spatial layout](../../production/spatial.md) owns Frame, fit and crop.
+
 ## Inset, cutout and flattened composite are distinct choices
 
-A rectangular image or normalized video can be placed directly as a Media Item. A circular inset
-is a geometric crop: use a square Frame and a rounded clip whose radius is half that square's side,
-or an authored clip Path. The camera background remains inside the circle. A cutout instead follows
-the person's silhouette and needs suitable transparency in the source.
+A speaking rectangular inset, circular inset or normalized cutout can be presented directly by
+Speech Track. A circular inset is a geometric crop: use a square Frame and a rounded clip whose
+radius is half that square's side. The camera background remains inside the circle. A cutout instead
+follows the person's silhouette and needs suitable transparency in the source. Speech Track presents
+the Take while it carries the Segment's speaking performance. Media Track can use the same prepared
+media when the work intentionally gives it an independent Window, playback, trim or visual role.
 
 A speaking person in either presentation remains A-roll when their performance carries the main
-Script. A large screen recording can occupy the background while a small presenter above it supplies
-the semantic timeline. Choose placement and stacking for the viewer's attention; preserve the
-performance's semantic timing and route its speech once.
+Script. Choose placement and stacking for the viewer's attention; preserve the performance's
+semantic timing and route its speech once.
 
 When the intended composition needs an isolated silhouette, a still portrait can use
 [image background removal](../../production/image-operations.md#remove-a-background). A moving subject
@@ -89,9 +137,9 @@ require another kind of Take or Track. Choose which role the cutout serves in th
 | A speaking performance establishing semantic time | `cutout-media.media` → SemanticTake → Speech Track; include its visual and audio outputs in Film. |
 | A visual overlay on an existing semantic timeline | `cutout-media.media` → a Media Item's `media` input; select its Window and include the Track's visual output in Film. |
 
-A deterministic image composition can flatten several layers into a reusable still when that frozen
-result is the useful artifact. If a cutout belongs inside it, removal precedes composition. An ordinary
-inset or a source with suitable transparency already has the material it needs.
+When the intended artifact is a fixed flattened arrangement of still images, use
+[Image Compose](../../production/image-operations.md#flatten-a-fixed-still-image-arrangement).
+That page owns its exact role, limits and Source syntax.
 
 Inspect cutout edges against the final background: hair, fingers, translucent edges, holes, halos
 and color spill. Match light and color when the layers should read as one scene; an intentionally
