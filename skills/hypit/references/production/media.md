@@ -114,7 +114,8 @@ time-bearing clip, use StillVideo:
 
 StillVideo produces a video-only BlobArtifact. Multiple `media:Still` children divide the authored
 duration by their optional weights. Normalization then makes that clip usable as prepared moving
-media. Choose this when the still should supply a Take's time or a video reference. Add
+media. Choose this when held pixels must themselves carry media time, such as a wordless Segment or
+provisional visual media paired with estimated semantic timing. Add
 `guide="clip-time"` only when a short-lived diagnostic view benefits from a visible local timecode,
 frame count and progress ruler; the guide is one display treatment and says nothing about later Film
 placement.

@@ -303,7 +303,7 @@ export const mediaPipelineMarkupSurfaces = [
           { name: "source", kind: "reference", required: false, accepts: [artifactTypes.blob],
             summary: "Selects the one authored image held for the full video; write Still children instead for several images." },
           { name: "duration", kind: "literal", required: true,
-            summary: "Sets the video's length in seconds, such as 6 or 2.5s; the author's decision, measured beforehand with hypit measure." },
+            summary: "Sets the video's length in seconds, such as 6 or 2.5s; choose it from the visual passage this held image is meant to carry." },
           { name: "clock", kind: "reference", required: true, accepts: [programSpaceTypes.clock],
             summary: "Selects the frame clock used by the generated MP4." },
           { name: "guide", kind: "literal", required: false, values: ["clip-time"],

@@ -77,8 +77,10 @@ pictures (every picture holds at least one frame, the rest go by weight with lef
 remainders, earlier first), `bind-still-video-source` attaches each picture in authored order, and
 encoding is one `render-still-video` Need. Pictures of different sizes are fitted into the first one's
 frame and letterboxed. Inspection and normalization remain the same explicit steps used by imported
-or generated moving video, so the Blob can serve B-roll through Normalize, or continue into either
-estimated or measured A-roll semantics afterward.
+or generated moving video. The resulting Blob can carry a wordless Segment's media span, supply
+provisional visual media for estimated semantic timing, or satisfy a downstream input that expressly
+needs a video Artifact. Spoken performance and independent narration obtain their measured semantic
+time from their own A-roll media, not from this held picture.
 
 The package also exposes one-picture Run Fragments. `still-video` takes `duration`, `clock`,
 `layout` and `source-0`; `clip-time-still-video` takes `duration`, `clock` and `source`, supplying
