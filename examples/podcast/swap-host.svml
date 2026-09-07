@@ -20,8 +20,8 @@
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
   <import as="recipes" source="./recipes.svs"/>
-  <import as="broll-kit" source="./kits/broll-v1.svs"/>
-  <import as="podcast-kit" source="./kits/podcast-v1.svs"/>
+  <import as="broll-kit" source="@hypit/seedance-kits/broll"/>
+  <import as="podcast-kit" source="@hypit/seedance-kits/podcast"/>
 
   <script id="story">
     <opening-question>

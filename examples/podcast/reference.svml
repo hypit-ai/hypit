@@ -22,8 +22,8 @@
   <import as="recipes" source="./reference.svs"/>
   <import as="image-kit" source="@hypit/gpt-image-kits/phone-ugc-v1"/>
   <import as="opening-kit" source="./kits/split-opening.svs"/>
-  <import as="broll-kit" source="./kits/broll-v1.svs"/>
-  <import as="podcast-kit" source="./kits/podcast-v1.svs"/>
+  <import as="broll-kit" source="@hypit/seedance-kits/broll"/>
+  <import as="podcast-kit" source="@hypit/seedance-kits/podcast"/>
 
   <script id="story">
     <opening-question>

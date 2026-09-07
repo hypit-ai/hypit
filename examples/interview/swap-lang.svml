@@ -22,7 +22,7 @@
   <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
   <import as="recipes" source="./recipes.svs"/>
   <import as="tracking" source="./spanish-tracking.svs"/>
-  <import as="interview-kit" source="./kits/street-interview-v1.svs"/>
+  <import as="interview-kit" source="@hypit/seedance-kits/street-interview"/>
 
   <script id="story">
     <manifest-rule>

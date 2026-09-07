@@ -15,7 +15,7 @@ Every component shown here must be imported by its package specifier before use:
 <import as="mediaop" from="@hypit/media-pipeline@1"/>
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
 ```
 
 ## media:Image
@@ -143,7 +143,7 @@ video and audio references within the model's declared limits.
 ```svml
 <seedance:ReferenceVideo id="alice-take" model="mini"
   prompt={alice-direction}
-  duration={alice-duration.duration}
+  duration="5"
   generate-audio="true">
   <seedance:Reference image={alice-reference}/>
   <seedance:Reference audio={alice-voice}/>
@@ -180,9 +180,10 @@ Runtime Endpoints for these exact Needs; neither changes the author graph.
 generic `text:Render` to produce the prompt, then connect that Text and the real media references to
 the low-level Seedance Surface.
 
-Copy only the selected Kit `.svs` files into the video project's `./kits/` directory. Import the
-vendored project copy so the Kit bytes remain inside the Source Closure; do not reach back into the
-installed Hypit Distribution from project source.
+Import the selected public Kit Source from its installed package. The package manager or active
+Distribution owns its installed version, while the Source Closure follows that explicit package
+import. A production can instead author and import its own project Kit when the shared wording does
+not fit the work.
 
 Read the
 [`@hypit/seedance-kits` guide](https://github.com/hypit-ai/hypit/blob/main/packages/seedance-kits/README.md)
@@ -194,7 +195,7 @@ language for the selected model, keeping dialogue in the language it should be s
 ```svml
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="broll-kit" source="./kits/broll-v1.svs"/>
+<import as="broll-kit" source="@hypit/seedance-kits/broll"/>
 
 <text:Value id="product-story">
   Show the product opening, the primary feature activating, and the finished result in one readable sequence.
@@ -207,7 +208,7 @@ language for the selected model, keeping dialogue in the language it should be s
 
 <seedance:ReferenceVideo id="demo" model="mini"
   prompt={demo-prompt}
-  duration={demo-duration.duration}
+  duration="5"
   resolution="720p"
   aspect-ratio="9:16"
   generate-audio="false">
@@ -244,7 +245,7 @@ camera changes and performance in its authored action, in the exact order they s
 ```svml
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="interview-kit" source="./kits/street-interview-v1.svs"/>
+<import as="interview-kit" source="@hypit/seedance-kits/street-interview"/>
 
 <text:Value id="interview-action">
   Begin with the shared view from @image3 while A asks the question.
@@ -259,7 +260,7 @@ camera changes and performance in its authored action, in the exact order they s
 </text:Render>
 
 <seedance:ReferenceVideo id="interview-take" model="mini"
-  prompt={interview-prompt} duration={interview-duration.duration}
+  prompt={interview-prompt} duration="8"
   resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={interviewer-view}/>
   <seedance:Reference image={guest-view}/>
@@ -282,7 +283,7 @@ module. The result enters Seedance through the same explicit `prompt` edge as an
 ```svml
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
 
 <text:Value id="hook-action">
   Begin with urgent direct eye contact, then let the final admission land more quietly.
@@ -297,7 +298,7 @@ module. The result enters Seedance through the same explicit `prompt` edge as an
 
 <seedance:ReferenceVideo id="hook-take" model="mini"
   prompt={hook-prompt}
-  duration={hook-duration.duration}
+  duration="8"
   resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={presenter-clean}/>
   <seedance:Reference audio={presenter-voice}/>
@@ -318,7 +319,7 @@ generation:
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
 <import as="recipes" source="./recipes.svs"/>
-<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
 
 <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
 <media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>
@@ -337,12 +338,12 @@ generation:
 </text:Render>
 
 <seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt}
-  duration={hook-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={presenter-clean}/>
   <seedance:Reference audio={presenter-voice}/>
 </seedance:ReferenceVideo>
 <seedance:ReferenceVideo id="meeting-take" model="mini" prompt={meeting-prompt}
-  duration={meeting-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={presenter-alt}/>
   <seedance:Reference audio={presenter-voice}/>
 </seedance:ReferenceVideo>

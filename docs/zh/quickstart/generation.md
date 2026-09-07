@@ -12,10 +12,9 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 ```svml
 <import as="media" from="@hypit/media@1"/>
 <import as="mediaop" from="@hypit/media-pipeline@1"/>
-<import as="estimate" from="@hypit/estimate@1"/>
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
 ```
 
 ## media:Image
@@ -129,7 +128,7 @@ Seedance 2.5 复用同样的 Surface，而不是由 Runtime 把别的模型偷�
 ```svml
 <seedance:ReferenceVideo id="alice-take" model="mini"
   prompt={alice-direction}
-  duration={alice-duration.duration}
+  duration="5"
   generate-audio="true">
   <seedance:Reference image={alice-reference}/>
   <seedance:Reference audio={alice-voice}/>
@@ -161,7 +160,8 @@ Endpoint，不会改变作者图。
 `@hypit/seedance-kits` 包含七个纯数据 Text Template。Kit 不是模型包装器：先用通用
 `text:Render` 生成 prompt，再把该 Text 与真实媒体引用显式接入低层 Seedance Surface。
 
-只把项目实际选择的 Kit `.svs` 文件复制进视频项目的 `./kits/` 目录，并导入这份项目内副本，使 Kit 字节保持在 Source Closure 内；项目源码不要反向引用已安装的 Hypit Distribution。
+直接从已安装的包导入选中的公开 Kit Source。包管理器或当前 Distribution 管理实际安装版本，
+Source Closure 沿着这个显式包导入读取内容。如果共享措辞不适合当前作品，也可以在项目里创作并导入自己的 Kit。
 
 创作前阅读
 [`@hypit/seedance-kits` 指南](https://github.com/hypit-ai/hypit/blob/main/packages/seedance-kits/README.md)
@@ -170,7 +170,7 @@ Endpoint，不会改变作者图。
 ```svml
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="broll-kit" source="./kits/broll-v1.svs"/>
+<import as="broll-kit" source="@hypit/seedance-kits/broll"/>
 
 <text:Value id="product-story">
   Show the product opening, the primary feature activating, and the finished result in one readable sequence.
@@ -182,7 +182,7 @@ Endpoint，不会改变作者图。
 </text:Render>
 
 <seedance:ReferenceVideo id="demo" model="mini"
-  prompt={demo-prompt} duration={demo-duration.duration}
+  prompt={demo-prompt} duration="5"
   resolution="720p" aspect-ratio="9:16" generate-audio="false">
   <seedance:Reference image={scene}/>
   <seedance:Reference image={product}/>
@@ -210,7 +210,7 @@ Endpoint，不会改变作者图。
 ```svml
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="interview-kit" source="./kits/street-interview-v1.svs"/>
+<import as="interview-kit" source="@hypit/seedance-kits/street-interview"/>
 
 <text:Value id="interview-action">
   Begin with the shared view from @image3 while A asks the question.
@@ -225,7 +225,7 @@ Endpoint，不会改变作者图。
 </text:Render>
 
 <seedance:ReferenceVideo id="interview-take" model="mini"
-  prompt={interview-prompt} duration={interview-duration.duration}
+  prompt={interview-prompt} duration="8"
   resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={interviewer-view}/>
   <seedance:Reference image={guest-view}/>
@@ -245,7 +245,7 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 ```svml
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
 
 <text:Value id="hook-action">
   Begin with urgent direct eye contact, then let the final admission land more quietly.
@@ -259,7 +259,7 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 </text:Render>
 
 <seedance:ReferenceVideo id="hook-take" model="mini"
-  prompt={hook-prompt} duration={hook-duration.duration}
+  prompt={hook-prompt} duration="8"
   resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={presenter-clean}/>
   <seedance:Reference audio={presenter-voice}/>
@@ -278,7 +278,7 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
 <import as="recipes" source="./recipes.svs"/>
-<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
 
 <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
 <media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>
@@ -297,12 +297,12 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 </text:Render>
 
 <seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt}
-  duration={hook-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={presenter-clean}/>
   <seedance:Reference audio={presenter-voice}/>
 </seedance:ReferenceVideo>
 <seedance:ReferenceVideo id="meeting-take" model="mini" prompt={meeting-prompt}
-  duration={meeting-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={presenter-alt}/>
   <seedance:Reference audio={presenter-voice}/>
 </seedance:ReferenceVideo>

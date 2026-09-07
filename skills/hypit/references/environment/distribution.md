@@ -66,6 +66,10 @@ executable Distribution. After installation or an update, use the selected launc
 `--help`, and `paths`, then continue with
 `profile.md` for the current project's capabilities and Runtime choices.
 
+The installed Distribution is the authority for exact Surface syntax. If a package or Surface named
+by the Skill is absent from `hypit vocabulary`, report the version mismatch and update the selected
+installation instead of inventing a translation.
+
 A contributor checkout can execute its own Distribution after its documented workspace setup, but it
 is a development arrangement, not an assumed location for ordinary production. Use one only when the
 user explicitly supplied or selected that checkout.

@@ -21,7 +21,7 @@
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
   <import as="recipes" source="./column-recipes.svs"/>
-  <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+  <import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
 
   <!-- Cue boundaries remain explicit author intent. The complete Messi and
        Ronaldo Segments are also the two disjoint Column reveal windows. -->
