@@ -83,19 +83,21 @@ Use the performed language supported by the selected package and Endpoint.
 For a layout study before speech exists, estimated timing can preserve the same Script identities.
 [Runs and substitutes](runs.md) explains choosing it and the evidence it supplies.
 
+Audio-only A-roll follows the same path with audio-only media. Voice Clone produces the Segment's
+performed audio from its Script and the person's Voice Reference. Normalize that output with
+`video="none"`, `audio="default"` and `span-authority="audio"`, then align it to the same Segment.
+The resulting SemanticTake publishes semantic time and sound through Speech Track without inventing
+a visual performance; the work's Media, Typography or MG Tracks supply the picture.
+
 ## Wordless passages use media boundaries
 
 An ordinary Script Segment such as `<empty></empty>` can carry a wordless passage. Its media gives
 it a duration, so the resulting SemanticTake has the Segment's start/end anchors and no timed words.
 It enters the same Speech Track assembly as a spoken Take.
 
-[wordless-take.ts](examples/wordless-take.ts) shows the adapter: it calls `materializeSemanticTake`
-from `hypit/speech` with the authored Segment, normalized media, a start at frame zero and an end at
-the media's frame count. A project Surface can expose it with `narrative`, `segment` and `media`
-inputs and one `take` output. [Track authoring](track-authoring.md) explains that package wiring.
-
-The speech estimator allocates spoken Tokens across a span; this wordless adapter uses the actual
-media boundaries directly. Action, music or visual rhythm can determine the chosen passage length.
+Use `estimate:SemanticTake` with that empty Segment and prepared media. With no spoken Tokens to
+locate, it maps the Segment start to frame zero and the Segment end to the media's frame count.
+Action, music or visual rhythm can determine the chosen passage length.
 
 ## Give a still a duration when that is its role
 
@@ -110,9 +112,12 @@ time-bearing clip, use StillVideo:
   video="primary-moving" audio="none" span-authority="video" clock={clock}/>
 ```
 
-StillVideo produces a silent video BlobArtifact. Multiple `media:Still` children divide the authored
+StillVideo produces a video-only BlobArtifact. Multiple `media:Still` children divide the authored
 duration by their optional weights. Normalization then makes that clip usable as prepared moving
-media. Choose this when the still should supply a Take's time or a video reference.
+media. Choose this when the still should supply a Take's time or a video reference. Add
+`guide="clip-time"` only when a short-lived diagnostic view benefits from a visible local timecode,
+frame count and progress ruler; the guide is one display treatment and says nothing about later Film
+placement.
 
 ## Edit bytes at an explicit point in the graph
 

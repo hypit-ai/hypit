@@ -76,6 +76,26 @@ The interview's project emoji strip illustrates this design: one outer Window, o
 items, a placeholder asset and one icon per answer. Each Moment changes its own slot. The Track does
 not decide when the spoken answer occurred; it consumes the already projected event.
 
+## Author an alternative performance assembly
+
+The installed Speech Track expresses one particular and useful assembly: every Segment-local
+SemanticTake keeps its complete span, and Source order forms one continuous prefix-sum
+`SemanticTrack`. Its audio and picture projections follow that same assembly.
+
+A work may intentionally need interruptions, overlapping dialogue, a time-consuming transition or
+another performance-time relationship. That is a legitimate project Track when it makes the edited
+media, semantic positions, visual projection and audio ownership explicit. If its output still is the
+standard `SemanticTrack`, it must satisfy that type's continuous item semantics so existing consumers
+can trust it. A genuinely different timeline meaning belongs to a project-owned type with matching
+projection Surfaces or an explicit adapter to the standard type. Source then selects that component
+normally; neither Core nor the default Speech Track needs a special case.
+
+Design the author Surface from the intended relationship rather than exposing low-level overlap
+arithmetic by default. The implementation can accept prepared performances, edit or combine them at
+its declared boundary, and publish only the outputs it can define unambiguously. Caption, MG, Media
+and Effects receive its declared semantic projections rather than inferring overlap from picture;
+sound routing makes deliberate simultaneous speech visible rather than accidental.
+
 ## Make spatial decisions equally explicit
 
 CanvasSpace identifies the coordinate system. SpatialFrame, anchors, extents and fitting describe

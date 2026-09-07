@@ -65,17 +65,38 @@ forms that component exposes.
 
 ## Semantic Takes supply the media timeline
 
-For the usual spoken production, start with the performance carrying the main Script. That is the
-A-roll and the source of semantic time, even while another picture covers it. In a podcast, the
-participants' turns belong to that shared performance timeline; each visible speaker does not
-create a separate program clock. Independently generated narration can also supply the spine when
-that is the intended form. Music, sound effects and covering footage then follow the assembled work.
+Script Segments have authored order and meaning but no program positions. Each spoken Segment is
+associated with the local media performance carrying it; normalization establishes that media's
+frame envelope, and alignment locates the Segment's words and anchors inside it. That self-contained
+value is a SemanticTake. Speech Track places the Takes in Source order and translates every local
+position by the lengths before it. The resulting SemanticTrack is the program's semantic time.
+
+```text
+Segment A + its local media  → SemanticTake A ┐
+Segment B + its local media  → SemanticTake B ├─ Source order → SemanticTrack
+Segment C + its local media  → SemanticTake C ┘
+```
+
+Speech Track is therefore not placing A-roll on an independently maintained master timeline. The
+ordered Takes create the timeline that Caption, MG, Media, Typography, Audio and Effects project
+through. The official Speech Track uses each complete local media span and joins the next Take at its
+end; it creates no gap or duration-consuming overlap. An edit that trims or retimes a performance
+belongs before its alignment. A visual handoff that does not change the performance media remains an
+ordinary visual composition on the resulting program time.
+
+For the usual spoken production, the performance carrying each Segment is the A-roll. In a podcast,
+the participants' turns belong to that shared performance timeline; each visible speaker does not
+create a separate program clock. Audio-only A-roll can also carry one Segment when that passage is
+independent-narration-led. Music, sound effects and covering footage then follow the
+assembled work. [Voice and performance](../playbooks/craft/voice-and-performance.md) owns the choice
+between visible A-roll, covered visible A-roll and audio-only A-roll.
 
 A-roll can sit above those pictures: a circular presenter inset over a screen recording, or a moving
 cutout in the corner over a product demonstration, still carries the main Script. The SemanticTake
-owns the performance and timing; the visual Track owns size, shape, placement and stacking. Media
-Track can present that same performance without changing its role to B-roll. Include the performance
-audio once and select the intended picture presentation in Film. [Compositing](../playbooks/craft/compositing.md)
+owns the performance and timing. Speech Track publishes its semantic, visual and audio contributions
+together; its visual Frame, fit, clipping, appearance, lifecycle motion and stack order present an
+inset or cutout directly. Include the wanted peer outputs in Film. This is one assembly of the same
+Take, not a Speech Track followed by a Media Track that displays it again. [Compositing](../playbooks/craft/compositing.md)
 explains insets and background removal.
 
 Declare a Clock for normalization, normalize generated or supplied media with explicit stream
@@ -93,11 +114,22 @@ those Takes in source order; global frame positions follow their actual normaliz
 This is an assembly excerpt: the imports, layout, fit Recipe and SemanticTakes must already exist.
 One Take may contain several speakers or generated cuts. Estimates help request a duration; they do
 not supply word timestamps. Covering or reframing its picture leaves the same performance and audio.
-Speech Track's appearance is a fit Recipe; use Media Track for a separate animated presentation.
+Speech Track shares the ordinary visual appearance of a Media Item: fit and crop,
+opacity and filters, clipping, padding, border, shadow, frame paint, lifecycle motion and stack
+order. Sampling children can pan, zoom or rotate the Take's picture inside that Frame over normalized
+Segment progress. Media Track remains the owner of an independent Window, source playback and trim,
+source audio, replacement Sequences and pictures that are not the speaking performance.
 
-Semantic structure also supports a wordless passage. A named empty Script Segment receives its
-actual boundaries from prepared media and remains addressable through the assembled SemanticTrack.
+Semantic structure also supports a wordless passage. It has no speaking A-roll, yet a named empty
+Script Segment receives its actual boundaries from prepared media and remains addressable through
+the assembled SemanticTrack. Semantic identity here means that the work can refer to the passage and
+its boundaries; it does not classify the passage or require spoken words.
 [Media preparation](media.md#wordless-passages-use-media-boundaries) owns that construction.
+
+Every Take contributes its Segment boundaries to the assembled semantic time. When its prepared
+media has no audio stream, Speech Track emits no audio clip for that Take; when it has no visual
+stream, it emits no picture. The available projections continue without manufacturing a missing
+stream.
 
 ## Coverage has a Window and a separate playback choice
 
