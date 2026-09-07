@@ -14,7 +14,7 @@
     "@hypit/artifact": "workspace:*",
     "@hypit/component-kit": "workspace:*",
     "@hypit/elaborator": "workspace:*",
-    "@hypit/media": "workspace:*",
+    "@hypit/media-pipeline": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/run": "workspace:*",

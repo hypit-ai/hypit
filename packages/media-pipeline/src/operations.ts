@@ -123,6 +123,7 @@ export function verifyStillVideoLayout(value: unknown): asserts value is StillVi
   for (const weight of layout.weights) {
     assert(typeof weight === "number" && Number.isFinite(weight) && weight > 0, "StillVideoLayout weights must be positive");
   }
+  assert(layout.guide === undefined || layout.guide === "clip-time", "StillVideoLayout guide is unsupported");
 }
 
 export function sealStillVideoLayout(value: StillVideoLayout): StillVideoLayout {
@@ -170,6 +171,7 @@ export function verifyStillVideoRequest(value: unknown): asserts value is StillV
   "StillVideoRequest.frameRate must be a positive rational");
   assert(Number.isSafeInteger(request.frameCount) && (request.frameCount as number) > 0,
     "StillVideoRequest.frameCount must be positive");
+  assert(request.guide === undefined || request.guide === "clip-time", "StillVideoRequest guide is unsupported");
   const output = object(request.output, "StillVideoRequest.output");
   assert(output.container === "mp4" && output.codec === "h264" && output.pixelFormat === "yuv420p",
     "StillVideoRequest output profile is unsupported");

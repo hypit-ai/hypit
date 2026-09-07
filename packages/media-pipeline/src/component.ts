@@ -230,6 +230,15 @@ export const mediaPipelineComponent = {
       },
     },
     {
+      producer: mediaPipelineProducers.clipTimeLayout,
+      handler: () => ({
+        outputs: {
+          layout: { kind: "inline", value: canonicalize({ weights: [1], guide: "clip-time" }) },
+        },
+        needs: {},
+      }),
+    },
+    {
       producer: mediaPipelineProducers.planStill,
       handler: ({ inputs }) => {
         const duration = inline(inputs.duration!.value, "SpeechDuration") as unknown as SpeechDuration;
@@ -245,6 +254,7 @@ export const mediaPipelineComponent = {
         const request = sealStillVideoRequest({
           frameRate: clock.frameRate,
           frameCount: frames,
+          ...(layout.guide === undefined ? {} : { guide: layout.guide }),
           output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
           segments: planStillVideoSegments(frames, layout.weights),
         });
