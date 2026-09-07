@@ -2,16 +2,21 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { sealSpeechEstimatePolicy } from "@hypit/estimate";
-import { sealSynchronizedMedia } from "@hypit/media";
+import { mediaTypes, sealSynchronizedMedia } from "@hypit/media";
+import { parseStructuredElement } from "@hypit/markup";
+import type { SurfaceResolvedReference } from "@hypit/markup";
 import {
   assertCaptionDocumentIdentity,
   assertNarrativeExcerptIdentity,
   assertNarrativeIdentity,
+  narrativeTypes,
 } from "@hypit/narrative";
 import type { Narrative } from "@hypit/narrative";
+import { materializeSegmentBoundaryTake, speechProducers } from "@hypit/speech";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
+  decodeSemanticTakeEstimateSurface,
   estimateSemanticTakeTiming,
   materializeEstimatedSemanticTake,
 } from "@hypit/semantic-take-estimate";
@@ -150,11 +155,67 @@ test("a wordless Segment receives the prepared media boundaries without an audio
     cueBreaks: [],
   });
 
-  const take = materializeEstimatedSemanticTake(wordless, wordlessExcerpt, media, policy);
+  const take = materializeSegmentBoundaryTake(wordless, wordlessExcerpt, media);
   assert.deepEqual(take.tokens, []);
   assert.deepEqual(take.anchors, [
     { identity: "pause:start", frame: 0 },
     { identity: "pause:end", frame: media.timeline.frameCount },
   ]);
   assert.equal(take.media.audio, undefined);
+});
+
+test("the preview Surface sends an empty Segment straight to boundary materialization", async () => {
+  const wordless: Narrative = {
+    id: "wordless-preview",
+    segments: [{
+      id: "pause",
+      startAnchorId: "pause:start",
+      endAnchorId: "pause:end",
+      tokenStart: 0,
+      tokenEndExclusive: 0,
+    }],
+    tokens: [], turns: [], selections: [], moments: [],
+    semanticIndex: { anchors: [
+      { id: "pause:start", kind: "segment-start", segmentId: "pause" },
+      { id: "pause:end", kind: "segment-end", segmentId: "pause" },
+    ] },
+  };
+  const wordlessExcerpt = {
+    narrativeId: wordless.id,
+    kind: "segment" as const,
+    id: "pause",
+    tokenStart: 0,
+    tokenEndExclusive: 0,
+  };
+  const authored = (
+    path: string,
+    type: SurfaceResolvedReference["type"],
+    value: unknown,
+  ): SurfaceResolvedReference => ({
+    path,
+    ref: { kind: "record", id: path },
+    type,
+    record: { id: path, type, value: { kind: "inline", value: value as never } },
+  });
+  const refs = new Map<string, SurfaceResolvedReference>([
+    ["story", authored("story", narrativeTypes.narrative, wordless)],
+    ["story.segment.pause", authored("story.segment.pause", narrativeTypes.excerpt, wordlessExcerpt)],
+    ["pause-media.media", authored("pause-media.media", mediaTypes.synchronized, media)],
+  ]);
+  const output = await decodeSemanticTakeEstimateSurface({
+    sourceName: "preview.svml",
+    element: parseStructuredElement({ name: "preview.svml", text:
+      '<estimate:SemanticTake id="pause-preview" narrative={story} segment={story.segment.pause} media={pause-media.media}/>',
+    }, 0).element,
+    resolveReference: (path) => refs.get(path),
+    resolveAsset: () => { throw new Error("No assets are resolved by this test."); },
+  });
+
+  assert.equal(output.records.length, 0);
+  assert.equal(output.fragments[0]?.operations[0]?.producer.name, speechProducers.materializeSegmentBoundaries.name);
+  assert.deepEqual(output.components[0]?.inputs, {
+    narrative: { kind: "record", id: "story" },
+    segment: { kind: "record", id: "story.segment.pause" },
+    media: { kind: "record", id: "pause-media.media" },
+  });
 });

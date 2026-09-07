@@ -1,6 +1,6 @@
 import { speechDependency, speechTypes } from "@hypit/speech";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import { narrativeTypes } from "@hypit/narrative";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import { speechEvidenceDependency, speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 import { mediaPipelineManifest, mediaPipelineModuleRef } from "@hypit/media-pipeline";
@@ -24,7 +24,7 @@ export const whisperXMarkupSurfaces = [{
     outputs: [whisperXTypes.language, speechTypes.semanticTake],
     vocabulary: {
       summary:
-        "Measures one normalized Take with WhisperX and aligns one authored Segment into a self-contained SemanticTake.",
+        "Publishes a real-media SemanticTake: WhisperX-aligned words for speech, or exact prepared-media boundaries for an empty Segment.",
       attributes: [
         { name: "id", kind: "identifier", required: true,
           summary: "Names this alignment and prefixes the bindings it publishes." },
@@ -36,10 +36,10 @@ export const whisperXMarkupSurfaces = [{
           summary: "Selects the single authored Segment performed by this Take." },
         { name: "media", kind: "reference", required: true,
           accepts: [mediaTypes.synchronized],
-          summary: "Selects the already normalized SynchronizedMedia measured by WhisperX." },
-        { name: "language", kind: "literal", required: true,
+          summary: "Selects the already normalized SynchronizedMedia represented by this Segment." },
+        { name: "language", kind: "literal", required: false,
           values: ["en", "zh", "es"],
-          summary: "Explicitly selects the English, Chinese or Spanish WhisperX transcription and alignment models." },
+          summary: "For a Segment with Tokens, explicitly selects the English, Chinese or Spanish WhisperX models." },
       ],
       ports: [
         { name: "take", type: speechTypes.semanticTake,
@@ -48,8 +48,9 @@ export const whisperXMarkupSurfaces = [{
       example: `<whisperx:SemanticTake id="opening" narrative={story}
   segment={story.segment.opening} media={opening-media.media} language="en"/>`,
       notes: [
-        "All five attributes are required; the element accepts no children and no text content.",
-        "Language is never detected from Script text or audio; each alignment call states en, zh or es explicitly.",
+        "A Segment with Tokens states all five attributes and sends its prepared audio for alignment.",
+        "An empty Segment omits language and maps its authored start/end Anchors directly to the prepared-media boundaries.",
+        "For speech, language is never detected from Script text or audio; each alignment call states en, zh or es explicitly.",
         "Importing this package is what selects the WhisperX model family; the Runtime separately binds the alignment Need to an Endpoint.",
       ],
     },
@@ -64,6 +65,7 @@ export const whisperXManifest: ModuleManifest = {
     speechDependency,
     speechEvidenceDependency,
     mediaDependency,
+    narrativeDependency,
     { module: mediaPipelineModuleRef },
     { module: speechAlignmentModuleRef },
   ],

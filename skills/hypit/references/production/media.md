@@ -89,15 +89,30 @@ performed audio from its Script and the person's Voice Reference. Normalize that
 The resulting SemanticTake publishes semantic time and sound through Speech Track without inventing
 a visual performance; the work's Media, Typography or MG Tracks supply the picture.
 
-## Wordless passages use media boundaries
+## Empty Segments use their media boundaries
 
-An ordinary Script Segment such as `<empty></empty>` can carry a wordless passage. Its media gives
-it a duration, so the resulting SemanticTake has the Segment's start/end anchors and no timed words.
-It enters the same Speech Track assembly as a spoken Take.
+An ordinary Script Segment such as `<empty></empty>` can carry a passage without words. Its prepared
+media gives it a duration, so the resulting SemanticTake has the Segment's start/end Anchors and no
+timed Tokens. It enters the same Speech Track assembly as a spoken Take.
 
-Use `estimate:SemanticTake` with that empty Segment and prepared media. With no spoken Tokens to
-locate, it maps the Segment start to frame zero and the Segment end to the media's frame count.
-Action, music or visual rhythm can determine the chosen passage length.
+Use the Surface that matches the evidence you have. For real media, the real semantic Surface maps
+the empty Segment directly to its media domain:
+
+```svml
+<whisperx:SemanticTake id="pause" narrative={story}
+  segment={story.segment.pause} media={pause-media.media}/>
+```
+
+For preview media, the prediction Surface performs the same boundary materialization:
+
+```svml
+<estimate:SemanticTake id="pause-preview" narrative={story}
+  segment={story.segment.pause} media={pause-preview-media.media}/>
+```
+
+Neither branch calls WhisperX or predicts word windows because the Segment has no Tokens. Action,
+music or visual rhythm can determine the media duration. Both publish the ordinary SemanticTake
+consumed by Speech Track; there is no separate wordless downstream type.
 
 ## Give a still a duration when that is its role
 

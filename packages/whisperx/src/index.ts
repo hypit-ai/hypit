@@ -1,7 +1,7 @@
 export {
   whisperXComponent,
 } from "./component.js";
-export { whisperXSemanticTakeFragment } from "./fragment.js";
+export { whisperXBoundarySemanticTakeFragment, whisperXSemanticTakeFragment } from "./fragment.js";
 export {
   assertWhisperXEvidenceWav,
   verifyWhisperXAlignmentRequest,
