@@ -15,7 +15,7 @@
      in Studio as in a Build:
 
        <import from="@hypit/stand-in@1" as="stand-in"/>
-       <fragment id="a-card" using="stand-in:video">
+       <fragment id="a-card" using="stand-in:timed-card">
          <input name="canvas" from="vertical"/><input name="duration" value="5"/><input name="clock" from="clock"/>
        </fragment>
        <satisfy output="motion-a.video" candidate="a-card.video"/>
@@ -29,6 +29,7 @@
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="estimate" from="@hypit/semantic-take-estimate@1"/>
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="space" from="@hypit/spatial@1"/>
   <import as="program" from="@hypit/program-space@1"/>
@@ -59,12 +60,17 @@
 
   <pipeline:Normalize id="take-media" source={take.video}
     recipe={recipes.media.aroll} clock={clock}/>
+  <pipeline:Normalize id="take-preview-media" source={take.video} clock={clock}
+    video="primary-moving" audio="none" span-authority="video"/>
   <pipeline:Normalize id="motion-a-media" source={motion-a.video}
     recipe={recipes.media.broll} clock={clock}/>
   <pipeline:Normalize id="motion-b-media" source={motion-b.video}
     recipe={recipes.media.broll} clock={clock}/>
   <whisperx:SemanticTake id="showcase-semantic" narrative={story}
     segment={story.segment.showcase} media={take-media.media} language="en"/>
+  <estimate:SemanticTake id="showcase-estimated" narrative={story}
+    segment={story.segment.showcase} media={take-preview-media.media}
+    language="en" pace="normal" rounding="round"/>
 
   <speech:Track id="speech"
     visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">

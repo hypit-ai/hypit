@@ -73,8 +73,8 @@ const captionCueBreak = object({ afterUnitId: { schema: string } });
 export const captionDocumentSchema: ValueSchema = object({
   narrativeId: { schema: string },
   id: { schema: string },
-  units: { schema: { kind: "array", minItems: 1, items: captionAlignmentUnit } },
-  words: { schema: { kind: "array", minItems: 1, items: captionDisplayWord } },
+  units: { schema: { kind: "array", items: captionAlignmentUnit } },
+  words: { schema: { kind: "array", items: captionDisplayWord } },
   cueBreaks: { schema: { kind: "array", items: captionCueBreak } },
 });
 export const narrativeMomentSchema: ValueSchema = object({

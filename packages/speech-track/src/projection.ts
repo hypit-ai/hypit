@@ -34,7 +34,7 @@ export function projectSpeechTrackVisual(track: SemanticTrack, set: SpeechTrackS
           frameCount: endFrameExclusive - startFrame,
           frame: placement.frame,
           fit: placement.fit,
-          stackingOrder: placement.stackingOrder,
+          ...placement.spec,
         }];
       }),
     ),

@@ -1,4 +1,11 @@
 import type { ContentFit, SpatialFrame } from "@hypit/spatial";
+import type {
+  MediaFramePresentation,
+  MediaLifecycleMotion,
+  MediaPaintLayerSpec,
+  MediaSampleAppearance,
+  MediaSamplingMotion,
+} from "@hypit/media-track";
 
 /** Author-owned policy for one ordered Speech Track. */
 export type SpeechTrackHeader = {
@@ -10,12 +17,17 @@ export type SpeechTrackTake = {
   readonly visual?: {
     readonly frame: SpatialFrame;
     readonly fit: ContentFit;
-    readonly stackingOrder: number;
+    readonly spec: SpeechTrackVisualSpec;
   };
 };
 
 export type SpeechTrackVisualSpec = {
   readonly stackingOrder: number;
+  readonly presentation: MediaFramePresentation;
+  readonly sampleAppearance: MediaSampleAppearance;
+  readonly motion: MediaLifecycleMotion;
+  readonly framePaint?: MediaPaintLayerSpec;
+  readonly samplingMotion?: MediaSamplingMotion;
 };
 
 /**

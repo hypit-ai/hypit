@@ -22,7 +22,6 @@ function segmentTokens(narrative: Narrative, excerpt: NarrativeExcerpt): readonl
     throw new Error(`NarrativeExcerpt ${excerpt.id} does not describe its authored Segment.`);
   }
   const tokens = narrative.tokens.slice(segment.tokenStart, segment.tokenEndExclusive);
-  if (tokens.length === 0) throw new Error(`Estimated SemanticTake Segment ${excerpt.id} contains no speech Tokens.`);
   return tokens;
 }
 
@@ -49,6 +48,21 @@ export function estimateSemanticTakeTiming(
   verifySynchronizedMedia(media);
   assertSpeechEstimatePolicy(policy);
   const tokens = segmentTokens(narrative, excerpt);
+  const segment = narrative.segments.find((candidate) => candidate.id === excerpt.id)!;
+  if (tokens.length === 0) {
+    const frameByAnchor = new Map<string, number>([
+      [segment.startAnchorId, 0],
+      [segment.endAnchorId, media.timeline.frameCount],
+    ]);
+    const anchors = narrative.semanticIndex.anchors
+      .filter((anchor) => anchor.segmentId === excerpt.id)
+      .map((anchor) => {
+        const frame = frameByAnchor.get(anchor.id);
+        if (frame === undefined) throw new Error(`Estimated timing cannot locate authored Anchor ${anchor.id}.`);
+        return { identity: anchor.id, frame };
+      });
+    return { tokens: [], anchors };
+  }
   const rate = media.timeline.frameRate.numerator / media.timeline.frameRate.denominator;
   const edgeGap = Math.max(1, Math.round(EDGE_GAP_SECONDS * rate));
   const wordGap = Math.max(1, Math.round(WORD_GAP_SECONDS * rate));
@@ -79,7 +93,6 @@ export function estimateSemanticTakeTiming(
     throw new Error("Estimated SemanticTake timing allocation did not close over its frame domain.");
   }
 
-  const segment = narrative.segments.find((candidate) => candidate.id === excerpt.id)!;
   const frameByAnchor = new Map<string, number>([
     [segment.startAnchorId, 0],
     [segment.endAnchorId, media.timeline.frameCount],

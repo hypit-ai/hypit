@@ -3,6 +3,12 @@ import type { SemanticTake } from "@hypit/speech";
 import { sealSemanticTrack } from "@hypit/semantic-track";
 import type { SemanticTrack } from "@hypit/semantic-track";
 import { canonicalize } from "@hypit/protocol";
+import {
+  assertMediaFramePresentation,
+  assertMediaLifecycleMotion,
+  assertMediaPaintLayerSpec,
+  sealMediaSampleLayerSpec,
+} from "@hypit/media-track";
 import { assertContentFit, assertSpatialFrame } from "@hypit/spatial";
 import type { ContentFit, SpatialFrame } from "@hypit/spatial";
 
@@ -47,8 +53,7 @@ function assertTake(take: SpeechTrackTake): void {
   if (take.visual !== undefined) {
     assertSpatialFrame(take.visual.frame);
     assertContentFit(take.visual.fit);
-    assert(Number.isSafeInteger(take.visual.stackingOrder),
-      `Speech Segment ${segment.segmentId} visual stacking order is invalid`);
+    assertSpeechTrackVisualSpec(take.visual.spec);
   }
 }
 
@@ -60,6 +65,14 @@ export function sealSpeechTrackVisualSpec(value: SpeechTrackVisualSpec): SpeechT
 
 export function assertSpeechTrackVisualSpec(value: SpeechTrackVisualSpec): void {
   assert(Number.isSafeInteger(value.stackingOrder), "SpeechTrackVisualSpec stacking order is invalid");
+  assertMediaFramePresentation(value.presentation, "SpeechTrackVisualSpec.presentation");
+  assertMediaLifecycleMotion(value.motion, 1, "SpeechTrackVisualSpec.motion");
+  sealMediaSampleLayerSpec({
+    id: "speech-visual",
+    appearance: value.sampleAppearance,
+    ...(value.samplingMotion === undefined ? {} : { samplingMotion: value.samplingMotion }),
+  });
+  if (value.framePaint !== undefined) assertMediaPaintLayerSpec(value.framePaint);
 }
 
 export function assertSpeechTrackSet(value: SpeechTrackSet): void {
@@ -107,7 +120,7 @@ export function appendSpeechTrackTake(
     ...(semantic.media.visual === undefined ? {} : { visual: {
       frame: structuredClone(frame),
       fit: structuredClone(fit),
-      stackingOrder: visualSpec.stackingOrder,
+      spec: structuredClone(visualSpec),
     } }),
   } satisfies SpeechTrackTake;
   return appendTake(set, take);

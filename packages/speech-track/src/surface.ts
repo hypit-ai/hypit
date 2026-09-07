@@ -8,6 +8,15 @@ import {
 } from "@hypit/markup";
 import { sameType } from "@hypit/protocol";
 import { speechTypes } from "@hypit/speech";
+import {
+  decodeMediaFramePaint,
+  decodeMediaMotion,
+  decodeMediaPresentation,
+  decodeMediaSamplingKeyframe,
+  decodeMediaSampleAppearance,
+  mediaAppearanceKeys,
+} from "@hypit/media-track";
+import type { MediaSamplingMotion } from "@hypit/media-track";
 import type { SvsRecipe } from "@hypit/svs";
 import { svsRecipeType } from "@hypit/svs";
 
@@ -57,15 +66,22 @@ function resolve(
   return value;
 }
 
-function recipe(value: SurfaceResolvedReference, label: string): SvsRecipe {
+const visualAppearancePropertyNames = [
+  ...contentFitPropertyNames,
+  ...mediaAppearanceKeys.sample.filter((name) => name !== "playback" && name !== "trim-start" && name !== "trim-end"),
+  ...mediaAppearanceKeys.frame.filter((name) => name !== "stack-order"),
+] as readonly string[];
+const visualMotionPropertyNames = mediaAppearanceKeys.motion.filter(
+  (name) => name !== "enter-origin" && name !== "exit-origin",
+);
+
+function recipe(value: SurfaceResolvedReference, label: string, allowed: readonly string[]): SvsRecipe {
   if (!sameType(value.type, svsRecipeType) || value.record?.value.kind !== "inline") {
     throw new Error(`${label} must be an authored SVS Recipe`);
   }
   const result = value.record.value.value as unknown as SvsRecipe;
-  const unknown = Object.keys(result.properties).filter((name) => !contentFitPropertyNames.includes(
-    name as (typeof contentFitPropertyNames)[number],
-  ));
-  if (unknown.length > 0) throw new Error(`${label} only accepts spatial fit properties; found ${unknown.join(", ")}`);
+  const unknown = Object.keys(result.properties).filter((name) => !allowed.includes(name));
+  if (unknown.length > 0) throw new Error(`${label} has unsupported properties ${unknown.join(", ")}`);
   return result;
 }
 
@@ -83,16 +99,37 @@ function takes(element: StructuredElement): StructuredElement[] {
   return result;
 }
 
+function samplingMotion(element: StructuredElement): MediaSamplingMotion | undefined {
+  const keyframes = element.children.flatMap((child) => {
+    if (child.kind === "text") {
+      if (child.value.trim()) throw new Error(`${element.name} accepts only Sampling children`);
+      return [];
+    }
+    if (localName(child.name) !== "Sampling") {
+      throw new Error(`${element.name} accepts only Sampling children`);
+    }
+    return [decodeMediaSamplingKeyframe(child)];
+  });
+  return keyframes.length === 0 ? undefined : { keyframes };
+}
+
 export const decodeSpeechTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  allowedAttributes(element, ["id", "visual-frame", "visual-appearance", "visual-z"], []);
+  allowedAttributes(element, ["id", "visual-frame", "visual-appearance", "visual-z"], ["visual-motion"]);
   const id = stringAttribute(element, "id");
   const baseFrame = resolve(element, "visual-frame", spatialTypes.frame, resolveReference);
   const baseAppearanceReference = resolve(element, "visual-appearance", svsRecipeType, resolveReference);
   const baseAppearance = recipe(
     baseAppearanceReference,
     `${element.name}.visual-appearance`,
+    visualAppearancePropertyNames,
   );
   const baseZ = integerAttribute(element, "visual-z");
+  const baseMotionReference = element.attributes["visual-motion"] === undefined
+    ? undefined
+    : resolve(element, "visual-motion", svsRecipeType, resolveReference);
+  const baseMotion = baseMotionReference === undefined
+    ? undefined
+    : recipe(baseMotionReference, `${element.name}.visual-motion`, visualMotionPropertyNames);
   const frameInputNames = new Map<string, string>();
   const frameInputName = (value: SurfaceResolvedReference, fallback: string): string => {
     const key = JSON.stringify(value.ref);
@@ -109,15 +146,16 @@ export const decodeSpeechTrackSurface: StructuredSurfaceHandler = ({ element, re
     fitInputNames.set(key, fallback);
     return fallback;
   };
-  const visualSpecInputNames = new Map<number, string>();
-  const visualSpecInputName = (stackingOrder: number, fallback: string): string => {
-    const previous = visualSpecInputNames.get(stackingOrder);
+  const visualSpecInputNames = new Map<string, string>();
+  const visualSpecInputName = (spec: ReturnType<typeof sealSpeechTrackVisualSpec>, fallback: string): string => {
+    const key = JSON.stringify(spec);
+    const previous = visualSpecInputNames.get(key);
     if (previous !== undefined) return previous;
-    visualSpecInputNames.set(stackingOrder, fallback);
+    visualSpecInputNames.set(key, fallback);
     return fallback;
   };
   const declaredTakes = takes(element).map((take, index) => {
-    allowedAttributes(take, ["source"], ["frame", "appearance", "z"]);
+    allowedAttributes(take, ["source"], ["frame", "appearance", "motion", "z"]);
     const suffix = String(index + 1).padStart(4, "0");
     const effectiveFrame = take.attributes.frame === undefined
       ? baseFrame
@@ -127,15 +165,31 @@ export const decodeSpeechTrackSurface: StructuredSurfaceHandler = ({ element, re
       : resolve(take, "appearance", svsRecipeType, resolveReference);
     const effectiveAppearance = take.attributes.appearance === undefined
       ? baseAppearance
-      : recipe(effectiveAppearanceReference, `${take.name}.appearance`);
+      : recipe(effectiveAppearanceReference, `${take.name}.appearance`, visualAppearancePropertyNames);
     const effectiveZ = take.attributes.z === undefined ? baseZ : integerAttribute(take, "z");
+    const effectiveMotionReference = take.attributes.motion === undefined
+      ? baseMotionReference
+      : resolve(take, "motion", svsRecipeType, resolveReference);
+    const effectiveMotion = take.attributes.motion === undefined
+      ? baseMotion
+      : recipe(effectiveMotionReference!, `${take.name}.motion`, visualMotionPropertyNames);
+    const effectiveSamplingMotion = samplingMotion(take);
+    const framePaint = decodeMediaFramePaint(effectiveAppearance, `${id}.take.${suffix}.frame-paint`);
+    const visualSpec = sealSpeechTrackVisualSpec({
+      stackingOrder: effectiveZ,
+      presentation: decodeMediaPresentation(effectiveAppearance),
+      sampleAppearance: decodeMediaSampleAppearance(effectiveAppearance),
+      motion: decodeMediaMotion(effectiveMotion),
+      ...(framePaint === undefined ? {} : { framePaint }),
+      ...(effectiveSamplingMotion === undefined ? {} : { samplingMotion: effectiveSamplingMotion }),
+    });
     const visual = {
       frameName: frameInputName(effectiveFrame, take.attributes.frame === undefined ? "visual-base-frame" : `take-${suffix}-frame`),
       fitName: fitInputName(effectiveAppearanceReference, take.attributes.appearance === undefined ? "visual-base-fit" : `take-${suffix}-fit`),
-      visualSpecName: visualSpecInputName(effectiveZ, take.attributes.z === undefined ? "visual-base-spec" : `take-${suffix}-visual-spec`),
+      visualSpecName: visualSpecInputName(visualSpec, `take-${suffix}-visual-spec`),
       frame: effectiveFrame,
       appearance: effectiveAppearance,
-      stackingOrder: effectiveZ,
+      spec: visualSpec,
     };
     return {
       suffix,
@@ -179,10 +233,7 @@ export const decodeSpeechTrackSurface: StructuredSurfaceHandler = ({ element, re
       records.push({
         id: `${id}.${take.visual.visualSpecName}`,
         type: speechTrackTypes.visualSpec,
-        value: { kind: "inline" as const, value: sealSpeechTrackVisualSpec({
-
-          stackingOrder: take.visual.stackingOrder,
-        }) },
+        value: { kind: "inline" as const, value: take.visual.spec },
         range: take.range,
       });
     }

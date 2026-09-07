@@ -3,6 +3,11 @@ import test from "node:test";
 
 import { sealSpeechEstimatePolicy } from "@hypit/estimate";
 import { sealSynchronizedMedia } from "@hypit/media";
+import {
+  assertCaptionDocumentIdentity,
+  assertNarrativeExcerptIdentity,
+  assertNarrativeIdentity,
+} from "@hypit/narrative";
 import type { Narrative } from "@hypit/narrative";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 
@@ -105,4 +110,51 @@ test("an implausibly short frame domain is refused instead of squeezing words to
     () => estimateSemanticTakeTiming(narrative, excerpt, short, policy),
     /keep every Token visible and separated/u,
   );
+});
+
+test("a wordless Segment receives the prepared media boundaries without an audio substitute", () => {
+  const wordless: Narrative = {
+    id: "wordless",
+    segments: [{
+      id: "pause",
+      startAnchorId: "pause:start",
+      endAnchorId: "pause:end",
+      tokenStart: 0,
+      tokenEndExclusive: 0,
+    }],
+    tokens: [],
+    turns: [],
+    selections: [],
+    moments: [],
+    semanticIndex: { anchors: [
+      { id: "program:start", kind: "program-start" },
+      { id: "pause:start", kind: "segment-start", segmentId: "pause" },
+      { id: "pause:end", kind: "segment-end", segmentId: "pause" },
+      { id: "program:end", kind: "program-end" },
+    ] },
+  };
+  const wordlessExcerpt = {
+    narrativeId: wordless.id,
+    kind: "segment" as const,
+    id: "pause",
+    tokenStart: 0,
+    tokenEndExclusive: 0,
+  };
+  assertNarrativeIdentity(wordless);
+  assertNarrativeExcerptIdentity(wordlessExcerpt);
+  assertCaptionDocumentIdentity({
+    narrativeId: wordless.id,
+    id: "wordless.caption",
+    units: [],
+    words: [],
+    cueBreaks: [],
+  });
+
+  const take = materializeEstimatedSemanticTake(wordless, wordlessExcerpt, media, policy);
+  assert.deepEqual(take.tokens, []);
+  assert.deepEqual(take.anchors, [
+    { identity: "pause:start", frame: 0 },
+    { identity: "pause:end", frame: media.timeline.frameCount },
+  ]);
+  assert.equal(take.media.audio, undefined);
 });

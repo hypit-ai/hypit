@@ -94,7 +94,7 @@ const paint: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "linear-gradient" } }, angleDeg: { schema: number }, stops: { schema: stops } }),
   object({ kind: { schema: { kind: "literal", value: "radial-gradient" } }, center: { schema: object({ x: { schema: unsigned }, y: { schema: unsigned } }) }, stops: { schema: stops } }),
 ] };
-const appearance = object({
+export const mediaSampleAppearanceSchema: ValueSchema = object({
   opacity: { schema: unsigned },
   filter: { schema: object({
     blurPx: { schema: unsigned }, brightness: { schema: unsigned }, contrast: { schema: unsigned }, saturation: { schema: unsigned },
@@ -105,7 +105,9 @@ const samplingKeyframe = object({
   offsetX: { schema: number }, offsetY: { schema: number }, rotationDeg: { schema: number },
   easing: { schema: { kind: "string", enum: ["linear", "ease-in", "ease-out", "ease-in-out"] }, optional: true },
 });
-const samplingMotion = object({ keyframes: { schema: { kind: "array", minItems: 2, items: samplingKeyframe } } });
+export const mediaSamplingMotionSchema: ValueSchema = object({
+  keyframes: { schema: { kind: "array", minItems: 2, items: samplingKeyframe } },
+});
 export const mediaPaintLayerSpecSchema: ValueSchema = object({
 
   id: { schema: string }, paint: { schema: paint }, opacity: { schema: unsigned },
@@ -113,7 +115,7 @@ export const mediaPaintLayerSpecSchema: ValueSchema = object({
 export const mediaSampleLayerSpecSchema: ValueSchema = object({
 
   id: { schema: string }, trim: { schema: trim, optional: true }, occupancy: { schema: occupancy, optional: true },
-  appearance: { schema: appearance }, samplingMotion: { schema: samplingMotion, optional: true },
+  appearance: { schema: mediaSampleAppearanceSchema }, samplingMotion: { schema: mediaSamplingMotionSchema, optional: true },
 });
 const audioSource = object({ artifact: { schema: blob }, sampleFrames: { schema: positiveInteger } });
 const visualSource: ValueSchema = { kind: "oneOf", variants: [
@@ -128,7 +130,7 @@ const paintLayer = object({ id: { schema: string }, kind: { schema: { kind: "lit
 const sampleLayer = object({
   id: { schema: string }, kind: { schema: { kind: "literal", value: "sample" } }, source: { schema: visualSource },
   fit: { schema: contentFitSchema }, trim: { schema: trim, optional: true }, occupancy: { schema: occupancy, optional: true },
-  appearance: { schema: appearance }, samplingMotion: { schema: samplingMotion, optional: true },
+  appearance: { schema: mediaSampleAppearanceSchema }, samplingMotion: { schema: mediaSamplingMotionSchema, optional: true },
 });
 const layer = { kind: "oneOf", variants: [paintLayer, sampleLayer] } as const;
 export const mediaLayerSetSchema: ValueSchema = object({

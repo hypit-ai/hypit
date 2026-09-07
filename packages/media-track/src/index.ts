@@ -4,6 +4,7 @@ export {
   decodeMediaFramePaint,
   decodeMediaMotion,
   decodeMediaPresentation,
+  decodeMediaSampleAppearance,
   decodeMediaSampleSpec,
   mediaAppearanceKeys,
 } from "./author.js";
@@ -23,7 +24,7 @@ export {
   sealMediaSampleLayerSpec,
 } from "./layers.js";
 export { lowerMediaItemElements } from "./lower.js";
-export { mediaItemSpecSchema, mediaFramePresentationSchema, mediaLifecycleMotionSchema, mediaLayerSetSchema, mediaHandoffSpecSchema, mediaPaintLayerSpecSchema, mediaSampleLayerSpecSchema, mediaSoundSetSchema, mediaSoundSpecSchema, mediaSequenceMemberSetSchema, mediaSequenceMemberSpecSchema, mediaSequenceSpecSchema, mediaTrackDependency, mediaTrackHeaderSchema, mediaTrackManifest, mediaTrackMarkupSurfaces, mediaTrackModuleRef, mediaTrackProducers, mediaTrackProgramSchema, mediaTrackSetSchema, mediaTrackTypes } from "./manifest.js";
+export { mediaItemSpecSchema, mediaFramePresentationSchema, mediaLifecycleMotionSchema, mediaLayerSetSchema, mediaHandoffSpecSchema, mediaPaintLayerSpecSchema, mediaSampleAppearanceSchema, mediaSampleLayerSpecSchema, mediaSamplingMotionSchema, mediaSoundSetSchema, mediaSoundSpecSchema, mediaSequenceMemberSetSchema, mediaSequenceMemberSpecSchema, mediaSequenceSpecSchema, mediaTrackDependency, mediaTrackHeaderSchema, mediaTrackManifest, mediaTrackMarkupSurfaces, mediaTrackModuleRef, mediaTrackProducers, mediaTrackProgramSchema, mediaTrackSetSchema, mediaTrackTypes } from "./manifest.js";
 export {
   assertMediaEdgeMotion,
   assertMediaLifecycleMotion,
@@ -47,7 +48,7 @@ export { appendMediaItem, appendMediaSequence, bindMediaItemClipPath, bindMediaS
 export { resolveVisualSampling } from "./sampling.js";
 export { lowerRestrictedSpeechVisualPresents } from "./restricted-speech.js";
 export type { RestrictedSpeechVisualClip } from "./restricted-speech.js";
-export { decodeMediaTrackSurface } from "./surface.js";
+export { decodeMediaSamplingKeyframe, decodeMediaTrackSurface } from "./surface.js";
 export {
   appendMediaSequenceMember,
   assertMediaHandoffSpec,
