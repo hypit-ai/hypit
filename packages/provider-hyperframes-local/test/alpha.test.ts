@@ -44,7 +44,12 @@ test("transparent normalized media composites through both SemanticTake/Speech T
     const fit = { sizing: "contain" as const, framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.5, y: 0.5 },
       offsetPx: { x: 0, y: 0 }, constraint: "bounded" as const };
     const frame = { xPx: 0, yPx: 0, widthPx: 96, heightPx: 64 };
-    const set = appendSpeechTrackTake(createSpeechTrackSet(), take, frame, fit, sealSpeechTrackVisualSpec({ stackingOrder: 1 }));
+    const set = appendSpeechTrackTake(createSpeechTrackSet(), take, frame, fit, sealSpeechTrackVisualSpec({
+      stackingOrder: 1,
+      presentation: { clip: { kind: "frame" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 }, shadows: [] },
+      sampleAppearance: { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } },
+      motion: { sustain: [] },
+    }));
     const semantic = assembleSpeechTrack(sealSpeechTrackHeader({ id: "speech" }), set);
     const speechVisual = projectSpeechTrackVisual(semantic, set);
     const space = projectSemanticProgramSpace(semantic);

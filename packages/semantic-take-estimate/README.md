@@ -71,5 +71,5 @@ the `opening-estimated` declaration above, a Run can use:
 
 This selects estimated timing for the measured Take while retaining the required prepared-media
 dependency and any Run choice for its source bytes. The estimate allocates the media's complete
-frame count; it neither generates nor normalizes that media. It requires spoken Tokens. A wordless
-Segment uses actual media boundaries directly when materializing its SemanticTake.
+frame count; it neither generates nor normalizes that media. For a wordless Segment it maps the
+Segment's two boundary Anchors directly to the media's first and final frame.

@@ -1,11 +1,10 @@
 # `@hypit/media-track`
 
 Place images, prepared video or compositable surfaces over the semantic timeline. B-roll is a common
-use: the picture can illustrate a phrase while the A-roll's speech continues. The same Track can
-present a speaking A-roll as an inset or a prepared transparent cutout; its SemanticTake continues
-to establish semantic time. The choice of visual component does not determine the performance's role.
-Items have independent Windows; a Sequence owns one visual slot whose Members replace each other
-through Handoffs.
+use: the picture can illustrate a phrase while the A-roll's speech continues. A prepared speaking
+A-roll is normally presented directly by Speech Track, including an inset or transparent cutout, so
+its semantic, visual and audio outputs keep one owner. Media Items own independently timed pictures;
+a Sequence owns one visual slot whose Members replace each other through Handoffs.
 
 The Markup Track takes `semantic` and `canvas`. Its Surface projects authored Selections, Moments,
 Segments or clock expressions into Windows and Instants. The component consumes those projected

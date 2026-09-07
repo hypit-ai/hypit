@@ -18,7 +18,7 @@ export const semanticTakeEstimateMarkupSurfaces = [{
   outputs: [estimateTypes.speechPolicy, speechTypes.semanticTake],
   vocabulary: {
     summary:
-      "Projects syllable-weighted estimated word windows onto one already normalized video and publishes a SemanticTake.",
+      "Projects estimated word windows or wordless Segment boundaries onto normalized media and publishes a SemanticTake.",
     attributes: [
       { name: "id", kind: "identifier", required: true,
         summary: "Names this estimated alignment and the SemanticTake it publishes." },
@@ -57,7 +57,7 @@ export const semanticTakeEstimateMarkupSurfaces = [{
     notes: [
       "The policy is the element's own: write it inline or name an SVS Recipe with policy; never both.",
       "This package does not measure audio and never claims WhisperX or other acoustic evidence.",
-      "Every Token uses its original Script identity. Only its local frame window is estimated.",
+      "Every spoken Token uses its original Script identity. A wordless Segment keeps its two authored boundary Anchors.",
       "Pronunciation-unit weights determine relative word lengths; adjacent words and both media edges retain non-zero frame gaps.",
       "The result has the same SemanticTake Type as a measured alignment, so Run chooses between ordinary candidates without a preview-specific downstream protocol.",
     ],

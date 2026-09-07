@@ -16,6 +16,7 @@ import type {
   MediaPaint,
   MediaPaintLayerSpec,
   MediaSampleLayerSpec,
+  MediaSampleAppearance,
   MediaSequenceSpec,
   MediaVisualOccupancy,
   MediaVisualTrim,
@@ -175,15 +176,20 @@ export function decodeMediaSampleSpec(
 
     id,
     ...(timed ? { occupancy: occupancy(recipe), ...(sourceTrim === undefined ? {} : { trim: sourceTrim }) } : {}),
-    appearance: {
-      opacity: number(recipe, "opacity", 1),
-      filter: {
-        blurPx: number(recipe, "blur", 0), brightness: number(recipe, "brightness", 1),
-        contrast: number(recipe, "contrast", 1), saturation: number(recipe, "saturation", 1),
-      },
-    },
+    appearance: decodeMediaSampleAppearance(recipe),
     ...(samplingMotion === undefined ? {} : { samplingMotion }),
   });
+}
+
+/** Decode visual-only sample styling without choosing playback or source trim. */
+export function decodeMediaSampleAppearance(recipe: SvsRecipe): MediaSampleAppearance {
+  return {
+    opacity: number(recipe, "opacity", 1),
+    filter: {
+      blurPx: number(recipe, "blur", 0), brightness: number(recipe, "brightness", 1),
+      contrast: number(recipe, "contrast", 1), saturation: number(recipe, "saturation", 1),
+    },
+  };
 }
 
 function edge(recipe: SvsRecipe, prefix: "enter" | "exit"): MediaLifecycleMotion["enter"] {

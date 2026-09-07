@@ -2,6 +2,13 @@ import { readFile } from "node:fs/promises";
 
 import { semanticTakeSchema, speechDependency, speechTypes } from "@hypit/speech";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
+import {
+  mediaFramePresentationSchema,
+  mediaLifecycleMotionSchema,
+  mediaPaintLayerSpecSchema,
+  mediaSampleAppearanceSchema,
+  mediaSamplingMotionSchema,
+} from "@hypit/media-track";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import {
@@ -41,19 +48,24 @@ export const speechTrackHeaderSchema: ValueSchema = object({
   id: { schema: string },
 });
 
+export const speechTrackVisualSpecSchema: ValueSchema = object({
+  stackingOrder: { schema: { kind: "number", integer: true } },
+  presentation: { schema: mediaFramePresentationSchema },
+  sampleAppearance: { schema: mediaSampleAppearanceSchema },
+  motion: { schema: mediaLifecycleMotionSchema },
+  framePaint: { schema: mediaPaintLayerSpecSchema, optional: true },
+  samplingMotion: { schema: mediaSamplingMotionSchema, optional: true },
+});
+
 export const speechTrackSetSchema: ValueSchema = object({
   takes: { schema: { kind: "array", items: object({
     semantic: { schema: semanticTakeSchema },
     visual: { schema: object({
       frame: { schema: spatialFrameSchema },
       fit: { schema: contentFitSchema },
-      stackingOrder: { schema: { kind: "number", integer: true } },
+      spec: { schema: speechTrackVisualSpecSchema },
     }), optional: true },
   }) } },
-});
-
-export const speechTrackVisualSpecSchema: ValueSchema = object({
-  stackingOrder: { schema: { kind: "number", integer: true } },
 });
 
 const visualRecipeProperties = [
@@ -74,6 +86,59 @@ const visualRecipeProperties = [
     summary: "Shifts the placed picture vertically in pixels once the two anchor points meet." },
   { name: "fit-constraint", required: false, fallback: "bounded", values: ["bounded", "free"],
     summary: "Decides whether the placed picture is pulled back until it covers as much of the Frame as its size allows, or left exactly where the anchors and offsets put it." },
+  { name: "opacity", required: false, fallback: "1",
+    summary: "Sets how opaque the Take's picture is drawn." },
+  { name: "blur", required: false, fallback: "0",
+    summary: "Blurs the Take's picture by a pixel radius." },
+  { name: "brightness", required: false, fallback: "1",
+    summary: "Scales the brightness of the Take's picture." },
+  { name: "contrast", required: false, fallback: "1",
+    summary: "Scales the contrast of the Take's picture." },
+  { name: "saturation", required: false, fallback: "1",
+    summary: "Scales the saturation of the Take's picture." },
+  { name: "clip", required: false, values: ["none", "frame", "rounded"], fallback: "frame",
+    summary: "Clips the Take's picture to its Frame, leaves overflow visible, or rounds the Frame." },
+  { name: "radius", required: false, fallback: "0",
+    summary: "Sets the rounded clip radius in pixels; half the side of a square Frame makes a circle." },
+  { name: "padding", required: false, fallback: "0",
+    summary: "Insets the Take's picture from its Frame edges using one, two or four pixel values." },
+  { name: "border-width", required: false, fallback: "0",
+    summary: "Draws a border of this pixel width around the Frame." },
+  { name: "border-style", required: false, values: ["solid", "dashed", "dotted"], fallback: "solid",
+    summary: "Chooses how a non-zero border is stroked." },
+  { name: "border-color", required: false,
+    summary: "Sets the color of a non-zero border." },
+  { name: "shadows", required: false, fallback: "none",
+    summary: "Casts Frame shadows written as `x y blur spread color` entries separated by semicolons." },
+  { name: "frame-paint", required: false, fallback: "transparent",
+    summary: "Fills the Frame behind the Take with a solid or gradient paint." },
+] as const;
+
+const visualMotionRecipeProperties = [
+  { name: "enter", required: false, fallback: "none",
+    values: ["none", "fade", "slide", "scale", "pop", "bounce", "blur-reveal", "wipe", "flip", "spin"],
+    summary: "Chooses the visual entrance applied inside this Segment." },
+  { name: "enter-frames", required: false,
+    summary: "Sets the entrance length in frames when an entrance is selected." },
+  { name: "enter-easing", required: false, values: ["linear", "ease-in", "ease-out", "ease-in-out"], fallback: "ease-in-out",
+    summary: "Shapes the entrance's acceleration." },
+  { name: "enter-direction", required: false, values: ["left", "right", "up", "down"],
+    summary: "Sets the direction of a directional entrance." },
+  { name: "enter-amount", required: false,
+    summary: "Sets how far the entrance displaces the visual." },
+  { name: "sustain", required: false, fallback: "none",
+    summary: "Applies continuous visual motion over the Segment as `operator amount cycles [direction]`." },
+  { name: "exit", required: false, fallback: "none",
+    values: ["none", "fade", "slide", "scale", "pop", "bounce", "blur-reveal", "wipe", "flip", "spin"],
+    summary: "Chooses the visual exit applied inside this Segment." },
+  { name: "exit-frames", required: false,
+    summary: "Sets the exit length in frames when an exit is selected." },
+  { name: "exit-easing", required: false, values: ["linear", "ease-in", "ease-out", "ease-in-out"], fallback: "ease-in-out",
+    summary: "Shapes the exit's acceleration." },
+  { name: "exit-direction", required: false, values: ["left", "right", "up", "down"],
+    summary: "Sets the direction of a directional exit." },
+  { name: "exit-amount", required: false,
+    summary: "Sets how far the exit displaces the visual." },
 ] as const;
 
 export const speechTrackMarkupSurfaces = [{
@@ -97,10 +162,13 @@ export const speechTrackMarkupSurfaces = [{
           recipe: visualRecipeProperties },
         { name: "visual-z", kind: "literal", required: true,
           summary: "Sets the stacking order every visual Take is composited at unless the Take names its own." },
+        { name: "visual-motion", kind: "reference", required: false, accepts: [svsRecipeType],
+          summary: "Chooses visual-only entrance, sustained motion and exit for every Take unless a Take names its own.",
+          recipe: visualMotionRecipeProperties },
       ],
       children: [
         { tag: "Take", cardinality: "many",
-          summary: "One self-contained SemanticTake, in document order.",
+          summary: "One self-contained SemanticTake, in document order; optional Sampling children move its picture inside the Frame.",
           attributes: [
             { name: "source", kind: "reference", required: true, accepts: [speechTypes.semanticTake],
               summary: "Chooses the normalized and locally aligned SemanticTake this Track assembles." },
@@ -111,6 +179,9 @@ export const speechTrackMarkupSurfaces = [{
               recipe: visualRecipeProperties },
             { name: "z", kind: "literal", required: false,
               summary: "Sets this Take's own stacking order in place of the Track's `visual-z`." },
+            { name: "motion", kind: "reference", required: false, accepts: [svsRecipeType],
+              summary: "Chooses this Take's own visual-only motion in place of the Track's `visual-motion`.",
+              recipe: visualMotionRecipeProperties },
           ] },
       ],
       ports: [
@@ -128,9 +199,11 @@ export const speechTrackMarkupSurfaces = [{
 </speech:Track>`,
       notes: [
         "A Track requires at least one Take and accepts no text content.",
-        "`visual-appearance` and a Take's `appearance` must each be an authored SVS Recipe declaring only the spatial fit properties listed for them; any other property is refused.",
+        "`visual-appearance` and a Take's `appearance` use the shared Media Item styling listed here: fit, visual filtering, Frame paint, clipping, border and shadow.",
         "Media normalization, acoustic evidence and Segment alignment happen before a Take enters the Track.",
-        "Placement and stacking are the complete visual authority of a Track; motion, transitions and independent pictures remain ordinary Media Tracks.",
+        "Speech visual motion changes only the projected picture inside its Segment; it does not retime the SemanticTake or its audio.",
+        "A Take accepts Sampling children with the same `at`, `zoom`, `x`, `y`, `rotate` and `easing` fields as a direct Media Item; at least two keyframes cover normalized Segment progress.",
+        "Playback, source trim, independent Windows, replacement Sequences and separate pictures remain ordinary Media Track concerns.",
       ],
     },
   }] as const;
