@@ -73,6 +73,7 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
   const pictureBytes = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
   const calls: string[] = [];
   const requests: Record<string, unknown>[] = [];
+  const idempotencyKeys = new Set<string>();
   const realFetch = globalThis.fetch;
   const realKey = process.env.HYPIHUB_API_KEY;
   const realOsResolve = OsCredentialStore.prototype.resolve;
@@ -86,6 +87,12 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
     }
     if (url.endsWith("/v1/images/generations")) {
       assert.equal((init?.headers as Record<string, string>).authorization, "Bearer test-image-key");
+      const key = new Headers(init?.headers).get("idempotency-key");
+      assert.ok(key);
+      if (idempotencyKeys.has(key)) {
+        return Response.json({ error: { code: "idempotency_conflict" } }, { status: 409 });
+      }
+      idempotencyKeys.add(key);
       requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
       return Response.json({ id: "job_image_test", status: "queued" }, { status: 202 });
     }
@@ -127,6 +134,20 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
       resolution: "1k",
     }]);
     assert.equal(calls.filter((item) => item.endsWith("/v1/images/generations")).length, 1);
+    // A new invocation must remain a new paid operation when its image shape changes.
+    const portrait = join(root, "assets", "portrait.png");
+    await runCli([
+      "image", "--prompt", promptFile, "--to", portrait,
+      "--aspect-ratio", "9:16", "--resolution", "4K",
+    ], { write: () => {} });
+    assert.deepEqual(Uint8Array.from(await readFile(portrait)), pictureBytes);
+    assert.deepEqual(requests[1], {
+      model: "gpt-image-2-text-to-image",
+      prompt: "A sheet of warm cream laid paper, even lighting, no text.",
+      aspect_ratio: "9:16",
+      resolution: "4k",
+    });
+    assert.equal(idempotencyKeys.size, 2);
   } finally {
     OsCredentialStore.prototype.resolve = realOsResolve;
     globalThis.fetch = realFetch;

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { CliPicture, CliPictureRequest } from "@hypit/cli";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { OsCredentialStore } from "@hypit/credential-store-os";
@@ -164,7 +165,7 @@ export async function generateVideoCliPicture(request: CliPictureRequest): Promi
     need,
     artifacts,
     credentials: await resolveCredentials(registration),
-    operation: "operation:hypit-image",
+    operation: `operation:hypit-image:${randomUUID()}`,
   };
   let outcome = await registration.endpoint.start(common);
   while (outcome.status === "pending") {
