@@ -6,6 +6,9 @@ External Model and Provider packages import this public subpath from the `hypit`
 It gives both sides the same request and result vocabulary without a dependency between their
 implementations. `sealGenerationPortTable` describes a model's inputs; `GenerationWireMapping` and
 `compileWireRequest` can translate those inputs to one Provider's documented wire fields.
+`selectWireModelForRequest` applies the same route selection without resolving media bytes. During
+planning, a Provider may add the model-port names already attached as future graph inputs; the
+selector does not inspect graph structure or interpret media roles.
 
 The package owns `GenerationRequest`, `GeneratedImageSet` and `GeneratedVideoSet` identities,
 schemas, validators and graph facets. Generated sets are atomic Products: a Provider persists the

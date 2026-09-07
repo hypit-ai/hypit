@@ -13,6 +13,7 @@ import {
   sealGenerationRequestDraft,
   sealGenerationPortTable,
   selectWireModel,
+  selectWireModelForRequest,
   verifyRequestAgainstPorts,
 } from "@hypit/generation";
 import type { GenerationPortTable, GenerationWireMapping } from "@hypit/generation";
@@ -173,6 +174,10 @@ test("one mapping compiles every port shape and routes by port presence", async 
 
   const textOnly = sealGenerationPortRequest(table, { prompt: ["hi"], duration: [8], resolution: ["720p"] });
   assert.equal(selectWireModel(mapping, new Set(Object.keys(textOnly.ports))), "demo/text-to-video");
+  assert.equal(
+    selectWireModelForRequest(mapping, textOnly, ["referenceImage"]),
+    "demo/reference-to-video",
+  );
   const framed = sealGenerationPortRequest(table, {
     prompt: ["hi"],
     duration: [8],

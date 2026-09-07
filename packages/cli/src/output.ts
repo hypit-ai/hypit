@@ -1,5 +1,7 @@
 import { relative, resolve } from "node:path";
 
+import type { CanonicalValue } from "@hypit/protocol";
+
 import type { OperationalMachineView } from "./machine-view.js";
 
 export type CliTerminal = {
@@ -11,6 +13,8 @@ export type CliTerminal = {
 
 export type CliIo = {
   readonly write: (text: string) => void;
+  /** Human progress that may use stderr while `write` remains a stable machine-output channel. */
+  readonly writeProgress?: (text: string) => void;
   /** Concrete command shells expose process status without coupling the engine to Node globals. */
   readonly setExitCode?: (code: number) => void;
   /** Interactive secret input supplied by the concrete CLI shell; never echoed or logged. */
@@ -98,11 +102,12 @@ export type PlanPreflight = {
 export type PlanProvider = {
   readonly request: string;
   readonly capability: string;
-  readonly status: "resolved" | "unresolved" | "ambiguous";
+  readonly status: "resolved" | "unresolved" | "unsupported" | "ambiguous";
   readonly endpoint?: string;
   readonly use?: string;
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
   readonly endpoints?: readonly string[];
+  readonly rejections?: readonly { readonly endpoint: string; readonly message: string }[];
   readonly binding?: string;
 };
 
@@ -119,6 +124,7 @@ export type PlanOutput = {
   readonly providerRequestCount?: number;
   readonly localRequestCount?: number;
   readonly unresolvedRequestCount?: number;
+  readonly unsupportedRequestCount?: number;
   readonly choiceCount: number;
   readonly choices: readonly { readonly output: string; readonly candidate: string }[];
   readonly omittedChoices?: number;
@@ -131,6 +137,26 @@ export type PlanOutput = {
   readonly needs?: readonly PlanNeed[];
   readonly omittedNeeds?: number;
   readonly preflight?: PlanPreflight;
+};
+
+export type PricingEntry = PlanProvider & {
+  readonly pricingDocuments?: readonly PricingDocument[];
+  readonly pricingError?: string;
+};
+
+export type PricingDocument = {
+  readonly source: string;
+  readonly data: CanonicalValue;
+};
+
+export type PricingOutput = {
+  readonly format: "hypit.cli-pricing@1";
+  readonly run: string;
+  readonly requestCount: number;
+  readonly pricing: readonly PricingEntry[];
+  readonly omittedPricing?: number;
+  readonly needs: readonly PlanNeed[];
+  readonly omittedNeeds?: number;
 };
 
 export type PlanNeed = {
@@ -170,6 +196,10 @@ export type CliPresentation =
   | {
       readonly kind: "plan";
       readonly machine: PlanOutput;
+    }
+  | {
+      readonly kind: "pricing";
+      readonly machine: PricingOutput;
     }
   | {
       readonly kind: "operational";
@@ -416,8 +446,17 @@ function providerGroupKey(provider: PlanProvider): string {
     use: provider.use,
     pricing: provider.pricing,
     endpoints: provider.endpoints,
+    rejections: provider.rejections,
     binding: provider.binding,
   });
+}
+
+function providerRejectionText(provider: PlanProvider, verbose: boolean): string {
+  const rejections = provider.rejections ?? [];
+  if (rejections.length === 0) return "no configured Endpoint accepts this request";
+  const shown = verbose ? rejections : rejections.slice(0, 1);
+  return shown.map((rejection) => `${rejection.endpoint}: ${rejection.message}`).join("; ")
+    + (shown.length === rejections.length ? "" : ` · ${rejections.length - shown.length} more Endpoint rejection${rejections.length - shown.length === 1 ? "" : "s"}`);
 }
 
 function renderPlan(
@@ -439,8 +478,9 @@ function renderPlan(
     ["Targets", targetSummary],
     ["Requests", String(view.machine.requestCount)],
     ...(view.machine.requestIssueCount === 0 ? [] : [["Request issues", String(view.machine.requestIssueCount)] as const]),
-    ...(view.machine.providerRequestCount === undefined ? [] : [["Provider requests", String(view.machine.providerRequestCount)] as const]),
-    ...(view.machine.localRequestCount === undefined ? [] : [["Local requests", String(view.machine.localRequestCount)] as const]),
+    ...((view.machine.providerRequestCount ?? 0) === 0 ? [] : [["Provider requests", String(view.machine.providerRequestCount)] as const]),
+    ...((view.machine.localRequestCount ?? 0) === 0 ? [] : [["Local requests", String(view.machine.localRequestCount)] as const]),
+    ...((view.machine.unsupportedRequestCount ?? 0) === 0 ? [] : [["Unsupported", String(view.machine.unsupportedRequestCount)] as const]),
     ...((view.machine.unresolvedRequestCount ?? 0) === 0 ? [] : [["Unresolved", String(view.machine.unresolvedRequestCount)] as const]),
     ...(view.machine.preflight === undefined ? [] : [[
       "Preflight", view.machine.preflight.ok ? "ready" : "needs attention",
@@ -464,6 +504,8 @@ function renderPlan(
         ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})${item.binding === undefined ? "" : ", bound in the Profile"}`)}`
         : item.status === "ambiguous"
           ? colors.warning(`${(item.endpoints ?? []).join(", ")} all offer it; add "bindings": { "${item.capability}": "<instance>" } to the Profile`)
+          : item.status === "unsupported"
+            ? colors.error(providerRejectionText(item, verbose))
           : item.binding === undefined
             ? colors.error("no selected Endpoint accepts this request")
             : colors.error(`bound to ${item.binding}, which does not offer it`);
@@ -537,6 +579,82 @@ function renderPlan(
   return `${lines.join("\n")}\n`;
 }
 
+function pricingDocumentLines(document: PricingDocument, colors: Palette, verbose: boolean): string[] {
+  if (!verbose) {
+    return [`      ${colors.dim("Pricing data")}  ${document.source} ${colors.dim("· use --json or --verbose for the Provider document")}`];
+  }
+  const rendered = JSON.stringify(document.data, undefined, 2);
+  return [
+    `      ${colors.dim("Source")}  ${document.source}`,
+    ...rendered.split("\n").map((line) => `      ${line}`),
+  ];
+}
+
+function renderPricing(
+  view: Extract<CliPresentation, { kind: "pricing" }>,
+  io: CliIo,
+  colors: Palette,
+  verbose: boolean,
+): string {
+  const machine = view.machine;
+  const lines = [heading("info", "Provider pricing information", io, colors), ""];
+  lines.push(...facts([
+    ["Run", shortPath(machine.run)],
+    ["Requests", String(machine.requestCount)],
+  ], colors));
+  if (machine.pricing.length > 0) lines.push("", colors.strong("Requests and pricing sources"));
+  const groups = new Map<string, PricingEntry[]>();
+  for (const item of machine.pricing) {
+    const key = JSON.stringify({
+      capability: item.capability,
+      status: item.status,
+      endpoint: item.endpoint,
+      use: item.use,
+      pricing: item.pricing,
+      endpoints: item.endpoints,
+      rejections: item.rejections,
+      binding: item.binding,
+      pricingDocuments: item.pricingDocuments,
+      pricingError: item.pricingError,
+    });
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  for (const group of groups.values()) {
+    const item = group[0]!;
+    const selected = item.status === "resolved"
+      ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})`)}`
+      : item.status === "ambiguous"
+        ? colors.error(`several Endpoints: ${(item.endpoints ?? []).join(", ")}`)
+        : item.status === "unsupported"
+          ? colors.error(providerRejectionText(item, verbose))
+        : colors.error("no selected Endpoint accepts this request");
+    lines.push(`  ${colors.accent(verbose ? item.capability : capabilityLabel(item.capability))}`);
+    lines.push(`    ${selected}${group.length === 1 ? "" : ` each ×${group.length}`}`);
+    if (item.pricing?.kind === "local") {
+      lines.push(`      ${colors.dim("local, no Provider charge")}`);
+    }
+    for (const document of item.pricingDocuments ?? []) {
+      lines.push(...pricingDocumentLines(document, colors, verbose));
+    }
+    if (item.pricingError !== undefined) {
+      lines.push(`      ${colors.warning(`Could not read Provider pricing: ${item.pricingError}`)}`);
+    }
+    if ((item.pricingDocuments?.length ?? 0) === 0 && item.pricing?.kind === "page") {
+      lines.push(`      ${colors.dim("Pricing page")}  ${item.pricing.url}`);
+    } else if ((item.pricingDocuments?.length ?? 0) === 0 && item.pricing === undefined
+      && item.status === "resolved" && item.pricingError === undefined) {
+      lines.push(`      ${colors.dim("No pricing source declared by this Provider")}`);
+    }
+    const requests = new Set(group.map((entry) => entry.request));
+    const needs = machine.needs.filter((need) => requests.has(need.request));
+    lines.push(...groupedNeedLines(needs, colors, verbose));
+  }
+  if ((machine.omittedPricing ?? 0) > 0) {
+    lines.push(`  ${colors.dim(`${machine.omittedPricing} more requests · use --limit <count>`)}`);
+  }
+  return `${lines.join("\n")}\n`;
+}
+
 function renderOperational(
   view: Extract<CliPresentation, { kind: "operational" }>,
   io: CliIo,
@@ -566,7 +684,9 @@ export function writeCliOutput(
         ? renderRunCheck(presentation, io, colors, options.verbose)
         : presentation.kind === "plan"
           ? renderPlan(presentation, io, colors, options.verbose)
-          : renderOperational(presentation, io, colors);
+          : presentation.kind === "pricing"
+            ? renderPricing(presentation, io, colors, options.verbose)
+            : renderOperational(presentation, io, colors);
   io.write(output);
 }
 
@@ -603,6 +723,16 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "With --runtime, plan also preflights only the demanded deployment slice and names the Provider",
       "and price page behind each external request.",
       "Planning never starts external work.",
+    ],
+    pricing: [
+      colors.accent(colors.strong("hypit pricing")),
+      colors.dim("Read current pricing material from the selected Providers for the requests in one Run."),
+      "",
+      "  hypit pricing <run-source> [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>]",
+      "",
+      "Pricing is an explicit read-only network operation. It starts no Build and submits no generation.",
+      "The command shows each Need beside its Provider source; use --json or --verbose for the raw document.",
+      "Hypit calculates no total.",
     ],
     build: [
       colors.accent(colors.strong("hypit build")),
@@ -744,6 +874,7 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
     colors.strong("Authoring"),
     row("check <source>", "verify one self-described Author or Run source"),
     row("plan <run-source>", "show selected work without executing"),
+    row("pricing <run-source>", "read selected Providers' current pricing material"),
     row("build <run-source>", "submit a Build; --follow observes it"),
     "",
     colors.strong("Results"),

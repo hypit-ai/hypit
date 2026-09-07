@@ -15,6 +15,7 @@ export {
   compileWireRequest,
   mappingSupportsRequest,
   selectWireModel,
+  selectWireModelForRequest,
 } from "./mapping.js";
 export type {
   GenerationArtifactUrlResolver,

@@ -2,6 +2,7 @@ import { requestDeadline } from "@hypit/runtime-kit";
 import type {
   AsyncEndpoint,
   EndpointPollContext,
+  EndpointPricingReader,
   EndpointStartContext,
   EndpointOutcome,
 } from "@hypit/endpoint-kit";
@@ -123,6 +124,7 @@ type KieClientOptions = {
 
 class KieClient {
   readonly #options: KieClientOptions;
+  readonly #pricingRecords = new Map<string, Promise<readonly Record<string, unknown>[]>>();
 
   constructor(options: KieClientOptions) {
     this.#options = options;
@@ -191,6 +193,40 @@ class KieClient {
     } finally {
       opened.finish();
     }
+  }
+
+  get pricingSource(): string {
+    return `${this.#options.apiBaseUrl}/client/v1/model-pricing/page`;
+  }
+
+  async pricingRecords(model: string): Promise<readonly Record<string, unknown>[]> {
+    let pending = this.#pricingRecords.get(model);
+    if (pending === undefined) {
+      pending = (async () => {
+        const records: Record<string, unknown>[] = [];
+        let page = 1;
+        let pages = 1;
+        while (page <= pages) {
+          const response = await this.#json(this.pricingSource, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ pageNum: page, pageSize: 100, modelDescription: model, interfaceType: "" }),
+          });
+          assert(response.code === 200, "KIE pricing service rejected the rate-card request");
+          const data = object(response.data, "KIE pricing data");
+          assert(Array.isArray(data.records), "KIE pricing data contains no records array");
+          for (const value of data.records) records.push(object(value, "KIE pricing record"));
+          const reportedPages = data.pages;
+          assert(typeof reportedPages === "number" && Number.isSafeInteger(reportedPages)
+            && reportedPages >= 0 && reportedPages <= 100, "KIE pricing page count is invalid");
+          pages = reportedPages;
+          page += 1;
+        }
+        return records;
+      })();
+      this.#pricingRecords.set(model, pending);
+    }
+    return await pending;
   }
 
   async upload(artifact: BlobRef, resources: ResourceStore, apiKey: string): Promise<string> {
@@ -390,6 +426,20 @@ class KieClient {
   }
 }
 
+function kiePricingReader(client: KieClient): EndpointPricingReader {
+  return async ({ request }) => {
+    const route = kieRouteForCapability(request.capability);
+    if (route === undefined) return [];
+    const selectedModel = route.selectModel(request);
+    const records = await client.pricingRecords(selectedModel);
+    if (records.length === 0) return [];
+    return [{
+      source: client.pricingSource,
+      data: canonicalize({ model: selectedModel, records }),
+    }];
+  };
+}
+
 function resultUrls(data: Record<string, unknown>): string[] {
   let result: unknown = data.resultJson;
   if (typeof result === "string") {
@@ -577,6 +627,7 @@ export function createKieProvider(config: CreateKieProviderOptions) {
     instance: config.instance ?? "kie.default",
     pool: config.pool ?? config.instance ?? "kie.default",
     pricing: { kind: "page", url: "https://kie.ai/pricing" },
+    readPricing: kiePricingReader(client),
     credentials: { apiKey: config.apiKey ?? credentialRef("env", "KIE_API_KEY") },
     credentialInputs: { apiKey: { label: "KIE API key" } },
     defaultConcurrency: config.defaultConcurrency ?? 10,

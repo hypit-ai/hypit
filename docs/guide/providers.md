@@ -140,14 +140,18 @@ the Runtime has resolved that Endpoint's declared credential slots. It may make 
 request to the real service, such as reading the authenticated model catalog. It must not be called by
 Build preflight and must never submit generation work.
 
-A Provider that charges declares where it publishes prices, and nothing more: `pricing: { kind: "page",
-url }` on `defineEndpointPackage`, pointing at the Provider's own public price page. A Provider that
-runs on this machine declares `pricing: { kind: "local" }`. Hypit never copies or interprets prices;
-`hypit plan --runtime <profile>` prints the Endpoint behind each request. Local work is marked local;
-Provider work carries the Provider's price page so the Agent can read the source before a paid Build.
-An undeclared price source is reported as unknown. Planning applies the selected Endpoint's ordinary
-`supports` check and does not maintain a second selection table. When an upstream file will only exist
-during the Build, the capability package reconstructs the authored
+A Provider that charges declares where it publishes prices with `pricing: { kind: "page", url }` on
+`defineEndpointPackage`; a Provider that runs on this machine declares `pricing: { kind: "local" }`.
+An Endpoint may additionally return current Provider-shaped documents from `readPricing`; a service
+with only a web page keeps that page as its interface. `hypit pricing <run> --runtime <profile>` places
+the material beside the Run's Needs without creating a Build. The Agent can calculate and explain the
+cost from those two facts, while the user's decision remains the spending authority. The shared
+interface remains only a source URL and Provider-shaped JSON, so a newly supported relay does not
+require a new Hypit pricing category.
+
+`hypit plan --runtime <profile>` remains local and prints the Endpoint behind each request. Planning
+applies the selected Endpoint's ordinary `supports` check and does not maintain a second selection
+table. When an upstream file will only exist during the Build, the capability package reconstructs the authored
 request parameters and leaves that file as a symbolic Resource slot. The same `supports` predicate still
 runs before the Build is queued. A package that cannot describe the request stops planning instead of
 falling back to capability-only selection.

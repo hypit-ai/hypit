@@ -5,9 +5,13 @@ import { spawn } from "node:child_process";
 import type { CredentialAcquisition } from "@hypit/runtime";
 import { encodeOAuth2Credential } from "@hypit/runtime";
 
-import type { CliIo } from "./output.js";
-
 const CALLBACK_MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true"><path d="M7.6 3.8H14.6L12.6 7.2H5.6L7.6 3.8Z" fill="currentColor"/><path d="M4.1 10.4H16.6L18.7 7H30.4L27.9 11.1H16.1L14.1 14.2H1.8L4.1 10.4Z" fill="currentColor"/><path d="M19.1 14.1H23.1L19.3 20.7H15.4L19.1 14.1Z" fill="currentColor"/></svg>`;
+
+type OAuthAcquisitionOptions = {
+  readonly onProgress?: (message: string) => void;
+  readonly fetch?: typeof globalThis.fetch;
+  readonly open?: (url: string) => void;
+};
 
 function base64url(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64").replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
@@ -26,9 +30,12 @@ function tokenExpiry(value: { readonly expires_at?: unknown; readonly expires_in
 
 /** Acquire one OAuth credential from the exact data declared by its Endpoint package. */
 export async function acquireOAuthCredential(
-  io: CliIo,
   acquisition: CredentialAcquisition,
+  options: OAuthAcquisitionOptions = {},
 ): Promise<string> {
+  if (!Number.isSafeInteger(acquisition.requestTimeoutMs) || acquisition.requestTimeoutMs <= 0) {
+    throw new Error("OAuth token request timeout must be a positive integer");
+  }
   const verifier = base64url(randomBytes(32));
   // S256 is part of OAuth PKCE. It authenticates this browser exchange; it is not content identity.
   const challenge = base64url(createHash("sha256").update(verifier).digest());
@@ -36,10 +43,6 @@ export async function acquireOAuthCredential(
   const server = createServer();
   const callback = new Promise<string>((resolveCode, reject) => {
     let settled = false;
-    // The browser can still hold the callback connection, and commonly opens a second
-    // one for /favicon.ico, after the code has been read. `server.close()` waits for
-    // those to end, which keeps the process alive long past the exchange, so drop them
-    // once the response has actually been written and stop the socket holding the loop open.
     const closeAllConnections = (): void => {
       server.closeAllConnections?.();
       server.unref();
@@ -98,23 +101,42 @@ export async function acquireOAuthCredential(
   authorize.searchParams.set("state", state);
   authorize.searchParams.set("code_challenge", challenge);
   authorize.searchParams.set("code_challenge_method", "S256");
-  io.write(`Opening sign-in: ${authorize}\n`);
-  const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
-  const openerArgs = process.platform === "win32" ? ["/c", "start", "", authorize.toString()] : [authorize.toString()];
-  spawn(opener, openerArgs, { stdio: "ignore", detached: true, windowsHide: true }).unref();
+  options.onProgress?.(`Opening sign-in: ${authorize}`);
+  if (options.open === undefined) {
+    const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
+    const openerArgs = process.platform === "win32" ? ["/c", "start", "", authorize.toString()] : [authorize.toString()];
+    spawn(opener, openerArgs, { stdio: "ignore", detached: true, windowsHide: true }).unref();
+  } else {
+    options.open(authorize.toString());
+  }
   const code = await callback;
-  const tokenResponse = await fetch(acquisition.tokenEndpoint, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: redirectUri,
-      client_id: acquisition.clientId,
-      code_verifier: verifier,
-    }),
-  });
-  const body = await tokenResponse.text();
+  options.onProgress?.("Authorization returned. Exchanging token…");
+  const deadline = AbortSignal.timeout(acquisition.requestTimeoutMs);
+  let tokenResponse: Response;
+  let body: string;
+  try {
+    tokenResponse = await (options.fetch ?? globalThis.fetch)(acquisition.tokenEndpoint, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: redirectUri,
+        client_id: acquisition.clientId,
+        code_verifier: verifier,
+      }),
+      signal: deadline,
+    });
+    body = await tokenResponse.text();
+  } catch (error) {
+    if (deadline.aborted) {
+      throw new Error(
+        `OAuth authorization returned, but the token exchange timed out after ${acquisition.requestTimeoutMs} ms; no credential was stored`,
+        { cause: error },
+      );
+    }
+    throw error;
+  }
   if (!tokenResponse.ok) throw new Error(`OAuth token exchange failed (${tokenResponse.status}): ${body.slice(0, 200)}`);
   const parsed = JSON.parse(body) as {
     readonly access_token?: unknown;
@@ -125,6 +147,7 @@ export async function acquireOAuthCredential(
   if (typeof parsed.access_token !== "string" || parsed.access_token.length === 0) {
     throw new Error("OAuth token response contained no access token");
   }
+  options.onProgress?.("Token received. Saving credential…");
   const expiresAt = tokenExpiry(parsed);
   return encodeOAuth2Credential({
     accessToken: parsed.access_token,
@@ -136,10 +159,10 @@ export async function acquireOAuthCredential(
 }
 
 function callbackPage(success: boolean): string {
-  const title = success ? "Signed in to Hypit" : "Hypit sign-in failed";
-  const heading = success ? "Hypit is signed in" : "Hypit sign-in failed";
+  const title = success ? "Authorization received" : "Hypit sign-in failed";
+  const heading = success ? "Authorization received" : "Hypit sign-in failed";
   const message = success
-    ? "Your credential is ready. You can close this window."
+    ? "Return to the terminal while Hypit finishes the token exchange and stores the credential."
     : "The sign-in could not be completed. You can close this window and try again.";
   const tone = success ? "success" : "error";
   const favicon = `data:image/svg+xml,${encodeURIComponent(CALLBACK_MARK_SVG)}`;

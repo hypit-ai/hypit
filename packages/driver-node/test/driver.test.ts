@@ -183,13 +183,15 @@ test("Endpoint capabilities may narrow themselves with typed Need constraints", 
   const { producers, endpoints } = configuredRegistry();
   endpoints.registerImmediateEndpoint("example:wrong-model", capabilities.generation, types.generated, () => {
     throw new Error("unsupported endpoint must never run");
-  }, { supports: () => false });
+  }, { supports: () => ({ status: "unsupported", reason: "example request is unsupported" }) });
   endpoints.registerImmediateEndpoint("example:compatible", capabilities.generation, types.generated, () => ({
     value: { kind: "inline", value: "Compatible" },
   }), {
     supports: (need) => {
       const constraints = need.constraints as Readonly<Record<string, unknown>>;
-      return constraints.prompt === "Greet Ada";
+      return constraints.prompt === "Greet Ada"
+        ? { status: "supported" }
+        : { status: "unsupported", reason: "prompt must be Greet Ada" };
     },
   });
 

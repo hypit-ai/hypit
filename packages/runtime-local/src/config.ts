@@ -8,8 +8,8 @@ import {
 } from "@hypit/package-loader-node";
 import type { NodePackageSelectionRequest } from "@hypit/package-loader-node";
 import { EndpointRegistry, NodeDriver } from "@hypit/driver-node";
-import type { EndpointCredential, EndpointFulfillment, EndpointRegistrar, EndpointScheduling } from "@hypit/endpoint-kit";
-import { endpointResourceClaims } from "@hypit/endpoint-kit";
+import type { EndpointCredential, EndpointFulfillment, EndpointPackage, EndpointRegistrar, EndpointScheduling } from "@hypit/endpoint-kit";
+import { endpointResourceClaims, verifyEndpointPricingDocument } from "@hypit/endpoint-kit";
 import { assertBuildId, canonicalize, canonicalStringify } from "@hypit/protocol";
 import type { CanonicalValue, CapabilityRef, Need } from "@hypit/protocol";
 import {
@@ -52,6 +52,7 @@ import {
 import type {
   HostPackageProgress,
   HostPackageReport,
+  RuntimeHostCapabilityPricing,
   RuntimeHostCapabilityProvider,
   RuntimeHostProviderQuery,
   RuntimeHostTransientExecution,
@@ -193,10 +194,6 @@ function bindings(value: unknown, endpoints: readonly LocalRuntimeAdapterSelecti
 
 export function parseLocalRuntimeProfile(value: unknown): LocalRuntimeProfile {
   const item = object(value, "$runtime");
-  if (item.runtime !== undefined && item.format === "hypit.runtime-profile@1") {
-    throw new Error("This Runtime Profile uses the retired hypit.runtime-profile@1 shape with a nested runtime object. "
-      + "Move runtime.config.dataRoot, credentials and endpoints to the top level and set format to hypit.runtime-local@1.");
-  }
   exactKeys(item, ["format", "dataRoot", "credentials", "endpoints", "bindings"], "$runtime");
   if (item.format !== "hypit.runtime-local@1") {
     throw new Error("$runtime.format must be hypit.runtime-local@1");
@@ -650,6 +647,21 @@ export async function describeRuntimeConfigProviders(
       ...(request.pendingInputs === undefined ? {} : { pendingInputs: request.pendingInputs }),
     });
     if (resolution.status === "missing") return { ...base, status: "unresolved", ...bound };
+    if (resolution.status === "unsupported") {
+      const endpoint = resolution.rejections.length === 1 ? resolution.rejections[0]!.endpointId : undefined;
+      const match = endpoint === undefined ? undefined
+        : activations.find(({ activation }) => activation.endpoint.instance.id === endpoint);
+      const pricing = match?.activation.endpoint.pricing;
+      return {
+        ...base,
+        status: "unsupported",
+        ...(endpoint === undefined ? {} : { endpoint }),
+        ...(match === undefined ? {} : { use: match.entry.use }),
+        ...(pricing === undefined ? {} : { pricing: structuredClone(pricing) }),
+        rejections: resolution.rejections.map((item) => ({ endpoint: item.endpointId, message: item.reason })),
+        ...bound,
+      };
+    }
     if (resolution.status === "ambiguous") return { ...base, status: "ambiguous", endpoints: resolution.endpointIds, ...bound };
     const match = activations.find(({ activation }) => activation.endpoint.instance.id === resolution.registration.id);
     const pricing = match?.activation.endpoint.pricing;
@@ -662,6 +674,138 @@ export async function describeRuntimeConfigProviders(
       ...bound,
     };
   });
+}
+
+async function resolveEndpointCredentials(
+  endpoint: EndpointPackage,
+  store: CredentialStore,
+  profile: string,
+): Promise<Readonly<Record<string, EndpointCredential>>> {
+  const credentials: Record<string, EndpointCredential> = {};
+  for (const slot of endpoint.credentials) {
+    const value = await store.resolve(slot.ref);
+    if (value === undefined) {
+      throw new Error(`${slot.label} for Endpoint ${slot.endpoint} is not configured. ${
+        slot.ref.store === "env"
+          ? `Set ${slot.ref.key} in this process environment.`
+          : `Configure it with: hypit auth login ${slot.endpoint} --runtime ${profile}`}`);
+    }
+    const writable = await writableCredentialStore(store, slot.ref);
+    credentials[slot.slot] = {
+      ...value,
+      ...(writable === undefined ? {} : {
+        replace: async (replacement: CredentialValue) => await writable.put(slot.ref, replacement),
+      }),
+    };
+  }
+  return credentials;
+}
+
+/** Read current Provider-owned pricing material; no Build, generation or durable pricing cache is created. */
+export async function readRuntimeConfigPricing(
+  path: string,
+  requests: readonly RuntimeHostProviderQuery[],
+  options: LoadRuntimeConfigOptions = {},
+): Promise<readonly RuntimeHostCapabilityPricing[]> {
+  if (requests.length === 0) return [];
+  const { absolute, document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
+  const registry = options.registry ?? new RuntimeAdapterRegistry();
+  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
+  const activations = await activatedEndpoints(document, root, hostStateRoot, registry);
+  const endpoints = await installedEndpointRegistry(document, activations);
+  let stores: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
+  const openedStores = async () => stores ??= await openCredentialStores(document, root, hostStateRoot, registry);
+  const result: RuntimeHostCapabilityPricing[] = [];
+  try {
+    for (const request of requests) {
+      const base = {
+        request: request.request,
+        capability: structuredClone(request.capability),
+      };
+      const binding = document.bindings[capabilityKey(request.capability)];
+      const bound = binding === undefined ? {} : { binding };
+      const endpointRequest = {
+        capability: request.capability,
+        returns: request.returns,
+        constraints: request.constraints,
+        ...(request.pendingInputs === undefined ? {} : { pendingInputs: request.pendingInputs }),
+      };
+      const resolution = endpoints.resolve(endpointRequest);
+      if (resolution.status === "missing") {
+        result.push({
+          ...base,
+          status: "unresolved",
+          ...bound,
+        });
+        continue;
+      }
+      if (resolution.status === "unsupported") {
+        const endpoint = resolution.rejections.length === 1 ? resolution.rejections[0]!.endpointId : undefined;
+        const match = endpoint === undefined ? undefined
+          : activations.find(({ activation }) => activation.endpoint.instance.id === endpoint);
+        const pricing = match?.activation.endpoint.pricing;
+        result.push({
+          ...base,
+          status: "unsupported",
+          ...(endpoint === undefined ? {} : { endpoint }),
+          ...(match === undefined ? {} : { use: match.entry.use }),
+          ...(pricing === undefined ? {} : { pricing: structuredClone(pricing) }),
+          rejections: resolution.rejections.map((item) => ({ endpoint: item.endpointId, message: item.reason })),
+          ...bound,
+        });
+        continue;
+      }
+      if (resolution.status === "ambiguous") {
+        result.push({
+          ...base,
+          status: "ambiguous",
+          endpoints: resolution.endpointIds,
+          ...bound,
+        });
+        continue;
+      }
+      const match = activations.find(({ activation }) =>
+        activation.endpoint.instance.id === resolution.registration.id);
+      const pricing = match?.activation.endpoint.pricing;
+      const selected = {
+        ...base,
+        status: "resolved" as const,
+        endpoint: resolution.registration.id,
+        ...(match === undefined ? {} : { use: match.entry.use }),
+        ...(pricing === undefined ? {} : { pricing: structuredClone(pricing) }),
+        ...bound,
+      };
+      if (pricing?.kind === "local" || match?.activation.endpoint.readPricing === undefined) {
+        result.push(selected);
+        continue;
+      }
+      try {
+        const pricingDocuments = await match.activation.endpoint.readPricing({
+          request: endpointRequest,
+          credentials: async () => {
+            const opened = await openedStores();
+            return await resolveEndpointCredentials(match.activation.endpoint, opened.store, absolute);
+          },
+        });
+        pricingDocuments.forEach(verifyEndpointPricingDocument);
+        result.push({
+          ...selected,
+          ...(pricingDocuments.length === 0 ? {} : {
+            pricingDocuments: structuredClone(pricingDocuments),
+          }),
+        });
+      } catch (error) {
+        result.push({
+          ...selected,
+          pricingError: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    return result;
+  } finally {
+    await stores?.close();
+  }
 }
 
 /**
@@ -691,6 +835,11 @@ export async function invokeRuntimeConfigNeed(
       ? `No Endpoint in ${absolute} serves ${subject}; hypit plan --runtime ${absolute} shows which Endpoint each capability needs`
       : `${absolute} binds ${subject} to ${resolution.endpointId}, which does not serve this request; change that binding`);
   }
+  if (resolution.status === "unsupported") {
+    throw new Error(resolution.rejections
+      .map((rejection) => `${rejection.endpointId} rejected ${subject}: ${rejection.reason}`)
+      .join("; "));
+  }
   if (resolution.status === "ambiguous") {
     throw new Error(`Several Endpoints in ${absolute} serve ${subject}: ${resolution.endpointIds.join(", ")}. `
       + `Say which one does it: add "bindings": { "${subject}": "<instance>" } to the Profile`);
@@ -703,23 +852,7 @@ export async function invokeRuntimeConfigNeed(
   if (activation === undefined) throw new Error(`Endpoint ${registration.id} is not declared by ${absolute}`);
   const stores = await openCredentialStores(document, root, hostStateRoot, registry);
   try {
-    const credentials: Record<string, EndpointCredential> = {};
-    for (const slot of activation.endpoint.credentials) {
-      const value = await stores.store.resolve(slot.ref);
-      if (value === undefined) {
-        throw new Error(`${slot.label} for Endpoint ${slot.endpoint} is not configured. ${
-          slot.ref.store === "env"
-            ? `Set ${slot.ref.key} in this process environment.`
-            : `Configure it with: hypit auth login ${slot.endpoint} --runtime ${absolute}`}`);
-      }
-      const writable = await writableCredentialStore(stores.store, slot.ref);
-      credentials[slot.slot] = {
-        ...value,
-        ...(writable === undefined ? {} : {
-          replace: async (replacement: CredentialValue) => await writable.put(slot.ref, replacement),
-        }),
-      };
-    }
+    const credentials = await resolveEndpointCredentials(activation.endpoint, stores.store, absolute);
     return await registration.handler({
       command: { kind: "fulfill-need", id: `command:${need.id}`, need },
       need,

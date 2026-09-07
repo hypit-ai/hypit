@@ -17,7 +17,7 @@ import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliIo, CliMachineView } from "./output.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
-import { assertPlannedRequests, assertPreflight, createCatalogDescriptor, describePlanNeeds, describePlanProviders, evaluatePlanNeeds, preflightPlan } from "./build-planning.js";
+import { assertPlannedRequests, assertPreflight, createCatalogDescriptor, describePlanNeeds, describePlanPricing, describePlanProviders, evaluatePlanNeeds, preflightPlan } from "./build-planning.js";
 import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
 import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
@@ -267,7 +267,7 @@ export async function runCli(
       : `No trusted Author or Run compiler accepts Frontend ${sourceHeader.using}`;
     throw new Error(message);
   }
-  if ((args.command === "plan" || args.command === "build") && !runMode) {
+  if ((args.command === "plan" || args.command === "pricing" || args.command === "build") && !runMode) {
     throw new Error(`${args.command} requires a self-described Run Source; check Author Sources independently`);
   }
   if (args.command === "check") {
@@ -571,6 +571,27 @@ export async function runCli(
     const result = loaded.compiler.planCompilation(loaded);
     const planHost = runtimeProfile === undefined ? undefined : await runtimeHost(runtimeProfile);
     const evaluated = await evaluatePlanNeeds(result.definition, packageContributions);
+    if (args.command === "pricing") {
+      if (planHost === undefined) {
+        throw new Error("pricing requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
+      }
+      const pricing = await describePlanPricing(planHost, evaluated.state, evaluated);
+      const needs = describePlanNeeds(evaluated.state, evaluated, pricing);
+      const shown = args.limit;
+      writeCliOutput(io, args.presentation, {
+        kind: "pricing",
+        machine: {
+          format: "hypit.cli-pricing@1",
+          run: projectPath(loaded.path, effectiveWorkspaceRoot),
+          requestCount: pricing.length,
+          pricing: pricing.slice(0, shown),
+          ...(pricing.length <= shown ? {} : { omittedPricing: pricing.length - shown }),
+          needs: needs.slice(0, shown),
+          ...(needs.length <= shown ? {} : { omittedNeeds: needs.length - shown }),
+        },
+      });
+      return;
+    }
     const preflight = planHost === undefined ? undefined : await preflightPlan(planHost, evaluated.state);
     const providers = planHost === undefined ? undefined : await describePlanProviders(planHost, evaluated.state, evaluated);
     const needs = describePlanNeeds(evaluated.state, evaluated, providers ?? []);
@@ -584,15 +605,17 @@ export async function runCli(
     const allUnreached = unreachedGenerations(result.compilation.author.graph, result.state, outputNames)
       .map((item) => ({ output: item.name, operation: item.producer }));
     const targets = loaded.run.document.targets.map((item) => item.output);
-    const unresolvedRequestCount = providers?.filter((item) => item.status !== "resolved").length ?? 0;
+    const unsupportedRequestCount = providers?.filter((item) => item.status === "unsupported").length ?? 0;
+    const unresolvedRequestCount = providers?.filter((item) => item.status === "unresolved" || item.status === "ambiguous").length ?? 0;
     const localRequestCount = providers?.filter((item) => item.status === "resolved" && item.pricing?.kind === "local").length ?? 0;
-    const providerRequestCount = providers === undefined ? undefined : providers.length - localRequestCount - unresolvedRequestCount;
+    const providerRequestCount = providers?.filter((item) => item.status === "resolved" && item.pricing?.kind !== "local").length;
     const requestIssueCount = needs.filter((item) => item.issue !== undefined).length;
     writeCliOutput(io, args.presentation, {
       kind: "plan",
       machine: {
         format: "hypit.cli-plan@3",
-        ok: (preflight?.ok ?? true) && unresolvedRequestCount === 0 && requestIssueCount === 0,
+        ok: (preflight?.ok ?? true) && unresolvedRequestCount === 0
+          && unsupportedRequestCount === 0 && requestIssueCount === 0,
         run: projectPath(loaded.path, effectiveWorkspaceRoot),
         targetCount: targets.length,
         targets: targets.slice(0, args.limit),
@@ -600,7 +623,7 @@ export async function runCli(
         requestCount: needs.length,
         requestIssueCount,
         ...(providerRequestCount === undefined ? {} : { providerRequestCount }),
-        ...(providers === undefined ? {} : { localRequestCount, unresolvedRequestCount }),
+        ...(providers === undefined ? {} : { localRequestCount, unresolvedRequestCount, unsupportedRequestCount }),
         choiceCount: allChoices.length,
         choices: allChoices.slice(0, args.limit),
         ...(allChoices.length <= args.limit ? {} : { omittedChoices: allChoices.length - args.limit }),
@@ -629,7 +652,8 @@ export async function runCli(
         } }),
       },
     });
-    if ((preflight !== undefined && !preflight.ok) || unresolvedRequestCount > 0 || requestIssueCount > 0) io.setExitCode?.(1);
+    if ((preflight !== undefined && !preflight.ok) || unresolvedRequestCount > 0
+      || unsupportedRequestCount > 0 || requestIssueCount > 0) io.setExitCode?.(1);
   } finally {
     await planResults?.close();
   }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MemoryResourceStore } from "@hypit/driver-node";
+import type { EndpointSupport } from "@hypit/endpoint-kit";
 import {
   assertMappingCoversPorts,
   compileWireRequest,
@@ -28,7 +29,8 @@ import {
   seedreamDefinition,
   sealSeedreamRequest,
 } from "@hypit/seedream";
-import type { CapabilityRef } from "@hypit/protocol";
+import type { CanonicalValue, CapabilityRef } from "@hypit/protocol";
+import { kieRoutes } from "../src/routes.js";
 
 /**
  * Every exact model this repository ships, paired with the Capability it publishes.
@@ -47,16 +49,12 @@ function capabilityKey(ref: CapabilityRef): string {
 
 const upload = async (artifact: { readonly resource: string }) => `https://upload.test/${artifact.resource}`;
 
-/**
- * The check the old hand-written translators could not perform. Forgetting a
- * reference role or an item field used to surface only after paid generation
- * returned the wrong result; it now fails here.
- */
+/** Every declared model port must have an explicit KIE wire mapping. */
 test("the KIE mapping covers every port every exact model declares", () => {
   assert.equal(modelCapabilities.length, kieModelCatalog.length);
   const mappings = new Map(kieModelCatalog.map((item) => [capabilityKey(item.capability), item]));
   for (const { ports, capability } of modelCapabilities) {
-    // Matched on the full Capability, version included: a stale mapping cannot pass by name alone.
+    // The full Capability includes the model module version.
     const mapping = mappings.get(capabilityKey(capability));
     assert.ok(mapping, `KIE declares no mapping for ${capabilityKey(capability)}`);
     assertMappingCoversPorts(ports, mapping);
@@ -180,6 +178,63 @@ test("Seedance 2.5 maps its exact request without leaking KIE envelope controls 
     return_last_frame: false,
     output_format: "mp4",
   });
+});
+
+test("KIE maps GPT Image background and applies its measured request combinations", async () => {
+  const route = kieRoutes.find((item) => item.capability.name === "gpt-image-2");
+  assert.ok(route);
+  const request = sealGptImage2Request({
+    prompt: ["A product cutout."],
+    aspectRatio: ["1:1"],
+    resolution: ["1K"],
+    background: ["transparent"],
+  });
+  const task = await route.compile(request as unknown as CanonicalValue, upload);
+  assert.deepEqual(task.input, {
+    prompt: "A product cutout.",
+    aspect_ratio: "1:1",
+    resolution: "1K",
+    background: "transparent",
+  });
+
+  for (const unsupported of [
+    sealGptImage2Request({
+      prompt: ["A product cutout."], aspectRatio: ["1:1"], resolution: ["2K"],
+      background: ["opaque"],
+    }),
+    sealGptImage2Request({
+      prompt: ["A portrait."], aspectRatio: ["5:4"], resolution: ["2K"],
+    }),
+    sealGptImage2Request({
+      prompt: ["A portrait."], aspectRatio: ["3:1"], resolution: ["4K"],
+    }),
+  ]) {
+    const support: EndpointSupport | undefined = route.supports?.({
+      capability: route.capability,
+      returns: route.returns,
+      constraints: unsupported as unknown as CanonicalValue,
+    });
+    assert.equal(support?.status, "unsupported");
+    assert.match(support?.status === "unsupported" ? support.reason : "", /KIE GPT Image 2/u);
+  }
+
+  for (const supported of [
+    sealGptImage2Request({
+      prompt: ["A portrait."], aspectRatio: ["auto"], resolution: ["4K"],
+    }),
+    sealGptImage2Request({
+      prompt: ["A portrait."], aspectRatio: ["1:1"], resolution: ["4K"],
+    }),
+    sealGptImage2Request({
+      prompt: ["A portrait."], aspectRatio: ["5:4"], resolution: ["4K"],
+    }),
+  ]) {
+    assert.deepEqual(route.supports?.({
+      capability: route.capability,
+      returns: route.returns,
+      constraints: supported as unknown as CanonicalValue,
+    }), { status: "supported" });
+  }
 });
 
 test("one model reaching a service that splits it keeps the reference roles intact", async () => {

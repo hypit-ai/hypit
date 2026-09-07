@@ -106,7 +106,7 @@ test("plan names the Provider and price page behind each request, and points at 
   assert.match(without, /Pass --runtime <profile>/u);
   assert.doesNotMatch(without, /Providers and price pages/u);
 
-  const output = capture(human, { kind: "plan", machine: { ...base, providerRequestCount: 2, localRequestCount: 1, unresolvedRequestCount: 1, providers: [
+  const output = capture(human, { kind: "plan", machine: { ...base, providerRequestCount: 2, localRequestCount: 1, unresolvedRequestCount: 0, unsupportedRequestCount: 1, providers: [
     {
       request: "seedance:one",
       capability: "@hypit/seedance@1#seedance-2-mini",
@@ -117,7 +117,17 @@ test("plan names the Provider and price page behind each request, and points at 
     },
     { request: "media:one", capability: "@hypit/media@1#inspect", status: "resolved", endpoint: "media.local", use: "@hypit/provider-media-local", pricing: { kind: "local" } },
     { request: "whisper:one", capability: "@hypit/whisperx@1#whisperx-alignment", status: "resolved", endpoint: "whisperx.remote", use: "@hypit/provider-example" },
-    { request: "image:one", capability: "@hypit/gpt-image@1#gpt-image-2", status: "unresolved" },
+    {
+      request: "image:one",
+      capability: "@hypit/gpt-image@1#gpt-image-2",
+      status: "unsupported",
+      endpoint: "hypihub.default",
+      use: "@hypit/provider-hypihub",
+      rejections: [{
+        endpoint: "hypihub.default",
+        message: "transparent background is available only at 1K; requested 2K",
+      }],
+    },
   ], needs: [{
     request: "seedance:one",
     step: "video::component::presenter.generate",
@@ -130,7 +140,8 @@ test("plan names the Provider and price page behind each request, and points at 
   assert.match(output, /@hypit\/seedance#seedance-2-mini\n\s+hypihub\.default \(@hypit\/provider-hypihub\)\s+·\s+https:\/\/hypit\.ai\/commercial\/pricing\//u);
   assert.match(output, /media\.local .*·\s+local, no Provider charge/u);
   assert.match(output, /whisperx\.remote .*·\s+price source unknown/u);
-  assert.match(output, /gpt-image#gpt-image-2\n\s+no selected Endpoint accepts this request\n/u);
+  assert.match(output, /Unsupported\s+1/u);
+  assert.match(output, /gpt-image#gpt-image-2\n\s+hypihub\.default: transparent background is available only at 1K; requested 2K\n/u);
   assert.match(output, /prompt 42 chars · duration 10 · resolution 720p · 1 image reference · input produced during Build/u);
   assert.doesNotMatch(output, /Pass --runtime/u);
   assert.doesNotMatch(output, /seedance@1#/u);
@@ -139,6 +150,45 @@ test("plan names the Provider and price page behind each request, and points at 
     { request: "seedance:one", capability: "@hypit/seedance@1#seedance-2-mini", status: "ambiguous", endpoints: ["hypihub.default", "kie.default"] },
   ] } });
   assert.match(verbose, /@hypit\/seedance@1#seedance-2-mini\n\s+hypihub\.default, kie\.default all offer it/u);
+});
+
+test("pricing presents Provider-owned material beside the corresponding Needs", () => {
+  const presentation = { kind: "pricing", machine: {
+    format: "hypit.cli-pricing@1",
+    run: "/project/build.svrun",
+    requestCount: 2,
+    pricing: [{
+      request: "seedance:one", capability: "@hypit/seedance@1#seedance-2", status: "resolved",
+      endpoint: "hypihub.default", use: "@hypit/provider-hypihub",
+      pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
+      pricingDocuments: [{
+        source: "https://hypit.ai/v1/pricing?model=bytedance%2Fseedance-2",
+        data: { model: "bytedance/seedance-2", pricing: { mode: "per_second", per_second_usd: 0.1045 } },
+      }],
+    }, {
+      request: "image:one", capability: "@hypit/gpt-image@1#gpt-image-2", status: "resolved",
+      endpoint: "kie.default", use: "@hypit/provider-kie",
+      pricing: { kind: "page", url: "https://kie.ai/pricing" },
+    }],
+    needs: [{
+      request: "seedance:one", step: "video::component::presenter.generate", port: "generation",
+      capability: "@hypit/seedance@1#seedance-2", endpoint: "hypihub.default",
+      summary: { fields: { duration: 5, resolution: "720p" }, references: {} }, pending: [],
+    }, {
+      request: "image:one", step: "video::component::portrait.generate", port: "generation",
+      capability: "@hypit/gpt-image@1#gpt-image-2", endpoint: "kie.default", pending: [],
+    }],
+  } } as const;
+  const output = capture(human, presentation);
+  assert.match(output, /Provider pricing information/u);
+  assert.match(output, /https:\/\/hypit\.ai\/v1\/pricing\?model=bytedance%2Fseedance-2/u);
+  assert.match(output, /use --json or --verbose for the Provider document/u);
+  assert.doesNotMatch(output, /"per_second_usd": 0\.1045/u);
+  assert.match(output, /duration 5 · resolution 720p/u);
+  assert.match(output, /Pricing page\s+https:\/\/kie\.ai\/pricing/u);
+
+  const verbose = capture({ ...human, verbose: true }, presentation);
+  assert.match(verbose, /"per_second_usd": 0\.1045/u);
 });
 
 test("run check treats historical reuse as a normal summary", () => {

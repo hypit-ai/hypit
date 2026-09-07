@@ -133,7 +133,17 @@ Activation 还可以返回 `diagnose(context)`。它只会在用户显式运行�
 Runtime 会先解析该 Endpoint 自己声明的凭据槽。它可以对真实服务做一次有界只读请求，例如读取
 已认证账户的模型目录；Build 预检不能调用它，它也绝不能提交生成任务。
 
-收费的 Provider 只声明一件事：价格发布在哪里。在 `defineEndpointPackage` 上写 `pricing: { kind: "page", url }`，指向 Provider 自己的公开价格页；在本机运行的 Provider 声明 `pricing: { kind: "local" }`。Hypit 不复制也不解释价格；`hypit plan --runtime <profile>` 会列出每个请求的 Endpoint，本地工作明确标成本地，Provider 工作附带它自己的价格页，Agent 在付费 Build 之前去原始页面读价。未声明价格来源的会被报告为未知。上游文件尚未生成时，能力包仍重建全部作者参数，只把未来文件保留为符号 Resource 槽；同一个 Endpoint 的普通 `supports` 会在 Build 入队前检查这份规格。包无法说明请求时直接停止，不回退成 capability-only 的假验证，也不维护第二张选择表。
+收费的 Provider 用 `pricing: { kind: "page", url }` 声明价格发布页面；在本机运行的 Provider
+声明 `pricing: { kind: "local" }`。Endpoint 还可以通过 `readPricing` 返回 Provider 当前发布的
+原始费率文档；只有网页的服务继续以该网页作为价格入口。`hypit pricing <run> --runtime <profile>`
+把这些材料放在 Run 的 Needs 旁边，而且不会创建 Build。Agent 可以据此计算并解释费用，用户的
+决定仍然是支出授权。共享接口只有来源 URL 和保持 Provider 原始形状的 JSON，因此接入新的
+中转站不需要先给 Hypit 增加一种价格表分类。
+
+`hypit plan --runtime <profile>` 仍然完全在本地执行并列出每个请求的 Endpoint。上游文件尚未
+生成时，能力包仍重建全部作者参数，只把未来文件保留为符号 Resource 槽；同一个 Endpoint 的
+普通 `supports` 会在 Build 入队前检查这份规格。包无法说明请求时直接停止，不回退成
+capability-only 的假验证，也不维护第二张选择表。
 
 ## 5. 按需声明 Managed Program
 

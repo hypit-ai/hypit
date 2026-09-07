@@ -46,6 +46,8 @@ export type CredentialAcquisition = {
   readonly tokenEndpoint: string;
   readonly clientId: string;
   readonly scopes: readonly string[];
+  /** Maximum duration of the service-owned token exchange after browser authorization returns. */
+  readonly requestTimeoutMs: number;
 };
 
 export type CredentialStore = {

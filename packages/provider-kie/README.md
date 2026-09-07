@@ -28,14 +28,30 @@ routes rather than extra Capabilities.
 | `@hypit/seedream` | `seedream-5-lite` | `seedream/5-lite-{text,image}-to-image` |
 | `@hypit/background-removal` | `remove-background` | `recraft/remove-background` |
 
-KIE accepts the GPT Image 2 `4:3`, `3:4` and `4:5` ratios. Its restrictions are combinations rather
-than a blacklist: `auto` is 1K-only, `1:1` is unavailable at 4K, and `4:5` is 1K-only. The KIE
-Endpoint checks those exact combinations before upload or paid submission without narrowing the
-model package's Provider-neutral vocabulary.
+KIE's current GPT Image 2 request surface is:
+
+| Resolution | Ratios unavailable at this Endpoint | `background` |
+| --- | --- | --- |
+| `1K` | none | optional |
+| `2K` | `5:4`, `4:5`, `3:1`, `1:3`, `9:21` | omit |
+| `4K` | `3:1`, `1:3`, `9:21` | omit |
+
+These facts were checked against KIE's live `createTask` endpoint on 2026-09-07. The live API accepts
+`5:4` and `4:5` at 4K even though KIE's [model page](https://kie.ai/gpt-image-2) currently lists a
+broader restriction. At 2K and 4K, any explicit `background` value is rejected, including `opaque`
+and `auto`. The KIE Endpoint checks this boundary before upload or paid submission; the GPT Image
+model package continues to expose the complete Provider-neutral vocabulary.
 
 KIE's Grok Imagine endpoints accept up to seven reference images, but only one at 1080p. This is
 also checked by the KIE Endpoint; the Grok model packages retain their model-level seven-image
 capacity.
+
+KIE publishes a public model-pricing catalogue at `POST /client/v1/model-pricing/page`. For each
+selected Need, `readPricing` derives the same KIE wire model used for execution, reads the catalogue's
+pages with that wire model in KIE's `modelDescription` query, and preserves the returned records. The
+Provider contains no Hypit model-price table and does not interpret KIE's descriptions or formulas.
+All returned parameter rows remain intact for the Agent to read beside the Need. Reading this public
+catalogue does not resolve the generation API credential and submits no work.
 
 There is deliberately no Grok image capability and no MiMo capability in this release. Seedream's
 `nsfwCheck` is explicit author request content; KIE cannot silently enable or disable it. A

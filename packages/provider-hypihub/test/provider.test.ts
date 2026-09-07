@@ -7,6 +7,7 @@ import type { AsyncEndpoint } from "@hypit/endpoint-kit";
 import { geminiCapabilities, geminiTypes, sealGeminiRequest } from "@hypit/gemini";
 import type { CanonicalValue, Need } from "@hypit/protocol";
 import { mimoSpeechEndpoints, sealMimoSpeechRequest } from "@hypit/mimo-speech";
+import { generationTypes } from "@hypit/generation";
 import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
 import { sealSpeechEvidenceAudio } from "@hypit/speech";
 import { speechEvidenceTypes } from "@hypit/speech-evidence";
@@ -112,12 +113,94 @@ test("HypiHub declares its own credential acquisition flow", () => {
   assert.equal(credential?.acquisition?.kind, "oauth2-pkce");
   assert.equal(credential?.acquisition?.authorizationEndpoint, "https://hypit.ai/oauth/consent");
   assert.equal(credential?.acquisition?.tokenEndpoint, "https://hypit.ai/oauth/token");
+  assert.equal(credential?.acquisition?.requestTimeoutMs, 30_000);
+});
+
+test("HypiHub publishes GPT Image request limits through its Endpoint offer", () => {
+  const offer = createHypiHubProvider().offers.find((item) => item.capability.name === "gpt-image-2");
+  assert.ok(offer);
+  assert.deepEqual(offer.supports?.({
+    capability: offer.capability,
+    returns: offer.returns,
+    constraints: {
+      ports: {
+        prompt: ["cutout"], aspectRatio: ["1:1"], resolution: ["2K"], background: ["opaque"],
+      },
+    },
+  }), {
+    status: "unsupported",
+    reason: "HypiHub GPT Image 2 accepts the background option only at 1K; omit it at 2K",
+  });
 });
 
 test("HypiHub derives credential acquisition from its configured service origin", () => {
-  const [credential] = createHypiHubProvider({ baseUrl: "https://gateway.example.test/v1" }).credentials;
+  const [credential] = createHypiHubProvider({
+    baseUrl: "https://gateway.example.test/v1",
+    oauthRequestTimeoutMs: 12_000,
+  }).credentials;
   assert.equal(credential?.acquisition?.authorizationEndpoint, "https://gateway.example.test/oauth/consent");
   assert.equal(credential?.acquisition?.tokenEndpoint, "https://gateway.example.test/oauth/token");
+  assert.equal(credential?.acquisition?.requestTimeoutMs, 12_000);
+});
+
+test("HypiHub returns its current model-pricing document", async () => {
+  const provider = createHypiHubProvider({
+    pricingRequestTimeoutMs: 1_000,
+    fetch: async (input, init) => {
+      assert.equal(String(input), "https://hypit.ai/v1/pricing?model=bytedance%2Fseedance-2");
+      assert.equal((init?.headers as Record<string, string>).authorization, "Bearer test-key");
+      return Response.json({
+        object: "model_pricing",
+        model: "bytedance/seedance-2",
+        pricing: { mode: "per_second", per_second_usd: 0.1045 },
+      });
+    },
+  });
+  const request = {
+    capability: seedanceEndpoints.standard!.capability,
+    returns: seedanceEndpoints.standard!.returns,
+    constraints: sealSeedanceRequest("seedance-2", {
+    prompt: ["A presenter speaks to camera."], resolution: ["720p"], aspectRatio: ["9:16"],
+    duration: [5], generateAudio: [true], webSearch: [false],
+    }) as unknown as CanonicalValue,
+  };
+  assert.deepEqual(await provider.readPricing!({
+    request,
+    credentials: async () => ({ apiKey: { secret: "test-key" } }),
+  }), [{
+    source: "https://hypit.ai/v1/pricing?model=bytedance%2Fseedance-2",
+    data: {
+      object: "model_pricing",
+      model: "bytedance/seedance-2",
+      pricing: { mode: "per_second", per_second_usd: 0.1045 },
+    },
+  }]);
+});
+
+test("HypiHub prices the wire route selected by an authored future input", async () => {
+  const provider = createHypiHubProvider({
+    pricingRequestTimeoutMs: 1_000,
+    fetch: async (input) => {
+      assert.equal(String(input), "https://hypit.ai/v1/pricing?model=gpt-image-2-image-to-image");
+      return Response.json({ object: "model_pricing", model: "gpt-image-2-image-to-image" });
+    },
+  });
+  const request = {
+    capability: { module: { name: "@hypit/gpt-image", version: "1" }, name: "gpt-image-2" },
+    returns: generationTypes.imageSet,
+    constraints: {
+      ports: { prompt: ["A portrait."], aspectRatio: ["9:16"], resolution: ["1K"] },
+    },
+    pendingInputs: [{ input: "images", role: "image" }],
+  } as const;
+  const [document] = await provider.readPricing!({
+    request,
+    credentials: async () => ({ apiKey: { secret: "test-key" } }),
+  });
+  assert.deepEqual(document?.data, {
+    object: "model_pricing",
+    model: "gpt-image-2-image-to-image",
+  });
 });
 
 test("HypiHub doctor checks the authenticated catalogue only when actively invoked", async () => {

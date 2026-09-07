@@ -34,7 +34,7 @@ async function decode(source: string, handler: StructuredSurfaceHandler) {
   });
 }
 
-const authored = `<gpt:Image id="holding" prompt={prompt} aspect-ratio="21:9" resolution="2K">
+const authored = `<gpt:Image id="holding" prompt={prompt} aspect-ratio="9:21" resolution="2K" background="auto">
   <gpt:Reference image={person.image}/>
   <gpt:Reference image={product.image}/>
 </gpt:Image>`;
@@ -52,6 +52,13 @@ test("raw GPT Image Surface keeps Text and every reference image on explicit gra
     kind: "component-output", component: "product", output: "image",
   });
   assert.deepEqual(component.outputs, { image: "holding.image" });
+  const draft = result.records.find((record) => record.id === "holding.draft");
+  assert.equal(draft?.value.kind, "inline");
+  assert.deepEqual((draft?.value.value as { ports?: unknown }).ports, {
+    aspectRatio: ["9:21"],
+    resolution: ["2K"],
+    background: ["auto"],
+  });
   assert.equal(result.records.filter((record) => record.id.endsWith(".binding")).length, 2);
   assert.equal(result.records.some((record) => record.id.endsWith(".cleanup")), false);
   assert.deepEqual(result.fragments[0]?.operations.map((operation) => operation.id), [

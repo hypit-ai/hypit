@@ -1,8 +1,10 @@
 import { requestDeadline } from "@hypit/runtime-kit";
-import type { AsyncEndpoint, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
+import type { AsyncEndpoint, EndpointCredential, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointPricingReader, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
 import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
 import { geminiCapabilities, geminiModels, geminiTypes, sealVisualObservation, verifyGeminiRequest } from "@hypit/gemini";
 import type { GeminiRequest } from "@hypit/gemini";
+import { selectWireModelForRequest } from "@hypit/generation";
+import type { GenerationRequest } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CapabilityRef } from "@hypit/protocol";
 import { credentialRef } from "@hypit/runtime";
@@ -34,6 +36,8 @@ export type CreateHypiHubProviderOptions = {
   readonly capabilityConcurrency?: Readonly<Record<string, number>>;
   readonly pollIntervalMs?: number;
   readonly requestTimeoutMs?: number;
+  readonly oauthRequestTimeoutMs?: number;
+  readonly pricingRequestTimeoutMs?: number;
   readonly operationTimeoutMs?: number;
   readonly uploadPartTimeoutMs?: number;
   readonly uploadPartAttempts?: number;
@@ -61,10 +65,10 @@ function apiBaseUrl(value: string): string {
   const origin = trimmed.replace(/\/(?:v1beta|v1)$/iu, "");
   return `${origin}/v1`;
 }
-function credential(context: EndpointInvocationContext) {
-  const value = context.credentials.apiKey?.secret;
+function credential(credentials: Readonly<Record<string, EndpointCredential>>) {
+  const value = credentials.apiKey?.secret;
   assert(typeof value === "string" && value.length > 0, "HypiHub login is unavailable; run hypit auth login for HypiHub");
-  return context.credentials.apiKey!;
+  return credentials.apiKey!;
 }
 function guidedMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
@@ -230,11 +234,59 @@ class HypiHubClient {
 
 function authFor(context: EndpointInvocationContext, client: HypiHubClient): HypiHubAuth {
   return createHypiHubAuth({
-    credential: credential(context),
+    credential: credential(context.credentials),
     baseUrl: client.baseUrl,
     requestTimeoutMs: client.timeout,
     fetch: client.fetcher,
   });
+}
+
+function pricingAuth(credentials: Readonly<Record<string, EndpointCredential>>, client: HypiHubClient): HypiHubAuth {
+  return createHypiHubAuth({
+    credential: credential(credentials),
+    baseUrl: client.baseUrl,
+    requestTimeoutMs: client.timeout,
+    fetch: client.fetcher,
+  });
+}
+
+function pricingModel(request: import("@hypit/endpoint-kit").EndpointRequest, transcriptionModel: string): string | undefined {
+  if (capabilityKey(request.capability) === capabilityKey(whisperXCapabilities.alignment)) {
+    return transcriptionModel;
+  }
+  if (request.capability.module.name === geminiCapabilities[geminiModels[0]].module.name
+    && request.capability.module.version === geminiCapabilities[geminiModels[0]].module.version
+    && geminiModels.some((model) => model === request.capability.name)) {
+    return request.capability.name;
+  }
+  const route = hypiHubRouteForCapability(request.capability);
+  if (route === undefined) return undefined;
+  const generation = request.constraints as unknown as GenerationRequest;
+  return selectWireModelForRequest(
+    route,
+    generation,
+    request.pendingInputs?.map((input) => input.input),
+  );
+}
+
+/** Read HypiHub's own current model-pricing document without calculating a request total. */
+function hypiHubPricingReader(client: HypiHubClient, transcriptionModel: string): EndpointPricingReader {
+  const documents = new Map<string, Promise<Record<string, unknown>>>();
+  return async ({ request, credentials }) => {
+    const model = pricingModel(request, transcriptionModel);
+    if (model === undefined) return [];
+    const path = `/pricing?model=${encodeURIComponent(model)}`;
+    let pending = documents.get(model);
+    if (pending === undefined) {
+      pending = credentials().then(async (resolved) => await client.json(path, pricingAuth(resolved, client)));
+      documents.set(model, pending);
+    }
+    const response = await pending;
+    return [{
+      source: `${client.baseUrl}${path}`,
+      data: canonicalize(response),
+    }];
+  };
 }
 
 function cardEndpoints(card: Record<string, unknown> | undefined): readonly string[] {
@@ -426,6 +478,8 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     assert(Number.isSafeInteger(limit) && limit > 0, `HypiHub ${name} capacity must be a positive integer`);
   }
   const requestTimeoutMs = options.requestTimeoutMs ?? 300_000;
+  const oauthRequestTimeoutMs = options.oauthRequestTimeoutMs ?? 30_000;
+  const pricingRequestTimeoutMs = options.pricingRequestTimeoutMs ?? 30_000;
   const operationTimeoutMs = options.operationTimeoutMs ?? 20 * 60_000;
   const uploadPartTimeoutMs = options.uploadPartTimeoutMs ?? 5 * 60_000;
   const uploadPartAttempts = options.uploadPartAttempts ?? 3;
@@ -434,6 +488,8 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   const geminiRateLimitRetryDelayMs = options.geminiRateLimitRetryDelayMs ?? 2_000;
   for (const [name, value] of Object.entries({
     requestTimeoutMs,
+    oauthRequestTimeoutMs,
+    pricingRequestTimeoutMs,
     operationTimeoutMs,
     uploadPartTimeoutMs,
     uploadPartAttempts,
@@ -447,6 +503,14 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   const client = new HypiHubClient({
     baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"),
     timeout: requestTimeoutMs,
+    uploadPartTimeout: uploadPartTimeoutMs,
+    uploadPartAttempts,
+    downloadAttempts,
+    fetcher: options.fetch ?? globalThis.fetch,
+  });
+  const pricingClient = new HypiHubClient({
+    baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"),
+    timeout: pricingRequestTimeoutMs,
     uploadPartTimeout: uploadPartTimeoutMs,
     uploadPartAttempts,
     downloadAttempts,
@@ -528,6 +592,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   return defineEndpointPackage({
     module: hypiHubProviderModuleRef, facet: "gateway", instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
     pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
+    readPricing: hypiHubPricingReader(pricingClient, transcriptionModel),
     credentials: { apiKey: options.apiKey ?? credentialRef("os", "hypihub.oauth") },
     credentialInputs: { apiKey: {
       label: "HypiHub login",
@@ -537,6 +602,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
         tokenEndpoint: new URL("/oauth/token", oauthOrigin).toString(),
         clientId: "hyc_d5d5e8e7131b0c877756e66c",
         scopes: ["user:profile", "user:inference"],
+        requestTimeoutMs: oauthRequestTimeoutMs,
       },
     } },
     defaultConcurrency: options.defaultConcurrency ?? 4,
@@ -544,8 +610,8 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     capabilities: [
       ...hypiHubRoutes
       .map((route) => route.media === "audio"
-        ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, capacity: route.capability.name, ...(capabilityConcurrency[route.capability.name] === undefined ? {} : { maxConcurrency: capabilityConcurrency[route.capability.name]! }) }
-        : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, capacity: route.capability.name, ...(capabilityConcurrency[route.capability.name] === undefined ? {} : { maxConcurrency: capabilityConcurrency[route.capability.name]! }) }),
+        ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, capacity: route.capability.name, ...(route.supports === undefined ? {} : { supports: route.supports }), ...(capabilityConcurrency[route.capability.name] === undefined ? {} : { maxConcurrency: capabilityConcurrency[route.capability.name]! }) }
+        : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, capacity: route.capability.name, ...(route.supports === undefined ? {} : { supports: route.supports }), ...(capabilityConcurrency[route.capability.name] === undefined ? {} : { maxConcurrency: capabilityConcurrency[route.capability.name]! }) }),
       ...geminiModels.map((model) => ({
         capability: geminiCapabilities[model],
         returns: geminiTypes.visualObservation,

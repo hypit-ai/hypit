@@ -203,6 +203,17 @@ export class NodeDriver {
         },
       };
     }
+    if (resolution.status === "unsupported") {
+      return {
+        blocked: {
+          command: command.id,
+          reason: "unsupported-endpoint-request",
+          subject: resolution.rejections
+            .map((rejection) => `${rejection.endpointId}: ${rejection.reason}`)
+            .join("; "),
+        },
+      };
+    }
     if (resolution.status === "ambiguous") {
       return {
         blocked: {

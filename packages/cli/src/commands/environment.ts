@@ -52,6 +52,9 @@ export async function runEnvironmentCommand(input: {
     : (event: { readonly specifier: string; readonly phase: "checking" | "installing" | "ready" }): void => {
       if (event.phase === "installing") io.write(`  · Installing ${event.specifier}\n`);
     };
+  const reportCredentialProgress = args.presentation.json
+    ? io.writeProgress
+    : io.writeProgress ?? io.write;
 
   if (args.command === "paths") {
     const runtimePaths = runtimeProfile === undefined
@@ -344,7 +347,11 @@ export async function runEnvironmentCommand(input: {
           throw new Error(`${item.label} cannot be written by this command; ${source}`);
         }
         const raw = item.acquisition !== undefined && args.credentialFile === undefined
-          ? await acquireOAuthCredential(io, item.acquisition)
+          ? await acquireOAuthCredential(item.acquisition, {
+            ...(reportCredentialProgress === undefined ? {} : {
+              onProgress: (message) => reportCredentialProgress(`  · ${message}\n`),
+            }),
+          })
           : args.credentialFile === undefined
             ? await io.readSecret?.(`${item.label}: `)
             : await readFile(args.credentialFile, "utf8");

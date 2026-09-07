@@ -7,6 +7,7 @@ import type {
   StoredValue,
   TypeRef,
 } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 import type {
   ResourceStore,
   CredentialAcquisition,
@@ -59,6 +60,31 @@ export type EndpointCredential = CredentialValue & {
   /** Narrow write authority for this declared slot only, when its selected Store is writable. */
   readonly replace?: (value: CredentialValue) => Promise<void>;
 };
+
+/** Provider-owned pricing material read from one exact source. Its shape remains the Provider's. */
+export type EndpointPricingDocument = {
+  readonly source: string;
+  readonly data: CanonicalValue;
+};
+
+export type EndpointPricingReaderContext = {
+  readonly request: EndpointRequest;
+  /** Resolve credentials only when this Provider's pricing source requires them. */
+  readonly credentials: () => Promise<Readonly<Record<string, EndpointCredential>>>;
+};
+
+/** Read whatever current pricing material this Provider can usefully narrow for one request. */
+export type EndpointPricingReader = (
+  context: EndpointPricingReaderContext,
+) => Awaitable<readonly EndpointPricingDocument[]>;
+
+export function verifyEndpointPricingDocument(value: EndpointPricingDocument): void {
+  let source: URL | undefined;
+  try { source = new URL(value.source); } catch { source = undefined; }
+  assert(source?.protocol === "https:" || source?.hostname === "localhost",
+    "Endpoint pricing source must use HTTPS or localhost");
+  canonicalize(value.data);
+}
 
 export type EndpointInvocationContext = {
   readonly command: FulfillNeedCommand;
@@ -161,9 +187,14 @@ export function endpointResourceClaims(scheduling: EndpointScheduling, request: 
   });
 }
 
+/** A Provider's complete support decision for one concrete request. */
+export type EndpointSupport =
+  | { readonly status: "supported" }
+  | { readonly status: "unsupported"; readonly reason: string };
+
 export type EndpointRegistrationOptions = {
   readonly pool?: string;
-  readonly supports?: (request: EndpointRequest) => boolean;
+  readonly supports?: (request: EndpointRequest) => EndpointSupport;
   readonly scheduling?: EndpointScheduling;
   readonly credentials?: Readonly<Record<string, CredentialRef>>;
   /**
@@ -211,6 +242,8 @@ export type EndpointPackage = {
   /** Host-facing login material declared by this exact configured Endpoint instance. */
   readonly credentials: readonly EndpointCredentialDescription[];
   readonly pricing?: EndpointPricing;
+  /** Optional live pricing-material reader owned by this Provider. */
+  readonly readPricing?: EndpointPricingReader;
   install(registry: EndpointRegistrar): Awaitable<void>;
 };
 
@@ -218,7 +251,7 @@ export type EndpointOffer = {
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
   readonly endpoint: string;
-  readonly supports?: (request: EndpointRequest) => boolean;
+  readonly supports?: (request: EndpointRequest) => EndpointSupport;
   readonly transient?: true;
 };
 
@@ -236,7 +269,7 @@ type EndpointCapabilityBase = {
   readonly unitsForRequest?: EndpointScheduling["unitsForRequest"];
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
-  readonly supports?: (request: EndpointRequest) => boolean;
+  readonly supports?: (request: EndpointRequest) => EndpointSupport;
   /**
    * Also allow this capability in a disposable, non-Build authoring execution.
    * The Provider is asserting that it needs no durable or cross-Build capacity
@@ -279,6 +312,8 @@ export type DefineEndpointPackageOptions = {
   readonly actionLimits?: EndpointActionLimits;
   /** The Provider's own price page, or `local` for work that runs on this machine without a charge. */
   readonly pricing?: EndpointPricing;
+  /** Read current Provider-owned pricing material relevant to one request. */
+  readonly readPricing?: EndpointPricingReader;
   readonly capabilities: readonly EndpointCapability[];
 };
 
@@ -374,6 +409,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     offers,
     credentials: credentialDescriptions,
     ...(options.pricing === undefined ? {} : { pricing: structuredClone(options.pricing) }),
+    ...(options.readPricing === undefined ? {} : { readPricing: options.readPricing }),
     install(registry) {
       for (const capability of options.capabilities) {
         const capacity = capability.capacity ?? capability.capability.name;

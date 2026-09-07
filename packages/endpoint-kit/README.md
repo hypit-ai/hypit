@@ -68,7 +68,27 @@ session; capabilities that require durable quota shared with Builds stay Build-o
 Endpoint packages are selected by a Runtime Profile, never activated by author imports. This package
 depends on no Node filesystem, scheduler implementation or video domain.
 
+An Endpoint may also expose `readPricing`. It receives the same complete `EndpointRequest` used for
+support selection and resolves only that Endpoint's declared credentials when its source requires
+them. The Provider returns current pricing documents together with their source URLs. Their data shape
+belongs to the Provider: one service may return a model rate card, another a broader mixed catalogue,
+and another may expose only its declared pricing page. Hypit preserves the material instead of
+inventing a shared rate-table taxonomy, interpreting formulas, calculating totals, or turning pricing
+information into spending authority.
+
+Three facts remain separate at this boundary:
+
+- the `EndpointRequest` describes the work selected by the Run;
+- an `EndpointPricingDocument` describes prices published by that Provider;
+- spending authority belongs to the user's decision about the described work and cost.
+
+The caller can place the first two beside each other for an Agent to calculate and explain. Request
+selection continues to follow the Runtime Profile and Endpoint support, while submission continues to
+follow the user's authority.
+
 `supports` receives one complete support description. For an executing Need, concrete graph values
 are already in `constraints`. During pre-Build planning, an upstream value that does not exist yet is
 represented by a semantic `pendingInputs` slot instead. A Provider may use the slot's input and
 media role to enforce support limits, but it never receives graph traversal rules or future bytes.
+It returns either `supported`, or `unsupported` with the Provider's reason. Selection infrastructure
+preserves that reason without interpreting request fields or maintaining a central limitation table.
