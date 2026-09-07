@@ -13,7 +13,7 @@ const image = {
 const resolve = async () => "data:image/png;base64,AQID";
 const resolveAudio = async () => "data:audio/wav;base64,AQID";
 
-test("HypiHub GPT image requests use canonical edit references and size dimensions", async () => {
+test("HypiHub GPT image requests preserve canonical edit references and independent image dimensions", async () => {
   const route = hypiHubRoutes.find((item) => item.capability.name === "gpt-image-2");
   assert.ok(route);
   const result = await route.compile({
@@ -28,7 +28,7 @@ test("HypiHub GPT image requests use canonical edit references and size dimensio
   assert.deepEqual(result.input, {
     prompt: "edit",
     aspect_ratio: "1:1",
-    size: "1024x1024",
+    resolution: "1k",
     reference_images: [{ url: "data:image/png;base64,AQID" }],
   });
 });
@@ -149,3 +149,20 @@ test("HypiHub MiMo TTS mappings use the public audio speech fields", async () =>
   assert.equal(result.model, "mimo-v2.5-tts-voicedesign");
   assert.deepEqual(result.input, { input: "hello", voice_description: "warm and calm" });
 });
+
+for (const capability of ["gpt-image-2", "nano-banana-2", "nano-banana-pro"]) {
+  for (const aspect of ["1:1", "16:9", "9:16"]) {
+    for (const tier of ["1K", "2K", "4K"]) {
+      test(`HypiHub ${capability} preserves ${aspect} at ${tier}`, async () => {
+        const route = hypiHubRoutes.find(item => item.capability.name === capability);
+        assert.ok(route);
+        const result = await route.compile({ ports: {
+          prompt: ["a paper boat"], aspectRatio: [aspect], resolution: [tier],
+        } }, resolve);
+        assert.deepEqual(result.input, {
+          prompt: "a paper boat", aspect_ratio: aspect, resolution: tier.toLowerCase(),
+        });
+      });
+    }
+  }
+}

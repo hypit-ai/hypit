@@ -12,6 +12,12 @@ persists them in Hypit's configured ArtifactStore. Image references use HypiHub'
 for one video). First/last-frame images use `first_frame` and `last_frame`. It also
 exports a small Gemini-native VLM generator for callers that previously used Vertex.
 
+GPT Image 2 and Nano Banana send image shape and output tier independently:
+`{ "aspect_ratio": "9:16", "resolution": "4k" }`. The provider does not convert
+`1K`/`2K`/`4K` into fixed pixel dimensions. An omitted tier still defaults to `1k`.
+Deploy the HypiHub server with the first-class image `resolution` contract before
+rolling out this provider; older gateways may ignore a tier on some routes.
+
 Runtime Profile example:
 
 ```json

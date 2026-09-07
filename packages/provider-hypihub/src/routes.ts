@@ -45,10 +45,9 @@ function normalizeHypiHubRequest(
 ): { readonly model: string; readonly input: CanonicalValue } {
   const input = { ...(request.input as Record<string, unknown>) };
   if (mapping.result === "image") {
-    const resolution = input.size;
-    if (resolution === "1K") input.size = "1024x1024";
-    else if (resolution === "2K") input.size = "2048x2048";
-    else if (resolution === "4K") input.size = "3840x2160";
+    // Resolution is a tier, not a pixel canvas. Preserve the independent
+    // aspect_ratio so increasing quality cannot turn a square into 16:9.
+    if (typeof input.resolution === "string") input.resolution = input.resolution.toLowerCase();
     return { model: request.model, input: canonicalize(input) };
   }
 

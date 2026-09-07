@@ -40,7 +40,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     fields: {
       prompt: { as: "value", field: "prompt" },
       aspectRatio: { as: "value", field: "aspect_ratio" },
-      resolution: { as: "value", field: "size", whenAbsent: "1024x1024" },
+      resolution: { as: "value", field: "resolution", whenAbsent: "1K" },
       images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
     },
   },
@@ -49,7 +49,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     fields: {
       prompt: { as: "value" as const, field: "prompt" },
       aspectRatio: { as: "value" as const, field: "aspect_ratio" },
-      resolution: { as: "value" as const, field: "size", whenAbsent: "1024x1024" },
+      resolution: { as: "value" as const, field: "resolution", whenAbsent: "1K" },
       images: { as: "itemObject" as const, field: "reference_images", urlKey: "url", fieldKeys: {} },
       outputFormat: { as: "value" as const, field: "output_format" },
     },
