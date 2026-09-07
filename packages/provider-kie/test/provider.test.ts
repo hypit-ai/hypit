@@ -11,6 +11,7 @@ import type { AsyncEndpoint } from "@hypit/endpoint-kit";
 import { artifactTypes } from "@hypit/artifact";
 import { backgroundRemovalCapabilities, backgroundRemovalRequest } from "@hypit/background-removal";
 import { seedanceEndpoints, sealSeedanceRequest } from "@hypit/seedance";
+import { generationTypes } from "@hypit/generation";
 import type { CanonicalValue, Need } from "@hypit/protocol";
 import { createKieProvider } from "@hypit/provider-kie";
 
@@ -82,6 +83,85 @@ test("all KIE capabilities share one asynchronous task engine and use exact-mode
       { id: "pool:kie.default", limit: 8 },
       { id: "capacity:kie.default/seedance-2-mini", limit: 4 },
     ],
+  });
+});
+
+test("KIE exposes the rate-card records returned for the request's wire model", async () => {
+  const provider = createKieProvider({
+    fetch: async (input, init) => {
+      assert.equal(String(input), "https://api.kie.ai/client/v1/model-pricing/page");
+      assert.deepEqual(JSON.parse(String(init?.body)), {
+        pageNum: 1,
+        pageSize: 100,
+        modelDescription: "bytedance/seedance-2-mini",
+        interfaceType: "",
+      });
+      return Response.json({ code: 200, data: {
+        records: [{
+          modelDescription: "bytedance/seedance-2-mini, 720P no video",
+          creditPrice: "8.2",
+          creditUnit: "per second",
+          usdPrice: "0.041",
+        }],
+        pages: 1,
+      } });
+    },
+  });
+  const request = {
+    capability: seedanceEndpoints.mini!.capability,
+    returns: seedanceEndpoints.mini!.returns,
+    constraints: sealSeedanceRequest("seedance-2-mini", {
+      prompt: ["A presenter speaks to camera."], resolution: ["720p"], aspectRatio: ["9:16"],
+      duration: [5], generateAudio: [true], webSearch: [false],
+    }) as unknown as CanonicalValue,
+  };
+  assert.deepEqual(await provider.readPricing!({
+    request,
+    credentials: async () => { throw new Error("public pricing must not require credentials"); },
+  }), [{
+    source: "https://api.kie.ai/client/v1/model-pricing/page",
+    data: {
+      model: "bytedance/seedance-2-mini",
+      records: [{
+        modelDescription: "bytedance/seedance-2-mini, 720P no video",
+        creditPrice: "8.2",
+        creditUnit: "per second",
+        usdPrice: "0.041",
+      }],
+    },
+  }]);
+});
+
+test("KIE prices the wire route selected by an authored future input", async () => {
+  const provider = createKieProvider({
+    fetch: async () => Response.json({ code: 200, data: {
+      records: [{
+        modelDescription: "gpt-image-2-image-to-image, 1K",
+        creditPrice: "8",
+        creditUnit: "per image",
+      }],
+      pages: 1,
+    } }),
+  });
+  const request = {
+    capability: { module: { name: "@hypit/gpt-image", version: "1" }, name: "gpt-image-2" },
+    returns: generationTypes.imageSet,
+    constraints: {
+      ports: { prompt: ["A portrait."], aspectRatio: ["9:16"], resolution: ["1K"] },
+    },
+    pendingInputs: [{ input: "images", role: "image" }],
+  } as const;
+  const [document] = await provider.readPricing!({
+    request,
+    credentials: async () => { throw new Error("public pricing must not require credentials"); },
+  });
+  assert.deepEqual(document?.data, {
+    model: "gpt-image-2-image-to-image",
+    records: [{
+      modelDescription: "gpt-image-2-image-to-image, 1K",
+      creditPrice: "8",
+      creditUnit: "per image",
+    }],
   });
 });
 

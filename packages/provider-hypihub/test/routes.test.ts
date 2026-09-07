@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { EndpointSupport } from "@hypit/endpoint-kit";
+import type { CanonicalValue } from "@hypit/protocol";
 
 import { hypiHubRoutes } from "../src/routes.js";
 
@@ -13,7 +15,7 @@ const image = {
 const resolve = async () => "data:image/png;base64,AQID";
 const resolveAudio = async () => "data:audio/wav;base64,AQID";
 
-test("HypiHub GPT image requests use canonical edit references and the resolution tier", async () => {
+test("HypiHub GPT image requests use canonical edit references and the authored resolution tier", async () => {
   const route = hypiHubRoutes.find((item) => item.capability.name === "gpt-image-2");
   assert.ok(route);
   const result = await route.compile({
@@ -21,6 +23,7 @@ test("HypiHub GPT image requests use canonical edit references and the resolutio
       prompt: ["edit"],
       aspectRatio: ["1:1"],
       resolution: ["1K"],
+      background: ["transparent"],
       images: [{ role: "image", artifact: image }],
     },
   }, resolve);
@@ -28,9 +31,47 @@ test("HypiHub GPT image requests use canonical edit references and the resolutio
   assert.deepEqual(result.input, {
     prompt: "edit",
     aspect_ratio: "1:1",
-    size: "1K",
+    resolution: "1K",
+    background: "transparent",
     reference_images: [{ url: "data:image/png;base64,AQID" }],
   });
+
+  const unsupported = { ports: {
+    prompt: ["cutout"], aspectRatio: ["1:1"], resolution: ["2K"], background: ["opaque"],
+  } } as unknown as CanonicalValue;
+  assert.deepEqual(route.supports?.({
+    capability: route.capability,
+    returns: route.returns,
+    constraints: unsupported,
+  }), {
+    status: "unsupported",
+    reason: "HypiHub GPT Image 2 accepts the background option only at 1K; omit it at 2K",
+  });
+  await assert.rejects(route.compile(unsupported, resolve), /background option only at 1K/u);
+
+  for (const constraints of [
+    { ports: { prompt: ["portrait"], aspectRatio: ["5:4"], resolution: ["2K"] } },
+    { ports: { prompt: ["portrait"], aspectRatio: ["3:1"], resolution: ["4K"] } },
+  ]) {
+    const support: EndpointSupport | undefined = route.supports?.({
+      capability: route.capability,
+      returns: route.returns,
+      constraints,
+    });
+    assert.equal(support?.status, "unsupported");
+    assert.match(support?.status === "unsupported" ? support.reason : "", /HypiHub GPT Image 2/u);
+  }
+
+  for (const constraints of [
+    { ports: { prompt: ["portrait"], aspectRatio: ["auto"], resolution: ["4K"] } },
+    { ports: { prompt: ["portrait"], aspectRatio: ["5:4"], resolution: ["4K"] } },
+  ]) {
+    assert.deepEqual(route.supports?.({
+      capability: route.capability,
+      returns: route.returns,
+      constraints,
+    }), { status: "supported" });
+  }
 });
 
 test("HypiHub image-to-video requests preserve Hypit's first-frame semantics", async () => {

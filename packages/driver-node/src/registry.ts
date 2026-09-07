@@ -194,24 +194,41 @@ export class EndpointRegistry implements EndpointRegistrar {
 
   resolve(need: EndpointRequest): EndpointResolution {
     const key = endpointCapabilityKey(need.capability);
-    const registrations = (this.#registrationsByCapability.get(key) ?? []).filter((registration) =>
-      sameRef(registration.returns, need.returns)
-      && (registration.supports?.(need) ?? true));
+    const registrations = (this.#registrationsByCapability.get(key) ?? [])
+      .filter((registration) => sameRef(registration.returns, need.returns));
     const bound = this.#bindings.get(key);
     if (bound !== undefined) {
       const chosen = registrations.find((registration) => registration.id === bound);
-      // A binding names the Endpoint; an Endpoint that cannot serve this request is a missing one,
-      // reported with the id so the deployment sees which binding to revisit.
-      return chosen === undefined ? { status: "missing", endpointId: bound } : { status: "resolved", registration: chosen };
+      if (chosen === undefined) return { status: "missing", endpointId: bound };
+      const support = chosen.supports?.(need) ?? { status: "supported" };
+      if (support.status === "unsupported") {
+        if (!support.reason.trim()) throw new Error(`Endpoint ${chosen.id} returned an empty unsupported reason`);
+        return { status: "unsupported", rejections: [{ endpointId: chosen.id, reason: support.reason }] };
+      }
+      return { status: "resolved", registration: chosen };
     }
     if (registrations.length === 0) return { status: "missing" };
-    if (registrations.length > 1) {
+    const supported: EndpointRegistration[] = [];
+    const rejections: { endpointId: string; reason: string }[] = [];
+    for (const registration of registrations) {
+      const support = registration.supports?.(need) ?? { status: "supported" };
+      if (support.status === "supported") {
+        supported.push(registration);
+      } else {
+        if (!support.reason.trim()) throw new Error(`Endpoint ${registration.id} returned an empty unsupported reason`);
+        rejections.push({ endpointId: registration.id, reason: support.reason });
+      }
+    }
+    if (supported.length === 0) {
+      return { status: "unsupported", rejections: rejections.sort((left, right) => left.endpointId.localeCompare(right.endpointId)) };
+    }
+    if (supported.length > 1) {
       return {
         status: "ambiguous",
-        endpointIds: [...new Set(registrations.map((registration) => registration.id))].sort(),
+        endpointIds: [...new Set(supported.map((registration) => registration.id))].sort(),
       };
     }
-    return { status: "resolved", registration: registrations[0]! };
+    return { status: "resolved", registration: supported[0]! };
   }
 
 }

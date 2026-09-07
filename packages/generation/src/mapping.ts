@@ -72,6 +72,29 @@ export function selectWireModel(mapping: GenerationWireMapping, present: Readonl
   throw new Error(`${mapping.capability.name} has no route for ports ${[...present].sort().join(", ")}`);
 }
 
+/**
+ * Select one service model from the authored request shape.
+ *
+ * During planning, `pendingPorts` names graph inputs the model package has
+ * already attached even though their Resource bytes do not exist yet. They are
+ * ordinary model port names, not graph traversal instructions.
+ */
+export function selectWireModelForRequest(
+  mapping: GenerationWireMapping,
+  request: GenerationRequest,
+  pendingPorts: readonly string[] = [],
+): string {
+  assert(mappingSupportsRequest(mapping, request),
+    `${mapping.capability.name} request contains a port this Provider cannot map`);
+  const present = new Set(presentPorts(request));
+  for (const port of pendingPorts) {
+    assert(mapping.fields[port] !== undefined,
+      `${mapping.capability.name} request contains future port ${port} this Provider cannot map`);
+    present.add(port);
+  }
+  return selectWireModel(mapping, present);
+}
+
 async function urlsOf(
   values: readonly GenerationMediaValue[],
   resolve: GenerationArtifactUrlResolver,
@@ -88,9 +111,7 @@ export async function compileWireRequest(
   request: GenerationRequest,
   resolve: GenerationArtifactUrlResolver,
 ): Promise<GenerationWireRequest> {
-  assert(mappingSupportsRequest(mapping, request),
-    `${mapping.capability.name} request contains a port this Provider cannot map`);
-  const present = presentPorts(request);
+  const model = selectWireModelForRequest(mapping, request);
   const input: Record<string, CanonicalValue> = { ...(mapping.constants ?? {}) };
 
   for (const [port, field] of Object.entries(mapping.fields)) {
@@ -120,7 +141,7 @@ export async function compileWireRequest(
     }
   }
 
-  return { model: selectWireModel(mapping, present), input: canonicalize(input) };
+  return { model, input: canonicalize(input) };
 }
 
 /** Does this request only use ports this mapping can write? Needs no model package. */

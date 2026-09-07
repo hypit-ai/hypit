@@ -39,6 +39,7 @@ import {
   openProjectBuildResultRepository,
   parseLocalRuntimeProfile,
   preflightRuntimeConfig,
+  readRuntimeConfigPricing,
 } from "@hypit/runtime-local";
 
 function inlineString(value: unknown): string {
@@ -381,6 +382,72 @@ test("Runtime providers name the selected Endpoint and its declared price source
   }
 });
 
+test("Runtime pricing reads Provider-owned material with only the selected Endpoint's credentials", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-pricing-"));
+  const path = join(root, "hypit.runtime.json");
+  await writeFile(path, JSON.stringify(profile({
+    dataRoot: ".",
+    credentials: { secrets: { use: "example.credentials" } },
+    endpoints: { paid: { use: "example.paid" }, local: { use: "example.local" } },
+  })));
+  const generate = { module: { name: "example.model", version: "1" }, name: "generate" } as const;
+  const render = { module: { name: "example.render", version: "1" }, name: "render" } as const;
+  const returns = { module: { name: "example.value", version: "1" }, name: "Output" } as const;
+  const handler = () => ({ value: { kind: "inline" as const, value: null } });
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeCredentialStoreAdapterFacet({
+    use: "example.credentials",
+    validate() {},
+    open: () => ({ value: {
+      async resolve(ref) {
+        return ref.store === "secrets" && ref.key === "paid.key" ? { secret: "selected-key" } : undefined;
+      },
+    } }),
+  }));
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.paid",
+    activate: (context) => ({ endpoint: defineEndpointPackage({
+      module: { name: "example.provider", version: "1" }, facet: "paid",
+      instance: context.instance, pool: context.pool ?? context.instance,
+      credentials: { apiKey: credentialRef("secrets", "paid.key") },
+      pricing: { kind: "page", url: "https://prices.example/models" },
+      readPricing: async ({ request, credentials }) => {
+        const resolved = await credentials();
+        assert.equal(resolved.apiKey?.secret, "selected-key");
+        assert.deepEqual(request.constraints, { seconds: 5 });
+        return [{ source: "https://prices.example/models/generate", data: { usdPerSecond: 0.25 } }];
+      },
+      capabilities: [{ capability: generate, returns, lifecycle: "immediate", handler }],
+    }) }),
+  }));
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.local",
+    activate: (context) => ({ endpoint: defineEndpointPackage({
+      module: { name: "example.local", version: "1" }, facet: "local",
+      instance: context.instance, pool: context.pool ?? context.instance, pricing: { kind: "local" },
+      capabilities: [{ capability: render, returns, lifecycle: "immediate", handler }],
+    }) }),
+  }));
+  try {
+    assert.deepEqual(await readRuntimeConfigPricing(path, [
+      providerQuery("generate", generate, returns, { seconds: 5 }),
+      providerQuery("render", render, returns, null),
+    ], { registry }), [{
+      request: "generate", capability: generate, status: "resolved", endpoint: "paid", use: "example.paid",
+      pricing: { kind: "page", url: "https://prices.example/models" },
+      pricingDocuments: [{
+        source: "https://prices.example/models/generate",
+        data: { usdPerSecond: 0.25 },
+      }],
+    }, {
+      request: "render", capability: render, status: "resolved", endpoint: "local", use: "example.local",
+      pricing: { kind: "local" },
+    }]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("transient execution follows capability opt-in rather than pricing and keeps Profile bindings", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-transient-"));
   const path = join(root, "hypit.runtime.json");
@@ -421,7 +488,9 @@ test("transient execution follows capability opt-in rather than pricing and keep
           returns: greetingTypes.generated,
           lifecycle: "immediate",
           transient: true,
-          supports: (need) => (need.constraints as { readonly prompt?: unknown }).prompt === "Greet Ada",
+          supports: (need) => (need.constraints as { readonly prompt?: unknown }).prompt === "Greet Ada"
+            ? { status: "supported" }
+            : { status: "unsupported", reason: "prompt must be Greet Ada" },
           handler: ({ need, credentials }) => {
             remoteCalls += 1;
             assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
@@ -535,7 +604,9 @@ test("Runtime provider inspection applies Endpoint supports when the complete re
           returns,
           lifecycle: "immediate",
           supports: (need) => (need.constraints as { readonly allowed?: unknown } | null)?.allowed === true
-            && need.pendingInputs?.some((input) => input.role === "image") === true,
+            && need.pendingInputs?.some((input) => input.role === "image") === true
+            ? { status: "supported" }
+            : { status: "unsupported", reason: "request needs allowed=true and a pending image input" },
           handler: () => ({ value: { kind: "inline", value: null } }),
         }],
       }),
@@ -550,8 +621,24 @@ test("Runtime provider inspection applies Endpoint supports when the complete re
         pendingInputs: [{ input: "reference", role: "image" }],
       },
     ], { registry }), [
-      { request: "pending-file", capability, status: "unresolved" },
-      { request: "complete", capability, status: "unresolved" },
+      {
+        request: "pending-file",
+        capability,
+        status: "unsupported",
+        endpoint: "narrow",
+        use: "example.narrow",
+        pricing: { kind: "local" },
+        rejections: [{ endpoint: "narrow", message: "request needs allowed=true and a pending image input" }],
+      },
+      {
+        request: "complete",
+        capability,
+        status: "unsupported",
+        endpoint: "narrow",
+        use: "example.narrow",
+        pricing: { kind: "local" },
+        rejections: [{ endpoint: "narrow", message: "request needs allowed=true and a pending image input" }],
+      },
       { request: "symbolic-resource", capability, status: "resolved", endpoint: "narrow", use: "example.narrow", pricing: { kind: "local" } },
     ]);
   } finally {
@@ -654,10 +741,6 @@ test("a Profile binds a contested capability to one of its Endpoints, and says s
   })), /names nowhere, which is not an Endpoint instance of this Profile \(paid\)/u);
   assert.throws(() => parseLocalRuntimeProfile(profile({ bindings: { "not a key": "paid" } })), /capability key/u);
   assert.throws(() => parseLocalRuntimeProfile({ ...profile(), stale: 1, older: 2 }), /does not accept stale, older; it accepts/u);
-  assert.throws(() => parseLocalRuntimeProfile({
-    format: "hypit.runtime-profile@1",
-    runtime: { use: "@hypit/runtime-local", config: {} },
-  }), /retired hypit.runtime-profile@1 shape/u);
 });
 
 test("providers, doctor and invoke share one resolver: a contested capability is ambiguous until the Profile binds it", async () => {

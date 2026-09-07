@@ -39,6 +39,12 @@ module changes the visible graph expansion rather than the document structure:
 </gpt:Image>
 ```
 
+Set the optional `background` attribute to `transparent` when the generated image should carry
+alpha, `opaque` when every output pixel should be opaque, or `auto` when the model should choose.
+Omitting it leaves that choice to the model and selected Provider. Provider-specific combinations,
+including which resolution tiers accept an explicit background choice, are reported by that
+Provider before generation.
+
 `prompt` is an ordinary `Text` graph edge. Every `Reference` is an ordinary image Artifact edge;
 the Surface does not copy runtime media into request metadata. The raw module expands to request
 assembly, generation and primary-image selection. The clean module then adds the official

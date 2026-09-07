@@ -56,6 +56,15 @@ function sameRef(
     && left.name === right.name;
 }
 
+/** The author-facing component and operation, without the encoded Source identity. */
+function plannedStepLabel(step: string): string {
+  let decoded = step;
+  try { decoded = decodeURIComponent(step); } catch { /* keep the raw id */ }
+  const marker = "::component::";
+  const at = decoded.lastIndexOf(marker);
+  return at === -1 ? decoded : decoded.slice(at + marker.length);
+}
+
 function demandedCapabilities(state: BuildState): readonly CapabilityRef[] {
   const found = new Map(plannedNeeds(state).map((need) => [capabilityName(need.capability), need.capability]));
   return [...found.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, value]) => value);
@@ -64,12 +73,21 @@ function demandedCapabilities(state: BuildState): readonly CapabilityRef[] {
 export type PlanProviderView = {
   readonly request: string;
   readonly capability: string;
-  readonly status: "resolved" | "unresolved" | "ambiguous";
+  readonly status: "resolved" | "unresolved" | "unsupported" | "ambiguous";
   readonly endpoint?: string;
   readonly use?: string;
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
   readonly endpoints?: readonly string[];
+  readonly rejections?: readonly { readonly endpoint: string; readonly message: string }[];
   readonly binding?: string;
+};
+
+export type PlanPricingView = PlanProviderView & {
+  readonly pricingDocuments?: readonly {
+    readonly source: string;
+    readonly data: CanonicalValue;
+  }[];
+  readonly pricingError?: string;
 };
 
 export type PendingPlanInput = {
@@ -284,14 +302,13 @@ export async function evaluatePlanNeeds(
   return { state, needs: result };
 }
 
-/** Resolve every planned request independently; concrete constraints exercise Endpoint `supports`. */
-export async function describePlanProviders(
-  host: NodeRuntimeHost,
+/** The complete pre-Build requests shared by Endpoint selection and Provider pricing reads. */
+export function plannedProviderQueries(
   state: BuildState,
   evaluated: EvaluatedPlan,
-): Promise<readonly PlanProviderView[]> {
+): readonly import("@hypit/runtime-host-node").RuntimeHostProviderQuery[] {
   const planned = plannedNeeds(state);
-  const requests = planned.flatMap((item) => {
+  return planned.flatMap((item) => {
     const plannedRequest = evaluated.needs.get(item.need);
     const constraints = plannedRequest?.constraints;
     if (plannedRequest === undefined || constraints === undefined) return [];
@@ -308,6 +325,16 @@ export async function describePlanProviders(
       }),
     }];
   });
+}
+
+/** Resolve every planned request independently; concrete constraints exercise Endpoint `supports`. */
+export async function describePlanProviders(
+  host: NodeRuntimeHost,
+  state: BuildState,
+  evaluated: EvaluatedPlan,
+): Promise<readonly PlanProviderView[]> {
+  const planned = plannedNeeds(state);
+  const requests = plannedProviderQueries(state, evaluated);
   const described = (await host.providers(requests)).map((item) => ({
     request: item.request,
     capability: capabilityName(item.capability),
@@ -316,9 +343,39 @@ export async function describePlanProviders(
     ...(item.use === undefined ? {} : { use: item.use }),
     ...(item.pricing === undefined ? {} : { pricing: item.pricing }),
     ...(item.endpoints === undefined ? {} : { endpoints: item.endpoints }),
+    ...(item.rejections === undefined ? {} : { rejections: item.rejections }),
     ...(item.binding === undefined ? {} : { binding: item.binding }),
   }));
   return planned.map((item) => described.find((provider) => provider.request === item.need) ?? {
+    request: item.need,
+    capability: capabilityName(item.capability),
+    status: "unresolved" as const,
+  }).filter((item, index, all) => all.findIndex((candidate) => candidate.request === item.request) === index);
+}
+
+/** Read Provider-owned pricing material relevant to each planned request. */
+export async function describePlanPricing(
+  host: NodeRuntimeHost,
+  state: BuildState,
+  evaluated: EvaluatedPlan,
+): Promise<readonly PlanPricingView[]> {
+  const planned = plannedNeeds(state);
+  const requests = plannedProviderQueries(state, evaluated);
+  const pricing = await host.pricing(requests);
+  const described = pricing.map((item): PlanPricingView => ({
+    request: item.request,
+    capability: capabilityName(item.capability),
+    status: item.status,
+    ...(item.endpoint === undefined ? {} : { endpoint: item.endpoint }),
+    ...(item.use === undefined ? {} : { use: item.use }),
+    ...(item.pricing === undefined ? {} : { pricing: item.pricing }),
+    ...(item.endpoints === undefined ? {} : { endpoints: item.endpoints }),
+    ...(item.rejections === undefined ? {} : { rejections: item.rejections }),
+    ...(item.binding === undefined ? {} : { binding: item.binding }),
+    ...(item.pricingDocuments === undefined ? {} : { pricingDocuments: item.pricingDocuments }),
+    ...(item.pricingError === undefined ? {} : { pricingError: item.pricingError }),
+  }));
+  return planned.map((item) => described.find((entry) => entry.request === item.need) ?? {
     request: item.need,
     capability: capabilityName(item.capability),
     status: "unresolved" as const,
@@ -333,14 +390,21 @@ export function assertPlannedRequests(
 ): void {
   const byRequest = new Map(providers.map((item) => [item.request, item]));
   const problems = plannedNeeds(state).flatMap((planned) => {
+    const subject = plannedStepLabel(planned.step);
     const issue = evaluated.needs.get(planned.need)?.issue;
-    if (issue !== undefined) return [`${planned.step}.${planned.port}: ${issue}`];
+    if (issue !== undefined) return [`${subject}: ${issue}`];
     const provider = byRequest.get(planned.need);
     if (provider?.status === "resolved") return [];
     if (provider?.status === "ambiguous") {
-      return [`${planned.step}.${planned.port}: several Endpoints accept ${capabilityName(planned.capability)}; bind one in the Runtime Profile`];
+      return [`${subject}: several Endpoints accept ${capabilityName(planned.capability)}; bind one in the Runtime Profile`];
     }
-    return [`${planned.step}.${planned.port}: no selected Endpoint accepts the complete ${capabilityName(planned.capability)} request`];
+    if (provider?.status === "unsupported") {
+      const detail = (provider.rejections ?? [])
+        .map((rejection) => `${rejection.endpoint}: ${rejection.message}`)
+        .join("; ");
+      return [`${subject}: ${detail || `no configured Endpoint accepts the complete ${capabilityName(planned.capability)} request`}`];
+    }
+    return [`${subject}: no selected Endpoint accepts the complete ${capabilityName(planned.capability)} request`];
   });
   if (problems.length > 0) {
     throw new Error([

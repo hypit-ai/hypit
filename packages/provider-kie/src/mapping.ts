@@ -106,6 +106,7 @@ const gptImageMapping: GenerationWireMapping = {
     prompt: { as: "value", field: "prompt" },
     aspectRatio: { as: "value", field: "aspect_ratio" },
     resolution: { as: "value", field: "resolution" },
+    background: { as: "value", field: "background" },
     images: { as: "urlArray", field: "input_urls" },
   },
 };

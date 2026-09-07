@@ -6,7 +6,7 @@ import type { ArtifactAttachment } from "@hypit/workspace";
 import type { BuildResultForward } from "@hypit/build-result";
 import type { BuildResultRepositoryLocation } from "@hypit/build-result-kit";
 import type { DriverRunResult, NodeDriverOptions, ProducerRegistry } from "@hypit/driver-node";
-import type { BuildDefinition, BuildState, CapabilityRef, Need, StoredValue } from "@hypit/protocol";
+import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef, Need, StoredValue } from "@hypit/protocol";
 import type {
   BuildCatalogDescriptor,
   BuildCompletion,
@@ -154,8 +154,8 @@ export type RuntimeHostCapabilityProvider = {
   /** Caller-owned identity for this planned request. */
   readonly request: string;
   readonly capability: CapabilityRef;
-  readonly status: "resolved" | "unresolved" | "ambiguous";
-  /** Configured Endpoint instance that would serve the capability, when exactly one does. */
+  readonly status: "resolved" | "unresolved" | "unsupported" | "ambiguous";
+  /** Configured Endpoint instance selected for this request, when exactly one is identifiable. */
   readonly endpoint?: string;
   /** Provider package the Runtime Profile selected for that Endpoint. */
   readonly use?: string;
@@ -163,8 +163,20 @@ export type RuntimeHostCapabilityProvider = {
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
   /** Every matching Endpoint instance when the selection is ambiguous. */
   readonly endpoints?: readonly string[];
+  /** Provider-owned reasons from Endpoints that offer the capability but reject this request. */
+  readonly rejections?: readonly { readonly endpoint: string; readonly message: string }[];
   /** The Endpoint instance the Profile's `bindings` name for this capability, when it names one. */
   readonly binding?: string;
+};
+
+export type RuntimeHostCapabilityPricing = RuntimeHostCapabilityProvider & {
+  /** Provider-owned current pricing material relevant to this request. */
+  readonly pricingDocuments?: readonly {
+    readonly source: string;
+    readonly data: CanonicalValue;
+  }[];
+  /** A failed pricing-source read. The Provider's static price page remains available. */
+  readonly pricingError?: string;
 };
 
 export type RuntimeHostProviderQuery = {
@@ -267,6 +279,8 @@ export type NodeRuntimeHost = {
    * Reads the Profile and Endpoint declarations only; never resolves a credential or contacts a service.
    */
   providers(requests: readonly RuntimeHostProviderQuery[]): Promise<readonly RuntimeHostCapabilityProvider[]>;
+  /** Read current Provider-owned pricing material relevant to these requests. */
+  pricing(requests: readonly RuntimeHostProviderQuery[]): Promise<readonly RuntimeHostCapabilityPricing[]>;
   /**
    * Execute one immediate Need through the selected Endpoint and its credentials, outside any Build.
    * The creation-time boundary for observation, transcription and other quick capabilities; it

@@ -12,6 +12,18 @@ admits them into the current Build's working byte area. Image references use Hyp
 for one video). First/last-frame images use `first_frame` and `last_frame`. It also
 exports a small Gemini-native VLM generator for callers that previously used Vertex.
 
+The current HypiHub GPT Image 2 route exposes the same request surface as its KIE upstream:
+
+| Resolution | Ratios unavailable at this Endpoint | `background` |
+| --- | --- | --- |
+| `1K` | none | optional |
+| `2K` | `5:4`, `4:5`, `3:1`, `1:3`, `9:21` | omit |
+| `4K` | `3:1`, `1:3`, `9:21` | omit |
+
+HypiHub owns this support check independently: it neither imports the KIE Provider nor narrows the
+GPT Image model package. When the service surface changes, this Provider can change without changing
+the model or another Provider.
+
 For moving portraits, [Volcengine Matting](../volcengine-matting/README.md) maps
 `@hypit/volcengine-matting@1#matte-portrait-video` to `POST /v1/videos` with
 `model: "matte-portrait-video"`, `ref_video_url` and `format` (`WEBM` by default, or `MOV`).
@@ -58,6 +70,9 @@ Resource identity is uploaded once within one Runtime operation. Hypit keeps no 
 cross-Build cache. Embedded callers may replace this transport with `publicAssetUrl`.
 
 OAuth login stores the access token, refresh token and expiry as one opaque credential value. The
+browser callback only confirms that authorization returned to the CLI; the CLI reports success after
+the bounded token exchange and Credential Store write complete. `oauthRequestTimeoutMs` controls that
+exchange and defaults to 30 seconds, independently of the longer inference request timeout. The
 Provider refreshes that value shortly before expiry or after an unauthorised response when the
 selected Store is writable. Its Endpoint receives only the credential slot it declared and a narrow
 operation for replacing that same slot; it cannot enumerate the Store, choose another key or read
@@ -71,9 +86,11 @@ from surfaced upload errors.
 The default remote alignment model is `victor-upmeet/whisperx`; `transcriptionModel` may select another
 HypiHub model that exposes the `transcriptions` route. `hypit doctor` reads the authenticated model
 catalog to verify configured capabilities; ordinary preflight never makes that request. The package
-declares HypiHub's public pricing page, `https://hypit.ai/commercial/pricing/`, as its price source;
-`hypit plan --runtime <profile>` prints it beside each request this Endpoint would serve. Per-model
-credit costs are never copied into Hypit.
+declares HypiHub's public pricing page, `https://hypit.ai/commercial/pricing/`, as its price source.
+For each selected Need, `readPricing` resolves the corresponding HypiHub model and returns the service's
+authenticated `GET /v1/pricing?model=<model>` response unchanged together with that URL. It covers
+generation, visual observation, alignment, Voice Design, and Voice Clone through the same mechanism;
+the Provider does not maintain a second list of billing formulas or calculate a request total.
 
 HypiHub declares MiMo Voice Design and Voice Clone together with every other capability it serves; it
 never hides one. Voice Design produces an accepted voice-reference Resource, and Voice Clone uses
@@ -81,11 +98,21 @@ that reference to produce independent speech. Hypit does not expose MiMo preset 
 selected Endpoint offers the same capability (a local WhisperX, a Vertex Gemini, or the official MiMo
 Provider), the Runtime Profile's `bindings` say which Endpoint serves it.
 
-Execution policy remains local to this Provider. A profile may set `requestTimeoutMs`,
-`operationTimeoutMs`, `uploadPartTimeoutMs`, `uploadPartAttempts`, `downloadAttempts`,
-`geminiRateLimitAttempts` and `geminiRateLimitRetryDelayMs`; defaults are respectively 300 seconds,
-20 minutes, 5 minutes, 3 attempts, 3 attempts, 4 attempts and 2 seconds. `defaultConcurrency`
-controls the total shared capacity of this Profile's HypiHub pool. Optional `capabilityConcurrency`
+Execution policy remains local to this Provider:
+
+| Profile field | Default | What it controls |
+| --- | ---: | --- |
+| `requestTimeoutMs` | 300 seconds | ordinary Provider HTTP requests |
+| `oauthRequestTimeoutMs` | 30 seconds | OAuth token exchange and refresh |
+| `pricingRequestTimeoutMs` | 30 seconds | authenticated pricing requests |
+| `operationTimeoutMs` | 20 minutes | one remote asynchronous operation |
+| `uploadPartTimeoutMs` | 5 minutes | one upload part |
+| `uploadPartAttempts` | 3 | attempts for one upload part |
+| `downloadAttempts` | 3 | attempts to collect one result |
+| `geminiRateLimitAttempts` | 4 | Gemini attempts after rate limits |
+| `geminiRateLimitRetryDelayMs` | 2 seconds | delay between those attempts |
+
+`defaultConcurrency` controls the total shared capacity of this Profile's HypiHub pool. Optional `capabilityConcurrency`
 sets narrower group limits, for example `{ "seedance-2-mini": 2, "gemini": 3, "transcription": 1 }`.
 Image/video/speech groups use the exact capability name; all Gemini capabilities share `gemini`, and
 WhisperX uses `transcription`. These limits coordinate this Runtime's requests; HypiHub remains

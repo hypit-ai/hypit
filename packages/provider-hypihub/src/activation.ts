@@ -23,6 +23,8 @@ const adapter = createRuntimeEndpointAdapterFacet({
       "capabilityConcurrency",
       "pollIntervalMs",
       "requestTimeoutMs",
+      "oauthRequestTimeoutMs",
+      "pricingRequestTimeoutMs",
       "operationTimeoutMs",
       "uploadPartTimeoutMs",
       "uploadPartAttempts",
@@ -44,6 +46,8 @@ const adapter = createRuntimeEndpointAdapterFacet({
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "HypiHub defaultConcurrency");
     const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "HypiHub pollIntervalMs");
     const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "HypiHub requestTimeoutMs");
+    const oauthRequestTimeoutMs = runtimeConfigPositiveInteger(config.oauthRequestTimeoutMs, "HypiHub oauthRequestTimeoutMs");
+    const pricingRequestTimeoutMs = runtimeConfigPositiveInteger(config.pricingRequestTimeoutMs, "HypiHub pricingRequestTimeoutMs");
     const operationTimeoutMs = runtimeConfigPositiveInteger(config.operationTimeoutMs, "HypiHub operationTimeoutMs");
     const uploadPartTimeoutMs = runtimeConfigPositiveInteger(config.uploadPartTimeoutMs, "HypiHub uploadPartTimeoutMs");
     const uploadPartAttempts = runtimeConfigPositiveInteger(config.uploadPartAttempts, "HypiHub uploadPartAttempts");
@@ -65,6 +69,8 @@ const adapter = createRuntimeEndpointAdapterFacet({
         ...(capabilityConcurrency === undefined ? {} : { capabilityConcurrency }),
         ...(pollIntervalMs === undefined ? {} : { pollIntervalMs }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
+        ...(oauthRequestTimeoutMs === undefined ? {} : { oauthRequestTimeoutMs }),
+        ...(pricingRequestTimeoutMs === undefined ? {} : { pricingRequestTimeoutMs }),
         ...(operationTimeoutMs === undefined ? {} : { operationTimeoutMs }),
         ...(uploadPartTimeoutMs === undefined ? {} : { uploadPartTimeoutMs }),
         ...(uploadPartAttempts === undefined ? {} : { uploadPartAttempts }),

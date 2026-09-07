@@ -17,6 +17,7 @@ import {
   openTransientRuntimeConfigExecution,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
+  readRuntimeConfigPricing,
   resolveRuntimeConfigPaths,
 } from "./config.js";
 import {
@@ -132,6 +133,10 @@ export async function openLocalRuntimeHost(
       ...(options?.capabilities === undefined ? {} : { capabilities: options.capabilities }),
     }),
     providers: async (capabilities) => await describeRuntimeConfigProviders(profile, capabilities, {
+      packageRoot: basePackageRoot,
+      ...distribution,
+    }),
+    pricing: async (requests) => await readRuntimeConfigPricing(profile, requests, {
       packageRoot: basePackageRoot,
       ...distribution,
     }),

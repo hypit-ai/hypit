@@ -62,7 +62,8 @@ export function parseCommand(argv: readonly string[]): CliCommand {
         ...optionalPackageRoot(options),
       };
     }
-    case "plan": {
+    case "plan":
+    case "pricing": {
       const [source, rest] = requiredPositional(tail, `${command} requires one Source`);
       const options = commandOptions(command, rest,
         "--runtime", "--package-root", "--workspace", "--asset-root", "--limit");

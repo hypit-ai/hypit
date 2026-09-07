@@ -120,15 +120,21 @@ function requestDocument(value: CanonicalValue): HyperframesDocument {
   return request.document as HyperframesDocument;
 }
 
-export function supportsAwsLambdaHyperframes(value: CanonicalValue): boolean {
+function awsLambdaHyperframesRejection(value: CanonicalValue): string | undefined {
   try {
     const document = requestDocument(value);
-    return document.surfaces.length === 0
-      && document.frameRate.denominator === 1
-      && SUPPORTED_FPS.has(document.frameRate.numerator);
-  } catch {
-    return false;
+    if (document.surfaces.length > 0) return "AWS Lambda HyperFrames does not accept embedded Surfaces";
+    if (document.frameRate.denominator !== 1 || !SUPPORTED_FPS.has(document.frameRate.numerator)) {
+      return "AWS Lambda HyperFrames accepts integer 24, 30 or 60 fps";
+    }
+    return undefined;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
   }
+}
+
+export function supportsAwsLambdaHyperframes(value: CanonicalValue): boolean {
+  return awsLambdaHyperframesRejection(value) === undefined;
 }
 
 function implementationFailure(code: string, error: unknown): EndpointOutcome {
@@ -506,7 +512,10 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       lifecycle: "asynchronous" as const,
       capability: renderHyperframesCapabilities.renderVisual,
       returns: mediaTypes.renderedVisual,
-      supports: (need) => supportsAwsLambdaHyperframes(need.constraints),
+      supports: (need) => {
+        const reason = awsLambdaHyperframesRejection(need.constraints);
+        return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };
+      },
       endpoint,
     }],
   });

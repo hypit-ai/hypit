@@ -30,6 +30,7 @@ export type BlockedCommand = {
   readonly reason:
     | "missing-producer"
     | "missing-endpoint"
+    | "unsupported-endpoint-request"
     | "ambiguous-endpoint"
     | "missing-operation-store";
   readonly subject: string;
@@ -61,4 +62,8 @@ export type EndpointRegistration = EndpointRegistrationBase & (
 export type EndpointResolution =
   | { readonly status: "resolved"; readonly registration: EndpointRegistration }
   | { readonly status: "missing"; readonly endpointId?: string }
+  | {
+    readonly status: "unsupported";
+    readonly rejections: readonly { readonly endpointId: string; readonly reason: string }[];
+  }
   | { readonly status: "ambiguous"; readonly endpointIds: readonly string[] };
