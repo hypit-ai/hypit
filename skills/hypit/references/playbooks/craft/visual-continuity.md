@@ -6,10 +6,10 @@ and this page when a visible change makes the shared world hard to understand.
 
 ## Preserve the relationship, change the view
 
-Complementary podcast views share a location, lighting logic and conversation axis. A host on the
-right looks toward the partner on the left; the partner's view reverses that attention. Microphone
-entry, furniture and background help explain the two camera positions. The second view shows another
-sector of the location rather than a mirrored duplicate of the first image.
+Complementary podcast views share a location, palette, material language and conversation axis. A
+host on the right looks toward the partner on the left; the partner's view reverses that attention.
+Microphone entry, furniture and background help explain the two camera positions. The second view
+shows another sector of the location rather than a mirrored duplicate of the first image.
 
 A plausible reverse view can be derived from the first host image because it already establishes the
 person, setting and conversation axis. If the second image breaks the relationship, revise the

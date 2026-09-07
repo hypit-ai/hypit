@@ -24,7 +24,7 @@ not need a matching playbook before it can be understood or made.
 | --- | --- |
 | [Directing generated images](craft/image-direction.md) | phone-video realism, character presence, image prompts, materials and palette, or preparing a useful visual reference |
 | [Voice and performance](craft/voice-and-performance.md) | how Segment performances create semantic time, who is A-roll, recurring voice identity, visual A-roll presentations, or genuinely independent narration |
-| [Directing generated performance](craft/seedance-directing.md) | using a video Kit, directing attitude and small actions, natural cuts, listeners, or sizing Takes |
+| [Directing generated video](craft/video-direction.md) | choosing a generation relationship, directing visible performance or silent action, camera behavior, cuts, or request duration |
 | [Reference relationships](craft/generated-dependencies.md) | deciding which images or Takes should depend on which references |
 | [Visual continuity](craft/visual-continuity.md) | complementary camera views, gaze, prop state, or what must remain coherent through a cut |
 | [B-roll](craft/b-roll.md) | exact cue coverage versus montage, short display windows, source playback, J-cuts, or adjacent Selections |

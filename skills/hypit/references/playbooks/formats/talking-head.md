@@ -11,6 +11,11 @@ space the video needs. [Image direction](../craft/image-direction.md) owns that 
 slightly right can leave room for an icon on the left; a table or the direction of their seated body
 can make that composition feel inhabited. Choose it for this layout, not as a universal UGC pose.
 
+For a reusable frontal speaking image, explicitly keep the face toward the lens, with no head tilt
+or rotation. A vivid attitude and an easy speaking gesture give this settled view life. The
+[idle principle](../craft/image-direction.md#choose-an-idle-state-for-the-encounter) relates that pose
+to addressing the viewer; the generated performance can move and react within the encounter.
+
 Use that same image and the person's recurring voice reference for every ordinary talking Take.
 Each Take can return to the same useful visual premise and contribute another piece of the edited
 performance.
@@ -24,9 +29,10 @@ Take independently because this work wants edited speech rather than an unbroken
 For a single presenter returning to one useful camera image through natural edited cuts, `speaker-v1`
 from `@hypit/seedance-kits` is a tested fit. It combines that character-and-scene image, one voice
 reference, Script dialogue, a Recipe for recurring direction, and optional action Text for the passage.
-[Directing generated performance](../craft/seedance-directing.md) shows its assembly and reference
-relationship. Read the selected installed template for its actual Recipe choices. A work whose camera,
-cast, or performance relationship differs can use another Kit or ordinary authored direction.
+The installed Kit package owns its exact assembly, reference order and Recipe choices.
+[Generated video direction](../craft/video-direction.md) explains what the image, voice, dialogue and
+passage direction each contribute. A work whose camera, cast, or performance relationship differs can
+use another Kit or ordinary authored direction.
 
 A fitting Speaker Recipe can combine stable framing with
 `edit-rhythm: pause-trim-jump-cuts`. The camera can
@@ -47,7 +53,7 @@ knowing shrug. The free hand makes relaxed emphatic gestures; keep the microphon
 ```
 
 This illustrates attitude and a few visible beats; it does not prescribe every creator's personality.
-See [Directing generated performance](../craft/seedance-directing.md) for listeners, gestures and cuts.
+See [Generated video direction](../craft/video-direction.md) for listeners, gestures and cuts.
 
 ## Let speech and graphics do different work
 

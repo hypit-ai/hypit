@@ -19,8 +19,8 @@ remain legible.
 Measure the Script to understand speaking density, then leave the time that the intended pause,
 reaction and action need. The selected video model's supported request lengths constrain what can be
 generated together without defining the story's scenes. [Script and time](../../creation/script-and-time.md#measure-before-choosing-durations)
-owns measurement, while [generated performance](../craft/seedance-directing.md#size-the-request-around-the-delivery)
-owns the current Seedance duration range and request judgment.
+owns measurement, while [generated video direction](../craft/video-direction.md#size-the-request-around-the-delivery)
+owns how the selected model's request range informs the performable passage.
 
 ## Establish a small useful set of camera images
 
@@ -59,10 +59,10 @@ The background carries story. It can reveal intimacy or status, explain why peop
 support a comic contrast, plant a useful object, or make a new scene immediately readable. Direct its
 vibe with the same conviction as the character rather than leaving the model to produce generic space.
 
-Related views share the facts that make the location recognizable: atmosphere, materials, light,
+Related views share the facts that make the location recognizable: atmosphere, materials, palette,
 social setting and spatial relationship. Each camera also sees its own plausible part of that place.
-A host framed against a window and their partner framed toward a dessert counter can belong to the
-same warm shop without repeating an identical wall. [Image direction](../craft/image-direction.md#let-the-setting-belong-to-the-subject)
+One camera can reveal the part of the place surrounding one character while another reveals a
+different sector around their partner. [Image direction](../craft/image-direction.md#establish-the-place-with-a-few-details)
 owns this relationship between person, setting and view.
 
 ## Let performance and editing carry the event

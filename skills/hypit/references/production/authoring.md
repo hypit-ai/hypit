@@ -3,7 +3,9 @@
 Read this when turning the current Treatment into Author Sources, Recipes, Runs, project components,
 and Builds, or when revising an existing production.
 
-[Source syntax](source-syntax.md) explains imports, references and language forms.
+[Script and semantic time](../creation/script-and-time.md) explains target wording, Segments, Roles,
+Caption Cue handoffs and semantic anchors. [Source syntax](source-syntax.md) explains imports,
+references and the language around that Script.
 [Composing Tracks](tracks.md) connects the visual and audio roles; [Track authoring](track-authoring.md)
 and [Caption authoring](caption-authoring.md) explain creating a new project component for them.
 [System relationships](system.md) connects these concepts to execution and Results;
@@ -19,6 +21,18 @@ Begin with the work the Treatment describes, not with a package inventory. Ident
 - the semantic relations that should follow words, phrases, pauses, or content events;
 - the genuinely clock-based events;
 - the final Film or other deliverables.
+
+Bring the relevant directing knowledge into those decisions: use
+[Script and semantic time](../creation/script-and-time.md) for the verbal structure and the meanings
+other layers will follow,
+[image direction](../playbooks/craft/image-direction.md) for generated camera images,
+[video direction](../playbooks/craft/video-direction.md) for generated performance and action,
+[voice and performance](../playbooks/craft/voice-and-performance.md) for A-roll and recurring voices,
+[B-roll](../playbooks/craft/b-roll.md) for coverage,
+[Caption](../playbooks/craft/captions.md) for speech-linked text, and
+[graphic composition](../playbooks/craft/graphic-compositions.md) for MG and designed visual state.
+These pages establish what the authored relationship should accomplish. Installed vocabulary then
+supplies the exact language for expressing it.
 
 Author those relationships explicitly. Script Selections and Moments carry meaning through produced
 speech into real time. Track and Film elements arrange the resulting picture and sound. One Source

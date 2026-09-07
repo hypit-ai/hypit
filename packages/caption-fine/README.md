@@ -51,8 +51,8 @@ The Fine Schedule preserves the Caption projection's ProgramSpace, Narrative and
 The renderer rejects any mismatched Space or document. Studio may expose lead, tail and handoff as
 ordinary parameter edits, but Cue rectangles remain read-only semantic evidence.
 
-Cue grouping is authored by Script segments, turns, Style changes and `||`; it is not delegated to
-an LLM. Fine rejects word-specific Style runs. A caption whose Cue contains structural roles or
+Script segments, turns, Style changes and `||` author Cue grouping. Fine rejects word-specific Style
+runs. A caption whose Cue contains structural roles or
 relationships—such as an independently arranged oversized keyword and supporting phrase—can use
 a new project Caption family. Reuse the common [Caption document, Program and timing](../caption/README.md),
 and implement the new schedule and rendering behavior in that package. This is ordinary component

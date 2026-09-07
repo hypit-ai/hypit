@@ -61,7 +61,8 @@ CaptionDocument contracts.
 ### Script vocabulary
 
 - **Segment**: a named structural passage, written `<opening>...</opening>`.
-- **Role Cue**: a speaker turn, written `<ALICE>...</ALICE>` or as a bare role tag in a Segment.
+- **Role Cue**: a speaker turn, written as a bare tag such as `<ALICE>` inside a Segment. The next
+  Role Cue or the Segment close ends that turn.
 - **Dual Text**: one authored speech span with separate display and spoken projections, written
   `<display text | spoken text>`.
 - **Selection marker**: a named semantic range, written `@name ... @/name`.
@@ -69,11 +70,12 @@ CaptionDocument contracts.
 - **CaptionDocument**: the Script-owned caption truth; it contains **Display Words**,
   **Alignment Units** and **Cue Breaks**. It contains no seconds or frames.
 - **Token attribute**: a flat postfix display-word annotation such as `really{emphasis}` or
-  `really{emphasis,keyword}`. It becomes `CaptionDisplayWord.attributes`; it is not a Selection and
-  does not carry timing.
+  `really{emphasis,importance=2,tone=warm}`. Values may be strings, finite numbers or booleans. It
+  becomes `CaptionDisplayWord.attributes`; it is not a Selection and does not carry timing.
 
 Within Dual Text, an unescaped `@` is legal only on the spoken side. The display side is literal; write
-`\@` if an at-sign must be shown. `||` is an authored Caption Cue Break and must occur between
+`\@` if an at-sign must be shown. An empty display side, such as `< | spoken words>`, keeps the speech
+tokens and omits them from Caption. `||` is an authored Caption Cue Break and must occur between
 complete Alignment Units.
 
 ## Segments, turns and Cues are different boundaries

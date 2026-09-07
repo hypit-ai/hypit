@@ -124,7 +124,7 @@ Semantic structure also supports a wordless passage. It has no speaking A-roll, 
 Script Segment receives its actual boundaries from prepared media and remains addressable through
 the assembled SemanticTrack. Semantic identity here means that the work can refer to the passage and
 its boundaries; it does not classify the passage or require spoken words.
-[Media preparation](media.md#wordless-passages-use-media-boundaries) owns that construction.
+[Media preparation](media.md#empty-segments-use-their-media-boundaries) owns that construction.
 
 Every Take contributes its Segment boundaries to the assembled semantic time. When its prepared
 media has no audio stream, Speech Track emits no audio clip for that Take; when it has no visual
