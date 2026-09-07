@@ -38,31 +38,22 @@ crafts explain resolution and duration choices.
 
 ## Establish the working crew
 
-Before promising a generated reconstruction, establish both sides of the work: the ability to
-understand the reference and the ability to produce the new piece. Inspect the selected Runtime
-Profile and its Endpoint diagnoses first. A typical reconstruction needs Gemini for visual
-observation, WhisperX for word transcription and alignment, an image-generation Endpoint—usually
-GPT Image 2—and a video-generation Endpoint—usually Seedance 2 Mini. The Treatment may demand
-additional voice or audio capabilities.
-
-Continue without interrupting the user when those capabilities are already reachable. When they are
-not, explain all material gaps together and ask which supported Provider accounts or Keys the user
-already has and whether preparing local WhisperX is practical. Keep secret values in `hypit auth`,
-not in conversation. Offer HypiHub as the official hosted choice when the user wants one account for
-observation, alignment, image generation, and video generation, or does not have the corresponding
-BYOK or local capabilities. This is an explicit environment choice; the Runtime Profile reference
-owns setup and verification.
-
-State the actual consequence of anything still missing. Without a working eye and ear, do not claim
-to have faithfully reconstructed the reference. Without the required image or video Endpoint, do not
-promise generated A-roll or B-roll. HyperFrames can still generate a deterministic MG-, Caption-, or
-Typography-led video when that is the work the user wants.
+At the beginning of reference reconstruction, read the
+[Runtime Profile](references/environment/profile.md) and establish the capabilities needed to
+understand the supplied work and produce the new piece: moving-image observation, word alignment for
+spoken work, and the image, video, voice or audio generation demanded by the Treatment. Continue when
+they are reachable. When they are not, present the material gaps together, explain their consequence
+for this work, and let the user choose among the real account, local and hosted options before relying
+on the missing capability.
 
 ## Two loops, one director
 
 Understanding a reference is a loop between coarse and fine: the whole-piece reading tells your eyes
 and ears where a closer look would change the work, and close evidence rewrites the whole-piece
-reading.
+reading. A limitation accepted earlier does not freeze the work at that level. When a newly reachable
+capability or a new Result can materially improve an earlier judgment, return to that judgment and
+upgrade it before relying on it for further creative or paid work. Preserve what remains sound and
+revise what the new evidence changes.
 
 Making the new piece is a loop between intention and result: the Brief holds what the user asked for,
 the Treatment is your directorial answer, and Source, Recipe, Run, and components make it exact.
@@ -74,16 +65,22 @@ design itself changes. Brief changes when the user's goal or constraints change.
 
 Create project components as normal production work. Let the authorized media requests complete and
 continue downstream; refine deterministic Caption, MG, Effects, and composition through Studio and
-rendering, reusing produced media through Run Candidates. Environment, creation, and production are
-rooms you enter whenever the current question leads there.
+rendering, reusing produced media through Run Candidates. Supplied and produced images and videos
+are the primary visual evidence for the work. A preview substitute is a short-lived answer to a
+current composition or wiring question, not a required stage, approval gate, or production state;
+select the most representative available media as soon as it exists. Environment, creation, and
+production are rooms you enter whenever the current question leads there. They are not stages that
+close behind the work.
 
 ## Standing responsibilities
 
 - **Money.** Before paid work, including observation and transcription, explain the actual requests,
-  selected Endpoints, and Provider price sources; state plainly when a price cannot be derived. For a Build,
-  use `hypit plan` with the selected Runtime Profile. Proceed under existing authorization that covers
-  the work and cost; obtain it when missing. Additional generation, including a repeated attempt,
-  needs an explicit decision covered by that authority. A request to rebuild or fix downstream work
+  selected Endpoints, and the current Provider pricing information available for them. Use `hypit plan`
+  with the selected Runtime Profile, then `hypit pricing` when its Providers expose machine-readable
+  material; interpret that material against the listed Needs instead of treating it as a system verdict.
+  Pricing availability is not a Build gate. Proceed under existing authorization that covers the work
+  and cost; obtain it when missing. Additional generation needs an explicit decision covered by that
+  authority. A request to rebuild or fix downstream work
   does not by itself authorize regenerating unchanged media. A Provider or billing-account change is
   a separate user choice; the Runtime Profile reference below owns how that choice is made.
 - **Existing work.** When revising or retrying, preserve usable produced media through explicit Run
@@ -138,7 +135,7 @@ rooms you enter whenever the current question leads there.
 | Run syntax, Targets, Candidates, Run Fragments or substitute media for a preview | `references/production/runs.md` |
 | admitting media, normalization, SemanticTakes, still clips, trims or extraction | `references/production/media.md` |
 | composing, correcting, resizing, cropping or cutting out an image | `references/production/image-operations.md` |
-| insets, layered screens, or a subject whose background needs removing | `references/playbooks/craft/compositing.md` |
+| faces, MG, Caption, insets or layered screens must share one frame, or a subject's background needs removing | `references/playbooks/craft/compositing.md` |
 | Canvas, Frames, aspect, fitting, cropping or coordinate relationships | `references/production/spatial.md` |
 | font resources, multilingual text, Emoji, titles or rich Typography | `references/production/fonts-and-text.md` |
 | which installed Surface to use, or whether to write a project component | `references/production/vocabulary.md` |
@@ -147,7 +144,7 @@ rooms you enter whenever the current question leads there.
 | writing a project Track with new layout, semantic events or persistent state | `references/production/track-authoring.md` |
 | drawing a component's elements, animation, resources or prepared surfaces | `references/production/component-visuals.md` |
 | writing a Caption family with new word relationships, scheduling or layout | `references/production/caption-authoring.md` |
-| `plan`, `build`, a retry or interrupted submission, following work, Results and exports | `references/production/builds.md` |
+| `plan`, Provider pricing information, `build`, a retry or interrupted submission, following work, Results and exports | `references/production/builds.md` |
 | opening Studio, understanding its views and edits, or adding a component Companion | `references/production/studio.md` |
 | Film assembly, picture and sound, final rendering or a selected frame interval | `references/production/rendering.md` |
 | judging the preview or finished Result and deciding what to fix | `references/production/review.md` |

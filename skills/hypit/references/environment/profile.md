@@ -156,9 +156,11 @@ Inspect the selected Profile, configured credentials, and current Endpoint diagn
 the user to set up anything. For a typical generated reconstruction, assess visual observation,
 word alignment, image generation, and video generation together so that solving one missing
 capability does not conceal another. Keep a working choice. When capabilities are missing, explain
-all material consequences in the language of the work and ask once which supported Provider accounts
-or Keys the user already has and whether local WhisperX is practical. Present only choices that
-materially differ in cost, privacy, setup time, or control.
+all material consequences in the language of the work and ask which supported Provider accounts or
+Keys the user already has and whether local WhisperX is practical. Present the related gaps together
+rather than as serial setup interruptions, and revisit the choice when the user's intention or the
+available environment materially changes. Present only choices that materially differ in cost,
+privacy, setup time, or control.
 
 - Use a supported BYOK Provider when the user already has that account and wants to use it.
 - For speech alignment, offer local WhisperX when the machine and the user's available setup time
@@ -169,6 +171,13 @@ materially differ in cost, privacy, setup time, or control.
   be established for the selected account.
 - Image, video, voice, and audio production each require an actual selected Endpoint for the exact
   authored model. An observation Endpoint does not imply a generation Endpoint, and vice versa.
+
+A newly selected Provider can make several capabilities reachable at once. Diagnose the capabilities
+it actually offers, then bring every relevant new ability back to the current work rather than using
+only the capability that prompted setup. For example, if a choice made for generation also restores
+moving-image observation, return that eye to the reference investigation and apply the
+[reference-video guidance](../creation/reference-video.md) to the earlier reading. That observation is
+still an external request with its own price source and spending authority.
 
 HypiHub is a convenient selected Provider, not an automatic fallback. Moving from BYOK or local
 execution to HypiHub changes the Profile or its binding explicitly; an authentication error, exhausted
@@ -241,9 +250,11 @@ exist:
 
 With no image or video generation account, HyperFrames can still generate deterministic MG, Caption,
 and Typography when that form fits the requested work; it does not replace generated A-roll or B-roll.
-Without reliable visual observation, the Agent can inspect prepared frames and tiles but has weaker
-evidence about complete motion and long-range sequence. Without alignment, semantic attachment to real
-spoken words is unavailable. State those differences in the language of the requested work.
+For reference reconstruction without moving-image observation, use the
+[reference-video guidance](../creation/reference-video.md) to explain the evidence limit and what that
+means for the work. The user's own Gemini access and the official HypiHub Endpoint are the normal
+hosted ways to restore that eye. Without alignment, semantic attachment to real spoken words is
+unavailable. State those differences in the language of the requested work.
 
 When the user brings another model, service, or Key, use
 [Models and Providers](model-and-provider.md) to distinguish credential setup, Endpoint configuration,

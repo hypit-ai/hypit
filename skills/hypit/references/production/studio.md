@@ -49,8 +49,14 @@ only those exact immediate capabilities a Provider explicitly permits for transi
 If new image/video generation blocks the display closure, select an existing Output or file; use
 an existing image through StillVideo when one is available. An explicit Card Candidate can keep a
 component or wiring study moving when no suitable pixels exist yet. It supplies a visible canvas
-and provisional clip time; the eventual media establishes performance, identity, composition and
-the real relationship between subject and graphics.
+and provisional clip time. The selected production image establishes its actual subject, color and
+framing; the produced video adds the evidence for performance, motion and changing overlap with
+graphics.
+
+The Preview view renders what the Run selected; it does not upgrade a Card or held image into stronger
+evidence. Prefer the production's supplied or produced pixels, and revise the Run selection when more
+representative media becomes available. [Runs](runs.md#use-the-most-representative-visual-evidence-available)
+explains the short-lived substitute choices.
 
 [Runs and substitutes](runs.md#a-complete-layout-preview) includes a complete Source and Run with
 a card Candidate, normalization and estimated semantic timing for this kind of layout study.

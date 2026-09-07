@@ -5,15 +5,15 @@ hands, screens, demonstrations, B-roll, Typography, or MG carry the picture.
 
 ## Recognize the organizing relationship
 
-A narration-led passage is organized by an accepted independent speech performance. Its pictures
-are designed around that performance rather than being temporary coverage over a speaking A-roll
-Take. Common forms include desk demonstrations, screen tutorials, product walkthroughs, visual
-essays, montage narration, and MG explainers.
+A narration-led passage is organized by accepted independent speech: audio-only A-roll. Its pictures
+are designed around that performance rather than being temporary coverage over visible A-roll.
+Common forms include desk demonstrations, screen tutorials, product walkthroughs, visual essays,
+montage narration, and MG explainers.
 
 The decisive question is not whether a face is currently visible. A presenter-led work may cover its
-A-roll with B-roll for several seconds and still be A-roll-led. A narration-led passage begins with a
-speech performance that does not depend on an underlying on-camera delivery. A mixed work can move
-between these relationships when the story does.
+visible A-roll with B-roll for several seconds and remain visible-performance-led. An
+independent-narration-led passage begins with audio-only A-roll that does not depend on an underlying
+on-camera delivery. A mixed work can move between these relationships when the story does.
 
 State that relationship in Treatment. It determines how performance, picture coverage, visual
 proof, and later review should be understood.
@@ -55,9 +55,9 @@ and README for its exact inputs and limits.
 ## Keep the narrator one person across the work
 
 Use `../craft/voice-and-performance.md` to establish the narrator's accepted Voice Reference and
-generate independent speech from it. If the same person also appears in A-roll elsewhere, the same
-Voice Reference can condition both the visible performance and independent narration. The work then
-changes sound-picture relationship without changing who is speaking.
+generate independent speech from it. If the same person also appears in visible A-roll elsewhere,
+the same Voice Reference can condition both the visible performance and independent narration. The
+work then changes sound-picture relationship without changing who is speaking.
 
 `../../creation/script-and-time.md` owns measurement and alignment. One accepted narration
 performance can carry many picture changes; their semantic relations follow that performance without

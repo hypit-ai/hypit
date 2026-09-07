@@ -12,6 +12,12 @@ Open Studio with the ordinary Run intended for the work. That Run binds the Auth
 files, earlier Results, and stand-in Candidates, so Studio and a Build see the same authored graph.
 A separate review Run is useful when its Candidate selection is intentionally different.
 
+Judge a visual fact from the most representative evidence that actually exists. Supplied and produced
+images and videos are the primary evidence for their appearance. A held production image can prove
+what that image contains and how it composes with deterministic graphics; it cannot prove the future
+shot's movement or performance. A produced video is the evidence for its changing face position,
+gesture, timing and interaction with Caption or MG.
+
 Studio renders the selected display closure with deterministic Producers and the exact capabilities
 that the Runtime Provider declares safe for transient authoring. It submits no Build and no paid
 generation. When that closure still needs external generation, use an existing file or Build
@@ -21,6 +27,8 @@ suitable pixels exist and a component or wiring question still deserves an early
 A Card can establish that the downstream graph renders, show broad geometry, and carry provisional
 clip time. Its visible marking keeps that evidence distinct from subject identity, performance,
 shot composition, texture, continuity, or the interaction between production media and graphics.
+It stops being useful when the same question can be answered from actual production pixels; earlier
+use does not create an approval state that the work must preserve.
 
 ## Separate legality from judgment
 

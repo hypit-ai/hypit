@@ -50,7 +50,10 @@ concrete request, and an expected result type.
 
 The Provider implements that capability through its service. It owns wire fields, URLs, uploads,
 authentication, task handling, result transfer, service-specific support limits, capacity, diagnostics,
-and its price source. Generated media returns as stored Resource references of the declared type.
+and its price source. When useful machine-readable pricing exists, `readPricing` may use the complete
+request to retrieve relevant Provider-owned material. The returned data keeps the Provider's own shape;
+a pricing page remains the interface when that is what the service publishes. Generated media returns
+as stored Resource references of the declared type.
 The shared generated-media vocabulary carries text, media references, and image/video/audio results;
 it does not choose a vendor or model on the author's behalf.
 

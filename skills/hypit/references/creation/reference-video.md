@@ -5,15 +5,17 @@ from.
 
 ## Direct the investigation
 
-The Agent is the mind and director. Use visual observation as eyes, transcription and alignment as
-ears, and local media commands to prepare a closer view. The tools report evidence; the Agent connects
-events across time, resolves contradictions, explains why they matter, and decides what to inspect
-next.
+The Agent is the mind and director. Moving-image observation is its broad eye, transcription and
+alignment are its ears, and local media commands prepare closer views that the Agent can inspect
+itself. The tools report evidence; the Agent connects events across time, resolves contradictions,
+explains why they matter, and decides what to inspect next. Gemini supplies moving-image observations;
+the Agent connects them into a whole-piece understanding and authors the target work.
 
-Begin by watching the whole piece. Spoken language carries most work Hypit is asked to clone, so obtain
-and read its word-level transcript and use it as the normal time spine. If the piece is genuinely
-speechless, establish that spine from its actions, visual changes, music, effects and silence. Form a
-provisional account of:
+Begin by watching the whole piece. For ordinary reconstruction, give the whole work or meaningful
+spans to a capable moving-image observer so motion, order and distant relationships are actually in
+evidence. Spoken language carries most work Hypit is asked to clone, so obtain and read its word-level
+transcript and use it as the normal time spine. If the piece is genuinely speechless, establish that
+spine from its actions, visual changes, music, effects and silence. Form a provisional account of:
 
 - the Hook, story movement, payoff, and intended viewer response;
 - how speech or silence carries the piece, who speaks when present, and the roles of A-roll and B-roll;
@@ -29,9 +31,10 @@ to overturn the coarse understanding.
 
 ## Choose evidence for the question
 
-Use `hypit transcribe` for speech and word time. Use `hypit observe` when motion, sound, sequence, or
-whole-piece visual context matters. The local `hypit media` family prepares views without interpreting
-them:
+Use `hypit transcribe` for speech and word time. Use `hypit observe` as the normal broad visual pass
+for reference reconstruction, over the whole short work or meaningful spans of a longer or denser
+work. Motion, sequence, persistence, transitions and whole-piece context need moving-image evidence.
+The local `hypit media` family prepares views without interpreting them:
 
 - `probe` reports media facts;
 - `cut` isolates a short temporal question;
@@ -67,6 +70,23 @@ is an observer's account, not the reference archive itself. Read it against the 
 connected whole-piece judgment in `ANALYSIS.md` and locatable facts in `TIMELINE.md`. A narrower
 question can instead use one clip, grid or frame as its input. The command forms are composable; the
 current uncertainty decides which of them is useful.
+
+Frames and tiles complement moving-image observation by supplying direct static evidence. If no
+moving-image observer is reachable, distinguish the evidence that remains direct from the
+relationships that are not yet well established. Frames and tiles still show appearance, text,
+composition, geometry, and sampled states; they provide less evidence about motion, transitions,
+persistence, and relationships across distant moments. Explain that limitation in terms of the
+current work, then use the
+[Runtime Profile](../environment/profile.md) to present the actual ways to strengthen the missing
+moving-image evidence. A user may knowingly choose to continue with that evidence limit, and a truly
+static question may need only static evidence, but the Agent does not present the limited account as
+a complete moving-image reading.
+
+When moving-image observation becomes reachable later, use it to revisit the parts of the reference
+that were understood from static samples alone. Update `ANALYSIS.md` and `TIMELINE.md` where the
+evidence changes them, then reconsider affected Treatment, Script, shots, components, or prompts.
+Existing work that the stronger evidence still supports remains useful. Observation may itself be a paid request;
+make its Endpoint and price source visible and use only spending authority that covers it.
 
 No evidence form is a substitute for every other one. A still cannot establish movement or sound. A
 single representative frame cannot establish entry, exit, replacement, or persistence. A long video

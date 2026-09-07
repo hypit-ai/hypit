@@ -65,6 +65,12 @@ A speaking Take can be assembled directly from the installed Source:
 The selected model vocabulary supplies its current duration, reference-count, format, and media
 limits. The Kit does not own those limits or the request's explicit media edges.
 
+For this visible A-roll form, the ReferenceVideo request is the speaking performance: it receives
+the short Voice Reference and exact Script dialogue, then returns the person's performed picture and
+sound together. Voice Design establishes who that person sounds like, so its short casting line can
+be unrelated to the finished dialogue. Voice Clone instead produces audio-only A-roll when a passage
+has no on-camera speaking performance.
+
 Use the Script's `.dialogue` Text rather than retyping dialogue into action. Map Role names to the
 Kit's A/B identities where necessary. Preserve one recurring voice reference per character when
 voice continuity matters. See [Voice and performance](voice-and-performance.md) for A-roll versus
@@ -77,6 +83,18 @@ playful skepticism. Then choose a few visible actions that communicate it. A res
 open-palmed explanation, a knowing shrug or a short glance can carry more than elaborate choreography.
 Vibe alone may leave an important interaction unspecified; describe the decisive action when the
 story needs a handoff, a look toward a partner or an exit.
+
+The action prompt describes what this generation should make visible over time. Give the performer
+physical relationships only with the camera, people, props, and parts of the setting that actually
+exist in the generated scene. A Caption, icon, product card, or other MG that will be composed later
+can shape where the performer is framed, but it is not something for the performer to point toward,
+touch, watch, or reveal inside this Take.
+
+Capable video models can turn figurative wording into literal objects, events, or transformations.
+Use concrete visible language for the intended gaze, gesture, movement, camera behavior, and cuts
+when a metaphor would introduce the wrong scene content. Social attitude and aesthetic shorthand
+remain useful when they direct the performance; an imagined object or event belongs in the prompt
+only when it should truly appear in the generated video.
 
 Natural emphatic gestures are usually more reliable than asking fingers to display an exact number.
 Let speech, Caption or MG convey the quantity while pointing and hand actions serve the performance.

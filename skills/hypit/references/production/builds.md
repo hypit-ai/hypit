@@ -70,9 +70,27 @@ would be sent. Planning starts no external work.
 
 With a selected Runtime Profile, the plan also names the Endpoint behind each request, applies that
 Endpoint's request-support rules, checks cheap readiness for the demanded capabilities, and shows the
-Provider's declared price page or that its price source is unknown. Hypit does not copy changing rate
-tables or manufacture a total. Use the linked Provider source together with the plan's real request
-counts and authored parameters when a cost judgment is needed.
+Provider's declared price page or that its price source is unknown. Planning remains local and does
+not require a billing account to answer.
+
+Read the current pricing material selected Providers expose for these same Needs:
+
+```bash
+hypit pricing path/to/build.svrun
+```
+
+`pricing` is an explicit read-only network operation. It creates no Build and submits no generation.
+It places each Need beside the current documents or page supplied by its selected Endpoint. Providers
+may expose a narrow model record or a broader catalogue; Hypit does not impose a common price-table
+shape or calculate a total. Use the Need's authored duration, resolution, count, or other billing facts
+to calculate and explain the relevant cost. Missing or broad pricing material is uncertainty to report,
+not a system prohibition on an otherwise authorized Build.
+
+The default human view groups matching Needs and keeps Provider documents folded to their source URLs.
+Use `--json` when you need the original documents for calculation, or `--verbose` to inspect them in the
+terminal. A mixed production naturally has separate image, video, voice, alignment, and local-processing
+entries. Read each relevant entry against its own Need, then explain the production's expected cost in
+ordinary language.
 
 Read the remaining Needs against this change. A Caption or MG-only revision should keep its existing
 media generation satisfied; replacing selected B-roll should leave the unchanged performance satisfied.
@@ -80,8 +98,8 @@ Rendering and other required processing may still appear as Needs. Explain each 
 from the user's goal or an explicit generation decision. If a request appears because a Candidate was
 lost or never selected, repair the Run and plan again before asking to spend or submitting work.
 
-Before new paid work, tell the user which requests and Provider Endpoints the plan selected and link
-their price sources. Existing explicit authorization for that described work is sufficient; otherwise
+Before new paid work, tell the user which requests and Provider Endpoints the plan selected and report
+the available calculation or link its Provider source. Existing explicit authorization for that described work is sufficient; otherwise
 obtain authorization before `build`. Authorization to correct downstream work does not silently extend
 to regenerating unchanged media. Additional paid work outside the authorized scope needs a new decision.
 

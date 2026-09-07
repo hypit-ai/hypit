@@ -88,11 +88,37 @@ The resulting Candidate is named `card.video`. Selecting it replaces the perform
 retaining the preparation and composition that consume that video. A substitute can also consume
 an existing computed Output; that Output remains part of the selected dependencies.
 
-When a usable image already exists, hold that image with `media-pipeline:still-video` or
-`media-pipeline:clip-time-still-video` instead. When usable video exists, select that video itself.
-The generic Card is useful only while no suitable pixels exist and the current component or wiring
-question is worth answering before generation completes; its role naturally disappears as real
-production media becomes available.
+## Use the most representative visual evidence available
+
+Supplied and produced images and videos are the primary visual evidence for a production. Select a
+usable video itself when it exists. While an intended video is still unavailable, an actual image
+from the work can be held with `media-pipeline:still-video` or
+`media-pipeline:clip-time-still-video`; it carries real subject, color and camera evidence into the
+composition, although it cannot establish the future motion or performance. A generic Card is useful
+only when no suitable pixels exist and a current component or wiring question is worth answering
+before generation completes.
+
+For example, keep a previously produced presenter image, give it provisional clip time, and use that
+video Candidate at the position where the future performance will enter:
+
+```svrun
+<import as="media" from="@hypit/media-pipeline@1"/>
+<build-record id="presenter-image" build="bld_..." output="presenter.image"/>
+<satisfy output="presenter.image" candidate="presenter-image"/>
+
+<fragment id="held-presenter" using="media:clip-time-still-video">
+  <input name="duration" value="5"/>
+  <input name="clock" from="clock"/>
+  <input name="source" from="presenter.image"/>
+</fragment>
+<satisfy output="performance.video" candidate="held-presenter.video"/>
+```
+
+Preview choices answer the question that exists now; they are not a sequence of production states.
+A production may skip them entirely, use one while media is being generated, or replace one as soon
+as more representative media is available. The Card normally loses its purpose first. A held image
+used in place of future motion loses that purpose when the video exists. Run Candidate selection
+makes each choice explicit without inventing an acceptance or promotion workflow.
 
 ## A complete layout preview
 
@@ -137,9 +163,10 @@ selected preview media through that environment and reuse its completed Outputs.
 production Run still requests generation and measured alignment, under the work's spending authority.
 
 For an existing production with usable footage, select its Result or file directly. If only an
-authored or generated picture exists, StillVideo already gives downstream composition much more
-relevant pixels than a Card. The actual shot is needed to judge overlap with a face, color
-relationships, performance or identity. [Studio](studio.md) explains what the preview can show.
+authored or generated picture exists, StillVideo gives downstream composition more relevant pixels
+than a Card. The held picture can establish its own identity, color and framing; the actual shot is
+the evidence for motion, performance and the changing relationship between a face and graphics.
+[Studio](studio.md) explains what the selected preview can show.
 
 ## Preserve the choices that still apply
 
