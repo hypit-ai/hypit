@@ -32,8 +32,7 @@ import {
   } from "@hypit/protocol";
 import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
 
-import { drawStandInSilence, renderStandInCard, standInCardNeed } from "./card.js";
-import { verifyStandInSilenceRequest } from "@hypit/stand-in";
+import { drawClipTimeGuide, renderStandInCard, standInCardNeed } from "./card.js";
 import { parseMediaInspection } from "./probe.js";
 import {
   compositeAnimatedWebpFrame,
@@ -772,7 +771,7 @@ export async function executeNormalizeMedia(
 }
 
 /**
- * Encode authored images into an exact silent CFR video. One picture is held for the whole frame
+ * Encode authored images into an exact video-only CFR clip. One picture is held for the whole frame
  * count; several are each held for their planned segment, fitted into the first picture's frame
  * and letterboxed on black, then concatenated in order.
  */
@@ -784,6 +783,7 @@ export async function executeRenderStillVideo(
   const work = await mkdtemp(join(tmpdir(), "hypit-media-still-"));
   try {
     const output = join(work, "still.mp4");
+    const baseOutput = need.request.guide === undefined ? output : join(work, "still-base.mp4");
     const staged = new Map<string, string>();
     const inputs: string[] = [];
     for (const segment of need.request.segments) {
@@ -833,12 +833,47 @@ export async function executeRenderStillVideo(
         ...argv,
         "-frames:v", String(need.request.frameCount), "-r", fps, "-fps_mode", "cfr",
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart", output,
+        "-movflags", "+faststart", baseOutput,
       ],
       timeoutMs: env.processTimeoutMs,
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
+    if (need.request.guide === "clip-time") {
+      const baseInspection = await outputInspection({
+        path: baseOutput,
+        mediaType: "video/mp4",
+        ffprobePath: env.ffprobePath,
+        timeoutMs: env.processTimeoutMs,
+        maxProbeOutputBytes: env.maxProbeOutputBytes,
+        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      });
+      const baseVisual = baseInspection.streams.find((item): item is MediaVideoStream => item.kind === "video");
+      assert(baseVisual !== undefined, "Still media guide has no visual stream");
+      for (let frame = 0; frame < need.request.frameCount; frame += 1) {
+        await writeFile(join(work, `guide-${String(frame).padStart(6, "0")}.png`), drawClipTimeGuide({
+          width: baseVisual.width,
+          height: baseVisual.height,
+          frameRate: need.request.frameRate,
+          frameCount: need.request.frameCount,
+        }, frame));
+      }
+      await runProcess({
+        executable: env.ffmpegPath,
+        argv: [
+          "-y", "-i", baseOutput,
+          "-framerate", fps, "-i", join(work, "guide-%06d.png"),
+          "-filter_complex", "[0:v][1:v]overlay=0:main_h-overlay_h:shortest=1,format=yuv420p[v]",
+          "-map", "[v]", "-an",
+          "-frames:v", String(need.request.frameCount), "-r", fps, "-fps_mode", "cfr",
+          "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+          "-movflags", "+faststart", output,
+        ],
+        timeoutMs: env.processTimeoutMs,
+        maxStdoutBytes: 64 * 1024,
+        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      });
+    }
     const inspected = await outputInspection({
       path: output,
       mediaType: "video/mp4",
@@ -872,41 +907,9 @@ export async function executeDrawStandInCard(
 ): Promise<MediaOperationResult> {
   const request = standInCardNeed(constraints);
   const value = await renderStandInCard({
-    ffmpegPath: env.ffmpegPath,
-    processTimeoutMs: env.processTimeoutMs,
-    runFfmpeg: async (argv) => {
-      await runProcess({
-        executable: env.ffmpegPath,
-        argv,
-        timeoutMs: env.processTimeoutMs,
-        maxStdoutBytes: 64 * 1024,
-        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
-      });
-    },
-    inspectStreams: async (path) => {
-      const inspected = await outputInspection({
-        path,
-        mediaType: "video/mp4",
-        ffprobePath: env.ffprobePath,
-        timeoutMs: env.processTimeoutMs,
-        maxProbeOutputBytes: env.maxProbeOutputBytes,
-        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
-      });
-      return inspected.streams;
-    },
     putBytes: async (bytes, mediaType) => await env.artifacts.put(bytes, mediaType) as unknown as CanonicalValue,
-    putFile: async (path, mediaType) => await env.artifacts.putFile(path, mediaType) as unknown as CanonicalValue,
   }, request);
   return artifactResult(value as unknown as BlobRef);
-}
-
-/** Materialize the generic silent-audio Candidate selected by a Run. */
-export async function executeDrawStandInSilence(
-  env: MediaExecutionEnvironment,
-  constraints: CanonicalValue,
-): Promise<MediaOperationResult> {
-  verifyStandInSilenceRequest(constraints);
-  return artifactResult(await env.artifacts.put(drawStandInSilence(constraints.sampleFrames), "audio/wav"));
 }
 
 type TransformPlan = {

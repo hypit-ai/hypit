@@ -2956,9 +2956,9 @@ importers:
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@hypit/media':
+      '@hypit/media-pipeline':
         specifier: workspace:*
-        version: link:../media
+        version: link:../media-pipeline
       '@hypit/program-space':
         specifier: workspace:*
         version: link:../program-space

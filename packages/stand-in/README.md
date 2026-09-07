@@ -1,16 +1,18 @@
 # `@hypit/stand-in`
 
-A stand-in is an ordinary generic Candidate selected by a Run in place of an output that is not
-needed yet. It knows nothing about the displaced Candidate's Producer, model, prompt or request.
-The Run supplies only the media shape the downstream composition needs, and the resulting file goes
-through the same inspect and normalize steps as any other file.
+A stand-in Card is an ordinary generic image Candidate selected by a Run when a composition needs
+visible pixels before the intended media exists. It knows nothing about the displaced Candidate's
+Producer, model, prompt or request. The resulting file goes through the same media operations as any
+other image.
 
-This package exports three Run Fragments: `image`, `video` and `silence`. A local media Provider
-materializes their deterministic files. Model packages do not know these Fragments exist.
+This package exports `card` and the convenience composition `timed-card`. A local media Provider
+draws the Card. `timed-card` then gives that image to `@hypit/media-pipeline`, which holds it for the
+requested duration and adds its clip-local time guide. Model packages do not know these
+Fragments exist.
 
 ```xml
 <import from="@hypit/stand-in@1" as="stand-in"/>
-<fragment id="kitchen-card" using="stand-in:video">
+<fragment id="kitchen-card" using="stand-in:timed-card">
   <input name="canvas" from="vertical"/>
   <input name="duration" value="5"/>
   <input name="clock" from="clock"/>
@@ -18,20 +20,19 @@ materializes their deterministic files. Model packages do not know these Fragmen
 <satisfy output="kitchen.video" candidate="kitchen-card.video"/>
 ```
 
-Remove the `satisfy` line to select the Source's primary Candidate again. The card carries a
-diagonal STAND-IN watermark, its kind, frame and duration and — for video — a running timecode and
-progress bar, so a cut that lands on the wrong frame remains visible.
+Remove the `satisfy` line to select the Source's primary Candidate again. The Card has one visible
+label and its canvas dimensions. The timed composition adds a coherent timecode, frame count and
+progress guide, so the exact clip-local frame remains visible.
 
 ## Fragment inputs and exports
 
 | Fragment | Inputs | Export |
 | --- | --- | --- |
-| `image` | `canvas`: CanvasSpace | `image`: BlobArtifact |
-| `video` | `canvas`: CanvasSpace, `duration`: SpeechDuration in seconds, `clock`: ProgramClock | `video`: BlobArtifact |
-| `silence` | `duration`: SpeechDuration in seconds | `audio`: BlobArtifact |
+| `card` | `canvas`: CanvasSpace | `image`: BlobArtifact |
+| `timed-card` | `canvas`: CanvasSpace, `duration`: SpeechDuration in seconds, `clock`: ProgramClock | `video`: BlobArtifact |
 
 `from` on a Run input refers to a public value of the Author entry; literal duration can use
-`value="5"`. The card/silence capability still needs a selected media Provider. Studio can use it
+`value="5"`. The card capability still needs a selected media Provider. Studio can use it
 when that Provider admits it for transient execution. An estimated SemanticTake is a separate
 choice supplied by `@hypit/semantic-take-estimate` after normalization.
 

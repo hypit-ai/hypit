@@ -1,9 +1,5 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { deflateSync } from "node:zlib";
 
-import type { MediaStream } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/protocol";
 import { verifyStandInCardRequest } from "@hypit/stand-in";
 import type { StandInCardRequest } from "@hypit/stand-in";
@@ -11,19 +7,13 @@ import type { StandInCardRequest } from "@hypit/stand-in";
 /**
  * A generic stand-in card, drawn from only the media shape a Run supplies.
  *
- * The card is pixels, not a model call: a flat ground coloured by kind, a thick border, a diagonal
- * STAND-IN watermark, the kind in large type, the frame and duration, and for video a running
- * timecode and progress bar. Everything is drawn here with a
- * built-in 5x7 bitmap font so the same card comes out of every machine, with or without a font
- * library in its ffmpeg. The PNG is deterministic for a given request.
+ * The card is pixels, not a model call. Everything is drawn here with a built-in 5x7 bitmap font,
+ * so the same card comes out of every machine. The PNG is deterministic for a given request.
  */
 
 type Rgb = readonly [number, number, number];
 
-const GROUND: Record<StandInCardRequest["kind"], Rgb> = {
-  video: [0x1E, 0x3A, 0x5F],
-  image: [0x2E, 0x4A, 0x3A],
-};
+const GROUND: Rgb = [0x17, 0x23, 0x32];
 const ACCENT: Rgb = [0xF5, 0xC5, 0x42];
 const TEXT: Rgb = [0xFF, 0xFF, 0xFF];
 const MUTED: Rgb = [0xC9, 0xD1, 0xD9];
@@ -153,23 +143,6 @@ class Raster {
     return cursor - x;
   }
 
-  /** The same text stepped along a 45° line, one glyph per step; the watermark reads diagonally. */
-  diagonalText(value: string, x: number, y: number, scale: number, color: Rgb, alpha: number): void {
-    const step = GLYPH_WIDTH * scale;
-    let index = 0;
-    for (const character of value) {
-      const rows = glyph(character);
-      const originX = x + index * step;
-      const originY = y + index * step;
-      for (let row = 0; row < GLYPH_HEIGHT; row += 1) {
-        for (let column = 0; column < GLYPH_WIDTH; column += 1) {
-          if (rows[row]![column] === "#") this.fill(originX + column * scale, originY + row * scale, scale, scale, color, alpha);
-        }
-      }
-      index += 1;
-    }
-  }
-
   png(): Uint8Array {
     const stride = this.width * 3;
     const scanlines = Buffer.alloc(this.height * (1 + stride));
@@ -215,11 +188,17 @@ function textWidth(value: string, scale: number): number {
   return Math.max(0, [...value].length * ADVANCE * scale - scale);
 }
 
-function seconds(video: NonNullable<StandInCardRequest["video"]>): number {
-  return video.frameCount * video.frameRate.denominator / video.frameRate.numerator;
-}
+export type ClipTimeGuideRequest = {
+  readonly width: number;
+  readonly height: number;
+  readonly frameRate: { readonly numerator: number; readonly denominator: number };
+  readonly frameCount: number;
+};
 
-function timecode(frame: number, video: NonNullable<StandInCardRequest["video"]>): string {
+function timecode(
+  frame: number,
+  video: Pick<ClipTimeGuideRequest, "frameRate" | "frameCount">,
+): string {
   const fps = video.frameRate.numerator / video.frameRate.denominator;
   const total = frame / fps;
   const minutes = Math.floor(total / 60);
@@ -231,33 +210,29 @@ function timecode(frame: number, video: NonNullable<StandInCardRequest["video"]>
 
 type Layout = {
   readonly border: number;
-  readonly band: number;
   readonly margin: number;
 };
 
 function layout(request: StandInCardRequest): Layout {
   const m = Math.min(request.width, request.height);
   const border = Math.max(6, Math.round(m * 0.03));
-  const band = request.kind === "video" ? Math.max(36, Math.round(request.height * 0.06)) : 0;
-  return { border, band, margin: border * 2 };
+  return { border, margin: border * 2 };
 }
 
-/** The still part of the card: everything but the timecode band. */
+/** Draw one neutral Card. Timing, if needed, belongs to the StillVideo that displays it. */
 export function drawStandInCard(request: StandInCardRequest): Uint8Array {
   verifyStandInCardRequest(request);
   const { width, height } = request;
   const m = Math.min(width, height);
-  const { border, band, margin } = layout(request);
-  const raster = new Raster(width, height, GROUND[request.kind]);
+  const { border, margin } = layout(request);
+  const raster = new Raster(width, height, GROUND);
 
-  // Diagonal watermark: stepped 45° lines of STAND-IN across the whole ground, faint.
-  const markScale = Math.max(2, Math.floor(m / 220));
-  const word = "STAND-IN   ";
-  const wordSpan = word.length * GLYPH_WIDTH * markScale;
-  const lineGap = Math.max(GLYPH_HEIGHT * markScale * 3, Math.round(m * 0.22));
-  for (let start = -height; start < width; start += lineGap) {
-    for (let along = 0; start + along < width + wordSpan && along < width + height; along += wordSpan) {
-      raster.diagonalText(word, start + along, along, markScale, TEXT, 0.09);
+  // A quiet visual field gives components something visible to sit over without pretending to be
+  // a generated subject. The blocks scale with the requested canvas and carry no media semantics.
+  const cell = Math.max(16, Math.round(m * 0.08));
+  for (let y = border; y < height - border; y += cell) {
+    for (let x = border; x < width - border; x += cell) {
+      if (((x / cell) + (y / cell)) % 3 < 1) raster.fill(x, y, cell, cell, TEXT, 0.018);
     }
   }
 
@@ -267,81 +242,55 @@ export function drawStandInCard(request: StandInCardRequest): Uint8Array {
   raster.fill(0, 0, border, height, ACCENT);
   raster.fill(width - border, 0, border, height, ACCENT);
 
-  // Corner tag.
+  // One label is enough; the rest of the card communicates by shape and colour.
   const tagScale = Math.max(2, Math.floor(m / 260));
   raster.text("STAND-IN", margin, margin, tagScale, ACCENT);
-  const kindTag = request.kind === "video" ? "NOT YET GENERATED" : "NOT YET GENERATED";
-  raster.text(kindTag, width - margin - textWidth(kindTag, tagScale), margin, tagScale, MUTED);
 
-  // Centre block: only the generic media shape selected by the Run.
-  const titleScale = Math.max(4, Math.floor(m / 70));
+  const frameWidth = Math.max(Math.round(width * 0.42), margin * 5);
+  const frameHeight = Math.max(Math.round(height * 0.28), margin * 4);
+  const frameX = Math.round((width - frameWidth) / 2);
+  const frameY = Math.round((height - frameHeight) / 2);
+  const stroke = Math.max(3, Math.round(border / 2));
+  raster.fill(frameX, frameY, frameWidth, stroke, MUTED, 0.75);
+  raster.fill(frameX, frameY + frameHeight - stroke, frameWidth, stroke, MUTED, 0.75);
+  raster.fill(frameX, frameY, stroke, frameHeight, MUTED, 0.75);
+  raster.fill(frameX + frameWidth - stroke, frameY, stroke, frameHeight, MUTED, 0.75);
+  raster.fill(frameX + stroke * 4, frameY + frameHeight - stroke * 6,
+    Math.round(frameWidth * 0.34), stroke * 2, ACCENT, 0.9);
+  raster.fill(frameX + Math.round(frameWidth * 0.58), frameY + stroke * 4,
+    stroke * 4, stroke * 4, TEXT, 0.55);
+
   const lineScale = Math.max(2, Math.floor(m / 200));
-  const title = request.kind.toUpperCase();
-  const frameLine = request.video === undefined
-    ? `${width} X ${height}`
-    : `${width} X ${height}   ${seconds(request.video).toFixed(2)} S   ${(request.video.frameRate.numerator / request.video.frameRate.denominator).toFixed(2)} FPS`;
-  const blockHeight = GLYPH_HEIGHT * titleScale + lineScale * 6
-    + GLYPH_HEIGHT * lineScale;
-  let y = Math.round((height - band - blockHeight) / 2);
-  const centred = (value: string, scale: number, color: Rgb): void => {
-    raster.text(value, Math.round((width - textWidth(value, scale)) / 2), y, scale, color);
-    y += GLYPH_HEIGHT * scale;
-  };
-  centred(title, titleScale, TEXT);
-  y += lineScale * 6;
-  centred(frameLine, lineScale, MUTED);
+  const frameLine = `${width} X ${height}`;
+  raster.text(frameLine, Math.round((width - textWidth(frameLine, lineScale)) / 2),
+    frameY + frameHeight + margin, lineScale, MUTED);
   return raster.png();
 }
 
-export function drawStandInSilence(sampleFrames: number): Uint8Array {
-  if (!Number.isSafeInteger(sampleFrames) || sampleFrames < 1) {
-    throw new Error("Stand-in silence sampleFrames must be a positive integer");
-  }
-  const dataBytes = sampleFrames * 2 * 2;
-  const wav = Buffer.alloc(44 + dataBytes);
-  wav.write("RIFF", 0);
-  wav.writeUInt32LE(36 + dataBytes, 4);
-  wav.write("WAVE", 8);
-  wav.write("fmt ", 12);
-  wav.writeUInt32LE(16, 16);
-  wav.writeUInt16LE(1, 20);
-  wav.writeUInt16LE(2, 22);
-  wav.writeUInt32LE(48_000, 24);
-  wav.writeUInt32LE(48_000 * 4, 28);
-  wav.writeUInt16LE(4, 32);
-  wav.writeUInt16LE(16, 34);
-  wav.write("data", 36);
-  wav.writeUInt32LE(dataBytes, 40);
-  return Uint8Array.from(wav);
-}
-
 /** The band a video card carries under its picture: timecode, frame counter and progress bar. */
-export function drawStandInBand(request: StandInCardRequest, frame: number): Uint8Array {
-  verifyStandInCardRequest(request);
-  const video = request.video;
-  if (video === undefined) throw new Error("only a video stand-in has a timecode band");
-  const { width } = request;
-  const { border, band, margin } = layout(request);
+export function drawClipTimeGuide(request: ClipTimeGuideRequest, frame: number): Uint8Array {
+  const { width, height, frameRate, frameCount } = request;
+  if (!Number.isSafeInteger(frame) || frame < 0 || frame >= frameCount) {
+    throw new Error("Clip time guide frame lies outside its clip");
+  }
+  const border = Math.max(6, Math.round(Math.min(width, height) * 0.03));
+  const band = Math.max(36, Math.round(height * 0.06));
+  const margin = border * 2;
   const raster = new Raster(width, band, INK);
   raster.fill(0, 0, border, band, ACCENT);
   raster.fill(width - border, 0, border, band, ACCENT);
   const scale = Math.max(2, Math.floor((band - border) / (GLYPH_HEIGHT + 4)));
   const textY = Math.round((band - border - GLYPH_HEIGHT * scale) / 2);
-  raster.text(timecode(frame, video), margin, textY, scale, TEXT);
-  const counter = `F ${frame + 1}/${video.frameCount}`;
+  raster.text(timecode(frame, { frameRate, frameCount }), margin, textY, scale, TEXT);
+  const counter = `F ${frame + 1}/${frameCount}`;
   raster.text(counter, width - margin - textWidth(counter, scale), textY, scale, MUTED);
   raster.fill(0, band - border, width, border, INK);
-  raster.fill(0, band - border, Math.round(width * (frame + 1) / video.frameCount), border, ACCENT);
+  raster.fill(0, band - border, Math.round(width * (frame + 1) / frameCount), border, ACCENT);
   return raster.png();
 }
 
 export type StandInDrawingEnvironment = {
-  readonly ffmpegPath: string;
-  readonly processTimeoutMs: number;
-  readonly runFfmpeg: (argv: readonly string[]) => Promise<void>;
-  readonly inspectStreams: (path: string) => Promise<readonly MediaStream[]>;
   readonly putBytes: (bytes: Uint8Array, mediaType: string) => Promise<CanonicalValue>;
-  readonly putFile: (path: string, mediaType: string) => Promise<CanonicalValue>;
 };
 
 export function standInCardNeed(value: CanonicalValue): StandInCardRequest {
@@ -349,45 +298,10 @@ export function standInCardNeed(value: CanonicalValue): StandInCardRequest {
   return value;
 }
 
-/** Draw the card; a video card is the still card with its band composited frame by frame by ffmpeg. */
+/** Draw the Card image. */
 export async function renderStandInCard(
   env: StandInDrawingEnvironment,
   request: StandInCardRequest,
 ): Promise<CanonicalValue> {
-  const still = drawStandInCard(request);
-  if (request.video === undefined) return await env.putBytes(still, "image/png");
-  const video = request.video;
-  const work = await mkdtemp(join(tmpdir(), "hypit-stand-in-"));
-  try {
-    const base = join(work, "card.png");
-    await writeFile(base, still);
-    for (let frame = 0; frame < video.frameCount; frame += 1) {
-      await writeFile(join(work, `band-${String(frame).padStart(6, "0")}.png`), drawStandInBand(request, frame));
-    }
-    const fps = `${video.frameRate.numerator}/${video.frameRate.denominator}`;
-    const output = join(work, "card.mp4");
-    const silence = video.audio === "silence";
-    await env.runFfmpeg([
-      "-y",
-      "-loop", "1", "-framerate", fps, "-i", base,
-      "-framerate", fps, "-i", join(work, "band-%06d.png"),
-      ...(silence ? ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"] : []),
-      "-filter_complex", "[0:v][1:v]overlay=0:main_h-overlay_h:shortest=1,format=yuv420p[v]",
-      "-map", "[v]", ...(silence ? ["-map", "2:a:0", "-c:a", "aac", "-b:a", "96k", "-shortest"] : []),
-      "-frames:v", String(video.frameCount), "-r", fps, "-fps_mode", "cfr",
-      "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-      "-movflags", "+faststart", output,
-    ]);
-    const streams = await env.inspectStreams(output);
-    const visual = streams.find((item) => item.kind === "video");
-    const audio = streams.filter((item) => item.kind === "audio");
-    if (visual === undefined || visual.kind !== "video" || visual.decodedUnitCount !== video.frameCount
-      || visual.width !== request.width || visual.height !== request.height
-      || streams.length !== 1 + audio.length || audio.length !== (silence ? 1 : 0)) {
-      throw new Error("Stand-in video differs from its requested frame domain");
-    }
-    return await env.putFile(output, "video/mp4");
-  } finally {
-    await rm(work, { recursive: true, force: true }).catch(() => {});
-  }
+  return await env.putBytes(drawStandInCard(request), "image/png");
 }

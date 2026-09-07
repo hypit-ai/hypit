@@ -198,7 +198,6 @@ test("local media opts only reusable display materialization into transient exec
     "extract-media-frame",
     "render-still-video",
     "draw-card",
-    "draw-silence",
   ]);
   assert.deepEqual(provider.offers.filter((offer) => offer.transient !== true)
     .map((offer) => offer.capability.name), [
@@ -518,7 +517,7 @@ test("local media Provider preserves one source A/V origin when audio starts lat
   }
 });
 
-test("a silent generated MP4 remains a visual-only product and cannot satisfy a requested audio stream", {
+test("a video-only generated MP4 remains visual-only and cannot satisfy a requested audio stream", {
   skip: !hasMediaBinaries,
 }, async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-provider-media-silent-"));
@@ -644,6 +643,7 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
         request: {
           frameRate: { numerator: 30, denominator: 1 },
           frameCount: 15,
+          guide: "clip-time",
           output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
           segments: [{ startFrame: 0, endFrameExclusive: 15, source: extractedFrame }],
         },
@@ -694,7 +694,7 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
   }
 });
 
-test("local media Provider renders one frame-domain audio plan and muxes exactly one silent visual with it", {
+test("local media Provider renders one frame-domain audio plan and muxes exactly one video-only visual with it", {
   skip: !hasMediaBinaries,
 }, async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-provider-media-program-"));
@@ -876,9 +876,7 @@ function pngSize(bytes: Uint8Array): { readonly width: number; readonly height: 
   return { width: view.getUint32(16), height: view.getUint32(20) };
 }
 
-test("local media Provider draws a stand-in card as a picture and as an exact silent clip", {
-  skip: !hasMediaBinaries && "ffmpeg is not installed",
-}, async () => {
+test("local media Provider draws a stand-in Card image", async () => {
   const resources = new MemoryResourceStore();
   const fulfillBlob = async (request: Need): Promise<Awaited<ReturnType<MemoryResourceStore["put"]>>> => {
     const provider = await handlerFor(request);
@@ -892,42 +890,13 @@ test("local media Provider draws a stand-in card as a picture and as an exact si
     return result.value as Awaited<ReturnType<MemoryResourceStore["put"]>>;
   };
   const picture = await fulfillBlob(need("need:card-image", standInCapabilities.drawCard, artifactTypes.blob, canonicalize({
-    kind: "image", width: 640, height: 400,
+    width: 640, height: 400,
   })));
   assert.equal(picture.kind, "blob");
   assert.equal(picture.mediaType, "image/png");
   const bytes = await resources.get(picture.resource);
   assert.ok(bytes !== undefined);
   assert.deepEqual(pngSize(bytes), { width: 640, height: 400 });
-
-  const clip = await fulfillBlob(need("need:card-video", standInCapabilities.drawCard, artifactTypes.blob, canonicalize({
-    kind: "video", width: 320, height: 568,
-    video: { frameRate: { numerator: 24, denominator: 1 }, frameCount: 12 },
-  })));
-  assert.equal(clip.mediaType, "video/mp4");
-  const inspection = await inspectArtifact(resources, clip);
-  const visual = inspection.streams.find((item) => item.kind === "video");
-  assert.ok(visual !== undefined && visual.kind === "video");
-  assert.equal(inspection.streams.length, 1, "the card request alone decides whether a clip carries silence");
-  assert.equal(visual.width, 320);
-  assert.equal(visual.height, 568);
-  assert.equal(visual.decodedUnitCount, 12);
-
-  const spoken = await fulfillBlob(need("need:card-spoken", standInCapabilities.drawCard, artifactTypes.blob, canonicalize({
-    kind: "video", width: 320, height: 568,
-    video: { frameRate: { numerator: 24, denominator: 1 }, frameCount: 12, audio: "silence" },
-  })));
-  const spokenStreams = (await inspectArtifact(resources, spoken)).streams;
-  const sound = spokenStreams.find((item) => item.kind === "audio");
-  assert.ok(sound !== undefined && sound.kind === "audio", "a generic video stand-in can carry a silent track");
-  assert.equal(sound.sampleRate, 48_000);
-  assert.equal(spokenStreams.length, 2);
-
-  const silence = await fulfillBlob(need("need:stand-in-silence", standInCapabilities.drawSilence, artifactTypes.blob,
-    canonicalize({ sampleRate: 48_000, channels: 2, sampleFrames: 48_000 })));
-  assert.equal(silence.mediaType, "audio/wav");
-  const silenceBytes = await resources.get(silence.resource);
-  assert.equal(silenceBytes?.byteLength, 44 + 48_000 * 4);
 });
 
 

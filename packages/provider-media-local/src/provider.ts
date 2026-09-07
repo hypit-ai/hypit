@@ -10,7 +10,6 @@ import {
   executeRenderTimelineAudio,
   executeRenderStillVideo,
   executeDrawStandInCard,
-  executeDrawStandInSilence,
   executeTransformMedia,
 } from "@hypit/media-execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-execution";
@@ -134,13 +133,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
         capability: standInCapabilities.drawCard,
         returns: artifactTypes.blob,
         handler: operation(executeDrawStandInCard),
-      },
-      {
-        lifecycle: "immediate" as const,
-        transient: true,
-        capability: standInCapabilities.drawSilence,
-        returns: artifactTypes.blob,
-        handler: operation(executeDrawStandInSilence),
       },
       {
         lifecycle: "immediate" as const,

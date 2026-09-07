@@ -67,7 +67,11 @@ Several images spread over one literal duration the same way, each held for its 
 </media:StillVideo>
 ```
 
-`StillVideo` returns a silent MP4 `BlobArtifact`, not `SynchronizedMedia`. The Surface publishes the
+For a short-lived diagnostic clip, `guide="clip-time"` burns one coherent band containing the
+clip-local timecode, current frame and progress ruler. Omit it for clean production pixels. The
+guide says nothing about the clip's eventual position in a Film.
+
+`StillVideo` returns a video-only MP4 `BlobArtifact`, not `SynchronizedMedia`. The Surface publishes the
 duration and the weights as Records; `plan-still-video` divides the whole frame count among the
 pictures (every picture holds at least one frame, the rest go by weight with leftovers to the largest
 remainders, earlier first), `bind-still-video-source` attaches each picture in authored order, and
@@ -76,10 +80,10 @@ frame and letterboxed. Inspection and normalization remain the same explicit ste
 or generated moving video, so the Blob can serve B-roll through Normalize, or continue into either
 estimated or measured A-roll semantics afterward.
 
-The package also exposes its one-picture Fragment as
-`@hypit/media-pipeline@1#still-video`, so a Run may select the same ordinary
-StillVideo branch as a Candidate. Its inputs are `duration`, `clock`, `layout`
-and `source-0`; choosing it remains an explicit `candidate` / `satisfy` decision.
+The package also exposes one-picture Run Fragments. `still-video` takes `duration`, `clock`,
+`layout` and `source-0`; `clip-time-still-video` takes `duration`, `clock` and `source`, supplying
+the diagnostic layout itself. A Run can select either ordinary branch as a Candidate through an
+explicit `candidate` / `satisfy` decision.
 
 Four ordinary author operations reuse that same inspection/execution boundary:
 
