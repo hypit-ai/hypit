@@ -124,7 +124,7 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
       model: "gpt-image-2-text-to-image",
       prompt: "A sheet of warm cream laid paper, even lighting, no text.",
       aspect_ratio: "1:1",
-      size: "1024x1024",
+      resolution: "1k",
     }]);
     assert.equal(calls.filter((item) => item.endsWith("/v1/images/generations")).length, 1);
   } finally {
