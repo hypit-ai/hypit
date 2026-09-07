@@ -21,15 +21,7 @@ const requiredCapability = {
   name: "Required",
 } as const satisfies CapabilityRef;
 
-/**
- * A stand-in program, written in the interpreter already running this file.
- *
- * These fixtures used to be `sh -c` strings. That cost them a shell twice over: `sh` is not on a
- * Windows machine by default, and where it is, a temporary path interpolated into the command
- * string arrives with its backslashes eaten, so the marker file was written somewhere nobody
- * looked and the wait timed out instead of failing. Node is here by definition, and takes its
- * arguments as arguments rather than as text to be parsed a second time.
- */
+/** A platform-neutral stand-in program executed by the Node process under test. */
 function nodeProgram(source: string, ...args: readonly string[]): ManagedProgramCommand {
   return { command: process.execPath, args: ["-e", source, ...args] };
 }
