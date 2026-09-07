@@ -1,5 +1,5 @@
 export { semanticTakeEstimateComponent } from "./component.js";
-export { semanticTakeEstimateFragment } from "./fragment.js";
+export { semanticTakeEstimateBoundaryFragment, semanticTakeEstimateFragment } from "./fragment.js";
 export {
   semanticTakeEstimateManifest,
   semanticTakeEstimateMarkupSurfaces,

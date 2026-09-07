@@ -9,12 +9,13 @@ import type {
 } from "@hypit/markup";
 import { mediaTypes } from "@hypit/media";
 import { narrativeTypes } from "@hypit/narrative";
+import type { NarrativeExcerpt } from "@hypit/narrative";
 import type { CanonicalValue } from "@hypit/protocol";
 import { sameType } from "@hypit/protocol";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
 
-import { semanticTakeEstimateFragment } from "./fragment.js";
+import { semanticTakeEstimateBoundaryFragment, semanticTakeEstimateFragment } from "./fragment.js";
 
 function reference(
   element: StructuredElement,
@@ -30,6 +31,12 @@ function reference(
   if (resolved === undefined) throw new Error(`${element.name}.${name} cannot resolve ${raw.path}`);
   if (!sameType(resolved.type, expected)) throw new Error(`${element.name}.${name} has the wrong type`);
   return resolved;
+}
+
+function authoredExcerpt(value: SurfaceResolvedReference): NarrativeExcerpt | undefined {
+  return value.record?.value.kind === "inline"
+    ? value.record.value.value as unknown as NarrativeExcerpt
+    : undefined;
 }
 
 /**
@@ -54,17 +61,37 @@ function policyOf(
 
 export const decodeSemanticTakeEstimateSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   const required = ["id", "narrative", "segment", "media"];
-  const allowed = new Set([...required, "policy", ...speechEstimatePolicyProperties]);
   const missing = required.filter((name) => element.attributes[name] === undefined);
+  if (missing.length > 0) {
+    throw new Error(`${element.name} requires ${required.join(", ")}`);
+  }
+  const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
+  const segment = reference(element, "segment", narrativeTypes.excerpt, resolveReference);
+  const media = reference(element, "media", mediaTypes.synchronized, resolveReference);
+  const excerpt = authoredExcerpt(segment);
+  const hasNoTokens = excerpt !== undefined && excerpt.tokenStart === excerpt.tokenEndExclusive;
+  const allowed = new Set(hasNoTokens ? required : [...required, "policy", ...speechEstimatePolicyProperties]);
   const unknown = Object.keys(element.attributes).filter((name) => !allowed.has(name));
-  if (missing.length > 0 || unknown.length > 0) {
-    throw new Error(`${element.name} requires ${required.join(", ")} and a policy (policy={recipe} or ${speechEstimatePolicyProperties.join(", ")})${
-      unknown.length === 0 ? "" : `; unknown ${unknown.join(", ")}`}`);
+  if (unknown.length > 0) {
+    throw new Error(`${element.name} has unknown or inapplicable attributes ${unknown.join(", ")}`);
   }
   if (element.children.some((child) => child.kind === "element" || child.value.trim().length > 0)) {
     throw new Error(`${element.name} must be empty`);
   }
   const id = textAttribute(element, "id");
+  if (hasNoTokens) {
+    return {
+      records: [],
+      components: [{
+        id,
+        fragment: semanticTakeEstimateBoundaryFragment.id,
+        inputs: { narrative: narrative.ref, segment: segment.ref, media: media.ref },
+        outputs: { take: `${id}.take` },
+        range: element.range,
+      }],
+      fragments: [semanticTakeEstimateBoundaryFragment],
+    };
+  }
   const policyId = `${id}.policy`;
   return {
     records: [{
@@ -77,9 +104,9 @@ export const decodeSemanticTakeEstimateSurface: StructuredSurfaceHandler = ({ el
       id,
       fragment: semanticTakeEstimateFragment.id,
       inputs: {
-        narrative: reference(element, "narrative", narrativeTypes.narrative, resolveReference).ref,
-        segment: reference(element, "segment", narrativeTypes.excerpt, resolveReference).ref,
-        media: reference(element, "media", mediaTypes.synchronized, resolveReference).ref,
+        narrative: narrative.ref,
+        segment: segment.ref,
+        media: media.ref,
         policy: { kind: "record", id: policyId },
       },
       outputs: { take: `${id}.take` },
