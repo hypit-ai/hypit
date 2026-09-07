@@ -15,11 +15,12 @@ A separate review Run is useful when its Candidate selection is intentionally di
 Studio renders the selected display closure with deterministic Producers and the exact capabilities
 that the Runtime Provider declares safe for transient authoring. It submits no Build and no paid
 generation. When that closure still needs external generation, use an existing file or Build
-Output, or explicitly select a stand-in when only shape and time are under review.
+Output. An existing image can enter through StillVideo; a Card can fill the remaining case where no
+suitable pixels exist and a component or wiring question still deserves an early look.
 
-A stand-in can establish layout, duration, cuts, and downstream wiring. Its visible marking reminds
-the reviewer that it cannot establish subject identity, performance, shot composition, texture,
-continuity, or the interaction between the selected production media and graphics.
+A Card can establish that the downstream graph renders, show broad geometry, and carry provisional
+clip time. Its visible marking keeps that evidence distinct from subject identity, performance,
+shot composition, texture, continuity, or the interaction between production media and graphics.
 
 ## Separate legality from judgment
 
@@ -43,8 +44,8 @@ Use whichever view can answer the current question:
 
 - An Agent with browser interaction can open Studio, seek and play the ordinary Run, look at the
   current frame, and discover where a layout or motion deserves closer inspection. This is usually
-  the cheapest way to work on Caption, MG, Effects, and composition, with stand-ins when external
-  media does not yet exist.
+  the cheapest way to work on Caption, MG, Effects, and composition; a Card can supply the minimal
+  visible unknown when no more representative media exists yet.
 - Once a numeric interval is known, a range render can inspect the corresponding frames of the same
   HyperFrames program. The range may come from the playhead, authored clock time, or an existing
   Result; HyperFrames does not need to know whether language helped the Agent locate it.

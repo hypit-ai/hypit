@@ -33,10 +33,12 @@
     duration="5" aspect-ratio="9:16" generate-audio="true"/>
   <pipeline:Normalize id="performance-media" source={performance.video} clock={clock}
     video="primary-moving" audio="default" span-authority="video"/>
+  <pipeline:Normalize id="performance-preview-media" source={performance.video} clock={clock}
+    video="primary-moving" audio="none" span-authority="video"/>
   <whisperx:SemanticTake id="opening-semantic" narrative={story}
     segment={story.segment.opening} media={performance-media.media} language="en"/>
   <estimate:SemanticTake id="estimated" narrative={story}
-    segment={story.segment.opening} media={performance-media.media}
+    segment={story.segment.opening} media={performance-preview-media.media}
     language="en" pace="normal" rounding="round"/>
   <speech:Track id="speech" visual-frame={full}
     visual-appearance={look.media.performance} visual-z="0">

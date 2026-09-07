@@ -47,8 +47,10 @@ processing require the selected environment.
 Studio creates no Build and submits no paid generation. It can execute deterministic Producers and
 only those exact immediate capabilities a Provider explicitly permits for transient authoring.
 If new image/video generation blocks the display closure, select an existing Output or file; use
-an explicit stand-in Candidate when the current question only concerns structure, layout or time.
-A stand-in does not establish performance, identity or the composition of future generated media.
+an existing image through StillVideo when one is available. An explicit Card Candidate can keep a
+component or wiring study moving when no suitable pixels exist yet. It supplies a visible canvas
+and provisional clip time; the eventual media establishes performance, identity, composition and
+the real relationship between subject and graphics.
 
 [Runs and substitutes](runs.md#a-complete-layout-preview) includes a complete Source and Run with
 a card Candidate, normalization and estimated semantic timing for this kind of layout study.

@@ -5,7 +5,7 @@
   <import as="estimate" from="@hypit/semantic-take-estimate@1"/>
   <target output="main.composition"/>
 
-  <fragment id="card" using="stand-in:video">
+  <fragment id="card" using="stand-in:timed-card">
     <input name="canvas" from="canvas"/>
     <input name="duration" value="5"/>
     <input name="clock" from="clock"/>
@@ -15,7 +15,7 @@
   <fragment id="timing" using="estimate:semantic-take">
     <input name="narrative" from="story"/>
     <input name="segment" from="story.segment.opening"/>
-    <input name="media" from="performance-media.media"/>
+    <input name="media" from="performance-preview-media.media"/>
     <input name="policy" from="estimated.policy"/>
   </fragment>
   <satisfy output="opening-semantic.take" candidate="timing.take"/>

@@ -66,12 +66,12 @@ which kind of value fits that position.
 
 ## Use a Fragment when the substitute needs computation
 
-A Run Fragment connects the computations that produce a Candidate. A generic video card, for
-example, needs the chosen Canvas, clock and duration:
+A Run Fragment connects the computations that produce a Candidate. This composition draws one
+generic Card, then asks Media Pipeline to hold it for the chosen duration with a clip-local guide:
 
 ```svrun
 <import as="stand-in" from="@hypit/stand-in@1"/>
-<fragment id="card" using="stand-in:video">
+<fragment id="card" using="stand-in:timed-card">
   <input name="canvas" from="canvas"/>
   <input name="duration" value="5"/>
   <input name="clock" from="clock"/>
@@ -87,6 +87,12 @@ name another Run Candidate or automatically expose an imported Source's private 
 The resulting Candidate is named `card.video`. Selecting it replaces the performance request while
 retaining the preparation and composition that consume that video. A substitute can also consume
 an existing computed Output; that Output remains part of the selected dependencies.
+
+When a usable image already exists, hold that image with `media-pipeline:still-video` or
+`media-pipeline:clip-time-still-video` instead. When usable video exists, select that video itself.
+The generic Card is useful only while no suitable pixels exist and the current component or wiring
+question is worth answering before generation completes; its role naturally disappears as real
+production media becomes available.
 
 ## A complete layout preview
 
@@ -104,17 +110,18 @@ Fragment to supply the Candidate for the original measured Take:
 <fragment id="timing" using="estimate:semantic-take">
   <input name="narrative" from="story"/>
   <input name="segment" from="story.segment.opening"/>
-  <input name="media" from="performance-media.media"/>
+  <input name="media" from="performance-preview-media.media"/>
   <input name="policy" from="estimated.policy"/>
 </fragment>
 <satisfy output="opening-semantic.take" candidate="timing.take"/>
 ```
 
-Together with the card selection, this leaves card creation, inspection and normalization as the
-media work. The original generated performance and WhisperX alignment are outside this preview's
-selected graph. The estimator retains the real Segment, Token and Anchor identities and distributes
-their positions across the prepared media's frame count. Those positions show provisional rhythm;
-real alignment supplies the performance's actual word timing.
+Together with the card selection, this leaves Card drawing, StillVideo rendering, video-only
+normalization and timing estimation as the media work. The original generated performance and
+WhisperX alignment are outside this preview's selected graph. The estimator retains the real
+Segment, Token and Anchor identities and distributes their positions across the prepared media's
+frame count. Those positions show provisional rhythm; real alignment supplies the performance's
+actual word timing.
 
 From the directory containing the copied example:
 
@@ -129,9 +136,10 @@ transient capabilities. If the chosen environment does not provide them for Stud
 selected preview media through that environment and reuse its completed Outputs. The normal
 production Run still requests generation and measured alignment, under the work's spending authority.
 
-For an existing production with usable footage, select its Result or file directly. A generic card
-is useful for spacing and timing questions; the actual shot is needed to judge overlap with a face,
-color relationships, performance or identity. [Studio](studio.md) explains what the preview can show.
+For an existing production with usable footage, select its Result or file directly. If only an
+authored or generated picture exists, StillVideo already gives downstream composition much more
+relevant pixels than a Card. The actual shot is needed to judge overlap with a face, color
+relationships, performance or identity. [Studio](studio.md) explains what the preview can show.
 
 ## Preserve the choices that still apply
 
