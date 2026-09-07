@@ -36,6 +36,14 @@ export async function acquireOAuthCredential(
   const server = createServer();
   const callback = new Promise<string>((resolveCode, reject) => {
     let settled = false;
+    // The browser can still hold the callback connection, and commonly opens a second
+    // one for /favicon.ico, after the code has been read. `server.close()` waits for
+    // those to end, which keeps the process alive long past the exchange, so drop them
+    // once the response has actually been written and stop the socket holding the loop open.
+    const closeAllConnections = (): void => {
+      server.closeAllConnections?.();
+      server.unref();
+    };
     server.on("request", (request, response) => {
       if (settled) {
         response.writeHead(204, { "cache-control": "no-store", connection: "close" });
@@ -55,7 +63,7 @@ export async function acquireOAuthCredential(
           connection: "close",
           "content-type": "text/html; charset=utf-8",
         });
-        response.end(callbackPage(true));
+        response.end(callbackPage(true), closeAllConnections);
         settled = true;
         resolveCode(code);
       } catch (error) {
@@ -64,12 +72,13 @@ export async function acquireOAuthCredential(
           connection: "close",
           "content-type": "text/html; charset=utf-8",
         });
-        response.end(callbackPage(false));
+        response.end(callbackPage(false), closeAllConnections);
         settled = true;
         reject(error);
       } finally {
         server.close();
         server.closeIdleConnections?.();
+        server.unref();
       }
     });
     server.once("error", reject);
