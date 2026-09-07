@@ -9,7 +9,12 @@ import {
   visualTextSchema, visualTextTypographySchema, visualTrackSchema, visualVideoSchema,
 } from "@hypit/composition";
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
-import type { RegisteredSurface, SurfaceAttributeVocabulary, SurfaceVocabulary } from "@hypit/markup";
+import type {
+  RegisteredSurface,
+  SurfaceAttributeVocabulary,
+  SurfacePortVocabulary,
+  SurfaceVocabulary,
+} from "@hypit/markup";
 import { exactModelHostAbi } from "@hypit/model-kit";
 import { loadNodePackageSelection, locateNodePackage } from "@hypit/package-loader-node";
 import type { NodePackageLoadOptions } from "@hypit/package-loader-node";
@@ -270,10 +275,32 @@ function attributeLine(attribute: SurfaceAttributeVocabulary): string {
   return `      ${attribute.name}${attribute.required ? "" : "?"}  ${shape}  ${attribute.summary}`;
 }
 
+function moduleSpecifier(surface: SurfaceListing): string {
+  return `${surface.module.name}@${surface.module.version}`;
+}
+
+function sourceImport(surface: SurfaceListing, vocabulary: SurfaceVocabulary): string {
+  const prefixedTag = vocabulary.example.match(/<([A-Za-z_][A-Za-z0-9_.-]*):([A-Za-z_][A-Za-z0-9_.-]*)\b/u);
+  const alias = prefixedTag?.[2] === surface.tag ? prefixedTag[1] : undefined;
+  return alias === undefined
+    ? `<import from="${moduleSpecifier(surface)}"/>`
+    : `<import as="${alias}" from="${moduleSpecifier(surface)}"/>`;
+}
+
+function portLine(port: SurfacePortVocabulary): string {
+  const type = `${port.type.name} (${port.type.module.name}@${port.type.module.version})`;
+  return `      ${port.name}  ${type}  ${port.summary}`;
+}
+
 function surfaceText(surface: SurfaceListing): string {
   const vocabulary = surface.vocabulary as SurfaceVocabulary | undefined;
-  const lines = [`  <${surface.tag}>  ${surface.mode}  from ${surface.package}`];
+  const lines = [
+    `  <${surface.tag}>  ${surface.mode}`,
+    `    package  ${surface.package}`,
+    `    module   ${moduleSpecifier(surface)}`,
+  ];
   if (vocabulary !== undefined) {
+    lines.push(`    import   ${sourceImport(surface, vocabulary)}`);
     lines.push(`    ${vocabulary.summary}`);
     if (vocabulary.appearance !== undefined) lines.push(`    ${vocabulary.appearance}`);
     if (vocabulary.attributes.length > 0) lines.push("    attributes", ...vocabulary.attributes.map(attributeLine));
@@ -281,7 +308,7 @@ function surfaceText(surface: SurfaceListing): string {
       lines.push(`    child <${child.tag}> (${child.cardinality})  ${child.summary}`, ...(child.attributes ?? []).map(attributeLine));
     }
     if (vocabulary.ports !== undefined && vocabulary.ports.length > 0) {
-      lines.push("    ports", ...vocabulary.ports.map((port) => `      ${JSON.stringify(port)}`));
+      lines.push("    ports", ...vocabulary.ports.map(portLine));
     }
     lines.push("    example", ...vocabulary.example.split("\n").map((line) => `      ${line}`));
     for (const note of vocabulary.notes ?? []) lines.push(`    note: ${note}`);
@@ -296,7 +323,7 @@ export function writeVocabularyHelp(io: CliIo): void {
     "What a Source may write. Prints installed package manifests; no Runtime Profile, no request, no state.",
     "",
     "  hypit vocabulary                         every installed package with its tags and models",
-    "  hypit vocabulary <package…> [--tag <tag>] the Surfaces a package declares: attributes, children, example",
+    "  hypit vocabulary <package…> [--tag <tag>] the Surfaces a package declares: module, import, attributes, children, ports, example",
     "  hypit vocabulary --visual [<shape>]      the value shapes and rules a drawing Producer must emit",
     "",
     "Read the package README the listing names before writing its elements. Add --json for a machine view.",
