@@ -164,13 +164,13 @@ class ApplicationTests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertEqual(engine.seen, (32_000, "en"))
 
-    def test_legacy_transcript_override_is_rejected(self) -> None:
+    def test_unknown_request_fields_are_reported(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             application = WhisperXApplication(config(Path(directory)), FakeEngine())
-            with self.assertRaisesRegex(RequestError, "transcript") as raised:
+            with self.assertRaisesRegex(RequestError, "unexpected") as raised:
                 application.transcribe(
                     {"content-type": "application/json"},
-                    json.dumps({"audio_path": "/tmp/input.wav", "transcript": "rewrite me"}).encode(),
+                    json.dumps({"audio_path": "/tmp/input.wav", "unexpected": True}).encode(),
                 )
         self.assertEqual(raised.exception.code, "UNKNOWN_FIELD")
 

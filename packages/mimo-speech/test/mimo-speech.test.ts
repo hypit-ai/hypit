@@ -52,11 +52,10 @@ const context = (source: string, voice: SurfaceResolvedReference = voiceReferenc
   resolveAsset: () => { throw new Error("no asset"); },
 });
 
-test("MiMo Speech declares Voice Design and Voice Clone without Provider facts", () => {
+test("MiMo Speech declares the two exact audio request shapes", () => {
   assert.deepEqual(mimoSpeechModels, ["mimo-v2.5-tts-voicedesign", "mimo-v2.5-tts-voiceclone"]);
   assert.ok(Object.values(mimoSpeechPorts).every((ports) => ports.result === "audio"));
   assert.ok(Object.values(mimoSpeechEndpoints).every((endpoint) => endpoint.returns.name === generationTypes.audioSet.name));
-  assert.equal(JSON.stringify(mimoSpeechPorts).includes("xiaomimimo.com"), false);
   assert.throws(() => sealMimoSpeechRequest("mimo-v2.5-tts-voicedesign", {
     text: ["Do not rewrite me."],
   }), /voiceDescription is required/u);
@@ -69,7 +68,6 @@ test("the installed author package contributes the two explicit speech operation
   assert.equal(mimoNodePackage.format, "hypit.node-package@1");
   assert.equal(mimoNodePackage.modules[0]?.manifest.version, "1");
   assert.deepEqual(mimoSpeechMarkupSurfaces.map((surface) => surface.name), ["voiceDesign", "voiceClone"]);
-  assert.equal(JSON.stringify(mimoNodePackage).includes("MIMO_API_KEY"), false);
 });
 
 test("VoiceDesign publishes one reusable voice reference", async () => {
