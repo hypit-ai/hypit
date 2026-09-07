@@ -22,7 +22,7 @@
   <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
   <import as="recipes" source="./reference.svs"/>
   <import as="image-kit" source="@hypit/gpt-image-kits/phone-ugc-v1"/>
-  <import as="interview-kit" source="./kits/street-interview-v1.svs"/>
+  <import as="interview-kit" source="@hypit/seedance-kits/street-interview"/>
 
   <script id="story">
     <manifest-rule>

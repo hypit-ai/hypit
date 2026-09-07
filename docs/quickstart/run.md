@@ -46,7 +46,7 @@ my-video/
     takes.svrun             another executable intention
     final.svrun             final delivery intention
   assets/                   project-owned input media
-  kits/                     optional vendored Recipe Kits
+  kits/                     optional project-authored Recipe Kits
   packages/                 optional project-local Author packages
   output/                   explicit exports for people and other tools
   hypit.runtime.json        execution environment
