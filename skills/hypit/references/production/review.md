@@ -1,10 +1,23 @@
 # Reviewing the production
 
-Read this when opening Studio, judging an encoded Result, comparing a reconstruction with its
-reference, or deciding where a visible problem should be repaired.
+Read this when opening Studio, judging an encoded Result, or improving the layout, timing and
+expression of the new Film.
 
 [Studio](studio.md) explains launch, session reuse, displayed information, Source writeback and
 project Companions. [Builds and Results](builds.md) explains retrieval and explicit Output reuse.
+
+## Make the composition work
+
+Compose MG, Caption, B-roll, Typography and Effects around the directed material and existing Outputs.
+Watch their actual arrangement in Studio or a rendered Result: is the comparison clear, is the
+Caption readable, does the B-roll cover the intended explanation, and do entries and exits land on
+the right words or actions? Adjust the layout, timing or component behavior that will make the
+passage work better. Judge a local change in the surrounding composition.
+
+Use Craft to give generated pictures and performances strong reference and prompt direction before
+requesting them. Composition usually develops around those produced assets. When a generated item
+fails its intended role, identify the concrete defect and improve the responsible direction before
+deciding on another authorized request. That decision has its own purpose and cost.
 
 ## Review the work the Run actually selects
 
@@ -34,7 +47,7 @@ use does not create an approval state that the work must preserve.
 
 `hypit check` can establish that the Source and graph are legal. Studio can establish what the
 configured composition displays. A completed Build can establish what the selected Endpoints actually
-produced. Creative review asks a different question: does this visible and audible work perform the
+produced. Creative review asks a different question: does this composition perform the
 Treatment and the useful relationships learned from the reference?
 
 Look at the complete Film at its intended delivery size as well as the components inside it. A component that looks
@@ -50,7 +63,7 @@ location remains an open question.
 
 Use whichever view can answer the current question:
 
-- An Agent with browser interaction can open Studio, seek and play the ordinary Run, look at the
+- Open Studio, seek and play the ordinary Run, look at the
   current frame, and discover where a layout or motion deserves closer inspection. This is usually
   the cheapest way to work on Caption, MG, Effects, and composition; a Card can supply the minimal
   visible unknown when no more representative media exists yet.
@@ -61,25 +74,24 @@ Use whichever view can answer the current question:
   relationship to upstream Candidate reuse.
 - On an encoded Result, focused media operations such as frames, cut, and tile can expose exact
   pixels, adjacent frames, or a short passage.
-- Watch the whole deliverable when the question concerns Hook clarity, story movement, pace, payoff,
-  CTA, performance, continuity, or whether A-roll, B-roll, Caption, MG, Effects, and Audio cooperate.
+- Watch the whole deliverable when the question concerns Hook clarity, story movement, payoff,
+  CTA, or how A-roll, B-roll, Caption, MG and Effects work together.
 
 Choose and combine these views according to the current question. A component name alone does not
 prove that a particular state is stable or that a change occurs at a guessed time; Studio or actual
 media supplies that evidence.
 
-Inspect the visible and audible relationships that could change the work:
+Inspect the relationships that make the composition work:
 
-- **picture and performance** — identity, camera relationship, action, eye line, continuity, useful
-  detail, and whether the shot serves its passage;
-- **semantic timing** — cuts, Caption Cues, MG states, Effects, and sounds occur on the intended word,
-  phrase, pause, or clock event;
+- **picture and coverage** — B-roll supports the passage and its display window carries the intended
+  explanation or handoff;
+- **semantic timing and motion** — cuts, Caption Cues, MG states and Effects occur on the
+  intended word, phrase, pause, or clock event; entry, settling, active behavior and exit make the
+  intended emphasis and handoff perceptible;
 - **Caption** — every meaningfully different speaker, position, color, emphasis, Cue shape, and motion
   configuration remains readable, belongs to the speech, and preserves the intended face and action;
 - **Typography and UI** — independent writing has the correct hierarchy, content, persistence, and
   relationship to the picture;
-- **audio** — speech is intelligible, speaker and voice are right, music and effects support the beat,
-  and transitions sound continuous;
 - **composition** — each element has enough room and the full frame preserves the intended visual
   hierarchy.
 
@@ -107,9 +119,11 @@ For a supplied person or product, compare the new appearances with those actual 
 as the intended camera image. Judge recognizable identity, appeal, and how naturally the new subject
 inhabits the piece; check that dialogue, demonstrations, and graphic details make sense for this target.
 
-Fresh visual attention is useful when familiarity hides an obvious problem. Another observer can be
-asked a neutral, bounded question about the actual media, while the commissioned Agent remains
-responsible for combining that evidence with the Brief, Treatment, and graph.
+Inspect the detailed realization of each relationship: the entry catches attention, the hold gives
+enough reading time, the motion explains a change, and the exit clears the next idea. Compare source
+and target at their corresponding words or actions; the target's new speech can place that event at
+a different second. A reference gives precise design evidence, while Brief and Treatment determine
+which of those choices belong in this piece.
 
 ## Repair the owning fact
 
@@ -121,9 +135,15 @@ responsible for combining that evidence with the Brief, Treatment, and graph.
 | The wrong file, earlier Output, or stand-in is selected | Run Source |
 | A reusable visual role cannot express or render its intended design | the project Author Package |
 
-Use the smallest correction that changes the failed fact and preserve existing work around it. Review
-again when that correction produces new visible or audible evidence. A request for different paid
-media is a new production decision whose additional calls must be visible in `hypit plan`; it is not
-an automatic consequence of routine review. Build completion is operational success; the production
-closes when the Agent has watched the actual deliverable and can explain why it satisfies the Brief
-and Treatment.
+Before changing the work, connect the composition problem to its consequence and the intended
+improvement. For instance, extending a hold can make a comparison readable; delaying an exit can keep
+proof visible through the claim it supports. Correct the owning fact and preserve existing work
+around it. Watch the affected interval and its handoffs after the change, then judge it in the whole
+Film. If the result did not improve, revisit the explanation before making another adjustment.
+
+A request for different paid media is a production decision whose additional calls must be visible
+in `hypit plan`. Reuse the accepted Outputs for composition changes.
+
+The composition is ready when its layout, readability and timing carry the Brief and Treatment
+clearly and compellingly. Continue when a change will improve that expression; deliver when it works,
+with the important choices and any material limitations explained.

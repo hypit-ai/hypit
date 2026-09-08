@@ -4,6 +4,7 @@ import { mkdtemp, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import sharp from "sharp";
 
 import type { CliIo } from "@hypit/cli";
 
@@ -129,4 +130,50 @@ test("media evidence keeps source times and sub-second visual changes", { skip: 
 test("fetch refuses anything but an http link and an explicit video destination", async () => {
   await assert.rejects(runMediaCli(["media", "fetch", "./local.mp4", "--to", "x.mp4"], io().io), /http or https link/);
   await assert.rejects(runMediaCli(["media", "fetch", "https://example.com/v", "--to", "x.txt"], io().io, tmpdir()), /must end in/);
+});
+
+test("word-located grids paginate dense samples without covering the source picture", { skip: !ffmpeg && "ffmpeg is not installed" }, async () => {
+  const work = await mkdtemp(join(tmpdir(), "hypit-word-grids-"));
+  try {
+    const source = await sample(work);
+    const transcript = join(work, "words.json");
+    await writeFile(transcript, JSON.stringify({ format: "hypit.transcript@1", passages: [{ words: [
+      { text: "Hello", start_seconds: 0.1, end_seconds: 0.4 },
+      { text: "world!", start_seconds: 0.4, end_seconds: 0.8 },
+      { text: "<你好 & café>" },
+      { text: "Hello", start_seconds: 2.1, end_seconds: 2.4 },
+      { text: "world!", start_seconds: 2.4, end_seconds: 2.8 },
+    ] }] }));
+    await assert.rejects(runMediaCli(["media", "tile", source, "--around", "hello world", "--transcript", transcript,
+      "--to", "ambiguous.jpg"], io().io, work), /occurs 2 times.*--occurrence/);
+    const around = io();
+    await runMediaCli(["media", "tile", source, "--around", "hello world", "--occurrence", "2", "--padding", "0.1",
+      "--every", "0.2", "--transcript", transcript, "--to", "around.jpg", "--json"], around.io, work);
+    const located = JSON.parse(around.text());
+    assert.deepEqual(located.samples, [2, 2.2, 2.4, 2.6, 2.8]);
+    assert.deepEqual(located.frames[0].words.active, []);
+    assert.equal(located.frames[1].words.active[0].text, "Hello");
+    assert.equal(located.frames[1].requestedAt, 2.2);
+    assert.ok(Math.abs(located.frames[1].at - 53 / 24) < 0.000001, "labels use the decoded frame time, not the requested seek time");
+    assert.equal(located.frames[2].words.active[0].text, "world!");
+
+    const pages = io();
+    await runMediaCli(["media", "tiles", source, "--start", "0", "--end", "3", "--every", "0.6",
+      "--transcript", transcript, "--columns", "2", "--rows", "1", "--to", "pages", "--json"], pages.io, work);
+    const grids = JSON.parse(pages.text()).grids;
+    assert.deepEqual(grids.map((grid: { samples: number[] }) => grid.samples), [[0, 0.6], [1.2, 1.8], [2.4]]);
+    assert.ok(grids.every((grid: { start: number; end: number }) => grid.start === 0 && grid.end === 3));
+    assert.equal((await readdir(join(work, "pages"))).length, 3);
+    const image = await sharp(grids[0].path).raw().toBuffer({ resolveWithObject: true });
+    const center = (128 * image.info.width + 168) * image.info.channels;
+    assert.ok(image.data[center]! > 220 && image.data[center + 1]! < 20, "the first source frame stays red and unobscured");
+    assert.ok(image.info.height > 240 + 32, "word annotations have their own space beneath the picture");
+
+    const frames = io();
+    await runMediaCli(["media", "frames", source, "--start", "0.5", "--end", "1.5", "--every", "0.4",
+      "--transcript", transcript, "--to", "frames", "--json"], frames.io, work);
+    assert.deepEqual(JSON.parse(frames.text()).frames.map((frame: { requestedAt: number }) => frame.requestedAt), [0.5, 0.9, 1.3]);
+  } finally {
+    await rm(work, { recursive: true, force: true });
+  }
 });

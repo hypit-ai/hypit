@@ -8,7 +8,6 @@ import { canonicalize } from "@hypit/protocol";
 import type { Need } from "@hypit/protocol";
 import type { ResourceStore } from "@hypit/runtime";
 import { sealAlignedTranscriptEvidence } from "@hypit/speech-evidence";
-import { sealVisualObservation } from "@hypit/gemini";
 import { interpretWhisperXTranscript } from "@hypit/whisperx";
 import type { WhisperXAlignmentRequest } from "@hypit/whisperx";
 
@@ -52,8 +51,7 @@ function host(seen: Need[]): CreationHost {
           }, request.sampleFrames),
         })) } };
       }
-      const request = need.constraints as { readonly prompt: string; readonly media: readonly unknown[] };
-      return { value: { kind: "inline" as const, value: canonicalize(sealVisualObservation(`saw ${request.media.length} media; asked: ${request.prompt}`)) } };
+      throw new Error(`Unexpected capability ${need.capability.name}`);
     },
   };
 }
@@ -66,34 +64,6 @@ function capture() {
   let output = "";
   return { io: { write: (text: string) => { output += text; } }, text: () => output };
 }
-
-test("observe seals one Gemini request from the media and writes the answer beside the Provider it named", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-observe-"));
-  const seen: Need[] = [];
-  try {
-    await writeFile(join(root, "frame.png"), Uint8Array.from([137, 80, 78, 71]));
-    await writeFile(join(root, "prompt.txt"), "What is the presenter holding?\n", "utf8");
-    const out = capture();
-    await runCreationCli([
-      "observe", "frame.png", "--instruction", "You only observe.", "--prompt", "prompt.txt", "--to", "notes/frame.md", "--json",
-    ], out.io, environment(root, seen));
-    const view = JSON.parse(out.text()) as Record<string, unknown>;
-    assert.equal(view.endpoint, "paid.default");
-    assert.deepEqual(view.pricing, page);
-    assert.equal(await readFile(join(root, "notes", "frame.md"), "utf8"), "saw 1 media; asked: What is the presenter holding?\n");
-    assert.equal(seen[0]?.capability.name, "gemini-3.1-pro");
-    const constraints = seen[0]!.constraints as { readonly instruction: string; readonly media: readonly { readonly artifact: { readonly mediaType: string } }[] };
-    assert.equal(constraints.instruction, "You only observe.");
-    assert.equal(constraints.media[0]?.artifact.mediaType, "image/png");
-
-    const again = capture();
-    await assert.rejects(runCreationCli([
-      "observe", "frame.png", "--instruction", "x", "--prompt", "y", "--to", "notes/frame.md",
-    ], again.io, environment(root, seen)), /already exists/u);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
 
 test("transcribe writes every word in seconds from the Profile's alignment Endpoint", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-transcribe-"));

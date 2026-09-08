@@ -86,7 +86,7 @@ sequence depends on the video, but it generally includes:
 
 1. **Breaking the request into shots.** The Agent identifies the spoken sections, visual beats,
    transitions, captions, B-roll opportunities and any persistent elements such as a ranking board.
-2. **Analyzing the reference or brief.** For a clone, it uses Gemini and the available media tools to
+2. **Analyzing the reference or brief.** For a clone, it watches the reference and uses timed frames and transcripts to
    inspect timing, composition, text, speakers and visual continuity. For an original, it resolves
    the same questions from your description and the selected creative direction.
 3. **Resolving details.** The Agent uses the reference, brief and observation results to settle

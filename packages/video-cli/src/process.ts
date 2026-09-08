@@ -2,13 +2,14 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 
 type ProcessInput = Uint8Array | Iterable<Uint8Array> | AsyncIterable<Uint8Array>;
+type ProcessOutput = { readonly stdout: Buffer; readonly stderr: string };
 
 function run(
   executable: string,
   args: readonly string[],
   input: ProcessInput | undefined,
   timeoutMs: number,
-): Promise<Buffer> {
+): Promise<ProcessOutput> {
   return new Promise((resolveRun, reject) => {
     const child = spawn(executable, [...args], { stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"], windowsHide: true });
     const out: Buffer[] = [];
@@ -18,7 +19,7 @@ function run(
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      if (error === undefined) resolveRun(Buffer.concat(out));
+      if (error === undefined) resolveRun({ stdout: Buffer.concat(out), stderr: err });
       else reject(error);
     };
     const timer = setTimeout(() => { child.kill("SIGKILL"); finish(new Error(`${executable} timed out after ${timeoutMs} ms`)); }, timeoutMs);
@@ -50,16 +51,21 @@ function run(
 }
 
 /** Run one external program to completion and return its stdout; stderr becomes the error text. */
-export function runProcess(executable: string, args: readonly string[], timeoutMs = 300_000): Promise<Buffer> {
+export async function runProcess(executable: string, args: readonly string[], timeoutMs = 300_000): Promise<Buffer> {
+  return (await run(executable, args, undefined, timeoutMs)).stdout;
+}
+
+/** Successful stderr can carry tool metadata, such as the timestamp of an extracted frame. */
+export function runProcessOutput(executable: string, args: readonly string[], timeoutMs = 300_000): Promise<ProcessOutput> {
   return run(executable, args, undefined, timeoutMs);
 }
 
 /** The same process boundary when a deterministic byte stream is one of the program's inputs. */
-export function runProcessWithInput(
+export async function runProcessWithInput(
   executable: string,
   args: readonly string[],
   input: ProcessInput,
   timeoutMs = 300_000,
 ): Promise<Buffer> {
-  return run(executable, args, input, timeoutMs);
+  return (await run(executable, args, input, timeoutMs)).stdout;
 }

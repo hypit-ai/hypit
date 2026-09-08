@@ -15,7 +15,6 @@
     "@hypit/credential-store-os": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/estimate": "workspace:*",
-    "@hypit/gemini": "workspace:*",
     "@hypit/generation": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/model-kit": "workspace:*",
@@ -31,6 +30,7 @@
     "@hypit/visual-ir": "workspace:*",
     "@hypit/whisperx": "workspace:*",
     "@hypit/workspace-fs-node": "workspace:*",
-    "@hypit/yt-dlp": "workspace:*"
+    "@hypit/yt-dlp": "workspace:*",
+    "sharp": "0.35.3"
   }
 }

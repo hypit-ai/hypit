@@ -78,9 +78,7 @@ their own Typography, Text, screen, or MG roles unless they are also meant to be
 
 Watch the passage first as an argument: does every visual change clarify, prove, pace, or intensify
 what is being said? Then inspect exact product and screen truth, hand and device geometry, Caption
-timing, persistent component states, visual handoffs, and audio continuity.
+timing, persistent component states and visual handoffs.
 
-Listen once without the picture to judge the speech performance, then watch without relying on the
-words to judge whether the visual sequence has its own intelligible progression. Finally review the
-complete Film. Repair weak narration at its performance source, weak proof in the shot or component
-design, wrong timing at the authored semantic relation, and weak balance in the mix.
+Let the visual sequence develop a clear progression alongside the narration. Repair weak proof in
+the shot or component design and wrong timing at the authored semantic relation.

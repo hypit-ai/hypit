@@ -125,7 +125,7 @@ never on exact-model packages or the CLI.
 
 ```text
 @hypit/provider-kie                  KIE generation plus background removal
-@hypit/provider-hypihub              HypiHub generation, Gemini VLM and WhisperX gateway
+@hypit/provider-hypihub              HypiHub generation, WhisperX gateway
 @hypit/provider-media-local          local ffprobe/ffmpeg
 @hypit/provider-whisperx-local       local WhisperX service
 @hypit/provider-hyperframes-local    local Chrome rendering

@@ -1,7 +1,7 @@
 # `@hypit/provider-hypihub`
 
 Thin Hypit Runtime Provider for a HypiHub deployment. It is an optional default gateway for
-paid generation, Gemini VLM and WhisperX alignment requests; callers may keep their own Provider and select HypiHub only
+paid generation and WhisperX alignment requests; callers may keep their own Provider and select HypiHub only
 when its OAuth login is configured.
 
 It maps the currently shipped image/video model capabilities to HypiHub, including image edits and
@@ -9,8 +9,7 @@ image-to-video first-frame inputs, submits jobs, polls them, downloads the first
 admits them into the current Build's working byte area. Image references use HypiHub's documented
 `reference_images` object shape (`[{ "url": "…" }]`); video references use the public
 `reference_image_urls`, `reference_videos`, and `reference_audios` fields (with `ref_video_url`
-for one video). First/last-frame images use `first_frame` and `last_frame`. It also
-exports a small Gemini-native VLM generator for callers that previously used Vertex.
+for one video). First/last-frame images use `first_frame` and `last_frame`.
 
 The current HypiHub GPT Image 2 route exposes the same request surface as its KIE upstream:
 
@@ -54,18 +53,17 @@ Runtime Profile example:
 }
 ```
 
-Gemini VLM is exposed as the Provider-neutral `@hypit/gemini` Runtime capability, and remote
-transcription is exposed as the same `@hypit/whisperx` alignment capability implemented by the local
-WhisperX Provider. An Author
-Source can select the exact model while the Runtime chooses HypiHub or Vertex. Existing embedded
-callers can still use the exported `createHypiHubGeminiGenerator`. Run `hypit auth login hypihub.default --runtime hypit.runtime.json` to sign in with HypiHub OAuth only when choosing HypiHub. A Profile may set `baseUrl`
+Remote transcription exposes the same `@hypit/whisperx` alignment capability implemented by the local
+WhisperX Provider. The Runtime Profile selects which Endpoint serves it. Run
+`hypit auth login hypihub.default --runtime hypit.runtime.json` to sign in with HypiHub OAuth when
+choosing HypiHub. A Profile may set `baseUrl`
 to the selected deployment's origin or an existing `/v1`/`/v1beta` base. The Runtime Provider
 normalizes it to `/v1`; missing or insufficient user
 credentials should be resolved at [hypit.ai](https://hypit.ai). Referenced image, audio and video
 Resources are uploaded through a session from `POST /v1/files/uploads`, followed by the private
 regional multipart instructions returned by HypiHub. The Provider follows the server-selected part
 size and concurrency, retries only a failed part with a fresh signed URL, completes or cancels that
-one upload, and then passes the returned HTTPS URL to generation, Gemini or transcription. One
+one upload, and then passes the returned HTTPS URL to generation or transcription. One
 Resource identity is uploaded once within one Runtime operation. Hypit keeps no upload catalog or
 cross-Build cache. Embedded callers may replace this transport with `publicAssetUrl`.
 
@@ -95,7 +93,7 @@ the Provider does not maintain a second list of billing formulas or calculate a 
 HypiHub declares MiMo Voice Design and Voice Clone together with every other capability it serves; it
 never hides one. Voice Design produces an accepted voice-reference Resource, and Voice Clone uses
 that reference to produce independent speech. Hypit does not expose MiMo preset voices. When another
-selected Endpoint offers the same capability (a local WhisperX, a Vertex Gemini, or the official MiMo
+selected Endpoint offers the same capability (a local WhisperX or the official MiMo
 Provider), the Runtime Profile's `bindings` say which Endpoint serves it.
 
 Execution policy remains local to this Provider:
@@ -109,20 +107,18 @@ Execution policy remains local to this Provider:
 | `uploadPartTimeoutMs` | 5 minutes | one upload part |
 | `uploadPartAttempts` | 3 | attempts for one upload part |
 | `downloadAttempts` | 3 | attempts to collect one result |
-| `geminiRateLimitAttempts` | 4 | Gemini attempts after rate limits |
-| `geminiRateLimitRetryDelayMs` | 2 seconds | delay between those attempts |
 
 `defaultConcurrency` controls the total shared capacity of this Profile's HypiHub pool. Optional `capabilityConcurrency`
-sets narrower group limits, for example `{ "seedance-2-mini": 2, "gemini": 3, "transcription": 1 }`.
-Image/video/speech groups use the exact capability name; all Gemini capabilities share `gemini`, and
-WhisperX uses `transcription`. These limits coordinate this Runtime's requests; HypiHub remains
-responsible for service-wide account limits. Immediate speech/Gemini/transcription slots cover the
+sets narrower group limits, for example `{ "seedance-2-mini": 2, "transcription": 1 }`.
+Image/video/speech groups use the exact capability name; WhisperX uses `transcription`. These limits
+coordinate this Runtime's requests; HypiHub remains
+responsible for service-wide account limits. Immediate speech/transcription slots cover the
 active HTTP invocation, while asynchronous image/video slots cover remote work until completion or local execution failure.
 
 For asynchronous image/video jobs, `actionLimits` configures the common `submit`, `poll` and `collect`
 admission budgets. Each accepts `concurrency` and `rate: { limit, periodMs }`, shared by the pool.
 These limits count lifecycle actions; Provider-specific upload parts and HTTP requests remain inside
-those actions. Synchronous speech, Gemini and transcription retain their ordinary request capacity.
+those actions. Synchronous speech and transcription retain their ordinary request capacity.
 
 A submission, polling or collection error ends the local attempt. Known job IDs and credential
 references remain available in Result receipts; a timeout with no ID is recorded as such. A job can
