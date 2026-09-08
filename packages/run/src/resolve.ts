@@ -3,13 +3,13 @@ import {
   exportRunFragment,
   resolveCompiledSourceExport,
 } from "@hypit/elaborator";
-import { canonicalStringify } from "@hypit/protocol";
+import { canonicalize, sameType } from "@hypit/protocol";
 import type {
   Candidate,
   GraphValueRef,
   ModuleRef,
   OperationNode,
-  StoredValue,
+  TypedRecord,
 } from "@hypit/protocol";
 import {
   createProvidedCandidate,
@@ -68,20 +68,7 @@ function logicalOutput(context: ResolveRunDocumentContext, name: string): string
   return exported.ref.id;
 }
 
-function assertStoredValue(value: unknown, subject: string): asserts value is StoredValue {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${subject} must contain one StoredValue object`);
-  }
-  const item = value as Record<string, unknown>;
-  if (item.kind === "inline" && Object.hasOwn(item, "value")) return;
-  if (item.kind === "blob"
-    && typeof item.digest === "string"
-    && Number.isSafeInteger(item.size)
-    && typeof item.mediaType === "string") return;
-  throw new Error(`${subject} is not an inline or blob StoredValue`);
-}
-
-/** Resolve both source graphs completely before Core derives a finite BuildPlan. */
+/** Resolve both source graph structures before Core derives a finite BuildPlan. */
 export async function resolveRunDocument(
   document: RunDocument,
   context: ResolveRunDocumentContext,
@@ -89,57 +76,74 @@ export async function resolveRunDocument(
   const imports = new Map(document.imports.map((item) => [item.as, item.from]));
   const candidates = new Map<string, Candidate>();
   const operations = new Map<string, OperationNode>();
+  const records = new Map<string, TypedRecord>();
   const addCandidate = (candidate: Candidate): void => {
-    const existing = candidates.get(candidate.id);
-    if (existing !== undefined && canonicalStringify(existing) !== canonicalStringify(candidate)) {
-      throw new Error(`Run Candidate ${candidate.id} has conflicting definitions`);
-    }
+    if (candidates.has(candidate.id)) throw new Error(`Run Candidate ${candidate.id} is declared twice`);
     candidates.set(candidate.id, candidate);
   };
   const addOperation = (operation: OperationNode): void => {
-    const existing = operations.get(operation.id);
-    if (existing !== undefined && canonicalStringify(existing) !== canonicalStringify(operation)) {
-      throw new Error(`Run Operation ${operation.id} has conflicting definitions`);
-    }
+    if (operations.has(operation.id)) throw new Error(`Run Operation ${operation.id} is declared twice`);
     operations.set(operation.id, operation);
   };
   const candidateNames = new Map<string, string>();
+  const candidateSources = new Map<string, RunCompilation["candidateSources"][string]>();
+  const declarationIds = new Set<string>();
   const bindCandidateName = (name: string, candidate: string): void => {
     if (candidateNames.has(name)) throw new Error(`Run Candidate reference ${name} is declared twice`);
     candidateNames.set(name, candidate);
   };
 
   for (const declaration of document.candidates) {
+    if (declarationIds.has(declaration.id)) throw new Error(`Run Candidate ${declaration.id} is declared twice`);
+    declarationIds.add(declaration.id);
     if (declaration.kind === "provided") {
-      const value = await context.readStoredValue(declaration.from);
-      assertStoredValue(value, declaration.from);
-      const candidate = createProvidedCandidate({ id: declaration.id, type: declaration.type, value });
-      addCandidate(candidate);
-      bindCandidateName(declaration.id, candidate.id);
-      continue;
-    }
-    if (declaration.kind === "file") {
-      const value = await context.readFile(declaration.from, declaration.mediaType);
-      assertStoredValue(value, declaration.from);
       const candidate = createProvidedCandidate({
         id: declaration.id,
         type: declaration.type,
-        value,
+        value: { kind: "inline", value: null },
       });
       addCandidate(candidate);
       bindCandidateName(declaration.id, candidate.id);
+      candidateSources.set(candidate.id, { kind: "stored-value", from: declaration.from });
+      continue;
+    }
+    if (declaration.kind === "file") {
+      const candidate = createProvidedCandidate({
+        id: declaration.id,
+        type: declaration.type,
+        value: { kind: "inline", value: null },
+      });
+      addCandidate(candidate);
+      bindCandidateName(declaration.id, candidate.id);
+      candidateSources.set(candidate.id, {
+        kind: "file",
+        from: declaration.from,
+        mediaType: declaration.mediaType,
+      });
       continue;
     }
     if (declaration.kind === "build-record") {
-      const record = await context.resolveBuildRecord(declaration.build, declaration.output);
-      if (record === undefined) {
-        throw new Error(
-          `Build ${declaration.build} has no accepted output ${declaration.output}; update build-record ${declaration.id}`,
-        );
+      const destinations = document.satisfactions
+        .filter((item) => item.candidate === declaration.id)
+        .map((item) => resolveCompiledSourceExport(context.compilation, item.output));
+      if (destinations.length === 0) continue;
+      const type = destinations[0]!.type;
+      for (const destination of destinations) {
+        if (destination.ref.kind !== "logical-output") {
+          throw new Error(`${declaration.id} satisfies an authored Record rather than a Logical Output`);
+        }
+        if (!sameType(destination.type, type)) {
+          throw new Error(`Historical Candidate ${declaration.id} is used for incompatible Logical Output types`);
+        }
       }
-      const candidate = createProvidedCandidate({ id: declaration.id, ...record });
+      const candidate = createProvidedCandidate({ id: declaration.id, type, value: { kind: "inline", value: null } });
       addCandidate(candidate);
       bindCandidateName(declaration.id, candidate.id);
+      candidateSources.set(candidate.id, {
+        kind: "build-output",
+        build: declaration.build,
+        output: declaration.output,
+      });
       continue;
     }
     const packageName = imports.get(declaration.using.alias);
@@ -148,10 +152,26 @@ export async function resolveRunDocument(
     if (fragment === undefined) {
       throw new Error(`${packageName} exports no Run Fragment ${declaration.using.name}`);
     }
+    const inputDeclarations = new Map(fragment.inputs.map((item) => [item.name, item]));
+    const fragmentInputs = Object.fromEntries(declaration.inputs.map((item): [string, GraphValueRef] => {
+      if ("from" in item) return [item.name, authorRef(context, item.from)];
+      const inputDeclaration = inputDeclarations.get(item.name);
+      if (inputDeclaration === undefined) {
+        throw new Error(`Run Fragment ${declaration.id} binds undeclared input ${item.name}`);
+      }
+      const id = `record:run:${declaration.id}:${item.name}`;
+      if (records.has(id)) throw new Error(`Run Fragment literal ${declaration.id}.${item.name} is declared twice`);
+      records.set(id, {
+        id,
+        type: inputDeclaration.type,
+        value: { kind: "inline", value: canonicalize(item.value) },
+      });
+      return [item.name, { kind: "record", id }];
+    }));
     const instance = elaborateGraphFragment(context.compilation.program, fragment, {
-      id: declaration.id,
+      id: `run:${declaration.id}`,
       fragment: fragment.id,
-      inputs: Object.fromEntries(declaration.inputs.map((item) => [item.name, authorRef(context, item.from)])),
+      inputs: fragmentInputs,
     });
     const contribution = exportRunFragment(instance, declaration.exports);
     for (const candidate of contribution.candidates) addCandidate(candidate);
@@ -177,6 +197,7 @@ export async function resolveRunDocument(
   const resolvedCandidates = [...candidates.values()];
   const resolvedOperations = [...operations.values()];
   const graph = sealRunGraph({
+    records: [...records.values()],
     candidates: resolvedCandidates,
     operations: resolvedOperations,
     satisfactions,
@@ -186,6 +207,7 @@ export async function resolveRunDocument(
     document,
     graph,
     candidates: Object.fromEntries([...candidateNames.entries()].sort(([left], [right]) => left.localeCompare(right))),
+    candidateSources: Object.fromEntries([...candidateSources.entries()].sort(([left], [right]) => left.localeCompare(right))),
     satisfactionNames: Object.fromEntries([...satisfactionNames.entries()].sort(([left], [right]) => left.localeCompare(right))),
   };
 }

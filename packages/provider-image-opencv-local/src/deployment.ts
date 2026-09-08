@@ -2,8 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { resolveNodePackageResource } from "@hypit/package-loader-node";
-import { runtimeConfigObject, runtimeConfigString } from "@hypit/runtime-kit";
-import type { RuntimeAdapterFactoryContext, ManagedProgramCommand } from "@hypit/runtime-kit";
+import type { ManagedProgramCommand } from "@hypit/runtime-kit";
 import {
   pythonEnvironmentExecutable,
   resolveRuntimeExecutable,
@@ -32,13 +31,16 @@ export type LocalOpenCvDeployment = {
  * project is the complete managed deployment.
  */
 export function resolveLocalOpenCvDeployment(
-  context: RuntimeAdapterFactoryContext,
+  input: {
+    readonly hostStateRoot: string;
+    readonly dataRoot: string;
+    readonly instance: string;
+    readonly pythonExecutable?: string;
+  },
 ): LocalOpenCvDeployment {
-  const config = runtimeConfigObject(context.config, "local OpenCV image");
-  const configured = runtimeConfigString(config.pythonExecutable, "OpenCV pythonExecutable");
-  if (configured !== undefined) {
+  if (input.pythonExecutable !== undefined) {
     return {
-      pythonExecutable: resolveRuntimeExecutable(context.dataRoot, configured),
+      pythonExecutable: resolveRuntimeExecutable(input.dataRoot, input.pythonExecutable),
       ownership: "external",
     };
   }
@@ -47,7 +49,11 @@ export function resolveLocalOpenCvDeployment(
       "local OpenCV has no bundled managed runtime; configure pythonExecutable explicitly",
     );
   }
-  const stateRoot = join(context.hostStateRoot, "programs", "image-opencv");
+  const stateRoot = join(
+    input.hostStateRoot,
+    "programs",
+    `image-opencv-${encodeURIComponent(input.instance)}`,
+  );
   const environment = join(stateRoot, ".venv");
   return {
     pythonExecutable: pythonEnvironmentExecutable(environment),

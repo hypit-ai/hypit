@@ -4,7 +4,7 @@
 
 欢迎提交 Pull Request。文档、示例和翻译与代码同样重要。
 
-在原创或复刻视频时，只有当你认为 Agent 创作的某个组件在无关项目中也有明确且很高的复用价值时，才可以让 Agent 把它移入 Hypit 仓库的 `packages/` 文件夹，再提交给我们，发起一个 Pull Request。普通的一次性组件应留在项目内部。
+视频组件通常保存在视频项目自己的 `packages/` 目录中。需要跨项目共享时，由所有者通过自己的 npm scope 或私有 registry 发布，再由各项目的包管理器安装版本化发行包。希望将能力纳入官方发行时，可以通过 issue 说明它解决的共同制作需求。
 
 ## 开始之前
 
@@ -12,7 +12,7 @@
 
 ## 环境准备
 
-需要 Node.js 22+ 和 pnpm 10.33，版本由根目录的 `packageManager` 字段指定。
+需要 Node.js 22.12+ 和 pnpm 10.33，版本由根目录的 `packageManager` 字段指定。
 
 ```bash
 corepack enable
@@ -35,12 +35,11 @@ pnpm install --frozen-lockfile
 
 ## 自查
 
-每个 Pull Request 的 CI 都会运行下面三条命令，提交前先在本地跑一遍：
+每个 Pull Request 的 CI 都会运行下面这些命令，提交前先在本地跑一遍：
 
 ```bash
 pnpm check         # TypeScript 类型检查
-pnpm test          # 包、服务适配器与仓库边界测试
-pnpm test:release  # 仓库卫生检查
+pnpm test          # 包与服务适配器测试
 ```
 
 ## 提交 Pull Request

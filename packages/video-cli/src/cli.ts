@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { renderCliError, writeCliHelp } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
+import { creationCommands, isCreationCommand, writeCreationHelp } from "./creation.js";
+import { isMediaCommand, mediaCommands, writeMediaHelp } from "./media.js";
+import { writeVocabularyHelp } from "./vocabulary.js";
 
 const argv = process.argv.slice(2);
 const json = argv.includes("--json");
@@ -46,6 +49,7 @@ async function readSecret(prompt: string): Promise<string> {
 
 const io: CliIo = {
   write: (text) => process.stdout.write(text),
+  writeProgress: (text) => process.stderr.write(text),
   setExitCode: (code) => { process.exitCode = code; },
   readSecret,
   terminal: {
@@ -59,7 +63,25 @@ const io: CliIo = {
 async function main(): Promise<void> {
   if (argv.length === 0 || argv[0] === "help" || argv.includes("--help")) {
     const topic = argv[0] === "help" ? argv[1] : argv.includes("--help") ? argv[0] : undefined;
+    if (isCreationCommand(topic)) {
+      writeCreationHelp(io, topic);
+      return;
+    }
+    if (topic === "media") {
+      const sub = argv[0] === "help" ? argv[2] : argv[1];
+      writeMediaHelp(io, isMediaCommand(sub) ? sub : undefined);
+      return;
+    }
+    if (topic === "vocabulary") {
+      writeVocabularyHelp(io);
+      return;
+    }
     writeCliHelp(io, topic);
+    if (topic === undefined) {
+      io.write(`\nCreation tools (one request through the selected Runtime Profile, no Build)\n${
+        creationCommands.map((item) => `  ${item}`).join("\n")}\n  hypit help <tool> for each\n`
+        + `\nPreparation (local, no request, no state)\n  media ${mediaCommands.join(" | ")}\n  vocabulary\n  hypit help media, hypit help vocabulary\n`);
+    }
     return;
   }
   const { runVideoCli } = await import("./index.js");

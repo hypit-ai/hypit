@@ -1,57 +1,101 @@
-# Two-person podcast format
+# Two-person podcast
 
-Use two final camera-view references and intentional speaker/reaction cuts to build a coherent
-two-person conversation.
+The relationship between two people carries the argument: a question invites a claim, a reaction
+changes its meaning, and a reply pays it off. Let that relationship motivate framing and performance.
 
-## Lock the two-view geometry first
+## Build the pair from a useful first view
 
-Draw the room and name camera positions A and B before generating either view.
+Generate the main host in the actual setting first. Use that image to derive the other host's
+complementary view: opposite screen position and gaze, microphone entering from the other side,
+and another visible sector of the same location. The first host view establishes the shared world;
+the complementary view changes what the other camera can see.
 
-- View A and View B belong to the same room, but they must show different background sectors and
-  different dominant landmark sets.
-- The two backgrounds must never be identical, near-identical, horizontally mirrored, or the same
-  wall with only the person changed.
-- Preserve seating, eye lines, table edge, microphones, shared props, light direction, lens feel,
-  and left/right relationship across the pair.
-- Reject and regenerate both images when the geometry cannot explain how the two cameras occupy the
-  room.
+These [idle views](../craft/image-direction.md#choose-an-idle-state-for-the-encounter) hold an easy
+conversational posture: each host turns toward their partner, with their face readable from the
+chosen camera. Their attitude is already present and can develop through different speaking turns.
 
-## Author the SVML program
+The worked restaurant example has this reference structure:
 
-1. Write Script turns with explicit A/B Role Cues. Use Dual Text for exact display/pronunciation
-   differences while preserving the intended visible spelling.
-2. Prepare the accepted final A-view and B-view images plus ordered A/B voice references.
-3. Vendor `podcast-v1.svs`. Select `framing`, `edit-language`, `pacing`, `performance`, `reaction`,
-   and `gesture` in an SVS Recipe.
-4. Render each Segment with `copy:Render`, Script dialogue, and an optional English action direction.
-5. Generate each take with `seedance:ReferenceVideo generate-audio="true"`, both final views, and
-   both voice references in the Kit's declared order.
-6. Normalize each accepted take, produce its `whisperx:SemanticTake`, assemble the results through
-   `speech:Track`, then add exact-font Captions, evidence Media, Typography, and optional Audio Tracks.
-7. Assemble with `film:Film`, render with `render:Video`, and use separate `.svrun` Sources with
-   explicit Targets for staged review and delivery.
+```text
+main host in restaurant ──> other host in restaurant
+main host + product ──────> main host holding product
+other host + product ─────> other host holding product
+main host (+ logo) ───────> each lifestyle scene
+both host views ──────────> optional split-screen opening image
+```
 
-## Direct turns and cuts
+Most new views are one hop from their useful parent. Derive lifestyle scenes from the main host,
+not from one another. Product-holding views inherit their own host's camera and add the actual
+product reference. Preserve gaze, the established setting and microphone placement while changing
+the intended prop state. File imports are valid inputs even when those images were generated outside
+Source.
 
-- Let each speaker finish a natural thought. Short challenges may lead into longer grounded answers;
-  do not create rapid alternation by splitting one sentence into fragments.
-- Use the Recipe's speaker-following or reaction-cut pattern. Do not write camera cuts, new angles,
-  zooms, or location changes into the action slot.
-- Camera stability and performer intensity are independent: a host may lean, laugh, gesture, or
-  change posture while the two established camera views remain fixed.
-- Only the current speaker moves their mouth. A listener cutaway stays silent but visually alive.
-- A skeptical format works well as bold claim → short challenge → mechanism/evidence → grounded
-  payoff that returns to the hook. A phone CTA is optional and appears only when the Script requires it.
+[Podcast and interview image examples](../craft/examples/conversation-images.md) preserve the
+concrete English production directions and explain what each reference is responsible for.
 
-## Review and reuse
+## Direct conversation inside a Take
 
-Review the two reference images side by side before video generation. Reject same-background reverse
-views, broken eye lines, contradictory seating, duplicated microphones, prop drift, or impossible
-lighting. Then review every take for voice assignment, exact words, lip-sync, reaction timing,
-camera selection, and identity. Pin accepted views and takes through `.svrun` `build-record` and
-`satisfy`.
+`podcast-v1` takes two final camera views and two voices, in matching A/B order. Map the Script's
+actual Role names to those hosts explicitly in action direction. Script remains the sole dialogue
+text; a single Segment can contain several turns and speaker cuts.
 
-Read `../craft/seedance-directing.md`, `../craft/persona-and-audio.md`, `../craft/captions.md`,
-and `../craft/b-roll.md`.
+The Kit's Recipe supplies recurring framing, editing, pace, performance, reaction and gesture choices.
+Action adds this passage's attention and interaction: who is making the claim, who is skeptical,
+when a reaction earns the other view, and who holds the product. Keep silent listeners physically
+alive through a posture adjustment, a brief glance down and back up, or an attentive expression while
+preserving their silence.
 
-That list is complete, and the always-read craft in `../index.md` applies regardless of format.
+A handoff needs legible possession. The main host offers the product toward their partner; the
+partner receives it in the complementary view; later shots reflect who now has it. A few clear
+relations are more useful than prescribing every finger. Cuts can carry this exchange without
+requiring serialized frame-continuation generation.
+
+For example, action accompanying a product-offer passage can say:
+
+```text
+GIRL is Host A and GUY is Host B. She treats the recommendation with amused certainty; his reaction
+is playful disbelief, not outrage. She offers the product toward the left edge of her view. In his
+complementary view it arrives from the right; he receives it and keeps it. When returning to her,
+the product is no longer in her hand. Keep the exchange casual, with compact gestures and no
+extra dialogue.
+```
+
+This particular direction assumes those view and prop inputs. A phone link sent digitally calls for
+the corresponding screen or conversational interaction instead of a physical handoff.
+
+## An opening can establish both people at once
+
+A top/bottom split screen can immediately reveal the pair before the first question finishes. The
+speaker can occupy one panel while the listener in the other looks down, adjusts their seat and
+looks back up. Those small silent actions establish a conversation already in progress.
+
+```text
+Keep the supplied top-and-bottom composition. The man in the upper panel delivers the question to
+his partner. In the lower panel, the woman briefly looks down, settles into her seat and looks back
+toward him as she listens. She remains silent. Let both panels feel like the same conversation
+already underway, without large gestures or a frozen listener.
+```
+
+The split reference and its matching video direction form one authored opening Take that can carry
+both people and a speaker change. The ordinary two-view Podcast Kit suits the later exchange. Use a
+split-screen opening when that attention device serves the work; use another component or Take shape
+for a different layout.
+
+## Coverage can follow a thought rather than every noun
+
+The example generates three lifestyle scenes together as a short silent montage, then places that
+one clip over a Selection spanning the host's examples and the start of the partner's response.
+The viewer understands the broader habit even when each visual cut is not synchronized to its noun.
+Give the montage enough room to play through once at native speed, so its last scene is not cut off.
+The Selection may slightly outlast the clip; let the underlying picture return when playback ends.
+The partner's incoming voice can precede that return: a useful J-cut relationship. Avoid a frozen
+tail or retiming merely to fill the Selection. Use the B-roll craft's current playback guidance
+rather than treating an existing project's Recipe as a required choice.
+
+Use separate clips when exact scene-to-cue correspondence matters, especially in reconstruction.
+Generate each within the selected model's actual range and consume only the needed section. Read
+[B-roll](../craft/b-roll.md) for source duration, `stretch`, short windows and gap-free boundaries.
+
+Host-colored Caption can clarify the speaker even over full-frame B-roll. Coordinate it with the
+scene palette and product treatment; choose the colors for this pair. Judge the whole exchange for
+responsive timing, restrained reactions, prop continuity and a payoff that feels earned.

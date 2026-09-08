@@ -1,4 +1,4 @@
-import { canonicalize, isDigest } from "@hypit/protocol";
+import { canonicalize, isResourceId } from "@hypit/protocol";
 
 import type { BackgroundRemovalRequest } from "./types.js";
 
@@ -7,7 +7,7 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 export function assertBackgroundRemovalRequest(value: BackgroundRemovalRequest): void {
-  assert(value.source.kind === "blob" && isDigest(value.source.digest)
+  assert(value.source.kind === "blob" && isResourceId(value.source.resource)
     && Number.isSafeInteger(value.source.size) && value.source.size >= 0
     && value.source.mediaType.startsWith("image/"), "Background Removal source must be an image Blob Artifact.");
 }

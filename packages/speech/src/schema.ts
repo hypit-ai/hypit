@@ -3,11 +3,11 @@ import type { ValueSchema } from "@hypit/protocol";
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
-const digest = { kind: "string", minLength: 71, maxLength: 71 } as const;
+const digest = { kind: "string", minLength: 5, maxLength: 256 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const audioBlobRef = object({
   kind: { schema: { kind: "literal", value: "blob" } },
-  digest: { schema: digest },
+  resource: { schema: digest },
   size: { schema: integer },
   mediaType: { schema: { kind: "literal", value: "audio/wav" } },
 });

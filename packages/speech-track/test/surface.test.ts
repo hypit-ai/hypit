@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import type { StructuredElement, SurfaceResolvedReference } from "@hypit/markup";
 import type { SemanticTake } from "@hypit/speech";
@@ -14,12 +14,12 @@ const take: SemanticTake = {
   media: {
     timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 30 },
     visual: {
-      artifact: { kind: "blob", digest: fixtureDigest("track:take:video"), size: 1, mediaType: "video/mp4" },
+      artifact: { kind: "blob", resource: fixtureResource("track:take:video"), size: 1, mediaType: "video/mp4" },
       width: 720,
       height: 1280,
     },
     audio: {
-      artifact: { kind: "blob", digest: fixtureDigest("track:take:audio"), size: 1, mediaType: "audio/wav" },
+      artifact: { kind: "blob", resource: fixtureResource("track:take:audio"), size: 1, mediaType: "audio/wav" },
     },
   },
   segment: {
@@ -56,7 +56,10 @@ function resolved(path: string): SurfaceResolvedReference | undefined {
     ref: { kind: "record", id: path },
     type: svsRecipeType,
     record: { id: path, type: svsRecipeType, value: { kind: "inline", value: {
-      path: "speech.base", properties: { fit: "cover" },
+      path: "speech.base", properties: {
+        fit: "cover", clip: "rounded", radius: 360,
+        "border-width": 4, "border-color": "#ffffff",
+      },
     } } },
   };
   return undefined;
@@ -76,7 +79,17 @@ test("Speech Track accepts only already-semantic Segment Takes", async () => {
       kind: "element",
       name: "speech:Take",
       attributes: { source: { kind: "reference", path: "opening.take" } },
-      children: [],
+      children: [
+        {
+          kind: "element", name: "speech:Sampling",
+          attributes: { at: "start", zoom: "1" }, children: [], range: { start: 30, end: 40 },
+        },
+        {
+          kind: "element", name: "speech:Sampling",
+          attributes: { at: "end", zoom: "1.08", y: "-18", easing: "ease-out" },
+          children: [], range: { start: 41, end: 55 },
+        },
+      ],
       range: { start: 20, end: 60 },
     }],
     range: { start: 0, end: 70 },
@@ -93,4 +106,17 @@ test("Speech Track accepts only already-semantic Segment Takes", async () => {
     audio: "speech.audio",
   });
   assert.equal(output.exports?.includes("speech.audio") ?? false, true);
+  const visualSpec = output.records.find((record) => record.type.name === "SpeechTrackVisualSpec");
+  assert.equal(visualSpec?.value.kind, "inline");
+  if (visualSpec?.value.kind !== "inline") throw new Error("Speech Track visual spec was not materialized");
+  const value = visualSpec.value.value as unknown as {
+    presentation: { clip: { kind: string; radiusPx?: number }; border?: { widthPx: number } };
+    samplingMotion?: { keyframes: readonly { atProgress: number; zoom: number; offsetY: number }[] };
+  };
+  assert.deepEqual(value.presentation.clip, { kind: "rounded", radiusPx: 360 });
+  assert.equal(value.presentation.border?.widthPx, 4);
+  assert.deepEqual(value.samplingMotion?.keyframes.map(({ atProgress, zoom, offsetY }) => ({ atProgress, zoom, offsetY })), [
+    { atProgress: 0, zoom: 1, offsetY: 0 },
+    { atProgress: 1, zoom: 1.08, offsetY: -18 },
+  ]);
 });

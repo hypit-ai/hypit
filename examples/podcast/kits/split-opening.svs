@@ -1,0 +1,17 @@
+<?svml using="@hypit/text/svs@1"?>
+<sheet version="1" id="split-opening">
+  text-template.split-opening { separator: paragraph; }
+  text-template.split-opening.block.view {
+    kind: fixed; order: 10;
+    text: "Animate @image1 as the same fixed horizontal split-screen view, with GUY above and GIRL below. Keep both identities, clothes, microphones, lighting, backgrounds, panel crops and the dividing line. Hold this single layout throughout the opening; no camera movement or internal cuts. GUY uses @audio1 and is the only speaker. GIRL listens silently. Add no captions, UI or floating words.";
+  }
+  text-template.split-opening.block.dialogue-title {
+    kind: fixed; order: 15; text: "Speak the authored dialogue exactly:";
+  }
+  text-template.split-opening.block.dialogue {
+    kind: slot; order: 20; slot: dialogue; optional: false;
+  }
+  text-template.split-opening.block.action {
+    kind: slot; order: 30; slot: action; optional: false;
+  }
+</sheet>

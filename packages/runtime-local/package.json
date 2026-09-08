@@ -11,8 +11,11 @@
     "./worker-process": "./src/worker-process.ts"
   },
   "dependencies": {
-    "@hypit/core": "workspace:*",
+    "@hypit/resource-store-fs": "workspace:*",
+    "@hypit/build-result-fs": "workspace:*",
+    "@hypit/build-result-kit": "workspace:*",
     "@hypit/component-kit": "workspace:*",
+    "@hypit/core": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/endpoint-kit": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
@@ -24,7 +27,7 @@
     "@hypit/validation": "workspace:*"
   },
   "devDependencies": {
-    "@hypit/artifact-store-fs": "workspace:*",
+    "@hypit/build-result": "workspace:*",
     "@hypit/credential-store-env": "workspace:*"
   }
 }

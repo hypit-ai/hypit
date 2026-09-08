@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 
 import { artifactTypes } from "@hypit/artifact";
-import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
+import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
 import {
   gptImageDenoiseV1,
   sealImageTransformProgram,
@@ -67,28 +67,28 @@ test("the OpenCV package is one replaceable Endpoint with no second queue", asyn
 });
 
 test("managed and external OpenCV deployments never mix their interpreters", () => {
-  const managedContext = { hostStateRoot: "/host", dataRoot: "/project", instance: "opencv", config: {} } as const;
+  const managedContext = { hostStateRoot: "/host", dataRoot: "/project", instance: "opencv" } as const;
   const managed = resolveLocalOpenCvDeployment(managedContext);
   assert.equal(managed.ownership, "managed");
   // The deployment already branches on the platform for the venv layout, so the tail it produces
   // is joined with the platform's separator too. Spell the separator as either one.
   assert.match(managed.pythonExecutable,
-    /host[\\/]programs[\\/]image-opencv[\\/]\.venv[\\/](?:bin[\\/]python|Scripts[\\/]python\.exe)$/u);
+    /host[\\/]programs[\\/]image-opencv-opencv[\\/]\.venv[\\/](?:bin[\\/]python|Scripts[\\/]python\.exe)$/u);
   assert.deepEqual(managed.installCommands?.[0]?.args.slice(-1), ["--frozen"]);
-  const managedProgram = localOpenCvProgram(managedContext);
+  const managedProgram = localOpenCvProgram(managedContext.instance, managed);
   assert.deepEqual(managedProgram.installation?.commands, managed.installCommands);
 
   const externalContext = {
     hostStateRoot: "/host",
     dataRoot: "/project",
     instance: "opencv",
-    config: { pythonExecutable: "./tools/python" },
+    pythonExecutable: "./tools/python",
   } as const;
   const external = resolveLocalOpenCvDeployment(externalContext);
   assert.equal(external.ownership, "external");
   assert.equal(external.pythonExecutable, resolve(join("/project", "tools", "python")));
   assert.equal(external.installCommands, undefined);
-  assert.equal(localOpenCvProgram(externalContext).installation, undefined);
+  assert.equal(localOpenCvProgram(externalContext.instance, external).installation, undefined);
 });
 
 const liveEnabled = process.env.HYPIT_OPENCV_TESTS === "1";
@@ -98,12 +98,12 @@ const hasOpenCv = spawnSync(openCvPython, ["-c", "import cv2, numpy"], { stdio: 
 test("the local Provider returns only a new image BlobArtifact", {
   skip: !liveEnabled || !hasOpenCv,
 }, async () => {
-  const artifacts = new MemoryArtifactStore();
+  const resources = new MemoryResourceStore();
   const png = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
     "base64",
   );
-  const source = await artifacts.put(png, "image/png");
+  const source = await resources.put(png, "image/png");
   const program = sealImageTransformProgram({
     operations: [{
       kind: "resize",
@@ -122,14 +122,13 @@ test("the local Provider returns only a new image BlobArtifact", {
   const result = await resolution.registration.handler({
     command: { kind: "fulfill-need", id: "command:image-transform", need: request },
     need: request,
-    artifacts,
+    resources,
     credentials: {},
   });
   assert.equal(result.value.kind, "blob");
   assert.equal(result.value.mediaType, "image/png");
-  assert.equal(await artifacts.has(result.value.digest), true);
-  assert.deepEqual(Object.keys(result.value).sort(), ["digest", "kind", "mediaType", "size"]);
-  const output = await artifacts.get(result.value.digest);
+  assert.equal(await resources.has(result.value.resource), true);
+  const output = await resources.get(result.value.resource);
   assert(output !== undefined);
   const encoded = Buffer.from(output);
   assert.equal(encoded.readUInt32BE(16), 64);
@@ -139,12 +138,12 @@ test("the local Provider returns only a new image BlobArtifact", {
 test("the local Provider composes ordered Layers into exact Canvas pixels", {
   skip: !liveEnabled || !hasOpenCv,
 }, async () => {
-  const artifacts = new MemoryArtifactStore();
+  const resources = new MemoryResourceStore();
   const png = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
     "base64",
   );
-  const source = await artifacts.put(png, "image/png");
+  const source = await resources.put(png, "image/png");
   const request = composeNeed(source);
   const registry = new EndpointRegistry();
   await createLocalOpenCvImageProvider({ pythonExecutable: openCvPython }).install(registry);
@@ -153,11 +152,11 @@ test("the local Provider composes ordered Layers into exact Canvas pixels", {
   assert.equal(resolution.registration.kind, "immediate");
   const result = await resolution.registration.handler({
     command: { kind: "fulfill-need", id: "command:image-compose", need: request },
-    need: request, artifacts, credentials: {},
+    need: request, resources, credentials: {},
   });
   assert.equal(result.value.kind, "blob");
   if (result.value.kind !== "blob") return;
-  const output = await artifacts.get(result.value.digest);
+  const output = await resources.get(result.value.resource);
   assert(output !== undefined);
   const probe = spawnSync(openCvPython, ["-c", [
     "import cv2, numpy as np, sys",

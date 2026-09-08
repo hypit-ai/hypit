@@ -82,3 +82,22 @@ export function materializeSemanticTake(
   assertSemanticTakeIdentity(take);
   return take;
 }
+
+/** Materialize the exact media boundaries of an authored Segment that contains no Tokens. */
+export function materializeSegmentBoundaryTake(
+  narrative: Narrative,
+  excerpt: NarrativeExcerpt,
+  media: SynchronizedMedia,
+): SemanticTake {
+  const segment = authoredSegment(narrative, excerpt);
+  if (segment.tokenStart !== segment.tokenEndExclusive) {
+    throw new Error(`Segment ${segment.id} contains spoken Tokens and needs token timing.`);
+  }
+  return materializeSemanticTake(narrative, excerpt, media, {
+    tokens: [],
+    anchors: [
+      { identity: segment.startAnchorId, frame: 0 },
+      { identity: segment.endAnchorId, frame: media.timeline.frameCount },
+    ],
+  });
+}

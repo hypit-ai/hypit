@@ -193,6 +193,7 @@ export const spatialMarkupSurfaces = [
         example: `<space:RegionTimeline id="heads" within={vertical} recipe={tracking.heads.default}/>` ,
         notes: [
           emptyNote,
+          "Detection and tracking happen before authoring; this Surface consumes finished numeric evidence and never invokes them during a Build.",
           "The array index is the ProgramSpace Frame; the Surface performs no timestamp conversion, interpolation, smoothing or identity inference.",
           "Each normalized AABB lies inside [0, 1] and is resolved into Canvas pixels during author compilation; null remains explicit absence.",
           "Track ids are ordinary external labels; a consumer may interpret them as Script Roles without Spatial knowing what a Role is.",

@@ -20,12 +20,12 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
     ? { kind: "inline" as const, value: canonicalize(input.value.value) }
     : { ...input.value };
   return {
-    id: `candidate:${input.id}`,
+    id: `candidate:run:${input.id}`,
     type: input.type,
     root: {
       kind: "value",
       value: {
-        id: input.record ?? `provided:${input.id}`,
+        id: input.record ?? `provided:run:${input.id}`,
         value,
       },
     },

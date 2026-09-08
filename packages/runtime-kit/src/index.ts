@@ -1,14 +1,14 @@
+import { endpointActions } from "@hypit/endpoint-kit";
 import type { EndpointPackage } from "@hypit/endpoint-kit";
 import type { HostFacet } from "@hypit/host";
 import type { CanonicalValue } from "@hypit/protocol";
 import { credentialRef } from "@hypit/runtime";
-import type { ArtifactStore, CredentialRef, CredentialStore } from "@hypit/runtime";
+import type { CredentialRef, CredentialStore, CredentialValue } from "@hypit/runtime";
 
 export const runtimeEndpointAdapterHostAbi = "hypit.runtime-endpoint-adapter-host@1";
-export const runtimeArtifactStoreAdapterHostAbi = "hypit.runtime-artifact-store-adapter-host@1";
 export const runtimeCredentialStoreAdapterHostAbi = "hypit.runtime-credential-store-adapter-host@1";
 
-export type RuntimeAdapterKind = "endpoint" | "artifact-store" | "credential-store";
+export type RuntimeAdapterKind = "endpoint" | "credential-store";
 
 type RuntimeAdapterAddress = {
   readonly use: string;
@@ -64,7 +64,10 @@ export type ManagedProgram = {
 export type RuntimeEndpointActivation = {
   readonly endpoint: EndpointPackage;
   readonly program?: ManagedProgram;
-  readonly diagnose?: () => readonly RuntimeDoctorDiagnostic[] | Promise<readonly RuntimeDoctorDiagnostic[]>;
+  readonly diagnose?: (context: {
+    readonly credentials: Readonly<Record<string, CredentialValue>>;
+    readonly capabilities?: readonly import("@hypit/protocol").CapabilityRef[];
+  }) => readonly RuntimeDoctorDiagnostic[] | Promise<readonly RuntimeDoctorDiagnostic[]>;
 };
 
 export type RuntimeOpened<T> = {
@@ -84,13 +87,11 @@ type RuntimeStoreAdapterImplementation<T> = {
 
 type RuntimeAdapterImplementation =
   | RuntimeEndpointAdapterImplementation
-  | RuntimeStoreAdapterImplementation<ArtifactStore>
   | RuntimeStoreAdapterImplementation<CredentialStore>;
 
 export type RuntimeAdapterHostFacet = HostFacet & {
   readonly abi:
     | typeof runtimeEndpointAdapterHostAbi
-    | typeof runtimeArtifactStoreAdapterHostAbi
     | typeof runtimeCredentialStoreAdapterHostAbi;
   readonly implementation: RuntimeAdapterImplementation;
 };
@@ -101,16 +102,13 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function abiFor(kind: RuntimeAdapterKind): RuntimeAdapterHostFacet["abi"] {
   if (kind === "endpoint") return runtimeEndpointAdapterHostAbi;
-  if (kind === "artifact-store") return runtimeArtifactStoreAdapterHostAbi;
   return runtimeCredentialStoreAdapterHostAbi;
 }
 
 function address(facet: RuntimeAdapterHostFacet): RuntimeAdapterAddress {
   const kind = facet.abi === runtimeEndpointAdapterHostAbi
     ? "endpoint"
-    : facet.abi === runtimeArtifactStoreAdapterHostAbi
-      ? "artifact-store"
-      : facet.abi === runtimeCredentialStoreAdapterHostAbi ? "credential-store" : undefined;
+    : facet.abi === runtimeCredentialStoreAdapterHostAbi ? "credential-store" : undefined;
   assert(kind !== undefined, `Runtime Adapter ${facet.abi} ABI is unsupported`);
   assert(facet.offers?.length === 1 && facet.offers[0]!.trim().length > 0,
     "Runtime Adapter must offer exactly one non-empty use name");
@@ -130,7 +128,7 @@ function verifyImplementation(value: unknown, subject: string, kind: RuntimeAdap
   return value as RuntimeAdapterImplementation;
 }
 
-function storeFacet<T>(kind: "artifact-store" | "credential-store", options: {
+function storeFacet<T>(kind: "credential-store", options: {
   readonly use: string;
   readonly validate: RuntimeStoreAdapterImplementation<T>["validate"];
   readonly open: RuntimeStoreAdapterImplementation<T>["open"];
@@ -159,15 +157,6 @@ export function createRuntimeEndpointAdapterFacet(options: {
     offers: [options.use],
     implementation: verifyImplementation({ activate: options.activate }, `Runtime Adapter ${options.use}`, "endpoint"),
   };
-}
-
-export function createRuntimeArtifactStoreAdapterFacet(options: {
-  readonly use: string;
-  readonly validate: RuntimeStoreAdapterImplementation<ArtifactStore>["validate"];
-  readonly open: RuntimeStoreAdapterImplementation<ArtifactStore>["open"];
-  readonly doctor?: RuntimeStoreAdapterImplementation<ArtifactStore>["doctor"];
-}): RuntimeAdapterHostFacet {
-  return storeFacet("artifact-store", options);
 }
 
 export function createRuntimeCredentialStoreAdapterFacet(options: {
@@ -221,17 +210,13 @@ export class RuntimeAdapterRegistry {
     return (await this.activateEndpoint(use, context)).endpoint;
   }
 
-  async #openStore<T>(use: string, kind: "artifact-store" | "credential-store", context: RuntimeAdapterFactoryContext): Promise<RuntimeOpened<T>> {
+  async #openStore<T>(use: string, kind: "credential-store", context: RuntimeAdapterFactoryContext): Promise<RuntimeOpened<T>> {
     const implementation = this.#registrations.get(this.#key(use, kind)) as RuntimeStoreAdapterImplementation<T> | undefined;
     assert(implementation !== undefined, `Runtime ${kind} adapter ${use} is not registered`);
     implementation.validate(context);
     const opened = await implementation.open(context);
     assert(opened.value !== null && typeof opened.value === "object", `Runtime ${kind} adapter ${use} returned no value`);
     return opened;
-  }
-
-  async openArtifactStore(use: string, context: RuntimeAdapterFactoryContext): Promise<RuntimeOpened<ArtifactStore>> {
-    return await this.#openStore(use, "artifact-store", context);
   }
 
   async openCredentialStore(use: string, context: RuntimeAdapterFactoryContext): Promise<RuntimeOpened<CredentialStore>> {
@@ -296,3 +281,27 @@ export function runtimeConfigCredentialRef(
   assert(store !== undefined && key !== undefined, `${subject} requires store and key`);
   return credentialRef(store, key);
 }
+
+/** Common Profile representation for short action occupancy and rate budgets. */
+export function runtimeConfigActionLimits(value: CanonicalValue | undefined): import("@hypit/endpoint-kit").EndpointActionLimits | undefined {
+  if (value === undefined) return undefined;
+  const actions = runtimeConfigObject(value, "actionLimits");
+  runtimeConfigExact(actions, endpointActions, "actionLimits");
+  return Object.fromEntries(Object.entries(actions).map(([action, raw]) => {
+    const limit = runtimeConfigObject(raw, `actionLimits.${action}`);
+    runtimeConfigExact(limit, ["concurrency", "rate"], `actionLimits.${action}`);
+    const concurrency = runtimeConfigPositiveInteger(limit.concurrency, `${action} concurrency`);
+    let rate: { limit: number; periodMs: number } | undefined;
+    if (limit.rate !== undefined) {
+      const item = runtimeConfigObject(limit.rate, `${action} rate`);
+      runtimeConfigExact(item, ["limit", "periodMs"], `${action} rate`);
+      const units = runtimeConfigPositiveInteger(item.limit, `${action} rate.limit`);
+      const periodMs = runtimeConfigPositiveInteger(item.periodMs, `${action} rate.periodMs`);
+      if (units === undefined || periodMs === undefined) throw new Error(`${action} rate requires limit and periodMs`);
+      rate = { limit: units, periodMs };
+    }
+    return [action, { ...(concurrency === undefined ? {} : { concurrency }), ...(rate === undefined ? {} : { rate }) }];
+  }));
+}
+
+export { requestDeadline } from "./request-deadline.js";

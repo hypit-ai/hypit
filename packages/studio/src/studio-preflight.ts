@@ -1,4 +1,3 @@
-import { plannedNeeds } from "@hypit/core";
 import type { Candidate } from "@hypit/protocol";
 import { sameType } from "@hypit/protocol";
 import type { StudioFilmCompanion } from "@hypit/studio-adapter";
@@ -49,13 +48,6 @@ function candidateIsMaterialized(candidate: Candidate | undefined): boolean {
     && candidate.root.value.value.kind === "inline";
 }
 
-function plannedExternalNeeds(base: RunPlan, refs: readonly string[], resolved: ReadonlySet<string> = new Set()): readonly string[] {
-  const planned = base.plan(base.run, refs);
-  return unique(plannedNeeds(planned.state).map((need) =>
-    `${need.capability.module.name}@${need.capability.module.version}#${need.capability.name}`,
-  ).filter((name) => !resolved.has(name)));
-}
-
 function localName(value: string): string {
   return value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
 }
@@ -86,19 +78,6 @@ function filmForTarget(registry: StudioCompanionRegistry, source: CompiledSource
 }
 
 /**
- * The deterministic media capabilities a preview Run still reaches after its mock media is
- * persisted. They are served by the local FFmpeg endpoint Studio installs for a preview Run, never
- * by a paid or external Provider, so a projection that needs one of them is not unresolved.
- */
-export const PREVIEW_LOCAL_MEDIA_CAPABILITIES: ReadonlySet<string> = new Set([
-  "@hypit/media-pipeline@1#inspect-media",
-  "@hypit/media-pipeline@1#normalize-media",
-  "@hypit/media-pipeline@1#extract-audio",
-  "@hypit/media-pipeline@1#render-audio",
-  "@hypit/media-pipeline@1#mux",
-]);
-
-/**
  * Video-domain policy is centralized here, inside Studio. Core still only
  * supplies the compiled graph and its exact BuildPlan/Need closure.
  */
@@ -106,7 +85,6 @@ export function inspectStudioRun(
   registry: StudioCompanionRegistry,
   source: CompiledSource,
   base: RunPlan,
-  resolvedCapabilities: ReadonlySet<string> = new Set(),
 ): StudioInspection {
   const issues: string[] = [];
   if (base.targets.length === 0) issues.push("the Run Source has no target; Studio requires Film or Render");
@@ -201,15 +179,10 @@ export function inspectStudioRun(
   }
 
   if (derived.length > 0) {
-    const needs = plannedExternalNeeds(base, derived.map((projection) => projection.ref), resolvedCapabilities);
-    if (needs.length > 0) {
-      issues.push(`the Studio projection closure requires unresolved capabilities: ${needs.join(", ")}`);
-    } else {
-      projections.push(...derived.map((projection) => ({
-        ...projection,
-        candidatePolicy: "deterministic-derived" as const,
-      })));
-    }
+    projections.push(...derived.map((projection) => ({
+      ...projection,
+      candidatePolicy: "deterministic-derived" as const,
+    })));
   }
   if (issues.length > 0) throw new StudioPreflightError(issues);
   return {

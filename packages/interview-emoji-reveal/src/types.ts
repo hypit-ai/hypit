@@ -3,9 +3,9 @@ import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
 
 export type EmojiRevealHeader = { readonly id: string };
 
-export type EmojiRevealItemSpec = {
-  readonly id: string;
-};
+export type EmojiRevealItemSpec =
+  | { readonly id: string; readonly preset: true }
+  | { readonly id: string; readonly preset: false };
 
 export type EmojiRevealStyle = {
   readonly id: string;
@@ -29,11 +29,16 @@ export type EmojiRevealStyle = {
   readonly stackingOrder: number;
 };
 
-export type EmojiRevealItem = {
-  readonly spec: EmojiRevealItemSpec;
-  readonly icon: BlobRef;
-  readonly activation: TemporalInstant;
-};
+export type EmojiRevealItem =
+  | {
+      readonly spec: EmojiRevealItemSpec & { readonly preset: true };
+      readonly icon: BlobRef;
+    }
+  | {
+      readonly spec: EmojiRevealItemSpec & { readonly preset: false };
+      readonly icon: BlobRef;
+      readonly activation: TemporalInstant;
+    };
 
 export type EmojiRevealSet = { readonly items: readonly EmojiRevealItem[] };
 

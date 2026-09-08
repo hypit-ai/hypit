@@ -82,11 +82,42 @@ test("program status may report down without failing the observation", async () 
     setExitCode(code) { exitCode = code; },
   }, distribution([], [{
     id: "speech-evidence.local",
-    instances: ["speech.primary"],
+    endpoint: "speech.primary",
     state: { state: "down", detail: "not running" },
   }]));
   assert.equal(exitCode, undefined);
   assert.match(output, /speech-evidence\.local: down/u);
+});
+
+test("program startup reports actions, not no-op checks", async () => {
+  let output = "";
+  const selected = {
+    bootstrapPackages: [],
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      prepare: async () => [],
+      controller: async () => ({
+        worker: {},
+        programs: {
+          async up(options: { readonly onProgress?: (event: { readonly id: string; readonly phase: "checking" | "starting" | "waiting" | "ready" }) => void }) {
+            options.onProgress?.({ id: "example", phase: "checking" });
+            options.onProgress?.({ id: "example", phase: "starting" });
+            options.onProgress?.({ id: "example", phase: "waiting" });
+            options.onProgress?.({ id: "example", phase: "ready" });
+            return { dataRoot: "/tmp", programs: [{ id: "example", endpoint: "example", state: { state: "ready" } }] };
+          },
+        },
+      }),
+    }),
+  } as unknown as CliDistribution;
+
+  await runCli(["programs", "up", "/project/hypit.runtime.json"], {
+    write(text) { output += text; },
+  }, selected);
+
+  assert.match(output, /· Starting example/u);
+  assert.match(output, /External programs ready/u);
+  assert.doesNotMatch(output, /· (?:Checking|Waiting for|Ready) example/u);
 });
 
 test("runtime up validates the Runtime before it starts Programs", async () => {
@@ -106,4 +137,33 @@ test("runtime up validates the Runtime before it starts Programs", async () => {
     /Runtime Profile conflict/u,
   );
   assert.deepEqual(calls, []);
+});
+
+test("runtime status keeps scheduling phases out of the default view", async () => {
+  let output = "";
+  const selected = {
+    bootstrapPackages: [],
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      controller: async () => ({
+        worker: { status: async () => ({ state: "running", profile: path, logPath: "/tmp/worker.log" }) },
+        programs: { report: async () => ({
+          dataRoot: "/tmp",
+          programs: [{ id: "renderer", endpoint: "renderer", state: { state: "ready" } }],
+        }) },
+      }),
+      openControl: async () => ({
+        activity: async () => ({ builds: [], capacity: [] }),
+        close: async () => {},
+      }),
+    }),
+  } as unknown as CliDistribution;
+
+  await runCli(["runtime", "status", "/project/hypit.runtime.json"], {
+    write(text) { output += text; },
+  }, selected);
+
+  assert.match(output, /Local Runtime ready/u);
+  assert.match(output, /Active Builds\s+0/u);
+  assert.doesNotMatch(output, /\bStarting\b|\bWaiting\b|\bDecided\b|Running turn|Capacity in use/u);
 });

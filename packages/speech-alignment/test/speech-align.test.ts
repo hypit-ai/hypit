@@ -5,7 +5,7 @@ import { sealAlignedTranscriptEvidence } from "@hypit/speech-evidence";
 import type { AlignedTranscriptEvidence, SpeechCharacterEvidence, SpeechWordEvidence } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import { narrativeValue, parseScript as parseScriptSource } from "@hypit/script";
 import {
@@ -85,10 +85,10 @@ function speechBasis(
     durationSec,
     frameRate: { numerator: 1_000, denominator: 1 },
   });
-  const audioDigest = fixtureDigest(`fixture:audio:${narrative.segments.map((segment) => segment.id).join("+")}:${durationSec}`);
+  const audioDigest = fixtureResource(`fixture:audio:${narrative.segments.map((segment) => segment.id).join("+")}:${durationSec}`);
   return {
     programSpace,
-    audio: { kind: "blob", digest: audioDigest, size: 1, mediaType: "audio/wav" },
+    audio: { kind: "blob", resource: audioDigest, size: 1, mediaType: "audio/wav" },
     segments: [{
       segmentId: narrative.segments[0]!.id,
       startFrame: 0,
@@ -157,8 +157,8 @@ test("a measured Segment-local map becomes a self-contained SemanticTake", () =>
     { narrativeId: narrative.id, kind: "segment", id: segment.id, tokenStart: segment.tokenStart, tokenEndExclusive: segment.tokenEndExclusive },
     {
       timeline: { frameRate: { numerator: 1_000, denominator: 1 }, frameCount: 2_000 },
-      visual: { artifact: { kind: "blob", digest: fixtureDigest("materialize:video"), size: 1, mediaType: "video/mp4" }, width: 720, height: 1280 },
-      audio: { artifact: { kind: "blob", digest: fixtureDigest("materialize:audio"), size: 1, mediaType: "audio/wav" } },
+      visual: { artifact: { kind: "blob", resource: fixtureResource("materialize:video"), size: 1, mediaType: "video/mp4" }, width: 720, height: 1280 },
+      audio: { artifact: { kind: "blob", resource: fixtureResource("materialize:audio"), size: 1, mediaType: "audio/wav" } },
     },
     map,
   );

@@ -4,7 +4,7 @@ import {
   verifySynchronizedMedia,
 } from "@hypit/media";
 import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
-import { canonicalize, isDigest } from "@hypit/protocol";
+import { canonicalize, isResourceId } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 import {
   assertContentFit,
@@ -35,7 +35,7 @@ export function assertMediaIdentity(value: string, label: string): void {
 }
 
 function assertBlob(value: BlobRef, label: string, prefix?: string): void {
-  assert(value.kind === "blob" && isDigest(value.digest)
+  assert(value.kind === "blob" && isResourceId(value.resource)
     && Number.isSafeInteger(value.size) && value.size >= 0 && value.mediaType.length > 0,
   `${label} is not a valid BlobArtifact.`);
   if (prefix !== undefined) assert(value.mediaType.startsWith(prefix), `${label} must be ${prefix} bytes.`);

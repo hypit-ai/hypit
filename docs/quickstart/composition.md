@@ -99,14 +99,14 @@ The renderer:
 4. Mixes the audio Tracks
 5. Muxes video + audio into the final MP4
 
-**Output:** `{final.video}` — the finished video as an ordinary content-addressed `BlobArtifact`.
+**Output:** `{final.video}` — the finished video as an ordinary Resource-backed `BlobArtifact`.
 This is the most common Build Target, and it can also be connected directly to later Blob consumers
 such as media trimming, audio/frame extraction or a model reference input.
 
 ## Full pipeline walkthrough
 
-The complete data flow from Script to rendered video. This example is based on
-`examples/talking-film-graph-check/` — the smallest complete graph.
+The complete data flow from Script to rendered video. The Sources below are an abridged
+illustration. The complete runnable project is `examples/podcast/`; the commands below use it.
 
 ### Author Source (`main.svml`)
 
@@ -264,9 +264,9 @@ width and is rejected.
 ### Compile and verify
 
 ```bash
-hypit check examples/talking-film-graph-check/main.svml
+hypit check examples/podcast/reference.svml
 
-hypit plan examples/talking-film-graph-check/build.svrun
+hypit plan examples/podcast/reference.svrun
 ```
 
 `check` compiles the Author Graph — validates all imports, types, and graph edges without calling

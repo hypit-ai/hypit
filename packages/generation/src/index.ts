@@ -15,6 +15,7 @@ export {
   compileWireRequest,
   mappingSupportsRequest,
   selectWireModel,
+  selectWireModelForRequest,
 } from "./mapping.js";
 export type {
   GenerationArtifactUrlResolver,
@@ -26,6 +27,7 @@ export type {
 export {
   assertGenerationPortTable,
   generationPort,
+  isMediaPort,
   sealGenerationPortTable,
 } from "./ports.js";
 export type {
@@ -70,7 +72,7 @@ export {
   generatedAudioSetSchema,
   generatedVideoSetSchema,
   generationBlobRefSchema,
-  generationDigestSchema,
+  generationResourceSchema,
   generationObjectSchema,
   generationPromptSchema,
 } from "./schema.js";

@@ -17,22 +17,24 @@ The compiler has no suffix table and no entry-Frontend default. A recursively im
 select another Frontend without the importer choosing on its behalf.
 
 `ModulePackageRegistry` maps author import spellings to exact, already trusted manifests and closes
-their digest-bound dependencies. It does not install npm packages or execute module code. An
+their declared Resource dependencies. It does not install npm packages or execute module code. An
 embedding application must register the manifests and matching Frontend/Surface implementations it
 has chosen to trust.
 
 `NodeCompiler` requires the host-neutral `Workspace` contract. The reference CLI explicitly selects
-`@hypit/workspace-fs-node`, where relative recursive Source imports are confined to one canonical
-root, symlink escapes are rejected and each edge is locked to the first bytes read for that
-compilation. A browser, Git, memory or remote Host can supply another Workspace without
-changing Frontends, Surfaces, Source Closure identity or Core.
+`@hypit/workspace-fs-node`, where every recursive Source import is confined to the canonical root
+that owns the importing SourceUnit, symlink escapes are rejected and each edge is locked to the
+first bytes read for that compilation. The Host may explicitly mount another Source root; the
+Compiler sees only the resulting Workspace units and does not know whether that root came from an
+installed data package, Git, memory or another source. Another Host can supply a different
+Workspace without changing Frontends, Surfaces, Source Closure identity or Core.
 
 The Workspace session owns a separate Source Asset capability. A Frontend/Surface may request an
 asset and assign its exact media type, but it never receives a path, filesystem handle or ambient
 read authority. The Workspace returns a `BlobRef`, the compiler binds that reference into the
 requesting SourceUnit, and the session exposes defensive generic `ArtifactAttachment`s on the Node
-compilation result. `check` and `plan` perform no ArtifactStore write. `build` passes the attachments
-to the selected Runtime for digest-checked staging.
+compilation result. `check` and `plan` perform no ResourceStore write. `build` passes the attachments
+to the selected Runtime for size-checked staging.
 
 SourceUnit recursion and Source Asset resolution are intentionally different capabilities: an
 asset cannot import syntax, and a source import does not silently make arbitrary neighboring bytes

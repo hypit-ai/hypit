@@ -485,8 +485,8 @@ export const typographyTrackMarkupSurfaces = [
 </text:Track>`,
         notes: [
           "A Track requires at least one `<Point>`, `<Area>` or `<Path>` and accepts no text content of its own.",
-          "An item states exactly one window form: `during`, `at` with `for`, `until` with `for`, or `start` with `end`; `selection`, `segment` and `moment` bind a start/end window and cannot be written together.",
-          "A point expression is `program.start`, `program.end`, `selection.start`, `selection.end` or `moment.cue`, each optionally offset by `+` or `-` and a duration, or a bare duration read as an absolute position.",
+          "An item states exactly one window form: `during`, `at` with `for`, `until` with `for`, or `start` with `end`. Bind selection, segment and/or moment only when the start/end expressions use them; different endpoints can use different bindings.",
+          "A point expression is `program.start`, `program.end`, `selection.start`, `selection.end`, `segment.start`, `segment.end` or `moment.cue`, each optionally offset by `+` or `-` and a duration, or a bare duration read as an absolute position.",
           "An item written without `content` owns its own document: direct text becomes one paragraph, and `<P>` children carry rich runs instead; a document mixes neither `<P>` children with direct text nor direct text with nested elements.",
           "Neither a `<P>` nor a `<Span>` may be empty, and a `style` on either must name a Style Record authored in this Source or imported from another, because its typography and Paint are copied into the document as the item is decoded.",
         ],

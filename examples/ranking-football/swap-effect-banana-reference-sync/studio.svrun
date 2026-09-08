@@ -1,9 +1,0 @@
-<?svml using="@hypit/run-markup@1"?>
-<svrun version="1">
-  <author source="./swap-effect-banana-reference-sync.svml"/>
-  <target output="final.video"/>
-  <file id="ronaldo-banana" type="@hypit/artifact@1#BlobArtifact" from="./reused/ronaldo.mp4" media-type="video/mp4"/>
-  <file id="messi-banana" type="@hypit/artifact@1#BlobArtifact" from="./reused/messi.mp4" media-type="video/mp4"/>
-  <satisfy output="ronaldo-take.video" candidate="ronaldo-banana"/>
-  <satisfy output="messi-take.video" candidate="messi-banana"/>
-</svrun>

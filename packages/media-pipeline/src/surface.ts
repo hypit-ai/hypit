@@ -17,7 +17,7 @@ import { svsRecipeType, type SvsRecipe } from "@hypit/svs";
 import {
   extractAudioFragment,
   extractFrameFragment,
-  stillVideoFragment,
+  createStillVideoFragment,
   synchronizedMediaFragment,
   transformMediaFragment,
 } from "./fragment.js";
@@ -228,33 +228,83 @@ export const decodeSynchronizedMediaSurface: StructuredSurfaceHandler = ({ eleme
   };
 };
 
+/** The pictures of a StillVideo in authored order, with their weights: one `source`, or Still children. */
+function stillPictures(
+  element: StructuredElement,
+  resolveReference: (path: string) => SurfaceResolvedReference | undefined,
+): readonly { readonly source: SurfaceResolvedReference; readonly weight: number }[] {
+  const children = element.children.filter((child) => child.kind === "element" || child.value.trim().length > 0);
+  if (element.attributes.source !== undefined) {
+    if (children.length > 0) throw new Error(`${element.name} takes either source or Still children, not both.`);
+    return [{ source: ref(element.attributes.source, `${element.name}.source`, resolveReference), weight: 1 }];
+  }
+  const pictures = children.map((child) => {
+    if (child.kind !== "element" || localName(child.name) !== "Still") {
+      throw new Error(`${element.name} accepts only Still children.`);
+    }
+    exactAttributes(child, ["source"], ["weight"]);
+    empty(child);
+    const rawWeight = child.attributes.weight;
+    let weight = 1;
+    if (rawWeight !== undefined) {
+      if (typeof rawWeight !== "string") throw new Error(`${child.name}.weight must be text.`);
+      weight = Number(rawWeight);
+      if (!Number.isFinite(weight) || weight <= 0) throw new Error(`${child.name}.weight must be a positive number.`);
+    }
+    return { source: ref(child.attributes.source, `${child.name}.source`, resolveReference), weight };
+  });
+  if (pictures.length === 0) throw new Error(`${element.name} requires a source or at least one Still child.`);
+  return pictures;
+}
+
 export const decodeStillVideoSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id", "source", "duration", "clock"]);
-  empty(element);
+  exactAttributes(element, ["id", "duration", "clock"], ["source", "guide"]);
   const id = text(element, "id");
-  const source = ref(element.attributes.source, `${element.name}.source`, resolveReference);
-  const duration = typedReference(
-    element.attributes.duration,
-    `${element.name}.duration`,
-    speechTypes.duration,
-    resolveReference,
-  );
+  const pictures = stillPictures(element, resolveReference);
+  // The duration is the author's decision, written here; it is published as an ordinary
+  // SpeechDuration Record so the fragment's plan step reads the same value a graph edge would carry.
+  const durationSec = seconds(text(element, "duration"), `${element.name}.duration`, false);
+  const durationId = `${id}.duration`;
+  const layoutId = `${id}.layout`;
+  const guide = element.attributes.guide;
+  if (guide !== undefined && guide !== "clip-time") {
+    throw new Error(`${element.name}.guide must be clip-time when written.`);
+  }
   const clock = typedReference(
     element.attributes.clock,
     `${element.name}.clock`,
     programSpaceTypes.clock,
     resolveReference,
   );
+  const fragment = createStillVideoFragment(pictures.length);
   return {
-    records: [],
+    records: [{
+      id: durationId,
+      type: speechTypes.duration,
+      value: { kind: "inline", value: durationSec },
+      range: element.range,
+    }, {
+      id: layoutId,
+      type: mediaPipelineTypes.stillVideoLayout,
+      value: { kind: "inline", value: {
+        weights: pictures.map((picture) => picture.weight),
+        ...(guide === undefined ? {} : { guide }),
+      } },
+      range: element.range,
+    }],
     components: [{
       id,
-      fragment: stillVideoFragment.id,
-      inputs: { source: source.ref, duration: duration.ref, clock: clock.ref },
+      fragment: fragment.id,
+      inputs: {
+        duration: { kind: "record", id: durationId },
+        clock: clock.ref,
+        layout: { kind: "record", id: layoutId },
+        ...Object.fromEntries(pictures.map((picture, index) => [`source-${index}`, picture.source.ref])),
+      },
       outputs: { video: `${id}.video` },
       range: element.range,
     }],
-    fragments: [stillVideoFragment],
+    fragments: [fragment],
   };
 };
 

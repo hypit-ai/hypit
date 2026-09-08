@@ -1,5 +1,5 @@
 import type { BlobRef } from "@hypit/protocol";
-import type { MediaInspection, MediaRational, MediaStreamSelection, RenderedVisual, TimelineAudio } from "@hypit/media";
+import type { MediaFrameRange, MediaInspection, MediaRational, MediaStreamSelection, RenderedVisual, TimelineAudio } from "@hypit/media";
 
 export type MediaSelectionRequest = {
   readonly video:
@@ -16,12 +16,6 @@ export type MediaSelectionRequest = {
 
 export type InspectMediaNeed = {
   readonly source: BlobRef;
-};
-
-/** Deterministic model-reference preparation over one ordinary media Blob. */
-export type PrepareMediaNeed = {
-  readonly source: BlobRef;
-  readonly profile: "gemini-reference";
 };
 
 export type MediaVideoSelector =
@@ -73,15 +67,31 @@ export type FrameExtractionRequest = {
   readonly output: { readonly format: "png" };
 };
 
-/** Exact silent video requested from one authored still image. */
+/** How the still video divides its literal duration among its pictures: one weight per picture, in order. */
+export type StillVideoLayout = {
+  readonly weights: readonly number[];
+  /** Optional diagnostic guide burned into the held clip; omitted keeps production pixels clean. */
+  readonly guide?: "clip-time";
+};
+
+/** One picture's span of the still video, in frames; `source` is bound one picture at a time. */
+export type StillVideoSegment = {
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+  readonly source?: BlobRef;
+};
+
+/** Exact video-only clip requested from one or more authored still images spread over a literal duration. */
 export type StillVideoRequest = {
   readonly frameRate: MediaRational;
   readonly frameCount: number;
+  readonly guide?: "clip-time";
   readonly output: {
     readonly container: "mp4";
     readonly codec: "h264";
     readonly pixelFormat: "yuv420p";
   };
+  readonly segments: readonly StillVideoSegment[];
 };
 
 export type TransformMediaNeed = {
@@ -103,8 +113,8 @@ export type ExtractFrameNeed = {
   readonly output: FrameExtractionRequest["output"];
 };
 
+/** Every segment of the request carries its picture by the time the Need is made. */
 export type RenderStillVideoNeed = {
-  readonly source: BlobRef;
   readonly request: StillVideoRequest;
 };
 
@@ -144,7 +154,7 @@ export type AudioProgramClip = {
   readonly fadeOutSamples: number;
 };
 
-/** Pure, content-addressed plan. Executing it is always a Provider Need. */
+/** Pure media plan. Executing it is always a Provider Need. */
 export type AudioProgramPlan = {
   readonly frameRate: MediaRational;
   readonly frameCount: number;
@@ -159,6 +169,7 @@ export type AudioProgramPlan = {
 
 export type RenderAudioNeed = {
   readonly plan: AudioProgramPlan;
+  readonly range?: MediaFrameRange;
 };
 
 export type MuxMediaNeed = {

@@ -246,8 +246,6 @@ Parameters for deterministic speech duration estimation.
 speech.normal {
   language: en;
   pace: normal;
-  min: 4;
-  max: 15;
   rounding: round;
 }
 ```
@@ -257,20 +255,20 @@ speech.normal {
 | `language` | Language code (e.g. `en`) |
 | `pace` | Speaking pace: `slow`, `normal`, `fast` |
 | `rate` | Positive pronunciation units per second; mutually exclusive with `pace` |
-| `min` | Minimum duration in seconds |
-| `max` | Maximum duration in seconds |
 | `rounding` | Rounding mode: `none`, `round`, `ceil` |
 
 The English named presets resolve to `4.2`, `4.6`, and `5.0` syllables per
 second. Use a numeric `rate` in place of `pace` when the project needs a
 continuous author-controlled value.
-Every property is explicit: `language`, `min`, `max`, `rounding`, and exactly
+Every property is explicit: `language`, `rounding`, and exactly
 one of `pace` or `rate` are required. The Estimate package supplies no hidden policy defaults.
 
-Referenced by `estimate:Speech` via the `policy` attribute:
+Referenced by `estimated:SemanticTake` via the `policy` attribute, and used by `hypit measure`
+when the author measures a line before writing its literal duration:
 
 ```svml
-<estimate:Speech id="hook-duration" source={story.segment.hook.speech}
+<estimated:SemanticTake id="hook-estimated" narrative={story}
+  segment={story.segment.hook} media={hook-media.media}
   policy={recipes.speech.normal}/>
 ```
 
@@ -368,7 +366,7 @@ import the private pre-release catalog and select only the faces the Author Grap
 The catalog contains 109 open families across handwriting, script, display, sans, serif,
 monospace, CJK, world-script and Emoji categories. Fontsource dependencies are pinned to `5.3.0`;
 the Chromium-compatible COLRv1 Emoji package is pinned separately. The compiler hashes installed
-bytes into content-addressed font values. It performs no download during a build, and the Runtime
+bytes into Resource-backed font values. It performs no download during a build, and the Runtime
 never guesses a font:
 
 ```svml
@@ -402,8 +400,6 @@ A complete `recipes.svs` file for a four-take talking-head project:
   speech.normal {
     language: en;
     pace: normal;
-    min: 4;
-    max: 15;
     rounding: round;
   }
 
@@ -440,7 +436,8 @@ This file is imported once in the `.svml` source and its values are referenced t
 ```svml
 <import as="recipes" source="./recipes.svs"/>
 
-<estimate:Speech id="hook-duration" source={story.segment.hook.speech}
+<estimated:SemanticTake id="hook-estimated" narrative={story}
+  segment={story.segment.hook} media={hook-media.media}
   policy={recipes.speech.normal}/>
 
 <text:Render id="hook-prompt" template={speaker-kit.speaker-v1}

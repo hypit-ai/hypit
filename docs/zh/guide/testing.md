@@ -54,25 +54,16 @@ test("compiles the expected exports", async () => {
 
 ### Provider 测试
 
-用真实或模拟的外部服务测试 Endpoint 实现。这类测试由环境门控：检查所需的凭据或可执行文件，缺失时跳过。
-
-```typescript
-test("generates a video", async (t) => {
-  if (!process.env.KIE_API_KEY) {
-    t.skip("KIE_API_KEY not set");
-    return;
-  }
-  // ... real API call
-});
-```
+在可控的伪传输边界验证请求映射、提交歧义、轮询、下载与失败语义。仓库测试不调用付费 Provider，也不以环境变量
+开启真实 API smoke/canary；一次真实调用不能证明这些失败边界，反而会引入费用、网络和外部状态噪声。
 
 ### 架构边界
 
 包边界由 package manifest、公开入口和共享合同表达；测试只验证边界上可观察的行为。
 仓库不再把源码文本正则当作依赖分析或架构审查的替代品。
 
-不得提交客户或品牌 fixture、凭据痕迹、付费产物、工作站绝对路径与一次性交付脚本。
-通用 live test 只有在显式 opt-in、不提交秘密，并且未设置开关时能在花钱前退出的情况下才保留。
+不得提交客户或品牌 fixture、凭据痕迹、付费产物、工作站绝对路径与一次性交付脚本。本机 ffmpeg、浏览器或
+OpenCV 的集成测试可以显式 opt-in；它们不得联网调用付费服务，也不进入默认测试成功的必要条件。
 
 ## 受环境开关控制的测试
 
@@ -80,14 +71,11 @@ test("generates a video", async (t) => {
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX 服务 | Python 3.13、uv、frozen sync |
 | `pnpm test:image-opencv` | OpenCV 图像变换 | 服务自带的解释器，位于 `services/image-opencv/.venv`；要用别的解释器就设 `HYPIT_OPENCV_PYTHON` |
-| `pnpm test:browser-visual` | 真实浏览器中的渲染几何、层叠与裁剪 | HyperFrames CLI 能启动的 Chrome、`ffmpeg`；非 macOS 还需 `HYPIT_TEST_FONT_PATH` |
-| `pnpm smoke:kie` | 实时付费的 KIE 生成 | `KIE_API_KEY` |
 
 ## 测试 fixtures
 
 测试夹具放在 `packages/<name>/test/fixtures/`。它们是普通的 `.svml`、`.svs` 和 `.svrun` 文件，用于覆盖特定的编译路径。
 
 `examples/` 目录同时充当集成级别的夹具：
-- `examples/bootstrap/` — 最小源闭包检查
-- `examples/talking-film-graph-check/` — 不含 Provider 的完整图编译
-- `examples/talking-head-aroll/` — 显式复用历史 Candidate 的 live example
+- `examples/interview/`、`examples/podcast/`、`examples/ranking-football/` — 包含 Source、Run 和素材的完整视频项目。
+- `examples/minimal-author-package/` — 带有 Surface 预览的完整组件包。

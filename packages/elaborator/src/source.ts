@@ -1,5 +1,5 @@
 import { link } from "@hypit/core";
-import { canonicalStringify, isDigest } from "@hypit/protocol";
+import { canonicalStringify, isResourceId } from "@hypit/protocol";
 import type {
   CompiledGraph,
   GraphValueRef,
@@ -498,7 +498,7 @@ export async function compileSourceClosure(
         const resolved = await request.resolveAsset(rawSource, assetRequest);
         const artifact = resolved.artifact;
         assert(artifact.kind === "blob", "INVALID_SOURCE_ASSET", `${assetRequest.from} did not resolve to a BlobRef`);
-        assert(isDigest(artifact.digest), "INVALID_SOURCE_ASSET_DIGEST", `${assetRequest.from} has an invalid digest`);
+        assert(isResourceId(artifact.resource), "INVALID_SOURCE_ASSET_RESOURCE", `${assetRequest.from} has an invalid Resource identity`);
         assert(Number.isSafeInteger(artifact.size) && artifact.size >= 0, "INVALID_SOURCE_ASSET_SIZE", `${assetRequest.from} has an invalid size`);
         assert(
           artifact.mediaType === assetRequest.mediaType,

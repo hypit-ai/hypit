@@ -46,12 +46,16 @@ export const minimaxH3Ports: GenerationPortTable = sealGenerationPortTable({
   ],
   requires: [
     { kind: "atMostOneOf", ports: ["referenceImage", "firstFrame"] },
+    { kind: "atMostOneOf", ports: ["referenceImage", "lastFrame"] },
     { kind: "atMostOneOf", ports: ["referenceVideo", "firstFrame"] },
+    { kind: "atMostOneOf", ports: ["referenceVideo", "lastFrame"] },
     { kind: "atMostOneOf", ports: ["referenceAudio", "firstFrame"] },
+    { kind: "atMostOneOf", ports: ["referenceAudio", "lastFrame"] },
     { kind: "requiresAnyOf", port: "referenceAudio", anyOf: ["referenceImage", "referenceVideo"] },
     // A first/last frame run inherits its framing from the uploaded image, so the
     // model takes no aspect ratio in that mode.
     { kind: "atMostOneOf", ports: ["aspectRatio", "firstFrame"] },
+    { kind: "atMostOneOf", ports: ["aspectRatio", "lastFrame"] },
     { kind: "weightedTotal", weights: { referenceImage: 1, referenceVideo: 1, referenceAudio: 1 }, maximum: 12 },
   ],
 });
@@ -122,10 +126,10 @@ export const minimaxH3MarkupSurfaces = [
       ],
     }),
     declaration("frame-video", "FrameVideo", ["firstFrame", "lastFrame"], {
-      summary: "Generates one video Artifact that opens on a given image and optionally closes on a second image with the MiniMax H3 model.",
+      summary: "Generates one video Artifact from a first frame, a last frame, or both with the MiniMax H3 model.",
       attributes: [
         ...minimaxH3Common,
-        { name: "first-frame", kind: "reference", required: true, accepts: [artifactTypes.blob],
+        { name: "first-frame", kind: "reference", required: false, accepts: [artifactTypes.blob],
           summary: "Selects the image Artifact the generated video opens on." },
         { name: "last-frame", kind: "reference", required: false, accepts: [artifactTypes.blob],
           summary: "Selects the image Artifact the generated video closes on." },
@@ -139,7 +143,7 @@ export const minimaxH3MarkupSurfaces = [
         minimaxH3DurationNote,
         minimaxH3ResolutionNote,
         "A first/last frame run inherits its framing from the given image, so this element takes no `aspect-ratio`.",
-        "`first-frame` and `last-frame` reference image Blobs.",
+        "At least one of `first-frame` or `last-frame` is required; both reference image Blobs.",
         "The element takes no children and no text content.",
       ],
     }),

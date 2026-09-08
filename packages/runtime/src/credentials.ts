@@ -11,6 +11,45 @@ export type CredentialValue = {
   readonly expiresAt?: number;
 };
 
+export type OAuth2Credential = {
+  readonly format: "hypit.oauth2-credential@1";
+  readonly accessToken: string;
+  readonly refreshToken?: string;
+  readonly expiresAt?: number;
+};
+
+export function encodeOAuth2Credential(value: Omit<OAuth2Credential, "format">): string {
+  assert(value.accessToken.length > 0, "OAuth access token is empty");
+  if (value.refreshToken !== undefined) assert(value.refreshToken.length > 0, "OAuth refresh token is empty");
+  if (value.expiresAt !== undefined) assert(Number.isFinite(value.expiresAt), "OAuth expiry is invalid");
+  return JSON.stringify({ format: "hypit.oauth2-credential@1", ...value } satisfies OAuth2Credential);
+}
+
+export function decodeOAuth2Credential(secret: string): OAuth2Credential | undefined {
+  let value: unknown;
+  try { value = JSON.parse(secret); } catch { return undefined; }
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const candidate = value as Partial<OAuth2Credential>;
+  if (candidate.format !== "hypit.oauth2-credential@1"
+    || typeof candidate.accessToken !== "string" || candidate.accessToken.length === 0
+    || (candidate.refreshToken !== undefined
+      && (typeof candidate.refreshToken !== "string" || candidate.refreshToken.length === 0))
+    || (candidate.expiresAt !== undefined
+      && (typeof candidate.expiresAt !== "number" || !Number.isFinite(candidate.expiresAt)))) return undefined;
+  return candidate as OAuth2Credential;
+}
+
+/** Host-facing way to acquire one credential; Provider-specific values stay in its Endpoint package. */
+export type CredentialAcquisition = {
+  readonly kind: "oauth2-pkce";
+  readonly authorizationEndpoint: string;
+  readonly tokenEndpoint: string;
+  readonly clientId: string;
+  readonly scopes: readonly string[];
+  /** Maximum duration of the service-owned token exchange after browser authorization returns. */
+  readonly requestTimeoutMs: number;
+};
+
 export type CredentialStore = {
   resolve(ref: CredentialRef): Promise<CredentialValue | undefined>;
 };

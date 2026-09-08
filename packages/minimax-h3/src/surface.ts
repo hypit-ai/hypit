@@ -61,8 +61,11 @@ export const decodeMinimaxTextVideoSurface: StructuredSurfaceHandler = ({ elemen
   const { prompt, ports } = common(element, resolveReference); return output(element, prompt, ports, []);
 };
 export const decodeMinimaxFrameVideoSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exact(element, ["id", "prompt", "duration", "resolution", "first-frame", "last-frame"], ["id", "prompt", "duration", "first-frame"]); empty(element);
-  const { prompt, ports } = common(element, resolveReference); const media: Media[] = [{ port: "firstFrame", role: "image", source: mediaRef(element, "first-frame", "image", resolveReference) }];
+  exact(element, ["id", "prompt", "duration", "resolution", "first-frame", "last-frame"], ["id", "prompt", "duration"]); empty(element);
+  assert(element.attributes["first-frame"] !== undefined || element.attributes["last-frame"] !== undefined,
+    `${element.name} requires first-frame, last-frame or both`);
+  const { prompt, ports } = common(element, resolveReference); const media: Media[] = [];
+  if (element.attributes["first-frame"] !== undefined) media.push({ port: "firstFrame", role: "image", source: mediaRef(element, "first-frame", "image", resolveReference) });
   if (element.attributes["last-frame"] !== undefined) media.push({ port: "lastFrame", role: "image", source: mediaRef(element, "last-frame", "image", resolveReference) });
   return output(element, prompt, ports, media);
 };

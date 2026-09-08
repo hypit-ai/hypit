@@ -13,7 +13,7 @@ function projectAudio(context: StudioTrackCompanionContext): readonly StudioEnti
     endFrameExclusive: item.window.endFrameExclusive,
     stackOrder: Number.MIN_SAFE_INTEGER,
     sourceTypes: [audioTrackTypes.clipSpec],
-    preview: artifactPreview("audio", item.source.artifact.digest),
+    preview: artifactPreview("audio", item.source.artifact.resource),
   }));
   return childEntities(context, items, "audio-clip", "standard").map((entity, index) => {
     const item = items[index]!;

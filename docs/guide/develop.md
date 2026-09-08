@@ -11,14 +11,12 @@ description: Getting started with Hypit development.
 |---|---|---|
 | Node.js | 22+ | everything |
 | pnpm | 10.33.x | workspace management; selected by the root `packageManager` field |
-| Python | 3.10–3.13 (OpenCV: 3.13) | local WhisperX and OpenCV Managed Programs |
+| Python | 3.10–3.13 | local WhisperX and OpenCV Managed Programs |
 | uv | latest | Python environment management |
 | ffmpeg / ffprobe | recent stable | media processing |
 | Chrome / Chromium | managed by HyperFrames | local HyperFrames rendering |
 
-Node.js and pnpm are the only hard requirements for repository development. Python/uv are needed
-when working with the managed WhisperX or OpenCV services; ffmpeg/ffprobe and a browser are needed
-for media or visual-rendering tests and live Builds.
+Node.js and pnpm are the only hard requirements. The rest are needed only for live Builds.
 
 ## Daily workflow
 
@@ -43,7 +41,7 @@ hypit/
 ├── packages/              workspace packages
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources
-├── services/              managed services and deployment adapters (whisperx, image-opencv, yt-dlp, media-lambda)
+├── services/              Python services (whisperx, image-opencv)
 ├── test/                  repository boundary tests and shared fixtures
 ├── package.json           root workspace manifest
 ├── pnpm-workspace.yaml    workspace: [packages/*]
@@ -55,7 +53,7 @@ hypit/
 | Guide | Topic |
 |---|---|
 | [Hypit Skill Architecture](./skill.md) | Route entry points, tools, handoffs and durable JSON state |
-| [Package architecture](./packages.md) | The five layers, dependency rules, package anatomy, facets |
+| [Package architecture](./packages.md) | Layers, dependency rules, package anatomy, facets |
 | [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, vocabulary and preview, activation |
 | [Adding a Provider](./providers.md) | Step-by-step: new Endpoint adapter |
 | [Runtime](./runtime.md) | Profile, Workspace, execution and lifecycle boundaries |

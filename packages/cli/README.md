@@ -3,13 +3,31 @@
 Domain neutral commands for checking, planning, building and inspecting Hypit projects.
 
 The command engine receives one explicit `CliDistribution`. A distribution supplies the compiler,
-trusted bootstrap packages, source package discovery and the Runtime Host selected by a Runtime
-Profile. The official video executable is assembled by `@hypit/video-cli`; another domain can
-reuse this package without installing video packages.
+trusted bootstrap packages, source package discovery and its Runtime Host. The official video
+executable assembles the Local Runtime through `@hypit/video-cli`; another application may provide
+another Host without changing this package or pretending that a local Profile selected it.
 
-Source imports decide which language and component packages give the source meaning. The Runtime
-Profile separately selects the Host and environment packages allowed to execute work. The CLI does
-not invent targets, candidates or provider choices.
+Source imports decide which language and component packages give the source meaning. A Local Runtime
+Profile separately selects Credential Stores and Endpoints allowed to execute work. The CLI does not
+invent targets, candidates or Provider choices.
 
-Human output is compact by default. `--verbose` expands details and `--json` emits machine readable
-results without presentation text.
+Human output is compact by default. `--json` emits a stable, bounded command view rather than raw
+compiler, Runtime or Repository objects. `--verbose` adds bounded operational detail; it never turns
+the command into an internal state dump.
+
+`plan` lists every Endpoint request in the frozen Build graph. Exact-model packages expose their own
+port tables and request-assembly edges, so the CLI can show authored prompt, duration and generation
+settings without searching arbitrary records for a request-shaped object. When an input file will be
+made by an earlier Build step, that direct graph edge stays symbolic until the file exists; the rest
+of the request is still shown. A complete request is resolved through the same Endpoint Registry as
+the Build, including the Endpoint's `supports` check.
+
+The implementation follows those same boundaries: `command.ts` defines the exact semantic command
+union, while argument parsing and option ownership live in `arguments.ts`; project Result
+browsing/export lives under `commands/results.ts`; Runtime,
+credential, package and deployment operations live under `commands/environment.ts`; active Build
+observation is read-only code in `observation.ts`; and human rendering is separate from the explicit
+machine-view union. `main.ts` resolves project and selected Runtime context separately from parsed
+syntax, then routes these command groups. Result commands do not consult or construct a Runtime,
+and the generic CLI cannot silently choose a Result Repository or a Provider-specific login
+flow.

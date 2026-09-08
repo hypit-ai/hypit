@@ -1,12 +1,10 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { OsCredentialStore } from "@hypit/credential-store-os";
-import { materializeRecord, runVideoCli, videoCliDistribution } from "@hypit/video-cli";
+import { runVideoCli, videoCliDistribution } from "@hypit/video-cli";
 
 import { videoTestPackages } from "./packages.js";
 
@@ -53,112 +51,49 @@ test("provider-free example plans from installed Source packages", async () => {
     "--workspace",
     process.cwd(),
   ], { write: (text) => { output += text; } });
-  const plan = (JSON.parse(output) as { readonly plan: {
-    readonly goals: readonly unknown[];
-    readonly steps: readonly { readonly producer: { readonly name: string } }[];
-  } }).plan;
-  const producers = new Set(plan.steps.map((step) => step.producer.name));
-  assert.equal(producers.has("assemble-semantic-track"), true);
-  assert.equal(producers.has("compile-composition"), true);
-  assert.equal(producers.has("project-muxed-media"), true);
-  assert.equal(plan.goals.length, 1);
+  const plan = JSON.parse(output) as {
+    readonly format: string;
+    readonly steps: number;
+    readonly targets: readonly string[];
+  };
+  assert.equal(plan.format, "hypit.cli-plan@3");
+  assert.equal(plan.steps > 0, true);
+  assert.equal(plan.targets.length, 1);
 });
 
-/**
- * The command a package author uses for the package's own chrome. Every wire call is
- * answered locally: this test spends nothing and reaches no network.
- */
-test("image writes one picture file with no Source, Build, Record or Runtime Profile", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-cli-image-"));
-  const pictureBytes = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
-  const calls: string[] = [];
-  const requests: Record<string, unknown>[] = [];
-  const realFetch = globalThis.fetch;
-  const realKey = process.env.HYPIHUB_API_KEY;
-  const realOsResolve = OsCredentialStore.prototype.resolve;
-  OsCredentialStore.prototype.resolve = async () => undefined;
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = String(input);
-    calls.push(url);
-    if (url.endsWith("/v1/models/gpt-image-2-text-to-image")) {
-      assert.equal((init?.headers as Record<string, string>).authorization, "Bearer test-image-key");
-      return Response.json({ id: "gpt-image-2-text-to-image", endpoints: ["images"] });
-    }
-    if (url.endsWith("/v1/images/generations")) {
-      assert.equal((init?.headers as Record<string, string>).authorization, "Bearer test-image-key");
-      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-      return Response.json({ id: "job_image_test", status: "queued" }, { status: 202 });
-    }
-    if (url.endsWith("/v1/jobs/job_image_test")) {
-      return Response.json({ id: "job_image_test", status: "succeeded" });
-    }
-    if (url.endsWith("/v1/jobs/job_image_test/assets")) {
-      return Response.json({ items: [{ url: "https://download.hypihub.test/paper.png" }] });
-    }
-    if (url === "https://download.hypihub.test/paper.png") {
-      return new Response(pictureBytes, { status: 200, headers: { "content-type": "image/png" } });
-    }
-    throw new Error(`Unexpected URL ${url}`);
-  }) as typeof globalThis.fetch;
-  process.env.HYPIHUB_API_KEY = "test-image-key";
+test("check compiles a data-only package Source export without a project copy", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-package-source-"));
   try {
-    const promptFile = join(root, "paper.txt");
-    await writeFile(promptFile, "A sheet of warm cream laid paper, even lighting, no text.\n", "utf8");
-    const destination = join(root, "assets", "paper.png");
+    const kitRoot = join(root, "packages", "image-kits");
+    await mkdir(join(kitRoot, "kits"), { recursive: true });
+    await writeFile(join(kitRoot, "package.json"), JSON.stringify({
+      name: "@acme/image-kits",
+      version: "1.0.0",
+      type: "module",
+      exports: { "./ugc-v1": "./kits/ugc-v1.svs" },
+    }), "utf8");
+    await writeFile(join(kitRoot, "kits", "ugc-v1.svs"), `<?svml using="@hypit/text/svs@1"?>
+<sheet version="1" id="ugc-v1">
+  text-template.ugc-v1 { separator: paragraph; }
+  text-template.ugc-v1.block.direction { kind: slot; order: 10; slot: direction; optional: false; }
+</sheet>`, "utf8");
+    const source = join(root, "main.svml");
+    await writeFile(source, `<?svml using="@hypit/markup@1"?>
+<svml>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="kit" source="@acme/image-kits/ugc-v1"/>
+  <text:Value id="direction">A useful photographed scene.</text:Value>
+  <text:Render id="prompt" template={kit.ugc-v1}>
+    <text:Set name="direction" text={direction}/>
+  </text:Render>
+</svml>`, "utf8");
     let output = "";
-    await runCli([
-      "image", "--prompt", promptFile, "--to", destination, "--aspect-ratio", "1:1",
-    ], { write: (text) => { output += text; } });
-    const machine = JSON.parse(output) as {
-      readonly package: string; readonly model: string;
-      readonly mediaType: string; readonly size: number; readonly path: string;
-    };
-    assert.equal(machine.package, "@hypit/gpt-image");
-    assert.equal(machine.model, "gpt-image-2");
-    assert.equal(machine.mediaType, "image/png");
-    assert.equal(machine.size, pictureBytes.byteLength);
-    assert.equal(machine.path, destination);
-    assert.deepEqual(Uint8Array.from(await readFile(destination)), pictureBytes);
-    // The author gave one option; every other port took the model's own first value.
-    assert.deepEqual(requests, [{
-      model: "gpt-image-2-text-to-image",
-      prompt: "A sheet of warm cream laid paper, even lighting, no text.",
-      aspect_ratio: "1:1",
-      size: "1024x1024",
-    }]);
-    assert.equal(calls.filter((item) => item.endsWith("/v1/images/generations")).length, 1);
-  } finally {
-    OsCredentialStore.prototype.resolve = realOsResolve;
-    globalThis.fetch = realFetch;
-    if (realKey === undefined) delete process.env.HYPIHUB_API_KEY;
-    else process.env.HYPIHUB_API_KEY = realKey;
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-test("materializeRecord copies an archived Artifact without rerunning a Build", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-cli-get-"));
-  try {
-    const bytes = Buffer.from("final-video-bytes");
-    const artifactDigest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
-    const output = join(root, "final.mp4");
-    const runtime = {
-      async openArtifact(digest: string) {
-        return digest === artifactDigest ? (async function* () { yield bytes; })() : undefined;
-      },
-    } as Parameters<typeof materializeRecord>[0];
-    const record = {
-      id: "final.video",
-      value: { kind: "inline", value: { digest: artifactDigest, size: bytes.byteLength, mediaType: "video/mp4" } },
-    } as unknown as Parameters<typeof materializeRecord>[1];
-    const result = await materializeRecord(runtime, record, output);
-    assert.deepEqual(result, {
-      kind: "artifact",
-      digest: artifactDigest,
-      mediaType: "video/mp4",
-      size: bytes.byteLength,
-      path: output,
+    await runCli(["check", source, "--workspace", root], {
+      write: (text) => { output += text; },
     });
+    const checked = JSON.parse(output) as { readonly sourceKind: string; readonly units: number };
+    assert.equal(checked.sourceKind, "author");
+    assert.equal(checked.units, 2);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

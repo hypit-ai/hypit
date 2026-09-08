@@ -9,7 +9,6 @@
   <import as="program" from="@hypit/program-space@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
-  <import as="estimate" from="@hypit/estimate@1"/>
   <import as="estimated" from="@hypit/semantic-take-estimate@1"/>
   <import as="speech" from="@hypit/speech-track@1"/>
   <import as="audio-track" from="@hypit/audio-track@1"/>
@@ -21,8 +20,8 @@
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
   <import as="recipes" source="./recipes.svs"/>
-  <import as="broll-kit" source="./kits/broll-v1.svs"/>
-  <import as="podcast-kit" source="./kits/podcast-v1.svs"/>
+  <import as="broll-kit" source="@hypit/seedance-kits/broll"/>
+  <import as="podcast-kit" source="@hypit/seedance-kits/podcast"/>
 
   <script id="story">
     <opening-question>
@@ -92,35 +91,35 @@
 
   <gpt:Image id="pepedoge" prompt={pepedoge-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={doge}/>
-    <gpt:Reference image={pepe}/>
+    <gpt:Reference image={doge.image}/>
+    <gpt:Reference image={pepe.image}/>
   </gpt:Image>
 
   <gpt:Image id="pepe-hold" prompt={pepe-hold-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={pepe}/>
-    <gpt:Reference image={creatine}/>
+    <gpt:Reference image={pepe.image}/>
+    <gpt:Reference image={creatine.image}/>
   </gpt:Image>
 
   <gpt:Image id="doge-hold" prompt={doge-hold-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={doge}/>
-    <gpt:Reference image={creatine}/>
+    <gpt:Reference image={doge.image}/>
+    <gpt:Reference image={creatine.image}/>
   </gpt:Image>
 
   <gpt:Image id="before" prompt={before-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={pepe}/>
+    <gpt:Reference image={pepe.image}/>
   </gpt:Image>
 
   <gpt:Image id="after" prompt={after-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={pepe}/>
+    <gpt:Reference image={pepe.image}/>
   </gpt:Image>
 
   <gpt:Image id="during" prompt={during-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={pepe}/>
+    <gpt:Reference image={pepe.image}/>
   </gpt:Image>
 
   <text:Render id="lifestyle-montage-prompt"
@@ -159,7 +158,7 @@
     prompt={daily-creatine-take-prompt} duration="7"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={pepe-hold.image}/>
-    <seedance:Reference image={doge}/>
+    <seedance:Reference image={doge.image}/>
     <seedance:Reference audio={pepe-voice}/>
     <seedance:Reference audio={doge-voice}/>
   </seedance:ReferenceVideo>
@@ -197,17 +196,15 @@
   <whisperx:SemanticTake id="arms-are-asking-semantic" narrative={story}
     segment={story.segment.arms-are-asking} media={arms-are-asking-media.media} language="en"/>
 
-  <estimate:Speech id="preview-estimate" source={story.segment.opening-question.speech}
-    policy={recipes.speech.preview}/>
   <estimated:SemanticTake id="opening-estimated" narrative={story}
     segment={story.segment.opening-question} media={opening-media.media}
-    policy={preview-estimate.policy}/>
+    policy={recipes.speech.preview}/>
   <estimated:SemanticTake id="daily-creatine-estimated" narrative={story}
     segment={story.segment.daily-creatine} media={daily-creatine-media.media}
-    policy={preview-estimate.policy}/>
+    policy={recipes.speech.preview}/>
   <estimated:SemanticTake id="arms-are-asking-estimated" narrative={story}
     segment={story.segment.arms-are-asking} media={arms-are-asking-media.media}
-    policy={preview-estimate.policy}/>
+    policy={recipes.speech.preview}/>
 
   <speech:Track id="speech" visual-frame={full-frame}
     visual-appearance={recipes.speech.visual} visual-z="10">

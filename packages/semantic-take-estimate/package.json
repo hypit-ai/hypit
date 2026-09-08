@@ -19,7 +19,8 @@
     "@hypit/narrative": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/run": "workspace:*",
-    "@hypit/speech": "workspace:*"
+    "@hypit/speech": "workspace:*",
+    "@hypit/svs": "workspace:*"
   },
   "devDependencies": {
     "@hypit/script": "workspace:*"

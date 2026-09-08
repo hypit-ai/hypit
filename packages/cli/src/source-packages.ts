@@ -30,6 +30,10 @@ async function discover(
 ) {
   const selection = await distribution.discoverSourcePackages?.(options.source, {
     ...(options.workspaceRoot === undefined ? {} : { workspaceRoot: options.workspaceRoot }),
+    packageRoot: options.packageRoot,
+    ...(options.distributionPackageRoot === undefined
+      ? {}
+      : { distributionPackageRoot: options.distributionPackageRoot }),
     packages,
   });
   if (selection === undefined) throw new Error("this Distribution cannot discover Source packages");

@@ -64,13 +64,9 @@ function ref(
   return result;
 }
 
-function decoder(endpoint: ExactModelEndpoint, continuation: boolean): StructuredSurfaceHandler {
+function decoder(endpoint: ExactModelEndpoint): StructuredSurfaceHandler {
   return ({ element, resolveReference }) => {
-    exact(element,
-      continuation
-        ? ["id", "prompt", "duration", "aspect-ratio", "resolution", "source-task-id"]
-        : ["id", "prompt", "duration", "aspect-ratio", "resolution"],
-      ["id", "prompt", "duration", "aspect-ratio", "resolution"]);
+    exact(element, ["id", "prompt", "duration", "aspect-ratio", "resolution"]);
     const id = text(element, "id");
     const prompt = ref(element, "prompt", textTypes.text, resolveReference);
     if (prompt.record !== undefined) {
@@ -101,11 +97,6 @@ function decoder(endpoint: ExactModelEndpoint, continuation: boolean): Structure
       aspectRatio: [text(element, "aspect-ratio")],
       resolution: [text(element, "resolution")],
     };
-    if (element.attributes["source-task-id"] !== undefined) {
-      assert(continuation, `${element.name} does not support source-task-id`);
-      ports.sourceTaskId = [text(element, "source-task-id")];
-      assert(images.length > 0, `${element.name}.source-task-id requires at least one Reference`);
-    }
     const draft = sealGenerationRequestDraft(endpoint.ports, ports);
     const records: Array<{
       id: string;
@@ -154,5 +145,5 @@ function decoder(endpoint: ExactModelEndpoint, continuation: boolean): Structure
   };
 }
 
-export const decodeGrokImagineVideoSurface = decoder(grokImagineEndpoints.video!, true);
-export const decodeGrokImaginePreviewVideoSurface = decoder(grokImagineEndpoints["preview-1.5"]!, false);
+export const decodeGrokImagineVideoSurface = decoder(grokImagineEndpoints.video!);
+export const decodeGrokImaginePreviewVideoSurface = decoder(grokImagineEndpoints["preview-1.5"]!);

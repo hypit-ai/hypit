@@ -57,7 +57,7 @@ export type MediaOtherStream = MediaStreamBase & {
 
 export type MediaStream = MediaVideoStream | MediaAudioStream | MediaOtherStream;
 
-/** Immutable observed facts about one exact content-addressed container. */
+/** Immutable observed facts about one exact media container. */
 export type MediaInspection = {
   readonly container: {
     readonly formatNames: readonly string[];

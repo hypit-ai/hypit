@@ -1,11 +1,10 @@
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, open, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { deflateSync } from "node:zlib";
-import { mediaTypes, sealMediaInspection, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
+import { verifyMediaFrameRange, mediaFrameRangeSamples, mediaTypes, sealMediaInspection, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
 import type { MediaAudioStream, MediaInspection, MediaRational, MediaStream, MediaStreamSelection, MediaTimestamp, MediaVideoStream, MuxedMedia, RenderedVisual, SynchronizedMedia, TimelineAudio } from "@hypit/media";
 import type { ProgramSpace } from "@hypit/program-space";
 import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleBoundary, speechTypes } from "@hypit/speech";
@@ -18,7 +17,6 @@ import {
   verifyMediaTransformProgram,
   type ExtractAudioNeed,
   type ExtractFrameNeed,
-  type PrepareMediaNeed,
   type InspectMediaNeed,
   type MuxMediaNeed,
   type NormalizeMediaNeed,
@@ -34,6 +32,7 @@ import {
   } from "@hypit/protocol";
 import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
 
+import { drawClipTimeGuide, renderStandInCard, standInCardNeed } from "./card.js";
 import { parseMediaInspection } from "./probe.js";
 import {
   compositeAnimatedWebpFrame,
@@ -47,7 +46,7 @@ import type { AnimatedWebp } from "./webp.js";
  * Where the bytes live and which binaries transform them.
  *
  * These byte operations are the whole of Hypit's media execution, and they
- * are written once. A local Provider supplies the Build's own ArtifactStore and
+ * are written once. A local Provider supplies the Build's own ResourceStore and
  * the ffmpeg on its PATH; a Lambda Provider supplies an S3-backed gateway and
  * the ffmpeg carried by its deployment. Nothing below knows which it is, so the two
  * deployments cannot drift into computing different media from one Need.
@@ -72,73 +71,6 @@ export type MediaExecutionEnvironment = {
 export type MediaOperationResult = {
   readonly value: StoredValue;
 };
-
-export type RenderMockImageRequest = {
-  readonly width: number;
-  readonly height: number;
-  readonly color: string;
-};
-
-export type RenderMockVideoRequest = {
-  readonly width: number;
-  readonly height: number;
-  readonly frameRate: MediaRational;
-  readonly frameCount: number;
-  readonly color: string;
-  readonly audio: "silence" | "none";
-};
-
-export type RenderMockSilenceRequest = {
-  readonly sampleRate: 48_000;
-  readonly channels: 2;
-  readonly sampleFrames: number;
-};
-
-function prepareNeed(value: CanonicalValue): PrepareMediaNeed {
-  const item = object(value, "Media preparation need");
-  const source = object(item.source, "Media preparation source");
-  assert(source.kind === "blob" && typeof source.digest === "string"
-    && Number.isSafeInteger(source.size) && (source.size as number) >= 0
-    && typeof source.mediaType === "string", "Media preparation source must be a BlobRef");
-  assert(item.profile === "gemini-reference", "Media preparation profile is unsupported");
-  return { source: source as unknown as BlobRef, profile: "gemini-reference" };
-}
-
-export async function executePrepareMedia(env: MediaExecutionEnvironment, constraints: CanonicalValue): Promise<MediaOperationResult> {
-  const need = prepareNeed(constraints);
-  const source = await sourceBytes(env, need.source);
-  if (need.source.mediaType.startsWith("image/")) {
-    const work = await mkdtemp(join(tmpdir(), "hypit-media-prepare-"));
-    try {
-      const input = join(work, "source.bin");
-      const output = join(work, "prepared.png");
-      await writeFile(input, source);
-      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-frames:v", "1", "-vf", "scale='min(2048,iw)':-2", "-c:v", "png", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
-      return artifactResult(await env.artifacts.putFile(output, "image/png"));
-    } finally { await rm(work, { recursive: true, force: true }).catch(() => {}); }
-  }
-  if (need.source.mediaType.startsWith("audio/")) {
-    const work = await mkdtemp(join(tmpdir(), "hypit-media-prepare-"));
-    try {
-      const input = join(work, "source.bin");
-      const output = join(work, "prepared.mp3");
-      await writeFile(input, source);
-      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-vn", "-c:a", "libmp3lame", "-b:a", "96k", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
-      return artifactResult(await env.artifacts.putFile(output, "audio/mpeg"));
-    } finally { await rm(work, { recursive: true, force: true }).catch(() => {}); }
-  }
-  if (need.source.mediaType.startsWith("video/")) {
-    const work = await mkdtemp(join(tmpdir(), "hypit-media-prepare-"));
-    try {
-      const input = join(work, "source.bin");
-      const output = join(work, "prepared.mp4");
-      await writeFile(input, source);
-      await runProcess({ executable: env.ffmpegPath, argv: ["-y", "-i", input, "-vf", "scale='min(1280,iw)':-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "32", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", output], timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024 });
-      return artifactResult(await env.artifacts.putFile(output, "video/mp4"));
-    } finally { await rm(work, { recursive: true, force: true }).catch(() => {}); }
-  }
-  throw new Error(`Media preparation does not support ${need.source.mediaType}`);
-}
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -216,8 +148,8 @@ async function version(executable: string, timeoutMs: number, sharedLibraryPath?
 
 async function sourceBytes(env: MediaExecutionEnvironment, source: BlobRef): Promise<Uint8Array> {
   const bytes = await env.artifacts.get(source);
-  assert(bytes !== undefined, `Media source ${source.digest} is unavailable`);
-  assert(bytes.byteLength === source.size, `Media source ${source.digest} size differs`);
+  assert(bytes !== undefined, `Media source ${source.resource} is unavailable`);
+  assert(bytes.byteLength === source.size, `Media source ${source.resource} size differs`);
   return bytes;
 }
 
@@ -227,7 +159,7 @@ async function stageArtifact(
   path: string,
 ): Promise<void> {
   const chunks = await env.artifacts.open(source);
-  assert(chunks !== undefined, `Media source ${source.digest} is unavailable`);
+  assert(chunks !== undefined, `Media source ${source.resource} is unavailable`);
   const file = await open(path, "w");
   let size = 0;
   try {
@@ -238,7 +170,7 @@ async function stageArtifact(
   } finally {
     await file.close();
   }
-  assert(size === source.size, `Media source ${source.digest} size differs`);
+  assert(size === source.size, `Media source ${source.resource} size differs`);
 }
 
 function timestampFraction(value: MediaTimestamp): { numerator: bigint; denominator: bigint } {
@@ -475,15 +407,10 @@ async function outputInspection(args: {
   readonly maxProbeOutputBytes: number;
   readonly sharedLibraryPath?: string;
 }): Promise<MediaInspection> {
-  const hash = createHash("sha256");
-  let size = 0;
-  for await (const chunk of createReadStream(args.path)) {
-    hash.update(chunk);
-    size += chunk.byteLength;
-  }
+  const size = (await stat(args.path)).size;
   const source: BlobRef = {
     kind: "blob",
-    digest: `sha256:${hash.digest("hex")}` as BlobRef["digest"],
+    resource: `res_${randomUUID()}`,
     size,
     mediaType: args.mediaType,
   };
@@ -498,143 +425,6 @@ function inlineResult(value: CanonicalValue): MediaOperationResult {
 
 function artifactResult(value: BlobRef): MediaOperationResult {
   return { value };
-}
-
-function mockColor(value: string): [number, number, number] {
-  assert(/^#[0-9a-f]{6}$/iu.test(value), "Mock color must be a six-digit hex color");
-  return [parseInt(value.slice(1, 3), 16), parseInt(value.slice(3, 5), 16), parseInt(value.slice(5, 7), 16)];
-}
-
-// Keep preview media visibly identifiable without changing the requested mock fill. The bright
-// outline survives both still-image and video materialization, so an agent can distinguish mock
-// media from authored assets at a glance.
-const MOCK_BORDER_COLOR = "#d946ef";
-// The border occupies pixels inside the mock bounds; it never expands or clips the media.
-const MOCK_BORDER_WIDTH = 8;
-
-function crc32(bytes: Uint8Array): number {
-  let crc = 0xFFFFFFFF;
-  for (const byte of bytes) {
-    crc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
-  }
-  return (crc ^ 0xFFFFFFFF) >>> 0;
-}
-
-function pngChunk(type: string, data: Uint8Array): Uint8Array {
-  const body = new Uint8Array(type.length + data.length);
-  for (let index = 0; index < type.length; index += 1) body[index] = type.charCodeAt(index);
-  body.set(data, type.length);
-  const result = new Uint8Array(12 + data.length);
-  const view = new DataView(result.buffer);
-  view.setUint32(0, data.length);
-  result.set(body, 4);
-  view.setUint32(8 + data.length, crc32(body));
-  return result;
-}
-
-function mockPng(width: number, height: number, color: string): Uint8Array {
-  positiveInteger(width, "Mock image width");
-  positiveInteger(height, "Mock image height");
-  const [red, green, blue] = mockColor(color);
-  const [borderRed, borderGreen, borderBlue] = mockColor(MOCK_BORDER_COLOR);
-  const scanlines = Buffer.alloc(height * (1 + width * 3));
-  for (let row = 0; row < height; row += 1) {
-    const offset = row * (1 + width * 3);
-    scanlines[offset] = 0;
-    for (let column = 0; column < width; column += 1) {
-      const pixel = offset + 1 + column * 3;
-      const border = row < MOCK_BORDER_WIDTH || row >= height - MOCK_BORDER_WIDTH
-        || column < MOCK_BORDER_WIDTH || column >= width - MOCK_BORDER_WIDTH;
-      scanlines[pixel] = border ? borderRed : red;
-      scanlines[pixel + 1] = border ? borderGreen : green;
-      scanlines[pixel + 2] = border ? borderBlue : blue;
-    }
-  }
-  const header = Buffer.alloc(13);
-  header.writeUInt32BE(width, 0); header.writeUInt32BE(height, 4);
-  header[8] = 8; header[9] = 2;
-  return Uint8Array.from(Buffer.concat([
-    Buffer.from("\x89PNG\r\n\x1a\n", "binary"),
-    Buffer.from(pngChunk("IHDR", header)),
-    Buffer.from(pngChunk("IDAT", deflateSync(scanlines))),
-    Buffer.from(pngChunk("IEND", new Uint8Array())),
-  ]));
-}
-
-function mockSilenceWav(sampleFrames: number): Uint8Array {
-  positiveInteger(sampleFrames, "Mock silence sampleFrames");
-  const dataBytes = sampleFrames * 2 * 2;
-  const wav = Buffer.alloc(44 + dataBytes);
-  wav.write("RIFF", 0); wav.writeUInt32LE(36 + dataBytes, 4); wav.write("WAVE", 8);
-  wav.write("fmt ", 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20);
-  wav.writeUInt16LE(2, 22); wav.writeUInt32LE(48_000, 24); wav.writeUInt32LE(48_000 * 4, 28);
-  wav.writeUInt16LE(4, 32); wav.writeUInt16LE(16, 34); wav.write("data", 36); wav.writeUInt32LE(dataBytes, 40);
-  return Uint8Array.from(wav);
-}
-
-function mockImageNeed(value: CanonicalValue): RenderMockImageRequest {
-  const item = object(value, "RenderMockImageRequest") as unknown as RenderMockImageRequest;
-  positiveInteger(item.width, "Mock image width"); positiveInteger(item.height, "Mock image height"); mockColor(item.color);
-  return item;
-}
-
-function mockVideoNeed(value: CanonicalValue): RenderMockVideoRequest {
-  const item = object(value, "RenderMockVideoRequest") as unknown as RenderMockVideoRequest;
-  positiveInteger(item.width, "Mock video width"); positiveInteger(item.height, "Mock video height");
-  positiveInteger(item.frameCount, "Mock video frameCount"); mockColor(item.color);
-  assert(item.audio === "silence" || item.audio === "none", "Mock video audio mode is invalid");
-  assert(Number.isSafeInteger(item.frameRate?.numerator) && item.frameRate.numerator > 0
-    && Number.isSafeInteger(item.frameRate?.denominator) && item.frameRate.denominator > 0,
-  "Mock video frameRate is invalid");
-  return item;
-}
-
-function mockSilenceNeed(value: CanonicalValue): RenderMockSilenceRequest {
-  const item = object(value, "RenderMockSilenceRequest") as unknown as RenderMockSilenceRequest;
-  assert(item.sampleRate === 48_000 && item.channels === 2, "Mock silence format must be 48kHz stereo");
-  positiveInteger(item.sampleFrames, "Mock silence sampleFrames");
-  return item;
-}
-
-export async function executeRenderMockImage(
-  env: MediaExecutionEnvironment,
-  constraints: CanonicalValue,
-): Promise<MediaOperationResult> {
-  return artifactResult(await env.artifacts.put(mockPng(mockImageNeed(constraints).width, mockImageNeed(constraints).height, mockImageNeed(constraints).color), "image/png"));
-}
-
-export async function executeRenderMockSilence(
-  env: MediaExecutionEnvironment,
-  constraints: CanonicalValue,
-): Promise<MediaOperationResult> {
-  const request = mockSilenceNeed(constraints);
-  return artifactResult(await env.artifacts.put(mockSilenceWav(request.sampleFrames), "audio/wav"));
-}
-
-export async function executeRenderMockVideo(
-  env: MediaExecutionEnvironment,
-  constraints: CanonicalValue,
-): Promise<MediaOperationResult> {
-  const request = mockVideoNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "hypit-media-mock-video-"));
-  try {
-    const output = join(work, "mock.mp4");
-    const rate = `${request.frameRate.numerator}/${request.frameRate.denominator}`;
-    const duration = request.frameCount * request.frameRate.denominator / request.frameRate.numerator;
-    const filter = `color=c=${request.color.slice(1)}:s=${request.width}x${request.height}:r=${rate}:d=${duration},drawbox=x=0:y=0:w=iw:h=ih:color=0x${MOCK_BORDER_COLOR.slice(1)}:t=${MOCK_BORDER_WIDTH}`;
-    const argv = ["-y", "-v", "error", "-f", "lavfi", "-i", filter,
-      ...(request.audio === "silence" ? ["-f", "lavfi", "-i", `anullsrc=r=48000:cl=stereo`] : []),
-      "-frames:v", String(request.frameCount), ...(request.audio === "silence"
-        ? ["-map", "0:v:0", "-map", "1:a:0", "-c:a", "pcm_s16le", "-shortest"]
-        : ["-an"]), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", rate,
-      "-movflags", "+faststart", output];
-    await runProcess({ executable: env.ffmpegPath, argv, timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024,
-      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }) });
-    return artifactResult(await env.artifacts.putFile(output, "video/mp4"));
-  } finally {
-    await rm(work, { recursive: true, force: true }).catch(() => {});
-  }
 }
 
 function inspectNeed(value: CanonicalValue): InspectMediaNeed {
@@ -693,9 +483,9 @@ function extractFrameNeed(value: CanonicalValue): ExtractFrameNeed {
 
 function renderStillVideoNeed(value: CanonicalValue): RenderStillVideoNeed {
   const item = object(value, "RenderStillVideoNeed") as unknown as RenderStillVideoNeed;
-  assert(item.source?.kind === "blob" && item.source.mediaType.startsWith("image/"),
-    "RenderStillVideoNeed source must be an image Artifact");
   verifyStillVideoRequest(item.request);
+  assert(item.request.segments.every((segment) => segment.source?.kind === "blob" && segment.source.mediaType.startsWith("image/")),
+    "RenderStillVideoNeed needs an image Artifact for every segment");
   return item;
 }
 
@@ -712,6 +502,7 @@ function evidenceAudioNeed(value: CanonicalValue): ProjectSpeechEvidenceAudioNee
 function renderAudioNeed(value: CanonicalValue): RenderAudioNeed {
   const item = object(value, "RenderAudioNeed") as unknown as RenderAudioNeed;
   verifyAudioProgramPlan(item.plan);
+  if (item.range !== undefined) verifyMediaFrameRange(item.range, item.plan.frameCount);
   return item;
 }
 
@@ -743,9 +534,12 @@ function atempo(rate: number): string[] {
   return filters;
 }
 
-function audioClipFilter(clip: AudioProgramClip, inputIndex: number, outputIndex: number): string {
+function audioClipFilter(clip: AudioProgramClip, inputIndex: number, outputIndex: number,
+  window: { readonly startSample: number; readonly endSampleExclusive: number }): string {
   const length = clip.targetEndSampleExclusive - clip.targetStartSample;
   const sourceLength = clip.sourceEndSampleExclusive - clip.sourceStartSample;
+  const left = Math.max(window.startSample, clip.targetStartSample);
+  const right = Math.min(window.endSampleExclusive, clip.targetEndSampleExclusive);
   const filters = [
     `atrim=start_sample=${clip.sourceStartSample}:end_sample=${clip.sourceEndSampleExclusive}`,
     "asetpts=PTS-STARTPTS",
@@ -763,7 +557,10 @@ function audioClipFilter(clip: AudioProgramClip, inputIndex: number, outputIndex
     ...(clip.fadeOutSamples === 0 ? [] : [
       `afade=t=out:start_sample=${length - clip.fadeOutSamples}:nb_samples=${clip.fadeOutSamples}`,
     ]),
-    `adelay=${clip.targetStartSample}S:all=1`,
+    // Crop after tempo, looping and envelopes, keeping their original phase.
+    `atrim=start_sample=${left - clip.targetStartSample}:end_sample=${right - clip.targetStartSample}`,
+    "asetpts=N/SR/TB",
+    `adelay=${left - window.startSample}S:all=1`,
   ];
   return `[${inputIndex}:a:0]${filters.join(",")}[clip${outputIndex}]`;
 }
@@ -820,6 +617,32 @@ export async function executeInspectMedia(
   }
 }
 
+async function sourceVideoEncoding(env: MediaExecutionEnvironment, path: string, streamIndex: number) {
+  const bytes = await runProcess({
+    executable: env.ffprobePath,
+    argv: ["-v", "error", "-print_format", "json", "-show_streams", "-show_pixel_formats", path],
+    timeoutMs: env.processTimeoutMs, maxStdoutBytes: env.maxProbeOutputBytes,
+    ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+  });
+  const probe = JSON.parse(Buffer.from(bytes).toString("utf8")) as {
+    streams: { index: number; codec_name?: string; pix_fmt?: string; tags?: Record<string, string> }[];
+    pixel_formats: { name: string; flags: { alpha: number } }[];
+  };
+  const stream = probe.streams.find((item) => item.index === streamIndex);
+  assert(stream !== undefined, `Media source has no video stream ${streamIndex}`);
+  const pixelFormat = probe.pixel_formats.find((item) => item.name === stream.pix_fmt);
+  assert(pixelFormat !== undefined, `Media source pixel format ${String(stream.pix_fmt)} is unknown`);
+  const alphaTag = Object.entries(stream.tags ?? {}).find(([key]) => key.toLowerCase() === "alpha_mode")?.[1];
+  const alpha = pixelFormat.flags.alpha === 1 || alphaTag === "1" || alphaTag === "straight";
+  // FFmpeg's native VP8/VP9 decoders discard the WebM alpha sidecar.
+  const decoder = !alpha ? undefined
+    : stream.codec_name === "vp9" ? "libvpx-vp9" : stream.codec_name === "vp8" ? "libvpx" : undefined;
+  return {
+    alpha,
+    inputArgs: decoder === undefined ? [] : [`-c:${streamIndex}`, decoder],
+  };
+}
+
 export async function executeNormalizeMedia(
   env: MediaExecutionEnvironment,
   constraints: CanonicalValue,
@@ -837,7 +660,11 @@ export async function executeNormalizeMedia(
     let visualWidth: number | undefined;
     let visualHeight: number | undefined;
     if (plan.video !== undefined) {
-      const output = join(work, "visual.mp4");
+      const encoding = animation === undefined
+        ? await sourceVideoEncoding(env, input, plan.video.index)
+        : { alpha: true, inputArgs: [] };
+      const outputType = encoding.alpha ? "video/webm" : "video/mp4";
+      const output = join(work, encoding.alpha ? "visual.webm" : "visual.mp4");
       const fps = `${need.frameRate.numerator}/${need.frameRate.denominator}`;
       const filter = [
         "setpts=PTS-STARTPTS",
@@ -851,20 +678,24 @@ export async function executeNormalizeMedia(
         "setsar=1",
       ].join(",");
       const visualInput = animation === undefined
-        ? ["-autorotate", "-i", input, "-map", `0:${plan.video.index}`]
+        ? [...encoding.inputArgs, "-autorotate", "-i", input, "-map", `0:${plan.video.index}`]
         : ["-f", "concat", "-safe", "0", "-i", await animatedWebpConcat(env, animation, work), "-map", "0:v:0"];
+      // The execution format must retain the source's alpha while materializing
+      // the program clock. Both encodings publish the same SynchronizedMedia type.
+      const encoderArgs = encoding.alpha
+        ? ["-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-lossless", "1", "-auto-alt-ref", "0"]
+        : ["-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-movflags", "+faststart"];
       await runProcess({
         executable: env.ffmpegPath,
         argv: ["-y", ...visualInput, "-an", "-vf", filter,
-          "-frames:v", String(plan.frameCount), "-fps_mode", "cfr", "-c:v", "libx264",
-          "-preset", "veryfast", "-pix_fmt", "yuv420p", "-movflags", "+faststart", output],
+          "-frames:v", String(plan.frameCount), "-fps_mode", "cfr", ...encoderArgs, output],
         timeoutMs: env.processTimeoutMs,
         maxStdoutBytes: 64 * 1024,
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       });
       const inspected = await outputInspection({
         path: output,
-        mediaType: "video/mp4",
+        mediaType: outputType,
         ffprobePath: env.ffprobePath,
         timeoutMs: env.processTimeoutMs,
         maxProbeOutputBytes: env.maxProbeOutputBytes,
@@ -876,7 +707,7 @@ export async function executeNormalizeMedia(
       assert(visual.sampleAspectRatio.numerator === 1 && visual.sampleAspectRatio.denominator === 1
         && visual.rotationDegrees === 0,
       "Normalized visual retains non-square samples or display rotation");
-      visualArtifact = await env.artifacts.putFile(output, "video/mp4");
+      visualArtifact = await env.artifacts.putFile(output, outputType);
       visualWidth = visual.width;
       visualHeight = visual.height;
     }
@@ -939,7 +770,11 @@ export async function executeNormalizeMedia(
   }
 }
 
-/** Encode one authored image into an exact silent CFR video. */
+/**
+ * Encode authored images into an exact video-only CFR clip. One picture is held for the whole frame
+ * count; several are each held for their planned segment, fitted into the first picture's frame
+ * and letterboxed on black, then concatenated in order.
+ */
 export async function executeRenderStillVideo(
   env: MediaExecutionEnvironment,
   constraints: CanonicalValue,
@@ -947,30 +782,98 @@ export async function executeRenderStillVideo(
   const need = renderStillVideoNeed(constraints);
   const work = await mkdtemp(join(tmpdir(), "hypit-media-still-"));
   try {
-    const input = join(work, "source.image");
     const output = join(work, "still.mp4");
-    await stageArtifact(env, need.source, input);
-    const fps = `${need.request.frameRate.numerator}/${need.request.frameRate.denominator}`;
-    const filter = [
+    const baseOutput = need.request.guide === undefined ? output : join(work, "still-base.mp4");
+    const staged = new Map<string, string>();
+    const inputs: string[] = [];
+    for (const segment of need.request.segments) {
+      const source = segment.source!;
+      let path = staged.get(source.resource);
+      if (path === undefined) {
+        path = join(work, `picture-${staged.size}.image`);
+        await stageArtifact(env, source, path);
+        staged.set(source.resource, path);
+      }
+      inputs.push(path);
+    }
+    const { numerator, denominator } = need.request.frameRate;
+    const fps = `${numerator}/${denominator}`;
+    const hold = (frames: number): string => [
       "select=eq(n\\,0)",
       "loop=loop=-1:size=1:start=0",
-      `trim=start_frame=0:end_frame=${need.request.frameCount}`,
-      `setpts=N*${need.request.frameRate.denominator}/(${need.request.frameRate.numerator}*TB)`,
-      "pad=ceil(iw/2)*2:ceil(ih/2)*2:(ow-iw)/2:(oh-ih)/2:color=black",
-      "setsar=1",
+      `trim=start_frame=0:end_frame=${frames}`,
+      `setpts=N*${denominator}/(${numerator}*TB)`,
     ].join(",");
+    let argv: string[];
+    if (need.request.segments.length === 1) {
+      const filter = `${hold(need.request.frameCount)},pad=ceil(iw/2)*2:ceil(ih/2)*2:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1`;
+      argv = ["-y", "-i", inputs[0]!, "-map", "0:v:0", "-an", "-vf", filter];
+    } else {
+      const first = await outputInspection({
+        path: inputs[0]!,
+        mediaType: need.request.segments[0]!.source!.mediaType,
+        ffprobePath: env.ffprobePath,
+        timeoutMs: env.processTimeoutMs,
+        maxProbeOutputBytes: env.maxProbeOutputBytes,
+        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      });
+      const picture = first.streams.find((item): item is MediaVideoStream => item.kind === "video");
+      assert(picture !== undefined, "Still video first picture has no decodable image");
+      const width = Math.ceil(picture.width / 2) * 2;
+      const height = Math.ceil(picture.height / 2) * 2;
+      const chains = need.request.segments.map((segment, index) =>
+        `[${index}:v]${hold(segment.endFrameExclusive - segment.startFrame)},`
+        + `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,format=yuv420p[s${index}]`);
+      const concat = `${need.request.segments.map((_, index) => `[s${index}]`).join("")}concat=n=${need.request.segments.length}:v=1:a=0[v]`;
+      argv = ["-y", ...inputs.flatMap((path) => ["-i", path]), "-filter_complex", `${chains.join(";")};${concat}`, "-map", "[v]", "-an"];
+    }
     await runProcess({
       executable: env.ffmpegPath,
       argv: [
-        "-y", "-i", input, "-map", "0:v:0", "-an", "-vf", filter,
+        ...argv,
         "-frames:v", String(need.request.frameCount), "-r", fps, "-fps_mode", "cfr",
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart", output,
+        "-movflags", "+faststart", baseOutput,
       ],
       timeoutMs: env.processTimeoutMs,
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
+    if (need.request.guide === "clip-time") {
+      const baseInspection = await outputInspection({
+        path: baseOutput,
+        mediaType: "video/mp4",
+        ffprobePath: env.ffprobePath,
+        timeoutMs: env.processTimeoutMs,
+        maxProbeOutputBytes: env.maxProbeOutputBytes,
+        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      });
+      const baseVisual = baseInspection.streams.find((item): item is MediaVideoStream => item.kind === "video");
+      assert(baseVisual !== undefined, "Still media guide has no visual stream");
+      for (let frame = 0; frame < need.request.frameCount; frame += 1) {
+        await writeFile(join(work, `guide-${String(frame).padStart(6, "0")}.png`), drawClipTimeGuide({
+          width: baseVisual.width,
+          height: baseVisual.height,
+          frameRate: need.request.frameRate,
+          frameCount: need.request.frameCount,
+        }, frame));
+      }
+      await runProcess({
+        executable: env.ffmpegPath,
+        argv: [
+          "-y", "-i", baseOutput,
+          "-framerate", fps, "-i", join(work, "guide-%06d.png"),
+          "-filter_complex", "[0:v][1:v]overlay=0:main_h-overlay_h:shortest=1,format=yuv420p[v]",
+          "-map", "[v]", "-an",
+          "-frames:v", String(need.request.frameCount), "-r", fps, "-fps_mode", "cfr",
+          "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+          "-movflags", "+faststart", output,
+        ],
+        timeoutMs: env.processTimeoutMs,
+        maxStdoutBytes: 64 * 1024,
+        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      });
+    }
     const inspected = await outputInspection({
       path: output,
       mediaType: "video/mp4",
@@ -995,6 +898,18 @@ export async function executeRenderStillVideo(
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+/** Draw a stand-in card for a generated output that has not been generated; a Provider draws, it never generates. */
+export async function executeDrawStandInCard(
+  env: MediaExecutionEnvironment,
+  constraints: CanonicalValue,
+): Promise<MediaOperationResult> {
+  const request = standInCardNeed(constraints);
+  const value = await renderStandInCard({
+    putBytes: async (bytes, mediaType) => await env.artifacts.put(bytes, mediaType) as unknown as CanonicalValue,
+  }, request);
+  return artifactResult(value as unknown as BlobRef);
 }
 
 type TransformPlan = {
@@ -1167,6 +1082,7 @@ export async function executeExtractFrame(
     const input = join(work, "source.bin");
     const output = join(work, "frame.png");
     await stageArtifact(env, need.source, input);
+    const encoding = await sourceVideoEncoding(env, input, need.streamIndex);
     const selection = need.at.kind === "first"
       ? "eq(n\\,0)"
       : need.at.kind === "last"
@@ -1177,7 +1093,7 @@ export async function executeExtractFrame(
     await runProcess({
       executable: env.ffmpegPath,
       argv: [
-        "-y", "-i", input, "-map", `0:${need.streamIndex}`, "-an",
+        "-y", ...encoding.inputArgs, "-i", input, "-map", `0:${need.streamIndex}`, "-an",
         "-vf", `setpts=PTS-STARTPTS,select=${selection}`,
         "-frames:v", "1", "-fps_mode", "vfr", "-c:v", "png", output,
       ],
@@ -1274,14 +1190,19 @@ export async function executeRenderTimelineAudio(
 ): Promise<MediaOperationResult> {
   const need = renderAudioNeed(constraints);
   const plan: AudioProgramPlan = need.plan;
+  const window = need.range === undefined
+    ? { startSample: 0, endSampleExclusive: plan.sampleFrames, sampleFrames: plan.sampleFrames }
+    : mediaFrameRangeSamples(need.range, plan.frameRate);
+  const clips = plan.clips.filter((clip) => clip.targetStartSample < window.endSampleExclusive
+    && clip.targetEndSampleExclusive > window.startSample);
   const work = await mkdtemp(join(tmpdir(), "hypit-media-audio-"));
   try {
     const artifacts = new Map<string, { source: BlobRef; path: string; inputIndex: number; sampleFrames: number }>();
-    for (const clip of plan.clips) {
-      const existing = artifacts.get(clip.artifact.digest);
+    for (const clip of clips) {
+      const existing = artifacts.get(clip.artifact.resource);
       if (existing !== undefined) {
         assert(existing.sampleFrames === clip.sourceSampleFrames,
-          `Audio input ${clip.artifact.digest} has conflicting sample counts in one plan`);
+          `Audio input ${clip.artifact.resource} has conflicting sample counts in one plan`);
         continue;
       }
       const inputIndex = artifacts.size;
@@ -1296,8 +1217,8 @@ export async function executeRenderTimelineAudio(
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       });
       assert(audio.decodedSampleFrames === clip.sourceSampleFrames,
-        `Audio input ${clip.artifact.digest} sample count differs from its plan`);
-      artifacts.set(clip.artifact.digest, {
+        `Audio input ${clip.artifact.resource} sample count differs from its plan`);
+      artifacts.set(clip.artifact.resource, {
         source: clip.artifact,
         path,
         inputIndex,
@@ -1308,20 +1229,20 @@ export async function executeRenderTimelineAudio(
     const output = join(work, "program.wav");
     const argv = ["-y"];
     for (const item of artifacts.values()) argv.push("-i", item.path);
-    if (plan.clips.length === 0) {
+    if (clips.length === 0) {
       argv.push(
         "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
-        "-af", `atrim=start_sample=0:end_sample=${plan.sampleFrames},asetpts=N/SR/TB`,
+        "-af", `atrim=start_sample=0:end_sample=${window.sampleFrames},asetpts=N/SR/TB`,
       );
     } else {
-      const chains = plan.clips.map((clip, index) => {
-        const inputIndex = artifacts.get(clip.artifact.digest)!.inputIndex;
-        return audioClipFilter(clip, inputIndex, index);
+      const chains = clips.map((clip, index) => {
+        const inputIndex = artifacts.get(clip.artifact.resource)!.inputIndex;
+        return audioClipFilter(clip, inputIndex, index, window);
       });
-      const labels = plan.clips.map((_clip, index) => `[clip${index}]`).join("");
+      const labels = clips.map((_clip, index) => `[clip${index}]`).join("");
       chains.push(
-        `${labels}amix=inputs=${plan.clips.length}:duration=longest:dropout_transition=0:normalize=0,`
-        + `apad=whole_len=${plan.sampleFrames},atrim=start_sample=0:end_sample=${plan.sampleFrames},`
+        `${labels}amix=inputs=${clips.length}:duration=longest:dropout_transition=0:normalize=0,`
+        + `apad=whole_len=${window.sampleFrames},atrim=start_sample=0:end_sample=${window.sampleFrames},`
         + "asetpts=N/SR/TB[out]",
       );
       argv.push("-filter_complex", chains.join(";"), "-map", "[out]");
@@ -1343,11 +1264,11 @@ export async function executeRenderTimelineAudio(
       maxProbeOutputBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
-    assert(audio.decodedSampleFrames === plan.sampleFrames,
+    assert(audio.decodedSampleFrames === window.sampleFrames,
       "Rendered TimelineAudio sample count differs from its plan");
     const value: TimelineAudio = sealTimelineAudio({
       artifact,
-      sampleFrames: plan.sampleFrames,
+      sampleFrames: window.sampleFrames,
     });
     return inlineResult(canonicalize(value));
   } finally {

@@ -3,7 +3,7 @@ title: 面向 Agent 使用者的快速开始
 description: 无需手写 SVML 或 SVS，通过 Coding Agent 创建、审阅并交付 Hypit 视频。
 ---
 
-你不需要了解 SVML、SVS、JavaScript 或命令行。用日常语言向 Coding Agent 描述视频，Agent 会通过 `/hypit` skill 完成创作或复刻，并在付费 Build 前提供 Studio mock 供你审阅。
+你不需要了解 SVML、SVS、JavaScript 或命令行。用日常语言向 Coding Agent 描述视频，Agent 会通过 `/hypit` skill 理解参考、设计内容、制作视频，并交付可继续修改的项目。
 
 ## 你需要准备什么
 
@@ -18,7 +18,7 @@ description: 无需手写 SVML 或 SVS，通过 Coding Agent 创建、审阅并�
 npx skills add hypit-ai/hypit -g
 ```
 
-然后在任意处启动 Coding Agent，Hypit skill 将全局可用。
+然后在任意处启动 Coding Agent，Hypit skill 将全局可用。Skill 提供制作知识；Agent 会检查 Hypit 命令是否可用，并在需要时安装可执行工具。
 
 ### **👉 [免费获得 100 个拥有独特音色的 AI 人物形象](https://drive.google.com/drive/u/2/folders/18J9Fz7mkU3OQNJ-2Res3eIyFQ2cemIK5)**
 
@@ -55,13 +55,14 @@ npx skills add hypit-ai/hypit -g
 
 你还可以补充目标受众、时长、语言、语气、品牌色、主持人、发布平台或画幅比例等要求。Agent 会把 brief 转换成完整计划，并自行补全制作所需的细节。
 
-## 3. 配置凭据
+## 3. 按 Agent 提示提供凭据
 
 <video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/provide_credentials_when_the_agent_asks.mp4"></video>
 
-在你描述视频之后，Agent 会检查项目需要哪些模型和服务。对于 Hypit 托管模型，Hypit 默认使用 HypiHub OAuth。如果缺少该凭据，请告诉 Agent 登录 HypiHub；Agent 会自己运行登录命令、打开浏览器流程，并把会话保存到系统安全凭据存储中。登录本身不会提交付费生成任务。
+在你描述视频之后，Agent 会检查项目需要哪些模型和服务。如果缺少必要凭据，Agent 会向你询问，并说明该凭据的用途。你可以选择两种方式：
 
-只有在你明确选择自有 Provider 时，才配置它的 API key。Agent 只会请求所选 Runtime Profile 声明的凭据；某个凭据不可用时，不会悄悄切换到其他 Provider。
+1. **使用 Hypit 推荐的 hypit.ai OAuth 登录。** 告诉 Agent 通过 hypit.ai 登录。一次 OAuth 登录即可覆盖 Hypit 托管服务提供的所有模型，不需要为每个模型分别收集 key。
+2. **使用你自己的 Provider key。** 你可以直接和 Agent 约定要使用哪些模型，并提供相应 Provider 的 API key。Agent 只会索取当前项目需要的 key，不会询问无关凭据。
 
 不要把密钥粘贴到公开文档中，也不要提交到 Git。Agent 会使用已配置的安全凭据存储来保存这些凭据。
 
@@ -69,48 +70,41 @@ npx skills add hypit-ai/hypit -g
 
 <video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/let_the_agent_do_the_production_work.mp4"></video>
 
-收到 brief 后，Agent 会在不要求你编写源码的情况下自动推进项目。通常会直接推进到 Studio mock；但如果参考视频或 brief 没有明确重要的剪辑细节，Agent 可能会提出一个聚焦的澄清问题。具体顺序会因视频而不同，但通常包括：
+Agent 会从你的目的出发理解参考视频，结合带时间的帧图和台词，弄清故事、节奏，以及字幕、B-roll、图形的作用与出现时机。换人或换产品的要求会从一开始影响剧本和设计。
 
-1. **拆分镜头。** Agent 识别口播段落、视觉节拍、转场、字幕、B-roll 机会，以及 ranking 板等需要持续保持的元素。
-2. **分析参考视频或 brief。** 复刻路线会使用 Gemini 和可用的媒体工具检查节奏、构图、文字、说话人和视觉连续性；原创路线则根据你的描述和确定的创作方向回答同样的问题。
-3. **自行确定细节。** Agent 会根据参考视频、brief 和观察结果自动确定时机、语言、产品位置和主持人处理方式。
-4. **读取现有 package 声明。** 在自行发明实现之前，Agent 会检查项目和 Hypit 官方 package 中已有的组件。如果已有合适的字幕、ranking、主持人、B-roll 或渲染组件，就直接复用。
-5. **必要时编写新 package。** 如果确实缺少所需的视觉行为，Agent 会创建一个足够小、可复用的新组件，并记录它的使用方式。你不需要自行设计 package 接口。
-6. **编写并检查源码。** Agent 会写出 SVML/SVS 源码，创建所需的 Run 配置，编译视频图，并修复发现的类型或布局问题。使用任何 Managed capability 之前，Agent 还会选择项目 Runtime Profile 并启动本地 Runtime。
-7. **与 mock 对比。** 对尚未真正生成的素材使用 mock，随后在 Studio 中渲染完整构图；Agent 会把看到的结果与参考视频或 brief 对比，修复时机、层级、裁切、字幕和画面密度等问题。
-8. **按照要求完成修改。** 基础视频确定后，Agent 会根据你的要求完成定制，例如更换画面中的人物，或替换成你的产品，然后检查修改后的结果。
+它把这些决定写入项目文件，选择或编写合适的组件，用图片与视频模型制作素材，再按语义时间线编排。Studio 和局部渲染帮助检查版面、时机与可读性。已有素材会被复用；重要的决定、进展和问题会及时告诉你。
 
-## 5. 查看 mock Studio
+## 5. 在 Studio 查看编排
 
 <video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/review_the_mock_studio.mp4"></video>
 
-第一版完成后，Agent 会为你打开 Studio mock。Mock 是审阅版本：尚未生成的媒体会使用确定性的临时素材代替，但真实的时序、布局、字幕、转场和 Track 关系都会保留。它要回答的是“这支视频是否成立”，而不是在你确认之前悄悄执行付费生成或最终渲染。
+Studio 展示当前 Run 选定的素材、字幕和图形。Agent 可以用已有素材检查构图，也可以在生成素材后继续调整编排。
 
-请从头到尾观看 mock，检查故事是否清楚、镜头顺序是否正确、字幕在手机上是否易读、ranking 板或产品是否突出、B-roll 节奏是否合适，以及整体语气是否符合 brief。如果发现问题，直接用日常语言告诉 Agent：
+查看故事是否清楚、字幕是否易读、产品或 ranking 板是否突出、B-roll 是否放在合适的位置。直接描述你想要的改变：
 
 ```text
-ranking 板出现得太晚，字幕太小，而且主持人说话时被 B-roll 盖住了。请修复这些问题，再给我看一次 mock。
+ranking 板出现得太晚，字幕太小。让板子跟着介绍排名的台词出现，并把字幕放大一些。
 ```
 
-Agent 会修改源码、重新检查并返回更新后的 mock。
+Agent 会修改对应部分，再展示更新后的画面。
 
 ## 6. 确认后提交付费 Build
 
 <video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/approve_and_submit_the_paid_build.mp4"></video>
 
-只有在你明确确认 mock 后，才要求 Agent 提交付费 Build：
+开始新的付费工作前，Agent 会说明所选模型、将要执行的外部工作和可查到的价格信息。你可以授权明确的制作范围：
 
 ```text
-mock 没有问题。请提交付费 Build 并生成最终视频。
+按这个方案生成素材并完成视频，预算在我们刚确认的范围内。
 ```
 
-开始之前，Agent 会向你总结所有选定的 Provider、凭据来源、预计执行的外部工作和预估费用，并等待你的确认。确认后它才会提交 Build、跟踪进度，并用书面化的语言报告 Provider 或 Runtime 问题。付费 Build 才会执行真实的素材生成、媒体处理和最终渲染；之前的 mock 不会自动触发这些计费操作。
+Agent 提交 Build 并跟进结果。已完成的素材和输出会保存在项目的 Result 中；出现失败时，它会说明原因，并在新的 Run 和 Build 中复用可用产物。
 
-## 7. 查看付费 Build 的结果
+## 7. 查看成片
 
 <video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/review_the_paid_result.mp4"></video>
 
-Build 完成后，Agent 会打开最终视频并提供保存后的输出文件。请查看最终结果，而不只是 Studio mock。真实生成的主持人、B-roll 和音频可能与 mock 的临时素材不同，因此要检查画面、字幕、转场、构图、声音和导出质量。如果需要修改，直接告诉 Agent 要改什么。Agent 会修改源码并带你重新审阅，而不是让你手动编辑已经渲染出的 MP4。
+Build 完成后，Agent 会提供最终视频及保存位置。查看内容、字幕、转场、构图和声音是否符合你的目标。需要修改时，直接告诉 Agent；项目保留可编辑的源码和已生成素材。
 
 ## 8. 继续用自然语言提出修改
 
@@ -122,7 +116,7 @@ Build 成功后，你仍然可以用对话继续指导项目。你可以更换�
 保留台词和排名顺序，但把主持人换成沉稳的男主持，并把 ranking 板做成纸质体育杂志风格。
 ```
 
-Agent 会把每项要求追踪到对应的源码和组件，保留你要求不变的部分，并在再次付费 Build 前先给你看新的 mock。
+Agent 会把每项要求落实到对应的源码和组件，保留你要求不变的部分，并复用已有产物。新的付费生成遵循你授权的范围。
 
 ## 9. 并行制作多个变体
 
@@ -135,4 +129,4 @@ Agent 会把每项要求追踪到对应的源码和组件，保留你要求不�
 - 把产品卖点放到开头的版本；
 - 加快剪辑、增加 B-roll 密度的版本。
 
-Agent 会先确认所有版本共用的内容，以及每个版本允许改变的范围。你确认方向后，它会为每个变体创建独立的项目范围，并下发子 Agent 并行制作。每个子 Agent 都会遵守已确认的边界，检查自己的布局和源码，再向主 Agent 汇报。最终你会得到清晰的变体完成列表，以及仍需要你决定的事项；不需要你亲自协调这些子 Agent。
+Agent 会整理各版本共用的内容和各自的变化，为每个版本写出明确的制作选择。独立工作可以并发执行，具体并发量由运行配置控制；共用素材可显式复用。最终你会得到每个版本的成片、项目文件和完成情况。

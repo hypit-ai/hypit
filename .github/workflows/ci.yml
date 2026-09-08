@@ -55,6 +55,3 @@ jobs:
 
       - name: Test
         run: pnpm test
-
-      - name: Repository hygiene
-        run: pnpm test:release

@@ -31,7 +31,7 @@ import type {
   CanonicalValue,
 } from "@hypit/protocol";
 import { renderHyperframesCapabilities } from "@hypit/render-hyperframes";
-import { isStreamingArtifactStore } from "@hypit/runtime";
+import { isStreamingResourceStore } from "@hypit/runtime";
 
 import {
   createHyperframesAwsLambdaClient,
@@ -120,15 +120,21 @@ function requestDocument(value: CanonicalValue): HyperframesDocument {
   return request.document as HyperframesDocument;
 }
 
-export function supportsAwsLambdaHyperframes(value: CanonicalValue): boolean {
+function awsLambdaHyperframesRejection(value: CanonicalValue): string | undefined {
   try {
     const document = requestDocument(value);
-    return document.surfaces.length === 0
-      && document.frameRate.denominator === 1
-      && SUPPORTED_FPS.has(document.frameRate.numerator);
-  } catch {
-    return false;
+    if (document.surfaces.length > 0) return "AWS Lambda HyperFrames does not accept embedded Surfaces";
+    if (document.frameRate.denominator !== 1 || !SUPPORTED_FPS.has(document.frameRate.numerator)) {
+      return "AWS Lambda HyperFrames accepts integer 24, 30 or 60 fps";
+    }
+    return undefined;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
   }
+}
+
+export function supportsAwsLambdaHyperframes(value: CanonicalValue): boolean {
+  return awsLambdaHyperframesRejection(value) === undefined;
 }
 
 function implementationFailure(code: string, error: unknown): EndpointOutcome {
@@ -163,14 +169,14 @@ async function artifactBytes(
   context: EndpointStartContext,
   artifact: BlobRef,
 ): Promise<Uint8Array | AsyncIterable<Uint8Array>> {
-  if (isStreamingArtifactStore(context.artifacts)) {
-    const chunks = await context.artifacts.open(artifact.digest);
-    assert(chunks !== undefined, `HyperFrames Artifact ${artifact.digest} is unavailable`);
+  if (isStreamingResourceStore(context.resources)) {
+    const chunks = await context.resources.open(artifact.resource);
+    assert(chunks !== undefined, `HyperFrames Artifact ${artifact.resource} is unavailable`);
     return chunks;
   }
-  const bytes = await context.artifacts.get(artifact.digest);
-  assert(bytes !== undefined, `HyperFrames Artifact ${artifact.digest} is unavailable`);
-  assert(bytes.byteLength === artifact.size, `HyperFrames Artifact ${artifact.digest} size differs`);
+  const bytes = await context.resources.get(artifact.resource);
+  assert(bytes !== undefined, `HyperFrames Artifact ${artifact.resource} is unavailable`);
+  assert(bytes.byteLength === artifact.size, `HyperFrames Artifact ${artifact.resource} size differs`);
   return bytes;
 }
 
@@ -179,7 +185,7 @@ function verifySite(site: HyperframesLambdaSite, bucketName: string): void {
   assert(site.bucketName === bucketName, "HyperFrames site was deployed to another bucket");
   const target = parseS3Uri(site.projectS3Uri);
   assert(target.bucket === bucketName && target.key === `sites/${site.siteId}/project.tar.gz`,
-    "HyperFrames site URI does not name its content-addressed project");
+    "HyperFrames site URI does not name its deployed project");
   positiveInteger(site.bytes, "HyperFrames site bytes");
   assert(Number.isFinite(Date.parse(site.uploadedAt)), "HyperFrames site upload timestamp is invalid");
   assert(typeof site.uploaded === "boolean", "HyperFrames site upload state is invalid");
@@ -241,8 +247,8 @@ async function storeOutput(
     "HyperFrames output exceeded the configured byte limit");
   const count = { value: 0 };
   const bounded = boundedChunks(source.chunks, maxRenderedBytes, expected, count);
-  if (isStreamingArtifactStore(context.artifacts)) {
-    return await context.artifacts.putStream(bounded, "video/mp4");
+  if (isStreamingResourceStore(context.resources)) {
+    return await context.resources.putStream(bounded, "video/mp4");
   }
   const buffers: Uint8Array[] = [];
   for await (const chunk of bounded) buffers.push(chunk);
@@ -252,7 +258,7 @@ async function storeOutput(
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  return await context.artifacts.put(bytes, "video/mp4");
+  return await context.resources.put(bytes, "video/mp4");
 }
 
 function fulfillment(
@@ -408,13 +414,13 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
         outputKey: outputKey(context.operation),
         executionName: executionName(context.operation),
       });
+      const handle = makeHandle(context, site, render, startedAt);
+      const receipt = { id: handle.executionArn };
+      await context.checkpoint?.({ handle: canonicalize(handle), receipt });
+      return { ...wakeAfter(canonicalize(handle), pollIntervalMs, now(), { phase: "submitted" }), receipt };
     } catch (error) {
       return implementationFailure("HYPERFRAMES_SUBMISSION_FAILED", error);
     }
-    const handle = makeHandle(context, site, render, startedAt);
-    return wakeAfter(canonicalize(handle), pollIntervalMs, now(), {
-      phase: "submitted",
-    });
   };
 
   const safeSubmit = async (
@@ -434,11 +440,10 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       try {
         handle = readHandle(context.handle, context);
       } catch (error) {
-        return implementationFailure("HYPERFRAMES_HANDLE_INVALID", error);
+        throw error;
       }
       if (now() - handle.startedAt >= maxOperationMs) {
-        return implementationFailure("HYPERFRAMES_OPERATION_TIMEOUT",
-          new Error("HyperFrames render exceeded its operation deadline"));
+        return implementationFailure("HYPERFRAMES_OPERATION_TIMEOUT", new Error("HyperFrames deadline exceeded"));
       }
       let document: HyperframesDocument;
       let progress: HyperframesLambdaProgress;
@@ -450,12 +455,12 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
           region,
         });
       } catch (error) {
-        return implementationFailure("HYPERFRAMES_PROGRESS_UNAVAILABLE", error);
+        return implementationFailure("HYPERFRAMES_POLL_FAILED", error);
       }
       try {
         verifyProgress(progress, document);
       } catch (error) {
-        return implementationFailure("HYPERFRAMES_PROGRESS_INVALID", error);
+        return implementationFailure("HYPERFRAMES_POLL_FAILED", error);
       }
       const next = { ...handle, polls: handle.polls + 1 };
       if (progress.status === "RUNNING") {
@@ -501,12 +506,16 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     facet: "render",
     instance: config.instance ?? "hyperframes.aws-lambda",
     pool: config.pool ?? config.instance ?? "hyperframes.aws-lambda",
+    pricing: { kind: "page", url: "https://aws.amazon.com/lambda/pricing/" },
     defaultConcurrency: config.defaultConcurrency ?? 2,
     capabilities: [{
       lifecycle: "asynchronous" as const,
       capability: renderHyperframesCapabilities.renderVisual,
       returns: mediaTypes.renderedVisual,
-      supports: (need) => supportsAwsLambdaHyperframes(need.constraints),
+      supports: (need) => {
+        const reason = awsLambdaHyperframesRejection(need.constraints);
+        return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };
+      },
       endpoint,
     }],
   });

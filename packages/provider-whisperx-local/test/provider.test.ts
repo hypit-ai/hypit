@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { sealSpeechEvidenceAudio, speechTypes } from "@hypit/speech";
 import assert from "node:assert/strict";
-import { MemoryArtifactStore, EndpointRegistry } from "@hypit/driver-node";
+import { MemoryResourceStore, EndpointRegistry } from "@hypit/driver-node";
 import type { Need } from "@hypit/protocol";
 import { speechEvidenceTypes } from "@hypit/speech-evidence";
 import {
@@ -103,8 +103,8 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
     }), { headers: { "content-type": "application/json" } });
   }) as typeof fetch;
   try {
-    const artifacts = new MemoryArtifactStore();
-    const artifact = await artifacts.put(expected, "audio/wav");
+    const resources = new MemoryResourceStore();
+    const artifact = await resources.put(expected, "audio/wav");
     const evidenceAudio = sealSpeechEvidenceAudio({
       artifact,
       sampleFrames: 32_000,
@@ -129,7 +129,7 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
     const output = await resolved.registration.handler({
       command: { kind: "fulfill-need", id: "command:whisperx-loopback", need },
       need,
-      artifacts,
+      resources,
       credentials: {},
     });
     assert.equal(stagedMatches, true);

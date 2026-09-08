@@ -3,12 +3,11 @@ const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
 const seconds = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
-// Structural admission fixes the length; media Type validators prove the
-// content-addressed identity wherever the value carries semantic media truth.
-const digest = { kind: "string", minLength: 71, maxLength: 71 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const blobArtifactSchema = (mediaTypes?: readonly string[]): ValueSchema => object({
-  kind: { schema: { kind: "literal", value: "blob" } }, digest: { schema: digest }, size: { schema: integer },
+  kind: { schema: { kind: "literal", value: "blob" } },
+  resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
+  size: { schema: integer },
   mediaType: { schema: mediaTypes === undefined ? string : { kind: "string", enum: mediaTypes } },
 });
 const rational = object({ numerator: { schema: { kind: "number", integer: true, minimum: 1 } }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } } });

@@ -1,42 +1,40 @@
 {
-  "format": "hypit.runtime-profile@1",
-  "runtime": {
-    "use": "@hypit/runtime-local",
-    "config": {
-      "dataRoot": ".hypit/runtimes/local",
-      "artifacts": {
-        "use": "@hypit/artifact-store-fs",
-        "config": { "path": "artifacts" }
-      },
-      "credentials": {
-        "os": { "use": "@hypit/credential-store-os" }
-      },
-      "endpoints": {
-        "hypihub.football-ranking": {
-          "use": "@hypit/provider-hypihub",
-          "pool": "generation",
-          "config": {
-            "baseUrl": "https://hypit.ai",
-            "apiKey": { "store": "os", "key": "hypihub.oauth" },
-            "defaultConcurrency": 3,
-            "pollIntervalMs": 10000,
-            "requestTimeoutMs": 120000
-          }
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/runtimes/local",
+  "credentials": {
+    "os": {
+      "use": "@hypit/credential-store-os"
+    }
+  },
+  "endpoints": {
+    "kie.default": {
+      "use": "@hypit/provider-kie",
+      "config": {
+        "apiKey": {
+          "store": "os",
+          "key": "KIE_API_KEY"
         },
-        "media.football-ranking": {
-          "use": "@hypit/provider-media-local",
-          "pool": "media",
-          "config": { "defaultConcurrency": 2 }
-        },
-        "hyperframes.football-ranking": {
-          "use": "@hypit/provider-hyperframes-local",
-          "pool": "render",
-          "config": {
-            "workers": 2,
-            "quality": "standard",
-            "defaultConcurrency": 1
-          }
-        }
+        "defaultConcurrency": 10
+      }
+    },
+    "media.local": {
+      "use": "@hypit/provider-media-local",
+      "config": {
+        "defaultConcurrency": 2
+      }
+    },
+    "whisperx.local": {
+      "use": "@hypit/provider-whisperx-local",
+      "config": {
+        "defaultConcurrency": 1
+      }
+    },
+    "hyperframes.local": {
+      "use": "@hypit/provider-hyperframes-local",
+      "config": {
+        "workers": 2,
+        "quality": "standard",
+        "defaultConcurrency": 1
       }
     }
   }

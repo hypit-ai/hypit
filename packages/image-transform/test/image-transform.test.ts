@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   decodeImageTransformProgramSurface,
@@ -71,7 +71,7 @@ test("the graph contract is exactly source plus Program to one image Need", asyn
   const producer = imageTransformComponent.producers[0]!;
   const source = {
     kind: "blob" as const,
-    digest: fixtureDigest("image-source"),
+    resource: fixtureResource("image-source"),
     size: 123,
     mediaType: "image/png",
   };

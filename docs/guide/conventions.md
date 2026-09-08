@@ -56,5 +56,5 @@ Adding a package does not require changing the root TypeScript configuration.
 
 - Compilation failures throw with descriptive messages including source location.
 - Runtime failures are recorded as Operation failures in the Build state machine.
-- Recoverable failures trigger retry according to Endpoint policy after Scheduler resource admission.
+- Recoverable failures trigger retry according to Endpoint policy after Scheduler capacity acquisition.
 - Fatal failures transition the Build to a terminal state.

@@ -8,7 +8,7 @@ const NANO_BANANA: ModuleRef = { name: "@hypit/nano-banana", version: "1" };
 const SEEDREAM: ModuleRef = { name: "@hypit/seedream", version: "1" };
 const MINIMAX: ModuleRef = { name: "@hypit/minimax-h3", version: "1" };
 const GROK: ModuleRef = { name: "@hypit/grok-imagine", version: "1" };
-const MIMO_TTS: ModuleRef = { name: "@hypit/mimo-tts", version: "1" };
+const MIMO_SPEECH: ModuleRef = { name: "@hypit/mimo-speech", version: "1" };
 
 const seedance = (name: string, model: string): GenerationWireMapping => ({
   capability: { module: SEEDANCE, name }, result: "video", routes: [{ model }],
@@ -28,6 +28,14 @@ const seedance = (name: string, model: string): GenerationWireMapping => ({
 });
 
 export const hypiHubMappings: readonly GenerationWireMapping[] = [
+  {
+    capability: { module: { name: "@hypit/volcengine-matting", version: "1" }, name: "matte-portrait-video" },
+    result: "video", routes: [{ model: "matte-portrait-video" }],
+    fields: {
+      source: { as: "url", field: "ref_video_url" },
+      format: { as: "value", field: "format", whenAbsent: "WEBM" },
+    },
+  },
   seedance("seedance-2", "bytedance/seedance-2"),
   seedance("seedance-2-fast", "bytedance/seedance-2-fast"),
   seedance("seedance-2-mini", "bytedance/seedance-2-mini"),
@@ -40,7 +48,8 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     fields: {
       prompt: { as: "value", field: "prompt" },
       aspectRatio: { as: "value", field: "aspect_ratio" },
-      resolution: { as: "value", field: "size", whenAbsent: "1024x1024" },
+      resolution: { as: "value", field: "resolution", whenAbsent: "1K" },
+      background: { as: "value", field: "background" },
       images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
     },
   },
@@ -49,7 +58,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     fields: {
       prompt: { as: "value" as const, field: "prompt" },
       aspectRatio: { as: "value" as const, field: "aspect_ratio" },
-      resolution: { as: "value" as const, field: "size", whenAbsent: "1024x1024" },
+      resolution: { as: "value" as const, field: "resolution" },
       images: { as: "itemObject" as const, field: "reference_images", urlKey: "url", fieldKeys: {} },
       outputFormat: { as: "value" as const, field: "output_format" },
     },
@@ -70,6 +79,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
   },
   {
     capability: { module: MINIMAX, name: "minimax-h3" }, result: "video", routes: [
+      { model: "minimax-h3/image-to-video", whenPresent: ["lastFrame"] },
       { model: "minimax-h3/image-to-video", whenPresent: ["firstFrame"] },
       { model: "minimax-h3/reference-to-video", whenPresent: ["referenceImage"] },
       { model: "minimax-h3/reference-to-video", whenPresent: ["referenceVideo"] },
@@ -94,7 +104,6 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
       prompt: { as: "value", field: "prompt" }, duration: { as: "value", field: "seconds" },
       resolution: { as: "value", field: "resolution" }, aspectRatio: { as: "value", field: "aspect_ratio" },
       images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
-      sourceTaskId: { as: "value", field: "source_task_id" },
     },
   },
   {
@@ -109,10 +118,18 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: MIMO_TTS, name: "mimo-v2.5-tts-voicedesign" }, result: "audio", routes: [{ model: "mimo-v2.5-tts-voicedesign" }],
+    capability: { module: MIMO_SPEECH, name: "mimo-v2.5-tts-voicedesign" }, result: "audio", routes: [{ model: "mimo-v2.5-tts-voicedesign" }],
     fields: {
       text: { as: "value", field: "input" },
       voiceDescription: { as: "value", field: "voice_description" },
+    },
+  },
+  {
+    capability: { module: MIMO_SPEECH, name: "mimo-v2.5-tts-voiceclone" }, result: "audio", routes: [{ model: "mimo-v2.5-tts-voiceclone" }],
+    fields: {
+      text: { as: "value", field: "input" },
+      instruction: { as: "value", field: "prompt" },
+      voiceReference: { as: "urlArray", field: "reference_audio" },
     },
   },
 ];

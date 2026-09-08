@@ -11,7 +11,7 @@ test("SemanticTake rejects Token frames that disagree with authored Anchors", ()
       audio: {
         artifact: {
           kind: "blob",
-          digest: `sha256:${"0".repeat(64)}`,
+          resource: "res_speech-identity",
           size: 1,
           mediaType: "audio/wav",
         },

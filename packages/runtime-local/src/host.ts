@@ -7,13 +7,17 @@ import { hypitHostStateRoot } from "@hypit/runtime-host-node";
 import { resolve } from "node:path";
 
 import {
-  createRuntimeArchiveFromConfig,
-  createRuntimeArtifactAccessFromConfig,
+  createRuntimeControlFromConfig,
+  createRuntimeResultControlFromConfig,
   createRuntimeCredentialsFromConfig,
   createRuntimeFromConfig,
+  describeRuntimeConfigProviders,
   doctorRuntimeConfig,
+  invokeRuntimeConfigNeed,
+  openTransientRuntimeConfigExecution,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
+  readRuntimeConfigPricing,
   resolveRuntimeConfigPaths,
 } from "./config.js";
 import {
@@ -99,12 +103,12 @@ export async function openLocalRuntimeHost(
     },
     controller,
     createRuntime: async () => await createRuntimeFromConfig(profile, { packageRoot: basePackageRoot, ...distribution }),
-    openArchive: async (options) => await createRuntimeArchiveFromConfig(profile, {
+    openControl: async (options) => await createRuntimeControlFromConfig(profile, {
       packageRoot: basePackageRoot,
       ...distribution,
       ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
     }),
-    openArtifacts: async () => await createRuntimeArtifactAccessFromConfig(profile, {
+    openResultControl: async () => await createRuntimeResultControlFromConfig(profile, {
       packageRoot: basePackageRoot,
       ...distribution,
     }),
@@ -128,22 +132,42 @@ export async function openLocalRuntimeHost(
       ...distribution,
       ...(options?.capabilities === undefined ? {} : { capabilities: options.capabilities }),
     }),
-    runWorker: async (readyFile) => {
-      const runtime = await createRuntimeFromConfig(profile, { packageRoot: basePackageRoot, ...distribution });
+    providers: async (capabilities) => await describeRuntimeConfigProviders(profile, capabilities, {
+      packageRoot: basePackageRoot,
+      ...distribution,
+    }),
+    pricing: async (requests) => await readRuntimeConfigPricing(profile, requests, {
+      packageRoot: basePackageRoot,
+      ...distribution,
+    }),
+    invoke: async (need, resources) => await invokeRuntimeConfigNeed(profile, need, resources, {
+      packageRoot: basePackageRoot,
+      ...distribution,
+    }),
+    openTransientExecution: async () => await openTransientRuntimeConfigExecution(profile, {
+      packageRoot: basePackageRoot,
+      ...distribution,
+    }),
+    runWorker: async (readyFile, owner) => {
+      let runtime: Awaited<ReturnType<typeof createRuntimeFromConfig>> | undefined;
       const abort = new AbortController();
       const stop = (): void => abort.abort();
       process.once("SIGTERM", stop);
       process.once("SIGINT", stop);
       try {
-        await markRuntimeProcessReady(readyFile);
+        runtime = await createRuntimeFromConfig(profile, {
+          packageRoot: basePackageRoot,
+          ...distribution,
+        });
         await runtime.work({
           idlePollMs: 250,
           signal: abort.signal,
+          ready: async () => await markRuntimeProcessReady(readyFile, owner),
         });
       } finally {
         process.removeListener("SIGTERM", stop);
         process.removeListener("SIGINT", stop);
-        await runtime.close();
+        await runtime?.close();
       }
     },
   };

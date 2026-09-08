@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import { decodeMediaFontSurface, mediaTypes } from "@hypit/media";
 
@@ -23,7 +23,7 @@ test("Font Surface turns explicit author bytes and face metadata into one exact 
       return {
         artifact: {
           kind: "blob",
-          digest: fixtureDigest("font:inter-bold"),
+          resource: fixtureResource("font:inter-bold"),
           size: 2_048,
           mediaType: request.mediaType,
         },
@@ -39,7 +39,7 @@ test("Font Surface turns explicit author bytes and face metadata into one exact 
     value: {
       sources: [{ artifact: {
         kind: "blob",
-        digest: fixtureDigest("font:inter-bold"),
+        resource: fixtureResource("font:inter-bold"),
         size: 2_048,
         mediaType: "font/woff2",
       } }],

@@ -1,4 +1,4 @@
-import { canonicalize, isDigest } from "@hypit/protocol";
+import { canonicalize, isResourceId } from "@hypit/protocol";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 
 import type {
@@ -21,7 +21,7 @@ function color(value: string | undefined, subject: string, alpha = true): void {
   assert(pattern.test(value), `${subject} must be ${alpha ? "#RRGGBB or #RRGGBBAA" : "#RRGGBBAA"}`);
 }
 function image(value: RasterLayer["source"], subject: string): void {
-  assert(value.kind === "blob" && isDigest(value.digest) && Number.isSafeInteger(value.size)
+  assert(value.kind === "blob" && isResourceId(value.resource) && Number.isSafeInteger(value.size)
     && value.size >= 0 && value.mediaType.startsWith("image/"), `${subject} must be an image Blob Artifact`);
 }
 

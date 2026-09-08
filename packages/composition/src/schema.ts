@@ -11,13 +11,13 @@ const object = (
 ): ValueSchema => ({ kind: "object", fields, ...(allowUnknown ? { allowUnknown: true } : {}) });
 const audioBlobRef = object({
   kind: { schema: { kind: "literal", value: "blob" } },
-  digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
+  resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
   size: { schema: integer },
   mediaType: { schema: { kind: "literal", value: "audio/wav" } },
 });
 const mediaBlobRef = object({
   kind: { schema: { kind: "literal", value: "blob" } },
-  digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
+  resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
   size: { schema: integer },
   mediaType: { schema: string },
 });

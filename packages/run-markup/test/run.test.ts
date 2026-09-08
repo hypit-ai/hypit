@@ -1,19 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createResolvedClosure,
+  defineBuild,
   link,
-  reduce,
-  sealBuildRequest,
+  materializeBuild,
+  planBuild,
   sealCompiledGraph,
   sealRecord,
-  start,
 } from "@hypit/core";
 import { sealGraphFragment } from "@hypit/elaborator";
 import type { CompiledSourceClosure } from "@hypit/elaborator";
-import type { CompiledGraph, ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
+import type { BuildState, ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 import {
   compileRunSource,
   createRunFragmentHostFacet,
@@ -98,16 +97,14 @@ function previewFragment() {
   });
 }
 
-function realize(compilation: CompiledSourceClosure, run: Awaited<ReturnType<typeof resolveRunDocument>>): CompiledGraph {
-  const selected = new Map(run.graph.satisfactions.map((item) => [item.output, item.candidate]));
-  return sealCompiledGraph({
-    outputs: compilation.graph.outputs.map((item) => ({
-      ...item,
-      primary: selected.get(item.id) ?? item.primary,
-    })),
-    candidates: [...compilation.graph.candidates, ...run.graph.candidates],
-    operations: [...compilation.graph.operations, ...run.graph.operations],
-  });
+function realize(compilation: CompiledSourceClosure, run: Awaited<ReturnType<typeof resolveRunDocument>>): BuildState {
+  const planned = planBuild(compilation.program, compilation.graph, run.graph);
+  return materializeBuild(defineBuild({
+    program: compilation.program,
+    initialRecords: planned.initialRecords,
+    plan: planned.plan,
+    targets: run.graph.targets,
+  }), []);
 }
 
 async function compileDocument(body: string) {
@@ -159,13 +156,57 @@ test("one multi-export Fragment declaration remains one execution", async () => 
   const run = await resolveRunDocument(compiled.document, {
     compilation,
     fragments,
-    readStoredValue() { throw new Error("not used"); },
-    readFile() { throw new Error("not used"); },
-    resolveBuildRecord() { throw new Error("not used"); },
   });
-  const graph = realize(compilation, run);
-  const state = start(compilation.program, graph, sealBuildRequest({ targets: run.graph.targets }));
+  const state = realize(compilation, run);
   assert.equal(state.plan.steps.filter((item) => item.producer.name === "preview").length, 1);
+});
+
+test("a Run Fragment may own an ordinary literal input", async () => {
+  const compiled = await compileDocument(`<svrun version="1">
+    <author source="./main.svml"/>
+    <import from="@example/run-preview" as="preview"/>
+    <target output="left"/>
+    <fragment id="card" using="preview:shared"><input name="prompt" value="five seconds"/></fragment>
+    <fragment id="unused" using="preview:shared"><input name="prompt" value="not selected"/></fragment>
+    <satisfy output="left" candidate="card.first"/>
+  </svrun>`);
+  const compilation = fixture();
+  const fragments = new RunFragmentRegistry();
+  fragments.register({ name: "@example/run-preview", fragments: { shared: previewFragment() } });
+  const run = await resolveRunDocument(compiled.document, { compilation, fragments });
+  assert.deepEqual(run.graph.records, [
+    {
+      id: "record:run:card:prompt",
+      type: promptType,
+      value: { kind: "inline", value: "five seconds" },
+    },
+    {
+      id: "record:run:unused:prompt",
+      type: promptType,
+      value: { kind: "inline", value: "not selected" },
+    },
+  ]);
+  const state = realize(compilation, run);
+  assert.equal(state.records.find((item) => item.id === "record:run:card:prompt")?.value.kind, "inline");
+  assert.equal(state.records.some((item) => item.id === "record:run:unused:prompt"), false);
+});
+
+test("Run literal syntax decodes numbers and requires one source of value", () => {
+  const parsed = parseRunDocument("duration.svrun", `<svrun version="1">
+    <author source="./main.svml"/>
+    <import from="@example/run-preview" as="preview"/>
+    <target output="left"/>
+    <fragment id="card" using="preview:shared"><input name="prompt" value="5"/></fragment>
+    <satisfy output="left" candidate="card.first"/>
+  </svrun>`);
+  const input = parsed.candidates.find((item) => item.kind === "fragment")?.inputs[0];
+  assert.deepEqual(input, { name: "prompt", value: 5 });
+  assert.throws(() => parseRunDocument("bad.svrun", `<svrun version="1">
+    <author source="./main.svml"/>
+    <import from="@example/run-preview" as="preview"/>
+    <target output="left"/>
+    <fragment id="card" using="preview:shared"><input name="prompt" from="prompt" value="5"/></fragment>
+  </svrun>`), /requires exactly one of from or value/u);
 });
 
 test("a Provided Value is an ordinary zero-input Candidate", async () => {
@@ -179,14 +220,10 @@ test("a Provided Value is an ordinary zero-input Candidate", async () => {
   const run = await resolveRunDocument(compiled.document, {
     compilation,
     fragments: new RunFragmentRegistry(),
-    readStoredValue() { return { kind: "inline", value: "already rendered" }; },
-    readFile() { throw new Error("not used"); },
-    resolveBuildRecord() { throw new Error("not used"); },
   });
-  const graph = realize(compilation, run);
-  const state = start(compilation.program, graph, sealBuildRequest({ targets: run.graph.targets }));
+  const state = realize(compilation, run);
   assert.equal(state.plan.steps.length, 0);
-  assert.equal(state.records.some((record) => record.id === "provided:fixed"), true);
+  assert.equal(state.records.some((record) => record.id === "provided:run:fixed"), true);
 });
 
 test("a source file is an ordinary BlobArtifact Candidate", async () => {
@@ -200,35 +237,19 @@ test("a source file is an ordinary BlobArtifact Candidate", async () => {
   const run = await resolveRunDocument(compiled.document, {
     compilation,
     fragments: new RunFragmentRegistry(),
-    readStoredValue() { throw new Error("not used"); },
-    readFile(from, mediaType) {
-      assert.equal(from, "./approved.mp4");
-      assert.equal(mediaType, "video/mp4");
-      return { kind: "blob", digest: fixtureDigest("approved video"), size: 14, mediaType };
-    },
-    resolveBuildRecord() { throw new Error("not used"); },
   });
   assert.equal(run.graph.candidates.length, 1);
   assert.equal(run.graph.candidates[0]?.type.module.name, "@hypit/artifact");
   assert.equal(run.graph.candidates[0]?.type.name, "BlobArtifact");
+  assert.deepEqual(run.candidateSources[run.graph.candidates[0]!.id], {
+    kind: "file",
+    from: "./approved.mp4",
+    mediaType: "video/mp4",
+  });
 });
 
-test("a Build Record resolves a Host Catalog alias without entering Core", async () => {
+test("a Build Record stays a structural zero-input Candidate until planning selects it", async () => {
   const compilation = fixture();
-  let historical = start(compilation.program, compilation.graph, sealBuildRequest({
-    targets: [{ output: "left" }],
-  }));
-  historical = reduce(historical);
-  const command = historical.outstanding.find((item) => item.kind === "invoke-producer");
-  assert.ok(command);
-  const event = {
-    kind: "producer-completed" as const,
-    command: command.id,
-    outputs: { media: { kind: "inline" as const, value: "archived media" } },
-    needs: {},
-  };
-  historical = reduce(historical, event);
-
   const compiled = await compileDocument(`<svrun version="1">
     <author source="./main.svml"/><target output="right"/>
     <build-record id="prior" build="prior-build" output="friendly-shot"/>
@@ -237,20 +258,14 @@ test("a Build Record resolves a Host Catalog alias without entering Core", async
   const run = await resolveRunDocument(compiled.document, {
     compilation,
     fragments: new RunFragmentRegistry(),
-    readStoredValue() { throw new Error("not used"); },
-    readFile() { throw new Error("not used"); },
-    resolveBuildRecord(build, output) {
-      assert.equal(build, "prior-build");
-      assert.equal(output, "friendly-shot");
-      const selection = historical.plan.selections.find((item) => item.output === "left");
-      const record = historical.records.find((item) => item.id === selection?.record);
-      assert.ok(record);
-      return { type: record.type, value: record.value };
-    },
   });
-  const graph = realize(compilation, run);
-  const state = start(compilation.program, graph, sealBuildRequest({ targets: run.graph.targets }));
-  assert.equal(state.plan.steps.length, 0);
+  const candidate = run.graph.satisfactions[0]!.candidate;
+  assert.deepEqual(run.candidateSources[candidate], {
+    kind: "build-output",
+    build: "prior-build",
+    output: "friendly-shot",
+  });
+  assert.equal(run.graph.candidates.find((item) => item.id === candidate)?.root.kind, "value");
 });
 
 test("Run imports are a prologue and Runtime settings are not language elements", () => {
@@ -278,9 +293,6 @@ test("a Target-only source still compiles one mandatory Run Graph", async () => 
   const run = await resolveRunDocument(compiled.document, {
     compilation,
     fragments: new RunFragmentRegistry(),
-    readStoredValue() { throw new Error("not used"); },
-    readFile() { throw new Error("not used"); },
-    resolveBuildRecord() { throw new Error("not used"); },
   });
   assert.equal(run.graph.operations.length, 0);
   assert.equal(run.graph.targets[0]?.output, "left");

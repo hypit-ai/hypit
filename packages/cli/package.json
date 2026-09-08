@@ -8,7 +8,12 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@hypit/build-result": "workspace:*",
+    "@hypit/build-result-kit": "workspace:*",
     "@hypit/compiler-node": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/core": "workspace:*",
+    "@hypit/driver-node": "workspace:*",
     "@hypit/elaborator": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
@@ -16,7 +21,13 @@
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-host-node": "workspace:*",
     "@hypit/source": "workspace:*",
+    "@hypit/validation": "workspace:*",
     "@hypit/workspace": "workspace:*",
     "typescript": "5.9.3"
+  },
+  "devDependencies": {
+    "@hypit/markup": "workspace:*",
+    "@hypit/run-markup": "workspace:*",
+    "@hypit/workspace-fs-node": "workspace:*"
   }
 }

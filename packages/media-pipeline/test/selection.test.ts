@@ -2,7 +2,7 @@ import { sealMediaInspection, verifyMediaStreamSelection } from "@hypit/media";
 import type { MediaInspection, MediaVideoStream } from "@hypit/media";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 
 import {
@@ -12,7 +12,7 @@ import {
 
 const source = {
   kind: "blob" as const,
-  digest: fixtureDigest("grok-container"),
+  resource: fixtureResource("grok-container"),
   size: 123,
   mediaType: "video/mp4",
 };
@@ -92,7 +92,7 @@ test("primary stream selection excludes Grok's MJPEG attached picture and observ
   assert.equal(selection.videoStreamIndex, 0);
   assert.equal(selection.audioStreamIndex, 1);
   assert.equal(selection.spanAuthority, "video");
-  assert.equal("basisDigest" in selection, false);
+  assert.equal("basisResourceId" in selection, false);
   assert.equal("narrativeDigest" in selection, false);
 });
 

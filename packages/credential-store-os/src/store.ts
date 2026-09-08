@@ -33,17 +33,17 @@ function macosReader(service: string): OsCredentialReader {
 
 function macosWriter(service: string): OsCredentialWriter {
   return async (_service, account, secret) => await new Promise((resolve, reject) => {
-    const child = spawn("/usr/bin/security", ["add-generic-password", "-U", "-s", service, "-a", account, "-w"], {
-      detached: true, shell: false, windowsHide: true, stdio: ["pipe", "ignore", "ignore"],
-    });
-    const timeout = setTimeout(() => child.kill(), 10_000);
-    child.on("error", (error) => { clearTimeout(timeout); reject(error); });
-    child.on("close", (code) => {
-      clearTimeout(timeout);
-      if (code === 0) resolve();
+    // macOS security(1) requires the password as the argument to -w; it does
+    // not read an omitted -w value from stdin. execFile keeps shell expansion
+    // out of the path and the callback never includes the secret in errors.
+    execFile("/usr/bin/security", [
+      "add-generic-password", "-U", "-s", service, "-a", account, "-w", secret,
+    ], {
+      timeout: 10_000, shell: false, windowsHide: true,
+    }, (error) => {
+      if (error === null) resolve();
       else reject(new Error(`OS credential write for ${account} failed`));
     });
-    child.stdin.end(`${secret}\n${secret}\n`);
   });
 }
 

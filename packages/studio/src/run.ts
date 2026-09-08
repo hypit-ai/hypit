@@ -9,7 +9,7 @@ import {
   RunFrontendRegistry,
 } from "@hypit/run";
 
-import type { StudioArchive } from "./archive.js";
+import type { StudioBuildLibrary } from "./build-library.js";
 import { observedCompiledSource } from "./compile.js";
 import type { CompiledSource } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
@@ -40,7 +40,7 @@ export async function loadStudioRun(input: {
   readonly run: string;
   readonly domain: StudioDomain;
   readonly registry: import("./studio-registry.js").StudioCompanionRegistry;
-  readonly archive?: StudioArchive;
+  readonly buildLibrary?: StudioBuildLibrary;
 }): Promise<RunPlan> {
   const fragments = new RunFragmentRegistry();
   const frontends = new RunFrontendRegistry();
@@ -55,8 +55,8 @@ export async function loadStudioRun(input: {
     authorCompiler: input.domain.createCompiler(observer.surfaces),
     fragments,
     frontends,
-    ...(input.archive === undefined ? {} : {
-      resolveBuildRecord: input.archive.resolveBuildRecord,
+    ...(input.buildLibrary === undefined ? {} : {
+      resolveHistoricalOutput: input.buildLibrary.resolveHistoricalOutput,
     }),
   });
   const compiled = await compiler.compileFile(input.run);

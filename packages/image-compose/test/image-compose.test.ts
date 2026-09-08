@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import { artifactTypes } from "@hypit/artifact";
 import {
@@ -25,7 +25,7 @@ const options = sealImageComposeOptions({ background: "#11223344" });
 const spec = sealImageComposeLayerSpec({
   fit: "cover", interpolation: "lanczos", opacity: 0.75,
 });
-const source = { kind: "blob" as const, digest: fixtureDigest("hero-image"), size: 123, mediaType: "image/png" };
+const source = { kind: "blob" as const, resource: fixtureResource("hero-image"), size: 123, mediaType: "image/png" };
 
 function record(id: string, type: TypeRef, value: StoredValue): TypedRecord {
   return { id, type, value };

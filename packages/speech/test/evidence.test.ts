@@ -3,7 +3,7 @@ import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvide
 import type { SpeechEvidenceAudio } from "@hypit/speech";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 
 test("speech evidence uses integer rational boundary projection rather than floating duration arithmetic", () => {
@@ -22,7 +22,7 @@ test("SpeechEvidenceAudio carries only normalized evidence bytes and their exact
   const value = sealSpeechEvidenceAudio({
     artifact: {
       kind: "blob",
-      digest: fixtureDigest("evidence"),
+      resource: fixtureResource("evidence"),
       size: 32_044,
       mediaType: "audio/wav",
     },

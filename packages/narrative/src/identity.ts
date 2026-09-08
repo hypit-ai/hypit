@@ -38,7 +38,7 @@ export function assertNarrativeIdentity(value: Narrative): void {
   let tokenCursor = 0;
   for (const segment of value.segments) {
     if (!Number.isSafeInteger(segment.tokenStart) || !Number.isSafeInteger(segment.tokenEndExclusive)
-      || segment.tokenStart !== tokenCursor || segment.tokenEndExclusive <= segment.tokenStart
+      || segment.tokenStart !== tokenCursor || segment.tokenEndExclusive < segment.tokenStart
       || segment.tokenEndExclusive > value.tokens.length
       || !anchorIds.has(segment.startAnchorId) || !anchorIds.has(segment.endAnchorId)) {
       throw new Error(`Narrative Segment ${segment.id} has invalid token or Anchor boundaries.`);
@@ -79,7 +79,7 @@ export function assertNarrativeExcerptIdentity(value: NarrativeExcerpt): void {
   nonempty(value.narrativeId, "NarrativeExcerpt narrativeId");
   nonempty(value.id, "NarrativeExcerpt id");
   if (!Number.isSafeInteger(value.tokenStart) || !Number.isSafeInteger(value.tokenEndExclusive)
-    || value.tokenStart < 0 || value.tokenEndExclusive <= value.tokenStart) {
+    || value.tokenStart < 0 || value.tokenEndExclusive < value.tokenStart) {
     throw new Error("NarrativeExcerpt Token coverage is invalid.");
   }
 }
@@ -100,7 +100,9 @@ export function assertNarrativeMomentRefIdentity(value: NarrativeMomentRef): voi
 export function assertCaptionDocumentIdentity(value: CaptionDocument): void {
   nonempty(value.narrativeId, "CaptionDocument narrativeId");
   nonempty(value.id, "CaptionDocument id");
-  if (value.units.length === 0 || value.words.length === 0) throw new Error("CaptionDocument is empty.");
+  if ((value.units.length === 0) !== (value.words.length === 0)) {
+    throw new Error("CaptionDocument units and words must be empty together.");
+  }
   const unitIds = unique(value.units.map((item) => item.id), "CaptionDocument unit id");
   const wordIds = unique(value.words.map((item) => item.id), "CaptionDocument word id");
   const words = new Map(value.words.map((word) => [word.id, word] as const));

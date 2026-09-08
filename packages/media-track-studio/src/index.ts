@@ -107,10 +107,10 @@ function materialPreview(
   if (layer?.kind !== "sample") return undefined;
   if (facet === "audio") {
     const artifact = layer.source.kind === "timed" ? layer.source.audio?.artifact : undefined;
-    return artifact === undefined ? undefined : artifactPreview("audio", artifact.digest);
+    return artifact === undefined ? undefined : artifactPreview("audio", artifact.resource);
   }
   if (layer.source.kind === "surface") return undefined;
-  return artifactPreview(layer.source.kind === "still" ? "image" : "video", layer.source.artifact.digest);
+  return artifactPreview(layer.source.kind === "still" ? "image" : "video", layer.source.artifact.resource);
 }
 
 function projectMedia(context: StudioTrackCompanionContext): readonly StudioEntityDraft[] {

@@ -30,6 +30,7 @@ export const emojiRevealTypes = {
 export const emojiRevealProducers = {
   createSet: { module: emojiRevealModuleRef, name: "create-emoji-reveal-set" },
   appendItem: { module: emojiRevealModuleRef, name: "append-emoji-reveal-item" },
+  appendPresetItem: { module: emojiRevealModuleRef, name: "append-preset-emoji-reveal-item" },
   finalize: { module: emojiRevealModuleRef, name: "finalize-emoji-reveal" },
   render: { module: emojiRevealModuleRef, name: "render-emoji-reveal" },
 } satisfies Record<string, ProducerRef>;
@@ -50,7 +51,7 @@ const blob = object({
 
 export const emojiRevealHeaderSchema: ValueSchema = object({ id: { schema: string } });
 export const emojiRevealItemSpecSchema: ValueSchema = object({
-  id: { schema: string },
+  id: { schema: string }, preset: { schema: { kind: "boolean" } },
 });
 export const emojiRevealStyleSchema: ValueSchema = object({
   id: { schema: string },
@@ -62,7 +63,7 @@ export const emojiRevealStyleSchema: ValueSchema = object({
   iconSizePx: { schema: positive }, revealFrames: { schema: positiveInteger }, stackingOrder: { schema: integer },
 });
 const emojiRevealItemSchema: ValueSchema = object({
-  spec: { schema: emojiRevealItemSpecSchema }, icon: { schema: blob }, activation: { schema: temporalInstantSchema },
+  spec: { schema: emojiRevealItemSpecSchema }, icon: { schema: blob }, activation: { schema: temporalInstantSchema, optional: true },
 });
 export const emojiRevealSetSchema: ValueSchema = object({
   items: { schema: { kind: "array", items: emojiRevealItemSchema } },
@@ -110,8 +111,8 @@ export const emojiRevealMarkupSurfaces = [
   { name: "track", tag: "Track", mode: "structured",
     outputs: [emojiRevealTypes.header, emojiRevealTypes.itemSpec, temporalTypes.instantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window, emojiRevealTypes.program, compositionTypes.visualTrack],
     vocabulary: {
-      summary: "Draws one adaptive row of placeholder icon slots and replaces them from left to right at authored semantic Moments.",
-      appearance: "A compact rounded rectangle centered near the top of the frame, with a dark outline and a hard lower-right shadow. Its width is computed from the number of fixed-size slots. Every slot starts with the same supplied placeholder icon. At each item's semantic Moment that slot is replaced by its supplied icon with a brief overshoot and settle, while earlier answers remain visible and later slots remain unanswered.",
+      summary: "Draws one adaptive row of preset or progressively revealed icon slots.",
+      appearance: "A compact rounded rectangle centered near the top of the frame, with a dark outline and a hard lower-right shadow. Its width is computed from the number of fixed-size slots. Preset slots are settled from the first frame. Every other slot starts with the same supplied placeholder icon, then its semantic Moment replaces that slot with a brief overshoot and settle while earlier answers remain visible and later slots remain unanswered.",
       preview: previewImage("Track.png"),
       attributes: [
         { name: "id", kind: "identifier", required: true, summary: "Names the reveal Program and Track." },
@@ -121,23 +122,24 @@ export const emojiRevealMarkupSurfaces = [
         { name: "placeholder", kind: "reference", required: true, accepts: [artifactTypes.blob], summary: "Supplies the one image drawn in every unrevealed slot." },
         ...temporalWindowAttributeVocabulary,
       ],
-      children: [{ tag: "Item", cardinality: "many", summary: "One left-to-right answer slot revealed at exactly one semantic Moment.", attributes: [
+      children: [{ tag: "Item", cardinality: "many", summary: "One answer slot, either settled from the start or revealed at exactly one semantic Moment.", attributes: [
         { name: "id", kind: "identifier", required: true, summary: "Names this answer slot and the timing subject it owns." },
         { name: "icon", kind: "reference", required: true, accepts: [artifactTypes.blob], summary: "Supplies this answer as an image Artifact from the same visual icon family as the placeholder." },
-        { name: "at", kind: "reference", required: true, accepts: [narrativeTypes.moment], summary: "Chooses the only legal reveal authority: an authored semantic Moment." },
+        { name: "preset", kind: "literal", required: false, values: ["true", "false"], summary: "Settles this Item from the start of the Track Window; preset Items have no at." },
+        { name: "at", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Chooses this non-preset Item's reveal Moment; required unless preset is true." },
       ] }],
       ports: [
         { name: "program", type: emojiRevealTypes.program, summary: "The adaptive strip with its projected outer Window and fully traced Moment activations." },
         { name: "track", type: compositionTypes.visualTrack, summary: "That Program rendered as an ordinary VisualTrack." },
       ],
       example: `<emoji:Track id="rules" semantic={speech.semantic} canvas={vertical} style={emoji-strip} placeholder={question-icon} during="program">
-  <emoji:Item id="manifest" icon={manifest-icon} at={story.moment.manifest}/>
+  <emoji:Item id="manifest" icon={manifest-icon} preset="true"/>
   <emoji:Item id="real-estate" icon={real-estate-icon} at={story.moment.real-estate}/>
   <emoji:Item id="bitcoin" icon={bitcoin-icon} at={story.moment.bitcoin}/>
 </emoji:Track>`,
       notes: [
-        "Item order is display order and must also be strict chronological reveal order.",
-        "Item.at accepts only a Moment: Selection boundaries, numeric instants and boundary fallbacks are intentionally absent.",
+        "Item order is display order: preset Items come first, then non-preset Items in strict chronological reveal order.",
+        "A non-preset Item.at accepts only a Moment: Selection boundaries, numeric instants and boundary fallbacks are intentionally absent.",
         "The outer Track Window is separate from the child reveal Moments and uses the shared temporal Window protocol.",
       ],
     } },
@@ -155,6 +157,9 @@ export const emojiRevealManifest: ModuleManifest = {
     { name: emojiRevealProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: emojiRevealTypes.set }], needs: [] },
     { name: emojiRevealProducers.appendItem.name,
       inputs: [{ name: "set", type: emojiRevealTypes.set }, { name: "space", type: programSpaceTypes.programSpace }, { name: "spec", type: emojiRevealTypes.itemSpec }, { name: "icon", type: artifactTypes.blob }, { name: "activation", type: temporalTypes.instant }],
+      outputs: [{ name: "set", type: emojiRevealTypes.set }], needs: [] },
+    { name: emojiRevealProducers.appendPresetItem.name,
+      inputs: [{ name: "set", type: emojiRevealTypes.set }, { name: "spec", type: emojiRevealTypes.itemSpec }, { name: "icon", type: artifactTypes.blob }],
       outputs: [{ name: "set", type: emojiRevealTypes.set }], needs: [] },
     { name: emojiRevealProducers.finalize.name,
       inputs: [{ name: "header", type: emojiRevealTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "outer", type: temporalTypes.window }, { name: "style", type: emojiRevealTypes.style }, { name: "placeholder", type: artifactTypes.blob }, { name: "set", type: emojiRevealTypes.set }],

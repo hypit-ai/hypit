@@ -29,8 +29,9 @@ other component by name.
   references that are terminal Tracks.
 - A **Script Companion** owns its grammar source map and Selection/Moment marker relocation.
 
-All three are selected as installed packages through `companionPackages`. Their ids are qualified by
-the package loader, and one replacement map applies only between Companions of the same kind.
+The video Distribution explicitly carries its official set. A package actually selected by the
+current Source closure may carry its own Companion facet. Their ids are qualified by the package
+loader, and duplicate or ambiguous Companions are errors rather than replacement policy.
 
 ## Author provenance
 

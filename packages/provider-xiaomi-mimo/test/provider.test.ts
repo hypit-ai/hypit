@@ -1,62 +1,98 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
-import { generationTypes } from "@hypit/generation";
-import { mimoTtsEndpoints, sealMimoTtsRequest } from "@hypit/mimo-tts";
+import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
+import { mimoSpeechEndpoints, sealMimoSpeechRequest } from "@hypit/mimo-speech";
 import type { CanonicalValue, Need } from "@hypit/protocol";
 import { createXiaomiMimoProvider } from "@hypit/provider-xiaomi-mimo";
 
-function need(constraints: CanonicalValue): Need {
+function need(
+  endpoint: (typeof mimoSpeechEndpoints)[keyof typeof mimoSpeechEndpoints],
+  constraints: CanonicalValue,
+  id: string,
+): Need {
   return {
-    id: "need:mimo-voicedesign",
-    capability: mimoTtsEndpoints.voiceDesign.capability,
-    returns: mimoTtsEndpoints.voiceDesign.returns,
+    id: `need:${id}`,
+    capability: endpoint.capability,
+    returns: endpoint.returns,
     constraints,
-    result: "record:mimo-voicedesign",
+    result: `record:${id}`,
   };
 }
 
-test("the official Provider maps only the VoiceDesign contract", async () => {
-  const artifacts = new MemoryArtifactStore();
-  const provider = createXiaomiMimoProvider({
-    fetch: async (input, init) => {
-      assert.equal(String(input), "https://api.xiaomimimo.com/v1/chat/completions");
-      assert.equal(new Headers(init?.headers).get("api-key"), "test-key");
-      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-      assert.equal(body.model, "mimo-v2.5-tts-voicedesign");
-      assert.deepEqual(body.audio, { format: "wav" });
-      assert.deepEqual(body.messages, [
-        { role: "user", content: "A clear, grounded female voice." },
-        { role: "assistant", content: "Keep every authored word." },
-      ]);
-      return Response.json({ choices: [{ message: { audio: { data: Buffer.from([9, 8, 7]).toString("base64") } } }] });
-    },
-  });
+async function invoke(request: Need, resources: MemoryResourceStore, fetch: typeof globalThis.fetch) {
+  const provider = createXiaomiMimoProvider({ fetch });
   const registry = new EndpointRegistry();
   await provider.install(registry);
-  const request = need(sealMimoTtsRequest("mimo-v2.5-tts-voicedesign", {
-    text: ["Keep every authored word."],
-    voiceDescription: ["A clear, grounded female voice."],
-  }) as unknown as CanonicalValue);
   const resolution = registry.resolve(request);
   assert.equal(resolution.status, "resolved");
   assert.equal(resolution.registration.kind, "immediate");
-  const result = await resolution.registration.handler({
-    command: { kind: "fulfill-need", id: "command:mimo-voicedesign", need: request },
+  return await resolution.registration.handler({
+    command: { kind: "fulfill-need", id: `command:${request.id}`, need: request },
     need: request,
-    artifacts,
+    resources,
     credentials: { apiKey: { secret: "test-key" } },
   });
-  assert.equal(result.value.kind, "inline");
-  const set = result.value.kind === "inline" ? result.value.value as Record<string, unknown> : {};
-  const audios = set.audios as Array<{ mediaType: string; digest: string }>;
-  assert.equal(audios[0]?.mediaType, "audio/wav");
-  assert.equal(await artifacts.has(audios[0]!.digest as `sha256:${string}`), true);
-});
+}
 
-test("Provider configuration owns credentials and queue policy, not model semantics", () => {
-  const provider = createXiaomiMimoProvider({ defaultConcurrency: 3 });
-  assert.equal(provider.offers.length, 1);
-  assert.equal(provider.offers[0]?.returns.name, generationTypes.audioSet.name);
+function audioResponse(bytes: Uint8Array) {
+  return Response.json({ choices: [{ message: { audio: { data: Buffer.from(bytes).toString("base64") } } }] });
+}
+
+test("the official Provider maps Voice Design and Voice Clone to Xiaomi's wire", async () => {
+  const resources = new MemoryResourceStore();
+  const voiceReference = await resources.put(new Uint8Array([1, 2, 3, 4]), "audio/wav");
+  const cases = [
+    {
+      endpoint: mimoSpeechEndpoints.voiceDesign,
+      request: sealMimoSpeechRequest("mimo-v2.5-tts-voicedesign", {
+        text: ["Keep every authored word."],
+        voiceDescription: ["A clear, grounded female voice."],
+      }),
+      assertBody(body: Record<string, unknown>) {
+        assert.deepEqual(body.audio, { format: "wav" });
+        assert.deepEqual(body.messages, [
+          { role: "user", content: "A clear, grounded female voice." },
+          { role: "assistant", content: "Keep every authored word." },
+        ]);
+      },
+    },
+    {
+      endpoint: mimoSpeechEndpoints.voiceClone,
+      request: sealMimoSpeechRequest("mimo-v2.5-tts-voiceclone", {
+        text: ["Keep every authored word."],
+        instruction: ["Calm and restrained."],
+        voiceReference: [{ role: "audio", artifact: voiceReference }],
+      }),
+      assertBody(body: Record<string, unknown>) {
+        const audio = body.audio as Record<string, string>;
+        assert.equal(audio.format, "wav");
+        assert.match(audio.voice!, /^data:audio\/wav;base64,/u);
+        assert.deepEqual(body.messages, [
+          { role: "user", content: "Calm and restrained." },
+          { role: "assistant", content: "Keep every authored word." },
+        ]);
+      },
+    },
+  ];
+
+  for (const [index, item] of cases.entries()) {
+    const result = await invoke(
+      need(item.endpoint, item.request as unknown as CanonicalValue, String(index)),
+      resources,
+      async (input, init) => {
+        assert.equal(String(input), "https://api.xiaomimimo.com/v1/chat/completions");
+        assert.equal(new Headers(init?.headers).get("api-key"), "test-key");
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        assert.equal(body.model, item.endpoint.capability.name);
+        item.assertBody(body);
+        return audioResponse(new Uint8Array([9, 8, 7, index]));
+      },
+    );
+    assert.equal(result.value.kind, "inline");
+    const set = result.value.kind === "inline" ? result.value.value as Record<string, unknown> : {};
+    const audios = set.audios as Array<{ mediaType: string; resource: string }>;
+    assert.equal(audios[0]?.mediaType, "audio/wav");
+    assert.equal(await resources.has(audios[0]!.resource as `res_${string}`), true);
+  }
 });

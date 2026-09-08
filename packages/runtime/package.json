@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@hypit/build-result-kit": "workspace:*",
     "@hypit/core": "workspace:*",
     "@hypit/protocol": "workspace:*"
   }

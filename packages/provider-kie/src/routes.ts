@@ -7,12 +7,14 @@ import type { BackgroundRemovalRequest } from "@hypit/background-removal";
 import {
   compileWireRequest,
   generationTypes,
+  selectWireModelForRequest,
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
 } from "@hypit/generation";
 import type { GenerationArtifactUrlResolver, GenerationRequest, GenerationWireMapping } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CanonicalValue, CapabilityRef, StoredValue, TypeRef } from "@hypit/protocol";
+import type { EndpointRequest, EndpointSupport } from "@hypit/endpoint-kit";
 
 import { kieModelCatalog, verifyKieModelCatalog } from "./mapping.js";
 
@@ -27,6 +29,9 @@ export type KieRoute = {
   readonly returns: TypeRef;
   readonly media: "image" | "video";
   readonly maxResults: number;
+  readonly supports?: (request: EndpointRequest) => EndpointSupport;
+  /** Select the same service model before or during execution, without resolving Resource bytes. */
+  readonly selectModel: (request: EndpointRequest) => string;
   readonly compile: (
     constraints: CanonicalValue,
     resolve: GenerationArtifactUrlResolver,
@@ -38,25 +43,38 @@ function capabilityKey(ref: CapabilityRef): string {
   return `${ref.module.name}@${ref.module.version}#${ref.name}`;
 }
 
-export function supportsKieGptImageRequest(request: GenerationRequest): boolean {
-  if (request.ports.aspectRatio === undefined) return true;
-  const ratio = request.ports.aspectRatio[0];
-  // KIE's GPT Image 2 endpoints reject these ratios even though the model
-  // vocabulary advertises them. Refuse before upload or paid submission.
-  if (ratio === "4:3" || ratio === "3:4" || ratio === "4:5") {
-    return false;
-  }
-  return true;
+function scalar(request: GenerationRequest, port: string): string | number | boolean | undefined {
+  const value = request.ports[port]?.[0];
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : undefined;
 }
 
-function validateKieGptImageRequest(request: GenerationRequest): void {
-  if (!supportsKieGptImageRequest(request)) {
-    const ratio = request.ports.aspectRatio?.[0];
-    throw new Error(`KIE GPT Image 2 does not accept aspect ratio ${String(ratio)}; use auto, 1:1, 3:2, 2:3, 16:9, 9:16 or 21:9`);
+/** Returns the KIE-wire limitation that rejects an otherwise valid model request. */
+function kieGenerationRejection(mapping: GenerationWireMapping, request: GenerationRequest): string | undefined {
+  if (mapping.capability.module.name === "@hypit/gpt-image" && mapping.capability.name === "gpt-image-2") {
+    const ratio = scalar(request, "aspectRatio");
+    const resolution = scalar(request, "resolution");
+    const background = scalar(request, "background");
+    const unsupportedRatios = resolution === "2K"
+      ? ["5:4", "4:5", "3:1", "1:3", "9:21"]
+      : resolution === "4K" ? ["3:1", "1:3", "9:21"] : [];
+    if (unsupportedRatios.includes(String(ratio))) {
+      return `KIE GPT Image 2 does not accept ${String(ratio)} at ${String(resolution)}`;
+    }
+    if (background !== undefined && resolution !== "1K") {
+      return `KIE GPT Image 2 accepts the background option only at 1K; omit it at ${String(resolution)}`;
+    }
   }
+  if (mapping.capability.module.name === "@hypit/grok-imagine"
+    && (mapping.capability.name === "grok-imagine-video"
+      || mapping.capability.name === "grok-imagine-video-1.5-preview")
+    && scalar(request, "resolution") === "1080p"
+    && (request.ports.images?.length ?? 0) > 1) {
+    return `KIE ${mapping.capability.name} accepts at most one reference image at 1080p`;
+  }
+  return undefined;
 }
 
-const kieGenerationMappings = kieModelCatalog.map((mapping) => {
+const kieGenerationMappings: readonly (GenerationWireMapping & { readonly result: "image" | "video" })[] = kieModelCatalog.map((mapping) => {
   if (mapping.result === "audio") {
     throw new Error(`KIE route ${mapping.capability.name} declares unsupported audio output`);
   }
@@ -69,9 +87,19 @@ const generationRoutes: readonly KieRoute[] = kieGenerationMappings.map((mapping
   returns: mapping.result === "image" ? generationTypes.imageSet : generationTypes.videoSet,
   media: mapping.result,
   maxResults: mapping.result === "image" ? 16 : 8,
+  supports: (need: EndpointRequest) => {
+    const reason = kieGenerationRejection(mapping, need.constraints as unknown as GenerationRequest);
+    return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };
+  },
+  selectModel: (need) => selectWireModelForRequest(
+    mapping,
+    need.constraints as unknown as GenerationRequest,
+    need.pendingInputs?.map((input) => input.input),
+  ),
   compile: async (constraints, resolve) => {
     const request = constraints as unknown as GenerationRequest;
-    if (mapping.capability.module.name === "@hypit/gpt-image") validateKieGptImageRequest(request);
+    const rejection = kieGenerationRejection(mapping, request);
+    if (rejection !== undefined) throw new Error(rejection);
     return await compileWireRequest(mapping, request, resolve);
   },
   packageResult: (artifacts) => ({
@@ -88,6 +116,7 @@ const backgroundRemovalRoute: KieRoute = {
   returns: artifactTypes.blob,
   media: "image",
   maxResults: 1,
+  selectModel: () => "recraft/remove-background",
   compile: async (constraints, resolve) => {
     const request = constraints as unknown as BackgroundRemovalRequest;
     assertBackgroundRemovalRequest(request);

@@ -2,19 +2,30 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sealAlignedTranscriptEvidence, speechEvidenceTypes } from "@hypit/speech-evidence";
-import type { AlignedTranscriptEvidence, SpeechTranscriptPassage } from "@hypit/speech-evidence";
+import type { AlignedTranscriptEvidence } from "@hypit/speech-evidence";
 import type { EndpointInvocationContext, EndpointFulfillment } from "@hypit/endpoint-kit";
 import { canonicalize } from "@hypit/protocol";
 import type { CanonicalValue } from "@hypit/protocol";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import {
+  assertWhisperXEvidenceWav,
+  interpretWhisperXTranscript,
+  verifyWhisperXAlignmentRequest,
   whisperXCapabilities,
 } from "@hypit/whisperx";
-import type { WhisperXAlignmentRequest } from "@hypit/whisperx";
+import type { WhisperXTranscriptResponse } from "@hypit/whisperx";
 
 export const localWhisperXProviderModuleRef = {
   name: "@hypit/provider-whisperx-local",
   version: "1",
+} as const;
+export const localWhisperXDefaults = {
+  baseUrl: "http://127.0.0.1:8765",
+  expectedModel: "small",
+  expectedDevice: "cpu",
+  expectedBatchSize: 8,
+  expectedServiceVersion: "0.1.0",
+  expectedWhisperXVersion: "3.8.6",
 } as const;
 export type CreateLocalWhisperXProviderOptions = {
   readonly instance?: string;
@@ -32,24 +43,7 @@ export type CreateLocalWhisperXProviderOptions = {
   readonly maxResponseBytes?: number;
 };
 
-type RawWord = {
-  readonly text?: unknown;
-  readonly word?: unknown;
-  readonly start?: unknown;
-  readonly end?: unknown;
-  readonly score?: unknown;
-};
-
-type RawSegment = {
-  readonly start?: unknown;
-  readonly end?: unknown;
-  readonly words?: unknown;
-};
-
-export type WhisperXServiceResponse = {
-  readonly language?: unknown;
-  readonly segments?: unknown;
-};
+export type WhisperXServiceResponse = WhisperXTranscriptResponse;
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -60,111 +54,7 @@ function positiveInteger(value: number, subject: string): number {
   return value;
 }
 
-function finite(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function alignmentRequest(value: CanonicalValue): WhisperXAlignmentRequest {
-  assert(value !== null && typeof value === "object" && !Array.isArray(value),
-    "WhisperX alignment request must be an object");
-  const item = value as unknown as WhisperXAlignmentRequest;
-  assert(item.audio?.kind === "blob"
-    && item.audio.mediaType === "audio/wav"
-    && Number.isSafeInteger(item.sampleFrames)
-    && item.sampleFrames > 0
-    && (item.language === "en" || item.language === "zh" || item.language === "es"),
-  "WhisperX alignment request is invalid");
-  return item;
-}
-
-function fourCc(bytes: Uint8Array, offset: number): string {
-  return String.fromCharCode(...bytes.subarray(offset, offset + 4));
-}
-
-/** Fail closed if the Provider would cause the service to normalize audio a second time. */
-function assertCanonicalEvidenceWav(bytes: Uint8Array, sampleFrames: number): void {
-  assert(bytes.byteLength >= 44 && fourCc(bytes, 0) === "RIFF" && fourCc(bytes, 8) === "WAVE",
-    "WhisperX evidence Artifact is not a WAV file");
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let offset = 12;
-  let format: { readonly codec: number; readonly channels: number; readonly sampleRate: number; readonly bits: number }
-    | undefined;
-  let dataBytes: number | undefined;
-  while (offset + 8 <= bytes.byteLength) {
-    const name = fourCc(bytes, offset);
-    const size = view.getUint32(offset + 4, true);
-    const body = offset + 8;
-    assert(body + size <= bytes.byteLength, "WhisperX evidence WAV has a truncated chunk");
-    if (name === "fmt ") {
-      assert(size >= 16, "WhisperX evidence WAV fmt chunk is invalid");
-      format = {
-        codec: view.getUint16(body, true),
-        channels: view.getUint16(body + 2, true),
-        sampleRate: view.getUint32(body + 4, true),
-        bits: view.getUint16(body + 14, true),
-      };
-    } else if (name === "data") {
-      dataBytes = size;
-    }
-    offset = body + size + (size % 2);
-  }
-  assert(format?.codec === 1 && format.channels === 1 && format.sampleRate === 16_000 && format.bits === 16,
-    "WhisperX evidence must be 16 kHz mono PCM s16 WAV");
-  assert(dataBytes === sampleFrames * 2, "WhisperX evidence sample count differs from its contract");
-}
-
-function sampleWindow(
-  startSec: unknown,
-  endSec: unknown,
-  sampleFrames: number,
-): { readonly startSample: number; readonly endSampleExclusive: number } | undefined {
-  if (!finite(startSec) || !finite(endSec) || startSec < 0 || endSec < startSec) return undefined;
-  const startSample = Math.round(startSec * 16_000);
-  const endSampleExclusive = Math.round(endSec * 16_000);
-  if (!Number.isSafeInteger(startSample) || !Number.isSafeInteger(endSampleExclusive)
-    || startSample > sampleFrames || endSampleExclusive > sampleFrames) return undefined;
-  return { startSample, endSampleExclusive };
-}
-
-/** Lower WhisperX's wire-level seconds once into exact 16 kHz evidence-sample boundaries. */
-export function interpretWhisperXResponse(
-  response: WhisperXServiceResponse,
-  sampleFrames: number,
-): readonly SpeechTranscriptPassage[] {
-  positiveInteger(sampleFrames, "WhisperX evidence sample count");
-  assert(Array.isArray(response.segments), "WhisperX response has no Segment array");
-  return response.segments.map((rawSegmentValue): SpeechTranscriptPassage => {
-    assert(rawSegmentValue !== null && typeof rawSegmentValue === "object" && !Array.isArray(rawSegmentValue),
-      "WhisperX response Segment is invalid");
-    const rawSegment = rawSegmentValue as RawSegment;
-    const passageWindow = sampleWindow(rawSegment.start, rawSegment.end, sampleFrames);
-    assert(Array.isArray(rawSegment.words), "WhisperX response Segment has no Word array");
-    const words: Array<SpeechTranscriptPassage["words"][number]> = [];
-    for (const rawWordValue of rawSegment.words) {
-      assert(rawWordValue !== null && typeof rawWordValue === "object" && !Array.isArray(rawWordValue),
-        "WhisperX response Word is invalid");
-      const rawWord = rawWordValue as RawWord;
-      const text = typeof rawWord.text === "string"
-        ? rawWord.text.trim()
-        : typeof rawWord.word === "string" ? rawWord.word.trim() : "";
-      if (text.length === 0) continue;
-      const wordWindow = sampleWindow(rawWord.start, rawWord.end, sampleFrames);
-      const score = finite(rawWord.score) && rawWord.score >= 0 && rawWord.score <= 1
-        ? rawWord.score
-        : undefined;
-      words.push({
-        text,
-        ...wordWindow,
-        ...(score === undefined ? {} : { score }),
-      });
-    }
-    return {
-      ...passageWindow,
-      words,
-      chars: [],
-    };
-  });
-}
+export const interpretWhisperXResponse = interpretWhisperXTranscript;
 
 async function limitedJson(response: Response, maxBytes: number, subject: string): Promise<{
   readonly value: unknown;
@@ -211,16 +101,16 @@ function result(value: CanonicalValue): EndpointFulfillment {
 }
 
 export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderOptions) {
-  const baseUrl = new URL(config.baseUrl ?? "http://127.0.0.1:8765");
+  const baseUrl = new URL(config.baseUrl ?? localWhisperXDefaults.baseUrl);
   assert(baseUrl.protocol === "http:" && ["127.0.0.1", "localhost", "::1", "[::1]"].includes(baseUrl.hostname),
     "local WhisperX Provider requires a loopback HTTP service");
   const normalizedBaseUrl = baseUrl.href.replace(/\/+$/u, "");
-  const expectedModel = config.expectedModel ?? "small";
-  const expectedDevice = config.expectedDevice ?? "cpu";
+  const expectedModel = config.expectedModel ?? localWhisperXDefaults.expectedModel;
+  const expectedDevice = config.expectedDevice ?? localWhisperXDefaults.expectedDevice;
   const expectedCompute = config.expectedCompute ?? (expectedDevice === "cpu" ? "int8" : "float16");
-  const expectedBatchSize = positiveInteger(config.expectedBatchSize ?? 8, "expectedBatchSize");
-  const expectedServiceVersion = config.expectedServiceVersion ?? "0.1.0";
-  const expectedWhisperXVersion = config.expectedWhisperXVersion ?? "3.8.6";
+  const expectedBatchSize = positiveInteger(config.expectedBatchSize ?? localWhisperXDefaults.expectedBatchSize, "expectedBatchSize");
+  const expectedServiceVersion = config.expectedServiceVersion ?? localWhisperXDefaults.expectedServiceVersion;
+  const expectedWhisperXVersion = config.expectedWhisperXVersion ?? localWhisperXDefaults.expectedWhisperXVersion;
   assert(expectedModel.trim().length > 0, "expectedModel is empty");
   assert(expectedDevice.trim().length > 0, "expectedDevice is empty");
   assert(expectedCompute.trim().length > 0, "expectedCompute is empty");
@@ -234,17 +124,18 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     facet: "alignment",
     instance: config.instance ?? "whisperx.local",
     pool: config.pool ?? config.instance ?? "whisperx.local",
+    pricing: { kind: "local" },
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,
       capability: whisperXCapabilities.alignment,
       returns: speechEvidenceTypes.alignedTranscript,
       handler: async (context: EndpointInvocationContext) => {
-        const request = alignmentRequest(context.need.constraints);
-        const audio = await context.artifacts.get(request.audio.digest);
+        const request = verifyWhisperXAlignmentRequest(context.need.constraints);
+        const audio = await context.resources.get(request.audio.resource);
         assert(audio !== undefined && audio.byteLength === request.audio.size,
-          `WhisperX evidence Artifact ${request.audio.digest} is unavailable or has changed`);
-        assertCanonicalEvidenceWav(audio, request.sampleFrames);
+          `WhisperX evidence Artifact ${request.audio.resource} is unavailable or has changed`);
+        assertWhisperXEvidenceWav(audio, request.sampleFrames);
         const work = await mkdtemp(join(tmpdir(), "hypit-whisperx-local-"));
         try {
           const audioPath = join(work, "alignment-evidence.wav");

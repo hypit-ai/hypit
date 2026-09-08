@@ -10,7 +10,7 @@ import { compositionDependency, compositionTypes, sealComposition } from "@hypit
 import type { Composition } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import {
@@ -45,6 +45,7 @@ import {
   renderHyperframesCapabilities,
   renderHyperframesComponent,
   renderHyperframesFragment,
+  createRenderHyperframesFragment,
   renderHyperframesManifest,
   renderHyperframesMarkupSurfaces,
   renderHyperframesModuleRef,
@@ -178,19 +179,19 @@ test("HyperFrames rendering is an explicit exact Need after ordinary document co
 test("separate visual, audio and mux Endpoints complete one author-visible render", async () => {
   const visualArtifact = {
     kind: "blob" as const,
-    digest: fixtureDigest("render-hyperframes:visual"),
+    resource: fixtureResource("render-hyperframes:visual"),
     size: 12_345,
     mediaType: "video/mp4",
   };
   const audioArtifact = {
     kind: "blob" as const,
-    digest: fixtureDigest("render-hyperframes:audio"),
+    resource: fixtureResource("render-hyperframes:audio"),
     size: 4_096,
     mediaType: "audio/wav",
   };
   const finalArtifact = {
     kind: "blob" as const,
-    digest: fixtureDigest("render-hyperframes:final-video"),
+    resource: fixtureResource("render-hyperframes:final-video"),
     size: 16_441,
     mediaType: "video/mp4",
   };
@@ -254,7 +255,7 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     record.type.module.name === artifactTypes.blob.module.name
     && record.type.name === artifactTypes.blob.name
     && record.value.kind === "blob"
-    && record.value.digest === finalArtifact.digest);
+    && record.value.resource === finalArtifact.resource);
   assert(video, "missing final BlobArtifact");
   assert.deepEqual(video.value, finalArtifact);
 });
@@ -273,7 +274,7 @@ test("a render Product with another frame domain is rejected by the explicit dow
         canvas: document.canvas,
         artifact: {
           kind: "blob",
-          digest: fixtureDigest("render-hyperframes:wrong-domain"),
+          resource: fixtureResource("render-hyperframes:wrong-domain"),
           size: 1,
           mediaType: "video/mp4",
           },
@@ -290,7 +291,7 @@ test("a render Product with another frame domain is rejected by the explicit dow
         value: stored(sealTimelineAudio({
           artifact: {
             kind: "blob",
-            digest: fixtureDigest("render-hyperframes:domain-check-audio"),
+            resource: fixtureResource("render-hyperframes:domain-check-audio"),
             size: 1,
             mediaType: "audio/wav",
           },
@@ -304,12 +305,12 @@ test("a render Product with another frame domain is rejected by the explicit dow
     endpoints,
     validators: validatorRegistry(),
   }).run(build());
-  assert.equal(result.status, "paused");
+  assert.equal(result.status, "failed");
   assert.match(result.outcomes.at(-1)?.message ?? "", /different presentation durations/u);
 });
 
 const fixtureModule = { name: "example.composition-fixture", version: "1" } as const;
-const fixtureSurfaceDigest = fixtureDigest("example.composition-fixture/surface@1");
+const fixtureSurfaceDigest = fixtureResource("example.composition-fixture/surface@1");
 const fixtureSurface = {
   name: "composition", tag: "Composition", mode: "structured",
   outputs: [compositionTypes.composition, semanticTrackTypes.track],
@@ -332,7 +333,8 @@ function source(text: string): AuthorSourceUnit {
   };
 }
 
-test("the final rendered video is an ordinary BlobArtifact that can feed another author component", async () => {
+for (const selectedRange of [false, true]) {
+test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordinary BlobArtifact for downstream components`, async () => {
   const sourceClosure = createResolvedClosure([
     ...videoContractManifests,
     hyperframesManifest,
@@ -374,7 +376,7 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
       <import as="render" from="@hypit/render-hyperframes@1"/>
       <import as="media" from="@hypit/media-pipeline@1"/>
       <fixture:Composition/>
-      <render:Video id="final" composition={composition} semantic={semantic}/>
+      <render:Video id="final" composition={composition} semantic={semantic} ${selectedRange ? 'start-frame="15" end-frame-exclusive="45"' : ""}/>
       <media:ExtractFrame id="poster" source={final.video} video="primary-moving" at="last"/>
     </svml>`),
     closure: sourceClosure,
@@ -392,12 +394,37 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
   assert.deepEqual(state.plan.steps.map((step) => step.producer.name).sort(), [
     "project-program-space",
     hyperframesProducers.compile.name,
-    renderHyperframesProducers.requestVisual.name,
+    selectedRange ? renderHyperframesProducers.requestVisualRange.name : renderHyperframesProducers.requestVisual.name,
     mediaPipelineProducers.planAudio.name,
-    mediaPipelineProducers.renderAudio.name,
+    selectedRange ? mediaPipelineProducers.renderAudioRange.name : mediaPipelineProducers.renderAudio.name,
     mediaPipelineProducers.mux.name,
     mediaPipelineProducers.projectMuxed.name,
     mediaPipelineProducers.inspect.name,
     mediaPipelineProducers.extractFrame.name,
   ].sort());
+});
+}
+
+
+test("selected render frames reach both visual and audio Needs through the ordinary Build graph", async () => {
+  const range = { startFrame: 15, endFrameExclusive: 45 };
+  const rangeRecord = await admitRecord(closure, sealRecord({ id: "selection", type: mediaTypes.frameRange,
+    value: stored(range) }), validatorRegistry());
+  const program = link(closure, [compositionRecord, semanticRecord, rangeRecord]);
+  const fragment = createRenderHyperframesFragment(true);
+  const selected = elaborateGraphFragment(program, fragment, {
+    id: "selected", fragment: fragment.id, inputs: {
+      composition: { kind: "record", id: compositionRecord.id },
+      semantic: { kind: "record", id: semanticRecord.id },
+      range: { kind: "record", id: rangeRecord.id },
+    },
+  });
+  const selectedGraph = sealCompiledGraph(bindAuthorFragment(selected, { video: "selected.video" }));
+  const result = await new NodeDriver({ producers: producerRegistry(), validators: validatorRegistry() }).run(
+    start(program, selectedGraph, sealBuildRequest({ targets: [{ output: "selected.video" }] })),
+  );
+  assert.equal(result.state.needs.length, 2);
+  for (const need of result.state.needs) assert.deepEqual((need.constraints as { range: unknown }).range, range);
+  assert.throws(() => hyperframesVisualRequest(compileHyperframesDocument(composition, space),
+    { range: { startFrame: 0, endFrameExclusive: 61 } }), /frame range/);
 });

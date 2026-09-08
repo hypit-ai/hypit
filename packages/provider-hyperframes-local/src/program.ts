@@ -1,11 +1,7 @@
 import { execFile } from "node:child_process";
 
 import { probeMediaToolchain } from "@hypit/media-execution";
-import { runtimeConfigObject, runtimeConfigString } from "@hypit/runtime-kit";
-import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@hypit/runtime-kit";
-import { resolveRuntimeExecutable } from "@hypit/runtime-host-node";
-
-import { defaultHyperframesCliPath } from "./provider.js";
+import type { ManagedProgram, ManagedProgramState } from "@hypit/runtime-kit";
 
 function run(executable: string, args: readonly string[]): Promise<{ ok: boolean; output: string }> {
   return new Promise((resolve) => {
@@ -23,17 +19,16 @@ function run(executable: string, args: readonly string[]): Promise<{ ok: boolean
  * when this Provider is selected.
  */
 export function localHyperframesBrowserProgram(
-  context: RuntimeAdapterFactoryContext,
+  input: {
+    readonly id: string;
+    readonly nodePath: string;
+    readonly hyperframesCliPath: string;
+    readonly ffprobePath: string;
+    readonly ffmpegPath?: string;
+  },
 ): ManagedProgram {
-  const config = runtimeConfigObject(context.config, "local HyperFrames");
-  const configuredNode = runtimeConfigString(config.nodePath, "HyperFrames nodePath");
-  const configuredCli = runtimeConfigString(config.hyperframesCliPath, "HyperFrames hyperframesCliPath");
-  const configuredFfprobe = runtimeConfigString(config.ffprobePath, "HyperFrames ffprobePath");
-  const node = resolveRuntimeExecutable(context.dataRoot, configuredNode ?? process.execPath);
-  const cli = resolveRuntimeExecutable(context.dataRoot, configuredCli ?? defaultHyperframesCliPath());
-  const ffprobe = resolveRuntimeExecutable(context.dataRoot, configuredFfprobe ?? "ffprobe");
   const probeBrowser = async (): Promise<ManagedProgramState> => {
-    const located = await run(node, [cli, "browser", "path"]);
+    const located = await run(input.nodePath, [input.hyperframesCliPath, "browser", "path"]);
     if (!located.ok) return { state: "down", detail: `HyperFrames browser is unavailable: ${located.output}` };
     const path = located.output.trim();
     if (path.length === 0 || path.includes("\n") || path.includes("\r")) {
@@ -46,15 +41,15 @@ export function localHyperframesBrowserProgram(
     return { state: "ready" };
   };
   return {
-    id: "hyperframes-browser",
+    id: input.id,
     installation: {
       probe: probeBrowser,
-      commands: [{ command: node, args: [cli, "browser", "ensure"] }],
+      commands: [{ command: input.nodePath, args: [input.hyperframesCliPath, "browser", "ensure"] }],
     },
     async probe(): Promise<ManagedProgramState> {
       const browser = await probeBrowser();
       if (browser.state !== "ready") return browser;
-      const media = await probeMediaToolchain({ ffprobePath: ffprobe });
+      const media = await probeMediaToolchain({ ffprobePath: input.ffprobePath, ...(input.ffmpegPath === undefined ? {} : { ffmpegPath: input.ffmpegPath }) });
       return media.state === "ready"
         ? { state: "ready" }
         : { state: media.state, detail: media.detail };

@@ -207,6 +207,26 @@ test("file and part concurrency remain separate for a multipart batch", async ()
 
 test("invalid uploadConcurrency is rejected before network activity", () => {
   const f = fixture();
-  for (const value of [0, -1, 1.5, 65, NaN]) assert.throws(() => f.uploader(value), /uploadConcurrency/u);
+  for (const value of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, NaN]) assert.throws(() => f.uploader(value), /uploadConcurrency/u);
   assert.equal(f.calls.length, 0);
+});
+
+test("OAuth refresh keeps the existing upload session and retries only its rejected request", async () => {
+  let token = "expired";
+  let refreshes = 0;
+  const f = fixture((url, init) => {
+    if (url.endsWith("/parts") && new Headers(init.headers).get("authorization") === "Bearer expired") {
+      return Response.json({ error: { code: "unauthorized" } }, { status: 401 });
+    }
+  });
+  const auth = {
+    token: async () => token,
+    canRefresh: () => true,
+    refresh: async () => { refreshes += 1; token = "renewed"; return token; },
+  };
+  assert.equal(await f.uploader().upload(input, auth), "https://hub.test/files/result");
+  assert.equal(refreshes, 1);
+  assert.equal(f.calls.filter((call) => call.endsWith("/files/uploads")).length, 1);
+  assert.equal(f.calls.filter((call) => call.endsWith("/parts")).length, 2);
+  assert.equal(f.calls.filter((call) => call.startsWith("DELETE")).length, 0);
 });

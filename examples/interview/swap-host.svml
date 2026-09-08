@@ -5,6 +5,7 @@
   <import as="text" from="@hypit/text@1"/>
   <import as="media" from="@hypit/media@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="program" from="@hypit/program-space@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
@@ -19,7 +20,7 @@
   <import as="render" from="@hypit/render-hyperframes@1"/>
   <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
   <import as="recipes" source="./recipes.svs"/>
-  <import as="interview-kit" source="./kits/street-interview-v1.svs"/>
+  <import as="interview-kit" source="@hypit/seedance-kits/street-interview"/>
   <import as="wojak-tracking" source="./wojak-tracking.svs"/>
 
   <script id="story">
@@ -122,9 +123,9 @@
     model="mini" prompt={manifest-rule-prompt}
     duration="10"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={interviewer-view}/>
-    <seedance:Reference image={guest-view}/>
-    <seedance:Reference image={shared-view}/>
+    <seedance:Reference image={interviewer-view.image}/>
+    <seedance:Reference image={guest-view.image}/>
+    <seedance:Reference image={shared-view.image}/>
     <seedance:Reference audio={chad-voice}/>
     <seedance:Reference audio={wojak-voice}/>
   </seedance:ReferenceVideo>
@@ -133,9 +134,9 @@
     model="mini" prompt={real-estate-rule-prompt}
     duration="8"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={interviewer-view}/>
-    <seedance:Reference image={guest-view}/>
-    <seedance:Reference image={shared-view}/>
+    <seedance:Reference image={interviewer-view.image}/>
+    <seedance:Reference image={guest-view.image}/>
+    <seedance:Reference image={shared-view.image}/>
     <seedance:Reference audio={chad-voice}/>
     <seedance:Reference audio={wojak-voice}/>
   </seedance:ReferenceVideo>
@@ -144,9 +145,9 @@
     model="mini" prompt={bitcoin-rule-prompt}
     duration="8"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
-    <seedance:Reference image={interviewer-view}/>
-    <seedance:Reference image={guest-view}/>
-    <seedance:Reference image={shared-view}/>
+    <seedance:Reference image={interviewer-view.image}/>
+    <seedance:Reference image={guest-view.image}/>
+    <seedance:Reference image={shared-view.image}/>
     <seedance:Reference audio={chad-voice}/>
     <seedance:Reference audio={wojak-voice}/>
   </seedance:ReferenceVideo>
@@ -212,10 +213,10 @@
 
   <emoji:Style id="rule-reveal-style" recipe={recipes.emoji.strip}/>
   <emoji:Track id="rule-reveal" semantic={speech.semantic} canvas={vertical}
-    style={rule-reveal-style} placeholder={rule-placeholder} during="program">
-    <emoji:Item id="manifest" icon={manifest-icon} at={story.moment.manifest}/>
-    <emoji:Item id="real-estate" icon={real-estate-icon} at={story.moment.real-estate}/>
-    <emoji:Item id="bitcoin" icon={bitcoin-icon} at={story.moment.bitcoin}/>
+    style={rule-reveal-style} placeholder={rule-placeholder.image} during="program">
+    <emoji:Item id="manifest" icon={manifest-icon.image} at={story.moment.manifest}/>
+    <emoji:Item id="real-estate" icon={real-estate-icon.image} at={story.moment.real-estate}/>
+    <emoji:Item id="bitcoin" icon={bitcoin-icon.image} at={story.moment.bitcoin}/>
   </emoji:Track>
 
   <screen:Track id="rule-reveal-flashes" semantic={speech.semantic} canvas={vertical}>

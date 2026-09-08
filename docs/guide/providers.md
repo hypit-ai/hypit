@@ -46,8 +46,8 @@ packages or the CLI:
 
 ## 3. Implement the Provider
 
-The Provider handles Commands from the Scheduler: request submission, polling, download and
-ArtifactStore persistence.
+The Provider handles Commands from the Scheduler: request submission, polling, download and writing
+the accepted Resource into the current Build's working byte area.
 
 ```typescript
 // src/provider.ts
@@ -69,7 +69,7 @@ export function createMyServiceProvider(options: {
     capabilities: [{
       capability: myCapability,
       returns: myResultType,
-      lane: "generate",
+      capacity: "generate",
       lifecycle: "asynchronous",
       endpoint: myAsyncEndpoint,
     }],
@@ -84,7 +84,7 @@ Look at existing Providers for reference:
 - `packages/provider-hyperframes-local/` — local Chrome rendering
 - `packages/provider-hyperframes-aws-lambda/` — asynchronous Step Functions/Lambda rendering
 - `packages/provider-media-aws-lambda/` — synchronous Lambda media execution over the shared ffmpeg body
-- `packages/provider-xiaomi-mimo/` — immediate official VoiceDesign API without importing the MiMo model package
+- `packages/provider-xiaomi-mimo/` — immediate official Voice Design and Voice Clone API without importing the MiMo model package
 
 ## 4. Write the activation descriptor
 
@@ -135,6 +135,27 @@ start work. It keeps environment names as references until a matching Need is ha
 presence is diagnosed through the generic CredentialStore path; a Provider must not special-case
 environment variables as a secret Store.
 
+An activation may also return `diagnose(context)`. It runs only for an explicit active `doctor`, after
+the Runtime has resolved that Endpoint's declared credential slots. It may make a bounded, read-only
+request to the real service, such as reading the authenticated model catalog. It must not be called by
+Build preflight and must never submit generation work.
+
+A Provider that charges declares where it publishes prices with `pricing: { kind: "page", url }` on
+`defineEndpointPackage`; a Provider that runs on this machine declares `pricing: { kind: "local" }`.
+An Endpoint may additionally return current Provider-shaped documents from `readPricing`; a service
+with only a web page keeps that page as its interface. `hypit pricing <run> --runtime <profile>` places
+the material beside the Run's Needs without creating a Build. The Agent can calculate and explain the
+cost from those two facts, while the user's decision remains the spending authority. The shared
+interface remains only a source URL and Provider-shaped JSON, so a newly supported relay does not
+require a new Hypit pricing category.
+
+`hypit plan --runtime <profile>` remains local and prints the Endpoint behind each request. Planning
+applies the selected Endpoint's ordinary `supports` check and does not maintain a second selection
+table. When an upstream file will only exist during the Build, the capability package reconstructs the authored
+request parameters and leaves that file as a symbolic Resource slot. The same `supports` predicate still
+runs before the Build is queued. A package that cannot describe the request stops planning instead of
+falling back to capability-only selection.
+
 ## 5. Declare a Managed Program when needed
 
 If the Provider depends on a warm external program, export its declaration beside the Endpoint.
@@ -170,10 +191,10 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 ```
 
-`hypit runtime up` prepares, starts and probes declared Managed Programs before starting the
+`hypit runtime up` prepares, starts and probes declared **local** Managed Programs before starting the
 durable Worker. `build` only preflights Programs backing capabilities demanded by its plan and
 fails before submission when one is not ready; it never installs or starts one. Providers that call
-only remote APIs omit `program` entirely.
+only remote APIs omit `program` entirely; Hypit has no `up` or `down` lifecycle for those services.
 
 ## 6. Install
 
@@ -215,11 +236,11 @@ hypit doctor hypit.runtime.json
 
 | Package | Pattern |
 |---|---|
-| `provider-kie` | Remote API: upload, paid submission, checkpointed polling, bounded download, immediate ArtifactStore persistence |
+| `provider-kie` | Remote API: upload, paid submission, checkpointed polling, bounded download into the current Build workspace |
 | `provider-media-local` | Local process: shell-free ffprobe/ffmpeg with bounded execution |
 | `provider-whisperx-local` | Local HTTP service with a warm model, single-admit concurrency |
 | `provider-hyperframes-local` | Local process: Chrome rendering with worker parallelism and output probe validation |
 | `provider-hyperframes-aws-lambda` | Remote asynchronous job: Step Functions submission, polling and S3 streaming |
 | `provider-image-opencv-local` | Local Python: bounded OpenCV/NumPy with locked Python environment |
 | `provider-media-aws-lambda` | Remote synchronous Lambda: the same nine capabilities as local media |
-| `provider-xiaomi-mimo` | Remote immediate API: exact MiMo VoiceDesign requests to persisted audio Artifacts |
+| `provider-xiaomi-mimo` | Remote immediate API: exact MiMo Voice Design and Voice Clone requests to persisted audio Resources |

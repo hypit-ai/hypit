@@ -1,6 +1,9 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+
+import { canonicalStringify } from "@hypit/protocol";
 
 import { processAlive, stopProcessTree } from "./process-control.js";
 
@@ -12,6 +15,7 @@ export type RuntimeWorkerLaunch = {
 
 export type RuntimeProcessState = {
   readonly state: "running" | "stopped";
+  readonly configuration?: "current" | "changed";
   readonly profile: string;
   readonly pid?: number;
   readonly startedAt?: number;
@@ -20,6 +24,13 @@ export type RuntimeProcessState = {
 
 type ProcessRecord = {
   readonly profile: string;
+  readonly profileConfig: string;
+  readonly owner: string;
+  readonly pid: number;
+  readonly startedAt: number;
+};
+
+type LaunchRecord = {
   readonly pid: number;
   readonly startedAt: number;
 };
@@ -36,81 +47,10 @@ function paths(dataRoot: string) {
   return {
     root,
     pid: join(root, "worker.json"),
-    lock: join(root, "worker.lock"),
     ready: join(root, "ready"),
+    launch: join(root, "launch.lock"),
     log: join(root, "worker.log"),
   };
-}
-
-async function acquireProcessLock(dataRoot: string, timeoutMs: number) {
-  const location = paths(dataRoot);
-  const deadline = Date.now() + timeoutMs;
-  await mkdir(location.root, { recursive: true });
-  while (true) {
-    let lock;
-    try {
-      lock = await open(location.lock, "wx");
-    } catch (error) {
-      if (!nodeError(error, "EEXIST")) throw error;
-      // A crashed host can leave the lock file behind. Only remove a lock whose owner is
-      // positively known to be gone; an empty/invalid file is treated as held while its writer
-      // finishes publishing the owner record.
-      let owner: unknown;
-      let ownerReadable = true;
-      try {
-        owner = JSON.parse(await readFile(location.lock, "utf8"));
-      } catch (readError) {
-        if (nodeError(readError, "ENOENT")) continue;
-        ownerReadable = false;
-      }
-      const ownerPid = owner !== null && typeof owner === "object" && "pid" in owner
-        && typeof owner.pid === "number" ? owner.pid : undefined;
-      if (ownerPid !== undefined && !processAlive(ownerPid)) {
-        await rm(location.lock, { force: true });
-        continue;
-      }
-      if (!ownerReadable) {
-        // A crash while publishing the tiny owner record can leave malformed JSON. Once that
-        // partial file is older than the lock wait budget it cannot belong to a live acquisition.
-        const age = Date.now() - (await stat(location.lock)).mtimeMs;
-        if (age > timeoutMs) {
-          await rm(location.lock, { force: true });
-          continue;
-        }
-      }
-      if (Date.now() >= deadline) throw new Error(`Timed out waiting for Runtime Worker lock: ${location.lock}`);
-      await new Promise((resolveWait) => setTimeout(resolveWait, 10));
-      continue;
-    }
-    try {
-      await lock.writeFile(JSON.stringify({ pid: process.pid, startedAt: Date.now() }), "utf8");
-      return lock;
-    } catch (error) {
-      await lock.close().catch(() => undefined);
-      await rm(location.lock, { force: true }).catch(() => undefined);
-      throw error;
-    }
-  }
-}
-
-async function withProcessLock<T>(dataRoot: string, timeoutMs: number, action: () => Promise<T>): Promise<T> {
-  const lock = await acquireProcessLock(dataRoot, timeoutMs);
-  try {
-    return await action();
-  } finally {
-    await lock.close();
-    await rm(paths(dataRoot).lock, { force: true });
-  }
-}
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return false;
-    throw error;
-  }
 }
 
 async function rotateLog(path: string): Promise<void> {
@@ -131,11 +71,27 @@ async function record(profile: string, dataRoot: string): Promise<ProcessRecord 
   try {
     const value = JSON.parse(await readFile(path, "utf8")) as ProcessRecord;
     if (value.profile !== resolve(profile)
+      || typeof value.profileConfig !== "string" || value.profileConfig.length === 0
+      || typeof value.owner !== "string" || value.owner.length === 0
       || !Number.isSafeInteger(value.pid) || value.pid < 1
       || !Number.isSafeInteger(value.startedAt) || value.startedAt < 0) {
       throw new Error(`Runtime Worker record is invalid: ${path}`);
     }
     return value;
+  } catch (error) {
+    if (nodeError(error, "ENOENT")) return undefined;
+    throw error;
+  }
+}
+
+async function profileConfig(profile: string): Promise<string> {
+  return canonicalStringify(JSON.parse(await readFile(resolve(profile), "utf8")));
+}
+
+async function readyOwner(path: string): Promise<string | undefined> {
+  try {
+    const value = (await readFile(path, "utf8")).trim();
+    return value.length === 0 ? undefined : value;
   } catch (error) {
     if (nodeError(error, "ENOENT")) return undefined;
     throw error;
@@ -153,6 +109,7 @@ export async function runtimeProcessStatus(
   }
   return {
     state: "running",
+    configuration: current.profileConfig === await profileConfig(profile) ? "current" : "changed",
     profile: current.profile,
     pid: current.pid,
     startedAt: current.startedAt,
@@ -160,16 +117,48 @@ export async function runtimeProcessStatus(
   };
 }
 
+async function acquireLaunch(path: string, timeoutMs: number): Promise<() => Promise<void>> {
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    try {
+      const file = await open(path, "wx");
+      await file.writeFile(JSON.stringify({ pid: process.pid, startedAt: Date.now() } satisfies LaunchRecord));
+      await file.close();
+      return async () => await rm(path, { force: true });
+    } catch (error) {
+      if (!nodeError(error, "EEXIST")) throw error;
+      let owner: LaunchRecord | undefined;
+      try {
+        owner = JSON.parse(await readFile(path, "utf8")) as LaunchRecord;
+      } catch (readError) {
+        if (readError instanceof SyntaxError) {
+          if (Date.now() > deadline) throw new Error("Runtime Worker launch lock remained incomplete");
+          await new Promise((resolveWait) => setTimeout(resolveWait, 20));
+          continue;
+        }
+        if (!nodeError(readError, "ENOENT")) throw readError;
+      }
+      if (owner !== undefined && Number.isSafeInteger(owner.pid) && owner.pid > 0 && processAlive(owner.pid)) {
+        if (Date.now() > deadline) throw new Error("another Runtime Worker launch did not finish in time");
+        await new Promise((resolveWait) => setTimeout(resolveWait, 20));
+        continue;
+      }
+      await rm(path, { force: true });
+    }
+  }
+}
+
 async function waitForReady(
   profile: string,
   dataRoot: string,
+  owner: string,
   timeoutMs: number,
 ): Promise<RuntimeProcessState> {
   const location = paths(dataRoot);
   const deadline = Date.now() + timeoutMs;
   while (Date.now() <= deadline) {
-    const state = await runtimeProcessStatus(profile, dataRoot);
-    if (state.state === "stopped") {
+    const current = await record(profile, dataRoot);
+    if (current === undefined || !processAlive(current.pid)) {
       let log = "";
       try {
         log = await readFile(location.log, "utf8");
@@ -178,10 +167,24 @@ async function waitForReady(
       }
       throw new Error(`Runtime Worker exited before becoming ready${log.length === 0 ? "" : `: ${log.trim().split("\n").at(-1)}`}`);
     }
-    if (await exists(location.ready)) return state;
+    if (current.owner !== owner) {
+      throw new Error("Runtime Worker record changed while waiting for the Worker to become ready");
+    }
+    if (await readyOwner(location.ready) === owner) {
+      return await runtimeProcessStatus(profile, dataRoot);
+    }
     await new Promise((resolveWait) => setTimeout(resolveWait, 10));
   }
   throw new Error(`Runtime Worker did not become ready within ${timeoutMs}ms; log: ${location.log}`);
+}
+
+async function waitForProcessExit(pid: number, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() <= deadline) {
+    if (!processAlive(pid)) return true;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 20));
+  }
+  return !processAlive(pid);
 }
 
 export async function ensureRuntimeProcess(
@@ -190,41 +193,85 @@ export async function ensureRuntimeProcess(
   launch: RuntimeWorkerLaunch,
   timeoutMs = 10_000,
 ): Promise<RuntimeProcessState> {
-  return await withProcessLock(dataRoot, timeoutMs + 1_000, async () => {
+  const absolute = resolve(profile);
+  const location = paths(dataRoot);
+  await mkdir(location.root, { recursive: true });
+  const releaseLaunch = await acquireLaunch(location.launch, timeoutMs);
+  try {
     const current = await runtimeProcessStatus(profile, dataRoot);
-    if (current.state === "running") return current;
-    const absolute = resolve(profile);
-    const location = paths(dataRoot);
+    if (current.state === "running") {
+      if (current.configuration === "changed") {
+        throw new Error("Runtime Profile changed while its Worker is running; stop and start the Worker to activate it");
+      }
+      return current;
+    }
+    const stale = await record(profile, dataRoot).catch(() => undefined);
+    if (stale !== undefined && !processAlive(stale.pid)) {
+      await rm(location.pid, { force: true });
+      await rm(location.ready, { force: true });
+    }
+    const owner = `worker_${randomUUID()}`;
+    const activeProfileConfig = await profileConfig(absolute);
     await rm(location.ready, { force: true });
     await rotateLog(location.log);
     const log = await open(location.log, "a");
-    const child = spawn(launch.command, [
-      ...launch.args,
-      "_worker",
-      absolute,
-      "--ready-file",
-      location.ready,
-      ...(launch.workerArgs ?? []),
-    ], {
-      cwd: process.cwd(),
-      // See the managed program start in `programs.ts`: on Windows, detaching costs the console and
-      // every console descendant then gets a window of its own.
-      detached: process.platform !== "win32",
-      windowsHide: true,
-      stdio: ["ignore", log.fd, log.fd],
-      env: process.env,
-    });
-    if (child.pid === undefined) throw new Error("Runtime Worker process has no pid");
-    const startedAt = Date.now();
-    await writeFile(location.pid, JSON.stringify({
-      profile: absolute,
-      pid: child.pid,
-      startedAt,
-    } satisfies ProcessRecord), "utf8");
-    child.unref();
-    await log.close();
-    return await waitForReady(absolute, dataRoot, timeoutMs);
-  });
+    let child;
+    try {
+      child = spawn(launch.command, [
+        ...launch.args,
+        "_worker",
+        absolute,
+        "--ready-file",
+        location.ready,
+        "--worker-owner",
+        owner,
+        ...(launch.workerArgs ?? []),
+      ], {
+        cwd: process.cwd(),
+        // See the managed program start in `programs.ts`: on Windows, detaching costs the console and
+        // every console descendant then gets a window of its own.
+        detached: process.platform !== "win32",
+        windowsHide: true,
+        stdio: ["ignore", log.fd, log.fd],
+        env: process.env,
+      });
+      if (child.pid === undefined) throw new Error("Runtime Worker process has no pid");
+      const startedAt = Date.now();
+      await writeFile(location.pid, JSON.stringify({
+        profile: absolute,
+        profileConfig: activeProfileConfig,
+        owner,
+        pid: child.pid,
+        startedAt,
+      } satisfies ProcessRecord), "utf8");
+      child.unref();
+      try {
+        const ready = await waitForReady(absolute, dataRoot, owner, timeoutMs);
+        if (ready.configuration === "changed") {
+          throw new Error("Runtime Profile changed while its Worker was starting; start it again to activate the new Profile");
+        }
+        return ready;
+      } catch (error) {
+        const stopped = await stopProcessTree(child.pid, true).catch(() => "denied" as const);
+        if (stopped === "denied" || !await waitForProcessExit(child.pid, 2_000)) {
+          throw new Error(
+            `Runtime Worker ${child.pid} failed to become ready and is still running; stop it explicitly before retrying`,
+            { cause: error },
+          );
+        }
+        const saved = await record(profile, dataRoot).catch(() => undefined);
+        if (saved?.owner === owner) {
+          await rm(location.pid, { force: true });
+          await rm(location.ready, { force: true });
+        }
+        throw error;
+      }
+    } finally {
+      await log.close();
+    }
+  } finally {
+    await releaseLaunch();
+  }
 }
 
 async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, timeoutMs: number): Promise<RuntimeProcessState> {
@@ -262,8 +309,14 @@ async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, tim
 }
 
 export async function stopRuntimeProcess(profile: string, dataRoot: string, timeoutMs = 10_000): Promise<RuntimeProcessState> {
-  return await withProcessLock(dataRoot, timeoutMs + 1_000,
-    () => stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs));
+  const location = paths(dataRoot);
+  await mkdir(location.root, { recursive: true });
+  const releaseLaunch = await acquireLaunch(location.launch, timeoutMs);
+  try {
+    return await stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs);
+  } finally {
+    await releaseLaunch();
+  }
 }
 
 export async function runtimeProcessLogs(dataRoot: string): Promise<{ readonly path: string; readonly text: string }> {
@@ -284,7 +337,7 @@ export async function runtimeProcessLogs(dataRoot: string): Promise<{ readonly p
   }
 }
 
-export async function markRuntimeProcessReady(path: string): Promise<void> {
+export async function markRuntimeProcessReady(path: string, owner: string): Promise<void> {
   await mkdir(dirname(resolve(path)), { recursive: true });
-  await writeFile(resolve(path), "", "utf8");
+  await writeFile(resolve(path), `${owner}\n`, "utf8");
 }

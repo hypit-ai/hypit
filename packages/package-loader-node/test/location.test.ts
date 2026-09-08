@@ -9,6 +9,7 @@ import {
   locateNodePackage,
   resolveNodePackageExecutable,
   resolveNodePackageResource,
+  resolveNodePackageSource,
 } from "@hypit/package-loader-node";
 
 async function machinePackage(
@@ -77,5 +78,36 @@ test("machine npm fallback preserves ESM import conditions", async () => {
     assert.equal(imported.value, 42);
   } finally {
     await rm(machine, { recursive: true, force: true });
+  }
+});
+
+test("package Source resolution reads one public export without activating package code", async () => {
+  const project = await mkdtemp(join(tmpdir(), "hypit-package-source-project-"));
+  try {
+    const root = await machinePackage(project, "@acme/image-kits", {
+      version: "1.2.3",
+      type: "module",
+      exports: {
+        ".": "./activation-that-must-not-run.mjs",
+        "./phone-ugc-v1": "./kits/phone-ugc-v1.svs",
+      },
+      hypit: { activation: "./activation-that-must-not-run.mjs" },
+    }, {
+      "activation-that-must-not-run.mjs": "throw new Error('activation ran');\n",
+      "kits/phone-ugc-v1.svs": "<?svml using=\"@hypit/svs@1\"?>\n<sheet version=\"1\"/>\n",
+    });
+    const options = { from: join(project, "main.svml") } as const;
+    assert.deepEqual(resolveNodePackageSource("@acme/image-kits/phone-ugc-v1", options), {
+      specifier: "@acme/image-kits/phone-ugc-v1",
+      package: "@acme/image-kits",
+      root: await realpath(root),
+      source: join(await realpath(root), "kits", "phone-ugc-v1.svs"),
+    });
+    assert.throws(
+      () => resolveNodePackageSource("@acme/image-kits/private", options),
+      /does not export Source/u,
+    );
+  } finally {
+    await rm(project, { recursive: true, force: true });
   }
 });

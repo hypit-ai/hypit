@@ -16,7 +16,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
     const config = runtimeConfigObject(context.config, "Xiaomi MiMo");
     runtimeConfigExact(config, [
       "apiBaseUrl", "apiKey", "defaultConcurrency", "requestTimeoutMs",
-      "maxResponseBytes",
+      "maxResponseBytes", "maxVoiceReferenceBase64Bytes",
     ], "Xiaomi MiMo");
     const apiBaseUrl = runtimeConfigString(config.apiBaseUrl, "Xiaomi MiMo apiBaseUrl");
     if (apiBaseUrl !== undefined) {
@@ -30,6 +30,10 @@ const adapter = createRuntimeEndpointAdapterFacet({
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "Xiaomi MiMo defaultConcurrency");
     const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "Xiaomi MiMo requestTimeoutMs");
     const maxResponseBytes = runtimeConfigPositiveInteger(config.maxResponseBytes, "Xiaomi MiMo maxResponseBytes");
+    const maxVoiceReferenceBase64Bytes = runtimeConfigPositiveInteger(
+      config.maxVoiceReferenceBase64Bytes,
+      "Xiaomi MiMo maxVoiceReferenceBase64Bytes",
+    );
     return {
       endpoint: createXiaomiMimoProvider({
         instance: context.instance,
@@ -39,6 +43,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
         ...(maxResponseBytes === undefined ? {} : { maxResponseBytes }),
+        ...(maxVoiceReferenceBase64Bytes === undefined ? {} : { maxVoiceReferenceBase64Bytes }),
       }),
     };
   },

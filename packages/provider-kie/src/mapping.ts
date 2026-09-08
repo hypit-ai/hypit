@@ -48,6 +48,7 @@ const minimaxMapping: GenerationWireMapping = {
   capability: { module: MINIMAX, name: "minimax-h3" },
   result: "video",
   routes: [
+    { model: "minimax-h3/image-to-video", whenPresent: ["lastFrame"] },
     { model: "minimax-h3/image-to-video", whenPresent: ["firstFrame"] },
     { model: "minimax-h3/reference-to-video", whenPresent: ["referenceImage"] },
     { model: "minimax-h3/reference-to-video", whenPresent: ["referenceVideo"] },
@@ -77,7 +78,6 @@ const grokVideoMapping: GenerationWireMapping = {
     resolution: { as: "value", field: "resolution" },
     duration: { as: "string", field: "duration" },
     images: { as: "urlArray", field: "image_urls" },
-    sourceTaskId: { as: "value", field: "task_id" },
   },
   constants: { mode: "normal" },
 };
@@ -106,6 +106,7 @@ const gptImageMapping: GenerationWireMapping = {
     prompt: { as: "value", field: "prompt" },
     aspectRatio: { as: "value", field: "aspect_ratio" },
     resolution: { as: "value", field: "resolution" },
+    background: { as: "value", field: "background" },
     images: { as: "urlArray", field: "input_urls" },
   },
 };

@@ -1,5 +1,5 @@
 import { SvmlError } from "./error.js";
-import type { Digest } from "./identity.js";
+import type { ResourceId } from "./identity.js";
 import type { CanonicalValue } from "./value.js";
 
 function normalize(value: unknown, path: string): CanonicalValue {
@@ -32,6 +32,6 @@ export function canonicalStringify(value: unknown): string {
   return JSON.stringify(canonicalize(value));
 }
 
-export function isDigest(value: string): value is Digest {
-  return /^sha256:[0-9a-f]{64}$/u.test(value);
+export function isResourceId(value: string): value is ResourceId {
+  return /^res_[a-zA-Z0-9._:-]+$/u.test(value);
 }

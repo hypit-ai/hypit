@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createResolvedClosure,
+  defineBuild,
   link,
+  materializeBuild,
+  planBuild,
   reduce,
   sealBuildRequest,
   sealCompiledGraph,
@@ -282,23 +285,26 @@ function request(targets: readonly string[]): BuildRequest {
   });
 }
 
-function selectCandidates(graph: CompiledGraph, satisfactions: readonly Satisfaction[]): CompiledGraph {
-  const selected = new Map(satisfactions.map((item) => [item.output, item.candidate]));
-  return sealCompiledGraph({
-    outputs: graph.outputs.map((item) => ({ ...item, primary: selected.get(item.id) ?? item.primary })),
-    candidates: graph.candidates,
-    operations: graph.operations,
-  });
-}
-
 function startSelected(
   program: LinkedProgram,
   graph: CompiledGraph,
   targets: readonly string[],
   satisfactions: readonly Satisfaction[] = [],
 ): BuildState {
-  const selected = selectCandidates(graph, satisfactions);
-  return start(program, selected, request(targets));
+  const planned = planBuild(program, graph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions,
+    targets: targets.map((outputId) => ({ output: outputId })),
+  });
+  return materializeBuild(defineBuild({
+    program,
+    initialRecords: planned.initialRecords,
+    plan: planned.plan,
+    targets: targets.map((outputId) => ({ output: outputId })),
+  }), []);
 }
 
 function fixture(targets: readonly string[], satisfactions: readonly Satisfaction[] = []): BuildState {
@@ -411,8 +417,8 @@ test("Case G: two single-output full-input Candidates share both upstream Values
   const b2 = state.plan.steps.find((step) => step.id === "b2");
   assert.deepEqual(b1?.inputs, { A: "provided:A", B: "provided:B" });
   assert.deepEqual(b2?.inputs, { A: "provided:A", B: "provided:B" });
-  assert.equal(state.plan.selections.find((item) => item.output === "b.C")?.candidate, "b1");
-  assert.equal(state.plan.selections.find((item) => item.output === "b.D")?.candidate, "b2");
+  assert.equal(state.plan.outputBindings.find((item) => item.output === "b.C")?.record, "operation:C");
+  assert.equal(state.plan.outputBindings.find((item) => item.output === "b.D")?.record, "operation:D");
 });
 
 test("Case G: shared zero-input upstream Operations appear exactly once", () => {
@@ -470,7 +476,7 @@ test("two Candidates that name one OperationId demand exactly one execution", ()
   const state = start(program, graph, request(["left", "right"]));
   assert.deepEqual(stepIds(state), ["left-operation"]);
   assert.deepEqual(
-    state.plan.selections.map((selection) => [selection.output, selection.record]),
+    state.plan.outputBindings.map((selection) => [selection.output, selection.record]),
     [["left", "identity:left"], ["right", "identity:left"]],
   );
 });
@@ -484,8 +490,8 @@ test("one independent Candidate may explicitly satisfy multiple compatible Logic
   ]);
   assert.deepEqual(stepIds(state), ["left-operation"]);
   assert.deepEqual(
-    state.plan.selections.map((selection) => [selection.output, selection.candidate]),
-    [["left", "shared-candidate"], ["right", "shared-candidate"]],
+    state.plan.outputBindings.map((selection) => [selection.output, selection.record]),
+    [["left", "identity:left"], ["right", "identity:left"]],
   );
 });
 

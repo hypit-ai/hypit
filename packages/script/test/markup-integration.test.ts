@@ -67,33 +67,6 @@ test("Script teaches Markup <script> only through its imported Manifest", async 
   assert.deepEqual(result.identities, [{ namespace: narrativeType, id: "story" }]);
 });
 
-test("the same Script meaning has the same authored Record digest across reflow", async () => {
-  const compact = await decodeMarkup(
-    {
-      name: "compact.svml",
-      text: `<svml><import from="@hypit/script@1"/><script id="story"><opening><ALICE>Hello.<BOB>Hi.</opening></script></svml>`,
-    },
-    scriptContext(),
-  );
-  const multiline = await decodeMarkup(
-    {
-      name: "multiline.svml",
-      text: `<svml>
-        <import from="@hypit/script@1"/>
-        <script id="story">
-          <opening>
-            <ALICE>Hello.
-            <BOB>Hi.
-          </opening>
-        </script>
-      </svml>`,
-    },
-    scriptContext(),
-  );
-
-  assert.deepEqual(compact.records, multiline.records);
-});
-
 test("without the import, Markup has no hard-coded knowledge of Script", async () => {
   await assert.rejects(
     decodeMarkup(

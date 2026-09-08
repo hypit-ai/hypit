@@ -1,8 +1,9 @@
-import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
-import { reduce, resolveProducer } from "@hypit/core";
+import { reduce, resolveNeedCommand, resolveProducer } from "@hypit/core";
 import type { ProducerHandlerResult } from "@hypit/component-kit";
-import type { EndpointFulfillment, EndpointOutcome } from "@hypit/endpoint-kit";
+import type { EndpointCredential, EndpointFulfillment, EndpointOutcome } from "@hypit/endpoint-kit";
+import { endpointResourceClaims } from "@hypit/endpoint-kit";
 import type {
   BuildState,
   CommandResult,
@@ -17,19 +18,19 @@ import {
 } from "@hypit/validation";
 import type { TypeValidatorRegistryLike } from "@hypit/validation";
 import type {
-  ArtifactStore,
+  ResourceStore,
   CredentialStore,
   CredentialValue,
   OperationSnapshot,
   OperationStore,
-  OperationUpdate,
   RuntimeExecutionContext,
   RuntimeExecutionResult,
   RuntimePreparation,
   RuntimeRunnableCommand,
 } from "@hypit/runtime";
+import { writableCredentialStore } from "@hypit/runtime";
 
-import { MemoryArtifactStore } from "./artifacts.js";
+import { MemoryResourceStore } from "./resources.js";
 import {
   ProducerRegistry,
   EndpointRegistry,
@@ -47,10 +48,13 @@ import type {
 export type NodeDriverOptions = {
   readonly producers?: ProducerRegistry;
   readonly endpoints?: EndpointRegistry;
-  readonly artifacts?: ArtifactStore;
+  readonly resources?: ResourceStore;
+  /** Runtime execution may isolate transient bytes by Build without exposing that policy to Endpoints. */
+  readonly resourcesForBuild?: (build: string) => ResourceStore;
   readonly operations?: OperationStore;
   readonly credentials?: CredentialStore;
   readonly validators?: TypeValidatorRegistryLike;
+  readonly actions?: import("@hypit/runtime").RuntimeActionExecutor;
 };
 
 type Executable =
@@ -63,7 +67,6 @@ type Executable =
       readonly command: FulfillNeedCommand;
       readonly endpointId: string;
       readonly resources: readonly import("@hypit/runtime").RuntimeResourceClaim[];
-      readonly queue?: import("@hypit/runtime").RuntimeQueueLane;
       readonly registration: EndpointRegistration;
     };
 
@@ -85,44 +88,60 @@ function failureMessage(error: unknown): string {
   return [...new Set(parts)].join("; caused by: ");
 }
 
-function operationId(identity: Pick<OperationSnapshot, "build" | "command" | "endpoint" | "pool" | "lane">): string {
-  const key = [identity.build, identity.command, identity.endpoint, identity.pool, identity.lane].join("\u0000");
-  return `op_${createHash("sha256").update(key).digest("hex")}`;
-}
-
 export class NodeDriver {
   readonly producers: ProducerRegistry;
   readonly endpoints: EndpointRegistry;
-  readonly artifacts: ArtifactStore;
+  readonly resources: ResourceStore;
+  readonly #resourcesForBuild: ((build: string) => ResourceStore) | undefined;
   readonly operations: OperationStore | undefined;
   readonly credentials: CredentialStore | undefined;
   readonly validators: TypeValidatorRegistryLike;
+  readonly #actions: import("@hypit/runtime").RuntimeActionExecutor | undefined;
+  readonly #credentialReads = new Map<string, Promise<CredentialValue | undefined>>();
 
   constructor(options: NodeDriverOptions = {}) {
     this.producers = options.producers ?? new ProducerRegistry();
     this.endpoints = options.endpoints ?? new EndpointRegistry();
-    this.artifacts = options.artifacts ?? new MemoryArtifactStore();
+    this.resources = options.resources ?? new MemoryResourceStore();
+    this.#resourcesForBuild = options.resourcesForBuild;
     this.operations = options.operations;
     this.credentials = options.credentials;
     this.validators = options.validators ?? new TypeValidatorRegistry();
+    this.#actions = options.actions;
+  }
+
+  #resourceStore(build?: string): ResourceStore {
+    return build === undefined ? this.resources : this.#resourcesForBuild?.(build) ?? this.resources;
   }
 
   async #endpointCredentials(
     registration: EndpointRegistration,
-  ): Promise<Readonly<Record<string, CredentialValue>>> {
+  ): Promise<Readonly<Record<string, EndpointCredential>>> {
     const requested = registration.credentials ?? {};
     if (Object.keys(requested).length === 0) return {};
     if (this.credentials === undefined) {
       throw new Error(`Endpoint ${registration.id} requires a CredentialStore`);
     }
-    const resolved: Record<string, CredentialValue> = {};
+    const resolved: Record<string, EndpointCredential> = {};
     for (const slot of Object.keys(requested).sort()) {
       const ref = requested[slot]!;
-      const value = await this.credentials.resolve(ref);
+      const key = JSON.stringify([ref.store, ref.key]);
+      let read = this.#credentialReads.get(key);
+      if (read === undefined) {
+        read = this.credentials.resolve(ref).finally(() => this.#credentialReads.delete(key));
+        this.#credentialReads.set(key, read);
+      }
+      const value = await read;
       if (value === undefined) {
         throw new Error(`Endpoint ${registration.id} credential ${slot} is unavailable from ${ref.store}:${ref.key}`);
       }
-      resolved[slot] = value;
+      const writable = await writableCredentialStore(this.credentials, ref);
+      resolved[slot] = {
+        ...value,
+        ...(writable === undefined ? {} : {
+          replace: async (replacement: CredentialValue) => await writable.put(ref, replacement),
+        }),
+      };
     }
     return resolved;
   }
@@ -184,6 +203,17 @@ export class NodeDriver {
         },
       };
     }
+    if (resolution.status === "unsupported") {
+      return {
+        blocked: {
+          command: command.id,
+          reason: "unsupported-endpoint-request",
+          subject: resolution.rejections
+            .map((rejection) => `${rejection.endpointId}: ${rejection.reason}`)
+            .join("; "),
+        },
+      };
+    }
     if (resolution.status === "ambiguous") {
       return {
         blocked: {
@@ -207,12 +237,10 @@ export class NodeDriver {
       executable: {
         command,
         endpointId: registration.id,
-        resources: registration.scheduling?.resources ?? [{
+        resources: registration.scheduling === undefined ? [{
           id: `endpoint:${registration.id}`,
-          maxActive: 1,
-          maxInFlight: 1,
-        }],
-        ...(registration.scheduling?.queue === undefined ? {} : { queue: registration.scheduling.queue }),
+          limit: 1,
+        }] : endpointResourceClaims(registration.scheduling, command.need),
         registration,
       },
     };
@@ -236,52 +264,40 @@ export class NodeDriver {
     } as const;
   }
 
-  async #completedOperation(
+  async acceptOperation(
     state: BuildState,
-    executable: Extract<Executable, { readonly endpointId: string }>,
     snapshot: OperationSnapshot,
-    expectedOperation: string,
-  ): Promise<RuntimeExecutionResult> {
-    if (snapshot.id !== expectedOperation) {
-      throw new Error(`OperationStore returned ${snapshot.id} for ${expectedOperation}`);
-    }
-    if (snapshot.status === "completed" && snapshot.completion !== undefined) {
-      return {
-        status: "completed",
-        event: await this.#endpointEvent(state, executable, snapshot.completion),
-      };
+  ): Promise<CommandResult | undefined> {
+    if ((snapshot.status === "completed" || snapshot.status === "pending") && snapshot.completion !== undefined) {
+      const command = state.outstanding.find((item) => item.id === snapshot.command);
+      if (command?.kind !== "fulfill-need") return undefined;
+      await validateValue(state.program.closure, command.need.returns, snapshot.completion.value, this.validators);
+      if (snapshot.status === "pending") {
+        await this.operations!.update(snapshot.id, { status: "completed", completion: snapshot.completion });
+      }
+      return { kind: "need-fulfilled", command: snapshot.command, value: snapshot.completion.value };
     }
     if (snapshot.status === "failed") {
       const failure = snapshot.failure;
       if (failure === undefined) throw new Error(`Operation ${snapshot.id} has no failure`);
       const content = {
         kind: "command-failed",
-        command: executable.command.id,
+        command: snapshot.command,
         code: failure.code,
         message: failure.message,
       } as const;
-      return {
-        status: "completed",
-        event: content,
-      };
+      return content;
     }
     if (snapshot.status === "cancelled") {
       const content = {
         kind: "command-failed",
-        command: executable.command.id,
+        command: snapshot.command,
         code: "CANCELLED",
-        message: `Operation ${snapshot.id} was cancelled by the Runtime pool`,
+        message: `Operation ${snapshot.id} was cancelled by the Runtime capacity controller`,
       } as const;
-      return {
-        status: "completed",
-        event: content,
-      };
+      return content;
     }
-    return {
-      status: "pending",
-      operation: snapshot.id,
-      ...(snapshot.wakeAt === undefined ? {} : { wakeAt: snapshot.wakeAt }),
-    };
+    return undefined;
   }
 
   async #executeEndpoint(
@@ -292,102 +308,123 @@ export class NodeDriver {
     if (executable.registration.kind !== "asynchronous") throw new Error("Endpoint is not asynchronous");
     const operations = this.operations;
     if (operations === undefined) throw new Error("asynchronous Endpoint requires OperationStore");
-    if (executable.queue === undefined) throw new Error("asynchronous Endpoint has no Provider pool/lane");
-    const base = {
-      build: context.build,
-      command: executable.command.id,
-      endpoint: executable.endpointId,
-      pool: executable.queue.pool,
-      lane: executable.queue.lane,
-    } as const;
-    const history = await operations.list({
-      build: base.build,
-      command: base.command,
-      endpoint: base.endpoint,
+    const history = await operations.list({ build: context.build, command: executable.command.id });
+    if (history.length > 1) throw new Error(`Command ${executable.command.id} has multiple Operations`);
+    let operation = history[0];
+    if (operation !== undefined && operation.endpoint !== executable.endpointId) {
+      throw new Error(`Operation ${operation.id} belongs to ${operation.endpoint}; its execution source cannot change`);
+    }
+    operation ??= await operations.create({
+      id: `op_${randomUUID()}`, build: context.build, command: executable.command.id,
+      endpoint: executable.endpointId, status: "pending", submission: "queued", createdAt: Date.now(),
+      request: structuredClone(executable.command),
+      credentials: structuredClone(executable.registration.credentials ?? {}),
+      ...(executable.registration.pool === undefined ? {} : { pool: executable.registration.pool }),
+      wakeAt: Date.now(), progress: { phase: "ready-to-submit" },
     });
-    const latest = history[0];
-    if (latest?.status === "completed" || latest?.status === "cancelled") {
-      return await this.#completedOperation(state, executable, latest, latest.id);
+    if (operation.status === "pending" && operation.completion === undefined) {
+      operation = await this.#advanceOperation(operation, executable.registration, context);
     }
-    if (latest?.status === "pending" && latest.wakeAt !== undefined && latest.wakeAt > Date.now()) {
-      return { status: "pending", operation: latest.id, wakeAt: latest.wakeAt };
+    if (operation.remoteEnded) await context.releaseOperationCapacity?.();
+    const event = await this.acceptOperation(state, operation);
+    return event === undefined ? {
+      status: "pending", operation: operation.id,
+      ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
+    } : { status: "completed", event };
+  }
+
+  async #advanceOperation(
+    operation: OperationSnapshot,
+    registration: EndpointRegistration,
+    runtimeContext: RuntimeExecutionContext,
+  ): Promise<OperationSnapshot> {
+    const operations = this.operations!;
+    if (registration.kind !== "asynchronous") throw new Error("Operation Endpoint is not asynchronous");
+    if (operation.status !== "pending" || operation.completion !== undefined) return operation;
+    if ((operation.wakeAt ?? 0) > Date.now()) return operation;
+    const command = operation.request;
+    if (command === undefined) throw new Error(`Operation ${operation.id} has no stored request`);
+    const endpoint = registration.endpoint;
+    const action: import("@hypit/endpoint-kit").EndpointAction = operation.remoteEnded ? "collect"
+      : operation.handle !== undefined ? "poll" : "submit";
+    if (action === "submit" && operation.submission !== "queued") {
+      return await operations.update(operation.id, {
+        status: "failed", failure: { code: "SUBMISSION_INTERRUPTED",
+          message: "Submission ended without a task receipt; this execution attempt has failed" },
+      });
     }
-    if (latest?.status === "failed") {
-      return await this.#completedOperation(state, executable, latest, latest.id);
-    }
-    const fresh = latest === undefined;
-    const identity = fresh
-      ? { id: operationId(base), ...base }
-      : latest;
-    const endpointContext = {
-      command: structuredClone(executable.command),
-      need: structuredClone(executable.command.need),
-      artifacts: this.artifacts,
-      credentials: await this.#endpointCredentials(executable.registration),
-      ...(this.credentials === undefined ? {} : { credentialStore: this.credentials }),
-      operation: identity.id,
+    const invoke = async (): Promise<EndpointOutcome> => {
+      const context = {
+        command: structuredClone(command), need: structuredClone(command.need),
+        resources: this.#resourceStore(operation.build), operation: operation.id,
+        credentials: await this.#endpointCredentials({ ...registration, credentials: operation.credentials ?? registration.credentials ?? {} }),
+        checkpoint: async (checkpoint: import("@hypit/endpoint-kit").EndpointCheckpoint) => {
+          await operations.update(operation.id, { status: "pending", ...checkpoint,
+            submission: "accepted", acknowledgedAt: operation.acknowledgedAt ?? Date.now(), wakeAt: Date.now(), progress: { phase: checkpoint.remoteEnded ? "collecting" : "submitted" } });
+          if (checkpoint.remoteEnded) await runtimeContext.releaseOperationCapacity?.();
+        },
+      };
+      if (action === "submit") {
+        await operations.update(operation.id, { status: "pending", submission: "started", progress: { phase: "submitting" } });
+        return await endpoint.start(context);
+      }
+      const pollContext = { ...context, handle: structuredClone(operation.handle!) };
+      if (action === "collect") {
+        if (endpoint.collect === undefined) throw new Error(`Endpoint ${registration.id} declared artifacts ready but has no collect action`);
+        return await endpoint.collect(pollContext);
+      }
+      return await endpoint.poll(pollContext);
     };
     let outcome: EndpointOutcome;
-    if (latest === undefined) {
-      outcome = await executable.registration.endpoint.start(endpointContext);
-    } else {
-      if (latest.status !== "pending" || latest.handle === undefined) {
-        throw new Error(`Operation ${latest.id} cannot be polled`);
-      }
-      outcome = await executable.registration.endpoint.poll({
-        ...endpointContext,
-        handle: structuredClone(latest.handle),
+    try {
+      const resources = registration.scheduling?.actions?.[action] ?? [];
+      if (resources.length > 0) {
+        if (this.#actions === undefined) throw new Error(`Endpoint ${registration.id} requires Runtime action admission`);
+        const result = await this.#actions.run({ build: operation.build, command: operation.command, action, resources }, invoke);
+        if (result.status === "deferred") return await operations.update(operation.id, {
+          status: "pending", ...(result.wakeAt === undefined ? {} : { wakeAt: result.wakeAt }),
+          progress: { phase: "waiting-resource" },
+        });
+        outcome = result.value;
+      } else outcome = await invoke();
+    } catch (error) {
+      return await operations.update(operation.id, {
+        status: "failed", failure: { code: "ENDPOINT_ACTION_FAILED",
+          message: `${action} failed: ${failureMessage(error)}` },
       });
     }
-    const write = async (update: OperationUpdate): Promise<OperationSnapshot> => {
-      if (!fresh) return await operations.update(identity.id, update);
-      try {
-        return await operations.create({ ...identity, ...update });
-      } catch (error) {
-        // Another Worker may have started the same Build/Command concurrently. The deterministic
-        // identity makes that write a harmless race: reuse the winner's durable Operation rather
-        // than issuing a second logical Operation to the caller.
-        const existing = await operations.read(identity.id);
-        if (existing !== undefined) return existing;
-        throw error;
-      }
+    const recorded = await operations.read(operation.id) ?? operation;
+    const receipt = outcome.receipt ?? recorded.receipt;
+    const facts = receipt === undefined ? {} : {
+      receipt, acknowledgedAt: recorded.acknowledgedAt ?? Date.now(),
     };
     if (outcome.status === "pending") {
-      const written = await write({
-        status: "pending",
-        handle: outcome.handle,
-        ...(outcome.wakeAt === undefined ? {} : { wakeAt: outcome.wakeAt }),
+      return await operations.update(operation.id, {
+        status: "pending", ...facts, submission: "accepted", handle: outcome.handle,
+        wakeAt: outcome.wakeAt ?? Date.now(),
         ...(outcome.progress === undefined ? {} : { progress: outcome.progress }),
       });
-      return await this.#completedOperation(
-        state,
-        executable,
-        written,
-        identity.id,
-      );
     }
-    if (outcome.status === "failed") {
-      const written = await write({
-        status: "failed",
-        failure: outcome.failure,
-      });
-      return await this.#completedOperation(
-        state,
-        executable,
-        written,
-        identity.id,
-      );
-    }
-    const written = await write({
-      status: "completed",
-      completion: outcome.result,
+    if (outcome.status === "ready") return await operations.update(operation.id, {
+      status: "pending", ...facts, remoteEnded: true, endedAt: Date.now(), handle: outcome.handle,
+      wakeAt: Date.now(), progress: { phase: "ready-to-collect" },
     });
-    return await this.#completedOperation(
-      state,
-      executable,
-      written,
-      identity.id,
-    );
+    if (outcome.status === "failed") return await operations.update(operation.id, {
+      status: "failed", ...facts, failure: outcome.failure,
+    });
+    return await operations.update(operation.id, {
+      status: "pending", ...facts, remoteEnded: true, endedAt: recorded.endedAt ?? Date.now(),
+      completion: outcome.result, wakeAt: Date.now(), progress: { phase: "ready-to-accept" },
+    });
+  }
+
+  async advanceOperation(operation: OperationSnapshot): Promise<OperationSnapshot> {
+    if (operation.request === undefined) throw new Error(`Operation ${operation.id} has no stored request`);
+    const selected = this.endpoints.resolve(operation.request.need);
+    if (selected.status !== "resolved" || selected.registration.id !== operation.endpoint) {
+      throw new Error(`Operation ${operation.id} cannot change its selected Endpoint ${operation.endpoint}`);
+    }
+    return await this.#advanceOperation(operation, selected.registration, { build: operation.build });
   }
 
   async #execute(
@@ -437,9 +474,8 @@ export class NodeDriver {
       const result = await executable.registration.handler({
         command: structuredClone(executable.command),
         need: structuredClone(executable.command.need),
-        artifacts: this.artifacts,
+        resources: this.#resourceStore(context?.build),
         credentials: await this.#endpointCredentials(executable.registration),
-        ...(this.credentials === undefined ? {} : { credentialStore: this.credentials }),
       });
       return { status: "completed", event: await this.#endpointEvent(state, executable, result) };
     } catch (error) {
@@ -465,7 +501,6 @@ export class NodeDriver {
       runnable: classifications.flatMap(({ executable }) => executable === undefined ? [] : [{
         command: executable.command,
         resources: executable.resources,
-        ...(("queue" in executable && executable.queue !== undefined) ? { queue: executable.queue } : {}),
         capacityMode: "endpointId" in executable && executable.registration.kind === "asynchronous"
           ? "asynchronous"
           : "active",
@@ -489,40 +524,31 @@ export class NodeDriver {
     return await this.#execute(state, classified.executable, context);
   }
 
-  /** Stop polling one persisted external Operation and make one best-effort Provider cancel call. */
-  async cancelOperation(
-    initial: BuildState,
-    operation: OperationSnapshot,
-  ): Promise<OperationSnapshot> {
+  /** Stop observing this Operation and make at most one explicit cancellation request. */
+  async cancelOperation(initial: BuildState, operation: OperationSnapshot): Promise<OperationSnapshot> {
     const operations = this.operations;
     if (operations === undefined) throw new Error("cancelling an Operation requires OperationStore");
     const current = await operations.read(operation.id) ?? operation;
-    if (current.status === "completed" || current.status === "failed" || current.status === "cancelled") return current;
-    const prepared = this.prepare(initial);
-    const descriptor = prepared.runnable.find((item) => item.command.id === operation.command);
-    if (descriptor === undefined) throw new Error(`Operation ${operation.id} Command is not currently runnable`);
-    const classified = this.#classify(prepared.state, descriptor.command);
-    const executable = classified.executable;
-    if (executable === undefined || !("endpointId" in executable)
-      || executable.endpointId !== operation.endpoint
-      || executable.registration.kind !== "asynchronous") {
-      throw new Error(`Operation ${operation.id} does not match the regenerated Endpoint Command`);
+    if (current.status !== "pending") return current;
+    let cancellation: NonNullable<OperationSnapshot["cancellation"]> = { outcome: "unsupported" };
+    if (current.handle !== undefined && !current.remoteEnded) {
+      try {
+        const command = current.request ?? resolveNeedCommand(initial, current.command);
+        if (command === undefined) throw new Error(`Operation ${current.id} has no Need Command`);
+        const selected = this.endpoints.resolve(command.need);
+        if (selected.status !== "resolved" || selected.registration.id !== current.endpoint
+          || selected.registration.kind !== "asynchronous") throw new Error("Operation Endpoint changed");
+        const result = await selected.registration.endpoint.cancel?.({
+          command, need: command.need, operation: current.id, handle: current.handle,
+          resources: this.#resourceStore(current.build),
+          credentials: await this.#endpointCredentials(selected.registration),
+        });
+        cancellation = { outcome: result?.status ?? "unsupported" };
+      } catch (error) {
+        cancellation = { outcome: "failed", message: failureMessage(error) };
+      }
     }
-    const endpointContext = {
-      command: structuredClone(executable.command),
-      need: structuredClone(executable.command.need),
-      artifacts: this.artifacts,
-      credentials: await this.#endpointCredentials(executable.registration),
-      ...(this.credentials === undefined ? {} : { credentialStore: this.credentials }),
-      operation: current.id,
-      handle: structuredClone(current.handle as NonNullable<typeof current.handle>),
-    };
-    try {
-      await executable.registration.endpoint.cancel?.(endpointContext);
-    } catch {
-      // Build cancellation is best effort. Local execution stops even if the Provider cannot.
-    }
-    return await operations.update(current.id, { status: "cancelled" });
+    return await operations.update(current.id, { status: "cancelled", cancellation });
   }
 
   async run(initial: BuildState, context?: RuntimeExecutionContext): Promise<DriverRunResult> {
@@ -579,7 +605,11 @@ export class NodeDriver {
           status: "error",
           message: error instanceof Error ? error.message : String(error),
         });
-        return { status: "paused", state, outcomes, blocked: [] };
+        state = reduce(state, {
+          kind: "command-failed", command: selected.command.id, code: "EXECUTION_FAILED",
+          message: failureMessage(error),
+        });
+        return { status: "failed", state, outcomes, blocked: [] };
       }
     }
   }

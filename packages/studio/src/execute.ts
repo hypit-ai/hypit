@@ -1,6 +1,7 @@
-import { EndpointRegistry, MemoryArtifactStore, NodeDriver } from "@hypit/driver-node";
-import type { ArtifactStore } from "@hypit/runtime";
+import { MemoryResourceStore, NodeDriver } from "@hypit/driver-node";
+import type { ResourceStore } from "@hypit/runtime";
 import type { BuildState } from "@hypit/protocol";
+import type { RuntimeHostTransientExecution } from "@hypit/runtime-host-node";
 
 import type { StudioDomain } from "./domain.js";
 
@@ -11,23 +12,36 @@ export type Executed = {
   readonly errors: readonly string[];
 };
 
-/** Run only deterministic Producers; Studio never installs or invokes Provider endpoints. */
-export async function executeDeterministic(
+/**
+ * Run the display closure: deterministic Producers, plus Needs the Runtime explicitly permits in
+ * a disposable authoring execution. The Runtime owns Endpoint selection and invocation; Studio
+ * never filters Providers or sees their handlers.
+ */
+export async function executeStudioProjection(
   domain: StudioDomain,
   planned: BuildState,
-  artifacts: ArtifactStore,
-  endpoints: EndpointRegistry = new EndpointRegistry(),
+  resources: ResourceStore,
+  execution?: RuntimeHostTransientExecution,
 ): Promise<Executed> {
-  const result = await new NodeDriver({
-    producers: domain.producers,
-    validators: domain.validators,
-    endpoints,
-    artifacts,
-  }).run(planned);
+  const result = execution === undefined
+    ? await new NodeDriver({
+        producers: domain.producers,
+        validators: domain.validators,
+        resources,
+      }).run(planned)
+    : await execution.evaluate({
+        state: planned,
+        producers: domain.producers,
+        validators: domain.validators,
+        resources,
+      });
   const counts = new Map<string, number>();
   for (const item of result.blocked) {
-    const need = result.state.needs.find((candidate) => item.subject.includes(candidate.capability.name));
-    const name = need?.capability.name ?? item.subject;
+    const command = result.state.outstanding.find((candidate) => candidate.id === item.command);
+    const capability = command?.kind === "fulfill-need" ? command.need.capability : undefined;
+    const name = capability === undefined
+      ? item.subject
+      : `${capability.module.name}@${capability.module.version}#${capability.name}`;
     counts.set(name, (counts.get(name) ?? 0) + 1);
   }
   return {
@@ -40,4 +54,4 @@ export async function executeDeterministic(
   };
 }
 
-export { MemoryArtifactStore };
+export { MemoryResourceStore };

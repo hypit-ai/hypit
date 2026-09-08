@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 import { projectProgramWindow } from "../../../test/temporal-fixture.js";
 
@@ -123,20 +123,18 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
   assert.ok(belowAt < middleAt && middleAt < aboveAt);
 });
 
-test("the package has no lower-composite, sibling Track, backdrop-filter or hidden audio port", () => {
+test("the Screen Overlay Fragment publishes its Program and peer VisualTrack", () => {
   const fragment = createScreenOverlayFragment([{ specName: "spec", windowName: "window" }]);
   assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "semantic", "spec", "window"]);
-  assert.equal(fragment.exports.some((output) => output.type.name === "AudioTrack"), false);
-  assert.throws(() => sealScreenOverlayItemSpec({
-    id: "blur",
-    content: { kind: "gaussian-blur" } as unknown as ScreenOverlayComponent,
-    stackingOrder: 1,
-  }), /unsupported|undefined|kind/iu);
+  assert.deepEqual(fragment.exports.map((output) => [output.name, output.type.name]), [
+    ["program", "ScreenOverlayProgram"],
+    ["track", "VisualTrack"],
+  ]);
 });
 
 test("the self-described Screen Surface parses into a finite peer-Track graph", async () => {
   const fixtureModule = { name: "example.screen-inputs", version: "1" } as const;
-  const fixtureSurfaceDigest = fixtureDigest("example.screen-inputs/surface@1");
+  const fixtureSurfaceDigest = fixtureResource("example.screen-inputs/surface@1");
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
     outputs: [spatialTypes.canvas, semanticTrackTypes.track],

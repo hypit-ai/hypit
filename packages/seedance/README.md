@@ -14,5 +14,6 @@ member as an ordinary `BlobArtifact`. Their prompt ports consume ordinary `Text`
 generic Text Template or third-party author module can feed them without becoming part of Seedance.
 
 `standard`, `fast`, `mini` and `2.5` select model variants independently of the invocation shape. Duration is
-either literal or supplied by an explicit `SpeechDuration` edge; the generic internal `DurationProgram`
-only delays that scalar binding and does not introduce a Speaker/Speech usage into the model interface.
+the author's literal, in whole seconds inside the model's declared range; measure the spoken line first
+with `hypit measure` and write the number here. Nothing in the graph computes it, so a Build plan is
+complete before it starts.

@@ -143,11 +143,6 @@ export function assertSpeechEstimatePolicy(value: SpeechEstimatePolicy): void {
     || (hasPace && !(["slow", "normal", "fast"] as const).includes(value.pace))
     || (hasRate && (!Number.isFinite(value.rate) || value.rate <= 0))
     || !(["none", "round", "ceil"] as const).includes(value.rounding)
-    || !Number.isFinite(value.minimumSec)
-    || value.minimumSec < 0
-    || !Number.isFinite(value.maximumSec)
-    || value.maximumSec <= 0
-    || value.minimumSec > value.maximumSec
     || (value.paddingSec !== undefined && (!Number.isFinite(value.paddingSec) || value.paddingSec < 0))
   ) {
     throw new Error("SpeechEstimatePolicy is invalid");
@@ -186,8 +181,8 @@ export function estimateSpeechDuration(
   const units = countSpeechEstimateUnits(text.value, language);
   if (units < 1) throw new Error("Speech Text contains no countable speech units");
   const raw = units / resolveSpeechEstimateRate(policy, language) + (policy.paddingSec ?? 0);
-  const firstClamp = Math.min(policy.maximumSec, Math.max(policy.minimumSec, raw));
-  const durationSec = Math.min(policy.maximumSec, Math.max(policy.minimumSec, rounded(firstClamp, policy.rounding)));
+  const durationSec = rounded(raw, policy.rounding);
+  if (durationSec === 0) throw new Error("Speech estimate rounds to zero seconds; use rounding none or ceil.");
   const duration = sealSpeechDuration(durationSec);
   assertSpeechDurationIdentity(duration);
   return duration;

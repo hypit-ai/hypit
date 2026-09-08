@@ -18,12 +18,12 @@ It deliberately ignores `AudioTrack`. HyperFrames produces a silent visual fact;
 compiles and renders program audio separately, then an explicit mux Provider joins the two. Changing
 audio can therefore never be implemented by secretly changing HyperFrames HTML or its renderer.
 
-Media remains content addressed in the compiled HTML as `hypit-artifact://` placeholders. The
-document separately carries each dependency's complete `BlobRef` (digest, byte count and MIME), so
+Media remains resource-referenced in compiled HTML as `hypit-resource://` placeholders. The
+document separately carries each dependency's complete `BlobRef` (Resource id, byte count and MIME), so
 a Provider can verify and name staged bytes without guessing from the hash. A local or hosted
 render Runtime calls `materializeHyperframesHtml()` with its own Artifact URL resolver before
 handing the HTML to HyperFrames. That environment-specific materialization is not a new compiled
-Record and does not change the document digest.
+Record and does not change the compiled document.
 
 The document exposes its render domain directly rather than asking an Endpoint to scrape HTML:
 exact rational `frameRate`, integer `frameCount`, and canvas dimensions are explicit document
@@ -41,10 +41,7 @@ their declared alpha, color-space and frame-domain metadata. The package never g
 from a user font name or filename extension. The document carries a deduplicated typed Surface set
 beside its Artifact set so a staging Runtime can verify the exact bytes before rendering.
 
-The ordinary test suite validates deterministic HTML and Artifact collection. Set
-`HYPIT_BROWSER_TESTS=1` to run the host integration witness that invokes the installed Hyperframes
-CLI, paints a real font and checks straight-alpha composition at the rendered pixel level. That
-test needs Chrome and FFmpeg; its multilingual case uses only the locked open-font package, not a
-system font. It is a renderer conformance witness, not Core logic.
-`@hypit/provider-hyperframes-local` adds a real two-worker silent-MP4 witness and strict ffprobe
-output verification.
+The ordinary test suite validates deterministic HTML, frame sampling markers and Artifact collection.
+The local Provider owns the Chrome integration tests. Run its tests with `HYPIT_BROWSER_TESTS=1`
+to exercise real multi-worker rendering, compare selected video frames with a full render, and check
+straight-alpha composition. These tests use the engine capture API and require Chrome and FFmpeg.

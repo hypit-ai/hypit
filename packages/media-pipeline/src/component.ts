@@ -1,5 +1,7 @@
+import { verifyMediaFrameRange } from "@hypit/media";
 import { mediaComponent } from "@hypit/media";
-import type { ComponentPackage } from "@hypit/component-kit";
+import { plannedNeedInputs } from "@hypit/component-kit";
+import type { ComponentPackage, PlannedNeedFacet } from "@hypit/component-kit";
 import { synchronizedMediaSampleFrames, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
 import type { MediaInspection, MediaStreamSelection, MuxedMedia, RenderedVisual, SynchronizedMedia, TimelineAudio } from "@hypit/media";
 import { assertProgramClockIdentity } from "@hypit/program-space";
@@ -7,14 +9,14 @@ import type { ProgramClock, ProgramSpace } from "@hypit/program-space";
 import { assertSpeechDurationIdentity, speechEvidenceSampleBoundary } from "@hypit/speech";
 import type { SpeechDuration } from "@hypit/speech";
 import type { Composition } from "@hypit/composition";
-import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue, CapabilityRef, ProducerRef, StoredValue } from "@hypit/protocol";
 import { canonicalize } from "@hypit/protocol";
 
 import {
   compileAudioProgramPlan,
   verifyAudioProgramPlan,
 } from "./audio-plan.js";
-import { mediaPipelineProducers, mediaPipelineTypes } from "./manifest.js";
+import { mediaPipelineCapabilities, mediaPipelineProducers, mediaPipelineTypes } from "./manifest.js";
 import {
   selectMediaStreams,
   verifyMediaSelectionRequest,
@@ -22,7 +24,10 @@ import {
 import {
   selectAudioStream,
   selectVideoStream,
+  bindStillVideoSource,
+  planStillVideoSegments,
   sealStillVideoRequest,
+  verifyStillVideoLayout,
   verifyAudioExtractionRequest,
   verifyFrameExtractionRequest,
   verifyMediaTransformProgram,
@@ -40,9 +45,9 @@ import type {
   ProjectSpeechEvidenceAudioNeed,
   RenderAudioNeed,
   RenderStillVideoNeed,
+  StillVideoLayout,
   StillVideoRequest,
   TransformMediaNeed,
-  PrepareMediaNeed,
 } from "./types.js";
 
 function inline(value: StoredValue, subject: string): CanonicalValue {
@@ -53,6 +58,32 @@ function inline(value: StoredValue, subject: string): CanonicalValue {
 function blob(value: StoredValue, subject: string): BlobRef {
   if (value.kind !== "blob") throw new Error(`${subject} must be a BlobArtifact`);
   return value;
+}
+
+/** Preserve unresolved graph inputs without pretending a structured value is a file. */
+function plannedMediaNeed(
+  producer: ProducerRef,
+  port: string,
+  capability: CapabilityRef,
+  roles: Readonly<Record<string, string>> = {},
+): PlannedNeedFacet {
+  return {
+    producer,
+    port,
+    capability,
+    plan({ state, step }) {
+      return { constraints: {}, pendingInputs: plannedNeedInputs(state, step, roles) };
+    },
+    present(specification) {
+      const references: Record<string, number> = {};
+      for (const item of specification.pendingInputs) {
+        const role = item.role;
+        if (role === undefined) continue;
+        references[role] = (references[role] ?? 0) + 1;
+      }
+      return { fields: {}, references };
+    },
+  };
 }
 
 export const mediaPipelineComponent = {
@@ -88,6 +119,12 @@ export const mediaPipelineComponent = {
       },
     },
     {
+      type: mediaPipelineTypes.stillVideoLayout,
+      handler: ({ value }) => {
+        verifyStillVideoLayout(inline(value, "StillVideoLayout"));
+      },
+    },
+    {
       type: mediaPipelineTypes.stillVideoRequest,
       handler: ({ value }) => {
         verifyStillVideoRequest(inline(value, "StillVideoRequest"));
@@ -101,14 +138,6 @@ export const mediaPipelineComponent = {
         const source = blob(inputs.source!.value, "Media inspection source");
         const need: InspectMediaNeed = { source };
         return { outputs: {}, needs: { inspection: canonicalize(need) } };
-      },
-    },
-    {
-      producer: mediaPipelineProducers.prepare,
-      handler: ({ inputs }) => {
-        const source = blob(inputs.source!.value, "Media preparation source");
-        const need: PrepareMediaNeed = { source, profile: "gemini-reference" };
-        return { outputs: {}, needs: { artifact: canonicalize(need) } };
       },
     },
     {
@@ -201,12 +230,23 @@ export const mediaPipelineComponent = {
       },
     },
     {
+      producer: mediaPipelineProducers.clipTimeLayout,
+      handler: () => ({
+        outputs: {
+          layout: { kind: "inline", value: canonicalize({ weights: [1], guide: "clip-time" }) },
+        },
+        needs: {},
+      }),
+    },
+    {
       producer: mediaPipelineProducers.planStill,
       handler: ({ inputs }) => {
         const duration = inline(inputs.duration!.value, "SpeechDuration") as unknown as SpeechDuration;
         const clock = inline(inputs.clock!.value, "ProgramClock") as unknown as ProgramClock;
         assertSpeechDurationIdentity(duration);
         assertProgramClockIdentity(clock);
+        const layout = inline(inputs.layout!.value, "StillVideoLayout") as unknown as StillVideoLayout;
+        verifyStillVideoLayout(layout);
         const frames = Math.round(duration * clock.frameRate.numerator / clock.frameRate.denominator);
         if (!Number.isSafeInteger(frames) || frames < 1) {
           throw new Error("Still video duration does not produce a positive safe frame count");
@@ -214,19 +254,31 @@ export const mediaPipelineComponent = {
         const request = sealStillVideoRequest({
           frameRate: clock.frameRate,
           frameCount: frames,
+          ...(layout.guide === undefined ? {} : { guide: layout.guide }),
           output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
+          segments: planStillVideoSegments(frames, layout.weights),
         });
         return { outputs: { request: { kind: "inline", value: canonicalize(request) } }, needs: {} };
       },
     },
     {
+      producer: mediaPipelineProducers.bindStill,
+      handler: ({ inputs }) => {
+        const request = inline(inputs.request!.value, "StillVideoRequest") as unknown as StillVideoRequest;
+        const source = blob(inputs.source!.value, "Still video source");
+        const bound = bindStillVideoSource(request, source);
+        return { outputs: { request: { kind: "inline", value: canonicalize(bound) } }, needs: {} };
+      },
+    },
+    {
       producer: mediaPipelineProducers.renderStill,
       handler: ({ inputs }) => {
-        const source = blob(inputs.source!.value, "Still video source");
         const request = inline(inputs.request!.value, "StillVideoRequest") as unknown as StillVideoRequest;
-        if (!source.mediaType.startsWith("image/")) throw new Error("Still video source must be an image Artifact");
         verifyStillVideoRequest(request);
-        const need: RenderStillVideoNeed = { source, request };
+        if (request.segments.some((segment) => segment.source === undefined)) {
+          throw new Error("Still video has a segment without a picture");
+        }
+        const need: RenderStillVideoNeed = { request };
         return { outputs: {}, needs: { video: canonicalize(need) } };
       },
     },
@@ -271,6 +323,17 @@ export const mediaPipelineComponent = {
       },
     },
     {
+      producer: mediaPipelineProducers.renderAudioRange,
+      handler: ({ inputs }) => {
+        const plan = inline(inputs.plan!.value, "AudioProgramPlan");
+        verifyAudioProgramPlan(plan);
+        const range = inline(inputs.range!.value, "MediaFrameRange");
+        verifyMediaFrameRange(range, plan.frameCount);
+        const need: RenderAudioNeed = { plan, range };
+        return { outputs: {}, needs: { audio: canonicalize(need) } };
+      },
+    },
+    {
       producer: mediaPipelineProducers.mux,
       handler: ({ inputs }) => {
         const visual = inline(inputs.visual!.value, "RenderedVisual");
@@ -296,6 +359,23 @@ export const mediaPipelineComponent = {
         };
       },
     },
+  ],
+  plannedNeeds: [
+    plannedMediaNeed(mediaPipelineProducers.inspect, "inspection", mediaPipelineCapabilities.inspect, { source: "media" }),
+    plannedMediaNeed(mediaPipelineProducers.normalize, "media", mediaPipelineCapabilities.normalize, { source: "media" }),
+    plannedMediaNeed(mediaPipelineProducers.transform, "video", mediaPipelineCapabilities.transform, { media: "video" }),
+    plannedMediaNeed(mediaPipelineProducers.extractAudio, "audio", mediaPipelineCapabilities.extractAudio, { source: "audio" }),
+    plannedMediaNeed(mediaPipelineProducers.extractFrame, "image", mediaPipelineCapabilities.extractFrame, { source: "video" }),
+    plannedMediaNeed(mediaPipelineProducers.renderStill, "video", mediaPipelineCapabilities.renderStill, { request: "image" }),
+    plannedMediaNeed(
+      mediaPipelineProducers.projectSpeechEvidenceAudio,
+      "evidenceAudio",
+      mediaPipelineCapabilities.projectSpeechEvidenceAudio,
+      { media: "audio" },
+    ),
+    plannedMediaNeed(mediaPipelineProducers.renderAudio, "audio", mediaPipelineCapabilities.renderAudio, { plan: "audio" }),
+    plannedMediaNeed(mediaPipelineProducers.renderAudioRange, "audio", mediaPipelineCapabilities.renderAudio, { plan: "audio" }),
+    plannedMediaNeed(mediaPipelineProducers.mux, "media", mediaPipelineCapabilities.mux, { visual: "video", audio: "audio" }),
   ],
 } satisfies ComponentPackage;
 
