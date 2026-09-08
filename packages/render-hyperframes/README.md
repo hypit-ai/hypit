@@ -2,9 +2,9 @@
 
 Explicit author and capability boundary for final HyperFrames video rendering.
 
-The package owns `<render:Video composition={...}/>` and lowers it to six ordinary Operations:
+The package owns `<render:Video composition={...}/>` and lowers it to ordinary Operations that:
 
-1. compile the referenced `Composition` into a `HyperframesDocument`;
+1. obtain the `ProgramSpace` from the semantic input and compile the referenced `Composition` into a `HyperframesDocument`;
 2. request a silent, frame-exact `RenderedVisual`;
 3. compile every peer `AudioTrack` into one `AudioProgramPlan`;
 4. request an exact 48 kHz `TimelineAudio`;

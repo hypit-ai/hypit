@@ -1,9 +1,10 @@
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { verifyCompositableSurfaceBytes } from "@hypit/media-execution";
 import type { CompositableSurfaceRef } from "@hypit/media";
@@ -44,6 +45,46 @@ function surface(bytes: Uint8Array, options: {
     timing: options.timing,
   };
 }
+
+test("cancelling Surface validation stops both probes without poisoning later calls", {
+  skip: process.platform === "win32",
+}, async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-surface-cancel-"));
+  const program = join(directory, "ffprobe");
+  const marker = join(directory, "running");
+  const bytes = new Uint8Array([0]);
+  const value = surface(bytes, { mediaType: "image/png", width: 1, height: 1,
+    alphaMode: "opaque", timing: { kind: "still" } });
+  try {
+    await writeFile(program, `#!${process.execPath}
+const fs = require('node:fs');
+fs.writeFileSync(${JSON.stringify(marker)} + '-' + process.pid, '');
+setInterval(() => {}, 1000);
+`);
+    await chmod(program, 0o755);
+    const controller = new AbortController();
+    const checking = verifyCompositableSurfaceBytes({ surface: value, bytes, ffprobePath: program,
+      signal: controller.signal });
+    const rejected = assert.rejects(checking, /stop probes/u);
+    let pids: number[] = [];
+    for (let i = 0; i < 200; i++) {
+      pids = (await readdir(directory)).filter((name) => name.startsWith("running-"))
+        .map((name) => Number(name.slice("running-".length)));
+      if (pids.length === 2) break;
+      await delay(10);
+    }
+    controller.abort(new Error("stop probes"));
+    await rejected;
+    assert.equal(pids.length, 2);
+    for (const pid of pids) assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+    await writeFile(program, `#!${process.execPath}
+console.log(JSON.stringify(process.argv.includes('-show_pixel_formats')
+ ? { pixel_formats: [{ name: 'rgb24', flags: { alpha: 0 } }] }
+ : { streams: [{ codec_type: 'video', width: 1, height: 1, pix_fmt: 'rgb24', nb_read_frames: '1' }] }));
+`);
+    await verifyCompositableSurfaceBytes({ surface: value, bytes, ffprobePath: program });
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
 
 test("Surface byte admission accepts matching still/video bytes and rejects contradictions", {
   skip: !hasMediaTools,

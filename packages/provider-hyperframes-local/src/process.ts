@@ -39,6 +39,11 @@ export async function runProcess(args: {
     let outputBytes = 0;
     let stderr = "";
     let settled = false;
+    let failure: Error | undefined;
+    const stop = (error: Error) => {
+      failure ??= error;
+      child.kill("SIGKILL");
+    };
     const finish = (error?: Error): void => {
       if (settled) return;
       settled = true;
@@ -47,17 +52,15 @@ export async function runProcess(args: {
       if (error === undefined) resolve({ stdout: Buffer.concat(stdout), stderr });
       else reject(error);
     };
-    const abort = () => { child.kill("SIGKILL"); finish(args.signal?.reason ?? new Error("Process aborted")); };
+    const abort = () => stop(args.signal?.reason ?? new Error("Process aborted"));
     args.signal?.addEventListener("abort", abort, { once: true });
     const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      finish(new Error(`${args.executable} timed out`));
+      stop(new Error(`${args.executable} timed out`));
     }, args.timeoutMs);
     child.stdout.on("data", (chunk: Buffer) => {
       outputBytes += chunk.byteLength;
       if (outputBytes > args.maxOutputBytes) {
-        child.kill("SIGKILL");
-        finish(new Error(`${args.executable} output exceeded the configured limit`));
+        stop(new Error(`${args.executable} output exceeded the configured limit`));
         return;
       }
       stdout.push(chunk);
@@ -66,13 +69,14 @@ export async function runProcess(args: {
       outputBytes += chunk.byteLength;
       stderr = `${stderr}${chunk.toString()}`.slice(-32_000);
       if (outputBytes > args.maxOutputBytes) {
-        child.kill("SIGKILL");
-        finish(new Error(`${args.executable} output exceeded the configured limit`));
+        stop(new Error(`${args.executable} output exceeded the configured limit`));
       }
     });
     child.on("error", (error) => finish(error));
+    if (args.signal?.aborted) abort();
     child.on("close", (code) => {
-      if (code === 0) finish();
+      if (failure !== undefined) finish(failure);
+      else if (code === 0) finish();
       else finish(new Error(`${args.executable} exited ${String(code)}: ${stderr}`));
     });
   });

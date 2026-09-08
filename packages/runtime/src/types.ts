@@ -78,23 +78,30 @@ export type RuntimeCommandExecutor = {
 };
 
 /** Build-local byte resources. Location, retention and transport are Runtime policy. */
+export type ResourceIOOptions = {
+  /** Cancel the transfer, close its streams and discard unfinished writes before rejecting.
+   * Stream producers supplied by the caller must observe the same signal while producing chunks.
+   */
+  readonly signal?: AbortSignal;
+};
+
 export type ResourceStore = {
   /** Store one new resource instance. Equal bytes remain independent resources. */
-  put(bytes: Uint8Array, mediaType: string): Promise<BlobRef>;
+  put(bytes: Uint8Array, mediaType: string, options?: ResourceIOOptions): Promise<BlobRef>;
   /** Write bytes for an already-declared source or historical resource. */
-  write(resource: BlobRef, bytes: Uint8Array): Promise<void>;
+  write(resource: BlobRef, bytes: Uint8Array, options?: ResourceIOOptions): Promise<void>;
   /** Read bytes previously stored under this execution identity. */
-  get(resource: ResourceId): Promise<Uint8Array | undefined>;
+  get(resource: ResourceId, options?: ResourceIOOptions): Promise<Uint8Array | undefined>;
   /** Cheap presence query. */
-  has(resource: ResourceId): Promise<boolean>;
+  has(resource: ResourceId, options?: ResourceIOOptions): Promise<boolean>;
 };
 
 /** Optional transfer capability. Core and components never require storage to expose it. */
 export type StreamingResourceStore = ResourceStore & {
-  putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string): Promise<BlobRef>;
-  writeStream(resource: BlobRef, chunks: AsyncIterable<Uint8Array>): Promise<void>;
+  putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string, options?: ResourceIOOptions): Promise<BlobRef>;
+  writeStream(resource: BlobRef, chunks: AsyncIterable<Uint8Array>, options?: ResourceIOOptions): Promise<void>;
   /** Stream bytes previously stored under this resource identity. */
-  open(resource: ResourceId): Promise<AsyncIterable<Uint8Array> | undefined>;
+  open(resource: ResourceId, options?: ResourceIOOptions): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
 export function isStreamingResourceStore(value: ResourceStore): value is StreamingResourceStore {

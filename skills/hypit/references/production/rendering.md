@@ -48,6 +48,8 @@ rate first.
 
 The original animation time remains intact, and picture and sound use the same interval. A short
 Run can target `detail.video` while the normal Run continues to target `final.video`.
+For this example, the renderer evaluates the original page at seconds 8–12 and encodes those frames
+as a four-second clip starting at zero. An animation already in progress at second 8 keeps that state.
 
 **The range limits final rendering. Upstream generation still follows the selected graph.** Keep
 the Run Candidates for usable media and SemanticTakes when inspecting a Caption or MG revision.
@@ -60,11 +62,22 @@ HyperFrames compiles the selected composition and renders its picture. Timeline 
 from the included AudioTracks, then picture and sound are muxed into the delivered file. A Runtime
 can bind these capabilities to different compatible Endpoints.
 
-For the local HyperFrames Provider, `workers` selects parallel frame workers and `browserCapacity`
-limits shared browser usage. These belong to the Runtime configuration; the Source keeps the same
-render declaration. [Runtime profiles](../environment/profile.md) explains worker choices, shared
-capacity and inspecting the selected Provider's configuration. Confirm that the chosen Endpoint
-supports range requests; the local HyperFrames implementation does.
+For the local HyperFrames Provider, `workers` selects independent Chrome processes within one render.
+They share the staged document and decoded source frames, capture different parts of the selected
+interval, and produce one encoded result. `defaultConcurrency` limits simultaneous render Needs;
+optional `browserCapacity` budgets their combined worker counts. These belong to the Runtime
+configuration; the Source keeps the same render declaration. [Runtime profiles](../environment/profile.md)
+explains shared capacity and inspecting the selected Provider's configuration. The local HyperFrames
+Provider supports range requests; the AWS Lambda Provider currently accepts whole documents only.
+
+A short interval reduces frame capture and source-frame extraction, but still prepares the document's
+declared assets and validates typed Surfaces. More workers accelerate capture, with preparation and
+final encoding contributing separately. Reusing media through the Run avoids generation work; it does
+not preserve a previous render's temporary preparation.
+
+A local render timeout ends that execution attempt and releases capacity after its work has stopped.
+Its failure and already completed Outputs belong to the Build Result. Continue through a new Run
+and Build that explicitly reuse the available media, as described in [Runs](runs.md).
 
 Use [Builds and Results](builds.md) to submit, follow and retrieve `final.video` or `detail.video`.
 Use [Review](review.md) to judge the observed interval or complete deliverable against the intended work.

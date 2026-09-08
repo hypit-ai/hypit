@@ -29,6 +29,7 @@ export type {
   OperationFailure,
   OperationProgress,
   OperationReceipt,
+  ResourceIOOptions,
   ResourceStore,
 } from "@hypit/runtime";
 

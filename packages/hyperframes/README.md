@@ -41,10 +41,7 @@ their declared alpha, color-space and frame-domain metadata. The package never g
 from a user font name or filename extension. The document carries a deduplicated typed Surface set
 beside its Artifact set so a staging Runtime can verify the exact bytes before rendering.
 
-The ordinary test suite validates deterministic HTML and Artifact collection. Set
-`HYPIT_BROWSER_TESTS=1` to run the host integration witness that invokes the installed Hyperframes
-CLI, paints a real font and checks straight-alpha composition at the rendered pixel level. That
-test needs Chrome and FFmpeg; its multilingual case uses only the locked open-font package, not a
-system font. It is a renderer conformance witness, not Core logic.
-`@hypit/provider-hyperframes-local` adds a real two-worker silent-MP4 witness and strict ffprobe
-output verification.
+The ordinary test suite validates deterministic HTML, frame sampling markers and Artifact collection.
+The local Provider owns the Chrome integration tests. Run its tests with `HYPIT_BROWSER_TESTS=1`
+to exercise real multi-worker rendering, compare selected video frames with a full render, and check
+straight-alpha composition. These tests use the engine capture API and require Chrome and FFmpeg.

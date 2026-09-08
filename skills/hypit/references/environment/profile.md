@@ -12,7 +12,6 @@ The environment is sufficient relative to the work, not as a global state. Read 
 Treatment, Source, and Run that matter, then identify the capabilities they need. A typical generated
 reconstruction may need:
 
-- visual observation through a selected `@hypit/gemini` Endpoint;
 - word transcription and alignment through a selected `@hypit/whisperx` Endpoint;
 - the exact image, video, voice, or audio models authored in Source;
 - media inspection, normalization, extraction, audio assembly, and muxing;
@@ -20,9 +19,9 @@ reconstruction may need:
 - the project's selected Build Result repository.
 
 Different work can need a smaller or larger set. Existing material with deterministic Caption, MG,
-and editing does not acquire an image model merely because another production used one. A reference
-reconstruction that depends on unobserved motion, speech timing, or new generated shots does need the
-corresponding eyes, ears, and production capabilities.
+and editing does not acquire an image model merely because another production used one. Word
+alignment establishes speech timing, and authored generation Needs require their selected
+production capabilities. Local media inspection prepares reference frames and clips independently.
 
 ## Keep the owners separate
 
@@ -104,6 +103,9 @@ a single request larger than the configured browser capacity is a configuration 
 illustrative budgets, not universal machine recommendations. Increasing workers can increase memory,
 decode and I/O pressure; inspect actual progress before attributing every delay to capacity contention.
 The selected frame range belongs to the render request, while worker policy belongs to the Endpoint.
+Local HyperFrames holds both its request slot and browser units until the whole render Need finishes,
+including preparation and encoding. The reserved units are a scheduling budget, not a live count of
+currently open Chrome processes. Omitting `browserCapacity` leaves only the request limit.
 
 Configure these choices in the Runtime Profile's Endpoint entries, using each Provider's documented
 fields. All instances sharing a resource must agree on its limit; use different pools for genuinely
@@ -139,7 +141,7 @@ Profile. Use `hypit runtime use <profile>` to select an intentional existing Pro
 
 The current official video Distribution starts with:
 
-- `hypihub.default` for remote generation, Gemini observation, and WhisperX alignment;
+- `hypihub.default` for remote generation and WhisperX alignment;
 - `media.local` for local media processing;
 - `hyperframes.local` for local visual rendering.
 
@@ -153,8 +155,8 @@ choose a Profile from a familiar filename or from another project above it.
 ## Choose the practical capability path with the user
 
 Inspect the selected Profile, configured credentials, and current Endpoint diagnoses before asking
-the user to set up anything. For a typical generated reconstruction, assess visual observation,
-word alignment, image generation, and video generation together so that solving one missing
+the user to set up anything. For a typical generated reconstruction, assess word alignment, image
+generation, and video generation together so that solving one missing
 capability does not conceal another. Keep a working choice. When capabilities are missing, explain
 all material consequences in the language of the work and ask which supported Provider accounts or
 Keys the user already has and whether local WhisperX is practical. Present the related gaps together
@@ -170,14 +172,7 @@ privacy, setup time, or control.
   have the corresponding BYOK or local capability. Authentication and available quota still need to
   be established for the selected account.
 - Image, video, voice, and audio production each require an actual selected Endpoint for the exact
-  authored model. An observation Endpoint does not imply a generation Endpoint, and vice versa.
-
-A newly selected Provider can make several capabilities reachable at once. Diagnose the capabilities
-it actually offers, then bring every relevant new ability back to the current work rather than using
-only the capability that prompted setup. For example, if a choice made for generation also restores
-moving-image observation, return that eye to the reference investigation and apply the
-[reference-video guidance](../creation/reference-video.md) to the earlier reading. That observation is
-still an external request with its own price source and spending authority.
+  authored model. Check support for the capabilities this work actually requests.
 
 HypiHub is a convenient selected Provider, not an automatic fallback. Moving from BYOK or local
 execution to HypiHub changes the Profile or its binding explicitly; an authentication error, exhausted
@@ -246,15 +241,12 @@ exist:
 - use a local implementation such as WhisperX when the machine can support it;
 - use deterministic HyperFrames components when an MG-, Caption-, or Typography-led piece genuinely
   fits the user's intent;
-- stop before promising a reconstruction that needs unavailable observation or generation.
+- stop before promising a reconstruction that needs unavailable generation.
 
 With no image or video generation account, HyperFrames can still generate deterministic MG, Caption,
 and Typography when that form fits the requested work; it does not replace generated A-roll or B-roll.
-For reference reconstruction without moving-image observation, use the
-[reference-video guidance](../creation/reference-video.md) to explain the evidence limit and what that
-means for the work. The user's own Gemini access and the official HypiHub Endpoint are the normal
-hosted ways to restore that eye. Without alignment, semantic attachment to real spoken words is
-unavailable. State those differences in the language of the requested work.
+Word alignment establishes the timing needed to attach semantic events to real speech. Explain a
+missing capability through the work it prevents, and continue independent work while resolving it.
 
 When the user brings another model, service, or Key, use
 [Models and Providers](model-and-provider.md) to distinguish credential setup, Endpoint configuration,

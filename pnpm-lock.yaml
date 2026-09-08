@@ -1963,6 +1963,9 @@ importers:
       hyperframes:
         specifier: 0.7.101
         version: 0.7.101(@types/node@24.10.1)
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
     devDependencies:
       '@hypit/composition':
         specifier: workspace:*
