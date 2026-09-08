@@ -10,7 +10,8 @@ Hypit Studio 打开一份 `.svrun`，把它的 Film 或 Render target 回溯到�
 Studio 不提交生成，也不创建 Build。需要生成的素材必须由 Run 明确选择：可以是项目文件、由 `<build-record>` 引用的历史 Build Output，也可以是用 `satisfy` 选择的普通替身 Fragment。Studio 可以请求所选 Runtime Profile 执行 Provider 明确允许临时创作执行的媒体 Need，例如检查和归一化；它不根据价格猜权限、不替换 Candidate，也不暗中制造占位。其余 Need 会带着准确 capability 失败。
 
 ```bash
-hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
+hypit-studio --run examples/ranking-football/swap-effect-banana/studio.svrun \
+  --workspace examples/ranking-football/swap-effect-banana
 # ➜  http://localhost:5179/
 ```
 

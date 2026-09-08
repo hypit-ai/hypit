@@ -53,7 +53,7 @@ hypit/
 | 指南 | 主题 |
 |---|---|
 | [Hypit Skill 架构](./skill.md) | 四条路径的入口、工具、路由和持久化 JSON 状态 |
-| [包架构](./packages.md) | 五个层次、依赖规则、包的构成、facets |
+| [包架构](./packages.md) | 分层、依赖规则、包的构成、facets |
 | [添加 Author 包](./author-packages.md) | 分步说明：新增组件、Surface、词表与预览图、activation |
 | [添加 Provider](./providers.md) | 分步说明：新增 Endpoint 适配器 |
 | [Runtime](./runtime.md) | Profile、Workspace、执行与生命周期边界 |

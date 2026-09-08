@@ -308,7 +308,7 @@ repository. Temporary Resources remain local and private to the active Runtime.
 ### 1. Select a Runtime
 
 ```bash
-cd examples/talking-head-aroll
+cd examples/podcast
 hypit runtime use hypit.runtime.json
 ```
 
@@ -334,11 +334,11 @@ JSON for inspection.
 ### 3. Check source and inspect the plan
 
 ```bash
-hypit check main.svml
+hypit check reference.svml
 ```
 
 ```bash
-hypit plan build.svrun
+hypit plan reference.svrun
 ```
 
 Review the frozen BuildPlan before spending money. The plan shows every Operation and Needs the
@@ -361,7 +361,7 @@ processes declared by Endpoints.
 ### 4. Submit the Build
 
 ```bash
-hypit build build.svrun --title first-cut --follow
+hypit build reference.svrun --title first-cut --follow
 ```
 
 Without `--follow`, `build` returns after durable submission. The detached Worker continues. With
@@ -402,7 +402,7 @@ completed public Outputs. Use `--output <name>` for one exact Output or `--limit
 ```bash
 hypit get <build-id> \
   --output final.video \
-  --to examples/talking-head-aroll/output/final.mp4
+  --to output/final.mp4
 ```
 
 `get` exports one exact `build + output` address to the required `--to` destination. A Scalar becomes

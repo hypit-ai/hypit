@@ -36,6 +36,8 @@ export type CreateHypiHubProviderOptions = {
   readonly oauthRequestTimeoutMs?: number;
   readonly pricingRequestTimeoutMs?: number;
   readonly operationTimeoutMs?: number;
+  /** Whole files uploaded concurrently per service and credential in this process. */
+  readonly uploadConcurrency?: number;
   readonly uploadPartTimeoutMs?: number;
   readonly uploadPartAttempts?: number;
   readonly downloadAttempts?: number;
@@ -104,6 +106,7 @@ class HypiHubClient {
   constructor(options: {
     readonly baseUrl: string;
     readonly timeout: number;
+    readonly uploadConcurrency: number;
     readonly uploadPartTimeout: number;
     readonly uploadPartAttempts: number;
     readonly downloadAttempts: number;
@@ -116,6 +119,7 @@ class HypiHubClient {
     this.uploader = new HypiHubUploader({
       baseUrl: this.baseUrl,
       requestTimeoutMs: this.timeout,
+      uploadConcurrency: options.uploadConcurrency,
       uploadPartTimeoutMs: options.uploadPartTimeout,
       uploadPartAttempts: options.uploadPartAttempts,
       fetch: this.fetcher,
@@ -151,20 +155,13 @@ class HypiHubClient {
     }
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
-  async upload(artifact: BlobRef, resources: ResourceStore, auth: HypiHubAuth, refreshOnUnauthorized = true): Promise<string> {
+  async upload(artifact: BlobRef, resources: ResourceStore, auth: HypiHubAuth): Promise<string> {
     const bytes = await resources.get(artifact.resource);
     assert(bytes !== undefined, `HypiHub reference artifact ${artifact.resource} is unavailable`);
     assert(bytes.byteLength === artifact.size, `HypiHub reference artifact ${artifact.resource} size differs`);
-    try {
-      return await this.uploader.upload({ bytes, mediaType: artifact.mediaType }, await auth.token());
-    } catch (error) {
-      if (refreshOnUnauthorized && auth.canRefresh() && /HTTP 401\b/u.test(error instanceof Error ? error.message : String(error))) {
-        await auth.refresh();
-        return await this.upload(artifact, resources, auth, false);
-      }
-      throw error;
-    }
+    return await this.uploader.upload({ bytes, mediaType: artifact.mediaType }, auth);
   }
+
   async transcribe(body: Record<string, unknown>, auth: HypiHubAuth): Promise<Record<string, unknown>> {
     return await this.json("/audio/transcriptions", auth, {
       method: "POST",
@@ -306,6 +303,7 @@ export async function diagnoseHypiHubProvider(
   const client = new HypiHubClient({
     baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"),
     timeout: options.requestTimeoutMs ?? 30_000,
+    uploadConcurrency: options.uploadConcurrency ?? 8,
     uploadPartTimeout: options.uploadPartTimeoutMs ?? 5 * 60_000,
     uploadPartAttempts: options.uploadPartAttempts ?? 3,
     downloadAttempts: options.downloadAttempts ?? 3,
@@ -480,6 +478,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   const client = new HypiHubClient({
     baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"),
     timeout: requestTimeoutMs,
+    uploadConcurrency: options.uploadConcurrency ?? 8,
     uploadPartTimeout: uploadPartTimeoutMs,
     uploadPartAttempts,
     downloadAttempts,
@@ -488,6 +487,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   const pricingClient = new HypiHubClient({
     baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"),
     timeout: pricingRequestTimeoutMs,
+    uploadConcurrency: options.uploadConcurrency ?? 8,
     uploadPartTimeout: uploadPartTimeoutMs,
     uploadPartAttempts,
     downloadAttempts,

@@ -98,6 +98,5 @@ Test fixtures go in `packages/<name>/test/fixtures/`. They are
 ordinary `.svml`, `.svs` and `.svrun` files that exercise specific compilation paths.
 
 The `examples/` directory also serves as integration-level fixtures:
-- `examples/bootstrap/` — smallest source closure check
-- `examples/talking-film-graph-check/` — complete graph compilation without Providers
-- `examples/talking-head-aroll/` — live example with explicit prior-Build Candidate reuse
+- `examples/interview/`, `examples/podcast/` and `examples/ranking-football/` — complete video projects with Sources, Runs and assets.
+- `examples/minimal-author-package/` — a complete component package with a Surface preview.
