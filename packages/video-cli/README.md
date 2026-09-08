@@ -1,7 +1,10 @@
 # `@hypit/video-cli`
 
 Official video command application. It selects the Markup compiler Host, but deliberately carries
-no built-in author, Run, Provider or Store package.
+no built-in author, Run or Store package and no Provider registry: a Build reaches a Provider only
+through the logical `use` names of its selected Runtime Profile. The single exception is
+`hypit image`, which writes one picture with no Runtime Profile at all and therefore links
+`@hypit/provider-hypihub` directly as this Distribution's default image backend.
 
 Every Frontend, Surface, deterministic Producer and Validator is activated from Source imports.
 Installing a new author package therefore does not require a video CLI or Core release. Source
@@ -44,7 +47,7 @@ fabricates a Target, Candidate or missing fact.
 `build` compiles one immutable Build Definition and passes it to the selected Runtime Profile with a fresh,
 automatically assigned execution id. Source or Plan identity never reclaims an earlier Build; reuse
 across Builds exists only through explicit Run Source Candidates. JSON Profiles resolve only adapters in their separately
-selected `use` fields and contain no executable callback. The CLI imports no Provider. A TypeScript config
+selected `use` fields and contain no executable callback. No Provider is compiled into the Build path. A TypeScript config
 module remains trusted deployment code with normal Node authority. Neither form is discovered from
 a source import.
 

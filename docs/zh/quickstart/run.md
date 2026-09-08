@@ -271,7 +271,7 @@ Runtime Profile 只选择 Runtime 包与该 Runtime 的封闭配置。完整结�
 ### 1. 选择 Runtime
 
 ```bash
-cd examples/talking-head-aroll
+cd examples/podcast
 hypit runtime use hypit.runtime.json
 ```
 
@@ -293,11 +293,11 @@ Doctor 校验全部显式 Runtime 角色、Endpoint 配置、凭据是否存在�
 ### 3. 检查 Source 与计划
 
 ```bash
-hypit check main.svml
+hypit check reference.svml
 ```
 
 ```bash
-hypit plan build.svrun
+hypit plan reference.svrun
 ```
 
 在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs；选择
@@ -313,7 +313,7 @@ status` 用于观察，`programs up|status|down` 只管理外部程序。
 ### 4. 提交 Build
 
 ```bash
-hypit build build.svrun --follow
+hypit build reference.svrun --follow
 ```
 
 不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是观察者，并会报告 phase / Operation 数量变化；Ctrl-C 不会取消任务。
@@ -349,7 +349,7 @@ hypit inspect <build-id>
 ```bash
 hypit get <build-id> \
   --name final.video \
-  --to examples/talking-head-aroll/output/final.mp4
+  --to examples/podcast/output/final.mp4
 ```
 
 每个被接受的中间 Record 和 Artifact 在 Build 完成前都会被归档。`get` 会复制一份已持久化的

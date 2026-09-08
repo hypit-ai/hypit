@@ -10,7 +10,8 @@ Hypit Studio 打开一份 `.svrun`，把它的 Film 或 Render target 回溯到�
 Studio 不调用 Provider，也不创建 Build。需要生成的素材必须已经由 Run 选择为真实 Candidate：可以是项目文件，也可以是早先 Build 接受并由 `<build-record>` 引用的 Record。显示闭包里不允许残留 Need；缺失关系会明确失败，不猜测素材、不制造占位。
 
 ```bash
-hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
+hypit-studio --run examples/ranking-football/swap-effect-banana/studio.svrun \
+  --workspace examples/ranking-football/swap-effect-banana
 # ➜  http://localhost:5179/
 ```
 

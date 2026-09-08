@@ -20,15 +20,12 @@ the glob `packages/*/test/**/*.test.ts`.
 
 ```typescript
 import assert from "node:assert/strict";
-import { describe, test } from "node:test";
+import test from "node:test";
 
 import { someFunction } from "@hypit/example";
 
-describe("someFunction", () => {
-  test("returns the expected result", () => {
-    const result = someFunction(input);
-    assert.deepStrictEqual(result, expected);
-  });
+test("someFunction returns the expected result", () => {
+  assert.deepStrictEqual(someFunction(input), expected);
 });
 ```
 
@@ -91,8 +88,18 @@ explicitly opt-in, use no committed secret and fail before spending money unless
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX service | Python 3.13, uv, frozen sync |
 | `pnpm test:image-opencv` | the shared OpenCV Raster interpreter across both request variants | the service's own interpreter at `services/image-opencv/.venv`; set `HYPIT_OPENCV_PYTHON` to use another |
-| `pnpm test:browser-visual` | rendered geometry, stacking and clipping in a real browser | a Chrome the HyperFrames CLI can start, `ffmpeg`, and `HYPIT_TEST_FONT_PATH` off macOS |
 | `pnpm smoke:kie` | Live paid KIE generation | `KIE_API_KEY` |
+
+One browser-gated test has no package script of its own. Run it through the Node test runner
+directly:
+
+```bash
+HYPIT_BROWSER_TESTS=1 node --import tsx --test packages/provider-hyperframes-local/test/provider.test.ts
+```
+
+It renders a real silent MP4 through the installed HyperFrames CLI, so it needs a Chrome that CLI
+can start and `ffmpeg`. Run the same file without `HYPIT_BROWSER_TESTS=1` and that one test skips
+while the rest of the file still runs, which is what `pnpm test` does.
 
 ## Test fixtures
 
@@ -100,6 +107,8 @@ Test fixtures go in `packages/<name>/test/fixtures/`. They are
 ordinary `.svml`, `.svs` and `.svrun` files that exercise specific compilation paths.
 
 The `examples/` directory also serves as integration-level fixtures:
-- `examples/bootstrap/` — smallest source closure check
-- `examples/talking-film-graph-check/` — complete graph compilation without Providers
-- `examples/talking-head-aroll/` — live example with explicit prior-Build Candidate reuse
+- `examples/interview/`, `examples/podcast/` and `examples/ranking-football/` — complete video
+  examples, each carrying SVML, SVS and SVRun sources beside its assets. The nested directories are
+  independent variants or explicit prior-Build reuse projects.
+- `examples/minimal-author-package/` — a package-authoring fixture, not a video example. It is the
+  smallest complete component package, down to a Surface preview asset.

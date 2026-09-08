@@ -105,8 +105,10 @@ such as media trimming, audio/frame extraction or a model reference input.
 
 ## Full pipeline walkthrough
 
-The complete data flow from Script to rendered video. This example is based on
-`examples/talking-film-graph-check/` — the smallest complete graph.
+The complete data flow from Script to rendered video. The Sources below are an abridged
+illustration of that shape, not the literal content of any file in this repository.
+`examples/podcast/` is the closest complete project, and the commands at the end of this
+walkthrough run against it.
 
 ### Author Source (`main.svml`)
 
@@ -263,10 +265,12 @@ width and is rejected.
 
 ### Compile and verify
 
-```bash
-hypit check examples/talking-film-graph-check/main.svml
+Run both against the complete podcast example:
 
-hypit plan examples/talking-film-graph-check/build.svrun
+```bash
+hypit check examples/podcast/reference.svml
+
+hypit plan examples/podcast/reference.svrun
 ```
 
 `check` compiles the Author Graph — validates all imports, types, and graph edges without calling

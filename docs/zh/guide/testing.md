@@ -19,15 +19,12 @@ pnpm test          # 包测试 + boundary 测试
 
 ```typescript
 import assert from "node:assert/strict";
-import { describe, test } from "node:test";
+import test from "node:test";
 
 import { someFunction } from "@hypit/example";
 
-describe("someFunction", () => {
-  test("returns the expected result", () => {
-    const result = someFunction(input);
-    assert.deepStrictEqual(result, expected);
-  });
+test("someFunction returns the expected result", () => {
+  assert.deepStrictEqual(someFunction(input), expected);
 });
 ```
 
@@ -80,14 +77,23 @@ test("generates a video", async (t) => {
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX 服务 | Python 3.13、uv、frozen sync |
 | `pnpm test:image-opencv` | OpenCV 图像变换 | 服务自带的解释器，位于 `services/image-opencv/.venv`；要用别的解释器就设 `HYPIT_OPENCV_PYTHON` |
-| `pnpm test:browser-visual` | 真实浏览器中的渲染几何、层叠与裁剪 | HyperFrames CLI 能启动的 Chrome、`ffmpeg`；非 macOS 还需 `HYPIT_TEST_FONT_PATH` |
 | `pnpm smoke:kie` | 实时付费的 KIE 生成 | `KIE_API_KEY` |
+
+还有一个受浏览器开关控制的测试没有对应的 package script，直接用 Node 测试运行器跑：
+
+```bash
+HYPIT_BROWSER_TESTS=1 node --import tsx --test packages/provider-hyperframes-local/test/provider.test.ts
+```
+
+它会通过安装好的 HyperFrames CLI 渲染一段真实的无声 MP4，因此需要该 CLI 能启动的 Chrome 和 `ffmpeg`。不带
+`HYPIT_BROWSER_TESTS=1` 跑同一个文件，这个测试会跳过，文件里其余测试照常执行——`pnpm test` 走的就是这条路径。
 
 ## 测试 fixtures
 
 测试夹具放在 `packages/<name>/test/fixtures/`。它们是普通的 `.svml`、`.svs` 和 `.svrun` 文件，用于覆盖特定的编译路径。
 
 `examples/` 目录同时充当集成级别的夹具：
-- `examples/bootstrap/` — 最小源闭包检查
-- `examples/talking-film-graph-check/` — 不含 Provider 的完整图编译
-- `examples/talking-head-aroll/` — 显式复用历史 Candidate 的 live example
+- `examples/interview/`、`examples/podcast/`、`examples/ranking-football/` — 三个完整的视频示例，各自带有
+  SVML、SVS、SVRun 源文件和配套素材。其中的子目录是彼此独立的变体，或是显式复用历史 Build 的项目。
+- `examples/minimal-author-package/` — 包创作夹具，不是视频示例。它是一个最小但完整的组件包，连 Surface
+  预览素材都齐备。

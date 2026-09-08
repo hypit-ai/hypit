@@ -61,7 +61,6 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/fonts-open            可分发字体资产
 @hypit/media-pipeline        媒体探测与规范化
 @hypit/media-execution       共享 ffmpeg 执行体
-@hypit/transport             调用边界
 @hypit/transport-aws-lambda  Lambda transport
 ```
 
@@ -84,12 +83,15 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/nano-banana           Nano Banana model family
 @hypit/seedream              Seedream model family
 @hypit/mimo-tts              Xiaomi MiMo VoiceDesign 模型及作者 Surface
+@hypit/gemini                provider 无关的 Gemini 文本与多模态请求
 @hypit/estimate              duration estimation
 @hypit/speech                shared speech products
 @hypit/speech-evidence       acoustic evidence products
 @hypit/speech-alignment      speech alignment
 @hypit/semantic-take-estimate 显式的音节加权预览对齐
+@hypit/semantic-take-adjust  对实测 take 锚点的显式作者修正
 @hypit/semantic-track        continuous semantic program skeleton
+@hypit/temporal-markup       Temporal 之上的共享 Window Markup surface
 @hypit/speech-track          ordered speech-take compilation
 @hypit/whisperx              WhisperX component
 @hypit/caption               Script-owned CaptionDocument、Selection 投影与定时
@@ -100,6 +102,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/deck-track            depth-stack collection Track
 @hypit/ranking               three ranking component families
 @hypit/screen-overlay        self-contained full-canvas overlays
+@hypit/comment-sticker       定时社交评论卡片，降解为普通 Visual Track
 @hypit/film                  Film composition
 @hypit/composition           peer Track composition
 @hypit/hyperframes           HyperFrames document compiler
@@ -109,6 +112,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/interview-emoji-reveal 可复用的顶部答案图标条
 @hypit/raster                共享确定性光栅执行合同
 @hypit/background-removal    外部图像去背景能力
+@hypit/mock-media            仅供预览的 mock 媒体 Fragment 及其能力合同
 ```
 
 ### Layer 5：Providers
@@ -118,6 +122,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 ```text
 @hypit/provider-kie                  KIE 生成与去背景
 @hypit/provider-hypihub              HypiHub 付费生成与 Gemini VLM 网关
+@hypit/provider-vertex               承担同一组能力的 Vertex Gemini 后端
 @hypit/provider-media-local          local ffprobe/ffmpeg
 @hypit/provider-whisperx-local       local WhisperX service
 @hypit/provider-hyperframes-local    local Chrome rendering
@@ -149,12 +154,29 @@ Frontend；不存在一个认识全部语法的中央解析器。
 ### Layer 7：Applications
 
 ```text
-@hypit/cli                 generic command engine (requires explicit Distribution)
-@hypit/video-cli           video command application (selects Markup compiler, no built-in author packages)
-@hypit/studio-adapter      stable Studio companion ABI and presentation DTOs
-@hypit/*-studio             由 Distribution 显式选择的独立官方 Studio Companion
-@hypit/studio              development preview for a Run, never runs a Provider
+@hypit/cli                      generic command engine (requires explicit Distribution)
+@hypit/video-cli                video command application (selects Markup compiler, no built-in author packages)
+@hypit/studio-adapter           stable Studio companion ABI and presentation DTOs
+@hypit/audio-track-studio       音频 Track Companion
+@hypit/caption-fine-studio      细粒度字幕 Track Companion
+@hypit/comment-sticker-studio   评论贴纸 Companion
+@hypit/deck-track-studio        深度栈 Track Companion
+@hypit/film-studio              Film 合成 Companion
+@hypit/media-track-studio       媒体 Track Companion
+@hypit/ranking-studio           排行榜 Companion
+@hypit/screen-overlay-studio    全画幅浮层 Companion
+@hypit/script-studio            Script Surface Companion
+@hypit/speech-track-studio      语音 Track Companion
+@hypit/typography-track-studio  字体排印 Track Companion
+@hypit/studio                   development preview for a Run, never runs a Provider
+@hypit/preview-mock             预览 Mock Realizer
+@hypit/reference-video-tools    参考视频重建 CLI（hypit-reference-video-tools）
+@hypit/yt-dlp                   通过 pin 版本的 services/yt-dlp 取回链接上的参考视频
 ```
+
+这十一个 `@hypit/*-studio` 是相互独立的官方 Studio Companion，由 Distribution 显式选择。每个
+Companion 依赖自己的领域包与 `@hypit/studio-adapter`，多数还依赖 `@hypit/composition`。依赖方向
+是单向的：领域包从不反过来依赖 Companion，因此 Distribution 可以只发布创作词汇而不带 Studio 界面。
 
 ## 依赖规则
 
@@ -165,7 +187,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 2. **领域无关 Core 闭包。** Layer 1 只有 `protocol` 与 `core`，且 `core` 只依赖 `protocol`。
    Compiler 与 Runtime 也可以领域无关，但它们不属于 Core。
 
-3. **CLI 独立性。** `@hypit/cli` 和 `@hypit/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@hypit/script`、`@hypit/seedance`、`@hypit/media-track`、`@hypit/typography-track`、`@hypit/film`）。Source import 按需激活作者包，Runtime Profile 的逻辑 `use` 名称按需激活运行包；两者都不是 CLI 的编译期依赖。
+3. **CLI 独立性。** `@hypit/cli` 不以任何方式依赖 Provider 包，两个 CLI 也都不维护 Provider 注册表：Build 只能通过所选 Runtime Profile 的逻辑 `use` 名称触及 Provider。`@hypit/video-cli` 只有一个直接的 Provider 依赖 `@hypit/provider-hypihub`，它仅服务于 `hypit image`——这条命令在没有 Runtime Profile 的情况下写出一张图片，因而没有可解析的 `use` 名称。video CLI 同样不依赖任何作者层的视频包（`@hypit/script`、`@hypit/seedance`、`@hypit/media-track`、`@hypit/typography-track`、`@hypit/film`）。Source import 按需激活作者包，Runtime Profile 的逻辑 `use` 名称按需激活运行包；两者都不是 CLI 的编译期依赖。
 
 ## 包的结构
 

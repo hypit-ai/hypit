@@ -46,7 +46,7 @@ hypit/
 ├── services/              managed services and deployment adapters (whisperx, image-opencv, yt-dlp, media-lambda)
 ├── test/                  repository boundary tests and shared fixtures
 ├── package.json           root workspace manifest
-├── pnpm-workspace.yaml    workspace: [packages/*]
+├── pnpm-workspace.yaml    workspace: [packages/*, services/*, examples/*/packages/*]
 └── tsconfig.json          TypeScript config
 ```
 
@@ -55,7 +55,7 @@ hypit/
 | Guide | Topic |
 |---|---|
 | [Hypit Skill Architecture](./skill.md) | Route entry points, tools, handoffs and durable JSON state |
-| [Package architecture](./packages.md) | The five layers, dependency rules, package anatomy, facets |
+| [Package architecture](./packages.md) | The seven layers, dependency rules, package anatomy, facets |
 | [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, vocabulary and preview, activation |
 | [Adding a Provider](./providers.md) | Step-by-step: new Endpoint adapter |
 | [Runtime](./runtime.md) | Profile, Workspace, execution and lifecycle boundaries |

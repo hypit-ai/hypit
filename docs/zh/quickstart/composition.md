@@ -101,8 +101,8 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
 
 ## 完整的管线流程
 
-从 Script 到渲染视频的完整数据流。本示例基于
-`examples/talking-film-graph-check/`——最小的完整图。
+从 Script 到渲染视频的完整数据流。下面的 Source 是这套形状的删节示意，并非仓库中某个文件的
+原文。`examples/podcast/` 是与之最接近的完整项目，本节末尾的命令就跑在它上面。
 
 ### Author Source (`main.svml`)
 
@@ -257,10 +257,12 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
 
 ### 编译与验证
 
-```bash
-hypit check examples/talking-film-graph-check/main.svml
+两条命令都针对完整的 podcast 示例执行：
 
-hypit plan examples/talking-film-graph-check/build.svrun
+```bash
+hypit check examples/podcast/reference.svml
+
+hypit plan examples/podcast/reference.svrun
 ```
 
 `check` 编译 Author Graph——验证所有导入、类型和图的边，而不调用任何外部服务。`plan`

@@ -262,7 +262,7 @@ output/
 ### 1. Select a Runtime
 
 ```bash
-cd examples/talking-head-aroll
+cd examples/podcast
 hypit runtime use hypit.runtime.json
 ```
 
@@ -286,11 +286,11 @@ JSON for inspection.
 ### 3. Check source and inspect the plan
 
 ```bash
-hypit check main.svml
+hypit check reference.svml
 ```
 
 ```bash
-hypit plan build.svrun
+hypit plan reference.svrun
 ```
 
 Review the frozen BuildPlan before spending money. The plan shows every Operation and Needs the
@@ -309,7 +309,7 @@ processes declared by Endpoints.
 ### 4. Submit the Build
 
 ```bash
-hypit build build.svrun --follow
+hypit build reference.svrun --follow
 ```
 
 Without `--follow`, `build` returns after durable submission. The detached Worker continues. With
@@ -349,7 +349,7 @@ archived Artifact only after those facts are correct:
 ```bash
 hypit get <build-id> \
   --name final.video \
-  --to examples/talking-head-aroll/output/final.mp4
+  --to examples/podcast/output/final.mp4
 ```
 
 Every accepted intermediate Record and Artifact is archived before the Build completes. `get` makes

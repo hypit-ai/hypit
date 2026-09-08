@@ -67,7 +67,6 @@ film's creative structure or call an external service.
 @hypit/fonts-open            redistributable font assets
 @hypit/media-pipeline        media inspection and normalization
 @hypit/media-execution       shared ffmpeg execution body
-@hypit/transport             invocation seams
 @hypit/transport-aws-lambda  Lambda transport
 ```
 
@@ -91,12 +90,15 @@ specific Provider deployment.
 @hypit/nano-banana           Nano Banana model family
 @hypit/seedream              Seedream model family
 @hypit/mimo-tts              Xiaomi MiMo VoiceDesign model + author Surface
+@hypit/gemini                provider-neutral Gemini text and multimodal requests
 @hypit/estimate              duration estimation
 @hypit/speech                shared speech products
 @hypit/speech-evidence       acoustic evidence products
 @hypit/speech-alignment      speech alignment
 @hypit/semantic-take-estimate explicit syllable-weighted preview alignment
+@hypit/semantic-take-adjust  explicit author corrections to measured take anchors
 @hypit/semantic-track        continuous semantic program skeleton
+@hypit/temporal-markup       shared Window Markup surface over Temporal
 @hypit/speech-track          ordered speech-take compilation
 @hypit/whisperx              WhisperX component
 @hypit/caption               Script-owned caption document, selection projection and timing
@@ -107,6 +109,7 @@ specific Provider deployment.
 @hypit/deck-track            depth-stack collection Track
 @hypit/ranking               three ranking component families
 @hypit/screen-overlay        self-contained full-canvas overlays
+@hypit/comment-sticker       timed social-comment cards as plain Visual Tracks
 @hypit/film                  Film composition
 @hypit/composition           peer Track composition
 @hypit/hyperframes           HyperFrames document compiler
@@ -116,6 +119,7 @@ specific Provider deployment.
 @hypit/interview-emoji-reveal reusable top-of-frame answer icon strip
 @hypit/raster                shared deterministic raster execution contract
 @hypit/background-removal    external image cutout capability
+@hypit/mock-media            preview-only mock media Fragments and contracts
 ```
 
 ### Layer 5: Providers
@@ -126,6 +130,7 @@ never on exact-model packages or the CLI.
 ```text
 @hypit/provider-kie                  KIE generation plus background removal
 @hypit/provider-hypihub              HypiHub paid generation and Gemini VLM gateway
+@hypit/provider-vertex               Vertex Gemini backend for the same capabilities
 @hypit/provider-media-local          local ffprobe/ffmpeg
 @hypit/provider-whisperx-local       local WhisperX service
 @hypit/provider-hyperframes-local    local Chrome rendering
@@ -157,12 +162,30 @@ queues, stores, credentials and process lifecycle; they never define author synt
 ### Layer 7: Applications
 
 ```text
-@hypit/cli                 generic command engine (requires explicit Distribution)
-@hypit/video-cli           video command application (selects Markup compiler, no built-in author packages)
-@hypit/studio-adapter      stable Studio companion ABI and presentation DTOs
-@hypit/*-studio             independent official Studio companions selected explicitly by the Distribution
-@hypit/studio              development preview for a Run, never runs a Provider
+@hypit/cli                      generic command engine (requires explicit Distribution)
+@hypit/video-cli                video command application (selects Markup compiler, no built-in author packages)
+@hypit/studio-adapter           stable Studio companion ABI and presentation DTOs
+@hypit/audio-track-studio       Audio Track Companion
+@hypit/caption-fine-studio      fine caption Track Companion
+@hypit/comment-sticker-studio   comment sticker Companion
+@hypit/deck-track-studio        deck Track Companion
+@hypit/film-studio              Film composition Companion
+@hypit/media-track-studio       Media Track Companion
+@hypit/ranking-studio           ranking Companion
+@hypit/screen-overlay-studio    screen overlay Companion
+@hypit/script-studio            Script Surface Companion
+@hypit/speech-track-studio      speech Track Companion
+@hypit/typography-track-studio  typography Track Companion
+@hypit/studio                   development preview for a Run, never runs a Provider
+@hypit/preview-mock             preview Mock Realizer
+@hypit/reference-video-tools    reference-video reconstruction CLI (hypit-reference-video-tools)
+@hypit/yt-dlp                   reference download through the pinned services/yt-dlp program
 ```
+
+The eleven `@hypit/*-studio` packages are independent official Studio Companions, selected
+explicitly by the Distribution. Each depends on its own domain package plus `@hypit/studio-adapter`,
+and most also on `@hypit/composition`. The dependency runs one way only: a domain package never
+depends on its Companion, so a Distribution can ship the authoring vocabulary without the Studio UI.
 
 ## Dependency rules
 
@@ -173,9 +196,13 @@ The package layout follows three dependency rules:
 2. **Domain-neutral Core closure.** Layer 1 contains only `protocol` and `core`; `core` depends only
    on `protocol`. Compiler and Runtime may also be domain neutral, but they remain outside Core.
 
-3. **CLI independence.** Neither `@hypit/cli` nor `@hypit/video-cli` transitively depends on any
-   Provider package. The video CLI also does not depend on any author-level video package
-   (`@hypit/script`, `@hypit/seedance`, `@hypit/media-track`, `@hypit/typography-track`, `@hypit/film`).
+3. **CLI independence.** `@hypit/cli` depends on no Provider package, transitively or otherwise,
+   and neither CLI carries a Provider registry: a Build reaches a Provider only through the logical
+   `use` names of its selected Runtime Profile. `@hypit/video-cli` holds exactly one direct Provider
+   dependency, `@hypit/provider-hypihub`, which serves only `hypit image` — a command that writes one
+   picture with no Runtime Profile, and therefore has no `use` name to resolve. The video CLI also
+   does not depend on any author-level video package (`@hypit/script`, `@hypit/seedance`,
+   `@hypit/media-track`, `@hypit/typography-track`, `@hypit/film`).
    Author packages are activated through Source imports, not compile-time CLI
    dependencies. These rules are kept visible in package manifests and reviewed as architecture,
    rather than approximated by source-text regex tests.

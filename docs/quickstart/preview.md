@@ -10,7 +10,8 @@ Hypit Studio opens one `.svrun`, traces its Film or Render target back to explai
 Studio never invokes a Provider or creates a Build. Generated material must already be selected by the Run as a real Candidate, either from a project file or from a Record accepted by an earlier Build and referenced through `<build-record>`. The display closure may contain no unresolved Need. Missing facts fail explicitly; Studio does not guess material or create placeholders.
 
 ```bash
-hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
+hypit-studio --run examples/ranking-football/swap-effect-banana/studio.svrun \
+  --workspace examples/ranking-football/swap-effect-banana
 # ➜  http://localhost:5179/
 ```
 
