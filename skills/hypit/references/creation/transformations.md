@@ -114,6 +114,7 @@ Otherwise, avoid chains of intermediate pictures that exist only to feed the nex
 single shot split by a model's duration limit, reuse the same accepted visual authorities for each
 part unless the cut itself is designed around a literal boundary frame.
 
-Studio and real Results close the decision loop. Adopt a generated item by using it in a later Run,
-Source, or request. If it fails the intended role, change the prompt, reference relation, shot design,
-or Treatment according to what is actually wrong.
+Carry accepted media into the composition through Source and Run Candidates. Use Studio and rendered
+Results to develop Caption, MG, B-roll coverage, effects and sound around those assets. If a generated
+item fails its intended role, improve the responsible prompt, reference relation or shot design before
+deciding on another authorized request. Reconsider Treatment when the creative answer itself changes.

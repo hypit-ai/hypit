@@ -13,8 +13,10 @@ Treat the soundtrack as a composition of independently authored contributions:
 - **ambience** gives places and edits a believable acoustic world;
 - **sound effects** answer discrete visible or editorial events.
 
-The Treatment and reference Timeline can describe what each layer contributes and where its role
-changes. The Source expresses the chosen relationships with ordinary audio Resources and Tracks.
+Choose sounds for what the new piece is doing: a reveal can earn a short accent, a comparison can
+share a recognizable motif, and a transition can carry the music into the next idea. Let the video's
+character guide the sound palette. The Treatment describes these choices; the Source expresses them
+with ordinary audio Resources and Tracks.
 An audio library, generated sound, recorded material, or an earlier accepted Output can all supply a
 layer; choose from the work's need rather than treating origin as an audible category.
 
@@ -65,17 +67,6 @@ can bind a montage, and a speaking Take can remain audible while B-roll or MG ch
 Conversely, a change of place, speaker perspective, narrative state, or designed silence may deserve
 an audible transition even when the picture changes gently.
 
-Listen at boundaries for clipped words, missing breaths, doubled speech, abrupt room changes, music
-that restarts accidentally, and effect tails cut by the next shot. Fades and overlaps should express
-the intended handoff rather than hide an unexplained discontinuity.
-
-## Review the complete listening experience
-
-First establish that each important source is the right performance or sound. Then hear speech with
-the surrounding layers, the densest passage, every structural transition, and the opening and close.
-Finally listen to the complete Film without stopping. Use the available listening setup that represents
-the delivery, and compare headphones with ordinary speakers when translation between them matters.
-
-Judge cumulative pace and fatigue as well as isolated clarity. Repair the owning layer: performance
-problems in the speech source, semantic placement in Source, event design in the effect, arrangement
-and balance in the mix, and clipping or encoding in the relevant media or final output.
+Give speech its complete phrase and let effect tails finish naturally. Use fades and overlaps to
+carry the intended handoff. Keep the mix coherent across the piece: clear speech, a consistent sound
+palette, and emphasis reserved for the moments that deserve it.

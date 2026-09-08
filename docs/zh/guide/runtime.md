@@ -191,7 +191,7 @@ hypit runtime down
 
 `runtime init` 会把视频 Distribution 提供的起始 Profile 写入 `hypit.runtime.json`，并为已经解析
 出的项目选择它；已有文件一律拒绝覆盖。这只是本地文件操作：不安装包、不连接服务、不索取凭据，
-也不启动 Worker。官方起始 Profile 使用 HypiHub 提供远程生成、Gemini 与 WhisperX，使用本地
+也不启动 Worker。官方起始 Profile 使用 HypiHub 提供远程生成、WhisperX，使用本地
 Endpoint 处理媒体并通过 HyperFrames 渲染。这是 Distribution 的开箱选择，不是 Core 规则；使用
 BYOK 或本地 Provider 时可以编辑 Profile 或选择另一份 Profile。
 

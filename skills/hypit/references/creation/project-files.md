@@ -93,23 +93,32 @@ referenced in place; its documentary role does not require a duplicate.
 
 - `ANALYSIS.md` is the current whole-piece understanding of a reference: form, story, recurring
   systems, relationships, function, and why the work holds together.
-- `TIMELINE.md` says what happens when in the reference, including concurrent picture, speech,
-  Caption, Typography, MG, Effect, and Audio behavior.
+- `TIMELINE.md` connects what happens when with what it does for the viewer. Preserve the content,
+  placement, entry, changes, persistence and exit of the reference's visual systems, their word or
+  action relationships, source times and useful evidence paths. Concurrent picture, speech, Caption,
+  Typography, MG, Effect and Audio behavior belong to the same connected account.
 - `transcript.json` is word-level speech evidence. It is evidence, not the director's interpretation.
 - `evidence/` contains only media worth reopening, with ordinary human-readable names.
 - `BRIEF.md` preserves the user's goal, facts, constraints, and requested changes.
 - `TREATMENT.md` is the director's current answer to the Brief: the intended new piece in complete
   creative terms, before implementation details.
 - `authors/`, `recipes/`, and `runs/` are the exact production implementation.
-- `PROGRESS.md` is a short photograph of the work now: the live question, next useful action, real
-  blockers, active Build ids and reusable Results. When handing work over, retain the relevant Run
-  and Runtime Profile, exact Build id and public Output names needed to continue. Run Candidates own
+- `PROGRESS.md` is a short photograph of the work now: the live question, what remains to examine or
+  make, next useful action, real blockers, active Build ids and reusable Results. When handing work
+  over, retain the relevant Run and Runtime Profile, exact Build id and public Output names needed
+  to continue. Run Candidates own
   the actual reuse choices; the note points to them. Established conclusions belong in their owning
   document instead.
 
 Rewrite these files when the current truth changes. They are not logs. `PROGRESS.md` may exist beside
 a reference or a production because either kind of work can span conversations; it does not mark a
 stage and can disappear when there is nothing useful to hand over.
+
+Use these files as the working memory across conversations. Write discoveries and decisions into
+their owning documents as the work develops, preserving both the explanation and its concrete
+details. Resume by reading the current project files and relevant Skill pages; use Progress to find
+the next question and the saved evidence, Sources, Runs or Results to continue it. A new discovery
+updates the account it changes so the next session inherits the improved understanding.
 
 ## Drafts and Results are different things
 

@@ -210,10 +210,11 @@ owns that gap through the explicit affinities; [B-roll craft](../playbooks/craft
 shared-boundary forms.
 
 The consuming component's Surface projects the authored identity through the real SemanticTrack.
-For example, `during={story.selection.proof}` on a visual Item makes that Surface construct the
-resulting Window, while `at={story.moment.claim}` on an MG item or sound makes its Surface construct
-the resulting Instant. The component's Fragment and Producers consume that value and own playback,
-visible duration, animation, and state behavior; Script supplies the meaning and its Anchors.
+For example, `during={story.selection.proof}` on a visual Item makes that Surface construct a Window.
+A persistent MG reveal can use `at={story.moment.claim}` to consume an Instant; an Audio Clip uses
+`at={story.moment.claim} for="600ms"` to occupy a Window. The component's Fragment and Producers
+consume that value and own playback, visible duration, animation, and state behavior; Script supplies
+the meaning and its Anchors.
 
 Surfaces that expose Hypit's shared temporal vocabulary accept the forms appropriate to their role.
 A Window occupies an interval:
@@ -251,7 +252,7 @@ serves. The target Source names the intended relation against the target Script.
 actual audio is aligned, the SemanticTrack supplies its frames. Do not copy a reference timestamp into
 the target or preserve an incidental lead/lag unless that offset itself is part of the design.
 
-## Let the creation and production loops meet honestly
+## Connect reference understanding to audiovisual composition
 
 Timing seen in Studio or a real Result may expose one of several different problems. A wrong Cue or
 semantic anchor changes Script. A sound performance that changes the intended rhythm may change the

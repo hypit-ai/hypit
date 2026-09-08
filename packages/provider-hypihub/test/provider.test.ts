@@ -4,7 +4,6 @@ import test from "node:test";
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { AsyncEndpoint } from "@hypit/endpoint-kit";
-import { geminiCapabilities, geminiTypes, sealGeminiRequest } from "@hypit/gemini";
 import type { CanonicalValue, Need } from "@hypit/protocol";
 import { mimoSpeechEndpoints, sealMimoSpeechRequest } from "@hypit/mimo-speech";
 import { generationTypes } from "@hypit/generation";
@@ -505,80 +504,6 @@ test("HypiHub stops before paid submission when a reference upload fails", async
   assert.doesNotMatch(outcome.status === "failed" ? outcome.failure.message : "", /must-not-leak/u);
 });
 
-test("HypiHub fulfills Gemini through the Runtime endpoint and uploads every media Resource", async () => {
-  const resources = new MemoryResourceStore();
-  const image = await resources.put(new Uint8Array([1, 2, 3]), "image/png");
-  const video = await resources.put(new Uint8Array([4, 5, 6]), "video/mp4");
-  const request: Need = {
-    id: "need:hypihub-gemini",
-    capability: geminiCapabilities["gemini-3.1-pro"],
-    returns: geminiTypes.visualObservation,
-    constraints: sealGeminiRequest({
-      instruction: "Answer briefly.", prompt: "Inspect both references.",
-      media: [{ artifact: image }, { artifact: video }],
-    }) as unknown as CanonicalValue,
-    result: "record:hypihub-gemini",
-  };
-  let uploadSessions = 0;
-  let completedUploads = 0;
-  let generationBody: Record<string, unknown> | undefined;
-  const registry = new EndpointRegistry();
-  await createHypiHubProvider({ fetch: async (input, init) => {
-    const url = String(input);
-    if (url.endsWith("/v1/files/uploads")) {
-      uploadSessions += 1;
-      return Response.json({
-        upload_mode: "s3_multipart",
-        upload_id: `up_gemini_${uploadSessions}`,
-        part_size: 16,
-        part_count: 1,
-        concurrency: 2,
-      });
-    }
-    const parts = /\/v1\/files\/uploads\/(up_gemini_\d+)\/parts$/u.exec(url);
-    if (parts) {
-      const body = JSON.parse(String(init?.body)) as {
-        readonly parts: readonly { readonly checksum_sha256: string }[];
-      };
-      return Response.json({ parts: [{
-        part_number: 1,
-        url: `https://s3.example/${parts[1]}?signature=secret`,
-        headers: {
-          "content-length": "3",
-          "x-amz-checksum-sha256": body.parts[0]?.checksum_sha256,
-        },
-      }] });
-    }
-    if (url.startsWith("https://s3.example/up_gemini_")) {
-      return new Response(null, { headers: { etag: "part" } });
-    }
-    if (/\/v1\/files\/uploads\/up_gemini_\d+\/complete$/u.test(url)) {
-      completedUploads += 1;
-      return Response.json({ url: `https://hypit.ai/files/${completedUploads}` });
-    }
-    if (url.includes(":generateContent")) {
-      generationBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
-      return Response.json({ candidates: [{ content: { parts: [{ text: "provider works" }] } }] });
-    }
-    throw new Error(`Unexpected URL ${url}`);
-  } }).install(registry);
-  const resolution = registry.resolve(request);
-  assert.equal(resolution.status, "resolved");
-  assert.equal(resolution.registration.kind, "immediate");
-  const result = await resolution.registration.handler({
-    command: { kind: "fulfill-need", id: "command:hypihub-gemini", need: request },
-    need: request, resources, credentials: { apiKey: { secret: "test-key" } },
-  });
-  assert.deepEqual(result.value, { kind: "inline", value: { text: "provider works" } });
-  assert.equal(uploadSessions, 2);
-  assert.equal(completedUploads, 2);
-  assert.deepEqual((generationBody?.contents as readonly unknown[]), [{ role: "user", parts: [
-    { text: "Inspect both references." },
-    { fileData: { mimeType: "image/png", fileUri: "https://hypit.ai/files/1" } },
-    { fileData: { mimeType: "video/mp4", fileUri: "https://hypit.ai/files/2" } },
-  ] }]);
-});
-
 test("HypiHub fulfills the Provider-neutral WhisperX alignment capability", async () => {
   const resources = new MemoryResourceStore();
   const bytes = wav(32_000);
@@ -671,10 +596,9 @@ test("HypiHub fulfills the Provider-neutral WhisperX alignment capability", asyn
 test("HypiHub exposes model groups beneath its own total capacity", async () => {
   const registry = new EndpointRegistry();
   await createHypiHubProvider({ pool: "hub-account", defaultConcurrency: 8,
-    capabilityConcurrency: { "seedance-2-mini": 2, gemini: 3, transcription: 1 } }).install(registry);
+    capabilityConcurrency: { "seedance-2-mini": 2, transcription: 1 } }).install(registry);
   const requests = [
     need({}),
-    { ...need({}), capability: Object.values(geminiCapabilities)[0]!, returns: geminiTypes.visualObservation },
     { ...need({}), capability: whisperXCapabilities.alignment, returns: speechEvidenceTypes.alignedTranscript },
   ];
   for (const [index, request] of requests.entries()) {
@@ -682,7 +606,7 @@ test("HypiHub exposes model groups beneath its own total capacity", async () => 
     assert.equal(selected.status, "resolved");
     assert.deepEqual(selected.registration.scheduling?.resources, [
       { id: "pool:hub-account", limit: 8 },
-      { id: `capacity:hub-account/${["seedance-2-mini", "gemini", "transcription"][index]}`, limit: [2, 3, 1][index] },
+      { id: `capacity:hub-account/${["seedance-2-mini", "transcription"][index]}`, limit: [2, 1][index] },
     ]);
   }
   assert.throws(() => createHypiHubProvider({ capabilityConcurrency: { invented: 1 } }), /unknown HypiHub capacity/);

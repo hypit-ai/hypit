@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, extname, join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import { findRuntimeProfile, loadDiscoveredSourcePackages, resolveProjectRoot } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
@@ -11,8 +11,6 @@ import {
   resolveSpeechEstimateLanguage,
   speechEstimatePolicyFromAttributes,
 } from "@hypit/estimate";
-import { geminiCapabilities, geminiModels, geminiTypes, sealGeminiRequest, verifyVisualObservation } from "@hypit/gemini";
-import type { GeminiMediaPart, GeminiModel, VisualObservation } from "@hypit/gemini";
 import type { CanonicalValue, CapabilityRef, Need, StoredValue } from "@hypit/protocol";
 import type { ResourceStore } from "@hypit/runtime";
 import type { RuntimeHostCapabilityProvider, RuntimeHostProviderQuery } from "@hypit/runtime-host-node";
@@ -26,18 +24,8 @@ import type { WhisperXLanguage } from "@hypit/whisperx";
 import { videoCliDistribution } from "./distribution.js";
 import { runProcess } from "./process.js";
 
-/**
- * Creation-time tools: see a picture, hear a recording, measure a script.
- *
- * Each is one immediate Need executed through the selected Runtime Profile, exactly as a Build would
- * resolve it — same Endpoint, same credential, same Provider — without a Build, Result or state. The
- * command names the Endpoint and its price page before it spends anything, writes one file the caller
- * chose, and nothing else. Everything the Author Graph declares as an output — pictures, clips, the
- * spoken A-roll — is a Build, however fast it comes back: an output carries the identity of the Source
- * that produced it, and a command's file does not.
- */
-
-export const creationCommands = ["observe", "transcribe", "measure"] as const;
+/** Transcribe source media through a selected Endpoint, or estimate authored speech locally. */
+export const creationCommands = ["transcribe", "measure"] as const;
 export type CreationCommand = typeof creationCommands[number];
 
 /** The slice of the Runtime host these commands use; tests hand in a fake. */
@@ -196,29 +184,6 @@ function providerLine(provider: RuntimeHostCapabilityProvider): string {
 // ---------------------------------------------------------------------------------------------------
 // Media
 
-const MEDIA_TYPES: Readonly<Record<string, string>> = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".gif": "image/gif",
-  ".mp4": "video/mp4",
-  ".m4v": "video/mp4",
-  ".mov": "video/quicktime",
-  ".webm": "video/webm",
-  ".wav": "audio/wav",
-  ".mp3": "audio/mpeg",
-  ".m4a": "audio/mp4",
-  ".flac": "audio/flac",
-  ".ogg": "audio/ogg",
-};
-
-function mediaType(path: string): string {
-  const type = MEDIA_TYPES[extname(path).toLowerCase()];
-  assert(type !== undefined, `${path} has no media type this command knows; supported: ${Object.keys(MEDIA_TYPES).join(", ")}`);
-  return type;
-}
-
 async function run(executable: string, args: readonly string[]): Promise<string> {
   return (await runProcess(executable, args)).toString("utf8");
 }
@@ -275,56 +240,6 @@ async function speechEvidenceBytes(path: string): Promise<{ readonly bytes: Uint
 function round(value: number): number { return Number(value.toFixed(3)); }
 function seconds(sample: number | undefined): number | undefined {
   return sample === undefined ? undefined : round(sample / EVIDENCE_SAMPLE_RATE);
-}
-
-// ---------------------------------------------------------------------------------------------------
-// observe
-
-async function observe(argv: readonly string[], io: CliIo, environment: CreationEnvironment): Promise<void> {
-  const parsed = parseArguments(argv, ["--instruction", "--prompt", "--model", "--to", "--runtime", "--workspace"]);
-  assert(parsed.positionals.length > 0, "observe requires at least one media file to look at");
-  const modelName = parsed.options.get("--model") ?? geminiModels[0];
-  assert((geminiModels as readonly string[]).includes(modelName),
-    `Gemini model ${modelName} is not declared by @hypit/gemini; declared models: ${geminiModels.join(", ")}`);
-  const model = modelName as GeminiModel;
-  const instruction = await textOrFile(required(parsed, "--instruction", "who the observer is and what it returns"), "--instruction", environment.cwd);
-  const prompt = await textOrFile(required(parsed, "--prompt", "the question to answer about the media"), "--prompt", environment.cwd);
-  const to = await destination(parsed, environment.cwd);
-  const { profile, host } = await environment.openHost(
-    parsed.options.get("--runtime"),
-    parsed.options.get("--workspace"),
-  );
-  const capability = geminiCapabilities[model];
-  const resources = new MemoryResourceStore();
-  const media: GeminiMediaPart[] = [];
-  for (const item of parsed.positionals) {
-    const path = resolve(environment.cwd, item);
-    media.push({ artifact: await resources.put(new Uint8Array(await readFile(path)), mediaType(path)) });
-  }
-  const need: Need = {
-    id: "need:hypit-observe",
-    capability,
-    returns: geminiTypes.visualObservation,
-    constraints: sealGeminiRequest({ instruction, prompt, media }) as unknown as CanonicalValue,
-    result: "record:hypit-observe",
-  };
-  const provider = await selectedProvider(host, need, profile);
-  if (!parsed.json) io.write(`Observing with ${model} through ${providerLine(provider)}\n`);
-  const fulfillment = await host.invoke(need, resources);
-  assert(fulfillment.value.kind === "inline", "the observation came back by reference");
-  verifyVisualObservation(fulfillment.value.value);
-  const text = (fulfillment.value.value as unknown as VisualObservation).text;
-  await writeNew(to, `${text}\n`);
-  const view = {
-    format: "hypit.video-cli-observe@1",
-    model,
-    media: parsed.positionals.map((item) => resolve(environment.cwd, item)),
-    ...providerView(provider),
-    characters: text.length,
-    path: to,
-  };
-  if (parsed.json) io.write(`${JSON.stringify(view, null, 2)}\n`);
-  else io.write(`✓ Observation written\n\n  ${text.length} characters\n  ${to}\n`);
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -497,18 +412,9 @@ async function measure(argv: readonly string[], io: CliIo, environment: Creation
 
 export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
   const sections: Record<CreationCommand, readonly string[]> = {
-    observe: [
-      "hypit observe",
-      "Look at pictures, clips or recordings with the Gemini Endpoint of the selected Runtime Profile.",
-      "",
-      "  hypit observe <media…> --instruction <text|file> --prompt <text|file> --to <file>",
-      "                [--model <gemini model>] [--runtime <profile>] [--workspace <project>]",
-      "",
-      "Writes the observation as text to --to. One immediate request; no Build, Result or state.",
-    ],
     transcribe: [
       "hypit transcribe",
-      "Hear a recording with the whisperx-alignment Endpoint of the selected Runtime Profile.",
+      "Establish word times with the whisperx-alignment Endpoint of the selected Runtime Profile.",
       "",
       "  hypit transcribe <audio|video> --to <transcript.json> [--language en|zh|es] [--runtime <profile>] [--workspace <project>]",
       "",
@@ -530,7 +436,7 @@ export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
   };
   const chosen = topic === undefined ? creationCommands : [topic];
   io.write(`${chosen.map((item) => sections[item].join("\n")).join("\n\n")}\n\n`
-    + "observe and transcribe name the Endpoint and its price page before they run; the Profile\n"
+    + "transcribe names the Endpoint and its price page before it runs; the Profile\n"
     + "comes from --runtime or the project's `hypit runtime use` selection. measure spends nothing.\n");
 }
 
@@ -538,7 +444,6 @@ export async function runCreationCli(argv: readonly string[], io: CliIo, environ
   const command = argv[0];
   assert(isCreationCommand(command), `unknown creation command ${command}`);
   if (argv.includes("--help")) { writeCreationHelp(io, command); return; }
-  if (command === "observe") await observe(argv, io, environment);
-  else if (command === "transcribe") await transcribe(argv, io, environment);
+  if (command === "transcribe") await transcribe(argv, io, environment);
   else await measure(argv, io, environment);
 }

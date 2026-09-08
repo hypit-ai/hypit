@@ -1,172 +1,157 @@
 # Understanding a reference video
 
 Read this when a video or link is evidence for what the new work should preserve, adapt, or learn
-from.
+from. The useful result is a timecode-level semantic reading: what the piece communicates, and how
+its exact audiovisual choices make that communication work.
 
-## Direct the investigation
+## Read the whole through its details
 
-The Agent is the mind and director. Moving-image observation is its broad eye, transcription and
-alignment are its ears, and local media commands prepare closer views that the Agent can inspect
-itself. The tools report evidence; the Agent connects events across time, resolves contradictions,
-explains why they matter, and decides what to inspect next. Gemini supplies moving-image observations;
-the Agent connects them into a whole-piece understanding and authors the target work.
+Watch the whole reference from opening to close. Follow its hook, argument or story, shifts of
+attention, payoff and intended viewer response. Read the spoken words with their times. Notice who
+establishes the performance, what the pictures contribute, and which Caption, MG, Typography, Effect
+and Audio systems persist or recur. Form a provisional explanation of why the piece works.
 
-Begin by watching the whole piece. For ordinary reconstruction, give the whole work or meaningful
-spans to a capable moving-image observer so motion, order and distant relationships are actually in
-evidence. Spoken language carries most work Hypit is asked to clone, so obtain and read its word-level
-transcript and use it as the normal time spine. If the piece is genuinely speechless, establish that
-spine from its actions, visual changes, music, effects and silence. Form a provisional account of:
+Read that meaning through its concrete realization. Each designed element deserves an account of its
+content and appearance, spatial relationship, entry, active behavior, persistence and exit. Locate
+these changes against the words, pauses or actions they serve. Explain what the choice does for the
+viewer: establishes a person, contrasts two claims, accumulates proof, amplifies a reaction, makes
+a process legible, or hands attention to the next idea. Meaning directs the close look; the close
+look supplies the detail needed to recreate the expression. Close reading also reveals purposes and
+connections that the first whole-piece impression missed.
 
-- the Hook, story movement, payoff, and intended viewer response;
-- how speech or silence carries the piece, who speaks when present, and the roles of A-roll and B-roll;
-- the persistent and recurring Caption, Typography, MG, Effect, and Audio systems;
-- changes, accumulations, replacements, reveals, cover relationships, and callbacks;
-- the few relationships that make the piece recognizably itself.
+When a choice is puzzling, widen the view: relate it to the surrounding words, nearby events, earlier
+appearances and later consequences. Consider what those connections could explain, then examine the
+relevant sequence. Read the Format or Craft for the relationship you are investigating; use it to
+sharpen the question and recognize what the reference is doing.
 
-Then spend detail attention where an answer can change the production. A ranking board that already
-contains players while a new portrait appears nearby raises a structural question: whether the new
-portrait enters, replaces, or accumulates on the board. That matters before the exact direction of an
-incidental slide. Coarse understanding tells you what deserves a close look; close evidence is allowed
-to overturn the coarse understanding.
+A motion's name is a starting point. Inspect its path, scale or opacity change, pace, overshoot or
+settling, and relationship to neighboring events when those make the effect distinctive. Likewise,
+understand a graphic's hierarchy, typography, palette and spacing through what the viewer must read
+first and compare next. Compression comes from identifying a coherent behavior that explains many
+frames. A dimmer copy during an exit may be one object's fade, for example; inspect the sequence to
+understand the change.
 
-## Choose evidence for the question
+Whole-piece and close readings revise each other. An object that survives a camera cut belongs to a
+system with a longer lifetime than that shot. Follow its state across the piece: a new entry may
+replace an item, add to a collection, or temporarily cover it. Document the system once and locate
+its changes in time. Camera boundaries help navigation; meaning and continuity determine which
+things belong together.
 
-Use `hypit transcribe` for speech and word time. Use `hypit observe` as the normal broad visual pass
-for reference reconstruction, over the whole short work or meaningful spans of a longer or denser
-work. Motion, sequence, persistence, transitions and whole-piece context need moving-image evidence.
-The local `hypit media` family prepares views without interpreting them:
+## Make time visible
 
-- `probe` reports media facts;
-- `cut` isolates a short temporal question;
-- `frames` exposes exact moments or small details;
-- `tile` and `tiles` show change across a span with visible time labels;
-- `boundaries` offers possible visual-change locations for navigation;
-- `fetch` turns a supported link into a local source file.
+Use `hypit transcribe` to establish word-level times for spoken work. Keep that transcript beside the
+reference: it is the temporal spine for connecting speech to cuts, illustrations, reveals and
+emphasis. For speechless work, locate meaning through actions and changes in the scene.
 
-For example, these commands preserve original-media time while exposing different evidence:
+The local `hypit media` commands expose the source at the scale needed:
+
+- `probe` gives duration, dimensions, frame rate and audio presence;
+- `cut` saves a selected passage as a clip;
+- `frames` extracts chosen moments or a range at a chosen interval;
+- `tile` and `tiles` arrange time-labeled frames for inspecting change, with optional word context;
+- `boundaries` locates abrupt visual changes worth inspecting;
+- `fetch` saves a supported video link locally.
+
+Use broad grids across the full reference to follow its development. For a long reference, read
+manageable passages while keeping their place in the whole clear. Inspect dense sequences around
+the entries, changes and exits of its distinct visual systems. Choose the range and sampling
+interval for the behavior being investigated. A brief animation needs neighboring frames; small
+writing needs a larger cell or a full-resolution frame. A broad grid can miss brief events between
+samples. Follow the developing idea and the visual systems through closer sequences to understand
+their changes and handoffs.
 
 ```bash
 hypit transcribe references/ad/source.mp4 \
   --to references/ad/transcript.json
 
-hypit media tile references/ad/source.mp4 --start 0 --end 12 \
+hypit media tile references/ad/source.mp4 --start 0 --end 12 --every 1 \
   --to references/ad/evidence/opening.jpg
+
+hypit media tile references/ad/source.mp4 --start 6.8 --end 8.4 --every 0.1 \
+  --transcript references/ad/transcript.json --columns 4 --cell 480 \
+  --to references/ad/evidence/list-change.jpg
 
 hypit media cut references/ad/source.mp4 --start 6.8 --end 8.4 --label-time \
   --to references/ad/evidence/list-change.mp4
 
 hypit media frames references/ad/source.mp4 --at 6.9,7.3,7.8 --label-time \
   --to references/ad/evidence/list-frames
-
-hypit observe references/ad/source.mp4 \
-  --instruction "Observe the supplied work and report evidence relevant to the question." \
-  --prompt "How do the picture, Caption, MG and sound establish and pay off the hook?" \
-  --to references/ad/drafts/whole-piece-observation.md
 ```
 
-`transcribe` writes word evidence used beside `TIMELINE.md`. Media commands write only the clips,
-frames or grids named by `--to`; keep the ones worth reopening under `evidence/`. An `observe` report
-is an observer's account, not the reference archive itself. Read it against the media, then write the
-connected whole-piece judgment in `ANALYSIS.md` and locatable facts in `TIMELINE.md`. A narrower
-question can instead use one clip, grid or frame as its input. The command forms are composable; the
-current uncertainty decides which of them is useful.
+Time labels identify positions in the input media. Give `--transcript` the transcript of that same
+media; its word times share that clock. Word labels sit below the picture so the original Caption
+and MG remain visible. Keep useful evidence under `evidence/` and use descriptive names that make it
+easy to reopen the relevant question.
 
-Frames and tiles complement moving-image observation by supplying direct static evidence. If no
-moving-image observer is reachable, distinguish the evidence that remains direct from the
-relationships that are not yet well established. Frames and tiles still show appearance, text,
-composition, geometry, and sampled states; they provide less evidence about motion, transitions,
-persistence, and relationships across distant moments. Explain that limitation in terms of the
-current work, then use the
-[Runtime Profile](../environment/profile.md) to present the actual ways to strengthen the missing
-moving-image evidence. A user may knowingly choose to continue with that evidence limit, and a truly
-static question may need only static evidence, but the Agent does not present the limited account as
-a complete moving-image reading.
+To inspect a spoken phrase, use `--around "the phrase" --transcript references/ad/transcript.json`
+in place of `--start` and `--end`. `--padding` adds surrounding time; repeated phrases can be selected
+with `--occurrence`. Use `tiles` with `--columns` and `--rows` to page a dense sequence into readable
+grids. Keep the range broad enough to see the incoming and outgoing handoffs.
 
-When moving-image observation becomes reachable later, use it to revisit the parts of the reference
-that were understood from static samples alone. Update `ANALYSIS.md` and `TIMELINE.md` where the
-evidence changes them, then reconsider affected Treatment, Script, shots, components, or prompts.
-Existing work that the stronger evidence still supports remains useful. Observation may itself be a paid request;
-make its Endpoint and price source visible and use only spending authority that covers it.
+For Caption, inspect each meaningfully different configuration: speaker treatment, placement,
+emphasis, Cue shape and animation. Follow transitions between configurations too. Repeated uses of
+the same behavior can share its description, with their differing content and times recorded.
 
-No evidence form is a substitute for every other one. A still cannot establish movement or sound. A
-single representative frame cannot establish entry, exit, replacement, or persistence. A long video
-pass can lose small text and rapid order. A tile shows sampled order but may miss what happens between
-cells. When motion direction or a transition is important, inspect a short clip or denser adjacent
-frames. When text or geometry is important, inspect full-resolution frames. Keep an unsupported claim
-unknown instead of completing the prose by imagination.
+When two readings conflict, reopen the relevant source interval and make the disputed detail legible.
+State what is visible or audible separately from what you infer it means. Player controls and other
+viewing context belong to the viewing surface; distinguish them from the designed video content.
 
-Visual reports can be wrong even when fluently written, especially about changes over time, small UI,
-rapid cuts, and which neighboring shot owns a detail. Compare the report with the transcript and the
-actual media. Ask one narrower question over one relevant span when the answer would change the work.
-Platform watermarks and player chrome are viewing context unless the video itself demonstrates that
-the author designed them.
+## Preserve a connected account
 
-For Caption systems, sample every meaningfully different configuration: speakers with different
-colors or positions, normal and emphasized states, different regions, or different motion. Repeated
-uses of one configuration do not need separate style investigations. A fixed quota of frames cannot
-prove that all configurations were seen.
+Write the understanding into the project as it develops. Preserve both the whole-piece explanation
+and the detailed reading, with source times and useful evidence paths so someone can pick up the
+same work from the files. Include what a choice does for the viewer alongside how it appears.
 
-## Write two complementary reference documents
+`ANALYSIS.md` carries the whole-piece model: what the work is trying to achieve, how its story and
+pacing work, what each visual or sound system contributes, which systems persist or recur, and how
+distant moments relate. Keep the reference's facts and your interpretation distinguishable in
+ordinary prose.
 
-`ANALYSIS.md` carries the whole-piece model. Write what kind of work it is, its story and pacing, what
-each layer contributes, which systems persist or recur, how distant moments relate, and why the piece
-works. Distinguish visible or audible facts from the Agent's reading in ordinary prose.
-
-`TIMELINE.md` carries locatable behavior. Organize it with loose second-level sections named by an
-original-media time range and a human-readable content phase:
+`TIMELINE.md` carries time-locatable realization. Organize it into sections named by source-media
+time and a meaningful phase. Within each, connect the active layers and their detailed behavior to
+the words or actions they serve. An account should let someone find the event, understand its
+expression and implement an appropriate counterpart. For example:
 
 ```md
-## 6.07–8.27 · Pain-point list accelerates
+## 6.07–8.27 · The workload accelerates
 
-Speech: the list reaches “videos / voiceovers / ads / scripts”. WhisperX places each word in this
-span.
+The spoken list reaches “videos / voiceovers / ads / scripts”. Each noun brings a new full-frame
+illustration and a marker-style word at its center, replacing the preceding pair. The lower spoken
+Caption gives way to these central labels so each example reads as one unit.
 
-Picture: each item uses a new B-roll shot. Tile 003 shows the cuts clustered around the spoken list.
-
-Caption: a marker-style word appears with each listed item; the lower spoken Caption is absent here.
-
-Reading: the one-item/one-picture rhythm makes the workload feel excessive.
+The word and picture enter together on each noun; the labels pop to size, settle briefly, and leave
+with their picture on the next cut. The increasingly short holds make the workload feel excessive.
+The 6.8–8.4 clip and list-change grid show the handoffs; word times are in transcript.json.
 ```
 
-These sections are navigation, not mutually exclusive rows. They may overlap, leave an unresolved
-gap, or contain smaller timed notes where density warrants it. Within a section, describe every layer
-that is actually active together. A title, music bed, Caption style, or MG object may continue across
-several sections; say that it continues rather than pretending the document boundary reset it.
+These sections can overlap and contain finer timed notes where the work is dense. A persistent
+title, board, sound bed or Caption system can span several sections; refer to the same system and
+describe what changes. Keep exact text, meaningful colors, positions, motion phases and timings where
+they are needed to understand or reproduce the design. Reopen the media for facts still in doubt.
 
-Use open production vocabulary—A-roll, B-roll, Speech, Voice-over, Silence, Caption, Typography,
-Text Track, MG, UI, Effect, Audio—and introduce a clearer term when a work needs one. Caption is the
-spoken display system: words, Cues, speaker or role, activation, placement, and style. Typography is
-independent visual writing such as a title, label, step, or poster text. UI and MG may contain text of
-their own. Classify by function instead of collapsing everything visible into a generic text track.
+Use production vocabulary by function. A-roll establishes the semantic performance even inside a
+small inset or behind a full-frame B-roll. Caption displays the speech; Typography carries independent
+writing. MG and UI can contain text of their own. A sound can support a continuing argument across
+several picture changes. Name the roles that clarify this particular work.
 
-Name the material for an important observed fact when its provenance will help another Agent trust,
-reopen or correct it: “tile 004 shows…”, “the 0:12.4 frame shows…”, “the 0:12–0:14 clip shows…”, or
-“the WhisperX transcript gives…”. Several materials may support one conclusion. Ordinary connected
-description need not repeat the citation in every sentence. When a fact remains unsettled, name the
-question that would change the work.
+## Turn understanding into new direction
 
-## Preserve time without turning it into target code
+Source time locates evidence. Record both the original seconds and the expressive relationship:
+a reveal answers a question, an image illustrates a phrase, an exit makes room for the next claim,
+or an audio handoff begins the next speaker under the previous picture.
 
-Look for the editorial intention behind timing. A portrait may arrive when a player is named, an
-icon may settle when a verdict lands, and the next speaker's voice may begin while the previous
-picture remains. Explain those relationships from the actual evidence. For the target, prefer
-Selections for meaningful spans and Moments for events, then let the accepted Takes locate them.
-If the new product changes the argument, reconsider the picture or reveal that serves it as well.
+The user's request determines how those relationships should live in the new piece. A different
+person or product may change the argument, copy, number of examples, graphic content, placement and
+duration. Use [transformations](transformations.md) to think through that adaptation. Prefer
+Selections for meaningful spans and Moments for events in the target Script, and let the accepted
+performance establish their time. [Script and time](script-and-time.md) owns that authoring language.
 
-Reference time establishes order, overlap, duration, and relation to spoken words. Record both the
-original seconds and the meaningful relation: a picture illustrates the word `videos`, a reveal lands
-after a pause, a Caption Cue spans a phrase, or an effect continues through a cut. In the usual spoken
-work, word-level evidence lets the director identify what an event means and later bind it to Script.
-A genuinely speechless work locates meaning through action, visual change, music, effects and silence
-instead. Read `script-and-time.md` when turning those observed relationships into the target's Script
-identities and timing.
+The recorded account should explain the whole piece from opening to close and make its distinct
+visual systems and their changes locatable. It should be concrete enough to direct the new work:
+what to preserve or adapt, how it is expressed, and why it belongs. Continue investigating an
+unexplained relationship where it could change that direction.
 
-## Keep the archive complete and revisable
-
-“Complete” means another Agent can recover every important element, when and how it appears, which
-system it belongs to, what it relates to, what role it plays, and why those relationships matter. It
-rests on accurate temporal and stylistic evidence without becoming a frame-by-frame transcription.
-
-Store only evidence worth reopening. Update Analysis and Timeline in place when new evidence changes
-the account. Put the current unresolved question and next useful observation in the reference's
-`PROGRESS.md`. Understanding the reference does not create the user's Brief.
+Keep the current question, passages or systems still to examine, and next useful action in
+`PROGRESS.md`. Write discoveries into Analysis and Timeline while they are fresh, and revise those
+accounts when the reading changes. When resuming, read these files and reopen the source at the
+recorded locations. The user's goal remains in Brief and your new design in Treatment.

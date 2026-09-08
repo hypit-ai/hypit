@@ -29,8 +29,6 @@ const adapter = createRuntimeEndpointAdapterFacet({
       "uploadPartTimeoutMs",
       "uploadPartAttempts",
       "downloadAttempts",
-      "geminiRateLimitAttempts",
-      "geminiRateLimitRetryDelayMs",
       "transcriptionModel",
     ], "HypiHub");
     const baseUrl = runtimeConfigString(config.baseUrl, "HypiHub baseUrl");
@@ -52,8 +50,6 @@ const adapter = createRuntimeEndpointAdapterFacet({
     const uploadPartTimeoutMs = runtimeConfigPositiveInteger(config.uploadPartTimeoutMs, "HypiHub uploadPartTimeoutMs");
     const uploadPartAttempts = runtimeConfigPositiveInteger(config.uploadPartAttempts, "HypiHub uploadPartAttempts");
     const downloadAttempts = runtimeConfigPositiveInteger(config.downloadAttempts, "HypiHub downloadAttempts");
-    const geminiRateLimitAttempts = runtimeConfigPositiveInteger(config.geminiRateLimitAttempts, "HypiHub geminiRateLimitAttempts");
-    const geminiRateLimitRetryDelayMs = runtimeConfigPositiveInteger(config.geminiRateLimitRetryDelayMs, "HypiHub geminiRateLimitRetryDelayMs");
     const transcriptionModel = runtimeConfigString(config.transcriptionModel, "HypiHub transcriptionModel");
     const capabilityConcurrency = config.capabilityConcurrency === undefined ? undefined : Object.fromEntries(
       Object.entries(runtimeConfigObject(config.capabilityConcurrency, "HypiHub capabilityConcurrency"))
@@ -75,8 +71,6 @@ const adapter = createRuntimeEndpointAdapterFacet({
         ...(uploadPartTimeoutMs === undefined ? {} : { uploadPartTimeoutMs }),
         ...(uploadPartAttempts === undefined ? {} : { uploadPartAttempts }),
         ...(downloadAttempts === undefined ? {} : { downloadAttempts }),
-        ...(geminiRateLimitAttempts === undefined ? {} : { geminiRateLimitAttempts }),
-        ...(geminiRateLimitRetryDelayMs === undefined ? {} : { geminiRateLimitRetryDelayMs }),
         ...(transcriptionModel === undefined ? {} : { transcriptionModel }),
       };
     return {

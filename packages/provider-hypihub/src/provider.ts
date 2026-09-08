@@ -1,8 +1,6 @@
 import { requestDeadline } from "@hypit/runtime-kit";
 import type { AsyncEndpoint, EndpointCredential, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointPricingReader, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
 import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
-import { geminiCapabilities, geminiModels, geminiTypes, sealVisualObservation, verifyGeminiRequest } from "@hypit/gemini";
-import type { GeminiRequest } from "@hypit/gemini";
 import { selectWireModelForRequest } from "@hypit/generation";
 import type { GenerationRequest } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
@@ -17,7 +15,6 @@ import {
   whisperXCapabilities,
 } from "@hypit/whisperx";
 import type { WhisperXTranscriptResponse } from "@hypit/whisperx";
-import { createHypiHubGeminiGenerator } from "./gemini.js";
 import { hypiHubRouteForCapability, hypiHubRoutes } from "./routes.js";
 import { HypiHubUploader } from "./upload.js";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-kit";
@@ -42,8 +39,6 @@ export type CreateHypiHubProviderOptions = {
   readonly uploadPartTimeoutMs?: number;
   readonly uploadPartAttempts?: number;
   readonly downloadAttempts?: number;
-  readonly geminiRateLimitAttempts?: number;
-  readonly geminiRateLimitRetryDelayMs?: number;
   /** HypiHub model used for the Provider-neutral WhisperX alignment capability. */
   readonly transcriptionModel?: string;
   readonly fetch?: typeof globalThis.fetch;
@@ -81,18 +76,13 @@ function failure(error: unknown): EndpointOutcome {
   return { status: "failed", failure: { code: "HYPIHUB_ERROR", message } };
 }
 
-function inlineGeminiRequest(context: EndpointInvocationContext): GeminiRequest {
-  const request = context.need.constraints as unknown;
-  verifyGeminiRequest(request);
-  return request;
-}
 function jobId(value: Record<string, unknown>): string {
   const id = value.id ?? value.job_id;
   assert(typeof id === "string" && id.length > 0, "HypiHub response has no job id");
   return id;
 }
 
-type HypiHubModelOperation = "images" | "image_edits" | "videos" | "audio_speech" | "transcriptions" | "gemini";
+type HypiHubModelOperation = "images" | "image_edits" | "videos" | "audio_speech" | "transcriptions";
 
 async function verifyModelRoute(client: HypiHubClient, auth: HypiHubAuth, model: string, operation: HypiHubModelOperation): Promise<void> {
   const card = await client.json(`/models/${encodeURIComponent(model)}`, auth);
@@ -254,11 +244,6 @@ function pricingModel(request: import("@hypit/endpoint-kit").EndpointRequest, tr
   if (capabilityKey(request.capability) === capabilityKey(whisperXCapabilities.alignment)) {
     return transcriptionModel;
   }
-  if (request.capability.module.name === geminiCapabilities[geminiModels[0]].module.name
-    && request.capability.module.version === geminiCapabilities[geminiModels[0]].module.version
-    && geminiModels.some((model) => model === request.capability.name)) {
-    return request.capability.name;
-  }
   const route = hypiHubRouteForCapability(request.capability);
   if (route === undefined) return undefined;
   const generation = request.constraints as unknown as GenerationRequest;
@@ -350,10 +335,6 @@ export async function diagnoseHypiHubProvider(
     let available = false;
     if (capabilityKey(capability) === capabilityKey(whisperXCapabilities.alignment)) {
       available = cardEndpoints(cards.get(transcriptionModel)).includes("transcriptions");
-    } else if (geminiModels.some((model) => model === capability.name)
-      && capability.module.name === geminiCapabilities[geminiModels[0]].module.name
-      && capability.module.version === geminiCapabilities[geminiModels[0]].module.version) {
-      available = cardEndpoints(cards.get(capability.name)).includes("gemini");
     } else {
       const route = hypiHubRouteForCapability(capability);
       if (route !== undefined) {
@@ -471,7 +452,7 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
 }
 
 export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}) {
-  const capacityNames = new Set([...hypiHubRoutes.map((route) => route.capability.name), "gemini", "transcription"]);
+  const capacityNames = new Set([...hypiHubRoutes.map((route) => route.capability.name), "transcription"]);
   const capabilityConcurrency = options.capabilityConcurrency ?? {};
   for (const [name, limit] of Object.entries(capabilityConcurrency)) {
     assert(capacityNames.has(name), `unknown HypiHub capacity ${name}`);
@@ -484,8 +465,6 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   const uploadPartTimeoutMs = options.uploadPartTimeoutMs ?? 5 * 60_000;
   const uploadPartAttempts = options.uploadPartAttempts ?? 3;
   const downloadAttempts = options.downloadAttempts ?? 3;
-  const geminiRateLimitAttempts = options.geminiRateLimitAttempts ?? 4;
-  const geminiRateLimitRetryDelayMs = options.geminiRateLimitRetryDelayMs ?? 2_000;
   for (const [name, value] of Object.entries({
     requestTimeoutMs,
     oauthRequestTimeoutMs,
@@ -494,8 +473,6 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     uploadPartTimeoutMs,
     uploadPartAttempts,
     downloadAttempts,
-    geminiRateLimitAttempts,
-    geminiRateLimitRetryDelayMs,
   })) {
     assert(Number.isSafeInteger(value) && value > 0, `HypiHub ${name} must be a positive integer`);
   }
@@ -523,42 +500,6 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     } catch (error) {
       throw new Error(guidedMessage(error), { cause: error });
     }
-  };
-  const geminiEndpoint: ImmediateEndpointHandler = async (context) => {
-    const request = inlineGeminiRequest(context);
-    const auth = authFor(context, client);
-    const generate = async (): Promise<string> => await createHypiHubGeminiGenerator({
-      apiKey: await auth.token(),
-      model: context.need.capability.name,
-      ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
-      requestTimeoutMs,
-      uploadPartTimeoutMs,
-      uploadPartAttempts,
-      ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
-      maxRateLimitRetries: geminiRateLimitAttempts - 1,
-      rateLimitRetryDelayMs: geminiRateLimitRetryDelayMs,
-    })({ parts, instruction: request.instruction });
-    const parts: Array<{ text: string } | { fileData: { mimeType: string; fileUri: string } }> = [{ text: request.prompt }];
-    const uploaded = new Map<string, Promise<string>>();
-    for (const item of request.media) {
-      let url = uploaded.get(item.artifact.resource);
-      if (url === undefined) {
-        url = options.publicAssetUrl === undefined
-          ? client.upload(item.artifact, context.resources, auth)
-          : options.publicAssetUrl(item.artifact, context.resources);
-        uploaded.set(item.artifact.resource, url);
-      }
-      parts.push({ fileData: { mimeType: item.artifact.mediaType, fileUri: await url } });
-    }
-    let value: string;
-    try {
-      value = await generate();
-    } catch (error) {
-      if (!auth.canRefresh() || !/HTTP 401\b/u.test(error instanceof Error ? error.message : String(error))) throw error;
-      await auth.refresh();
-      value = await generate();
-    }
-    return { value: { kind: "inline", value: canonicalize(sealVisualObservation(value)) } };
   };
   const transcriptionModel = options.transcriptionModel?.trim() || "victor-upmeet/whisperx";
   const whisperXEndpoint: ImmediateEndpointHandler = async (context) => {
@@ -612,14 +553,6 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       .map((route) => route.media === "audio"
         ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, capacity: route.capability.name, ...(route.supports === undefined ? {} : { supports: route.supports }), ...(capabilityConcurrency[route.capability.name] === undefined ? {} : { maxConcurrency: capabilityConcurrency[route.capability.name]! }) }
         : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, capacity: route.capability.name, ...(route.supports === undefined ? {} : { supports: route.supports }), ...(capabilityConcurrency[route.capability.name] === undefined ? {} : { maxConcurrency: capabilityConcurrency[route.capability.name]! }) }),
-      ...geminiModels.map((model) => ({
-        capability: geminiCapabilities[model],
-        returns: geminiTypes.visualObservation,
-        lifecycle: "immediate" as const,
-        handler: geminiEndpoint,
-        capacity: "gemini",
-        ...(capabilityConcurrency.gemini === undefined ? {} : { maxConcurrency: capabilityConcurrency.gemini }),
-      })),
       {
         capability: whisperXCapabilities.alignment,
         returns: speechEvidenceTypes.alignedTranscript,

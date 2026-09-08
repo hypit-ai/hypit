@@ -188,12 +188,11 @@ accepted performance has semantic time, its dependent layers follow the delivery
 happened. Repair a weak performance at its direction, wording, reference, or generation according to
 the visible and audible problem.
 
-## Review the person, not just the waveform
+## Carry the character through the performance
 
-Judge whether the voice and visible performance express the same character: pronunciation, pace,
-cadence, emotion, mouth movement, gesture, gaze, and interaction with the scene. Across recurring
-Takes, listen for identity drift and room discontinuity while allowing intentional changes in energy
-or delivery.
+Direct voice and visible performance toward the same character: pace, emotion, gesture, gaze and
+interaction with the scene. Carry that identity across recurring Takes while allowing the energy
+and delivery to develop with the conversation.
 
 Review covered passages with their picture and with the underlying speech source made clear. A clean
 mix cannot rescue the wrong performer, and a good voice sample cannot rescue an unconvincing Take.

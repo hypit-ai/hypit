@@ -4,17 +4,15 @@ import { dirname, extname, join, resolve } from "node:path";
 
 import type { CliIo } from "@hypit/cli";
 import { downloadVideo, isVideoUrl } from "@hypit/yt-dlp";
+import sharp from "sharp";
 
-import { runProcess, runProcessWithInput } from "./process.js";
+import { runProcess, runProcessOutput, runProcessWithInput } from "./process.js";
+import { phraseRanges, readTranscript, wordsAt } from "./transcript.js";
+import type { FrameWords, TranscriptWord } from "./transcript.js";
 
 /**
- * Media preparation for the eyes: dumb, local, stateless.
- *
- * A reference video is read by the Gemini Endpoint through `hypit observe`. These commands only make
- * the pieces that request needs when the whole video is too long or too dense to read at once: a
- * stretch cut to a clip, frames at chosen seconds, a grid of frames drawn large enough to read small
- * type, the pixel-jump boundaries a video shows before anyone knows what it is, and a link turned into
- * a file. Each writes exactly what the caller named and nothing else; none decides what the video is.
+ * Local views of media at chosen times and scales. Transcript annotations use the same seconds as
+ * the input media. These commands expose evidence; editorial interpretation belongs to the author.
  */
 
 export const mediaCommands = ["probe", "cut", "frames", "tile", "tiles", "boundaries", "fetch"] as const;
@@ -291,20 +289,29 @@ export async function cutClip(
   }
 }
 
-export async function cutFrame(source: string, at: number, target: string, labelTime = false): Promise<void> {
+export async function cutFrame(source: string, at: number, target: string, labelTime = false): Promise<number> {
   if (!labelTime) {
-    await runProcess("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...openAt(source, at), "-frames:v", "1", ...JPEG, target]);
-    return;
+    const jump = Math.max(0, at - SEEK_RUN_UP);
+    const output = await runProcessOutput("ffmpeg", [
+      "-hide_banner", "-loglevel", "info", "-y", "-copyts", "-start_at_zero",
+      ...(jump > 0 ? ["-ss", String(jump)] : []), "-i", source,
+      "-vf", `trim=start=${at},showinfo`, "-frames:v", "1", "-fps_mode", "passthrough", ...JPEG, target,
+    ]);
+    const base = /config in time_base:\s*(\d+)\/(\d+)/u.exec(output.stderr);
+    const pts = /\bn:\s*0\s+pts:\s*(-?\d+)/u.exec(output.stderr);
+    assert(base !== null && pts !== null, `no video frame exists at or after ${at} s`);
+    return Number(pts[1]) * Number(base[1]) / Number(base[2]);
   }
   const temporary = await mkdtemp(join(tmpdir(), "hypit-labeled-frame-"));
   const clean = join(temporary, "clean.jpg");
   try {
-    await cutFrame(source, at, clean);
-    const label = rasterLabel(timecode(at));
+    const actual = await cutFrame(source, at, clean);
+    const label = rasterLabel(timecode(actual));
     await runProcessWithInput("ffmpeg", [
       "-hide_banner", "-loglevel", "error", "-y", "-i", clean, ...rawVideoInput(label, 1),
       "-filter_complex", "[0:v][1:v]overlay=8:8[out]", "-map", "[out]", "-frames:v", "1", ...JPEG, target,
     ], label.bytes);
+    return actual;
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
@@ -312,7 +319,7 @@ export async function cutFrame(source: string, at: number, target: string, label
 
 const TILE_COLUMNS = 3;
 const TILE_CELL_WIDTH = 480;
-/** Four frames show what moves in a one-second shot; nine keep a fifteen-second one legible. */
+/** A compact overview default. Callers choose denser samples for fast changes. */
 export function tileFrameCount(seconds: number): number { return clamp(Math.round(seconds * 1.5), 4, 9); }
 
 export function tileSampleTimes(start: number, end: number, frameCount: number): readonly number[] {
@@ -321,20 +328,27 @@ export function tileSampleTimes(start: number, end: number, frameCount: number):
   return Array.from({ length: frameCount }, (_, index) => round(start + (index + 0.5) * (end - start) / frameCount));
 }
 
-async function labeledTileCell(source: string, at: number, target: string, cellWidth: number): Promise<void> {
-  const clean = `${target}.clean.jpg`;
-  try {
-    await cutFrame(source, at, clean);
-    const label = rasterLabel(timecode(at), cellWidth);
-    await runProcessWithInput("ffmpeg", [
-      "-hide_banner", "-loglevel", "error", "-y", "-i", clean, ...rawVideoInput(label, 1),
-      "-filter_complex", `[0:v]scale=${cellWidth}:-2[frame];[frame][1:v]vstack=inputs=2[out]`,
-      "-map", "[out]", "-frames:v", "1", ...JPEG, target,
-    ], label.bytes);
-  } finally {
-    await rm(clean, { force: true });
-  }
+function escapeMarkup(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
+
+async function frameLabel(at: number, width: number, words?: FrameWords): Promise<Buffer> {
+  const lines = [timecode(at)];
+  if (words !== undefined) {
+    lines.push(words.active.length === 0 ? "No timed word at this frame" : words.active.map((word) =>
+      `<b>${escapeMarkup(word.text)}</b>  ${word.start!.toFixed(3)}–${word.end!.toFixed(3)} s`).join("\n"));
+    if (words.context.length > 0) lines.push(words.context.map((word) => words.active.includes(word)
+      ? `<span foreground="#ffdc80"><b>${escapeMarkup(word.text)}</b></span>` : escapeMarkup(word.text)).join(" "));
+  }
+  const text = await sharp({ text: {
+    text: `<span foreground="#f5f5f5">${lines.join("\n")}</span>`,
+    font: `sans ${Math.max(12, Math.round(width / 28))}`, width: width - 16, rgba: true, wrap: "word-char",
+  } }).png().toBuffer({ resolveWithObject: true });
+  return sharp({ create: { width, height: text.info.height + 16, channels: 3, background: "#0c0c0c" } })
+    .composite([{ input: text.data, left: 8, top: 8 }]).png().toBuffer();
+}
+
+type SampledFrame = { readonly requestedAt: number; readonly at: number; readonly words?: FrameWords };
 
 export async function tileFrames(
   source: string,
@@ -342,20 +356,36 @@ export async function tileFrames(
   target: string,
   cellWidth: number,
   columns: number,
-): Promise<void> {
-  assert(times.length >= 2, "a grid needs at least two frames");
+  words?: readonly TranscriptWord[],
+): Promise<readonly SampledFrame[]> {
+  assert(times.length >= 1, "a grid needs at least one frame");
   const temporary = await mkdtemp(join(tmpdir(), "hypit-tile-"));
   try {
+    const frames: SampledFrame[] = [];
+    const cells: { picture: Buffer; label: Buffer; height: number; labelHeight: number }[] = [];
     for (let index = 0; index < times.length; index += 1) {
-      await labeledTileCell(source, times[index]!, join(temporary, `cell-${String(index).padStart(4, "0")}.jpg`), cellWidth);
+      const at = times[index]!;
+      const path = join(temporary, `${index}.jpg`);
+      const actual = await cutFrame(source, at, path);
+      const frameWords = words === undefined ? undefined : wordsAt(words, actual);
+      frames.push({ requestedAt: at, at: actual, ...(frameWords === undefined ? {} : { words: frameWords }) });
+      const picture = await sharp(path).resize({ width: cellWidth }).png().toBuffer({ resolveWithObject: true });
+      const label = await frameLabel(actual, cellWidth, frameWords);
+      const labelHeight = (await sharp(label).metadata()).height!;
+      cells.push({ picture: picture.data, height: picture.info.height, label, labelHeight });
     }
     const rows = Math.ceil(times.length / columns);
-    await runProcess("ffmpeg", [
-      "-hide_banner", "-loglevel", "error", "-y", "-framerate", "1", "-pattern_type", "glob",
-      "-i", join(temporary, "cell-*.jpg"),
-      "-vf", `tile=layout=${columns}x${rows}:nb_frames=${times.length}:padding=8:margin=8:color=black`,
-      "-frames:v", "1", ...JPEG, target,
-    ]);
+    const pictureHeight = Math.max(...cells.map((cell) => cell.height));
+    const rowHeight = pictureHeight + Math.max(...cells.map((cell) => cell.labelHeight));
+    await sharp({ create: {
+      width: columns * (cellWidth + 8) + 8, height: rows * (rowHeight + 8) + 8,
+      channels: 3, background: "#0c0c0c",
+    } }).composite(cells.flatMap((cell, index) => {
+      const left = 8 + (index % columns) * (cellWidth + 8);
+      const top = 8 + Math.floor(index / columns) * (rowHeight + 8);
+      return [{ input: cell.picture, left, top }, { input: cell.label, left, top: top + pictureHeight }];
+    })).jpeg({ quality: 90 }).toFile(target);
+    return frames;
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
@@ -393,6 +423,68 @@ export async function visualBoundaries(
 // ---------------------------------------------------------------------------------------------------
 // Commands
 
+const SAMPLE_OPTIONS = ["--start", "--end", "--at", "--every", "--transcript", "--around", "--occurrence", "--padding"];
+
+async function transcriptOption(parsed: Parsed, cwd: string): Promise<readonly TranscriptWord[] | undefined> {
+  const path = parsed.options.get("--transcript");
+  return path === undefined ? undefined : readTranscript(resolve(cwd, path));
+}
+
+export function intervalSamples(start: number, end: number, every: number): readonly number[] {
+  assert(Number.isFinite(start) && start >= 0 && Number.isFinite(end) && end > start, "a sample range needs 0 <= start < end");
+  assert(Number.isFinite(every) && every >= 0.001, "--every must be at least 0.001 seconds");
+  return Array.from({ length: Math.ceil((end - start) / every) }, (_, index) => round(start + index * every))
+    .filter((time) => time < end);
+}
+
+function sampleRange(parsed: Parsed, duration: number, words?: readonly TranscriptWord[]): { start: number; end: number } {
+  const around = parsed.options.get("--around");
+  if (around !== undefined) {
+    assert(words !== undefined, "--around requires --transcript");
+    assert(!parsed.options.has("--start") && !parsed.options.has("--end"), "choose --around or --start/--end");
+    const matches = phraseRanges(words, around);
+    assert(matches.length > 0, `No timed phrase matches ${JSON.stringify(around)}`);
+    assert(matches.length === 1 || parsed.options.has("--occurrence"),
+      `The phrase occurs ${matches.length} times: ${matches.map((match, index) => `${index + 1}: ${match.start}–${match.end}s`).join(", ")}. Choose --occurrence <n> or --start/--end.`);
+    const occurrence = integerOption(parsed, "--occurrence", 1, 1);
+    const match = matches[occurrence - 1];
+    assert(match !== undefined, `--occurrence ${occurrence} is beyond the ${matches.length} matches`);
+    const padding = secondsOption(parsed, "--padding", 0.3);
+    const start = Math.max(0, round(match.start - padding));
+    const end = Math.min(duration, round(match.end + padding));
+    assert(end > start, "the phrase lies outside the input media; use its matching transcript");
+    return { start, end };
+  }
+  assert(!parsed.options.has("--occurrence") && !parsed.options.has("--padding"), "--occurrence and --padding apply to --around");
+  const start = secondsOption(parsed, "--start", 0);
+  const end = secondsOption(parsed, "--end", duration);
+  assert(end > start && end <= duration, `range must satisfy 0 <= start < end <= ${duration} s`);
+  return { start, end };
+}
+
+function sampleTimes(parsed: Parsed, duration: number, words?: readonly TranscriptWord[], requireEvery = false): readonly number[] {
+  const at = parsed.options.get("--at");
+  if (at !== undefined) {
+    for (const key of ["--start", "--end", "--every", "--frames", "--around", "--occurrence", "--padding"]) {
+      assert(!parsed.options.has(key), `--at cannot be combined with ${key}`);
+    }
+    const times = secondsList(at, "--at", 1);
+    assert(times.every((time) => time < duration), `a frame time must be before the end of the file (${duration} s)`);
+    assert(times.every((time, index) => index === 0 || time > times[index - 1]!), "sample times must be strictly increasing");
+    return times;
+  }
+  const { start, end } = sampleRange(parsed, duration, words);
+  const every = parsed.options.get("--every");
+  assert(every === undefined || !parsed.options.has("--frames"), "choose --every or --frames");
+  assert(!requireEvery || every !== undefined, "frames requires --at <s,s,…> or --every <seconds>");
+  const times = every === undefined
+    ? tileSampleTimes(start, end, integerOption(parsed, "--frames", tileFrameCount(end - start), 2))
+    : intervalSamples(start, end, Number(every));
+  assert(times.length > 0 && times.every((time) => time < duration), "the range needs sample times before the media ends");
+  assert(times.every((time, index) => index === 0 || time > times[index - 1]!), "sample times must be distinct to the nearest millisecond");
+  return times;
+}
+
 async function probe(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
   const parsed = parseArguments(argv, []);
   const source = await sourceFile(parsed, cwd);
@@ -416,33 +508,22 @@ async function cut(argv: readonly string[], io: CliIo, cwd: string): Promise<voi
 }
 
 async function frames(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
-  const parsed = parseArguments(argv, ["--at", "--every", "--to"], ["--label-time"]);
+  const parsed = parseArguments(argv, [...SAMPLE_OPTIONS, "--to"], ["--label-time"]);
   const source = await sourceFile(parsed, cwd);
   const info = await probeMedia(source);
-  const at = parsed.options.get("--at");
-  const every = parsed.options.get("--every");
-  assert((at === undefined) !== (every === undefined), "name the seconds with --at <s,s,…> or sample with --every <seconds>, not both");
-  let times: number[];
-  if (at !== undefined) {
-    times = secondsList(at, "--at", 1);
-  } else {
-    const step = Number(every);
-    assert(Number.isFinite(step) && step > 0, `--every must be a positive number of seconds, got ${every}`);
-    times = [];
-    for (let time = 0; time < info.duration; time += step) times.push(round(time));
-  }
-  assert(times.length > 0, "name at least one frame time");
-  assert(times.every((value) => value < info.duration), `a frame time must be before the end of the file (${info.duration} s)`);
-  assert(new Set(times.map((value) => value.toFixed(3))).size === times.length, "frame times must be distinct to the nearest millisecond");
+  const words = await transcriptOption(parsed, cwd);
+  const times = sampleTimes(parsed, info.duration, words, true);
   const to = await destinationDirectory(parsed, cwd, "the new directory to write the frames into");
   const staging = await mkdtemp(join(dirname(to), ".hypit-frames-"));
-  const labeled = parsed.flags.has("--label-time");
-  const written: { readonly at: number; readonly path: string }[] = [];
+  const labeled = parsed.flags.has("--label-time") || words !== undefined;
+  const written: (SampledFrame & { readonly path: string })[] = [];
   try {
     for (const time of times) {
       const name = `frame-${time.toFixed(3).replace(".", "_")}s.jpg`;
-      await cutFrame(source, time, join(staging, name), labeled);
-      written.push({ at: time, path: join(to, name) });
+      const frame = words === undefined
+        ? { requestedAt: time, at: await cutFrame(source, time, join(staging, name), labeled) }
+        : (await tileFrames(source, [time], join(staging, name), info.width, 1, words))[0]!;
+      written.push({ ...frame, path: join(to, name) });
     }
     await rename(staging, to);
   } catch (error) {
@@ -454,30 +535,18 @@ async function frames(argv: readonly string[], io: CliIo, cwd: string): Promise<
 }
 
 async function tile(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
-  const parsed = parseArguments(argv, ["--start", "--end", "--at", "--frames", "--cell", "--columns", "--to"]);
+  const parsed = parseArguments(argv, [...SAMPLE_OPTIONS, "--frames", "--cell", "--columns", "--to"]);
   const source = await sourceFile(parsed, cwd);
   const info = await probeMedia(source);
-  const explicit = parsed.options.get("--at");
-  let times: readonly number[];
-  if (explicit !== undefined) {
-    assert(!parsed.options.has("--start") && !parsed.options.has("--end") && !parsed.options.has("--frames"), "--at cannot be combined with --start, --end or --frames");
-    times = secondsList(explicit, "--at", 2);
-  } else {
-    const start = secondsOption(parsed, "--start", 0);
-    const end = secondsOption(parsed, "--end", info.duration);
-    assert(end <= info.duration + 0.001, `--end ${end} is past the end of the file (${info.duration} s)`);
-    const count = integerOption(parsed, "--frames", tileFrameCount(end - start), 2);
-    times = tileSampleTimes(start, end, count);
-  }
-  assert(times.every((value) => value < info.duration), `a sample time must be before the end of the file (${info.duration} s)`);
-  assert(times.every((value, index) => index === 0 || value > times[index - 1]!), "sample times must be strictly increasing");
+  const words = await transcriptOption(parsed, cwd);
+  const times = sampleTimes(parsed, info.duration, words);
   // Preserve source width unless an exceptionally tiny input needs room for a legible timecode.
   const cell = integerOption(parsed, "--cell", Math.max(80, Math.min(TILE_CELL_WIDTH, info.width)), 80);
   const columns = integerOption(parsed, "--columns", TILE_COLUMNS, 1);
   const target = await destination(parsed, cwd, "the grid image to write, for example notes/hook-grid.jpg");
-  await tileFrames(source, times, target, cell, columns);
+  const frames = await tileFrames(source, times, target, cell, columns, words);
   const rows = Math.ceil(times.length / columns);
-  if (parsed.json) { io.write(`${JSON.stringify({ path: target, samples: times, columns, rows, cellWidth: cell }, null, 2)}\n`); return; }
+  if (parsed.json) { io.write(`${JSON.stringify({ path: target, samples: times, columns, rows, cellWidth: cell, frames }, null, 2)}\n`); return; }
   io.write(`${target}\n  ${times.length} labeled frames, ${columns}×${rows}, ${cell} px cells\n  ${times.map((at) => `${at} s`).join("  ")}\n`);
 }
 
@@ -486,6 +555,7 @@ type TileRange = {
   readonly start: number;
   readonly end: number;
   readonly frames?: number;
+  readonly every?: number;
 };
 
 function tileRange(value: unknown, index: number, duration: number): TileRange {
@@ -493,45 +563,72 @@ function tileRange(value: unknown, index: number, duration: number): TileRange {
   const raw = value as Record<string, unknown>;
   assert(typeof raw.start === "number" && Number.isFinite(raw.start) && raw.start >= 0, `range ${index + 1}.start must be non-negative seconds`);
   assert(typeof raw.end === "number" && Number.isFinite(raw.end) && raw.end > raw.start, `range ${index + 1}.end must be after its start`);
-  assert(raw.end <= duration + 0.001, `range ${index + 1}.end is past the end of the file (${duration} s)`);
+  assert(raw.end <= duration, `range ${index + 1}.end is past the end of the file (${duration} s)`);
   assert(raw.id === undefined || (typeof raw.id === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(raw.id)), `range ${index + 1}.id must be a safe file name`);
   assert(raw.frames === undefined || (Number.isSafeInteger(raw.frames) && (raw.frames as number) >= 2), `range ${index + 1}.frames must be a whole number of at least 2`);
-  return { start: raw.start, end: raw.end, ...(raw.id === undefined ? {} : { id: raw.id as string }), ...(raw.frames === undefined ? {} : { frames: raw.frames as number }) };
+  assert(raw.every === undefined || (typeof raw.every === "number" && Number.isFinite(raw.every) && raw.every >= 0.001), `range ${index + 1}.every must be at least 0.001 seconds`);
+  assert(raw.frames === undefined || raw.every === undefined, `range ${index + 1} must choose frames or every`);
+  return { start: raw.start, end: raw.end, ...(raw.id === undefined ? {} : { id: raw.id as string }),
+    ...(raw.frames === undefined ? {} : { frames: raw.frames as number }), ...(raw.every === undefined ? {} : { every: raw.every as number }) };
 }
 
 async function tiles(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
-  const parsed = parseArguments(argv, ["--ranges", "--frames", "--cell", "--columns", "--to"]);
+  const parsed = parseArguments(argv, [...SAMPLE_OPTIONS, "--ranges", "--frames", "--cell", "--columns", "--rows", "--to"]);
   const source = await sourceFile(parsed, cwd);
   const info = await probeMedia(source);
-  const rangesPath = resolve(cwd, required(parsed, "--ranges", "a JSON array of { start, end, id?, frames? } ranges"));
-  const rangesRaw = JSON.parse(await readFile(rangesPath, "utf8")) as unknown;
-  assert(Array.isArray(rangesRaw) && rangesRaw.length > 0, `${rangesPath} must contain a non-empty JSON array`);
-  const ranges = rangesRaw.map((value, index) => tileRange(value, index, info.duration));
-  const ids = ranges.flatMap((range) => range.id === undefined ? [] : [range.id]);
-  assert(new Set(ids).size === ids.length, "range ids must be unique");
-  const defaultFrames = parsed.options.has("--frames") ? integerOption(parsed, "--frames", 2, 2) : undefined;
+  const words = await transcriptOption(parsed, cwd);
+  const rangesPath = parsed.options.get("--ranges");
+  let ranges: { id?: string; start: number; end: number; times: readonly number[] }[];
+  if (rangesPath === undefined) {
+    const times = sampleTimes(parsed, info.duration, words);
+    const range = parsed.options.has("--at")
+      ? { start: times[0]!, end: times.at(-1)! }
+      : sampleRange(parsed, info.duration, words);
+    ranges = [{ ...range, times }];
+  } else {
+    for (const key of ["--start", "--end", "--at", "--around", "--padding", "--occurrence"]) {
+      assert(!parsed.options.has(key), `--ranges cannot be combined with ${key}`);
+    }
+    assert(!parsed.options.has("--frames") || !parsed.options.has("--every"), "choose --frames or --every");
+    const raw = JSON.parse(await readFile(resolve(cwd, rangesPath), "utf8")) as unknown;
+    assert(Array.isArray(raw) && raw.length > 0, `${rangesPath} must contain a non-empty JSON array`);
+    ranges = raw.map((value, index) => {
+      const range = tileRange(value, index, info.duration);
+      const options = new Map(parsed.options);
+      options.set("--start", String(range.start)); options.set("--end", String(range.end));
+      if (range.frames !== undefined) { options.delete("--every"); options.set("--frames", String(range.frames)); }
+      if (range.every !== undefined) { options.delete("--frames"); options.set("--every", String(range.every)); }
+      return { ...range, times: sampleTimes({ ...parsed, options }, info.duration, words) };
+    });
+    const ids = ranges.flatMap((range) => range.id === undefined ? [] : [range.id]);
+    assert(new Set(ids).size === ids.length, "range ids must be unique");
+  }
   const cell = integerOption(parsed, "--cell", Math.max(80, Math.min(TILE_CELL_WIDTH, info.width)), 80);
   const columns = integerOption(parsed, "--columns", TILE_COLUMNS, 1);
+  const rows = integerOption(parsed, "--rows", 3, 1);
+  const perPage = columns * rows;
   const to = await destinationDirectory(parsed, cwd, "the new directory to write the grids into");
   const staging = await mkdtemp(join(dirname(to), ".hypit-tiles-"));
-  const written: { readonly id?: string; readonly start: number; readonly end: number; readonly samples: readonly number[]; readonly path: string }[] = [];
+  const written: { id?: string; start: number; end: number; samples: readonly number[]; path: string; frames: readonly SampledFrame[] }[] = [];
   try {
-    for (let index = 0; index < ranges.length; index += 1) {
-      const range = ranges[index]!;
-      const count = range.frames ?? defaultFrames ?? tileFrameCount(range.end - range.start);
-      const times = tileSampleTimes(range.start, range.end, count);
+    for (const [index, range] of ranges.entries()) {
       const stem = range.id ?? `${range.start.toFixed(3).replace(".", "_")}s-${range.end.toFixed(3).replace(".", "_")}s`;
-      const name = `${String(index + 1).padStart(3, "0")}-${stem}.jpg`;
-      await tileFrames(source, times, join(staging, name), cell, columns);
-      written.push({ ...(range.id === undefined ? {} : { id: range.id }), start: range.start, end: range.end, samples: times, path: join(to, name) });
+      for (let offset = 0; offset < range.times.length; offset += perPage) {
+        const times = range.times.slice(offset, offset + perPage);
+        const page = range.times.length > perPage ? `-p${String(offset / perPage + 1).padStart(3, "0")}` : "";
+        const name = `${String(index + 1).padStart(3, "0")}-${stem}${page}.jpg`;
+        const frames = await tileFrames(source, times, join(staging, name), cell, columns, words);
+        written.push({ ...(range.id === undefined ? {} : { id: range.id }), start: range.start, end: range.end,
+          samples: times, path: join(to, name), frames });
+      }
     }
     await rename(staging, to);
   } catch (error) {
     await rm(staging, { recursive: true, force: true });
     throw error;
   }
-  if (parsed.json) { io.write(`${JSON.stringify({ directory: to, grids: written }, null, 2)}\n`); return; }
-  io.write(`${to}\n  ${written.length} time-labeled ${written.length === 1 ? "grid" : "grids"} from ${written[0]!.start} s to ${written.at(-1)!.end} s\n`);
+  if (parsed.json) { io.write(`${JSON.stringify({ directory: to, columns, rows, cellWidth: cell, grids: written }, null, 2)}\n`); return; }
+  io.write(`${to}\n  ${written.length} time-labeled ${written.length === 1 ? "grid" : "grids"}\n`);
 }
 
 async function boundaries(argv: readonly string[], io: CliIo, cwd: string): Promise<void> {
@@ -568,19 +665,22 @@ export function writeMediaHelp(io: CliIo, topic?: MediaCommand): void {
     probe: ["  hypit media probe <file>", "    Duration, size, frame rate and whether there is audio."],
     cut: ["  hypit media cut <file> --start <s> --end <s> [--label-time] --to <clip.mp4>",
       "    One exact stretch. --label-time visibly overlays absolute source time on the evidence copy."],
-    frames: ["  hypit media frames <file> (--at <s,s,…> | --every <s>) [--label-time] --to <dir>",
-      "    Single frames named by absolute source time; optional visible labels."],
-    tile: ["  hypit media tile <file> ([--start <s> --end <s>] | --at <s,s,…>) [--frames <n>] [--cell <px>] [--columns <n>] --to <grid.jpg>",
-      "    One time-labeled grid. Range samples are evenly spaced; --at names exact samples."],
-    tiles: ["  hypit media tiles <file> --ranges <ranges.json> [--frames <n>] [--cell <px>] [--columns <n>] --to <dir>",
-      "    One labeled grid per { start, end, id?, frames? } in a JSON array."],
+    frames: ["  hypit media frames <file> (--at <s,s,…> | --every <s>) [--start <s> --end <s>] [--label-time] [--transcript <json>] --to <dir>",
+      "    Individual frames named by source time; --transcript adds word times and context below each picture."],
+    tile: ["  hypit media tile <file> [--start <s> --end <s> | --at <s,s,…>] [--every <s> | --frames <n>] [--transcript <json>] [--cell <px>] [--columns <n>] --to <grid.jpg>",
+      "    One grid. --every samples from start, excluding end; --frames chooses evenly spaced midpoints."],
+    tiles: ["  hypit media tiles <file> [--start <s> --end <s> | --at <s,s,…> | --ranges <json>] [--every <s> | --frames <n>] [--transcript <json>] [--cell <px>] [--columns <n>] [--rows <n>] --to <dir>",
+      "    Paginated grids (3 rows by default). Range files contain { start, end, id?, frames?, every? }."],
     boundaries: ["  hypit media boundaries <file> [--rate <samples/s>] [--threshold <0..1>]",
       "    Mechanical adjacent-frame change candidates with scores; never editorial shot labels."],
     fetch: ["  hypit media fetch <url> --to <video.mp4>", "    A link turned into a file with the pinned yt-dlp, video and audio together."],
   };
   const chosen = topic === undefined ? mediaCommands : [topic];
-  io.write(`hypit media\nPrepare what the eyes will look at. Local ffmpeg work; no Runtime Profile, no request, no state.\n\n${
-    chosen.map((item) => sections[item].join("\n")).join("\n\n")}\n\nCommands that create evidence write only what --to names and refuse to overwrite. Add --json for the complete machine view.\n`);
+  io.write(`hypit media\nInspect media at chosen times and scales. Local work; no Runtime Profile, no request, no state.\n\n${
+    chosen.map((item) => sections[item].join("\n")).join("\n\n")}\n\nFrames and grids accept --around <phrase> with --transcript instead of --start/--end.\n`
+    + "Use --occurrence <n> for a repeated phrase; --padding <s> adds time on each side (default 0.3).\n"
+    + "Transcript times must share the input media's clock. An untimed gap is labeled as such, without inferring silence.\n"
+    + "Commands that create evidence write only what --to names and refuse to overwrite. Add --json for the complete machine view.\n");
 }
 
 export async function runMediaCli(argv: readonly string[], io: CliIo, cwd = process.cwd()): Promise<void> {

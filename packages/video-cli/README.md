@@ -32,17 +32,16 @@ hypit cancel <build-id>
 hypit doctor
 ```
 
-Creation-time tools run one immediate request through the selected Runtime Profile, with no Build,
-Result or state. Each names the Endpoint and its price page before it runs, and writes exactly one
-file the caller chose:
+`transcribe` runs one immediate request through the selected Runtime Profile, with no Build,
+Result or state. It names the Endpoint and its price page before it runs, and writes the transcript
+to the chosen file. `measure` estimates a passage locally:
 
 ```bash
-hypit observe <media…> --instruction <text|file> --prompt <text|file> --to notes/frame.md
 hypit transcribe reference.mp4 --to notes/reference.transcript.json [--language en|zh|es]
 hypit measure main.svml --segment hook --language en --pace normal --rounding round
 ```
 
-`observe` uses the Profile's Gemini Endpoint and `transcribe` its `whisperx-alignment` Endpoint (after
+`transcribe` uses the Profile's `whisperx-alignment` Endpoint (after
 extracting 16 kHz mono speech audio with ffmpeg). `measure` counts a Segment's pronunciation units at a
 delivery policy and prints the seconds to write as the literal `duration`; it opens no Profile and
 spends nothing. `--runtime <profile>` names the Profile; otherwise the project's `hypit runtime use`
@@ -52,8 +51,8 @@ that produced them, so they are declared in the Source and go through `plan` and
 voice or learn a passage's real length before authoring the rest, build a Run whose target is that
 speech output and reuse it as a Candidate.
 
-Two more families are local, stateless and spend nothing. `hypit media` prepares what the eyes will
-look at when a whole video is too long or too dense to hand over at once, and `hypit vocabulary`
+Two more families are local, stateless and spend nothing. `hypit media` exposes the source at chosen
+times and scales, and `hypit vocabulary`
 prints what a Source may write:
 
 ```bash
@@ -62,6 +61,8 @@ hypit media cut reference.mp4 --start 12 --end 19.5 --label-time --to notes/hook
 hypit media frames reference.mp4 --at 12.4,13.1 --label-time --to notes/hook-frames
 hypit media tile reference.mp4 --start 12 --end 19.5 --to notes/hook-grid.jpg
 hypit media tile reference.mp4 --at 12.4,13.1,14.8 --columns 3 --to notes/exact-grid.jpg
+hypit media tile reference.mp4 --start 12 --end 14 --every 0.1 --transcript notes/reference.transcript.json --to notes/detail.jpg
+hypit media tiles reference.mp4 --around "your next idea" --transcript notes/reference.transcript.json --every 0.1 --columns 3 --rows 2 --to notes/phrase
 hypit media tiles reference.mp4 --ranges notes/ranges.json --to notes/grids
 hypit media boundaries reference.mp4
 hypit media fetch https://… --to reference/source.mp4
@@ -70,11 +71,33 @@ hypit vocabulary @hypit/media-pipeline --tag StillVideo
 hypit vocabulary --visual text
 ```
 
-`cut` seeks to the exact frame and can visibly overlay absolute source time on the evidence copy;
-`frames` writes one JPEG per named second and can add the same visible label. `tile` always draws the
-absolute source time below every cell. It accepts either one range sampled evenly or exact `--at`
-times; `tiles` repeats that operation for an ordinary JSON array of `{ start, end, id?, frames? }`
-ranges. Columns, cell width and sample count remain caller choices. `boundaries` reports adjacent-frame
+`cut` isolates the requested interval and can visibly overlay source time on the evidence copy.
+`frames` writes one JPEG per requested time, selecting the first decoded frame at or after it.
+Visible frame labels use that frame's actual timestamp, as do the labels below each `tile` cell.
+Sampling is shared by `frames`, `tile` and `tiles`:
+
+- `--at` names exact sample times; `--start` and `--end` choose a range in seconds.
+- `--every` samples from the start at that interval, excluding the end. Times use millisecond precision.
+- Grids can instead use `--frames` evenly spaced bin midpoints. Without a sampling option they provide
+  a compact overview; choose the interval explicitly when inspecting fast motion.
+- `--transcript` reads `hypit.transcript@1` from `hypit transcribe`. The transcript and input media must
+  share the same clock. Labels show source time, active words with their start/end, and nearby words.
+  Active spans use `[start, end)`; overlapping words are all shown. Missing times stay missing, and a
+  frame without a timed word is identified without inferring silence. Text is rendered below the
+  source picture using Sharp/Pango and the machine's fonts, including font fallback for multilingual text.
+- `--around "a phrase"` with `--transcript` selects that phrase's word boundaries plus `--padding`
+  seconds on either side (0.3 by default), clipped to the input duration. Matching uses whole consecutive
+  words, ignoring case, whitespace and punctuation. Repeated matches list their times and require an
+  explicit `--occurrence` (one-based), or a numeric range. This locates evidence; it does not interpret it.
+- `tiles` accepts the same selection as `tile`, or `--ranges` with a JSON array of
+  `{ start, end, id?, frames?, every? }`. A range's sampling choice overrides the command default.
+  It paginates into `--columns` × `--rows` cells (3 × 3 by default); the final page may have fewer cells.
+  `--cell` chooses picture width. `tile` keeps all requested samples in one image.
+
+`--json` reports each frame's `requestedAt` and actual `at`, plus its active/context words when supplied.
+Grid `samples` retain the requested times; `frames` contain the actual extracted-frame information.
+It also reports every page path for `tiles`. The media layer reads existing timed text; transcription
+and its Endpoint remain separate. `boundaries` reports adjacent-frame
 change candidates and their measured scores; it does not suppress short changes or call them shots.
 `fetch` turns a link into a file with the pinned yt-dlp. Commands that create evidence write only
 what `--to` names and refuse to overwrite. `vocabulary` reads the installed

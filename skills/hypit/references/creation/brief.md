@@ -72,6 +72,6 @@ Selections, and Moments.
 - New evidence about the reference changes its Analysis or Timeline; it may then cause the director to
   reconsider Treatment.
 
-Studio and built Results participate in this loop. If the work looks wrong because the design itself
-was wrong, revise Treatment. If the design is sound and its implementation is wrong, repair the
-production. Brief changes only when the user's truth changes.
+Studio and built Results make the current design visible. If the work looks wrong because the
+design itself was wrong, revise Treatment. If the design is sound and its implementation is wrong,
+repair the production. Brief changes only when the user's truth changes.
