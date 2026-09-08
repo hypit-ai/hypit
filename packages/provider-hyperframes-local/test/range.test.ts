@@ -4,6 +4,8 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
+import type { ResourceIOOptions } from "@hypit/runtime";
 import { sealComposition, sealVisualTrack } from "@hypit/composition";
 import { mediaFrameRangeSamples } from "@hypit/media";
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
@@ -42,6 +44,22 @@ function documentFor(artifact: BlobRef) {
   return compileHyperframesDocument(sealComposition({ id: "range-video",
     canvas: { width: 64, height: 64, clearColor: "#000000" }, tracks: [track] }), space);
 }
+
+test("a render deadline cancels resource preparation and awaits the reader's cleanup", async () => {
+  class StalledResources extends MemoryResourceStore {
+    active = 0;
+    override async get(_resource: string, options: ResourceIOOptions = {}) {
+      this.active++;
+      try { await delay(60_000, undefined, { signal: options.signal }); return new Uint8Array([0]); }
+      finally { this.active--; }
+    }
+  }
+  const resources = new StalledResources();
+  const document = documentFor({ kind: "blob", resource: "res_waiting", size: 1, mediaType: "video/mp4" });
+  await assert.rejects(renderHyperframesVisual({ document }, { resources, processTimeoutMs: 100 }),
+    /render timed out during preparing resources/u);
+  assert.equal(resources.active, 0, "the failed render must not leave its reader running");
+});
 
 test("the render deadline is global while stage deadlines are explicit deployment policy", () => {
   const defaults = resolveExecutionOptions({});
@@ -115,6 +133,31 @@ test("real selected renders sample video correctly across loop, hold and stretch
     await assert.rejects(renderHyperframesVisual({ document, range: { startFrame: 7, endFrameExclusive: 8 } },
       { resources, workers: 2, initializationTimeoutMs: 1, processTimeoutMs: 30_000 }), /worker 0 initialization timed out/);
     assert.equal((await render("after-timeout", { startFrame: 7, endFrameExclusive: 8 }, 1)).length, stride);
+
+    // One cancelled attempt must not interrupt a different render using the same source store.
+    const controller = new AbortController();
+    const stopped = renderHyperframesVisual({ document }, { resources, workers: 4, signal: controller.signal,
+      onProgress: (event) => { if (event.phase === "worker-start") controller.abort(new Error("stop this attempt")); } });
+    const [failed, completed] = await Promise.allSettled([stopped, render("concurrent", undefined, 2)]);
+    assert.equal(failed.status, "rejected");
+    assert.equal(completed.status, "fulfilled");
+    if (completed.status === "fulfilled") assert.equal(completed.value.length, 12 * stride);
+
+    class StalledOutput extends MemoryResourceStore {
+      active = false;
+      override get(resource: BlobRef["resource"], options?: ResourceIOOptions) { return resources.get(resource, options); }
+      override async put(_bytes: Uint8Array, _mediaType: string, options: ResourceIOOptions = {}): Promise<BlobRef> {
+        this.active = true;
+        storeController.abort(new Error("stop output storage"));
+        try { await delay(60_000, undefined, { signal: options.signal }); throw new Error("unexpected completion"); }
+        finally { this.active = false; }
+      }
+    }
+    const storeController = new AbortController();
+    const outputResources = new StalledOutput();
+    await assert.rejects(renderHyperframesVisual({ document, range: { startFrame: 0, endFrameExclusive: 1 } },
+      { resources: outputResources, workers: 1, signal: storeController.signal }), /stop output storage/u);
+    assert.equal(outputResources.active, false);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

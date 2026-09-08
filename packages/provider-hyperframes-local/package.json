@@ -23,7 +23,8 @@
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-host-node": "workspace:*",
     "@hypit/runtime-kit": "workspace:*",
-    "hyperframes": "0.7.101"
+    "hyperframes": "0.7.101",
+    "tsx": "4.21.0"
   },
   "devDependencies": {
     "@hypit/composition": "workspace:*",

@@ -10,7 +10,9 @@ Runtime Operation id, so recovery cannot accidentally submit the same attempt tw
 Cancellation uses that same identity to stop the remote Step Functions execution, including the
 crash window before the first checkpoint was saved.
 
-The distributed HyperFrames contract supports only integer 24, 30 and 60 fps. Unsupported Needs
+This Provider accepts whole-document requests at integer 24, 30 and 60 fps; it currently declines
+requests containing a frame range. Its chunk settings partition a whole render across Lambda workers,
+whereas the local Provider also accepts a selected interval. Unsupported Needs
 are declined by `supports()` so another Endpoint may satisfy them; no frame rate or GPU intent is
 silently changed. The Provider always requests strict SDR H.264, exact CFR assembly, software
 browser rendering and plan protocol v2. It also declines Surface-bearing documents until the

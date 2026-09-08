@@ -1,3 +1,5 @@
+import { addAbortSignal, Readable } from "node:stream";
+import type { ResourceIOOptions } from "@hypit/runtime";
 import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
@@ -20,24 +22,24 @@ import type {
 
 /**
  * `put` and `get` are the whole port. The rest are optional: a client that
- * omits them leaves the store implementing only the three-method ResourceStore,
+ * omits them leaves the store implementing only the ResourceStore,
  * which is exactly what the optional Streaming facet means.
  */
 export type S3ObjectClient = {
-  put(input: PutObjectCommandInput): Promise<void>;
-  get(input: GetObjectCommandInput): Promise<Uint8Array | undefined>;
+  put(input: PutObjectCommandInput, options?: ResourceIOOptions): Promise<void>;
+  get(input: GetObjectCommandInput, options?: ResourceIOOptions): Promise<Uint8Array | undefined>;
   /**
    * The object's bytes as they arrive. Separate from `get` because an Artifact
    * may be a whole programme: a caller that asked to stream must not have the
    * object assembled in memory on its behalf.
    */
-  open?(input: GetObjectCommandInput): Promise<AsyncIterable<Uint8Array> | undefined>;
+  open?(input: GetObjectCommandInput, options?: ResourceIOOptions): Promise<AsyncIterable<Uint8Array> | undefined>;
   /** Undefined when the key is absent. */
-  head?(input: GetObjectCommandInput): Promise<{ readonly size: number } | undefined>;
-  createMultipart?(input: CreateMultipartUploadCommandInput): Promise<string>;
-  uploadPart?(input: UploadPartCommandInput): Promise<{ readonly etag: string }>;
-  completeMultipart?(input: CompleteMultipartUploadCommandInput): Promise<void>;
-  abortMultipart?(input: AbortMultipartUploadCommandInput): Promise<void>;
+  head?(input: GetObjectCommandInput, options?: ResourceIOOptions): Promise<{ readonly size: number } | undefined>;
+  createMultipart?(input: CreateMultipartUploadCommandInput, options?: ResourceIOOptions): Promise<string>;
+  uploadPart?(input: UploadPartCommandInput, options?: ResourceIOOptions): Promise<{ readonly etag: string }>;
+  completeMultipart?(input: CompleteMultipartUploadCommandInput, options?: ResourceIOOptions): Promise<void>;
+  abortMultipart?(input: AbortMultipartUploadCommandInput, options?: ResourceIOOptions): Promise<void>;
 };
 
 function statusCode(error: unknown): number | undefined {
@@ -63,43 +65,49 @@ export class AwsS3ObjectClient implements S3ObjectClient {
     this.#client = new S3Client(config);
   }
 
-  async put(input: PutObjectCommandInput): Promise<void> {
-    await this.#client.send(new PutObjectCommand(input));
+  async put(input: PutObjectCommandInput, options: ResourceIOOptions = {}): Promise<void> {
+    await this.#client.send(new PutObjectCommand(input), (options.signal === undefined ? {} : { abortSignal: options.signal }));
   }
 
-  async get(input: GetObjectCommandInput): Promise<Uint8Array | undefined> {
-    try {
-      const response = await this.#client.send(new GetObjectCommand(input));
-      if (response.Body === undefined) throw new Error(`S3 object ${input.Key ?? "<unknown>"} has no body`);
-      return Uint8Array.from(await response.Body.transformToByteArray());
-    } catch (error) {
-      if (absent(error)) return undefined;
-      throw error;
-    }
+  async get(input: GetObjectCommandInput, options: ResourceIOOptions = {}): Promise<Uint8Array | undefined> {
+    const source = await this.open(input, options);
+    if (source === undefined) return undefined;
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of source) chunks.push(chunk);
+    return Uint8Array.from(Buffer.concat(chunks));
   }
 
-  async open(input: GetObjectCommandInput): Promise<AsyncIterable<Uint8Array> | undefined> {
-    let body: AsyncIterable<Uint8Array>;
+  async open(input: GetObjectCommandInput, options: ResourceIOOptions = {}): Promise<AsyncIterable<Uint8Array> | undefined> {
+    options.signal?.throwIfAborted();
+    let body: Readable;
     try {
-      const response = await this.#client.send(new GetObjectCommand(input));
+      const response = await this.#client.send(new GetObjectCommand(input), (options.signal === undefined ? {} : { abortSignal: options.signal }));
       if (response.Body === undefined) throw new Error(`S3 object ${input.Key ?? "<unknown>"} has no body`);
-      body = response.Body as unknown as AsyncIterable<Uint8Array>;
+      body = response.Body as Readable;
+      // open() can be cancelled before its caller starts consuming the body.
+      body.on("error", () => {});
+      if (options.signal !== undefined) addAbortSignal(options.signal, body);
     } catch (error) {
       if (absent(error)) return undefined;
       throw error;
     }
     return (async function* () {
-      for await (const chunk of body) yield Uint8Array.from(chunk);
+      try {
+        for await (const chunk of body) {
+          options.signal?.throwIfAborted();
+          yield Uint8Array.from(chunk as Buffer);
+        }
+      } finally { body.destroy(); }
     })();
   }
 
-  async head(input: GetObjectCommandInput): Promise<{ readonly size: number } | undefined> {
+  async head(input: GetObjectCommandInput, options: ResourceIOOptions = {}): Promise<{ readonly size: number } | undefined> {
     try {
       const response = await this.#client.send(new HeadObjectCommand({
         Bucket: input.Bucket,
         Key: input.Key,
         ...(input.ExpectedBucketOwner === undefined ? {} : { ExpectedBucketOwner: input.ExpectedBucketOwner }),
-      }));
+      }), (options.signal === undefined ? {} : { abortSignal: options.signal }));
       return { size: response.ContentLength ?? 0 };
     } catch (error) {
       if (absent(error)) return undefined;
@@ -107,24 +115,24 @@ export class AwsS3ObjectClient implements S3ObjectClient {
     }
   }
 
-  async createMultipart(input: CreateMultipartUploadCommandInput): Promise<string> {
-    const response = await this.#client.send(new CreateMultipartUploadCommand(input));
+  async createMultipart(input: CreateMultipartUploadCommandInput, options: ResourceIOOptions = {}): Promise<string> {
+    const response = await this.#client.send(new CreateMultipartUploadCommand(input), (options.signal === undefined ? {} : { abortSignal: options.signal }));
     if (response.UploadId === undefined) throw new Error("S3 did not return a multipart upload id");
     return response.UploadId;
   }
 
-  async uploadPart(input: UploadPartCommandInput): Promise<{ readonly etag: string }> {
-    const response = await this.#client.send(new UploadPartCommand(input));
+  async uploadPart(input: UploadPartCommandInput, options: ResourceIOOptions = {}): Promise<{ readonly etag: string }> {
+    const response = await this.#client.send(new UploadPartCommand(input), (options.signal === undefined ? {} : { abortSignal: options.signal }));
     if (response.ETag === undefined) throw new Error("S3 did not return a part ETag");
     return { etag: response.ETag };
   }
 
-  async completeMultipart(input: CompleteMultipartUploadCommandInput): Promise<void> {
-    await this.#client.send(new CompleteMultipartUploadCommand(input));
+  async completeMultipart(input: CompleteMultipartUploadCommandInput, options: ResourceIOOptions = {}): Promise<void> {
+    await this.#client.send(new CompleteMultipartUploadCommand(input), (options.signal === undefined ? {} : { abortSignal: options.signal }));
   }
 
-  async abortMultipart(input: AbortMultipartUploadCommandInput): Promise<void> {
-    await this.#client.send(new AbortMultipartUploadCommand(input));
+  async abortMultipart(input: AbortMultipartUploadCommandInput, options: ResourceIOOptions = {}): Promise<void> {
+    await this.#client.send(new AbortMultipartUploadCommand(input), (options.signal === undefined ? {} : { abortSignal: options.signal }));
   }
 
 }

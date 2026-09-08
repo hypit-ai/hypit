@@ -20,6 +20,12 @@ implementation lives in `@hypit/runtime-local`; Node component and endpoint exec
 The scheduler never changes graph meaning. Targets and candidates are fixed before execution, and
 resource limits only control when an already selected command may run.
 
+Resource I/O accepts an optional `ResourceIOOptions` with an `AbortSignal`. The selected store owns
+stopping its transport and closing its streams before the call rejects. A caller passing a stream
+to `putStream` or `writeStream` uses the same signal for its producer, so a pending chunk can also
+be interrupted. Cancellation affects the current transfer; completed resources remain available.
+An execution deadline belongs to its caller and is passed through this ordinary I/O interface.
+
 
 A Build's `stop` records `user-cancelled` or `execution-failed` and an optional reason. The first
 cause is retained. Runtime stops launching work, saves the attempt's outcome, completed Outputs and

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { isResourceId } from "@hypit/protocol";
 import type { BlobRef, ResourceId } from "@hypit/protocol";
-import type { ResourceStore } from "@hypit/runtime";
+import type { ResourceIOOptions, ResourceStore } from "@hypit/runtime";
 
 import { AwsS3ObjectClient } from "./client.js";
 import type { S3ObjectClient } from "./client.js";
@@ -64,9 +64,9 @@ export class S3ResourceStore implements ResourceStore {
   readonly #prefix: string;
   readonly #expectedBucketOwner: string | undefined;
   readonly #partSizeBytes: number;
-  readonly open?: (resource: ResourceId) => Promise<AsyncIterable<Uint8Array> | undefined>;
-  readonly putStream?: (chunks: AsyncIterable<Uint8Array>, mediaType: string) => Promise<BlobRef>;
-  readonly writeStream?: (resource: BlobRef, chunks: AsyncIterable<Uint8Array>) => Promise<void>;
+  readonly open?: (resource: ResourceId, options?: ResourceIOOptions) => Promise<AsyncIterable<Uint8Array> | undefined>;
+  readonly putStream?: (chunks: AsyncIterable<Uint8Array>, mediaType: string, options?: ResourceIOOptions) => Promise<BlobRef>;
+  readonly writeStream?: (resource: BlobRef, chunks: AsyncIterable<Uint8Array>, options?: ResourceIOOptions) => Promise<void>;
 
   constructor(options: S3ResourceStoreOptions) {
     assert(options.bucket.trim().length > 0, "S3 Resource bucket must not be empty");
@@ -81,11 +81,11 @@ export class S3ResourceStore implements ResourceStore {
     assert(this.#partSizeBytes >= 5 * 1024 * 1024, "S3 requires multipart parts of at least 5 MiB");
     const client = options.client;
     if (client.open !== undefined && client.createMultipart !== undefined && client.uploadPart !== undefined
-      && client.completeMultipart !== undefined) {
-      this.open = (resource) => this.#openStream(resource);
-      this.putStream = (chunks, mediaType) => this.#putStream(chunks, mediaType);
-      this.writeStream = async (resource, chunks) => {
-        await this.#storeStream(resource.resource, chunks, resource.mediaType, resource.size);
+      && client.completeMultipart !== undefined && client.abortMultipart !== undefined) {
+      this.open = (resource, options = {}) => this.#openStream(resource, options);
+      this.putStream = (chunks, mediaType, options = {}) => this.#putStream(chunks, mediaType, options);
+      this.writeStream = async (resource, chunks, options = {}) => {
+        await this.#storeStream(resource.resource, chunks, resource.mediaType, options, resource.size);
       };
     }
   }
@@ -98,8 +98,9 @@ export class S3ResourceStore implements ResourceStore {
     return this.#expectedBucketOwner === undefined ? {} : { ExpectedBucketOwner: this.#expectedBucketOwner };
   }
 
-  async put(bytes: Uint8Array, mediaType: string): Promise<BlobRef> {
+  async put(bytes: Uint8Array, mediaType: string, options: ResourceIOOptions = {}): Promise<BlobRef> {
     assert(mediaType.trim().length > 0, "Resource mediaType must not be empty");
+    options.signal?.throwIfAborted();
     const copy = Uint8Array.from(bytes);
     const resource = `res_${randomUUID()}` as ResourceId;
     await this.#client.put({
@@ -109,11 +110,12 @@ export class S3ResourceStore implements ResourceStore {
       ContentLength: copy.byteLength,
       ContentType: mediaType,
       ...this.#owner(),
-    });
+    }, options);
     return { kind: "blob", resource, size: copy.byteLength, mediaType };
   }
 
-  async write(resource: BlobRef, bytes: Uint8Array): Promise<void> {
+  async write(resource: BlobRef, bytes: Uint8Array, options: ResourceIOOptions = {}): Promise<void> {
+    options.signal?.throwIfAborted();
     const copy = Uint8Array.from(bytes);
     assert(copy.byteLength === resource.size,
       `Resource ${resource.resource} has size ${copy.byteLength}, expected ${resource.size}`);
@@ -124,37 +126,40 @@ export class S3ResourceStore implements ResourceStore {
       ContentLength: copy.byteLength,
       ContentType: resource.mediaType,
       ...this.#owner(),
-    });
+    }, options);
   }
 
-  async get(resource: ResourceId): Promise<Uint8Array | undefined> {
+  async get(resource: ResourceId, options: ResourceIOOptions = {}): Promise<Uint8Array | undefined> {
+    options.signal?.throwIfAborted();
     const bytes = await this.#client.get({
       Bucket: this.#bucket,
       Key: this.key(resource),
       ...this.#owner(),
-    });
+    }, options);
     return bytes === undefined ? undefined : Uint8Array.from(bytes);
   }
 
-  async has(resource: ResourceId): Promise<boolean> {
+  async has(resource: ResourceId, options: ResourceIOOptions = {}): Promise<boolean> {
+    options.signal?.throwIfAborted();
     if (this.#client.head === undefined) {
-      return await this.#client.get({ Bucket: this.#bucket, Key: this.key(resource), ...this.#owner() }) !== undefined;
+      return await this.#client.get({ Bucket: this.#bucket, Key: this.key(resource), ...this.#owner() }, options) !== undefined;
     }
-    return await this.#client.head({ Bucket: this.#bucket, Key: this.key(resource), ...this.#owner() }) !== undefined;
+    return await this.#client.head({ Bucket: this.#bucket, Key: this.key(resource), ...this.#owner() }, options) !== undefined;
   }
 
-  async #openStream(resource: ResourceId): Promise<AsyncIterable<Uint8Array> | undefined> {
+  async #openStream(resource: ResourceId, options: ResourceIOOptions = {}): Promise<AsyncIterable<Uint8Array> | undefined> {
+    options.signal?.throwIfAborted();
     return await this.#client.open!({
       Bucket: this.#bucket,
       Key: this.key(resource),
       ...this.#owner(),
-    });
+    }, options);
   }
 
-  async #putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string): Promise<BlobRef> {
+  async #putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string, options: ResourceIOOptions = {}): Promise<BlobRef> {
     assert(mediaType.trim().length > 0, "Resource mediaType must not be empty");
     const resource = `res_${randomUUID()}` as ResourceId;
-    const size = await this.#storeStream(resource, chunks, mediaType);
+    const size = await this.#storeStream(resource, chunks, mediaType, options);
     return { kind: "blob", resource, size, mediaType };
   }
 
@@ -162,20 +167,23 @@ export class S3ResourceStore implements ResourceStore {
     resource: ResourceId,
     chunks: AsyncIterable<Uint8Array>,
     mediaType: string,
+    options: ResourceIOOptions,
     expectedSize?: number,
   ): Promise<number> {
+    options.signal?.throwIfAborted();
     const client = this.#client as Required<Pick<S3ObjectClient,
       "createMultipart" | "uploadPart" | "completeMultipart">> & S3ObjectClient;
     const key = this.key(resource);
     const owner = this.#owner();
     const uploadId = await client.createMultipart({
       Bucket: this.#bucket, Key: key, ContentType: mediaType, ...owner,
-    });
+    }, options);
     const parts: { PartNumber: number; ETag: string }[] = [];
     let pending: Uint8Array[] = [];
     let pendingBytes = 0;
     let size = 0;
     const flush = async (): Promise<void> => {
+      options.signal?.throwIfAborted();
       if (pendingBytes === 0 && parts.length > 0) return;
       const body = new Uint8Array(pendingBytes);
       let offset = 0;
@@ -189,11 +197,12 @@ export class S3ResourceStore implements ResourceStore {
       const { etag } = await client.uploadPart({
         Bucket: this.#bucket, Key: key, UploadId: uploadId,
         PartNumber: partNumber, Body: body, ContentLength: body.byteLength, ...owner,
-      });
+      }, options);
       parts.push({ PartNumber: partNumber, ETag: etag });
     };
     try {
       for await (const value of chunks) {
+        options.signal?.throwIfAborted();
         if (!(value instanceof Uint8Array)) throw new Error("Resource stream yielded non-bytes");
         const chunk = Uint8Array.from(value);
         size += chunk.byteLength;
@@ -211,15 +220,20 @@ export class S3ResourceStore implements ResourceStore {
       if (expectedSize !== undefined && size !== expectedSize) {
         throw new Error(`Resource ${resource} has size ${size}, expected ${expectedSize}`);
       }
+      options.signal?.throwIfAborted();
       await client.completeMultipart({
         Bucket: this.#bucket, Key: key, UploadId: uploadId,
         MultipartUpload: { Parts: parts }, ...owner,
-      });
+      }, options);
       return size;
     } catch (error) {
-      await client.abortMultipart?.({
-        Bucket: this.#bucket, Key: key, UploadId: uploadId, ...owner,
-      }).catch(() => undefined);
+      try {
+        await client.abortMultipart!({
+          Bucket: this.#bucket, Key: key, UploadId: uploadId, ...owner,
+        }, { signal: AbortSignal.timeout(5_000) });
+      } catch (cleanupError) {
+        throw new Error(`${String(error)}; S3 multipart cleanup failed for ${uploadId}: ${String(cleanupError)}`, { cause: error });
+      }
       throw error;
     }
   }

@@ -49,7 +49,9 @@ async function runProcess(args: {
   readonly argv: readonly string[];
   readonly timeoutMs: number;
   readonly maxOutputBytes: number;
+  readonly signal?: AbortSignal;
 }): Promise<Uint8Array> {
+  args.signal?.throwIfAborted();
   return await new Promise((resolve, reject) => {
     const child = spawn(args.executable, [...args.argv], {
       shell: false,
@@ -61,22 +63,28 @@ async function runProcess(args: {
     let bytes = 0;
     let stderr = "";
     let settled = false;
+    let failure: Error | undefined;
+    const stop = (error: Error) => {
+      failure ??= error;
+      child.kill("SIGKILL");
+    };
     const finish = (error?: Error): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      args.signal?.removeEventListener("abort", abort);
       if (error === undefined) resolve(Buffer.concat(stdout));
       else reject(error);
     };
+    const abort = () => stop(args.signal?.reason ?? new Error("Process aborted"));
+    args.signal?.addEventListener("abort", abort, { once: true });
     const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      finish(new Error(`${args.executable} timed out`));
+      stop(new Error(`${args.executable} timed out`));
     }, args.timeoutMs);
     child.stdout.on("data", (chunk: Buffer) => {
       bytes += chunk.byteLength;
       if (bytes > args.maxOutputBytes) {
-        child.kill("SIGKILL");
-        finish(new Error(`${args.executable} output exceeded the configured limit`));
+        stop(new Error(`${args.executable} output exceeded the configured limit`));
         return;
       }
       stdout.push(chunk);
@@ -85,13 +93,14 @@ async function runProcess(args: {
       bytes += chunk.byteLength;
       stderr = `${stderr}${chunk.toString()}`.slice(-8_000);
       if (bytes > args.maxOutputBytes) {
-        child.kill("SIGKILL");
-        finish(new Error(`${args.executable} output exceeded the configured limit`));
+        stop(new Error(`${args.executable} output exceeded the configured limit`));
       }
     });
     child.on("error", (error) => finish(error));
+    if (args.signal?.aborted) abort();
     child.on("close", (code) => {
-      if (code === 0) finish();
+      if (failure !== undefined) finish(failure);
+      else if (code === 0) finish();
       else finish(new Error(`${args.executable} exited ${String(code)}: ${stderr}`));
     });
   });
@@ -157,33 +166,30 @@ function assertSrgb(stream: ProbeStream): void {
   }
 }
 
-const pixelFormats = new Map<string, Promise<Map<string, boolean>>>();
+const pixelFormats = new Map<string, Map<string, boolean>>();
 
 async function pixelFormatAlpha(
   ffprobePath: string,
   timeoutMs: number,
   maxOutputBytes: number,
+  signal: AbortSignal,
 ): Promise<Map<string, boolean>> {
-  let pending = pixelFormats.get(ffprobePath);
-  if (pending === undefined) {
-    pending = (async () => {
-      const root = json(await runProcess({
-        executable: ffprobePath,
-        argv: ["-v", "error", "-print_format", "json", "-show_pixel_formats"],
-        timeoutMs,
-        maxOutputBytes,
-      }), "ffprobe pixel-format query");
-      assert(Array.isArray(root.pixel_formats), "ffprobe returned no pixel-format table");
-      const result = new Map<string, boolean>();
-      for (const raw of root.pixel_formats) {
-        const format = object(raw) as PixelFormat | undefined;
-        if (typeof format?.name === "string") result.set(format.name, format.flags?.alpha === 1);
-      }
-      return result;
-    })();
-    pixelFormats.set(ffprobePath, pending);
+  signal.throwIfAborted();
+  const cached = pixelFormats.get(ffprobePath);
+  if (cached !== undefined) return cached;
+  const root = json(await runProcess({ executable: ffprobePath,
+    argv: ["-v", "error", "-print_format", "json", "-show_pixel_formats"],
+    timeoutMs, maxOutputBytes, signal,
+  }), "ffprobe pixel-format query");
+  assert(Array.isArray(root.pixel_formats), "ffprobe returned no pixel-format table");
+  const result = new Map<string, boolean>();
+  for (const raw of root.pixel_formats) {
+    const format = object(raw) as PixelFormat | undefined;
+    if (typeof format?.name === "string") result.set(format.name, format.flags?.alpha === 1);
   }
-  return await pending;
+  // Cache completed facts only; cancelling one caller cannot cancel another's probe.
+  pixelFormats.set(ffprobePath, result);
+  return result;
 }
 
 function suffix(mediaType: string): string {
@@ -206,7 +212,11 @@ export async function verifyCompositableSurfaceBytes(options: {
   readonly ffprobePath?: string;
   readonly processTimeoutMs?: number;
   readonly maxProbeOutputBytes?: number;
+  readonly signal?: AbortSignal;
 }): Promise<void> {
+  const controller = new AbortController();
+  const signal = options.signal === undefined ? controller.signal : AbortSignal.any([controller.signal, options.signal]);
+  signal.throwIfAborted();
   assertCompositableSurfaceRef(options.surface);
   assert(options.bytes.byteLength === options.surface.artifact.size,
     `Surface ${options.surface.artifact.resource} byte size differs`);
@@ -216,16 +226,21 @@ export async function verifyCompositableSurfaceBytes(options: {
   const directory = await mkdtemp(join(tmpdir(), "hypit-surface-verify-"));
   try {
     const path = join(directory, `surface${suffix(options.surface.artifact.mediaType)}`);
-    await writeFile(path, options.bytes);
-    const [probe, formats] = await Promise.all([
+    await writeFile(path, options.bytes, { signal });
+    const pending = [
       runProcess({
         executable: ffprobePath,
         argv: ["-v", "error", "-print_format", "json", "-show_streams", "-count_frames", path],
         timeoutMs,
-        maxOutputBytes,
+        maxOutputBytes, signal,
       }),
-      pixelFormatAlpha(ffprobePath, timeoutMs, maxOutputBytes),
-    ]);
+      pixelFormatAlpha(ffprobePath, timeoutMs, maxOutputBytes, signal),
+    ] as const;
+    await Promise.allSettled(pending.map(async (job) => {
+      try { return await job; } catch (error) { controller.abort(error); throw error; }
+    }));
+    signal.throwIfAborted();
+    const [probe, formats] = await Promise.all(pending);
     const root = json(probe, "ffprobe Surface query");
     assert(Array.isArray(root.streams) && root.streams.length === 1,
       "Surface must contain exactly one visual stream and no audio or auxiliary streams");

@@ -1,9 +1,47 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createServer } from "node:http";
+import { once } from "node:events";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { S3ResourceStore } from "@hypit/resource-store-s3";
 import type { S3ObjectClient } from "@hypit/resource-store-s3";
 import { isStreamingResourceStore } from "@hypit/runtime";
+import type { ResourceIOOptions } from "@hypit/runtime";
+import { AwsS3ObjectClient } from "../src/client.js";
+
+test("cancelling an S3 body read closes the actual HTTP transfer", async () => {
+  let reached!: () => void;
+  let disconnected!: () => void;
+  const received = new Promise<void>((resolve) => { reached = resolve; });
+  const closed = new Promise<void>((resolve) => { disconnected = resolve; });
+  const server = createServer((_request, response) => {
+    response.writeHead(200, { "Content-Length": "100000", "Content-Type": "application/octet-stream" });
+    response.write(Buffer.from([1]));
+    response.once("close", disconnected);
+    reached();
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert.ok(address !== null && typeof address !== "string");
+  const controller = new AbortController();
+  try {
+    const store = new S3ResourceStore({ bucket: "fixture", client: new AwsS3ObjectClient({
+      endpoint: `http://127.0.0.1:${address.port}`, region: "us-east-1", forcePathStyle: true,
+      credentials: { accessKeyId: "local-test", secretAccessKey: "local-test" },
+    }) });
+    const source = await store.open!("res_stalled", { signal: controller.signal });
+    assert.ok(source !== undefined);
+    const iterator = source[Symbol.asyncIterator]();
+    assert.deepEqual((await iterator.next()).value, new Uint8Array([1]));
+    const rejected = assert.rejects(iterator.next());
+    await received;
+    controller.abort(new Error("transfer stopped"));
+    await rejected;
+    await closed;
+  } finally { server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); }
+});
 
 class FakeS3 implements S3ObjectClient {
   readonly values = new Map<string, Uint8Array>();
@@ -82,6 +120,28 @@ class FullFakeS3 extends FakeS3 {
   async abortMultipart() {}
 
 }
+
+test("cancelled S3 uploads abort their multipart transfer with a fresh cleanup signal", async () => {
+  const controller = new AbortController();
+  let aborted = false;
+  class InterruptedS3 extends FullFakeS3 {
+    override async uploadPart(_input: Parameters<NonNullable<S3ObjectClient["uploadPart"]>>[0], options: ResourceIOOptions = {}): Promise<{ etag: string }> {
+      controller.abort(new Error("stop upload"));
+      await delay(60_000, undefined, { signal: options.signal });
+      throw new Error("unexpected completion");
+    }
+    override async abortMultipart(_input?: unknown, options: ResourceIOOptions = {}) {
+      assert.equal(options.signal?.aborted, false);
+      aborted = true;
+    }
+  }
+  const client = new InterruptedS3();
+  const store = new S3ResourceStore({ client, bucket: "fixture" });
+  await assert.rejects(store.putStream!((async function* () { yield new Uint8Array([1]); })(),
+    "video/mp4", { signal: controller.signal }));
+  assert.equal(aborted, true);
+  assert.equal(client.values.size, 0);
+});
 
 test("streaming is exposed only when the client supports it", () => {
   const store = new S3ResourceStore({ client: new FakeS3(), bucket: "fixture" });
