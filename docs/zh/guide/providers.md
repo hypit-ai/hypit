@@ -44,7 +44,7 @@ Provider 包依赖 Runtime 端口与共享能力词汇，不依赖精确模型�
 
 ## 3. 实现 Provider
 
-Provider 处理来自 Scheduler 的 Command：提交请求、轮询、下载以及 ArtifactStore 持久化。
+Provider 处理来自 Scheduler 的 Command：提交请求、轮询、下载，并把字节交给当前 Build 的临时工作区。
 
 ```typescript
 // src/provider.ts
@@ -66,7 +66,7 @@ export function createMyServiceProvider(options: {
     capabilities: [{
       capability: myCapability,
       returns: myResultType,
-      lane: "generate",
+      capacity: "generate",
       lifecycle: "asynchronous",
       endpoint: myAsyncEndpoint,
     }],
@@ -81,7 +81,7 @@ export function createMyServiceProvider(options: {
 - `packages/provider-hyperframes-local/` — 本地 Chrome 渲染
 - `packages/provider-hyperframes-aws-lambda/` — 异步 Step Functions/Lambda 渲染
 - `packages/provider-media-aws-lambda/` — 通过共享 ffmpeg 执行体完成同步 Lambda 媒体操作
-- `packages/provider-xiaomi-mimo/` — 不依赖 MiMo 模型包的官方即时 VoiceDesign API
+- `packages/provider-xiaomi-mimo/` — 不依赖 MiMo 模型包的官方即时音色设计与音色克隆 API
 
 ## 4. 编写 activation 描述符
 
@@ -129,6 +129,22 @@ export default hypitPackage;
 capability 和调度事实。Activation 不得解析密钥或环境来源的部署值、访问网络或启动任务；环境变量名会作为引用保留到真正处理匹配 Need 时。凭据是否存在由通用 CredentialStore 路径诊断，
 Provider 不得把环境变量硬编码成特殊的密钥 Store。
 
+Activation 还可以返回 `diagnose(context)`。它只会在用户显式运行主动 `doctor` 时执行，而且
+Runtime 会先解析该 Endpoint 自己声明的凭据槽。它可以对真实服务做一次有界只读请求，例如读取
+已认证账户的模型目录；Build 预检不能调用它，它也绝不能提交生成任务。
+
+收费的 Provider 用 `pricing: { kind: "page", url }` 声明价格发布页面；在本机运行的 Provider
+声明 `pricing: { kind: "local" }`。Endpoint 还可以通过 `readPricing` 返回 Provider 当前发布的
+原始费率文档；只有网页的服务继续以该网页作为价格入口。`hypit pricing <run> --runtime <profile>`
+把这些材料放在 Run 的 Needs 旁边，而且不会创建 Build。Agent 可以据此计算并解释费用，用户的
+决定仍然是支出授权。共享接口只有来源 URL 和保持 Provider 原始形状的 JSON，因此接入新的
+中转站不需要先给 Hypit 增加一种价格表分类。
+
+`hypit plan --runtime <profile>` 仍然完全在本地执行并列出每个请求的 Endpoint。上游文件尚未
+生成时，能力包仍重建全部作者参数，只把未来文件保留为符号 Resource 槽；同一个 Endpoint 的
+普通 `supports` 会在 Build 入队前检查这份规格。包无法说明请求时直接停止，不回退成
+capability-only 的假验证，也不维护第二张选择表。
+
 ## 5. 按需声明 Managed Program
 
 如果 Provider 依赖需要保持温热的外部程序，就在 Endpoint 旁边导出它的声明。这里没有第二个
@@ -164,9 +180,9 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 ```
 
-`hypit runtime up` 会准备、启动并探测 Managed Program，然后启动耐久 Worker。`build` 只预检
+`hypit runtime up` 会准备、启动并探测**本地** Managed Program，然后启动耐久 Worker。`build` 只预检
 本次 Plan 所需 Capability 对应的 Program；未就绪时在提交前失败，绝不安装或启动它。只调用
-远程 API 的 Provider 不返回 `program`。
+远程 API 的 Provider 不返回 `program`，Hypit 也没有可以启动或停止这类服务的生命周期。
 
 ## 6. 声明依赖
 
@@ -207,11 +223,11 @@ hypit doctor hypit.runtime.json
 
 | 包 | 模式 |
 |---|---|
-| `provider-kie` | 远程 API：上传、付费提交、带检查点的轮询、有界下载、即时 ArtifactStore 持久化 |
+| `provider-kie` | 远程 API：上传、付费提交、带检查点的轮询、有界下载、写入当前 Build 工作区 |
 | `provider-media-local` | 本地进程：不经 shell 的 ffprobe/ffmpeg，执行有界 |
 | `provider-whisperx-local` | 本地 HTTP 服务：带热模型，单次准入并发 |
 | `provider-hyperframes-local` | 本地进程：Chrome 渲染，带 worker 并行与输出探测校验 |
-| `provider-hyperframes-aws-lambda` | 远程可恢复任务：确定性 Step Functions 提交、轮询与 S3 流式落库 |
+| `provider-hyperframes-aws-lambda` | 远程异步任务：按 Operation 自行暂存、Step Functions 轮询与结果流式回收 |
 | `provider-image-opencv-local` | 本地 Python：有界的 OpenCV/NumPy，配合锁定的 Python 环境 |
 | `provider-media-aws-lambda` | 远程同步 Lambda：与本地媒体相同的九项能力 |
-| `provider-xiaomi-mimo` | 远程即时 API：把精确 MiMo VoiceDesign 请求落成持久化音频 Artifact |
+| `provider-xiaomi-mimo` | 远程即时 API：把精确 MiMo 音色设计与音色克隆请求落成持久化音频 Resource |

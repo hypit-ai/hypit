@@ -141,13 +141,13 @@ async function materializeFace(
   }));
   const byArtifact = new Map<string, FontArtifactRef["sources"][number]>();
   for (const source of resolvedSources) {
-    const existing = byArtifact.get(source.artifact.digest);
+    const existing = byArtifact.get(source.artifact.resource);
     if (existing === undefined) {
-      byArtifact.set(source.artifact.digest, source);
+      byArtifact.set(source.artifact.resource, source);
       continue;
     }
     if (existing.unicodeRange === undefined || source.unicodeRange === undefined) continue;
-    byArtifact.set(source.artifact.digest, {
+    byArtifact.set(source.artifact.resource, {
       artifact: existing.artifact,
       unicodeRange: `${existing.unicodeRange},${source.unicodeRange}`,
     });

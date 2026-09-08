@@ -67,7 +67,3 @@ examples/**/.svml/
 
 # Reverse-engineering scratch projects live outside the repository too
 /projects/*
-!/projects/hypihub-provider-smoke/
-!/projects/hypihub-provider-smoke/**
-/projects/hypihub-provider-smoke/.hypit/
-/projects/hypihub-provider-smoke/.DS_Store

@@ -8,7 +8,11 @@ import { temporalTypes } from "@hypit/temporal";
 
 import { emojiRevealProducers, emojiRevealTypes } from "./manifest.js";
 
-export type EmojiRevealFragmentItem = { readonly specName: string; readonly iconName: string; readonly activationName: string };
+export type EmojiRevealFragmentItem = {
+  readonly specName: string;
+  readonly iconName: string;
+  readonly activationName?: string;
+};
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
@@ -21,9 +25,13 @@ export function createEmojiRevealFragment(items: readonly EmojiRevealFragmentIte
   let current = "emoji:set:empty";
   items.forEach((item, index) => {
     const id = `emoji:set:append:${String(index + 1).padStart(4, "0")}`;
-    operations.push({ id, producer: emojiRevealProducers.appendItem, inputs: {
-      set: operation(current), space: operation("emoji:space"), spec: input(item.specName), activation: input(item.activationName),
-      icon: input(item.iconName),
+    operations.push({ id, producer: item.activationName === undefined
+      ? emojiRevealProducers.appendPresetItem
+      : emojiRevealProducers.appendItem, inputs: {
+      set: operation(current), spec: input(item.specName), icon: input(item.iconName),
+      ...(item.activationName === undefined ? {} : {
+        space: operation("emoji:space"), activation: input(item.activationName),
+      }),
     }, result: { kind: "output", name: "set" } });
     current = id;
   });
@@ -43,7 +51,7 @@ export function createEmojiRevealFragment(items: readonly EmojiRevealFragmentIte
       { name: "placeholder", type: artifactTypes.blob },
       ...items.flatMap((item) => [
         { name: item.specName, type: emojiRevealTypes.itemSpec }, { name: item.iconName, type: artifactTypes.blob },
-        { name: item.activationName, type: temporalTypes.instant },
+        ...(item.activationName === undefined ? [] : [{ name: item.activationName, type: temporalTypes.instant }]),
       ]),
     ],
     operations,

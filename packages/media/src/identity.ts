@@ -1,6 +1,6 @@
 import {
   canonicalize,
-  isDigest,
+  isResourceId,
 } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 
@@ -59,7 +59,7 @@ function compareTimestamp(left: MediaTimestamp, right: MediaTimestamp): number {
 function verifyBlob(value: unknown, subject: string): asserts value is BlobRef {
   const item = object(value, subject);
   assert(item.kind === "blob", `${subject} must be a BlobRef`);
-  assert(typeof item.digest === "string" && isDigest(item.digest), `${subject}.digest is invalid`);
+  assert(typeof item.resource === "string" && isResourceId(item.resource), `${subject}.resource is invalid`);
   nonNegativeInteger(item.size, `${subject}.size`);
   assert(typeof item.mediaType === "string" && item.mediaType.length > 0, `${subject}.mediaType is invalid`);
 }

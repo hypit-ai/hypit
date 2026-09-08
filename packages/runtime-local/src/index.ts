@@ -1,22 +1,29 @@
 export {
-  createLocalRuntimeArchiveControl,
-  createLocalRuntimeArtifactAccess,
+  createLocalRuntimeControl,
 } from "./control.js";
 export { createLocalCredentialControl } from "./credentials.js";
+export { createLocalResultWriter } from "./result-writer.js";
 export {
   createLocalRuntime,
 } from "./runtime.js";
 export { openLocalRuntimeHost } from "./host.js";
 export {
   createRuntimeFromConfig,
-  createRuntimeArchiveFromConfig,
-  createRuntimeArtifactAccessFromConfig,
+  createRuntimeControlFromConfig,
+  createRuntimeResultControlFromConfig,
   createRuntimeCredentialsFromConfig,
+  doctorProjectBuildResultRepository,
+  openProjectBuildResultRepository,
+  openBuildResultRepositoryLocation,
   declaredManagedPrograms,
+  describeRuntimeConfigProviders,
   doctorRuntimeConfig,
+  invokeRuntimeConfigNeed,
+  openTransientRuntimeConfigExecution,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
-  parseRuntimeConfig,
+  readRuntimeConfigPricing,
+  parseLocalRuntimeProfile,
   resolveRuntimeConfigPaths,
 } from "./config.js";
 export {

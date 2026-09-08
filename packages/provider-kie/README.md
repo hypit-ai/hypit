@@ -10,7 +10,7 @@ choose another model.
 
 It imports no exact-model package. Every supported Capability contributes one `KieRoute`: exact
 Capability, return Type, request compiler, media/count limits and result packer. All Routes share one
-upload, admission, paid submission, checkpoint, polling and download state machine. Model mappings
+upload, paid submission, durable Operation polling, download and working-Resource write path. Model mappings
 generate eleven Routes; Background Removal contributes the twelfth.
 
 ## Supported catalog
@@ -28,9 +28,30 @@ routes rather than extra Capabilities.
 | `@hypit/seedream` | `seedream-5-lite` | `seedream/5-lite-{text,image}-to-image` |
 | `@hypit/background-removal` | `remove-background` | `recraft/remove-background` |
 
-KIE's GPT Image 2 endpoints do not accept `4:3`, `3:4` or `4:5`, even though those values are part
-of the model package's general vocabulary. The KIE route rejects those combinations before upload
-or paid submission; use `auto`, `1:1`, `3:2`, `2:3`, `16:9`, `9:16` or `21:9` for this Provider.
+KIE's current GPT Image 2 request surface is:
+
+| Resolution | Ratios unavailable at this Endpoint | `background` |
+| --- | --- | --- |
+| `1K` | none | optional |
+| `2K` | `5:4`, `4:5`, `3:1`, `1:3`, `9:21` | omit |
+| `4K` | `3:1`, `1:3`, `9:21` | omit |
+
+These facts were checked against KIE's live `createTask` endpoint on 2026-09-07. The live API accepts
+`5:4` and `4:5` at 4K even though KIE's [model page](https://kie.ai/gpt-image-2) currently lists a
+broader restriction. At 2K and 4K, any explicit `background` value is rejected, including `opaque`
+and `auto`. The KIE Endpoint checks this boundary before upload or paid submission; the GPT Image
+model package continues to expose the complete Provider-neutral vocabulary.
+
+KIE's Grok Imagine endpoints accept up to seven reference images, but only one at 1080p. This is
+also checked by the KIE Endpoint; the Grok model packages retain their model-level seven-image
+capacity.
+
+KIE publishes a public model-pricing catalogue at `POST /client/v1/model-pricing/page`. For each
+selected Need, `readPricing` derives the same KIE wire model used for execution, reads the catalogue's
+pages with that wire model in KIE's `modelDescription` query, and preserves the returned records. The
+Provider contains no Hypit model-price table and does not interpret KIE's descriptions or formulas.
+All returned parameter rows remain intact for the Agent to read beside the Need. Reading this public
+catalogue does not resolve the generation API credential and submits no work.
 
 There is deliberately no Grok image capability and no MiMo capability in this release. Seedream's
 `nsfwCheck` is explicit author request content; KIE cannot silently enable or disable it. A
@@ -42,13 +63,12 @@ requests, not in Provider routing.
 Declarative activation names an ordinary CredentialRef, not an environment-specific Provider field:
 
 ```json
-{
+"kie.personal": {
   "use": "@hypit/provider-kie",
-  "instance": "kie.personal",
   "config": {
     "apiKey": { "store": "os", "key": "kie.api-key" },
     "defaultConcurrency": 8,
-    "laneConcurrency": {
+    "capabilityConcurrency": {
       "seedance-2.5": 4,
       "gpt-image-2": 3
     }
@@ -68,53 +88,44 @@ const kie = createKieProvider({
   instance: "kie.personal",
   apiKey: credentialRef("env", "KIE_API_KEY"),
   defaultConcurrency: 8,
-  laneConcurrency: {
+  capabilityConcurrency: {
     "seedance-2.5": 4,
     "gpt-image-2": 3,
   },
 });
 ```
 
-`defaultConcurrency` is the total KIE pool capacity shared by all Builds. Each optional
-`laneConcurrency` entry limits one exact KIE model lane inside that total. There is no cross-Provider
-`seedance` family queue: another Provider owns another pool and its own independently named
-lanes. A task acquires its pool and lane capacity together, so it is queued once rather than
-copied between parent and child queues.
+`defaultConcurrency` is the total capacity of this configured KIE Endpoint across all Builds. Each
+optional `capabilityConcurrency` entry narrows the capacity of one exact KIE model inside that total. By
+default the Endpoint instance is the shared-resource identity. Set Profile `pool` only when multiple
+Endpoint instances really use the same account or deployment quota. Another Provider is independent
+unless the Profile explicitly gives it that same real-resource identity.
+One Need execution acquires its total and model-specific capacity claims atomically. These are shared-resource
+limits, not parent and child queues.
+
+Optional `actionLimits` uses the shared Endpoint vocabulary for `submit`, `poll` and `collect`.
+For example, `submit: { rate: { limit: 1, periodMs: 200 } }` admits one start action every 200 ms,
+with an initial burst of one. It is shared by instances in the same pool. A start includes reference
+preparation and submission; this is an action-admission limit, not a timestamp guarantee for each
+HTTP request. `collect: { concurrency: 2 }` separately bounds concurrent result downloads.
+Polling transport errors and operation deadlines fail the attempt and retain the task receipt.
 
 An advanced embedding adds `kie` to its Endpoint list beside a complete, explicit set of Runtime
 service packages and selections. The `.svml` Module Closure separately contains only the model
 Manifests actually imported by the author document; installing KIE does not add author intent.
 
-## Paid-operation law
+## Task execution and receipts
 
-1. Reference `BlobRef`s are read from the configured ArtifactStore and uploaded through KIE's file
-   stream API. KIE temporary URLs never enter author source or generated Product identity.
-2. A successful `createTask` response is persisted as one asynchronous Operation. Because KIE does not document an
-   idempotency key, an ambiguous network/5xx submission is not automatically retried.
-3. Once a `taskId` exists, later Worker polling continues only that same task. Poll/download errors cannot create a new
-   paid generation.
-4. Successful result URLs are converted to short-lived download URLs, bounded while streaming,
-   immediately written to the configured content-addressed ArtifactStore, and removed from durable
-   result metadata.
-5. The selected `BuildDispatchStore` owns shared Build capacity. This Provider contributes one KIE
-   pool plus exact capability lanes and a conservative create-task interval; it does not introduce Redis or another source of
-   Build truth.
+Reference Resources are uploaded before `createTask`. An acknowledged task ID is saved immediately;
+normal polling uses that same ID. Submission, polling or collection errors end the attempt with the
+actual error. A timeout without an ID records the missing acknowledgement; the next attempt can be a
+new Build. No failure changes the selected Endpoint or account.
 
-The automated suite uses an adversarial fake KIE service. The credentialed smoke command is a paid
-deployment test and is intentionally not run by the public repository test suite. It must be enabled
-explicitly and keeps a stable Runtime directory under the operating system temporary directory so
-an interrupted paid task can continue polling from its SQLite checkpoint:
+On success, poll reports artifacts ready and `collect` downloads them into the Build's working byte
+area. The Result retains completed public Outputs and non-secret task receipts after active Runtime
+state is removed. A task receipt identifies `/api/v1/jobs/recordInfo?taskId=<id>` on the configured
+KIE API base URL; the selected credential reference supplies access without storing the key in Result.
+These records support inspection and explicit reuse in a new Run, not restarting the old Build.
 
-```sh
-HYPIT_KIE_LIVE=1 KIE_API_KEY=... pnpm smoke:kie
-```
-
-The default case is `gpt-image-2`. Set `HYPIT_KIE_SMOKE_CASES=all` or a comma-separated subset of
-`gpt-image-2,nano-banana-2,seedream-5-lite,seedance-2-mini,minimax-h3,grok-imagine`.
-Set `HYPIT_KIE_SMOKE_REFERENCE` to add the optional `gpt-image-2-edit` upload case; only use an asset
-that is explicitly approved for external upload.
-
-`KIE_BASE_URL` and `HYPIT_KIE_SMOKE_ROOT` are optional deployment overrides. The command prints
-credit usage, the content digest and a local inspection copy, but never prints or persists the key.
-A representative run of all six families and the optional upload case has passed. Generated
-results are deployment evidence and are intentionally not committed as a dated transcript.
+The automated tests exercise submission errors, accepted-task polling, full-response deadlines and
+bounded downloads against fake services, without paid generation.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 import { projectMomentWindow, projectProgramWindow, projectSegmentWindow, projectSelectionWindow } from "../../../test/temporal-fixture.js";
 import type { TemporalWindowProjection } from "../../../test/temporal-fixture.js";
@@ -89,7 +89,7 @@ const semantic = semanticTrackFixture(space, {
 });
 const source: BlobRef = {
   kind: "blob",
-  digest: fixtureDigest("media-track:still"),
+  resource: fixtureResource("media-track:still"),
   size: 4_096,
   mediaType: "image/png",
 };
@@ -199,12 +199,12 @@ function timed(id = "timed", withAudio = true): SynchronizedMedia {
       frameCount: 60,
     },
     visual: {
-      artifact: { kind: "blob", digest: fixtureDigest(`video:${id}`), size: 10_000, mediaType: "video/mp4" },
+      artifact: { kind: "blob", resource: fixtureResource(`video:${id}`), size: 10_000, mediaType: "video/mp4" },
       width: 720,
       height: 1280,
     },
     ...(withAudio ? { audio: {
-      artifact: { kind: "blob" as const, digest: fixtureDigest(`audio:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
+      artifact: { kind: "blob" as const, resource: fixtureResource(`audio:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
     } } : {}),
   };
 }
@@ -363,7 +363,7 @@ test("an owned clip path is an explicit Media input and lowers only over the Ite
     'path("M 0 0 L 400 0 L 360 300 L 40 300 Z")');
 });
 
-test("self-blur is two explicit samples of one Artifact and Artifact collection deduplicates bytes", () => {
+test("self-blur is two explicit samples of one Resource and collection keeps one reference", () => {
   let layers = createMediaLayerSet();
   layers = appendStillMediaLayer(layers, source, extent, { ...fit, sizing: "cover" }, sealMediaSampleLayerSpec({
     id: "blurred", appearance: {
@@ -382,9 +382,9 @@ test("self-blur is two explicit samples of one Artifact and Artifact collection 
     tracks: [track],
   }), space);
   assert.equal(document.artifacts.length, 1);
-  assert.equal((document.html.match(new RegExp(source.digest, "gu")) ?? []).length, 0,
-    "HTML uses artifact URIs without the digest prefix spelling");
-  assert.equal((document.html.match(/hypit-artifact:\/\/sha256\//gu) ?? []).length, 2);
+  assert.equal((document.html.match(new RegExp(source.resource, "gu")) ?? []).length, 2,
+    "HTML names the same declared Resource at both sampling sites");
+  assert.equal((document.html.match(/hypit-resource:\/\/res_/gu) ?? []).length, 2);
   const blurred = track.presents[0]!.elements.find((element) => element.id === "blurred");
   assert.equal(blurred?.style.find((entry) => entry.name === "left")?.value, "-48px");
   assert.equal(blurred?.style.find((entry) => entry.name === "top")?.value, "-48px");
@@ -505,7 +505,7 @@ test("source audio and edge SFX project separately from the visual Track", () =>
 
 test("still and animated typed Surfaces use the same layer law without browser format guesses", () => {
   const still: CompositableSurfaceRef = {
-    artifact: { kind: "blob", digest: fixtureDigest("surface:still"), size: 500, mediaType: "image/png" },
+    artifact: { kind: "blob", resource: fixtureResource("surface:still"), size: 500, mediaType: "image/png" },
     width: 100,
     height: 100,
     colorSpace: "srgb",
@@ -514,7 +514,7 @@ test("still and animated typed Surfaces use the same layer law without browser f
   };
   const animated: CompositableSurfaceRef = {
     ...still,
-    artifact: { kind: "blob", digest: fixtureDigest("surface:animated"), size: 2_000, mediaType: "video/webm" },
+    artifact: { kind: "blob", resource: fixtureResource("surface:animated"), size: 2_000, mediaType: "video/webm" },
     timing: { kind: "frames", frameRate: { numerator: 30, denominator: 1 }, frameCount: 30 },
   };
   let layers = appendSurfaceMediaLayer(createMediaLayerSet(), still, fit, sealMediaSampleLayerSpec({
@@ -643,7 +643,7 @@ test("every documented Media frame and fit remains one ordinary Item instead of 
 });
 
 test("transparent, Paint, self-blur and alternate-source backing are only ordered owned layers", () => {
-  const alternate: BlobRef = { kind: "blob", digest: fixtureDigest("media-track:alternate"), size: 2_048, mediaType: "image/webp" };
+  const alternate: BlobRef = { kind: "blob", resource: fixtureResource("media-track:alternate"), size: 2_048, mediaType: "image/webp" };
   let layers = createMediaLayerSet();
   layers = appendMediaPaintLayer(layers, sealMediaPaintLayerSpec({
     id: "solid", paint: { kind: "solid", color: "#101018" }, opacity: 1,
@@ -849,7 +849,7 @@ test("Sequence resolves strict logical phases, expanded handoffs and one uninter
 
 test("Sequence handoffs accept still, timed and alpha Surface members through one lowering path", () => {
   const alphaSurface: CompositableSurfaceRef = {
-    artifact: { kind: "blob", digest: fixtureDigest("surface:alpha-member"), size: 800, mediaType: "image/png" },
+    artifact: { kind: "blob", resource: fixtureResource("surface:alpha-member"), size: 800, mediaType: "image/png" },
     width: 200, height: 300, colorSpace: "srgb", alphaMode: "straight", timing: { kind: "still" },
   };
   const surfaceLayers = () => appendSurfaceMediaLayer(createMediaLayerSet(), alphaSurface, fit, sealMediaSampleLayerSpec({

@@ -7,7 +7,7 @@ export type {
   RegisteredModulePackage,
 } from "./modules.js";
 export { NodeCompiler } from "./compiler.js";
-export { NodeRunCompiler, deterministicSpeechDurations, deterministicSpeechDurationsFromGraph } from "./run.js";
+export { NodeRunCompiler } from "./run.js";
 export type {
   NodeCompilerOptions,
   NodeCompiledSourceClosure,

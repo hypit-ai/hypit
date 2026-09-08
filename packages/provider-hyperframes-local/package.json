@@ -11,6 +11,8 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
+    "@hyperframes/engine": "0.7.101",
+    "@hyperframes/producer": "0.7.101",
     "@hypit/endpoint-kit": "workspace:*",
     "@hypit/hyperframes": "workspace:*",
     "@hypit/media": "workspace:*",
@@ -19,9 +21,10 @@
     "@hypit/protocol": "workspace:*",
     "@hypit/render-hyperframes": "workspace:*",
     "@hypit/runtime": "workspace:*",
-    "@hypit/runtime-kit": "workspace:*",
     "@hypit/runtime-host-node": "workspace:*",
-    "hyperframes": "0.7.101"
+    "@hypit/runtime-kit": "workspace:*",
+    "hyperframes": "0.7.101",
+    "tsx": "4.21.0"
   },
   "devDependencies": {
     "@hypit/composition": "workspace:*",

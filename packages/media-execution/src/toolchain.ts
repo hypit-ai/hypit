@@ -4,7 +4,7 @@ export type MediaToolchainState =
   | { readonly state: "ready"; readonly ffprobeVersion: string; readonly ffmpegVersion?: string }
   | { readonly state: "down" | "mismatch"; readonly detail: string };
 
-const REQUIRED_ENCODERS = ["aac", "libmp3lame", "libx264", "pcm_s16le", "png"] as const;
+const REQUIRED_ENCODERS = ["aac", "libx264", "pcm_s16le"] as const;
 const REQUIRED_FILTERS = [
   "aformat", "amix", "aresample", "asetpts", "atempo", "atrim",
   "loop", "pad", "scale", "select", "setpts", "setsar", "trim",

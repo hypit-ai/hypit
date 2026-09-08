@@ -13,15 +13,14 @@ Every component shown here must be imported by its package specifier before use:
 ```svml
 <import as="media" from="@hypit/media@1"/>
 <import as="mediaop" from="@hypit/media-pipeline@1"/>
-<import as="estimate" from="@hypit/estimate@1"/>
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
 ```
 
 ## media:Image
 
-Declares a content-addressed image asset from a local file.
+Declares an image Resource from a local file.
 
 ```svml
 <media:Image id="presenter" src="./assets/presenter.png"/>
@@ -37,7 +36,7 @@ The image is referenced downstream via `{presenter}` — for example, as a chara
 
 ## media:Audio
 
-Declares a content-addressed audio asset from a local file.
+Declares an audio Resource from a local file.
 
 ```svml
 <media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
@@ -50,53 +49,28 @@ Declares a content-addressed audio asset from a local file.
 
 Typically used as a voice-timbre reference for `seedance:ReferenceVideo`.
 
-## estimate:Speech
+## Durations are literals
 
-Deterministic speech duration planning from Script pronunciation text. No external service call — the
-duration is computed locally from pronunciation units and a delivery-density policy.
+A generated take's length is the author's decision, written as a literal on the element that needs
+it. Measure the line first, then write the number:
+
+```bash
+hypit measure main.svml --segment hook --language en --pace normal --rounding round
+# 7s
+```
 
 ```svml
-<estimate:Speech id="hook-duration"
-  source={story.segment.hook.speech}
-  policy={recipes.speech.normal}/>
+<seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt} duration="7">
+  …
+</seedance:ReferenceVideo>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `source` | yes | Script text to estimate — typically `{script.segment.NAME.speech}` |
-| `policy` | no | SVS speech Recipe controlling pace and bounds; omit it to use inline parameters |
-
-The `policy` references an SVS Recipe (see [SVS Stylesheets](./styles.md#speech-estimation)):
-
-```svs
-speech.normal {
-  language: en;
-  pace: normal;
-  min: 4;
-  max: 15;
-  rounding: round;
-}
-```
-
-You can also specify estimation parameters inline instead of using an SVS policy:
-
-```svml
-<estimate:Speech id="opening-duration"
-  source={story.segment.opening.speech}
-  language="en" pace="normal" min="4" max="15" rounding="round"/>
-```
-
-For English, the official pace presets are `slow = 4.2`, `normal = 4.6`, and
-`fast = 5.0` syllables per second. `rate="4.75"` may be used instead of `pace`
-when a project needs a value between the named presets. `pace` and `rate` are
-mutually exclusive.
-
-There are no implicit policy values: `language`, `min`, `max`, `rounding`, and
-exactly one of `pace` or `rate` must be present either inline or in the referenced Recipe.
-
-**Output:** `{hook-duration.duration}` — the estimated duration in seconds, passed to generation
-components.
+`hypit measure` counts pronunciation units of the Segment's speech at a delivery policy — `language`,
+`pace` (`slow = 4.2`, `normal = 4.6`, `fast = 5.0` syllables per second for English) or a numeric
+`rate` and `rounding` — with no external call. Nothing in the graph computes a duration,
+so `hypit plan` is complete before a Build starts. The same policy, written on
+`estimated:SemanticTake` or as an SVS Recipe it names (see
+[SVS Stylesheets](./styles.md#speech-estimation)), weights a Segment's words across preview media.
 
 ## text:Value
 
@@ -169,7 +143,7 @@ video and audio references within the model's declared limits.
 ```svml
 <seedance:ReferenceVideo id="alice-take" model="mini"
   prompt={alice-direction}
-  duration={alice-duration.duration}
+  duration="5"
   generate-audio="true">
   <seedance:Reference image={alice-reference}/>
   <seedance:Reference audio={alice-voice}/>
@@ -179,7 +153,8 @@ video and audio references within the model's declared limits.
 The component does not know that this is a talking head. That meaning lives in the supplied Text.
 
 Common attributes are `id`, `model`, `prompt`, `duration`, `resolution`, `aspect-ratio` and
-`generate-audio`. `duration` may be literal or an explicit `{estimate.duration}` edge.
+`generate-audio`. `duration` is a literal in whole seconds inside the model's range, measured
+beforehand with `hypit measure`.
 
 The audio generated in an earlier take can be reused as a later reference through an ordinary graph
 edge. Extraction does not turn it into speech evidence or attach speaker meaning:
@@ -205,21 +180,22 @@ Runtime Endpoints for these exact Needs; neither changes the author graph.
 generic `text:Render` to produce the prompt, then connect that Text and the real media references to
 the low-level Seedance Surface.
 
-Copy only the selected Kit `.svs` files into the video project's `./kits/` directory. Import the
-vendored project copy so the Kit bytes remain inside the Source Closure; do not reach back into the
-installed Hypit Distribution from project source.
+Import the selected public Kit Source from its installed package. The package manager or active
+Distribution owns its installed version, while the Source Closure follows that explicit package
+import. A production can instead author and import its own project Kit when the shared wording does
+not fit the work.
 
 Read the
 [`@hypit/seedance-kits` guide](https://github.com/hypit-ai/hypit/blob/main/packages/seedance-kits/README.md)
 and the [selected Kit source](https://github.com/hypit-ai/hypit/tree/main/packages/seedance-kits/kits)
-before authoring. Use an official Kit whenever its format matches. Keep generation instructions and
-dynamic prompt slots in English; preserve the authored language only for dialogue that must be
-spoken verbatim. Write a freeform English prompt only when none of the seven Kits applies.
+before choosing one. A Kit is useful when its shot assumptions and wording serve the intended
+performance. You can also write prompt Text directly or author a project Kit. Choose the prompt
+language for the selected model, keeping dialogue in the language it should be spoken.
 
 ```svml
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="broll-kit" source="./kits/broll-v1.svs"/>
+<import as="broll-kit" source="@hypit/seedance-kits/broll"/>
 
 <text:Value id="product-story">
   Show the product opening, the primary feature activating, and the finished result in one readable sequence.
@@ -232,7 +208,7 @@ spoken verbatim. Write a freeform English prompt only when none of the seven Kit
 
 <seedance:ReferenceVideo id="demo" model="mini"
   prompt={demo-prompt}
-  duration={demo-duration.duration}
+  duration="5"
   resolution="720p"
   aspect-ratio="9:16"
   generate-audio="false">
@@ -269,7 +245,7 @@ camera changes and performance in its authored action, in the exact order they s
 ```svml
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="interview-kit" source="./kits/street-interview-v1.svs"/>
+<import as="interview-kit" source="@hypit/seedance-kits/street-interview"/>
 
 <text:Value id="interview-action">
   Begin with the shared view from @image3 while A asks the question.
@@ -284,7 +260,7 @@ camera changes and performance in its authored action, in the exact order they s
 </text:Render>
 
 <seedance:ReferenceVideo id="interview-take" model="mini"
-  prompt={interview-prompt} duration={interview-duration.duration}
+  prompt={interview-prompt} duration="8"
   resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={interviewer-view}/>
   <seedance:Reference image={guest-view}/>
@@ -307,7 +283,7 @@ module. The result enters Seedance through the same explicit `prompt` edge as an
 ```svml
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
 
 <text:Value id="hook-action">
   Begin with urgent direct eye contact, then let the final admission land more quietly.
@@ -322,7 +298,7 @@ module. The result enters Seedance through the same explicit `prompt` edge as an
 
 <seedance:ReferenceVideo id="hook-take" model="mini"
   prompt={hook-prompt}
-  duration={hook-duration.duration}
+  duration="8"
   resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={presenter-clean}/>
   <seedance:Reference audio={presenter-voice}/>
@@ -335,24 +311,20 @@ reference media or generation endpoint.
 
 ## Combination example
 
-A two-take setup with estimated durations feeding explicit Text assembly and Seedance generation:
+A two-take setup with measured durations written as literals, explicit Text assembly and Seedance
+generation:
 
 ```svml
 <import as="media" from="@hypit/media@1"/>
-<import as="estimate" from="@hypit/estimate@1"/>
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
 <import as="recipes" source="./recipes.svs"/>
-<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
 
 <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
 <media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>
 <media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
 
-<estimate:Speech id="hook-duration"
-  source={story.segment.hook.speech} policy={recipes.speech.normal}/>
-<estimate:Speech id="meeting-duration"
-  source={story.segment.meeting.speech} policy={recipes.speech.normal}/>
 <text:Value id="hook-action">Start urgently, then become quieter.</text:Value>
 <text:Value id="meeting-action">Indicate the product, then return to the lens.</text:Value>
 
@@ -366,12 +338,12 @@ A two-take setup with estimated durations feeding explicit Text assembly and See
 </text:Render>
 
 <seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt}
-  duration={hook-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={presenter-clean}/>
   <seedance:Reference audio={presenter-voice}/>
 </seedance:ReferenceVideo>
 <seedance:ReferenceVideo id="meeting-take" model="mini" prompt={meeting-prompt}
-  duration={meeting-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
   <seedance:Reference image={presenter-alt}/>
   <seedance:Reference audio={presenter-voice}/>
 </seedance:ReferenceVideo>

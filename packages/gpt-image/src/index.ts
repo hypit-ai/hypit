@@ -21,12 +21,21 @@ export const gptImage2Ports: GenerationPortTable = sealGenerationPortTable({
       name: "aspectRatio",
       value: {
         kind: "enum",
-        values: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16", "21:9"],
+        values: [
+          "auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16",
+          "2:1", "1:2", "3:1", "1:3", "21:9", "9:21", "5:4", "4:5",
+        ],
       },
       minItems: 1,
       maxItems: 1,
     },
     { name: "resolution", value: { kind: "enum", values: ["1K", "2K", "4K"] }, minItems: 1, maxItems: 1 },
+    {
+      name: "background",
+      value: { kind: "enum", values: ["transparent", "opaque", "auto"] },
+      minItems: 0,
+      maxItems: 1,
+    },
     { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 16 },
   ],
   requires: [],
@@ -76,14 +85,24 @@ const gptImageAttributes: readonly SurfaceAttributeVocabulary[] = [
     kind: "literal",
     required: true,
     summary: "The shape of the generated picture.",
-    values: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16", "21:9"],
+    values: [
+      "auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16",
+      "2:1", "1:2", "3:1", "1:3", "21:9", "9:21", "5:4", "4:5",
+    ],
   },
   {
     name: "resolution",
     kind: "literal",
     required: true,
-    summary: "The size band the model renders at.",
+    summary: "The model's output resolution tier.",
     values: ["1K", "2K", "4K"],
+  },
+  {
+    name: "background",
+    kind: "literal",
+    required: false,
+    summary: "Requests transparent pixels or a fully opaque generated picture.",
+    values: ["transparent", "opaque", "auto"],
   },
 ];
 

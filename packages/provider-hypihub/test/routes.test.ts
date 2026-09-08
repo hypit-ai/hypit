@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { EndpointSupport } from "@hypit/endpoint-kit";
+import type { CanonicalValue } from "@hypit/protocol";
 
 import { hypiHubRoutes } from "../src/routes.js";
 
 const image = {
   kind: "blob" as const,
-  digest: `sha256:${"1".repeat(64)}`,
+  resource: "res_hypihub-route-1",
   size: 3,
   mediaType: "image/png",
 };
@@ -13,7 +15,7 @@ const image = {
 const resolve = async () => "data:image/png;base64,AQID";
 const resolveAudio = async () => "data:audio/wav;base64,AQID";
 
-test("HypiHub GPT image requests use canonical edit references and size dimensions", async () => {
+test("HypiHub GPT image requests use canonical edit references and the authored resolution tier", async () => {
   const route = hypiHubRoutes.find((item) => item.capability.name === "gpt-image-2");
   assert.ok(route);
   const result = await route.compile({
@@ -21,6 +23,7 @@ test("HypiHub GPT image requests use canonical edit references and size dimensio
       prompt: ["edit"],
       aspectRatio: ["1:1"],
       resolution: ["1K"],
+      background: ["transparent"],
       images: [{ role: "image", artifact: image }],
     },
   }, resolve);
@@ -28,9 +31,47 @@ test("HypiHub GPT image requests use canonical edit references and size dimensio
   assert.deepEqual(result.input, {
     prompt: "edit",
     aspect_ratio: "1:1",
-    size: "1024x1024",
+    resolution: "1K",
+    background: "transparent",
     reference_images: [{ url: "data:image/png;base64,AQID" }],
   });
+
+  const unsupported = { ports: {
+    prompt: ["cutout"], aspectRatio: ["1:1"], resolution: ["2K"], background: ["opaque"],
+  } } as unknown as CanonicalValue;
+  assert.deepEqual(route.supports?.({
+    capability: route.capability,
+    returns: route.returns,
+    constraints: unsupported,
+  }), {
+    status: "unsupported",
+    reason: "HypiHub GPT Image 2 accepts the background option only at 1K; omit it at 2K",
+  });
+  await assert.rejects(route.compile(unsupported, resolve), /background option only at 1K/u);
+
+  for (const constraints of [
+    { ports: { prompt: ["portrait"], aspectRatio: ["5:4"], resolution: ["2K"] } },
+    { ports: { prompt: ["portrait"], aspectRatio: ["3:1"], resolution: ["4K"] } },
+  ]) {
+    const support: EndpointSupport | undefined = route.supports?.({
+      capability: route.capability,
+      returns: route.returns,
+      constraints,
+    });
+    assert.equal(support?.status, "unsupported");
+    assert.match(support?.status === "unsupported" ? support.reason : "", /HypiHub GPT Image 2/u);
+  }
+
+  for (const constraints of [
+    { ports: { prompt: ["portrait"], aspectRatio: ["auto"], resolution: ["4K"] } },
+    { ports: { prompt: ["portrait"], aspectRatio: ["5:4"], resolution: ["4K"] } },
+  ]) {
+    assert.deepEqual(route.supports?.({
+      capability: route.capability,
+      returns: route.returns,
+      constraints,
+    }), { status: "supported" });
+  }
 });
 
 test("HypiHub image-to-video requests preserve Hypit's first-frame semantics", async () => {
@@ -81,7 +122,7 @@ test("HypiHub Seedance sends reference images through the public top-level field
       webSearch: [false],
       referenceImage: [
         { role: "image", artifact: image },
-        { role: "image", artifact: { ...image, digest: `sha256:${"2".repeat(64)}` } },
+        { role: "image", artifact: { ...image, resource: "res_hypihub-route-2" } },
       ],
     },
   }, resolve);
@@ -116,7 +157,7 @@ test("HypiHub uses ref_video_url for one video and the public array for multiple
   const route = hypiHubRoutes.find((item) => item.capability.name === "minimax-h3");
   assert.ok(route);
   const video = { ...image, mediaType: "video/mp4" };
-  const resolveVideo = async (artifact: typeof video) => `https://hypit.ai/files/${artifact.digest.slice(-1)}.mp4`;
+  const resolveVideo = async (artifact: typeof video) => `https://hypit.ai/files/${artifact.resource.slice(-1)}.mp4`;
 
   const single = await route.compile({ ports: {
     prompt: ["animate"], duration: [6],
@@ -131,7 +172,7 @@ test("HypiHub uses ref_video_url for one video and the public array for multiple
     prompt: ["animate"], duration: [6],
     referenceVideo: [
       { role: "video", artifact: video },
-      { role: "video", artifact: { ...video, digest: `sha256:${"2".repeat(64)}` } },
+      { role: "video", artifact: { ...video, resource: "res_hypihub-route-2" } },
     ],
   } }, resolveVideo);
   assert.deepEqual(multiple.input, {
@@ -140,7 +181,7 @@ test("HypiHub uses ref_video_url for one video and the public array for multiple
   });
 });
 
-test("HypiHub MiMo TTS mappings use the public audio speech fields", async () => {
+test("HypiHub MiMo Speech mappings use the public audio speech fields", async () => {
   const voiceDesign = hypiHubRoutes.find((item) => item.capability.name === "mimo-v2.5-tts-voicedesign");
   assert.ok(voiceDesign);
   const result = await voiceDesign.compile({
@@ -148,4 +189,20 @@ test("HypiHub MiMo TTS mappings use the public audio speech fields", async () =>
   }, resolve);
   assert.equal(result.model, "mimo-v2.5-tts-voicedesign");
   assert.deepEqual(result.input, { input: "hello", voice_description: "warm and calm" });
+
+  const voiceClone = hypiHubRoutes.find((item) => item.capability.name === "mimo-v2.5-tts-voiceclone");
+  assert.ok(voiceClone);
+  const cloned = await voiceClone.compile({
+    ports: {
+      text: ["hello again"],
+      instruction: ["quiet and direct"],
+      voiceReference: [{ role: "audio", artifact: { ...image, mediaType: "audio/wav" } }],
+    },
+  }, resolveAudio);
+  assert.equal(cloned.model, "mimo-v2.5-tts-voiceclone");
+  assert.deepEqual(cloned.input, {
+    input: "hello again",
+    prompt: "quiet and direct",
+    reference_audio: ["data:audio/wav;base64,AQID"],
+  });
 });

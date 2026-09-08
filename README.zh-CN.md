@@ -20,7 +20,7 @@
 
 <p align="center">
   <a href="https://github.com/hypit-ai/hypit/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/hypit-ai/hypit?style=flat-square&color=FFD700&logo=github&logoColor=white&label=Stars"></a>
-  <a href="./package.json"><img alt="Node 22+" src="https://img.shields.io/badge/Node.js-22+-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white"></a>
+  <a href="./package.json"><img alt="Node 22.12+" src="https://img.shields.io/badge/Node.js-22.12%2B-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white"></a>
   <a href="./package.json"><img alt="pnpm 10.33" src="https://img.shields.io/badge/pnpm-10.33-F69220?style=flat-square&logo=pnpm&logoColor=white"></a>
   <a href="./package.json"><img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white"></a>
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0%20with%20conditions-E3B341?style=flat-square"></a>
@@ -53,9 +53,14 @@ Hypit 为 AI Agent（Claude Code、Codex 等）提供了一套制作视频的语
 npx skills add hypit-ai/hypit -g
 ```
 
+OpenAgents 等 Skill Hub 安装的是同一个 `skills/hypit/` 真目录。首次使用时，Skill 会另行准备
+可执行的 Hypit Distribution；视频项目可以放在任意位置。
+
 ## 示例
 
 ### UGC
+
+[Generation source](examples/ranking-football/reference.svml) · [Run and production notes](examples/ranking-football/README.md)
 
 <table>
   <tr>
@@ -77,6 +82,8 @@ npx skills add hypit-ai/hypit -g
 
 ### 播客
 
+[Generation source](examples/podcast/reference.svml) · [Run and production notes](examples/podcast/README.md)
+
 <table>
   <tr>
     <th width="16%">参考视频</th>
@@ -96,6 +103,8 @@ npx skills add hypit-ai/hypit -g
 </table>
 
 ### 街头采访
+
+[Generation source](examples/interview/reference.svml) · [Run and production notes](examples/interview/README.md)
 
 <table>
   <tr>

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 import {
   compileSourceClosure,
@@ -30,7 +30,7 @@ type DiscoveredUnit = {
 };
 
 function attachmentKey(artifact: BlobRef): string {
-  return `${artifact.digest}\u0000${artifact.mediaType}`;
+  return `${artifact.resource}\u0000${artifact.mediaType}`;
 }
 
 export function mergeAttachments(groups: readonly (readonly ArtifactAttachment[])[]): readonly ArtifactAttachment[] {
@@ -42,8 +42,8 @@ export function mergeAttachments(groups: readonly (readonly ArtifactAttachment[]
       if (existing.artifact.size !== item.artifact.size) {
         throw new NodeCompilerError(
           "SOURCE_ATTACHMENT_CONFLICT",
-          `Artifact attachment ${item.artifact.digest} carries conflicting sizes`,
-          item.artifact.digest,
+          `Artifact attachment ${item.artifact.resource} carries conflicting sizes`,
+          item.artifact.resource,
         );
       }
       continue;
@@ -162,7 +162,7 @@ export class NodeCompiler {
         const bytes = Uint8Array.from(request.bytes);
         const artifact: BlobRef = {
           kind: "blob",
-          digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+          resource: `res_${randomUUID()}`,
           size: bytes.byteLength,
           mediaType: request.mediaType,
         };
@@ -171,7 +171,7 @@ export class NodeCompiler {
         if (existing !== undefined && existing.artifact.size !== bytes.byteLength) {
           throw new NodeCompilerError(
             "SOURCE_ATTACHMENT_CONFLICT",
-            `Embedded asset ${request.from} conflicts with ${artifact.digest}`,
+            `Embedded asset ${request.from} conflicts with ${artifact.resource}`,
             request.from,
           );
         }
@@ -197,6 +197,11 @@ export class NodeCompiler {
     if (requests.every((request) => existing.includes(request))) return program;
     const closure = this.#options.modules.createClosure([...existing, ...requests]);
     return link(closure, program.records);
+  }
+
+  /** Admit one selected Run value through the same Type-owner boundary as authored Records. */
+  async admitRecord(program: LinkedProgram, record: import("@hypit/protocol").TypedRecord): Promise<void> {
+    await this.#admitRecord(program.closure, record);
   }
 
 }

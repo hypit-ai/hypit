@@ -17,11 +17,17 @@ export async function discoverVideoSourcePackages(
   sourcePath: string,
   options: {
     readonly workspaceRoot?: string;
+    readonly packageRoot?: string;
+    readonly distributionPackageRoot?: string;
     readonly packages?: readonly LoadedPackage[];
   } = {},
 ) {
   return await discoverSourcePackages(sourcePath, {
     ...(options.workspaceRoot === undefined ? {} : { workspaceRoot: options.workspaceRoot }),
+    ...(options.packageRoot === undefined ? {} : { packageRoot: options.packageRoot }),
+    ...(options.distributionPackageRoot === undefined
+      ? {}
+      : { distributionPackageRoot: options.distributionPackageRoot }),
     ...(options.packages === undefined ? {} : { packages: options.packages }),
     bootstrapAuthorFrontends: [markupFrontend],
   });

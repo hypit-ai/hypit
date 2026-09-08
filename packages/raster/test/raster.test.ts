@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   assertRasterRequest,
@@ -11,7 +11,7 @@ import {
   rasterTransformRequest,
 } from "@hypit/raster";
 
-const image = { kind: "blob" as const, digest: fixtureDigest("raster-image"), size: 12, mediaType: "image/png" };
+const image = { kind: "blob" as const, resource: fixtureResource("raster-image"), size: 12, mediaType: "image/png" };
 
 test("one exact Raster capability carries both closed deterministic request variants", () => {
   const transform = rasterTransformRequest(image, [{ kind: "encode", format: "webp", quality: 90 }]);

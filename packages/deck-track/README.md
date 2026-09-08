@@ -36,7 +36,7 @@ Optional labels are separate exact-font values and are referenced by Cards. File
 media metadata are never treated as label truth.
 
 The Surface projects every Card `at` and the deck terminal to `TemporalInstant` values before the
-Deck component runs. Card append and finalization consume those Instants directly; they never locate
+Deck component runs. Card append and completion consume those Instants directly; they never locate
 a Moment/Selection or manufacture a one-frame terminal Window internally.
 
 `deck:Label` accepts either literal body copy or `content={Text}`. It binds that copy to exact font

@@ -1,6 +1,8 @@
 import { relative, resolve } from "node:path";
 
-import type { BuildPlan, TypeRef } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
+
+import type { OperationalMachineView } from "./machine-view.js";
 
 export type CliTerminal = {
   readonly isTTY: boolean;
@@ -11,6 +13,8 @@ export type CliTerminal = {
 
 export type CliIo = {
   readonly write: (text: string) => void;
+  /** Human progress that may use stderr while `write` remains a stable machine-output channel. */
+  readonly writeProgress?: (text: string) => void;
   /** Concrete command shells expose process status without coupling the engine to Node globals. */
   readonly setExitCode?: (code: number) => void;
   /** Interactive secret input supplied by the concrete CLI shell; never echoed or logged. */
@@ -35,101 +39,171 @@ export type CliDiagnostic = {
 };
 
 export type DoctorOutput = {
-  readonly format: "hypit.cli-doctor@1";
+  readonly format: "hypit.cli-doctor@3";
   readonly ok: boolean;
-  readonly dataRoot: string;
+  readonly project: string;
+  readonly profile?: string;
+  readonly diagnosticCount: number;
   readonly diagnostics: readonly CliDiagnostic[];
+  readonly omittedDiagnostics?: number;
 };
 
 export type AuthorCheckOutput = {
-  readonly format: "hypit.cli-check@1";
+  readonly format: "hypit.cli-check@2";
   readonly sourceKind: "author";
   readonly ok: true;
+  readonly source: string;
+  readonly frontend: string;
   readonly units: number;
-  readonly sourceAssets: readonly unknown[];
-  readonly modules: readonly string[];
-  readonly exports: readonly {
+  readonly assets: number;
+  readonly modules: number;
+  readonly outputCount: number;
+  readonly outputs: readonly {
     readonly name: string;
-    readonly type: TypeRef;
-    readonly kind: string;
+    readonly type: string;
   }[];
+  readonly omittedOutputs?: number;
+  readonly details?: {
+    readonly modules: readonly string[];
+    readonly values: readonly { readonly name: string; readonly type: string }[];
+  };
 };
 
 export type RunCheckOutput = {
-  readonly format: "hypit.cli-check@1";
+  readonly format: "hypit.cli-check@2";
   readonly sourceKind: "run";
   readonly ok: true;
   readonly run: string;
-  readonly source: string;
-  readonly targets: readonly unknown[];
-  readonly candidates: Readonly<Record<string, string>>;
-  readonly satisfactions: readonly unknown[];
+  readonly author: string;
+  readonly frontend: string;
+  readonly targetCount: number;
+  readonly targets: readonly string[];
+  readonly candidates: number;
+  readonly satisfactions: number;
   readonly steps?: number;
-  readonly unresolvedBuildRecords?: readonly {
-    readonly id: string;
+  readonly unresolvedHistoricalOutputs?: readonly {
+    readonly candidate: string;
     readonly build: string;
     readonly output: string;
   }[];
-  /** Provider-free estimate:Speech values available before any Build. */
-  readonly deterministic_durations?: readonly {
-    readonly operation: string;
-    readonly speech_record: string;
-    readonly policy_record: string;
-    readonly seconds: number;
-  }[];
+  readonly omittedHistoricalOutputs?: number;
 };
 
 export type PlanPreflight = {
   readonly ok: boolean;
-  readonly dataRoot: string;
+  readonly capabilityCount: number;
   readonly capabilities: readonly string[];
+  readonly omittedCapabilities?: number;
+  readonly diagnosticCount: number;
   readonly diagnostics: readonly CliDiagnostic[];
+  readonly omittedDiagnostics?: number;
+};
+
+export type PlanProvider = {
+  readonly request: string;
+  readonly capability: string;
+  readonly status: "resolved" | "unresolved" | "unsupported" | "ambiguous";
+  readonly endpoint?: string;
+  readonly use?: string;
+  readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
+  readonly endpoints?: readonly string[];
+  readonly rejections?: readonly { readonly endpoint: string; readonly message: string }[];
+  readonly binding?: string;
 };
 
 export type PlanOutput = {
-  readonly format: "hypit.cli-plan@1";
+  readonly format: "hypit.cli-plan@3";
   readonly ok: boolean;
-  readonly plan: BuildPlan;
-  /** Generations the Source declares that these Targets do not reach and no Record supplies. */
-  readonly unreached?: readonly { readonly name: string; readonly producer: string }[];
-  /** Provider-free estimate:Speech values used to size deterministic preview and paid takes. */
-  readonly deterministic_durations?: readonly {
-    readonly operation: string;
-    readonly speech_record: string;
-    readonly policy_record: string;
-    readonly seconds: number;
-  }[];
+  readonly run: string;
+  readonly targetCount: number;
+  readonly targets: readonly string[];
+  readonly steps: number;
+  readonly requestCount: number;
+  readonly requestIssueCount: number;
+  /** Present when a Runtime Profile was selected. */
+  readonly providerRequestCount?: number;
+  readonly localRequestCount?: number;
+  readonly unresolvedRequestCount?: number;
+  readonly unsupportedRequestCount?: number;
+  readonly choiceCount: number;
+  readonly choices: readonly { readonly output: string; readonly candidate: string }[];
+  readonly omittedChoices?: number;
+  readonly unreached?: readonly { readonly output: string; readonly operation: string }[];
+  readonly omittedUnreached?: number;
+  /** Present only when a Runtime Profile was selected; the Endpoint and price page behind each capability. */
+  readonly providers?: readonly PlanProvider[];
+  readonly omittedProviders?: number;
+  /** Every external request the Build will make, in step order, with its parameters when known. */
+  readonly needs?: readonly PlanNeed[];
+  readonly omittedNeeds?: number;
   readonly preflight?: PlanPreflight;
 };
+
+export type PricingEntry = PlanProvider & {
+  readonly pricingDocuments?: readonly PricingDocument[];
+  readonly pricingError?: string;
+};
+
+export type PricingDocument = {
+  readonly source: string;
+  readonly data: CanonicalValue;
+};
+
+export type PricingOutput = {
+  readonly format: "hypit.cli-pricing@1";
+  readonly run: string;
+  readonly requestCount: number;
+  readonly pricing: readonly PricingEntry[];
+  readonly omittedPricing?: number;
+  readonly needs: readonly PlanNeed[];
+  readonly omittedNeeds?: number;
+};
+
+export type PlanNeed = {
+  readonly request: string;
+  readonly step: string;
+  readonly port: string;
+  readonly capability: string;
+  readonly endpoint?: string;
+  readonly summary?: {
+    readonly fields: Readonly<Record<string, string | number | boolean>>;
+    readonly references: Readonly<Record<string, number>>;
+  };
+  readonly pending: readonly {
+    readonly input: string;
+    readonly record: string;
+    readonly sourceStep?: string;
+    readonly kind?: "image" | "video" | "audio" | "other";
+  }[];
+  readonly issue?: string;
+};
+
+export type CliMachineView = OperationalMachineView;
 
 export type CliPresentation =
   | {
       readonly kind: "doctor";
       readonly machine: DoctorOutput;
-      readonly profile: string;
     }
   | {
       readonly kind: "check-author";
       readonly machine: AuthorCheckOutput;
-      readonly source: string;
-      readonly frontend: string;
     }
   | {
       readonly kind: "check-run";
       readonly machine: RunCheckOutput;
-      readonly frontend: string;
     }
   | {
       readonly kind: "plan";
       readonly machine: PlanOutput;
-      readonly run: string;
-      /** Presentation names declared by this Author Source and Run Source. Never used to plan. */
-      readonly outputNames?: Readonly<Record<string, string>>;
-      readonly satisfactionNames?: Readonly<Record<string, string>>;
+    }
+  | {
+      readonly kind: "pricing";
+      readonly machine: PricingOutput;
     }
   | {
       readonly kind: "operational";
-      readonly machine: unknown;
+      readonly machine: CliMachineView;
       readonly title: string;
       readonly status?: "success" | "warning" | "error" | "info";
       readonly facts?: readonly (readonly [string, string])[];
@@ -175,22 +249,6 @@ function shortPath(path: string): string {
   return local.length > 0 && !local.startsWith("..") ? local : absolute;
 }
 
-function shortOpaque(value: string): string {
-  if (value.length <= 38) return value;
-  return `${value.slice(0, 24)}…${value.slice(-8)}`;
-}
-
-function typeName(type: TypeRef): string {
-  return `${type.module.name}@${type.module.version}/${type.name}`;
-}
-
-/** Frontends may export graph plumbing so later compilers can address it.
- * Keep that machine surface intact, but do not make authors read generated
- * binding names during an ordinary source check. */
-function isGeneratedExportName(name: string): boolean {
-  return name.includes(".__") || /\.binding-\d+$/u.test(name) || name.endsWith(".bindings");
-}
-
 function facts(rows: readonly (readonly [string, string])[], colors: Palette): string[] {
   const width = Math.max(...rows.map(([name]) => name.length), 0);
   return rows.map(([name, value]) => `  ${colors.dim(name.padEnd(width))}  ${value}`);
@@ -208,12 +266,10 @@ function heading(status: "success" | "warning" | "error" | "info", text: string,
 }
 
 function renderDoctor(view: Extract<CliPresentation, { kind: "doctor" }>, io: CliIo, colors: Palette): string {
-  const errors = view.machine.diagnostics.filter((item) => item.severity === "error");
-  const warnings = view.machine.diagnostics.filter((item) => item.severity === "warning");
   const lines = [colors.accent(colors.strong("Hypit Doctor")), ""];
   lines.push(...facts([
-    ["Profile", shortPath(view.profile)],
-    ["Data root", shortPath(view.machine.dataRoot)],
+    ["Project", shortPath(view.machine.project)],
+    ...(view.machine.profile === undefined ? [] : [["Profile", shortPath(view.machine.profile)] as const]),
   ], colors));
   lines.push("");
   if (view.machine.diagnostics.length === 0) {
@@ -226,9 +282,11 @@ function renderDoctor(view: Extract<CliPresentation, { kind: "doctor" }>, io: Cl
       if (item.subject !== undefined) lines.push(`  ${colors.dim("Subject")}  ${item.subject}`);
     }
   }
+  if ((view.machine.omittedDiagnostics ?? 0) > 0) {
+    lines.push(`  ${colors.dim(`${view.machine.omittedDiagnostics} more diagnostics · use --limit <count>`)}`);
+  }
   lines.push("");
-  const summary = `${errors.length} error${errors.length === 1 ? "" : "s"}`
-    + ` · ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`;
+  const summary = `${view.machine.diagnosticCount} diagnostic${view.machine.diagnosticCount === 1 ? "" : "s"}`;
   lines.push(view.machine.ok ? colors.success(summary) : colors.error(summary));
   return `${lines.join("\n")}\n`;
 }
@@ -240,34 +298,34 @@ function renderAuthorCheck(
   verbose: boolean,
 ): string {
   const lines = [heading("success", "Source is valid", io, colors), ""];
-  const authorFacing = view.machine.exports.filter((item) => !isGeneratedExportName(item.name));
-  const outputs = authorFacing.filter((item) => item.kind === "logical-output");
-  const values = authorFacing.filter((item) => item.kind !== "logical-output");
-  const readable = verbose ? view.machine.exports : outputs;
+  const readable = view.machine.outputs;
   lines.push(...facts([
-    ["Source", shortPath(view.source)],
-    ["Frontend", view.frontend],
-    ["Modules", String(view.machine.modules.length)],
-    ["Units", String(view.machine.units)],
-    ["Outputs", String(outputs.length)],
-    ...(verbose ? [["Values", String(values.length)] as const] : []),
-    ["Assets", String(view.machine.sourceAssets.length)],
+    ["Source", shortPath(view.machine.source)],
+    ["Outputs", String(view.machine.outputCount)],
+    ...(verbose ? [
+      ["Frontend", view.machine.frontend] as const,
+      ["Modules", String(view.machine.modules)] as const,
+      ["Units", String(view.machine.units)] as const,
+      ["Assets", String(view.machine.assets)] as const,
+      ...(view.machine.details === undefined
+        ? [] : [["Values", String(view.machine.details.values.length)] as const]),
+    ] : []),
   ], colors));
-  if (readable.length > 0) {
-    lines.push("", colors.strong(verbose ? "All exports" : "Runnable outputs"));
-    const ordered = [...readable].sort((left, right) => {
-      const leftRank = left.kind === "logical-output" ? 0 : 1;
-      const rightRank = right.kind === "logical-output" ? 0 : 1;
-      return leftRank - rightRank || left.name.localeCompare(right.name);
-    });
-    const shown = verbose ? ordered : ordered.slice(0, 12);
-    const width = Math.max(...shown.map((item) => item.name.length));
-    for (const item of shown) {
-      lines.push(`  ${colors.accent(item.name.padEnd(width))}  ${typeName(item.type)}`
-        + `${verbose ? `  ${colors.dim(item.kind)}` : ""}`);
+  if (verbose && readable.length > 0) {
+    lines.push("", colors.strong("Outputs"));
+    const ordered = [...readable].sort((left, right) => left.name.localeCompare(right.name));
+    const width = Math.max(...ordered.map((item) => item.name.length));
+    for (const item of ordered) {
+      lines.push(`  ${colors.accent(item.name.padEnd(width))}  ${item.type}`);
     }
-    if (shown.length < ordered.length) {
-      lines.push(`  ${colors.dim(`${ordered.length - shown.length} more · use --verbose for the complete list`)}`);
+    if ((view.machine.omittedOutputs ?? 0) > 0) {
+      lines.push(`  ${colors.dim(`${view.machine.omittedOutputs} more · use --limit <count>`)}`);
+    }
+  }
+  if (verbose && view.machine.details !== undefined && view.machine.details.values.length > 0) {
+    lines.push("", colors.strong("Values"));
+    for (const item of view.machine.details.values) {
+      lines.push(`  ${colors.accent(item.name)}  ${item.type}`);
     }
   }
   return `${lines.join("\n")}\n`;
@@ -277,24 +335,128 @@ function renderRunCheck(
   view: Extract<CliPresentation, { kind: "check-run" }>,
   io: CliIo,
   colors: Palette,
+  verbose: boolean,
 ): string {
   const lines = [heading("success", "Run source is valid", io, colors), ""];
+  const reuse = (view.machine.unresolvedHistoricalOutputs?.length ?? 0)
+    + (view.machine.omittedHistoricalOutputs ?? 0);
+  const targetSummary = view.machine.targets.length === 0
+    ? String(view.machine.targetCount)
+    : view.machine.targets.join(", ")
+      + (view.machine.targets.length < view.machine.targetCount
+        ? ` (+${view.machine.targetCount - view.machine.targets.length})`
+        : "");
   lines.push(...facts([
     ["Run", shortPath(view.machine.run)],
-    ["Author", shortPath(view.machine.source)],
-    ["Frontend", view.frontend],
-    ["Targets", String(view.machine.targets.length)],
-    ["Candidates", String(Object.keys(view.machine.candidates).length)],
-    ["Satisfactions", String(view.machine.satisfactions.length)],
-    ...(view.machine.steps === undefined ? [] : [["Steps", String(view.machine.steps)] as const]),
+    ["Targets", targetSummary],
+    ...(reuse === 0 ? [] : [["Reuse", `${reuse} historical Output${reuse === 1 ? "" : "s"}`] as const]),
+    ...(verbose ? [
+      ["Author", shortPath(view.machine.author)] as const,
+      ["Frontend", view.machine.frontend] as const,
+      ["Candidates", String(view.machine.candidates)] as const,
+      ["Satisfactions", String(view.machine.satisfactions)] as const,
+      ...(view.machine.steps === undefined ? [] : [["Steps", String(view.machine.steps)] as const]),
+    ] : []),
   ], colors));
-  const unresolved = view.machine.unresolvedBuildRecords ?? [];
-  if (unresolved.length > 0) {
-    lines.push("", heading("warning", `${unresolved.length} historical Candidate${unresolved.length === 1 ? "" : "s"} unresolved`, io, colors));
-    for (const item of unresolved) lines.push(`  ${item.id} ← ${item.build}/${item.output}`);
-    lines.push(`  ${colors.dim("The Run source is valid. plan/build will resolve these archived values.")}`);
+  const unresolved = view.machine.unresolvedHistoricalOutputs ?? [];
+  if (verbose && unresolved.length > 0) {
+    lines.push("", colors.strong("Historical reuse"));
+    for (const item of unresolved) lines.push(`  ${item.candidate} ← ${item.build}/${item.output}`);
+    if ((view.machine.omittedHistoricalOutputs ?? 0) > 0) {
+      lines.push(`  ${colors.dim(`${view.machine.omittedHistoricalOutputs} more · use --limit <count>`)}`);
+    }
   }
   return `${lines.join("\n")}\n`;
+}
+
+/** `@hypit/seedance@1#seedance-2-mini` → `@hypit/seedance#seedance-2-mini`; the module version is verbose detail. */
+function capabilityLabel(name: string): string {
+  return name.replace(/@[^@#]+#/u, "#");
+}
+
+/** The author-facing part of a step id: the component and operation, without the Source path. */
+function stepLabel(step: string): string {
+  let decoded = step;
+  try { decoded = decodeURIComponent(step); } catch { /* keep the raw id */ }
+  const marker = "::component::";
+  const at = decoded.lastIndexOf(marker);
+  return at === -1 ? decoded : decoded.slice(at + marker.length);
+}
+
+const MEASURE = /^(\d+) (words|chars)$/u;
+
+/** Text lengths are ranged across a group rather than splitting otherwise identical requests. */
+function groupKey(need: PlanNeed): string {
+  const pending = need.pending.map((item) => item.kind ?? "value").sort().join(",");
+  if (need.summary === undefined) return `?${pending}|${need.issue ?? ""}`;
+  const fields = Object.entries(need.summary.fields)
+    .map(([name, value]) => {
+      const measured = typeof value === "string" ? MEASURE.exec(value) : null;
+      return measured === null ? `${name}=${String(value)}` : `${name}=<${measured[2]}>`;
+    });
+  const references = Object.entries(need.summary.references).map(([kind, count]) => `${kind}=${count}`);
+  return [...fields, "|", ...references, "|", pending, "|", need.issue ?? ""].join(" ");
+}
+
+function needSummaryText(needs: readonly PlanNeed[]): string {
+  const first = needs[0]!;
+  const parts: string[] = [];
+  for (const [name, value] of Object.entries(first.summary?.fields ?? {})) {
+    const measured = typeof value === "string" ? MEASURE.exec(value) : null;
+    if (measured !== null) {
+      const unit = measured[2]!;
+      const counts = needs.map((need) => Number(MEASURE.exec(String(need.summary?.fields[name] ?? `0 ${unit}`))?.[1] ?? 0));
+      const low = Math.min(...counts);
+      const high = Math.max(...counts);
+      parts.push(`${name} ${low === high ? low : `${low}–${high}`} ${unit}`);
+    } else if (typeof value === "boolean") {
+      parts.push(value ? name : `no ${name}`);
+    } else {
+      parts.push(`${name} ${value}`);
+    }
+  }
+  const references = Object.entries(first.summary?.references ?? {}).sort(([left], [right]) => left.localeCompare(right))
+    .map(([kind, count]) => `${count} ${kind}`);
+  if (references.length > 0) parts.push(`${references.join(" + ")} reference${references.length === 1 && references[0]!.startsWith("1 ") ? "" : "s"}`);
+  const pendingCount = first.pending.length;
+  if (pendingCount > 0) parts.push(`${pendingCount === 1 ? "input" : `${pendingCount} inputs`} produced during Build`);
+  if (first.issue !== undefined) parts.push(`could not inspect: ${first.issue}`);
+  return parts.length === 0 ? "no parameters" : parts.join(" · ");
+}
+
+/** One line per distinct request shape, counted; the step names when only one request has that shape. */
+function groupedNeedLines(needs: readonly PlanNeed[], colors: Palette, verbose: boolean): string[] {
+  const groups = new Map<string, PlanNeed[]>();
+  for (const need of needs) {
+    const key = groupKey(need);
+    groups.set(key, [...(groups.get(key) ?? []), need]);
+  }
+  return [...groups.values()].map((group) => {
+    const who = group.length === 1 || verbose ? colors.dim(group.map((need) => stepLabel(need.step)).join(", ")) : "";
+    const count = `×${group.length}`.padStart(4);
+    return `    ${colors.dim(count)}  ${needSummaryText(group)}${who.length === 0 ? "" : `  ${who}`}`;
+  });
+}
+
+function providerGroupKey(provider: PlanProvider): string {
+  return JSON.stringify({
+    capability: provider.capability,
+    status: provider.status,
+    endpoint: provider.endpoint,
+    use: provider.use,
+    pricing: provider.pricing,
+    endpoints: provider.endpoints,
+    rejections: provider.rejections,
+    binding: provider.binding,
+  });
+}
+
+function providerRejectionText(provider: PlanProvider, verbose: boolean): string {
+  const rejections = provider.rejections ?? [];
+  if (rejections.length === 0) return "no configured Endpoint accepts this request";
+  const shown = verbose ? rejections : rejections.slice(0, 1);
+  return shown.map((rejection) => `${rejection.endpoint}: ${rejection.message}`).join("; ")
+    + (shown.length === rejections.length ? "" : ` · ${rejections.length - shown.length} more Endpoint rejection${rejections.length - shown.length === 1 ? "" : "s"}`);
 }
 
 function renderPlan(
@@ -303,57 +465,95 @@ function renderPlan(
   colors: Palette,
   verbose: boolean,
 ): string {
-  const plan = view.machine.plan;
-  const grouped = new Map<string, number>();
-  const requested = new Map<string, number>();
-  for (const step of plan.steps) {
-    const name = `${step.producer.module.name}@${step.producer.module.version}`;
-    grouped.set(name, (grouped.get(name) ?? 0) + 1);
-    const needs = Object.keys(step.needs).length;
-    if (needs > 0) {
-      const producer = `${name}#${step.producer.name}`;
-      requested.set(producer, (requested.get(producer) ?? 0) + needs);
-    }
-  }
-  const lines = [heading("success", "Build plan is valid", io, colors), ""];
-  const requestCount = [...requested.values()].reduce((total, count) => total + count, 0);
+  const lines = [heading(view.machine.ok ? "success" : "error",
+    view.machine.ok ? "Build plan is valid" : "Build plan needs attention", io, colors), ""];
+  const targetSummary = view.machine.targets.length === 0
+    ? String(view.machine.targetCount)
+    : view.machine.targets.join(", ")
+      + (view.machine.targets.length < view.machine.targetCount
+        ? ` (+${view.machine.targetCount - view.machine.targets.length})`
+        : "");
   lines.push(...facts([
-    ["Run", shortPath(view.run)],
-    ["Targets", String(plan.goals.length)],
-    ["Steps", String(plan.steps.length)],
-    ["External requests", String(requestCount)],
+    ["Run", shortPath(view.machine.run)],
+    ["Targets", targetSummary],
+    ["Requests", String(view.machine.requestCount)],
+    ...(view.machine.requestIssueCount === 0 ? [] : [["Request issues", String(view.machine.requestIssueCount)] as const]),
+    ...((view.machine.providerRequestCount ?? 0) === 0 ? [] : [["Provider requests", String(view.machine.providerRequestCount)] as const]),
+    ...((view.machine.localRequestCount ?? 0) === 0 ? [] : [["Local requests", String(view.machine.localRequestCount)] as const]),
+    ...((view.machine.unsupportedRequestCount ?? 0) === 0 ? [] : [["Unsupported", String(view.machine.unsupportedRequestCount)] as const]),
+    ...((view.machine.unresolvedRequestCount ?? 0) === 0 ? [] : [["Unresolved", String(view.machine.unresolvedRequestCount)] as const]),
+    ...(view.machine.preflight === undefined ? [] : [[
+      "Preflight", view.machine.preflight.ok ? "ready" : "needs attention",
+    ] as const]),
+    ...(verbose ? [["Steps", String(view.machine.steps)] as const] : []),
   ], colors));
-  if (verbose && grouped.size > 0) {
-    lines.push("", colors.strong("Operations"));
-    const entries = [...grouped.entries()].sort(([left], [right]) => left.localeCompare(right));
-    const countWidth = Math.max(...entries.map(([, count]) => String(count).length));
-    for (const [name, count] of entries) {
-      lines.push(`  ${colors.accent(String(count).padStart(countWidth))}  ${name}`);
+  if (view.machine.providers !== undefined) {
+    if (view.machine.providers.length > 0) lines.push("", colors.strong("Providers and price pages"));
+    const groups = new Map<string, PlanProvider[]>();
+    for (const provider of view.machine.providers) {
+      const key = providerGroupKey(provider);
+      groups.set(key, [...(groups.get(key) ?? []), provider]);
     }
-  }
-  if (requested.size > 0) {
-    lines.push("", colors.strong("External requests"));
-    const entries = [...requested.entries()].sort(([left], [right]) => left.localeCompare(right));
-    const countWidth = Math.max(...entries.map(([, count]) => String(count).length));
-    for (const [producer, count] of entries) {
-      lines.push(`  ${colors.warning(String(count).padStart(countWidth))}  ${producer}`);
+    for (const group of groups.values()) {
+      const item = group[0]!;
+      const requestIssue = (view.machine.needs ?? [])
+        .find((need) => need.request === item.request)?.issue;
+      const where = requestIssue !== undefined
+        ? colors.error("request is not completely described before Build")
+        : item.status === "resolved"
+        ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})${item.binding === undefined ? "" : ", bound in the Profile"}`)}`
+        : item.status === "ambiguous"
+          ? colors.warning(`${(item.endpoints ?? []).join(", ")} all offer it; add "bindings": { "${item.capability}": "<instance>" } to the Profile`)
+          : item.status === "unsupported"
+            ? colors.error(providerRejectionText(item, verbose))
+          : item.binding === undefined
+            ? colors.error("no selected Endpoint accepts this request")
+            : colors.error(`bound to ${item.binding}, which does not offer it`);
+      const price = item.pricing === undefined
+        ? (item.status === "resolved" ? colors.warning("price source unknown") : undefined)
+        : item.pricing.kind === "local"
+          ? colors.dim("local, no Provider charge")
+          : item.pricing.url;
+      lines.push(`  ${colors.accent(verbose ? item.capability : capabilityLabel(item.capability))}`);
+      lines.push(`    ${where}${price === undefined ? "" : `  ·  ${price}`}`);
+      const requests = new Set(group.map((provider) => provider.request));
+      lines.push(...groupedNeedLines((view.machine.needs ?? []).filter((need) => requests.has(need.request)), colors, verbose));
     }
-    lines.push(`  ${colors.dim("These Needs may reach the Endpoints selected by the Runtime Profile during build.")}`);
+    if ((view.machine.omittedProviders ?? 0) > 0) {
+      lines.push(`  ${colors.dim(`${view.machine.omittedProviders} more requests · use --limit <count>`)}`);
+    }
+  } else if (view.machine.requestCount > 0) {
+    const byCapability = new Map<string, PlanNeed[]>();
+    for (const need of view.machine.needs ?? []) {
+      byCapability.set(need.capability, [...(byCapability.get(need.capability) ?? []), need]);
+    }
+    if (byCapability.size > 0) lines.push("", colors.strong("Requests"));
+    for (const [capability, needs] of byCapability) {
+      lines.push(`  ${colors.accent(verbose ? capability : capabilityLabel(capability))}`);
+      lines.push(...groupedNeedLines(needs, colors, verbose));
+    }
+    lines.push("", colors.dim("Pass --runtime <profile> to see the Endpoint and price page behind each request."));
   }
   const unreached = view.machine.unreached ?? [];
-  if (unreached.length > 0) {
+  if (verbose && unreached.length > 0) {
     lines.push("", colors.strong("Declared but not reached"));
-    const width = Math.max(...unreached.map((item) => item.name.length));
+    const width = Math.max(...unreached.map((item) => item.output.length));
     for (const item of unreached) {
-      lines.push(`  ${colors.accent(item.name.padEnd(width))}  ${colors.dim(item.producer)}`);
+      lines.push(`  ${colors.accent(item.output.padEnd(width))}  ${colors.dim(item.operation)}`);
     }
-    lines.push(`  ${colors.dim("This Run will not perform these. Either nothing needs them, a Target is missing, or an accepted Record was never pinned.")}`);
+    if ((view.machine.omittedUnreached ?? 0) > 0) {
+      lines.push(`  ${colors.dim(`${view.machine.omittedUnreached} more · use --limit <count>`)}`);
+    }
   }
   if (view.machine.preflight !== undefined
-    && (view.machine.preflight.capabilities.length > 0 || view.machine.preflight.diagnostics.length > 0)) {
+    && (view.machine.preflight.diagnostics.length > 0
+      || (verbose && view.machine.preflight.capabilities.length > 0))) {
     lines.push("", colors.strong("Runtime preflight"));
-    for (const capability of view.machine.preflight.capabilities) lines.push(`  ${colors.accent(capability)}`);
-    if (view.machine.preflight.diagnostics.length === 0) {
+    if (verbose) for (const capability of view.machine.preflight.capabilities) lines.push(`  ${colors.accent(capability)}`);
+    if (verbose && (view.machine.preflight.omittedCapabilities ?? 0) > 0) {
+      lines.push(`  ${colors.dim(`${view.machine.preflight.omittedCapabilities} more capabilities · use --limit <count>`)}`);
+    }
+    if (verbose && view.machine.preflight.diagnostics.length === 0) {
       lines.push(`  ${colors.success(glyph(io, "✓", "+"))} required deployment slice is ready`);
     } else {
       for (const item of view.machine.preflight.diagnostics) {
@@ -361,24 +561,96 @@ function renderPlan(
         lines.push(`  ${mark} ${item.code}: ${item.message}`);
       }
     }
-    const capabilityCount = view.machine.preflight.capabilities.length;
-    lines.push(`  ${colors.dim(`Runtime base checked; ${capabilityCount} demanded Endpoint ${capabilityCount === 1 ? "capability" : "capabilities"} checked.`)}`);
-  }
-  const visibleSelections = verbose
-    ? plan.selections
-    : plan.selections.filter((selection) => view.satisfactionNames?.[selection.output] !== undefined);
-  if (visibleSelections.length > 0) {
-    lines.push("", colors.strong(verbose ? "Selections" : "Run choices"));
-    for (const selection of visibleSelections) {
-      const status = colors.success(glyph(io, "✓", "+"));
-      const output = view.outputNames?.[selection.output] ?? shortOpaque(selection.output);
-      const candidate = view.satisfactionNames?.[selection.output];
-      lines.push(`  ${status} ${colors.accent(output)}`
-        + `${candidate === undefined ? "" : ` ← ${candidate}`}`);
-      if (verbose && (output !== selection.output || candidate !== undefined)) {
-        lines.push(`    ${colors.dim(`${shortOpaque(selection.output)} ← ${shortOpaque(selection.candidate)}`)}`);
-      }
+    if (verbose) {
+      const capabilityCount = view.machine.preflight.capabilityCount;
+      lines.push(`  ${colors.dim(`${capabilityCount} demanded Endpoint ${capabilityCount === 1 ? "capability" : "capabilities"} checked.`)}`);
     }
+  }
+  if (view.machine.choices.length > 0) {
+    lines.push("", colors.strong("Run choices"));
+    for (const selection of view.machine.choices) {
+      const status = colors.success(glyph(io, "✓", "+"));
+      lines.push(`  ${status} ${colors.accent(selection.output)} ← ${selection.candidate}`);
+    }
+    if ((view.machine.omittedChoices ?? 0) > 0) {
+      lines.push(`  ${colors.dim(`${view.machine.omittedChoices} more choices · use --limit <count>`)}`);
+    }
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+function pricingDocumentLines(document: PricingDocument, colors: Palette, verbose: boolean): string[] {
+  if (!verbose) {
+    return [`      ${colors.dim("Pricing data")}  ${document.source} ${colors.dim("· use --json or --verbose for the Provider document")}`];
+  }
+  const rendered = JSON.stringify(document.data, undefined, 2);
+  return [
+    `      ${colors.dim("Source")}  ${document.source}`,
+    ...rendered.split("\n").map((line) => `      ${line}`),
+  ];
+}
+
+function renderPricing(
+  view: Extract<CliPresentation, { kind: "pricing" }>,
+  io: CliIo,
+  colors: Palette,
+  verbose: boolean,
+): string {
+  const machine = view.machine;
+  const lines = [heading("info", "Provider pricing information", io, colors), ""];
+  lines.push(...facts([
+    ["Run", shortPath(machine.run)],
+    ["Requests", String(machine.requestCount)],
+  ], colors));
+  if (machine.pricing.length > 0) lines.push("", colors.strong("Requests and pricing sources"));
+  const groups = new Map<string, PricingEntry[]>();
+  for (const item of machine.pricing) {
+    const key = JSON.stringify({
+      capability: item.capability,
+      status: item.status,
+      endpoint: item.endpoint,
+      use: item.use,
+      pricing: item.pricing,
+      endpoints: item.endpoints,
+      rejections: item.rejections,
+      binding: item.binding,
+      pricingDocuments: item.pricingDocuments,
+      pricingError: item.pricingError,
+    });
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  for (const group of groups.values()) {
+    const item = group[0]!;
+    const selected = item.status === "resolved"
+      ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})`)}`
+      : item.status === "ambiguous"
+        ? colors.error(`several Endpoints: ${(item.endpoints ?? []).join(", ")}`)
+        : item.status === "unsupported"
+          ? colors.error(providerRejectionText(item, verbose))
+        : colors.error("no selected Endpoint accepts this request");
+    lines.push(`  ${colors.accent(verbose ? item.capability : capabilityLabel(item.capability))}`);
+    lines.push(`    ${selected}${group.length === 1 ? "" : ` each ×${group.length}`}`);
+    if (item.pricing?.kind === "local") {
+      lines.push(`      ${colors.dim("local, no Provider charge")}`);
+    }
+    for (const document of item.pricingDocuments ?? []) {
+      lines.push(...pricingDocumentLines(document, colors, verbose));
+    }
+    if (item.pricingError !== undefined) {
+      lines.push(`      ${colors.warning(`Could not read Provider pricing: ${item.pricingError}`)}`);
+    }
+    if ((item.pricingDocuments?.length ?? 0) === 0 && item.pricing?.kind === "page") {
+      lines.push(`      ${colors.dim("Pricing page")}  ${item.pricing.url}`);
+    } else if ((item.pricingDocuments?.length ?? 0) === 0 && item.pricing === undefined
+      && item.status === "resolved" && item.pricingError === undefined) {
+      lines.push(`      ${colors.dim("No pricing source declared by this Provider")}`);
+    }
+    const requests = new Set(group.map((entry) => entry.request));
+    const needs = machine.needs.filter((need) => requests.has(need.request));
+    lines.push(...groupedNeedLines(needs, colors, verbose));
+  }
+  if ((machine.omittedPricing ?? 0) > 0) {
+    lines.push(`  ${colors.dim(`${machine.omittedPricing} more requests · use --limit <count>`)}`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -409,10 +681,12 @@ export function writeCliOutput(
     : presentation.kind === "check-author"
       ? renderAuthorCheck(presentation, io, colors, options.verbose)
       : presentation.kind === "check-run"
-        ? renderRunCheck(presentation, io, colors)
+        ? renderRunCheck(presentation, io, colors, options.verbose)
         : presentation.kind === "plan"
           ? renderPlan(presentation, io, colors, options.verbose)
-          : renderOperational(presentation, io, colors);
+          : presentation.kind === "pricing"
+            ? renderPricing(presentation, io, colors, options.verbose)
+            : renderOperational(presentation, io, colors);
   io.write(output);
 }
 
@@ -420,8 +694,8 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
   const common = [
     "",
     colors.strong("Output"),
-    "  --json                     complete machine-readable result",
-    "  --verbose                  reveal identities and complete lists",
+    "  --json                     stable machine view",
+    "  --verbose                  add bounded operational detail",
     "  --color auto|always|never  control ANSI color",
     "  --debug                    include internal trace frames on failure",
     "",
@@ -431,13 +705,14 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("hypit check")),
       colors.dim("Validate one self-described Author Source or Run Source without executing it."),
       "",
-      "  hypit check <source> [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>]",
+      "  hypit check <source> [--workspace <workspace>] [--asset-root <directory>]",
     ],
     doctor: [
       colors.accent(colors.strong("hypit doctor")),
-      colors.dim("Diagnose one complete declarative Runtime Profile without submitting work."),
+      colors.dim("Diagnose project Results and, when selected or supplied, one Runtime Profile."),
       "",
-      "  hypit doctor [<runtime-profile>]",
+      "  hypit doctor [<runtime-profile>] [--workspace <project>]",
+      "  Without a Runtime Profile, checks only the project's selected Result Store.",
     ],
     plan: [
       colors.accent(colors.strong("hypit plan")),
@@ -445,28 +720,45 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "",
       "  hypit plan <run-source> [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>]",
       "",
-      "With --runtime, plan also preflights only the demanded deployment slice.",
+      "With --runtime, plan also preflights only the demanded deployment slice and names the Provider",
+      "and price page behind each external request.",
       "Planning never starts external work.",
+    ],
+    pricing: [
+      colors.accent(colors.strong("hypit pricing")),
+      colors.dim("Read current pricing material from the selected Providers for the requests in one Run."),
+      "",
+      "  hypit pricing <run-source> [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>]",
+      "",
+      "Pricing is an explicit read-only network operation. It starts no Build and submits no generation.",
+      "The command shows each Need beside its Provider source; use --json or --verbose for the raw document.",
+      "Hypit calculates no total.",
     ],
     build: [
       colors.accent(colors.strong("hypit build")),
       colors.dim("Submit one durable Build and ensure its selected Runtime Worker is available."),
       "",
-      "  hypit build <run-source> [--runtime <profile>] [--asset-root <directory>] [--follow]",
+      "  hypit build <run-source> [--title <text>] [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>] [--follow]",
       "",
+      "  --title <text>            give this Result a human-facing title",
       "  --follow                   observe the Build; the Worker still owns execution",
       "  --max-wait-ms <ms>         bound startup or follow waiting",
     ],
     runtime: [
       colors.accent(colors.strong("hypit runtime")),
-      colors.dim("Select a project Runtime Profile, then operate its durable Worker."),
+      colors.dim("Select a project Runtime Profile, then operate the local Build Worker."),
       "",
-      "  hypit runtime use <profile>       select the Profile for this project",
-      "  hypit runtime unset               remove only the local selection",
-      "  hypit runtime up [<profile>]      prepare selected packages, programs and Worker",
-      "  hypit runtime status [<profile>]  inspect Worker, queue capacity and declared programs",
-      "  hypit runtime logs [<profile>]    read Worker logs",
+      "  hypit runtime init [<profile>] [--workspace <project>] create and select a starter Profile",
+      "  hypit runtime use <profile> [--workspace <project>]  select the project Profile",
+      "  hypit runtime unset [--workspace <project>]          remove only that selection",
+      "  hypit runtime up [<profile>]      prepare local packages and programs, then start the Worker",
+      "  hypit runtime status [<profile>]  inspect the local Worker, active Builds and programs",
+      "  hypit runtime logs [<profile>] [--lines <count>]",
       "  hypit runtime down [<profile>]    stop the Worker; external programs keep running",
+      "",
+      "The project is resolved first. Selection is read only from that project's .hypit/runtime.",
+      "No Profile filename discovery or parent-project inheritance is performed.",
+      "Remote Endpoints such as HypiHub are not started by this command; use doctor to test them.",
     ],
     packages: [
       colors.accent(colors.strong("hypit packages")),
@@ -486,12 +778,12 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "  hypit programs status [<profile>]",
       "  hypit programs down [<profile>]",
     ],
-    queue: [
-      colors.accent(colors.strong("hypit queue")),
-      colors.dim("Inspect durable Build dispatch and Provider pool capacity."),
+    activity: [
+      colors.accent(colors.strong("hypit activity")),
+      colors.dim("Inspect active Builds and Provider pool capacity."),
       "",
-      "  hypit queue [--runtime <profile>] [--watch]",
-      "  hypit queue [--runtime <profile>] --watch --jsonl",
+      "  hypit activity [--runtime <profile>] [--watch]",
+      "  hypit activity [--runtime <profile>] --watch --jsonl",
     ],
     paths: [
       colors.accent(colors.strong("hypit paths")),
@@ -501,59 +793,56 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
     ],
     builds: [
       colors.accent(colors.strong("hypit builds")),
-      colors.dim("List Builds archived by one Runtime Profile."),
+      colors.dim("List project-owned Build Results without opening a Runtime."),
       "",
-      "  hypit builds [--runtime <profile>]",
+      "  hypit builds [--workspace <project>] [--limit <count>] [--before <build-id>]",
     ],
     status: [
       colors.accent(colors.strong("hypit status")),
       colors.dim("Show one Build now, or keep watching it without owning execution."),
       "",
       "  hypit status <build-id> [--runtime <profile>] [--watch]",
-      "  --watch                   observe until terminal; the Worker still owns execution",
+      "  --watch                   observe until a Result outcome or operator attention",
       "  --max-wait-ms <ms>        stop watching after a bounded wait",
     ],
     inspect: [
       colors.accent(colors.strong("hypit inspect")),
-      colors.dim("Inspect one Build's targets and accepted archive."),
+      colors.dim("Inspect one project-owned Build Result and its public Outputs."),
       "",
-      "  hypit inspect <build-id> [--runtime <profile>]",
+      "  hypit inspect <build-id> [--output <name>] [--limit <count>] [--workspace <project>]",
     ],
     get: [
       colors.accent(colors.strong("hypit get")),
-      colors.dim("Read or copy one archived result; copying never reruns work."),
+      colors.dim("Export one exact named Build Output to an explicit local destination."),
       "",
-      "  hypit get <build-id> [--runtime <profile>] [--name <source-name>|--record <id>|--output <id>|--artifact <digest>] [--to <path>]",
+      "  hypit get <build-id> --output <name> --to <path> [--workspace <project>]",
+      "",
+      "Scalar and Resource Outputs become files. A Composite Output becomes a directory",
+      "containing value.json and every Resource referenced by that value.",
     ],
     history: [
       colors.accent(colors.strong("hypit history")),
-      colors.dim("Find accepted historical Logical Outputs without selecting them for a new Run."),
+      colors.dim("Find one named Output across project-owned Build Results."),
       "",
-      "  hypit history <output-name> [--runtime <profile>] [--source <author-source>]",
-      "  hypit history --source <author-source> [--runtime <profile>]",
+      "  hypit history <output-name> [--workspace <project>] [--source <author-source>] [--limit <count>] [--before <build-id>]",
     ],
     cancel: [
       colors.accent(colors.strong("hypit cancel")),
-      colors.dim("Withdraw one Build and honestly reconcile work already submitted to Providers."),
+      colors.dim("Stop one Build and request cancellation of submitted work when supported."),
       "",
       "  hypit cancel <build-id> [--runtime <profile>] [--reason <text>]",
     ],
-    image: [
-      colors.accent(colors.strong("hypit image")),
-      colors.dim("Generate one picture into a file, for an asset that ships inside a package."),
+    result: [
+      colors.accent(colors.strong("hypit result")),
+      colors.dim("Edit one Result, finish an interrupted Result write, or discard an incomplete submission."),
       "",
-      "  hypit image --prompt <text|text-file> --to <path.png> [--model <package>] [--aspect-ratio <r>] [--resolution <r>]",
-      "",
-      "  --prompt <text|file>       the prompt itself, or a text file holding it",
-      "  --to <path>                the file to write; parent directories are created",
-      "  --model <package>          installed package declaring the exact image model",
-      "  --aspect-ratio <r>         a ratio the selected model accepts",
-      "  --resolution <r>           a resolution the selected model accepts",
-      "",
-      "A package's own chrome is authoring input, so this reads no Source and writes no",
-      "Record: no .svml, .svs, .svrun, Build or Runtime Profile takes part. It needs only",
-      "the credentials the selected Provider declares.",
-      "Unset options take the model's own first declared value.",
+      "  hypit result finish <build-id> [--runtime <profile>]",
+      "  hypit result discard <build-id> [--runtime <profile>]",
+      "  hypit result edit <build-id> [--workspace <project>] [--title <text>] [--note <text>]",
+      "                           [--highlight <output> ...]",
+      "  --clear-title            remove the Result's human title",
+      "  --clear-note             remove its note",
+      "  --clear-highlights       remove all highlighted Outputs",
     ],
     auth: [
       colors.accent(colors.strong("hypit auth")),
@@ -571,54 +860,45 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
 export function writeCliHelp(io: CliIo, topic?: string): void {
   const colors = palette(io.terminal?.isTTY === true && io.terminal.color);
   const row = (command: string, description: string, width = 30): string =>
-    `  ${command.padEnd(width)}${description}`;
+    `  ${command}${" ".repeat(Math.max(2, width - command.length))}${description}`;
   if (topic !== undefined) {
     const selected = commandHelp(topic, colors);
     if (selected !== undefined) {
-      io.write(selected.join("\n"));
+      io.write(`${selected.join("\n")}\n`);
       return;
     }
   }
   io.write([
     colors.accent(colors.strong("Hypit")),
-    colors.dim('"First, there was narration. Then, there were montages."'),
-    "",
-    colors.strong("Typical flow"),
-    row("runtime use <profile>", "select this project's execution environment", 40),
-    row("plan <run-source>", "see exactly what this Run will demand", 40),
-    row("quote <run-source>", "estimate the credits for this Build", 40),
-    row("build <run-source>", "submit durable work; add --follow to watch", 40),
-    row("get <build-id>", "read or copy an archived result", 40),
-    row("doctor [profile]", "diagnose deployment setup when needed", 40),
     "",
     colors.strong("Authoring"),
     row("check <source>", "verify one self-described Author or Run source"),
-    row("plan <run-source>", "freeze and inspect a Build plan"),
-    row("quote <run-source>", "estimate the credits for a Build"),
-    row("build <run-source>", "submit a durable Build; --follow only observes"),
-    row("image --prompt … --to <path>", "generate one picture file for a package asset"),
+    row("plan <run-source>", "show selected work without executing"),
+    row("pricing <run-source>", "read selected Providers' current pricing material"),
+    row("build <run-source>", "submit a Build; --follow observes it"),
     "",
-    colors.strong("Archive"),
-    row("builds", "list known Builds"),
-    row("history [output]", "find accepted historical Logical Outputs"),
-    row("status <build-id> [--watch]", "show or continuously observe one Build"),
-    row("inspect <build-id>", "inspect accepted Records and demanded outputs"),
-    row("get <build-id>", "read or materialize one archived result"),
-    row("cancel <build-id>", "withdraw one Build and reconcile submitted work"),
+    colors.strong("Results"),
+    row("builds", "list Results newest first"),
+    row("history <output>", "find one named Output across Builds"),
+    row("status <build-id> [--watch]", "show current work and Result facts"),
+    row("inspect <build-id>", "inspect one Result"),
+    row("get <build-id> --output <name> --to <path>", "export one Build Output"),
+    row("result edit <build-id>", "title, annotate or highlight a Result"),
     "",
     colors.strong("Runtime"),
-    row("doctor [profile]", "validate deployment without executing"),
-    row("runtime use|unset", "select this project's Runtime Profile"),
-    row("runtime up|status|logs|down", "prepare deployment and manage the Worker"),
+    row("doctor [profile]", "diagnose selected external setup"),
+    row("runtime init|use|unset", "create or select this project's Runtime Profile"),
+    row("runtime up|status|logs|down", "prepare and manage the local Build Runtime"),
     row("programs up|status|down", "manage declared external programs only"),
     row("packages install|status", "manage pinned upstream packages in the machine home"),
-    row("queue [--watch]", "inspect durable dispatch and shared capacity"),
-    row("paths", "show every effective state location"),
-    row("auth status|login|logout", "manage Endpoint-declared credential references"),
+    row("activity [--watch]", "inspect active Builds and shared capacity"),
+    row("cancel <build-id>", "withdraw one active Build"),
+    row("paths", "show physical state locations"),
+    row("auth status|login|logout", "manage Endpoint credentials"),
     "",
     colors.strong("Output"),
-    row("--json", "complete machine-readable result"),
-    row("--verbose", "reveal identities and complete lists"),
+    row("--json", "stable machine view"),
+    row("--verbose", "add bounded operational detail"),
     row("--color auto|always|never", "control ANSI color"),
     row("--debug", "include internal trace frames on failure"),
     "",

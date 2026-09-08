@@ -6,7 +6,7 @@ import {
   runtimeConfigString,
 } from "@hypit/runtime-kit";
 
-import { createLocalWhisperXProvider } from "./provider.js";
+import { createLocalWhisperXProvider, localWhisperXDefaults } from "./provider.js";
 import { localWhisperXProgram } from "./program.js";
 
 const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
@@ -37,30 +37,50 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "WhisperX defaultConcurrency");
     const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "WhisperX requestTimeoutMs");
     const maxResponseBytes = runtimeConfigPositiveInteger(config.maxResponseBytes, "WhisperX maxResponseBytes");
-    for (const key of ["serviceCommand"] as const) {
-      const value = config[key];
-      if (value !== undefined
-        && (!Array.isArray(value) || value.length === 0
-          || value.some((item) => typeof item !== "string" || item.length === 0))) {
-        throw new Error(`WhisperX ${key} must be a non-empty array of non-empty strings`);
-      }
+    const serviceCommandValue = config.serviceCommand;
+    if (serviceCommandValue !== undefined
+      && (!Array.isArray(serviceCommandValue) || serviceCommandValue.length === 0
+        || serviceCommandValue.some((item) => typeof item !== "string" || item.length === 0))) {
+      throw new Error("WhisperX serviceCommand must be a non-empty array of non-empty strings");
     }
+    const selectedBaseUrl = baseUrl ?? localWhisperXDefaults.baseUrl;
+    const selectedModel = expectedModel ?? localWhisperXDefaults.expectedModel;
+    const selectedDevice = expectedDevice ?? localWhisperXDefaults.expectedDevice;
+    const selectedCompute = expectedCompute ?? (selectedDevice === "cpu" ? "int8" : "float16");
+    const selectedBatchSize = expectedBatchSize ?? localWhisperXDefaults.expectedBatchSize;
+    const selectedServiceVersion = expectedServiceVersion ?? localWhisperXDefaults.expectedServiceVersion;
+    const selectedWhisperXVersion = expectedWhisperXVersion ?? localWhisperXDefaults.expectedWhisperXVersion;
+    const serviceCommand = serviceCommandValue === undefined ? undefined : {
+      command: serviceCommandValue[0] as string,
+      args: (serviceCommandValue as string[]).slice(1),
+    };
     return {
       endpoint: createLocalWhisperXProvider({
         instance: context.instance,
         pool: context.pool,
-        ...(baseUrl === undefined ? {} : { baseUrl }),
-        ...(expectedModel === undefined ? {} : { expectedModel }),
-        ...(expectedDevice === undefined ? {} : { expectedDevice }),
-        ...(expectedCompute === undefined ? {} : { expectedCompute }),
-        ...(expectedBatchSize === undefined ? {} : { expectedBatchSize }),
-        ...(expectedServiceVersion === undefined ? {} : { expectedServiceVersion }),
-        ...(expectedWhisperXVersion === undefined ? {} : { expectedWhisperXVersion }),
+        baseUrl: selectedBaseUrl,
+        expectedModel: selectedModel,
+        expectedDevice: selectedDevice,
+        expectedCompute: selectedCompute,
+        expectedBatchSize: selectedBatchSize,
+        expectedServiceVersion: selectedServiceVersion,
+        expectedWhisperXVersion: selectedWhisperXVersion,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
         ...(maxResponseBytes === undefined ? {} : { maxResponseBytes }),
       }),
-      program: localWhisperXProgram(context),
+      program: localWhisperXProgram({
+        id: context.instance,
+        hostStateRoot: context.hostStateRoot,
+        baseUrl: selectedBaseUrl,
+        expectedModel: selectedModel,
+        expectedDevice: selectedDevice,
+        expectedCompute: selectedCompute,
+        expectedBatchSize: selectedBatchSize,
+        expectedServiceVersion: selectedServiceVersion,
+        expectedWhisperXVersion: selectedWhisperXVersion,
+        ...(serviceCommand === undefined ? {} : { serviceCommand }),
+      }),
     };
   },
 });

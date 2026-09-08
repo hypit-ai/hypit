@@ -9,7 +9,7 @@ import type { FontArtifactRef } from "@hypit/media";
 import { sealCanvasSpace, spatialTypes } from "@hypit/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import {
@@ -61,7 +61,7 @@ const filmProgram = sealFilmProgram({
 });
 const titleFont: FontArtifactRef = {
   sources: [{ artifact: {
-    kind: "blob", digest: fixtureDigest("film-test-title-font"), size: 1, mediaType: "font/woff2",
+    kind: "blob", resource: fixtureResource("film-test-title-font"), size: 1, mediaType: "font/woff2",
   } }],
   weight: 800,
   style: "normal",

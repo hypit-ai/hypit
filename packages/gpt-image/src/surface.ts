@@ -115,7 +115,7 @@ function references(
 
 function decode(clean: boolean): StructuredSurfaceHandler {
   return ({ element, resolveReference }) => {
-    exactAttributes(element, ["id", "prompt", "aspect-ratio", "resolution"],
+    exactAttributes(element, ["id", "prompt", "aspect-ratio", "resolution", "background"],
       ["id", "prompt", "aspect-ratio", "resolution"]);
     const id = textAttribute(element, "id");
     const promptSource = prompt(element, resolveReference);
@@ -123,9 +123,13 @@ function decode(clean: boolean): StructuredSurfaceHandler {
     const endpoint = gptImageEndpoints.image!;
     const imagePort = generationPort(gptImage2Ports, "images");
     assert(imagePort.value.kind === "media", "GPT Image images port is not media");
+    const background = element.attributes.background === undefined
+      ? undefined
+      : textAttribute(element, "background");
     const draft = sealGptImage2Draft({
       aspectRatio: [textAttribute(element, "aspect-ratio")],
       resolution: [textAttribute(element, "resolution")],
+      ...(background === undefined ? {} : { background: [background] }),
     });
     const records: Array<{
       readonly id: string;

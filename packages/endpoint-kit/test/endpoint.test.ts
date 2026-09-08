@@ -45,9 +45,10 @@ test("one Endpoint definition generates one configured instance and host-neutral
     defaultConcurrency: 3,
     capabilities: [{
       lifecycle: "immediate",
+      transient: true,
       capability: capabilities.generation,
       returns: types.generated,
-      lane: "text-generation",
+      capacity: "text-generation",
       maxConcurrency: 1,
       handler: () => ({
         value: { kind: "inline", value: "generated" },
@@ -60,6 +61,7 @@ test("one Endpoint definition generates one configured instance and host-neutral
     capability: capabilities.generation,
     returns: types.generated,
     endpoint: "example.personal",
+    transient: true,
   }]);
 
   const registrations: CapturedRegistration[] = [];
@@ -69,13 +71,32 @@ test("one Endpoint definition generates one configured instance and host-neutral
   assert.deepEqual(registrations[0]?.options.credentials, {
     apiKey: credentialRef("env", "EXAMPLE_API_KEY"),
   });
+  assert.equal(registrations[0]?.options.transient, true);
   assert.deepEqual(registrations[0]?.options.scheduling, {
-    queue: { pool: "example.personal", lane: "text-generation" },
     resources: [
-      { id: "pool:example.personal", maxActive: 3, maxInFlight: 3 },
-      { id: "lane:example.personal/text-generation", maxActive: 1, maxInFlight: 1 },
+      { id: "pool:example.personal", limit: 3 },
+      { id: "capacity:example.personal/text-generation", limit: 1 },
     ],
   });
+});
+
+test("an asynchronous Endpoint cannot opt into disposable execution", () => {
+  assert.throws(() => defineEndpointPackage({
+    module: { name: "example.provider", version: "1" },
+    facet: "remote",
+    instance: "example.remote",
+    pool: "example.remote",
+    capabilities: [{
+      lifecycle: "asynchronous",
+      transient: true,
+      capability: capabilities.generation,
+      returns: types.generated,
+      endpoint: {
+        start: () => ({ status: "failed", failure: { code: "unused", message: "unused" } }),
+        poll: () => ({ status: "failed", failure: { code: "unused", message: "unused" } }),
+      },
+    }],
+  }), /cannot be transient and asynchronous/u);
 });
 
 test("wakeAfter turns polling policy into an explicit Runtime wake hint", () => {

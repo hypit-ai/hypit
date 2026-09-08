@@ -21,15 +21,7 @@ const requiredCapability = {
   name: "Required",
 } as const satisfies CapabilityRef;
 
-/**
- * A stand-in program, written in the interpreter already running this file.
- *
- * These fixtures used to be `sh -c` strings. That cost them a shell twice over: `sh` is not on a
- * Windows machine by default, and where it is, a temporary path interpolated into the command
- * string arrives with its backslashes eaten, so the marker file was written somewhere nobody
- * looked and the wait timed out instead of failing. Node is here by definition, and takes its
- * arguments as arguments rather than as text to be parsed a second time.
- */
+/** A platform-neutral stand-in program executed by the Node process under test. */
 function nodeProgram(source: string, ...args: readonly string[]): ManagedProgramCommand {
   return { command: process.execPath, args: ["-e", source, ...args] };
 }
@@ -46,18 +38,11 @@ async function project(program: (root: string) => ManagedProgram) {
   const root = await mkdtemp(join(tmpdir(), "hypit-programs-"));
   const path = join(root, "hypit.runtime.json");
   await writeFile(path, JSON.stringify({
-    format: "hypit.runtime-profile@1",
-    runtime: {
-      use: "@hypit/runtime-local",
-      config: {
-        dataRoot: ".",
-        artifacts: { use: "example.artifacts" },
-        credentials: {},
-        endpoints: {
-          one: { use: "example.program", pool: "example.local", config: {} },
-          two: { use: "example.program", pool: "example.local", config: {} },
-        },
-      },
+    format: "hypit.runtime-local@1",
+    dataRoot: ".",
+    credentials: {},
+    endpoints: {
+      one: { use: "example.program", pool: "example.local", config: {} },
     },
   }));
   const registry = new RuntimeAdapterRegistry();
@@ -132,7 +117,7 @@ function fileBackedProgram(marker: string): ManagedProgram {
   };
 }
 
-test("up starts the program once for every Endpoint that drives it, and down stops it", async () => {
+test("up starts one Endpoint's program and down stops it", async () => {
   const marker = join(await mkdtemp(join(tmpdir(), "hypit-marker-")), "ready");
   const { root, path, options } = await project(() => fileBackedProgram(marker));
   const progress: string[] = [];
@@ -142,8 +127,8 @@ test("up starts the program once for every Endpoint that drives it, and down sto
     maxWaitMs: 20_000,
     onProgress: (event) => progress.push(`${event.id}:${event.phase}`),
   });
-  assert.equal(started.programs.length, 1, "one program, not one per Endpoint");
-  assert.deepEqual(started.programs[0]!.instances, ["one", "two"]);
+  assert.equal(started.programs.length, 1);
+  assert.equal(started.programs[0]!.endpoint, "one");
   assert.equal(started.programs[0]!.action, "started");
   assert.deepEqual(started.programs[0]!.state, { state: "ready" });
   assert.deepEqual(progress, ["example:checking", "example:starting", "example:waiting", "example:ready"]);
@@ -170,7 +155,7 @@ test("up starts the program once for every Endpoint that drives it, and down sto
   await rm(root, { recursive: true, force: true });
 });
 
-test("a program answering with another identity is never joined by a second copy", async () => {
+test("a program answering with another identity is never started beside it", async () => {
   const { path, options } = await project(() => ({
     id: "example",
     start: nodeProgram("process.exit(1);"),
@@ -226,16 +211,10 @@ test("up creates a fresh Runtime data directory before running commands", async 
   const dataRoot = join(projectRoot, "never-created");
   const path = join(projectRoot, "hypit.runtime.json");
   await writeFile(path, JSON.stringify({
-    format: "hypit.runtime-profile@1",
-    runtime: {
-      use: "@hypit/runtime-local",
-      config: {
-        dataRoot: "./never-created",
-        artifacts: { use: "example.artifacts" },
-        credentials: {},
-        endpoints: { one: { use: "example.program", config: {} } },
-      },
-    },
+    format: "hypit.runtime-local@1",
+    dataRoot: "./never-created",
+    credentials: {},
+    endpoints: { one: { use: "example.program", config: {} } },
   }));
   const registry = new RuntimeAdapterRegistry();
   const probe = async () => {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   sealGenerationMediaBinding,
@@ -10,7 +10,9 @@ import {
 import {
   createExactModelPrimaryGenerationFragment,
   defineExactModelModule,
+  plannedExactModelRequest,
 } from "@hypit/model-kit";
+import type { BuildState } from "@hypit/protocol";
 import { sealText } from "@hypit/text";
 
 const ports = sealGenerationPortTable({
@@ -33,16 +35,11 @@ const definition = defineExactModelModule({
   }],
 });
 
-test("one exact model definition owns draft, media binding, finalization and generation contracts", async () => {
+test("media binding reaches the finalized exact-model request", async () => {
   const endpoint = definition.endpoints.image!;
-  assert.equal(endpoint.draftType.name, "GraphNativeImageRequestDraft");
-  assert.equal(endpoint.mediaBindings.images?.type.name, "GraphNativeImageRequestImagesBinding");
-  assert.equal(endpoint.textBindings.prompt?.producer.name, "bind-request-graph-native-image-prompt-text");
-  assert.ok(definition.manifest.producers.some((producer) => producer.name === endpoint.finalizeProducer.name));
-
   const artifact = {
     kind: "blob" as const,
-    digest: fixtureDigest("graph-native-image"),
+    resource: fixtureResource("graph-native-image"),
     size: 4,
     mediaType: "image/png",
   };
@@ -61,8 +58,12 @@ test("one exact model definition owns draft, media binding, finalization and gen
   assert.ok(finalizeFacet);
   const finalized = await finalizeFacet.handler({ inputs: { draft: { value: bound.outputs.draft! } } } as never);
   assert.equal(finalized.outputs.request?.kind, "inline");
-  if (finalized.outputs.request?.kind !== "inline") return;
-  const request = finalized.outputs.request.value as Record<string, unknown>;
+  assert.deepEqual(finalized.outputs.request?.kind === "inline" ? finalized.outputs.request.value : undefined, {
+    ports: {
+      images: [{ artifact, role: "image" }],
+      prompt: ["draw it"],
+    },
+  });
 });
 
 test("one graph Text edge fills the exact model prompt before finalization", async () => {
@@ -96,7 +97,72 @@ test("the dynamic Fragment exposes every Text and media edge as an explicit sema
     "request-graph-native-image",
     "select-primary-image",
   ]);
-  assert.deepEqual(fragment.inputs.map((input) => input.name), [
-    "draft", "first:artifact", "first:binding", "prompt:text", "second:artifact", "second:binding",
-  ]);
+});
+
+test("planning follows the model's declared assembly edges and leaves an upstream file symbolic", () => {
+  const endpoint = definition.endpoints.image!;
+  const mediaPort = ports.ports.find((port) => port.name === "images");
+  assert.ok(mediaPort?.value.kind === "media");
+  const state = {
+    records: [
+      { id: "draft:initial", type: endpoint.draftType, value: { kind: "inline", value: sealGenerationRequestDraft(ports, {}) } },
+      { id: "prompt", type: { module: { name: "@hypit/text", version: "1" }, name: "Text" }, value: { kind: "inline", value: sealText("draw the authored scene") } },
+      { id: "binding", type: endpoint.mediaBindings.images!.type, value: { kind: "inline", value: sealGenerationMediaBinding(mediaPort as never, { role: "image" }) } },
+      // Deliberately request-shaped, but not connected to the declared assembly chain.
+      { id: "decoy", type: endpoint.requestType, value: { kind: "inline", value: { ports: { prompt: ["wrong"] } } } },
+    ],
+    needs: [],
+    plan: { steps: [
+      { id: "bind-text", producer: endpoint.textBindings.prompt!.producer, inputs: { draft: "draft:initial", text: "prompt" }, outputs: { draft: "draft:text" }, needs: {} },
+      { id: "bind-image-one", producer: endpoint.mediaBindings.images!.producer, inputs: { draft: "draft:text", binding: "binding", artifact: "image:upstream-one" }, outputs: { draft: "draft:image-one" }, needs: {} },
+      { id: "bind-image-two", producer: endpoint.mediaBindings.images!.producer, inputs: { draft: "draft:image-one", binding: "binding", artifact: "image:upstream-two" }, outputs: { draft: "draft:image-two" }, needs: {} },
+      { id: "finalize", producer: endpoint.finalizeProducer, inputs: { draft: "draft:image-two" }, outputs: { request: "request" }, needs: {} },
+      { id: "generate", producer: endpoint.producer, inputs: { request: "request" }, outputs: {}, needs: { generation: { id: "need:image" } } },
+      { id: "make-image-one", producer: { module: { name: "@test/upstream", version: "1" }, name: "make" }, inputs: {}, outputs: { image: "image:upstream-one" }, needs: {} },
+      { id: "make-image-two", producer: { module: { name: "@test/upstream", version: "1" }, name: "make" }, inputs: {}, outputs: { image: "image:upstream-two" }, needs: {} },
+    ] },
+  } as unknown as BuildState;
+
+  assert.deepEqual(plannedExactModelRequest(state, "generate", "generation", endpoint), {
+    model: "graph-native-image",
+    ports: { prompt: ["draw the authored scene"] },
+    pendingMedia: [
+      {
+        port: "images",
+        role: "image",
+        record: "image:upstream-one",
+        sourceStep: "make-image-one",
+        available: false,
+      },
+      {
+        port: "images",
+        role: "image",
+        record: "image:upstream-two",
+        sourceStep: "make-image-two",
+        available: false,
+      },
+    ],
+    complete: false,
+  });
+  const facet = definition.component.plannedNeeds[0]!;
+  const specification = facet.plan({ state, step: "generate", port: "generation" });
+  assert.deepEqual(specification, {
+    constraints: {
+      ports: {
+        images: [
+          { role: "image", slot: "image:upstream-one" },
+          { role: "image", slot: "image:upstream-two" },
+        ],
+        prompt: ["draw the authored scene"],
+      },
+    },
+    pendingInputs: [
+      { input: "images", record: "image:upstream-one", sourceStep: "make-image-one", role: "image" },
+      { input: "images", record: "image:upstream-two", sourceStep: "make-image-two", role: "image" },
+    ],
+  });
+  assert.deepEqual(specification === undefined ? undefined : facet.present?.(specification), {
+    fields: { prompt: ["draw the authored scene"] },
+    references: { image: 2 },
+  });
 });

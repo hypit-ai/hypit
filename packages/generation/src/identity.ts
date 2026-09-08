@@ -1,6 +1,6 @@
 import {
   canonicalize,
-  isDigest,
+  isResourceId,
 } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 
@@ -28,7 +28,7 @@ export function assertGenerationBlobRef(
 ): asserts value is BlobRef {
   const object = plainObject(value, "Generation artifact");
   assert(object.kind === "blob", "Generation artifact must be a BlobRef");
-  assert(typeof object.digest === "string" && isDigest(object.digest), "Generation artifact digest is invalid");
+  assert(typeof object.resource === "string" && isResourceId(object.resource), "Generation artifact resource is invalid");
   assert(Number.isSafeInteger(object.size) && (object.size as number) >= 0, "Generation artifact size is invalid");
   assert(typeof object.mediaType === "string" && object.mediaType.length > 0, "Generation artifact mediaType is invalid");
   if (mediaPrefix !== undefined) {

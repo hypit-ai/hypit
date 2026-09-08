@@ -1,4 +1,4 @@
-import type { Digest } from "./identity.js";
+import type { ResourceId } from "./identity.js";
 
 export type CanonicalValue =
   | null
@@ -10,7 +10,8 @@ export type CanonicalValue =
 
 export type BlobRef = {
   readonly kind: "blob";
-  readonly digest: Digest;
+  /** One admitted resource instance. Equal bytes admitted twice keep distinct identities. */
+  readonly resource: ResourceId;
   readonly size: number;
   readonly mediaType: string;
 };
@@ -75,7 +76,7 @@ export function blobRefObjectSchema(mediaTypes?: readonly string[]): ValueSchema
     kind: "object",
     fields: {
       kind: { schema: { kind: "literal", value: "blob" } },
-      digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
+      resource: { schema: { kind: "string", minLength: 5 } },
       size: { schema: { kind: "number", integer: true, minimum: 0 } },
       mediaType: {
         schema: mediaTypes === undefined

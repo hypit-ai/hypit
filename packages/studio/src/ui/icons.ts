@@ -11,7 +11,7 @@ const paths: Readonly<Record<string, string>> = {
   chevron: '<path d="m7 9 5 5 5-5"/>',
   select: '<path d="M5 3v15l4-4 3 6 3-1.5-3-6h6L5 3Z"/>',
   tasks: '<path d="M10 6h10M10 12h10M10 18h10"/><path d="m3.5 6 1.5 1.5L7.5 4.5M3.5 12 5 13.5l2.5-3M3.5 18 5 19.5l2.5-3"/>',
-  archive: '<path d="M4 8v12h16V8M3 4h18v4H3zM9 12h6"/>',
+  results: '<path d="M4 8v12h16V8M3 4h18v4H3zM9 12h6"/>',
   run: '<circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4V8Z"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="2"/><path d="m4 18 5-5 3 3 3-4 5 6"/>',
   sidebarCollapse: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16m7-11-3 3 3 3"/>',

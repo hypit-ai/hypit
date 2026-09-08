@@ -1,10 +1,10 @@
 # `@hypit/provider-xiaomi-mimo`
 
-Immediate Runtime Endpoint for Xiaomi's official MiMo V2.5 VoiceDesign API.
+Immediate Runtime Endpoint for Xiaomi's official MiMo V2.5 Voice Design and Voice Clone APIs.
 
 This package owns the `chat/completions` wire shape, `api-key` credential, timeout, response bounds,
-and ArtifactStore ingestion. It does not import `@hypit/mimo-tts`: the VoiceDesign capability and
-port names are bound as versioned data, keeping the exact model contract independent from this service.
+voice-reference encoding and ResourceStore ingestion. It names `@hypit/mimo-speech@1` capabilities
+as versioned data and does not import the model package at runtime.
 
 Runtime Profile example:
 
@@ -23,9 +23,10 @@ Runtime Profile example:
 }
 ```
 
-The Provider always requests final WAV bytes. Streaming is a service transport optimization and is
-not part of the author model.
+Voice Design sends the authored voice description. Voice Clone reads the selected audio Resource,
+checks Xiaomi's accepted MP3/WAV formats and sends it as the vendor's data-URL voice reference.
+The Provider always requests final WAV bytes.
 
-Selecting the Provider in the Runtime Profile activates it independently from author model syntax.
-It declares default concurrency on its pool and exact capability lanes. The shared
-Scheduler owns queuing across Builds; this package does not create a private queue.
+Selecting this Provider in the Runtime Profile is independent from author syntax. Its pool and
+capability claims participate in the shared Runtime capacity model; the package has no private
+scheduler.

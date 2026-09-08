@@ -91,8 +91,6 @@ explicitly opt-in, use no committed secret and fail before spending money unless
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX service | Python 3.13, uv, frozen sync |
 | `pnpm test:image-opencv` | the shared OpenCV Raster interpreter across both request variants | the service's own interpreter at `services/image-opencv/.venv`; set `HYPIT_OPENCV_PYTHON` to use another |
-| `pnpm test:browser-visual` | rendered geometry, stacking and clipping in a real browser | a Chrome the HyperFrames CLI can start, `ffmpeg`, and `HYPIT_TEST_FONT_PATH` off macOS |
-| `pnpm smoke:kie` | Live paid KIE generation | `KIE_API_KEY` |
 
 ## Test fixtures
 
@@ -100,6 +98,5 @@ Test fixtures go in `packages/<name>/test/fixtures/`. They are
 ordinary `.svml`, `.svs` and `.svrun` files that exercise specific compilation paths.
 
 The `examples/` directory also serves as integration-level fixtures:
-- `examples/bootstrap/` — smallest source closure check
-- `examples/talking-film-graph-check/` — complete graph compilation without Providers
-- `examples/talking-head-aroll/` — live example with explicit prior-Build Candidate reuse
+- `examples/interview/`, `examples/podcast/` and `examples/ranking-football/` — complete video projects with Sources, Runs and assets.
+- `examples/minimal-author-package/` — a complete component package with a Surface preview.

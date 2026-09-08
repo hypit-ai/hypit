@@ -8,7 +8,7 @@ import {
   programSpaceSampleFrames,
 } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
-import { canonicalize, isDigest } from "@hypit/protocol";
+import { canonicalize, isResourceId } from "@hypit/protocol";
 import { assertTemporalWindowFor, temporalDurationInSamples } from "@hypit/temporal";
 import type { ProjectedWindow, TemporalDuration } from "@hypit/temporal";
 
@@ -170,7 +170,7 @@ export function assertAudioTrackProgram(value: AudioTrackProgram): void {
     assert(Number.isSafeInteger(item.window.startFrame) && item.window.startFrame >= 0
       && Number.isSafeInteger(item.window.endFrameExclusive)
       && item.window.endFrameExclusive > item.window.startFrame, `Audio Item ${item.id} window is invalid.`);
-    assert(isDigest(item.source.artifact.digest) && item.source.artifact.mediaType === "audio/wav"
+    assert(isResourceId(item.source.artifact.resource) && item.source.artifact.mediaType === "audio/wav"
       && Number.isSafeInteger(item.source.sampleFrames) && item.source.sampleFrames > 0,
     `Audio Item ${item.id} source is invalid.`);
     assert(item.trim.startSample >= 0 && item.trim.endSampleExclusive > item.trim.startSample

@@ -1,4 +1,4 @@
-import type { TypeRef } from "@hypit/protocol";
+import type { CanonicalValue, TypeRef } from "@hypit/protocol";
 import type {
   RunBuildRecord,
   RunCandidateDeclaration,
@@ -157,6 +157,17 @@ function buildRecord(element: StructuredElement): RunBuildRecord {
   };
 }
 
+function scalar(value: string): CanonicalValue {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  if (value === "null") return null;
+  if (/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/u.test(value)) {
+    const number = Number(value);
+    if (Number.isFinite(number)) return number;
+  }
+  return value;
+}
+
 function fragment(element: StructuredElement): RunFragmentInstance {
   exactAttributes(element, ["id", "using"]);
   const using = stringAttribute(element, "using")!;
@@ -164,13 +175,19 @@ function fragment(element: StructuredElement): RunFragmentInstance {
   if (separator <= 0 || separator === using.length - 1) {
     fail(element, "RUN_FRAGMENT_REF", `<fragment> using must be alias:fragment`);
   }
-  const inputs: { readonly name: string; readonly from: string }[] = [];
+  const inputs: RunFragmentInstance["inputs"][number][] = [];
   const exports: string[] = [];
   for (const child of elements(element)) {
     if (child.name === "input") {
-      exactAttributes(child, ["name", "from"]);
+      exactAttributes(child, ["name", "from", "value"]);
       empty(child);
-      inputs.push({ name: stringAttribute(child, "name")!, from: stringAttribute(child, "from")! });
+      const name = stringAttribute(child, "name")!;
+      const from = stringAttribute(child, "from", false);
+      const value = stringAttribute(child, "value", false);
+      if ((from === undefined) === (value === undefined)) {
+        fail(child, "RUN_FRAGMENT_INPUT", `<input> ${name} requires exactly one of from or value`);
+      }
+      inputs.push(from === undefined ? { name, value: scalar(value!) } : { name, from });
       continue;
     }
     if (child.name === "export") {

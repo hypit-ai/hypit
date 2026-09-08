@@ -1,7 +1,7 @@
 # `@hypit/fonts-open`
 
 Workspace package exposing 109 redistributable open font families as exact,
-content-addressed `FontArtifactRef` values. The installed packages carry their font bytes and license
+Resource-backed `FontArtifactRef` values. The installed packages carry their font bytes and license
 files. Author compilation and rendering never download fonts or inspect system font directories.
 
 A developer who pulls this repository gets the catalog with the ordinary `pnpm install`; importing
@@ -69,7 +69,7 @@ and license metadata; `openFontFamiliesByCategory` is suitable for a frontend pi
 
 Latin variable faces intentionally load the compact Latin subset. CJK, world-script and Emoji
 families preserve every Unicode-range shard from their installed CSS as one logical face. Only
-faces referenced by the Author Graph enter a Build transfer bundle and ArtifactStore.
+faces referenced by the Author Graph enter a Build transfer bundle and ResourceStore.
 
 Every catalog entry is either SIL OFL 1.1 or Apache 2.0. Tests compare the declared license against
 the installed package's own metadata. Private local fonts are not bundled: public redistribution

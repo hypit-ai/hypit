@@ -23,8 +23,8 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     ], "local media");
     const configuredFfmpeg = runtimeConfigString(config.ffmpegPath, "media ffmpegPath");
     const configuredFfprobe = runtimeConfigString(config.ffprobePath, "media ffprobePath");
-    const ffmpegPath = configuredFfmpeg === undefined ? undefined : resolveRuntimeExecutable(context.dataRoot, configuredFfmpeg);
-    const ffprobePath = configuredFfprobe === undefined ? undefined : resolveRuntimeExecutable(context.dataRoot, configuredFfprobe);
+    const ffmpegPath = resolveRuntimeExecutable(context.dataRoot, configuredFfmpeg ?? "ffmpeg");
+    const ffprobePath = resolveRuntimeExecutable(context.dataRoot, configuredFfprobe ?? "ffprobe");
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "media defaultConcurrency");
     const processTimeoutMs = runtimeConfigPositiveInteger(config.processTimeoutMs, "media processTimeoutMs");
     const maxProbeOutputBytes = runtimeConfigPositiveInteger(config.maxProbeOutputBytes, "media maxProbeOutputBytes");
@@ -32,13 +32,13 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
       endpoint: createLocalMediaProvider({
         instance: context.instance,
         pool: context.pool,
-        ...(ffmpegPath === undefined ? {} : { ffmpegPath }),
-        ...(ffprobePath === undefined ? {} : { ffprobePath }),
+        ffmpegPath,
+        ffprobePath,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
         ...(processTimeoutMs === undefined ? {} : { processTimeoutMs }),
         ...(maxProbeOutputBytes === undefined ? {} : { maxProbeOutputBytes }),
       }),
-      program: localMediaToolchainProgram(context),
+      program: localMediaToolchainProgram({ id: context.instance, ffmpegPath, ffprobePath }),
       diagnose: async () => [
         ...await diagnoseRuntimeExecutable({
           root: context.dataRoot,

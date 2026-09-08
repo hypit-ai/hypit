@@ -5,28 +5,59 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 
 import type { CliDistribution } from "../src/distribution.js";
+import { parseCommand } from "../src/arguments.js";
 import { runCli } from "../src/main.js";
-import type { CliRuntimeArchiveControl } from "../src/runtime-port.js";
+import { resolveProjectRoot } from "../src/project-context.js";
+import type { CliRuntimeControl } from "../src/runtime-port.js";
 import { findRuntimeProfile, selectRuntimeProfile } from "../src/runtime-selection.js";
 
-test("project Runtime selection is a relative local pointer discovered from nested sources", async () => {
+test("check has no Runtime context", () => {
+  assert.throws(
+    () => parseCommand(["check", "main.svml", "--runtime", "runtime.json"]),
+    /--runtime does not apply to check/u,
+  );
+});
+
+test("project resolution precedes exact project Runtime selection", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-selection-"));
   try {
     const nested = join(root, "sources", "chapter");
     const profile = join(root, "runtime", "local.json");
     await mkdir(nested, { recursive: true });
     await mkdir(join(root, "runtime"), { recursive: true });
+    await writeFile(join(root, "package.json"), "{}\n", "utf8");
     await writeFile(profile, "{}\n", "utf8");
 
     const selected = await selectRuntimeProfile(root, profile);
     assert.equal(selected.profile, await realpath(profile));
     assert.equal((await readFile(join(root, ".hypit", "runtime"), "utf8")).trim(), join("runtime", "local.json"));
 
-    const found = await findRuntimeProfile(nested);
+    assert.equal(await findRuntimeProfile(nested), undefined);
+    const project = await resolveProjectRoot({ cwd: nested });
+    assert.equal(project, resolve(root));
+    const found = await findRuntimeProfile(project);
     assert.equal(found?.profile, selected.profile);
     assert.equal(await realpath(found!.projectRoot), selected.projectRoot);
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("a parent Runtime selection never becomes a child project's selection", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "hypit-runtime-parent-"));
+  try {
+    const child = join(parent, "child");
+    const profile = join(parent, "runtime.json");
+    await mkdir(child, { recursive: true });
+    await writeFile(join(child, "package.json"), "{}\n", "utf8");
+    await writeFile(profile, "{}\n", "utf8");
+    await selectRuntimeProfile(parent, profile);
+
+    const project = await resolveProjectRoot({ cwd: child });
+    assert.equal(project, resolve(child));
+    assert.equal(await findRuntimeProfile(project), undefined);
+  } finally {
+    await rm(parent, { recursive: true, force: true });
   }
 });
 
@@ -40,15 +71,15 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
     await writeFile(otherProfile, "{}\n", "utf8");
     const calls: string[] = [];
     const control = {
-      async queue() { return { dispatches: [], capacity: [], operations: [] }; },
+      async activity() { return { builds: [], capacity: [] }; },
       async close() {},
-    } as unknown as CliRuntimeArchiveControl;
+    } as unknown as CliRuntimeControl;
     const distribution = {
       openRuntimeHost: async (path: string) => ({
         profile: path,
         resolvePaths: async () => ({}),
-        openArchive: async () => {
-          calls.push(`queue:${resolve(path)}`);
+        openControl: async () => {
+          calls.push(`activity:${resolve(path)}`);
           return control;
         },
         controller: async () => ({
@@ -58,16 +89,58 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
     } as unknown as CliDistribution;
     process.chdir(root);
 
-    await runCli(["runtime", "use", profile, "--json"], { write() {} }, distribution);
-    await runCli(["queue", "--json"], { write() {} }, distribution);
-    await runCli(["queue", "--runtime", otherProfile, "--json"], { write() {} }, distribution);
-    await runCli(["runtime", "unset", "--json"], { write() {} }, distribution);
+    await runCli(["runtime", "use", profile, "--workspace", root, "--json"], { write() {} }, distribution);
+    await runCli(["activity", "--json"], { write() {} }, distribution);
+    await runCli(["activity", "--runtime", otherProfile, "--json"], { write() {} }, distribution);
+    await runCli(["runtime", "unset", "--workspace", root, "--json"], { write() {} }, distribution);
 
     assert.deepEqual(calls, [
-      `queue:${await realpath(profile)}`,
-      `queue:${otherProfile}`,
+      `activity:${await realpath(profile)}`,
+      `activity:${otherProfile}`,
     ]);
     assert.equal(await findRuntimeProfile(root), undefined);
+  } finally {
+    process.chdir(previous);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("runtime init writes and selects the Distribution starter without opening a Runtime", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-init-"));
+  const previous = process.cwd();
+  try {
+    await writeFile(join(root, "package.json"), "{}\n", "utf8");
+    process.chdir(root);
+    let opened = false;
+    const starter = {
+      format: "hypit.runtime-local@1" as const,
+      dataRoot: ".hypit/runtimes/local",
+      credentials: {},
+      endpoints: {},
+    };
+    const distribution = {
+      initialRuntimeProfile: starter,
+      openRuntimeHost: async () => {
+        opened = true;
+        throw new Error("runtime init must not open the Runtime");
+      },
+    } as unknown as CliDistribution;
+    let output = "";
+    await runCli(["runtime", "init", "--workspace", root], {
+      write(text) { output += text; },
+    }, distribution);
+
+    const profile = join(root, "hypit.runtime.json");
+    assert.deepEqual(JSON.parse(await readFile(profile, "utf8")), starter);
+    assert.equal((await findRuntimeProfile(root))?.profile, await realpath(profile));
+    assert.equal(opened, false);
+    assert.match(output, /No package was installed, no service was contacted and no Worker was started/u);
+
+    await assert.rejects(
+      runCli(["runtime", "init", "--workspace", root], { write() {} }, distribution),
+      /Runtime Profile already exists/u,
+    );
+    assert.deepEqual(JSON.parse(await readFile(profile, "utf8")), starter);
   } finally {
     process.chdir(previous);
     await rm(root, { recursive: true, force: true });

@@ -12,7 +12,7 @@ export const hyperframesProducers = {
   compile: { module: hyperframesModuleRef, name: "compile-composition" },
 } satisfies Record<string, ProducerRef>;
 
-const digest = { kind: "string", minLength: 71, maxLength: 71 } as const;
+const resource = { kind: "string", minLength: 5, maxLength: 256 } as const;
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
 const nonNegativeInteger = { kind: "number", integer: true, minimum: 0 } as const;
 export const hyperframesDocumentSchema: ValueSchema = {
@@ -38,7 +38,7 @@ export const hyperframesDocumentSchema: ValueSchema = {
       kind: "object",
       fields: {
         kind: { schema: { kind: "literal", value: "blob" } },
-        digest: { schema: digest },
+        resource: { schema: resource },
         size: { schema: nonNegativeInteger },
         mediaType: { schema: { kind: "string", minLength: 1 } },
       },

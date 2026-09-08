@@ -6,19 +6,16 @@ import {
   executeInspectMedia,
   executeMuxProgramMedia,
   executeNormalizeMedia,
-  executePrepareMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
   executeRenderStillVideo,
-  executeRenderMockImage,
-  executeRenderMockVideo,
-  executeRenderMockSilence,
+  executeDrawStandInCard,
   executeTransformMedia,
 } from "@hypit/media-execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-execution";
 import { mediaPipelineCapabilities } from "@hypit/media-pipeline";
-import { mockMediaCapabilities } from "@hypit/mock-media";
-import { isStreamingArtifactStore } from "@hypit/runtime";
+import { standInCapabilities } from "@hypit/stand-in";
+import { isStreamingResourceStore } from "@hypit/runtime";
 import { speechTypes } from "@hypit/speech";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { EndpointFulfillment, EndpointInvocationContext } from "@hypit/endpoint-kit";
@@ -49,7 +46,7 @@ function fulfillment(result: MediaOperationResult): EndpointFulfillment {
 }
 
 /**
- * The Build's own ArtifactStore, and whatever ffmpeg this machine has. The
+ * The Build's own ResourceStore, and whatever ffmpeg this machine has. The
  * operations themselves live in `@hypit/media-execution`, shared with the
  * AWS Provider so one Need cannot mean two different transforms.
  */
@@ -63,16 +60,16 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
   const environment = (context: EndpointInvocationContext): MediaExecutionEnvironment => ({
     ...common,
     artifacts: {
-      get: async (source) => await context.artifacts.get(source.digest),
-      open: async (source) => isStreamingArtifactStore(context.artifacts)
-        ? await context.artifacts.open(source.digest)
-        : await context.artifacts.get(source.digest).then((bytes) => bytes === undefined
+      get: async (source) => await context.resources.get(source.resource),
+      open: async (source) => isStreamingResourceStore(context.resources)
+        ? await context.resources.open(source.resource)
+        : await context.resources.get(source.resource).then((bytes) => bytes === undefined
           ? undefined
           : (async function* () { yield bytes; })()),
-      put: async (bytes, mediaType) => await context.artifacts.put(bytes, mediaType),
-      putFile: async (path, mediaType) => isStreamingArtifactStore(context.artifacts)
-        ? await context.artifacts.putStream(createReadStream(path), mediaType)
-        : await context.artifacts.put(await readFile(path), mediaType),
+      put: async (bytes, mediaType) => await context.resources.put(bytes, mediaType),
+      putFile: async (path, mediaType) => isStreamingResourceStore(context.resources)
+        ? await context.resources.putStream(createReadStream(path), mediaType)
+        : await context.resources.put(await readFile(path), mediaType),
     },
   });
   const operation = (
@@ -85,67 +82,57 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
     facet: "media",
     instance: config.instance ?? "media.local",
     pool: config.pool ?? config.instance ?? "media.local",
+    pricing: { kind: "local" },
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [
       {
         lifecycle: "immediate" as const,
+        transient: true,
         capability: mediaPipelineCapabilities.inspect,
         returns: mediaTypes.inspection,
         handler: operation(executeInspectMedia),
       },
       {
         lifecycle: "immediate" as const,
+        transient: true,
         capability: mediaPipelineCapabilities.normalize,
         returns: mediaTypes.synchronized,
         handler: operation(executeNormalizeMedia),
       },
       {
         lifecycle: "immediate" as const,
-        capability: mediaPipelineCapabilities.prepare,
-        returns: artifactTypes.blob,
-        handler: operation(executePrepareMedia),
-      },
-      {
-        lifecycle: "immediate" as const,
+        transient: true,
         capability: mediaPipelineCapabilities.transform,
         returns: artifactTypes.blob,
         handler: operation(executeTransformMedia),
       },
       {
         lifecycle: "immediate" as const,
+        transient: true,
         capability: mediaPipelineCapabilities.extractAudio,
         returns: artifactTypes.blob,
         handler: operation(executeExtractAudio),
       },
       {
         lifecycle: "immediate" as const,
+        transient: true,
         capability: mediaPipelineCapabilities.extractFrame,
         returns: artifactTypes.blob,
         handler: operation(executeExtractFrame),
       },
       {
         lifecycle: "immediate" as const,
+        transient: true,
         capability: mediaPipelineCapabilities.renderStill,
         returns: artifactTypes.blob,
         handler: operation(executeRenderStillVideo),
       },
       {
         lifecycle: "immediate" as const,
-        capability: mockMediaCapabilities.image,
+        transient: true,
+        capability: standInCapabilities.drawCard,
         returns: artifactTypes.blob,
-        handler: operation(executeRenderMockImage),
-      },
-      {
-        lifecycle: "immediate" as const,
-        capability: mockMediaCapabilities.video,
-        returns: artifactTypes.blob,
-        handler: operation(executeRenderMockVideo),
-      },
-      {
-        lifecycle: "immediate" as const,
-        capability: mockMediaCapabilities.silence,
-        returns: artifactTypes.blob,
-        handler: operation(executeRenderMockSilence),
+        handler: operation(executeDrawStandInCard),
       },
       {
         lifecycle: "immediate" as const,

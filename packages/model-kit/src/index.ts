@@ -1,5 +1,8 @@
 import type {
   ComponentPackage,
+  PlannedNeedFacet,
+  PlannedNeedPresentation,
+  PlannedNeedSpecification,
   ProducerFacet,
   ProducerHandlerContext,
   TypeValidatorFacet,
@@ -35,11 +38,32 @@ import {
 import type {
   CanonicalValue,
   CapabilityRef,
+  BuildState,
   ModuleManifest,
   ModuleRef,
   ProducerRef,
   TypeRef,
 } from "@hypit/protocol";
+
+export type PlannedExactModelMediaReference = {
+  readonly port: string;
+  readonly role: GenerationMediaBinding["role"];
+  readonly fields?: GenerationMediaBinding["fields"];
+  readonly record: string;
+  readonly sourceStep?: string;
+  /** The Blob already exists in this disposable planning view. */
+  readonly available: boolean;
+};
+
+export type PlannedExactModelRequest = {
+  readonly model: string;
+  /** Every authored scalar and Text port value, plus media values whose Blobs already exist. */
+  readonly ports: GenerationRequestDraft["ports"];
+  /** Declared media edges whose files will be produced by an upstream Build step. */
+  readonly pendingMedia: readonly PlannedExactModelMediaReference[];
+  /** True only when the executable Need already exists and has passed full request validation. */
+  readonly complete: boolean;
+};
 
 /**
  * One exact model endpoint. The model declares which input ports it accepts;
@@ -101,6 +125,7 @@ export type ExactModelModule<Key extends string = string> = {
   readonly component: ComponentPackage & {
     readonly validators: readonly TypeValidatorFacet[];
     readonly producers: readonly ProducerFacet[];
+    readonly plannedNeeds: readonly PlannedNeedFacet[];
   };
   /** Inert declaration of these exact models for Hosts that address one directly. */
   readonly hostFacet: ExactModelHostFacet;
@@ -211,6 +236,187 @@ function inlineValue<T>(
 ): T {
   assert(value.kind === "inline" && value.value !== undefined, `${subject} must be inline`);
   return canonicalize(value.value) as unknown as T;
+}
+
+function sameReference(
+  left: { readonly module: ModuleRef; readonly name: string },
+  right: { readonly module: ModuleRef; readonly name: string },
+): boolean {
+  return left.module.name === right.module.name
+    && left.module.version === right.module.version
+    && left.name === right.name;
+}
+
+/**
+ * Read one exact-model request from its declared assembly graph.
+ *
+ * This follows only the exact producers published by the model Host facet. It never searches for
+ * object shapes or guesses which upstream record "looks like" a request. Missing media stays a
+ * symbolic graph edge; scalar parameters and authored Text remain available before the file exists.
+ */
+export function plannedExactModelRequest(
+  state: BuildState,
+  stepId: string,
+  needPort: string,
+  endpoint: ExactModelEndpoint,
+): PlannedExactModelRequest | undefined {
+  const generationStep = state.plan.steps.find((step) => step.id === stepId);
+  if (generationStep === undefined || !sameReference(generationStep.producer, endpoint.producer)) return undefined;
+  const binding = generationStep.needs[needPort];
+  if (binding === undefined) return undefined;
+
+  const knownNeed = state.needs.find((need) => need.id === binding.id);
+  if (knownNeed !== undefined) {
+    verifyRequestAgainstPorts(endpoint.ports, knownNeed.constraints);
+    return {
+      model: endpoint.ports.model,
+      ports: structuredClone((knownNeed.constraints as unknown as GenerationRequestDraft).ports),
+      pendingMedia: [],
+      complete: true,
+    };
+  }
+
+  const records = new Map(state.records.map((record) => [record.id, record]));
+  const producedBy = new Map(state.plan.steps.flatMap((step) =>
+    Object.values(step.outputs).map((record) => [record, step] as const)));
+  const requestRecord = generationStep.inputs.request;
+  if (requestRecord === undefined) return undefined;
+  const finalize = producedBy.get(requestRecord);
+  if (finalize === undefined || !sameReference(finalize.producer, endpoint.finalizeProducer)) return undefined;
+  const finalDraft = finalize.inputs.draft;
+  if (finalDraft === undefined) return undefined;
+
+  const pendingMedia: PlannedExactModelMediaReference[] = [];
+  const visiting = new Set<string>();
+  const rebuildDraft = (recordId: string): GenerationRequestDraft => {
+    if (visiting.has(recordId)) throw new Error(`${endpoint.ports.model} request assembly contains a cycle at ${recordId}`);
+    visiting.add(recordId);
+    try {
+      const record = records.get(recordId);
+      if (record !== undefined) {
+        const draft = inlineValue<GenerationRequestDraft>(record.value, `${endpoint.ports.model} request draft`);
+        verifyRequestDraftAgainstPorts(endpoint.ports, draft);
+        return draft;
+      }
+      const step = producedBy.get(recordId);
+      if (step === undefined) throw new Error(`${endpoint.ports.model} request draft ${recordId} has no source`);
+      const previousId = step.inputs.draft;
+      if (previousId === undefined) throw new Error(`${step.id} does not declare its request draft input`);
+      let draft = rebuildDraft(previousId);
+
+      const textBinding = Object.values(endpoint.textBindings)
+        .find((candidate) => sameReference(step.producer, candidate.producer));
+      if (textBinding !== undefined) {
+        const textId = step.inputs.text;
+        const text = textId === undefined ? undefined : records.get(textId);
+        if (text === undefined) throw new Error(`${step.id} has no authored Text input`);
+        return bindGenerationText(
+          endpoint.ports,
+          draft,
+          textBinding.port,
+          inlineValue<Text>(text.value, `${step.id} Text`),
+        );
+      }
+
+      const mediaBinding = Object.values(endpoint.mediaBindings)
+        .find((candidate) => sameReference(step.producer, candidate.producer));
+      if (mediaBinding === undefined) {
+        throw new Error(`${step.id} is not part of ${endpoint.ports.model}'s declared request assembly`);
+      }
+      const bindingId = step.inputs.binding;
+      const artifactId = step.inputs.artifact;
+      const authoredBinding = bindingId === undefined ? undefined : records.get(bindingId);
+      if (authoredBinding === undefined || artifactId === undefined) {
+        throw new Error(`${step.id} is missing its authored media binding`);
+      }
+      const value = inlineValue<GenerationMediaBinding>(authoredBinding.value, `${step.id} media binding`);
+      const port = endpoint.ports.ports.find((candidate): candidate is GenerationMediaPort =>
+        candidate.name === mediaBinding.port && candidate.value.kind === "media");
+      if (port === undefined) throw new Error(`${step.id} names undeclared media port ${mediaBinding.port}`);
+      verifyGenerationMediaBinding(port, value);
+      const artifact = records.get(artifactId);
+      if (artifact?.value.kind === "blob") {
+        draft = bindGenerationMedia(endpoint.ports, draft, mediaBinding.port, value, artifact.value);
+      } else {
+        pendingMedia.push({
+          port: mediaBinding.port,
+          role: value.role,
+          ...(value.fields === undefined ? {} : { fields: structuredClone(value.fields) }),
+          record: artifactId,
+          ...(producedBy.get(artifactId) === undefined ? {} : { sourceStep: producedBy.get(artifactId)!.id }),
+          available: false,
+        });
+      }
+      return draft;
+    } finally {
+      visiting.delete(recordId);
+    }
+  };
+
+  const draft = rebuildDraft(finalDraft);
+  return {
+    model: endpoint.ports.model,
+    ports: structuredClone(draft.ports),
+    pendingMedia,
+    complete: false,
+  };
+}
+
+function exactModelSpecification(planned: PlannedExactModelRequest): PlannedNeedSpecification {
+  const ports = structuredClone(planned.ports) as Record<string, CanonicalValue[]>;
+  for (const resource of planned.pendingMedia) {
+    const items = ports[resource.port] ?? [];
+    items.push(canonicalize({
+      role: resource.role,
+      slot: resource.record,
+      ...(resource.fields === undefined ? {} : { fields: resource.fields }),
+    }));
+    ports[resource.port] = items;
+  }
+  return {
+    constraints: canonicalize({ ports }),
+    pendingInputs: planned.pendingMedia.map((resource) => ({
+      input: resource.port,
+      record: resource.record,
+      ...(resource.sourceStep === undefined ? {} : { sourceStep: resource.sourceStep }),
+      role: resource.role,
+    })),
+  };
+}
+
+function exactModelPresentation(
+  endpoint: ExactModelEndpoint,
+  specification: PlannedNeedSpecification,
+): PlannedNeedPresentation {
+  const request = specification.constraints as { readonly ports?: Readonly<Record<string, readonly CanonicalValue[]>> };
+  const fields: Record<string, readonly CanonicalValue[]> = {};
+  const references: Record<string, number> = {};
+  for (const port of endpoint.ports.ports) {
+    const values = request.ports?.[port.name] ?? [];
+    if (port.value.kind !== "media") {
+      if (values.length > 0) fields[port.name] = structuredClone(values);
+      continue;
+    }
+    for (const value of values) {
+      if (value === null || typeof value !== "object" || Array.isArray(value)) continue;
+      const role = (value as { readonly role?: unknown }).role;
+      if (typeof role === "string") references[role] = (references[role] ?? 0) + 1;
+    }
+  }
+  return { fields, references };
+}
+
+function exactModelPlannedNeedFacet(endpoint: ExactModelEndpoint): PlannedNeedFacet {
+  return {
+    producer: endpoint.producer,
+    port: "generation",
+    capability: endpoint.capability,
+    plan({ state, step, port }) {
+      const planned = plannedExactModelRequest(state, step, port, endpoint);
+      return planned === undefined ? undefined : exactModelSpecification(planned);
+    },
+    present: (specification) => exactModelPresentation(endpoint, specification),
+  };
 }
 
 /**
@@ -407,6 +613,7 @@ export function defineExactModelModule<const Key extends string>(
           }),
         },
       ]),
+      plannedNeeds: Object.values(endpoints).map((endpoint) => exactModelPlannedNeedFacet(endpoint)),
     },
   };
 }

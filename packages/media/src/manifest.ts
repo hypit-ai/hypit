@@ -3,6 +3,7 @@ import type { ModuleManifest, TypeRef } from "@hypit/protocol";
 import { compositableSurfaceSchema, fontArtifactSchema, fontStackSchema, mediaInspectionSchema, mediaStreamSelectionSchema, muxedMediaSchema, renderedVisualSchema, synchronizedMediaSchema, timelineAudioSchema } from "./schema.js";
 export const mediaModuleRef = { name: "@hypit/media", version: "1" } as const;
 export const mediaTypes = {
+  frameRange: { module: mediaModuleRef, name: "MediaFrameRange" },
   inspection: { module: mediaModuleRef, name: "MediaInspection" },
   streamSelection: { module: mediaModuleRef, name: "MediaStreamSelection" }, synchronized: { module: mediaModuleRef, name: "SynchronizedMedia" },
   renderedVisual: { module: mediaModuleRef, name: "RenderedVisual" }, timelineAudio: { module: mediaModuleRef, name: "TimelineAudio" },
@@ -17,7 +18,7 @@ export const mediaMarkupSurfaces = [
     {
       name: "image", tag: "Image", mode: "structured", outputs: [artifactTypes.blob],
       vocabulary: {
-        summary: "Requests one authored image file from the Host and publishes it as a content-addressed Artifact.",
+        summary: "Requests one authored image file from the Host and publishes it as a byte Artifact.",
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names the Artifact Record this element publishes." },
@@ -38,7 +39,7 @@ export const mediaMarkupSurfaces = [
     {
       name: "audio", tag: "Audio", mode: "structured", outputs: [artifactTypes.blob],
       vocabulary: {
-        summary: "Requests one authored audio file from the Host and publishes it as a content-addressed Artifact.",
+        summary: "Requests one authored audio file from the Host and publishes it as a byte Artifact.",
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names the Artifact Record this element publishes." },
@@ -59,7 +60,7 @@ export const mediaMarkupSurfaces = [
     {
       name: "video", tag: "Video", mode: "structured", outputs: [artifactTypes.blob],
       vocabulary: {
-        summary: "Requests one authored video file from the Host and publishes it as a content-addressed Artifact.",
+        summary: "Requests one authored video file from the Host and publishes it as a byte Artifact.",
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names the Artifact Record this element publishes." },
@@ -107,6 +108,7 @@ export const mediaMarkupSurfaces = [
 export const mediaManifest: ModuleManifest = {
   format: "hypit.module@1", name: mediaModuleRef.name, version: mediaModuleRef.version, dependencies: [artifactDependency],
   types: [
+    { name: mediaTypes.frameRange.name },
     { name: mediaTypes.inspection.name },
     { name: mediaTypes.streamSelection.name },
     { name: mediaTypes.synchronized.name },

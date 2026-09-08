@@ -6,21 +6,23 @@ import type {
   CompiledGraph,
   GraphValueRef,
   LinkedProgram,
+  NeedId,
   OperationNode,
   ProducerStep,
   RecordId,
+  RunGraph,
+  Satisfaction,
+  StepId,
   TypeRef,
   TypedRecord,
 } from "@hypit/protocol";
 
-import { canonicalStringify } from "@hypit/protocol";
 import { invariant } from "./error.js";
 import {
   operationResultRecord,
   resolveCandidate,
   resolveLogicalOutput,
   resolveOperation,
-  satisfiedCandidate,
   verifyBuildRequest,
 } from "./graph.js";
 import { resolveProducer } from "./link.js";
@@ -67,58 +69,109 @@ type ProducedRecord = {
   readonly step?: string;
 };
 
+/** One external request the exact finite BuildPlan will make: which step asks, through which port. */
 export type PlannedNeed = {
+  readonly step: StepId;
+  readonly port: string;
+  readonly need: NeedId;
+  readonly result: RecordId;
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
 };
 
 const planStepIndexes = new WeakMap<BuildPlan, ReadonlyMap<string, ProducerStep>>();
 
-function plannedNeedKey(need: PlannedNeed): string {
-  const ref = (value: { readonly module: { readonly name: string; readonly version: string }; readonly name: string }) =>
-    `${value.module.name}@${value.module.version}#${value.name}`;
-  return `${ref(need.capability)} -> ${ref(need.returns)}`;
-}
-
-/** External requirements declared by the exact finite BuildPlan. */
+/** Every external requirement of the BuildPlan, one entry per request, in step order. */
 export function plannedNeeds(state: BuildState): readonly PlannedNeed[] {
-  const found = new Map<string, PlannedNeed>();
+  const found: PlannedNeed[] = [];
   for (const step of state.plan.steps) {
     const producer = resolveProducer(state.program.closure, step.producer);
     for (const need of producer.needs) {
-      const item = { capability: need.capability, returns: need.returns };
-      found.set(plannedNeedKey(item), item);
+      const binding = step.needs[need.name];
+      if (binding === undefined) continue;
+      found.push({
+        step: step.id,
+        port: need.name,
+        need: binding.id,
+        result: binding.result,
+        capability: need.capability,
+        returns: need.returns,
+      });
     }
   }
-  return [...found.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([, value]) => structuredClone(value));
+  return structuredClone(found);
 }
 
 function planContent(
   steps: readonly ProducerStep[],
   goals: BuildPlan["goals"],
-  selections: BuildPlan["selections"],
+  outputBindings: BuildPlan["outputBindings"],
 ): BuildPlan {
   return {
     format: "hypit.plan@1",
     steps,
     goals,
-    selections,
+    outputBindings,
   };
 }
 
-export function compileBuild(
+/** Candidate identity is useful only while the two source graphs are being planned. */
+export type BuildCandidateSelection = {
+  readonly output: string;
+  readonly candidate: string;
+  readonly record: string;
+};
+
+export type PlannedExecution = {
+  readonly plan: BuildPlan;
+  readonly selections: readonly BuildCandidateSelection[];
+  readonly initialRecords: readonly TypedRecord[];
+};
+
+function compilePlanning(
   program: LinkedProgram,
   graph: CompiledGraph,
   request: BuildRequest,
-): BuildPlan {
-  verifyBuildRequest(program, graph, request);
+  satisfactions: readonly Satisfaction[],
+  runRecords: readonly TypedRecord[],
+): PlannedExecution {
+  const verificationProgram: LinkedProgram = {
+    closure: program.closure,
+    records: [...program.records, ...runRecords],
+  };
+  verifyBuildRequest(verificationProgram, graph, request);
+
+  const selectedCandidates = new Map<string, string>();
+  for (const satisfaction of satisfactions) {
+    const output = resolveLogicalOutput(graph, satisfaction.output);
+    const candidate = resolveCandidate(graph, satisfaction.candidate);
+    invariant(
+      !selectedCandidates.has(output.id),
+      "DUPLICATE_RUN_SATISFACTION",
+      `${output.id} is satisfied more than once`,
+      output.id,
+    );
+    invariant(
+      sameType(candidate.type, output.type),
+      "CANDIDATE_RESULT_TYPE_MISMATCH",
+      `${candidate.id} supplies ${typeKey(candidate.type)}, not ${typeKey(output.type)}`,
+      candidate.id,
+    );
+    selectedCandidates.set(output.id, candidate.id);
+  }
 
   const authored = new Map(program.records.map((record) => [record.id, record]));
+  const availableRunRecords = new Map<string, TypedRecord>();
+  for (const record of runRecords) {
+    invariant(!authored.has(record.id), "RUN_RECORD_CONFLICT", `${record.id} conflicts with authored input`, record.id);
+    invariant(!availableRunRecords.has(record.id), "DUPLICATE_RUN_RECORD", `${record.id} is declared twice`, record.id);
+    availableRunRecords.set(record.id, record);
+    authored.set(record.id, record);
+  }
+  const demandedRunRecords = new Set<string>();
   const demandedOperations = new Map<string, OperationNode>();
   const resolvedOutputs = new Map<string, ResolvedSource>();
-  const selections = new Map<string, BuildPlan["selections"][number]>();
+  const selections = new Map<string, BuildCandidateSelection>();
 
   const operationSource = (id: string): ResolvedSource => {
     const operation = resolveOperation(graph, id);
@@ -138,6 +191,7 @@ export function compileBuild(
     const ref = pending.pop() as GraphValueRef;
     if (ref.kind === "record") {
       invariant(authored.has(ref.id), "UNKNOWN_RECORD", `unknown authored record ${ref.id}`, ref.id);
+      if (availableRunRecords.has(ref.id)) demandedRunRecords.add(ref.id);
       continue;
     }
     if (ref.kind === "operation-result") {
@@ -149,7 +203,7 @@ export function compileBuild(
     }
     if (resolvedOutputs.has(ref.id)) continue;
     const output = resolveLogicalOutput(graph, ref.id);
-    const candidate = satisfiedCandidate(graph, ref.id);
+    const candidate = resolveCandidate(graph, selectedCandidates.get(ref.id) ?? output.primary);
     let resolved: ResolvedSource;
     if (candidate.root.kind === "value") {
       const record: TypedRecord = {
@@ -222,14 +276,58 @@ export function compileBuild(
     .map(({ source }) => ({ record: source.record, type: source.type }))
     .sort((a, b) => a.record.localeCompare(b.record));
   const sortedSelections = [...selections.values()].sort((a, b) => a.output.localeCompare(b.output));
-  const plan = planContent(steps, goals, sortedSelections);
-  validatePlanStructure(program, graph, plan);
-  return plan;
+  const outputBindings = sortedSelections.map((selection) => ({
+    output: selection.output,
+    record: selection.record,
+    type: resolveLogicalOutput(graph, selection.output).type,
+  }));
+  const initialRecordsById = new Map<string, TypedRecord>();
+  for (const record of selectedProvidedRecords(program, graph, sortedSelections)) {
+    initialRecordsById.set(record.id, record);
+  }
+  for (const id of demandedRunRecords) {
+    const record = availableRunRecords.get(id)!;
+    invariant(!initialRecordsById.has(id), "RUN_RECORD_CONFLICT", `${id} has multiple sources`, id);
+    initialRecordsById.set(id, record);
+  }
+  const initialRecords = [...initialRecordsById.values()].sort((left, right) => left.id.localeCompare(right.id));
+  const plan = planContent(steps, goals, outputBindings);
+  verifyBuildPlan(program, initialRecords, plan);
+  return { plan, selections: sortedSelections, initialRecords };
 }
 
-function validatePlanStructure(
+/** Plan one Author Graph with one complete Run Graph without rewriting either graph. */
+export function planBuild(
+  program: LinkedProgram,
+  authorGraph: CompiledGraph,
+  runGraph: RunGraph,
+): PlannedExecution {
+  invariant(runGraph.format === "hypit.run-graph@1", "UNSUPPORTED_RUN_GRAPH", "unsupported Run Graph");
+  const graph: CompiledGraph = {
+    format: "hypit.graph@1",
+    outputs: authorGraph.outputs,
+    candidates: [...authorGraph.candidates, ...runGraph.candidates],
+    operations: [...authorGraph.operations, ...runGraph.operations],
+  };
+  const request: BuildRequest = {
+    format: "hypit.build-request@1",
+    targets: runGraph.targets,
+  };
+  return compilePlanning(program, graph, request, runGraph.satisfactions, runGraph.records);
+}
+
+/** Author-only planning convenience. Run compilation should call `planBuild`. */
+export function compileBuild(
   program: LinkedProgram,
   graph: CompiledGraph,
+  request: BuildRequest,
+): BuildPlan {
+  return compilePlanning(program, graph, request, [], []).plan;
+}
+
+export function verifyBuildPlan(
+  program: LinkedProgram,
+  initialRecords: readonly TypedRecord[],
   plan: BuildPlan,
 ): void {
   invariant(plan.format === "hypit.plan@1", "UNSUPPORTED_PLAN", "unsupported build plan format");
@@ -237,7 +335,7 @@ function validatePlanStructure(
 
   const records = new Map<RecordId, ProducedRecord>();
   for (const record of program.records) records.set(record.id, { type: record.type });
-  for (const record of selectedProvidedRecords(program, graph, plan)) {
+  for (const record of initialRecords) {
     invariant(!records.has(record.id), "DUPLICATE_RECORD", `record ${record.id} has multiple sources`, record.id);
     records.set(record.id, { type: record.type });
   }
@@ -288,11 +386,13 @@ function validatePlanStructure(
     }
   }
 
-  for (const selection of plan.selections) {
-    const output = resolveLogicalOutput(graph, selection.output);
-    const record = records.get(selection.record);
-    invariant(record !== undefined, "UNKNOWN_SELECTION_RECORD", `${selection.output} selects ${selection.record}`);
-    invariant(sameType(record.type, output.type), "SELECTION_TYPE_MISMATCH", selection.output);
+  const outputIds = new Set<string>();
+  for (const binding of plan.outputBindings) {
+    invariant(!outputIds.has(binding.output), "DUPLICATE_OUTPUT_BINDING", `${binding.output} is bound more than once`);
+    outputIds.add(binding.output);
+    const record = records.get(binding.record);
+    invariant(record !== undefined, "UNKNOWN_OUTPUT_RECORD", `${binding.output} binds ${binding.record}`);
+    invariant(sameType(record.type, binding.type), "OUTPUT_BINDING_TYPE_MISMATCH", binding.output);
   }
   for (const goal of plan.goals) {
     const supplied = records.get(goal.record);
@@ -307,11 +407,12 @@ function validatePlanStructure(
 export function selectedProvidedRecords(
   program: LinkedProgram,
   graph: CompiledGraph,
-  plan: BuildPlan,
+  selections: readonly BuildCandidateSelection[],
 ): readonly TypedRecord[] {
   const authored = new Set(program.records.map((record) => record.id));
   const records = new Map<string, TypedRecord>();
-  for (const selection of plan.selections) {
+  const candidates = new Map<string, string>();
+  for (const selection of selections) {
     const candidate = resolveCandidate(graph, selection.candidate);
     if (candidate.root.kind !== "value") continue;
     const record: TypedRecord = {
@@ -321,13 +422,14 @@ export function selectedProvidedRecords(
     };
     invariant(selection.record === record.id, "SELECTION_RECORD_MISMATCH", `${selection.output} does not select ${record.id}`);
     invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`, record.id);
-    const previous = records.get(record.id);
+    const previousCandidate = candidates.get(record.id);
     invariant(
-      previous === undefined || canonicalStringify(previous) === canonicalStringify(record),
+      previousCandidate === undefined || previousCandidate === candidate.id,
       "PROVIDED_RECORD_CONFLICT",
-      `${record.id} has conflicting Provided Values`,
+      `${record.id} is supplied by both ${previousCandidate ?? "an authored Record"} and ${candidate.id}`,
       record.id,
     );
+    candidates.set(record.id, candidate.id);
     records.set(record.id, record);
   }
   return [...records.values()].sort((left, right) => left.id.localeCompare(right.id));

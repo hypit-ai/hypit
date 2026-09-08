@@ -2,11 +2,12 @@
 
 Reusable Hypit author vocabulary for a top-of-frame icon answer strip.
 
-The strip owns one outer projected `TemporalWindow`. Each child answer accepts only an authored
-Script `Moment`, projected outside this package to a traced `TemporalInstant`. Display order is source
-order and must also be strict chronological order. The Track receives one placeholder image and every
-Item receives one answer image: `n` answers therefore have exactly `n + 1` explicit image inputs. A
-Moment replaces only its own slot, so earlier answers remain and later slots remain unanswered.
+The strip owns one outer projected `TemporalWindow`. An Item is either preset from the first frame or
+accepts one authored Script `Moment`, projected outside this package to a traced `TemporalInstant`.
+Display order is source order: preset Items come first, then revealed Items in strict chronological
+order. The Track receives one placeholder image and every Item receives one answer image: `n` answers
+therefore have exactly `n + 1` explicit image inputs. A Moment replaces only its own slot, so earlier
+answers remain and later slots remain unanswered.
 
 ```xml
 <media:Image id="question-icon" src="./icons/rendered/question-mark.png"/>
@@ -18,7 +19,7 @@ Moment replaces only its own slot, so earlier answers remain and later slots rem
 
 <emoji:Track id="rules" semantic={speech.semantic} canvas={vertical}
   style={emoji-strip} placeholder={question-icon} during="program">
-  <emoji:Item id="manifest" icon={manifest-icon} at={story.moment.manifest}/>
+  <emoji:Item id="manifest" icon={manifest-icon} preset="true"/>
   <emoji:Item id="real-estate" icon={real-estate-icon} at={story.moment.real-estate}/>
   <emoji:Item id="bitcoin" icon={bitcoin-icon} at={story.moment.bitcoin}/>
 </emoji:Track>

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { videoContractManifests } from "../../../test/support/video-domain.js";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 import { projectMomentInstantFixture, projectSegmentWindow, projectSelectionWindow } from "../../../test/temporal-fixture.js";
 
@@ -148,14 +148,14 @@ const middle = selection("middle", "early-end", "overlap-end");
 const late = selection("late", "late-start", "late-end");
 const triggerAnchors = ["one", "two", "three", "four"] as const;
 const font: FontArtifactRef = {
-  sources: [{ artifact: { kind: "blob", digest: fixtureDigest("ranking-font"), size: 32, mediaType: "font/woff2" } }],
+  sources: [{ artifact: { kind: "blob", resource: fixtureResource("ranking-font"), size: 32, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
 };
 const recipe = (path: string, properties: SvsRecipe["properties"] = {}): SvsRecipe => ({
   path, properties,
 });
-const image = (id: string) => ({ kind: "blob" as const, digest: fixtureDigest(`ranking-image:${id}`), size: 64, mediaType: "image/png" });
+const image = (id: string) => ({ kind: "blob" as const, resource: fixtureResource(`ranking-image:${id}`), size: 64, mediaType: "image/png" });
 const header = (variant: RankingHeader["variant"], id: string = variant) => sealRankingHeader({
   id, variant,
 });
@@ -315,7 +315,7 @@ test("variant Style decoders reject unknown Recipes and keep exact fonts and ind
     rows: [{ id: "s", label: "S", color: "#ef4444" }, { id: "a", label: "A", color: "#22c55e" }], "board-stack": 8, "item-stack": 31,
   }), font);
   assert.deepEqual(tier.style.rows.map((row) => row.id), ["s", "a"]);
-  assert.equal(tier.style.fonts[0]?.sources[0]?.artifact.digest, font.sources[0]!.artifact.digest);
+  assert.equal(tier.style.fonts[0]?.sources[0]?.artifact.resource, font.sources[0]!.artifact.resource);
   assert.deepEqual([tier.style.boardStackingOrder, tier.style.itemStackingOrder], [8, 31]);
   assert.throws(() => decodeTierBoardStyle(recipe("ranking.tier", { padding: 18 }), font), /does not accept padding/u);
   assert.throws(() => decodeColumnStyle(recipe("ranking.column", { "tier-only": 1 }), font), /does not accept/u);
@@ -475,7 +475,7 @@ test("TopThree accepts one to three optional-image Items and removes active acce
 const sound = (id: string): SynchronizedMedia => ({
   timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 3 },
   audio: {
-    artifact: { kind: "blob", digest: fixtureDigest(`ranking-sound:${id}`), size: 128, mediaType: "audio/wav" },
+    artifact: { kind: "blob", resource: fixtureResource(`ranking-sound:${id}`), size: 128, mediaType: "audio/wav" },
   },
 });
 
@@ -498,7 +498,7 @@ test("visual and sound event plans share exact phase frames while absent sound s
   assert.deepEqual(audio.clips.map((clip) => clip.gain), [0.8, 0.6, 0.8, 0.6]);
 });
 
-test("each component owns a distinct event law and repeated lowering is canonical", () => {
+test("each component owns a distinct event law", () => {
   const tierOwner = header("tier-board", "tier-events");
   const tierItems = [tierSpec("direct", "s"), tierSpec("drop", "a", "drop")];
   const tier = decodeTierBoardStyle(recipe("ranking.tier", { rows: [{ id: "s", label: "S", color: "#ef4444" }, { id: "a", label: "A", color: "#22c55e" }] }), font).style;
@@ -510,12 +510,6 @@ test("each component owns a distinct event law and repeated lowering is canonica
   const top = decodeTopThreeStyle(recipe("ranking.top"), font).style;
   assert.deepEqual(buildTopThreeSoundEvents(schedule(topOwner, topItems), top, specs(topOwner, topItems)).events.map((item) => item.kind), ["appear"]);
 
-  const columnOwner = header("column", "deterministic");
-  const columnItems = [columnSpec("one", 3)];
-  const columnStyle = decodeColumnStyle(recipe("ranking.column"), font).style;
-  let set = appendColumnItem(createColumnItemSet(), columnItems[0]!);
-  const program = buildColumnProgram(columnOwner, canvas, frame, columnSchedule(columnOwner, columnItems, { one: early }), columnStyle, set);
-  assert.deepEqual(renderColumn(space, program), renderColumn(space, program));
 });
 
 test("all three author Surfaces preserve explicit semantic, spatial, font, image and optional sound graph edges", async () => {

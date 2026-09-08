@@ -5,7 +5,7 @@ import type {
   BuildState,
   CommandResult,
   CoreCommand,
-  Digest,
+  ResourceId,
 } from "@hypit/protocol";
 import type { OperationSnapshot } from "./operations.js";
 
@@ -19,25 +19,17 @@ export type RuntimeRunnableCommand = {
   readonly command: CoreCommand;
   /** Every resource is acquired atomically before the command can cause a side effect. */
   readonly resources: readonly RuntimeResourceClaim[];
-  readonly queue?: RuntimeQueueLane;
   /** Asynchronous work retains one shared in-flight reservation while polling. */
   readonly capacityMode?: "active" | "asynchronous";
 };
 
-export type RuntimeResourceClaim = {
-  readonly id: string;
-  readonly maxActive: number;
-  readonly maxInFlight: number;
-};
-
-export type RuntimeQueueLane = {
-  readonly pool: string;
-  readonly lane: string;
-};
+export type RuntimeResourceClaim = import("./capacity.js").CapacityResourceClaim;
 
 export type RuntimeWorkerRunOptions = {
   readonly idlePollMs: number;
   readonly signal?: AbortSignal;
+  /** Called after abandoned work is claimable and immediately before the claim loop starts. */
+  readonly ready?: () => void | Promise<void>;
 };
 
 export type RuntimePreparation = {
@@ -49,12 +41,24 @@ export type RuntimePreparation = {
 export type RuntimeExecutionContext = {
   /** Stable Run-local identity; two identical BuildRequests may still be distinct Builds. */
   readonly build: string;
+  /** Release only the asynchronous Operation's occupancy after its remote end is confirmed. */
+  readonly releaseOperationCapacity?: () => Promise<void>;
+};
+
+export type RuntimeActionResult<T> =
+  | { readonly status: "completed"; readonly value: T }
+  | Extract<RuntimeExecutionResult, { readonly status: "deferred" }>;
+
+/** One short action; occupancy ends with the call, while rate consumption remains. */
+export type RuntimeActionExecutor = {
+  run<T>(request: { readonly build: string; readonly command: string; readonly action: string;
+    readonly resources: readonly RuntimeResourceClaim[] }, execute: () => Promise<T>): Promise<RuntimeActionResult<T>>;
 };
 
 export type RuntimeExecutionResult =
   | { readonly status: "completed"; readonly event: CommandResult }
   | { readonly status: "pending"; readonly operation: string; readonly wakeAt?: number }
-  | { readonly status: "deferred"; readonly wakeAt: number; readonly reason: string };
+  | { readonly status: "deferred"; readonly wakeAt?: number; readonly reason: string };
 
 /** Minimal execution port used by a Scheduler. `prepare` is the sole command-generation boundary. */
 export type RuntimeCommandExecutor = {
@@ -68,27 +72,41 @@ export type RuntimeCommandExecutor = {
     state: BuildState,
     operation: OperationSnapshot,
   ): Promise<OperationSnapshot>;
+  advanceOperation?(operation: OperationSnapshot): Promise<OperationSnapshot>;
+  /** Validate an already received result without invoking a Producer or contacting an Endpoint. */
+  acceptOperation?(state: BuildState, operation: OperationSnapshot): Promise<CommandResult | undefined>;
 };
 
-/** Content-addressed bytes. Location, retention and remote transport are adapter policy. */
-export type ArtifactStore = {
-  /** Admit bytes and compute their identity in the same pass. */
-  put(bytes: Uint8Array, mediaType: string): Promise<BlobRef>;
-  /** Read bytes previously admitted under this digest. */
-  get(digest: Digest): Promise<Uint8Array | undefined>;
+/** Build-local byte resources. Location, retention and transport are Runtime policy. */
+export type ResourceIOOptions = {
+  /** Cancel the transfer, close its streams and discard unfinished writes before rejecting.
+   * Stream producers supplied by the caller must observe the same signal while producing chunks.
+   */
+  readonly signal?: AbortSignal;
+};
+
+export type ResourceStore = {
+  /** Store one new resource instance. Equal bytes remain independent resources. */
+  put(bytes: Uint8Array, mediaType: string, options?: ResourceIOOptions): Promise<BlobRef>;
+  /** Write bytes for an already-declared source or historical resource. */
+  write(resource: BlobRef, bytes: Uint8Array, options?: ResourceIOOptions): Promise<void>;
+  /** Read bytes previously stored under this execution identity. */
+  get(resource: ResourceId, options?: ResourceIOOptions): Promise<Uint8Array | undefined>;
   /** Cheap presence query. */
-  has(digest: Digest): Promise<boolean>;
+  has(resource: ResourceId, options?: ResourceIOOptions): Promise<boolean>;
 };
 
 /** Optional transfer capability. Core and components never require storage to expose it. */
-export type StreamingArtifactStore = ArtifactStore & {
-  putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string): Promise<BlobRef>;
-  /** Stream bytes previously admitted under this digest. */
-  open(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
+export type StreamingResourceStore = ResourceStore & {
+  putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string, options?: ResourceIOOptions): Promise<BlobRef>;
+  writeStream(resource: BlobRef, chunks: AsyncIterable<Uint8Array>, options?: ResourceIOOptions): Promise<void>;
+  /** Stream bytes previously stored under this resource identity. */
+  open(resource: ResourceId, options?: ResourceIOOptions): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
-export function isStreamingArtifactStore(value: ArtifactStore): value is StreamingArtifactStore {
+export function isStreamingResourceStore(value: ResourceStore): value is StreamingResourceStore {
   return "putStream" in value && typeof value.putStream === "function"
+    && "writeStream" in value && typeof value.writeStream === "function"
     && "open" in value && typeof value.open === "function";
 }
 
@@ -105,6 +123,8 @@ export type BuildStore = {
   create(build: string, definition: BuildDefinition): Promise<BuildSnapshot>;
   read(build: string): Promise<BuildSnapshot | undefined>;
   append(build: string, fact: BuildFact): Promise<void>;
+  /** Drop execution material after the project Build Result has become authoritative. */
+  remove?(build: string): Promise<void>;
 };
 
 export type ScheduledBuild =
@@ -132,4 +152,6 @@ export type ScheduledBuildResult = {
 export type BuildSchedulerOptions = {
   /** Optional durable authority. When present, every admitted Core Fact is appended. */
   readonly buildStore?: BuildStore;
+  /** Called after an accepted event changes the materialized Build view. */
+  readonly onStateChange?: (build: string, state: BuildState) => Promise<void>;
 };

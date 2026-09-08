@@ -19,39 +19,40 @@ description: 添加新的作者层组件的分步指南。
 mkdir -p packages/my-component/src packages/my-component/test
 ```
 
+在视频项目中创建它，并从一开始使用所有者自己的 scope；`@hypit/*` 由当前 Distribution 拥有。
+
 ## 2. 编写 package.json
 
 ```json
 {
-  "name": "@hypit/my-component",
+  "name": "@your-studio/my-component",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
+  "files": ["dist", "preview", "README.md"],
+  "exports": { ".": "./dist/index.js" },
   "hypit": {
-    "activation": "./src/activation.ts"
+    "activation": "./dist/activation.js"
   },
-  "dependencies": {
-    "@hypit/protocol": "workspace:*",
-    "@hypit/elaborator": "workspace:*",
-    "@hypit/markup": "workspace:*"
+  "devDependencies": {
+    "hypit": "^0.1.0",
+    "typescript": "^5.9.0"
   }
 }
 ```
 
-只添加你的包实际导入的依赖。分层规则参见 [包架构](./packages.md)。
+开发时使用公开的 `hypit/*` subpath，发布物只包含组件自己的编译文件。分层规则参见
+[包架构](./packages.md)。
 
 ## 3. 定义 Module Manifest
 
 在 `src/index.ts` 中声明你的 Module 的身份、Type 和 Producer：
 
 ```typescript
-import type { ModuleManifest, ModuleRef } from "@hypit/protocol";
+import type { ModuleManifest, ModuleRef } from "hypit/author-kit";
 
 export const myComponentModuleRef: ModuleRef = {
-  name: "@hypit/my-component",
+  name: "@your-studio/my-component",
   version: "1",
 };
 
@@ -71,7 +72,6 @@ export const myComponentMarkupSurfaces = [{
   mode: "structured",
   outputs: [ /* 这段语法可以创作的 Type */ ],
   vocabulary: { /* 这个元素是什么、长什么样 —— 见第 5 步 */ },
-  implementation: { digest: "sha256:..." },
 }] as const;
 ```
 
@@ -83,7 +83,7 @@ Surface handler 把 Markup Frontend 的 XML 元素解码成带类型的作者声
 
 ```typescript
 // src/surface.ts
-import type { StructuredSurfaceHandler } from "@hypit/markup";
+import type { StructuredSurfaceHandler } from "hypit/author-kit";
 
 export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) => {
   // Read attributes and children from the XML element
@@ -96,7 +96,7 @@ export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) 
 通用包不要从业务包源码推断写法。使用仓库内的最小完整 fixture：
 `examples/minimal-author-package/packages/example-component/`。它包含完整的
 Surface 返回值、Fragment literal、Manifest ports、Producer 和 activation 形状。
-只有 `inspect_svml_vocabulary` 已证明存在高度相似的结构性 sibling 时，才允许读取该
+只有 `hypit vocabulary` 已证明存在高度相似的结构性 sibling 时，才允许读取该
 sibling 的 README 和实现所需的少数 role 文件，并将其复制为新的 Module；不得比较无关业务包。
 
 ## 5. 声明 Surface 词表与预览图
@@ -127,34 +127,17 @@ vocabulary: {
 }
 ```
 
-凡是读者必须看一眼产出才能理解的 Surface，都要声明 `preview`。这不限于产出 `VisualTrack` 的 Surface：`@hypit/speech-track` 也为 SemanticTrack 声明了预览图，因为它的形态看一眼比读一段描述更快。没有可展示产出的 Surface 可以不声明，例如只负责装配请求的那种。
+凡是读者应该在 Studio 时间轴或目录里一眼认出的 Surface，都要声明 `preview`：它是海报。海报是设计出来的图，不是产出的一帧。它用这一小块位置所允许的最抽象、最形象的方式说明组件是什么，就像电影海报不是电影截屏：`@hypit/ranking` 的 Column 海报是一列名次徽章挨着一列图标，Tier 榜是带字母的几行加图标。把它画成 SVG 随包提交，栅格化成 manifest 在 `preview/` 下指名的 PNG，组件外观演进时海报保持稳定。没有可展示产出的 Surface 可以不声明，例如只负责装配请求的那种。
 
-`appearance` 和 `preview` 回答的是两个不同的问题，谁都替代不了谁：`appearance` 说的是这个元素在所有情况下都会画出什么，预览图给出的是其中一个诚实的实例。
+`appearance` 和 `preview` 回答的是两个不同的问题，谁都替代不了谁：`appearance` 说的是这个元素在所有情况下都会画出什么，海报说的是这个元素是干什么的。
 
-完整词表和预览声明以最小 fixture 为权威示例。生产路线应使用
-`hypit-reference-video-tools inspect_svml_vocabulary` 读取已安装包的公开声明，
-而不是打开业务包源码。
-
-### 预览图怎么产出
-
-预览图是你自己这个组件在本地渲染出来的真实一帧。没有任何工具会替你生成它，而手工画的示意图比没有预览图更糟，因为它冒充了真实产出。
-
-用 `hypit-reference-video-tools render_previews` 渲染 fixture 的 preview Source；新包沿用同一套
-package-owned preview Source，不需要阅读仓库的视觉测试源码。步骤是：
-
-1. 用你自己包的 render 函数，在一个封好的 ProgramSpace 上构造出 Track 值；
-2. `sealComposition({ id, canvas, tracks })`，再用 `@hypit/hyperframes` 的 `compileHyperframesDocument(composition, space)`；
-3. `materializeHyperframesHtml(document, resolve)` 写进一个临时目录，其中 `resolve` 把声明的每个 Artifact（字体、图片）映射到本地文件；
-4. 通过标准的 SVRun → preview-mock → Producer 路径得到真实 Composition；
-5. 找到目标 Present 最长的稳定区间，在固定版本的本地浏览器中 seek 到区间中间帧并截图，提交到 `preview/` 下。
-
-不会为了这一张图生成完整 PNG 序列，也不修改 HyperFrames。若没有至少两帧的稳定区间，就使用该包最长 Present 的中间帧。
+完整词表和预览声明以最小 fixture 为权威示例。`hypit vocabulary <package>` 打印已安装包的公开声明；从这份输出写作，而不是打开别的业务包源码。
 
 ## 6. 编写 activation 描述符
 
 ```typescript
 // src/activation.ts
-import { createMarkupSurfaceHostFacet } from "@hypit/markup";
+import { createMarkupSurfaceHostFacet } from "hypit/author-kit";
 import {
   myComponentManifest,
   myComponentMarkupSurfaces,
@@ -179,17 +162,16 @@ export const hypitPackage = {
 export default hypitPackage;
 ```
 
-Module 会自动提供精确的 `manifest.name@manifest.version`，所以作者直接导入 `@hypit/my-component@1`，无需再声明一份重复别名。只有包确实拥有另一个逻辑名称时才使用可选的 `specifiers`。Surface declaration 决定可接受的标签（以 `mine` 导入时即为 `<mine:Widget>`）。它属于 Markup Host facet，不属于语义 Module Manifest，更不属于 Core。
+Module 会自动提供精确的 `manifest.name@manifest.version`，所以作者直接导入 `@your-studio/my-component@1`，无需再声明一份重复别名。只有包确实拥有另一个逻辑名称时才使用可选的 `specifiers`。Surface declaration 决定可接受的标签（以 `mine` 导入时即为 `<mine:Widget>`）。它属于 Markup Host facet，不属于语义 Module Manifest，更不属于 Core。
 
-## 7. 声明包依赖
+## 7. 编译包
 
-```json
-"dependencies": {
-  "@hypit/protocol": "workspace:*"
-}
+```bash
+pnpm build
 ```
 
-pnpm 工作区链接负责解析包，不需要根路径注册表。
+框架声明从 `hypit/author-kit` 导入；组件使用的领域值从 `hypit/composition` 等所属
+subpath 导入。加载 activation 时由当前 Distribution 提供这些 API，组件 tarball 不携带另一份 Hypit。
 
 ## 8. 安装
 
@@ -204,7 +186,7 @@ pnpm install --frozen-lockfile
 ```xml
 <?svml using="@hypit/markup@1"?>
 <svml>
-  <import as="mine" from="@hypit/my-component@1"/>
+  <import as="mine" from="@your-studio/my-component@1"/>
 
   <mine:Widget id="demo" during={story.selection.example}/>
 </svml>
@@ -219,4 +201,4 @@ pnpm install --frozen-lockfile
 
 当 vocabulary 证明输入/输出 Type、timing contract、终端 Track 和 Surface ports 高度相似，
 才可走 close-sibling 路径：读取该 sibling 的 README 与必要 role 文件，复制结构，重建
-Module/Producer identity，并继续通过 package-ready、Source-use、preview 和最终 gate。
+Module/Producer identity，并直接检查 Source 使用方式与 preview 结果。

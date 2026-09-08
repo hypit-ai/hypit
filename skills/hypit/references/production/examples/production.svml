@@ -1,0 +1,65 @@
+<?svml using="@hypit/markup@1"?>
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="estimate" from="@hypit/semantic-take-estimate@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="typo" from="@hypit/typography-track@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="look" source="./look.svs"/>
+
+  <script id="story">
+    <opening><HOST>Here is @proof the useful part @/proof.</opening>
+  </script>
+  <space:Canvas id="canvas" width="720" height="1280"/>
+  <program:Clock id="clock" frame-rate="30"/>
+  <space:Frame id="full" within={canvas}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <space:Frame id="title-frame" within={canvas}
+    left="8%" top="12%" right="92%" bottom="30%"/>
+
+  <text:Value id="direction">
+    A close, naturally lit phone-video view of a presenter in a workshop.
+    The presenter looks into the camera and says: Here is the useful part.
+  </text:Value>
+  <seedance:TextVideo id="performance" model="mini" prompt={direction}
+    duration="5" aspect-ratio="9:16" generate-audio="true"/>
+  <pipeline:Normalize id="performance-media" source={performance.video} clock={clock}
+    video="primary-moving" audio="default" span-authority="video"/>
+  <pipeline:Normalize id="performance-preview-media" source={performance.video} clock={clock}
+    video="primary-moving" audio="none" span-authority="video"/>
+  <whisperx:SemanticTake id="opening-semantic" narrative={story}
+    segment={story.segment.opening} media={performance-media.media} language="en"/>
+  <estimate:SemanticTake id="estimated" narrative={story}
+    segment={story.segment.opening} media={performance-preview-media.media}
+    language="en" pace="normal" rounding="round"/>
+  <speech:Track id="speech" visual-frame={full}
+    visual-appearance={look.media.performance} visual-z="0">
+    <speech:Take source={opening-semantic.take}/>
+  </speech:Track>
+
+  <fonts:Stack id="title-font" family="inter" weight="700" style="normal" emoji="color"/>
+  <typo:Style id="title-style" recipe={look.text.title} font={title-font}>
+    <typo:Fill color="#F1E7D8"/>
+    <typo:Stroke color="#18212A" width="2" placement="outside"/>
+  </typo:Style>
+  <typo:Track id="titles" semantic={speech.semantic}>
+    <typo:Area id="proof-label" placement={title-frame} style={title-style}
+      during={story.selection.proof}>The useful part</typo:Area>
+  </typo:Track>
+  <film:Film id="main" canvas={canvas} semantic={speech.semantic} appearance={look.film.main}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audio}/>
+    <film:Track source={titles.track}/>
+  </film:Film>
+  <render:Video id="final" composition={main.composition} semantic={speech.semantic}/>
+  <render:Video id="detail" composition={main.composition} semantic={speech.semantic}
+    start-frame="30" end-frame-exclusive="90"/>
+</svml>

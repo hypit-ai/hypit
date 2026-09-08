@@ -8,9 +8,8 @@ then finalized into the only `GenerationRequest` a Provider can receive. The pac
 semantics but no API key, Provider selection, queue or network code. `@hypit/provider-kie` is
 one optional Runtime implementation.
 
-Provider limits are checked by the Provider before any paid operation. In particular, KIE's GPT
-Image 2 endpoints reject `4:3`, `3:4` and `4:5`; those values remain in this model contract because
-the model Surface is Provider-neutral, but a KIE Runtime must use one of its accepted ratios.
+Provider-specific combination limits are checked by that Provider before any paid operation. They
+do not narrow this model-owned vocabulary or leak into author source.
 
 The one physical package exposes two independently importable logical modules:
 
@@ -35,10 +34,16 @@ module changes the visible graph expansion rather than the document structure:
   aspect-ratio="9:16"
   resolution="2K"
 >
-  <gpt:Reference image={person}/>
-  <gpt:Reference image={product}/>
+  <gpt:Reference image={person.image}/>
+  <gpt:Reference image={product.image}/>
 </gpt:Image>
 ```
+
+Set the optional `background` attribute to `transparent` when the generated image should carry
+alpha, `opaque` when every output pixel should be opaque, or `auto` when the model should choose.
+Omitting it leaves that choice to the model and selected Provider. Provider-specific combinations,
+including which resolution tiers accept an explicit background choice, are reported by that
+Provider before generation.
 
 `prompt` is an ordinary `Text` graph edge. Every `Reference` is an ordinary image Artifact edge;
 the Surface does not copy runtime media into request metadata. The raw module expands to request

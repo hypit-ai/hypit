@@ -36,7 +36,7 @@ const state = {
     format: "hypit.plan@1",
     steps: [{ id: "step:used", producer, inputs: {}, outputs: { image: "record:used" }, needs: {} }],
     goals: [],
-    selections: [{ output: "output:reused", candidate: "candidate:reused", record: "record:reused" }],
+    outputBindings: [{ output: "output:reused", record: "record:reused", type: producer }],
   },
 } as unknown as BuildState;
 
@@ -78,7 +78,7 @@ test("a generation is reported under the name the author wrote, not the step ins
       },
     ],
   } as unknown as CompiledGraph;
-  const empty = { plan: { format: "hypit.plan@1", steps: [], goals: [], selections: [] } } as unknown as BuildState;
+  const empty = { plan: { format: "hypit.plan@1", steps: [], goals: [], outputBindings: [] } } as unknown as BuildState;
   assert.deepEqual(unreachedGenerations(expanded, empty, { "output:picked": "orphan.image" })
     .map((item) => item.name), ["orphan.image"]);
 });

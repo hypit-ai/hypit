@@ -27,27 +27,25 @@ export const grokImagineVideoPorts: GenerationPortTable = sealGenerationPortTabl
     },
     { name: "resolution", value: { kind: "enum", values: ["480p", "720p", "1080p"] }, minItems: 1, maxItems: 1 },
     { name: "duration", value: { kind: "number", integer: true, minimum: 6, maximum: 30 }, minItems: 1, maxItems: 1 },
-    { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 4 },
-    /** Continues an earlier generation; only meaningful beside its source images. */
-    { name: "sourceTaskId", value: { kind: "token", minLength: 1, maxLength: 255 }, minItems: 0, maxItems: 1 },
+    { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 7 },
   ],
-  requires: [{ kind: "requiresPresent", port: "sourceTaskId", needs: ["images"] }],
+  requires: [],
 });
 
 export const grokImagine15PreviewPorts: GenerationPortTable = sealGenerationPortTable({
   model: "grok-imagine-video-1.5-preview",
   result: "video",
   ports: [
-    { name: "prompt", value: { kind: "text", maxChars: 5_000 }, minItems: 1, maxItems: 1 },
+    { name: "prompt", value: { kind: "text", maxChars: 4_096 }, minItems: 1, maxItems: 1 },
     {
       name: "aspectRatio",
-      value: { kind: "enum", values: ["2:3", "3:2", "1:1", "16:9", "9:16"] },
+      value: { kind: "enum", values: ["auto", "2:3", "3:2", "1:1", "16:9", "9:16"] },
       minItems: 1,
       maxItems: 1,
     },
     { name: "resolution", value: { kind: "enum", values: ["480p", "720p", "1080p"] }, minItems: 1, maxItems: 1 },
-    { name: "duration", value: { kind: "number", integer: true, minimum: 6, maximum: 30 }, minItems: 1, maxItems: 1 },
-    { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 4 },
+    { name: "duration", value: { kind: "number", integer: true, minimum: 1, maximum: 15 }, minItems: 1, maxItems: 1 },
+    { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 7 },
   ],
   requires: [],
 });
@@ -97,20 +95,28 @@ const surface = (
   vocabulary,
 });
 
-const grokImagineVideoAttributes: readonly SurfaceAttributeVocabulary[] = [
+const grokImagineBaseAttributes: readonly SurfaceAttributeVocabulary[] = [
   { name: "id", kind: "identifier", required: true,
     summary: "Names this generation so its video Artifact can be referenced elsewhere in the Source." },
   { name: "prompt", kind: "reference", required: true, accepts: [textTypes.text],
     summary: "Selects the Text the model generates from." },
-  { name: "duration", kind: "literal", required: true,
-    summary: "Sets the length of the generated video in whole seconds." },
-  { name: "aspect-ratio", kind: "literal", required: true,
-    values: ["2:3", "3:2", "1:1", "16:9", "9:16"],
-    summary: "Sets the width-to-height ratio of the generated video." },
   { name: "resolution", kind: "literal", required: true,
     values: ["480p", "720p", "1080p"],
     summary: "Sets the picture height of the generated video." },
 ];
+
+function grokImagineVideoAttributes(preview: boolean): readonly SurfaceAttributeVocabulary[] {
+  return [
+    ...grokImagineBaseAttributes,
+    { name: "duration", kind: "literal", required: true,
+      summary: "Sets the length of the generated video in whole seconds." },
+    { name: "aspect-ratio", kind: "literal", required: true,
+      values: preview
+        ? ["auto", "2:3", "3:2", "1:1", "16:9", "9:16"]
+        : ["2:3", "3:2", "1:1", "16:9", "9:16"],
+      summary: "Sets the width-to-height ratio of the generated video." },
+  ];
+}
 
 const grokImagineVideoChildren: readonly SurfaceChildVocabulary[] = [
   { tag: "Reference", cardinality: "many",
@@ -126,19 +132,12 @@ const grokImagineVideoPortVocabulary: readonly SurfacePortVocabulary[] = [
     summary: "The generated video Artifact." },
 ];
 
-const grokImagineVideoNotes: readonly string[] = [
-  "`Reference` accepts only an `image` reference to an image Blob, is empty, and repeats at most four times.",
-  "`duration` is a whole number of seconds between 6 and 30.",
-];
+const grokImagineReferenceNote = "`Reference` accepts only an `image` reference to an image Blob, is empty, and repeats at most seven times.";
 
 export const grokImagineMarkupSurfaces = [
     surface("video", "Video", grokImagineEndpoints.video!, {
-      summary: "Generates one video Artifact from a Text prompt and up to four reference images with the Grok Imagine video model.",
-      attributes: [
-        ...grokImagineVideoAttributes,
-        { name: "source-task-id", kind: "literal", required: false,
-          summary: "Continues an earlier Grok Imagine generation named by its task identifier." },
-      ],
+      summary: "Generates one video Artifact from a Text prompt and up to seven reference images with the Grok Imagine video model.",
+      attributes: grokImagineVideoAttributes(false),
       children: grokImagineVideoChildren,
       ports: grokImagineVideoPortVocabulary,
       example: [
@@ -147,20 +146,20 @@ export const grokImagineMarkupSurfaces = [
         "</grok:Video>",
       ].join("\n"),
       notes: [
-        ...grokImagineVideoNotes,
-        "`source-task-id` requires at least one `Reference`; the continuation resumes from the images it names.",
+        grokImagineReferenceNote,
+        "`duration` is a whole number of seconds between 6 and 30.",
         "The element carries no text content.",
       ],
     }),
     surface("preview-video", "PreviewVideo", grokImagineEndpoints["preview-1.5"]!, {
-      summary: "Generates one video Artifact from a Text prompt and up to four reference images with the Grok Imagine 1.5 preview video model.",
-      attributes: grokImagineVideoAttributes,
+      summary: "Generates one video Artifact from a Text prompt and up to seven reference images with the Grok Imagine 1.5 preview video model.",
+      attributes: grokImagineVideoAttributes(true),
       children: grokImagineVideoChildren,
       ports: grokImagineVideoPortVocabulary,
       example: '<grok:PreviewVideo id="preview" prompt={previewPrompt} duration="6" aspect-ratio="9:16" resolution="720p"/>',
       notes: [
-        ...grokImagineVideoNotes,
-        "The preview model has no continuation port, so `source-task-id` belongs to `Video` alone.",
+        grokImagineReferenceNote,
+        "`duration` is a whole number of seconds between 1 and 15.",
         "The element carries no text content.",
       ],
     }),

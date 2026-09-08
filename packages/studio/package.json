@@ -5,11 +5,11 @@
   "type": "module",
   "exports": {
     "./start": "./start.ts",
-    "./preview-check": "./preview-check.ts",
     "./src/*": "./src/*"
   },
   "dependencies": {
     "@hypit/audio-track-studio": "workspace:*",
+    "@hypit/build-result": "workspace:*",
     "@hypit/caption-fine-studio": "workspace:*",
     "@hypit/cli": "workspace:*",
     "@hypit/compiler-node": "workspace:*",
@@ -45,7 +45,6 @@
     "@hypit/video-cli": "workspace:*",
     "@hypit/workspace": "workspace:*",
     "@hypit/workspace-fs-node": "workspace:*",
-    "@hypit/provider-media-local": "workspace:*",
-    "vite": "5.4.21"
+    "vite": "8.2.2"
   }
 }

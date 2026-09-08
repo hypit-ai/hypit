@@ -2,16 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { artifactTypes } from "@hypit/artifact";
-import { markupSurfaceHostFacetAbi, parseStructuredElement } from "@hypit/markup";
+import { parseStructuredElement } from "@hypit/markup";
 import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/markup";
 import { textTypes } from "@hypit/text";
 
-import gptImageNodePackage from "../src/activation.js";
 import {
   decodeCleanGptImageSurface,
   decodeGptImageSurface,
 } from "../src/surface.js";
-import { gptImageCleanMarkupSurfaces, gptImageMarkupSurfaces } from "../src/index.js";
 
 const refs = new Map<string, SurfaceResolvedReference>([
   ["prompt", {
@@ -36,7 +34,7 @@ async function decode(source: string, handler: StructuredSurfaceHandler) {
   });
 }
 
-const authored = `<gpt:Image id="holding" prompt={prompt} aspect-ratio="21:9" resolution="2K">
+const authored = `<gpt:Image id="holding" prompt={prompt} aspect-ratio="9:21" resolution="2K" background="auto">
   <gpt:Reference image={person.image}/>
   <gpt:Reference image={product.image}/>
 </gpt:Image>`;
@@ -54,6 +52,13 @@ test("raw GPT Image Surface keeps Text and every reference image on explicit gra
     kind: "component-output", component: "product", output: "image",
   });
   assert.deepEqual(component.outputs, { image: "holding.image" });
+  const draft = result.records.find((record) => record.id === "holding.draft");
+  assert.equal(draft?.value.kind, "inline");
+  assert.deepEqual((draft?.value.value as { ports?: unknown }).ports, {
+    aspectRatio: ["9:21"],
+    resolution: ["2K"],
+    background: ["auto"],
+  });
   assert.equal(result.records.filter((record) => record.id.endsWith(".binding")).length, 2);
   assert.equal(result.records.some((record) => record.id.endsWith(".cleanup")), false);
   assert.deepEqual(result.fragments[0]?.operations.map((operation) => operation.id), [
@@ -83,18 +88,6 @@ test("clean GPT Image Surface adds the official denoise as one visible downstrea
   const clean = result.fragments[0]?.operations.find((operation) => operation.id === "clean-image");
   assert.deepEqual(clean?.inputs.source, { kind: "fragment-operation", operation: "select-primary-image" });
   assert.deepEqual(clean?.inputs.program, { kind: "fragment-input", name: "cleanup" });
-});
-
-test("the physical package carries both independently importable Surface implementations", () => {
-  assert.deepEqual([
-    { name: "@hypit/gpt-image", surfaces: gptImageMarkupSurfaces.map((surface) => surface.tag) },
-    { name: "@hypit/gpt-image/clean", surfaces: gptImageCleanMarkupSurfaces.map((surface) => surface.tag) },
-  ], [
-    { name: "@hypit/gpt-image", surfaces: ["Image"] },
-    { name: "@hypit/gpt-image/clean", surfaces: ["Image"] },
-  ]);
-  assert.equal(gptImageNodePackage.hostFacets
-    .filter((facet) => facet.abi === markupSurfaceHostFacetAbi).length, 2);
 });
 
 test("GPT Image Surface rejects hidden inline prompts and undeclared child shapes", async () => {

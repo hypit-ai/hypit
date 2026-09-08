@@ -1,7 +1,7 @@
 <?svml using="@hypit/markup@1"?>
 
-<!-- A complete, self-contained catalogue Source. The generated take is preview-mocked; the
-     remaining deterministic graph is compiled and rendered through the normal Studio path. -->
+<!-- A complete catalogue Source. Its Run is ordinary: Studio can open it once the required media
+     Candidates are supplied, and a normal Build of the same Run can regenerate the catalogue frame. -->
 <svml>
   <import from="@hypit/script@1"/>
   <import as="wording" from="@hypit/text@1"/>
@@ -9,7 +9,6 @@
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
-  <import as="estimate" from="@hypit/estimate@1"/>
   <import as="space" from="@hypit/spatial@1"/>
   <import as="program" from="@hypit/program-space@1"/>
   <import as="film" from="@hypit/film@1"/>
@@ -26,8 +25,7 @@
   <space:Frame id="speech-frame" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
 
   <wording:Value id="direction">A neutral catalogue card in a quiet studio.</wording:Value>
-  <estimate:Speech id="showcase-duration" source={story.segment.showcase.speech} policy={recipes.speech.normal}/>
-  <seedance:TextVideo id="take" model="mini" prompt={direction} duration={showcase-duration.duration} generate-audio="true"/>
+  <seedance:TextVideo id="take" model="mini" prompt={direction} duration="4" generate-audio="true"/>
   <pipeline:Normalize id="take-media" source={take.video} recipe={recipes.media.aroll} clock={clock}/>
   <whisperx:SemanticTake id="showcase-semantic" narrative={story} segment={story.segment.showcase} media={take-media.media} language="en"/>
   <speech:Track id="speech" visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">

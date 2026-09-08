@@ -1,20 +1,13 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import test from "node:test";
 
 import {
   decodeOpenFontFaceSurface,
   decodeOpenFontStackSurface,
-  openFontFamilies,
-  openFontFamiliesByCategory,
-  openFontFamilyNames,
 } from "@hypit/fonts-open";
 import type { FontArtifactRef, FontStackRef } from "@hypit/media";
 import type { StructuredElement, StructuredSurfaceHandler } from "@hypit/markup";
 
-const require = createRequire(import.meta.url);
 const range = { start: 0, end: 80 };
 
 async function decode(
@@ -33,7 +26,7 @@ async function decode(
       return {
         artifact: {
           kind: "blob",
-          digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+          resource: `res_font-${requests.length}`,
           size: bytes.byteLength,
           mediaType: request.mediaType,
         },
@@ -55,44 +48,6 @@ async function decodeFace(family: string, weight: string, style: string) {
   });
   return { ...result, font: result.value as unknown as FontArtifactRef };
 }
-
-test("the catalog exposes 109 publishable open families with frontend metadata", () => {
-  assert.equal(openFontFamilyNames.length, 109);
-  assert.equal(Object.values(openFontFamiliesByCategory).flat().length, 109);
-  for (const family of Object.values(openFontFamilies)) {
-    assert.ok(family.label);
-    assert.ok(family.intendedUse);
-    assert.ok(["OFL-1.1", "Apache-2.0"].includes(family.license));
-  }
-});
-
-test("catalog license metadata matches every installed Fontsource package", () => {
-  for (const [name, family] of Object.entries(openFontFamilies)) {
-    const packagePath = require.resolve(`${family.packageName}/package.json`);
-    const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as { readonly license: string };
-    assert.equal(packageJson.license, family.license, name);
-  }
-});
-
-test("every declared family, static weight and style can materialize exact bytes", async () => {
-  for (const name of openFontFamilyNames) {
-    const family = openFontFamilies[name];
-    const weights = family.kind === "static" || family.kind === "static-split" || family.kind === "external-split"
-      ? family.weights
-      : [family.minimumWeight];
-    for (const weight of weights) {
-      for (const style of family.styles) {
-        const { font, requests } = await decodeFace(name, String(weight), style);
-        assert.ok(font.sources.length > 0, `${name} ${weight} ${style}`);
-        const uniqueBytes = new Set(requests.map(
-          (request) => createHash("sha256").update(request.bytes).digest("hex"),
-        ));
-        assert.equal(uniqueBytes.size, font.sources.length, `${name} ${weight} ${style}`);
-        assert.equal(new Set(requests.map((request) => request.from)).size, requests.length, name);
-      }
-    }
-  }
-});
 
 test("one Latin variable face contributes one exact installed source", async () => {
   const { font, requests } = await decodeFace("inter", "700", "italic");

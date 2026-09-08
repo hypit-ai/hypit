@@ -4,11 +4,12 @@ import test from "node:test";
 import { reduce } from "@hypit/core";
 import {
   ProducerRegistry,
-  MemoryArtifactStore,
+  MemoryResourceStore,
   NodeDriver,
   EndpointRegistry,
 } from "@hypit/driver-node";
 import { credentialRef } from "@hypit/runtime";
+import type { WritableCredentialStore } from "@hypit/runtime";
 
 import { capabilities, createGreetingBuild, producers as greetingProducers, types } from "../../core/test/greeting-fixture.js";
 
@@ -147,17 +148,50 @@ test("an Endpoint receives only declared credential slots and secrets never ente
   assert.equal(JSON.stringify(completed.state).includes("top-secret-value"), false);
 });
 
+test("a writable credential gives its Endpoint authority to replace only that declared slot", async () => {
+  const { producers, endpoints } = configuredRegistry();
+  let stored = "old-secret";
+  endpoints.registerImmediateEndpoint(
+    "example:credential-rotation",
+    capabilities.generation,
+    types.generated,
+    async ({ credentials }) => {
+      assert.equal(typeof credentials.apiKey?.replace, "function");
+      await credentials.apiKey!.replace!({ secret: "new-secret" });
+      assert.equal("credentialStore" in credentials.apiKey!, false);
+      return { value: { kind: "inline", value: "Credentialed result" } };
+    },
+    { credentials: { apiKey: credentialRef("test", "endpoint-key") } },
+  );
+  const credentialStore: WritableCredentialStore = {
+    owns(ref) { return ref.store === "test"; },
+    async resolve() { return { secret: stored }; },
+    async put(_ref, value) { stored = value.secret; },
+    async delete() { return false; },
+  };
+  const driver = new NodeDriver({
+    producers,
+    endpoints,
+    credentials: credentialStore,
+  });
+  const completed = await driver.run(createGreetingBuild());
+  assert.equal(completed.status, "complete");
+  assert.equal(stored, "new-secret");
+});
+
 test("Endpoint capabilities may narrow themselves with typed Need constraints", async () => {
   const { producers, endpoints } = configuredRegistry();
   endpoints.registerImmediateEndpoint("example:wrong-model", capabilities.generation, types.generated, () => {
     throw new Error("unsupported endpoint must never run");
-  }, { supports: () => false });
+  }, { supports: () => ({ status: "unsupported", reason: "example request is unsupported" }) });
   endpoints.registerImmediateEndpoint("example:compatible", capabilities.generation, types.generated, () => ({
     value: { kind: "inline", value: "Compatible" },
   }), {
     supports: (need) => {
       const constraints = need.constraints as Readonly<Record<string, unknown>>;
-      return constraints.prompt === "Greet Ada";
+      return constraints.prompt === "Greet Ada"
+        ? { status: "supported" }
+        : { status: "unsupported", reason: "prompt must be Greet Ada" };
     },
   });
 
@@ -206,17 +240,17 @@ test("an alternate Candidate is explicitly selected before execution, never by E
   assert.equal(accepted.state.needs.length, 0);
 });
 
-test("MemoryArtifactStore is content addressed and returns defensive copies", async () => {
-  const store = new MemoryArtifactStore();
+test("MemoryResourceStore keeps independent admissions and returns defensive copies", async () => {
+  const store = new MemoryResourceStore();
   const source = new Uint8Array([1, 2, 3]);
   const first = await store.put(source, "application/octet-stream");
   source[0] = 9;
   const second = await store.put(new Uint8Array([1, 2, 3]), "application/octet-stream");
-  assert.equal(first.digest, second.digest);
-  const loaded = await store.get(first.digest);
+  assert.notEqual(first.resource, second.resource);
+  const loaded = await store.get(first.resource);
   assert.deepEqual(loaded, new Uint8Array([1, 2, 3]));
   if (loaded !== undefined) loaded[0] = 8;
-  assert.deepEqual(await store.get(first.digest), new Uint8Array([1, 2, 3]));
+  assert.deepEqual(await store.get(first.resource), new Uint8Array([1, 2, 3]));
 });
 
 test("Core still owns scheduling when Driver has every implementation", async () => {
@@ -230,7 +264,7 @@ test("Core still owns scheduling when Driver has every implementation", async ()
   assert.equal(result.status, "complete");
 });
 
-test("a direct Driver caller can retry one failed Handler without replaying completed producers", async () => {
+test("a direct Driver failure ends its state and a new attempt starts independently", async () => {
   const { producers, endpoints, calls } = configuredRegistry();
   let attempts = 0;
   endpoints.registerImmediateEndpoint("example:unstable", capabilities.generation, types.generated, () => {
@@ -244,11 +278,28 @@ test("a direct Driver caller can retry one failed Handler without replaying comp
 
   const driver = new NodeDriver({ producers, endpoints });
   const paused = await driver.run(createGreetingBuild());
-  assert.equal(paused.status, "paused");
+  assert.equal(paused.status, "failed");
   assert.match(paused.outcomes.at(-1)?.message ?? "", /temporary outage/u);
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 0, fulfill: 1 });
 
-  const completed = await driver.run(paused.state);
+  assert.equal((await driver.run(paused.state)).status, "failed");
+  assert.equal(calls.fulfill, 1);
+  const completed = await driver.run(createGreetingBuild());
   assert.equal(completed.status, "complete");
-  assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 1, fulfill: 2 });
+  assert.deepEqual(calls, { prompt: 2, request: 2, assemble: 1, fulfill: 2 });
+});
+
+test("shared action-rate declarations conflict when their periods differ", () => {
+  const registry = new EndpointRegistry();
+  for (const [id, periodMs] of [["a", 100], ["b", 200]] as const) {
+    registry.registerAsyncEndpoint(id, capabilities.generation, types.generated, {
+      start: () => ({ status: "pending", handle: { id } }),
+      poll: () => ({ status: "completed", result: { value: { kind: "inline", value: "done" } } }),
+    }, { scheduling: { resources: [{ id: "pool:shared", limit: 10 }],
+      actions: { submit: [{ id: "rate:shared/submit", limit: 1, periodMs }] } } });
+  }
+  const [conflict] = registry.capacityConflicts();
+  assert.equal(conflict?.resource, "rate:shared/submit");
+  assert.deepEqual(conflict?.endpointIds, ["a", "b"]);
+  assert.deepEqual(conflict?.settings, ["1 per 100 ms", "1 per 200 ms"]);
 });

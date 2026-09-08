@@ -1,18 +1,20 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import {
   mkdir,
   mkdtemp,
+  readFile,
   rm,
+  stat,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { FileArtifactStore } from "@hypit/artifact-store-fs";
+import { FileResourceStore } from "@hypit/resource-store-fs";
+import { FileBuildResultRepository } from "@hypit/build-result";
+import type { BuildResultRepository } from "@hypit/build-result";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
-import { MemoryArtifactStore } from "@hypit/driver-node";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { AsyncEndpoint, EndpointPackage } from "@hypit/endpoint-kit";
 import type { ComponentPackage } from "@hypit/component-kit";
@@ -22,13 +24,14 @@ import {
   collectLoadedNodePackageComponents,
   loadNodePackageSelection,
 } from "@hypit/package-loader-node";
-import { credentialRef } from "@hypit/runtime";
-import type { CredentialValue, WritableCredentialStore } from "@hypit/runtime";
+import { buildExecutionActivity, credentialRef } from "@hypit/runtime";
+import type { BuildCompletion, CredentialValue, WritableCredentialStore } from "@hypit/runtime";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
 import {
   capabilities,
   createGreetingBuild,
+  createParallelGreetingBuild,
   manifest as greetingManifest,
   producers,
   types,
@@ -36,21 +39,102 @@ import {
 
 const providerModule = { name: "example.local-endpoint", version: "1" } as const;
 
-function definition(state: ReturnType<typeof createGreetingBuild>) {
-  return defineBuild(state.program, state.graph, state.request);
+function definition(state: ReturnType<typeof createGreetingBuild>, program = state.program) {
+  const authored = new Set(state.program.records.map((record) => record.id));
+  return defineBuild({
+    program,
+    initialRecords: state.records.filter((record) => !authored.has(record.id)),
+    plan: state.plan,
+    targets: state.targets,
+  });
 }
 
 function projectRuntimeFixture(directory: string) {
   const state = new SqliteRuntimeState(join(directory, ".hypit", "runtime.sqlite"));
+  const work = join(directory, ".hypit", "work");
   return {
     buildStore: state.builds,
     buildCatalog: state.catalog,
     operationStore: state.operations,
-    dispatchStore: state.dispatch,
-    artifactStore: new FileArtifactStore(join(directory, ".hypit", "artifacts")),
+    commandExecutionStore: state.commandExecutions,
+    executionStore: state.execution,
+    removeActiveBuild: async (build: string) => await state.removeActiveBuild(build),
+    submissionStore: state.submissions,
+    resourceStore: new FileResourceStore(join(directory, ".hypit", "artifacts")),
+    resourceStoreForBuild: (build: string) => new FileResourceStore(join(work, build)),
+    clearBuildResources: async (build: string) => {
+      await rm(join(work, build), { recursive: true, force: true });
+    },
+    openBuildResultRepository: async (location: import("@hypit/build-result-kit").BuildResultRepositoryLocation) => {
+      assert.equal(location.selection.use, "@hypit/build-result-fs");
+      const config = location.selection.config as { readonly path?: string } | undefined;
+      return { repository: new FileBuildResultRepository(join(location.root, config?.path ?? ".hypit/results")) };
+    },
     credentialStore: new EnvironmentCredentialStore(),
     close: () => state.close(),
   } as const;
+}
+
+function resultDestination(directory: string) {
+  return {
+    repository: {
+      root: directory,
+      selection: { use: "@hypit/build-result-fs", config: { path: "results" } },
+    },
+  } as const;
+}
+
+function durableBuildRequest(
+  directory: string,
+  id: string,
+  initial: ReturnType<typeof createGreetingBuild>,
+) {
+  return {
+    id,
+    definition: definition(initial),
+    catalog: {
+      source: { path: join(directory, "main.svml") },
+      publishedOutputs: initial.targets.map((target, index) => ({
+        name: `target.${index + 1}`,
+        ref: { kind: "logical-output" as const, id: target.output },
+      })),
+    },
+    result: resultDestination(directory),
+  } as const;
+}
+
+test("a Worker does not claim a Build when the pinned Runtime environment differs", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-worker-owner-"));
+  const initial = createGreetingBuild();
+  try {
+    const runtime = await createLocalRuntime({
+      ...projectRuntimeFixture(directory),
+      assertEnvironment: () => {
+        throw new Error("Runtime Profile no longer matches this Worker's active environment");
+      },
+    });
+    await runtime.build(durableBuildRequest(directory, "bld_20260902T120000000Z_0000000001", initial));
+
+    await assert.rejects(runtime.workOnce(), /no longer matches this Worker's active environment/u);
+    const status = await runtime.inspect("bld_20260902T120000000Z_0000000001");
+    assert.equal(status?.activity, "ready");
+    assert.deepEqual(status?.requests, { total: 1, completed: 0 });
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+async function finishClaimedBuild(
+  runtime: Awaited<ReturnType<typeof createLocalRuntime>>,
+): Promise<BuildCompletion> {
+  let snapshot;
+  for (let index = 0; index < 4; index += 1) {
+    snapshot = await runtime.workOnce();
+    if (snapshot !== undefined && "outcome" in snapshot) return snapshot;
+  }
+  throw new Error(`Build did not finish; last activity was ${snapshot === undefined
+    ? "none" : "wakeAt" in snapshot ? buildExecutionActivity(snapshot) : "removed"}`);
 }
 
 test("Endpoint-declared credentials use the selected writable Store without a Provider switch", async () => {
@@ -99,14 +183,20 @@ test("Endpoint-declared credentials use the selected writable Store without a Pr
   }
 });
 
-test("project local runtime queues, polls and cancels work with replaceable packages", async () => {
+test("project local Runtime advances, polls and cancels work with replaceable packages", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-"));
   const initial = createGreetingBuild();
   const catalog = {
     source: { path: join(directory, "main.svml") },
-    aliases: [{
+    publishedOutputs: [{
       name: "final.document",
-      ref: { kind: "logical-output" as const, id: initial.request.targets[0]!.output },
+      ref: { kind: "logical-output" as const, id: initial.targets[0]!.output },
+    }, {
+      name: "prompt.text",
+      ref: { kind: "logical-output" as const, id: "prompt" },
+    }, {
+      name: "generated.text",
+      ref: { kind: "logical-output" as const, id: "generated" },
     }],
   };
   let promptCalls = 0;
@@ -195,41 +285,57 @@ test("project local runtime queues, polls and cancels work with replaceable pack
       components: [components],
       endpoints: [endpointPackage],
     });
-    const first = await firstRuntime.build({ id: "greeting-build", definition: definition(initial), catalog });
-    assert.equal(first.status, "queued");
-    assert.equal((await firstRuntime.workOnce())?.phase, "waiting");
+    const first = await firstRuntime.build({
+      id: "bld_20260902T120000001Z_0000000001",
+      definition: definition(initial),
+      catalog,
+      result: resultDestination(directory),
+    });
+    assert("view" in first);
+    assert.equal(first.view.activity, "ready");
+    const firstTurn = await firstRuntime.workOnce();
+    assert(firstTurn !== undefined && "wakeAt" in firstTurn);
+    assert.equal(buildExecutionActivity(firstTurn), "ready");
     assert.equal(starts, 1);
     assert.equal(polls, 0);
-    const second = await firstRuntime.status("greeting-build");
-    assert.equal(second.dispatch?.phase, "waiting");
-    assert.equal((await firstRuntime.workOnce())?.terminal, "complete");
+    const second = await firstRuntime.inspect("bld_20260902T120000001Z_0000000001");
+    assert.equal(second?.activity, "ready");
+    assert.equal((await finishClaimedBuild(firstRuntime)).outcome, "complete");
     assert.equal(starts, 1);
     assert.equal(polls, 1);
     assert.equal(promptCalls, 1, "persisted Core facts stop deterministic upstream replay");
     assert.equal(requestCalls, 1, "the Need request Producer is also persisted");
     assert.equal(assembleCalls, 1);
-    const clientStatus = await firstRuntime.status("greeting-build");
-    assert.equal(clientStatus.catalog?.aliases[0]?.name, "final.document");
-    assert.deepEqual((await firstRuntime.builds()).map((item) => item.build), ["greeting-build"]);
+    const clientStatus = await firstRuntime.inspect("bld_20260902T120000001Z_0000000001");
+    assert.equal(clientStatus, undefined);
+    assert.deepEqual((await firstRuntime.activity()).builds, []);
+    const buildResult = await new FileBuildResultRepository(join(directory, "results"))
+      .read("bld_20260902T120000001Z_0000000001");
+    assert.deepEqual(Object.keys(buildResult?.outputs ?? {}).sort(), [
+      "final.document",
+      "generated.text",
+      "prompt.text",
+    ]);
+    assert.deepEqual(buildResult?.targets, ["final.document"]);
 
-    await firstRuntime.build({ id: "greeting-follow", definition: definition(createGreetingBuild()) });
+    await firstRuntime.build(durableBuildRequest(directory, "bld_20260902T120000002Z_0000000001", createGreetingBuild()));
     await firstRuntime.workOnce();
-    await firstRuntime.workOnce();
-    const followed = await firstRuntime.status("greeting-follow");
-    assert.equal(followed.dispatch?.terminal, "complete");
+    await finishClaimedBuild(firstRuntime);
+    const followed = await firstRuntime.inspect("bld_20260902T120000002Z_0000000001");
+    assert.equal(followed, undefined);
     assert.equal(starts, 2);
     assert.equal(polls, 2);
-    const followedStatus = await firstRuntime.status("greeting-follow");
-    assert.equal(followedStatus.build?.state.status, "complete");
-    assert.equal(followedStatus.operations.length, 1);
+    const followedStatus = await firstRuntime.inspect("bld_20260902T120000002Z_0000000001");
+    assert.equal(followedStatus, undefined);
 
-    const waiting = await firstRuntime.build({ id: "greeting-cancel", definition: definition(createGreetingBuild()) });
-    assert.equal(waiting.status, "queued");
+    const waiting = await firstRuntime.build(durableBuildRequest(directory, "bld_20260902T120000003Z_0000000001", createGreetingBuild()));
+    assert("view" in waiting);
+    assert.equal(waiting.view.activity, "ready");
     await firstRuntime.workOnce();
-    const requested = await firstRuntime.cancel("greeting-cancel");
-    assert.notEqual(requested?.cancellation, undefined);
-    const cancelled = await firstRuntime.workOnce();
-    assert.equal(cancelled?.terminal, "cancelled");
+    const requested = await firstRuntime.cancel("bld_20260902T120000003Z_0000000001");
+    assert.equal(requested?.cancellationRequested, true);
+    const cancelled = await finishClaimedBuild(firstRuntime);
+    assert.equal(cancelled.outcome, "cancelled");
     assert.equal(cancels, 1);
     await firstRuntime.close();
   } finally {
@@ -237,8 +343,428 @@ test("project local runtime queues, polls and cancels work with replaceable pack
   }
 });
 
+test("a completed public file moves into its Build Result and leaves no Runtime working copy", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-result-file-"));
+  const id = "bld_20260902T120000004Z_0000000001";
+  const workStore = new FileResourceStore(join(directory, ".hypit", "work", id));
+  const initial = createGreetingBuild({ generationRealization: "placeholder", targetOutputs: ["generated"] });
+  const buildDefinition = definition(initial);
+  const components: ComponentPackage = {
+    producers: [{
+      producer: producers.makePrompt,
+      handler: () => ({ outputs: { prompt: { kind: "inline", value: "make a clip" } }, needs: {} }),
+    }, {
+      producer: producers.placeholderText,
+      handler: async () => ({
+        outputs: { generated: await workStore.put(new TextEncoder().encode("video bytes"), "video/mp4") },
+        needs: {},
+      }),
+    }],
+  };
+  try {
+    const runtime = await createLocalRuntime({
+      ...projectRuntimeFixture(directory),
+      components: [components],
+    });
+    await runtime.build({
+      id,
+      definition: buildDefinition,
+      catalog: {
+        source: { path: join(directory, "main.svml") },
+        publishedOutputs: [{ name: "clip.video", ref: { kind: "logical-output", id: "generated" } }],
+      },
+      result: resultDestination(directory),
+    });
+    assert.equal((await finishClaimedBuild(runtime)).outcome, "complete");
+    const results = new FileBuildResultRepository(join(directory, "results"));
+    const result = await results.read(id);
+    assert.equal(result?.outputs["clip.video"]?.value.kind, "build-file");
+    const resolved = await results.resolve(id, "clip.video");
+    assert.equal(resolved?.value.kind, "build-file");
+    if (resolved?.value.kind !== "build-file") throw new Error("expected completed Result file");
+    const opened = await results.openFile(resolved.build, resolved.value);
+    if (opened === undefined) throw new Error("expected completed Result bytes");
+    const resultBytes: number[] = [];
+    for await (const chunk of opened) resultBytes.push(...chunk);
+    assert.equal(new TextDecoder().decode(Uint8Array.from(resultBytes)), "video bytes");
+    assert.equal(await stat(join(directory, ".hypit", "work", id)).then(() => true, () => false), false);
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("a failed Build keeps public Outputs completed before removing active Runtime state", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000005Z_0000000001-"));
+  const initial = createGreetingBuild();
+  const components: ComponentPackage = {
+    producers: [{
+      producer: producers.makePrompt,
+      handler: () => ({ outputs: { prompt: { kind: "inline", value: "Greet Ada" } }, needs: {} }),
+    }, {
+      producer: producers.requestText,
+      handler: ({ inputs }) => {
+        assert.equal(inputs.prompt?.value.kind, "inline");
+        return { outputs: {}, needs: { generation: { prompt: inputs.prompt.value.value } } };
+      },
+    }],
+  };
+  const endpoint = defineEndpointPackage({
+    module: providerModule,
+    facet: "generation",
+    instance: "generation.failure",
+    pool: "generation.failure",
+    capabilities: [{
+      lifecycle: "asynchronous",
+      capability: capabilities.generation,
+      returns: types.generated,
+      endpoint: {
+        start: () => ({ status: "failed", failure: { code: "REMOTE_FAILED", message: "generation failed" } }),
+        poll: () => { throw new Error("failed work is not polled"); },
+      },
+    }],
+  });
+  try {
+    const runtime = await createLocalRuntime({
+      ...projectRuntimeFixture(directory),
+      components: [components],
+      endpoints: [endpoint],
+    });
+    await runtime.build({
+      id: "bld_20260902T120000005Z_0000000001",
+      definition: definition(initial),
+      catalog: {
+        source: { path: join(directory, "main.svml") },
+        publishedOutputs: [{ name: "prompt.text", ref: { kind: "logical-output", id: "prompt" } }, {
+          name: "generated.text", ref: { kind: "logical-output", id: "generated" },
+        }, {
+          name: "final.document", ref: { kind: "logical-output", id: "document" },
+        }],
+      },
+      result: resultDestination(directory),
+    });
+    assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
+    const result = await new FileBuildResultRepository(join(directory, "results"))
+      .read("bld_20260902T120000005Z_0000000001");
+    assert.equal(result?.outcome, "failed");
+    assert.equal(result?.failure, "generation failed");
+    assert.deepEqual(Object.keys(result?.outputs ?? {}), ["prompt.text"]);
+    assert.deepEqual(result?.outputs["prompt.text"]?.value, { kind: "inline", value: "Greet Ada" });
+    const status = await runtime.inspect("bld_20260902T120000005Z_0000000001");
+    assert.equal(status, undefined);
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+for (const phase of ["submit", "poll"] as const) {
+  test(`a ${phase} failure retains an already received sibling Output in the final Result`, async () => {
+    const directory = await mkdtemp(join(tmpdir(), "hypit-local-sibling-result-"));
+    const initial = createParallelGreetingBuild();
+    let starts = 0;
+    let polls = 0;
+    const components: ComponentPackage = { producers: [
+      { producer: producers.makePrompt, handler: () => ({ outputs: { prompt: { kind: "inline", value: "hello" } }, needs: {} }) },
+      { producer: producers.requestText, handler: () => ({ outputs: {}, needs: { generation: {} } }) },
+    ] };
+    const finish = async (id: number) => {
+      if (id === 1) return { status: "failed" as const, failure: { code: "EXAMPLE_FAILURE", message: "first request failed" } };
+      await new Promise<void>((resolve) => setTimeout(resolve, 10));
+      return { status: "completed" as const, result: { value: { kind: "inline" as const, value: "retained sibling output" } } };
+    };
+    const endpoint = defineEndpointPackage({
+      module: providerModule, facet: "generation", instance: "generation.siblings", pool: "generation.siblings", defaultConcurrency: 2,
+      capabilities: [{ lifecycle: "asynchronous", capability: capabilities.generation, returns: types.generated, endpoint: {
+        start() {
+          const id = ++starts;
+          return phase === "submit" ? finish(id) : { status: "pending", handle: { id }, receipt: { id: `task-${id}` }, wakeAt: Date.now() };
+        },
+        poll({ handle }) { polls++; return finish((handle as { id: number }).id); },
+      } }],
+    });
+    const runtime = await createLocalRuntime({ ...projectRuntimeFixture(directory), components: [components], endpoints: [endpoint] });
+    try {
+      const id = "bld_20260906T110000000Z_0000000001";
+      await runtime.build(durableBuildRequest(directory, id, initial));
+      assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
+      const result = await new FileBuildResultRepository(join(directory, "results")).read(id);
+      assert.equal(result?.failure, "first request failed");
+      assert.deepEqual(result?.outputs["target.2"]?.value, { kind: "inline", value: "retained sibling output" });
+      assert.equal(starts, 2);
+      assert.equal(polls, phase === "submit" ? 0 : 2);
+      assert.equal((await runtime.activity()).builds.length, 0);
+    } finally {
+      await runtime.close();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+}
+
+test("an interrupted Result write finishes explicitly without rerunning the Build", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-result-retry-"));
+  const initial = createGreetingBuild({ generationRealization: "placeholder" });
+  let generationCalls = 0;
+  let rejectSync = true;
+  const components: ComponentPackage = {
+    producers: [{
+      producer: producers.makePrompt,
+      handler: () => ({ outputs: { prompt: { kind: "inline", value: "Greet Ada" } }, needs: {} }),
+    }, {
+      producer: producers.placeholderText,
+      handler: () => {
+        generationCalls += 1;
+        return { outputs: { generated: { kind: "inline", value: "Hello" } }, needs: {} };
+      },
+    }, {
+      producer: producers.assemble,
+      handler: ({ inputs }) => {
+        const generated = inputs.generated?.value;
+        assert.equal(generated?.kind, "inline");
+        return {
+          outputs: { document: { kind: "inline", value: { text: generated.value } } },
+          needs: {},
+        };
+      },
+    }],
+  };
+  const fixture = projectRuntimeFixture(directory);
+  const openRepository = async (
+    location: import("@hypit/build-result-kit").BuildResultRepositoryLocation,
+  ) => {
+    const path = (location.selection.config as { readonly path?: string } | undefined)?.path ?? ".hypit/results";
+    const base = new FileBuildResultRepository(join(location.root, path));
+    const repository: BuildResultRepository = {
+      create: async (seed) => await base.create(seed),
+      async openWriter(build) {
+        const writer = await base.openWriter(build);
+        if (writer === undefined) return undefined;
+        return {
+          read: async () => await writer.read(),
+          sync: async (input) => {
+            if (rejectSync) throw new Error("result store unavailable");
+            return await writer.sync(input);
+          },
+          finish: async (input) => await writer.finish(input),
+        };
+      },
+      removeIncomplete: async (build) => await base.removeIncomplete(build),
+      read: async (build) => await base.read(build),
+      updatePresentation: async (build, update) => await base.updatePresentation(build, update),
+      browse: async (request) => await base.browse(request),
+      describeOutput: async (build, output) => await base.describeOutput(build, output),
+      resolve: async (build, output) => await base.resolve(build, output),
+      openFile: async (build, file) => await base.openFile(build, file),
+    };
+    return { repository };
+  };
+  try {
+    const runtime = await createLocalRuntime({
+      ...fixture,
+      openBuildResultRepository: openRepository,
+      components: [components],
+    });
+    await runtime.build({
+      id: "bld_20260902T120000006Z_0000000001",
+      definition: definition(initial),
+      catalog: {
+        source: { path: join(directory, "main.svml") },
+        publishedOutputs: [{ name: "final.document", ref: { kind: "logical-output", id: "document" } }],
+      },
+      result: resultDestination(directory),
+    });
+    const blocked = await runtime.workOnce();
+    assert(blocked !== undefined && "decision" in blocked);
+    assert.deepEqual(blocked.attention, { step: "result", error: "result store unavailable" });
+    assert.equal(generationCalls, 1);
+    assert.equal(await runtime.workOnce(), undefined);
+
+    rejectSync = false;
+    const completed = await runtime.finishResult("bld_20260902T120000006Z_0000000001");
+    assert(completed !== undefined);
+    assert.equal(completed.outcome, "complete");
+    assert.equal(generationCalls, 1);
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("a failed Result creation leaves no active Build", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-submit-rollback-"));
+  const initial = createGreetingBuild({ generationRealization: "placeholder" });
+  const fixture = projectRuntimeFixture(directory);
+  const unavailable: BuildResultRepository = {
+    async create() { throw new Error("result repository refused creation"); },
+    async openWriter() { return undefined; },
+    async removeIncomplete() {},
+    async read() { return undefined; },
+    async updatePresentation() { throw new Error("result repository refused update"); },
+    async browse() { return { results: [] }; },
+    async describeOutput() { return undefined; },
+    async resolve() { return undefined; },
+    async openFile() { return undefined; },
+  };
+  try {
+    const runtime = await createLocalRuntime({
+      ...fixture,
+      openBuildResultRepository: async () => ({ repository: unavailable }),
+    });
+    await assert.rejects(runtime.build({
+      id: "bld_20260902T120000007Z_0000000001",
+      definition: definition(initial),
+      catalog: {
+        source: { path: join(directory, "main.svml") },
+        publishedOutputs: [{ name: "final.document", ref: { kind: "logical-output", id: "document" } }],
+      },
+      result: resultDestination(directory),
+    }), /result repository refused creation/u);
+    const status = await runtime.inspect("bld_20260902T120000007Z_0000000001");
+    assert.equal(status, undefined);
+    assert.equal(await runtime.workOnce(), undefined);
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("an immediate Command left in started state fails its Build without invoking the Producer again", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-command-receipt-"));
+  const initial = createGreetingBuild({ generationRealization: "placeholder" });
+  let calls = 0;
+  const components: ComponentPackage = {
+    producers: [{
+      producer: producers.makePrompt,
+      handler: () => {
+        calls += 1;
+        return { outputs: { prompt: { kind: "inline", value: "must not run" } }, needs: {} };
+      },
+    }],
+  };
+  try {
+    const runtime = await createLocalRuntime({
+      ...projectRuntimeFixture(directory),
+      components: [components],
+    });
+    const submitted = await runtime.build(durableBuildRequest(directory, "bld_20260902T120000008Z_0000000001", initial));
+    const command = submitted.state.outstanding[0];
+    assert.ok(command);
+    const state = new SqliteRuntimeState(join(directory, ".hypit", "runtime.sqlite"));
+    await state.commandExecutions.begin("bld_20260902T120000008Z_0000000001", command.id);
+    state.close();
+
+    const terminal = await finishClaimedBuild(runtime);
+    assert.equal(terminal.outcome, "failed");
+    assert.equal(calls, 0);
+    const failed = await new FileBuildResultRepository(join(directory, "results"))
+      .read("bld_20260902T120000008Z_0000000001");
+    assert.equal(failed?.outcome, "failed");
+    assert.match(failed?.failure ?? "", /stopped before its result was stored/u);
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("a selected historical file is staged once before its Build becomes active", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000009Z_0000000001-"));
+  const initial = createGreetingBuild();
+  const bytes = new Uint8Array([4, 3, 2, 1]);
+  const historical = {
+    kind: "blob" as const,
+    resource: "res_historical_input" as const,
+    size: bytes.byteLength,
+    mediaType: "image/png",
+  };
+  const program = {
+    ...initial.program,
+    records: initial.program.records.filter((record) => record.id !== "intent:root"),
+  };
+  const intent = initial.records.find((record) => record.id === "intent:root")!;
+  const buildDefinition = defineBuild({
+    program,
+    initialRecords: [{ ...intent, value: historical }],
+    plan: initial.plan,
+    targets: initial.targets,
+  });
+  let attachmentOpens = 0;
+  let endpointCalls = 0;
+  const components: ComponentPackage = {
+    producers: [{
+      producer: producers.makePrompt,
+      handler: ({ inputs }) => ({ outputs: { prompt: inputs.intent!.value }, needs: {} }),
+    }, {
+      producer: producers.requestText,
+      handler: ({ inputs }) => ({ outputs: {}, needs: { generation: { source: inputs.prompt!.value } } }),
+    }, {
+      producer: producers.assemble,
+      handler: ({ inputs }) => ({
+        outputs: { document: { kind: "inline", value: { text: inputs.generated!.id } } },
+        needs: {},
+      }),
+    }],
+  };
+  const endpoint = defineEndpointPackage({
+    module: providerModule,
+    facet: "generation",
+    instance: "generation.bld_20260902T120000009Z_0000000001",
+    pool: "generation.bld_20260902T120000009Z_0000000001",
+    capabilities: [{
+      lifecycle: "immediate",
+      capability: capabilities.generation,
+      returns: types.generated,
+      handler: async ({ need, resources }) => {
+        endpointCalls += 1;
+        const source = (need.constraints as { readonly source: typeof historical }).source;
+        assert.equal(await resources.has(source.resource), true);
+        assert.deepEqual(await resources.get(source.resource), bytes);
+        return { value: { kind: "inline", value: "generated from history" } };
+      },
+    }],
+  });
+  try {
+    const runtime = await createLocalRuntime({
+      ...projectRuntimeFixture(directory),
+      components: [components],
+      endpoints: [endpoint],
+    });
+    await runtime.build({
+      id: "bld_20260902T120000009Z_0000000001",
+      definition: buildDefinition,
+      catalog: {
+        source: { path: join(directory, "main.svml") },
+        publishedOutputs: [{ name: "final.document", ref: { kind: "logical-output", id: "document" } }],
+      },
+      attachments: [{
+        artifact: historical,
+        async open() {
+          attachmentOpens += 1;
+          return (async function* () { yield bytes; })();
+        },
+      }],
+      result: resultDestination(directory),
+    });
+    assert.equal(attachmentOpens, 1);
+    const work = new FileResourceStore(join(directory, ".hypit", "work", "bld_20260902T120000009Z_0000000001"));
+    assert.equal(await work.has(historical.resource), true);
+
+    const completed = await runtime.workOnce();
+    assert(completed !== undefined && "outcome" in completed);
+    assert.equal(completed.outcome, "complete");
+    assert.equal(endpointCalls, 1);
+    assert.equal(attachmentOpens, 1);
+    assert.equal(await work.has(historical.resource), false);
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("one local Worker admits later Builds while preserving shared Endpoint capacity", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "hypit-local-parallel-builds-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000011Z_0000000001uilds-"));
+  const fixture = projectRuntimeFixture(directory);
+  let activeBuildReads = 0;
+  let mostBuildReads = 0;
   let unrestrictedActive = 0;
   let mostUnrestricted = 0;
   let limitedActive = 0;
@@ -304,25 +830,35 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
   });
   try {
     const runtime = await createLocalRuntime({
-      ...projectRuntimeFixture(directory),
+      ...fixture,
+      buildStore: {
+        create: (...args) => fixture.buildStore.create(...args),
+        append: (...args) => fixture.buildStore.append(...args),
+        read: async (...args) => {
+          activeBuildReads += 1;
+          mostBuildReads = Math.max(mostBuildReads, activeBuildReads);
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          try {
+            return await fixture.buildStore.read(...args);
+          } finally {
+            activeBuildReads -= 1;
+          }
+        },
+        remove: (...args) => fixture.buildStore.remove!(...args),
+      },
       components: [components],
       endpoints: [endpoint],
     });
-    await runtime.build({
-      id: "parallel-a",
-      definition: definition(createGreetingBuild()),
-    });
+    await runtime.build(durableBuildRequest(directory, "bld_20260902T120000010Z_0000000001", createGreetingBuild()));
     const controller = new AbortController();
     const work = runtime.work({ idlePollMs: 5, signal: controller.signal });
     await firstStarted;
-    await runtime.build({
-      id: "parallel-b",
-      definition: definition(createGreetingBuild()),
-    });
+    await runtime.build(durableBuildRequest(directory, "bld_20260902T120000011Z_0000000001", createGreetingBuild()));
+    const results = new FileBuildResultRepository(join(directory, "results"));
     while (true) {
-      const states = await Promise.all(["parallel-a", "parallel-b"].map(async (id) =>
-        (await runtime.status(id)).dispatch?.terminal));
-      if (states.every((state) => state === "complete")) break;
+      const outcomes = await Promise.all(["bld_20260902T120000010Z_0000000001", "bld_20260902T120000011Z_0000000001"].map(async (id) =>
+        (await results.read(id))?.outcome));
+      if (outcomes.every((outcome) => outcome === "complete")) break;
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
     controller.abort();
@@ -390,18 +926,17 @@ test("project local runtime accepts components loaded from an installed package"
         return collectLoadedNodePackageComponents(loaded);
       },
     });
+    const selected = createGreetingBuild({ generationRealization: "placeholder" });
     const result = await runtime.build({
-      id: "selected-preview",
-      definition: definition(createGreetingBuild({
-        generationRealization: "placeholder",
-      })),
+      ...durableBuildRequest(runtimeRoot, "bld_20260902T120000012Z_0000000001", selected),
       componentPackages: ["example-greeting-components"],
     });
-    assert.equal(result.status, "queued");
-    const completed = await runtime.workOnce();
-    assert.equal(completed?.terminal, "complete");
-    assert.equal((await runtime.status("selected-preview")).build?.state.records
-      .some((record) => record.id === "document:root"), true);
+    assert("view" in result);
+    assert.equal(result.view.activity, "ready");
+    const completed = await finishClaimedBuild(runtime);
+    assert.equal(completed.outcome, "complete");
+    assert.equal((await new FileBuildResultRepository(join(runtimeRoot, "results"))
+      .read("bld_20260902T120000012Z_0000000001"))?.outcome, "complete");
     await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -451,17 +986,17 @@ test("project local runtime remembers the complete package closure across increm
   });
   try {
     for (const [id, specifier] of [
-      ["component-closure-a", "example-feature-a"],
-      ["component-closure-b", "example-feature-b"],
-      ["component-closure-shared", "example-shared-components"],
+      ["bld_20260902T120000013Z_0000000001", "example-feature-a"],
+      ["bld_20260902T120000014Z_0000000001", "example-feature-b"],
+      ["bld_20260902T120000015Z_0000000001", "example-shared-components"],
     ] as const) {
+      const initial = createGreetingBuild({ generationRealization: "placeholder" });
       await runtime.build({
-        id,
-        definition: definition(createGreetingBuild({ generationRealization: "placeholder" })),
+        ...durableBuildRequest(directory, id, initial),
         componentPackages: [specifier],
       });
-      const completed = await runtime.workOnce();
-      assert.equal(completed?.terminal, "complete");
+      const completed = await finishClaimedBuild(runtime);
+      assert.equal(completed.outcome, "complete");
     }
     assert.deepEqual(loadedSelections, [
       ["example-feature-a"],
@@ -473,60 +1008,157 @@ test("project local runtime remembers the complete package closure across increm
   }
 });
 
-test("project local runtime accepts an explicitly selected replacement ArtifactStore package", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "hypit-local-artifacts-"));
-  const artifactStore = new MemoryArtifactStore();
-  try {
-    const runtime = await createLocalRuntime({
-      ...projectRuntimeFixture(directory),
-      artifactStore,
-    });
-    const bytes = new Uint8Array([7, 8, 9]);
-    const sourceArtifact = {
-      kind: "blob" as const,
-      digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const,
-      size: bytes.byteLength,
-      mediaType: "application/octet-stream",
-    };
-    assert.equal(await artifactStore.has(sourceArtifact.digest), false);
-    await runtime.build({
-      id: "source-artifact-staging",
-      definition: definition(createGreetingBuild()),
-      attachments: [{ artifact: sourceArtifact, open: async () => (async function* () { yield bytes; })() }],
-    });
-    const failed = await runtime.workOnce();
-    assert.equal(failed?.terminal, "failed");
-    assert.deepEqual(await artifactStore.get(sourceArtifact.digest), bytes);
-    let reopened = false;
-    await runtime.build({
-      id: "existing-source-artifact",
-      definition: definition(createGreetingBuild()),
-      attachments: [{
-        artifact: sourceArtifact,
-        open: async () => {
-          reopened = true;
-          throw new Error("existing content-addressed bytes must not be reopened");
+for (const cancellation of ["accepted", "unsupported", "failed-build", "host-failure"] as const) {
+  test(`${cancellation} finishes the Build with receipts without waiting for remote termination`, async () => {
+    const directory = await mkdtemp(join(tmpdir(), "hypit-settlement-"));
+    let fixture = projectRuntimeFixture(directory);
+    let failRead = false;
+    let remoteActive = 0, starts = 0, cancels = 0, polls = 0;
+    const provider = defineEndpointPackage({ module: providerModule, facet: "generation", instance: "settlement",
+      pool: "shared", defaultConcurrency: 1, capabilities: [{ capability: capabilities.generation, returns: types.generated,
+        lifecycle: "asynchronous", endpoint: {
+          start() { starts++; remoteActive++; return { status: "pending", handle: { job: starts }, receipt: { id: `job-${starts}` }, wakeAt: Date.now() + 60_000 }; },
+          poll() { polls++; throw new Error("stopped Builds must not poll"); },
+          cancel() { cancels++; return { status: cancellation === "accepted" ? "accepted" : "unsupported" }; },
+        } }] });
+    const openRuntime = () => createLocalRuntime({ ...fixture, endpoints: [provider],
+      buildStore: {
+        create: (...args) => fixture.buildStore.create(...args),
+        append: (...args) => fixture.buildStore.append(...args),
+        read: async (build) => {
+          if (failRead) { failRead = false; throw new Error("Runtime read interrupted"); }
+          return await fixture.buildStore.read(build);
         },
-      }],
-    });
-    assert.equal(reopened, false);
-    const absentBytes = new Uint8Array([10, 11, 12]);
-    const absentArtifact = {
-      kind: "blob" as const,
-      digest: `sha256:${createHash("sha256").update(absentBytes).digest("hex")}` as const,
-      size: absentBytes.byteLength,
-      mediaType: "application/octet-stream",
-    };
-    await assert.rejects(runtime.build({
-      id: "mismatched-source-artifact",
-      definition: definition(createGreetingBuild()),
-      attachments: [{
-        artifact: absentArtifact,
-        open: async () => (async function* () { yield new Uint8Array([0]); })(),
-      }],
-    }), /does not match its staged bytes/u);
-    await runtime.close();
+      }, components: [{ producers: [
+      { producer: producers.makePrompt, handler: () => ({ outputs: { prompt: { kind: "inline", value: "hello" } }, needs: {} }) },
+      { producer: producers.requestText, handler: () => ({ outputs: {}, needs: { generation: { prompt: "hello" } } }) },
+    ] }] });
+    let runtime = await openRuntime();
+    try {
+      const first = "bld_20260905T120000001Z_0000000001";
+      const second = "bld_20260905T120000002Z_0000000001";
+      const initial = createGreetingBuild({ targetOutputs: ["generated"] });
+      await runtime.build(durableBuildRequest(directory, first, initial));
+      await runtime.workOnce();
+      if (cancellation === "failed-build" || cancellation === "host-failure") {
+        if (cancellation === "failed-build") {
+          const snapshot = (await fixture.buildStore.read(first))!;
+          const { BuildMachine } = await import("@hypit/core");
+          const machine = new BuildMachine(snapshot.definition, snapshot.facts);
+          const operation = (await fixture.operationStore.list({ build: first }))[0]!;
+          const fact = machine.evaluate({ kind: "command-failed", command: operation.command, code: "EXAMPLE_FAILURE", message: "a sibling failed" });
+          assert.ok(fact); await fixture.buildStore.append(first, fact);
+        } else { failRead = true; }
+        await fixture.executionStore.claim("test-wake", Date.now() + 60_001);
+        await fixture.executionStore.releaseTurn(first, "test-wake", Date.now());
+      } else { await runtime.cancel(first); }
+      const completion = await runtime.workOnce();
+      const isFailure = cancellation === "failed-build" || cancellation === "host-failure";
+      assert.ok(completion !== undefined && "outcome" in completion);
+      assert.equal(completion.outcome, isFailure ? "failed" : "cancelled");
+      assert.equal((await fixture.executionStore.listCapacity()).length, 0);
+      assert.equal(await runtime.inspect(first), undefined);
+      const result = await new FileBuildResultRepository(join(directory, "results")).read(first);
+      assert.equal(result?.outcome, completion.outcome);
+      assert.equal(result?.operations?.[0]?.receipt?.id, "job-1");
+      assert.equal(result?.operations?.[0]?.status, isFailure ? "pending" : "cancelled");
+      assert.equal(polls, 0);
+      assert.equal(cancels, isFailure ? 0 : 1);
+      assert.equal(remoteActive, 1, "local termination does not pretend the cloud task stopped");
+      await runtime.build(durableBuildRequest(directory, second, initial));
+      await runtime.workOnce();
+      assert.equal(starts, 2, "a new Build can perform its own execution attempt");
+    } finally { await runtime.close(); await rm(directory, { recursive: true, force: true }); }
+  });
+}
+
+test("concurrent durable Builds preserve action capacity and outcomes across failures", { timeout: 30_000 }, async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-concurrent-builds-"));
+  const fixture = projectRuntimeFixture(directory);
+  let starts = 0, activeTasks = 0, peakTasks = 0, downloads = 0, peakDownloads = 0;
+  const checks = new Map<number, number>();
+  const provider = defineEndpointPackage({
+    module: providerModule, facet: "generation", instance: "concurrent", pool: "shared-account",
+    defaultConcurrency: 8,
+    actionLimits: { submit: { concurrency: 2 }, collect: { concurrency: 2 } },
+    capabilities: [{ capability: capabilities.generation, returns: types.generated, lifecycle: "asynchronous", endpoint: {
+      async start() {
+        const id = starts++;
+        activeTasks++;
+        peakTasks = Math.max(peakTasks, activeTasks);
+        await new Promise((resolve) => setTimeout(resolve, 2));
+        if (id % 10 === 0) {
+          activeTasks--;
+          throw new Error("submission timeout without receipt");
+        }
+        return { status: "pending", handle: { id }, receipt: { id: `remote-${id}` }, wakeAt: Date.now() + 3 };
+      },
+      poll({ handle }) {
+        const { id } = handle as { id: number };
+        const count = (checks.get(id) ?? 0) + 1;
+        checks.set(id, count);
+        if (id % 10 === 1) {
+          activeTasks--;
+          throw new Error("poll transport failed");
+        }
+        if (count < 10) return { status: "pending", handle, wakeAt: Date.now() + 3 };
+        activeTasks--;
+        return { status: "ready", handle };
+      },
+      async collect({ handle }) {
+        const { id } = handle as { id: number };
+        downloads++;
+        peakDownloads = Math.max(peakDownloads, downloads);
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 40));
+          if (id % 10 === 2) throw new Error("download failed");
+          return { status: "completed", result: { value: { kind: "inline", value: `generated-${id}` } } };
+        } finally { downloads--; }
+      },
+    } }],
+  });
+  const runtime = await createLocalRuntime({
+    ...fixture,
+    endpoints: [provider],
+    components: [{ producers: [
+      { producer: producers.makePrompt, handler: () => ({ outputs: { prompt: { kind: "inline", value: "hello" } }, needs: {} }) },
+      { producer: producers.requestText, handler: () => ({ outputs: {}, needs: { generation: { prompt: "hello" } } }) },
+    ] }],
+  });
+  const controller = new AbortController();
+  let work: Promise<void> | undefined;
+  try {
+    const ids: string[] = [];
+    for (let index = 0; index < 20; index++) {
+      const id = `bld_20260906T120000000Z_${String(index).padStart(10, "0")}`;
+      ids.push(id);
+      const request = durableBuildRequest(directory, id, createGreetingBuild({ targetOutputs: ["generated"] }));
+      await runtime.build(request);
+    }
+    const deadline = setTimeout(() => controller.abort(), 20_000);
+    try {
+      work = runtime.work({ idlePollMs: 2, signal: controller.signal });
+      while ((await fixture.executionStore.list()).length > 0 && !controller.signal.aborted) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      controller.abort();
+      await work;
+    } finally { clearTimeout(deadline); }
+    assert.equal((await fixture.executionStore.list()).length, 0, "every attempt must finish, including failures");
+    assert.equal((await fixture.executionStore.listCapacity()).length, 0);
+    assert.equal(starts, 20, "each Build submits once");
+    assert.ok(peakTasks <= 8 && peakTasks > 1, `remote task concurrency: ${peakTasks}`);
+    assert.ok(peakDownloads === 2, `download concurrency: ${peakDownloads}`);
+    const results = new FileBuildResultRepository(join(directory, "results"));
+    const manifests = await Promise.all(ids.map((id) => results.read(id)));
+    assert.equal(manifests.filter((item) => item?.outcome === "complete").length, 14);
+    assert.equal(manifests.filter((item) => item?.outcome === "failed").length, 6);
+    assert.equal(manifests.filter((item) => item?.operations?.[0]?.receipt !== undefined).length, 18);
+    assert.ok(manifests.filter((item) => item?.outcome === "failed").every((item) => item!.failure !== undefined));
   } finally {
+    controller.abort();
+    await work;
+    await runtime.close();
     await rm(directory, { recursive: true, force: true });
   }
 });

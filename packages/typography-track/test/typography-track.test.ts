@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 import { projectSelectionWindow } from "../../../test/temporal-fixture.js";
 
@@ -61,7 +61,7 @@ const semantic = semanticTrackFixture(space, { anchors: [
 const exactTestFont: FontArtifactRef = {
   sources: [{ artifact: {
     kind: "blob",
-    digest: fixtureDigest("typography-track-test-font"),
+    resource: fixtureResource("typography-track-test-font"),
     size: 1,
     mediaType: "font/woff2",
   } }],
@@ -72,7 +72,7 @@ const exactTestFont: FontArtifactRef = {
 const exactTestSurface: CompositableSurfaceRef = {
   artifact: {
     kind: "blob",
-    digest: fixtureDigest("typography-track-test-surface"),
+    resource: fixtureResource("typography-track-test-surface"),
     size: 1,
     mediaType: "image/png",
   },
@@ -225,7 +225,7 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
     }],
   });
   const material: CompositableSurfaceRef = {
-    artifact: { kind: "blob", digest: fixtureDigest("text-mask-material"), size: 1, mediaType: "image/png" },
+    artifact: { kind: "blob", resource: fixtureResource("text-mask-material"), size: 1, mediaType: "image/png" },
     width: 800, height: 240, colorSpace: "srgb", alphaMode: "straight", timing: { kind: "still" },
   };
   const track = renderTextMaskTrack(space, program, material, sealTextMaskSpec({

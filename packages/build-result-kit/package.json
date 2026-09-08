@@ -1,0 +1,15 @@
+{
+  "name": "@hypit/build-result-kit",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hypit/build-result": "workspace:*",
+    "@hypit/host": "workspace:*",
+    "@hypit/protocol": "workspace:*"
+  }
+}

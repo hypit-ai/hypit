@@ -19,8 +19,8 @@
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
   <import as="recipes" source="./recipes.svs"/>
-  <import as="broll-kit" source="./kits/broll-v1.svs"/>
-  <import as="podcast-kit" source="./kits/podcast-v1.svs"/>
+  <import as="broll-kit" source="@hypit/seedance-kits/broll"/>
+  <import as="podcast-kit" source="@hypit/seedance-kits/podcast"/>
 
   <script id="story">
     <opening-question>
@@ -90,35 +90,35 @@
 
   <gpt:Image id="idoltboy" prompt={idoltboy-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={tboy}/>
-    <gpt:Reference image={idol}/>
+    <gpt:Reference image={tboy.image}/>
+    <gpt:Reference image={idol.image}/>
   </gpt:Image>
 
   <gpt:Image id="idol-hold" prompt={idol-hold-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={idol}/>
-    <gpt:Reference image={retinol}/>
+    <gpt:Reference image={idol.image}/>
+    <gpt:Reference image={retinol.image}/>
   </gpt:Image>
 
   <gpt:Image id="tboy-hold" prompt={tboy-hold-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={tboy}/>
-    <gpt:Reference image={retinol}/>
+    <gpt:Reference image={tboy.image}/>
+    <gpt:Reference image={retinol.image}/>
   </gpt:Image>
 
   <gpt:Image id="cleanser" prompt={cleanser-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={idol}/>
+    <gpt:Reference image={idol.image}/>
   </gpt:Image>
 
   <gpt:Image id="mask-selfie" prompt={mask-selfie-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={idol}/>
+    <gpt:Reference image={idol.image}/>
   </gpt:Image>
 
   <gpt:Image id="alarm-phone" prompt={alarm-phone-prompt}
     aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={idol}/>
+    <gpt:Reference image={idol.image}/>
   </gpt:Image>
 
   <text:Render id="lifestyle-montage-prompt"
@@ -157,7 +157,7 @@
     prompt={daily-retinol-take-prompt} duration="8"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={idol-hold.image}/>
-    <seedance:Reference image={tboy}/>
+    <seedance:Reference image={tboy.image}/>
     <seedance:Reference audio={idol-voice}/>
     <seedance:Reference audio={tboy-voice}/>
   </seedance:ReferenceVideo>

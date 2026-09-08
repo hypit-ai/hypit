@@ -29,5 +29,5 @@ Then configure the Provider with the environment's interpreter:
 
 The Provider starts one bounded, shell-free Python process for each admitted Need. The ordinary
 SVML Runtime Scheduler owns concurrency. The Python process reads only its explicit temporary input
-and Program files and writes one explicit output image; it has no network, artifact-store, author
+and Program files and writes one explicit output image; it has no network, Resource Store, author
 source or BuildState API.

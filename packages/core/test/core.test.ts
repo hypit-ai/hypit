@@ -4,6 +4,7 @@ import {
   BuildMachine,
   defineBuild,
   reduce,
+  resolveNeedCommand,
 } from "@hypit/core";
 import type {
   CommandResult,
@@ -90,7 +91,13 @@ test("Core executes a finite plan through an external Need and completion", () =
 
 test("Build Definition plus admitted Facts restores the same next Command", () => {
   const initial = createGreetingBuild();
-  const definition = defineBuild(initial.program, initial.graph, initial.request);
+  const authored = new Set(initial.program.records.map((record) => record.id));
+  const definition = defineBuild({
+    program: initial.program,
+    initialRecords: initial.records.filter((record) => !authored.has(record.id)),
+    plan: initial.plan,
+    targets: initial.targets,
+  });
   const machine = new BuildMachine(definition);
   const facts: BuildFact[] = [];
   const prompt = machine.commands()[0];
@@ -119,4 +126,34 @@ test("Build Definition plus admitted Facts restores the same next Command", () =
   );
   assert.deepEqual(restored.commands(), machine.commands());
   assert.equal(restored.commands()[0]?.kind, "fulfill-need");
+});
+
+test("scheduling is incremental: a ready Producer runs while an unrelated Need is still outstanding", () => {
+  let current = onlyProducer(createGreetingBuild({ includeSideTarget: true }));
+  let state = reduce(current.state, producerEvent(current.command, { prompt: { kind: "inline", value: "Greet Ada" } }));
+  const request = state.outstanding.find((item): item is InvokeProducerCommand =>
+    item.kind === "invoke-producer" && item.producer.name === "request-text");
+  const side = state.outstanding.find((item): item is InvokeProducerCommand =>
+    item.kind === "invoke-producer" && item.producer.name === "placeholder-text");
+  assert.ok(request);
+  assert.ok(side);
+  // The request step emits its Need; the side chain keeps moving without waiting for it.
+  state = reduce(state, producerEvent(request, {}, { generation: { prompt: "Greet Ada" } }));
+  state = reduce(state, producerEvent(side, { generated: { kind: "inline", value: "Hi, Ada" } }));
+  assert.ok(state.outstanding.some((item) => item.kind === "fulfill-need"), "the Need is still outstanding");
+  const assembleSide = state.outstanding.find((item): item is InvokeProducerCommand =>
+    item.kind === "invoke-producer" && item.producer.name === "assemble");
+  assert.ok(assembleSide, "the side chain's next Producer was scheduled behind the outstanding Need");
+});
+
+
+test("Core resolves an existing Need Command after failure without restarting scheduling", () => {
+  const { state, command } = reachNeed();
+  assert.deepEqual(resolveNeedCommand(state, command.id), command);
+  const failed = reduce(state, { kind: "command-failed", command: command.id, code: "EXAMPLE", message: "stopped" });
+  assert.equal(failed.status, "failed");
+  assert.equal(failed.outstanding.length, 0);
+  assert.deepEqual(resolveNeedCommand(failed, command.id), command);
+  assert.equal(resolveNeedCommand(failed, "absent-command"), undefined);
+  assert.equal(failed.outstanding.length, 0);
 });

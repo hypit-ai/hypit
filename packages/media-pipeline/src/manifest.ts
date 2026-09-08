@@ -21,10 +21,10 @@ export const mediaPipelineTypes = {
   audioExtractionRequest: { module: mediaPipelineModuleRef, name: "AudioExtractionRequest" },
   frameExtractionRequest: { module: mediaPipelineModuleRef, name: "FrameExtractionRequest" },
   stillVideoRequest: { module: mediaPipelineModuleRef, name: "StillVideoRequest" },
+  stillVideoLayout: { module: mediaPipelineModuleRef, name: "StillVideoLayout" },
 } satisfies Record<string, TypeRef>;
 export const mediaPipelineCapabilities = {
   inspect: { module: mediaPipelineModuleRef, name: "inspect-media" },
-  prepare: { module: mediaPipelineModuleRef, name: "prepare-media" },
   normalize: { module: mediaPipelineModuleRef, name: "normalize-media" },
   transform: { module: mediaPipelineModuleRef, name: "transform-media" },
   extractAudio: { module: mediaPipelineModuleRef, name: "extract-media-audio" },
@@ -36,22 +36,22 @@ export const mediaPipelineCapabilities = {
 } satisfies Record<string, CapabilityRef>;
 export const mediaPipelineProducers = {
   inspect: { module: mediaPipelineModuleRef, name: "request-media-inspection" },
-  prepare: { module: mediaPipelineModuleRef, name: "request-media-preparation" },
   select: { module: mediaPipelineModuleRef, name: "select-media-streams" },
   normalize: { module: mediaPipelineModuleRef, name: "request-media-normalization" },
   transform: { module: mediaPipelineModuleRef, name: "request-media-transform" },
   extractAudio: { module: mediaPipelineModuleRef, name: "request-audio-extraction" },
   extractFrame: { module: mediaPipelineModuleRef, name: "request-frame-extraction" },
+  clipTimeLayout: { module: mediaPipelineModuleRef, name: "clip-time-still-layout" },
   planStill: { module: mediaPipelineModuleRef, name: "plan-still-video" },
   renderStill: { module: mediaPipelineModuleRef, name: "request-still-video" },
+  bindStill: { module: mediaPipelineModuleRef, name: "bind-still-video-source" },
   projectSpeechEvidenceAudio: { module: mediaPipelineModuleRef, name: "request-speech-evidence-audio" },
   planAudio: { module: mediaPipelineModuleRef, name: "compile-audio-program" },
   renderAudio: { module: mediaPipelineModuleRef, name: "request-audio-render" },
+  renderAudioRange: { module: mediaPipelineModuleRef, name: "request-audio-range" },
   mux: { module: mediaPipelineModuleRef, name: "request-media-mux" },
   projectMuxed: { module: mediaPipelineModuleRef, name: "project-muxed-media" },
 } satisfies Record<string, ProducerRef>;
-
-export const mediaPipelineDependency = { module: mediaPipelineModuleRef } as const;
 
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const mode = (name: string): ValueSchema => ({
@@ -164,6 +164,7 @@ export const stillVideoRequestSchema: ValueSchema = {
       },
     } },
     frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
+    guide: { optional: true, schema: { kind: "literal", value: "clip-time" } },
     output: { schema: {
       kind: "object",
       fields: {
@@ -172,6 +173,30 @@ export const stillVideoRequestSchema: ValueSchema = {
         pixelFormat: { schema: { kind: "literal", value: "yuv420p" } },
       },
     } },
+    segments: { schema: { kind: "array", items: {
+      kind: "object",
+      fields: {
+        startFrame: { schema: { kind: "number", integer: true, minimum: 0 } },
+        endFrameExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
+        source: { optional: true, schema: {
+          kind: "object",
+          fields: {
+            kind: { schema: { kind: "literal", value: "blob" } },
+            resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
+            size: { schema: { kind: "number", integer: true, minimum: 0 } },
+            mediaType: { schema: { kind: "string", minLength: 6 } },
+          },
+        } },
+      },
+    } } },
+  },
+};
+
+export const stillVideoLayoutSchema: ValueSchema = {
+  kind: "object",
+  fields: {
+    weights: { schema: { kind: "array", items: { kind: "number", minimum: 0 } } },
+    guide: { optional: true, schema: { kind: "literal", value: "clip-time" } },
   },
 };
 
@@ -179,7 +204,7 @@ const blobRefSchema: ValueSchema = {
   kind: "object",
   fields: {
     kind: { schema: { kind: "literal", value: "blob" } },
-    digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
+    resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
     size: { schema: { kind: "number", integer: true, minimum: 0 } },
     mediaType: { schema: { kind: "literal", value: "audio/wav" } },
   },
@@ -269,25 +294,43 @@ export const mediaPipelineMarkupSurfaces = [
     },
     {
       name: "still-video", tag: "StillVideo", mode: "structured",
-      outputs: [mediaPipelineTypes.stillVideoRequest, artifactTypes.blob],
+      outputs: [speechTypes.duration, mediaPipelineTypes.stillVideoLayout, mediaPipelineTypes.stillVideoRequest, artifactTypes.blob],
       vocabulary: {
-        summary: "Encodes one authored image as an ordinary silent MP4 Blob on an explicit duration and frame clock.",
+        summary: "Spreads one or more authored images over an explicit duration as an ordinary video-only MP4 Blob on a frame clock.",
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names the still-video operation and the MP4 Artifact it publishes." },
-          { name: "source", kind: "reference", required: true, accepts: [artifactTypes.blob],
-            summary: "Selects the authored image whose first decoded frame is held for the full video." },
-          { name: "duration", kind: "reference", required: true, accepts: [speechTypes.duration],
-            summary: "Selects the positive duration used to establish the video's finite frame count." },
+          { name: "source", kind: "reference", required: false, accepts: [artifactTypes.blob],
+            summary: "Selects the one authored image held for the full video; write Still children instead for several images." },
+          { name: "duration", kind: "literal", required: true,
+            summary: "Sets the video's length in seconds, such as 6 or 2.5s; choose it from the visual passage this held image is meant to carry." },
           { name: "clock", kind: "reference", required: true, accepts: [programSpaceTypes.clock],
             summary: "Selects the frame clock used by the generated MP4." },
+          { name: "guide", kind: "literal", required: false, values: ["clip-time"],
+            summary: "Burns one clip-local diagnostic band with timecode, frame count and a progress ruler into the held video." },
+        ],
+        children: [
+          { tag: "Still", cardinality: "many",
+            summary: "One image in authored order; the duration is divided among the Still children by weight, equally unless weights say otherwise.",
+            attributes: [
+              { name: "source", kind: "reference", required: true, accepts: [artifactTypes.blob],
+                summary: "Selects the authored image whose first decoded frame is held for this share." },
+              { name: "weight", kind: "literal", required: false,
+                summary: "Sets this image's share of the duration relative to its siblings, such as 2; every Still weighs 1 unless written." },
+            ] },
         ],
         ports: [{ name: "video", type: artifactTypes.blob,
-          summary: "The ordinary silent MP4 Artifact, addressed as `<id>.video`." }],
-        example: `<media:StillVideo id="opening-still" source={opening-head}
-  duration={opening-duration.duration} clock={clock}/>`,
+          summary: "The ordinary video-only MP4 Artifact, addressed as `<id>.video`." }],
+        example: `<media:StillVideo id="kitchen-stills" duration="6" clock={clock}>
+  <media:Still source={counter}/>
+  <media:Still source={basil} weight="2"/>
+  <media:Still source={board}/>
+</media:StillVideo>`,
         notes: [
+          "Write exactly one of source or Still children. Frames are whole: each image gets the floor of its share and the leftover frames go to the largest remainders, so the split is deterministic and every image holds at least one frame.",
+          "Images of different sizes are fitted into the first image's frame, letterboxed on black.",
           "The result is a normal video Blob, not SynchronizedMedia and not a SemanticTake.",
+          "The optional clip-time guide describes this clip's local frame domain, not its later position in a Film.",
           "Use Normalize afterward exactly as for generated or imported moving video.",
           "Encoding is a render-still-video Need fulfilled by the selected media Provider; this Surface never invokes FFmpeg itself.",
         ],
@@ -429,10 +472,12 @@ export const mediaPipelineManifest: ModuleManifest = {
     {
       name: mediaPipelineTypes.stillVideoRequest.name,
     },
+    {
+      name: mediaPipelineTypes.stillVideoLayout.name,
+    },
   ],
   capabilities: [
     { name: mediaPipelineCapabilities.inspect.name, returns: mediaTypes.inspection },
-    { name: mediaPipelineCapabilities.prepare.name, returns: artifactTypes.blob },
     { name: mediaPipelineCapabilities.normalize.name, returns: mediaTypes.synchronized },
     { name: mediaPipelineCapabilities.transform.name, returns: artifactTypes.blob },
     { name: mediaPipelineCapabilities.extractAudio.name, returns: artifactTypes.blob },
@@ -452,12 +497,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.inspect,
         returns: mediaTypes.inspection,
       }],
-    },
-    {
-      name: mediaPipelineProducers.prepare.name,
-      inputs: [{ name: "source", type: artifactTypes.blob }],
-      outputs: [],
-      needs: [{ name: "artifact", capability: mediaPipelineCapabilities.prepare, returns: artifactTypes.blob }],
     },
     {
       name: mediaPipelineProducers.select.name,
@@ -528,10 +567,26 @@ export const mediaPipelineManifest: ModuleManifest = {
       }],
     },
     {
+      name: mediaPipelineProducers.clipTimeLayout.name,
+      inputs: [],
+      outputs: [{ name: "layout", type: mediaPipelineTypes.stillVideoLayout }],
+      needs: [],
+    },
+    {
       name: mediaPipelineProducers.planStill.name,
       inputs: [
         { name: "duration", type: speechTypes.duration },
         { name: "clock", type: programSpaceTypes.clock },
+        { name: "layout", type: mediaPipelineTypes.stillVideoLayout },
+      ],
+      outputs: [{ name: "request", type: mediaPipelineTypes.stillVideoRequest }],
+      needs: [],
+    },
+    {
+      name: mediaPipelineProducers.bindStill.name,
+      inputs: [
+        { name: "request", type: mediaPipelineTypes.stillVideoRequest },
+        { name: "source", type: artifactTypes.blob },
       ],
       outputs: [{ name: "request", type: mediaPipelineTypes.stillVideoRequest }],
       needs: [],
@@ -539,7 +594,6 @@ export const mediaPipelineManifest: ModuleManifest = {
     {
       name: mediaPipelineProducers.renderStill.name,
       inputs: [
-        { name: "source", type: artifactTypes.blob },
         { name: "request", type: mediaPipelineTypes.stillVideoRequest },
       ],
       outputs: [],
@@ -571,6 +625,16 @@ export const mediaPipelineManifest: ModuleManifest = {
     {
       name: mediaPipelineProducers.renderAudio.name,
       inputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }],
+      outputs: [],
+      needs: [{
+        name: "audio",
+        capability: mediaPipelineCapabilities.renderAudio,
+        returns: mediaTypes.timelineAudio,
+      }],
+    },
+    {
+      name: mediaPipelineProducers.renderAudioRange.name,
+      inputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }, { name: "range", type: mediaTypes.frameRange }],
       outputs: [],
       needs: [{
         name: "audio",

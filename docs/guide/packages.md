@@ -39,7 +39,7 @@ selects its own Frontend in its mandatory header; no central parser knows every 
 @hypit/source                mandatory Source Header
 @hypit/elaborator            author declarations and Fragment expansion
 @hypit/run                   syntax-neutral Run Graph
-@hypit/validation            semantic admission
+@hypit/validation            semantic validation
 @hypit/host                  opaque Host-facet envelope
 @hypit/workspace             replaceable Source/Asset session
 @hypit/compiler-node         reference Node compiler Host
@@ -57,7 +57,7 @@ Reusable values and deterministic building blocks. They support video authoring 
 film's creative structure or call an external service.
 
 ```text
-@hypit/artifact              content-addressed bytes
+@hypit/artifact              Runtime-referenced byte values
 @hypit/component-kit         Producer and validator registration
 @hypit/text                  graph-native text templates
 @hypit/media                 media values
@@ -90,8 +90,8 @@ specific Provider deployment.
 @hypit/gpt-image             GPT Image model family
 @hypit/nano-banana           Nano Banana model family
 @hypit/seedream              Seedream model family
-@hypit/mimo-tts              Xiaomi MiMo VoiceDesign model + author Surface
-@hypit/estimate              duration estimation
+@hypit/mimo-speech           Xiaomi MiMo Voice Design and Voice Clone models + author Surfaces
+@hypit/estimate              creation-time speech measurement (hypit measure) and the estimate policy type
 @hypit/speech                shared speech products
 @hypit/speech-evidence       acoustic evidence products
 @hypit/speech-alignment      speech alignment
@@ -125,20 +125,21 @@ never on exact-model packages or the CLI.
 
 ```text
 @hypit/provider-kie                  KIE generation plus background removal
-@hypit/provider-hypihub              HypiHub paid generation and Gemini VLM gateway
+@hypit/provider-hypihub              HypiHub generation, WhisperX gateway
 @hypit/provider-media-local          local ffprobe/ffmpeg
 @hypit/provider-whisperx-local       local WhisperX service
 @hypit/provider-hyperframes-local    local Chrome rendering
 @hypit/provider-hyperframes-aws-lambda asynchronous distributed rendering
 @hypit/provider-image-opencv-local   local OpenCV Raster execution
 @hypit/provider-media-aws-lambda     synchronous AWS media execution
-@hypit/provider-xiaomi-mimo           official Xiaomi MiMo VoiceDesign API
+@hypit/provider-xiaomi-mimo           official Xiaomi MiMo Voice Design and Voice Clone API
 ```
 
 ### Layer 6: Runtime
 
-Domain-neutral execution ports plus replaceable deployment implementations. Runtime packages own
-queues, stores, credentials and process lifecycle; they never define author syntax.
+Domain-neutral execution ports plus replaceable deployment implementations. The local Runtime owns
+its queue, active stores and process lifecycle as one implementation; credentials, Endpoints and the
+project Build Result repository are the intentional package-selected boundaries.
 
 ```text
 @hypit/runtime               Scheduler, Worker and Store ports
@@ -148,8 +149,12 @@ queues, stores, credentials and process lifecycle; they never define author synt
 @hypit/runtime-host-node     Node Runtime Host ABI
 @hypit/runtime-local         local Worker and assembly
 @hypit/store-sqlite          SQLite state
-@hypit/artifact-store-fs     filesystem Artifacts
-@hypit/artifact-store-s3     S3 Artifacts
+@hypit/resource-store-fs     internal filesystem working Resources
+@hypit/resource-store-s3     library for Runtime implementations needing S3 working Resources
+@hypit/build-result          storage-neutral project Result model
+@hypit/build-result-kit      Build Result repository package ABI
+@hypit/build-result-fs       default project Result repository
+@hypit/build-result-s3       optional S3-compatible project Result repository
 @hypit/credential-store-env  environment credentials
 @hypit/credential-store-os      macOS Keychain or Windows Credential Locker
 ```
@@ -237,8 +242,10 @@ A physical package may expose independently activated facets:
 | `author` | Frontend, Surface, Graph Fragment | author vocabulary only | source `<import>` through the compiler Host |
 | `compute` | deterministic Producer, Type Validator | pure computation | compiler Host |
 | `endpoint` | privileged external capability | network, filesystem, process, credentials | Runtime Profile |
-| `infrastructure` | Scheduler, Worker and Store implementation | persistence, scheduling | Runtime Profile |
-| `application` | Host-specific interpretation such as a Studio Track Companion | only that application's UI/operations | explicit application profile |
+| `credential-store` | resolves explicitly named credentials | secret storage | Runtime Profile |
+| `result-repository` | completed Build Results | project history storage | project `hypit.results.json` |
+| `infrastructure` | Runtime Host, Scheduler and Worker implementation | persistence, scheduling | application Distribution |
+| `application` | Host-specific interpretation such as a Studio Track Companion | only that application's UI/operations | Distribution or selected Source package |
 
 A source `<import>` activates only author facets. It never grants network, filesystem, process,
 credential or queue authority.
@@ -246,16 +253,19 @@ credential or queue authority.
 ## Package selection
 
 Hypit does not maintain a package registry or a second package-resolution layer. npm or pnpm
-installs packages and owns their versions and integrity. Hypit has two explicit selection paths:
+installs packages and owns their versions and integrity. Each owner has one explicit selection path:
 
 | Selection | Packages activated |
 |---|---|
+| Application Distribution | Runtime Host and trusted bootstrap packages |
 | Source imports | Frontends, Surfaces, Producers and Validators |
-| Runtime Profile `use` | Runtime Hosts, infrastructure and Provider Endpoints |
-| Studio Profile `companionPackages` | project Companion packages selected for that Studio session |
+| Runtime Profile `credentials.*.use` / `endpoints.*.use` | Credential Stores and Provider Endpoints |
+| Project Result config `use` | one Build Result Repository |
+| Studio Distribution + selected Source packages | official Companions plus project Companions used by that Source closure |
 
 A Source import never grants network, filesystem, process, credential or queue authority. Those
-remain available only to packages explicitly selected by the Runtime Profile.
+remain available only to the Runtime Host and packages explicitly selected at environmental
+boundaries.
 
 ### Logical package addresses and Source discovery
 
@@ -274,15 +284,16 @@ Frontend implementations are not privileged fields in the physical package forma
 the ordinary `hypit.source-frontend@1` Host facet, exactly as Run Fragments, Markup Surfaces and
 Runtime Adapters advertise their own Host ABIs. Only the Source Host interprets that facet.
 
-Runtime Profiles follow the same rule. Each `use` selects a Runtime Host, Endpoint Adapter or
-Runtime Infrastructure ABI plus a logical name. A physical npm package advertises that logical
-offer. The generic CLI therefore
-does not contain a Provider registry, and different Adapter kinds may share
-a logical spelling without colliding.
+Runtime Profiles follow the same rule for the two facets they actually select. Each `use` names one
+Credential Store or Endpoint Adapter offer. Project Result configuration independently selects one
+Repository offer. The application Distribution supplies the Runtime Host itself; it is not repeated
+as a fake selector inside that Host's Profile. The generic CLI therefore contains neither a Provider
+registry nor a hard-coded Result Repository, and different Adapter kinds may share a logical spelling
+without colliding.
 
 The loader never downloads packages and never scans unrelated installed dependencies for plugins.
-It loads only packages selected by Source discovery or the Runtime Profile, plus exact Module
-dependencies declared by those packages.
+It loads only packages selected by Source discovery, environmental configuration or the application
+Distribution, plus exact Module dependencies declared by those packages.
 
 An authored project is a separate directory and Git/workspace boundary. Its explicit packages are
 resolved from its own `packages/` or installation; the active tool Distribution supplies the

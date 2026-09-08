@@ -1,6 +1,6 @@
 import type { ObjectFieldSchema, ValueSchema } from "@hypit/protocol";
 
-export const generationDigestSchema = {
+export const generationResourceSchema = {
   kind: "string",
   minLength: 71,
   maxLength: 71,
@@ -16,7 +16,7 @@ export const generationBlobRefSchema = {
   kind: "object",
   fields: {
     kind: { schema: { kind: "literal", value: "blob" } },
-    digest: { schema: generationDigestSchema },
+    resource: { schema: generationResourceSchema },
     size: { schema: { kind: "number", integer: true, minimum: 0 } },
     mediaType: { schema: { kind: "string", minLength: 1, maxLength: 255 } },
   },

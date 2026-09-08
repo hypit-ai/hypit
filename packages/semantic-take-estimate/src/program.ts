@@ -7,7 +7,7 @@ import type { SpeechEstimatePolicy } from "@hypit/estimate";
 import { verifySynchronizedMedia } from "@hypit/media";
 import type { SynchronizedMedia } from "@hypit/media";
 import type { Narrative, NarrativeExcerpt } from "@hypit/narrative";
-import { materializeSemanticTake } from "@hypit/speech";
+import { materializeSegmentBoundaryTake, materializeSemanticTake } from "@hypit/speech";
 import type { SemanticTake, SemanticTakeTimedToken, SemanticTakeTiming } from "@hypit/speech";
 
 const EDGE_GAP_SECONDS = 0.12;
@@ -22,7 +22,6 @@ function segmentTokens(narrative: Narrative, excerpt: NarrativeExcerpt): readonl
     throw new Error(`NarrativeExcerpt ${excerpt.id} does not describe its authored Segment.`);
   }
   const tokens = narrative.tokens.slice(segment.tokenStart, segment.tokenEndExclusive);
-  if (tokens.length === 0) throw new Error(`Estimated SemanticTake Segment ${excerpt.id} contains no speech Tokens.`);
   return tokens;
 }
 
@@ -49,6 +48,11 @@ export function estimateSemanticTakeTiming(
   verifySynchronizedMedia(media);
   assertSpeechEstimatePolicy(policy);
   const tokens = segmentTokens(narrative, excerpt);
+  if (tokens.length === 0) {
+    const take = materializeSegmentBoundaryTake(narrative, excerpt, media);
+    return { tokens: take.tokens, anchors: take.anchors };
+  }
+  const segment = narrative.segments.find((candidate) => candidate.id === excerpt.id)!;
   const rate = media.timeline.frameRate.numerator / media.timeline.frameRate.denominator;
   const edgeGap = Math.max(1, Math.round(EDGE_GAP_SECONDS * rate));
   const wordGap = Math.max(1, Math.round(WORD_GAP_SECONDS * rate));
@@ -79,7 +83,6 @@ export function estimateSemanticTakeTiming(
     throw new Error("Estimated SemanticTake timing allocation did not close over its frame domain.");
   }
 
-  const segment = narrative.segments.find((candidate) => candidate.id === excerpt.id)!;
   const frameByAnchor = new Map<string, number>([
     [segment.startAnchorId, 0],
     [segment.endAnchorId, media.timeline.frameCount],

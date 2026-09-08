@@ -1,4 +1,5 @@
 export * from "./canonical.js";
+export * from "./build-id.js";
 export * from "./error.js";
 export { modulePackageAbi } from "./module.js";
 export { blobRefObjectSchema } from "./value.js";

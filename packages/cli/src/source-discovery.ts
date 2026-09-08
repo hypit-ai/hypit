@@ -3,7 +3,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 import { authorFrontendsFromHostFacets, prepareAuthorSource } from "@hypit/elaborator";
 import type { AuthorFrontend } from "@hypit/elaborator";
-import { physicalPackageName } from "@hypit/package-loader-node";
+import { physicalPackageName, resolveNodePackageSource } from "@hypit/package-loader-node";
 import type { LogicalPackageAddress, LoadedPackage } from "@hypit/package-loader-node";
 import { modulePackageAbi } from "@hypit/protocol";
 import { prepareRunSource, runFragmentHostAbi, runFrontendsFromHostFacets } from "@hypit/run";
@@ -21,13 +21,6 @@ function selectedPackage(request: string): string {
   return physicalPackageName(request);
 }
 
-function relativeSource(importer: string, request: string): string {
-  if (!request.startsWith("./") && !request.startsWith("../")) {
-    throw new Error(`Source import ${request} in ${importer} must be relative`);
-  }
-  return resolve(dirname(importer), request);
-}
-
 function addressKey(value: LogicalPackageAddress): string {
   return `${value.abi}\u0000${value.name}`;
 }
@@ -41,6 +34,8 @@ export async function discoverSourcePackages(
   sourcePath: string,
   options: {
     readonly workspaceRoot?: string;
+    readonly packageRoot?: string;
+    readonly distributionPackageRoot?: string;
     readonly packages?: readonly LoadedPackage[];
     readonly bootstrapAuthorFrontends?: readonly AuthorFrontend[];
     readonly bootstrapRunFrontends?: readonly RunFrontend[];
@@ -48,6 +43,7 @@ export async function discoverSourcePackages(
 ): Promise<{ readonly selected: readonly string[]; readonly logical: readonly LogicalPackageAddress[] }> {
   const canonicalSource = await realpath(resolve(sourcePath));
   const root = await realpath(resolve(options.workspaceRoot ?? dirname(canonicalSource)));
+  const packageRoot = resolve(options.packageRoot ?? root);
   if (!isWithin(root, canonicalSource)) throw new Error(`Source ${canonicalSource} is outside workspace root ${root}`);
 
   const packages = options.packages ?? [];
@@ -82,13 +78,35 @@ export async function discoverSourcePackages(
     logical.set(addressKey(address), address);
     selected.add(physical ?? selectedPackage(address.name));
   };
-  const discover = async (path: string): Promise<void> => {
+  const resolveImportedSource = (
+    importer: string,
+    importerRoot: string,
+    request: string,
+  ): { readonly source: string; readonly root: string } => {
+    if (request.startsWith("./") || request.startsWith("../")) {
+      return { source: resolve(dirname(importer), request), root: importerRoot };
+    }
+    const located = resolveNodePackageSource(request, {
+      from: importer,
+      workspaceRoots: [packageRoot],
+      ...(options.distributionPackageRoot === undefined
+        ? {}
+        : { distributionRoots: [options.distributionPackageRoot] }),
+      externalRoots: [],
+      allowExternal: false,
+    });
+    return { source: located.source, root: located.root };
+  };
+  const discover = async (path: string, sourceRoot: string): Promise<void> => {
     const canonical = await realpath(path);
-    if (!isWithin(root, canonical)) throw new Error(`Source ${canonical} is outside workspace root ${root}`);
+    const canonicalRoot = await realpath(sourceRoot);
+    if (!isWithin(canonicalRoot, canonical)) {
+      throw new Error(`Source ${canonical} is outside its source root ${canonicalRoot}`);
+    }
     if (visited.has(canonical)) return;
     visited.add(canonical);
     const text = await readFile(canonical, "utf8");
-    const name = relative(root, canonical);
+    const name = relative(canonicalRoot, canonical);
     const header = parseSourceHeader(name, text);
     const authors = authorFrontends.filter((item) => item.frontend.id === header.using);
     const runs = runFrontends.filter((item) => item.frontend.id === header.using);
@@ -106,7 +124,10 @@ export async function discoverSourcePackages(
       for (const request of discovery.modules) {
         requireLogical({ abi: modulePackageAbi, name: request }, moduleOwners.get(request));
       }
-      for (const child of discovery.sources) await discover(relativeSource(canonical, child.from));
+      for (const child of discovery.sources) {
+        const imported = resolveImportedSource(canonical, canonicalRoot, child.from);
+        await discover(imported.source, imported.root);
+      }
       return;
     }
     const owner = runs[0]!;
@@ -117,10 +138,11 @@ export async function discoverSourcePackages(
     for (const item of discovery.imports) {
       requireLogical({ abi: runFragmentHostAbi, name: item.from }, fragmentOwners.get(item.from));
     }
-    await discover(relativeSource(canonical, discovery.author.source));
+    const imported = resolveImportedSource(canonical, canonicalRoot, discovery.author.source);
+    await discover(imported.source, imported.root);
   };
 
-  await discover(canonicalSource);
+  await discover(canonicalSource, root);
   return {
     selected: [...selected].sort(),
     logical: [...logical.values()].sort((left, right) => addressKey(left).localeCompare(addressKey(right))),

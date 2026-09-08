@@ -74,7 +74,7 @@ const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const blob = object({
   kind: { schema: { kind: "literal", value: "blob" } },
-  digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
+  resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
   size: { schema: unsignedInteger },
   mediaType: { schema: string },
 });
@@ -94,7 +94,7 @@ const paint: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "linear-gradient" } }, angleDeg: { schema: number }, stops: { schema: stops } }),
   object({ kind: { schema: { kind: "literal", value: "radial-gradient" } }, center: { schema: object({ x: { schema: unsigned }, y: { schema: unsigned } }) }, stops: { schema: stops } }),
 ] };
-const appearance = object({
+export const mediaSampleAppearanceSchema: ValueSchema = object({
   opacity: { schema: unsigned },
   filter: { schema: object({
     blurPx: { schema: unsigned }, brightness: { schema: unsigned }, contrast: { schema: unsigned }, saturation: { schema: unsigned },
@@ -105,7 +105,9 @@ const samplingKeyframe = object({
   offsetX: { schema: number }, offsetY: { schema: number }, rotationDeg: { schema: number },
   easing: { schema: { kind: "string", enum: ["linear", "ease-in", "ease-out", "ease-in-out"] }, optional: true },
 });
-const samplingMotion = object({ keyframes: { schema: { kind: "array", minItems: 2, items: samplingKeyframe } } });
+export const mediaSamplingMotionSchema: ValueSchema = object({
+  keyframes: { schema: { kind: "array", minItems: 2, items: samplingKeyframe } },
+});
 export const mediaPaintLayerSpecSchema: ValueSchema = object({
 
   id: { schema: string }, paint: { schema: paint }, opacity: { schema: unsigned },
@@ -113,7 +115,7 @@ export const mediaPaintLayerSpecSchema: ValueSchema = object({
 export const mediaSampleLayerSpecSchema: ValueSchema = object({
 
   id: { schema: string }, trim: { schema: trim, optional: true }, occupancy: { schema: occupancy, optional: true },
-  appearance: { schema: appearance }, samplingMotion: { schema: samplingMotion, optional: true },
+  appearance: { schema: mediaSampleAppearanceSchema }, samplingMotion: { schema: mediaSamplingMotionSchema, optional: true },
 });
 const audioSource = object({ artifact: { schema: blob }, sampleFrames: { schema: positiveInteger } });
 const visualSource: ValueSchema = { kind: "oneOf", variants: [
@@ -128,7 +130,7 @@ const paintLayer = object({ id: { schema: string }, kind: { schema: { kind: "lit
 const sampleLayer = object({
   id: { schema: string }, kind: { schema: { kind: "literal", value: "sample" } }, source: { schema: visualSource },
   fit: { schema: contentFitSchema }, trim: { schema: trim, optional: true }, occupancy: { schema: occupancy, optional: true },
-  appearance: { schema: appearance }, samplingMotion: { schema: samplingMotion, optional: true },
+  appearance: { schema: mediaSampleAppearanceSchema }, samplingMotion: { schema: mediaSamplingMotionSchema, optional: true },
 });
 const layer = { kind: "oneOf", variants: [paintLayer, sampleLayer] } as const;
 export const mediaLayerSetSchema: ValueSchema = object({
@@ -270,11 +272,11 @@ const sequenceInputs = [
 const appearanceRecipeProperties = [
   { name: "fit", required: false, fallback: "contain",
     values: ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"],
-    summary: "Decides how the source is scaled into the Frame." },
+    summary: "Scales the source into the fitting area left inside the Frame after border and padding." },
   { name: "frame-x", required: false, fallback: "0.5",
-    summary: "Places the anchor point across the Frame, from 0 at its left edge to 1 at its right." },
+    summary: "Places the destination alignment point across the fitting area, from 0 at its left edge to 1 at its right." },
   { name: "frame-y", required: false, fallback: "0.5",
-    summary: "Places the anchor point down the Frame, from 0 at its top edge to 1 at its bottom." },
+    summary: "Places the destination alignment point down the fitting area, from 0 at its top edge to 1 at its bottom." },
   { name: "content-x", required: false, fallback: "0.5",
     summary: "Places the anchor point across the scaled source, from 0 at its left edge to 1 at its right." },
   { name: "content-y", required: false, fallback: "0.5",
@@ -284,7 +286,7 @@ const appearanceRecipeProperties = [
   { name: "fit-offset-y", required: false, fallback: "0",
     summary: "Shifts the fitted source vertically in pixels once the two anchor points meet." },
   { name: "fit-constraint", required: false, values: ["bounded", "free"], fallback: "bounded",
-    summary: "Decides whether the fitted source is held inside the Frame or may overflow it." },
+    summary: "With bounded, large content keeps the fitting area covered on each axis and small content stays inside it; free preserves the authored alignment and offsets. Clipping is controlled separately." },
   { name: "opacity", required: false, fallback: "1",
     summary: "Sets how opaque the sampled picture is drawn." },
   { name: "blur", required: false, fallback: "0",
@@ -303,7 +305,7 @@ const appearanceRecipeProperties = [
   { name: "trim-end", required: false,
     summary: "Ends timed material before this whole frame of its own timeline, and is written with `trim-start`." },
   { name: "stack-order", required: true,
-    summary: "Orders this unit against every other Item and Sequence on the Track, higher drawing in front." },
+    summary: "Sets this unit's absolute stacking order in the Film, higher drawing in front." },
   { name: "clip", required: false, values: ["none", "frame", "rounded"], fallback: "frame",
     summary: "Decides how the picture is clipped to the Frame." },
   { name: "radius", required: false, fallback: "0",
@@ -363,7 +365,7 @@ export const mediaTrackMarkupSurfaces = [{
       compositionTypes.visualTrack, compositionTypes.audioTrack],
     vocabulary: {
       summary: "One Media Track: independently timed Items and replacement Sequences placed on a shared SemanticTrack and Canvas, lowered to one peer VisualTrack and, when audio is authored, one peer AudioTrack.",
-      appearance: "Rectangular pictures, each filling its own Frame exactly where that Frame sits on the Canvas, and nothing besides: the Track draws no chrome, caption or backdrop of its own, and lays nothing out relative to anything else. Inside one Frame the layers stack back to front in the order they are written — flat or gradient Paint fills, then a still image, a video or a Surface scaled in by the fit — clipped to the Frame as a square, a rounded rectangle or an authored Path, optionally ringed by a border and sitting on drop shadows. An Item appears for its own window and leaves at the end of it, entering and exiting on one operator such as a fade, a slide from an edge, a scale, a pop or a wipe, holding a small continuous float, pulse or drift while it is up, and panning, zooming or rotating its picture inside the Frame across the window. A Sequence instead keeps one Frame occupied without a break and replaces the picture inside it at each activation point, the outgoing picture giving way on a cut, a crossfade, a push, a wipe, a cover or a page-turn; where two units overlap, the higher stack order draws in front.",
+      appearance: "Pictures and layered compositions occupy authored Frames on the Canvas. Each source is scaled and aligned inside its Frame's border and padding; a contain fit can leave space, while cover can crop. Paint and sampled Layers draw in Source order under a shared rectangular, rounded or Path clip, with optional border and shadows. Lifecycle motion moves the framed unit; Sampling pans, zooms or rotates the picture inside it. Each Item has an independent window. A Sequence shares one outer Frame while Members replace its contents through cut, crossfade, push, wipe, cover or page-turn Handoffs. Source playback determines whether moving content covers the whole assigned span. Absolute stack order decides which overlapping unit draws in front.",
       preview: previewImage("Track.png"),
       attributes: [
         { name: "id", kind: "identifier", required: true,
@@ -418,11 +420,11 @@ export const mediaTrackMarkupSurfaces = [{
               recipe: motionRecipeProperties },
             { name: "clip", kind: "reference", required: false, accepts: [spatialTypes.path],
               summary: "Clips the Sequence to an authored Path." },
-            { name: "until", kind: "expression", required: true, values: ["program.end"],
-              accepts: [narrativeTypes.moment, narrativeTypes.selection],
-              summary: "Ends the Sequence at the literal `program.end`, at a Moment, or at a Selection." },
+            { name: "until", kind: "reference", required: true,
+              accepts: [narrativeTypes.moment, narrativeTypes.selection, narrativeTypes.excerpt],
+              summary: "Ends the Sequence at a Moment or a chosen Selection/Segment boundary." },
             { name: "until-boundary", kind: "literal", required: false, values: ["start", "end"],
-              summary: "Chooses which edge of the ending Selection ends the Sequence; defaults to `end`." },
+              summary: "Chooses which edge of the ending Selection or Segment ends the Sequence; defaults to `end` and is refused for a Moment." },
           ] },
       ],
       ports: [
@@ -442,7 +444,7 @@ export const mediaTrackMarkupSurfaces = [{
 </media-track:Track>`,
       notes: [
         "A Track requires at least one Item or Sequence and accepts no text content.",
-        "An Item states exactly one window form: `during`, `at` with `for`, `until` with `for`, or `start` with `end`; `selection`, `segment` and `moment` bind a start/end window and cannot be written together.",
+        "An Item states exactly one window form: `during`, `at` with `for`, `until` with `for`, or `start` with `end`. Bind `selection`, `segment` and/or `moment` only when the start/end expressions use them; different endpoints can use different bindings.",
         "A point expression is `program.start`, `program.end`, `selection.start`, `selection.end`, `segment.start`, `segment.end` or `moment.cue`, each optionally offset by `+` or `-` and a duration, or a bare duration read as an absolute position.",
         "A unit that names a direct source names exactly one of `image`, `media` or `surface`; `extent` is required with `image` and refused otherwise.",
         "`audio-gain` is refused without selected source audio.",
@@ -452,16 +454,17 @@ export const mediaTrackMarkupSurfaces = [{
         "An `enter` or an `exit` operator requires its own `enter-frames` or `exit-frames`.",
         "An Item written with a direct source accepts `<Sampling>` and `<Sound>` children; an Item written without one accepts `<Paint>`, `<Layer>` and `<Sound>` children, and requires at least one Paint or Layer.",
         "A Sequence requires at least two `<Member>` children, exactly one `<Handoff>` for every adjacent Member pair, and accepts `<Sound>` children.",
-        "`until-boundary` is refused for `program.end` and for a Moment.",
+        "Sequence `until` is a semantic reference, not a literal `program.end`. `until-boundary` defaults to end for a Selection or Segment and is refused for a Moment.",
         "A Member is one picture in the replacement order:",
         [
           "| Attribute | Kind | Required | Meaning |",
           "|---|---|---|---|",
           "| `id` | identifier | no | Names this Member; the Sequence derives `<sequence>.member.<index>` otherwise |",
-          "| `at` | reference (@hypit/narrative@1#NarrativeMoment, @hypit/narrative@1#NarrativeSelection) | yes | The Moment or Selection that activates this Member |",
-          "| `boundary` | literal (start, end) | with a Selection | Which edge of the activating Selection the Member starts on; refused for a Moment |",
+          "| `at` | semantic reference | one timing form | A Moment, Selection or Segment that activates this Member |",
+          "| `boundary` | literal (start, end) | with a Selection or Segment | Which edge activates this Member; refused for a Moment |",
+          "| `instant` | expression | one timing form | Explicit point expression instead of `at`; bind selection, segment or moment if the expression uses it |",
           "| `appearance` | reference (@hypit/svs@1#Recipe) | no | This Member's own Recipe in place of the Sequence's |",
-          "| `image` | reference (@hypit/artifact@1#Blob) | one source form | A durationless still image, which also requires `extent` |",
+          "| `image` | reference (@hypit/artifact@1#BlobArtifact) | one source form | A durationless still image, which also requires `extent` |",
           "| `media` | reference (@hypit/media@1#SynchronizedMedia) | one source form | An explicitly prepared timed source |",
           "| `surface` | reference (@hypit/media@1#CompositableSurfaceRef) | one source form | An alpha-aware still or timed Surface |",
           "| `extent` | reference (@hypit/spatial@1#IntrinsicExtent) | with `image` | The authored pixel extent of the still image |",
@@ -475,7 +478,7 @@ export const mediaTrackMarkupSurfaces = [{
           "| Attribute | Kind | Required | Meaning |",
           "|---|---|---|---|",
           "| `id` | identifier | no | Names this Handoff; the Sequence derives `<sequence>.handoff.<index>` otherwise |",
-          "| `from` | literal | yes | The id of the outgoing Member, which must be the Member preceding this Handoff |",
+          "| `from` | literal | yes | The outgoing Member id; Handoffs are ordered by adjacent Member pair |",
           "| `transition` | reference (@hypit/svs@1#Recipe) | yes | The Recipe for the handoff operator, its length, its boundary and its audio treatment |",
         ].join("\n"),
         "A `transition` Recipe carries exactly these properties:",
@@ -507,7 +510,7 @@ export const mediaTrackMarkupSurfaces = [{
           "| Attribute | Kind | Required | Meaning |",
           "|---|---|---|---|",
           "| `id` | identifier | no | Names this layer, which `source-audio` selects by; the Track derives one from the unit and the layer position otherwise |",
-          "| `image` | reference (@hypit/artifact@1#Blob) | one source form | A durationless still image, which also requires `extent` |",
+          "| `image` | reference (@hypit/artifact@1#BlobArtifact) | one source form | A durationless still image, which also requires `extent` |",
           "| `media` | reference (@hypit/media@1#SynchronizedMedia) | one source form | An explicitly prepared timed source |",
           "| `surface` | reference (@hypit/media@1#CompositableSurfaceRef) | one source form | An alpha-aware still or timed Surface |",
           "| `extent` | reference (@hypit/spatial@1#IntrinsicExtent) | with `image` | The authored pixel extent of the still image |",
@@ -536,7 +539,7 @@ export const mediaTrackMarkupSurfaces = [{
           "| `gain` | literal | no | Linear gain applied to this sound; defaults to `1` |",
         ].join("\n"),
         "A Sound states exactly one trigger form, and `handoff` only names a Handoff of the Sequence it is written in.",
-        "A direct source is sampled into a layer named `content`, so `audio=\"include\"` on a direct video selects that audio itself and refuses `source-audio` beside it.",
+        "A direct prepared source is sampled into a layer named `content`; use `source-audio=\"content\"` to include its audio. Layered units select a Layer id. Raw `video` and `audio=\"include\"` attributes are not accepted.",
       ],
     },
   }] as const;

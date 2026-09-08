@@ -273,7 +273,7 @@ export type StudioEditHandle = {
 
 /** A source descriptor; Companion packages never depend on Studio's HTTP routes. */
 export type StudioPreviewSource =
-  | { readonly kind: "artifact"; readonly digest: string }
+  | { readonly kind: "artifact"; readonly resource: string }
   | {
       readonly kind: "surface-preview";
       readonly module: string;
@@ -728,9 +728,9 @@ export function requiredReferencedValue(
 
 export function artifactPreview(
   kind: StudioMaterialPreview["kind"],
-  digest: string,
+  resource: string,
 ): StudioMaterialPreview {
-  return { kind, source: { kind: "artifact", digest } };
+  return { kind, source: { kind: "artifact", resource } };
 }
 
 export function previewLayer(

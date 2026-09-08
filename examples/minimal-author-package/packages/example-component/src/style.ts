@@ -1,5 +1,5 @@
-import type { FontStackRef } from "@hypit/media";
-import type { SvsRecipe } from "@hypit/svs";
+import type { FontStackRef } from "hypit/media";
+import type { SvsRecipe } from "hypit/svs";
 
 /** The two values a Style decoder receives after author references are resolved. */
 export type ExampleStyleInput = {

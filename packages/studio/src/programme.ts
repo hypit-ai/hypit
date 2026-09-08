@@ -1,5 +1,5 @@
 import type { ArtifactAttachment } from "@hypit/workspace";
-import type { BlobRef, Digest, StoredValue } from "@hypit/protocol";
+import type { BlobRef, ResourceId, StoredValue } from "@hypit/protocol";
 import { sameType } from "@hypit/protocol";
 import type { Composition } from "@hypit/composition";
 import { compositionTypes } from "@hypit/composition";
@@ -12,12 +12,11 @@ import type { SemanticTrack } from "@hypit/semantic-track";
 import { semanticTrackTypes } from "@hypit/semantic-track";
 import type { ProgramSpace } from "@hypit/program-space";
 import type { StudioResolvedTrack, StudioTemporalBinding } from "@hypit/studio-adapter";
+import type { RuntimeHostTransientExecution } from "@hypit/runtime-host-node";
 
-import type { StudioArchive } from "./archive.js";
 import type { CompiledSource, ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
-import { executeDeterministic, MemoryArtifactStore } from "./execute.js";
-import type { EndpointRegistry } from "@hypit/driver-node";
+import { executeStudioProjection, MemoryResourceStore } from "./execute.js";
 import type { RunPlan } from "./run.js";
 import type { StudioViewRequirement } from "./studio-preflight.js";
 import { studioSurfacePreview } from "./surface-preview.js";
@@ -69,13 +68,13 @@ async function bytesOf(attachment: ArtifactAttachment): Promise<Uint8Array> {
   return bytes;
 }
 
-type ExecutionState = Awaited<ReturnType<typeof executeDeterministic>>["state"];
+type ExecutionState = Awaited<ReturnType<typeof executeStudioProjection>>["state"];
 
 function selectedValue(
   state: ExecutionState,
   output: string,
 ): StoredValue | undefined {
-  const selection = state.plan.selections.find((item) => item.output === output);
+  const selection = state.plan.outputBindings.find((item) => item.output === output);
   if (selection === undefined) return undefined;
   const executed = state.records.find((item) => item.id === selection.record)?.value;
   if (executed !== undefined) return executed;
@@ -85,12 +84,12 @@ function selectedValue(
 }
 
 function compositionArtifacts(composition: Composition): readonly BlobRef[] {
-  const found = new Map<Digest, BlobRef>();
+  const found = new Map<ResourceId, BlobRef>();
   const visit = (value: unknown): void => {
     if (value === null || typeof value !== "object") return;
     if ((value as { readonly kind?: unknown }).kind === "blob") {
       const artifact = value as BlobRef;
-      found.set(artifact.digest, artifact);
+      found.set(artifact.resource, artifact);
       return;
     }
     if (Array.isArray(value)) {
@@ -111,47 +110,51 @@ export async function preview(input: {
   readonly outputRefs: readonly string[];
   readonly compositionRef: string;
   readonly projections: readonly StudioViewRequirement[];
-  readonly archive?: StudioArchive;
-  /** Preview-only endpoint set. Production Studio passes none; preview-mock may pass only local mock media. */
-  readonly endpoints?: EndpointRegistry;
+  /** Runtime-owned execution for capabilities explicitly safe outside a Build. */
+  readonly transientExecution?: RuntimeHostTransientExecution;
 }): Promise<Preview> {
   const exportsByRef = new Map(input.source.exports.map((item) => [item.ref, item] as const));
   const targets = input.outputRefs.flatMap((ref) => {
     const found = exportsByRef.get(ref);
     return found === undefined ? [] : [found];
   });
-  const store = new MemoryArtifactStore();
+  const store = new MemoryResourceStore();
   const served = new Map(input.source.served);
   for (const attachment of input.run.attachments) {
     const bytes = await bytesOf(attachment);
-    await store.put(bytes, attachment.artifact.mediaType);
-    served.set(attachment.artifact.digest, {
+    await store.write(attachment.artifact, bytes);
+    served.set(attachment.artifact.resource, {
       mediaType: attachment.artifact.mediaType,
       bytes,
     });
   }
-  for (const [, file] of input.source.served) await store.put(file.bytes, file.mediaType);
-  const artifacts = {
-    async get(digest: Digest) {
-      const local = await store.get(digest);
-      if (local !== undefined) return local;
-      const archived = await input.archive?.read(digest);
-      if (archived !== undefined) {
-        served.set(digest, { mediaType: "application/octet-stream", bytes: archived });
-      }
-      return archived;
+  for (const [resource, file] of input.source.served) {
+    await store.write({ kind: "blob", resource: resource as ResourceId, size: file.bytes.byteLength, mediaType: file.mediaType }, file.bytes);
+  }
+  const resources = {
+    async get(resource: ResourceId) {
+      return await store.get(resource);
     },
     async put(bytes: Uint8Array, mediaType: string) {
       const ref = await store.put(bytes, mediaType);
-      served.set(ref.digest, { mediaType, bytes });
+      served.set(ref.resource, { mediaType, bytes });
       return ref;
     },
-    async has(digest: Digest) {
-      return await store.has(digest) || await input.archive?.read(digest) !== undefined;
+    async write(resource: BlobRef, bytes: Uint8Array) {
+      await store.write(resource, bytes);
+      served.set(resource.resource, { mediaType: resource.mediaType, bytes });
+    },
+    async has(resource: ResourceId) {
+      return await store.has(resource);
     },
   };
   const planned = input.run.plan(input.run.run, targets.map((target) => target.ref));
-  const executed = await executeDeterministic(input.domain, planned.state, artifacts, input.endpoints);
+  const executed = await executeStudioProjection(
+    input.domain,
+    planned.state,
+    resources,
+    input.transientExecution,
+  );
   if (executed.unserved.length > 0) {
     throw new Error(
       `Studio projection is unresolved: ${executed.unserved.map((item) => item.capability).join(", ")}`,
@@ -180,9 +183,9 @@ export async function preview(input: {
   }
   const composition = compositionValue.value as unknown as Composition;
   for (const artifact of compositionArtifacts(composition)) {
-    if (served.has(artifact.digest)) continue;
-    const bytes = await input.archive?.read(artifact.digest);
-    if (bytes !== undefined) served.set(artifact.digest, { mediaType: artifact.mediaType, bytes });
+    if (!served.has(artifact.resource)) {
+      throw new Error(`Studio composition Resource ${artifact.resource} has no Run attachment.`);
+    }
   }
   const projectionByRef = new Map(input.projections.map((projection) => [projection.ref, projection]));
   const tracks: BuiltTrack[] = targets.flatMap((target) => {

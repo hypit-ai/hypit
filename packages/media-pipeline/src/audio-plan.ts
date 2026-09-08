@@ -2,7 +2,7 @@ import { programFrameSampleBoundary, programSpaceFrameCount } from "@hypit/progr
 import type { ProgramSpace } from "@hypit/program-space";
 import { assertCompositionIdentity } from "@hypit/composition";
 import type { Composition } from "@hypit/composition";
-import { canonicalize, isDigest } from "@hypit/protocol";
+import { canonicalize, isResourceId } from "@hypit/protocol";
 
 import type { AudioProgramPlan } from "./types.js";
 
@@ -36,7 +36,7 @@ export function verifyAudioProgramPlan(value: unknown): asserts value is AudioPr
     assert(typeof clip.id === "string" && clip.id.length > 0 && !ids.has(clip.id),
       "AudioProgramPlan clip id is empty or repeated");
     ids.add(clip.id);
-    assert(clip.artifact?.kind === "blob" && isDigest(clip.artifact.digest)
+    assert(clip.artifact?.kind === "blob" && isResourceId(clip.artifact.resource)
       && Number.isSafeInteger(clip.artifact.size) && clip.artifact.size >= 0
       && clip.artifact.mediaType === "audio/wav",
     `AudioProgramPlan clip ${clip.id} must reference canonical WAV`);
@@ -85,7 +85,7 @@ export function compileAudioProgramPlan(composition: Composition, programSpace: 
         id: `${track.id}:${clip.id}`,
         artifact: {
           kind: "blob" as const,
-          digest: clip.artifact.digest,
+          resource: clip.artifact.resource,
           size: clip.artifact.size,
           mediaType: clip.artifact.mediaType,
         },

@@ -6,7 +6,14 @@ import { assertContentFit, assertIntrinsicExtent, assertSpatialFrame } from "@hy
 import type { ContentFit, IntrinsicExtent, SpatialFrame } from "@hypit/spatial";
 
 import { lowerMediaItemElements } from "./lower.js";
-import type { MediaItemProgram } from "./types.js";
+import type {
+  MediaFramePresentation,
+  MediaItemProgram,
+  MediaLifecycleMotion,
+  MediaPaintLayerSpec,
+  MediaSampleAppearance,
+  MediaSamplingMotion,
+} from "./types.js";
 
 export type RestrictedSpeechVisualClip = {
   readonly id: string;
@@ -19,12 +26,17 @@ export type RestrictedSpeechVisualClip = {
   readonly frame: SpatialFrame;
   readonly fit: ContentFit;
   readonly stackingOrder: number;
+  readonly presentation: MediaFramePresentation;
+  readonly sampleAppearance: MediaSampleAppearance;
+  readonly motion: MediaLifecycleMotion;
+  readonly framePaint?: MediaPaintLayerSpec;
+  readonly samplingMotion?: MediaSamplingMotion;
 };
 
 /**
- * Focused reuse point for Speech Track: one normalized muted take and one
- * explicitly placed foreground layer, without Media Track motion or sequence
- * semantics.
+ * Focused reuse point for Speech Track: one normalized muted Take and its
+ * visual presentation inside a fixed Segment envelope, without Media Track
+ * Window, playback/trim, source-audio or Sequence ownership.
  */
 export function lowerRestrictedSpeechVisualPresents(
   trackId: string,
@@ -57,29 +69,33 @@ export function lowerRestrictedSpeechVisualPresents(
       subjectId: clip.subjectId ?? clip.id,
       span: { ...clip.span },
       frame: structuredClone(clip.frame),
-      presentation: {
-        clip: { kind: "frame" },
-        padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 },
-        shadows: [],
-      },
-      layers: [{
-        id: `${trackId}:${clip.id}:foreground`,
-        kind: "sample",
-        source: {
-          kind: "timed",
-          artifact: structuredClone(clip.artifact),
-          extent: structuredClone(clip.extent),
-          frameRate: { ...clip.frameRate },
-          frameCount: clip.frameCount,
+      presentation: structuredClone(clip.presentation),
+      layers: [
+        ...(clip.framePaint === undefined ? [] : [{
+          id: clip.framePaint.id,
+          kind: "paint" as const,
+          paint: structuredClone(clip.framePaint.paint),
+          opacity: clip.framePaint.opacity,
+        }]),
+        {
+          id: `${trackId}:${clip.id}:foreground`,
+          kind: "sample",
+          source: {
+            kind: "timed",
+            artifact: structuredClone(clip.artifact),
+            extent: structuredClone(clip.extent),
+            frameRate: { ...clip.frameRate },
+            frameCount: clip.frameCount,
+          },
+          fit: structuredClone(clip.fit),
+          occupancy: { mode: "once", align: "start" },
+          appearance: structuredClone(clip.sampleAppearance),
+          ...(clip.samplingMotion === undefined ? {} : {
+            samplingMotion: structuredClone(clip.samplingMotion),
+          }),
         },
-        fit: structuredClone(clip.fit),
-        occupancy: { mode: "once", align: "start" },
-        appearance: {
-          opacity: 1,
-          filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 },
-        },
-      }],
-      motion: { sustain: [] },
+      ],
+      motion: structuredClone(clip.motion),
       stacking: {
         order: clip.stackingOrder,
         tieBreak: `${trackId}:${String(index + 1).padStart(4, "0")}:${clip.id}`,

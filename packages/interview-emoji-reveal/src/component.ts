@@ -6,7 +6,7 @@ import type { CanvasSpace } from "@hypit/spatial";
 import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
 
 import { emojiRevealProducers, emojiRevealTypes } from "./manifest.js";
-import { appendEmojiRevealItem, assertEmojiRevealProgram, createEmojiRevealSet, finalizeEmojiReveal, renderEmojiReveal } from "./program.js";
+import { appendEmojiRevealItem, appendPresetEmojiRevealItem, assertEmojiRevealProgram, createEmojiRevealSet, finalizeEmojiReveal, renderEmojiReveal } from "./program.js";
 import type { EmojiRevealHeader, EmojiRevealItemSpec, EmojiRevealProgram, EmojiRevealSet, EmojiRevealStyle } from "./types.js";
 
 function inline<T>(value: StoredValue | undefined, label: string): T {
@@ -26,6 +26,10 @@ export const emojiRevealComponent = {
       inline<EmojiRevealSet>(inputs.set?.value, "EmojiRevealSet"), inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
       inline<EmojiRevealItemSpec>(inputs.spec?.value, "EmojiRevealItemSpec"), blob(inputs.icon?.value, "Emoji Reveal icon"),
       inline<TemporalInstant>(inputs.activation?.value, "TemporalInstant"),
+    )) }, needs: {} }) },
+    { producer: emojiRevealProducers.appendPresetItem, handler: ({ inputs }) => ({ outputs: { set: output(appendPresetEmojiRevealItem(
+      inline<EmojiRevealSet>(inputs.set?.value, "EmojiRevealSet"),
+      inline<EmojiRevealItemSpec>(inputs.spec?.value, "EmojiRevealItemSpec"), blob(inputs.icon?.value, "Emoji Reveal icon"),
     )) }, needs: {} }) },
     { producer: emojiRevealProducers.finalize, handler: ({ inputs }) => ({ outputs: { program: output(finalizeEmojiReveal(
       inline<EmojiRevealHeader>(inputs.header?.value, "EmojiRevealHeader"), inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),

@@ -2,7 +2,7 @@
 
 Exact author/compute contracts and package-owned author Surfaces for MiniMax H3 video generation.
 
-Text, first/last-frame and subject-reference modes are separate Surfaces rather than one dynamic
+Text, frame-guided and subject-reference modes are separate Surfaces rather than one dynamic
 port mode. Each produces an ordinary video Artifact. This package owns request semantics
 and validation only; Provider calls, credentials, retries and queueing belong to a Runtime Endpoint
 such as `@hypit/provider-kie`.
@@ -18,3 +18,4 @@ such as `@hypit/provider-kie`.
 ```
 
 The Surface makes every prompt/media dependency an explicit graph edge and leaves execution to a Provider.
+`FrameVideo` accepts a first frame, a last frame, or both; either frame is an ordinary image Artifact edge.

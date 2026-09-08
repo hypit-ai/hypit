@@ -2,11 +2,11 @@
 
 Explicit author and capability boundary for final HyperFrames video rendering.
 
-The package owns `<render:Video composition={...}/>` and lowers it to six ordinary Operations:
+The package owns `<render:Video composition={...}/>` and lowers it to ordinary Operations that:
 
-1. compile the referenced `Composition` into a content-addressed `HyperframesDocument`;
+1. obtain the `ProgramSpace` from the semantic input and compile the referenced `Composition` into a `HyperframesDocument`;
 2. request a silent, frame-exact `RenderedVisual`;
-3. compile every peer `AudioTrack` into one content-addressed `AudioProgramPlan`;
+3. compile every peer `AudioTrack` into one `AudioProgramPlan`;
 4. request an exact 48 kHz `TimelineAudio`;
 5. request one `MuxedMedia` from those two independently verified Products;
 6. expose the verified mux Artifact unchanged as a domain-neutral `BlobArtifact`.
@@ -17,7 +17,7 @@ Provider for the exact visual capability. Media Providers independently realize 
 mux. None parses SVML or decides which Composition to render. Every result is bound to the same
 ProgramSpace and exact frame/sample domain before it can become a final video Record.
 
-The output does not carry copied duration or lineage metadata. It is an ordinary content-addressed
+The output does not carry copied duration or lineage metadata. It is an ordinary Resource-backed
 Blob and can therefore be connected directly to any later component that accepts Blob bytes. A
 consumer that needs stream or duration facts must request explicit media inspection.
 
@@ -32,6 +32,23 @@ contract can feed the render Surface. Conversely, targeting Composition never de
 rendering exists only when the author declares and the Build targets the video output.
 
 `@hypit/provider-hyperframes-local` is the first concrete visual implementation. It stages the
-document's exact `BlobRef` dependencies, lets HyperFrames partition the finite frame domain across
+document's exact `BlobRef` dependencies, partitions the requested frame domain across
 configured Chrome workers, emits a silent MP4 and rejects output unless ffprobe proves one H.264
 stream with the declared canvas, rational frame rate and frame count.
+
+Select a contiguous interval using zero-based, half-open frame bounds:
+
+```xml
+<render:Video id="preview" composition={main.composition} semantic={speech.semantic}
+  start-frame="240" end-frame-exclusive="360"/>
+```
+
+At 30 fps this renders seconds 8–12, with 120 output frames. Write both bounds, or omit both to
+render the whole programme. The HTML and animation clock remain unchanged. Visual and audio Needs
+receive the same range; mux consumes their selected outputs. `workers` belongs in the local
+Provider's Runtime configuration.
+
+In TypeScript, `hyperframesVisualRequest(document, { range })` constructs the visual request;
+`createRenderHyperframesFragment(true)` accepts a `MediaFrameRange` input and connects it to visual
+and audio requests. The AWS Lambda Provider currently declines range requests. Selection limits
+final rendering work; it does not prune upstream generation dependencies.

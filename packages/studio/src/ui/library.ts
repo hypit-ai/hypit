@@ -66,7 +66,7 @@ function taskProgress(task: StudioTaskView): string | undefined {
 function taskCard(task: StudioTaskView): HTMLElement {
   const node = document.createElement("article");
   node.className = `task-card task-${task.status}`;
-  const title = task.targets.length === 0 ? leaf(task.run ?? task.source) : task.targets.join(", ");
+  const title = task.title ?? (task.targets.length === 0 ? leaf(task.run ?? task.source) : task.targets.join(", "));
   const progress = taskProgress(task);
   node.innerHTML = `
     <div class="task-state"><span></span></div>
@@ -89,7 +89,7 @@ function taskCard(task: StudioTaskView): HTMLElement {
   const progressNode = node.querySelector<HTMLElement>("[data-progress]")!;
   if (progress === undefined) progressNode.remove();
   else progressNode.textContent = progress;
-  node.title = `${task.id}\n${source}`;
+  node.title = [title, task.id, source, task.note].filter((item) => item !== undefined).join("\n");
   return node;
 }
 
@@ -103,15 +103,21 @@ function artifactKind(mediaType: string): { readonly label: string; readonly ico
 function artifactCard(artifact: StudioArtifactView): HTMLElement {
   const kind = artifactKind(artifact.mediaType);
   const link = document.createElement("a");
-  link.className = `artifact-card artifact-${kind.label.toLowerCase()}`;
-  link.href = `/__studio/artifact/${artifact.digest}`;
+  link.className = `artifact-card artifact-${kind.label.toLowerCase()}${artifact.highlighted ? " artifact-highlighted" : ""}`;
+  const query = new URLSearchParams({
+    build: artifact.build,
+    output: artifact.output,
+    path: artifact.valuePath,
+  });
+  link.href = `/__studio/artifact?${query.toString()}`;
   link.target = "_blank";
   link.rel = "noreferrer";
-  const title = artifact.outputs[0] ?? artifact.records[0] ?? kind.label;
+  const title = artifact.valuePath === "$" ? artifact.output : `${artifact.output} ${artifact.valuePath}`;
   link.innerHTML = `
     <div class="artifact-preview">
       <span class="artifact-glyph">${icon(kind.icon)}</span>
       <span class="artifact-type"></span>
+      ${artifact.highlighted ? '<span class="artifact-highlight">Highlighted</span>' : ""}
     </div>
     <div class="artifact-copy">
       <strong></strong>
@@ -119,7 +125,11 @@ function artifactCard(artifact: StudioArtifactView): HTMLElement {
     </div>`;
   link.querySelector<HTMLElement>(".artifact-type")!.textContent = kind.label;
   link.querySelector("strong")!.textContent = title;
-  link.querySelector<HTMLElement>(".artifact-meta")!.textContent = `${formatBytes(artifact.size)} · ${date.format(artifact.createdAt)}`;
+  link.querySelector<HTMLElement>(".artifact-meta")!.textContent = [
+    artifact.buildTitle,
+    formatBytes(artifact.size),
+    date.format(artifact.createdAt),
+  ].filter((item) => item !== undefined).join(" · ");
   if (artifact.mediaType.startsWith("image/")) {
     const image = document.createElement("img");
     image.src = link.href;
@@ -127,8 +137,23 @@ function artifactCard(artifact: StudioArtifactView): HTMLElement {
     image.loading = "lazy";
     link.querySelector<HTMLElement>(".artifact-preview")!.prepend(image);
   }
-  link.title = [title, artifact.mediaType, artifact.digest, artifact.run ?? artifact.source].join("\n");
+  link.title = [
+    title,
+    artifact.mediaType,
+    `${artifact.ownerBuild}/${artifact.ownerOutput}/${artifact.filePath}`,
+    artifact.run ?? artifact.source,
+    artifact.buildNote,
+  ].filter((item) => item !== undefined).join("\n");
   return link;
+}
+
+function olderButton(load: () => void): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "library-older";
+  button.textContent = "Load older";
+  button.addEventListener("click", load);
+  return button;
 }
 
 export function createLibraryPane(code: CodePane): LibraryPane {
@@ -143,7 +168,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
         <span>${icon("tasks")}</span><strong>Tasks</strong>
       </button>
       <button type="button" class="library-tab" data-library-tab="artifacts" role="tab" aria-selected="false">
-        <span>${icon("archive")}</span><strong>Artifacts</strong>
+        <span>${icon("results")}</span><strong>Artifacts</strong>
       </button>
     </div>
     <section class="library-view active" data-library-view="source">
@@ -158,7 +183,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
     </section>
     <section class="library-view" data-library-view="tasks">
       <div class="library-toolbar">
-        <div><strong>Build archive</strong><small data-task-count></small></div>
+        <div><strong>Build Results</strong><small data-task-count></small></div>
         <button type="button" class="library-refresh" data-library-refresh aria-label="Refresh tasks" title="Refresh">${icon("refresh")}</button>
       </div>
       <div class="library-context-row" data-runtime-context></div>
@@ -186,6 +211,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
   let library: StudioLibraryView | undefined;
   let artifactFilter = "all";
   let refreshing = false;
+  let expanded = false;
 
   const renderSources = (): void => {
     if (snapshot === undefined) return;
@@ -224,20 +250,21 @@ export function createLibraryPane(code: CodePane): LibraryPane {
     context.querySelector("strong")!.textContent = runtime === undefined ? "not selected" : leaf(library!.environment);
     context.title = runtime === undefined ? "No Runtime selected for this environment" : `${library!.environment}\n${runtime}`;
     runtimeContext.append(context);
+    const entries: HTMLElement[] = tasks.map(taskCard);
     if (tasks.length === 0) {
-      taskList.replaceChildren(emptyState("tasks",
+      entries.push(emptyState("tasks",
         runtime === undefined ? "No Runtime selected" : "No builds yet",
         runtime === undefined
           ? "Select one with hypit runtime use, then reopen Studio."
           : "Builds created from this environment will appear here."));
-      return;
     }
-    taskList.replaceChildren(...tasks.map(taskCard));
+    if (library?.next !== undefined) entries.push(olderButton(() => void loadOlder()));
+    taskList.replaceChildren(...entries);
   };
 
   const renderArtifacts = (): void => {
     const artifacts = library?.artifacts ?? [];
-    element.querySelector<HTMLElement>("[data-artifact-count]")!.textContent = `${artifacts.length} stored object${artifacts.length === 1 ? "" : "s"}`;
+    element.querySelector<HTMLElement>("[data-artifact-count]")!.textContent = `${artifacts.length} public file${artifacts.length === 1 ? "" : "s"}`;
     const filters = [
       ["all", "All"],
       ["video", "Video"],
@@ -255,15 +282,14 @@ export function createLibraryPane(code: CodePane): LibraryPane {
     const shown = artifactFilter === "all"
       ? artifacts
       : artifacts.filter((artifact) => artifact.mediaType.startsWith(`${artifactFilter}/`));
+    const entries: HTMLElement[] = shown.map(artifactCard);
     if (shown.length === 0) {
-      artifactGrid.replaceChildren(emptyState("archive",
+      entries.push(emptyState("results",
         artifacts.length === 0 ? "No accepted artifacts" : `No ${artifactFilter} artifacts`,
-        library?.runtime === undefined
-          ? "Artifacts appear only from a selected Runtime archive."
-          : "Only ArtifactStore objects referenced by accepted Records appear here."));
-      return;
+        "Public files appear here when a Build Result contains them."));
     }
-    artifactGrid.replaceChildren(...shown.map(artifactCard));
+    if (library?.next !== undefined) entries.push(olderButton(() => void loadOlder()));
+    artifactGrid.replaceChildren(...entries);
   };
 
   const switchTo = (next: LibrarySection): void => {
@@ -283,25 +309,55 @@ export function createLibraryPane(code: CodePane): LibraryPane {
     tab.addEventListener("click", () => switchTo(tab.dataset.libraryTab as LibrarySection));
   }
 
-  const refresh = async (): Promise<void> => {
+  const mergeLibrary = (value: StudioLibraryView, append: boolean): void => {
+    if (library === undefined || (!append && !expanded)) {
+      library = value;
+      return;
+    }
+    const tasks = new Map(library.tasks.map((task) => [task.id, task]));
+    const artifacts = new Map(library.artifacts.map((artifact) => [artifact.id, artifact]));
+    for (const task of value.tasks) tasks.set(task.id, task);
+    for (const artifact of value.artifacts) artifacts.set(artifact.id, artifact);
+    library = {
+      environment: value.environment,
+      ...(value.runtime === undefined ? {} : { runtime: value.runtime }),
+      ...((append || !expanded ? value.next : library.next) === undefined
+        ? {}
+        : { next: append || !expanded ? value.next : library.next }),
+      tasks: [...tasks.values()].sort((left, right) => right.createdAt - left.createdAt || left.id.localeCompare(right.id)),
+      artifacts: [...artifacts.values()].sort((left, right) =>
+        Number(right.highlighted) - Number(left.highlighted)
+          || right.createdAt - left.createdAt
+          || left.output.localeCompare(right.output)
+          || left.valuePath.localeCompare(right.valuePath)),
+    };
+  };
+
+  const refresh = async (before?: string): Promise<void> => {
     if (refreshing) return;
     refreshing = true;
     element.classList.add("is-refreshing");
     try {
-      const response = await fetch("/__studio/library");
+      const query = before === undefined ? "" : `?${new URLSearchParams({ before }).toString()}`;
+      const response = await fetch(`/__studio/library${query}`);
       const value = await response.json() as StudioLibraryView | { readonly error: string };
       if (!response.ok || "error" in value) throw new Error("error" in value ? value.error : "Library unavailable");
-      library = value;
+      mergeLibrary(value, before !== undefined);
+      if (before !== undefined) expanded = true;
       renderTasks();
       renderArtifacts();
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      if (active === "tasks") taskList.replaceChildren(emptyState("tasks", "Archive unavailable", detail));
-      if (active === "artifacts") artifactGrid.replaceChildren(emptyState("archive", "ArtifactStore unavailable", detail));
+      if (active === "tasks") taskList.replaceChildren(emptyState("tasks", "Build Results unavailable", detail));
+      if (active === "artifacts") artifactGrid.replaceChildren(emptyState("results", "Build Results unavailable", detail));
     } finally {
       refreshing = false;
       element.classList.remove("is-refreshing");
     }
+  };
+
+  const loadOlder = async (): Promise<void> => {
+    if (library?.next !== undefined) await refresh(library.next);
   };
 
   for (const button of Array.from(element.querySelectorAll<HTMLButtonElement>("[data-library-refresh]"))) {

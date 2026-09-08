@@ -27,6 +27,11 @@ optional visual Artifact plus intrinsic extent, and optional audio Artifact. Str
 authority choice and the trim/pad ledger remain in Selection and execution instead of travelling
 through every consumer.
 
+Normalization preserves transparency in the selected visual stream. The executing Provider owns
+the intermediate encoding; both opaque and transparent pictures use the same SynchronizedMedia
+value. A later SemanticTake adds Script timing while retaining that prepared media. A visual
+overlay can instead enter Media Track directly.
+
 This package is the shared execution vocabulary. Speech authoring makes the boundary explicit:
 `<pipeline:Normalize>` produces one `SynchronizedMedia`, then a speech provider and deterministic
 alignment produce one `SemanticTake`. Media Track consumes that prepared value; it never owns an
@@ -46,16 +51,40 @@ hide the Normalize graph node or turn multiple sources into one opaque batch ope
 A still image becomes ordinary video before it enters that waist:
 
 ```svml
-<media:StillVideo id="opening-still" source={opening-head}
-  duration={opening-duration.duration} clock={clock}/>
+<media:StillVideo id="opening-still" source={opening-head.image}
+  duration="6" clock={clock}/>
 <pipeline:Normalize id="opening-media" source={opening-still.video}
   video="primary-moving" audio="none" span-authority="video" clock={clock}/>
 ```
 
-`StillVideo` returns a silent MP4 `BlobArtifact`, not `SynchronizedMedia`. Encoding its first decoded
-image frame is a `render-still-video` Need; inspection and normalization remain the same explicit
-steps used by imported or generated moving video. The Blob can therefore serve B-roll through
-Normalize, or continue into either estimated or measured A-roll semantics afterward.
+Several images spread over one literal duration the same way, each held for its share of the frames:
+
+```svml
+<media:StillVideo id="kitchen-stills" duration="6" clock={clock}>
+  <media:Still source={counter.image}/>
+  <media:Still source={basil.image} weight="2"/>
+  <media:Still source={board.image}/>
+</media:StillVideo>
+```
+
+For a short-lived diagnostic clip, `guide="clip-time"` burns one coherent band containing the
+clip-local timecode, current frame and progress ruler. Omit it for clean production pixels. The
+guide says nothing about the clip's eventual position in a Film.
+
+`StillVideo` returns a video-only MP4 `BlobArtifact`, not `SynchronizedMedia`. The Surface publishes the
+duration and the weights as Records; `plan-still-video` divides the whole frame count among the
+pictures (every picture holds at least one frame, the rest go by weight with leftovers to the largest
+remainders, earlier first), `bind-still-video-source` attaches each picture in authored order, and
+encoding is one `render-still-video` Need. Pictures of different sizes are fitted into the first one's
+frame and letterboxed. Inspection and normalization remain the same explicit steps used by imported
+or generated moving video. The resulting Blob is ordinary time-bearing visual media. Its later role
+comes entirely from the downstream Source relationships; StillVideo itself owns only the authored
+images, duration, frame clock and optional guide.
+
+The package also exposes one-picture Run Fragments. `still-video` takes `duration`, `clock`,
+`layout` and `source-0`; `clip-time-still-video` takes `duration`, `clock` and `source`, supplying
+the diagnostic layout itself. A Run can select either ordinary branch as a Candidate through an
+explicit `candidate` / `satisfy` decision.
 
 Four ordinary author operations reuse that same inspection/execution boundary:
 
@@ -76,7 +105,7 @@ WAV but makes no `SemanticTake`, speaker or alignment claim; it can therefore fe
 reference port directly. Frame extraction supports `first`, `last`, `frame:<index>` and
 `time:<seconds>`. Transform operations are ordered author meaning and never an arbitrary FFmpeg string.
 
-The same package also owns two provider-neutral finalization plans/capabilities:
+The same package also owns two provider-neutral media completion plans/capabilities:
 
 ```text
 Composition -> pure AudioProgramPlan -> render-timeline-audio Need -> TimelineAudio

@@ -65,10 +65,11 @@ operations followed by a fixed-port append/merge Producer rather than an undecla
 
 ## Assets a package ships
 
-A component's own chrome — its paper, board, panel, texture or default backdrop — is a file inside
-the package, read with `readFile(new URL("../assets/…", import.meta.url))`. So is the preview image
-its Surface declares. Neither is an input the installing project supplies, and neither is produced by
-a Build: use `hypit image` while authoring the package and commit the result.
+A component's own chrome — its paper, board, panel or default backdrop — is drawn by the component's
+own code, and the preview image its Surface declares is captured from that rendering. A small static
+file a component ships, such as a font or an icon set the author already owns, is read with
+`readFile(new URL("../assets/…", import.meta.url))`. None of this is an input the installing project
+supplies, and none of it is produced by a Build or by an image model.
 
 A component that cannot draw itself without a Source supplying its background is the wrong shape.
 The symptom is unmistakable — it imports cleanly and renders nothing.

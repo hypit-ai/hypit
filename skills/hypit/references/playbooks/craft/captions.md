@@ -1,162 +1,140 @@
 # Caption craft
 
-Captions are one program-wide interpretation of the authoritative Script, measured against the real
-speech program. Do not create separate caption systems for speakers, regions, or styles.
+Caption displays the speech as it is being delivered. Its verbal identity and contemporaneous
+relationship to that speech matter more than its size, decoration or placement. A striking animated
+word can be Caption; a title held long after the phrase to label a section can be Typography even
+when those words were also spoken. Their role in the work decides the distinction.
 
-## What is a caption is decided by the words, not by the styling
+Script's Dual Text permits intentional display/pronunciation differences: “2012” and “twenty twelve”
+remain one authored verbal unit. Caption does not require literal equality to a raw transcript.
+Independent titles, lower thirds, labels and editorial paraphrases belong to their own Text or MG role.
 
-**Text that arrives with speech and reads exactly what is being said is a caption.** That is the
-whole test, and it is checkable rather than a judgement: the words match the transcript verbatim, and
-they appear as those words are spoken. A reference video's word-level transcript is prepared for
-exactly this comparison.
+For implementation of a new visual family, read
+[Caption authoring](../../production/caption-authoring.md). That guide keeps the common text/timing
+chain and shows where the new family owns scheduling and rendering.
 
-Nothing about how it is drawn changes the answer. A caption may be set in two typefaces, sit on a
-coloured slab, arrive a word at a time, be enormous, be decorative, or open the video — and it is
-still a caption. Handsome styling is the commonest reason this gets misfiled, and it is not a reason
-at all.
+## One data contract, three presentation layers
 
-So it is authored with the caption vocabulary, driven by the Script and the alignment map. Never
-reproduce it as `typo:` or `text:` with the words typed in by hand. That looks equivalent on the
-first frame and is not: hand-typed words no longer follow the Script, so re-recording the line leaves
-them stale, they are unreachable by anything that reasons about captions, and the identity that makes
-them checkable is gone.
+Script publishes one `CaptionDocument`: ordered display words, complete Alignment Units, speaking
+Roles, word attributes and authored Cue handoffs. Caption joins it to the real SemanticTrack. That
+common typed relationship is what makes the result Caption; an official renderer is not the
+definition. A project package can provide another Caption family while keeping the same Script words
+and measured speech evidence.
 
-When the caption vocabulary cannot express the appearance, that is a vocabulary gap and it is
-declared as one. Write a new project-local caption package that fills the same roles the installed
-caption packages fill — Style, Program, planning and alignment — and drive it from the same Script
-and map. `../../local-author-package.md` says where those roles are stated and when a package's own
-source is worth opening. Reaching for a typography Track because it already draws the shape is the
-mistake this section exists to prevent.
+Direct the presentation through three related layers:
 
-Text that is *not* a caption keeps its own vocabulary: a title nobody says, a lower third, a label on
-a product, an editorial line that paraphrases rather than transcribes. The distinction is whether the
-words are the spoken words.
+| Layer | What it decides |
+| --- | --- |
+| **Family** | The structural visual language and scheduling behavior the Caption can express: uniform flowing words, independently arranged phrases, speaker-attached shapes, or another authored relationship. |
+| **Recipe and resolved Style** | One coherent treatment within that family. An SVS Recipe gathers a useful combination; the family's Style Surface resolves it with fonts or other explicit resources. Role or Selection applications can choose among those Styles. |
+| **Parameters** | The individual decisions inside that treatment: placement and anchors, usable width, wrapping, typography, Paint and boxes, active-word response, Cue motion, reveal, lead, tail and handoff. |
 
-## Author one caption pipeline
+The installed family vocabulary owns exact parameter names and accepted values. Craft owns how the
+combination serves this picture and this reading rhythm. Keep a proven production treatment in its
+project `.svs`; a set that has earned reuse across works can become an ordinary versioned data package
+under its owner's scope. Such a collection preserves the family, Recipe and intended use together
+rather than turning isolated parameter values into universal defaults.
 
-Use one deterministic pipeline for the program:
+## Keep wording and timing in their owners
 
-```text
-exact font → caption-fine:Style → caption:Program
-                                      +
-                               speech.semantic
-                                      ↓
-                            caption-fine:Track
-```
+Script owns display words, speaking Roles, Dual Text units, attributes and `||` Cue Breaks. Its
+CaptionDocument contains no seconds or frames. Caption joins that truth to the actual SemanticTrack;
+a visual family then presents the timed units. Reuse those units rather than retyping spoken words
+into independent Typography merely because it can draw the desired shape.
+
+Use the produced performance's normalized and aligned audio. A change to that audio, its speed or
+its cuts can change word timing and requires corresponding alignment. A visual-only restyle can
+reuse the same semantic and media outputs through the Run.
+
+## Start with the Fine family's real expressive range
+
+UGC, podcast and interview work can use `@hypit/caption-fine`. Fine supports exact fonts,
+placement and anchors, wrapping, Cue boxes, active-word treatment, lead/tail and motion through
+explicit Style Recipes. Role overrides can distinguish podcast hosts; a tracked head can supply a
+moving placement point without changing the verbal pipeline.
 
 ```svml
-<fonts:Stack id="caption-font" family="inter" weight="700"
-  style="normal" emoji="color"/>
-<caption-fine:Style id="primary-caption"
-  recipe={recipes.caption.primary} font={caption-font}/>
-
 <caption:Program id="caption-program" document={story.caption} narrative={story}
   default={primary-caption}>
-  <caption:Use role="HOST" style={host-caption}/>
-  <caption:Use selection={story.selection.product}
-    style={product-caption}/>
-  <caption:Mute selection={story.selection.private}/>
+  <caption:Use role="GUEST" style={guest-caption}/>
 </caption:Program>
-
 <caption-fine:Track id="captions" document={story.caption}
-  semantic={speech.semantic}
-  program={caption-program}/>
+  semantic={speech.semantic} program={caption-program}/>
 ```
 
-Add `{captions.track}` to `film:Film` as one peer Visual Track. If the format intentionally has no
-captions, omit the Caption components entirely.
+This excerpt assumes the imported Surfaces, fonts and Styles already declared in the Source.
+Use the owning package README and `hypit vocabulary @hypit/caption-fine` for current Recipe fields.
+Keep one coherent interpretation of the Script across speakers and styles; different colors do not
+require unrelated transcripts or separately invented timing.
 
-## A Fine Caption Recipe writes eleven keys or it throws
+Fine's uniform-flow layout is a particular family and a useful broad implementation. When the work
+needs new structural relationships within a Cue, create a project Caption family consuming the common
+Caption data and semantic timing. Word attributes and semantic Selections can carry the authored roles
+that family interprets; its own schedule and renderer can give those roles distinct arrangement and
+animation. A new layout is normal component authorship. [Caption authoring](../../production/caption-authoring.md)
+explains the boundary.
 
-`caption-fine:Style` requires `align`, `background`, `fill`, `line-height`, `padding`, `radius`,
-`size`, `stack-order`, `width`, `x` and `y`. None of them has a fallback: a Recipe missing one is
-refused when the Style decodes, before anything draws.
+## Design Cue rhythm with the Caption system
 
-The three that get left out are the box keys — `background`, `padding` and `radius` — because a
-design that wants no Cue box reads as having nothing to say about them. Write them anyway: an
-invisible box is `background="#00000000"` with `padding` and `radius` at `0`, which is a value, not
-an omission.
+A Cue is one timed block of displayed speech. Its family and Recipe determine what that block looks
+like; Script's `||` determines an additional handoff between blocks inside the same Segment, speaking
+turn and Style run. Those other boundaries already form new Cues. A visual line is different: Fine
+may wrap one Cue over several lines without another `||`.
 
-**`padding` is a string; `radius` and `size` are numbers.** `padding: 0` is refused with *Fine Caption
-Recipe padding must be a string* while `radius: 0` beside it is correct, and the same holds for
-`active-box-padding`. The reason is that padding admits a pair — `padding: "8 12"` is eight vertical
-and twelve horizontal — which no JSON number can carry, so it travels as text and is split on the
-space. A single value is still written as one: `padding: "0"`.
+Choose the grouping from language and picture together. Let one Cue carry a coherent phrase or
+thought that the viewer can grasp while still watching the performance. Preserve words whose meaning
+depends on each other, and give a payoff or contrast its own handoff when the visual treatment makes
+that separation useful. Keep a name, negation, article and noun, preposition and object, phrasal verb,
+or quantity and unit together when separating them would make either screen state harder to read.
 
-`cue-min-words` and `cue-max-words` are not Recipe properties. Cue length belongs to Script `||`
-boundaries and the route's `validate_script_cues` gate.
+For the compact Fine treatments common in short-form UGC, begin with two to four displayed words per
+Cue, or an equivalently brief reading unit in writing systems that do not separate words with spaces.
+Count what Caption displays: the spoken side of Dual Text does not make the visual block longer. This
+range is a strong drafting prior for a quickly handed-off, animated Caption; the actual language,
+delivery, font, width, motion and Canvas decide the finished grouping. Let a tightly bound phrase run
+longer when its meaning would suffer from another handoff.
 
-## Cue boundaries are marked in the Script, with `||`
+With Fine's uniform-flow family, direct the common Cue to remain on one line by considering its
+grouping together with the Recipe's font size, usable width and word gap. A stable line lets each
+handoff replace one readable block without repeatedly changing the block's height and the viewer's
+reading position. A Caption family designed around a two-line stack, an oversized keyword with a
+supporting phrase, or another internal composition owns that relationship itself; its intentional
+line structure is not a reason to add another `||`.
 
-A Recipe holds no rule for where one Cue ends and the next begins. **The Script does**, as a `||`
-between two complete Alignment Units — `docs/quickstart/script.md` is authoritative for it, and
-the Script parser carries those breaks into the Caption Document.
+For example, a compact Fine treatment can begin with this phrase rhythm:
 
+```svml
+<explanation><HOST>
+  One reference || can rebuild ||
+  the shots and pacing, ||
+  the captions and effects, ||
+  around your product.
+</explanation>
 ```
-<PRESENTER> It's generally good || at a lot of || different things, ||
-  but it's not || as specialized || as some of these || other models.
-```
 
-A Segment with no `||` in it is **one Cue**, however long it is: the whole passage renders as a
-single line and runs off both edges of the frame. That is the shape to recognise — a caption that
-overflows is a Segment nobody broke, not a Style whose width or size is wrong, and widening the box
-or shrinking the type will not close it.
+Its Cues contain two, two, four, four and three displayed words, while articles remain with their
+nouns and each list pair stays intact. The same sentence can justify another grouping when a
+different family makes a contrast, keyword or reaction the visual event. The sentence supplies
+semantic structure; the chosen presentation says how much of that structure should share one screen
+state.
 
-Treat roughly **3–4 spoken words per Cue as the hard default** (fewer for long words, large type, or
-dense designs). A longer Cue is an explicit exception that must be justified by the reference and
-verified in the rendered bounds; it is never the result of forgetting `||`.
+Use Studio or a rendered interval to see the Cue with actual speech. Repeatedly flashing tiny groups
+usually means the viewer is being asked to reacquire text too often; an overfull block usually means
+the language, Recipe or family is asking one visual state to carry too much. Change `||` when the
+reading unit is wrong. Change the Recipe when the reading unit is right but its size, wrap, placement
+or motion is wrong. Change the family when the desired relationships cannot be expressed by that
+family's structure.
 
-The route's mechanical gate is stricter: `validate_script_cues --run <build.svrun>` rejects every Cue
-over four visible words, including Dual Text display words. Split it with `||` between complete units.
+Choose font, size, width, line height, contrast and motion together. If a Cue overflows, inspect both
+its authored grouping and its actual Style; do not assume every overflow has the same cause. Lead,
+tail and handoff shape visibility while karaoke follows semantic word timing.
 
-Mark the breaks where the reference breaks. The observation for a shot says what is on screen at
-once, and that is the Cue.
+Treat Caption, icons, flashes and other graphics as a composition. A guest color and answer accents
+can work together without coloring every system identically. Check readability across
+light and dark frames, avoid hiding the important face or product, and allow enough space above a
+tracked head for the whole Cue rather than only its anchor.
 
-`||` cannot sit inside a Dual Text unit or split one, since a break falls between units and never
-through one. Timing is not authored with it: each Cue is still timed from the alignment.
-
-## Keep the Script authoritative
-
-- Preserve the exact Script display text. Do not copy burned-in reference subtitles or rewrite the
-  spoken source to match an existing visual caption.
-- Use Dual Text when display and pronunciation differ. A Dual Text Alignment Unit is indivisible for
-  timing; a Selection that cuts through it is rejected.
-- Use `caption:Use role` for speaker-wide style and `caption:Use selection` for a semantic Selection's
-  complete-unit projection. Ordered rules replace the complete Style, with the last matching rule
-  winning.
-- Use `caption:Mute` to hide complete Alignment Units without deleting Script words, changing speech,
-  or regrouping Cues.
-- Preserve original-language dialogue. Translation or alternate-language delivery is a separate
-  authored Script decision, not a downstream model rewrite.
-
-## Keep authoring separate from timing
-
-- Script owns the CaptionDocument, including Display Words, N:M Alignment Units and authored `||`
-  Cue Breaks.
-- Caption projects Selections/Roles to complete units before it sees any frame or audio measurement.
-- Each `whisperx:SemanticTake` measures one accepted normalized Segment take and packages its local
-  timing; `speech:Track` assembles those Takes into the SemanticTrack used by `caption-fine:Track`.
-- Recompute the affected SemanticTake whenever the speech audio changes. This holds for every Track
-  timed against it — Caption, Media, Typography, Ranking, Deck, Comment, Screen, Audio — because each
-  one is otherwise measured against audio that no longer exists, and the drift is invisible in a
-  still frame.
-
-## Design for readability
-
-- Define one explicit default Style covering every Alignment Unit, then use only the overrides the story needs.
-- Keep caption placement inside a safe region and clear of faces, products, device screens, buttons,
-  and essential evidence.
-- Use consistent font bytes, width, size, line height, Cue bounds, and padding when stable readability
-  matters. Avoid decorative motion or active scaling that makes consecutive Cues appear unrelated.
-- Short spoken phrases remain complete even when they cannot satisfy a preferred minimum word count.
-  Never remove words merely to force a visual layout target.
-- Treat captions and editorial overlays as separate Tracks with deliberate stack orders and spatial
-  regions so they do not compete for the same area.
-
-## Review the actual program
-
-- Review the full delivery with real speech timing, not only a still frame or a structural plan.
-- Verify every word, Role Style, muted unit, Cue boundary, timing window, line wrap, safe zone, and
-  overlap with Media/Text Tracks.
-- Listen while reviewing: a visually plausible Caption Track still fails if it leads or trails the
-  actual spoken word.
+Use [Caption tracking](caption-tracking.md) for the produced-video → face boxes → head regions →
+rerender loop. Fixed placement remains a valid design. Review the moving result with speech for
+reading rhythm, Role assignment, cut transitions and visual collisions; a single styled frame is
+not sufficient evidence of Caption timing.

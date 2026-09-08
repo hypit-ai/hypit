@@ -9,7 +9,7 @@ type TerminalVisualTrack = {
     readonly subjectId?: string;
     readonly elements?: readonly {
       readonly kind?: string;
-      readonly artifact?: { readonly digest?: string };
+      readonly artifact?: { readonly resource?: string };
     }[];
   }[];
 };
@@ -18,7 +18,7 @@ type TerminalAudioTrack = {
   readonly clips?: readonly {
     readonly id: string;
     readonly subjectId?: string;
-    readonly artifact?: { readonly digest?: string };
+    readonly artifact?: { readonly resource?: string };
   }[];
 };
 
@@ -44,14 +44,14 @@ function projectTerminalVisual(context: StudioTrackCompanionContext): readonly S
   return context.generic().map((entity) => {
     const present = entity.presentId === undefined ? undefined : presents.get(entity.presentId);
     const material = present?.elements?.find((element) =>
-      (element.kind === "image" || element.kind === "video") && element.artifact?.digest !== undefined);
-    const digest = material?.artifact?.digest;
+      (element.kind === "image" || element.kind === "video") && element.artifact?.resource !== undefined);
+    const resource = material?.artifact?.resource;
     return withTemporalLineage(context, {
       ...entity,
       ...(present?.subjectId === undefined ? {} : { authoredId: present.subjectId }),
       display: {
         title: present?.subjectId ?? entity.display.title,
-        layers: digest === undefined ? [] : [previewLayer(artifactPreview(material?.kind === "image" ? "image" : "video", digest), material?.kind === "image" ? "repeat-x" : "storyboard")],
+        layers: resource === undefined ? [] : [previewLayer(artifactPreview(material?.kind === "image" ? "image" : "video", resource), material?.kind === "image" ? "repeat-x" : "storyboard")],
       },
       presentation: { entity: "media-item", chrome: "standard" },
     });
@@ -63,13 +63,13 @@ function projectTerminalAudio(context: StudioTrackCompanionContext): readonly St
     .map((clip) => [clip.id, clip] as const));
   return context.generic().map((entity, index) => {
     const clip = clips.get(context.spans[index]?.id ?? "");
-    const digest = clip?.artifact?.digest;
+    const resource = clip?.artifact?.resource;
     return withTemporalLineage(context, {
       ...entity,
       ...(clip?.subjectId === undefined ? {} : { authoredId: clip.subjectId }),
       display: {
         title: clip?.subjectId ?? entity.display.title,
-        layers: digest === undefined ? [] : [previewLayer(artifactPreview("audio", digest), "waveform")],
+        layers: resource === undefined ? [] : [previewLayer(artifactPreview("audio", resource), "waveform")],
       },
       presentation: { entity: "audio-clip", chrome: "standard" },
     });

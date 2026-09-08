@@ -9,7 +9,7 @@ const source = {
   media: {
     timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 100 },
     visual: {
-      artifact: { kind: "blob", digest: `sha256:${"0".repeat(64)}`, size: 1, mediaType: "video/mp4" },
+      artifact: { kind: "blob", resource: "res_semantic-take-adjust", size: 1, mediaType: "video/mp4" },
       width: 720,
       height: 1280,
     },

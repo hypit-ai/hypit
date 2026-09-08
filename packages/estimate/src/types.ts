@@ -5,8 +5,6 @@ export type SpeechEstimateRounding = "none" | "round" | "ceil";
 
 type SpeechEstimatePolicyBase = {
   readonly language: SpeechEstimateLanguage;
-  readonly minimumSec: number;
-  readonly maximumSec: number;
   readonly rounding: SpeechEstimateRounding;
   readonly paddingSec?: number;
 };

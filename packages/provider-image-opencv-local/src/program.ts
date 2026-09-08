@@ -1,8 +1,8 @@
 import { execFile } from "node:child_process";
 
-import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@hypit/runtime-kit";
+import type { ManagedProgram, ManagedProgramState } from "@hypit/runtime-kit";
 
-import { resolveLocalOpenCvDeployment } from "./deployment.js";
+import type { LocalOpenCvDeployment } from "./deployment.js";
 
 /** Kept equal to `services/image-opencv/pyproject.toml` by a test in this package. */
 const REQUIRED_MAJOR = { cv2: 4, numpy: 2 } as const;
@@ -27,11 +27,10 @@ function run(executable: string, args: readonly string[]): Promise<{ ok: boolean
  * the APIs this Provider calls, fails in the middle of a Build with a
  * subprocess error. Probing says so at `doctor` time instead.
  */
-export function localOpenCvProgram(context: RuntimeAdapterFactoryContext): ManagedProgram {
-  const deployment = resolveLocalOpenCvDeployment(context);
+export function localOpenCvProgram(id: string, deployment: LocalOpenCvDeployment): ManagedProgram {
   const python = deployment.pythonExecutable;
   return {
-    id: "image-opencv",
+    id,
     ...(deployment.stateRoot === undefined ? {} : { stateRoot: deployment.stateRoot }),
     ...(deployment.installCommands === undefined ? {} : {
       installation: {

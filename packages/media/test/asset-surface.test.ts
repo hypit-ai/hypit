@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   decodeMediaAudioSurface,
@@ -18,7 +18,7 @@ for (const fixture of [
   test(`${fixture.label} Surface publishes the resolved BlobArtifact`, async () => {
     const artifact = {
       kind: "blob" as const,
-      digest: fixtureDigest(`media:${fixture.label.toLowerCase()}`),
+      resource: fixtureResource(`media:${fixture.label.toLowerCase()}`),
       size: 2_048,
       mediaType: fixture.mediaType,
     };
@@ -52,7 +52,7 @@ test("Video Surface rejects ambiguous extensions and non-video resolved artifact
     element: { kind: "element", name: "media:Video", attributes, children: [], range },
     resolveReference: () => undefined,
     resolveAsset: (request) => ({ artifact: {
-      kind: "blob", digest: fixtureDigest("media:video-invalid"), size: 10, mediaType,
+      kind: "blob", resource: fixtureResource("media:video-invalid"), size: 10, mediaType,
     } }),
   });
 

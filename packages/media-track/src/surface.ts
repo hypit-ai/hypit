@@ -307,7 +307,7 @@ function declaredVisualSource(
     : { kind, value: reference(element.attributes.surface, `${element.name}.surface`, mediaTypes.compositableSurface, resolve) };
 }
 
-function sampling(element: StructuredElement): MediaSamplingMotion["keyframes"][number] {
+export function decodeMediaSamplingKeyframe(element: StructuredElement): MediaSamplingMotion["keyframes"][number] {
   allowed(element, ["at", "zoom", "x", "y", "rotate", "easing"]);
   empty(element);
   const at = text(element, "at");
@@ -348,7 +348,7 @@ function sourceLayer(
       if (context.ignoreSiblingChildren === true) return [];
       throw new Error(`${element.name} accepts only Sampling children.`);
     }
-    return [sampling(child)];
+    return [decodeMediaSamplingKeyframe(child)];
   });
   const motion = keyframes.length === 0 ? undefined : { keyframes };
   const layerSuffix = `${context.unitSuffix}-layer-${suffix(layerIndex)}`;

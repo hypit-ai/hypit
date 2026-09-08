@@ -3,15 +3,13 @@
 <svml>
   <import from="@hypit/script@1"/>
   <import as="asset" from="@hypit/media@1"/>
-  <import as="mimo" from="@hypit/mimo-tts@1"/>
+  <import as="mimo" from="@hypit/mimo-speech@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="program" from="@hypit/program-space@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
-  <import as="estimate" from="@hypit/estimate@1"/>
-  <import as="estimated" from="@hypit/semantic-take-estimate@1"/>
   <import as="speech" from="@hypit/speech-track@1"/>
   <import as="audio-track" from="@hypit/audio-track@1"/>
   <import as="caption" from="@hypit/caption@1"/>
@@ -21,9 +19,11 @@
   <import as="space" from="@hypit/spatial@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
-  <import as="recipes" source="./recipes.svs"/>
-  <import as="broll-kit" source="./kits/broll-v1.svs"/>
-  <import as="podcast-kit" source="./kits/podcast-v1.svs"/>
+  <import as="recipes" source="./reference.svs"/>
+  <import as="image-kit" source="@hypit/gpt-image-kits/phone-ugc-v1"/>
+  <import as="opening-kit" source="./kits/split-opening.svs"/>
+  <import as="broll-kit" source="@hypit/seedance-kits/broll"/>
+  <import as="podcast-kit" source="@hypit/seedance-kits/podcast"/>
 
   <script id="story">
     <opening-question>
@@ -40,100 +40,248 @@
     </arms-are-asking>
   </script>
 
-  <text:Value id="guy-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Young East Asian man with a slim oval face, straight nose, dark almond-shaped eyes behind round black glasses, and thick wavy black hair falling over his forehead. He has a medium shoulder line and wears a pale striped T-shirt with a small black chest mark; keep the microphone and side-facing gaze visible.</text:Value>
-  <gpt:Image id="guy" prompt={guy-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="girl-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Young East Asian woman with an oval face, dark almond-shaped eyes, straight brows, long straight black hair with wispy bangs, and broad athletic shoulders. She wears a black strapless top and a delicate necklace; keep her upper torso and microphone position visible.</text:Value>
+  <!-- The main host establishes the person, place and capture language. -->
+  <text:Value id="girl-shot">
+    Generate a close half-body podcast view. A woman sits toward the right, her body angled slightly left,
+    looking at her conversation partner outside the left edge. Her face remains clearly readable.
+    She sits back comfortably in a fabric armchair with her legs crossed, near enough to the camera for her
+    face and upper body to feel present, while her shoulders, arms and seated legs stay comfortably framed.
+  </text:Value>
+  <text:Value id="girl-direction">
+    She is exceptionally beautiful, with Japanese-American features and Korean girl-group-idol presence:
+    a small refined face, very fair skin, large attractive eyes with blue contact lenses, and long straight
+    black hair with blunt bangs. Her strikingly muscular physique contrasts with her delicate face.
+    Her shoulders are very broad, her head-to-shoulder proportions excellent, and her arms have pronounced
+    muscle definition and visible veins. She wears a black strapless top with an angel-wing design and
+    relaxed tweed trousers with an asymmetrical pattern of pale stripes.
+    The setting is outside a pleasant Korean street-side restaurant, with textured dark wooden walls,
+    plants and other tables. A half-eaten grape bingsu sits on a table in the lower left.
+    A podcast microphone extends from the left, marked HYPIT in attractive uppercase lettering.
+    Natural light falls comfortably across her face; the wooden wall retains its own color and texture.
+  </text:Value>
+  <text:Render id="girl-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="shot" text={girl-shot}/>
+    <text:Set name="direction" text={girl-direction}/>
+  </text:Render>
   <gpt:Image id="girl" prompt={girl-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="guy-hypihub-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Young East Asian man with a slim oval face, straight nose, dark almond-shaped eyes behind round black glasses, and thick wavy black hair falling over his forehead. He has a medium shoulder line and wears a pale striped T-shirt with a small black chest mark; keep the microphone and side-facing gaze visible.</text:Value>
-  <gpt:Image id="guy-hypihub" prompt={guy-hypihub-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="girl-hypihub-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Young East Asian woman with an oval face, dark almond-shaped eyes, straight brows, long straight black hair with wispy bangs, and broad athletic shoulders. She wears a black strapless top and a delicate necklace; keep her upper torso and microphone position visible.</text:Value>
-  <gpt:Image id="girl-hypihub" prompt={girl-hypihub-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="split-hypihub-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Show the same young East Asian man with thick wavy black hair in the upper half and the same athletic young East Asian woman with long black hair and bangs in the lower half. Keep both faces, shoulders, microphones, and the clean horizontal split visible.</text:Value>
-  <gpt:Image id="split-hypihub" prompt={split-hypihub-prompt} aspect-ratio="9:16" resolution="2K"/>
-  <text:Value id="creatine-prompt">A photograph with the texture of real iPhone footage. Generate a vertical medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. single creatine supplement tub with a squat cylindrical body, wide lid, and bold product label centered in the frame, with its shape, cap, label placement, and hand scale clearly readable. Use a short neutral product backdrop and no extra objects.</text:Value>
-  <gpt:Image id="creatine" prompt={creatine-prompt} aspect-ratio="9:16" resolution="2K"/>
+
+  <text:Value id="guy-shot">
+    Generate the complementary half-body camera view across this conversation.
+    A slim young man sits toward the left, angled and looking right toward the woman outside the frame.
+    Match the comfortable camera distance and scale of the first view. The microphone now enters from the right;
+    a bowl of mango bingsu on the lower-right table balances him.
+  </text:Value>
+  <text:Value id="guy-direction">
+    He is a handsome, skinny American young man with an endearing nerdy presence, messy curly hair,
+    black-framed glasses and an attractive face. He wears a pale finely striped T-shirt with a small abstract
+    devil-tail graphic, black trousers and a cool necklace. He sits casually in the corresponding fabric chair.
+    Keep the same restaurant, textured wooden surfaces and natural lighting, but show the other part of the
+    space with different background objects appropriate to this camera's direction. The microphone reads HYPIT.
+  </text:Value>
+  <text:Value id="guy-references">
+    Use the first image for the restaurant, capture language and conversational geometry. Create the other host and the opposite camera view; do not mirror the woman or duplicate her background.
+  </text:Value>
+  <text:Render id="guy-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="shot" text={guy-shot}/>
+    <text:Set name="direction" text={guy-direction}/>
+    <text:Set name="references" text={guy-references}/>
+  </text:Render>
+  <gpt:Image id="guy" prompt={guy-prompt} aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={girl.image}/>
+  </gpt:Image>
+
+  <text:Value id="creatine-prompt">
+    A typical e-commerce product photograph of a single creatine supplement tub.
+    The main English label reads CREATINE, with a few smaller packaging details arranged like a believable
+    supplement label. Show the whole tub and lid clearly against a simple neutral product backdrop.
+    Only the tub is present; there are no surrounding objects or floating words.
+  </text:Value>
+  <gpt:Image id="creatine" prompt={creatine-prompt} aspect-ratio="1:1" resolution="2K"/>
 
   <text:Value id="guy-voice-sample">OK Sarah, so what is the one single thing that you literally can't live without?</text:Value>
   <mimo:VoiceDesign id="guy-voice" speech={guy-voice-sample}>
-    A young East Asian man with a curious, friendly podcast-host delivery; clear, relaxed, lightly nasal, and conversational, with an easy medium pace.
+    A young American man with a curious, friendly podcast-host delivery; clear, relaxed, lightly nasal, and conversational, with an easy medium pace.
   </mimo:VoiceDesign>
   <text:Value id="girl-voice-sample">Creatine. Five grams a day, every day.</text:Value>
   <mimo:VoiceDesign id="girl-voice" speech={girl-voice-sample}>
-    A young East Asian woman with a confident, lively podcast delivery; clear, bright, athletic, and matter-of-fact, with expressive emphasis and natural pacing.
+    A young woman speaking conversational American English with a confident, lively podcast delivery; clear, bright, athletic, and matter-of-fact, with expressive emphasis and natural pacing.
   </mimo:VoiceDesign>
   <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
 
-  <text:Value id="split-prompt">
-    A photograph with the texture of real iPhone footage. Generate a horizontal split-screen composition, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Preserve the Rembrandt lighting in the reference images exactly. Create a horizontal split-screen composition with the man in the upper half and the woman in the lower half. Frame both people in tight close-ups focused on their upper bodies from the upper chest upward.
+  <text:Value id="split-shot">
+    Create a horizontal split-screen image: the man fills the upper panel and the woman fills the lower panel.
+    Both panels are close views of their faces and upper bodies, with their microphones visible.
   </text:Value>
+  <text:Value id="split-direction">
+    Keep each person's identity, styling, restaurant surroundings and natural lighting.
+    The man looks right and the woman looks left, as in their individual views.
+    Keep the horizontal dividing line clean and preserve the sense that both are present in the conversation.
+  </text:Value>
+  <text:Value id="split-references">
+    The first image supplies the man and his camera view for the upper panel. The second supplies the woman and her camera view for the lower panel.
+  </text:Value>
+  <text:Render id="split-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="shot" text={split-shot}/>
+    <text:Set name="direction" text={split-direction}/>
+    <text:Set name="references" text={split-references}/>
+  </text:Render>
+  <gpt:Image id="split" prompt={split-prompt} aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={guy.image}/>
+    <gpt:Reference image={girl.image}/>
+  </gpt:Image>
 
-  <text:Value id="guy-hold-prompt">
-    A photograph with the texture of real iPhone footage. Generate a medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Preserve the Rembrandt lighting from the first reference image exactly. Preserve the microphone and its placement, shifting it only slightly toward the right side of the frame to leave enough room for the man to raise his forearm. Show the man smiling while holding the creatine container from the second reference image. He continues looking toward the right side of the frame as though speaking to someone there. He holds the creatine with the hand on the left side of the frame.
+  <text:Value id="girl-hold-shot">
+    Keep the first image's camera view, framing, natural lighting, seated pose and microphone position.
   </text:Value>
+  <text:Value id="girl-hold-direction">
+    The woman holds the creatine tub from the second image with the hand on the right side of the frame,
+    while the hand on the left points toward it. She still looks left as if talking to her partner.
+    Preserve her beauty, identity and muscular physique. The tub belongs naturally in her hand and the scene.
+  </text:Value>
+  <text:Value id="girl-hold-references">
+    Image one supplies the host and the complete scene. Image two supplies the exact product, including its label and proportions.
+  </text:Value>
+  <text:Render id="girl-hold-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="shot" text={girl-hold-shot}/>
+    <text:Set name="direction" text={girl-hold-direction}/>
+    <text:Set name="references" text={girl-hold-references}/>
+  </text:Render>
+  <gpt:Image id="girl-hold" prompt={girl-hold-prompt} aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={girl.image}/>
+    <gpt:Reference image={creatine.image}/>
+  </gpt:Image>
 
-  <text:Value id="girl-hold-prompt">
-    A photograph with the texture of real iPhone footage. Generate a medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Preserve the Rembrandt lighting from the first reference image exactly. Preserve the microphone and its placement, shifting it only slightly toward the left side of the frame to leave enough room for the woman to raise her forearm. Show the woman smiling while holding the creatine container from the second reference image. She continues looking toward the left side of the frame as though speaking to someone there. She holds the creatine with the hand on the right side of the frame and points toward it with the hand on the left side of the frame.
+  <text:Value id="guy-hold-shot">
+    Keep the first image's camera view, framing, natural lighting, seated pose and microphone position.
   </text:Value>
+  <text:Value id="guy-hold-direction">
+    The man holds the creatine tub from the second image with the hand on the left side of the frame.
+    He still looks right as if speaking to his partner. Keep his other hand naturally at rest.
+    Preserve his identity and clothing; the tub belongs naturally in his hand and the scene.
+  </text:Value>
+  <text:Value id="guy-hold-references">
+    Image one supplies the host and the complete scene. Image two supplies the same product held by the woman.
+  </text:Value>
+  <text:Render id="guy-hold-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="shot" text={guy-hold-shot}/>
+    <text:Set name="direction" text={guy-hold-direction}/>
+    <text:Set name="references" text={guy-hold-references}/>
+  </text:Render>
+  <gpt:Image id="guy-hold" prompt={guy-hold-prompt} aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={guy.image}/>
+    <gpt:Reference image={creatine.image}/>
+  </gpt:Image>
 
-  <text:Value id="coffee-prompt">
-    A photograph with the texture of real iPhone footage. Generate an arm's-length selfie, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Preserve the woman's identity and strongly athletic physique from the reference image, including her visibly muscular arms. She is inside a café, holding the phone high with an extended arm and turning her upper body for a lively selfie. She now wears a light-gray sleeveless hooded zip-up athletic vest over a beige bandeau top, with the hood up and an additional pink baseball cap. She makes an animated, playful expression while pointing behind herself toward a cup of coffee on a table. Other café patrons are subtly visible in the clear background. The lighting is convincingly real: bright afternoon daylight enters from outside and fills the café, casting natural golden side light across her face. Keep the composition energetic and spontaneous, like genuine phone-shot UGC.
+  <text:Value id="coffee-shot">
+    Generate a lively raised-arm selfie of the woman turning toward her phone inside a cafe.
+    The view feels comfortably close and casually composed.
   </text:Value>
+  <text:Value id="coffee-direction">
+    She has changed into a lightweight pale-gray sleeveless zip-front sports layer over a beige bandeau,
+    with the hood and an additional pink baseball cap. Her expression is playful and sociable, with one casual
+    hand gesture. Preserve her exceptionally attractive face, muscular shoulders and strong arms.
+    Other customers are faintly present in the cafe. Afternoon light through the windows gives her face
+    natural illumination; cafe furniture and surroundings retain their color.
+  </text:Value>
+  <text:Value id="coffee-references">
+    The first image supplies her identity and physique. Change her clothing, pose and location to the cafe selfie described here.
+  </text:Value>
+  <text:Render id="coffee-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="shot" text={coffee-shot}/>
+    <text:Set name="direction" text={coffee-direction}/>
+    <text:Set name="references" text={coffee-references}/>
+  </text:Render>
+  <gpt:Image id="coffee" prompt={coffee-prompt} aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={girl.image}/>
+  </gpt:Image>
 
-  <text:Value id="smoothie-prompt">
-    A photograph with the texture of real iPhone footage. Generate a mirror selfie, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Preserve the woman's identity and strongly athletic physique from the reference image, including her visibly muscular arms. She is standing inside a dessert shop and taking a mirror selfie with her phone. She now wears a dark navy Adidas athletic tank top and gray-black over-ear headphones. With her free hand she holds a delicious bowl of strawberry shaved ice close to herself, her lips slightly parted in a lively expression as though she is about to taste it. Her phone has a cute CASETiFY case covered with adorable bunny illustrations, and she looks directly at the phone screen. The lighting is convincingly real: bright afternoon daylight enters from outside and fills the shop, giving her face natural frontal illumination. Use an energetic, playful composition rather than a stiff or symmetrical pose.
+  <text:Value id="smoothie-shot">
+    Generate a lively mirror selfie of the woman standing in a dessert shop.
+    She holds her phone in one hand, watches its screen, and holds a bowl of strawberry bingsu in the other.
   </text:Value>
+  <text:Value id="smoothie-direction">
+    She wears a navy Adidas sports tank and charcoal over-ear headphones. Her phone has a playful CASETiFY
+    case with a cute rabbit design. She parts her lips with an amused expression as if about to taste the bingsu.
+    Keep her very beautiful face and clearly muscular arms and shoulders. The shop is lit naturally through
+    its windows, with a readable background. The composition feels spontaneous rather than rigid.
+  </text:Value>
+  <text:Value id="smoothie-references">
+    Preserve the woman from the first image while creating this different outfit, activity and location. This dessert scene broadly supports her food routine; it is not a literal smoothie demonstration.
+  </text:Value>
+  <text:Render id="smoothie-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="shot" text={smoothie-shot}/>
+    <text:Set name="direction" text={smoothie-direction}/>
+    <text:Set name="references" text={smoothie-references}/>
+  </text:Render>
+  <gpt:Image id="smoothie" prompt={smoothie-prompt} aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={girl.image}/>
+  </gpt:Image>
 
-  <text:Value id="pasta-prompt">
-    A photograph with the texture of real iPhone footage. Generate a low-angle composition, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. Preserve the woman's identity and strongly athletic physique from the reference image, including her muscular shoulders and arms. She is in the courtyard of her home, photographed from a phone placed on a table and angled upward. The covered courtyard has a warm modern Korean interior style, a wooden slatted roof, and hanging plants. She now wears a cute pink spaghetti-strap apron over a white T-shirt, with part of her hair held back by a white hair clip. She is seriously preparing a batch of macaroni at the stovetop, ready to place it into a pot. The lighting is convincingly real: bright golden afternoon light fills the outdoor space and gives her face natural frontal illumination.
+  <text:Value id="pasta-shot">
+    Generate a low-angle photograph as if a phone has been set on a table in the woman's home courtyard.
+    She is close enough for her attentive expression and practical hand movements to be clearly readable.
   </text:Value>
+  <text:Value id="pasta-direction">
+    She wears a pink spaghetti-strap apron over a textured pale T-shirt, with a pale hair clip holding back
+    part of her hair. She is preparing macaroni at a stovetop, with pasta ready to go into a pot.
+    Keep her exceptionally attractive face, strong arms and broad muscular shoulders.
+    The covered courtyard has a warm modern Korean domestic feel, with a slatted wooden roof and hanging plants.
+    Afternoon sunlight enters the courtyard and gives her face natural illumination, while the covered area
+    and surrounding wood keep the scene tonally grounded.
+  </text:Value>
+  <text:Value id="pasta-references">
+    Use the first image for her identity and physique; create the home-cooking scene independently of the other lifestyle images.
+  </text:Value>
+  <text:Render id="pasta-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="shot" text={pasta-shot}/>
+    <text:Set name="direction" text={pasta-direction}/>
+    <text:Set name="references" text={pasta-references}/>
+  </text:Render>
+  <gpt:Image id="pasta" prompt={pasta-prompt} aspect-ratio="9:16" resolution="2K">
+    <gpt:Reference image={girl.image}/>
+  </gpt:Image>
 
   <text:Value id="lifestyle-montage-story">
-    Use the three reference images as three ordered shots in one compact, quiet montage. Shot one uses the coffee reference: the woman looks into the camera, raises one relaxed peace sign, and gently turns her face a little from side to side while keeping the rest of her pose natural. Shot two uses the strawberry shaved-ice reference: she continues taking a mirror selfie, keeps the phone clearly visible in one hand and her gaze on its screen, and slightly parts her lips as if she is about to taste the shaved ice. Shot three uses the pasta reference: she calmly continues preparing the pasta with small, practical hand movements and a focused, attentive expression. Keep the action inside each shot continuous and physically coherent, then cut cleanly to the next reference scene in the authored order. Keep all three performances restrained and natural, with ordinary real-time motion, no exaggerated gestures, no repeated blinking, and no slow motion.
+    Use @image1, @image2 and @image3 as three ordered shots in one five-second montage about her daily food routine.
+    Give all three scenes readable screen time, including the final cooking scene.
+    In the cafe selfie she gives a small playful head turn. In the mirror selfie she keeps her phone in one hand,
+    looks at its screen and brings the bingsu slightly closer with an amused expression.
+    In the courtyard she continues preparing pasta with small, practical movements.
+    Cut cleanly between the three scenes; each scene is continuous internally. Keep her identity, outfit and
+    setting faithful to that scene's reference. Motion is ordinary real-time motion, relaxed and physically coherent.
   </text:Value>
 
-  <text:Value id="opening-take-prompt">
-    Preserve the reference image as a fixed horizontal split screen for the entire shot, with the man in the upper half and the woman in the lower half. Keep both identities, outfits, lighting, backgrounds, framing, scale, and the split-screen boundary unchanged. Use one continuous locked view with no cuts, reframing, zoom, or camera movement. In the upper half, the man keeps his gaze toward the right side of the frame throughout while speaking briskly and naturally in one continuous thought, with only a small conversational head movement and no dramatic pause. He says exactly: “OK Sarah so what is the one single thing that you literally can't live without?” At the same time in the lower half, the woman remains completely silent and does not move her mouth. She briefly looks downward, makes one small seated-posture adjustment, then raises her eyes and looks toward the left side of the frame with a focused, attentive expression. Keep both performances understated, simultaneous, photorealistic, and physically coherent. Add no subtitles, captions, labels, UI text, or floating words.
+  <text:Value id="opening-action">
+    The man speaks briskly and naturally while looking right, with a small conversational head movement.
+    At the same time the woman remains silent, briefly glances down, makes one small seated-posture adjustment,
+    and looks back left attentively. Her lips do not form his words. Keep both performances understated and alive.
   </text:Value>
+  <text:Render id="opening-take-prompt" template={opening-kit.split-opening}>
+    <text:Set name="dialogue" text={story.segment.opening-question.dialogue}/>
+    <text:Set name="action" text={opening-action}/>
+  </text:Render>
 
   <text:Value id="daily-creatine-action">
-    ROLE LABEL MAPPING: GIRL is Host A and uses the first image and first audio reference. GUY is Host B and uses the second image and second audio reference. In the dialogue text, every GIRL line belongs only to Host A and every GUY line belongs only to Host B. Only the speaker assigned to the current line moves their mouth; the listener remains silent. GIRL PERFORMANCE: While saying “Creatine,” she lifts the creatine container into a clear, readable position. While saying “Five grams a day, every day,” she points at the container with her free hand and gives small, confident nods. During the next sentence, give each item one distinct, compact gesture with that same free hand: on “I put it in my coffee,” make a small pinching-and-sprinkling motion downward as if adding a scoop to a mug; on “my smoothie,” make one brief circular stirring motion; on “and even my pasta water,” turn the palm outward in a playful, matter-of-fact presentation gesture that lands the joke. Keep the container secure in her other hand throughout. GUY PERFORMANCE: While saying “God, I think you're,” he braces one hand against the sofa and makes one quick seated-posture adjustment, with a mildly incredulous and amused expression. On “treating this as flour,” he raises his right hand for one compact conversational wave. Deliver the word “flour” with a clear falling intonation so the sentence lands decisively rather than sounding like a question. Keep the gestures brisk, readable, understated, and naturally synchronized to the specified phrases.
+    GIRL is Host A (@image1, @audio1); GUY is Host B (@image2, @audio2).
+    Only the current speaker speaks; the listener reacts silently.
+    GIRL presents the creatine tub with cheerful, matter-of-fact confidence. On "Creatine", make its label easy
+    to see; on the daily amount, give it one light indicating gesture and a small nod. Keep it secure in that hand.
+    Her list of foods has a playful, almost obvious-to-her rhythm, with a relaxed illustrative gesture from the free hand.
+    GUY shifts his seated posture with mild amused disbelief, then makes one compact open-hand gesture as
+    "treating this as flour" lands. Let "flour" finish with falling intonation. Keep the banter brisk and natural;
+    no finger counting or exaggerated reactions.
   </text:Value>
 
   <text:Value id="arms-are-asking-action">
-    ROLE LABEL MAPPING: GIRL is Host A and uses the first image and first audio reference. GUY is Host B and uses the second image and second audio reference. In the dialogue text, every GIRL line belongs only to Host A and every GUY line belongs only to Host B. Only the speaker assigned to the current line moves their mouth; the listener remains silent. CONTINUITY: At the beginning, the woman's free hand on the left side of her frame is already lowered naturally while her other hand still holds the creatine container. On the cut to the man, make the container handoff read as one continuous action across the two fixed camera views. Once the man has received it, the container must remain absent from the woman's later shot. PACING AND PERFORMANCE: use quick, conversational handoffs with no long pauses. Keep every expression understated, relaxed, and natural. FIRST GIRL LINE: On “But actually,” she gives a small head tilt and looks toward the left with a slight amused smile, then continues immediately. While saying “you need this way more than I do,” she leans slightly left and extends the container toward the left edge of her frame in one direct offering motion. GUY LINE: On “Wait, what?” he receives the container from the right edge of his frame. On “I didn't ask for that!” he keeps it in one hand, gives one quick palm-up questioning gesture with the free hand, and makes one small confused head shake. FINAL GIRL LINE: The container is no longer visible in her frame. While saying “Of course you did,” she loosely folds her arms and looks left with a slight natural smile. While saying “Look at your arms!” she leans slightly left, unfolds one hand, points toward the left once, and gives one small confident nod. Keep every action brisk, readable, physically coherent, and precisely synchronized to the specified words.
+    GIRL is Host A (@image1, @audio1); GUY is Host B (@image2, @audio2).
+    Keep the exchange quick, relaxed and gently teasing. Each person speaks only their own lines.
+    At first GIRL holds the tub and looks left with an amused half-smile. As she says "you need this way more
+    than I do", she offers it toward the left edge of her frame. Cut on that offering action to GUY's view,
+    where he receives it from the right; his holding reference supplies the resulting pose.
+    GUY gives a small confused head shake and one palm-up gesture with his free hand while keeping the tub secure.
+    On the return to GIRL, her hands are empty. She loosely folds her arms, then gestures toward him once as
+    "Look at your arms!" lands with a confident nod. Make the change of possession clear through the cuts.
   </text:Value>
-
-  <gpt:Image id="split" prompt={split-prompt}
-    aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={split-hypihub}/>
-  </gpt:Image>
-
-  <gpt:Image id="guy-hold" prompt={guy-hold-prompt}
-    aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={guy}/>
-    <gpt:Reference image={creatine}/>
-  </gpt:Image>
-
-  <gpt:Image id="girl-hold" prompt={girl-hold-prompt}
-    aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={girl}/>
-    <gpt:Reference image={creatine}/>
-  </gpt:Image>
-
-  <gpt:Image id="coffee" prompt={coffee-prompt}
-    aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={girl-hypihub}/>
-  </gpt:Image>
-
-  <gpt:Image id="smoothie" prompt={smoothie-prompt}
-    aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={girl}/>
-  </gpt:Image>
-
-  <gpt:Image id="pasta" prompt={pasta-prompt}
-    aspect-ratio="9:16" resolution="2K">
-    <gpt:Reference image={girl}/>
-  </gpt:Image>
 
   <text:Render id="lifestyle-montage-prompt"
     template={broll-kit.broll-v1} recipe={recipes.broll.calm-ugc-montage}>
@@ -161,19 +309,19 @@
   </text:Render>
 
   <seedance:ReferenceVideo id="opening-take" model="mini"
-    prompt={opening-take-prompt} duration="4"
+    prompt={opening-take-prompt} duration="5"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={split.image}/>
-    <seedance:Reference audio={guy-voice.audio}/>
+    <seedance:Reference audio={guy-voice.reference}/>
   </seedance:ReferenceVideo>
 
   <seedance:ReferenceVideo id="daily-creatine-take" model="mini"
     prompt={daily-creatine-take-prompt} duration="8"
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={girl-hold.image}/>
-    <seedance:Reference image={guy}/>
-    <seedance:Reference audio={girl-voice.audio}/>
-    <seedance:Reference audio={guy-voice.audio}/>
+    <seedance:Reference image={guy.image}/>
+    <seedance:Reference audio={girl-voice.reference}/>
+    <seedance:Reference audio={guy-voice.reference}/>
   </seedance:ReferenceVideo>
 
   <seedance:ReferenceVideo id="arms-are-asking-take" model="mini"
@@ -181,8 +329,8 @@
     resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={girl-hold.image}/>
     <seedance:Reference image={guy-hold.image}/>
-    <seedance:Reference audio={girl-voice.audio}/>
-    <seedance:Reference audio={guy-voice.audio}/>
+    <seedance:Reference audio={girl-voice.reference}/>
+    <seedance:Reference audio={guy-voice.reference}/>
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="720" height="1280"/>
@@ -209,17 +357,6 @@
   <whisperx:SemanticTake id="arms-are-asking-semantic" narrative={story}
     segment={story.segment.arms-are-asking} media={arms-are-asking-media.media} language="en"/>
 
-  <estimate:Speech id="preview-estimate" source={story.segment.opening-question.speech}
-    policy={recipes.speech.preview}/>
-  <estimated:SemanticTake id="opening-estimated" narrative={story}
-    segment={story.segment.opening-question} media={opening-media.media}
-    policy={preview-estimate.policy}/>
-  <estimated:SemanticTake id="daily-creatine-estimated" narrative={story}
-    segment={story.segment.daily-creatine} media={daily-creatine-media.media}
-    policy={preview-estimate.policy}/>
-  <estimated:SemanticTake id="arms-are-asking-estimated" narrative={story}
-    segment={story.segment.arms-are-asking} media={arms-are-asking-media.media}
-    policy={preview-estimate.policy}/>
 
   <speech:Track id="speech" visual-frame={full-frame}
     visual-appearance={recipes.speech.visual} visual-z="10">

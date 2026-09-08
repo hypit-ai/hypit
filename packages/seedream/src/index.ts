@@ -23,7 +23,7 @@ export const seedream5LitePorts: GenerationPortTable = sealGenerationPortTable({
     { name: "outputFormat", value: { kind: "enum", values: ["png", "jpeg"] }, minItems: 1, maxItems: 1 },
     /** Explicit author choice; the Provider never silently changes this policy. */
     { name: "nsfwCheck", value: { kind: "boolean" }, minItems: 1, maxItems: 1 },
-    { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 16 },
+    { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 14 },
   ],
   requires: [],
 });
@@ -148,7 +148,7 @@ export const seedreamMarkupSurfaces = [{
   <seedream:Reference image={scene.image}/>
 </seedream:ReferenceImage>`,
       notes: [
-        "The element requires at least one `Reference` child and accepts at most 16.",
+        "The element requires at least one `Reference` child and accepts at most 14.",
         "The Surface copies no runtime media into request metadata; every reference stays a graph edge.",
       ],
     },

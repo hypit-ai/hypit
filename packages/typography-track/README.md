@@ -1,23 +1,18 @@
 # `@hypit/typography-track`
 
-Official provider-free Text overlay package. It owns a typed `TypographyTrackProgram` and lowers every
-item into an independently timed and stacked Present in the public VisualTrack contract.
+Place independently authored titles, labels, verdicts and other text in the video. Their lifetime
+can follow a Script Selection or Moment even when their wording differs from the speech. For words
+displayed as they are spoken, use a [Caption family](../caption-fine/README.md).
 
-`TypographyTrackProgram@1` implements the complete Point/Area/Path author model:
-bounded rich documents, exact font stacks, ordered Paint, frame/content/paragraph/line/run/word/
-grapheme boxes, deterministic overflow and Unicode-aware local motion.
+The Track takes `semantic` and derives ProgramSpace from it. Items use explicit Point, Frame or Path
+placement, exact fonts and Styles. Timing can follow a Segment, Selection, Moment with duration, the
+whole program or explicit clock expressions. `.program` describes the text presentation; `.track`
+is the VisualTrack to include in Film. Each item has its own lifetime and stacking order.
 
-An item spanning the complete ProgramSpace is a persistent overlay; a shorter item is timed. They
-are not different Track kinds. Timing is projected through `@hypit/temporal`, and placement is
-an explicit `SpatialFrame` input from `@hypit/spatial`; neither is hidden in the appearance
-Recipe. The package exposes semantic typography rather than a rendering callback, arbitrary CSS or
-cross-Track access.
-
-The provider-free `<text:Track>` Surface validates `.svs` Recipes, accepts Program, Selection,
-Moment or explicit point-expression timing plus explicit Point/Frame/Path edges, and produces the
-same TypographyTrackProgram without changing Core or Film. `<text:Mask>` is a separate component that
-consumes one authored Text Program and one owned still Surface; advanced/multiline/Path masks fail
-closed and materialize through an independent package.
+The text program supports rich documents, font stacks, Paint, wrapping, overflow and motion at item,
+word or grapheme level. Placement and time are separate from the Style Recipe. `typo:Mask` is a
+separate component for an authored Text Program and an owned still surface; read its vocabulary for
+the supported mask forms.
 
 Content has two explicit author forms:
 
@@ -25,10 +20,10 @@ Content has two explicit author forms:
 <import as="copy" from="@hypit/text@1"/>
 <import as="typo" from="@hypit/typography-track@1"/>
 
-<copy:Value id="headline">Intent, not timelines.</copy:Value>
+<copy:Value id="headline-copy">A useful idea, clearly shown.</copy:Value>
 
 <typo:Track id="titles" semantic={speech.semantic}>
-  <typo:Area id="headline" content={headline}
+  <typo:Area id="headline" content={headline-copy}
     placement={layout.headline} style={title-style} during="program"/>
 
   <typo:Area id="editorial" placement={layout.editorial}

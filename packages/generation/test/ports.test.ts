@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MemoryArtifactStore } from "@hypit/driver-node";
+import { MemoryResourceStore } from "@hypit/driver-node";
 import {
   assertMappingCoversPorts,
   bindGenerationMedia,
@@ -13,6 +13,7 @@ import {
   sealGenerationRequestDraft,
   sealGenerationPortTable,
   selectWireModel,
+  selectWireModelForRequest,
   verifyRequestAgainstPorts,
 } from "@hypit/generation";
 import type { GenerationPortTable, GenerationWireMapping } from "@hypit/generation";
@@ -79,7 +80,7 @@ const mapping: GenerationWireMapping = {
 };
 
 async function artifacts() {
-  const store = new MemoryArtifactStore();
+  const store = new MemoryResourceStore();
   return {
     image: await store.put(new Uint8Array([1]), "image/png"),
     video: await store.put(new Uint8Array([2]), "video/mp4"),
@@ -87,7 +88,7 @@ async function artifacts() {
   };
 }
 
-const resolve = async (artifact: { readonly digest: string }) => `https://cdn.test/${artifact.digest}`;
+const resolve = async (artifact: { readonly resource: string }) => `https://cdn.test/${artifact.resource}`;
 
 test("a port table derives the request Schema and rejects undeclared ports", () => {
   const schema = requestSchemaFromPorts(table);
@@ -163,16 +164,20 @@ test("one mapping compiles every port shape and routes by port presence", async 
   assert.deepEqual(wire.input, {
     duration: "8",
     prompt: "hello",
-    reference_audio_urls: [`https://cdn.test/${audio.digest}`],
-    reference_image_urls: [`https://cdn.test/${image.digest}`],
+    reference_audio_urls: [`https://cdn.test/${audio.resource}`],
+    reference_image_urls: [`https://cdn.test/${image.resource}`],
     resolution: "720p",
     return_last_frame: false,
-    video_list: [{ ends: 4, start: 1, url: `https://cdn.test/${video.digest}` }],
+    video_list: [{ ends: 4, start: 1, url: `https://cdn.test/${video.resource}` }],
     voice_ids: ["alpha", "beta"],
   });
 
   const textOnly = sealGenerationPortRequest(table, { prompt: ["hi"], duration: [8], resolution: ["720p"] });
   assert.equal(selectWireModel(mapping, new Set(Object.keys(textOnly.ports))), "demo/text-to-video");
+  assert.equal(
+    selectWireModelForRequest(mapping, textOnly, ["referenceImage"]),
+    "demo/reference-to-video",
+  );
   const framed = sealGenerationPortRequest(table, {
     prompt: ["hi"],
     duration: [8],

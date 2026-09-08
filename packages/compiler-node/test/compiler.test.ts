@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import {
   mkdtemp,
   mkdir,
@@ -287,7 +286,7 @@ function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Workspace 
           const bytes = Uint8Array.from(assetBytes);
           const artifact: BlobRef = {
             kind: "blob",
-            digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+            resource: "res_memory-reference",
             size: bytes.byteLength,
             mediaType: request.mediaType,
           };
@@ -405,12 +404,12 @@ test("Run-only Fragment modules extend the execution closure without polluting t
     "the durable Build keeps only modules needed by its selected execution slice",
   );
   assert.equal(planned.definition.plan, planned.state.plan);
-  assert.equal(planned.definition.request, planned.state.request);
+  assert.equal(planned.definition.targets, planned.state.targets);
   assert.equal(planned.definition.plan.steps.length, 1);
   assert.equal(planned.definition.plan.steps[0]?.producer.name, previewProducer.name);
 });
 
-test("static Run checking accepts a future BuildRecord without opening a BuildArchive", async () => {
+test("static Run checking accepts a future BuildRecord without opening project Results", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-future-build-record-"));
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "reuse.svrun");
@@ -436,15 +435,52 @@ test("static Run checking accepts a future BuildRecord without opening a BuildAr
   });
   const workspace = await new NodeFilesystemWorkspace({ root }).open(runFile);
   const checked = await runCompiler.checkSource(workspace.entry, workspace);
-  assert.deepEqual(checked.unresolvedBuildRecords, [{
+  assert.deepEqual(checked.unresolvedHistoricalOutputs, [{
     id: "prior",
     build: "future-build",
     output: "hello.result",
   }]);
   await assert.rejects(
     runCompiler.compileSource(workspace.entry, workspace),
-    /plan\/build requires --runtime to resolve it/u,
+    /requires a project Result Store/u,
   );
+
+  await writeFile(authorFile, `<?svml using="@hypit/markup@1"?>
+  <svml>
+    <import as="lab" from="example.compiler-lab@1"/>
+    <lab:Result id="hello"/><lab:Result id="unused-history"/>
+    <lab:Result id="unused-value"/><lab:Result id="unused-file"/>
+  </svml>`, "utf8");
+  await writeFile(runFile, `<?svml using="@hypit/run-markup@1"?>
+  <svrun version="1">
+    <author source="./main.svml"/>
+    <target output="hello.result"/>
+    <build-record id="prior" build="future-build" output="unused-history.result"/>
+    <value id="fixed" type="example.compiler-lab@1#Result" from="./missing-value.json"/>
+    <file id="media" type="example.compiler-lab@1#Result" from="./missing-file.mp4" media-type="video/mp4"/>
+    <satisfy output="unused-history.result" candidate="prior"/>
+    <satisfy output="unused-value.result" candidate="fixed"/>
+    <satisfy output="unused-file.result" candidate="media"/>
+  </svrun>`, "utf8");
+  const unusedWorkspace = await new NodeFilesystemWorkspace({ root }).open(runFile);
+  const compiled = await runCompiler.compileSource(unusedWorkspace.entry, unusedWorkspace);
+  assert.equal(runCompiler.planCompilation(compiled).state.plan.steps.length, 1,
+    "unreachable zero-input Candidates are never opened or substituted into the selected execution");
+
+  await writeFile(join(root, "selected-value.json"), JSON.stringify({ kind: "inline", value: "ready" }), "utf8");
+  await writeFile(join(root, "selected-file.mp4"), new Uint8Array([1, 2, 3]));
+  await writeFile(runFile, `<?svml using="@hypit/run-markup@1"?>
+  <svrun version="1">
+    <author source="./main.svml"/>
+    <target output="unused-value.result"/><target output="unused-file.result"/>
+    <value id="fixed" type="example.compiler-lab@1#Result" from="./selected-value.json"/>
+    <file id="media" type="example.compiler-lab@1#Result" from="./selected-file.mp4" media-type="video/mp4"/>
+    <satisfy output="unused-value.result" candidate="fixed"/>
+    <satisfy output="unused-file.result" candidate="media"/>
+  </svrun>`, "utf8");
+  const selectedWorkspace = await new NodeFilesystemWorkspace({ root }).open(runFile);
+  const selected = runCompiler.planCompilation(await runCompiler.compileSource(selectedWorkspace.entry, selectedWorkspace));
+  assert.deepEqual(selected.definition.initialRecords.map((record) => record.value.kind).sort(), ["blob", "inline"]);
 });
 
 test("source assets become graph values and a Host transfer bundle without closure metadata", async () => {
@@ -462,10 +498,10 @@ test("source assets become graph values and a Host transfer bundle without closu
   const attachment = first.attachments[0];
   assert.deepEqual(await readAttachment(attachment), new Uint8Array([1, 2, 3, 4]));
   assert.equal(first.program.records[0]?.value.kind, "blob");
-  assert.equal(first.program.records[0]?.value.kind === "blob" ? first.program.records[0].value.digest : undefined, attachment?.artifact.digest);
+  assert.equal(first.program.records[0]?.value.kind === "blob" ? first.program.records[0].value.resource : undefined, attachment?.artifact.resource);
   await writeFile(asset, new Uint8Array([9, 8, 7]));
   const second = await assetCompiler({ root }).compileFile(file);
-  assert.notEqual(second.attachments[0]?.artifact.digest, attachment?.artifact.digest);
+  assert.notEqual(second.attachments[0]?.artifact.resource, attachment?.artifact.resource);
 });
 
 test("an installed package Surface can contribute embedded bytes without an author file or network", async () => {
@@ -482,8 +518,8 @@ test("an installed package Surface can contribute embedded bytes without an auth
   assert.deepEqual(await readAttachment(attachment), new Uint8Array([8, 6, 7, 5, 3, 0, 9]));
   assert.equal(compiled.program.records[0]?.value.kind, "blob");
   assert.equal(compiled.program.records[0]?.value.kind === "blob"
-    ? compiled.program.records[0].value.digest
-    : undefined, attachment?.artifact.digest);
+    ? compiled.program.records[0].value.resource
+    : undefined, attachment?.artifact.resource);
 });
 
 test("Run compilation retains embedded Author attachments for later Runtime staging", async () => {
@@ -547,7 +583,7 @@ test("filesystem Workspace captures source text and asset identity once", async 
   const detached = await workspace.attachments();
   assert.deepEqual(await readAttachment(detached[0]), new Uint8Array([4, 5, 6, 7]),
     "attachment bytes are opened lazily; Runtime rejects them if they no longer match the captured identity");
-  assert.equal((await workspace.attachments())[0]?.artifact.digest, firstAsset.artifact.digest);
+  assert.equal((await workspace.attachments())[0]?.artifact.resource, firstAsset.artifact.resource);
   await assert.rejects(
     async () => await workspace.resolveSource(entry, {
       from: "./escaped.svs",
@@ -587,6 +623,38 @@ test("an asset root widens bytes without widening Source imports", async () => {
   }), (error: unknown) => error instanceof WorkspaceError && error.code === "SOURCE_OUTSIDE_ROOT");
 });
 
+test("a Host-resolved Source keeps relative imports inside its own read boundary", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "hypit-external-source-"));
+  const project = join(parent, "project");
+  const packageRoot = join(parent, "package");
+  await mkdir(project);
+  await mkdir(packageRoot);
+  const entryPath = join(project, "main.svml");
+  const kitPath = join(packageRoot, "kit.svs");
+  const childPath = join(packageRoot, "child.svs");
+  const outsidePath = join(parent, "outside.svs");
+  await writeFile(entryPath, "entry", "utf8");
+  await writeFile(kitPath, "kit", "utf8");
+  await writeFile(childPath, "child", "utf8");
+  await writeFile(outsidePath, "outside", "utf8");
+  const workspace = await new NodeFilesystemWorkspace({
+    root: project,
+    externalSourceResolver(_importer, request) {
+      assert.equal(request.from, "@acme/kits/example");
+      return { root: packageRoot, source: kitPath };
+    },
+  }).open(entryPath);
+  const kit = await workspace.resolveSource(workspace.entry, {
+    from: "@acme/kits/example",
+    alias: "kit",
+  });
+  assert.equal((await workspace.resolveSource(kit, { from: "./child.svs", alias: "child" })).text, "child");
+  await assert.rejects(
+    async () => await workspace.resolveSource(kit, { from: "../outside.svs", alias: "outside" }),
+    (error: unknown) => error instanceof WorkspaceError && error.code === "SOURCE_OUTSIDE_ROOT",
+  );
+});
+
 test("filesystem and in-memory Workspaces load identical asset bytes", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-workspace-equivalence-"));
   const file = join(root, "main.svml");
@@ -602,8 +670,16 @@ test("filesystem and in-memory Workspaces load identical asset bytes", async () 
   const filesystem = await assetCompiler({ root }).compileFile(file);
   const memory = await assetCompiler({ workspace: memoryWorkspace(source, bytes) }).compileFile("memory:main");
 
-  assert.deepEqual(memory.attachments.map((item) => item.artifact),
-    filesystem.attachments.map((item) => item.artifact));
+  const memoryArtifact = memory.attachments[0]?.artifact;
+  const filesystemArtifact = filesystem.attachments[0]?.artifact;
+  assert.ok(memoryArtifact?.resource);
+  assert.ok(filesystemArtifact?.resource);
+  assert.notEqual(memoryArtifact.resource, filesystemArtifact.resource,
+    "separate admissions keep separate resource identities even for equal bytes");
+  assert.deepEqual(
+    { size: memoryArtifact.size, mediaType: memoryArtifact.mediaType },
+    { size: filesystemArtifact.size, mediaType: filesystemArtifact.mediaType },
+  );
   assert.deepEqual(await readAttachment(memory.attachments[0]),
     await readAttachment(filesystem.attachments[0]));
 });

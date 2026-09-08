@@ -1,5 +1,6 @@
 import { BuildMachine, reduce } from "@hypit/core";
-import type { BuildState } from "@hypit/protocol";
+import type { BuildState, CommandResult } from "@hypit/protocol";
+import { capacityUnits } from "./capacity.js";
 
 import type {
   BuildSchedulerOptions,
@@ -18,6 +19,8 @@ type MutableBuild = {
   readonly outcomes: SchedulerExecutionOutcome[];
   blocked: ScheduledBuildResult["blocked"];
   stopped: boolean;
+  failure?: Extract<CommandResult, { readonly kind: "command-failed" }>;
+  readonly attempted: Set<string>;
 };
 
 type ActiveResult = {
@@ -51,10 +54,12 @@ function buildCommandKey(build: string, command: string): string {
 export class LocalBuildScheduler {
   readonly #executor: RuntimeCommandExecutor;
   readonly #buildStore: BuildSchedulerOptions["buildStore"];
+  readonly #onStateChange: BuildSchedulerOptions["onStateChange"];
 
   constructor(executor: RuntimeCommandExecutor, options: BuildSchedulerOptions = {}) {
     this.#executor = executor;
     this.#buildStore = options.buildStore;
+    this.#onStateChange = options.onStateChange;
   }
 
   async run(requests: readonly ScheduledBuild[]): Promise<readonly ScheduledBuildResult[]> {
@@ -87,6 +92,7 @@ export class LocalBuildScheduler {
         outcomes: [],
         blocked: [],
         stopped: false,
+        attempted: new Set(),
       });
     }
     const active = new Map<string, ActiveCommand>();
@@ -94,7 +100,8 @@ export class LocalBuildScheduler {
     let cursor = 0;
 
     const resourceLimit = (resource: RuntimeRunnableCommand["resources"][number]): number => {
-      const proposed = positiveInteger(resource.maxActive, `resource ${resource.id} default`);
+      capacityUnits(resource);
+      const proposed = positiveInteger(resource.limit, `resource ${resource.id} limit`);
       const previous = resourceDefaults.get(resource.id);
       if (previous !== undefined && previous !== proposed) {
         throw new Error(`resource ${resource.id} has conflicting default concurrency ${previous} and ${proposed}`);
@@ -103,9 +110,10 @@ export class LocalBuildScheduler {
       return proposed;
     };
 
-    const accept = async (build: MutableBuild, event: import("@hypit/protocol").CommandResult): Promise<void> => {
+    const accept = async (build: MutableBuild, event: CommandResult): Promise<void> => {
       if (this.#buildStore === undefined || build.machine === undefined) {
         build.state = reduce(build.state, event);
+        await this.#onStateChange?.(build.id, build.state);
         return;
       }
       const fact = build.machine.evaluate(event);
@@ -116,6 +124,7 @@ export class LocalBuildScheduler {
       await this.#buildStore.append(build.id, fact);
       build.machine.commit();
       build.state = build.machine.view();
+      await this.#onStateChange?.(build.id, build.state);
     };
 
     const preparations = async (): Promise<Map<string, readonly RuntimeRunnableCommand[]>> => {
@@ -129,7 +138,7 @@ export class LocalBuildScheduler {
         build.state = prepared.state;
         build.blocked = prepared.blocked;
         ready.set(build.id, prepared.runnable.filter((item) =>
-          !active.has(buildCommandKey(build.id, item.command.id))));
+          !active.has(buildCommandKey(build.id, item.command.id)) && !build.attempted.has(item.command.id)));
       }
       return ready;
     };
@@ -138,7 +147,7 @@ export class LocalBuildScheduler {
       const counts = new Map<string, number>();
       for (const item of active.values()) {
         for (const resource of item.command.resources) {
-          counts.set(resource.id, (counts.get(resource.id) ?? 0) + 1);
+          counts.set(resource.id, (counts.get(resource.id) ?? 0) + capacityUnits(resource));
         }
       }
       return counts;
@@ -154,90 +163,109 @@ export class LocalBuildScheduler {
       active.set(key, { build, command, promise });
     };
 
-    while (true) {
-      const ready = await preparations();
-      const counts = resourceCounts();
+    try {
+      while (true) {
+        const ready = await preparations();
+        const counts = resourceCounts();
 
-      while (builds.length > 0) {
-        let selected = false;
-        for (let offset = 0; offset < builds.length; offset += 1) {
-          const index = (cursor + offset) % builds.length;
-          const build = builds[index]!;
-          const command = (ready.get(build.id) ?? []).find((candidate) =>
-            candidate.resources.every((resource) =>
-              (counts.get(resource.id) ?? 0) < resourceLimit(resource)));
-          if (command === undefined) continue;
-          ready.set(build.id, (ready.get(build.id) ?? []).filter((item) =>
-            item.command.id !== command.command.id));
-          launch(build, command);
-          for (const resource of command.resources) {
-            counts.set(resource.id, (counts.get(resource.id) ?? 0) + 1);
+        while (builds.length > 0) {
+          let selected = false;
+          for (let offset = 0; offset < builds.length; offset += 1) {
+            const index = (cursor + offset) % builds.length;
+            const build = builds[index]!;
+            const command = (ready.get(build.id) ?? []).find((candidate) =>
+              candidate.resources.every((resource) =>
+                (counts.get(resource.id) ?? 0) + capacityUnits(resource) <= resourceLimit(resource)));
+            if (command === undefined) continue;
+            ready.set(build.id, (ready.get(build.id) ?? []).filter((item) =>
+              item.command.id !== command.command.id));
+            launch(build, command);
+            for (const resource of command.resources) {
+              counts.set(resource.id, (counts.get(resource.id) ?? 0) + capacityUnits(resource));
+            }
+            cursor = (index + 1) % builds.length;
+            selected = true;
+            break;
           }
-          cursor = (index + 1) % builds.length;
-          selected = true;
-          break;
+          if (!selected) break;
         }
-        if (!selected) break;
+
+        if (active.size === 0) break;
+        const settled = await Promise.race([...active.values()].map((item) => item.promise));
+        active.delete(settled.key);
+        const build = settled.build;
+        if (build.state.status === "failed" || build.state.status === "complete") continue;
+        if (settled.execution === undefined) {
+          build.stopped = true;
+          build.outcomes.push({
+            command: settled.command.command.id,
+            kind: settled.command.command.kind,
+            resources: settled.command.resources.map((resource) => resource.id),
+            status: "error",
+            message: settled.error instanceof Error ? settled.error.message : String(settled.error),
+          });
+          continue;
+        }
+        if (settled.execution.status === "pending") {
+          build.attempted.add(settled.command.command.id);
+          build.outcomes.push({
+            command: settled.command.command.id,
+            kind: settled.command.command.kind,
+            resources: settled.command.resources.map((resource) => resource.id),
+            status: "pending",
+            operation: settled.execution.operation,
+            ...(settled.execution.wakeAt === undefined ? {} : { wakeAt: settled.execution.wakeAt }),
+          });
+          continue;
+        }
+        if (settled.execution.status === "deferred") {
+          build.attempted.add(settled.command.command.id);
+          build.outcomes.push({
+            command: settled.command.command.id,
+            kind: settled.command.command.kind,
+            resources: settled.command.resources.map((resource) => resource.id),
+            status: "deferred",
+            ...(settled.execution.wakeAt === undefined ? {} : { wakeAt: settled.execution.wakeAt }),
+            message: settled.execution.reason,
+          });
+          continue;
+        }
+        const event = settled.execution.event;
+        try {
+          if (event.kind === "command-failed") {
+            // Stop launching work immediately, but accept results of calls already running
+            // before the failure clears Core's outstanding commands. No pending job is polled.
+            build.stopped = true;
+            build.failure ??= event;
+          } else {
+            await accept(build, event);
+          }
+          build.outcomes.push({
+            command: settled.command.command.id,
+            kind: settled.command.command.kind,
+            resources: settled.command.resources.map((resource) => resource.id),
+            status: "completed",
+          });
+        } catch (error) {
+          build.stopped = true;
+          build.outcomes.push({
+            command: settled.command.command.id,
+            kind: settled.command.command.kind,
+            resources: settled.command.resources.map((resource) => resource.id),
+            status: "error",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
 
-      if (active.size === 0) break;
-      const settled = await Promise.race([...active.values()].map((item) => item.promise));
-      active.delete(settled.key);
-      const build = settled.build;
-      if (settled.execution === undefined) {
-        build.stopped = true;
-        build.outcomes.push({
-          command: settled.command.command.id,
-          kind: settled.command.command.kind,
-          resources: settled.command.resources.map((resource) => resource.id),
-          status: "error",
-          message: settled.error instanceof Error ? settled.error.message : String(settled.error),
-        });
-        continue;
+      for (const build of builds) {
+        if (build.failure !== undefined) await accept(build, build.failure);
       }
-      if (settled.execution.status === "pending") {
-        build.stopped = true;
-        build.outcomes.push({
-          command: settled.command.command.id,
-          kind: settled.command.command.kind,
-          resources: settled.command.resources.map((resource) => resource.id),
-          status: "pending",
-          operation: settled.execution.operation,
-          ...(settled.execution.wakeAt === undefined ? {} : { wakeAt: settled.execution.wakeAt }),
-        });
-        continue;
-      }
-      if (settled.execution.status === "deferred") {
-        build.stopped = true;
-        build.outcomes.push({
-          command: settled.command.command.id,
-          kind: settled.command.command.kind,
-          resources: settled.command.resources.map((resource) => resource.id),
-          status: "deferred",
-          wakeAt: settled.execution.wakeAt,
-          message: settled.execution.reason,
-        });
-        continue;
-      }
-      const event = settled.execution.event;
-      try {
-        await accept(build, event);
-        build.outcomes.push({
-          command: settled.command.command.id,
-          kind: settled.command.command.kind,
-          resources: settled.command.resources.map((resource) => resource.id),
-          status: "completed",
-        });
-      } catch (error) {
-        build.stopped = true;
-        build.outcomes.push({
-          command: settled.command.command.id,
-          kind: settled.command.command.kind,
-          resources: settled.command.resources.map((resource) => resource.id),
-          status: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
+
+    } catch (error) {
+      // Do not let a classification/configuration error release capacity beneath other active calls.
+      await Promise.allSettled([...active.values()].map((item) => item.promise));
+      throw error;
     }
 
     return builds.map((build) => ({

@@ -11,11 +11,11 @@ import {
   stopRuntimeProcess,
 } from "../src/worker-process.js";
 
-test("one detached Runtime Worker can be started, observed and stopped", async () => {
+test("one live detached Runtime Worker survives repeated starts and stale startup markers", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-process-"));
   const profile = join(root, "runtime.json");
   const dataRoot = join(root, ".hypit", "runtimes", "local");
-  await writeFile(profile, JSON.stringify({ format: "hypit.runtime-profile@1" }), "utf8");
+  await writeFile(profile, JSON.stringify({ format: "hypit.runtime-local@1" }), "utf8");
   await mkdir(join(root, ".hypit"), { recursive: true });
   await writeFile(join(root, ".hypit", "runtime"), "runtime.json\n", "utf8");
   const program = `
@@ -23,23 +23,37 @@ test("one detached Runtime Worker can be started, observed and stopped", async (
     const path = require("node:path");
     const index = process.argv.indexOf("--ready-file");
     const ready = process.argv[index + 1];
+    const ownerIndex = process.argv.indexOf("--worker-owner");
+    const owner = process.argv[ownerIndex + 1];
     fs.mkdirSync(path.dirname(ready), { recursive: true });
     // Say it in the log before claiming to be ready. The ready file is what the parent waits on,
     // so anything written after it is a race the parent can win.
     process.stdout.write("worker-ready\\n");
-    fs.writeFileSync(ready, String(process.pid));
-    process.on("SIGTERM", () => process.exit(0));
-    setInterval(() => {}, 1000);
+    fs.writeFileSync(ready, owner);
+    const keepAlive = setInterval(() => undefined, 1000);
+    process.on("SIGTERM", () => {
+      clearInterval(keepAlive);
+      process.exit(0);
+    });
   `;
   try {
-    const first = await ensureRuntimeProcess(
-      profile,
-      dataRoot,
-      { command: process.execPath, args: ["-e", program] },
-      5_000,
-    );
+    const [first, concurrent] = await Promise.all([
+      ensureRuntimeProcess(
+        profile,
+        dataRoot,
+        { command: process.execPath, args: ["-e", program] },
+        5_000,
+      ),
+      ensureRuntimeProcess(
+        profile,
+        dataRoot,
+        { command: process.execPath, args: ["-e", program] },
+        5_000,
+      ),
+    ]);
     assert.equal(first.state, "running");
     assert.ok(first.pid);
+    assert.equal(concurrent.pid, first.pid);
     assert.equal(await readFile(join(root, ".hypit", "runtime"), "utf8"), "runtime.json\n");
 
     const second = await ensureRuntimeProcess(
@@ -52,40 +66,26 @@ test("one detached Runtime Worker can be started, observed and stopped", async (
     assert.equal((await runtimeProcessStatus(profile, dataRoot)).state, "running");
     assert.match((await runtimeProcessLogs(dataRoot)).text, /worker-ready/u);
 
+    await rm(join(dataRoot, "worker", "ready"));
+    const afterMissingStartupMarker = await ensureRuntimeProcess(
+      profile,
+      dataRoot,
+      { command: "must-not-run", args: [] },
+      5_000,
+    );
+    assert.equal(afterMissingStartupMarker.pid, first.pid);
+
+    await writeFile(profile, JSON.stringify({ format: "hypit.runtime-local@1", changed: true }), "utf8");
+    assert.equal((await runtimeProcessStatus(profile, dataRoot)).configuration, "changed");
+    await assert.rejects(
+      ensureRuntimeProcess(profile, dataRoot, { command: "must-not-run", args: [] }, 5_000),
+      /Runtime Profile changed/u,
+    );
+
     assert.equal((await stopRuntimeProcess(profile, dataRoot, 5_000)).state, "stopped");
     assert.equal((await runtimeProcessStatus(profile, dataRoot)).state, "stopped");
   } finally {
     await stopRuntimeProcess(profile, dataRoot, 1_000).catch(() => undefined);
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-test("concurrent cold starts publish and reuse one Runtime Worker", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-process-race-"));
-  const profile = join(root, "runtime.json");
-  const dataRoot = join(root, ".hypit", "runtimes", "local");
-  await writeFile(profile, JSON.stringify({ format: "hypit.runtime-profile@1" }), "utf8");
-  const program = `
-    const fs = require("node:fs");
-    const path = require("node:path");
-    const index = process.argv.indexOf("--ready-file");
-    const ready = process.argv[index + 1];
-    const count = path.join(path.dirname(ready), "starts");
-    fs.appendFileSync(count, String(process.pid) + "\\n");
-    fs.mkdirSync(path.dirname(ready), { recursive: true });
-    setTimeout(() => fs.writeFileSync(ready, String(process.pid)), 50);
-    process.on("SIGTERM", () => process.exit(0));
-    setInterval(() => {}, 1000);
-  `;
-  try {
-    const results = await Promise.all([
-      ensureRuntimeProcess(profile, dataRoot, { command: process.execPath, args: ["-e", program] }, 5_000),
-      ensureRuntimeProcess(profile, dataRoot, { command: process.execPath, args: ["-e", program] }, 5_000),
-    ]);
-    assert.equal(results[0]?.pid, results[1]?.pid);
-    assert.equal((await readFile(join(dataRoot, "worker", "starts"), "utf8")).trim().split("\n").length, 1);
-  } finally {
-    await stopRuntimeProcess(profile, dataRoot, 5_000).catch(() => undefined);
     await rm(root, { recursive: true, force: true });
   }
 });

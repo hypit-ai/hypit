@@ -291,7 +291,7 @@ export function elaborateAuthorGraph(
       inputs[input.name] = { kind: "logical-output", id: binding.id };
     }
     const instance = elaborateGraphFragment(program, component.fragment, {
-      id: component.declaration.id,
+      id: `author:${component.declaration.id}`,
       fragment: component.fragment.id,
       inputs,
     });

@@ -8,28 +8,46 @@ importers:
 
   .:
     dependencies:
+      cmu-pronouncing-dictionary:
+        specifier: 3.0.0
+        version: 3.0.0
       tsx:
         specifier: 4.21.0
         version: 4.21.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vite:
+        specifier: 8.2.2
+        version: 8.2.2(@types/node@24.10.1)(esbuild@0.27.7)(tsx@4.21.0)
     devDependencies:
       '@hypit/artifact':
         specifier: workspace:*
         version: link:packages/artifact
-      '@hypit/artifact-store-fs':
-        specifier: workspace:*
-        version: link:packages/artifact-store-fs
-      '@hypit/artifact-store-s3':
-        specifier: workspace:*
-        version: link:packages/artifact-store-s3
       '@hypit/audio-track':
         specifier: workspace:*
         version: link:packages/audio-track
       '@hypit/audio-track-studio':
         specifier: workspace:*
         version: link:packages/audio-track-studio
+      '@hypit/author-kit':
+        specifier: workspace:*
+        version: link:packages/author-kit
       '@hypit/background-removal':
         specifier: workspace:*
         version: link:packages/background-removal
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:packages/build-result
+      '@hypit/build-result-fs':
+        specifier: workspace:*
+        version: link:packages/build-result-fs
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:packages/build-result-kit
+      '@hypit/build-result-s3':
+        specifier: workspace:*
+        version: link:packages/build-result-s3
       '@hypit/caption':
         specifier: workspace:*
         version: link:packages/caption
@@ -72,15 +90,15 @@ importers:
       '@hypit/fonts-open':
         specifier: workspace:*
         version: link:packages/fonts-open
-      '@hypit/gemini':
-        specifier: workspace:*
-        version: link:packages/gemini
       '@hypit/generation':
         specifier: workspace:*
         version: link:packages/generation
       '@hypit/gpt-image':
         specifier: workspace:*
         version: link:packages/gpt-image
+      '@hypit/gpt-image-kits':
+        specifier: workspace:*
+        version: link:packages/gpt-image-kits
       '@hypit/grok-imagine':
         specifier: workspace:*
         version: link:packages/grok-imagine
@@ -108,24 +126,18 @@ importers:
       '@hypit/media-track-studio':
         specifier: workspace:*
         version: link:packages/media-track-studio
-      '@hypit/mimo-tts':
+      '@hypit/mimo-speech':
         specifier: workspace:*
-        version: link:packages/mimo-tts
+        version: link:packages/mimo-speech
       '@hypit/minimax-h3':
         specifier: workspace:*
         version: link:packages/minimax-h3
-      '@hypit/mock-media':
-        specifier: workspace:*
-        version: link:packages/mock-media
       '@hypit/nano-banana':
         specifier: workspace:*
         version: link:packages/nano-banana
       '@hypit/narrative':
         specifier: workspace:*
         version: link:packages/narrative
-      '@hypit/preview-mock':
-        specifier: workspace:*
-        version: link:packages/preview-mock
       '@hypit/program-space':
         specifier: workspace:*
         version: link:packages/program-space
@@ -147,15 +159,9 @@ importers:
       '@hypit/provider-kie':
         specifier: workspace:*
         version: link:packages/provider-kie
-      '@hypit/provider-media-aws-lambda':
-        specifier: workspace:*
-        version: link:packages/provider-media-aws-lambda
       '@hypit/provider-media-local':
         specifier: workspace:*
         version: link:packages/provider-media-local
-      '@hypit/provider-vertex':
-        specifier: workspace:*
-        version: link:packages/provider-vertex
       '@hypit/provider-whisperx-local':
         specifier: workspace:*
         version: link:packages/provider-whisperx-local
@@ -174,6 +180,12 @@ importers:
       '@hypit/render-hyperframes':
         specifier: workspace:*
         version: link:packages/render-hyperframes
+      '@hypit/resource-store-fs':
+        specifier: workspace:*
+        version: link:packages/resource-store-fs
+      '@hypit/resource-store-s3':
+        specifier: workspace:*
+        version: link:packages/resource-store-s3
       '@hypit/run-markup':
         specifier: workspace:*
         version: link:packages/run-markup
@@ -231,6 +243,9 @@ importers:
       '@hypit/speech-track-studio':
         specifier: workspace:*
         version: link:packages/speech-track-studio
+      '@hypit/stand-in':
+        specifier: workspace:*
+        version: link:packages/stand-in
       '@hypit/store-sqlite':
         specifier: workspace:*
         version: link:packages/store-sqlite
@@ -258,93 +273,42 @@ importers:
       '@hypit/visual-ir':
         specifier: workspace:*
         version: link:packages/visual-ir
+      '@hypit/volcengine-matting':
+        specifier: workspace:*
+        version: link:packages/volcengine-matting
       '@hypit/whisperx':
         specifier: workspace:*
         version: link:packages/whisperx
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
+      rollup:
+        specifier: 4.62.4
+        version: 4.62.4
+      rollup-plugin-dts:
+        specifier: 6.2.3
+        version: 6.2.3(rollup@4.62.4)(typescript@5.9.3)
+      vitepress:
+        specifier: ^1.6.4
+        version: 1.6.4(@algolia/client-search@5.56.0)(@types/node@24.10.1)(lightningcss@1.33.0)(postcss@8.5.28)(search-insights@2.17.3)(typescript@5.9.3)
+
+  examples/minimal-author-package/packages/example-component:
+    devDependencies:
+      '@types/node':
+        specifier: 24.10.1
+        version: 24.10.1
+      hypit:
+        specifier: workspace:*
+        version: link:../../../..
       typescript:
         specifier: 5.9.3
         version: 5.9.3
-      vitepress:
-        specifier: ^1.6.4
-        version: 1.6.4(@algolia/client-search@5.56.0)(@types/node@24.10.1)(postcss@8.5.25)(search-insights@2.17.3)(typescript@5.9.3)
-
-  examples/minimal-author-package/packages/example-component:
-    dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../../../../packages/artifact
-      '@hypit/component-kit':
-        specifier: workspace:*
-        version: link:../../../../packages/component-kit
-      '@hypit/composition':
-        specifier: workspace:*
-        version: link:../../../../packages/composition
-      '@hypit/elaborator':
-        specifier: workspace:*
-        version: link:../../../../packages/elaborator
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../../../../packages/markup
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../../../../packages/media
-      '@hypit/program-space':
-        specifier: workspace:*
-        version: link:../../../../packages/program-space
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../../../../packages/protocol
-      '@hypit/semantic-track':
-        specifier: workspace:*
-        version: link:../../../../packages/semantic-track
-      '@hypit/svs':
-        specifier: workspace:*
-        version: link:../../../../packages/svs
-      '@hypit/temporal':
-        specifier: workspace:*
-        version: link:../../../../packages/temporal
-      '@hypit/temporal-markup':
-        specifier: workspace:*
-        version: link:../../../../packages/temporal-markup
-      '@hypit/visual-ir':
-        specifier: workspace:*
-        version: link:../../../../packages/visual-ir
 
   packages/artifact:
     dependencies:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-
-  packages/artifact-store-fs:
-    dependencies:
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@hypit/runtime-kit':
-        specifier: workspace:*
-        version: link:../runtime-kit
-
-  packages/artifact-store-s3:
-    dependencies:
-      '@aws-sdk/client-s3':
-        specifier: 3.1103.0
-        version: 3.1103.0
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@hypit/runtime-kit':
-        specifier: workspace:*
-        version: link:../runtime-kit
 
   packages/audio-track:
     dependencies:
@@ -419,6 +383,21 @@ importers:
         specifier: workspace:*
         version: link:../studio-adapter
 
+  packages/author-kit:
+    dependencies:
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@hypit/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/background-removal:
     dependencies:
       '@hypit/artifact':
@@ -433,6 +412,48 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/build-result:
+    dependencies:
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/build-result-fs:
+    dependencies:
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
+
+  packages/build-result-kit:
+    dependencies:
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
+      '@hypit/host':
+        specifier: workspace:*
+        version: link:../host
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/build-result-s3:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: 3.1103.0
+        version: 3.1103.0
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -534,9 +555,24 @@ importers:
 
   packages/cli:
     dependencies:
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
       '@hypit/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@hypit/core':
+        specifier: workspace:*
+        version: link:../core
+      '@hypit/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -558,12 +594,25 @@ importers:
       '@hypit/source':
         specifier: workspace:*
         version: link:../source
+      '@hypit/validation':
+        specifier: workspace:*
+        version: link:../validation
       '@hypit/workspace':
         specifier: workspace:*
         version: link:../workspace
       typescript:
         specifier: 5.9.3
         version: 5.9.3
+    devDependencies:
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/run-markup':
+        specifier: workspace:*
+        version: link:../run-markup
+      '@hypit/workspace-fs-node':
+        specifier: workspace:*
+        version: link:../workspace-fs-node
 
   packages/comment-sticker:
     dependencies:
@@ -665,9 +714,6 @@ importers:
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@hypit/estimate':
-        specifier: workspace:*
-        version: link:../estimate
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -884,15 +930,6 @@ importers:
 
   packages/estimate:
     dependencies:
-      '@hypit/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@hypit/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1319,30 +1356,6 @@ importers:
         specifier: 0.2.0
         version: 0.2.0
 
-  packages/gemini:
-    dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@hypit/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@hypit/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/media-pipeline':
-        specifier: workspace:*
-        version: link:../media-pipeline
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/text':
-        specifier: workspace:*
-        version: link:../text
-
   packages/generation:
     dependencies:
       '@hypit/artifact':
@@ -1419,6 +1432,15 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
+
+  packages/gpt-image-kits:
+    devDependencies:
+      '@hypit/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/grok-imagine:
     dependencies:
@@ -1635,6 +1657,9 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
+      '@hypit/stand-in':
+        specifier: workspace:*
+        version: link:../stand-in
 
   packages/media-pipeline:
     dependencies:
@@ -1665,6 +1690,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/run':
+        specifier: workspace:*
+        version: link:../run
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
@@ -1732,7 +1760,7 @@ importers:
         specifier: workspace:*
         version: link:../studio-adapter
 
-  packages/mimo-tts:
+  packages/mimo-speech:
     dependencies:
       '@hypit/artifact':
         specifier: workspace:*
@@ -1773,33 +1801,6 @@ importers:
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
-
-  packages/mock-media:
-    dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@hypit/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../media
-      '@hypit/program-space':
-        specifier: workspace:*
-        version: link:../program-space
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/run':
-        specifier: workspace:*
-        version: link:../run
-      '@hypit/spatial':
-        specifier: workspace:*
-        version: link:../spatial
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../speech
 
   packages/model-kit:
     dependencies:
@@ -1867,54 +1868,6 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
-  packages/preview-mock:
-    dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@hypit/artifact-store-fs':
-        specifier: workspace:*
-        version: link:../artifact-store-fs
-      '@hypit/compiler-node':
-        specifier: workspace:*
-        version: link:../compiler-node
-      '@hypit/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-      '@hypit/estimate':
-        specifier: workspace:*
-        version: link:../estimate
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../media
-      '@hypit/mock-media':
-        specifier: workspace:*
-        version: link:../mock-media
-      '@hypit/program-space':
-        specifier: workspace:*
-        version: link:../program-space
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/provider-media-local':
-        specifier: workspace:*
-        version: link:../provider-media-local
-      '@hypit/semantic-take-estimate':
-        specifier: workspace:*
-        version: link:../semantic-take-estimate
-      '@hypit/spatial':
-        specifier: workspace:*
-        version: link:../spatial
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@hypit/text':
-        specifier: workspace:*
-        version: link:../text
-      '@hypit/workspace':
-        specifier: workspace:*
-        version: link:../workspace
-
   packages/program-space:
     dependencies:
       '@hypit/markup':
@@ -1971,6 +1924,12 @@ importers:
 
   packages/provider-hyperframes-local:
     dependencies:
+      '@hyperframes/engine':
+        specifier: 0.7.101
+        version: 0.7.101
+      '@hyperframes/producer':
+        specifier: 0.7.101
+        version: 0.7.101
       '@hypit/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -2004,6 +1963,9 @@ importers:
       hyperframes:
         specifier: 0.7.101
         version: 0.7.101(@types/node@24.10.1)
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
     devDependencies:
       '@hypit/composition':
         specifier: workspace:*
@@ -2020,9 +1982,6 @@ importers:
       '@hypit/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@hypit/gemini':
-        specifier: workspace:*
-        version: link:../gemini
       '@hypit/generation':
         specifier: workspace:*
         version: link:../generation
@@ -2048,12 +2007,18 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@hypit/mimo-tts':
+      '@hypit/mimo-speech':
         specifier: workspace:*
-        version: link:../mimo-tts
+        version: link:../mimo-speech
       '@hypit/seedance':
         specifier: workspace:*
         version: link:../seedance
+      '@hypit/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@hypit/volcengine-matting':
+        specifier: workspace:*
+        version: link:../volcengine-matting
 
   packages/provider-image-opencv-local:
     dependencies:
@@ -2113,9 +2078,6 @@ importers:
         specifier: workspace:*
         version: link:../runtime-kit
     devDependencies:
-      '@hypit/artifact-store-fs':
-        specifier: workspace:*
-        version: link:../artifact-store-fs
       '@hypit/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -2152,6 +2114,9 @@ importers:
       '@hypit/narrative':
         specifier: workspace:*
         version: link:../narrative
+      '@hypit/resource-store-fs':
+        specifier: workspace:*
+        version: link:../resource-store-fs
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
@@ -2171,37 +2136,6 @@ importers:
         specifier: workspace:*
         version: link:../validation
 
-  packages/provider-media-aws-lambda:
-    dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@hypit/endpoint-kit':
-        specifier: workspace:*
-        version: link:../endpoint-kit
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../media
-      '@hypit/media-pipeline':
-        specifier: workspace:*
-        version: link:../media-pipeline
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/runtime-kit':
-        specifier: workspace:*
-        version: link:../runtime-kit
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@hypit/transport-aws-lambda':
-        specifier: workspace:*
-        version: link:../transport-aws-lambda
-    devDependencies:
-      '@hypit/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-
   packages/provider-media-local:
     dependencies:
       '@hypit/artifact':
@@ -2219,9 +2153,6 @@ importers:
       '@hypit/media-pipeline':
         specifier: workspace:*
         version: link:../media-pipeline
-      '@hypit/mock-media':
-        specifier: workspace:*
-        version: link:../mock-media
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2237,34 +2168,9 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
-    devDependencies:
-      '@hypit/driver-node':
+      '@hypit/stand-in':
         specifier: workspace:*
-        version: link:../driver-node
-
-  packages/provider-vertex:
-    dependencies:
-      '@google/genai':
-        specifier: 1.52.0
-        version: 1.52.0
-      '@hypit/endpoint-kit':
-        specifier: workspace:*
-        version: link:../endpoint-kit
-      '@hypit/gemini':
-        specifier: workspace:*
-        version: link:../gemini
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@hypit/runtime-kit':
-        specifier: workspace:*
-        version: link:../runtime-kit
-      '@hypit/text':
-        specifier: workspace:*
-        version: link:../text
+        version: link:../stand-in
     devDependencies:
       '@hypit/driver-node':
         specifier: workspace:*
@@ -2325,9 +2231,9 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@hypit/mimo-tts':
+      '@hypit/mimo-speech':
         specifier: workspace:*
-        version: link:../mimo-tts
+        version: link:../mimo-speech
 
   packages/ranking:
     dependencies:
@@ -2405,103 +2311,6 @@ importers:
         specifier: workspace:*
         version: link:../spatial
 
-  packages/reference-video-tools:
-    dependencies:
-      '@hypit/composition':
-        specifier: workspace:*
-        version: link:../composition
-      '@hypit/core':
-        specifier: workspace:*
-        version: link:../core
-      '@hypit/credential-store-os':
-        specifier: workspace:*
-        version: link:../credential-store-os
-      '@hypit/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-      '@hypit/estimate':
-        specifier: workspace:*
-        version: link:../estimate
-      '@hypit/gemini':
-        specifier: workspace:*
-        version: link:../gemini
-      '@hypit/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../media
-      '@hypit/model-kit':
-        specifier: workspace:*
-        version: link:../model-kit
-      '@hypit/package-loader-node':
-        specifier: workspace:*
-        version: link:../package-loader-node
-      '@hypit/preview-mock':
-        specifier: workspace:*
-        version: link:../preview-mock
-      '@hypit/program-space':
-        specifier: workspace:*
-        version: link:../program-space
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/provider-hypihub':
-        specifier: workspace:*
-        version: link:../provider-hypihub
-      '@hypit/provider-media-local':
-        specifier: workspace:*
-        version: link:../provider-media-local
-      '@hypit/provider-vertex':
-        specifier: workspace:*
-        version: link:../provider-vertex
-      '@hypit/run-markup':
-        specifier: workspace:*
-        version: link:../run-markup
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@hypit/script':
-        specifier: workspace:*
-        version: link:../script
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@hypit/speech-evidence':
-        specifier: workspace:*
-        version: link:../speech-evidence
-      '@hypit/studio':
-        specifier: workspace:*
-        version: link:../studio
-      '@hypit/svs':
-        specifier: workspace:*
-        version: link:../svs
-      '@hypit/video-cli':
-        specifier: workspace:*
-        version: link:../video-cli
-      '@hypit/visual-ir':
-        specifier: workspace:*
-        version: link:../visual-ir
-      '@hypit/whisperx':
-        specifier: workspace:*
-        version: link:../whisperx
-      '@hypit/yt-dlp':
-        specifier: workspace:*
-        version: link:../yt-dlp
-      puppeteer-core:
-        specifier: 25.5.0
-        version: 25.5.0
-      tsx:
-        specifier: 4.21.0
-        version: 4.21.0
-    devDependencies:
-      '@types/node':
-        specifier: 24.10.1
-        version: 24.10.1
-
   packages/render-hyperframes:
     dependencies:
       '@hypit/artifact':
@@ -2551,6 +2360,27 @@ importers:
         specifier: workspace:*
         version: link:../validation
 
+  packages/resource-store-fs:
+    dependencies:
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+
+  packages/resource-store-s3:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: 3.1103.0
+        version: 3.1103.0
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+
   packages/run:
     dependencies:
       '@hypit/elaborator':
@@ -2587,6 +2417,9 @@ importers:
 
   packages/runtime:
     dependencies:
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
       '@hypit/core':
         specifier: workspace:*
         version: link:../core
@@ -2596,6 +2429,15 @@ importers:
 
   packages/runtime-host-node:
     dependencies:
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
+      '@hypit/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2626,6 +2468,12 @@ importers:
 
   packages/runtime-local:
     dependencies:
+      '@hypit/build-result-fs':
+        specifier: workspace:*
+        version: link:../build-result-fs
+      '@hypit/build-result-kit':
+        specifier: workspace:*
+        version: link:../build-result-kit
       '@hypit/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -2644,6 +2492,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/resource-store-fs':
+        specifier: workspace:*
+        version: link:../resource-store-fs
       '@hypit/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -2660,9 +2511,9 @@ importers:
         specifier: workspace:*
         version: link:../validation
     devDependencies:
-      '@hypit/artifact-store-fs':
+      '@hypit/build-result':
         specifier: workspace:*
-        version: link:../artifact-store-fs
+        version: link:../build-result
       '@hypit/credential-store-env':
         specifier: workspace:*
         version: link:../credential-store-env
@@ -2785,9 +2636,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../speech
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
@@ -2872,6 +2720,9 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
+      '@hypit/svs':
+        specifier: workspace:*
+        version: link:../svs
     devDependencies:
       '@hypit/script':
         specifier: workspace:*
@@ -3039,6 +2890,36 @@ importers:
         specifier: workspace:*
         version: link:../studio-adapter
 
+  packages/stand-in:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@hypit/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@hypit/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@hypit/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/run':
+        specifier: workspace:*
+        version: link:../run
+      '@hypit/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@hypit/speech':
+        specifier: workspace:*
+        version: link:../speech
+
   packages/store-sqlite:
     dependencies:
       '@hypit/core':
@@ -3056,6 +2937,9 @@ importers:
       '@hypit/audio-track-studio':
         specifier: workspace:*
         version: link:../audio-track-studio
+      '@hypit/build-result':
+        specifier: workspace:*
+        version: link:../build-result
       '@hypit/caption-fine-studio':
         specifier: workspace:*
         version: link:../caption-fine-studio
@@ -3110,9 +2994,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/provider-media-local':
-        specifier: workspace:*
-        version: link:../provider-media-local
       '@hypit/ranking-studio':
         specifier: workspace:*
         version: link:../ranking-studio
@@ -3165,8 +3046,8 @@ importers:
         specifier: workspace:*
         version: link:../workspace-fs-node
       vite:
-        specifier: 5.4.21
-        version: 5.4.21(@types/node@24.10.1)
+        specifier: 8.2.2
+        version: 8.2.2(@types/node@24.10.1)(esbuild@0.27.7)(tsx@4.21.0)
 
   packages/studio-adapter:
     dependencies:
@@ -3346,18 +3227,18 @@ importers:
       '@hypit/compiler-markup-node':
         specifier: workspace:*
         version: link:../compiler-markup-node
-      '@hypit/credential-store-env':
+      '@hypit/composition':
         specifier: workspace:*
-        version: link:../credential-store-env
+        version: link:../composition
       '@hypit/credential-store-os':
         specifier: workspace:*
         version: link:../credential-store-os
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@hypit/endpoint-kit':
+      '@hypit/estimate':
         specifier: workspace:*
-        version: link:../endpoint-kit
+        version: link:../estimate
       '@hypit/generation':
         specifier: workspace:*
         version: link:../generation
@@ -3376,18 +3257,60 @@ importers:
       '@hypit/provider-hypihub':
         specifier: workspace:*
         version: link:../provider-hypihub
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
       '@hypit/runtime-host-node':
         specifier: workspace:*
         version: link:../runtime-host-node
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
+      '@hypit/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@hypit/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
+      '@hypit/visual-ir':
+        specifier: workspace:*
+        version: link:../visual-ir
+      '@hypit/whisperx':
+        specifier: workspace:*
+        version: link:../whisperx
       '@hypit/workspace-fs-node':
         specifier: workspace:*
         version: link:../workspace-fs-node
+      '@hypit/yt-dlp':
+        specifier: workspace:*
+        version: link:../yt-dlp
+      sharp:
+        specifier: 0.35.3
+        version: 0.35.3(@types/node@24.10.1)
 
   packages/visual-ir:
     dependencies:
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/volcengine-matting:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -3453,37 +3376,6 @@ importers:
   packages/yt-dlp: {}
 
   services/image-opencv: {}
-
-  services/media-lambda:
-    dependencies:
-      '@hypit/artifact-store-s3':
-        specifier: workspace:*
-        version: link:../../packages/artifact-store-s3
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../../packages/media
-      '@hypit/media-execution':
-        specifier: workspace:*
-        version: link:../../packages/media-execution
-      '@hypit/media-pipeline':
-        specifier: workspace:*
-        version: link:../../packages/media-pipeline
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../../packages/protocol
-      '@hypit/provider-media-aws-lambda':
-        specifier: workspace:*
-        version: link:../../packages/provider-media-aws-lambda
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../../packages/speech
-      '@hypit/transport-aws-lambda':
-        specifier: workspace:*
-        version: link:../../packages/transport-aws-lambda
-    devDependencies:
-      esbuild:
-        specifier: ^0.25.0
-        version: 0.25.12
 
   services/whisperx: {}
 
@@ -3646,6 +3538,10 @@ packages:
   '@aws/lambda-invoke-store@0.3.0':
     resolution: {integrity: sha512-sl4Bm6yiMNYrZKkqqDFWN0UfnWhlS8ivKxrYl+6t0gCLrqr8y3B2IqZZbFRkfaVVp7C/baApyh71P+LeE1A2sQ==}
     engines: {node: '>=18.0.0'}
+
+  '@babel/code-frame@7.29.7':
+    resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
+    engines: {node: '>=6.9.0'}
 
   '@babel/helper-string-parser@7.29.7':
     resolution: {integrity: sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==}
@@ -4727,6 +4623,9 @@ packages:
     os: [linux]
     libc: [glibc]
 
+  '@oxc-project/types@0.148.0':
+    resolution: {integrity: sha512-Nm4s/jB+4FpFsPhWGEC4h7rzksesmtnMXomo6rCMcg/b8zLQuOziRgkCS1fxDCXOlJB/6Q8oABOZ/OP6RIPj9A==}
+
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
 
@@ -4766,6 +4665,105 @@ packages:
         optional: true
       yauzl:
         optional: true
+
+  '@rolldown/binding-android-arm-eabi@1.2.7':
+    resolution: {integrity: sha512-EypzgnYCwyVY4NDHKzGmNJT5b+XaQEBniHxsMdeIQLB/tcCzZnhqrzHpZFbX9iaxx+5RiB8caATBtfvZP7zVxQ==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [arm]
+    os: [android]
+
+  '@rolldown/binding-android-arm64@1.2.7':
+    resolution: {integrity: sha512-l17HE9EweWaqJZhuUuNBN/FzM62xw+DECVnJyvMsxn8vJFAGLy5QfLDoYAcronkAN8VxKZHezDpulHDPx95vFw==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [arm64]
+    os: [android]
+
+  '@rolldown/binding-darwin-arm64@1.2.7':
+    resolution: {integrity: sha512-8ED8ELFvHXc6OCETIn4gXObPiaR6bckM/ipXtbzlPVDRMBfEGjCKgO90F9YtfdpDatVx/ZQw7aZ1vUMf/+T3Mw==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@rolldown/binding-darwin-x64@1.2.7':
+    resolution: {integrity: sha512-/WPripjtiAIZ2tWY7ddijORT0Ujg87wxWW/qcoFVCKAWVDPhtY0xr7Dj0M3GyNGz60jGwTElhro/mkF9dT7dDQ==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [x64]
+    os: [darwin]
+
+  '@rolldown/binding-freebsd-x64@1.2.7':
+    resolution: {integrity: sha512-14DI4NcqpvbICxSnGLx3PmtDaWqRP/KGSGb6C+JLLVPeZRl6dKdHba3pGsqT3vpdTqhEYIPG0MMQ8c0xYqoJxA==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@rolldown/binding-linux-arm-gnueabihf@1.2.7':
+    resolution: {integrity: sha512-bxrWIRvHWQvbJwi+VIie/kDJmQxcNE6xxWwZdqF/ExVAigtHkv54WTLQPb+QsZdnFy18fg7JPfWGL0RH6vwIlQ==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [arm]
+    os: [linux]
+
+  '@rolldown/binding-linux-arm64-gnu@1.2.7':
+    resolution: {integrity: sha512-toOY2BChBZyuxU7OYX6Tn389di4IzAqPTycVcci0O7FSfBqzRB3RZn+K5Is6ANf4tmgRd/K1yZTsNTXbkXsnLg==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@rolldown/binding-linux-arm64-musl@1.2.7':
+    resolution: {integrity: sha512-lAIXTH/aiLRLxsTgQvfhjo4K1ydWIp00+V0voOr9beb/9ZmkUFrSIb03dXNFRgMNvkE6oGsF10ioQ6UsI+vS5Q==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@rolldown/binding-linux-ppc64-gnu@1.2.7':
+    resolution: {integrity: sha512-kdnwS28Pkenp/mZMRwjXXXwxQ7pIsm+bF919LUK93BOyhcLsrVKdP2p9fxpiPNPAbNuch8ypQt0pm2P2LYCAGg==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [ppc64]
+    os: [linux]
+    libc: [glibc]
+
+  '@rolldown/binding-linux-s390x-gnu@1.2.7':
+    resolution: {integrity: sha512-516OdsyLdr5E65paF3yBF55t8mfm9+gmtCsK3xI7XKXIT7EfRlHhxL8K/NR6Hu8BWSgF5+1w74lTL0+nxcc8Qw==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [s390x]
+    os: [linux]
+    libc: [glibc]
+
+  '@rolldown/binding-linux-x64-gnu@1.2.7':
+    resolution: {integrity: sha512-r8/z8n7GFaYRln3xmP1Cxy0HH/HLM0uBUPkEuSVEfKGDA89M0FsZRZJRSwe/tJjRx+fpH/gjorfhB8tmEbSFLA==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@rolldown/binding-linux-x64-musl@1.2.7':
+    resolution: {integrity: sha512-pAsE8iiDxUg1xBqdhrTfg45AVDVpirjz00sblEYClGNNcMnDb+e8beQgqIAw6LvauX/APvgxUnwrgun/YYGBhw==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@rolldown/binding-openharmony-arm64@1.2.7':
+    resolution: {integrity: sha512-lTcIYmmnQQA8Or/2DatS6oSqcdLHvendjS+zLu+FwgToynWMRSmQdpM65fTANJgIS4mjbMOo5KT2lnT9SAb96w==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [arm64]
+    os: [openharmony]
+
+  '@rolldown/binding-win32-arm64-msvc@1.2.7':
+    resolution: {integrity: sha512-e3Gu3WxbNk/UqQhxqU7YIYO+9ZBvWNz3U+h/qRFosscMFzdRPbXYSaSWgSnklv2fz1TgzBTcti2z35c/7irsHw==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [arm64]
+    os: [win32]
+
+  '@rolldown/binding-win32-x64-msvc@1.2.7':
+    resolution: {integrity: sha512-W/jg5qoRSqjsEv0+dZi4e687mcHqmVuU0P4fK6qS/xjetW2Gmc1W8j//z5nAeNcC8Ttm0hV46IjcYeuVwYhuiw==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [x64]
+    os: [win32]
+
+  '@rolldown/pluginutils@1.0.1':
+    resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
   '@rollup/rollup-android-arm-eabi@4.62.4':
     resolution: {integrity: sha512-RrPokAb7dmbxFoeO3TloqHyOjgye8RkBhSqmp4aJMIex4c9r46ZstPnleDQOq1t46VOVjwIuwNogIqbodV1Vvg==}
@@ -5443,6 +5441,15 @@ packages:
   fast-fifo@1.3.2:
     resolution: {integrity: sha512-/d9sfos4yxzpwkDkuN7k2SqFKtYNmCTzgfEpz82x34IM9/zc8KGxQoXg1liNC/izpRM/MBdt44Nmx41ZWqk+FQ==}
 
+  fdir@6.5.0:
+    resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
+    engines: {node: '>=12.0.0'}
+    peerDependencies:
+      picomatch: ^3 || ^4
+    peerDependenciesMeta:
+      picomatch:
+        optional: true
+
   fetch-blob@3.2.0:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
     engines: {node: ^12.20 || >= 14.13}
@@ -5578,6 +5585,9 @@ packages:
     resolution: {integrity: sha512-e6rvdUCiQCAuumZslxRJWR/Doq4VpPR82kqclvcS0efgt430SlGIk05vdCN58+VrzgtIcfNODjozVielycD4Sw==}
     engines: {node: '>=16'}
 
+  js-tokens@4.0.0:
+    resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
+
   json-bigint@1.0.0:
     resolution: {integrity: sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==}
 
@@ -5589,6 +5599,80 @@ packages:
 
   jws@4.0.1:
     resolution: {integrity: sha512-EKI/M/yqPncGUUh44xz0PxSidXFr/+r0pA70+gIYhjv+et7yxM+s29Y+VGDkovRofQem0fs7Uvf4+YmAdyRduA==}
+
+  lightningcss-android-arm64@1.33.0:
+    resolution: {integrity: sha512-gEpRTalKdosp4Bb8qWtc2iOgE5SeIHlpS1up9bFq2wAyYhl1UdTObYiHe98zEM9SQvSoqQZ1IQD0JNpg3Ml5pg==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [arm64]
+    os: [android]
+
+  lightningcss-darwin-arm64@1.33.0:
+    resolution: {integrity: sha512-Sciaz8eenNTKn9b3t7+xr0ipTp9YxKQY4npwQ3mrRuL0BAVHBLyZxofhaKBAVtzmtRZ/zTyo0/to4B1uWG/Djg==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [arm64]
+    os: [darwin]
+
+  lightningcss-darwin-x64@1.33.0:
+    resolution: {integrity: sha512-Z5UPAxzrjlWNNyGy6i65cJzzvgJ5D3T6wMvs+gWpY9d7qRhANrxqAp6LhxIgZhWEw18RfJTGcRxjuLIBr+m8XQ==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [x64]
+    os: [darwin]
+
+  lightningcss-freebsd-x64@1.33.0:
+    resolution: {integrity: sha512-QQM/Ti/hQajJwCY+RiWuCZ9sdtI/XQk7nDK5vC8kkdwixezOlDgvDx7+RT+QjK6FcFT4MpsuoBnHIo/O3StRRg==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [x64]
+    os: [freebsd]
+
+  lightningcss-linux-arm-gnueabihf@1.33.0:
+    resolution: {integrity: sha512-N7FVBe6iS24MlM6R/4RBTxGhQheZGs7tiQ9U32UtF75NzP5Q7xWPRqLBCKxlRQRk3rY1jCIPLzx7WzOhuUIRLQ==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [arm]
+    os: [linux]
+
+  lightningcss-linux-arm64-gnu@1.33.0:
+    resolution: {integrity: sha512-j2v/itmy4HlNxlc6voKXYgBqNi0Ng2LShg4z7GufpEgs05P+2suBVyi9I6YHq5uoVFx9ETin3eCEhLVyXGQnKg==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  lightningcss-linux-arm64-musl@1.33.0:
+    resolution: {integrity: sha512-yiO5ROMuYQgXbC60yjZU5CYSFZGKXL0HFATXt9mHJn1+zW55oCtMI9NfcVhYLMFDL7gV7oBPon/EmMMGg2OvtQ==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  lightningcss-linux-x64-gnu@1.33.0:
+    resolution: {integrity: sha512-ar+Ju7LmcN0Jo4FpL4hpFybwNG9/3A/Br5KW2n2jyODg3MEZXaDYADdemoNS+BDNfMgKvylJLj4S5tyRActuAg==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  lightningcss-linux-x64-musl@1.33.0:
+    resolution: {integrity: sha512-RYiYbkokw0trfKqqzfF55lginwEPrD3OJDfTuJzFs1MK6iFnDenaz1fqLLtX4ITG3OktJQXOeTaw1awrBAlZPw==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  lightningcss-win32-arm64-msvc@1.33.0:
+    resolution: {integrity: sha512-1K+MPfLSFVpphzpdbfkhlWk6wBrTObBzS2T6db10PNOZgR9GoVsAWzwNyuhUYYbTp23j+4RrncfujZ4uAzXvwA==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [arm64]
+    os: [win32]
+
+  lightningcss-win32-x64-msvc@1.33.0:
+    resolution: {integrity: sha512-OlEICDx/Xl0FqSp4bry8zFnCvGpig3Gl4gCquvYwHuqJKEC1+n9NgDniFvqHGmMv1ZkqDJrDqKKSykTDX+ehuA==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [x64]
+    os: [win32]
+
+  lightningcss@1.33.0:
+    resolution: {integrity: sha512-WkUDrojuJs0xkgGf2udWxa3yGBRxPtxUkB79i6aCZLRgc7PM8fZe9TosfPDcvEpQZbuFASnHYmRLBLUbmLOIIA==}
+    engines: {node: '>= 12.0.0'}
 
   lilconfig@3.1.3:
     resolution: {integrity: sha512-/vlFKAoH5Cgt3Ie+JLhRbwOsCQePABiU3tJ1egGvyQ+33R/vcwM2Zl2QR/LzjsBeItPt3oSVXapn+m4nQDvpzw==}
@@ -5660,6 +5744,11 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  nanoid@3.3.18:
+    resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
+    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
+    hasBin: true
+
   node-domexception@1.0.0:
     resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
     engines: {node: '>=10.5.0'}
@@ -5710,12 +5799,20 @@ packages:
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
+  picomatch@4.0.7:
+    resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
+    engines: {node: '>=12'}
+
   postcss-selector-parser@7.1.5:
     resolution: {integrity: sha512-KvvtD7SrlBP7dlgkBghEE3r84CABm5SmV2aNcG4oCA+qDnJ/tvKonFVvwWAyyWUEwxuNawdfEAZKP9zM3oZ2Uw==}
     engines: {node: '>=4'}
 
   postcss@8.5.25:
     resolution: {integrity: sha512-DTPx3RWSSnWyzLxQnlH0rJP+EW5ekl16ZU4/psbIhA0e53kJfdgaN5vKM+xP7yJtXVu+nfdVFmlgFDEKAe4Pyw==}
+    engines: {node: ^10 || ^12 || >=14}
+
+  postcss@8.5.28:
+    resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
 
   preact@10.29.8:
@@ -5787,6 +5884,18 @@ packages:
   roarr@2.15.4:
     resolution: {integrity: sha512-CHhPh+UNHD2GTXNYhPWLnU8ONHdI+5DI+4EYIAOaiD63rHeYlZvyh8P+in5999TTSFgUYuKUAjzRI4mdh/p+2A==}
     engines: {node: '>=8.0'}
+
+  rolldown@1.2.7:
+    resolution: {integrity: sha512-g0EtLvBjTUB7jhyV0S/TCup3v/XSVl45vUIGbOGU4QPiyjTenCe4mKuFvW9fEgYmS2Fo42AUssRmNuMziXdrig==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    hasBin: true
+
+  rollup-plugin-dts@6.2.3:
+    resolution: {integrity: sha512-UgnEsfciXSPpASuOelix7m4DrmyQgiaWBnvI0TM4GxuDh5FkqW8E5hu57bCxXB90VvR1WNfLV80yEDN18UogSA==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      rollup: ^3.29.4 || ^4
+      typescript: ^4.5 || ^5.0
 
   rollup@4.62.4:
     resolution: {integrity: sha512-RXOqwaPsBGjMNMa4sQjDjHieHEZDFoj/Rdr46l2MU5DfEs16wHJPC2RPTPHWhNl+M3aI472LLqFkFKut4SblOg==}
@@ -5895,6 +6004,10 @@ packages:
   tiny-invariant@1.3.3:
     resolution: {integrity: sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==}
 
+  tinyglobby@0.2.17:
+    resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
+    engines: {node: '>=12.0.0'}
+
   trim-lines@3.0.1:
     resolution: {integrity: sha512-kRj8B+YHZCc9kQYdWfJB2/oUl9rA99qbowYYBtr4ui4mZyAQ2JpvVBd/6U2YloATfqBhBTSMhTpgBHtU0Mf3Rg==}
 
@@ -5986,6 +6099,49 @@ packages:
       sugarss:
         optional: true
       terser:
+        optional: true
+
+  vite@8.2.2:
+    resolution: {integrity: sha512-cFKLV/PRgAUlIRm5WjMjJ86jrftzpqcgH+Us+DS8mI3CDNiH30Whrz8uHL3+MOLPAgqbMBAqWdAHAphOAM+z/Q==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': ^20.19.0 || >=22.12.0
+      '@vitejs/devtools': ^0.4.0 || ^0.5.0
+      esbuild: ^0.27.0 || ^0.28.0
+      jiti: '>=1.21.0'
+      less: ^4.0.0
+      sass: ^1.70.0
+      sass-embedded: ^1.70.0
+      stylus: '>=0.54.8'
+      sugarss: ^5.0.0
+      terser: ^5.16.0
+      tsx: ^4.8.1
+      yaml: ^2.4.2
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      '@vitejs/devtools':
+        optional: true
+      esbuild:
+        optional: true
+      jiti:
+        optional: true
+      less:
+        optional: true
+      sass:
+        optional: true
+      sass-embedded:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+      tsx:
+        optional: true
+      yaml:
         optional: true
 
   vitepress@1.6.4:
@@ -6364,6 +6520,13 @@ snapshots:
       tslib: 2.8.1
 
   '@aws/lambda-invoke-store@0.3.0': {}
+
+  '@babel/code-frame@7.29.7':
+    dependencies:
+      '@babel/helper-validator-identifier': 7.29.7
+      js-tokens: 4.0.0
+      picocolors: 1.1.1
+    optional: true
 
   '@babel/helper-string-parser@7.29.7': {}
 
@@ -6989,6 +7152,7 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+    optional: true
 
   '@hono/node-server@2.0.12(hono@4.12.32)':
     dependencies:
@@ -7233,30 +7397,88 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
-  '@protobufjs/aspromise@1.1.2': {}
+  '@oxc-project/types@0.148.0': {}
 
-  '@protobufjs/base64@1.1.2': {}
+  '@protobufjs/aspromise@1.1.2':
+    optional: true
 
-  '@protobufjs/codegen@2.0.5': {}
+  '@protobufjs/base64@1.1.2':
+    optional: true
 
-  '@protobufjs/eventemitter@1.1.1': {}
+  '@protobufjs/codegen@2.0.5':
+    optional: true
+
+  '@protobufjs/eventemitter@1.1.1':
+    optional: true
 
   '@protobufjs/fetch@1.1.1':
     dependencies:
       '@protobufjs/aspromise': 1.1.2
+    optional: true
 
-  '@protobufjs/float@1.0.2': {}
+  '@protobufjs/float@1.0.2':
+    optional: true
 
-  '@protobufjs/path@1.1.2': {}
+  '@protobufjs/path@1.1.2':
+    optional: true
 
-  '@protobufjs/pool@1.1.0': {}
+  '@protobufjs/pool@1.1.0':
+    optional: true
 
-  '@protobufjs/utf8@1.1.2': {}
+  '@protobufjs/utf8@1.1.2':
+    optional: true
 
   '@puppeteer/browsers@3.1.0':
     dependencies:
       modern-tar: 0.7.7
       yargs: 18.1.0
+
+  '@rolldown/binding-android-arm-eabi@1.2.7':
+    optional: true
+
+  '@rolldown/binding-android-arm64@1.2.7':
+    optional: true
+
+  '@rolldown/binding-darwin-arm64@1.2.7':
+    optional: true
+
+  '@rolldown/binding-darwin-x64@1.2.7':
+    optional: true
+
+  '@rolldown/binding-freebsd-x64@1.2.7':
+    optional: true
+
+  '@rolldown/binding-linux-arm-gnueabihf@1.2.7':
+    optional: true
+
+  '@rolldown/binding-linux-arm64-gnu@1.2.7':
+    optional: true
+
+  '@rolldown/binding-linux-arm64-musl@1.2.7':
+    optional: true
+
+  '@rolldown/binding-linux-ppc64-gnu@1.2.7':
+    optional: true
+
+  '@rolldown/binding-linux-s390x-gnu@1.2.7':
+    optional: true
+
+  '@rolldown/binding-linux-x64-gnu@1.2.7':
+    optional: true
+
+  '@rolldown/binding-linux-x64-musl@1.2.7':
+    optional: true
+
+  '@rolldown/binding-openharmony-arm64@1.2.7':
+    optional: true
+
+  '@rolldown/binding-win32-arm64-msvc@1.2.7':
+    optional: true
+
+  '@rolldown/binding-win32-x64-msvc@1.2.7':
+    optional: true
+
+  '@rolldown/pluginutils@1.0.1': {}
 
   '@rollup/rollup-android-arm-eabi@4.62.4':
     optional: true
@@ -7443,7 +7665,8 @@ snapshots:
     dependencies:
       undici-types: 7.16.0
 
-  '@types/retry@0.12.0': {}
+  '@types/retry@0.12.0':
+    optional: true
 
   '@types/unist@3.0.3': {}
 
@@ -7451,9 +7674,9 @@ snapshots:
 
   '@ungap/structured-clone@1.3.3': {}
 
-  '@vitejs/plugin-vue@5.2.4(vite@5.4.21(@types/node@24.10.1))(vue@3.5.41(typescript@5.9.3))':
+  '@vitejs/plugin-vue@5.2.4(vite@5.4.21(@types/node@24.10.1)(lightningcss@1.33.0))(vue@3.5.41(typescript@5.9.3))':
     dependencies:
-      vite: 5.4.21(@types/node@24.10.1)
+      vite: 5.4.21(@types/node@24.10.1)(lightningcss@1.33.0)
       vue: 3.5.41(typescript@5.9.3)
 
   '@vue/compiler-core@3.5.41':
@@ -7569,7 +7792,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  agent-base@7.1.4: {}
+  agent-base@7.1.4:
+    optional: true
 
   algoliasearch@5.56.0:
     dependencies:
@@ -7631,7 +7855,8 @@ snapshots:
 
   base64-js@1.5.1: {}
 
-  bignumber.js@9.3.1: {}
+  bignumber.js@9.3.1:
+    optional: true
 
   birpc@2.9.0: {}
 
@@ -7647,7 +7872,8 @@ snapshots:
     dependencies:
       base64-js: 1.5.1
 
-  buffer-equal-constant-time@1.0.1: {}
+  buffer-equal-constant-time@1.0.1:
+    optional: true
 
   buffer-from@1.1.2: {}
 
@@ -7714,7 +7940,8 @@ snapshots:
 
   csstype@3.2.3: {}
 
-  data-uri-to-buffer@4.0.1: {}
+  data-uri-to-buffer@4.0.1:
+    optional: true
 
   debug@4.4.3:
     dependencies:
@@ -7794,6 +8021,7 @@ snapshots:
   ecdsa-sig-formatter@1.0.11:
     dependencies:
       safe-buffer: 5.2.1
+    optional: true
 
   emoji-regex-xs@1.0.0: {}
 
@@ -7915,16 +8143,22 @@ snapshots:
     transitivePeerDependencies:
       - bare-abort-controller
 
-  extend@3.0.2: {}
+  extend@3.0.2:
+    optional: true
 
   fast-deep-equal@3.1.3: {}
 
   fast-fifo@1.3.2: {}
 
+  fdir@6.5.0(picomatch@4.0.7):
+    optionalDependencies:
+      picomatch: 4.0.7
+
   fetch-blob@3.2.0:
     dependencies:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
+    optional: true
 
   ffmpeg-static@5.3.0:
     dependencies:
@@ -7956,6 +8190,7 @@ snapshots:
   formdata-polyfill@4.0.10:
     dependencies:
       fetch-blob: 3.2.0
+    optional: true
 
   fsevents@2.3.3:
     optional: true
@@ -7967,6 +8202,7 @@ snapshots:
       node-fetch: 3.3.2
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   gcp-metadata@8.1.2:
     dependencies:
@@ -7975,6 +8211,7 @@ snapshots:
       json-bigint: 1.0.0
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   get-caller-file@2.0.5: {}
 
@@ -8010,8 +8247,10 @@ snapshots:
       jws: 4.0.1
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
-  google-logging-utils@1.1.3: {}
+  google-logging-utils@1.1.3:
+    optional: true
 
   gopd@1.2.0: {}
 
@@ -8069,6 +8308,7 @@ snapshots:
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   hyperframes@0.7.101(@types/node@24.10.1):
     dependencies:
@@ -8116,9 +8356,13 @@ snapshots:
     dependencies:
       is-inside-container: 1.0.0
 
+  js-tokens@4.0.0:
+    optional: true
+
   json-bigint@1.0.0:
     dependencies:
       bignumber.js: 9.3.1
+    optional: true
 
   json-stringify-safe@5.0.1: {}
 
@@ -8127,11 +8371,62 @@ snapshots:
       buffer-equal-constant-time: 1.0.1
       ecdsa-sig-formatter: 1.0.11
       safe-buffer: 5.2.1
+    optional: true
 
   jws@4.0.1:
     dependencies:
       jwa: 2.0.1
       safe-buffer: 5.2.1
+    optional: true
+
+  lightningcss-android-arm64@1.33.0:
+    optional: true
+
+  lightningcss-darwin-arm64@1.33.0:
+    optional: true
+
+  lightningcss-darwin-x64@1.33.0:
+    optional: true
+
+  lightningcss-freebsd-x64@1.33.0:
+    optional: true
+
+  lightningcss-linux-arm-gnueabihf@1.33.0:
+    optional: true
+
+  lightningcss-linux-arm64-gnu@1.33.0:
+    optional: true
+
+  lightningcss-linux-arm64-musl@1.33.0:
+    optional: true
+
+  lightningcss-linux-x64-gnu@1.33.0:
+    optional: true
+
+  lightningcss-linux-x64-musl@1.33.0:
+    optional: true
+
+  lightningcss-win32-arm64-msvc@1.33.0:
+    optional: true
+
+  lightningcss-win32-x64-msvc@1.33.0:
+    optional: true
+
+  lightningcss@1.33.0:
+    dependencies:
+      detect-libc: 2.1.2
+    optionalDependencies:
+      lightningcss-android-arm64: 1.33.0
+      lightningcss-darwin-arm64: 1.33.0
+      lightningcss-darwin-x64: 1.33.0
+      lightningcss-freebsd-x64: 1.33.0
+      lightningcss-linux-arm-gnueabihf: 1.33.0
+      lightningcss-linux-arm64-gnu: 1.33.0
+      lightningcss-linux-arm64-musl: 1.33.0
+      lightningcss-linux-x64-gnu: 1.33.0
+      lightningcss-linux-x64-musl: 1.33.0
+      lightningcss-win32-arm64-msvc: 1.33.0
+      lightningcss-win32-x64-msvc: 1.33.0
 
   lilconfig@3.1.3: {}
 
@@ -8143,7 +8438,8 @@ snapshots:
       htmlparser2: 10.1.0
       uhyphen: 0.2.0
 
-  long@5.3.2: {}
+  long@5.3.2:
+    optional: true
 
   magic-string@0.30.21:
     dependencies:
@@ -8200,13 +8496,17 @@ snapshots:
 
   nanoid@3.3.16: {}
 
-  node-domexception@1.0.0: {}
+  nanoid@3.3.18: {}
+
+  node-domexception@1.0.0:
+    optional: true
 
   node-fetch@3.3.2:
     dependencies:
       data-uri-to-buffer: 4.0.1
       fetch-blob: 3.2.0
       formdata-polyfill: 4.0.10
+    optional: true
 
   nth-check@3.0.1:
     dependencies:
@@ -8243,6 +8543,7 @@ snapshots:
     dependencies:
       '@types/retry': 0.12.0
       retry: 0.13.1
+    optional: true
 
   pako@0.2.9: {}
 
@@ -8252,6 +8553,8 @@ snapshots:
 
   picocolors@1.1.1: {}
 
+  picomatch@4.0.7: {}
+
   postcss-selector-parser@7.1.5:
     dependencies:
       cssesc: 3.0.0
@@ -8260,6 +8563,12 @@ snapshots:
   postcss@8.5.25:
     dependencies:
       nanoid: 3.3.16
+      picocolors: 1.1.1
+      source-map-js: 1.2.1
+
+  postcss@8.5.28:
+    dependencies:
+      nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -8284,6 +8593,7 @@ snapshots:
       '@protobufjs/utf8': 1.1.2
       '@types/node': 24.10.1
       long: 5.3.2
+    optional: true
 
   pump@3.0.4:
     dependencies:
@@ -8346,7 +8656,8 @@ snapshots:
 
   restructure@3.0.2: {}
 
-  retry@0.13.1: {}
+  retry@0.13.1:
+    optional: true
 
   rfdc@1.4.1: {}
 
@@ -8358,6 +8669,35 @@ snapshots:
       json-stringify-safe: 5.0.1
       semver-compare: 1.0.0
       sprintf-js: 1.1.3
+
+  rolldown@1.2.7:
+    dependencies:
+      '@oxc-project/types': 0.148.0
+      '@rolldown/pluginutils': 1.0.1
+    optionalDependencies:
+      '@rolldown/binding-android-arm-eabi': 1.2.7
+      '@rolldown/binding-android-arm64': 1.2.7
+      '@rolldown/binding-darwin-arm64': 1.2.7
+      '@rolldown/binding-darwin-x64': 1.2.7
+      '@rolldown/binding-freebsd-x64': 1.2.7
+      '@rolldown/binding-linux-arm-gnueabihf': 1.2.7
+      '@rolldown/binding-linux-arm64-gnu': 1.2.7
+      '@rolldown/binding-linux-arm64-musl': 1.2.7
+      '@rolldown/binding-linux-ppc64-gnu': 1.2.7
+      '@rolldown/binding-linux-s390x-gnu': 1.2.7
+      '@rolldown/binding-linux-x64-gnu': 1.2.7
+      '@rolldown/binding-linux-x64-musl': 1.2.7
+      '@rolldown/binding-openharmony-arm64': 1.2.7
+      '@rolldown/binding-win32-arm64-msvc': 1.2.7
+      '@rolldown/binding-win32-x64-msvc': 1.2.7
+
+  rollup-plugin-dts@6.2.3(rollup@4.62.4)(typescript@5.9.3):
+    dependencies:
+      magic-string: 0.30.21
+      rollup: 4.62.4
+      typescript: 5.9.3
+    optionalDependencies:
+      '@babel/code-frame': 7.29.7
 
   rollup@4.62.4:
     dependencies:
@@ -8546,6 +8886,11 @@ snapshots:
 
   tiny-invariant@1.3.3: {}
 
+  tinyglobby@0.2.17:
+    dependencies:
+      fdir: 6.5.0(picomatch@4.0.7)
+      picomatch: 4.0.7
+
   trim-lines@3.0.1: {}
 
   tslib@2.8.1: {}
@@ -8614,7 +8959,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite@5.4.21(@types/node@24.10.1):
+  vite@5.4.21(@types/node@24.10.1)(lightningcss@1.33.0):
     dependencies:
       esbuild: 0.21.5
       postcss: 8.5.25
@@ -8622,8 +8967,22 @@ snapshots:
     optionalDependencies:
       '@types/node': 24.10.1
       fsevents: 2.3.3
+      lightningcss: 1.33.0
 
-  vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@24.10.1)(postcss@8.5.25)(search-insights@2.17.3)(typescript@5.9.3):
+  vite@8.2.2(@types/node@24.10.1)(esbuild@0.27.7)(tsx@4.21.0):
+    dependencies:
+      lightningcss: 1.33.0
+      picomatch: 4.0.7
+      postcss: 8.5.28
+      rolldown: 1.2.7
+      tinyglobby: 0.2.17
+    optionalDependencies:
+      '@types/node': 24.10.1
+      esbuild: 0.27.7
+      fsevents: 2.3.3
+      tsx: 4.21.0
+
+  vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@24.10.1)(lightningcss@1.33.0)(postcss@8.5.28)(search-insights@2.17.3)(typescript@5.9.3):
     dependencies:
       '@docsearch/css': 3.8.2
       '@docsearch/js': 3.8.2(@algolia/client-search@5.56.0)(search-insights@2.17.3)
@@ -8632,7 +8991,7 @@ snapshots:
       '@shikijs/transformers': 2.5.0
       '@shikijs/types': 2.5.0
       '@types/markdown-it': 14.1.2
-      '@vitejs/plugin-vue': 5.2.4(vite@5.4.21(@types/node@24.10.1))(vue@3.5.41(typescript@5.9.3))
+      '@vitejs/plugin-vue': 5.2.4(vite@5.4.21(@types/node@24.10.1)(lightningcss@1.33.0))(vue@3.5.41(typescript@5.9.3))
       '@vue/devtools-api': 7.7.10
       '@vue/shared': 3.5.41
       '@vueuse/core': 12.8.2(typescript@5.9.3)
@@ -8641,10 +9000,10 @@ snapshots:
       mark.js: 8.11.1
       minisearch: 7.2.0
       shiki: 2.5.0
-      vite: 5.4.21(@types/node@24.10.1)
+      vite: 5.4.21(@types/node@24.10.1)(lightningcss@1.33.0)
       vue: 3.5.41(typescript@5.9.3)
     optionalDependencies:
-      postcss: 8.5.25
+      postcss: 8.5.28
     transitivePeerDependencies:
       - '@algolia/client-search'
       - '@types/node'
@@ -8687,7 +9046,8 @@ snapshots:
     dependencies:
       argparse: 2.0.1
 
-  web-streams-polyfill@3.3.3: {}
+  web-streams-polyfill@3.3.3:
+    optional: true
 
   webdriver-bidi-protocol@0.4.2: {}
 

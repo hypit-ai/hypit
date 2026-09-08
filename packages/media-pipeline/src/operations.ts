@@ -1,6 +1,7 @@
 import { verifyMediaInspection } from "@hypit/media";
 import type { MediaAudioStream, MediaInspection, MediaVideoStream } from "@hypit/media";
 import { canonicalize } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 
 import type {
   AudioExtractionRequest,
@@ -8,7 +9,9 @@ import type {
   MediaAudioSelector,
   MediaTransformProgram,
   MediaVideoSelector,
+  StillVideoLayout,
   StillVideoRequest,
+  StillVideoSegment,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -114,6 +117,52 @@ export function sealFrameExtractionRequest(value: FrameExtractionRequest): Frame
   return result;
 }
 
+export function verifyStillVideoLayout(value: unknown): asserts value is StillVideoLayout {
+  const layout = object(value, "StillVideoLayout");
+  assert(Array.isArray(layout.weights) && layout.weights.length > 0, "StillVideoLayout needs at least one weight");
+  for (const weight of layout.weights) {
+    assert(typeof weight === "number" && Number.isFinite(weight) && weight > 0, "StillVideoLayout weights must be positive");
+  }
+  assert(layout.guide === undefined || layout.guide === "clip-time", "StillVideoLayout guide is unsupported");
+}
+
+export function sealStillVideoLayout(value: StillVideoLayout): StillVideoLayout {
+  const result = canonicalize(value) as unknown as StillVideoLayout;
+  verifyStillVideoLayout(result);
+  return result;
+}
+
+/**
+ * Spread `frameCount` whole frames over the weights. Every picture first holds one frame; the rest
+ * are shared by weight, each picture taking the floor of its share and the frames left over going
+ * one each to the largest fractional remainders, earlier picture first on a tie. Deterministic, and
+ * refused when there are fewer frames than pictures.
+ */
+export function planStillVideoSegments(frameCount: number, weights: readonly number[]): readonly StillVideoSegment[] {
+  assert(Number.isSafeInteger(frameCount) && frameCount > 0, "Still video frame count must be positive");
+  assert(weights.length > 0, "Still video needs at least one picture");
+  assert(frameCount >= weights.length, `Still video has ${frameCount} frames for ${weights.length} pictures; each picture needs at least one`);
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  const shared = frameCount - weights.length;
+  const exact = weights.map((weight) => shared * weight / total);
+  const floors = exact.map((share) => 1 + Math.floor(share));
+  let remaining = frameCount - floors.reduce((sum, item) => sum + item, 0);
+  const order = exact.map((share, index) => ({ index, fraction: share - Math.floor(share) }))
+    .sort((left, right) => right.fraction - left.fraction || left.index - right.index);
+  for (const { index } of order) {
+    if (remaining === 0) break;
+    floors[index] = floors[index]! + 1;
+    remaining -= 1;
+  }
+  const segments: StillVideoSegment[] = [];
+  let start = 0;
+  for (const frames of floors) {
+    segments.push({ startFrame: start, endFrameExclusive: start + frames });
+    start += frames;
+  }
+  return segments;
+}
+
 export function verifyStillVideoRequest(value: unknown): asserts value is StillVideoRequest {
   const request = object(value, "StillVideoRequest");
   const frameRate = object(request.frameRate, "StillVideoRequest.frameRate");
@@ -122,15 +171,43 @@ export function verifyStillVideoRequest(value: unknown): asserts value is StillV
   "StillVideoRequest.frameRate must be a positive rational");
   assert(Number.isSafeInteger(request.frameCount) && (request.frameCount as number) > 0,
     "StillVideoRequest.frameCount must be positive");
+  assert(request.guide === undefined || request.guide === "clip-time", "StillVideoRequest guide is unsupported");
   const output = object(request.output, "StillVideoRequest.output");
   assert(output.container === "mp4" && output.codec === "h264" && output.pixelFormat === "yuv420p",
     "StillVideoRequest output profile is unsupported");
+  assert(Array.isArray(request.segments) && request.segments.length > 0, "StillVideoRequest needs at least one segment");
+  let cursor = 0;
+  for (const item of request.segments) {
+    const segment = object(item, "StillVideoRequest.segments[]");
+    assert(segment.startFrame === cursor, "StillVideoRequest segments must be contiguous from frame 0");
+    assert(Number.isSafeInteger(segment.endFrameExclusive) && (segment.endFrameExclusive as number) > cursor,
+      "StillVideoRequest segments must each hold at least one frame");
+    cursor = segment.endFrameExclusive as number;
+    if (segment.source !== undefined) {
+      const source = object(segment.source, "StillVideoRequest.segments[].source");
+      assert(source.kind === "blob" && typeof source.mediaType === "string" && source.mediaType.startsWith("image/"),
+        "StillVideoRequest segment source must be an image Artifact");
+    }
+  }
+  assert(cursor === request.frameCount, "StillVideoRequest segments must cover exactly frameCount frames");
 }
 
 export function sealStillVideoRequest(value: StillVideoRequest): StillVideoRequest {
   const result = canonicalize(value) as unknown as StillVideoRequest;
   verifyStillVideoRequest(result);
   return result;
+}
+
+/** Attach one picture to the first segment that has none; the pictures arrive in authored order. */
+export function bindStillVideoSource(request: StillVideoRequest, source: BlobRef): StillVideoRequest {
+  verifyStillVideoRequest(request);
+  assert(source.kind === "blob" && source.mediaType.startsWith("image/"), "Still video source must be an image Artifact");
+  const index = request.segments.findIndex((segment) => segment.source === undefined);
+  assert(index >= 0, "Still video already has a picture for every segment");
+  return sealStillVideoRequest({
+    ...request,
+    segments: request.segments.map((segment, at) => at === index ? { ...segment, source } : segment),
+  });
 }
 
 function uniqueDefault<T extends { readonly disposition: { readonly default: boolean }; readonly index: number }>(

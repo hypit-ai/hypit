@@ -1,41 +1,21 @@
 import type { NodeCompiler } from "@hypit/compiler-node";
 import type { LoadedPackage, NodePackageContribution } from "@hypit/package-loader-node";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
+import type { BuildResultRepository } from "@hypit/build-result";
+import type { BuildResultRepositoryLocation } from "@hypit/build-result-kit";
+import type { BuildResultRepositoryDiagnostic } from "@hypit/build-result-kit";
+import type { CanonicalValue } from "@hypit/protocol";
 
 export type CliCompilerOptions = {
   /** Canonical containment boundary for Author and Run Sources plus source assets. */
   readonly workspaceRoot?: string;
   /** Additional Host-authorized asset roots. These never widen Source imports. */
   readonly assetRoots?: readonly string[];
-  readonly packageContributions: readonly NodePackageContribution[];
-};
-
-/**
- * One picture asked for directly, with no Source, Build, Record or Runtime Profile.
- *
- * A component package's own chrome — a paper texture, a board, a panel — is authoring
- * input that ships inside the package, so it is never anybody's Output. Credentials are
- * the only thing this needs.
- */
-export type CliPictureRequest = {
-  /** Installed package specifier naming the exact model family; the Distribution defaults it. */
-  readonly model?: string;
-  readonly prompt: string;
-  readonly aspectRatio?: string;
-  readonly resolution?: string;
-  /** Project package root; the Distribution remains a separate read-only resolution root. */
-  readonly packageRoot: string;
-  /** Read-only packages shipped by the active Distribution. */
+  /** Project-owned package resolution boundary for package Source imports. */
+  readonly packageRoot?: string;
+  /** Read-only application Distribution that owns the reserved @hypit namespace. */
   readonly distributionPackageRoot?: string;
-};
-
-export type CliPicture = {
-  /** Installed package specifier that declared the exact model. */
-  readonly package: string;
-  /** Exact model name, as the model package declares it. */
-  readonly model: string;
-  readonly mediaType: string;
-  readonly bytes: Uint8Array;
+  readonly packageContributions: readonly NodePackageContribution[];
 };
 
 /**
@@ -49,6 +29,8 @@ export type CliDistribution = {
   readonly packageRoot?: string;
   /** Explicit Host bootstrap packages; never inferred from Source contents. */
   readonly bootstrapPackages: readonly LoadedPackage[];
+  /** Product-owned starter Profile. The generic CLI only writes this explicit value. */
+  readonly initialRuntimeProfile?: CanonicalValue;
   createCompiler(options: CliCompilerOptions): NodeCompiler;
   /**
    * Read the self-described Run Source and its Author Source closure, then return
@@ -59,6 +41,8 @@ export type CliDistribution = {
    */
   discoverSourcePackages?(path: string, options?: {
     readonly workspaceRoot?: string;
+    readonly packageRoot?: string;
+    readonly distributionPackageRoot?: string;
     /** Exact packages already trusted for the current fixed-point discovery pass. */
     readonly packages?: readonly LoadedPackage[];
   }): Promise<{
@@ -70,12 +54,21 @@ export type CliDistribution = {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;
   }): Promise<NodeRuntimeHost>;
-  /**
-   * Generate one picture for a package asset.
-   *
-   * Which exact models exist is a model package's declaration and which Provider fulfils
-   * them is this Distribution's choice, so both stay here. The generic engine only reads
-   * the prompt, writes the file and reports where it went.
-   */
-  generatePicture?(request: CliPictureRequest): Promise<CliPicture>;
+  /** Open project-owned Result history even when no Runtime Profile is selected. */
+  openProjectResults(projectRoot: string, options: {
+    readonly packageRoot: string;
+    readonly distributionPackageRoot?: string;
+  }): Promise<{
+    readonly location: BuildResultRepositoryLocation;
+    readonly repository: BuildResultRepository;
+    close(): void | Promise<void>;
+  }>;
+  /** Actively diagnose this project's selected Result Store without reading its history. */
+  diagnoseProjectResults(projectRoot: string, options: {
+    readonly packageRoot: string;
+    readonly distributionPackageRoot?: string;
+  }): Promise<{
+    readonly location?: BuildResultRepositoryLocation;
+    readonly diagnostics: readonly BuildResultRepositoryDiagnostic[];
+  }>;
 };

@@ -136,7 +136,7 @@ function projectRanking(context: StudioTrackCompanionContext): readonly StudioEn
       ...(semanticSource?.id === undefined ? {} : { markerId: semanticSource.id }),
       display: {
         title: label,
-        layers: icon === undefined ? [] : [previewLayer(artifactPreview("image", icon.digest), "repeat-x")],
+        layers: icon === undefined ? [] : [previewLayer(artifactPreview("image", icon.resource), "repeat-x")],
       },
       startFrame: visible.startFrame,
       endFrameExclusive: visible.endFrameExclusive,

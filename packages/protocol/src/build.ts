@@ -118,10 +118,10 @@ export type BuildRequest = {
   readonly targets: readonly BuildTarget[];
 };
 
-export type BuildSelection = {
+export type BuildOutputBinding = {
   readonly output: LogicalOutputId;
-  readonly candidate: CandidateId;
   readonly record: RecordId;
+  readonly type: TypeRef;
 };
 
 export type ProducerStep = {
@@ -141,7 +141,19 @@ export type BuildPlan = {
   readonly format: "hypit.plan@1";
   readonly steps: readonly ProducerStep[];
   readonly goals: readonly BuildGoal[];
-  readonly selections: readonly BuildSelection[];
+  /** Every Logical Output reached by the selected execution, independent of how it was supplied. */
+  readonly outputBindings: readonly BuildOutputBinding[];
+};
+
+/** The complete execution intent compiled from one `.svrun` source. */
+export type RunGraph = {
+  readonly format: "hypit.run-graph@1";
+  /** Literal values authored by this Run and reached only through its selected Fragments. */
+  readonly records: readonly TypedRecord[];
+  readonly candidates: readonly Candidate[];
+  readonly operations: readonly OperationNode[];
+  readonly satisfactions: readonly Satisfaction[];
+  readonly targets: readonly BuildTarget[];
 };
 
 export type LinkedProgram = {
@@ -201,11 +213,12 @@ export type BuildDiagnostic = {
 
 /** Immutable finite program selected by one Author Graph plus one Run Graph. */
 export type BuildDefinition = {
-  readonly format: "hypit.build-definition@1";
+  readonly format: "hypit.build-definition@2";
   readonly program: LinkedProgram;
-  readonly graph: CompiledGraph;
-  readonly request: BuildRequest;
+  /** Selected zero-input values. Candidate identity has already served its planning purpose. */
+  readonly initialRecords: readonly TypedRecord[];
   readonly plan: BuildPlan;
+  readonly targets: readonly BuildTarget[];
 };
 
 type BuildFactBase = {
@@ -241,9 +254,8 @@ export type BuildFact = ProducerAppliedFact | NeedAppliedFact | CommandFailedFac
 export type BuildState = {
   readonly format: "hypit.build@1";
   readonly program: LinkedProgram;
-  readonly graph: CompiledGraph;
-  readonly request: BuildRequest;
   readonly plan: BuildPlan;
+  readonly targets: readonly BuildTarget[];
   readonly status: "active" | "complete" | "failed";
   readonly records: readonly TypedRecord[];
   readonly steps: readonly StepState[];

@@ -77,7 +77,7 @@ export function assertTextStyle(style: TextStyle): void {
     throw new Error("TextStyle typography size or weight is invalid.");
   }
   if (style.typography.fonts === undefined) {
-    throw new Error("Official TextStyle requires an exact content-addressed font stack.");
+    throw new Error("Official TextStyle requires an exact declared font stack.");
   }
   if (!["start", "center", "end"].includes(style.point.anchorInline)
     || !["start", "center", "end"].includes(style.point.anchorBlock)
@@ -483,7 +483,7 @@ function maskTextElement(item: TextItem): VisualTextElement {
     throw new Error(`${item.id} advanced Text Mask flow must be materialized by an independent package.`);
   }
   const fonts = typography.fonts;
-  if (fonts.length === 0) throw new Error("Text Mask requires an exact content-addressed font stack.");
+  if (fonts.length === 0) throw new Error("Text Mask requires an exact declared font stack.");
   if (fonts !== undefined) {
     const primary = fonts[0];
     if (primary === undefined || primary.weight !== typography.weight || primary.style !== typography.style || typography.synthesis !== "none") {

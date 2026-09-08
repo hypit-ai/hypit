@@ -8,9 +8,10 @@ import {
 } from "@hypit/markup";
 import { sameType } from "@hypit/protocol";
 import { narrativeTypes } from "@hypit/narrative";
+import type { NarrativeExcerpt } from "@hypit/narrative";
 import { mediaTypes } from "@hypit/media";
 
-import { whisperXSemanticTakeFragment } from "./fragment.js";
+import { whisperXBoundarySemanticTakeFragment, whisperXSemanticTakeFragment } from "./fragment.js";
 import { whisperXTypes } from "./manifest.js";
 import type { WhisperXLanguage } from "./types.js";
 
@@ -28,15 +29,38 @@ function reference(
   return value;
 }
 
+function authoredExcerpt(value: SurfaceResolvedReference): NarrativeExcerpt | undefined {
+  return value.record?.value.kind === "inline"
+    ? value.record.value.value as unknown as NarrativeExcerpt
+    : undefined;
+}
+
 export const decodeWhisperXSemanticTakeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id", "narrative", "segment", "media", "language"]);
+  const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
+  const segment = reference(element, "segment", narrativeTypes.excerpt, resolveReference);
+  const media = reference(element, "media", mediaTypes.synchronized, resolveReference);
+  const excerpt = authoredExcerpt(segment);
+  const hasNoTokens = excerpt !== undefined && excerpt.tokenStart === excerpt.tokenEndExclusive;
+  exactAttributes(element, hasNoTokens
+    ? ["id", "narrative", "segment", "media"]
+    : ["id", "narrative", "segment", "media", "language"]);
   if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
     throw new Error(`${element.name} does not accept children`);
   }
   const id = stringAttribute(element, "id");
-  const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
-  const segment = reference(element, "segment", narrativeTypes.excerpt, resolveReference);
-  const media = reference(element, "media", mediaTypes.synchronized, resolveReference);
+  if (hasNoTokens) {
+    return {
+      records: [],
+      components: [{
+        id,
+        fragment: whisperXBoundarySemanticTakeFragment.id,
+        inputs: { narrative: narrative.ref, segment: segment.ref, media: media.ref },
+        outputs: { take: `${id}.take` },
+        range: element.range,
+      }],
+      fragments: [whisperXBoundarySemanticTakeFragment],
+    };
+  }
   const language = stringAttribute(element, "language");
   if (language !== "en" && language !== "zh" && language !== "es") {
     throw new Error(`${element.name}.language must be en, zh, or es`);

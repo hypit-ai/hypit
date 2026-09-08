@@ -4,9 +4,10 @@
 
 Pull requests are welcome. Documentation, examples and translations count as much as code.
 
-When creating an original or reconstructed video, if a component has clear, high reuse value across
-unrelated videos, you can ask your Agent to move it into Hypit's `packages/` folder, then submit it to
-us in a Pull Request. Ordinary one-off components should remain project-local.
+Video components normally live in the video project's `packages/` directory. When sharing one across
+projects, publish it under your own npm scope or private registry and install a versioned release
+through the project's package manager. Proposals for the official Distribution belong in an issue
+that explains the shared production need.
 
 ## Before you start
 
@@ -16,7 +17,7 @@ contract, describe the approach in the issue first.
 
 ## Set up
 
-You need Node.js 22+ and pnpm 10.33, selected by the root `packageManager` field.
+You need Node.js 22.12+ and pnpm 10.33, selected by the root `packageManager` field.
 
 ```bash
 corepack enable
@@ -42,12 +43,11 @@ page belongs with the change to its counterpart.
 
 ## Check your work
 
-CI runs these three commands on every pull request. Run them locally first:
+CI runs these commands on every pull request. Run them locally first:
 
 ```bash
 pnpm check         # TypeScript type-check
-pnpm test          # package, service-adapter and repository-boundary tests
-pnpm test:release  # repository hygiene
+pnpm test          # package and service-adapter tests
 ```
 
 ## Open the pull request

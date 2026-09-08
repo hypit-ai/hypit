@@ -3,44 +3,66 @@ import { constants } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, isAbsolute, join, resolve } from "node:path";
 import type { ArtifactAttachment } from "@hypit/workspace";
-import type { BuildDefinition, BuildState, CapabilityRef, Digest } from "@hypit/protocol";
+import type { BuildResultForward } from "@hypit/build-result";
+import type { BuildResultRepositoryLocation } from "@hypit/build-result-kit";
+import type { DriverRunResult, NodeDriverOptions, ProducerRegistry } from "@hypit/driver-node";
+import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef, Need, StoredValue } from "@hypit/protocol";
 import type {
   BuildCatalogDescriptor,
-  BuildCatalogEntry,
-  BuildDispatchSnapshot,
-  BuildSnapshot,
+  BuildCompletion,
+  BuildExecutionStop,
   CapacityReservation,
+  CredentialAcquisition,
   CredentialRef,
   OperationSnapshot,
+  ResourceStore,
   RuntimeWorkerRunOptions,
 } from "@hypit/runtime";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-kit";
 
-export type RuntimeHostBuildSubmission = {
+export type RuntimeHostActiveBuildSubmission = {
   readonly id: string;
   readonly state: BuildState;
-  readonly status: "queued" | "running" | "waiting" | "complete" | "failed" | "cancelled";
-  readonly dispatch: BuildDispatchSnapshot;
+  readonly view: BuildView;
 };
 
-export type RuntimeBuildQuote = {
-  readonly format: "hypit.build-quote@1";
-  readonly status: "complete";
-  readonly totalCredits: number;
-  readonly totalUsd: number;
-  readonly items: readonly {
-    readonly request: string;
-    readonly model: string;
-    readonly estimatedCredits: number;
-    readonly estimatedUsd: number;
-  }[];
+export type RuntimeHostFinishedBuildSubmission = {
+  readonly id: string;
+  readonly state: BuildState;
+  readonly completion: BuildCompletion;
 };
 
-export type RuntimeHostStatus = {
-  readonly build: BuildSnapshot | undefined;
-  readonly catalog: BuildCatalogEntry | undefined;
-  readonly operations: readonly OperationSnapshot[];
-  readonly dispatch: BuildDispatchSnapshot | undefined;
+export type RuntimeHostBuildSubmission = RuntimeHostActiveBuildSubmission | RuntimeHostFinishedBuildSubmission;
+
+export type BuildActivity = "submitting" | "ready" | "running" | "waiting" | "saving-result";
+
+export type BuildOperationView = {
+  readonly id?: string;
+  readonly receipt?: import("@hypit/runtime").OperationReceipt;
+  readonly wakeAt?: number;
+  readonly endpoint: string;
+  readonly status: OperationSnapshot["status"];
+  readonly progress?: OperationSnapshot["progress"];
+  readonly failure?: OperationSnapshot["failure"];
+};
+
+/** Stable Host view. Runtime persistence records never cross this boundary. */
+export type BuildView = {
+  readonly id: string;
+  readonly createdAt: number;
+  readonly activity: BuildActivity;
+  readonly outcome?: BuildCompletion["outcome"];
+  readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
+  readonly cancellationRequested: boolean;
+  readonly stop?: BuildExecutionStop;
+  readonly source?: { readonly path: string };
+  readonly run?: { readonly path: string };
+  readonly targets: readonly string[];
+  /** External Needs in the frozen Build Plan and the subset already accepted by Core. */
+  readonly requests?: { readonly total: number; readonly completed: number };
+  readonly acceptedRecords: number;
+  readonly outstandingCommands: number;
+  readonly operations: readonly BuildOperationView[];
 };
 
 export type RuntimeHostCredentialStatus = {
@@ -49,29 +71,29 @@ export type RuntimeHostCredentialStatus = {
   readonly label: string;
   readonly kind: "secret" | "json";
   readonly ref: CredentialRef;
+  readonly acquisition?: CredentialAcquisition;
   readonly configured: boolean;
   readonly writable: boolean;
 };
 
-export type RuntimeHostArchive = {
-  status(build: string): Promise<RuntimeHostStatus>;
-  activity(build: string): Promise<{
-    readonly operations: readonly OperationSnapshot[];
-    readonly dispatch: BuildDispatchSnapshot | undefined;
-  }>;
-  queue(): Promise<{
-    readonly dispatches: readonly BuildDispatchSnapshot[];
+export type RuntimeHostControl = {
+  inspect(build: string): Promise<BuildView | undefined>;
+  activity(): Promise<{
+    readonly builds: readonly BuildView[];
     readonly capacity: readonly CapacityReservation[];
-    readonly operations: readonly OperationSnapshot[];
   }>;
-  builds(): Promise<readonly BuildCatalogEntry[]>;
-  cancel(build: string, reason?: string): Promise<BuildDispatchSnapshot | undefined>;
+  cancel(build: string, reason?: string): Promise<BuildView | undefined>;
   close(): void | Promise<void>;
 };
 
-export type RuntimeHostArtifactAccess = {
-  readArtifact(digest: Digest): Promise<Uint8Array | undefined>;
-  openArtifact(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
+/** One-shot Result write or incomplete-submission cleanup with no execution Providers. */
+export type RuntimeHostResultControl = {
+  finishResult(build: string): Promise<{
+    readonly id: string;
+    readonly outcome: BuildCompletion["outcome"];
+    readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
+  } | undefined>;
+  discardSubmission(build: string): Promise<boolean>;
   close(): void | Promise<void>;
 };
 
@@ -85,17 +107,19 @@ export type RuntimeHostCredentialControl = {
   close(): void | Promise<void>;
 };
 
-export type RuntimeHostExecution = RuntimeHostArchive & RuntimeHostArtifactAccess & RuntimeHostCredentialControl & {
-  quoteBuild(request: {
-    readonly definition: BuildDefinition;
-    readonly componentPackages?: readonly string[];
-  }): Promise<RuntimeBuildQuote>;
+export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialControl & RuntimeHostResultControl & {
   build(request: {
     readonly id: string;
     readonly definition: BuildDefinition;
     readonly componentPackages?: readonly string[];
-    readonly catalog?: BuildCatalogDescriptor;
+    readonly catalog: BuildCatalogDescriptor;
     readonly attachments?: readonly ArtifactAttachment[];
+    /** Project-owned Result destination, fixed before this Build becomes active. */
+    readonly result: {
+      readonly repository: BuildResultRepositoryLocation;
+      readonly title?: string;
+      readonly forwards?: readonly BuildResultForward[];
+    };
   }, options?: {
     readonly follow?: boolean;
     readonly pollIntervalMs?: number;
@@ -110,6 +134,64 @@ export type RuntimeHostDoctorResult = {
   readonly diagnostics: readonly RuntimeDoctorDiagnostic[];
 };
 
+/**
+ * Disposable graph evaluation through capabilities that their Providers explicitly allow outside
+ * a Build. The Host owns Endpoint selection, credentials, invocation and session-local concurrency;
+ * callers contribute only deterministic domain Producers, validation and an ephemeral ResourceStore.
+ */
+export type RuntimeHostTransientExecution = {
+  evaluate(input: {
+    readonly state: BuildState;
+    readonly producers: ProducerRegistry;
+    readonly validators: NonNullable<NodeDriverOptions["validators"]>;
+    readonly resources: ResourceStore;
+  }): Promise<DriverRunResult>;
+  close(): void | Promise<void>;
+};
+
+/** The selected Endpoint behind one demanded capability, read from the Profile alone. */
+export type RuntimeHostCapabilityProvider = {
+  /** Caller-owned identity for this planned request. */
+  readonly request: string;
+  readonly capability: CapabilityRef;
+  readonly status: "resolved" | "unresolved" | "unsupported" | "ambiguous";
+  /** Configured Endpoint instance selected for this request, when exactly one is identifiable. */
+  readonly endpoint?: string;
+  /** Provider package the Runtime Profile selected for that Endpoint. */
+  readonly use?: string;
+  /** Where that Provider publishes its prices, as the Provider package declares it. */
+  readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
+  /** Every matching Endpoint instance when the selection is ambiguous. */
+  readonly endpoints?: readonly string[];
+  /** Provider-owned reasons from Endpoints that offer the capability but reject this request. */
+  readonly rejections?: readonly { readonly endpoint: string; readonly message: string }[];
+  /** The Endpoint instance the Profile's `bindings` name for this capability, when it names one. */
+  readonly binding?: string;
+};
+
+export type RuntimeHostCapabilityPricing = RuntimeHostCapabilityProvider & {
+  /** Provider-owned current pricing material relevant to this request. */
+  readonly pricingDocuments?: readonly {
+    readonly source: string;
+    readonly data: CanonicalValue;
+  }[];
+  /** A failed pricing-source read. The Provider's static price page remains available. */
+  readonly pricingError?: string;
+};
+
+export type RuntimeHostProviderQuery = {
+  readonly request: string;
+  readonly capability: CapabilityRef;
+  readonly returns: import("@hypit/protocol").TypeRef;
+  /** Complete support-relevant parameters available before the Build. */
+  readonly constraints: import("@hypit/protocol").CanonicalValue;
+  /** Future graph inputs described by the package that owns this request. */
+  readonly pendingInputs?: readonly {
+    readonly input: string;
+    readonly role?: string;
+  }[];
+};
+
 export type ManagedProgramProgress = {
   readonly id: string;
   readonly phase: "checking" | "installing" | "starting" | "waiting" | "ready";
@@ -117,7 +199,7 @@ export type ManagedProgramProgress = {
 
 export type ManagedProgramReport = {
   readonly id: string;
-  readonly instances: readonly string[];
+  readonly endpoint: string;
   readonly action?: "already-running" | "installed" | "started" | "stopped" | "not-ours" | "nothing-to-stop" | "unchanged";
   readonly state:
     | { readonly state: "ready" }
@@ -130,6 +212,7 @@ export type ManagedProgramReport = {
 
 export type RuntimeWorkerState = {
   readonly state: "running" | "stopped";
+  readonly configuration?: "current" | "changed";
   readonly profile: string;
   readonly pid?: number;
   readonly startedAt?: number;
@@ -171,8 +254,9 @@ export type NodeRuntimeHost = {
     readonly packageRoot?: string;
   }): Promise<RuntimeController>;
   createRuntime(): Promise<RuntimeHostExecution>;
-  openArchive(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostArchive>;
-  openArtifacts(): Promise<RuntimeHostArtifactAccess>;
+  openControl(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostControl>;
+  /** Open only Result-writing dependencies; never construct execution Providers. */
+  openResultControl(): Promise<RuntimeHostResultControl>;
   openCredentials(endpoint: string): Promise<RuntimeHostCredentialControl>;
   /** Explicitly prepare upstream packages selected by this Runtime Profile. */
   prepare(options?: {
@@ -190,7 +274,22 @@ export type NodeRuntimeHost = {
   doctor(options?: {
     readonly capabilities?: readonly CapabilityRef[];
   }): Promise<RuntimeHostDoctorResult>;
-  runWorker(readyFile: string): Promise<void>;
+  /**
+   * Which selected Endpoint would serve each capability and where its Provider publishes prices.
+   * Reads the Profile and Endpoint declarations only; never resolves a credential or contacts a service.
+   */
+  providers(requests: readonly RuntimeHostProviderQuery[]): Promise<readonly RuntimeHostCapabilityProvider[]>;
+  /** Read current Provider-owned pricing material relevant to these requests. */
+  pricing(requests: readonly RuntimeHostProviderQuery[]): Promise<readonly RuntimeHostCapabilityPricing[]>;
+  /**
+   * Execute one immediate Need through the selected Endpoint and its credentials, outside any Build.
+   * The creation-time boundary for observation, transcription and other quick capabilities; it
+   * creates no Build, Result or state, and refuses asynchronous capabilities.
+   */
+  invoke(need: Need, resources: ResourceStore): Promise<{ readonly value: StoredValue }>;
+  /** Open one disposable authoring execution. It creates no Build, Result or recoverable Operation. */
+  openTransientExecution(): Promise<RuntimeHostTransientExecution>;
+  runWorker(readyFile: string, owner: string): Promise<void>;
 };
 
 /**
