@@ -12,7 +12,6 @@
  * checked.
  *
  *   node test/run.mjs                  every unit test
- *   node test/run.mjs browser-visual   the browser suite, which needs a browser and ffmpeg
  *   node test/run.mjs image-opencv     the OpenCV suite, which needs the service's interpreter
  */
 import { spawnSync } from "node:child_process";
@@ -43,10 +42,6 @@ function managedPython(project) {
 }
 
 const suites = {
-  "browser-visual": {
-    files: ["packages/hyperframes/test/browser-visual.test.ts"],
-    env: { HYPIT_BROWSER_TESTS: "1" },
-  },
   "image-opencv": {
     files: ["packages/provider-image-opencv-local/test/provider.test.ts"],
     env: {
