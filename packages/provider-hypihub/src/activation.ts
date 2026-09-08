@@ -15,7 +15,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
   activate(context) {
     if (context.pool === undefined) throw new Error("HypiHub Provider Pool is required");
     const config = runtimeConfigObject(context.config, "HypiHub");
-    runtimeConfigExact(config, ["baseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs", "requestTimeoutMs", "audio", "whisperxModel"], "HypiHub");
+    runtimeConfigExact(config, ["baseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs", "requestTimeoutMs", "uploadConcurrency", "audio", "whisperxModel"], "HypiHub");
     const baseUrl = runtimeConfigString(config.baseUrl, "HypiHub baseUrl");
     if (baseUrl !== undefined) {
       const url = new URL(baseUrl);
@@ -27,6 +27,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
     if (apiKey === undefined) throw new Error("HypiHub apiKey CredentialRef is required");
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "HypiHub defaultConcurrency");
     const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "HypiHub pollIntervalMs");
+    const uploadConcurrency = runtimeConfigPositiveInteger(config.uploadConcurrency, "HypiHub uploadConcurrency");
     const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "HypiHub requestTimeoutMs");
     const audio = runtimeConfigBoolean(config.audio, "HypiHub audio");
     const whisperxModel = runtimeConfigString(config.whisperxModel, "HypiHub whisperxModel");
@@ -39,6 +40,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
         ...(pollIntervalMs === undefined ? {} : { pollIntervalMs }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
+        ...(uploadConcurrency === undefined ? {} : { uploadConcurrency }),
         ...(audio === undefined ? {} : { audio }),
         ...(whisperxModel === undefined ? {} : { whisperxModel }),
       }),

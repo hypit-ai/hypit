@@ -28,6 +28,8 @@ export type CreateHypiHubProviderOptions = {
   readonly defaultConcurrency?: number;
   readonly pollIntervalMs?: number;
   readonly requestTimeoutMs?: number;
+  /** Whole file upload concurrency per origin/credential. Defaults to 8; range 1..64. */
+  readonly uploadConcurrency?: number;
   /** Timeout for one S3 multipart PUT. Defaults to five minutes. */
   readonly uploadPartTimeoutMs?: number;
   /** Attempts per S3 part; only a failed part is retried. Defaults to three. */
@@ -104,7 +106,7 @@ class HypiHubClient {
   readonly timeout: number;
   readonly fetcher: typeof globalThis.fetch;
   readonly uploader: HypiHubUploader;
-  constructor(options: { readonly baseUrl: string; readonly timeout: number; readonly uploadPartTimeout: number; readonly uploadPartAttempts: number; readonly fetcher: typeof globalThis.fetch }) {
+  constructor(options: { readonly baseUrl: string; readonly timeout: number; readonly uploadPartTimeout: number; readonly uploadPartAttempts: number; readonly uploadConcurrency: number; readonly fetcher: typeof globalThis.fetch }) {
     this.baseUrl = options.baseUrl.replace(/\/$/u, ""); this.timeout = options.timeout;
     this.fetcher = options.fetcher;
     this.uploader = new HypiHubUploader({
@@ -112,6 +114,7 @@ class HypiHubClient {
       requestTimeoutMs: this.timeout,
       uploadPartTimeoutMs: options.uploadPartTimeout,
       uploadPartAttempts: options.uploadPartAttempts,
+      uploadConcurrency: options.uploadConcurrency,
       fetch: this.fetcher,
     });
   }
@@ -265,7 +268,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     "HypiHub uploadPartTimeoutMs must be a positive integer");
   const client = new HypiHubClient({
     baseUrl: apiBaseUrl(options.baseUrl ?? "https://hypit.ai/v1"), timeout: options.requestTimeoutMs ?? 300_000,
-    uploadPartTimeout, uploadPartAttempts,
+    uploadPartTimeout, uploadPartAttempts, uploadConcurrency: options.uploadConcurrency ?? 8,
     fetcher: options.fetch ?? globalThis.fetch,
   });
   const apiKey = options.apiKey ?? credentialRef("os", "hypihub.oauth");
@@ -286,6 +289,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       model: context.need.capability.name,
       ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
       ...(options.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: options.requestTimeoutMs }),
+      ...(options.uploadConcurrency === undefined ? {} : { uploadConcurrency: options.uploadConcurrency }),
       ...(options.uploadPartTimeoutMs === undefined ? {} : { uploadPartTimeoutMs: options.uploadPartTimeoutMs }),
       ...(options.uploadPartAttempts === undefined ? {} : { uploadPartAttempts: options.uploadPartAttempts }),
       ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
