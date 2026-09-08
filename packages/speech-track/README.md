@@ -67,6 +67,23 @@ crop anchors, opacity and filters, rounded or rectangular clipping, padding, bor
 frame paint. Lifecycle motion can move that visual presentation as it enters, remains or exits. None
 of these choices changes the Take's semantic timing or audio.
 
+This is the same destination/content geometry as a Media Item: the outer `frame` places and shapes
+the presentation; border and padding define its fitting area; the source's intrinsic extent, fit
+and alignment determine the inner picture rectangle. The shared spatial Recipe keys and defaults
+are described in [Spatial](../spatial/README.md#destination-and-fitted-content), and frame decoration
+in [Media Track](../media-track/README.md#place-the-frame-then-fit-its-contents). Rounded clipping is
+applied to the outer Frame, including when a contain fit leaves space around the picture.
+
+A Take override replaces the corresponding Track setting. In particular, `appearance` selects a
+complete Recipe rather than merging individual properties from `visual-appearance`. Speech Track
+authors stacking through `visual-z` / `z`; its appearance Recipe carries the shared picture and
+frame properties without Media Track's `stack-order`, playback or trim fields.
+
+Speech visuals occupy their prepared Take's Segment span. Their lifecycle motion repeats within
+each Take's span, and Sampling moves only the picture under the frame's clip. The current Speech
+Surface supports rectangular, rounded and unclipped frame presentation. An authored Path clip and
+Canvas-edge `enter-origin` / `exit-origin` are Media Track interfaces.
+
 Sampling children move the Take's picture inside its Frame over normalized Segment progress, using
 the same fields as a direct Media Item:
 

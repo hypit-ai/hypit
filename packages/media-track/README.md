@@ -14,6 +14,61 @@ Moving media enters after [normalization](../media-pipeline/README.md), with the
 frame clock already selected. Still images use their actual intrinsic Extent. Placement, fitting,
 sampling and motion remain separate authored choices.
 
+## Place the frame, then fit its contents
+
+An Item or Sequence owns an outer destination `frame`. Each sampled source has a fitted content
+rectangle calculated from its intrinsic extent and its fit Recipe. Border and padding reduce the
+fitting area inside the outer Frame. Source dimensions stay factual; the calculated rectangle can
+be smaller or larger than the fitting area.
+
+[Spatial](../spatial/README.md#destination-and-fitted-content) owns the seven fit modes, the two
+alignment points, pixel offsets and bounded/free placement. `frame-x` / `frame-y` are alignment
+fractions in that fitting area. Move the whole visual by changing the `frame` reference; choose
+which part of the picture is visible through the fit and content alignment.
+
+The appearance Recipe separates the outer presentation from the sampled picture:
+
+| Properties | What they affect |
+| --- | --- |
+| `stack-order` | Absolute visual stacking of the Item or Sequence; required |
+| `clip` | Outer clipping: `frame` (default), `rounded`, or `none` |
+| `radius` | Pixel radius when `clip: rounded`; half a square Frame's side gives a circle |
+| `padding` | Fitting inset, as quoted pixel values: `"12"`, `"8 12"`, or `"8 12 16 12"` |
+| `border-width`, `border-style`, `border-color` | Border inside the outer Frame; a positive width requires a color |
+| `shadows` | Frame shadows, as quoted `x y blur spread color` entries separated by semicolons |
+| `frame-paint` | Solid or gradient backing behind the content |
+| `fit`, alignment and fit offsets | The scaled source's rectangle |
+| `opacity`, `blur`, `brightness`, `contrast`, `saturation` | The sampled picture, independently of frame decoration |
+
+For example, this is a rounded card with an inset picture and a painted backing:
+
+```svs
+media.card {
+  stack-order: 40;
+  fit: contain;
+  clip: rounded;
+  radius: 24;
+  padding: "12";
+  border-width: 2;
+  border-color: #B9A88B;
+  frame-paint: #25332D;
+  shadows: "0 8 20 0 #00000055";
+}
+```
+
+The outer size includes the border; border and padding both reduce the fitting area. The clip
+follows the outer Frame, so a smaller contained picture may retain square corners inside a rounded
+card. A rounded picture with a flush edge uses a Frame matching its displayed aspect. `clip: none`
+allows source overflow; fitting alone supplies no mask. An authored spatial Path can be bound to
+an Item or Sequence with `clip={path}` in place of the Recipe's clip choice. Path coordinates are in
+Canvas pixels.
+
+A `motion` Recipe transforms the framed unit, including its backing and decoration. `Sampling`
+transforms the fitted source inside it, around the source rectangle's center. It accepts `zoom`,
+pixel `x` / `y`, degree `rotate`, and `easing`, at `start`, `end`, or intermediate percentages. Supply
+keys spanning start to end. Sampling runs after fitting and is not constrained by `fit-constraint`;
+a deliberate pan or rotation may reveal the backing or lower layers.
+
 ## Author Items and replacement Sequences
 
 These excerpts assume the imports, named assets, normalized media, Frames, Extents, Script,
@@ -51,6 +106,11 @@ and the Sequence has an explicit terminal Instant. Each adjacent pair needs a Ha
 an explicit `cut` when no blended transition is intended. `from` names the outgoing Member; its
 successor is the incoming Member. A Handoff's duration and boundary ratio place the visual transition
 around that logical boundary without moving the semantic event.
+
+For layered content, `Paint` and `Layer` children draw in Source order inside the shared Frame. Give
+each Layer its own fit/sample Recipe. A Member appearance override selects its source fit, sampling
+and frame paint; the Sequence still owns the outer Frame, clip, padding, border, shadow, motion and
+stack order. Separate Items supply independently placed Frames.
 
 An Item or Member can select audio using `source-audio`: `content` for its direct source, or a child
 Layer id for layered content. This is opt-in. `Sound` can instead attach normalized audio to Item

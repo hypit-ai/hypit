@@ -120,6 +120,12 @@ order. Sampling children can pan, zoom or rotate the Take's picture inside that 
 Segment progress. Media Track remains the owner of an independent Window, source playback and trim,
 source audio, replacement Sequences and pictures that are not the speaking performance.
 
+The Track's `visual-frame`, `visual-appearance`, `visual-motion` and `visual-z` are defaults for its
+Takes. A Take's `frame`, `appearance`, `motion` or `z` replaces that corresponding choice; an
+appearance override selects a complete Recipe. In Speech Track, use `visual-z` / `z` for stacking.
+The visual branch uses the Take's existing span, so a new Frame or crop changes its presentation
+while preserving semantic time and speech.
+
 Semantic structure also supports a wordless passage. It has no speaking A-roll, yet a named empty
 Script Segment receives its actual boundaries from prepared media and remains addressable through
 the assembled SemanticTrack. Semantic identity here means that the work can refer to the passage and
@@ -145,6 +151,17 @@ stream.
 An image needs its intrinsic Extent. Moving media enters through explicit normalization as `media`;
 `surface` accepts an already compositable surface from another component. Frame says where it goes;
 fit/crop says how the source occupies it.
+
+[Spatial layout](spatial.md#fit-the-source-into-the-frame) explains the shared destination/content
+model, including alignment, rounded corners, padding, borders and the difference between moving
+the Frame and moving its contents. A Media Item or Sequence takes its outer Frame from `frame` and
+its stack order from the appearance Recipe's `stack-order`.
+
+For a picture with a designed backing, an Item can use ordered `Paint` and `Layer` children in place
+of a direct source. Paint fills the frame; each sampled Layer has its own fit and picture styling.
+The unit owns the shared clip, border and motion. A Sequence keeps that outer presentation while its
+Members replace the content. Use separate Items when pictures need independent Frames. The Media
+Track vocabulary supplies the exact Layer, Sampling and Handoff forms.
 
 For natural moving B-roll, start with `once-start`: a short Window truncates the clip; a long Window
 returns to the layer below after the clip finishes. If uninterrupted coverage matters, choose its

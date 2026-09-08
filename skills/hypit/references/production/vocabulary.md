@@ -81,9 +81,10 @@ Describe the Surface's role, attributes and outputs with a small valid example s
 can select it. A visual preview makes its appearance recognizable; Studio shows the actual
 configuration used in a production.
 
-For existing Track composition, read [Tracks](tracks.md). For a new Track, read
-[Track authoring](track-authoring.md) when deciding temporal inputs, spatial ownership, persistent
-state, preset content or peer visual/audio outputs. [Caption authoring](caption-authoring.md) covers
+For existing Track composition, read [Tracks](tracks.md). For a new Track,
+[Component design](component-design.md) shapes its visual idea, semantic behavior and useful controls.
+[Track authoring](track-authoring.md) explains temporal inputs, spatial ownership, persistent
+state, preset content and peer visual/audio outputs. [Caption authoring](caption-authoring.md) covers
 a new speech-text family without rebuilding its transcript or timing.
 
 [Studio and Companions](studio.md) covers timeline presentation and Inspector editing for the new

@@ -1,13 +1,39 @@
-# Authoring Prompt Kits
+# Choosing and authoring Prompt Kits
 
-Read this when a useful piece of prompt direction should be assembled consistently across several
-shots or projects. For one prompt whose wording belongs only to the current Source, ordinary
-`text:Value` elements are enough.
+Read this when choosing a reusable prompt treatment, assembling its Text inputs, or preserving useful
+direction in a new Kit. A Kit can preserve proven wording even for one image or Take. Ordinary
+`text:Value` elements carry the parts authored specifically for the current work.
 
 A Prompt Kit is a data-only TextTemplate Source. It owns reusable wording and meaningful choices;
 it does not own a model, Provider, media reference, output size, or production workflow. Keep fluent
 shot direction fluent. Turn something into a Kit when preserving the exact text or exposing a small
 repeated choice improves real productions, rather than splitting every sentence into a parameter.
+
+## Choose an existing treatment by its relationship
+
+[Image direction](../playbooks/craft/image-direction.md) and
+[video direction](../playbooks/craft/video-direction.md) guide what the prompt should accomplish.
+Choose a Kit whose fixed assumptions serve that intention:
+
+| Direction needed | Where to look |
+| --- | --- |
+| The fixed phone-video capture wording, with this picture's framing, subject and environment | The installed `@hypit/gpt-image-kits` README and its `phone-ugc-v1` template |
+| A speaking performer, podcast, street encounter, video call, silent B-roll, or motion/camera transfer | The installed `@hypit/seedance-kits` README and its corresponding exported template |
+
+These are packaged Sources, so their README and exported `.svs` files supply the template names,
+Text slots, defaults and Recipe choices. A package's Surface vocabulary serves a different role:
+`hypit vocabulary @hypit/text --tag Render` describes assembly, and the selected model's vocabulary
+describes generation. Read the chosen template when its fixed text or a choice's exact wording matters.
+
+For an ordinary speaking passage, connect the Segment's `.dialogue` and this passage's action;
+the selected Recipe supplies recurring performance choices. For an image, bring the framing and
+subject/environment direction from Craft. Keep the template's reference roles consistent with the
+actual media connected to the model. The owning package documents that order.
+
+Fit includes assumptions as well as available knobs. A two-view conversation and a combined
+split-screen opening may need different prompt structures. Keep the useful Kit for passages it
+serves, and use authored Text or a project template for a different relationship. A Prompt Kit is
+also distinct from a Run Fragment that supplies substitute media; [Runs](runs.md) owns that use.
 
 ## Declare the reusable text program
 

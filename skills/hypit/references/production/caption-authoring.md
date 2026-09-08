@@ -5,6 +5,8 @@ Read this when a work needs a new relationship among its spoken words, layout an
 [Track authoring](track-authoring.md) owns project package wiring.
 [Fonts and text](fonts-and-text.md) explains exact font resources and fallbacks;
 [component visuals](component-visuals.md) explains the final drawing representation.
+[Component design](component-design.md) connects a new family's visual idea to useful author controls
+and its fit beside the rest of the video.
 
 ## Decide what is actually new
 
