@@ -55,6 +55,8 @@ class HypiHubHTTPError extends Error {
 export type HypiHubUploaderOptions = {
   readonly baseUrl: string;
   readonly requestTimeoutMs: number;
+  /** Whole files per origin/credential in this process. Defaults to 8; range 1..64. */
+  readonly uploadConcurrency?: number;
   readonly uploadPartTimeoutMs?: number;
   readonly uploadPartAttempts?: number;
   readonly fetch: typeof globalThis.fetch;
@@ -91,17 +93,29 @@ function assertHTTPS(value: string, subject: string): void {
 
 // A provider can upload references from several operations/uploader instances.
 // Bound whole file sessions, independently of each file's S3 part concurrency.
-const uploadGates = new Map<string, { active: number; waiting: (() => void)[] }>();
-async function acquireUploadSlot(origin: string, auth: UploadAuth): Promise<() => void> {
+type UploadGate = { active: number; limits: Map<number, number>; waiting: (() => void)[] };
+const uploadGates = new Map<string, UploadGate>();
+function drainUploadGate(gate: UploadGate): void {
+  const limit = Math.min(...gate.limits.keys());
+  while (gate.active < limit && gate.waiting.length > 0) {
+    gate.active += 1;
+    gate.waiting.shift()!();
+  }
+}
+async function acquireUploadSlot(origin: string, auth: UploadAuth, limit: number): Promise<() => void> {
   const key = `${origin}:${createHash("sha256").update(await uploadToken(auth)).digest("hex")}`;
   let gate = uploadGates.get(key);
-  if (gate === undefined) { gate = { active: 0, waiting: [] }; uploadGates.set(key, gate); }
-  if (gate.active < 2) gate.active += 1;
-  else await new Promise<void>((resolve) => gate.waiting.push(resolve));
+  if (gate === undefined) { gate = { active: 0, limits: new Map(), waiting: [] }; uploadGates.set(key, gate); }
+  // Instances sharing a credential share capacity. The strictest outstanding
+  // caller wins; a lower limit drains existing work without cancelling it.
+  gate.limits.set(limit, (gate.limits.get(limit) ?? 0) + 1);
+  await new Promise<void>((resolve) => { gate.waiting.push(resolve); drainUploadGate(gate); });
   return () => {
-    const next = gate.waiting.shift();
-    if (next !== undefined) next();
-    else { gate.active -= 1; if (gate.active === 0) uploadGates.delete(key); }
+    gate.active -= 1;
+    const remaining = (gate.limits.get(limit) ?? 1) - 1;
+    if (remaining === 0) gate.limits.delete(limit); else gate.limits.set(limit, remaining);
+    drainUploadGate(gate);
+    if (gate.active === 0 && gate.waiting.length === 0) uploadGates.delete(key);
   };
 }
 
@@ -109,6 +123,7 @@ async function acquireUploadSlot(origin: string, auth: UploadAuth): Promise<() =
 export class HypiHubUploader {
   readonly baseUrl: string;
   readonly requestTimeout: number;
+  readonly uploadConcurrency: number;
   readonly uploadPartTimeout: number;
   readonly uploadPartAttempts: number;
   readonly fetcher: typeof globalThis.fetch;
@@ -117,6 +132,8 @@ export class HypiHubUploader {
   constructor(options: HypiHubUploaderOptions) {
     this.baseUrl = apiBaseUrl(options.baseUrl);
     this.requestTimeout = requiredInteger(options.requestTimeoutMs, "HypiHub upload request timeout");
+    this.uploadConcurrency = requiredInteger(options.uploadConcurrency ?? 8, "HypiHub uploadConcurrency");
+    assert(this.uploadConcurrency <= 64, "HypiHub uploadConcurrency must be within 1..64");
     this.uploadPartTimeout = requiredInteger(options.uploadPartTimeoutMs ?? 5 * 60_000,
       "HypiHub upload part timeout");
     this.uploadPartAttempts = requiredInteger(options.uploadPartAttempts ?? 3,
@@ -348,7 +365,7 @@ export class HypiHubUploader {
   }
 
   async upload(input: HypiHubUploadInput, auth: UploadAuth): Promise<string> {
-    const release = await acquireUploadSlot(this.baseUrl, auth);
+    const release = await acquireUploadSlot(this.baseUrl, auth, this.uploadConcurrency);
     try { return await this.uploadWithSlot(input, auth); }
     finally { release(); }
   }
