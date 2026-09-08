@@ -2,6 +2,8 @@
 
 Read this when a production needs new graphic structure, state or rendering behavior. Begin from
 what the viewer should perceive and what should follow a changed performance.
+[Component design](component-design.md) develops that idea into a useful author interface and a
+coherent treatment in the actual composition.
 [Composing Tracks](tracks.md) covers existing Track roles; [vocabulary](vocabulary.md) covers discovery
 and project package ownership. [Caption authoring](caption-authoring.md) covers the speech-text case.
 

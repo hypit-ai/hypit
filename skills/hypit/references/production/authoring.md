@@ -8,6 +8,7 @@ Caption Cue handoffs and semantic anchors. [Source syntax](source-syntax.md) exp
 references and the language around that Script.
 [Composing Tracks](tracks.md) connects the visual and audio roles; [Track authoring](track-authoring.md)
 and [Caption authoring](caption-authoring.md) explain creating a new project component for them.
+[Component design](component-design.md) explains shaping its behavior and controls around the work.
 [System relationships](system.md) connects these concepts to execution and Results;
 [media preparation](media.md) explains the values entering the timeline.
 

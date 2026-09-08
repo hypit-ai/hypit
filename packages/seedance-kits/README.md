@@ -49,15 +49,25 @@ Speaker uses the same graph vocabulary. The Kit assumes `@image1` is the visible
 </seedance:ReferenceVideo>
 ```
 
-The seven templates are:
+## Choose a template
 
-- `speaker-v1`: one visible speaker, one character-and-scene image and one voice reference;
-- `broll-v1`: silent visual micro-story;
-- `podcast-v1`: two fixed podcast views with two voices;
-- `call-v1`: two live video-call reverse views;
-- `street-interview-v1`: interviewer, guest and shared street views, two voices and microphone positioning;
-- `motion-reference-v1`: preserve the subject and transfer body motion only;
-- `camera-reference-v1`: preserve the subject and transfer camera language only.
+Each import below has the prefix `@hypit/seedance-kits/`. The selected Source exports the listed
+template id. Its linked `.svs` file owns the exact fixed wording, default choices and allowed values.
+
+| Import suffix / template | Intended relationship and media references | Text slots |
+| --- | --- | --- |
+| `speaker` / [`speaker-v1`](kits/speaker-v1.svs) | One visible speaker: `@image1` is the character-and-scene view; `@audio1` is that speaker's voice. | Required `dialogue`; optional `action` |
+| `broll` / [`broll-v1`](kits/broll-v1.svs) | A silent visual micro-story; images appear in authored reference order, with their roles explained in the story. | Required `story` |
+| `podcast` / [`podcast-v1`](kits/podcast-v1.svs) | Two fixed views: images 1/2 show A/B, and audio 1/2 supplies their corresponding voices. | Required `dialogue`; optional `action` |
+| `call` / [`call-v1`](kits/call-v1.svs) | Image 1 shows A in the main tile and B in the inset; image 2 reverses them. Both are live views, with audio 1/2 for A/B. | Required `dialogue`; optional `action` |
+| `street-interview` / [`street-interview-v1`](kits/street-interview-v1.svs) | Images 1/2/3 are interviewer A, guest B and shared street setups; audio 1/2 is A/B. A holds the microphone. | Required `dialogue`; optional `action` |
+| `motion-reference` / [`motion-reference-v1`](kits/motion-reference-v1.svs) | Image 1 supplies the subject; video 1 supplies body motion, gestures and pose dynamics. | Optional `direction` |
+| `camera-reference` / [`camera-reference-v1`](kits/camera-reference-v1.svs) | Image 1 supplies the subject; video 1 supplies camera framing, lens, movement and photographic rhythm. | Optional `direction` |
+
+For example, `source="@hypit/seedance-kits/call"` imported as `kit` exposes `kit.call-v1`.
+Text slots use `text:Set`; scalar Recipe choices use the selected template's named axes. Reading the
+template reveals what each choice actually asks the generator to do. Rendering the Text Output as a
+Run Target lets an author inspect the assembled prompt without generating media.
 
 Speaker, B-roll, Podcast, Call and Street Interview expose prompt choices through their Text
 Templates. The examples above use author-chosen literal durations. Measure adopted speech with

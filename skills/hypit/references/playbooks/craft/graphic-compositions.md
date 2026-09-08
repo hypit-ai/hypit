@@ -55,6 +55,8 @@ one enormous component.
 Group elements when their shared layout, state or semantic behavior would otherwise have to be
 reimplemented across unrelated tags. Keep independently useful layers separate when ordinary
 composition already expresses the relationship. A new shared visual role can be a project component.
+[Component design](../../production/component-design.md) connects that visual idea to semantic behavior,
+useful author controls and its place in the actual composition.
 
 The package owns reusable mechanics, default chrome and any bundled assets that belong to its
 identity. Source and Recipe supply this work's text, media, palette, placement and events. A surface
