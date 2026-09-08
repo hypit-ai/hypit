@@ -4,8 +4,8 @@ description: Create, review and ship Hypit videos from a Coding Agent without wr
 ---
 
 You do not need to know SVML, SVS, JavaScript or the command line. Describe your video in ordinary
-language; the Agent uses the `/hypit` skill to create or reconstruct it and provides a Studio mock
-for review before any paid Build.
+language; the Agent uses the `/hypit` skill to understand the reference, direct the work and deliver
+a video with an editable project.
 
 ## What you need
 
@@ -20,9 +20,13 @@ Install the Hypit skill:
 npx skills add hypit-ai/hypit -g
 ```
 
-Then start a Coding Agent anywhere; the Hypit skill is available globally.
+Then start a Coding Agent anywhere; the Hypit skill is available globally. The Skill supplies
+production knowledge. The Agent checks whether the Hypit command is installed and sets up the
+executable tools when needed.
 
 ## 2. Describe the video you want
+
+<video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/describe_the_video_you_want.mp4"></video>
 
 You can take either of two paths.
 
@@ -64,6 +68,8 @@ the information you provide.
 
 ## 3. Provide credentials when the Agent asks
 
+<video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/provide_credentials_when_the_agent_asks.mp4"></video>
+
 After you describe the video, the Agent checks which models and services the project needs. If a
 required credential is missing, it will ask you for it and explain what it is used for. You have two
 options:
@@ -80,72 +86,60 @@ the configured secure credential store.
 
 ## 4. Let the Agent do the production work
 
-Once you submit the brief, the Agent works through the project automatically without requiring you to
-write source code. It does not ask questions during production; wait for the Studio mock. The exact
-sequence depends on the video, but it generally includes:
+<video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/let_the_agent_do_the_production_work.mp4"></video>
 
-1. **Breaking the request into shots.** The Agent identifies the spoken sections, visual beats,
-   transitions, captions, B-roll opportunities and any persistent elements such as a ranking board.
-2. **Analyzing the reference or brief.** For a clone, it watches the reference and uses timed frames and transcripts to
-   inspect timing, composition, text, speakers and visual continuity. For an original, it resolves
-   the same questions from your description and the selected creative direction.
-3. **Resolving details.** The Agent uses the reference, brief and observation results to settle
-   timing, language, product placement and host treatment automatically.
-4. **Reading existing package declarations.** Before inventing an implementation, it checks the
-   components already available in the project and in Hypit's official packages. This lets it reuse
-   a caption, ranking, presenter, B-roll or rendering component when one already fits.
-5. **Writing a new package when needed.** If the requested visual behavior is genuinely missing, the
-   Agent creates the smallest reusable component required and records how it is used. You do not need
-   to design the package interface yourself.
-6. **Creating the source and checking it.** The Agent writes the SVML/SVS source, creates the needed
-   Run configuration, compiles the graph, and fixes type or layout problems it finds.
-7. **Comparing against a mock.** It produces mock media for unbuilt generations, renders the complete
-   composition in Studio, compares what it sees with the reference or brief, and repairs issues such
-   as incorrect timing, hierarchy, cropping, captions or visual density.
-8. **Applying your requested changes.** After establishing the base video, it applies the changes in
-   your brief, such as replacing the person on screen or adapting the video to your product, then
-   checks the updated result.
+The Agent understands the reference in terms of your goal. Timed frames and words help it explain
+the story, pacing, and the purpose and timing of captions, B-roll and graphics. A replacement person
+or product shapes the script and creative direction from the beginning.
 
-## 5. Review the mock Studio
+It records those decisions in project files, selects or writes suitable components, generates media,
+and composes the video around its semantic timeline. Studio and selected-range renders help check
+layout, timing and readability. The Agent reuses existing media and keeps you informed about material
+decisions, progress and problems.
 
-When the first pass is ready, the Agent opens a Studio mock for you. A mock is a review version: it
-uses deterministic stand-ins for media that has not been generated yet, while preserving the real
-timing, layout, captions, transitions and track relationships. It is intended to answer “does this
-video work?” before you pay for the final media and rendering.
+## 5. Review the composition in Studio
 
-Watch the mock from beginning to end. Check the story, the order of the shots, the readability of
-captions, the prominence of the ranking board or product, the rhythm of B-roll, and whether the
-overall tone matches your brief. If something is wrong, describe the problem in ordinary language:
+<video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/review_the_mock_studio.mp4"></video>
+
+Studio displays the media, captions and graphics selected by the current Run. The Agent can inspect
+composition with existing material and continue refining it as generated media becomes available.
+
+Check whether the story is clear, captions are readable, the product or ranking board has enough
+prominence, and B-roll appears where it helps. Describe the change you want:
 
 ```text
-The board appears too late, the captions are too small, and the B-roll covers the host
-while she is speaking. Please fix those issues and show me the mock again.
+The board appears too late and the captions are too small. Bring the board in with the words
+introducing the ranking, and make the captions larger.
 ```
 
-The Agent edits the source, reruns the relevant checks and returns an updated mock.
+The Agent changes the relevant parts and shows the updated composition.
 
 ## 6. Approve and submit the paid Build
 
-Only after you explicitly approve the mock should you ask for the paid Build:
+<video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/approve_and_submit_the_paid_build.mp4"></video>
+
+Before new paid work, the Agent explains the selected models, expected external work and available
+pricing information. Authorize a concrete production scope:
 
 ```text
-The mock is approved. Submit the paid Build and create the final video.
+Generate the media and finish the video with this direction, within the budget we agreed.
 ```
 
-The Agent summarizes the selected models, expected external work and Provider pricing information before it starts.
-It then submits the Build, follows its progress and reports any provider or runtime issue in plain
-language. A paid Build is the step that performs the real generation, media processing and final
-rendering; the earlier mock does not silently trigger those billable operations.
+The Agent submits a Build and follows its outcome. Completed media and outputs remain in the
+project's Result. If an attempt fails, the Agent explains the failure and reuses available outputs
+through a new Run and Build.
 
-## 7. Review the paid result
+## 7. Review the finished video
 
-When the Build finishes, the Agent opens the resulting video and provides the saved output. Watch
-the final result, not only the Studio mock. Real generated shots can differ from their mock
-stand-ins, so check the generated host, B-roll, audio, captions, transitions, framing and export
-quality. If the result needs a correction, tell the Agent what to change. It will revise the source
-and guide you through another review rather than asking you to edit the rendered MP4 by hand.
+<video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/review_the_paid_result.mp4"></video>
+
+When the Build finishes, the Agent provides the final video and its saved location. Review the
+content, captions, transitions, framing and sound against your goal. Describe any changes you want;
+the project retains editable Sources and generated media.
 
 ## 8. Request natural-language changes
+
+<video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/request_natural_language_changes.mp4"></video>
 
 After a successful Build, you can continue directing the project conversationally. You may change
 the host, replace B-roll, alter the ranking-board treatment, translate the script, adjust the tone or
@@ -157,9 +151,11 @@ look like a paper sports magazine.
 ```
 
 The Agent traces each request to the relevant source and component, preserves what you asked it to
-keep, and shows a new mock before another paid Build.
+keep, and reuses existing outputs. New paid generation follows your authorized scope.
 
 ## 9. Create multiple variants in parallel
+
+<video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/create_multiple_variants_in_parallel.mp4"></video>
 
 When you want several versions, first tell the Agent the dimensions that may vary. It will discuss
 the intended directions with you, for example:
@@ -169,8 +165,7 @@ the intended directions with you, for example:
 - one version with a product-focused opening;
 - one version with faster cuts and denser B-roll.
 
-The Agent confirms the shared parts and the allowed differences before starting. Once you approve the
-directions, it creates a separate project scope for each variant and dispatches child Agents to work
-in parallel. Each child keeps the agreed boundaries, checks its own layout and source, and reports
-back to the main Agent. You receive a clear list of completed variants and any decision that still
-needs your input; you do not have to coordinate the child Agents yourself.
+The Agent records the shared parts and each version's changes, then gives every variant explicit
+production choices. Independent work can execute concurrently within the Runtime's configured
+capacity; shared media can be reused. You receive each finished video, its project files and a clear
+account of completion.

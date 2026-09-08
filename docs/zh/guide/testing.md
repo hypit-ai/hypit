@@ -77,6 +77,5 @@ OpenCV 的集成测试可以显式 opt-in；它们不得联网调用付费服务
 测试夹具放在 `packages/<name>/test/fixtures/`。它们是普通的 `.svml`、`.svs` 和 `.svrun` 文件，用于覆盖特定的编译路径。
 
 `examples/` 目录同时充当集成级别的夹具：
-- `examples/bootstrap/` — 最小源闭包检查
-- `examples/talking-film-graph-check/` — 不含 Provider 的完整图编译
-- `examples/talking-head-aroll/` — 显式复用历史 Candidate 的 live example
+- `examples/interview/`、`examples/podcast/`、`examples/ranking-football/` — 包含 Source、Run 和素材的完整视频项目。
+- `examples/minimal-author-package/` — 带有 Surface 预览的完整组件包。

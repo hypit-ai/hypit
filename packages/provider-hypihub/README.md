@@ -62,7 +62,7 @@ normalizes it to `/v1`; missing or insufficient user
 credentials should be resolved at [hypit.ai](https://hypit.ai). Referenced image, audio and video
 Resources are uploaded through a session from `POST /v1/files/uploads`, followed by the private
 regional multipart instructions returned by HypiHub. The Provider follows the server-selected part
-size and concurrency, retries only a failed part with a fresh signed URL, completes or cancels that
+size and part concurrency, retries a failed part with a fresh signed URL, completes or cancels that
 one upload, and then passes the returned HTTPS URL to generation or transcription. One
 Resource identity is uploaded once within one Runtime operation. Hypit keeps no upload catalog or
 cross-Build cache. Embedded callers may replace this transport with `publicAssetUrl`.
@@ -87,7 +87,7 @@ catalog to verify configured capabilities; ordinary preflight never makes that r
 declares HypiHub's public pricing page, `https://hypit.ai/commercial/pricing/`, as its price source.
 For each selected Need, `readPricing` resolves the corresponding HypiHub model and returns the service's
 authenticated `GET /v1/pricing?model=<model>` response unchanged together with that URL. It covers
-generation, visual observation, alignment, Voice Design, and Voice Clone through the same mechanism;
+generation, alignment, Voice Design, and Voice Clone through the same mechanism;
 the Provider does not maintain a second list of billing formulas or calculate a request total.
 
 HypiHub declares MiMo Voice Design and Voice Clone together with every other capability it serves; it
@@ -104,6 +104,7 @@ Execution policy remains local to this Provider:
 | `oauthRequestTimeoutMs` | 30 seconds | OAuth token exchange and refresh |
 | `pricingRequestTimeoutMs` | 30 seconds | authenticated pricing requests |
 | `operationTimeoutMs` | 20 minutes | one remote asynchronous operation |
+| `uploadConcurrency` | 8 | whole file sessions per origin/credential within this process |
 | `uploadPartTimeoutMs` | 5 minutes | one upload part |
 | `uploadPartAttempts` | 3 | attempts for one upload part |
 | `downloadAttempts` | 3 | attempts to collect one result |
@@ -126,5 +127,17 @@ be inspected at `/jobs/<id>` and its generated assets at `/jobs/<id>/assets` on 
 The next production attempt uses a new Run and Build. Runtime bindings never switch from a user's
 own Provider to HypiHub after a key, quota or transport failure.
 
-Multipart concurrency is different: HypiHub
-selects it for one upload session, and it does not create a Build queue or a second Runtime pool.
+`uploadConcurrency` bounds whole files inside the Provider transport. Uploader instances in the same
+process share the limit for the same service origin and current credential; the smallest outstanding
+limit applies. Token refresh can change that grouping. Separate processes are not coordinated by this
+local limit. It is a positive safe integer; HypiHub still enforces its own account quota. Part
+concurrency is separately negotiated by HypiHub for each file. These are transport limits inside a
+Runtime action, not additional Build admission limits.
+
+Signing, completing and cancelling a known upload session may retry temporary transport failures
+within at most four attempts and the smaller of `requestTimeoutMs` or 120 seconds. A new upload
+session is retried only after an explicit temporary 429 rejection; an unknown creation result ends
+the attempt. Daily and storage quota errors fail immediately. Active part workers finish before the
+session is cancelled. An unconfirmed cancellation logs its upload ID without exposing signed URLs.
+OAuth refresh retries the rejected control request on the same session. None of this resumes a
+failed Build or changes the selected Provider.

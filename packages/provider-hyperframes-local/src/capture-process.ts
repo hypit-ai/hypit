@@ -1,6 +1,7 @@
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import { setTimeout as delay } from "node:timers/promises";
 import type { CaptureInput } from "./capture.js";
 import type { HyperframesRenderProgress } from "./render.js";
 
@@ -23,6 +24,19 @@ async function killRenderTree(pid: number): Promise<void> {
     for (const target of [-child, child]) {
       try { process.kill(target, "SIGKILL"); }
       catch (error) { if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error; }
+    }
+    // Signal delivery is asynchronous. Wait for execution to stop while the
+    // parent is still alive to reap its child; zombies no longer hold resources.
+    const deadline = Date.now() + cleanupMs;
+    while (true) {
+      const state = await exec("ps", ["-p", String(child), "-o", "stat="], { timeout: cleanupMs })
+        .then(({ stdout }) => stdout.trim(), (error) => {
+          if (error.code === 1 && !error.stdout?.trim()) return "";
+          throw error;
+        });
+      if (state === "" || state.startsWith("Z")) break;
+      if (Date.now() >= deadline) throw new Error(`Render process ${child} did not stop after SIGKILL`);
+      await delay(20);
     }
   }
 }

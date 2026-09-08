@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
+import { execFileSync } from "node:child_process";
 import { runCaptureProcess } from "../src/capture-process.js";
 import { resolveExecutionOptions } from "../src/render.js";
 import type { CaptureInput } from "../src/capture.js";
@@ -27,7 +28,13 @@ setInterval(() => {}, 1000);
         controller.abort(new Error("render deadline"));
       }, pathToFileURL(entry)), /render deadline/u);
     assert.ok(descendant !== undefined);
-    assert.throws(() => process.kill(descendant!, 0), { code: "ESRCH" });
+    try {
+      process.kill(descendant, 0);
+      assert.notEqual(process.platform, "win32");
+      assert.match(execFileSync("ps", ["-p", String(descendant), "-o", "stat="], { encoding: "utf8" }).trim(), /^Z/u);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+    }
   } finally {
     if (descendant !== undefined) { try { process.kill(descendant, "SIGKILL"); } catch {} }
     await rm(root, { recursive: true, force: true });

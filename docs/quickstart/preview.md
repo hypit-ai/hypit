@@ -10,7 +10,8 @@ Hypit Studio opens one `.svrun`, traces its Film or Render target back to explai
 Studio never submits generation or creates a Build. Generated material must be selected explicitly by the Run: from a project file, an earlier Build through `<build-record>`, or an ordinary stand-in Fragment selected with `satisfy`. Studio may ask the selected Runtime Profile to execute exact media Needs whose Provider marks them safe for transient authoring, such as inspection and normalization. It does not infer that permission from pricing, choose another Candidate or invent a placeholder. Other Needs fail with their capability named.
 
 ```bash
-hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
+hypit-studio --run examples/ranking-football/swap-effect-banana/studio.svrun \
+  --workspace examples/ranking-football/swap-effect-banana
 # ➜  http://localhost:5179/
 ```
 
