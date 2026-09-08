@@ -11,6 +11,8 @@ export type HypiHubGeminiGeneratorOptions = {
   readonly model?: string;
   readonly baseUrl?: string;
   readonly requestTimeoutMs?: number;
+  /** Whole file upload concurrency per origin/credential. Defaults to 8; range 1..64. */
+  readonly uploadConcurrency?: number;
   /** Timeout for one direct S3 multipart PUT. Defaults to five minutes. */
   readonly uploadPartTimeoutMs?: number;
   /** Attempts per direct S3 part. Defaults to three. */
@@ -91,6 +93,7 @@ export function createHypiHubGeminiGenerator(options: HypiHubGeminiGeneratorOpti
   const uploader = new HypiHubUploader({
     baseUrl,
     requestTimeoutMs: timeout,
+    ...(options.uploadConcurrency === undefined ? {} : { uploadConcurrency: options.uploadConcurrency }),
     ...(options.uploadPartTimeoutMs === undefined ? {} : { uploadPartTimeoutMs: options.uploadPartTimeoutMs }),
     ...(options.uploadPartAttempts === undefined ? {} : { uploadPartAttempts: options.uploadPartAttempts }),
     fetch: fetcher,

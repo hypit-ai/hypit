@@ -22,7 +22,7 @@ function fixture(hook: (url: string, init: RequestInit, calls: string[]) => Resp
     if (init.method === "DELETE") return new Response(null, { status: 204 });
     throw new Error(`unexpected request ${url}`);
   };
-  const uploader = () => new HypiHubUploader({ baseUrl: "https://hub.test", requestTimeoutMs: 5000, uploadPartAttempts: 1, fetch: fetcher, logger: (message) => logs.push(message) });
+  const uploader = (uploadConcurrency?: number) => new HypiHubUploader({ ...(uploadConcurrency === undefined ? {} : { uploadConcurrency }), baseUrl: "https://hub.test", requestTimeoutMs: 5000, uploadPartAttempts: 1, fetch: fetcher, logger: (message) => logs.push(message) });
   return { uploader, calls, logs };
 }
 
@@ -105,12 +105,12 @@ test("file concurrency is shared across uploader instances for the same origin a
       return Response.json({ url: "https://hub.test/files/result" });
     }
   });
-  const uploads = Array.from({ length: 6 }, () => f.uploader().upload(input, "test-key"));
+  const uploads = Array.from({ length: 50 }, () => f.uploader().upload(input, "test-key"));
   await new Promise<void>((resolve) => setImmediate(resolve));
-  assert.equal(nextId, 2);
+  assert.equal(nextId, 8);
   release();
   await Promise.all(uploads);
-  assert.equal(nextId, 6); assert.equal(maximum, 2); assert.equal(active, 0);
+  assert.equal(nextId, 50); assert.equal(maximum, 8); assert.equal(active, 0);
 });
 
 test("cancellation waits for other in-flight part workers to settle", async () => {
@@ -133,4 +133,80 @@ test("invalid negotiated policy still cancels its known upload session", async (
     ? Response.json({ upload_mode: "s3_multipart", upload_id: "up_test", part_size: 0 }) : undefined);
   await assert.rejects(f.uploader().upload(input, "test-key"), /part size/u);
   assert.equal(f.calls.filter((c) => c.startsWith("DELETE")).length, 1);
+});
+
+test("configured file concurrency controls batches and releases capacity after failures", async () => {
+  for (const limit of [1, 4, 16]) {
+    let active = 0; let maximum = 0; let created = 0;
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => { release = resolve; });
+    const f = fixture(async (url, init) => {
+      if (url.endsWith("/files/uploads")) {
+        active += 1; maximum = Math.max(maximum, active); created += 1;
+        return Response.json({ upload_mode: "s3_multipart", upload_id: `up_${created}`, part_size: 16, part_count: 1, concurrency: 4 });
+      }
+      if (url.endsWith("/complete")) { await barrier; throw new Error("completion unavailable"); }
+      if (init.method === "DELETE") { active -= 1; return new Response(null, { status: 204 }); }
+    });
+    // A terminal response avoids retry sleeps; all files must still drain.
+    const original = f.uploader(limit).fetcher;
+    const uploader = new HypiHubUploader({ baseUrl: "https://hub.test", requestTimeoutMs: 5000, uploadConcurrency: limit, logger: () => {}, fetch: async (resource, init) => {
+      try { return await original(resource, init); }
+      catch { return Response.json({ error: { code: "invalid_completion" } }, { status: 400 }); }
+    } });
+    const pending = Array.from({ length: 50 }, () => uploader.upload(input, `configured-${limit}`));
+    const settled = Promise.allSettled(pending);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(created, limit);
+    release();
+    assert((await settled).every((r) => r.status === "rejected"));
+    assert.equal(created, 50); assert.equal(maximum, limit); assert.equal(active, 0);
+  }
+});
+
+test("the strictest outstanding instance limit is shared and disappears when it drains", async () => {
+  let active = 0; let created = 0; let phaseMaximum = 0;
+  let release!: () => void;
+  const barrier = new Promise<void>((resolve) => { release = resolve; });
+  const f = fixture(async (url) => {
+    if (url.endsWith("/files/uploads")) {
+      active += 1; phaseMaximum = Math.max(phaseMaximum, active); created += 1;
+      return Response.json({ upload_mode: "s3_multipart", upload_id: `up_${created}`, part_size: 16, part_count: 1, concurrency: 4 });
+    }
+    if (url.endsWith("/complete")) { await barrier; active -= 1; return Response.json({ url: "https://hub.test/files/result" }); }
+  });
+  const low = f.uploader(2); const high = f.uploader(8);
+  const pending = [low.upload(input, "mixed-limit"), low.upload(input, "mixed-limit"), ...Array.from({ length: 12 }, () => high.upload(input, "mixed-limit"))];
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(created, 2);
+  release(); await Promise.all(pending);
+  assert.equal(active, 0); assert.equal(phaseMaximum, 8);
+});
+
+test("file and part concurrency remain separate for a multipart batch", async () => {
+  let puts = 0; let peakPuts = 0; let creates = 0;
+  let release!: () => void;
+  const barrier = new Promise<void>((resolve) => { release = resolve; });
+  const f = fixture(async (url) => {
+    if (url.endsWith("/files/uploads")) {
+      creates += 1;
+      return Response.json({ upload_mode: "s3_multipart", upload_id: `up_${creates}`, part_size: 1, part_count: 4, concurrency: 4 });
+    }
+    if (url.startsWith("https://s3.test/")) {
+      puts += 1; peakPuts = Math.max(peakPuts, puts);
+      await barrier; puts -= 1;
+      return new Response(null, { headers: { etag: "etag" } });
+    }
+  });
+  const pending = Array.from({ length: 12 }, () => f.uploader().upload(input, "multipart-batch"));
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(creates, 8); assert.equal(puts, 32);
+  release(); await Promise.all(pending);
+  assert.equal(creates, 12); assert.equal(puts, 0); assert.equal(peakPuts, 32);
+});
+
+test("invalid uploadConcurrency is rejected before network activity", () => {
+  const f = fixture();
+  for (const value of [0, -1, 1.5, 65, NaN]) assert.throws(() => f.uploader(value), /uploadConcurrency/u);
+  assert.equal(f.calls.length, 0);
 });

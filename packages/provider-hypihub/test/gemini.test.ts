@@ -3,6 +3,31 @@ import test from "node:test";
 
 import { createHypiHubGeminiGenerator } from "../src/gemini.js";
 
+test("Gemini honors configured concurrency while uploading a batch of unique references", async () => {
+  let active = 0; let peak = 0; let created = 0;
+  let release!: () => void;
+  const barrier = new Promise<void>((resolve) => { release = resolve; });
+  const generate = createHypiHubGeminiGenerator({ apiKey: "gemini-capacity-test", uploadConcurrency: 3, logger: () => {}, fetch: async (resource, init) => {
+    const url = String(resource);
+    if (url.endsWith("/files/uploads")) {
+      created += 1; active += 1; peak = Math.max(peak, active);
+      return Response.json({ upload_mode: "s3_multipart", upload_id: `up_${created}`, part_size: 16, part_count: 1, concurrency: 4 });
+    }
+    if (url.endsWith("/parts")) {
+      const body = JSON.parse(String(init?.body)) as { parts: { checksum_sha256: string }[] };
+      return Response.json({ parts: [{ part_number: 1, url: "https://s3.test/part", headers: { "content-length": "1", "x-amz-checksum-sha256": body.parts[0]!.checksum_sha256 } }] });
+    }
+    if (url === "https://s3.test/part") return new Response(null, { headers: { etag: "etag" } });
+    if (url.endsWith("/complete")) { await barrier; active -= 1; return Response.json({ url: "https://hub.test/files/ref" }); }
+    assert.equal(active, 0); assert.equal(created, 12);
+    return Response.json({ candidates: [{ content: { parts: [{ text: "OK" }] } }] });
+  } });
+  const result = generate({ instruction: "inspect", parts: Array.from({ length: 12 }, (_, i) => ({ inlineData: { mimeType: "image/png", data: Buffer.from([i]).toString("base64") } })) });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(created, 3);
+  release(); assert.equal(await result, "OK"); assert.equal(peak, 3);
+});
+
 test("HypiHub Gemini uses native wire format for text, image and video parts", async () => {
   let seenUrl = "";
   let seenBody: Record<string, unknown> | undefined;

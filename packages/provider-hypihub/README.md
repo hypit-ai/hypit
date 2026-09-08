@@ -43,7 +43,16 @@ for every valid non-empty media file, including files compressed by the tool bef
 are uploaded concurrently through short-lived signed URLs, so media bytes do not make an extra trip
 through the HypiHub application server. A failed part alone is retried with a fresh signed URL.
 
-The server owns the part size, concurrency, and URL lifetime. Clients do not need to duplicate that
+Whole-file uploads default to **8 concurrent files** per origin/credential in a Node process,
+shared across Provider and Gemini uploader instances. Set `uploadConcurrency` (integer 1..64)
+in the Provider runtime configuration, `createHypiHubProvider`, or
+`createHypiHubGeminiGenerator` to change it. Extra files wait locally. If outstanding calls
+sharing a credential specify different limits, the lowest limit controls new starts until
+those calls finish; running uploads are allowed to drain. Separate processes still share
+the server's account session limit, which defaults to 64. These are configurable protection
+limits, not a claim about sustained network throughput.
+
+The server owns the part size, per-file part concurrency, and URL lifetime. Clients do not need to duplicate that
 policy. `uploadPartTimeoutMs` (default five minutes) and `uploadPartAttempts` (default three) only
 control client retry behavior. Signed S3 URLs are never included in Provider error messages. Uploads remain deduplicated by Artifact digest within one
 Runtime operation. Embedded callers may override the entire transport with `publicAssetUrl`.
