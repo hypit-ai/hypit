@@ -4,6 +4,7 @@ import type { CliIo } from "@hypit/cli";
 import { creationCommands, isCreationCommand, writeCreationHelp } from "./creation.js";
 import { isMediaCommand, mediaCommands, writeMediaHelp } from "./media.js";
 import { writeVocabularyHelp } from "./vocabulary.js";
+import { writeCaptureHelp } from "./capture.js";
 
 const argv = process.argv.slice(2);
 const json = argv.includes("--json");
@@ -61,7 +62,8 @@ const io: CliIo = {
 };
 
 async function main(): Promise<void> {
-  if (argv.length === 0 || argv[0] === "help" || argv.includes("--help")) {
+  const commandArgs = argv[0] === "capture" && argv.includes("--") ? argv.slice(0, argv.indexOf("--")) : argv;
+  if (argv.length === 0 || argv[0] === "help" || commandArgs.includes("--help")) {
     const topic = argv[0] === "help" ? argv[1] : argv.includes("--help") ? argv[0] : undefined;
     if (isCreationCommand(topic)) {
       writeCreationHelp(io, topic);
@@ -76,11 +78,15 @@ async function main(): Promise<void> {
       writeVocabularyHelp(io);
       return;
     }
+    if (topic === "capture") {
+      writeCaptureHelp(io);
+      return;
+    }
     writeCliHelp(io, topic);
     if (topic === undefined) {
       io.write(`\nCreation tools (one request through the selected Runtime Profile, no Build)\n${
         creationCommands.map((item) => `  ${item}`).join("\n")}\n  hypit help <tool> for each\n`
-        + `\nPreparation (local, no request, no state)\n  media ${mediaCommands.join(" | ")}\n  vocabulary\n  hypit help media, hypit help vocabulary\n`);
+        + `\nPreparation (local tools and project files)\n  media ${mediaCommands.join(" | ")}\n  capture screenshot | run | install-browser\n  vocabulary\n  hypit help media, hypit help capture, hypit help vocabulary\n`);
     }
     return;
   }

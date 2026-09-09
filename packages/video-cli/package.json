@@ -9,6 +9,7 @@
     "./cli": "./src/cli.ts"
   },
   "dependencies": {
+    "@hypit/browser-capture": "workspace:*",
     "@hypit/cli": "workspace:*",
     "@hypit/compiler-markup-node": "workspace:*",
     "@hypit/composition": "workspace:*",
