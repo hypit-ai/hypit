@@ -566,7 +566,7 @@ All four track families together in one source file:
 
 <!-- All peer tracks feed into Film -->
 <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
-  <film:Track source={speech.visual}/>
+  <film:Track source={performance.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={cards.visual}/>
   <film:Track source={captions.track}/>

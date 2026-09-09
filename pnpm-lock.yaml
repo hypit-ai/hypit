@@ -231,9 +231,6 @@ importers:
       '@hypit/seedream':
         specifier: workspace:*
         version: link:packages/seedream
-      '@hypit/semantic-take-estimate':
-        specifier: workspace:*
-        version: link:packages/semantic-take-estimate
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:packages/semantic-track
@@ -255,9 +252,6 @@ importers:
       '@hypit/speech-track-studio':
         specifier: workspace:*
         version: link:packages/speech-track-studio
-      '@hypit/stand-in':
-        specifier: workspace:*
-        version: link:packages/stand-in
       '@hypit/store-sqlite':
         specifier: workspace:*
         version: link:packages/store-sqlite
@@ -305,6 +299,18 @@ importers:
         version: 1.6.4(@algolia/client-search@5.56.0)(@types/node@24.10.1)(lightningcss@1.33.0)(postcss@8.5.28)(search-insights@2.17.3)(typescript@5.9.3)
 
   examples/minimal-author-package/packages/example-component:
+    devDependencies:
+      '@types/node':
+        specifier: 24.10.1
+        version: 24.10.1
+      hypit:
+        specifier: workspace:*
+        version: link:../../../..
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  examples/semantic-composition/packages/responsive-explainer:
     devDependencies:
       '@types/node':
         specifier: 24.10.1
@@ -1681,9 +1687,6 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
-      '@hypit/stand-in':
-        specifier: workspace:*
-        version: link:../stand-in
 
   packages/media-pipeline:
     dependencies:
@@ -2192,9 +2195,6 @@ importers:
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
-      '@hypit/stand-in':
-        specifier: workspace:*
-        version: link:../stand-in
     devDependencies:
       '@hypit/driver-node':
         specifier: workspace:*
@@ -2715,43 +2715,6 @@ importers:
         specifier: workspace:*
         version: link:../speech
 
-  packages/semantic-take-estimate:
-    dependencies:
-      '@hypit/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@hypit/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@hypit/estimate':
-        specifier: workspace:*
-        version: link:../estimate
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../media
-      '@hypit/narrative':
-        specifier: workspace:*
-        version: link:../narrative
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/run':
-        specifier: workspace:*
-        version: link:../run
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@hypit/svs':
-        specifier: workspace:*
-        version: link:../svs
-    devDependencies:
-      '@hypit/script':
-        specifier: workspace:*
-        version: link:../script
-
   packages/semantic-track:
     dependencies:
       '@hypit/component-kit':
@@ -2870,24 +2833,15 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
-      '@hypit/media-track':
-        specifier: workspace:*
-        version: link:../media-track
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../semantic-track
-      '@hypit/spatial':
-        specifier: workspace:*
-        version: link:../spatial
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
-      '@hypit/svs':
-        specifier: workspace:*
-        version: link:../svs
     devDependencies:
       '@hypit/core':
         specifier: workspace:*
@@ -2913,36 +2867,6 @@ importers:
       '@hypit/studio-adapter':
         specifier: workspace:*
         version: link:../studio-adapter
-
-  packages/stand-in:
-    dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@hypit/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@hypit/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@hypit/media-pipeline':
-        specifier: workspace:*
-        version: link:../media-pipeline
-      '@hypit/program-space':
-        specifier: workspace:*
-        version: link:../program-space
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/run':
-        specifier: workspace:*
-        version: link:../run
-      '@hypit/spatial':
-        specifier: workspace:*
-        version: link:../spatial
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../speech
 
   packages/store-sqlite:
     dependencies:

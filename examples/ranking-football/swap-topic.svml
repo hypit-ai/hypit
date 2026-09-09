@@ -7,7 +7,6 @@
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
-  <import as="estimated" from="@hypit/semantic-take-estimate@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="speech" from="@hypit/speech-track@1"/>
   <import as="media-track" from="@hypit/media-track@1"/>
@@ -58,7 +57,6 @@
   <gpt:Image id="jeff-icon" prompt={jeff-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
   <text:Value id="jack-icon-prompt">A photograph with the texture of real iPhone footage. Generate a close portrait, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. fair-skinned young technology executive with short brown hair, narrow face, and slim athletic shoulder line, wearing a plain dark shirt. Keep the portrait centered, shoulders visible, and use a simple neutral background with no readable text or logos.</text:Value>
   <gpt:Image id="jack-icon" prompt={jack-icon-prompt} aspect-ratio="1:1" resolution="1K"/>
-
 
   <text:Value id="elon-action">
     Keep the handheld microphone in the same hand throughout and use only the free hand for gestures. Open "Elon is D tier" with a skeptical look, lower the free palm decisively, and finish the verdict with one dry downward nod. On "44 billion dollars", rub the free thumb against two fingers in a clear money gesture while widening the eyes at the number. On "change the name", turn the free palm over once as if replacing one label with another, then give a disbelieving side glance. On "Sends rockets to Mars", sweep the free hand upward in a smooth launch arc and follow it briefly with the eyes. Across "can't send a tweet without crashing the stock market", tap the air once like posting, then snap the gaze downward and grimace as the free hand drops sharply. On "Richest guy on Earth", open the free arm with exaggerated confidence and a smug half-smile. On "good haircut", lightly touch the top of the hair once, pull the hand away, and finish with a mocking wince.
@@ -221,26 +219,14 @@
   <whisperx:SemanticTake id="sam-semantic" narrative={story}
     segment={story.segment.sam} media={sam-media.media} language="en"/>
 
-  <pipeline:StillVideo id="elon-still" source={presenter.image}
-    duration="11" clock={clock}/>
-  <pipeline:StillVideo id="sam-still" source={presenter.image}
-    duration="12" clock={clock}/>
-  <pipeline:Normalize id="elon-preview-media" source={elon-still.video}
-    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
-  <pipeline:Normalize id="sam-preview-media" source={sam-still.video}
-    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
-  <estimated:SemanticTake id="elon-preview" narrative={story}
-    segment={story.segment.elon} media={elon-preview-media.media}
-    language="en" pace="normal" rounding="round"/>
-  <estimated:SemanticTake id="sam-preview" narrative={story}
-    segment={story.segment.sam} media={sam-preview-media.media}
-    language="en" pace="normal" rounding="round"/>
-
-  <speech:Track id="speech" visual-frame={speech-frame}
-    visual-appearance={recipes.speech.visual} visual-z="0">
+  <speech:Track id="speech">
     <speech:Take source={elon-semantic.take}/>
     <speech:Take source={sam-semantic.take}/>
   </speech:Track>
+  <media-track:Track id="speech-picture" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Performance during="program" frame={speech-frame}
+      appearance={recipes.media.performance}/>
+  </media-track:Track>
   <audio-track:Track id="music-bed" semantic={speech.semantic}>
     <audio-track:Clip source={soundtrack-media.media} during="program"
       playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
@@ -332,7 +318,7 @@
 
   <film:Film id="main" canvas={vertical} semantic={speech.semantic}
     appearance={recipes.film.vertical}>
-    <film:Track source={speech.visual}/>
+    <film:Track source={speech-picture.visual}/>
     <film:Track source={speech.audio}/>
     <film:Track source={tech-tiers.visual}/>
     <film:Track source={tech-tiers.audio}/>

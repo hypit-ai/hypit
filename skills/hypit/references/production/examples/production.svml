@@ -1,11 +1,11 @@
 <?svml using="@hypit/markup@1"?>
 <svml>
+  <import as="media-track" from="@hypit/media-track@1"/>
   <import from="@hypit/script@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
-  <import as="estimate" from="@hypit/semantic-take-estimate@1"/>
   <import as="speech" from="@hypit/speech-track@1"/>
   <import as="space" from="@hypit/spatial@1"/>
   <import as="program" from="@hypit/program-space@1"/>
@@ -33,29 +33,26 @@
     duration="5" aspect-ratio="9:16" generate-audio="true"/>
   <pipeline:Normalize id="performance-media" source={performance.video} clock={clock}
     video="primary-moving" audio="default" span-authority="video"/>
-  <pipeline:Normalize id="performance-preview-media" source={performance.video} clock={clock}
-    video="primary-moving" audio="none" span-authority="video"/>
   <whisperx:SemanticTake id="opening-semantic" narrative={story}
     segment={story.segment.opening} media={performance-media.media} language="en"/>
-  <estimate:SemanticTake id="estimated" narrative={story}
-    segment={story.segment.opening} media={performance-preview-media.media}
-    language="en" pace="normal" rounding="round"/>
-  <speech:Track id="speech" visual-frame={full}
-    visual-appearance={look.media.performance} visual-z="0">
+  <speech:Track id="speech">
     <speech:Take source={opening-semantic.take}/>
   </speech:Track>
+  <media-track:Track id="speech-picture" semantic={speech.semantic} canvas={canvas}>
+    <media-track:Performance during="program" frame={full}
+      appearance={look.media.performance}/>
+  </media-track:Track>
 
   <fonts:Stack id="title-font" family="inter" weight="700" style="normal" emoji="color"/>
   <typo:Style id="title-style" recipe={look.text.title} font={title-font}>
     <typo:Fill color="#F1E7D8"/>
-    <typo:Stroke color="#18212A" width="2" placement="outside"/>
   </typo:Style>
   <typo:Track id="titles" semantic={speech.semantic}>
     <typo:Area id="proof-label" placement={title-frame} style={title-style}
       during={story.selection.proof}>The useful part</typo:Area>
   </typo:Track>
   <film:Film id="main" canvas={canvas} semantic={speech.semantic} appearance={look.film.main}>
-    <film:Track source={speech.visual}/>
+    <film:Track source={speech-picture.visual}/>
     <film:Track source={speech.audio}/>
     <film:Track source={titles.track}/>
   </film:Film>

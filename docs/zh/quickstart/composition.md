@@ -22,7 +22,7 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
-  <film:Track source={speech.visual}/>
+  <film:Track source={performance.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={captions.track}/>
   <film:Track source={product-broll.visual}/>
@@ -49,7 +49,7 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 
 | 来源 | 类型 | 来自 |
 |---|---|---|
-| `{speech.visual}` | VisualTrack | `speech:Track`——稀疏的同源口播视觉 |
+| `{performance.visual}` | VisualTrack | `media-track:Track`——语义表演的画面呈现 |
 | `{speech.audio}` | AudioTrack | `speech:Track`——同步音频 |
 | `{captions.track}` | VisualTrack | Caption 样式族 Track——定时字幕 |
 | `{cards.visual}` | VisualTrack | `media-track:Track`——Media 叠加层或 B-roll |
@@ -170,10 +170,13 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
   <whisperx:SemanticTake id="opening-semantic" narrative={story}
     segment={story.segment.opening} media={take-media.media} language="en"/>
-  <speech:Track id="speech"
-    visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
+  <speech:Track id="speech">
     <speech:Take source={opening-semantic.take}/>
   </speech:Track>
+<media-track:Track id="performance" semantic={speech.semantic} canvas={vertical}>
+  <media-track:Performance during="program" frame={speech-frame}
+    appearance={recipes.media.performance}/>
+</media-track:Track>
 
   <!-- 4. Tracks: captions, Media, text -->
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
@@ -198,7 +201,7 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   <!-- 5. Film: compose all tracks -->
   <film:Film id="main" canvas={vertical} semantic={speech.semantic}
     appearance={recipes.film.vertical}>
-    <film:Track source={speech.visual}/>
+    <film:Track source={performance.visual}/>
     <film:Track source={speech.audio}/>
     <film:Track source={cards.visual}/>
     <film:Track source={captions.track}/>
@@ -222,7 +225,7 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   film.vertical {
     background: #09090B;
   }
-  speech.visual { fit: cover; }
+  media.performance { stack-order: 0; fit: cover; }
   media.card {
     stack-order: 40; fit: cover; playback: hold-start;
     frame-paint: #111116; clip: rounded; radius: 20;

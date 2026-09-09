@@ -1,5 +1,5 @@
 import { canonicalStringify, isResourceId } from "@hypit/protocol";
-import type { BlobRef } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue } from "@hypit/protocol";
 
 import {
   assertVisualStyleV1,
@@ -58,6 +58,16 @@ export type VisualElementBase = {
 
 export type VisualBoxElement = VisualElementBase & {
   readonly kind: "box";
+};
+
+/** A renderer-interpreted local program. Its format and payload belong to its rendering package. */
+export type VisualProgramElement = VisualElementBase & {
+  readonly kind: "program";
+  readonly program: {
+    readonly format: string;
+    readonly payload: { readonly [key: string]: CanonicalValue };
+    readonly artifacts: readonly BlobRef[];
+  };
 };
 
 /** A strictly local two-input mask. Both roots are direct owned children in the same Present. */
@@ -336,18 +346,15 @@ export type VisualSurfaceElement = VisualElementBase & {
 };
 
 /**
- * Deliberately small, code-free renderer-neutral visual primitives.
+ * Structural elements and explicit renderer programs compose in one owned tree.
  *
- * Elements may reference only parents in the same Present. They have no selector,
- * script, sibling Track id or accumulated-composite input.
- *
- * A Present holds exactly one root; everything else names a `parent`, which has to be a box or a
- * mask. **Position is measured from that parent, not from the Canvas.** A component that computes
+ * A Present holds exactly one root; everything else names a `parent`, which can be a box,
+ * mask or program. **Position is measured from that parent, not from the Canvas.** A component that computes
  * its layout in Canvas pixels and then nests its elements has to subtract the parent's own origin,
  * or every child lands offset by it — which draws without complaint and is wrong by exactly the
  * distance the parent sits from the corner.
  */
-export type VisualElement = VisualBoxElement | VisualMaskElement | VisualTextElement | VisualTextFlowElement | VisualPathTextElement | VisualMediaElement | VisualSurfaceElement;
+export type VisualElement = VisualBoxElement | VisualProgramElement | VisualMaskElement | VisualTextElement | VisualTextFlowElement | VisualPathTextElement | VisualMediaElement | VisualSurfaceElement;
 
 export type VisualPresent = {
   readonly id: string;
@@ -423,6 +430,7 @@ export type Composition = {
 
 /** The only local style properties accepted in element keyframes. */
 export const animatableLocalStyles = [
+  "backdrop-filter",
   "clip-path",
   "filter",
   "opacity",
@@ -951,6 +959,12 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace | unde
       present.span.endFrameExclusive - present.span.startFrame,
       `${trackId}.${present.id}.${element.id}`,
     );
+    if (element.kind === "program") {
+      assertNonEmpty(element.program.format, `${element.id}.program.format`);
+      if (element.program.payload === null || typeof element.program.payload !== "object" || Array.isArray(element.program.payload)) throw new Error("Visual program payload must be an object.");
+      canonicalStringify(element.program.payload);
+      for (const artifact of element.program.artifacts) assertMediaArtifact(artifact, `${element.id}.program.artifacts`);
+    }
     if (element.kind === "image" || element.kind === "video") {
       assertMediaArtifact(element.artifact, `${trackId}.${present.id}.${element.id}.artifact`);
       if (!element.artifact.mediaType.startsWith(`${element.kind}/`)) {
@@ -1066,8 +1080,8 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace | unde
     if (element.parent !== undefined && !elements.has(element.parent)) {
       throw new Error(`${trackId}.${present.id}.${element.id} references a foreign parent.`);
     }
-    if (element.parent !== undefined && !["box", "mask"].includes(elements.get(element.parent)?.kind ?? "")) {
-      throw new Error(`${trackId}.${present.id}.${element.id} must have a box or mask parent.`);
+    if (element.parent !== undefined && !["box", "mask", "program"].includes(elements.get(element.parent)?.kind ?? "")) {
+      throw new Error(`${trackId}.${present.id}.${element.id} must have a box, mask or program parent.`);
     }
     const visited = new Set<string>();
     let cursor: VisualElement | undefined = element;
@@ -1128,6 +1142,7 @@ function normalizeElement(element: VisualElement): VisualElement {
     ...(element.animation === undefined ? {} : { animation: normalizeAnimation(element.animation) }),
   };
   if (element.kind === "box") return { ...common, kind: "box" };
+  if (element.kind === "program") return { ...common, kind: "program", program: structuredClone(element.program) };
   if (element.kind === "mask") return {
     ...common,
     kind: "mask",

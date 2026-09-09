@@ -36,8 +36,8 @@ The package README supplies exact behavior that is local to that installed imple
 When the question requires more detail, inspect the relevant implementation and exported API. An
 existing component can also provide a useful implementation example for a new project package.
 
-Run Fragment libraries have a separate interface. A package such as `@hypit/stand-in` can provide
-useful Candidates while declaring no Markup Surfaces. Read [Runs](runs.md) and the library's
+Run Fragment libraries have a separate interface. A package can provide
+Candidates while declaring no Markup Surfaces. Read [Runs](runs.md) and the library's
 package-local Fragment documentation for those inputs and exports.
 
 ## Choose a component for its behavior

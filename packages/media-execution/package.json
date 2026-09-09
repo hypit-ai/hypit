@@ -12,7 +12,6 @@
     "@hypit/media-pipeline": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/speech": "workspace:*",
-    "@hypit/stand-in": "workspace:*"
+    "@hypit/speech": "workspace:*"
   }
 }

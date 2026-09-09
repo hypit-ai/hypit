@@ -41,7 +41,6 @@ export const mediaPipelineProducers = {
   transform: { module: mediaPipelineModuleRef, name: "request-media-transform" },
   extractAudio: { module: mediaPipelineModuleRef, name: "request-audio-extraction" },
   extractFrame: { module: mediaPipelineModuleRef, name: "request-frame-extraction" },
-  clipTimeLayout: { module: mediaPipelineModuleRef, name: "clip-time-still-layout" },
   planStill: { module: mediaPipelineModuleRef, name: "plan-still-video" },
   renderStill: { module: mediaPipelineModuleRef, name: "request-still-video" },
   bindStill: { module: mediaPipelineModuleRef, name: "bind-still-video-source" },
@@ -164,7 +163,6 @@ export const stillVideoRequestSchema: ValueSchema = {
       },
     } },
     frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
-    guide: { optional: true, schema: { kind: "literal", value: "clip-time" } },
     output: { schema: {
       kind: "object",
       fields: {
@@ -196,7 +194,6 @@ export const stillVideoLayoutSchema: ValueSchema = {
   kind: "object",
   fields: {
     weights: { schema: { kind: "array", items: { kind: "number", minimum: 0 } } },
-    guide: { optional: true, schema: { kind: "literal", value: "clip-time" } },
   },
 };
 
@@ -306,8 +303,6 @@ export const mediaPipelineMarkupSurfaces = [
             summary: "Sets the video's length in seconds, such as 6 or 2.5s; choose it from the visual passage this held image is meant to carry." },
           { name: "clock", kind: "reference", required: true, accepts: [programSpaceTypes.clock],
             summary: "Selects the frame clock used by the generated MP4." },
-          { name: "guide", kind: "literal", required: false, values: ["clip-time"],
-            summary: "Burns one clip-local diagnostic band with timecode, frame count and a progress ruler into the held video." },
         ],
         children: [
           { tag: "Still", cardinality: "many",
@@ -330,7 +325,6 @@ export const mediaPipelineMarkupSurfaces = [
           "Write exactly one of source or Still children. Frames are whole: each image gets the floor of its share and the leftover frames go to the largest remainders, so the split is deterministic and every image holds at least one frame.",
           "Images of different sizes are fitted into the first image's frame, letterboxed on black.",
           "The result is a normal video Blob, not SynchronizedMedia and not a SemanticTake.",
-          "The optional clip-time guide describes this clip's local frame domain, not its later position in a Film.",
           "Use Normalize afterward exactly as for generated or imported moving video.",
           "Encoding is a render-still-video Need fulfilled by the selected media Provider; this Surface never invokes FFmpeg itself.",
         ],
@@ -565,12 +559,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.extractFrame,
         returns: artifactTypes.blob,
       }],
-    },
-    {
-      name: mediaPipelineProducers.clipTimeLayout.name,
-      inputs: [],
-      outputs: [{ name: "layout", type: mediaPipelineTypes.stillVideoLayout }],
-      needs: [],
     },
     {
       name: mediaPipelineProducers.planStill.name,

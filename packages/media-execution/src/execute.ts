@@ -32,7 +32,6 @@ import {
   } from "@hypit/protocol";
 import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
 
-import { drawClipTimeGuide, renderStandInCard, standInCardNeed } from "./card.js";
 import { parseMediaInspection } from "./probe.js";
 import {
   compositeAnimatedWebpFrame,
@@ -783,7 +782,6 @@ export async function executeRenderStillVideo(
   const work = await mkdtemp(join(tmpdir(), "hypit-media-still-"));
   try {
     const output = join(work, "still.mp4");
-    const baseOutput = need.request.guide === undefined ? output : join(work, "still-base.mp4");
     const staged = new Map<string, string>();
     const inputs: string[] = [];
     for (const segment of need.request.segments) {
@@ -833,47 +831,12 @@ export async function executeRenderStillVideo(
         ...argv,
         "-frames:v", String(need.request.frameCount), "-r", fps, "-fps_mode", "cfr",
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart", baseOutput,
+        "-movflags", "+faststart", output,
       ],
       timeoutMs: env.processTimeoutMs,
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
-    if (need.request.guide === "clip-time") {
-      const baseInspection = await outputInspection({
-        path: baseOutput,
-        mediaType: "video/mp4",
-        ffprobePath: env.ffprobePath,
-        timeoutMs: env.processTimeoutMs,
-        maxProbeOutputBytes: env.maxProbeOutputBytes,
-        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
-      });
-      const baseVisual = baseInspection.streams.find((item): item is MediaVideoStream => item.kind === "video");
-      assert(baseVisual !== undefined, "Still media guide has no visual stream");
-      for (let frame = 0; frame < need.request.frameCount; frame += 1) {
-        await writeFile(join(work, `guide-${String(frame).padStart(6, "0")}.png`), drawClipTimeGuide({
-          width: baseVisual.width,
-          height: baseVisual.height,
-          frameRate: need.request.frameRate,
-          frameCount: need.request.frameCount,
-        }, frame));
-      }
-      await runProcess({
-        executable: env.ffmpegPath,
-        argv: [
-          "-y", "-i", baseOutput,
-          "-framerate", fps, "-i", join(work, "guide-%06d.png"),
-          "-filter_complex", "[0:v][1:v]overlay=0:main_h-overlay_h:shortest=1,format=yuv420p[v]",
-          "-map", "[v]", "-an",
-          "-frames:v", String(need.request.frameCount), "-r", fps, "-fps_mode", "cfr",
-          "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-          "-movflags", "+faststart", output,
-        ],
-        timeoutMs: env.processTimeoutMs,
-        maxStdoutBytes: 64 * 1024,
-        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
-      });
-    }
     const inspected = await outputInspection({
       path: output,
       mediaType: "video/mp4",
@@ -898,18 +861,6 @@ export async function executeRenderStillVideo(
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
-}
-
-/** Draw a stand-in card for a generated output that has not been generated; a Provider draws, it never generates. */
-export async function executeDrawStandInCard(
-  env: MediaExecutionEnvironment,
-  constraints: CanonicalValue,
-): Promise<MediaOperationResult> {
-  const request = standInCardNeed(constraints);
-  const value = await renderStandInCard({
-    putBytes: async (bytes, mediaType) => await env.artifacts.put(bytes, mediaType) as unknown as CanonicalValue,
-  }, request);
-  return artifactResult(value as unknown as BlobRef);
 }
 
 type TransformPlan = {

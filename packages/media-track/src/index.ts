@@ -46,8 +46,7 @@ export {
 } from "./sounds.js";
 export { appendMediaItem, appendMediaSequence, bindMediaItemClipPath, bindMediaSequenceClipPath, assertMediaItemSpec, assertMediaTrackHeader, assertMediaTrackProgram, assertMediaTrackProgramIdentity, assertMediaTrackSet, createMediaTrackSet, finalizeMediaTrack, projectMediaAudioTrack, projectMediaVisualTrack, sealMediaItemSpec, sealMediaTrackHeader, sealMediaTrackProgram } from "./program.js";
 export { resolveVisualSampling } from "./sampling.js";
-export { lowerRestrictedSpeechVisualPresents } from "./restricted-speech.js";
-export type { RestrictedSpeechVisualClip } from "./restricted-speech.js";
+export { appendMediaPerformance } from "./performance.js";
 export { decodeMediaSamplingKeyframe, decodeMediaTrackSurface } from "./surface.js";
 export {
   appendMediaSequenceMember,

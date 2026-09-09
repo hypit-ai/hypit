@@ -1,103 +1,51 @@
 # `@hypit/speech-track`
 
-Assemble the performances carrying the Script into one semantic timeline, with separate picture and
-sound outputs. In the usual spoken production, these performances are the A-roll. A speaker can be
-covered by B-roll while their words continue to define the semantic time of the piece. A podcast's
-speaking turns share this timeline; an independent narration can also carry it.
-
-A-roll can be a circular picture-in-picture or a foreground presenter cutout over another main
-picture. Its speaking performance establishes the semantic timeline regardless of its screen area
-or stack order. Speech Track projects that same prepared Take into semantic, visual and audio
-outputs together; the inset or cutout does not need to be displayed a second time through Media
-Track.
-
-## Assemble prepared Takes
-
-Normalize the media and associate each Script Segment with a SemanticTake before assembly. A spoken
-Take includes aligned words; a wordless Take includes its media and Segment boundaries. One Take can
-contain several speakers or camera cuts. Takes are assembled in Source order:
+Assemble ordered SemanticTakes into a semantic timeline and its original sound. The performance
+carrying the Script is the A-roll, whether its picture fills the screen, appears in an inset,
+is a transparent cutout, or is covered by other pictures. This role establishes time; the visual
+composition decides where and how that material appears.
 
 ```svml
-<import as="speech" from="@hypit/speech-track@1"/>
-
-<speech:Track id="speech" visual-frame={layout.full}
-  visual-appearance={look.performance} visual-z="0">
+<speech:Track id="speech">
   <speech:Take source={opening.take}/>
   <speech:Take source={answer.take}/>
 </speech:Track>
 ```
 
-This excerpt assumes the Takes, Frame and appearance Recipe exist. An appearance Recipe can share
-the ordinary visual appearance of a Media Item:
-
-```svs
-performance {
-  fit: cover;
-  clip: rounded;
-  radius: 270;
-  border-width: 3;
-  border-color: rgba(255, 255, 255, 0.9);
-}
-```
-
-With a `540 × 540` Frame, that rounded clip presents the performance as a circle. The shared frame
-rate and total ProgramSpace come from the ordered Takes. Their local word and boundary frames become
-positions in that assembled space.
+The Takes are already normalized and semantic. Source order and actual prepared lengths establish
+the shared ProgramSpace. Local word positions and Segment boundaries become global positions.
+One Take may contain several speakers or camera cuts; a wordless Take supplies its media boundaries.
 
 | Output | Use |
 | --- | --- |
-| `.semantic` | Supply semantic timing to Film, Caption, Media, Typography, Audio and other components |
-| `.visual` | Include the performance picture in Film when wanted |
-| `.audio` | Include the performance sound in Film, including beneath B-roll |
+| `.semantic` | Semantic time and prepared materials for Film, Caption, Media and project components |
+| `.audio` | Original performance sound at its assembled positions |
 
-Each Take always contributes its Segment and Anchor timing. A Take with no audio stream contributes
-no audio clip; a Take with no visual stream contributes no picture. Its remaining semantic and
-media projections continue normally, so a video-only wordless Take needs no synthetic audio and an
-audio-only narration needs no synthetic picture.
+Select `.audio` in Film when that sound belongs in the result. This explicit convenience projection
+keeps the prepared source at its original speed and gain; a Take without audio contributes no clip.
+For independent music, effects or authored mixing choices, use [Audio Track](../audio-track/README.md).
 
-Select each wanted picture and sound output explicitly in Film. Replacing the visible picture with
-Media Track coverage does not replace the semantic timeline or mute the included performance audio.
-An audio-only performance can supply the timeline while other Tracks supply the picture.
+## Present the performance
 
-## Present the performance directly
-
-`visual-frame`, `visual-appearance`, `visual-motion` and `visual-z` supply the Track's visual base. A
-Take can override them with `frame`, `appearance`, `motion` and `z`. Appearance can control fit and
-crop anchors, opacity and filters, rounded or rectangular clipping, padding, borders, shadows and
-frame paint. Lifecycle motion can move that visual presentation as it enters, remains or exits. None
-of these choices changes the Take's semantic timing or audio.
-
-This is the same destination/content geometry as a Media Item: the outer `frame` places and shapes
-the presentation; border and padding define its fitting area; the source's intrinsic extent, fit
-and alignment determine the inner picture rectangle. The shared spatial Recipe keys and defaults
-are described in [Spatial](../spatial/README.md#destination-and-fitted-content), and frame decoration
-in [Media Track](../media-track/README.md#place-the-frame-then-fit-its-contents). Rounded clipping is
-applied to the outer Frame, including when a contain fit leaves space around the picture.
-
-A Take override replaces the corresponding Track setting. In particular, `appearance` selects a
-complete Recipe rather than merging individual properties from `visual-appearance`. Speech Track
-authors stacking through `visual-z` / `z`; its appearance Recipe carries the shared picture and
-frame properties without Media Track's `stack-order`, playback or trim fields.
-
-Speech visuals occupy their prepared Take's Segment span. Their lifecycle motion repeats within
-each Take's span, and Sampling moves only the picture under the frame's clip. The current Speech
-Surface supports rectangular, rounded and unclipped frame presentation. An authored Path clip and
-Canvas-edge `enter-origin` / `exit-origin` are Media Track interfaces.
-
-Sampling children move the Take's picture inside its Frame over normalized Segment progress, using
-the same fields as a direct Media Item:
+[Media Track](../media-track/README.md#display-a-semantic-performance) can consume the assembled
+performance through a Media Performance:
 
 ```svml
-<speech:Take source={opening.take}>
-  <speech:Sampling at="start" zoom="1"/>
-  <speech:Sampling at="end" zoom="1.08" y="-18" easing="ease-out"/>
-</speech:Take>
+<media:Track id="performance" semantic={speech.semantic} canvas={canvas}>
+  <media:Performance during="program" frame={layout.full}
+    appearance={look.performance}/>
+</media:Track>
 ```
 
-Use [Media Track](../media-track/README.md) when a picture owns an independent semantic Window,
-source playback or trim, source audio, a replacement Sequence, or a visual source other than the
-performance itself. Caption and MG consume `.semantic` to follow the same words and events.
+Include `performance.visual` and `speech.audio` in Film. The Media Recipe supplies `stack-order`,
+fit, clipping, rounded corners, border and other presentation choices. A selected window that starts
+inside a Take begins at the matching source frame. Presentation continues across Take boundaries.
 
-The [Studio Companion](../speech-track-studio/src/index.ts) presents the assembled Takes and their
-materials. Media preparation is owned by [Media Pipeline](../media-pipeline/README.md), and exact
-SemanticTake values by [Speech](../speech/README.md).
+A project component can also consume `.semantic` and use `projectSemanticMedia` from
+`hypit/semantic-track` to obtain selected material spans and their source positions. When video and
+graphics share layout or motion, that component can own both in one visual program. Independent
+Caption or other overlays can remain separate Tracks.
+
+[Media Pipeline](../media-pipeline/README.md) owns preparation;
+[Semantic Track](../semantic-track/README.md) owns the timeline and its projections.
+The [Studio Companion](../speech-track-studio/src/index.ts) exposes the original audio clips.

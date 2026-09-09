@@ -69,7 +69,6 @@ function projectCaption(parsed: ParsedNarrative, id: string, narrativeId: string
       throw new Error(`Caption identity region ${region.id} does not structurally partition its authored speech`);
     }
   }
-  if (units.length === 0 || words.length === 0) throw new Error("Caption document contains no visible words");
 
   const tokenIndex = new Map(parsed.tokens.map((token) => [token.id, token.index]));
   const cueBreaks = parsed.captionProjection.breaks.map((breakPoint) => {

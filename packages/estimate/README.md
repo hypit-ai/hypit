@@ -22,10 +22,10 @@ The estimate reports the time the wording needs at that delivery. Use it to deci
 needs merging, fuller wording, tightening, or splitting, then choose the request duration with the
 selected model's supported values in mind.
 
-The one graph value this package declares is `SpeechEstimatePolicy`: the same language, pace or rate,
-rounding and optional padding, written as attributes or an SVS Recipe on `<estimated:SemanticTake>`, which
-weights a Segment's Tokens across preview media by pronunciation units. Nothing here runs inside a
-Build; a Build plan is complete before it starts because every duration is already a literal.
+`SpeechEstimatePolicy` holds the language, pace or rate, rounding and optional padding used by the
+measurement API. `speechEstimatePolicyFromRecipe` reads those values from a Recipe for package authors.
+The measurement produces a duration estimate for authoring; actual word positions come from the
+performed media's semantic preparation.
 
 ```ts
 import { estimateSpeechDuration, sealSpeechEstimatePolicy, speechEstimatePolicyFromRecipe } from "@hypit/estimate";

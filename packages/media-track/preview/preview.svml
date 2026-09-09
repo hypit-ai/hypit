@@ -1,35 +1,13 @@
 <?svml using="@hypit/markup@1"?>
-
-<!-- The catalogue picture for this package's Surfaces, and the Source it is drawn from.
-
-     Everything here is the package's own sample: its copy, its Recipe values, its Canvas. Nothing
-     about a project reaches this file, and nothing in it reaches a project. It exists so a reader
-     can see the Surface's range in one picture, and so that picture can be made again.
-
-     The checked-in Track.png is the package catalogue asset. This Source and its ordinary Run
-     preserve how it was authored; regenerating the encoded frame is a normal Build.
-
-     A placeholder shows the Frame treatment and nothing inside it. To look at the component before
-     buying its pictures, select a generic stand-in Candidate in the Run. The Run supplies only the
-     media shape its composition needs; the Profile's local media Endpoint draws and normalizes it,
-     in Studio as in a Build:
-
-       <import from="@hypit/stand-in@1" as="stand-in"/>
-       <fragment id="a-card" using="stand-in:timed-card">
-         <input name="canvas" from="vertical"/><input name="duration" value="5"/><input name="clock" from="clock"/>
-       </fragment>
-       <satisfy output="motion-a.video" candidate="a-card.video"/>
-
-     A committed sample works the same way as a `file` Candidate on `motion-a.video`. Candidate
-     selection is explicit in the Run; Studio never replaces missing media itself. -->
+<!-- A wordless catalogue composition using this package's two sample graphics.
+     The samples are the displayed content. Their frame treatments demonstrate fit,
+     padding, clipping and motion; build.svrun renders the same composition. -->
 <svml>
   <import from="@hypit/script@1"/>
-  <import as="wording" from="@hypit/text@1"/>
-  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="media" from="@hypit/media@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
-  <import as="estimate" from="@hypit/semantic-take-estimate@1"/>
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="space" from="@hypit/spatial@1"/>
   <import as="program" from="@hypit/program-space@1"/>
@@ -37,58 +15,32 @@
   <import as="render" from="@hypit/render-hyperframes@1"/>
   <import as="recipes" source="./recipes.svs"/>
 
-  <!-- The copy is written so the two inserts are up at the same time in the middle of it: a
-       catalogue picture that shows one unit at a time says nothing about how two of them stack. -->
-  <script id="story">
-    <showcase><HOST>A Media Track lays @rounded pictures into Frames you place, @wide each one clipped
-      and painted the way its Recipe says@/wide@/rounded, and hands the rest of the Canvas back.</showcase>
-  </script>
-
+  <script id="story"><empty></empty></script>
   <space:Canvas id="vertical" width="720" height="1280"/>
   <program:Clock id="clock" frame-rate="30"/>
-  <space:Frame id="speech-frame" within={vertical}
-    left="0%" top="0%" right="100%" bottom="100%"/>
+  <space:Frame id="full" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="card-a" within={vertical}
     left="8%" top="16%" right="92%" bottom="46%"/>
   <space:Frame id="card-b" within={vertical}
     left="12%" top="52%" right="88%" bottom="78%"/>
+  <space:Extent id="picture-size" width="640" height="360"/>
+  <media:Image id="picture-a" src="./rounded.png"/>
+  <media:Image id="picture-b" src="./flush.png"/>
 
-  <wording:Value id="direction">Locked medium close-up in a quiet daylight studio. Spoken dialogue.</wording:Value>
-  <seedance:TextVideo id="take" model="mini" prompt={direction} duration="8" generate-audio="true"/>
-  <seedance:TextVideo id="motion-a" model="mini" prompt={direction} duration="5"/>
-  <seedance:TextVideo id="motion-b" model="mini" prompt={direction} duration="5"/>
-
-  <pipeline:Normalize id="take-media" source={take.video}
-    recipe={recipes.media.aroll} clock={clock}/>
-  <pipeline:Normalize id="take-preview-media" source={take.video} clock={clock}
+  <pipeline:StillVideo id="duration" source={picture-a} duration="5" clock={clock}/>
+  <pipeline:Normalize id="duration-media" source={duration.video} clock={clock}
     video="primary-moving" audio="none" span-authority="video"/>
-  <pipeline:Normalize id="motion-a-media" source={motion-a.video}
-    recipe={recipes.media.broll} clock={clock}/>
-  <pipeline:Normalize id="motion-b-media" source={motion-b.video}
-    recipe={recipes.media.broll} clock={clock}/>
-  <whisperx:SemanticTake id="showcase-semantic" narrative={story}
-    segment={story.segment.showcase} media={take-media.media} language="en"/>
-  <estimate:SemanticTake id="showcase-estimated" narrative={story}
-    segment={story.segment.showcase} media={take-preview-media.media}
-    language="en" pace="normal" rounding="round"/>
+  <whisperx:SemanticTake id="showcase-time" narrative={story}
+    segment={story.segment.empty} media={duration-media.media}/>
+  <speech:Track id="speech"><speech:Take source={showcase-time.take}/></speech:Track>
 
-  <speech:Track id="speech"
-    visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
-    <speech:Take source={showcase-semantic.take}/>
-  </speech:Track>
-
-  <!-- Rounded against square, padded against flush, sliding in against cutting: one Track showing
-       what the Recipe decides rather than what the component always does. -->
   <media-track:Track id="showcase" semantic={speech.semantic} canvas={vertical}>
-    <media-track:Item id="rounded-card" media={motion-a-media.media} during={story.selection.rounded}
+    <media-track:Item id="rounded-card" image={picture-a} extent={picture-size} during="program"
       frame={card-a} appearance={recipes.media.card} motion={recipes.motion.card}/>
-    <media-track:Item id="flush-card" media={motion-b-media.media} during={story.selection.wide}
+    <media-track:Item id="flush-card" image={picture-b} extent={picture-size} during="program"
       frame={card-b} appearance={recipes.media.wide} motion={recipes.motion.card}/>
   </media-track:Track>
-
   <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
-    <film:Track source={speech.visual}/>
-    <film:Track source={speech.audio}/>
     <film:Track source={showcase.visual}/>
   </film:Film>
   <render:Video id="final" composition={main.composition} semantic={speech.semantic}/>

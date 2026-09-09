@@ -9,7 +9,6 @@
   <import as="program" from="@hypit/program-space@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
-  <import as="estimated" from="@hypit/semantic-take-estimate@1"/>
   <import as="speech" from="@hypit/speech-track@1"/>
   <import as="audio-track" from="@hypit/audio-track@1"/>
   <import as="caption" from="@hypit/caption@1"/>
@@ -196,22 +195,15 @@
   <whisperx:SemanticTake id="arms-are-asking-semantic" narrative={story}
     segment={story.segment.arms-are-asking} media={arms-are-asking-media.media} language="en"/>
 
-  <estimated:SemanticTake id="opening-estimated" narrative={story}
-    segment={story.segment.opening-question} media={opening-media.media}
-    policy={recipes.speech.preview}/>
-  <estimated:SemanticTake id="daily-creatine-estimated" narrative={story}
-    segment={story.segment.daily-creatine} media={daily-creatine-media.media}
-    policy={recipes.speech.preview}/>
-  <estimated:SemanticTake id="arms-are-asking-estimated" narrative={story}
-    segment={story.segment.arms-are-asking} media={arms-are-asking-media.media}
-    policy={recipes.speech.preview}/>
-
-  <speech:Track id="speech" visual-frame={full-frame}
-    visual-appearance={recipes.speech.visual} visual-z="10">
+  <speech:Track id="speech">
     <speech:Take source={opening-semantic.take}/>
     <speech:Take source={daily-creatine-semantic.take}/>
     <speech:Take source={arms-are-asking-semantic.take}/>
   </speech:Track>
+  <media-track:Track id="speech-picture" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Performance during="program" frame={full-frame}
+      appearance={recipes.media.performance}/>
+  </media-track:Track>
 
   <audio-track:Track id="music-bed" semantic={speech.semantic}>
     <audio-track:Clip source={soundtrack-media.media} during="program"
@@ -238,7 +230,7 @@
 
   <film:Film id="main" canvas={vertical} semantic={speech.semantic}
     appearance={recipes.film.vertical}>
-    <film:Track source={speech.visual}/>
+    <film:Track source={speech-picture.visual}/>
     <film:Track source={speech.audio}/>
     <film:Track source={lifestyle.visual}/>
     <film:Track source={captions.track}/>

@@ -14,12 +14,9 @@
     "@hypit/component-kit": "workspace:*",
     "@hypit/composition": "workspace:*",
     "@hypit/elaborator": "workspace:*",
-    "@hypit/media-track": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/speech": "workspace:*",
     "@hypit/semantic-track": "workspace:*",
-    "@hypit/spatial": "workspace:*",
-    "@hypit/svs": "workspace:*",
     "@hypit/markup": "workspace:*"
   },
   "devDependencies": {

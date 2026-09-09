@@ -1,7 +1,7 @@
 # `@hypit/visual-ir`
 
-The renderer-neutral, code-free terminal visual vocabulary. HyperFrames is the current reference
-render route, not the identity or only possible implementation of this IR.
+The terminal visual vocabulary includes structural elements and explicit renderer-program payloads.
+HyperFrames renders both structural elements and its browser program format.
 
 ## Writing a visual program
 
@@ -17,7 +17,7 @@ coordinates are relative to their parent.
 
 An element may have an `animation` with ordered `keyframes`. Each keyframe has `atFrame`, optional
 `easing`, and `style`. `atFrame` is measured from the containing Present's start. Supported animated
-properties are `opacity`, `transform`, `filter` and `clip-path`; easing is `linear`, `ease-in`,
+properties are `opacity`, `transform`, `filter`, `backdrop-filter` and `clip-path`; easing is `linear`, `ease-in`,
 `ease-out` or `ease-in-out`. A renderer can evaluate these values at any requested frame.
 
 Video playback uses the element's separate `sampling` map. Its local target intervals select source
@@ -28,3 +28,9 @@ For prepared pixels from another rendering tool, emit a `surface` element with a
 CompositableSurfaceRef. Its resource, geometry, color/alpha and temporal metadata let composition
 place and sample it through the same Track model. Local masks name their owned content and mask
 children. Preparation that transforms another material receives that material as an explicit input.
+
+A `program` element carries an explicit format, an object payload and referenced artifacts. The
+rendering package owns that payload's language and execution. It can place owned structural children
+inside a local program, retaining typed media and fonts. For browser HTML/CSS/JavaScript see
+[HyperFrames](../hyperframes/README.md#local-browser-programs). This separates structural convenience
+from the renderer's fuller composition capabilities.

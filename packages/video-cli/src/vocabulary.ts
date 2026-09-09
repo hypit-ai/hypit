@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import type { CliIo } from "@hypit/cli";
 import {
   animatableLocalStyles,
-  visualBoxSchema, visualElementSchema, visualImageSchema, visualMaskSchema, visualPathCommandSchema,
+  visualProgramSchema, visualBoxSchema, visualElementSchema, visualImageSchema, visualMaskSchema, visualPathCommandSchema,
   visualSurfaceSchema, visualTextDocumentSchema, visualTextFlowSchema, visualTextPaintSchema,
   visualTextSchema, visualTextTypographySchema, visualTrackSchema, visualVideoSchema,
 } from "@hypit/composition";
@@ -220,6 +220,7 @@ export function describeSchema(schema: ValueSchema, indent = ""): string[] {
 const VISUAL_SHAPES: Readonly<Record<string, ValueSchema>> = {
   "visual-track": visualTrackSchema,
   "visual-element": visualElementSchema,
+  program: visualProgramSchema,
   box: visualBoxSchema,
   mask: visualMaskSchema,
   text: visualTextSchema,
@@ -235,7 +236,7 @@ const VISUAL_SHAPES: Readonly<Record<string, ValueSchema>> = {
 
 // Each of these is refused somewhere in composition, or follows from how the emitted CSS is written.
 const VISUAL_RULES = [
-  "A Present holds exactly one element with no `parent`; every other element names one, and it must be a box or a mask.",
+  "A Present holds exactly one element with no `parent`; every other element names one, and it must be a box, mask or program.",
   "`order` is unique across the whole Present, not among siblings.",
   "A child's position is measured from its parent's box, not from the Canvas.",
   "An animation carries at least two keyframes, and every keyframe of one animation declares the same properties; `atFrame` is Present-relative.",

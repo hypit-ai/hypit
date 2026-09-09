@@ -208,7 +208,7 @@ function sampleElements(
       style: mediaStyle,
     }];
   }
-  const sampling = samplingOverrides[layer.id] ?? resolveVisualSampling({
+  const sampling = samplingOverrides[layer.id] ?? layer.sampling ?? resolveVisualSampling({
       space,
       sourceFrameRate: sourceTiming.frameRate,
       sourceFrameCount: sourceTiming.frameCount,

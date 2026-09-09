@@ -18,6 +18,7 @@ import type {
 import { canonicalStringify, isResourceId } from "@hypit/protocol";
 import type { BlobRef, ResourceId } from "@hypit/protocol";
 import { VISUAL_IR_V1 } from "@hypit/visual-ir";
+import { readBrowserProgram, browserProgramHtml, browserProgramScript } from "./browser-program.js";
 
 import type {
   ResourceUrlResolver,
@@ -325,6 +326,11 @@ function renderElement(
     })();
     return `<svg ${common}${viewport} width="100%" height="100%" overflow="visible"><defs><mask id="${maskId}" x="0" y="0" width="100%" height="100%" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" style="mask-type:${element.mode}">${maskSource}</mask></defs><foreignObject x="0" y="0" width="100%" height="100%" mask="url(#${maskId})"><div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:100%;height:100%">${renderOwned(contentRoot)}</div></foreignObject></svg>`;
   }
+  if (element.kind === "program") {
+    const program = readBrowserProgram(element.program);
+    const slots = new Map((children.get(element.id) ?? []).map(child => [child.id, renderElement(child, children, context)]));
+    return `<div ${common}>${browserProgramHtml(program, slots)}</div>`;
+  }
   const descendants = (children.get(element.id) ?? [])
     .map((child) => renderElement(child, children, context))
     .join("");
@@ -510,6 +516,7 @@ function collectArtifacts(composition: Composition): BlobRef[] {
       for (const element of present.elements) {
         if (element.kind === "image" || element.kind === "video") add(element.artifact);
         if (element.kind === "surface") add(element.surface.artifact);
+        if (element.kind === "program") for (const artifact of element.program.artifacts) add(artifact);
         if (element.kind === "text") {
           for (const font of element.fonts ?? []) {
             for (const source of font.sources) add(source.artifact);
@@ -652,6 +659,14 @@ function emitHtml(composition: Composition, programSpace: ProgramSpace): string 
   const visualHtml = visuals.map(({ track, present }, index) => renderVisualPresent(track, present, index, numerator, denominator, emittedFilterIds, stableId)).join("\n    ");
   const animationCss = visuals.flatMap(({ track, present }) => renderAnimationRules(track, present, stableId)).join("\n    ");
   const fontCss = renderFontFaces(composition, stableId);
+  const programs = visuals.flatMap(({ track, present }) => present.elements.flatMap(element => element.kind !== "program" ? [] : [{
+    id: stableId([track.id, present.id, element.id]),
+    startFrame: present.span.startFrame,
+    durationFrames: present.span.endFrameExclusive - present.span.startFrame,
+    program: readBrowserProgram(element.program),
+  }]));
+  const programCss = programs.map(entry => `@scope (#${entry.id}) { ${entry.program.css ?? ""} }`).join("\n");
+  const programRuntime = programs.length === 0 ? "" : `<script>${browserProgramScript(programs, numerator, denominator)}</script>`;
   const duration = frameSeconds(programSpaceFrameCount(programSpace), numerator, denominator);
   const fps = fpsRational(numerator, denominator);
   const frameCount = programSpaceFrameCount(programSpace);
@@ -672,12 +687,13 @@ function emitHtml(composition: Composition, programSpace: ProgramSpace): string 
     *,*::before,*::after{box-sizing:border-box}
     ${fontCss}
     ${animationCss}
+    ${programCss}
   </style>
 </head>
 <body>
   <div data-composition-id="${escapeHtml(composition.id)}" data-start="0" data-no-timeline data-width="${composition.canvas.width}" data-height="${composition.canvas.height}" data-duration="${duration}" data-fps="${fps}" data-hypit-frame-count="${frameCount}">
     ${visualHtml}
-  </div>${animationRuntime}${textRuntime}
+  </div>${programRuntime}${animationRuntime}${textRuntime}
 </body>
 </html>
 `;

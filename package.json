@@ -88,6 +88,10 @@
     "./visual-ir": {
       "types": "./dist/public/visual-ir.d.ts",
       "import": "./packages/visual-ir/src/index.ts"
+    },
+    "./hyperframes": {
+      "types": "./dist/public/hyperframes.d.ts",
+      "import": "./packages/hyperframes/src/index.ts"
     }
   },
   "bin": {
@@ -126,7 +130,12 @@
     "examples/minimal-author-package/packages/*/preview/**/*",
     "README.md",
     "README.zh-CN.md",
-    "LICENSE"
+    "LICENSE",
+    "examples/semantic-composition/README.md",
+    "examples/semantic-composition/packages/*/src/**/*",
+    "examples/semantic-composition/packages/*/package.json",
+    "examples/semantic-composition/packages/*/tsconfig.json",
+    "examples/semantic-composition/packages/*/README.md"
   ],
   "scripts": {
     "build:public-types": "node scripts/build-public-types.mjs",
@@ -212,7 +221,6 @@
     "@hypit/seedance": "workspace:*",
     "@hypit/seedance-kits": "workspace:*",
     "@hypit/seedream": "workspace:*",
-    "@hypit/semantic-take-estimate": "workspace:*",
     "@hypit/semantic-track": "workspace:*",
     "@hypit/spatial": "workspace:*",
     "@hypit/speech": "workspace:*",
@@ -220,7 +228,6 @@
     "@hypit/speech-evidence": "workspace:*",
     "@hypit/speech-track": "workspace:*",
     "@hypit/speech-track-studio": "workspace:*",
-    "@hypit/stand-in": "workspace:*",
     "@hypit/store-sqlite": "workspace:*",
     "@hypit/studio-adapter": "workspace:*",
     "@hypit/svs": "workspace:*",

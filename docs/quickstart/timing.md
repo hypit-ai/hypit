@@ -61,30 +61,30 @@ the completed `SemanticTake`, not a second evidence-shaped timing structure.
 
 ## Assemble the SemanticTrack
 
-`speech:Track` concatenates already-semantic Takes in document order and projects three aligned
-facets from the same items:
+`speech:Track` concatenates already-semantic Takes in document order and provides the semantic
+timeline and its original sound. Media presents the performance separately:
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="speech-frame" within={vertical}
   left="0%" top="0%" right="100%" bottom="100%"/>
 
-<speech:Track id="speech"
-  visual-frame={speech-frame}
-  visual-appearance={recipes.speech.visual}
-  visual-z="0">
+<speech:Track id="speech">
   <speech:Take source={opening-semantic.take}/>
   <speech:Take source={answer-semantic.take}/>
 </speech:Track>
+<media-track:Track id="performance" semantic={speech.semantic} canvas={vertical}>
+  <media-track:Performance during="program" frame={speech-frame}
+    appearance={recipes.media.performance}/>
+</media-track:Track>
 ```
 
 | Output | Type | Meaning |
 |---|---|---|
 | `{speech.semantic}` | SemanticTrack | Global semantic and frame-domain authority |
-| `{speech.visual}` | VisualTrack | Same-source pictures, aligned to the semantic items |
 | `{speech.audio}` | AudioTrack | Same-source sound, aligned to the semantic items |
 
-The three facets are projections of the same ordered Takes. They cannot drift independently.
+Picture consumers and the original audio use the same prepared Takes and source positions.
 `SemanticTrack` derives global frames by prefix-summing the local Take lengths, and also supplies the
 program duration and frame domain required by Film and Render.
 
@@ -108,7 +108,7 @@ deterministic Track:
 
 <film:Film id="main" canvas={vertical}
   semantic={speech.semantic} appearance={recipes.film.vertical}>
-  <film:Track source={speech.visual}/>
+  <film:Track source={performance.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={cards.visual}/>
   <film:Track source={captions.track}/>
@@ -123,13 +123,8 @@ for a point event, and `during="program"` for the complete SemanticTrack domain.
 `semantic={speech.semantic}`.
 
 ```text
-raw take ─► Normalize ─► SynchronizedMedia ─► SemanticTake ─┐
-raw take ─► Normalize ─► SynchronizedMedia ─► SemanticTake ─┤
-                                                            ▼
-                                                       speech:Track
-                                                ┌───────────┼───────────┐
-                                                ▼           ▼           ▼
-                                           .semantic     .visual      .audio
-                                                │           │           │
-                                                └──────► Film / Tracks ◄─┘
+prepared Takes → Speech Track ── .semantic → Media / project scene → .visual ─┐
+                         │             └──→ Caption / semantic graphics ───┤
+                         └───── .audio ────────────────────────────────────┤
+                                                                         Film
 ```

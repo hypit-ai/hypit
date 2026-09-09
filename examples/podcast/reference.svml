@@ -358,12 +358,15 @@
     segment={story.segment.arms-are-asking} media={arms-are-asking-media.media} language="en"/>
 
 
-  <speech:Track id="speech" visual-frame={full-frame}
-    visual-appearance={recipes.speech.visual} visual-z="10">
+  <speech:Track id="speech">
     <speech:Take source={opening-semantic.take}/>
     <speech:Take source={daily-creatine-semantic.take}/>
     <speech:Take source={arms-are-asking-semantic.take}/>
   </speech:Track>
+  <media-track:Track id="speech-picture" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Performance during="program" frame={full-frame}
+      appearance={recipes.media.performance}/>
+  </media-track:Track>
 
   <audio-track:Track id="music-bed" semantic={speech.semantic}>
     <audio-track:Clip source={soundtrack-media.media} during="program"
@@ -390,7 +393,7 @@
 
   <film:Film id="main" canvas={vertical} semantic={speech.semantic}
     appearance={recipes.film.vertical}>
-    <film:Track source={speech.visual}/>
+    <film:Track source={speech-picture.visual}/>
     <film:Track source={speech.audio}/>
     <film:Track source={lifestyle.visual}/>
     <film:Track source={captions.track}/>

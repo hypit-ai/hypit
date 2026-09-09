@@ -22,7 +22,6 @@ import {
   selectMediaStreams,
 } from "@hypit/media-pipeline";
 import { canonicalize } from "@hypit/protocol";
-import { standInCapabilities } from "@hypit/stand-in";
 import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@hypit/protocol";
 
 import { createLocalMediaProvider } from "../src/index.js";
@@ -197,7 +196,6 @@ test("local media opts only reusable display materialization into transient exec
     "extract-media-audio",
     "extract-media-frame",
     "render-still-video",
-    "draw-card",
   ]);
   assert.deepEqual(provider.offers.filter((offer) => offer.transient !== true)
     .map((offer) => offer.capability.name), [
@@ -643,7 +641,6 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
         request: {
           frameRate: { numerator: 30, denominator: 1 },
           frameCount: 15,
-          guide: "clip-time",
           output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
           segments: [{ startFrame: 0, endFrameExclusive: 15, source: extractedFrame }],
         },
@@ -869,36 +866,6 @@ test("local media Provider executes an end-aligned loop from the exact authored 
     await rm(root, { recursive: true, force: true });
   }
 });
-
-function pngSize(bytes: Uint8Array): { readonly width: number; readonly height: number } {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  assert.equal(Buffer.from(bytes.subarray(1, 4)).toString("ascii"), "PNG");
-  return { width: view.getUint32(16), height: view.getUint32(20) };
-}
-
-test("local media Provider draws a stand-in Card image", async () => {
-  const resources = new MemoryResourceStore();
-  const fulfillBlob = async (request: Need): Promise<Awaited<ReturnType<MemoryResourceStore["put"]>>> => {
-    const provider = await handlerFor(request);
-    const result = await provider.handler({
-      command: { kind: "fulfill-need", id: `command:${request.id}`, need: request },
-      need: request,
-      resources,
-      credentials: {},
-    });
-    assert.equal(result.value.kind, "blob");
-    return result.value as Awaited<ReturnType<MemoryResourceStore["put"]>>;
-  };
-  const picture = await fulfillBlob(need("need:card-image", standInCapabilities.drawCard, artifactTypes.blob, canonicalize({
-    width: 640, height: 400,
-  })));
-  assert.equal(picture.kind, "blob");
-  assert.equal(picture.mediaType, "image/png");
-  const bytes = await resources.get(picture.resource);
-  assert.ok(bytes !== undefined);
-  assert.deepEqual(pngSize(bytes), { width: 640, height: 400 });
-});
-
 
 test("audio range preserves loop phase, tempo and intersected fades from the full programme", { skip: !hasMediaBinaries }, async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-audio-range-"));

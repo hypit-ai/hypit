@@ -1,3 +1,3 @@
 # `@hypit/speech-track-studio`
 
-Hypit Studio Companion for the visual and audio projections of `@hypit/speech-track`.
+Hypit Studio Companion for the original audio projection of `@hypit/speech-track`.

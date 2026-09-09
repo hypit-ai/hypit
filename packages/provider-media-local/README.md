@@ -48,7 +48,7 @@ remain valid; the package neither pins a semantic Capability to one FFmpeg versi
 system package manager.
 
 The reusable display-materialization capabilities—inspection, normalization, transform, extraction,
-StillVideo and stand-in drawing—also opt into transient authoring execution. Speech-evidence projection,
+StillVideo—also opt into transient authoring execution. Speech-evidence projection,
 programme-audio rendering and final muxing remain Build-only. This is declared per capability; the
 Runtime and Studio contain no media capability allowlist.
 

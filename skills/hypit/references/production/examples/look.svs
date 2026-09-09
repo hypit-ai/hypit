@@ -1,6 +1,6 @@
 <?svml using="@hypit/svs@1"?>
 <sheet version="1">
-  media.performance { fit: cover; }
+  media.performance { stack-order: 0; fit: cover; }
   text.title { size: 54; weight: 700; stack-order: 20; }
   film.main { background: #18212A; }
 </sheet>

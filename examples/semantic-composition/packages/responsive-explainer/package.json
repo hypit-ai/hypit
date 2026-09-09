@@ -1,0 +1,11 @@
+{
+  "name": "@example/responsive-explainer",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "hypit": { "activation": "./dist/activation.js" },
+  "exports": { ".": "./dist/render.js" },
+  "files": ["dist", "README.md"],
+  "scripts": { "build": "tsc -p tsconfig.json", "prepack": "npm run build" },
+  "devDependencies": { "hypit": "workspace:*", "typescript": "5.9.3", "@types/node": "24.10.1" }
+}

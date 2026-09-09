@@ -95,7 +95,6 @@ specific Provider deployment.
 @hypit/speech                shared speech products
 @hypit/speech-evidence       acoustic evidence products
 @hypit/speech-alignment      speech alignment
-@hypit/semantic-take-estimate explicit syllable-weighted preview alignment
 @hypit/semantic-track        continuous semantic program skeleton
 @hypit/speech-track          ordered speech-take compilation
 @hypit/whisperx              WhisperX component

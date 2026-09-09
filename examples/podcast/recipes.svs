@@ -63,13 +63,8 @@
     gesture: natural;
   }
 
-  speech.preview {
-    language: en;
-    pace: normal;
-    rounding: none;
-  }
 
-  speech.visual {
+  media.performance { stack-order: 10;
     fit: cover;
   }
 

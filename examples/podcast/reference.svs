@@ -27,7 +27,7 @@
     gesture: natural;
   }
 
-  speech.visual {
+  media.performance { stack-order: 10;
     fit: cover;
   }
 

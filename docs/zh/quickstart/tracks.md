@@ -473,7 +473,7 @@ Track 接受 `id`、`canvas` 与 `semantic`。时长写作 `12f`、`250ms` 或 `
 
 <!-- 所有对等 Track 都进入 Film -->
 <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
-  <film:Track source={speech.visual}/>
+  <film:Track source={performance.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={cards.visual}/>
   <film:Track source={captions.track}/>

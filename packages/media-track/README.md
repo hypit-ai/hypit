@@ -1,9 +1,8 @@
 # `@hypit/media-track`
 
 Place images, prepared video or compositable surfaces over the semantic timeline. B-roll is a common
-use: the picture can illustrate a phrase while the A-roll's speech continues. A prepared speaking
-A-roll is normally presented directly by Speech Track, including an inset or transparent cutout, so
-its semantic, visual and audio outputs keep one owner. Media Items own independently timed pictures;
+use: the picture can illustrate a phrase while the A-roll's speech continues. Performance presents the semantic material as a full picture, inset or cutout.
+Media Items own independently timed pictures;
 a Sequence owns one visual slot whose Members replace each other through Handoffs.
 
 The Markup Track takes `semantic` and `canvas`. Its Surface projects authored Selections, Moments,
@@ -13,6 +12,45 @@ times with Frames, media and appearance; the Fragment obtains ProgramSpace from 
 Moving media enters after [normalization](../media-pipeline/README.md), with the intended streams and
 frame clock already selected. Still images use their actual intrinsic Extent. Placement, fitting,
 sampling and motion remain separate authored choices.
+
+## Display a semantic performance
+
+```svml
+<media:Track id="performance" semantic={speech.semantic} canvas={canvas}>
+  <media:Performance during="program" frame={layout.full}
+    appearance={look.performance}/>
+</media:Track>
+```
+
+`Performance` displays the prepared material in its enclosing Track's `semantic` input. `during`
+selects the whole program, a Segment or a Selection; the other Window forms work as usual. One
+Performance can span any number of Takes. Each plays at its original program position: if a Take
+begins at program second 5, a Window from seconds 7 to 10 shows source seconds 2 to 5. An audio-only
+interval contributes no picture. The presentation shares one frame, appearance and lifecycle across
+Take boundaries.
+
+Its appearance Recipe needs `stack-order` and can set fit, crop anchors, opacity, filters, clipping,
+padding, border, shadow and frame paint. `motion` moves the framed presentation, and `Sampling`
+children transform the fitted picture over the complete selected Window, without restarting at
+Take boundaries. `Sound` children attach prepared effects to its entrance or exit. Its original
+sound is independently available as `speech.audio` for Film. Use an Item with direct `media` for
+independent playback or source trim; Performance preserves the semantic assembly's source timing.
+
+```svml
+<media:Performance during={story.segment.explanation} frame={layout.full}
+  appearance={look.performance}>
+  <media:Sampling at="start" zoom="1"/>
+  <media:Sampling at="end" zoom="1.08"/>
+</media:Performance>
+```
+
+This excerpt belongs inside the same Media Track. Its selected passage determines the appearance
+interval, while the two Sampling keys direct a gradual push-in inside the unchanged Frame.
+
+For a fixed card, full picture, circle or cutout this is ordinary Media presentation. If video and
+graphics must resize, mask or move together, write a project component that owns that relationship.
+`projectSemanticMedia` supplies the same material spans to its drawing function. The component can
+use a browser program from `hypit/hyperframes` while Caption and independent overlays remain peers.
 
 ## Place the frame, then fit its contents
 

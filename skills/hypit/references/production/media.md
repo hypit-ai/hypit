@@ -2,6 +2,8 @@
 
 Read this when admitting files, connecting generated media, choosing streams, or editing a clip
 before using it in a Track or a model reference. [Tracks](tracks.md) covers placement and playback.
+For acquiring website screenshots, page recordings or local HTML graphics, read
+[browser capture](browser-capture.md).
 
 Media carries the visible performance and sound. Preparing it for a video answers two further
 questions: how it occupies the program's time, and which Script passage it realizes. Normalization
@@ -75,13 +77,12 @@ For an already declared Script and prepared spoken performance:
   segment={story.segment.opening} media={performance-media.media} language="en"/>
 ```
 
-WhisperX measures the audio; alignment locates the authored words in that evidence. The result
-`opening-semantic.take` contains the same media and that Segment's local timing. Speech Track
-assembles Takes in their intended order and translates their local positions into program time.
+WhisperX supplies timed speech evidence; alignment locates the authored Script in that evidence.
+Script remains the wording authority, and this step establishes where its words occur in the
+performance. The result `opening-semantic.take` contains the same media and that Segment's local
+timing. Speech Track assembles Takes in their intended order and translates their local positions
+into program time.
 Use the performed language supported by the selected package and Endpoint.
-
-For a layout study before speech exists, estimated timing can preserve the same Script identities.
-[Runs and substitutes](runs.md) explains choosing it and the evidence it supplies.
 
 Audio-only A-roll follows the same path with audio-only media. Voice Clone produces the Segment's
 performed audio from its Script and the person's Voice Reference. Normalize that output with
@@ -95,24 +96,16 @@ An ordinary Script Segment such as `<empty></empty>` can carry a passage without
 media gives it a duration, so the resulting SemanticTake has the Segment's start/end Anchors and no
 timed Tokens. It enters the same Speech Track assembly as a spoken Take.
 
-Use the Surface that matches the evidence you have. For real media, the real semantic Surface maps
-the empty Segment directly to its media domain:
+The semantic Surface maps an empty Segment directly to its prepared media domain:
 
 ```svml
 <whisperx:SemanticTake id="pause" narrative={story}
   segment={story.segment.pause} media={pause-media.media}/>
 ```
 
-For preview media, the prediction Surface performs the same boundary materialization:
-
-```svml
-<estimate:SemanticTake id="pause-preview" narrative={story}
-  segment={story.segment.pause} media={pause-preview-media.media}/>
-```
-
-Neither branch calls WhisperX or predicts word windows because the Segment has no Tokens. Action,
-music or visual rhythm can determine the media duration. Both publish the ordinary SemanticTake
-consumed by Speech Track; there is no separate wordless downstream type.
+This performs boundary materialization without a transcription request because the Segment has no
+Tokens. Action, music or visual rhythm can determine the media duration. The ordinary SemanticTake
+enters Speech Track alongside spoken Takes.
 
 ## Give a still a duration when that is its role
 
@@ -130,16 +123,7 @@ time-bearing clip, use StillVideo:
 StillVideo produces a video-only BlobArtifact. Multiple `media:Still` children divide the authored
 duration by their optional weights. Normalization then makes that clip usable as prepared moving
 media. Choose it when one or more held images need to become a time-bearing video Artifact; its role
-is assigned by the downstream Source relationships just like any other video. Add
-`guide="clip-time"` only when a short-lived diagnostic view benefits from a visible local timecode,
-frame count and progress ruler; the guide is one display treatment and says nothing about later Film
-placement.
-
-StillVideo itself is not a preview state. A held image intended to remain in the Film is ordinary
-production media. When a Run uses a held image only in place of a future moving shot, that Candidate
-is temporary: keep the actual image as evidence while it is useful, then select the produced video
-when the question depends on motion, performance or changing overlap.
-[Runs](runs.md#use-the-most-representative-visual-evidence-available) owns that choice.
+is assigned by the downstream Source relationships just like any other video.
 
 ## Edit bytes at an explicit point in the graph
 

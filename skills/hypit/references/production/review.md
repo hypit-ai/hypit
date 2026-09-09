@@ -14,34 +14,22 @@ Caption readable, does the B-roll cover the intended explanation, and do entries
 the right words or actions? Adjust the layout, timing or component behavior that will make the
 passage work better. Judge a local change in the surrounding composition.
 
-Use Craft to give generated pictures and performances strong reference and prompt direction before
-requesting them. Composition usually develops around those produced assets. When a generated item
-fails its intended role, identify the concrete defect and improve the responsible direction before
-deciding on another authorized request. That decision has its own purpose and cost.
+Work from the authored Script and the production's existing semantic timing when locating a word,
+reveal or handoff. Those relationships identify the passages whose composition needs attention;
+Studio and rendered frames show how the chosen assets work there. Carry the same produced media
+and semantic Outputs through layout and component revisions.
 
 ## Review the work the Run actually selects
 
-Open Studio with the ordinary Run intended for the work. That Run binds the Author Source, Targets,
-files, earlier Results, and stand-in Candidates, so Studio and a Build see the same authored graph.
-A separate review Run is useful when its Candidate selection is intentionally different.
+Use the Run that selects the production's actual material. It binds the Author Source, Targets,
+files and earlier Results. Preserve the produced media and semantic Outputs as the composition
+changes. A focused Run can render the affected interval; Studio can open the same selected work
+for interactive playback and editing.
 
-Judge a visual fact from the most representative evidence that actually exists. Supplied and produced
-images and videos are the primary evidence for their appearance. A held production image can prove
-what that image contains and how it composes with deterministic graphics; it cannot prove the future
-shot's movement or performance. A produced video is the evidence for its changing face position,
-gesture, timing and interaction with Caption or MG.
-
-Studio renders the selected display closure with deterministic Producers and the exact capabilities
-that the Runtime Provider declares safe for transient authoring. It submits no Build and no paid
-generation. When that closure still needs external generation, use an existing file or Build
-Output. An existing image can enter through StillVideo; a Card can fill the remaining case where no
-suitable pixels exist and a component or wiring question still deserves an early look.
-
-A Card can establish that the downstream graph renders, show broad geometry, and carry provisional
-clip time. Its visible marking keeps that evidence distinct from subject identity, performance,
-shot composition, texture, continuity, or the interaction between production media and graphics.
-It stops being useful when the same question can be answered from actual production pixels; earlier
-use does not create an approval state that the work must preserve.
+Judge the relationship that the evidence can establish. A component's own example can show its
+style and behavior. The actual production image establishes its framing and color; the produced
+video shows how moving faces and gestures interact with Caption and MG. Inspect those interactions
+with the material that will appear in the deliverable.
 
 ## Separate legality from judgment
 
@@ -63,10 +51,6 @@ location remains an open question.
 
 Use whichever view can answer the current question:
 
-- Open Studio, seek and play the ordinary Run, look at the
-  current frame, and discover where a layout or motion deserves closer inspection. This is usually
-  the cheapest way to work on Caption, MG, Effects, and composition; a Card can supply the minimal
-  visible unknown when no more representative media exists yet.
 - Once a numeric interval is known, a range render can inspect the corresponding frames of the same
   HyperFrames program. The range may come from the playhead, authored clock time, or an existing
   Result; HyperFrames does not need to know whether language helped the Agent locate it.
@@ -74,6 +58,8 @@ Use whichever view can answer the current question:
   relationship to upstream Candidate reuse.
 - On an encoded Result, focused media operations such as frames, cut, and tile can expose exact
   pixels, adjacent frames, or a short passage.
+- Open Studio when interactive playback, parameter editing or a component's Companion helps the
+  current work. Seek or select semantic entities to inspect their place in the composition.
 - Watch the whole deliverable when the question concerns Hook clarity, story movement, payoff,
   CTA, or how A-roll, B-roll, Caption, MG and Effects work together.
 
@@ -132,7 +118,7 @@ which of those choices belong in this piece.
 | The intended story, shot logic, or visual system is wrong | `TREATMENT.md` |
 | Words, speakers, Cue breaks, Selections, or Moments are wrong | the Author Source's Script |
 | Composition, authored parameters, or semantic/clock relation is wrong | Author Source or Recipe |
-| The wrong file, earlier Output, or stand-in is selected | Run Source |
+| The wrong file or earlier Output is selected | Run Source |
 | A reusable visual role cannot express or render its intended design | the project Author Package |
 
 Before changing the work, connect the composition problem to its consequence and the intended

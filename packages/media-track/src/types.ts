@@ -1,4 +1,4 @@
-import type { FrameSpan } from "@hypit/composition";
+import type { FrameSpan, VisualTimedSampling } from "@hypit/composition";
 import type { CompositableSurfaceRef, MediaRational } from "@hypit/media";
 import type { BlobRef } from "@hypit/protocol";
 import type {
@@ -95,6 +95,7 @@ export type MediaPaintLayerProgram = {
 export type MediaSampleLayerProgram = {
   readonly id: string;
   readonly kind: "sample";
+  readonly sampling?: VisualTimedSampling;
   readonly source: MediaVisualSource;
   readonly fit: ContentFit;
   readonly trim?: MediaVisualTrim;

@@ -143,8 +143,13 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
         onProgress?.({ phase: "worker-start", worker, range: task, browserPid, elapsedMs: elapsedMs() });
         for (let frame = task.startFrame; frame < task.endFrameExclusive; frame++) {
           signal.throwIfAborted();
-          const captured = await stage(`worker ${worker} frame ${frame}`, config.frameTimeoutMs,
-            () => engine.captureFrameToBuffer(activeSession, frame, frame * fps.den / fps.num));
+          const captured = await stage(`worker ${worker} frame ${frame}`, config.frameTimeoutMs, async () => {
+            const capture = await engine.captureFrameToBuffer(activeSession, frame, frame * fps.den / fps.num);
+            const programError = await activeSession.page.evaluate(() =>
+              (window as unknown as { __hypitBrowserProgramError?: string }).__hypitBrowserProgramError);
+            if (programError !== undefined) throw new Error(`Browser program failed at frame ${frame}: ${programError}`);
+            return capture;
+          });
           await writeFile(join(outputFrames, `${String(frame - range.startFrame).padStart(9, "0")}.png`), captured.buffer);
         }
         onProgress?.({ phase: "worker-complete", worker, range: task, browserPid, elapsedMs: elapsedMs() });

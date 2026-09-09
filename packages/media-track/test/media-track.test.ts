@@ -13,6 +13,7 @@ import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
 import { artifactTypes } from "@hypit/artifact";
 import { narrativeTypes } from "@hypit/narrative";
 import {
+  appendMediaPerformance,
   appendMediaPaintLayer,
   appendMediaSound,
   appendMediaItem,
@@ -759,6 +760,11 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
       ]),
       node("media:Sound", { id: "proof-enter", source: ref("sfx"), at: "enter", gain: "0.5" }),
     ]),
+    node("media:Performance", { id: "presenter", frame: ref("frame"), clip: ref("clip-path"), appearance: ref("still-style"), motion: ref("motion"), during: ref("answer-segment") }, [
+      node("media:Sampling", { at: "start", zoom: "1" }),
+      node("media:Sampling", { at: "end", zoom: "1.08", x: "6" }),
+      node("media:Sound", { id: "presenter-enter", source: ref("sfx"), at: "enter" }),
+    ]),
     node("media:Sequence", { id: "steps", frame: ref("frame"), appearance: ref("sequence-style"), until: ref("terminal"), "until-boundary": "end" }, [
       node("media:Member", { id: "one", image: ref("still"), extent: ref("extent"), at: ref("cue1") }),
       node("media:Member", { id: "two", surface: ref("surface"), appearance: ref("surface-style"), at: ref("cue2") }),
@@ -779,6 +785,9 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
   const producers = fragment.operations.map((entry) => entry.producer.name);
   assert.ok(producers.includes("append-still-media-layer"));
   assert.ok(producers.includes("append-media-item"));
+  const performanceOperation = fragment.operations.find(entry => entry.producer.name === "append-media-performance");
+  assert.deepEqual(performanceOperation?.inputs.semantic, { kind: "fragment-input", name: "semantic" });
+  assert.equal(fragment.inputs.filter(entry => entry.type.name === semanticTrackTypes.track.name).length, 1);
   assert.ok(producers.includes("append-timed-media-layer"));
   assert.ok(producers.includes("append-surface-media-layer"));
   assert.ok(producers.includes("append-media-paint-layer"));
@@ -794,13 +803,21 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
       && "subjectId" in record.value.value
       ? [String((record.value.value as { readonly subjectId: unknown }).subjectId)]
       : []));
-  assert.deepEqual([...temporalSubjects].sort(), ["one", "proof", "segment-card", "steps", "still-card", "two"]);
+  assert.deepEqual([...temporalSubjects].sort(), ["one", "presenter", "proof", "segment-card", "steps", "still-card", "two"]);
   assert.ok(producers.includes("append-media-sound"));
   assert.ok(fragment.inputs.some((entry) => entry.type.name === artifactTypes.blob.name));
   assert.ok(fragment.inputs.some((entry) => entry.type.name === mediaTypes.synchronized.name));
   assert.ok(fragment.inputs.some((entry) => entry.type.name === spatialTypes.path.name));
   const itemSpecs = result.records.filter((entry) => entry.type.name === "MediaItemSpec");
-  assert.equal(itemSpecs.length, 3);
+  assert.equal(itemSpecs.length, 4);
+  const performanceSample = result.records.find(entry => entry.id === "presenter.sample");
+  assert.ok(performanceSample?.value.kind === "inline");
+  assert.deepEqual((performanceSample.value.value as unknown as { samplingMotion: unknown }).samplingMotion, {
+    keyframes: [
+      { atProgress: 0, zoom: 1, offsetX: 0, offsetY: 0, rotationDeg: 0 },
+      { atProgress: 1, zoom: 1.08, offsetX: 6, offsetY: 0, rotationDeg: 0 },
+    ],
+  });
   const selected = itemSpecs[2]!.value.kind === "inline"
     ? itemSpecs[2]!.value.value as unknown as MediaItemSpec
     : undefined;
@@ -975,4 +992,38 @@ test("Sequence fails atomically on malformed order, topology, envelope and three
       sealMediaHandoffSpec({ id: "outside", fromMemberId: "member-1", toMemberId: "member-2", operator: "wipe", durationFrames: 60, boundaryRatio: 1, direction: "left", audio: "cut" }),
     ] }), createMediaSoundSet(), 120,
   ), /envelope/u);
+});
+
+
+test("Performance keeps source positions and continuous picture motion across Takes", () => {
+  const performance = { ...semantic, items: semantic.items.map(item => ({ take: { ...item.take,
+    media: { ...item.take.media, visual: { artifact: { ...source, mediaType: "video/mp4" }, width: 720, height: 1280 } },
+  } })) };
+  const window = projectProgramWindow({ itemId: "performance", semantic: performance,
+    projection: { start: { ref: "absolute", at: { unit: "frames", value: 20 } },
+      end: { ref: "absolute", at: { unit: "frames", value: 100 } } } });
+  const set = appendMediaPerformance({ set: createMediaTrackSet(), header, space, canvas, frame,
+    layers: createMediaLayerSet(), spec: itemSpec({ id: "performance" }), sounds: createMediaSoundSet(), window },
+    performance, fit, sealMediaSampleLayerSpec({ id: "content", appearance, occupancy: { mode: "once", align: "start" },
+      samplingMotion: { keyframes: [
+        { atProgress: 0, zoom: 1, offsetX: 0, offsetY: 0, rotationDeg: 0 },
+        { atProgress: 1, zoom: 1.08, offsetX: 0, offsetY: -18, rotationDeg: 0 },
+      ] } }));
+  const visual = projectMediaVisualTrack(space, finalizeMediaTrack(set, header, space));
+  assert.equal(visual.presents.length, 1);
+  assert.deepEqual(visual.presents[0]!.span, { startFrame: 20, endFrameExclusive: 100 });
+  const videos = visual.presents[0]!.elements.filter(element => element.kind === "video");
+  assert.deepEqual(videos.map(video => video.kind === "video" ? video.sampling?.segments : undefined), [
+    [{ target: { startFrame: 0, endFrameExclusive: 10 }, sourceFrame: { numerator: 20, denominator: 1 }, rate: { numerator: 1, denominator: 1 } }],
+    [{ target: { startFrame: 10, endFrameExclusive: 70 }, sourceFrame: { numerator: 0, denominator: 1 }, rate: { numerator: 1, denominator: 1 } }],
+    [{ target: { startFrame: 70, endFrameExclusive: 80 }, sourceFrame: { numerator: 0, denominator: 1 }, rate: { numerator: 1, denominator: 1 } }],
+  ]);
+  const contentTransforms = visual.presents[0]!.elements.filter(element => element.id.endsWith(":sampling"));
+  assert.equal(contentTransforms.length, 3);
+  for (const element of contentTransforms) {
+    assert.deepEqual(element.animation?.keyframes.map(key => [key.atFrame, key.style]), [
+      [0, [{ name: "transform", value: "translate(0px,0px) rotate(0deg) scale(1)" }]],
+      [80, [{ name: "transform", value: "translate(0px,-18px) rotate(0deg) scale(1.08)" }]],
+    ]);
+  }
 });

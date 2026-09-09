@@ -17,7 +17,7 @@ With the named inputs already declared:
 
 <film:Film id="main" canvas={canvas} semantic={speech.semantic}
   appearance={look.film.main}>
-  <film:Track source={speech.visual}/>
+  <film:Track source={performance.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={coverage.visual}/>
   <film:Track source={captions.track}/>

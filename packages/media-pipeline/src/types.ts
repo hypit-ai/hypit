@@ -70,8 +70,6 @@ export type FrameExtractionRequest = {
 /** How the still video divides its literal duration among its pictures: one weight per picture, in order. */
 export type StillVideoLayout = {
   readonly weights: readonly number[];
-  /** Optional diagnostic guide burned into the held clip; omitted keeps production pixels clean. */
-  readonly guide?: "clip-time";
 };
 
 /** One picture's span of the still video, in frames; `source` is bound one picture at a time. */
@@ -85,7 +83,6 @@ export type StillVideoSegment = {
 export type StillVideoRequest = {
   readonly frameRate: MediaRational;
   readonly frameCount: number;
-  readonly guide?: "clip-time";
   readonly output: {
     readonly container: "mp4";
     readonly codec: "h264";

@@ -24,10 +24,15 @@ Animation keyframes use `atFrame` offsets from the Present's start. Media sampli
 same local frame origin and map to exact source frames.
 
 The exported `VisualElement` union covers `box`, `mask`, `text`, `text-flow`, `path-text`, `image`,
-`video` and `surface`. Text carries exact FontArtifactRef values; images and videos carry BlobRefs;
+`video`, `surface` and `program`. Text carries exact FontArtifactRef values; images and videos carry BlobRefs;
 `surface` carries a CompositableSurfaceRef. The schema and exported TypeScript types in `src/track.ts`
 give each shape. `hypit vocabulary --visual visual-track` and focused element queries expose those
 schemas through the installed Distribution.
+
+A `program` carries `{ format, payload, artifacts }`. The rendering package owns the object payload
+and supports named formats. It may place typed children in its own local structure, so video, text
+and graphics can share behavior while retaining explicit material dependencies. The parent
+relationship remains local to the Present; internal layout belongs to that program.
 
 ## AudioTrack
 

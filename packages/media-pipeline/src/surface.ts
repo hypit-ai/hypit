@@ -258,7 +258,7 @@ function stillPictures(
 }
 
 export const decodeStillVideoSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id", "duration", "clock"], ["source", "guide"]);
+  exactAttributes(element, ["id", "duration", "clock"], ["source"]);
   const id = text(element, "id");
   const pictures = stillPictures(element, resolveReference);
   // The duration is the author's decision, written here; it is published as an ordinary
@@ -266,10 +266,6 @@ export const decodeStillVideoSurface: StructuredSurfaceHandler = ({ element, res
   const durationSec = seconds(text(element, "duration"), `${element.name}.duration`, false);
   const durationId = `${id}.duration`;
   const layoutId = `${id}.layout`;
-  const guide = element.attributes.guide;
-  if (guide !== undefined && guide !== "clip-time") {
-    throw new Error(`${element.name}.guide must be clip-time when written.`);
-  }
   const clock = typedReference(
     element.attributes.clock,
     `${element.name}.clock`,
@@ -288,7 +284,6 @@ export const decodeStillVideoSurface: StructuredSurfaceHandler = ({ element, res
       type: mediaPipelineTypes.stillVideoLayout,
       value: { kind: "inline", value: {
         weights: pictures.map((picture) => picture.weight),
-        ...(guide === undefined ? {} : { guide }),
       } },
       range: element.range,
     }],

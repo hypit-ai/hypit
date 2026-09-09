@@ -109,9 +109,8 @@ their Provider explicitly allows in transient authoring execution. The Runtime o
 Endpoint activation, Profile bindings, request-level `supports`, credentials and
 invocation; Studio receives no Endpoint Registry and makes no decision from pricing,
 process location, model name or package name. A Need without transient support stops
-with its exact capability named. A stand-in is an ordinary generic image, video or
-silence Candidate from `@hypit/stand-in`; the Run supplies its visible dimensions and
-duration and selects it with `satisfy`. Model packages do not manufacture stand-ins.
+with its exact capability named. Existing media and completed Outputs enter through
+ordinary Run Candidates selected with `satisfy`.
 
 Studio and an encoded review use the same ordinary Run. Studio evaluates its
 transient display closure in the browser; building that Run evaluates the

@@ -27,6 +27,19 @@ Runtime or Result repository requires restarting that Studio session: those impl
 selections are loaded at startup. A browser refresh alone does not reload the server-side modules.
 Stop only the relevant Studio process; stopping Studio does not cancel a submitted Build.
 
+## Show the finished work
+
+Alongside the delivered video, a brief look at its editable production can make the handoff more
+tangible. When Studio is readily accessible to the user, open the finished work and share the session
+URL. Use a Run that reuses the completed media and SemanticTakes while keeping its Tracks and Recipes
+available for editing. Reuse a suitable existing session or launch one as described above.
+
+Point out something specific to this piece: a reveal tied to a word, the Caption styling, or a
+component parameter they can adjust. Let the actual work demonstrate the editing experience. For a
+remote user, a readily available screenshot or short recording can provide the same introduction.
+[Project handoff](../creation/project-files.md#hand-over-an-editable-production) explains what to
+include when the user wants to continue editing on another machine.
+
 ## Read the different views
 
 | View | What it shows and what it can change |
@@ -44,22 +57,14 @@ repository. With no Runtime selected, finished Results remain accessible; previe
 display closure needs no unresolved Endpoint work. Active Runtime status and transient Endpoint
 processing require the selected environment.
 
-Studio creates no Build and submits no paid generation. It can execute deterministic Producers and
-only those exact immediate capabilities a Provider explicitly permits for transient authoring.
-If new image/video generation blocks the display closure, select an existing Output or file; use
-an existing image through StillVideo when one is available. An explicit Card Candidate can keep a
-component or wiring study moving when no suitable pixels exist yet. It supplies a visible canvas
-and provisional clip time. The selected production image establishes its actual subject, color and
-framing; the produced video adds the evidence for performance, motion and changing overlap with
-graphics.
+Studio opens the selected work for interactive playback and editing. It creates no Build and submits
+no paid generation. It can evaluate deterministic Producers and the exact immediate capabilities a
+Provider permits for transient authoring, such as media inspection and normalization. Select existing
+files or produced Outputs through the Run for the material the view needs. If a required generation
+is still running, continue component work and open its resulting composition when the material is ready.
 
-The Preview view renders what the Run selected; it does not upgrade a Card or held image into stronger
-evidence. Prefer the production's supplied or produced pixels, and revise the Run selection when more
-representative media becomes available. [Runs](runs.md#use-the-most-representative-visual-evidence-available)
-explains the short-lived substitute choices.
-
-[Runs and substitutes](runs.md#a-complete-layout-preview) includes a complete Source and Run with
-a card Candidate, normalization and estimated semantic timing for this kind of layout study.
+[Runs](runs.md) explains selection and reuse. [Rendering](rendering.md) provides frame-range Builds
+for inspecting the composition as encoded media; choose the view that helps answer the current question.
 
 ## Edit the owning Source fact
 

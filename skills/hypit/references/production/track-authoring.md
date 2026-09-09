@@ -82,7 +82,7 @@ not decide when the spoken answer occurred; it consumes the already projected ev
 
 The installed Speech Track expresses one particular and useful assembly: every Segment-local
 SemanticTake keeps its complete span, and Source order forms one continuous prefix-sum
-`SemanticTrack`. Its audio and picture projections follow that same assembly.
+`SemanticTrack`. Its original audio follows that assembly. Visual components consume its prepared materials.
 
 A work may intentionally need interruptions, overlapping dialogue, a time-consuming transition or
 another performance-time relationship. That is a legitimate project Track when it makes the edited

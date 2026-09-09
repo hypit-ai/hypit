@@ -47,7 +47,7 @@ commands. [Fonts and text](fonts-and-text.md) shows which Typography placement c
 
 ## Fit the source into the Frame
 
-Media Track and Speech Track's visual branch share two spatial roles:
+Media Track separates two spatial roles:
 
 - The **destination Frame** places the visual on the Canvas and supplies its outer shape.
 - The **fitted content rectangle** places the scaled source inside that Frame. Its size and position
@@ -106,14 +106,18 @@ already available:
 ```svml
 <space:AnchoredFrame id="presenter-frame" within={canvas}
   x="94%" y="94%" width="320px" height="320px" anchor="bottom-right"/>
-<speech:Track id="speech" visual-frame={presenter-frame}
-  visual-appearance={look.presenter} visual-z="20">
+<speech:Track id="speech">
   <speech:Take source={opening.take}/>
 </speech:Track>
+<media:Track id="presenter" semantic={speech.semantic} canvas={canvas}>
+  <media:Performance during="program" frame={presenter-frame}
+    appearance={look.presenter}/>
+</media:Track>
 ```
 
 ```svs
 look.presenter {
+  stack-order: 20;
   fit: cover;
   clip: rounded;
   radius: 160;
@@ -142,17 +146,25 @@ and paint. `Sampling` children pan, zoom or rotate the fitted picture under that
 for a moving crop or a slow push-in while a card's outline stays still:
 
 ```svml
-<speech:Take source={opening.take}>
-  <speech:Sampling at="start" zoom="1"/>
-  <speech:Sampling at="end" zoom="1.08" y="-18"/>
-</speech:Take>
+<media:Item media={prepared.media} during={story.selection.detail}
+  frame={detail-frame} appearance={look.detail}>
+  <media:Sampling at="start" zoom="1"/>
+  <media:Sampling at="end" zoom="1.08" y="-18"/>
+</media:Item>
 ```
 
-This Take excerpt belongs inside Speech Track. Media Track accepts the same Sampling fields on a
-direct-source Item or Member, or on a sampled Layer. `x` and `y` are pixel offsets, `rotate` is in
+This excerpt belongs inside Media Track, with prepared media, a Selection, Frame and Recipe already
+available. Sampling fields apply to a direct-source Item or Member, a sampled Layer, or a Performance.
+`x` and `y` are pixel offsets, `rotate` is in
 degrees, and `at` follows the source unit's active span from `start` to `end`, with percentages for
 intermediate keys. Sampling acts after the static fit; its movement can expose space inside the
 Frame. Choose the crop and motion together for the intended coverage.
+
+A Performance uses the Track's prepared semantic material, with Sampling and whole-frame motion
+running across its full display Window, including Take boundaries. A scene that coordinates a moving
+performance viewport with surrounding graphics can own that motion in its
+[component program](component-visuals.md#compose-video-and-graphics-in-one-browser-program), while
+retaining the prepared video's source positions.
 
 [Tracks](tracks.md) explains the Media/Speech inputs and timing roles. Read their installed
 vocabulary for the complete appearance and motion fields.

@@ -29,7 +29,7 @@ For example, after the named inputs are declared:
 ```svml
 <film:Film id="main" canvas={vertical} semantic={speech.semantic}
   appearance={recipes.film.vertical}>
-  <film:Track source={speech.visual}/>
+  <film:Track source={performance.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={coverage.visual}/>
   <film:Track source={captions.track}/>
