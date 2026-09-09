@@ -340,7 +340,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 |---|---|
 | `source` | 必填——静态图片、Synchronized Medium 或 Compositable Surface |
 | `extent` | 静态图片必填，其余情况给了会被拒绝 |
-| `at` | 必填——这张卡发出的 Moment |
+| `at` | 必填——这张卡发出的事件，可以是 Moment 或 `2s`、`12f` 等作者时间 |
 | `appearance` | 可选——它自己的 Recipe，否则沿用整叠的 |
 | `label` | 可选——一条 `deck:Label` 记录 |
 
@@ -367,7 +367,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 <import as="screen" from="@hypit/screen-overlay@1"/>
 ```
 
-`screen:Track` 接受 `id`、`canvas` 与 `space`。它的子元素就是各个效果，至少一个，各自为空，都必须带 `z` 决定层叠顺序，并且各有一个时间窗，形式是以下之一：
+`screen:Track` 接受 `id`、`canvas`，以及 `semantic` 或 `space` 之一作为时间来源。它的子元素就是各个效果，至少一个，各自为空，都必须带 `z` 决定层叠顺序，并且各有一个时间窗，形式是以下之一：
 
 | 时间窗 | 写法 |
 |---|---|
@@ -376,7 +376,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 | 一个 Moment，持续一段时长 | 在带有 `semantic={speech.semantic}` 的 Track 内写 `at={story.moment.x} for="12f"` |
 | 显式区间 | `start="…" end="…"`，可另外指定 `selection=` 或 `moment=` |
 
-Track 接受 `id`、`canvas` 与 `semantic`。时长写作 `12f`、`250ms` 或 `1.5s`。一个 Selection
+时长写作 `12f`、`250ms` 或 `1.5s`。一个 Selection
 只表示一个连续区间，一个 Moment 只表示一个点；同一效果需要再次出现时，应再写一个 item。
 
 可用的效果有十一种——`Flash`、`ColorWash`、`Vignette`、`ScanLines`、`DirectionalMatte`、`WhipVeil`、`GlitchVeil`、`Grain`、`LightLeak`、`Bokeh` 与 `TVStatic`——每种各有自己的必填属性，例如 `Flash` 的 `color` / `intensity` / `attack` / `hold` / `decay`，或 `Vignette` 的 `center-x` / `center-y` / `radius-x` / `radius-y` / `softness` / `color` / `opacity`。它们都没有默认值：一个效果要么把自己的形状说全，要么被拒绝。

@@ -12,8 +12,8 @@ source of another operation.
 They all need an endpoint. `image-compose` and `image-transform` ask for the raster capability, which
 `@hypit/provider-image-opencv-local` answers by running OpenCV in a bounded Python process on
 your own machine; `background-removal` asks for its own capability, which `@hypit/provider-kie`
-answers remotely. No example in this repository binds either, so add the endpoint to your
-[Runtime Profile](/guide/runtime) before planning a Build that uses one.
+answers remotely. Select the supporting Endpoint in your [Runtime Profile](/guide/runtime)
+when using these operations.
 
 ## Composing layers
 
@@ -100,3 +100,20 @@ that is the endpoint's business, not the Source's.
 
 **Output:** `{cutout.image}` — typically fed to a Media Item so a presenter sits over the picture
 rather than in a box.
+
+## Removing a moving person's background
+
+For a presenter over another picture, process the generated or supplied video with
+[`@hypit/volcengine-matting`](https://github.com/hypit-ai/hypit/blob/main/packages/volcengine-matting/README.md),
+served by a supporting HypiHub Endpoint:
+
+```svml
+<import as="matte" from="@hypit/volcengine-matting@1"/>
+<matte:Portrait id="cutout" source={performance.video}/>
+```
+
+Normalize `cutout.video` to prepare it for the timeline. If it establishes the spoken program,
+align that prepared media to its Script Segment and assemble it through Speech Track. Present the
+picture with Media Track or a project scene, at the chosen location and paint order. As B-roll,
+the normalized cutout can enter Media Track directly. Matting changes the picture's background;
+the composition determines its role.

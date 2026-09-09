@@ -1,77 +1,56 @@
 ---
-title: Studio 实时预览
-description: 打开一份素材已经满足的 Run，检查画面、时间线并修改真实作者 Source。
+title: Hypit Studio
+description: 浏览编排、Source 和 Result，编辑作品的时机与外观。
 ---
 
-# Studio 实时预览
+# Hypit Studio
 
-Hypit Studio 打开一份 `.svrun`，把它的 Film 或 Render target 回溯到可解释的 Semantic 与 Track 投影，并用四个区域呈现：左上 Source、中上 Preview、右上 Inspector、下方 Timeline。
+Studio 在浏览器中打开可编辑的视频项目。你可以播放编排、逐帧查看，在时间线上选择词语或图形，并修改组件公开的属性。交付成片时，也可以一起打开 Studio，展示作品的可编辑结构。
 
-Studio 打开 Run 选择的编排，使用项目文件和已完成的 Build Output。通过 `<build-record>` 和 `satisfy` 保留正在编辑的素材。Provider 支持临时创作执行时，Studio 可请求所选 Runtime Profile 完成检查、归一化等媒体操作。生成和 Build 提交通过 CLI 进行；Studio 提供播放、语义定位和对实际 Source 的编辑。
+## 打开要编辑的作品
 
 ```bash
-hypit-studio --run examples/ranking-football/swap-effect-banana/studio.svrun \
-  --workspace examples/ranking-football/swap-effect-banana
-# ➜  http://localhost:5179/
+cd /path/to/my-video
+hypit-studio --run build.svrun
 ```
 
-| 参数 | 含义 |
+打开命令打印的网址。Studio 使用这份 Run 选择的 Author Source 和素材。编辑时要保留已生成素材，可以通过 [`build-record` 与 `satisfy`](./run.md) 选择已完成的 Output。
+
+| 参数 | 用途 |
 | --- | --- |
-| `--run <build.svrun>` | 要打开的 Run Source。必填。 |
-| `--runtime <hypit.runtime.json>` | 用于临时媒体执行和显示活动 `BuildView`；历史 Result 与 `<build-record>` 仍来自项目 Result Repository。 |
-| `--workspace <directory>` | Source 访问与写回边界；默认是 Run 所在目录。 |
-| `--port <number>` | HTTP 端口，默认 `5179`。 |
+| `--run <file.svrun>` | 选择要打开的 Run。 |
+| `--runtime <profile.json>` | 选择 Runtime Profile；省略时使用项目保存的 Runtime 选择。 |
+| `--workspace <directory>` | 设置 Source 访问与修改的项目边界。 |
+| `--port <number>` | 指定浏览器服务端口，默认请求 `5179`。 |
 
-Studio 的工作单元是 Run，不是孤立的 `.svml`。Run 决定当前 Author Source、目标和 Candidate；Studio 的每次重新编译都继续使用同一份 Run，不会在后台选择另一套素材。
+所选目标需要指向一个 Film 及其时间来源。说话表演可以提供 SemanticTrack，动画可以使用作者声明的 ProgramSpace，两者都支持视觉组件与属性编辑。显示编排所需的素材应已通过 Run 提供。Studio 可以完成所选 Runtime 支持的媒体准备；生成和编码渲染通过 `hypit build` 提交。
 
-## 什么样的 Run 可以打开
+## 浏览项目
 
-Studio 需要：
+左侧资源库包含三个视图：
 
-- 一个真实存在的 Film 或 Render target；
-- 可以追溯的 Semantic Track 与可展示 Track；
-- 明确选择的素材 Candidate；
-- 能由确定性 Producer 和 Provider 声明的临时能力完成的显示闭包。
+- **Source** 列出所选 Run 及其 Author、Recipe 文件，可以选择文件查看或编辑。
+- **Tasks** 显示项目已完成的 Build；选择 Runtime 后，也能查看活动执行信息。
+- **Artifacts** 用于查看 Build Result 中保留的公开产物文件。
 
-如果 Run 只提供一个不透明成片，或某条显示链仍要求外部生成，Studio 会拒绝启动。它编辑的是当前作者图和 Track，不从最终视频反推一份新工程。
+选择 Artifact 会打开它供查看。要将它用于编排，修改 Run 的 Candidate 选择，让素材选择留在可编辑的项目中。
 
-项目文件可以直接满足一个输出；早先 Build 的结果可以通过 `<build-record>` 复用：
+## 画面、时间线与 Inspector
 
-```svml
-<file id="take-1" type="@hypit/artifact@1#BlobArtifact"
-  from="./assets/take-1.mp4" media-type="video/mp4"/>
-<satisfy output="take-opening.video" candidate="take-1"/>
-```
+中央 Preview 使用 HyperFrames 绘制编排，组件布局、素材采样和动作与编码渲染来自同一份编排。调整字幕位置、图形重点或覆盖画面时，可以对照真实素材查看。
 
-## 四个区域
+Timeline 把组件的出现放在同一时钟上。语义编排还会显示 Segment、Word、Selection 和 Moment。选择实体即可定位；播放、逐帧、缩放和滚动便于查看具体转场或版面。
 
-### Source
+Inspector 显示所选实体的属性。可编辑字段与时间线手柄由组件的 **Studio Companion** 提供，它负责向 Studio 描述组件。项目组件可以随绘制代码一起提供自己的 Companion。组件能够渲染，与它开放了哪些编辑控件，是两件事：字段或手势需要明确可修改的 Source 值。
 
-左上显示当前 Author SVML，支持行号、高亮、选择联动和文本编辑。当前版本还不是完整的 Source workspace；相关 SVS、SVRun、任务与产物浏览仍在单独调研。
+## 修改作品
 
-### Preview
+Source 编辑修改所选 `.svml`、`.svs` 或 `.svrun` 文件。支持的 Inspector 修改和时间线手势会写回对应作者值，然后用同一份 Run 重新编译。移动共享的 Selection 或 Moment，会改变它在 Script 中的位置，使用它的组件随之更新；修改共享 Frame 或 Recipe，也可能影响多个画面元素。
 
-中上使用真实素材和 HyperFrames 画面。结构、Frame、padding、堆叠、动效和 Track 布局来自与 Build 相同的领域程序，不是 Studio 的近似重绘。
+编辑后查看保存状态。重新编译失败时，Studio 显示错误并恢复之前的文件。结构化 Inspector 草稿使用 Apply 或 Reset。Run 和已加载 Source 文件会被监听；更换安装包、组件代码或 Runtime 选择后，需要重启 Studio 来加载这些变化。
 
-### Inspector
+## 声音与交付
 
-右上显示当前实体的来源、时间、操作能力和 adapter 公开的作者参数。可写字段都带精确 Source range；没有唯一写回目标的值保持只读。
+预览播放包含 Film 选中的 AudioTrack，例如口播、音乐与音效。导出视频的音频由渲染的媒体管线装配。交付编码后的成片，同时可以用 Studio 浏览其可编辑编排。
 
-### Timeline
-
-下方把 Semantic Segment、Word、Selection、Moment 和组件 Track 放到同一帧域。点击实体会选择并 seek；可以播放、逐帧移动、缩放和滚动。只有 adapter 声明且能够解析到唯一作者目标的 move/trim 手势才会启用。
-
-## 修改怎样落回 Source
-
-Studio 有两类结构化作者操作：
-
-- 时间线手势提交 `timeline.adjust`；
-- Inspector 参数提交 `parameter.adjust`。
-
-它们沿本次 Run 的真实执行谱系找到 SVML/SVS 中的作者逆像。修改后 Studio 使用同一 Run 重新编译；成功才发布新画面，失败就恢复文件并显示真实领域错误。它不会创建隐藏 Build、提交生成，或把 Selection 偷换成绝对帧。
-
-选择、投影、消费与写回的完整语义见 [Studio 时间谱系](../guide/studio-temporal-windows.md) 和 [Studio 作者操作](../guide/studio-timeline-operations.md)。
-
-## 声音
-
-HyperFrames 只负责画面；Programme audio 最终由媒体管线装配。为了按口播检查 B-roll 时机，Studio 播放时可以同步播放 Speech Track 的真实音频。没有显式音频的视觉素材不会被自动赋予声音。
+组件作者可以阅读 [Studio 时间谱系](../guide/studio-temporal-windows.md) 了解语义编辑，以及 [Companion SDK](https://github.com/hypit-ai/hypit/blob/main/packages/studio-adapter/README.md) 了解如何公开组件实体和控件。

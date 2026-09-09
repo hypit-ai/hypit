@@ -1,233 +1,48 @@
 ---
-title: 添加 Provider
-description: 添加新 Endpoint 适配器的分步指南。
+title: 模型与 Provider
+description: 选择账户、连接服务或添加模型，沿用同一套视频执行系统。
 ---
 
-# 添加 Provider
+# 模型与 Provider
 
-一个 Provider 包实现一项受控的外部能力——视频生成、媒体处理、对齐或渲染。字幕作者语义
-和 Cue 分组由 Script 自己负责，不需要 Provider。Provider 通过 Runtime Profile 激活，而不是
-通过 Author Source 里的 `<import>`。
+**Model** 定义要生成什么：输入、支持的参数和输出类型。**Provider** 知道如何通过某个服务完成这个请求。**Endpoint** 是配置好的 Provider 实例，包含服务地址、凭据引用和容量。Runtime Profile 将所需能力绑定到 Endpoint。
 
-不需要改动 Core、CLI 或任何作者包。
+## 根据需求选择修改位置
 
-## 1. 创建包
+| 你想做什么 | 修改哪里 |
+| --- | --- |
+| 同一服务换 Key | 凭据引用与所选 Endpoint 配置 |
+| 换成协议兼容的服务地址 | Provider 已支持的地址或部署配置 |
+| 同一模型换成不同 API 来源 | 安装或编写该 API 的 Provider，并选择它的 Endpoint |
+| 使用尚未定义的新模型 | 添加 Model 包，并由支持其请求的 Provider 执行 |
 
-```bash
-mkdir -p packages/provider-my-service/src packages/provider-my-service/test
+两个服务即使提供同一个模型，请求格式、限制和可用参数也可能不同。Provider 检查请求是否受该服务支持，并说明不匹配的原因。Profile 决定使用哪个来源；该来源报错并不授权通过另一个账户花钱。
+
+已有安装时，先检查所选 Profile 和凭据状态。起始 Profile 提供配置示例；连接账户或准备依赖前，先选择想使用的服务。[Run 与 Build](../quickstart/run.md) 介绍相关命令。
+
+## 添加 Model
+
+项目包使用 `hypit/model-kit`、`hypit/generation` 和 `hypit/author-kit`。声明准确的请求端口、参数取值、输出类型和能力。作者 Surface 把 Prompt Text 与参考素材连接到请求，再将生成素材作为普通图输出公开。
+
+[Model SDK](https://github.com/hypit-ai/hypit/blob/main/packages/model-kit/README.md) 提供请求定义与 activation 示例。包拥有模型接口；凭据与 HTTP 映射由 Provider 负责。
+
+## 添加 Provider
+
+将选定的 `hypit` 版本作为开发依赖，使用公开 SDK：
+
+```ts
+import { defineEndpointPackage } from "hypit/endpoint-kit";
+import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "hypit/endpoint-kit";
 ```
 
-## 2. 编写 package.json
+实现服务支持的准确能力与输出类型，将请求端口映射到服务 API，解析声明的凭据并返回结果。即时操作可以直接返回；远程任务可以先提交得到 ID，再轮询完成情况、收集输出文件。并发和动作限制由 Endpoint 的资源声明负责。
 
-Provider 包依赖 Runtime 端口与共享能力词汇，不依赖精确模型包，也绝不依赖 CLI：
+真正的失败会结束本次执行尝试。Build Result 保留已完成的 Output 与公开任务回执。后续工作通过新的 Run 与 Build，选择仍适用的已有 Output 复用。
 
-```json
-{
-  "name": "@hypit/provider-my-service",
-  "version": "0.0.0-dev",
-  "private": true,
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "hypit": { "activation": "./src/activation.ts" },
-  "dependencies": {
-    "@hypit/endpoint-kit": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/runtime": "workspace:*",
-    "@hypit/runtime-kit": "workspace:*",
-    "@hypit/runtime-host-node": "workspace:*",
-    "@hypit/generation": "workspace:*"
-  }
-}
-```
+[Endpoint SDK](https://github.com/hypit-ai/hypit/blob/main/packages/endpoint-kit/README.md) 维护处理接口、activation、资源声明和价格 API。将包编译为 JavaScript，由项目包管理器安装。在 [Runtime Profile](./runtime.md) 的 `endpoints` 中配置实例，并通过 `bindings` 选择它。
 
-## 3. 实现 Provider
+## 价格与授权
 
-Provider 处理来自 Scheduler 的 Command：提交请求、轮询、下载，并把字节交给当前 Build 的临时工作区。
+Provider 可以声明本地执行没有 Provider 调用费用，或提供公开费率页面。它也可以使用 Endpoint 凭据读取当前费率，返回简洁摘要及原始价格材料。`hypit pricing <run>` 将费率与计划请求一起展示；未来素材的测量值在产物存在前仍是未知的。
 
-```typescript
-// src/provider.ts
-import { defineEndpointPackage } from "@hypit/endpoint-kit";
-
-export function createMyServiceProvider(options: {
-  instance: string;
-  pool: string;
-  apiKey: CredentialRef;
-  defaultConcurrency?: number;
-}) {
-  return defineEndpointPackage({
-    module: { name: "@hypit/provider-my-service", version: "1" },
-    facet: "service",
-    instance: options.instance,
-    pool: options.pool,
-    credentials: { apiKey: options.apiKey },
-    defaultConcurrency: options.defaultConcurrency ?? 2,
-    capabilities: [{
-      capability: myCapability,
-      returns: myResultType,
-      capacity: "generate",
-      lifecycle: "asynchronous",
-      endpoint: myAsyncEndpoint,
-    }],
-  });
-}
-```
-
-可以参考现有的 Provider：
-- `packages/provider-kie/src/provider.ts` — 带上传、轮询和下载的远程生成
-- `packages/provider-media-local/` — 本地进程执行（ffprobe/ffmpeg）
-- `packages/provider-whisperx-local/` — 本地 HTTP 服务
-- `packages/provider-hyperframes-local/` — 本地 Chrome 渲染
-- `packages/provider-hyperframes-aws-lambda/` — 异步 Step Functions/Lambda 渲染
-- `packages/provider-media-aws-lambda/` — 通过共享 ffmpeg 执行体完成同步 Lambda 媒体操作
-- `packages/provider-xiaomi-mimo/` — 不依赖 MiMo 模型包的官方即时音色设计与音色克隆 API
-
-## 4. 编写 activation 描述符
-
-```typescript
-// src/activation.ts
-import {
-  createRuntimeEndpointAdapterFacet,
-  runtimeConfigCredentialRef,
-  runtimeConfigExact,
-  runtimeConfigObject,
-  runtimeConfigPositiveInteger,
-} from "@hypit/runtime-kit";
-import { createMyServiceProvider } from "./provider.js";
-
-const adapter = createRuntimeEndpointAdapterFacet({
-  use: "@hypit/provider-my-service",
-
-  activate(context) {
-    if (context.pool === undefined) throw new Error("MyService pool is required");
-    const config = runtimeConfigObject(context.config, "MyService");
-    runtimeConfigExact(config, ["apiKey", "defaultConcurrency"], "MyService");
-    const apiKey = runtimeConfigCredentialRef(config.apiKey, "MyService apiKey");
-    if (apiKey === undefined) throw new Error("MyService apiKey CredentialRef is required");
-    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency");
-    return {
-      endpoint: createMyServiceProvider({
-        instance: context.instance,
-        pool: context.pool,
-        apiKey,
-        ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
-      }),
-    };
-  },
-});
-
-export const hypitPackage = {
-  format: "hypit.node-package@1" as const,
-  hostFacets: [adapter],
-};
-
-export default hypitPackage;
-```
-
-`activate` 是唯一的纯部署声明。它返回的 Endpoint 同时拥有供 `doctor` 与执行使用的凭据引用、
-capability 和调度事实。Activation 不得解析密钥或环境来源的部署值、访问网络或启动任务；环境变量名会作为引用保留到真正处理匹配 Need 时。凭据是否存在由通用 CredentialStore 路径诊断，
-Provider 不得把环境变量硬编码成特殊的密钥 Store。
-
-Activation 还可以返回 `diagnose(context)`。它只会在用户显式运行主动 `doctor` 时执行，而且
-Runtime 会先解析该 Endpoint 自己声明的凭据槽。它可以对真实服务做一次有界只读请求，例如读取
-已认证账户的模型目录；Build 预检不能调用它，它也绝不能提交生成任务。
-
-收费的 Provider 用 `pricing: { kind: "page", url }` 声明价格发布页面；在本机运行的 Provider
-声明 `pricing: { kind: "local" }`。Endpoint 还可以通过 `readPricing` 返回 Provider 当前发布的
-原始费率文档；只有网页的服务继续以该网页作为价格入口。`hypit pricing <run> --runtime <profile>`
-把这些材料放在 Run 的 Needs 旁边，而且不会创建 Build。Agent 可以据此计算并解释费用，用户的
-决定仍然是支出授权。共享接口包含来源 URL、保持 Provider 原始形状的 JSON 和可选的简短费率说明，因此接入新的
-中转站不需要先给 Hypit 增加一种价格表分类。
-
-`hypit plan --runtime <profile>` 仍然完全在本地执行并列出每个请求的 Endpoint。上游文件尚未
-生成时，能力包仍重建全部作者参数，只把未来文件保留为符号 Resource 槽；同一个 Endpoint 的
-普通 `supports` 会在 Build 入队前检查这份规格。包无法说明请求时直接停止，不回退成
-capability-only 的假验证，也不维护第二张选择表。
-
-## 5. 按需声明 Managed Program
-
-如果 Provider 依赖需要保持温热的外部程序，就在 Endpoint 旁边导出它的声明。这里没有第二个
-manifest 开关，也没有中央 Program 注册表：
-
-```typescript
-// src/program.ts
-import type { ManagedProgram } from "@hypit/runtime-kit";
-
-export function createMyProgram(): ManagedProgram {
-  return {
-    id: "my-service",
-    prepare: { command: "uv", args: ["sync", "--project", "services/my-service", "--frozen"] },
-    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "hypit-my-service"] },
-    probe: async () => {
-      // 返回 { state: "ready" } 或 { state: "down", detail: "..." }
-    },
-  };
-}
-```
-
-在同一个 activation 中把它与 Endpoint 一起返回：
-
-```typescript
-const adapter = createRuntimeEndpointAdapterFacet({
-  use: "@hypit/provider-my-service",
-  activate(context) {
-    return {
-      endpoint: createMyServiceProvider(/* 已解析配置 */),
-      program: createMyProgram(),
-    };
-  },
-});
-```
-
-`hypit runtime up` 会准备、启动并探测**本地** Managed Program，然后启动耐久 Worker。`build` 只预检
-本次 Plan 所需 Capability 对应的 Program；未就绪时在提交前失败，绝不安装或启动它。只调用
-远程 API 的 Provider 不返回 `program`，Hypit 也没有可以启动或停止这类服务的生命周期。
-
-## 6. 声明依赖
-
-在 Provider 自己的 `package.json` 中声明所有导入包：
-
-```json
-"dependencies": {
-  "@hypit/runtime-kit": "workspace:*"
-}
-```
-
-用项目的包管理器安装它。Runtime Profile 用 `use` 显式实例化之前，这个包始终不会运行。
-
-## 7. 在 hypit.runtime.json 中引用
-
-```json
-{
-  "endpoints": {
-    "my-service": {
-      "use": "@hypit/provider-my-service",
-      "pool": "my-service.account",
-      "config": {
-        "apiKey": { "store": "os", "key": "my-service.api-key" },
-        "defaultConcurrency": 2
-      }
-    }
-  }
-}
-```
-
-验证配置：
-
-```bash
-hypit doctor hypit.runtime.json
-```
-
-## 可供研究的现有 Provider
-
-| 包 | 模式 |
-|---|---|
-| `provider-kie` | 远程 API：上传、付费提交、带检查点的轮询、有界下载、写入当前 Build 工作区 |
-| `provider-media-local` | 本地进程：不经 shell 的 ffprobe/ffmpeg，执行有界 |
-| `provider-whisperx-local` | 本地 HTTP 服务：带热模型，单次准入并发 |
-| `provider-hyperframes-local` | 本地进程：Chrome 渲染，带 worker 并行与输出探测校验 |
-| `provider-hyperframes-aws-lambda` | 远程异步任务：按 Operation 自行暂存、Step Functions 轮询与结果流式回收 |
-| `provider-image-opencv-local` | 本地 Python：有界的 OpenCV/NumPy，配合锁定的 Python 环境 |
-| `provider-media-aws-lambda` | 远程同步 Lambda：与本地媒体相同的九项能力 |
-| `provider-xiaomi-mimo` | 远程即时 API：把精确 MiMo 音色设计与音色克隆请求落成持久化音频 Resource |
+费率帮助说明费用。用户的委托授权使用所选账户、按约定范围与预算付费。登录成功或账户有余额，是与这份授权分别成立的事实。

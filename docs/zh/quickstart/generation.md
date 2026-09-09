@@ -108,7 +108,7 @@ Seedance 2.5 复用同样的 Surface，而不是由 Runtime 把别的模型偷�
 <seedance:TextVideo id="ambient" model="mini"
   prompt={ambient-direction} duration="5" web-search="false"/>
 ```
-创作规则要求每条 take 都从一张已验收的图开始，所以实际创作用的是首帧或有序引用这两种形状。这里记录这个形状是因为模型有它，而不是因为一条 take 应该在没有画面的情况下开始。
+对于反复出现的人物、产品或场景，先制作参考图能给视频模型明确的视觉方向。多个 Take 可以复用这些参考，再由 Script 与 action Prompt 指导各段表演。当场景可以直接描述、不需要保持特定视觉身份时，也可以使用 TextVideo。
 
 
 ### seedance:FrameVideo

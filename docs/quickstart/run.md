@@ -247,7 +247,17 @@ a Profile from a conventional filename or inherits another project's selection f
 `check` and `plan` never make live Provider requests. A graph-only `plan` without a selected Runtime
 needs no deployment credentials; with a selected Runtime, its cheap preflight checks that demanded
 credential references are present. Before `doctor` or a paid/external `build`, configure only the
-variables referenced by the selected Runtime Profile:
+credentials referenced by the selected Runtime Profile. First inspect the existing selection:
+
+```bash
+hypit auth status
+```
+
+If a needed service is not ready, choose whether to configure that service or another supported
+local or hosted option. For example, WhisperX can run locally or through HypiHub. A starter Endpoint
+is a configuration starting point, not evidence that an account was chosen.
+
+After choosing a service, connect its credential:
 
 | Variable | Provider/use |
 |---|---|
@@ -258,8 +268,6 @@ variables referenced by the selected Runtime Profile:
 Run only the lines for the Endpoints in your Profile. In macOS/Linux shells:
 
 ```bash
-read -r -s HYPIHUB_API_KEY
-export HYPIHUB_API_KEY
 read -r -s KIE_API_KEY
 export KIE_API_KEY
 read -r -s MIMO_API_KEY
@@ -269,13 +277,34 @@ export MIMO_API_KEY
 In Windows PowerShell:
 
 ```powershell
-$env:HYPIHUB_API_KEY = "your-key"
 $env:KIE_API_KEY = "your-key"
 $env:MIMO_API_KEY = "your-key"
 ```
 
 Keep credentials out of Author Source, Run Source, Runtime Profile source, and committed files.
 `doctor` validates required credential presence without printing secret values.
+
+## Read prices for the selected Run
+
+```bash
+hypit pricing reference.svrun
+hypit pricing reference.svrun --json
+```
+
+The selected Runtime determines which Endpoint serves each request. `pricing` reads those Providers'
+rate information and groups matching requests, showing known parameters and request counts. Work
+explicitly declared local without a Provider charge is summarized; unknown prices, unsupported
+requests and failed price reads remain visible. `--verbose` includes the local request details and
+original pricing documents.
+
+Use the report to explain the intended spend: the chosen account, planned material, published units
+and applicable rates. The command reads prices; it does not submit generation or calculate a guaranteed
+total. A future media input may not yet have a known duration, so preserve that uncertainty in the
+estimate. JSON keeps request parameters in `groups[].requests` and source material in
+`groups[].pricingDocuments`.
+
+Agree on the account, work and budget before paid calls. Existing authorization covers the work
+within that agreement; pricing output and successful authentication are information, not approval.
 
 ## Build workflow
 

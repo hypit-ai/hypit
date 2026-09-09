@@ -212,7 +212,15 @@ CLI 必须先确定项目：显式 `--workspace` 直接给出边界；否则使�
 
 `check` 与 `plan` 不会请求在线 Provider。没有所选 Runtime 的 `plan` 只看图，不需要部署
 凭据；有 Runtime 时，便宜预检会检查本次 Plan 所需凭据是否存在。在运行 `doctor` 或付费/
-外部 `build` 之前，只配置当前 Runtime Profile 实际引用的环境变量：
+外部 `build` 之前，只配置当前 Runtime Profile 实际引用的凭据。先检查已有选择：
+
+```bash
+hypit auth status
+```
+
+需要的服务未就绪时，先决定配置它，还是选择其他支持的本地或托管方式。例如 WhisperX 可以在本机或通过 HypiHub 运行。起始 Endpoint 是配置起点，并不代表已经选择某个账户。
+
+选择服务后，再连接其凭据：
 
 | 变量 | Provider / 用途 |
 |---|---|
@@ -223,8 +231,6 @@ CLI 必须先确定项目：显式 `--workspace` 直接给出边界；否则使�
 只执行 Profile 中所选 Endpoint 对应的行。在 macOS/Linux Shell 中：
 
 ```bash
-read -r -s HYPIHUB_API_KEY
-export HYPIHUB_API_KEY
 read -r -s KIE_API_KEY
 export KIE_API_KEY
 read -r -s MIMO_API_KEY
@@ -234,12 +240,24 @@ export MIMO_API_KEY
 在 Windows PowerShell 中：
 
 ```powershell
-$env:HYPIHUB_API_KEY = "your-key"
 $env:KIE_API_KEY = "your-key"
 $env:MIMO_API_KEY = "your-key"
 ```
 
 不要把凭据写进 Author Source、Run Source、Runtime Profile 源文件或提交内容。`doctor` 会验证所需凭据是否存在，但不会打印秘密值。
+
+## 查询所选 Run 的费用信息
+
+```bash
+hypit pricing reference.svrun
+hypit pricing reference.svrun --json
+```
+
+所选 Runtime 决定每个请求由哪个 Endpoint 执行。`pricing` 读取对应 Provider 的费率信息，将匹配请求分组，展示已知参数与请求数量。明确声明为本地无 Provider 调用费用的工作汇总显示；未知价格、不支持的请求和价格读取失败继续可见。`--verbose` 补充本地请求细节与原始价格材料。
+
+用报告说明准备怎么花费：所选账户、计划素材、计价单位与适用费率。命令读取价格，不提交生成，也不计算一个保证准确的总价。未来素材的时长可能还未知，估价时保留这部分不确定性。JSON 在 `groups[].requests` 中保留请求参数，在 `groups[].pricingDocuments` 中保留价格来源材料。
+
+付费调用前，确认账户、工作范围和预算。已有授权覆盖约定内的工作；价格输出与登录成功提供信息，本身不代表同意花费。
 
 ## Build 工作流
 

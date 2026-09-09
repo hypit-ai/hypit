@@ -119,9 +119,10 @@ Prompt-only generation. This is the only shape that accepts `web-search`.
 <seedance:TextVideo id="ambient" model="mini"
   prompt={ambient-direction} duration="5" web-search="false"/>
 ```
-Craft requires every take to start from an accepted image, so a first frame or ordered references are
-the shapes to author with. This shape is documented because the model has it, not because a take
-should begin without a picture.
+For a recurring presenter, product or setting, authoring reference images first gives the video
+model a concrete visual direction. Reuse those references across takes, with the Script and action
+prompt directing each performance. TextVideo remains useful when the intended scene can be described
+directly without a particular visual identity to preserve.
 
 
 ### seedance:FrameVideo

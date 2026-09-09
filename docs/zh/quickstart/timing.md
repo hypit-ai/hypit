@@ -5,19 +5,22 @@ description: 逐 Take 归一化与语义对齐，然后装配为 SemanticTrack�
 
 # 时序与装配
 
-Hypit 的时间真相是 `SemanticTrack`。它按 Segment 粒度构建：
+对于说话视频，`SemanticTrack` 把作者的 Script 与实际表演联系起来，是字幕、随词语出现的图形和覆盖画面的自然时间来源。它按 Segment 粒度构建：
 
 1. 把每个已接受的音视频 Take 归一化到同一个精确帧域；
 2. 将归一化媒体与对应的 Script Segment 对齐，得到自包含的 `SemanticTake`；
 3. 用 `speech:Track` 按节目顺序装配这些 Semantic Take。
 
-每个 Take 在进入 Track 之前就已经具有语义。
+每个 Take 在进入 Speech Track 之前就已经具有语义。画面由 Media Track 或项目组件呈现，与这里的语义和音频装配分别表达。
+
+纯视觉动画也可以通过 ProgramSpace 声明自己的时长与帧率，见 [纯组件绘制的影片](./composition.md)。其事件可以使用秒或帧；说话视频则可以用 Script Selection 和 Moment 驱动相同的视觉行为。
 
 ```svml
 <import as="program" from="@hypit/program-space@1"/>
 <import as="pipeline" from="@hypit/media-pipeline@1"/>
 <import as="whisperx" from="@hypit/whisperx@1"/>
 <import as="speech" from="@hypit/speech-track@1"/>
+<import as="media-track" from="@hypit/media-track@1"/>
 <import as="space" from="@hypit/spatial@1"/>
 <import as="recipes" source="./recipes.svs"/>
 ```

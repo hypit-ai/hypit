@@ -9,7 +9,7 @@ description: 开始 Hypit 开发工作。
 
 | 工具 | 版本 | 用于 |
 |---|---|---|
-| Node.js | 22+ | 所有工作 |
+| Node.js | 22.12+ | 所有工作 |
 | pnpm | 10.33.x | workspace 管理；由根目录 `packageManager` 字段选择 |
 | Python | 3.10–3.13 | 本地 WhisperX 与 OpenCV Managed Program |
 | uv | latest | Python 环境管理 |
@@ -52,10 +52,10 @@ hypit/
 
 | 指南 | 主题 |
 |---|---|
-| [Hypit Skill 架构](./skill.md) | 四条路径的入口、工具、路由和持久化 JSON 状态 |
-| [包架构](./packages.md) | 分层、依赖规则、包的构成、facets |
+| [与 Agent 一起制作视频](./skill.md) | 创作方向、服务选择与可编辑项目 |
+| [包与扩展](./packages.md) | 组件、模型与服务的职责，安装与分享 |
 | [添加 Author 包](./author-packages.md) | 分步说明：新增组件、Surface、词表与预览图、activation |
-| [添加 Provider](./providers.md) | 分步说明：新增 Endpoint 适配器 |
+| [模型与 Provider](./providers.md) | 选择账户与 API，开发 Model 或 Provider 包 |
 | [Runtime](./runtime.md) | Profile、Workspace、执行与生命周期边界 |
 | [测试](./testing.md) | 测试运行器、写法、示例、boundary tests |
 | [代码规范](./conventions.md) | 命名、模块边界、wire 数据、TypeScript 配置 |

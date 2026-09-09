@@ -9,7 +9,7 @@ description: Getting started with Hypit development.
 
 | Tool | Version | Required for |
 |---|---|---|
-| Node.js | 22+ | everything |
+| Node.js | 22.12+ | everything |
 | pnpm | 10.33.x | workspace management; selected by the root `packageManager` field |
 | Python | 3.10–3.13 | local WhisperX and OpenCV Managed Programs |
 | uv | latest | Python environment management |
@@ -52,10 +52,10 @@ hypit/
 
 | Guide | Topic |
 |---|---|
-| [Hypit Skill Architecture](./skill.md) | Route entry points, tools, handoffs and durable JSON state |
-| [Package architecture](./packages.md) | Layers, dependency rules, package anatomy, facets |
+| [Making videos with an Agent](./skill.md) | Creative direction, service choices and editable projects |
+| [Packages and Extension](./packages.md) | Component, model and service ownership; installation and sharing |
 | [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, vocabulary and preview, activation |
-| [Adding a Provider](./providers.md) | Step-by-step: new Endpoint adapter |
+| [Models and Providers](./providers.md) | Select accounts and APIs; develop a Model or Provider package |
 | [Runtime](./runtime.md) | Profile, Workspace, execution and lifecycle boundaries |
 | [Testing](./testing.md) | Test runner, patterns, examples, boundary tests |
 | [Conventions](./conventions.md) | Naming, module boundaries, wire data, TypeScript config |

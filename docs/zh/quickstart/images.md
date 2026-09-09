@@ -7,7 +7,7 @@ description: 在图片流向生成器或 Track 之前，对它做合成、校正
 
 有三个包接收一张图片、交还一张图片。它们都不产出 Track：每个输出都是一张可供下游引用的图片——作为 Seedance 的参考帧、作为 Media Item，或作为下一次操作的来源。
 
-它们都需要 Endpoint。`image-compose` 与 `image-transform` 索取 raster 能力，由 `@hypit/provider-image-opencv-local` 在本机运行 OpenCV 来满足；`background-removal` 索取的是它自己声明的能力，由 `@hypit/provider-kie` 远程满足。本仓库没有示例默认绑定这两者，所以在 plan 一次用到它们的 Build 之前，先把 Endpoint 加进你的 [Runtime Profile](/zh/guide/runtime)。
+它们都需要 Endpoint。`image-compose` 与 `image-transform` 索取 raster 能力，由 `@hypit/provider-image-opencv-local` 在本机运行 OpenCV 来满足；`background-removal` 索取的是它自己声明的能力，由 `@hypit/provider-kie` 远程满足。使用这些操作时，在 [Runtime Profile](/zh/guide/runtime) 中选择支持它们的 Endpoint。
 
 ## 合成图层
 
@@ -87,3 +87,14 @@ description: 在图片流向生成器或 Track 之前，对它做合成、校正
 ```
 
 **输出：** `{cutout.image}`——通常喂给一个 Media Item，好让出镜者叠在画面上，而不是待在一个方框里。
+
+## 移动人物抠像
+
+人物需要出现在其他画面之上时，可以将生成或已有视频交给 [`@hypit/volcengine-matting`](https://github.com/hypit-ai/hypit/blob/main/packages/volcengine-matting/README.md)，由支持该能力的 HypiHub Endpoint 执行：
+
+```svml
+<import as="matte" from="@hypit/volcengine-matting@1"/>
+<matte:Portrait id="cutout" source={performance.video}/>
+```
+
+将 `cutout.video` 归一化，准备进入时间线。如果它建立说话节目的语义骨架，再把准备好的媒体与 Script Segment 对齐，通过 Speech Track 装配。画面由 Media Track 或项目场景按选择的位置、绘制顺序呈现。作为 B-roll 时，归一化后的抠像可以直接进入 Media Track。抠像改变画面背景，具体角色由编排决定。

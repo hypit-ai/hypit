@@ -1,246 +1,72 @@
 ---
-title: Adding a Provider
-description: Step-by-step guide for adding a new Endpoint adapter.
+title: Models and Providers
+description: Choose an account, connect a service or add a model without changing the video execution system.
 ---
 
-# Adding a Provider
+# Models and Providers
 
-A Provider package implements a privileged external capability — video generation, media
-processing, alignment or rendering. Caption authoring and cue grouping are Script-owned and do not
-need a Provider. A Provider is activated through the Runtime Profile,
-never through `<import>` in Author Source.
+A **Model** defines what you ask to generate: its inputs, supported parameters and output type.
+A **Provider** knows how to fulfill that request through a particular service. An **Endpoint** is a
+configured instance of that Provider, with its service address, credential reference and capacity.
+The Runtime Profile binds the requested capability to an Endpoint.
 
-No change to Core, the CLI or any author package is required.
+## Choose the change that matches the need
 
-## 1. Create the package
+| You want to… | Change |
+| --- | --- |
+| Use another key for the same service | The credential reference and selected Endpoint configuration |
+| Use another compatible service address | The address or deployment options supported by the Provider |
+| Use the same model through a different API | Install or write a Provider for that API and select its Endpoint |
+| Use a model not yet defined | Add a Model package and a Provider that supports its request |
 
-```bash
-mkdir -p packages/provider-my-service/src packages/provider-my-service/test
+Two services offering the same model can have different request formats, limits or available
+parameters. The Provider checks the request against that service's support and explains a mismatch.
+A Profile chooses the route; an error on that route does not authorize spending through another account.
+
+For an existing installation, inspect the selected Profile and credential status first. A starter
+Profile supplies configuration examples; choose the services you want before connecting accounts or
+preparing their dependencies. [Runs and Builds](../quickstart/run.md) shows the commands.
+
+## Add a Model
+
+Develop a project package against `hypit/model-kit`, `hypit/generation` and `hypit/author-kit`.
+Declare the exact request ports, parameter values, result type and capability. Its author Surface
+connects prompt Text and reference media to the request, then publishes the resulting media as a
+normal graph Output.
+
+The [Model SDK](https://github.com/hypit-ai/hypit/blob/main/packages/model-kit/README.md) includes a
+request definition and explains activation. The package owns the model interface; credentials and
+HTTP mapping belong to the Provider.
+
+## Add a Provider
+
+Use the selected `hypit` release as a development dependency and import the public SDK:
+
+```ts
+import { defineEndpointPackage } from "hypit/endpoint-kit";
+import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "hypit/endpoint-kit";
 ```
 
-## 2. Write package.json
+Implement the exact capabilities and result types the service supports. Map request ports to the
+service API, resolve the declared credentials, and return its results. An immediate operation
+returns directly; a remote task can submit an ID, poll for completion and collect the output files.
+Concurrency and action limits belong to the Endpoint's resource declarations.
 
-Provider packages depend on Runtime ports and shared capability vocabularies, never on exact-model
-packages or the CLI:
+A genuine failure ends that execution attempt. Build Results preserve completed Outputs and public
+task receipts. Further work uses a new Run and Build with suitable existing Outputs selected for reuse.
 
-```json
-{
-  "name": "@hypit/provider-my-service",
-  "version": "0.0.0-dev",
-  "private": true,
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "hypit": { "activation": "./src/activation.ts" },
-  "dependencies": {
-    "@hypit/endpoint-kit": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/runtime": "workspace:*",
-    "@hypit/runtime-kit": "workspace:*",
-    "@hypit/runtime-host-node": "workspace:*",
-    "@hypit/generation": "workspace:*"
-  }
-}
-```
+The [Endpoint SDK](https://github.com/hypit-ai/hypit/blob/main/packages/endpoint-kit/README.md)
+owns the handler interfaces, activation, resource declarations and pricing API. Compile the package
+to JavaScript and install it in the project through its package manager. Configure its Endpoint
+under `endpoints` and select it in `bindings` in the [Runtime Profile](./runtime.md).
 
-## 3. Implement the Provider
+## Prices and permission
 
-The Provider handles Commands from the Scheduler: request submission, polling, download and writing
-the accepted Resource into the current Build's working byte area.
+The Provider declares local work without a Provider charge, or supplies its published pricing page.
+It can also read current rates using the Endpoint's credentials and return a concise summary with
+the original pricing documents. `hypit pricing <run>` brings those rates together with the planned
+requests. Pending media measurements remain unknown until the material exists.
 
-```typescript
-// src/provider.ts
-import { defineEndpointPackage } from "@hypit/endpoint-kit";
-
-export function createMyServiceProvider(options: {
-  instance: string;
-  pool: string;
-  apiKey: CredentialRef;
-  defaultConcurrency?: number;
-}) {
-  return defineEndpointPackage({
-    module: { name: "@hypit/provider-my-service", version: "1" },
-    facet: "service",
-    instance: options.instance,
-    pool: options.pool,
-    credentials: { apiKey: options.apiKey },
-    defaultConcurrency: options.defaultConcurrency ?? 2,
-    capabilities: [{
-      capability: myCapability,
-      returns: myResultType,
-      capacity: "generate",
-      lifecycle: "asynchronous",
-      endpoint: myAsyncEndpoint,
-    }],
-  });
-}
-```
-
-Look at existing Providers for reference:
-- `packages/provider-kie/src/provider.ts` — remote generation with upload, polling and download
-- `packages/provider-media-local/` — local process execution (ffprobe/ffmpeg)
-- `packages/provider-whisperx-local/` — local HTTP service
-- `packages/provider-hyperframes-local/` — local Chrome rendering
-- `packages/provider-hyperframes-aws-lambda/` — asynchronous Step Functions/Lambda rendering
-- `packages/provider-media-aws-lambda/` — synchronous Lambda media execution over the shared ffmpeg body
-- `packages/provider-xiaomi-mimo/` — immediate official Voice Design and Voice Clone API without importing the MiMo model package
-
-## 4. Write the activation descriptor
-
-```typescript
-// src/activation.ts
-import {
-  createRuntimeEndpointAdapterFacet,
-  runtimeConfigCredentialRef,
-  runtimeConfigExact,
-  runtimeConfigObject,
-  runtimeConfigPositiveInteger,
-} from "@hypit/runtime-kit";
-import { createMyServiceProvider } from "./provider.js";
-
-const adapter = createRuntimeEndpointAdapterFacet({
-  use: "@hypit/provider-my-service",
-
-  activate(context) {
-    if (context.pool === undefined) throw new Error("MyService pool is required");
-    const config = runtimeConfigObject(context.config, "MyService");
-    runtimeConfigExact(config, ["apiKey", "defaultConcurrency"], "MyService");
-    const apiKey = runtimeConfigCredentialRef(config.apiKey, "MyService apiKey");
-    if (apiKey === undefined) throw new Error("MyService apiKey CredentialRef is required");
-    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency");
-    return {
-      endpoint: createMyServiceProvider({
-        instance: context.instance,
-        pool: context.pool,
-        apiKey,
-        ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
-      }),
-    };
-  },
-});
-
-export const hypitPackage = {
-  format: "hypit.node-package@1" as const,
-  hostFacets: [adapter],
-};
-
-export default hypitPackage;
-```
-
-`activate` is the one pure deployment declaration. The Endpoint it returns owns the credential
-references, capabilities and scheduling facts used by both `doctor` and execution.
-Activation must not resolve secrets or environment-sourced deployment values, access the network or
-start work. It keeps environment names as references until a matching Need is handled. Credential
-presence is diagnosed through the generic CredentialStore path; a Provider must not special-case
-environment variables as a secret Store.
-
-An activation may also return `diagnose(context)`. It runs only for an explicit active `doctor`, after
-the Runtime has resolved that Endpoint's declared credential slots. It may make a bounded, read-only
-request to the real service, such as reading the authenticated model catalog. It must not be called by
-Build preflight and must never submit generation work.
-
-A Provider that charges declares where it publishes prices with `pricing: { kind: "page", url }` on
-`defineEndpointPackage`; a Provider that runs on this machine declares `pricing: { kind: "local" }`.
-An Endpoint may additionally return current Provider-shaped documents from `readPricing`; a service
-with only a web page keeps that page as its interface. `hypit pricing <run> --runtime <profile>` places
-the material beside the Run's Needs without creating a Build. The Agent can calculate and explain the
-cost from those two facts, while the user's decision remains the spending authority. The shared
-interface carries a source URL, Provider-shaped JSON and an optional concise rate summary, so a newly supported relay does not
-require a new Hypit pricing category.
-
-`hypit plan --runtime <profile>` remains local and prints the Endpoint behind each request. Planning
-applies the selected Endpoint's ordinary `supports` check and does not maintain a second selection
-table. When an upstream file will only exist during the Build, the capability package reconstructs the authored
-request parameters and leaves that file as a symbolic Resource slot. The same `supports` predicate still
-runs before the Build is queued. A package that cannot describe the request stops planning instead of
-falling back to capability-only selection.
-
-## 5. Declare a Managed Program when needed
-
-If the Provider depends on a warm external program, export its declaration beside the Endpoint.
-There is no second manifest flag or central program registry:
-
-```typescript
-// src/program.ts
-import type { ManagedProgram } from "@hypit/runtime-kit";
-
-export function createMyProgram(): ManagedProgram {
-  return {
-    id: "my-service",
-    prepare: { command: "uv", args: ["sync", "--project", "services/my-service", "--frozen"] },
-    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "hypit-my-service"] },
-    probe: async () => {
-      // Return { state: "ready" } or { state: "down", detail: "..." }
-    },
-  };
-}
-```
-
-Return it beside the Endpoint from the same activation:
-
-```typescript
-const adapter = createRuntimeEndpointAdapterFacet({
-  use: "@hypit/provider-my-service",
-  activate(context) {
-    return {
-      endpoint: createMyServiceProvider(/* parsed config */),
-      program: createMyProgram(),
-    };
-  },
-});
-```
-
-`hypit runtime up` prepares, starts and probes declared **local** Managed Programs before starting the
-durable Worker. `build` only preflights Programs backing capabilities demanded by its plan and
-fails before submission when one is not ready; it never installs or starts one. Providers that call
-only remote APIs omit `program` entirely; Hypit has no `up` or `down` lifecycle for those services.
-
-## 6. Install
-
-Declare every imported package in the Provider's own `package.json`:
-
-```json
-"dependencies": {
-  "@hypit/runtime-kit": "workspace:*"
-}
-```
-
-Install the package with the project's package manager. It remains inert until the Runtime Profile
-explicitly selects its `use` id.
-
-## 7. Reference from hypit.runtime.json
-
-```json
-{
-  "endpoints": {
-    "my-service": {
-      "use": "@hypit/provider-my-service",
-      "pool": "my-service.account",
-      "config": {
-        "apiKey": { "store": "os", "key": "my-service.api-key" },
-        "defaultConcurrency": 2
-      }
-    }
-  }
-}
-```
-
-Verify the configuration:
-
-```bash
-hypit doctor hypit.runtime.json
-```
-
-## Existing Providers to study
-
-| Package | Pattern |
-|---|---|
-| `provider-kie` | Remote API: upload, paid submission, checkpointed polling, bounded download into the current Build workspace |
-| `provider-media-local` | Local process: shell-free ffprobe/ffmpeg with bounded execution |
-| `provider-whisperx-local` | Local HTTP service with a warm model, single-admit concurrency |
-| `provider-hyperframes-local` | Local process: Chrome rendering with worker parallelism and output probe validation |
-| `provider-hyperframes-aws-lambda` | Remote asynchronous job: Step Functions submission, polling and S3 streaming |
-| `provider-image-opencv-local` | Local Python: bounded OpenCV/NumPy with locked Python environment |
-| `provider-media-aws-lambda` | Remote synchronous Lambda: the same nine capabilities as local media |
-| `provider-xiaomi-mimo` | Remote immediate API: exact MiMo Voice Design and Voice Clone requests to persisted audio Resources |
+Rates help explain the cost. The user's agreement supplies permission to spend through the selected
+account for the agreed work and budget. That permission is separate from a successful login or an
+available balance.

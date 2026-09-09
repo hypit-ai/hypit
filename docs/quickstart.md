@@ -1,186 +1,85 @@
 ---
 title: Quickstart for Agent users
-description: Create, review and ship Hypit videos from a Coding Agent without writing SVML or SVS by hand.
+description: Turn a reference video into a new video for your presenter, product and audience.
 ---
 
-You do not need to know SVML, SVS, JavaScript or the command line. Describe your video in ordinary
-language; the Agent uses the `/hypit` skill to understand the reference, direct the work and deliver
-a video with an editable project.
+# Make a video with your Agent
 
-The recordings illustrate example conversations and editing views. Interface details and commands
-may differ; the guidance below describes the current workflow.
+Bring a video you like and tell the Agent what you want to make from it: your face, your product,
+a new audience, or another variation. Hypit gives it the production knowledge and tools to understand
+the reference, create the material, and compose an editable video.
 
 ## What you need
 
 - A Coding Agent that can use skills, such as Claude Code or Codex.
-- A reference video or a creative brief.
+- A reference video or a description of the video you want.
 
 ## 1. Install the Hypit skill
-
-Install the Hypit skill:
 
 ```bash
 npx skills add hypit-ai/hypit -g
 ```
 
-Then start a Coding Agent anywhere; the Hypit skill is available globally. The Skill supplies
-production knowledge. The Agent checks whether the Hypit command is installed and sets up the
-executable tools when needed, explaining any setup that needs your choice.
+Open your video project in the Agent. The Skill supplies production knowledge; the `hypit` package
+supplies the executable tools. The Agent checks for an existing installation and helps prepare any
+missing tools. You do not need to clone the Hypit repository.
 
-## 2. Describe the video you want
+## 2. Bring a reference and explain what should change
 
-<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/describe_the_video_you_want.mp4"></video>
-
-Start with a reference to adapt or an idea to develop.
-
-### Clone a reference video
-
-Ask the Agent to clone a video and provide its local file path:
+Give the Agent a file or a supported platform link, together with any face, product or brand material:
 
 ```text
-/hypit clone this video: /path/to/video.mp4
+/hypit Use this video as a reference: /path/to/video.mp4.
+Replace the product with Hypit (hypit.ai), keeping the energetic opening and ranking format.
 ```
 
-You can also provide a link from an online video platform. The Agent uses `yt-dlp` to download the
-source from supported sites. For example:
+You can change the presenter, product, language, aspect ratio or call to action. The Agent studies
+what makes the reference work, including how graphics and captions land on particular words, then
+adapts the script and visual direction to your goal. It keeps its understanding and decisions in the
+project and explains the direction as the work develops.
+
+### **👉 [Get 100 FREE AI Avatars with unique voices](https://drive.google.com/drive/u/2/folders/18J9Fz7mkU3OQNJ-2Res3eIyFQ2cemIK5)**
+
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-10/clone_a_video_with_your_product.mp4"></video>
+
+## 3. Choose the services you want to use
+
+The Agent checks the relevant tools and services already available. For a spoken reference, WhisperX
+provides the words and their timing so the Agent can relate the picture to what is being said.
+If it is missing, the Agent can help prepare it locally or explain the hosted option.
+
+[HypiHub](https://hypit.ai) offers hosted WhisperX and image, video and voice models through one
+account. You can also use your own keys with supported Providers, and combine local and hosted
+capabilities. The Agent explains what is needed and helps connect the services you choose.
+
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-10/log_in_to_hypit_or_bring_your_own_key.mp4"></video>
+
+## 4. Agree on the cost and let production run
+
+Before paid work, the Agent explains the selected account, planned work and available rates or
+estimated cost, including anything still unknown. Agree on the scope and budget; calls covered by
+that agreement can then proceed together. A change of account, scope or budget gives you a new decision.
 
 ```text
-/hypit clone this video: https://www.youtube.com/watch?v=VIDEO_ID
-/hypit clone this video: https://www.instagram.com/reel/REEL_ID/
+Use my HypiHub account for this video, within the budget we agreed. Go ahead.
 ```
 
-Tell the Agent what should change, if anything: the host, language, product, aspect ratio, visual
-style or call to action. The Agent studies what makes the reference work and adapts its script, performances and visual
-relationships to your goal. You receive a finished video and an editable project.
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-10/check_the_quote_and_approve.mp4"></video>
 
-### Create an original video
+The Agent prepares the script, performance direction and image references to get the material right
+from the start. While generation runs, it can build the graphics and captions. Hypit keeps the
+execution and produced files in Build Results; the Agent reports progress as the work takes shape.
 
-You can describe an idea just as you would brief a human producer. For example:
+## 5. Watch the finished video and make it yours
 
-```text
-Create a ranking video with a ranking board that has five rows. The left side labels the rows S, A, B,
-C and D, with a different color for each tier; the right side is for placing the icons assigned to
-each tier. Put Hypit in S tier and explain its advantages. Also include Arcads, Higgsfield, Seedance
-and CapCut. Give each competitor a fair, concise summary of its strengths and weaknesses. Make the
-result clear, energetic and suitable for a short social video.
-```
+With the actual material in place, the Agent checks whether the layout, captions, graphics and
+B-roll appear clearly and at the right moments. It delivers the video and can open Studio so you
+can explore its timeline and edit supported properties.
 
-You can add constraints such as audience, duration, language, tone, brand colors, presenter, platform
-or aspect ratio. The Agent turns the brief into a complete plan and fills in production details from
-the information you provide.
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-10/watch_the_finished_video.mp4"></video>
 
-## 3. Choose the services for your project
+Keep talking to make changes or variants. Suitable existing material stays in use while the Agent
+changes the relevant script, component or placement. Your project remains editable in ordinary files.
 
-<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/provide_credentials_when_the_agent_asks.mp4"></video>
-
-The Agent first checks the tools and services already available for this project. It explains any
-missing capability and helps you choose how to provide it. For a spoken reference, WhisperX supplies
-the transcript and word timings used to understand the video. The Agent checks for a local setup;
-if needed, it can help prepare one or use a hosted service you choose.
-
-You can use your own provider accounts, or choose HypiHub for hosted transcription and generation
-through one account. Tell the Agent which services you already use and whether you prefer local
-setup or hosted tools. It opens login after you choose to connect that service. The recording shows
-the HypiHub login option.
-
-Use the service's login or credential setup to connect your account. Credentials belong in the
-configured credential store, while the project records which services to use.
-
-## 4. Agree on the paid work
-
-<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/approve_and_submit_the_paid_build.mp4"></video>
-
-Before using a paid service, the Agent explains the account, work to be performed and available
-pricing information. Agree on the production scope and budget, for example:
-
-```text
-Use my selected account to make this video, including transcription and media generation,
-within a total budget of $5. Keep me informed as it progresses.
-```
-
-Your authorization covers that agreed work as it proceeds. If you want only an analysis first,
-authorize that scope; the production can be priced once its direction is clear. An expanded scope,
-a different paying account or work beyond the budget brings a new decision back to you.
-
-The recording illustrates approving a production request. Actual prices and local or hosted
-processing depend on the services selected for your project.
-
-## 5. Let the Agent produce the video
-
-<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/let_the_agent_do_the_production_work.mp4"></video>
-
-The Agent understands the reference in terms of your goal. Timed frames and words help it explain
-the story, pacing, and the purpose and timing of captions, B-roll and graphics. A replacement person
-or product shapes the script and creative direction from the beginning.
-
-It records the direction, writes the image and performance prompts, and arranges the references
-that connect the generated material. While independent generation is running, it can write the
-components and prepare the composition. Spoken material supplies the semantic timing for captions
-and graphics; wordless animation can use its own authored rhythm.
-
-With the actual material available, the Agent checks how the layout, motion and timing work together
-and refines the relevant components. Existing media stays available for reuse, and you receive
-updates about creative decisions, progress and problems.
-
-Builds save their completed media and outputs. If an attempt fails, the Agent explains what happened
-and uses available work in a new Run and Build, within the agreed scope.
-
-## 6. Review the finished video
-
-<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/review_the_paid_result.mp4"></video>
-
-When the Build finishes, the Agent provides the final video and its saved location. Review the
-content, captions, transitions, framing and sound against your goal. Describe any changes you want;
-the project retains editable Sources and generated media.
-
-### Explore the editable project in Studio
-
-<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/review_the_mock_studio.mp4"></video>
-
-Alongside the finished video, the Agent can open Studio to show the editable composition. Its
-Preview, Timeline and Inspector let you explore how the media, captions and graphics fit together.
-
-The recording shows the timeline and editing interface with placeholder media. In your project,
-the Agent opens a Run that selects your existing production material. If you are working remotely,
-a screenshot or short recording can introduce the project too.
-
-You can make a concrete request such as:
-
-```text
-Bring the board in with the words introducing the ranking, and make the captions larger.
-```
-
-The Agent changes the relevant source or component and checks the updated composition.
-
-## 7. Request natural-language changes
-
-<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/request_natural_language_changes.mp4"></video>
-
-After a successful Build, you can continue directing the project conversationally. You may change
-the host, replace B-roll, alter the ranking-board treatment, translate the script, adjust the tone or
-switch the aspect ratio. For example:
-
-```text
-Keep the script and ranking order, but replace the host with a calm male presenter and make the board
-look like a paper sports magazine.
-```
-
-The Agent traces each request to the relevant source and component, preserves what you asked it to
-keep, and reuses existing outputs. New paid generation follows your authorized scope.
-
-## 8. Create multiple variants in parallel
-
-<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/create_multiple_variants_in_parallel.mp4"></video>
-
-When you want several versions, first tell the Agent the dimensions that may vary. It will discuss
-the intended directions with you, for example:
-
-- one version with a different host;
-- one version translated into Spanish;
-- one version with a product-focused opening;
-- one version with faster cuts and denser B-roll.
-
-The Agent records the shared parts and each version's changes, then gives every variant explicit
-production choices. Independent work can execute concurrently within the Runtime's configured
-capacity; shared media can be reused. You receive each finished video, its project files and a clear
-account of completion.
+For more detail, see [Making videos with an Agent](./guide/skill.md),
+[Runs and Builds](./quickstart/run.md), and [Studio](./quickstart/preview.md).

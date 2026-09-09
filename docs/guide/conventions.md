@@ -5,6 +5,8 @@ description: Naming, module boundaries, TypeScript configuration and wire data.
 
 # Conventions
 
+These conventions describe work inside the Hypit repository. Project extensions use their owner's scope and the public `hypit/*` SDK subpaths; see [Packages and Extension](./packages.md).
+
 ## Naming
 
 | Thing | Convention | Example |
@@ -18,7 +20,7 @@ description: Naming, module boundaries, TypeScript configuration and wire data.
 
 ## Module boundaries
 
-- Each package has exactly one public entry point: `src/index.ts`.
+- A package declares its public entry points in `package.json` exports; `src/index.ts` is the usual workspace entry.
 - Internal modules use explicit `.js` extensions (NodeNext resolution).
 - Cross-package imports use `@hypit/*`, never relative paths across package boundaries.
 - Circular production dependencies are forbidden.
@@ -44,8 +46,8 @@ Adding a package does not require changing the root TypeScript configuration.
 
 - All persisted data uses the `@1` wire format version.
 - Project-owned Module and Frontend identities use the literal logical version `1`.
-- Workspace `package.json` versions remain `0.0.0-dev` until publication. They are physical package
-  metadata, not logical protocol identities.
+- Package versions select physical releases through npm or pnpm. They are distinct from logical
+  Module and Frontend interface versions.
 - npm or pnpm owns installed package versions and bytes. Hypit identities describe semantic
   Modules, Frontends, Fragments and implementations rather than pretending to hash an installed package.
 - Wire types are defined in `@hypit/protocol` and are immutable.
@@ -56,5 +58,6 @@ Adding a package does not require changing the root TypeScript configuration.
 
 - Compilation failures throw with descriptive messages including source location.
 - Runtime failures are recorded as Operation failures in the Build state machine.
-- Recoverable failures trigger retry according to Endpoint policy after Scheduler capacity acquisition.
-- Fatal failures transition the Build to a terminal state.
+- Providers own bounded transport retries where their service protocol permits them.
+- A failed execution attempt ends the Build. Further work uses a new Run and Build, with completed
+  Outputs explicitly selected for reuse.

@@ -5,19 +5,26 @@ description: Per-take normalization and alignment, followed by SemanticTrack ass
 
 # Timing & Assembly
 
-Hypit's timing authority is a `SemanticTrack`. Build it in segment-sized pieces:
+For spoken video, a `SemanticTrack` connects the authored Script to the actual performance. This is
+the natural time source for captions, word-triggered graphics and coverage. Build it in segment-sized pieces:
 
 1. normalize each accepted A/V take into one exact frame domain;
 2. align that normalized media with its authored Script Segment to create a self-contained `SemanticTake`;
 3. assemble the Semantic Takes in program order with `speech:Track`.
 
-Every Take is already semantic before it enters the Track.
+Every Take is already semantic before it enters the Speech Track. Pictures can be presented by
+Media Track or a project component independently of this semantic and audio assembly.
+
+A purely visual animation can instead declare its own duration and frame rate in a ProgramSpace.
+See [an authored film clock](./composition.md#a-film-drawn-entirely-by-components). It can use seconds
+or frames for events; spoken work can use Script Selections and Moments for the same visual behavior.
 
 ```svml
 <import as="program" from="@hypit/program-space@1"/>
 <import as="pipeline" from="@hypit/media-pipeline@1"/>
 <import as="whisperx" from="@hypit/whisperx@1"/>
 <import as="speech" from="@hypit/speech-track@1"/>
+<import as="media-track" from="@hypit/media-track@1"/>
 <import as="space" from="@hypit/spatial@1"/>
 <import as="recipes" source="./recipes.svs"/>
 ```

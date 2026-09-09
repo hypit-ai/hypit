@@ -417,7 +417,7 @@ A direct child of the stack, self-closing, at least one, and dealt in document o
 |---|---|
 | `source` | required — a still image, a Synchronized Medium, or a Compositable Surface |
 | `extent` | required for a still image and refused for anything else |
-| `at` | required — the Moment the card is dealt on |
+| `at` | required — the reveal event: a Moment or an authored time such as `2s` or `12f` |
 | `appearance` | optional — its own Recipe, otherwise the stack's |
 | `label` | optional — a `deck:Label` record |
 
@@ -447,7 +447,7 @@ effect bound to its own window.
 <import as="screen" from="@hypit/screen-overlay@1"/>
 ```
 
-`screen:Track` takes `id`, `canvas` and `space`. Its children are the effects, at least one, each
+`screen:Track` takes `id`, `canvas` and one time source: `semantic` or `space`. Its children are the effects, at least one, each
 empty, each with a required `z` for stacking order and a window that is one of:
 
 | Window | Written |
@@ -457,7 +457,7 @@ empty, each with a required `z` for stacking order and a window that is one of:
 | A Moment, for a length | `at={story.moment.x} for="12f"` on an item whose Track has `semantic={speech.semantic}` |
 | An explicit span | `start="…" end="…"`, optionally against a `selection=` or `moment=` |
 
-The Track takes `id`, `canvas` and `semantic`. Lengths are `12f`, `250ms` or `1.5s`. A Selection
+Lengths are `12f`, `250ms` or `1.5s`. A Selection
 names one contiguous interval and a Moment names one point; author another item when an effect should
 appear again.
 

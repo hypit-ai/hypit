@@ -1,82 +1,65 @@
 ---
 title: Component Anatomy
-description: The roles a component package fills, illustrated by the minimal author-package fixture.
+description: Turn a scene's creative interface into a reusable graph contribution.
 ---
 
 # Component Anatomy
 
-Every component package fills the same set of roles. This page describes the roles and their
-canonical fixture locations;
-[Adding an Author Package](./author-packages.md) is the step-by-step.
+A component connects an author-facing idea to its implementation. For a ranking board, that idea
+might be “introduce each contender on its line, then move its icon into the ranked position.” Its
+inputs express those relationships; its code supplies the drawing and motion.
 
-Read this instead of reading a neighbouring package end to end. One package's specifics are a worse
-thing to copy than its structure.
+Start with [Adding an Author Package](./author-packages.md) for a complete buildable example.
+[Ranking](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/README.md) is a richer example
+of semantic events, persistent state and a Studio Companion.
 
-## The roles
+## The implementation roles
 
-| Role | What it owns | Called |
-|---|---|---|
-| Manifest | Module identity, nominal Types, Producers, Surface declarations and their vocabulary | `manifest.ts`, sometimes `index.ts` |
-| Types | The TypeScript shapes those nominal Types carry | `types.ts` |
-| Value layer | `assert…`, `seal…` and `create…` for every authored value | `program.ts`, `schedule.ts` |
-| Style decoder | One SVS Recipe plus exact fonts into a Style value | `author.ts`, `style.ts` |
-| Renderer | A Program into the elements a Track presents | `lower.ts`, `render.ts`, `presentation.ts` |
-| Surface | XML element into typed records and inputs | `surface.ts` |
-| Producers | The deterministic handlers the Manifest declared, and Validators | `component.ts` |
-| Fragment | The graph a Surface expands into: inputs, operations, outputs | `fragment.ts` |
-| Activation | The host facets a Host installs | `activation.ts` |
+These roles can be organized into files that suit the component's size:
 
-Use `examples/minimal-author-package/packages/example-component/` for the canonical role layout.
-Only when vocabulary inspection proves a close structural sibling should you inspect that sibling's
-README and the specific role files you must adapt; do not compare unrelated business packages to
-infer generic architecture.
+| Role | Responsibility |
+| --- | --- |
+| Manifest and Types | Name the values, Producers, inputs and outputs the package provides |
+| Surface | Read the authored element and resolve its explicit inputs |
+| Fragment | Describe the operations and dependencies connecting those inputs to outputs |
+| Producer | Perform the declared computation |
+| Value and Style helpers | Validate inputs, apply documented defaults and decode the accepted Recipe properties |
+| Schedule and drawing | Project events and draw the scene at each frame |
+| Activation | Publish the contributions the selected package offers |
+| Studio Companion | Describe timeline entities and editable properties for Studio |
 
-## What each role must get right
+The [Author SDK](https://github.com/hypit-ai/hypit/blob/main/packages/author-kit/README.md)
+and included example own the exact object shapes. A small component can keep related roles together;
+a larger component benefits from separating reusable scheduling, styling and drawing logic.
 
-**Types and Manifest are the contract.** Everything else agrees with them, so write them first and
-stop changing them. A nominal Type belongs to your Module; Core keeps no central union, so adding one
-needs no Core release.
+## Design around relationships
 
-**The value layer is where authored data becomes trustworthy.** Every value that crosses a boundary
-gets an `assert…` that states what is wrong in the author's terms, and a `seal…` that canonicalises
-it. A Producer that receives an unsealed value has no way to tell a mistake from a shape it has not
-met. The fixture's value layer is the minimal pattern; a close sibling may be used as a bounded
-implementation skeleton only after vocabulary inspection.
+For spoken work, accept Selections and Moments for behavior tied to the words. Their projection
+provides exact windows and instants after the performance exists. For an authored animation,
+seconds or frames can express the reading rhythm. A duration such as `12f` can describe the length
+of a transition in either case.
 
-**The Style decoder reads a Recipe, not a stylesheet.** It takes one decoded `SvsRecipe` shaped as
-`{ path, properties }` and the exact fonts, validates the keys it admits, and produces a Style value.
-Unknown keys fail; defaults are declared, not implied. Use the fixture's decoder for the generic boundary, or the selected close sibling when
-the new package intentionally extends that sibling's domain contract.
+Media presentation, spatial layout and time each have their own inputs. A normalized clip supplies
+sampleable media; a SemanticTrack can supply the prepared performance and its source positions.
+A Frame can locate the scene, while its internal HTML/CSS or element tree coordinates videos,
+text, masks and graphics. Group content that shares behavior. Independent contributions can stay
+as peer Tracks with their own paint order.
 
-**The renderer turns a Program into elements and nothing else.** It resolves no timing of its own and
-reaches into no other Track. Timing arrives already projected; placement arrives as a Frame.
+A caption component benefits from the existing caption document, style selection and semantic
+timing. Use the fine-caption family for the styles it expresses; a new family can consume those
+same caption relationships and draw a different visual treatment.
 
-**The Surface decodes one element.** It reads attributes and children, resolves references, pushes
-typed records, and returns the graph declarations. It is the only place that knows the markup exists.
+## Make it useful to another author
 
-**The Fragment is the shape, not the work.** It declares which inputs the Surface supplies, which
-operations run, and which outputs the element publishes. Producers do the work; the Fragment says how
-they are wired.
+Choose parameter names from the creative decision: the reveal event, the content, the placement,
+the appearance. Document defaults and what an override changes. A Style decoder receives an SVS
+Recipe shaped as `{ path, properties }` and explicit font resources; a Source references the Style
+by its authored id.
 
-An author package's Surface returns this Graph Fragment; it is not the `run-fragment-host` facet used
-by preview or other Run-side replacement packages. Every operation must use a Producer declared by
-the same Module. Producer port bindings are exact: variable-length collections require repeated
-operations followed by a fixed-port append/merge Producer rather than an undeclared variadic input.
+Keep the video's particular copy and media as inputs. The component draws its own graphic
+structure and can ship reusable assets such as fonts or icons. Its example Source should show the
+states that matter, including how it behaves with different content or a changed event time.
 
-## Assets a package ships
-
-A component's own chrome — its paper, board, panel or default backdrop — is drawn by the component's
-own code, and the preview image its Surface declares is captured from that rendering. A small static
-file a component ships, such as a font or an icon set the author already owns, is read with
-`readFile(new URL("../assets/…", import.meta.url))`. None of this is an input the installing project
-supplies, and none of it is produced by a Build or by an image model.
-
-A component that cannot draw itself without a Source supplying its background is the wrong shape.
-The symptom is unmistakable — it imports cleanly and renders nothing.
-
-## What does not belong in a component package
-
-- Credentials, HTTP, queues or Provider selection. A model package owns request semantics only.
-- Timing resolved from anything other than the ProgramSpace and SemanticMap it was given.
-- Access to another Track's values.
-- A field added to Core, Composition or Visual IR to make one component work.
+The package's README and vocabulary give authors enough information to choose and use it. A Studio
+Companion can add editing handles for the source values that have a clear interpretation. New visual
+behavior belongs in this package; a Provider handles external execution when the graph needs it.
