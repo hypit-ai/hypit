@@ -433,9 +433,19 @@ function kiePricingReader(client: KieClient): EndpointPricingReader {
     const selectedModel = route.selectModel(request);
     const records = await client.pricingRecords(selectedModel);
     if (records.length === 0) return [];
+    const lines = records.map((record) => {
+      if (typeof record.modelDescription !== "string" || typeof record.creditUnit !== "string") return undefined;
+      const value = (item: unknown) => typeof item === "string" || typeof item === "number" ? String(item) : undefined;
+      const usd = value(record.usdPrice);
+      const credits = value(record.creditPrice);
+      if (usd === undefined && credits === undefined) return undefined;
+      const amounts = [usd === undefined ? undefined : `USD ${usd}`, credits === undefined ? undefined : `${credits} credits`];
+      return `${record.modelDescription}: ${amounts.filter((item) => item !== undefined).join("; ")} (${record.creditUnit})`;
+    });
     return [{
       source: client.pricingSource,
       data: canonicalize({ model: selectedModel, records }),
+      ...(lines.every((line) => line !== undefined) ? { summary: lines.join("\n") } : {}),
     }];
   };
 }

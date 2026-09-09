@@ -66,6 +66,8 @@ export type EndpointCredential = CredentialValue & {
 export type EndpointPricingDocument = {
   readonly source: string;
   readonly data: CanonicalValue;
+  /** Optional concise rate description, including units and conditions, owned by this Provider. */
+  readonly summary?: string;
 };
 
 export type EndpointPricingReaderContext = {
@@ -85,6 +87,8 @@ export function verifyEndpointPricingDocument(value: EndpointPricingDocument): v
   assert(source?.protocol === "https:" || source?.hostname === "localhost",
     "Endpoint pricing source must use HTTPS or localhost");
   canonicalize(value.data);
+  assert(value.summary === undefined || typeof value.summary === "string",
+    "Endpoint pricing summary must be text");
 }
 
 export type EndpointInvocationContext = {

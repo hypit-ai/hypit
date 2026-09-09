@@ -22,7 +22,10 @@ type SourceOptions = ProjectOption & {
 export type AuthorCommand =
   | (CommandBase & SourceOptions & { readonly command: "check" })
   | (CommandBase & SourceOptions & RuntimeOption & { readonly command: "plan" })
-  | (CommandBase & SourceOptions & RuntimeOption & { readonly command: "pricing" })
+  | (CommandBase & Omit<SourceOptions, "limit"> & RuntimeOption & {
+      readonly command: "pricing";
+      readonly limit?: number;
+    })
   | (CommandBase & SourceOptions & RuntimeOption & {
       readonly command: "build";
       readonly follow: boolean;

@@ -86,6 +86,7 @@ export type PlanPricingView = PlanProviderView & {
   readonly pricingDocuments?: readonly {
     readonly source: string;
     readonly data: CanonicalValue;
+    readonly summary?: string;
   }[];
   readonly pricingError?: string;
 };
