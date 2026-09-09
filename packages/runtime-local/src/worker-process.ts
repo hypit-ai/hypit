@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { canonicalStringify } from "@hypit/protocol";
 
 import { processAlive, stopProcessTree } from "./process-control.js";
+import { readProcessLogs } from "./process-logs.js";
 import { startWithOwnConsole } from "./programs.js";
 
 export type RuntimeWorkerLaunch = {
@@ -160,12 +161,7 @@ async function waitForReady(
   while (Date.now() <= deadline) {
     const current = await record(profile, dataRoot);
     if (current === undefined || !processAlive(current.pid)) {
-      let log = "";
-      try {
-        log = await readFile(location.log, "utf8");
-      } catch (error) {
-        if (!nodeError(error, "ENOENT")) throw error;
-      }
+      const log = await readProcessLogs(location.log, LOG_TAIL_BYTES);
       throw new Error(`Runtime Worker exited before becoming ready${log.length === 0 ? "" : `: ${log.trim().split("\n").at(-1)}`}`);
     }
     if (current.owner !== owner) {
@@ -338,20 +334,7 @@ export async function stopRuntimeProcess(profile: string, dataRoot: string, time
 
 export async function runtimeProcessLogs(dataRoot: string): Promise<{ readonly path: string; readonly text: string }> {
   const path = paths(dataRoot).log;
-  let file;
-  try {
-    file = await open(path, "r");
-    const metadata = await file.stat();
-    const length = Math.min(metadata.size, LOG_TAIL_BYTES);
-    const buffer = Buffer.alloc(length);
-    const { bytesRead } = await file.read(buffer, 0, length, metadata.size - length);
-    return { path, text: buffer.subarray(0, bytesRead).toString("utf8") };
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return { path, text: "" };
-    throw error;
-  } finally {
-    await file?.close();
-  }
+  return { path, text: await readProcessLogs(path, LOG_TAIL_BYTES) };
 }
 
 export async function markRuntimeProcessReady(path: string, owner: string): Promise<void> {

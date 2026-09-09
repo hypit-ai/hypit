@@ -108,7 +108,12 @@ The lifecycle commands have deliberately narrow meanings:
 
 - `hypit runtime init` writes and selects the Distribution's starter Profile; it performs no setup or
   network access and never overwrites an existing Profile.
-- `hypit runtime up|down` manages local package preparation, declared local Programs and the Worker.
+- `hypit runtime up` prepares selected local dependencies, starts declared local Programs and starts
+  the Worker. `hypit runtime down` stops the Worker; `hypit programs down` stops the Programs.
   Remote services have no lifecycle for Hypit to start or stop.
+- `hypit runtime logs` reads the Worker's output, including separately redirected standard errors
+  on Windows. The files are `worker.log` and `worker.err.log` under the Runtime data directory's
+  `worker/`. Separate error output is labeled `[stderr]`; the files do not establish an interleaved
+  event order. A failure before readiness also includes the recorded error in its startup message.
 - `hypit doctor` is the active, read-only check. Endpoint-owned diagnostics may authenticate and read a
   remote capability catalog; normal preflight never does.

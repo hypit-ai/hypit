@@ -9,6 +9,7 @@ import type { ManagedProgram, ManagedProgramCommand, ManagedProgramState } from 
 import { declaredManagedPrograms } from "./config.js";
 import type { LoadRuntimeConfigOptions } from "./config.js";
 import { processAlive, stopProcessTree } from "./process-control.js";
+import { processErrorLogPath } from "./process-logs.js";
 
 export type ManagedProgramAction =
   | "already-running"
@@ -176,7 +177,7 @@ export async function startWithOwnConsole(
   root: string,
   logPath: string,
 ): Promise<{ readonly pid?: number; readonly detail?: string }> {
-  const errorPath = `${logPath.replace(/\.log$/u, "")}.err.log`;
+  const errorPath = processErrorLogPath(logPath);
   const environment = Object.entries(start.env ?? {})
     .map(([name, value]) => `$env:${name} = ${powershellLiteral(String(value))}`).join("\n");
   const argumentList = start.args.length === 0

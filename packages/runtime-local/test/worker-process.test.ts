@@ -89,3 +89,34 @@ test("one live detached Runtime Worker survives repeated starts and stale startu
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("Runtime logs include separately redirected errors even without standard output", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-logs-"));
+  const worker = join(root, "worker");
+  try {
+    await mkdir(worker);
+    await writeFile(join(worker, "worker.err.log"), "worker could not load the Profile\n");
+    assert.equal((await runtimeProcessLogs(root)).text, "[stderr]\nworker could not load the Profile\n");
+    await writeFile(join(worker, "worker.log"), "worker starting\n");
+    assert.equal((await runtimeProcessLogs(root)).text,
+      "worker starting\n[stderr]\nworker could not load the Profile\n");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("a Worker that fails before readiness reports its error stream", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-start-error-"));
+  const profile = join(root, "runtime.json");
+  const dataRoot = join(root, "runtime");
+  await writeFile(profile, JSON.stringify({ format: "hypit.runtime-local@1" }));
+  try {
+    await assert.rejects(ensureRuntimeProcess(profile, dataRoot, {
+      command: process.execPath,
+      args: ["-e", 'process.stderr.write("worker configuration could not load\\n"); process.exitCode = 1;'],
+    }, 5_000), /worker configuration could not load/u);
+  } finally {
+    await stopRuntimeProcess(profile, dataRoot, 1_000).catch(() => undefined);
+    await rm(root, { recursive: true, force: true });
+  }
+});
