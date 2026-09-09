@@ -23,6 +23,62 @@ and editing does not acquire an image model merely because another production us
 alignment establishes speech timing, and authored generation Needs require their selected
 production capabilities. Local media inspection prepares reference frames and clips independently.
 
+## Choose the practical capability path with the user
+
+Read the project's relevant choices and inspect its tools, Profile, credentials and local preparation.
+Keep a working setup the user has chosen. For a spoken reference, transcription may be the immediate
+need while image and video requests are still taking shape. Explain the capabilities the piece will
+need, and make the setup choice concrete through what is available, the preparation effort and cost.
+
+`programs status` and `doctor` describe the selected Profile. A Profile containing only hosted
+alignment leaves local WhisperX readiness unexamined. [Local tools](local-tools.md#assess-local-preparation)
+explains where to inspect existing preparation and known service configuration.
+
+- Recommend local WhisperX when the machine and preparation time make it practical. Its calls have
+  no hosted Provider charge; first preparation may install a runtime and download model weights.
+  [Local tools](local-tools.md#select-local-whisperx-explicitly) owns setup and repair guidance.
+- Use a supported BYOK Provider when the user already has that account and wants to use it.
+- Offer HypiHub when the user prefers one hosted account or wants an alternative to local preparation.
+  It hosts WhisperX and supported image, video and audio models, so the same account can serve
+  reference understanding and later generation. Check access for the capabilities this work needs.
+
+When the path is undecided, share those findings, recommend a practical choice and ask which setup
+suits the user. Their decision can cover the preparation as a whole. Record it in
+[Brief](../creation/brief.md#brief-preserves-user-authority); the Profile implements that choice.
+[Paid scope](../production/builds.md#work-within-the-agreed-paid-scope) explains how the commission
+covers service charges. Prepare further model credentials as the creative plan needs them.
+
+Switching from BYOK or local execution to HypiHub changes the selected service and may change the
+billing account. That remains a user choice when the earlier route encounters authentication, quota,
+rate-limit or service errors. An OAuth page follows the decision to connect the selected account.
+
+## Create a Profile when the project needs one
+
+From the project directory:
+
+```bash
+hypit runtime init
+hypit paths
+```
+
+`runtime init` writes and selects an editable starter `hypit.runtime.json`. It preserves an existing
+Profile and performs no installation or login. Use `hypit runtime use <profile>` to select an
+intentional existing Profile for this project.
+
+The official video Distribution's starter includes:
+
+- `hypihub.default` for remote generation and WhisperX alignment;
+- `media.local` for local media processing;
+- `hyperframes.local` for local visual rendering.
+
+These entries describe initial routing. Adapt them to the local and hosted services the user has
+chosen. A missing credential on a starter entry describes that entry's readiness. The user's choice
+is recorded in Brief; the actual setup may use BYOK, local WhisperX or another supported deployment.
+Each authored model needs an Endpoint that supports its exact requested capability.
+
+Runtime selection is project-local. Commands read that project's `.hypit/runtime` pointer and do not
+choose a Profile from a familiar filename or from another project above it.
+
 ## Keep the owners separate
 
 | Owner | What it decides |
@@ -126,68 +182,6 @@ Read the installed `@hypit/runtime-local` README for the shared model and the se
 accepted settings. Use `hypit activity` to inspect actual claims. After changing a Profile, follow
 [Worker reload guidance](../production/builds.md#reload-changed-execution-code-deliberately).
 
-## Begin with the Distribution starter
-
-From the project directory:
-
-```bash
-hypit runtime init
-hypit paths
-```
-
-`runtime init` writes and selects an editable starter `hypit.runtime.json`. It does not install a
-package, contact a service, request a credential, or start a Worker, and it preserves an existing
-Profile. Use `hypit runtime use <profile>` to select an intentional existing Profile for this project.
-
-The current official video Distribution starts with:
-
-- `hypihub.default` for remote generation and WhisperX alignment;
-- `media.local` for local media processing;
-- `hyperframes.local` for local visual rendering.
-
-This is a useful first configuration, not an Author-language rule. A project may select BYOK
-Providers, local WhisperX, remote rendering, or another supported deployment without changing its
-Source. Exact models remain author choices and are demanded only when the selected Run reaches them.
-
-Runtime selection is project-local. Commands read that project's `.hypit/runtime` pointer and do not
-choose a Profile from a familiar filename or from another project above it.
-
-## Choose the practical capability path with the user
-
-Inspect the available tools, selected Profile, configured credentials and relevant Endpoint diagnoses
-before asking the user to set up anything. Keep working choices and explain which ones this piece
-will use. For a typical generated reconstruction, consider reference transcription, image generation
-and video generation together, giving the user a clear picture of the capabilities the work needs.
-
-Resolve the choices needed for the current work. For a spoken reference, word timing may be the
-immediate need while the specific image and video requests are still taking shape. Explain the local
-and hosted paths and their consequences for later production; ask about existing accounts when that
-helps choose a path. Prepare further credentials when the creative plan needs those services.
-Revisit a choice when the user's intention or available environment materially changes.
-
-- Use a supported BYOK Provider when the user already has that account and wants to use it.
-- For speech alignment, offer local WhisperX when the machine and the user's available setup time
-  make it practical. Its calls have no hosted Provider charge; first preparation may install a
-  runtime and download model weights. [Local tools](local-tools.md#select-local-whisperx-explicitly)
-  owns setup and repair guidance.
-- Offer HypiHub as the official hosted option when the user prefers one hosted account or does not
-  have the corresponding BYOK or local capability. It hosts WhisperX and supported image, video and
-  audio models, so the same account can serve reference understanding and later generation. Check
-  the selected account's access and available quota for the capabilities the work needs.
-- Image, video, voice, and audio production each require an actual selected Endpoint for the exact
-  authored model. Check support for the capabilities this work actually requests.
-
-HypiHub is a convenient selected Provider, not an automatic fallback. Moving from BYOK or local
-execution to HypiHub changes the Profile or its binding explicitly; an authentication error, exhausted
-quota, rate limit or service failure never authorizes that switch or a different billing account.
-Ask for a user decision only when the alternatives have a meaningful consequence,
-not merely because several equivalent implementations exist.
-
-Explain a setup choice in terms of the work it enables, its preparation effort and which account
-would pay. [Paid scope](../production/builds.md#work-within-the-agreed-paid-scope) connects that choice
-to the user's commission. Continue independent work, such as watching reference frames or studying
-the supplied product, while a needed setup decision is being resolved.
-
 ## Put secrets behind credential references
 
 A Profile names a Credential Store and key; the secret stays in that store. The writable OS store
@@ -200,14 +194,15 @@ Inspect one Endpoint's credential slots without revealing their values:
 hypit auth status hypihub.default
 ```
 
-When the Endpoint declares an acquisition flow or the selected store accepts interactive input, use:
+Once the user has chosen to connect that account, use its declared acquisition flow or the selected
+store's interactive input:
 
 ```bash
 hypit auth login hypihub.default
 ```
 
-OAuth may open the Provider's browser flow. Another Endpoint may securely prompt for its exact secret
-or accept `--from <secret-file>`. An Endpoint backed by the read-only environment store is configured
+For an OAuth Endpoint, this command opens the Provider's browser flow immediately. Another Endpoint
+may securely prompt for its exact secret or accept `--from <secret-file>`. An Endpoint backed by the read-only environment store is configured
 in the Worker process environment instead.
 
 Keep secrets out of Author Sources, Runs, Runtime Profile JSON, project documentation, command

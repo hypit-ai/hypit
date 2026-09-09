@@ -9,11 +9,12 @@ and project package ownership. [Caption authoring](caption-authoring.md) covers 
 
 ## Start with the author-visible behavior
 
-Prefer semantic inputs when the component responds to the video's meaning. A comparison can occupy
+Prefer semantic inputs when the component responds to the words or performance. A comparison can occupy
 a Selection; a verdict can trigger a Moment; the whole board can live for a Segment. Expose those
 choices on the Surface and pass their projected Windows or Instants to the implementation. This
-keeps the component useful when a new performance changes the pace. Clock-based inputs remain
-appropriate for behavior whose intention is an explicit time or duration.
+keeps the component useful when a new performance changes the pace. In an authored animation,
+content events carry their own reading rhythm. Their Instants and Windows enter the same component
+inputs; durations and frame offsets direct how a change unfolds.
 
 Write a small intended Source use before implementing it. A new score strip might have one Style,
 an outer Window, preset scores and score-changing Moments. Decide whether its items appear briefly,
@@ -53,6 +54,12 @@ This separation lets one Moment drive an answer reveal, a short sound and a flas
 receives its own appropriate projection, but all refer to the same authored event. Changed speech
 moves the event without asking each component to search for a word or inspect the Script parser.
 
+For a component that also serves authored animation, `resolveTemporalContext` and `createTemporalSpace`
+from `hypit/temporal-markup` supply the chosen film clock. Clock expressions project directly through
+that space; Script references use its semantic context. The drawing code consumes the resolved
+values in either case. The installed `examples/semantic-composition/packages/chat-scene` demonstrates
+repeated content children with their own events and a program drawn entirely in code.
+
 For a Window consumer, `during={story.selection.example}` can take both semantic boundaries.
 `at={story.moment.answer} for="8f"` starts a short effect at a Moment. An Instant consumer may accept
 `at={story.moment.answer}` with no duration because it owns a state transition. Read the actual
@@ -71,8 +78,8 @@ Then decide what its children mean:
 - a preset item may already occupy the initial state and need no reveal trigger.
 
 Document that meaning in the component. `preset` is the answer strip's package-owned initial-state
-concept. An answer strip may sensibly accept only Moments for child reveals; expose the timing forms
-that match the component's behavior.
+concept. An answer strip consumes an Instant for a reveal that persists, while Media consumes a
+Window for occupancy. Expose timing inputs whose consumption matches the behavior.
 
 The interview's project emoji strip illustrates this design: one outer Window, ordered answer
 items, a placeholder asset and one icon per answer. Each Moment changes its own slot. The Track does
@@ -147,21 +154,26 @@ The useful pieces of a project package are:
 | Vocabulary and preview | Explain the role and show a recognizable, configured example |
 | Optional Studio Companion | Project meaningful editor entities, real parameter bindings and temporal lineage without changing video rendering |
 
-For a semantic Window, call `createTemporalWindowProjection` in the Surface with the resolved
-SemanticTrack and authored element. For an event, use `createTemporalInstantProjection`. Preserve
-all returned `records`, `components` and `fragments`, and wire its returned `ref` into the domain
-Fragment. Merely reading `ref` and dropping those drafts leaves no producer for that value.
+Resolve the Track's `semantic` or `space` through `resolveTemporalContext`, then use
+`createTemporalSpace` once to obtain the shared ProgramSpace. A spoken composition normally supplies
+`semantic={speech.semantic}`; an authored animation can supply `space={animation}`. This choice
+belongs to the Surface. The visual Producer consumes space and projected time, not Script syntax.
 
-Validate the temporal forms the component actually accepts. The answer strip, for example, checks
-that `at` references a Moment before using the shared helper; it intentionally does not accept a
-Selection boundary. Keep a child `subjectId` meaningful to the component while qualifying graph ids
-by the owning Track so two instances cannot collide. The exact helper options live in
-`hypit/temporal-markup`.
+For each Window, call `createTemporalWindowProjection`; for an event, use
+`createTemporalInstantProjection`. Pass the resolved context, the shared `space`, the child element
+and `resolveReference`. Preserve all returned `records`, `components` and `fragments`, and wire the
+returned `ref` into the domain Fragment. The common `at` accepts a Moment or an authored duration
+from program start. Selection and Segment boundaries use `boundary="start"` or `boundary="end"`.
+A Moment needs the semantic context that locates its Script anchor.
 
-Project ProgramSpace from the SemanticTrack once within the Fragment. Domain Producers then receive
-that space and traced Windows/Instants, alongside Canvas/Frame, Style and explicit content inputs.
-If the component consumes repeated children, a finite create/append/finalize graph is one established
-pattern: each operation retains declared ports, and every child's media remains a real graph edge.
+Keep each child's `subjectId` meaningful to the component while qualifying graph ids by its owning
+Track, so multiple instances can coexist. A finite create/append/finalize graph supports any authored
+number of messages or cards with ordinary fixed Producer ports. The exact helpers and vocabulary
+live in `hypit/temporal-markup`; the `@example/chat-scene` package demonstrates both time sources.
+
+A scene may publish computed event times when another component needs them, just as it publishes a
+Track. This shares pre-render data. When the author already specifies a common trigger, consumers
+can share that input directly. Expose additional outputs for a real composition relationship.
 
 For persistent state, reason about a requested frame directly. For example: outside the outer Window,
 draw nothing; inside it, each slot shows its preset/activated answer or its placeholder. Apply an

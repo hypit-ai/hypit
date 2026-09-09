@@ -22,12 +22,14 @@ to them before a performance has been generated.
 Once the media exists, normalization gives it a shared frame clock. A **SemanticTake** associates
 that media with one Script Segment and records its word and boundary positions in local frames.
 Speech Track assembles the Takes, translating their positions into a **SemanticTrack** for the
-complete program. Its **ProgramSpace** supplies the program's time axis.
+complete program. Its **ProgramSpace** supplies the program's time axis. A pure graphic animation can
+instead declare a ProgramSpace directly and draw each frame through components; it needs no performance media.
 
 In spoken work, the performance carrying the main Script is the A-roll. A single presenter, a
 conversation with several speakers, and an independent narration can each carry this spine.
 Covering the speaker with B-roll does not change whose words establish time. Speech Track assembles
-the relevant Takes into one semantic timeline while exposing their picture and sound separately.
+the relevant Takes into one semantic timeline and publishes their original audio. Media or a project
+component obtains the prepared picture from that semantic performance and decides how to present it.
 The speaker can occupy a small circular inset or appear as a cutout above a full-screen demonstration.
 That speaking performance still supplies the SemanticTake. A-roll describes this semantic role;
 screen area and stacking belong to its visual presentation.
@@ -41,6 +43,11 @@ span, with start and end boundaries and no spoken words to locate.
 
 ## Components turn those relationships into picture and sound
 
+Choose each relationship at the scale that makes it useful. Script describes what an event follows;
+Frames describe placement; a component owns shared layout, state and motion. The dependency graph
+says which values that work needs. These structures can differ: a Source element can produce several
+appearances, and one appearance can contain a whole scene of video and graphics.
+
 A component gives an authored relationship its behavior. A ranking board can consume a phrase's
 Selection to animate an entry; a reveal, flash and sound can share one Moment. Each interprets the
 event according to its role. The board may keep the revealed answer visible after the entrance ends.
@@ -49,8 +56,15 @@ Placement and appearance have their own inputs: a Frame says where the board bel
 how it looks, and supplied text or images say what it contains. This lets one behavior serve several
 productions while each production chooses its content and art direction.
 
-Components publish visual and audio Tracks. Film assembles the wanted Tracks into a **Composition**,
-and rendering turns that composition into the delivered video. Including performance audio lets
+Visual and audio components publish Tracks. A visual Track groups named appearances; each appearance
+owns its lifetime, paint order and internal element tree. A moving video and its diagram can form
+one scene, with independent Caption beside it. Media provides ordinary presentation, and a project
+component can own the shared behavior of a more specific scene. [Component design](component-design.md)
+explains that choice; [drawing a component](component-visuals.md) shows both structural elements and
+HTML/CSS programs with frame-driven behavior.
+
+Film assembles the wanted Tracks into a **Composition**, and rendering turns that composition into
+the delivered video. Including performance audio lets
 it continue under B-roll; a silent covering picture changes only the visible layer.
 
 [Tracks](tracks.md) explains the available roles. [Spatial layout](spatial.md) and

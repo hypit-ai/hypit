@@ -13,8 +13,9 @@ hypit-studio --run build.svrun
 ```
 
 Supply `--runtime <profile>` when intentionally using a different Profile from the project's
-`hypit runtime use` selection. Studio needs a Run whose selected targets reach one Film and a
-resolvable semantic projection. An image-generation-only Run is not a Film view; several distinct
+`hypit runtime use` selection. Studio needs a Run whose selected targets reach one Film with resolved
+composition and time. Speech-led work includes a Script lane; a pure animation's ProgramSpace supplies
+the clock for its component lanes. An image-generation-only Run is not a Film view; several distinct
 Films need separate Runs or sessions.
 
 Open the URL actually printed by the process and retain it with the Run it serves. The default

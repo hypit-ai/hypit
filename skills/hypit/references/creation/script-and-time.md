@@ -99,6 +99,9 @@ word it belongs with and does not create another speech time unit. CJK prose com
 one Han, Hiragana or Katakana character per lexical unit; compounds, decimal numbers and the spoken
 side of Dual Text preserve their own lexical structure. This is why Cue breaks, word attributes and
 semantic markers attach to complete authored units instead of punctuation or visual line positions.
+Character-level timing does not call for character-sized Cues: use `||` for meaningful reading
+phrases. [Caption craft](../playbooks/craft/captions.md#language-changes-the-reading-unit) explains
+Chinese, English and mixed-script grouping, spacing and their fit in the picture.
 
 ## Write the intended pronunciation
 
@@ -174,13 +177,34 @@ Script also represents passages without speech:
 No words does not mean no semantics: the Segment retains its identity and start/end anchors. Its
 associated normalized media determines the duration, and its SemanticTake has an empty word array.
 The same SemanticTrack and Track timing vocabulary apply to a wordless passage or an entire
-speech-free piece. The empty tag itself declares neither a zero-length interval nor a duration.
+piece made from prepared media. The empty tag itself declares neither a zero-length interval nor a duration.
 
 Choose Segment boundaries from natural production passages and delivery length, not from every
 picture cut. One Segment and Take can carry several speaking turns, camera cuts or a split-screen
 conversation. One continuous narration can carry many B-roll changes through Selections. Edited UGC
 can deliberately use several Takes driven by the same character-and-scene image; a natural cut is
 often part of its appeal. A Role change or `||` does not require another generation.
+
+## Time an authored animation
+
+For speech-led work, a graphic's timing usually follows what it explains. Preserve that relationship
+in Script: a reveal belongs to its Moment, and coverage belongs to its Selection. Rewriting the
+argument or changing the performance then carries the design into the target's actual timing.
+Reference seconds document what you observed; the target Script expresses what the new graphic follows.
+
+A chat animation, diagram or kinetic-text piece can instead be drawn entirely by components. Its
+messages and changes still carry meaning; the author chooses when the audience receives them and
+how long they need to read. Keep content and event timing together in the owning component's Source.
+An event can have an identity such as `question` or `reveal` and an authored `at="2.6s"` without
+inventing spoken words or a media-backed Segment. Film time is declared through ProgramSpace;
+[composition and rendering](../production/rendering.md#compose-an-authored-animation) shows the form.
+
+Choose timing per relationship, not once for the whole video. A spoken Moment can introduce a chat
+scene whose messages then unfold at authored intervals. Conversely, an authored animation can reveal
+one item on a spoken Moment. A projected expression such as `instant="moment.cue + 12f"` with
+`moment={story.moment.intro}` keeps an interval relative to that spoken event. The event's trigger
+and its entrance duration are different choices:
+`at={story.moment.answer}` locates the answer; ten frames can give its arrival a particular character.
 
 ## Measure before choosing durations
 
@@ -272,6 +296,7 @@ A Window occupies an interval:
 | `during={story.segment.hook}` | The Segment's Window. |
 | `during={story.selection.proof}` | The Selection's Window, including its authored affinities. |
 | `at={story.moment.claim} for="8f"` | A Window beginning at a Moment and lasting eight frames. |
+| `at="2s" for="12f"` | A Window beginning two seconds into the film and lasting twelve frames. |
 | `until={story.moment.claim} for="250ms"` | A 250 ms Window ending at a Moment. |
 | `start="program.start" end="moment.cue" moment={story.moment.claim}` | A Window composed from two explicit endpoints. |
 
@@ -286,9 +311,15 @@ An Instant names one point:
 | Form | Result |
 | --- | --- |
 | `at={story.moment.claim}` | The authored Moment. |
+| `at="2s"` or `at="12f"` | A point on the film clock, in seconds or frames. |
 | `at={story.selection.proof} boundary="start"` | The Selection's chosen boundary. |
 | `at={story.segment.hook} boundary="end"` | The Segment's chosen boundary. |
 | `instant="program.start + 8f"` | An explicit clock expression. |
+| `instant="moment.cue + 12f" moment={story.moment.claim}` | Twelve frames after the Moment, following it when the delivery changes. |
+
+`at="12f"` locates an event; `for="12f"` gives an interval its length. Frames use the selected
+film clock. Semantic projection keeps the event's Script identity alongside its resolved frame,
+so its authored relationship remains available for later changes.
 
 A particular Surface may deliberately expose only some of these forms. Its vocabulary reports the
 attributes it actually accepts; the shared spelling does not grant every component every temporal

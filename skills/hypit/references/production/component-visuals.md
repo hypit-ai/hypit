@@ -30,6 +30,11 @@ Use several Presents when items have separate lifetimes or stacking positions. A
 can keep its settled rows visible while later rows enter. Its domain program decides those spans
 and states; the drawing output makes them explicit.
 
+Track grouping is an authoring boundary; each Present has its own paint order among the film's
+appearances. Its element tree supplies local layout and compositing scope. Use that tree or a browser
+program for content that moves, clips or changes layout together. The final DOM follows these owned
+visual relationships rather than the nesting of tags in Source.
+
 ## A working drawing function
 
 [visuals.ts](examples/visuals.ts) contains `renderCard`, a complete pure drawing function using
@@ -91,6 +96,12 @@ together. `browserProgram` from `hypit/hyperframes` creates a `program` element'
 owns the local structure; CSS supplies layout, stacking, masks, filters and blending; optional
 `setup(root, data)` code returns `render(localFrame)`. This function sets the complete state at that
 frame. A range render may start in the middle, so compute state from the frame and authored inputs.
+
+For shared opacity or a filter, put the affected content under the element that owns the treatment.
+A translucent panel can use backdrop filtering; its painted position and browser compositing scope
+determine which background it affects. A transition can own both participating pictures and their
+handoff. Choose the scope from the visible relationship, keeping independently useful contributions
+as peer Presents. These are ordinary composition choices within the same rendering path.
 
 Use ordinary typed children for prepared video, images and exact-font text. A `{{child-id}}` slot in
 the HTML places each direct child exactly once. These children retain their declared resources,

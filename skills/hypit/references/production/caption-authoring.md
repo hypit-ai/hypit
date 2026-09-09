@@ -2,6 +2,7 @@
 
 Read this when a work needs a new relationship among its spoken words, layout and motion.
 [Caption craft](../playbooks/craft/captions.md) owns readability and directing judgment;
+[Caption styling and coverage](caption-program.md) owns applying Styles and Mutes;
 [Track authoring](track-authoring.md) owns project package wiring.
 [Fonts and text](fonts-and-text.md) explains exact font resources and fallbacks;
 [component visuals](component-visuals.md) explains the final drawing representation.
@@ -14,11 +15,32 @@ Fine Caption already covers uniform flowing text with exact fonts, Paint, boxes,
 placement and motion. Different colors, Role styles, cue entrances or head tracking may only require
 Source and Recipe changes. A keyword occupying a separate oversized line, words playing different
 visual roles, or a recurring spatial relationship among speakers can justify a new family directly.
-Creating that family is normal video production.
+Creating that family is normal video production. Name the family for the visual relationship it
+makes reusable, and name each Style for a particular treatment within it. A project can also own a
+single-use caption composition when that is what the video needs.
 
 The result is still Caption when the displayed words correspond to speech and remain close to its
 delivery. Independent slogans, summaries and titles usually belong to Typography even if they react
 to a Script Moment.
+
+## Own the visual relationship
+
+Media can present ordinary footage; a scene component can coordinate footage with diagrams or other
+graphics. Fine and custom Caption families have the same relationship. Their shared input is the
+authored speech and its semantic timing; the implementation owns the spatial structure and motion.
+
+Start from what the viewer should understand or feel. A supporting phrase might establish the
+thought while its key word takes the emphasis. Design how they enter, share space, respond to speech
+and hand off to the next thought. That relationship suggests useful controls: the word's authored
+role, fonts, relative sizes, placement and motion. Put the work's choices in its Style/Recipe and
+the reusable arrangement in the renderer.
+
+The output remains an ordinary VisualTrack. Its Presents can own trees of text, boxes, images and
+other visual elements. When words and graphics share layout or motion, they can live in the same
+component. [Component visuals](component-visuals.md#compose-video-and-graphics-in-one-browser-program)
+also describes HTML/CSS browser programs with typed media and text children. That drawing freedom
+applies to captions too: give the program the resolved caption schedule and explicit resources,
+and evaluate its state at the requested frame. Keep separately useful overlays as peers.
 
 ## Keep the existing text and timing chain
 
@@ -69,6 +91,12 @@ is a separate operation. A narrow width should not silently rewrite the Script i
 If the family needs an additional grouping rule, give that rule explicit parameters and preserve the
 original word/unit associations in the schedule.
 
+Display Words follow the Script's writing system: a Han character is normally one Word, while an
+English word is normally one Word. Keep that timing granularity separate from a phrase's visual
+grouping. Compose adjacent Han characters without Latin word gaps, preserve punctuation with its
+word, and use the selected fonts' actual widths for layout. Exercise mixed-script names as well as
+plain English when the family will carry Chinese copy.
+
 `caption:Mute` suppresses selected display units while preserving speech. A new family should use
 the common mute application when scheduling, as Fine does. Validate that schedule, document, narrative
 and ProgramSpace belong together; do not silently accept timing from another video.
@@ -81,7 +109,8 @@ timeline and Caption Program; its Fragment performs the common timing join and i
 render operations. Register the new family's Producers and any new schedule Type in its own package.
 
 The renderer owns typography, structural relationships, stacking and motion. Use the existing text
-shaping and Visual IR facilities; do not depend on an arbitrary system font or browser layout state.
+shaping and Visual IR facilities with explicit font resources, including selected local font files,
+so the same faces reach the rendering machine.
 Read `@hypit/caption-fine`'s `fragment.ts`, `schedule.ts` and `render.ts` as separate implementation
 examples. Reuse the common parts and replace the actual family behavior, including its parameter
 validation; renaming Fine while retaining its uniform-word assumption will not implement a structural

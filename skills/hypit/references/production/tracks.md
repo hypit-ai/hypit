@@ -222,6 +222,8 @@ can be chosen directly for a new visual role; making one is ordinary production 
 
 For the selected family's exact attributes and Recipes, use `hypit vocabulary @hypit/caption-fine`
 and its installed README. [Caption craft](../playbooks/craft/captions.md) explains reading rhythm;
+[Caption styling and coverage](caption-program.md) explains Role and Selection overrides, whole
+Segments, word-specific styles and Mute;
 [Caption tracking](../playbooks/craft/caption-tracking.md) explains measured moving placement.
 
 ## Persistent MG is more than another timed image
@@ -244,7 +246,9 @@ uses that same separation when designing a new semantic component.
 ## Assemble the intended peers
 
 Film's domain assembly receives a Canvas, a ProgramSpace and a Film Recipe. The current `film:Film`
-Surface takes `canvas`, `semantic` and `appearance`, deriving the space from the SemanticTrack.
+Surface takes `canvas`, `appearance` and a time source: `semantic` derives the space from the
+performance; `space` selects an authored ProgramSpace. Pure MG can consist entirely of visual
+components. [Rendering](rendering.md#compose-an-authored-animation) shows the complete time setup.
 Include each desired visual and audio
 output explicitly. Listing a Track later does not move it to the front: absolute stacking is authored
 inside the Track's Presents. Use intentional, distinguishable layer orders where things overlap.

@@ -1,7 +1,8 @@
 # Fonts and independent text
 
-Read this when choosing exact fonts, handling multiple writing systems or Emoji, or placing titles
-and labels. [Caption](../playbooks/craft/captions.md) covers text displayed with speech.
+Read this when choosing or finding fonts, using a local font file, handling multiple writing systems
+or Emoji, or placing titles and labels. [Caption](../playbooks/craft/captions.md) covers text displayed
+with speech and the reading rhythm of Chinese and English Cues.
 
 The font's glyph shapes and spacing determine how text wraps and how much room it needs. A font
 resource supplies those glyphs, a Style supplies their size and treatment, and a text item supplies
@@ -23,15 +24,59 @@ then a color Emoji face. Choose fallback faces for the actual writing systems in
 Weight and style must exist in the chosen family. `hypit vocabulary @hypit/fonts-open` and that
 package's README describe the installed catalog and supported combinations.
 
-Font bytes are explicit production resources, so rendering uses the selected faces regardless of
-the machine's installed fonts. A supplied brand font can be declared with its exact face metadata:
+For Chinese-led speech, start with a face made for the intended script: the installed catalog
+includes `noto-sans-sc` and `noto-serif-sc` for Simplified Chinese, `noto-sans-tc` and `noto-serif-tc`
+for Traditional Chinese, and display faces such as `zcool-kuaile`. Choose their character to suit the
+piece. A compact, clear face is useful for running speech; an expressive display face can suit a
+playful caption or a short title. Inspect the real words at delivery size, including punctuation,
+numbers and any Latin names.
+
+Fallback order also directs the design. Inter first with Noto Sans SC after it gives Latin letters
+Inter's shapes and Chinese Noto's. A Chinese face first can supply both scripts for a more unified
+line. Similar numeric weights in different families can look different, so judge the pairing in the
+same Cue. The renderer uses the exact supplied faces and disables synthetic bold and italic.
+
+## Use fonts already on the machine or supplied by the user
+
+Installed fonts are useful source material. Select their actual files and declare them as assets,
+so the chosen face travels with the build instead of depending on a family name existing on another
+machine. For example, a project can use a local brand face alongside an explicit Chinese fallback:
 
 ```svml
 <import as="asset" from="@hypit/media@1"/>
-<asset:Font id="brand-font" src="./assets/brand-semibold.woff2" weight="600" style="normal"/>
+<asset:Font id="brand-font" src="./assets/fonts/brand-semibold.woff2" weight="600" style="normal"/>
+<fonts:Face id="chinese-font" family="noto-sans-sc" weight="600" style="normal"/>
+
+<caption-fine:Style id="caption-style" recipe={look.caption.primary} font={brand-font}>
+  <caption-fine:Fallback font={chinese-font}/>
+</caption-fine:Style>
 ```
 
-Pass `{brand-font}` to the receiving Style. The file and metadata describe the actual supplied face.
+This excerpt assumes the `fonts`, `caption-fine` and Recipe imports. `asset:Font` accepts a file path;
+copying a selected face into the project's `assets/fonts/` makes the Source portable. Use the file's
+real weight and style. Declaring weight 700 does not turn a regular-only file into a bold face.
+
+Useful places to locate fonts include Font Book and `~/Library/Fonts` or `/Library/Fonts` on macOS;
+Windows Fonts and `%WINDIR%\Fonts` or `%LOCALAPPDATA%\Microsoft\Windows\Fonts` on Windows; and
+`fc-list` on systems with Fontconfig. Search the relevant font locations or use the operating
+system's font information to identify the face and file. A local `.ttf`, `.otf`, `.woff` or `.woff2`
+face can enter the same asset path as a supplied font. A `.ttc`/`.otc` collection contains multiple
+faces; the current Font Surface has no collection-face selector. Obtain the intended standalone
+face, or export it with a font tool when permitted, before declaring it.
+
+## Find a face when the available choices do not fit
+
+Start with the user's brand assets and the relevant local or bundled faces. If the work calls for
+another face, look at the foundry's or an open-font project's official specimen and download. Check
+the actual script coverage, available weight/style and intended use, then bring the chosen file into
+the project. Keep its source and license with it, especially when sharing the editable project.
+Downloading a selected face as an asset is enough; installing it system-wide is optional.
+
+Font choice and treatment work together: compare the actual caption wording, its line width,
+character detail and contrast with the image. Good Han glyph coverage alone does not make an
+English font-size, spacing or outline recipe suit Chinese text.
+
+## Emoji presentation
 
 `emoji="color"` adds a color face; `emoji="mono"` chooses monochrome. Some symbols have both text
 and Emoji presentation. Write the intended Unicode sequence, such as `☎️`, when its color form is

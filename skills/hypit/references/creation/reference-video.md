@@ -4,6 +4,9 @@ Read this when a video or link is evidence for what the new work should preserve
 from. The useful result is a timecode-level semantic reading: what the piece communicates, and how
 its exact audiovisual choices make that communication work.
 
+For a reference supplied as a link, [video download](../production/video-downloads.md) explains
+`hypit media fetch`, its local preparation and the saved source file used by the tools below.
+
 ## Read the whole through its details
 
 Watch the whole reference from opening to close. Follow its hook, argument or story, shifts of
@@ -44,6 +47,9 @@ a strong starting point for following the argument and connecting speech to cuts
 reveals and emphasis. Keep that transcript beside the reference and interpret its wording with the
 surrounding argument, visible names and supplied context. Small transcription errors can coexist
 with a clear understanding of what the passage means.
+
+[Environment selection](../environment/profile.md#choose-the-practical-capability-path-with-the-user)
+explains assessing local preparation and choosing the local or hosted path for this transcription.
 
 WhisperX's recognized spelling reflects the recognizer's interpretation of the audio. Coined words
 and unfamiliar names are especially prone to substitutions, so a spelling difference alone cannot

@@ -2,6 +2,7 @@
 
 Read this when admitting files, connecting generated media, choosing streams, or editing a clip
 before using it in a Track or a model reference. [Tracks](tracks.md) covers placement and playback.
+For a source video at a link, read [video download](video-downloads.md).
 For acquiring website screenshots, page recordings or local HTML graphics, read
 [browser capture](browser-capture.md).
 

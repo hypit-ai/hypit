@@ -36,6 +36,8 @@ by non-secret labels or Endpoint references, the work they cover, and the accept
 budget. Retain any limits the user attached to that agreement. Distinguish your proposed estimate
 from what the user has accepted, and an estimate from a firm spending ceiling. Keep the agreement
 current when the user changes it so another conversation can continue under the same authority.
+Record their local or hosted setup choices and accepted preparation in the same ordinary language.
+The Runtime Profile expresses how to execute those choices; Brief preserves what the user agreed to.
 [Builds](../production/builds.md#work-within-the-agreed-paid-scope) owns how it applies to paid work.
 
 ## Treatment is the director's answer

@@ -33,3 +33,12 @@ This prevents a warm process with an incompatible inference configuration from a
 The Runtime installs and starts the packaged service in the machine Program Home when this Endpoint
 is selected. The environment is reused across projects and sessions. The current local package and
 service are trusted code; this is not a community-plugin sandbox.
+
+`hypit paths` reports the machine `hostState`. The managed installation lives below
+`<hostState>/programs/whisperx-<encoded Endpoint instance>-<encoded service host>/`, with Python in
+`.venv/` and the service's NLTK data in `nltk_data/`. Both identifiers use `encodeURIComponent`;
+the service host includes its port. The default service is `http://127.0.0.1:8765` and exposes
+its configuration through `/health`. Inspect an existing Profile's address and expected settings
+when locating that service. A custom `serviceCommand` supplies its own installation and start command.
+`hypit programs status` checks the Programs selected by the supplied Profile; `programs up` prepares
+and starts them. The managed installation does not require a global `whisperx` shell command.

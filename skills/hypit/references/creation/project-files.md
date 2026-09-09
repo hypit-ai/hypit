@@ -6,6 +6,15 @@ names.
 
 ## Establish the project boundary
 
+Understand the current request and keep its intended result in [Brief](brief.md). Locate the work
+through the user's supplied paths, the current project and its notes, following linked assets or
+shared libraries where their relationship to this production is clear.
+
+Judge earlier work by what it contributes to that target: a reference, a component, or material that
+still fits the intended person, product, words and presentation. Explain what can be carried forward
+and what the requested changes require. A proposal to deliver a different existing video changes
+the commission and belongs in the conversation with the user.
+
 Run commands from the video project's root. A small `package.json` makes that root explicit and
 can later hold the project's component dependencies:
 

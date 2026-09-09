@@ -1,7 +1,19 @@
 # Local tools and Managed Programs
 
-Read this when the selected Profile uses local media, HyperFrames, WhisperX, OpenCV, or another local
-Endpoint and its executable or Managed Program is unavailable.
+Read this when assessing local preparation, selecting local WhisperX, or preparing and repairing a
+local Endpoint's executable or Managed Program.
+
+## Assess local preparation
+
+Use `hypit paths` to locate the selected Profile and machine state. Inspect relevant service
+configuration, the Provider's documented installation locations, and executables such as `ffmpeg`
+and `uv`. Hypit's managed WhisperX has its own Python environment; a missing global `whisperx`
+command leaves that installation's state unknown. The installed `@hypit/provider-whisperx-local`
+README owns its preparation and service locations.
+
+Establish what already works, what needs starting or repair, and what needs downloads. Use those
+findings in [environment selection](profile.md#choose-the-practical-capability-path-with-the-user),
+then prepare the chosen setup using its Provider instructions and the evidence from its logs.
 
 ## Diagnose the selected local capability
 

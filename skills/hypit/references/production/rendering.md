@@ -34,6 +34,41 @@ Presents, so moving these Film children does not reorder the picture.
 `main.composition` is the assembled work, usable in Studio. `final.video` asks for an encoded video.
 A compatible Composition from another component can also feed the render Surface.
 
+## Compose an authored animation
+
+A Film needs a time axis, whether or not it contains speech or prepared media. For a speech-led piece,
+continue to pass `semantic={speech.semantic}`: it provides both the real performance time and the
+context in which Tracks resolve Script references. For a pure MG piece, declare a ProgramSpace and
+pass `space` to the components, Film and Render:
+
+```svml
+<import as="time" from="@hypit/program-space@1"/>
+<time:Space id="animation" frame-rate="30" duration="8s"/>
+
+<!-- conversation is the project's own visual component. -->
+<chat:Scene id="conversation" space={animation} canvas={canvas} font={font}
+  during="program" title="Launch crew">
+  <chat:Message id="question" sender="Maya" side="left" at="0.5s" text="Ready?"/>
+  <chat:Message id="answer" sender="Leo" side="right" at="2s" text="Let's go."/>
+</chat:Scene>
+<film:Film id="main" canvas={canvas} space={animation} appearance={look.film.main}>
+  <film:Track source={conversation.track}/>
+</film:Film>
+<render:Video id="final" composition={main.composition} space={animation}/>
+```
+
+The example assumes the Canvas, font, Film Recipe and project package are declared. `time:Space`
+accepts seconds, milliseconds or frames and must end on a frame boundary. `Clock` remains the
+separate duration-free input for normalizing real media. Drawing code produces the picture at each
+requested frame; the Film's background supplies the canvas color. With no AudioTrack, the delivered
+video is silent. Render ranges and worker settings apply in the same way as for spoken work.
+
+Media, Typography, Audio and the graphic Tracks accept this same time context. A Media Performance
+specifically needs its SemanticTrack because that is where its prepared footage resides. Caption
+uses its speech-linked document; authored chat text belongs to the chat scene. The working example
+`examples/semantic-composition/chat.svml` and its `@example/chat-scene` package show the complete
+code-only composition, including scrolling and arbitrary message arrivals.
+
 ## Choose a render interval in frames
 
 ```svml
