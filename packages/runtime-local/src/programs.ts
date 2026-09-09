@@ -161,10 +161,15 @@ function windowsCommandLine(args: readonly string[]): string {
 /**
  * Windows: a console of its own, hidden, so the launching console's destruction does not take it.
  *
- * The script is fed on stdin rather than as a command-line argument, so no quoting of ours crosses a
- * shell boundary. `Start-Process` refuses to send both streams to one file, so the error stream gets
- * its own beside the log; `-PassThru` reports the new process, which is the pid everything after this
- * waits on and stores.
+ * The script travels as one `-EncodedCommand` blob, so no quoting of ours crosses a shell boundary.
+ * Feeding it on stdin instead looks equivalent and is not: `-Command -` parses what it reads a
+ * statement at a time, so an argument holding a newline — `node -e` with a real script in it — ends
+ * the statement early and PowerShell exits having run nothing, with no process id and nothing on
+ * stderr to say why. Base64 has no line structure to trip over.
+ *
+ * `Start-Process` refuses to send both streams to one file, so the error stream gets its own beside
+ * the log; `-PassThru` reports the new process, which is the pid everything after this waits on and
+ * stores.
  */
 export async function startWithOwnConsole(
   start: ManagedProgramCommand,
@@ -189,9 +194,10 @@ export async function startWithOwnConsole(
   ].filter((line) => line.length > 0).join("\n");
 
   const shell = await new Promise<{ readonly out: string; readonly err: string }>((settle) => {
-    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "-"], {
+    const encoded = Buffer.from(script, "utf16le").toString("base64");
+    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded], {
       windowsHide: true,
-      stdio: ["pipe", "pipe", "pipe"],
+      stdio: ["ignore", "pipe", "pipe"],
     });
     let out = "";
     let err = "";
@@ -209,7 +215,6 @@ export async function startWithOwnConsole(
     // for the pipe to drain is what settles this, and `close` still settles it first when it comes.
     child.on("exit", () => { setTimeout(done, 250).unref(); });
     child.on("close", done);
-    child.stdin.end(script, "utf8");
   });
   const pid = Number(shell.out);
   if (Number.isSafeInteger(pid) && pid > 0) return { pid };
