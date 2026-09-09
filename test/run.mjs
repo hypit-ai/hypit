@@ -50,7 +50,16 @@ if (suite === undefined) {
   files = suite.files;
 }
 
-const result = spawnSync(process.execPath, ["--import", "tsx", "--test", ...files], {
+/**
+ * A test that waits forever otherwise stops the whole suite without saying which one it was: the
+ * runner prints nothing more and the CI job holds its runner until the six-hour ceiling. This
+ * bound turns that into an ordinary failure naming the test.
+ */
+const testTimeoutMs = 120_000;
+
+const result = spawnSync(process.execPath, [
+  "--import", "tsx", "--test", `--test-timeout=${testTimeoutMs}`, ...files,
+], {
   stdio: "inherit",
   windowsHide: true,
   // What the caller already chose wins: these are defaults for running the suite, not a policy.

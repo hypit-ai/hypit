@@ -855,10 +855,18 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
     await firstStarted;
     await runtime.build(durableBuildRequest(directory, "bld_20260902T120000011Z_0000000001", createGreetingBuild()));
     const results = new FileBuildResultRepository(join(directory, "results"));
+    // Waiting without a deadline for an outcome that never arrives is indistinguishable from a
+    // suite that has stopped: no assertion fails and nothing further is printed. Carry the last
+    // outcomes into the failure so a Build that stalled is named rather than guessed at.
+    const ids = ["bld_20260902T120000010Z_0000000001", "bld_20260902T120000011Z_0000000001"];
+    const deadline = Date.now() + 30_000;
+    let outcomes: readonly (string | undefined)[] = [];
     while (true) {
-      const outcomes = await Promise.all(["bld_20260902T120000010Z_0000000001", "bld_20260902T120000011Z_0000000001"].map(async (id) =>
-        (await results.read(id))?.outcome));
+      outcomes = await Promise.all(ids.map(async (id) => (await results.read(id))?.outcome));
       if (outcomes.every((outcome) => outcome === "complete")) break;
+      if (Date.now() > deadline) {
+        assert.fail(`Builds did not complete within 30s: ${ids.map((id, at) => `${id} is ${outcomes[at] ?? "unwritten"}`).join(", ")}`);
+      }
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
     controller.abort();

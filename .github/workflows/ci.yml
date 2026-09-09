@@ -29,6 +29,10 @@ jobs:
     # alike. That gap is real and older than this matrix; closing it means adding ffmpeg to both,
     # not to one, which would leave a red leg ambiguous between the two causes.
     runs-on: ${{ matrix.os }}
+    # A test that never returns would otherwise hold a runner until the six-hour default. The
+    # suite takes about a minute; this is the ceiling for a job that has stopped making progress,
+    # not a budget the tests are meant to approach.
+    timeout-minutes: 20
     strategy:
       # Breakage on one platform is a different finding from breakage on the other, and cancelling
       # the second leg would throw away the half of the answer nobody has yet.
