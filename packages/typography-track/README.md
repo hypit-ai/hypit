@@ -1,10 +1,14 @@
 # `@hypit/typography-track`
 
+The Track Surface accepts `semantic={speech.semantic}` or `space={animation}`. Semantic context
+resolves Script Selections and Moments; authored space supports clock-based animation. Shared `at`
+inputs accept a Moment or a time such as `2s`; `at` with `for` produces a Window where required.
+
 Place independently authored titles, labels, verdicts and other text in the video. Their lifetime
 can follow a Script Selection or Moment even when their wording differs from the speech. For words
 displayed as they are spoken, use a [Caption family](../caption-fine/README.md).
 
-The Track takes `semantic` and derives ProgramSpace from it. Items use explicit Point, Frame or Path
+The Track takes `semantic` or `space` to supply ProgramSpace. Items use explicit Point, Frame or Path
 placement, exact fonts and Styles. Timing can follow a Segment, Selection, Moment with duration, the
 whole program or explicit clock expressions. `.program` describes the text presentation; `.track`
 is the VisualTrack to include in Film. Each item has its own lifetime and stacking order.

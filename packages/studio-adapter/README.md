@@ -137,8 +137,10 @@ official Companion. The Source closure selects project packages; Studio does not
 scan `node_modules` for plugins or use Runtime Profiles to select Companions.
 
 The same host facet can contribute Film and Script boundary companions. A Film companion declares
-the references that select one semantic axis and its terminal Tracks. A Script companion owns raw
-source observation and marker adjustment. Studio core only matches and invokes these declarations;
+the accepted `timeSources` (author attribute and Type) and its terminal Tracks. Film accepts either
+a SemanticTrack or a declared ProgramSpace. Track Companion context includes `semantic` when the
+time source supplies a semantic timeline; pure animation leaves it undefined. A Script companion owns
+raw source observation and marker adjustment. Studio core only matches and invokes these declarations;
 it does not import either domain package.
 
 For a domain item whose Spec is consumed beside a Window or Instant, call

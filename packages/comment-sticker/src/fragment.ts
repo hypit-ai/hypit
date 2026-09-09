@@ -1,9 +1,9 @@
+import { programSpaceTypes } from "@hypit/program-space";
 import { artifactTypes } from "@hypit/artifact";
 import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation } from "@hypit/elaborator";
 import type { TypeRef } from "@hypit/protocol";
-import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { textTypes } from "@hypit/text";
 import { temporalTypes } from "@hypit/temporal";
@@ -33,12 +33,6 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
   if (items.length === 0) throw new Error("Comment Sticker Fragment requires at least one Item.");
   const types = new Map<string, TypeRef>();
   const operations: FragmentOperation[] = [
-    {
-      id: "comment:space",
-      producer: semanticTrackProducers.projectProgramSpace,
-      inputs: { track: input("semantic") },
-      result: { kind: "output", name: "space" },
-    },
     {
       id: "comment:set:empty",
       producer: commentStickerProducers.createSet,
@@ -88,7 +82,7 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
       inputs: {
         set: operation(current),
         header: input("header"),
-        space: operation("comment:space"),
+        space: input("space"),
         frame: input(item.frameName),
         style: input(item.styleName),
         window: input(item.windowName),
@@ -110,7 +104,7 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
     {
       id: "comment:track",
       producer: commentStickerProducers.render,
-      inputs: { canvas: input("canvas"), space: operation("comment:space"), program: operation("comment:program") },
+      inputs: { canvas: input("canvas"), space: input("space"), program: operation("comment:program") },
       result: { kind: "output", name: "track" },
     },
   );
@@ -118,7 +112,7 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
     inputs: [
       { name: "canvas", type: spatialTypes.canvas },
       { name: "header", type: commentStickerTypes.header },
-      { name: "semantic", type: semanticTrackTypes.track },
+      { name: "space", type: programSpaceTypes.programSpace },
       ...[...types].map(([inputName, type]) => ({ name: inputName, type })),
     ],
     operations,

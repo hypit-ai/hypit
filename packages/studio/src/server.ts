@@ -293,7 +293,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       }
       const current = snapshot;
       const script = current?.script;
-      if (current === undefined || script === undefined) throw new Error("Studio has no writable Script source map.");
+      if (current === undefined || script === undefined || current.semantic === undefined) throw new Error("Studio has no writable Script source map.");
       if (handle.semantic.narrativeId !== current.semantic.narrativeId
         || script.narrativeId !== current.semantic.narrativeId) {
         throw new Error("The timeline entity and writable Script do not belong to the selected Narrative.");
@@ -342,11 +342,11 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         const anchorId = endpoint.authority.boundary === "start"
           ? semanticTarget.startAnchorId
           : semanticTarget.endAnchorId;
-        return snapshot?.semantic.anchors.find((anchor) => anchor.id === anchorId)?.frame;
+        return snapshot?.semantic?.anchors.find((anchor) => anchor.id === anchorId)?.frame;
       }
       if (endpoint.source.kind === "moment" && semanticTarget.kind === "moment"
         && endpoint.source.id === handle.semantic.id) {
-        return snapshot?.semantic.anchors.find((anchor) => anchor.id === semanticTarget.anchorId)?.frame;
+        return snapshot?.semantic?.anchors.find((anchor) => anchor.id === semanticTarget.anchorId)?.frame;
       }
       return undefined;
     };
@@ -357,14 +357,14 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       const id = endpoint.source.id;
       if (id === undefined) return undefined;
       if (endpoint.reference === "selection.start" || endpoint.reference === "selection.end") {
-        const selection = snapshot?.semantic.selections.find((candidate) => candidate.id === id);
+        const selection = snapshot?.semantic?.selections.find((candidate) => candidate.id === id);
         return endpoint.reference === "selection.start" ? selection?.startFrame : selection?.endFrameExclusive;
       }
       if (endpoint.reference === "segment.start" || endpoint.reference === "segment.end") {
-        const segment = snapshot?.semantic.segments.find((candidate) => candidate.id === id);
+        const segment = snapshot?.semantic?.segments.find((candidate) => candidate.id === id);
         return endpoint.reference === "segment.start" ? segment?.startFrame : segment?.endFrameExclusive;
       }
-      return snapshot?.semantic.moments.find((candidate) => candidate.id === id)?.frame;
+      return snapshot?.semantic?.moments.find((candidate) => candidate.id === id)?.frame;
     };
     const projectedPointValue = (endpoint: StudioTemporalInstantProjection, desired: number): string => {
       if (endpoint.reference === "absolute") return frame(desired);

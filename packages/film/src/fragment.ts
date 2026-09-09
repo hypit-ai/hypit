@@ -1,4 +1,4 @@
-import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
+import { programSpaceTypes } from "@hypit/program-space";
 import { spatialTypes } from "@hypit/spatial";
 import { compositionTypes } from "@hypit/composition";
 import type { Track } from "@hypit/composition";
@@ -12,7 +12,7 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 function assertTrackInputs(tracks: readonly FilmTrackInput[]): FilmTrackInput[] {
-  const names = new Set(["program", "canvas", "semantic"]);
+  const names = new Set(["program", "canvas", "space"]);
   return [...tracks]
     .map((track) => ({ name: track.name.trim(), kind: track.kind }))
     .sort((left, right) => left.name.localeCompare(right.name))
@@ -33,12 +33,6 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
   const tracks = assertTrackInputs(options.tracks);
   const operations: FragmentOperation[] = [
     {
-      id: "film:space",
-      producer: semanticTrackProducers.projectProgramSpace,
-      inputs: { track: input("semantic") },
-      result: { kind: "output" as const, name: "space" },
-    },
-    {
       id: "track-set:empty",
       producer: filmProducers.createTrackSet,
       inputs: {},
@@ -51,7 +45,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     operations.push({
       id,
       producer: track.kind === "visual" ? filmProducers.appendVisualTrack : filmProducers.appendAudioTrack,
-      inputs: { set: operation(current), space: operation("film:space"), track: input(track.name) },
+      inputs: { set: operation(current), space: input("space"), track: input(track.name) },
       result: { kind: "output" as const, name: "set" },
     });
     current = id;
@@ -62,7 +56,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     inputs: {
       program: input("program"),
       canvas: input("canvas"),
-      space: operation("film:space"),
+      space: input("space"),
       set: operation(current),
     },
     result: { kind: "output" as const, name: "composition" },
@@ -71,7 +65,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     inputs: [
       { name: "program", type: filmTypes.program },
       { name: "canvas", type: spatialTypes.canvas },
-      { name: "semantic", type: semanticTrackTypes.track },
+      { name: "space", type: programSpaceTypes.programSpace },
       ...tracks.map((track) => ({
         name: track.name,
         type: track.kind === "visual" ? compositionTypes.visualTrack : compositionTypes.audioTrack,

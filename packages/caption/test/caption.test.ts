@@ -42,6 +42,41 @@ test("Caption styles one Role across non-contiguous authored Cues", () => {
   assert.deepEqual(program.runs.map((run) => run.styleId), ["guy", "plain", "guy"]);
 });
 
+test("Caption selects complete Segments and the program through structural anchors", () => {
+  const parsed = parseScript("caption-ranges.svml", `~@whole
+@opening <intro><HOST>One idea.</intro> @/opening
+<answer><GUEST>Another view.</answer>
+@/whole~`);
+  const narrative = narrativeValue(parsed, "story") as unknown as Narrative;
+  const document = captionDocument(parsed, "story.caption", "story");
+  const whole = narrative.selections.find((selection) => selection.id === "whole")!;
+  const opening = narrative.selections.find((selection) => selection.id === "opening")!;
+  assert.deepEqual(captionUnitsForSelection(document, narrative, whole).unitIds,
+    document.units.map((unit) => unit.id));
+  assert.deepEqual(captionUnitsForSelection(document, narrative, opening).unitIds,
+    document.units.filter((unit) => unit.segmentId === "intro").map((unit) => unit.id));
+});
+
+test("Caption applications use authored order and styling does not undo a display mute", () => {
+  const parsed = parseScript("caption-coverage.svml",
+    "<line><HOST>First. <GUEST>@answer Another view. @/answer</line>");
+  const narrative = narrativeValue(parsed, "story") as unknown as Narrative;
+  const document = captionDocument(parsed, "story.caption", "story");
+  const makeStyle = (id: string) => sealCaptionStyle({ id, rendering: { family: "test", parameters: {} } });
+  const base = makeStyle("base"), guest = makeStyle("guest"), accent = makeStyle("accent");
+  const selected = captionUnitsForSelection(document, narrative, narrative.selections[0]!).unitIds;
+  const roleUse = { id: "guest-role", unitIds: captionUnitsForRole(document, "GUEST").unitIds, style: guest };
+  const rangeUse = { id: "answer-range", unitIds: selected, style: accent };
+  const resolve = (applications: typeof roleUse[]) => resolveCaptionProgram(document, narrative, "captions",
+    base, applications, [{ id: "hidden-answer", unitIds: selected }]);
+  const rangeLast = resolve([roleUse, rangeUse]);
+  assert.deepEqual(rangeLast.runs.map((run) => run.styleId), ["base", "accent"]);
+  const roleLast = resolve([rangeUse, roleUse]);
+  assert.deepEqual(roleLast.runs.map((run) => run.styleId), ["base", "guest"]);
+  assert.deepEqual(rangeLast.mutedUnitIds, selected);
+  assert.deepEqual(roleLast.mutedUnitIds, selected);
+});
+
 test("Caption keeps Selection styles and adds flat word-attribute styles separately", () => {
   const parsed = parseScript("caption-attributes.svml", "<line>@focus really{emphasis} matters @/focus</line>");
   const narrative = narrativeValue(parsed, "story") as unknown as Narrative;

@@ -1,13 +1,18 @@
 # `@hypit/media-track`
 
+The Track Surface accepts `semantic={speech.semantic}` or `space={animation}`. Semantic context
+resolves Script Selections and Moments; authored space supports clock-based animation. Shared `at`
+inputs accept a Moment or a time such as `2s`; `at` with `for` produces a Window where required.
+`Performance` still needs `semantic`, which supplies its ordered prepared footage.
+
 Place images, prepared video or compositable surfaces over the semantic timeline. B-roll is a common
 use: the picture can illustrate a phrase while the A-roll's speech continues. Performance presents the semantic material as a full picture, inset or cutout.
 Media Items own independently timed pictures;
 a Sequence owns one visual slot whose Members replace each other through Handoffs.
 
-The Markup Track takes `semantic` and `canvas`. Its Surface projects authored Selections, Moments,
-Segments or clock expressions into Windows and Instants. The component consumes those projected
-times with Frames, media and appearance; the Fragment obtains ProgramSpace from the SemanticTrack.
+The Markup Track takes `canvas` and a time source (`semantic` or `space`). Its Surface projects
+authored Selections, Moments, Segments or clock expressions into Windows and Instants. The component
+consumes those projected times with Frames, media and appearance; its Fragment receives ProgramSpace.
 
 Moving media enters after [normalization](../media-pipeline/README.md), with the intended streams and
 frame clock already selected. Still images use their actual intrinsic Extent. Placement, fitting,

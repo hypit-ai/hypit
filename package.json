@@ -139,7 +139,11 @@
     "examples/semantic-composition/packages/*/src/**/*",
     "examples/semantic-composition/packages/*/package.json",
     "examples/semantic-composition/packages/*/tsconfig.json",
-    "examples/semantic-composition/packages/*/README.md"
+    "examples/semantic-composition/packages/*/README.md",
+    "examples/semantic-composition/*.svml",
+    "examples/semantic-composition/*.svrun",
+    "examples/semantic-composition/*.svs",
+    "examples/semantic-composition/hypit.runtime.json"
   ],
   "scripts": {
     "build:public-types": "node scripts/build-public-types.mjs",

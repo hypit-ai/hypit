@@ -1,4 +1,4 @@
-import { semanticTrackTypes } from "@hypit/semantic-track";
+import { createTemporalSpace, resolveTemporalContext } from "@hypit/temporal-markup";
 import { spatialTypes } from "@hypit/spatial";
 import { compositionTypes } from "@hypit/composition";
 import type { AudioTrack, Track, VisualTrack } from "@hypit/composition";
@@ -93,16 +93,13 @@ function trackKind(reference: SurfaceResolvedReference): "visual" | "audio" {
 }
 
 export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id", "canvas", "semantic", "appearance"]);
+  exactAttributes(element, ["id", "canvas", element.attributes.space === undefined ? "semantic" : "space", "appearance"]);
   const id = stringAttribute(element, "id");
   const canvas = requiredReference(element, "canvas", resolveReference);
   if (!sameType(canvas.type, spatialTypes.canvas)) {
     throw new Error(`${element.name}.canvas must reference CanvasSpace`);
   }
-  const semantic = requiredReference(element, "semantic", resolveReference);
-  if (!sameType(semantic.type, semanticTrackTypes.track)) {
-    throw new Error(`${element.name}.semantic must reference SemanticTrack`);
-  }
+  const time = createTemporalSpace({ id, element, ...resolveTemporalContext({ element, resolveReference }) });
   const appearanceReference = requiredReference(element, "appearance", resolveReference);
   const appearance = filmAppearanceFromRecipe(
     recipe(appearanceReference, `${element.name}.appearance`).properties,
@@ -132,18 +129,18 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
       value: { kind: "inline", value: program },
       range: element.range,
     }],
-    components: [{
+    components: [...time.components, {
       id,
       fragment: fragment.id,
       inputs: {
         program: { kind: "record", id: programId },
         canvas: canvas.ref,
-        semantic: semantic.ref,
+        space: time.space.ref,
         ...Object.fromEntries(tracks.map((track) => [track.name, track.source.ref])),
       },
       outputs: { composition: `${id}.composition` },
       range: element.range,
     }],
-    fragments: [fragment],
+    fragments: [...time.fragments, fragment],
   };
 };

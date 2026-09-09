@@ -55,8 +55,7 @@ import type {
 import { artifactTypes } from "@hypit/artifact";
 import { mediaTrackManifest, mediaTrackTypes } from "@hypit/media-track";
 
-const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-  durationSec: 2,
+const space = sealProgramSpace({ id: "test-space", durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const semantic = semanticTrackFixture(space);
@@ -208,7 +207,7 @@ function momentPoint(id: string, frameValue: number): TemporalInstant {
   return {
     id: `${id}::moment`,
     subjectId: id,
-    source: { spaceId: space.id, narrativeId: space.narrativeId, kind: "moment", id },
+    source: { spaceId: space.id, narrativeId: "script", kind: "moment", id },
     projection: { ref: "moment.cue" },
     frame: frameValue,
     authority: { kind: "fixed" },
@@ -219,7 +218,7 @@ function programPoint(subjectId: string, endFrame: number): TemporalInstant {
   return {
     id: "program::program",
     subjectId,
-    source: { spaceId: space.id, narrativeId: space.narrativeId, kind: "program", id: "program" },
+    source: { spaceId: space.id, narrativeId: "script", kind: "program", id: "program" },
     projection: { ref: "program.end" },
     frame: endFrame,
     authority: { kind: "fixed" },

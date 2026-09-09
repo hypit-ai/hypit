@@ -1,0 +1,8 @@
+{
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/runtime",
+  "endpoints": {
+    "media.local": { "use": "@hypit/provider-media-local", "config": { "defaultConcurrency": 2 } },
+    "hyperframes.local": { "use": "@hypit/provider-hyperframes-local", "config": { "workers": 2, "defaultConcurrency": 1 } }
+  }
+}

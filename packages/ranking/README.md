@@ -1,8 +1,12 @@
 # `@hypit/ranking`
 
+The Track Surface accepts `semantic={speech.semantic}` or `space={animation}`. Semantic context
+resolves Script Selections and Moments; authored space supports clock-based animation. Shared `at`
+inputs accept a Moment or a time such as `2s`; `at` with `for` produces a Window where required.
+
 Ranking boards that follow the argument of a video: introduce an item, give its verdict, and retain
-its place while the next item is discussed. The board consumes the performance's SemanticTrack,
-Frames, Styles, fonts, text and optional icons or sound.
+its place while the next item is discussed. Its Surface binds the performance's semantic time or
+authored time; the board consumes projected timing, Frames, Styles, fonts, text and optional icons or sound.
 
 | Form | Temporal behavior |
 | --- | --- |
@@ -46,7 +50,7 @@ The following files are included in the Distribution and show how the responsibi
 | File | What to learn from it |
 | --- | --- |
 | [surface.ts](src/surface.ts) | `rankingSurface` resolves author inputs, projects the outer and item times through `createTemporalWindowProjection` / `createTemporalInstantProjection`, and retains the returned drafts and references. |
-| [fragment.ts](src/fragment.ts) | `createRankingFragment` projects ProgramSpace and wires typed content, time, layout and Style inputs into finite operations. |
+| [fragment.ts](src/fragment.ts) | `createRankingFragment` receives ProgramSpace and wires typed content, time, layout and Style inputs into finite operations. |
 | [schedule.ts](src/schedule.ts) | Compute reveal, activation and settled spans from the projected times. |
 | [component.ts](src/component.ts) and [render.ts](src/render.ts) | Build the ranking program and produce picture and optional sound from that schedule. |
 | [manifest.ts](src/manifest.ts) and [activation.ts](src/activation.ts) | Publish Types, Producers, Surface vocabulary and package contributions. |

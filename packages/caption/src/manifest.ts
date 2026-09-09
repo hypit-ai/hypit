@@ -55,7 +55,7 @@ export const captionMarkupSurfaces = [{
       { name: "default", kind: "reference", required: true, accepts: [captionTypes.style], summary: "The default Style." },
     ],
     children: [
-      { tag: "Use", cardinality: "many", summary: "Applies a Style to one Role or one complete semantic Selection.", attributes: [
+      { tag: "Use", cardinality: "many", summary: "Applies a complete Style by Role or semantic Selection, or supplies a word-attribute Style for a supporting family.", attributes: [
         { name: "style", kind: "reference", required: true, accepts: [captionTypes.style], summary: "The Style to apply." },
         { name: "role", kind: "literal", required: false, summary: "Selects all Caption units authored for this Role." },
         { name: "selection", kind: "reference", required: false, accepts: [narrativeTypes.selection], summary: "Selects complete Caption units contained by a semantic Selection." },
@@ -66,7 +66,18 @@ export const captionMarkupSurfaces = [{
         { name: "selection", kind: "reference", required: false, accepts: [narrativeTypes.selection], summary: "Selects complete Caption units contained by a semantic Selection." },
       ] },
     ],
-    example: '<caption:Program id="captions" document={story.caption} narrative={story} default={plain}/> ',
+    example: `<caption:Program id="captions" document={story.caption} narrative={story} default={plain}>
+  <caption:Use role="GUEST" style={guest}/>
+  <caption:Use selection={story.selection.answer} style={answer}/>
+  <caption:Mute selection={story.selection.demonstration}/>
+</caption:Program>`,
+    notes: [
+      "Use selects exactly one of role, selection or attribute; Mute selects exactly one of role or selection.",
+      "For Role and Selection applications, the last matching Use in Source order selects the complete Style; properties are not merged.",
+      "Selections may cover a phrase, a whole Segment, several Segments or the program, preserving complete display/pronunciation units.",
+      "All Mute selections hide their words independently of Style order. They do not mute audio; the family still controls neighboring Cue lead and tail.",
+      "Word-attribute runs are separate from Role/Selection overrides and require a family that implements them; Fine does not. Conflicting Styles on one attributed word are rejected.",
+    ],
   },
 }] as const;
 

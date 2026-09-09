@@ -1067,8 +1067,7 @@ export function renderFineCaption(
     throw new Error("Fine Caption accepts one uniform token rule and cannot consume word-specific Style runs");
   }
   assertProgramSpaceIdentity(space);
-  if (schedule.spaceId !== space.id || schedule.narrativeId !== space.narrativeId
-    || document.narrativeId !== space.narrativeId) {
+  if (schedule.spaceId !== space.id || schedule.narrativeId !== document.narrativeId) {
     throw new Error("Fine Caption inputs belong to different ProgramSpaces or Narratives");
   }
   const styles = new Map(program.styles.map((style) => [style.id, style]));

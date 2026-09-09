@@ -22,7 +22,7 @@ function usage(message?: string): never {
     [--port <number>] [--workspace <directory>] [--package-root <directory>]
 
 Studio opens one explicit Run Source, requires a Film/Render target and a
-resolved deterministic semantic projection, and writes only the selected file
+resolved deterministic composition, and writes only the selected file
 inside that exact Run and Author Source closure.
 `);
   process.exit(1);

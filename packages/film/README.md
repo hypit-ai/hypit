@@ -1,5 +1,9 @@
 # `@hypit/film`
 
+The Surface accepts `semantic={speech.semantic}` for performance time or `space={animation}` for an
+authored ProgramSpace. Its Fragment receives `space` directly; rendering does not require Script
+or prepared performance media. Both time sources use the same frame and audio pipeline.
+
 Official package-owned assembly layer between peer Tracks and the generic Composition waist.
 Film is an ordinary author component and an optional Target, not a Core root or a privileged video
 type.
@@ -16,8 +20,8 @@ remains order-independent because the public contract canonicalizes Tracks and v
 belongs to each Present's absolute stacking key.
 
 The official Structured Surface validates an imported generic SVS Recipe into a nominal
-`FilmProgram`, receives CanvasSpace and SemanticTrack through separate explicit edges, projects
-ProgramSpace from that SemanticTrack, type-checks
+`FilmProgram`, receives CanvasSpace and the selected time source through separate explicit edges,
+projects ProgramSpace when that source is a SemanticTrack, type-checks
 each `<film:Track source={...}/>` reference and generates the finite fold. CanvasSpace is the only
 dimension truth, ProgramSpace is the only frame-rate truth, and FilmProgram owns only assembly
 identity and clear color.

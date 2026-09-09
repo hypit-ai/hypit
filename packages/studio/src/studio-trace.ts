@@ -30,7 +30,7 @@ export function outputFor(source: CompiledSource, ref: string): StudioOutput | u
   return source.exports.find((item) => item.ref === ref);
 }
 
-function referencedValueFor(source: CompiledSource, ref: string): StudioOutput | undefined {
+export function referencedValueFor(source: CompiledSource, ref: string): StudioOutput | undefined {
   const output = outputFor(source, ref);
   if (output !== undefined) return output;
   const record = source.compiled.program.records.find((item) => item.id === ref);

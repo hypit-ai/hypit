@@ -46,8 +46,7 @@ const audio: BlobRef = {
 };
 
 function fixture() {
-  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-    durationSec: 4,
+  const programSpace = sealProgramSpace({ id: "test-space", durationSec: 4,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const visual = sealVisualTrack({ programSpaceId: "test-space",
@@ -220,8 +219,7 @@ test("the Type owner rejects an invalid VisualTrack at the shared admission gate
 
 test("Composition validates Track frame ranges against the explicitly connected ProgramSpace", () => {
   const { programSpace, visual } = fixture();
-  const foreign = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-    durationSec: 1,
+  const foreign = sealProgramSpace({ id: "test-space", durationSec: 1,
     frameRate: { numerator: 24, denominator: 1 },
   });
   const composition = sealComposition({

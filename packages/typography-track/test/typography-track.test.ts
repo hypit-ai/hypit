@@ -49,8 +49,7 @@ import { sealText, textComponent, textDependency, textManifest, textTypes } from
 import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
 
-const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-  durationSec: 5,
+const space = sealProgramSpace({ id: "test-space", durationSec: 5,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const semantic = semanticTrackFixture(space, { anchors: [
@@ -278,7 +277,7 @@ test("TypographyTrackProgram rejects a frame span outside ProgramSpace", () => {
 
 test("Selection Text consumes explicit Selection, SemanticTrack, Style, Motion and Placement edges", () => {
   const selection: NarrativeSelectionRef = {
-    narrativeId: space.narrativeId,
+    narrativeId: "script",
     id: "callout",
     startAnchorId: "selection:start",
     endAnchorId: "selection:end",

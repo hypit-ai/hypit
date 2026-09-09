@@ -111,15 +111,15 @@ export function createStore(): Store {
         selection = { kind: "none" };
       }
       if (held.kind === "semantic-segment"
-        && !snapshot.semantic.segments.some((segment) => segment.id === held.segmentId)) {
+        && !snapshot.semantic?.segments.some((segment) => segment.id === held.segmentId)) {
         selection = { kind: "none" };
       }
       if (held.kind === "semantic-selection"
-        && !snapshot.semantic.selections.some((item) => item.id === held.selectionId)) {
+        && !snapshot.semantic?.selections.some((item) => item.id === held.selectionId)) {
         selection = { kind: "none" };
       }
       if (held.kind === "semantic-moment"
-        && !snapshot.semantic.moments.some((item) => item.id === held.momentId)) {
+        && !snapshot.semantic?.moments.some((item) => item.id === held.momentId)) {
         selection = { kind: "none" };
       }
       playhead = { frame: clamp(playhead.frame), origin: playhead.origin };
@@ -132,17 +132,17 @@ export function createStore(): Store {
       emit();
     },
     selectSemanticSegment(segmentId, origin) {
-      if (snapshot?.semantic.segments.some((segment) => segment.id === segmentId) !== true) return;
+      if (snapshot?.semantic?.segments.some((segment) => segment.id === segmentId) !== true) return;
       selection = { kind: "semantic-segment", segmentId, origin };
       emit();
     },
     selectSemanticSelection(selectionId, origin) {
-      if (snapshot?.semantic.selections.some((item) => item.id === selectionId) !== true) return;
+      if (snapshot?.semantic?.selections.some((item) => item.id === selectionId) !== true) return;
       selection = { kind: "semantic-selection", selectionId, origin };
       emit();
     },
     selectSemanticMoment(momentId, origin) {
-      if (snapshot?.semantic.moments.some((item) => item.id === momentId) !== true) return;
+      if (snapshot?.semantic?.moments.some((item) => item.id === momentId) !== true) return;
       selection = { kind: "semantic-moment", momentId, origin };
       emit();
     },

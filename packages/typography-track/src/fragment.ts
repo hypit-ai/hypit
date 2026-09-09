@@ -1,7 +1,7 @@
+import { programSpaceTypes } from "@hypit/program-space";
 import { compositionTypes } from "@hypit/composition";
 import type { VisualTrack } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/elaborator";
-import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 
 import { typographyTrackProducers, typographyTrackTypes } from "./manifest.js";
 
@@ -11,20 +11,14 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 /** Provider-free official lowering from TypographyTrackProgram to one peer VisualTrack. */
 export const typographyTrackFragment = sealGraphFragment({
   inputs: [
-    { name: "semantic", type: semanticTrackTypes.track },
+    { name: "space", type: programSpaceTypes.programSpace },
     { name: "program", type: typographyTrackTypes.program },
   ],
   operations: [
     {
-      id: "space",
-      producer: semanticTrackProducers.projectProgramSpace,
-      inputs: { track: input("semantic") },
-      result: { kind: "output", name: "space" },
-    },
-    {
       id: "render",
       producer: typographyTrackProducers.render,
-      inputs: { space: operation("space"), program: input("program") },
+      inputs: { space: input("space"), program: input("program") },
       result: { kind: "output", name: "track" },
     },
   ],

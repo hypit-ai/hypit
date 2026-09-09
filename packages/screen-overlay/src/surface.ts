@@ -1,4 +1,4 @@
-import { semanticTrackTypes } from "@hypit/semantic-track";
+import { createTemporalSpace, resolveTemporalContext } from "@hypit/temporal-markup";
 import { spatialTypes } from "@hypit/spatial";
 import type { StructuredElement, StructuredSurfaceHandler, SurfaceComponentDraft, SurfaceRecordDraft, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
 import { createTemporalWindowProjection, temporalWindowAttributeNames } from "@hypit/temporal-markup";
@@ -59,13 +59,14 @@ function content(element: StructuredElement): { readonly value: ScreenOverlayCom
 export const decodeScreenOverlaySurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   allowed(element, ["id", "canvas", "semantic"]); const id = text(element, "id");
   const canvas = ref(element.attributes.canvas, `${element.name}.canvas`, spatialTypes.canvas, resolveReference);
-  const semantic = ref(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
+  const context = resolveTemporalContext({ element, resolveReference });
+  const time = createTemporalSpace({ id: id, element, ...context });
   const headerId = `${id}.header`; const records: SurfaceRecordDraft[] = [{ id: headerId, type: screenOverlayTypes.header,
     value: { kind: "inline", value: sealScreenOverlayHeader({ id }) }, range: element.range }];
-  const temporalComponents: SurfaceComponentDraft[] = [];
-  const temporalFragments: ReturnType<typeof createTemporalWindowProjection>["fragments"][number][] = [];
+  const temporalComponents: SurfaceComponentDraft[] = [...time.components];
+  const temporalFragments: ReturnType<typeof createTemporalWindowProjection>["fragments"][number][] = [...time.fragments];
   const fragmentItems: Parameters<typeof createScreenOverlayFragment>[0][number][] = [];
-  const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, header: { kind: "record", id: headerId }, semantic: semantic.ref };
+  const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, header: { kind: "record", id: headerId }, space: time.space.ref };
   let index = 0;
   for (const child of element.children) {
     if (child.kind === "text") { if (child.value.trim()) throw new Error(`${element.name} accepts only component children.`); continue; }
@@ -75,7 +76,7 @@ export const decodeScreenOverlaySurface: StructuredSurfaceHandler = ({ element, 
     const itemSpec = sealScreenOverlayItemSpec({
       id: optionalText(child, "id") ?? `${id}.${decoded.value.kind}.${suffix}`, content: decoded.value,
       stackingOrder: integer(child, "z") });
-    const temporal = createTemporalWindowProjection({ id: itemSpec.id, element: child, semantic, resolveReference });
+    const temporal = createTemporalWindowProjection({ id: itemSpec.id, element: child, ...context, space: time.space, resolveReference });
     records.push(...temporal.records); temporalComponents.push(...temporal.components); temporalFragments.push(...temporal.fragments);
     const specId = `${id}.item.${suffix}.spec`; const specName = `item-${suffix}-spec`;
     records.push({ id: specId, type: screenOverlayTypes.itemSpec, value: { kind: "inline", value: itemSpec }, range: child.range });

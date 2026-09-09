@@ -34,8 +34,7 @@ import { renderTypographyTrack, sealTypographyTrackProgram, stillTextMotion, typ
 import type { TextStyle } from "@hypit/typography-track";
 import { admitRecord, TypeValidatorRegistry } from "@hypit/validation";
 
-const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-  durationSec: 4,
+const space = sealProgramSpace({ id: "test-space", durationSec: 4,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const semantic = semanticTrackFixture(space);
@@ -148,7 +147,7 @@ const textInstance = elaborateGraphFragment(linked, typographyTrackFragment, {
   id: "title",
   fragment: typographyTrackFragment.id,
   inputs: {
-    semantic: { kind: "record", id: "semantic" },
+    space: { kind: "record", id: "space" },
     program: { kind: "record", id: "text-program" },
   },
 });
@@ -168,7 +167,7 @@ const filmInstance = elaborateGraphFragment(linked, filmFragment, {
   inputs: {
     program: { kind: "record", id: "film-program" },
     canvas: { kind: "record", id: "canvas" },
-    semantic: { kind: "record", id: "semantic" },
+    space: { kind: "record", id: "space" },
     title: { kind: "logical-output", id: "title.track" },
     background: { kind: "record", id: "background" },
     audio: { kind: "record", id: "audio" },
@@ -213,7 +212,6 @@ function producerModules(target: string): string[] {
 test("Film stops at Composition and Hyperframes remains an ordinary downstream Fragment", () => {
   assert.deepEqual(producerNames("title.track"), [
     typographyTrackProducers.render.name,
-    semanticTrackProducers.projectProgramSpace.name,
   ]);
   assert.equal(producerModules("main.composition").includes(hyperframesProducers.compile.module.name), false);
   assert.deepEqual(producerNames("main.composition").filter((name) => name.startsWith("append-")).sort(), [

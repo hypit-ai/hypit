@@ -16,9 +16,8 @@ Composition. The renderer then compiles that Composition into an MP4 video.
 
 ## film:Film
 
-Assembles all Tracks into a single Composition. Film itself has no domain knowledge — it does not
-know what a caption is, what Media is, or what speech is. It takes any VisualTrack or AudioTrack
-and layers them by stacking order.
+Assembles selected VisualTracks and AudioTracks into a single Composition. Each visual contribution
+retains its own timed appearances and paint order; sound is included through the selected AudioTracks.
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
@@ -35,7 +34,8 @@ and layers them by stacking order.
 |---|---|---|
 | `id` | yes | Unique identifier |
 | `canvas` | yes | Explicit CanvasSpace shared with Track layout |
-| `semantic` | yes | SemanticTrack from `speech:Track` — defines duration and frame rate |
+| `semantic` | one time source | Selected performance's SemanticTrack; supplies duration and frame rate |
+| `space` | one time source | Authored ProgramSpace; use either `semantic` or `space` |
 | `appearance` | yes | SVS Film Recipe — the canvas clear color |
 
 ### film:Track
@@ -58,9 +58,9 @@ Common Track sources:
 
 ### Track stacking
 
-Tracks are **flat** — there is no nesting or grouping. Z-ordering is determined entirely by the
-`stack-order` property in each Track's SVS Recipe. Lower values go behind; higher values render on
-top.
+Film collects peer Tracks. Each Track can contain several independently timed and ordered
+appearances, called Presents. Many components expose that paint order as `stack-order` in their
+Recipe: lower values paint behind higher values. Reordering Film children leaves this order intact.
 
 Typical stacking order:
 
@@ -71,9 +71,11 @@ Typical stacking order:
 | 70 | Captions |
 | 90 | Text overlays |
 
-One component can emit multiple visual elements (Presents) at different z-positions, which
-interleave with other components' Presents. The final render flattens all Presents, sorts by
-absolute stacking key, and paints them onto one canvas.
+Presents from different components can interleave. Each Present also owns an internal element tree:
+several videos, text and graphics can share layout, masks or coordinated motion. A project component
+can use an HTML/CSS browser program for such a scene. Independent Caption or coverage can remain
+peer contributions. Group the content whose behavior belongs together; its size and media type do
+not prescribe that boundary.
 
 **Output:** `{main.composition}` — the complete Composition, passed to the renderer.
 
@@ -89,7 +91,8 @@ Compiles the Composition into a finished video via the HyperFrames renderer.
 |---|---|---|
 | `id` | yes | Unique identifier |
 | `composition` | yes | Composition from `film:Film` |
-| `semantic` | yes | SemanticTrack from `speech:Track` |
+| `semantic` | one time source | The composition's selected SemanticTrack |
+| `space` | one time source | The composition's authored ProgramSpace; use either `semantic` or `space` |
 
 The renderer:
 
@@ -102,6 +105,27 @@ The renderer:
 **Output:** `{final.video}` — the finished video as an ordinary Resource-backed `BlobArtifact`.
 This is the most common Build Target, and it can also be connected directly to later Blob consumers
 such as media trimming, audio/frame extraction or a model reference input.
+
+## A film drawn entirely by components
+
+For spoken work, Script Selections and Moments preserve the relationship between the words and
+their presentation. A chat animation or diagram can instead direct its own reading rhythm. Declare
+the film clock and use it in the scene, Film and Render:
+
+```svml
+<import as="time" from="@hypit/program-space@1"/>
+<time:Space id="animation" frame-rate="30" duration="8s"/>
+<!-- scene.track is produced by a component using this same clock. -->
+<film:Film id="main" canvas={canvas} space={animation} appearance={recipes.film.main}>
+  <film:Track source={scene.track}/>
+</film:Film>
+<render:Video id="final" composition={main.composition} space={animation}/>
+```
+
+The scene's events can use authored seconds or frames. In a spoken composition, the same behavior
+can follow projected Script events instead. The component draws the picture directly; no background
+image or silent performance is needed to establish duration. With no selected AudioTrack, the
+delivered video is silent.
 
 ## Full pipeline walkthrough
 

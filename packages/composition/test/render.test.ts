@@ -15,8 +15,7 @@ import {
 } from "../src/index.js";
 import type { VisualTrack } from "../src/index.js";
 
-const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-  durationSec: 2,
+const space = sealProgramSpace({ id: "test-space", durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 

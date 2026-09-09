@@ -23,7 +23,7 @@
     "@hypit/spatial": "workspace:*",
     "@hypit/svs": "workspace:*",
     "@hypit/markup": "workspace:*",
-    "@hypit/temporal": "workspace:*"
-    ,"@hypit/temporal-markup": "workspace:*"
+    "@hypit/temporal": "workspace:*",
+    "@hypit/temporal-markup": "workspace:*"
   }
 }

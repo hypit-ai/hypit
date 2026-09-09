@@ -21,7 +21,8 @@
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/semantic-track": "workspace:*",
-    "@hypit/markup": "workspace:*"
+    "@hypit/markup": "workspace:*",
+    "@hypit/temporal-markup": "workspace:*"
   },
   "devDependencies": {
     "@hypit/core": "workspace:*",

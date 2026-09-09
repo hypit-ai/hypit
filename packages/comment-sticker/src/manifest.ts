@@ -1,3 +1,4 @@
+import { temporalContextAttributeVocabulary } from "@hypit/temporal-markup";
 import { readFile } from "node:fs/promises";
 
 import { artifactDependency, artifactTypes } from "@hypit/artifact";
@@ -6,7 +7,7 @@ import { fontArtifactSchema, mediaDependency, mediaTypes } from "@hypit/media";
 import { narrativeDependency } from "@hypit/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackDependency } from "@hypit/semantic-track";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
@@ -276,8 +277,7 @@ export const commentStickerMarkupSurfaces = [
             summary: "Names the Track and prefixes every binding it publishes." },
           { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
             summary: "Chooses the Canvas the cards are laid out on." },
-          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
-            summary: "Chooses the SemanticTrack that owns the Program frame domain and resolves every temporal binding." },
+          ...temporalContextAttributeVocabulary,
         ],
         children: [
           { tag: "Sticker", cardinality: "many",

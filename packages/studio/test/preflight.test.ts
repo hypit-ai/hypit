@@ -1,3 +1,4 @@
+import { programSpaceTypes } from "@hypit/program-space";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -14,7 +15,7 @@ const filmModule = { name: "@example/film", version: "1" } as const;
 const companion: StudioFilmCompanion = {
   id: "film",
   match: { module: filmModule, surface: "film", outputType: compositionTypes.composition },
-  semantic: { attribute: "semantic", type: semanticTrackTypes.track },
+  timeSources: [{ attribute: "semantic", type: semanticTrackTypes.track }, { attribute: "space", type: programSpaceTypes.programSpace }],
   tracks: { childSurface: "Track", sourceAttribute: "source", types: [compositionTypes.visualTrack] },
 };
 

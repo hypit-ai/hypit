@@ -19,7 +19,8 @@
     "@hypit/semantic-track": "workspace:*",
     "@hypit/spatial": "workspace:*",
     "@hypit/svs": "workspace:*",
-    "@hypit/markup": "workspace:*"
+    "@hypit/markup": "workspace:*",
+    "@hypit/temporal-markup": "workspace:*"
   },
   "devDependencies": {
     "@hypit/core": "workspace:*",

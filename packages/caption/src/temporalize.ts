@@ -15,7 +15,7 @@ export function temporalizeCaptionDocument(
   assertCaptionDocument(document);
   assertCaptionProgramForDocument(program, document);
   const space = projectSemanticProgramSpace(semantic);
-  if (document.narrativeId !== space.narrativeId) {
+  if (document.narrativeId !== semantic.narrativeId) {
     throw new CaptionTimingError("CAPTION_NARRATIVE", "CaptionDocument and SemanticTrack belong to different Narratives.");
   }
   const styleByUnit = new Map(program.runs.flatMap((run) => run.unitIds.map((unitId) => [unitId, run.styleId] as const)));
@@ -68,7 +68,7 @@ export function temporalizeCaptionDocument(
   flush();
   const result: TimedCaptionProjection = {
     spaceId: space.id,
-    narrativeId: space.narrativeId,
+    narrativeId: semantic.narrativeId,
     documentId: document.id,
     cues,
   };

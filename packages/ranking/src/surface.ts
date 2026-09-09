@@ -1,3 +1,4 @@
+import { createTemporalSpace, resolveTemporalContext } from "@hypit/temporal-markup";
 import {
   assertEmptyElement as empty,
   assertAttributes as allowed,
@@ -14,7 +15,6 @@ import {
 import { sameType, type CanonicalValue, type TypeRef } from "@hypit/protocol";
 import { mediaTypes } from "@hypit/media";
 import type { FontArtifactRef, FontStackRef } from "@hypit/media";
-import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
@@ -199,38 +199,39 @@ const variantDefinition = {
 
 function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
   return ({ element, resolveReference }) => {
-    const common = ["id", "semantic", "frame", "during", "terminal", "style", "appear-sound", "move-sound"];
+    const common = ["id", "semantic", "space", "frame", "during", "terminal", "style", "appear-sound", "move-sound"];
     const attributes = variant === "column" || variant === "tier-board"
       ? [...common.filter((name) => name !== "terminal"), "canvas"]
       : common;
     allowed(element, attributes);
     const id = text(element, "id");
     const selected = variantDefinition[variant];
-    const semantic = reference(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
+    const context = resolveTemporalContext({ element, resolveReference });
+    const time = createTemporalSpace({ id, element, ...context });
     const canvas = variant === "column" || variant === "tier-board"
       ? reference(element.attributes.canvas, `${element.name}.canvas`, spatialTypes.canvas, resolveReference)
       : undefined;
     const frame = reference(element.attributes.frame, `${element.name}.frame`, spatialTypes.frame, resolveReference);
-    const outerTemporal = createTemporalWindowProjection({ id: `${id}.outer`, subjectId: id, element, semantic, resolveReference });
+    const outerTemporal = createTemporalWindowProjection({ id: `${id}.outer`, subjectId: id, element, ...context, space: time.space, resolveReference });
     const terminalTemporal = variant === "top-three"
       ? createTemporalInstantProjection({
-          id: `${id}.terminal`, subjectId: id, element, semantic, resolveReference,
+          id: `${id}.terminal`, subjectId: id, element, ...context, space: time.space, resolveReference,
           semanticAttribute: "terminal", projectedAttribute: false,
         })
       : undefined;
     const styleRaw = element.attributes.style;
     const style = reference(styleRaw, `${element.name}.style`, selected.style, resolveReference);
     const records: SurfaceRecordDraft[] = [...outerTemporal.records, ...(terminalTemporal?.records ?? [])];
-    const temporalComponents: SurfaceComponentDraft[] = [...outerTemporal.components, ...(terminalTemporal?.components ?? [])];
-    const temporalFragments = [...outerTemporal.fragments, ...(terminalTemporal?.fragments ?? [])];
+    const temporalComponents: SurfaceComponentDraft[] = [...time.components, ...outerTemporal.components, ...(terminalTemporal?.components ?? [])];
+    const temporalFragments = [...time.fragments, ...outerTemporal.fragments, ...(terminalTemporal?.fragments ?? [])];
     const headerId = `${id}.header`;
     records.push({
       id: headerId, type: rankingTypes.header,
       value: { kind: "inline", value: sealRankingHeader({ id, variant }) as unknown as CanonicalValue },
       range: element.range,
     });
-    const inputs: Record<string, typeof semantic.ref> = {
-      header: { kind: "record", id: headerId }, semantic: semantic.ref, frame: frame.ref,
+    const inputs: Record<string, typeof time.space.ref> = {
+      header: { kind: "record", id: headerId }, space: time.space.ref, frame: frame.ref,
       outer: outerTemporal.ref, style: style.ref,
       ...(canvas === undefined ? {} : { canvas: canvas.ref }),
       ...(terminalTemporal === undefined ? {} : { terminal: terminalTemporal.ref }),
@@ -259,8 +260,8 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       const contentName = authored.content === undefined ? undefined : `item-${suffix}-content`;
       if (authored.content !== undefined) inputs[contentName!] = authored.content.ref;
       const itemTemporal = !authored.timed ? undefined : variant === "top-three"
-        ? createTemporalInstantProjection({ id: `${id}.item.${suffix}`, subjectId: spec.id, element: child, semantic, resolveReference })
-        : createTemporalWindowProjection({ id: `${id}.item.${suffix}`, subjectId: spec.id, element: child, semantic, resolveReference });
+        ? createTemporalInstantProjection({ id: `${id}.item.${suffix}`, subjectId: spec.id, element: child, ...context, space: time.space, resolveReference })
+        : createTemporalWindowProjection({ id: `${id}.item.${suffix}`, subjectId: spec.id, element: child, ...context, space: time.space, resolveReference });
       if (itemTemporal !== undefined) {
         records.push(...itemTemporal.records);
         temporalComponents.push(...itemTemporal.components);

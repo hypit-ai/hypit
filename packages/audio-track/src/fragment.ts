@@ -1,8 +1,8 @@
+import { programSpaceTypes } from "@hypit/program-space";
 import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation } from "@hypit/elaborator";
 import { mediaTypes } from "@hypit/media";
-import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { temporalTypes } from "@hypit/temporal";
 
 import { audioTrackProducers, audioTrackTypes } from "./manifest.js";
@@ -20,7 +20,6 @@ export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[
   if (items.length === 0) throw new Error("Audio Track Fragment requires at least one Item.");
   const inputTypes = new Map<string, (typeof audioTrackTypes.clipSpec | typeof mediaTypes.synchronized | typeof temporalTypes.window)>();
   const operations: FragmentOperation[] = [
-    { id: "audio:space", producer: semanticTrackProducers.projectProgramSpace, inputs: { track: input("semantic") }, result: { kind: "output", name: "space" } },
     { id: "audio:set:empty", producer: audioTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } },
   ];
   let current = "audio:set:empty";
@@ -33,7 +32,7 @@ export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[
       id,
       producer: audioTrackProducers.appendItem,
       inputs: {
-        set: operation(current), header: input("header"), space: operation("audio:space"),
+        set: operation(current), header: input("header"), space: input("space"),
         media: input(item.mediaName), spec: input(item.specName),
         window: input(item.windowName),
       },
@@ -43,12 +42,12 @@ export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[
   });
   operations.push(
     { id: "audio:program", producer: audioTrackProducers.finalize, inputs: { set: operation(current), header: input("header") }, result: { kind: "output", name: "program" } },
-    { id: "audio:track", producer: audioTrackProducers.render, inputs: { space: operation("audio:space"), program: operation("audio:program") }, result: { kind: "output", name: "track" } },
+    { id: "audio:track", producer: audioTrackProducers.render, inputs: { space: input("space"), program: operation("audio:program") }, result: { kind: "output", name: "track" } },
   );
   return sealGraphFragment({
     inputs: [
       { name: "header", type: audioTrackTypes.header },
-      { name: "semantic", type: semanticTrackTypes.track },
+      { name: "space", type: programSpaceTypes.programSpace },
       ...[...inputTypes].map(([inputName, type]) => ({ name: inputName, type })),
     ],
     operations,

@@ -28,9 +28,11 @@ transient processing require the selected Runtime.
 
 ## Opening and editing a session
 
-The selected targets must reach one Film and its semantic projection. Studio rejects
-several distinct Films in one view; use separate Runs/sessions for those. The semantic
-axis can include ordinary wordless Script Segments with media spans.
+The selected targets must reach one Film and its resolved time source. Studio rejects several
+distinct Films in one view; use separate Runs/sessions for those. A SemanticTrack supplies the
+Script lane and performance timing, including wordless Segments with media spans. A declared
+ProgramSpace supplies authored animation time without a Script lane. Both show their component
+tracks and use the same rendering and parameter-editing machinery.
 
 Open the URL printed by Vite. Studio requests port 5179 by default, accepts `--port`,
 and Vite can choose another available port when it is occupied. Reuse that process

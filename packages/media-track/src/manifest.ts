@@ -1,3 +1,4 @@
+import { temporalContextAttributeVocabulary } from "@hypit/temporal-markup";
 import { visualTimedSamplingSchema } from "@hypit/composition";
 import { readFile } from "node:fs/promises";
 
@@ -367,14 +368,13 @@ export const mediaTrackMarkupSurfaces = [{
       temporalTypes.instantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window, mediaTrackTypes.program,
       compositionTypes.visualTrack, compositionTypes.audioTrack],
     vocabulary: {
-      summary: "Show the semantic performance, place independent media Items, and compose replacement Sequences on a shared SemanticTrack and Canvas. Publishes a VisualTrack and, when audio is authored, an AudioTrack.",
+      summary: "Show the semantic performance, place independent media Items, and compose replacement Sequences on a shared film time axis and Canvas. Publishes a VisualTrack and, when audio is authored, an AudioTrack.",
       appearance: "Pictures and layered compositions occupy authored Frames on the Canvas. Each source is scaled and aligned inside its Frame's border and padding; a contain fit can leave space, while cover can crop. Paint and sampled Layers draw in Source order under a shared rectangular, rounded or Path clip, with optional border and shadows. Lifecycle motion moves the framed unit; Sampling pans, zooms or rotates the picture inside it. Each Item has an independent window. A Sequence shares one outer Frame while Members replace its contents through cut, crossfade, push, wipe, cover or page-turn Handoffs. Source playback determines whether moving content covers the whole assigned span. Absolute stack order decides which overlapping unit draws in front.",
       preview: previewImage("Track.png"),
       attributes: [
         { name: "id", kind: "identifier", required: true,
           summary: "Names this Track and prefixes the identity of every Item, Sequence, layer and sound that does not name itself." },
-        { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
-          summary: "Supplies semantic time for every child and the prepared material shown by Performance." },
+        ...temporalContextAttributeVocabulary,
         { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
           summary: "Chooses the Canvas every Frame on this Track is measured inside." },
       ],
@@ -440,9 +440,9 @@ export const mediaTrackMarkupSurfaces = [{
               recipe: motionRecipeProperties },
             { name: "clip", kind: "reference", required: false, accepts: [spatialTypes.path],
               summary: "Clips the Sequence to an authored Path." },
-            { name: "until", kind: "reference", required: true,
+            { name: "until", kind: "expression", required: true,
               accepts: [narrativeTypes.moment, narrativeTypes.selection, narrativeTypes.excerpt],
-              summary: "Ends the Sequence at a Moment or a chosen Selection/Segment boundary." },
+              summary: "Ends the Sequence at a Moment, a Selection/Segment boundary, or an authored time such as 8s." },
             { name: "until-boundary", kind: "literal", required: false, values: ["start", "end"],
               summary: "Chooses which edge of the ending Selection or Segment ends the Sequence; defaults to `end` and is refused for a Moment." },
           ] },
@@ -476,13 +476,13 @@ export const mediaTrackMarkupSurfaces = [{
         "An `enter` or an `exit` operator requires its own `enter-frames` or `exit-frames`.",
         "An Item written with a direct source accepts `<Sampling>` and `<Sound>` children; an Item written without one accepts `<Paint>`, `<Layer>` and `<Sound>` children, and requires at least one Paint or Layer.",
         "A Sequence requires at least two `<Member>` children, exactly one `<Handoff>` for every adjacent Member pair, and accepts `<Sound>` children.",
-        "Sequence `until` is a semantic reference, not a literal `program.end`. `until-boundary` defaults to end for a Selection or Segment and is refused for a Moment.",
+        "Sequence `until` selects a Moment, a Selection or Segment boundary, or an authored time such as 8s. `until-boundary` defaults to end for a Selection or Segment.",
         "A Member is one picture in the replacement order:",
         [
           "| Attribute | Kind | Required | Meaning |",
           "|---|---|---|---|",
           "| `id` | identifier | no | Names this Member; the Sequence derives `<sequence>.member.<index>` otherwise |",
-          "| `at` | semantic reference | one timing form | A Moment, Selection or Segment that activates this Member |",
+          "| `at` | reference or time | one timing form | A Moment, Selection or Segment boundary, or an authored time that activates this Member |",
           "| `boundary` | literal (start, end) | with a Selection or Segment | Which edge activates this Member; refused for a Moment |",
           "| `instant` | expression | one timing form | Explicit point expression instead of `at`; bind selection, segment or moment if the expression uses it |",
           "| `appearance` | reference (@hypit/svs@1#Recipe) | no | This Member's own Recipe in place of the Sequence's |",

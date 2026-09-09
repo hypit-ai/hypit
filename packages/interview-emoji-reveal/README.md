@@ -1,5 +1,9 @@
 # Emoji Reveal
 
+The Track Surface accepts `semantic={speech.semantic}` or `space={animation}`. Semantic context
+resolves Script Selections and Moments; authored space supports clock-based animation. Shared `at`
+inputs accept a Moment or a time such as `2s`; `at` with `for` produces a Window where required.
+
 Reusable Hypit author vocabulary for a top-of-frame icon answer strip.
 
 The strip owns one outer projected `TemporalWindow`. An Item is either preset from the first frame or
@@ -27,7 +31,7 @@ answers remain and later slots remain unanswered.
 
 `Selection`, `Segment`, numeric instants and a `boundary` fallback are deliberately not part of an
 Item's vocabulary. The component consumes only `ProgramSpace`, the projected outer Window and the
-projected Moment Instants; it does not interpret Script semantics itself and has no Studio dependency.
+projected Instants; it does not interpret Script semantics itself and has no Studio dependency.
 
 The bundled preview icons come from [Tabler Icons](https://tabler.io/icons), distributed under the
 MIT license and retrieved through the Iconify API. Their SVG files are the design sources and are

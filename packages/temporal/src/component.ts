@@ -2,6 +2,7 @@ import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-
 import { canonicalize } from "@hypit/protocol";
 import type { StoredValue } from "@hypit/protocol";
 import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import type { ProgramSpace } from "@hypit/program-space";
 import type { SemanticTrack } from "@hypit/semantic-track";
 
 import {
@@ -30,7 +31,7 @@ export const temporalComponent = {
     { producer: temporalProducers.projectProgramInstant, handler: ({ inputs }) => ({ outputs: { instant: output(projectProgramInstant({
       itemId: instantSpec(inputs).id,
       subjectId: instantSpec(inputs).subjectId,
-      semantic: inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
+      space: inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
       projection: instantSpec(inputs).projection,
       authority: instantSpec(inputs).authority,
     })) }, needs: {} }) },

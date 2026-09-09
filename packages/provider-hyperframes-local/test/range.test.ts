@@ -24,8 +24,7 @@ import type { HyperframesRenderProgress } from "../src/index.js";
 import { distributeFrameRange, sourceFrameAt, sourceWindows, videoSlots } from "../src/sampling.js";
 
 function documentFor(artifact: BlobRef) {
-  const space = sealProgramSpace({ id: "range-space", narrativeId: "range-narrative",
-    durationSec: 12 / 30, frameRate: { numerator: 30, denominator: 1 } });
+  const space = sealProgramSpace({ id: "range-space", durationSec: 12 / 30, frameRate: { numerator: 30, denominator: 1 } });
   const track = sealVisualTrack({ id: "video", visualIr: "hypit.visual-ir@1", programSpaceId: space.id,
     presents: [{ id: "sample", span: { startFrame: 0, endFrameExclusive: 12 },
       stacking: { order: 0, tieBreak: "sample" }, elements: [{ id: "video", order: 0, kind: "video", artifact,

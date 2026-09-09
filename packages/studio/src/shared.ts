@@ -263,18 +263,13 @@ export type StudioSnapshot = {
    * The special Studio lane. This is not another VisualTrack: it is the
    * Narrative's segment/word geometry projected onto the same frame domain.
    */
-  readonly semantic: SemanticTimeline;
-  /**
-   * The picture, ready to mount. Real material is the base layer rather than the
-   * whole picture: the Tracks above it have not been rendered into that file, so
-   * they are composited over it exactly as they are in `hyperframes` mode.
-   */
+  readonly semantic?: SemanticTimeline;
   /** The Tracks, compiled into the document the renderer photographs. */
   readonly preview: { readonly kind: "hyperframes"; readonly srcdoc: string };
   readonly provenance: {
     /** Where the timeline came from. The frame domain always shares its source. */
-    readonly timing: "measured";
-    readonly picture: "measured";
+    readonly timing: "measured" | "authored";
+    readonly picture: "resolved";
     /** What the badges above are standing for, in one sentence. */
     readonly note: string;
   };

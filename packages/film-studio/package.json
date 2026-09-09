@@ -10,6 +10,7 @@
     "@hypit/composition": "workspace:*",
     "@hypit/film": "workspace:*",
     "@hypit/semantic-track": "workspace:*",
-    "@hypit/studio-adapter": "workspace:*"
+    "@hypit/studio-adapter": "workspace:*",
+    "@hypit/program-space": "workspace:*"
   }
 }

@@ -9,6 +9,7 @@ import type { RunPlan } from "./run.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 import {
   outputFor,
+  referencedValueFor,
   placementFor,
   roleFor,
   traceFor,
@@ -30,6 +31,7 @@ export type StudioViewRequirement = {
 export type StudioInspection = {
   readonly renderTargets: readonly string[];
   readonly filmComposition: string;
+  readonly timeRef: string;
   readonly projections: readonly StudioViewRequirement[];
 };
 
@@ -118,7 +120,7 @@ export function inspectStudioRun(
     }
   }
 
-  // The selected Film companion alone declares membership and semantic-axis vocabulary.
+  // The selected Film companion declares membership and time-source vocabulary.
   const filmTrackRefs = unique(chosen.placement.children.flatMap((child) => {
     if (localName(child.tag) !== film.tracks.childSurface) return [];
     const source = child.resolvedReferenceAttributes?.[film.tracks.sourceAttribute];
@@ -129,11 +131,13 @@ export function inspectStudioRun(
       ? [output.ref]
       : [];
   });
-  const semanticOutput = outputFor(source,
-    chosen.placement.resolvedReferenceAttributes?.[film.semantic.attribute] ?? "");
-  if (semanticOutput === undefined || !sameType(semanticOutput.typeRef, film.semantic.type)) {
-    issues.push("Film has no traceable SemanticTrack reference");
-  }
+  const times = film.timeSources.flatMap((sourceType) => {
+    const value = referencedValueFor(source, chosen.placement!.resolvedReferenceAttributes?.[sourceType.attribute] ?? "");
+    return value !== undefined && sameType(value.typeRef, sourceType.type) ? [value] : [];
+  });
+  const timeOutput = times[0];
+  if (times.length !== 1) issues.push("Film requires one traceable time source.");
+  const semanticOutput = timeOutput !== undefined && sameType(timeOutput.typeRef, semanticTrackTypes.track) ? timeOutput : undefined;
   let companionValueRefs: readonly string[] = [];
   try {
     companionValueRefs = unique(filmTrackRefs.flatMap((ref) =>
@@ -188,6 +192,7 @@ export function inspectStudioRun(
   return {
     renderTargets: targets.map((item) => item.ref),
     filmComposition: chosen.compositionRef,
+    timeRef: timeOutput!.ref,
     projections,
   };
 }

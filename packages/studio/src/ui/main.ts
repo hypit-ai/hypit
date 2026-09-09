@@ -775,7 +775,7 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
 }
 
 function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): void {
-  const segment = snapshot.semantic.segments.find((item) => item.id === segmentId);
+  const segment = snapshot.semantic?.segments.find((item) => item.id === segmentId);
   if (segment === undefined) { inspector.replaceChildren(); return; }
   defaultWorkspaceHeading();
   const empty = document.createElement("div");
@@ -785,7 +785,7 @@ function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): v
 }
 
 function renderSemanticSelectionInspector(snapshot: StudioSnapshot, selectionId: string): void {
-  const selection = snapshot.semantic.selections.find((item) => item.id === selectionId);
+  const selection = snapshot.semantic?.selections.find((item) => item.id === selectionId);
   if (selection === undefined) { inspector.replaceChildren(); return; }
   defaultWorkspaceHeading();
   const empty = document.createElement("div");
@@ -795,7 +795,7 @@ function renderSemanticSelectionInspector(snapshot: StudioSnapshot, selectionId:
 }
 
 function renderSemanticMomentInspector(snapshot: StudioSnapshot, momentId: string): void {
-  const moment = snapshot.semantic.moments.find((item) => item.id === momentId);
+  const moment = snapshot.semantic?.moments.find((item) => item.id === momentId);
   if (moment === undefined) { inspector.replaceChildren(); return; }
   defaultWorkspaceHeading();
   const empty = document.createElement("div");
@@ -819,13 +819,13 @@ store.subscribe(({ snapshot, selection, playhead }) => {
   const origin = selection.kind === "none" ? undefined : selection.origin;
   const chosen = selection.kind === "clip" ? store.clip(selection.clipId) : undefined;
   const chosenSegment = selection.kind === "semantic-segment"
-    ? snapshot.semantic.segments.find((item) => item.id === selection.segmentId)
+    ? snapshot.semantic?.segments.find((item) => item.id === selection.segmentId)
     : undefined;
   const chosenSelection = selection.kind === "semantic-selection"
-    ? snapshot.semantic.selections.find((item) => item.id === selection.selectionId)
+    ? snapshot.semantic?.selections.find((item) => item.id === selection.selectionId)
     : undefined;
   const chosenMoment = selection.kind === "semantic-moment"
-    ? snapshot.semantic.moments.find((item) => item.id === selection.momentId)
+    ? snapshot.semantic?.moments.find((item) => item.id === selection.momentId)
     : undefined;
   // Rebuilding this every frame of playback would be DOM churn for no change.
   const describes = `${snapshot.revision}:${selection.kind}:${chosen?.id ?? chosenSegment?.id ?? chosenSelection?.id ?? chosenMoment?.id ?? ""}`;

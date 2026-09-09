@@ -23,6 +23,7 @@ export function semanticTrackFixture(
   space: ProgramSpace,
   options: {
     readonly id?: string;
+    readonly narrativeId?: string;
     readonly segments?: readonly FixtureSegment[];
     readonly anchors?: readonly FixtureAnchor[];
   } = {},
@@ -41,7 +42,7 @@ export function semanticTrackFixture(
   return {
     // A SemanticTrack is the author-visible identity of the ProgramSpace it projects.
     id: options.id ?? space.id,
-    narrativeId: space.narrativeId,
+    narrativeId: options.narrativeId ?? "script",
     items: segments.map((segment, index) => {
       const endFrameExclusive = startFrame + segment.frameCount;
       const startAnchorId = `segment:${segment.id}:start`;
@@ -52,7 +53,7 @@ export function semanticTrackFixture(
           && (index === segments.length - 1 ? anchor.frame <= endFrameExclusive : anchor.frame < endFrameExclusive))
         .map((anchor) => ({ identity: anchor.identity, frame: anchor.frame - startFrame }));
       const take = {
-        narrativeId: space.narrativeId,
+        narrativeId: options.narrativeId ?? "script",
         media: {
           timeline: { frameRate: space.frameRate, frameCount: segment.frameCount },
           audio: { artifact: audioArtifact },

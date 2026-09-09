@@ -147,7 +147,7 @@ test("at/for and until/for derive complementary semantic and duration inverses",
   ]);
 });
 
-test("absolute Window edits use only the Companion's exact parameter vocabulary", () => {
+test("absolute Window edits work without a semantic lane and use the Companion's parameter vocabulary", () => {
   const source = (start: number, end: number) => ({
     endpoint: `main::${start}`,
     path: "main.svml",
@@ -170,18 +170,18 @@ test("absolute Window edits use only the Companion's exact parameter vocabulary"
       projection: {
         kind: "window",
         start: {
-          kind: "instant", expression: "1f", reference: "absolute", frame: 1, source: { ...temporalIdentity, kind: "program", id: "program" },
+          kind: "instant", expression: "1f", reference: "absolute", frame: 1, source: { spaceId: "animation", kind: "program", id: "program" },
           authority: { kind: "parameter", binding: "from", relation: "direct" },
         },
         end: {
-          kind: "instant", expression: "20f", reference: "absolute", frame: 20, source: { ...temporalIdentity, kind: "program", id: "program" },
+          kind: "instant", expression: "20f", reference: "absolute", frame: 20, source: { spaceId: "animation", kind: "program", id: "program" },
           authority: { kind: "parameter", binding: "until", relation: "direct" },
         },
         startFrame: 1, endFrameExclusive: 20,
       },
       phases: [],
     },
-    semantic,
+    undefined,
   );
 
   assert.deepEqual(handles.map((handle) => ({

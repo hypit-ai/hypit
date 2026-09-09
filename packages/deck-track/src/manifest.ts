@@ -1,3 +1,4 @@
+import { temporalContextAttributeVocabulary } from "@hypit/temporal-markup";
 import { readFile } from "node:fs/promises";
 
 import { artifactTypes } from "@hypit/artifact";
@@ -20,7 +21,7 @@ import {
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackDependency } from "@hypit/semantic-track";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
@@ -168,8 +169,7 @@ export const depthStackMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this deck so its Program and Track can be referenced elsewhere in the Source." },
-          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
-            summary: "Chooses the SemanticTrack that owns the frame domain and places each Card's Moment." },
+          ...temporalContextAttributeVocabulary,
           { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
             summary: "Chooses the Canvas the deck is rendered into." },
           { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
@@ -314,15 +314,15 @@ export const depthStackMarkupSurfaces = [
               { name: "playback-past", required: false, values: ["hold-tail", "continue", "hide"], fallback: "hold-tail",
                 summary: "Decides what a Card shows once its material is spent: its last frame held, its own timeline running on, or nothing." },
             ] },
-          { name: "until", kind: "expression", required: true, values: ["program.end"],
-            accepts: [narrativeTypes.moment, narrativeTypes.selection],
-            summary: "Ends the deck at the literal `program.end`, at a Moment, or at a Selection." },
+          { name: "until", kind: "expression", required: true,
+            accepts: [narrativeTypes.moment, narrativeTypes.selection, narrativeTypes.excerpt],
+            summary: "Ends the deck at a Moment, a Selection or Segment boundary, or an authored time such as 8s." },
           { name: "until-boundary", kind: "literal", required: false, values: ["start", "end"],
-            summary: "Chooses which edge of the ending Selection ends the deck." },
+            summary: "Chooses which edge of the ending Selection or Segment ends the deck." },
         ],
         children: [
           { tag: "Card", cardinality: "many",
-            summary: "One card of the stack, dealt at its own Moment in document order.",
+            summary: "One card of the stack, dealt at its own event in document order.",
             attributes: [
               { name: "id", kind: "identifier", required: true,
                 summary: "Names this Card within the deck." },
@@ -399,7 +399,7 @@ export const depthStackMarkupSurfaces = [
         notes: [
           "The deck requires at least one Card, and a Card is empty.",
           "`extent` is required for a still image source and refused for a Synchronized Medium or a Compositable Surface.",
-          "`until-boundary` defaults to `end` and is refused unless `until` names a Selection.",
+          "`until-boundary` defaults to `end` when `until` names a Selection or Segment.",
           "Both Recipes are closed: any property outside the ones listed here is refused, and a Card without its own `appearance` reads the deck's Recipe for fit, sampling, frame Paint and playback.",
         ],
       } },

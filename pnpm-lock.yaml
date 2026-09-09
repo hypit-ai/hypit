@@ -310,6 +310,18 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  examples/semantic-composition/packages/chat-scene:
+    devDependencies:
+      '@types/node':
+        specifier: 24.10.1
+        version: 24.10.1
+      hypit:
+        specifier: workspace:*
+        version: link:../../../..
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   examples/semantic-composition/packages/responsive-explainer:
     devDependencies:
       '@types/node':
@@ -1005,6 +1017,9 @@ importers:
       '@hypit/svs':
         specifier: workspace:*
         version: link:../svs
+      '@hypit/temporal-markup':
+        specifier: workspace:*
+        version: link:../temporal-markup
     devDependencies:
       '@hypit/core':
         specifier: workspace:*
@@ -1036,6 +1051,9 @@ importers:
       '@hypit/film':
         specifier: workspace:*
         version: link:../film
+      '@hypit/program-space':
+        specifier: workspace:*
+        version: link:../program-space
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../semantic-track
@@ -2370,6 +2388,9 @@ importers:
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../semantic-track
+      '@hypit/temporal-markup':
+        specifier: workspace:*
+        version: link:../temporal-markup
     devDependencies:
       '@hypit/core':
         specifier: workspace:*
@@ -3051,6 +3072,9 @@ importers:
       '@hypit/narrative':
         specifier: workspace:*
         version: link:../narrative
+      '@hypit/program-space':
+        specifier: workspace:*
+        version: link:../program-space
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../semantic-track

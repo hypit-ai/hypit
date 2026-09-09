@@ -1,5 +1,9 @@
 # `@hypit/render-hyperframes`
 
+The Surface accepts `semantic={speech.semantic}` for performance time or `space={animation}` for an
+authored ProgramSpace. Its Fragment receives `space` directly; rendering does not require Script
+or prepared performance media. Both time sources use the same frame and audio pipeline.
+
 Explicit author and capability boundary for final HyperFrames video rendering.
 
 The package owns `<render:Video composition={...}/>` and lowers it to ordinary Operations that:

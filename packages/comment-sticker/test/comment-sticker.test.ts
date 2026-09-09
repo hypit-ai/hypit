@@ -50,7 +50,7 @@ const style = decodeCommentStickerStyle(recipe, fonts, "social-comment");
 const frame = { xPx: 80, yPx: 140, widthPx: 920, heightPx: 360 };
 const canvas = { widthPx: 1080, heightPx: 1920,
   origin: "top-left" as const, xDirection: "right" as const, yDirection: "down" as const, pixelAspect: "square" as const };
-const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative", durationSec: 3, frameRate: { numerator: 30, denominator: 1 } });
+const space = sealProgramSpace({ id: "test-space", durationSec: 3, frameRate: { numerator: 30, denominator: 1 } });
 const header = sealCommentStickerHeader({ id: "comments" });
 const semantic = semanticTrackFixture(space);
 

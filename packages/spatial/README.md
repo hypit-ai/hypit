@@ -40,7 +40,8 @@ position unchanged. Fitting calculates rectangles; the consuming component owns 
 `content-x`, `content-y`, `fit-offset-x`, `fit-offset-y`, and `fit-constraint`. Defaults are `contain`,
 center points (`0.5`), zero pixel offsets and `bounded`. These alignment fractions place the source
 inside the supplied destination. Canvas placement remains the job of Frame / AnchoredFrame /
-AspectFrame. Media Track and Speech Track use this same decoder.
+AspectFrame. Media Track uses this decoder for Items, Performances and Sequence members; project
+components can use the same fitting functions where that presentation fits their role.
 
 ## Measured regions
 

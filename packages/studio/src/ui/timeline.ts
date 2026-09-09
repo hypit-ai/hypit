@@ -189,7 +189,7 @@ export function createTimeline(store: Store): Timeline {
       const next = Math.abs(candidate - frame);
       if (next < distance) { nearest = candidate; distance = next; }
     };
-    for (const anchor of state.snapshot.semantic.anchors) consider(anchor.frame);
+    for (const anchor of state.snapshot.semantic?.anchors ?? []) consider(anchor.frame);
     for (const clip of state.snapshot.tracks.flatMap((track) => track.clips)) {
       consider(clip.startFrame);
       consider(clip.endFrameExclusive);
@@ -234,7 +234,7 @@ export function createTimeline(store: Store): Timeline {
     preferredIndex?: number,
   ): number | undefined => {
     if (state === undefined) return undefined;
-    const anchors = state.snapshot.semantic.anchors;
+    const anchors = state.snapshot.semantic?.anchors ?? [];
     const preferredKind = preferredIndex === undefined ? undefined : anchors[preferredIndex]?.kind;
     return [...indices].sort((left, right) => {
       const leftAnchor = anchors[left]!;
@@ -254,7 +254,7 @@ export function createTimeline(store: Store): Timeline {
     | undefined => {
     if (state === undefined || edit.handle.semantic === undefined) return undefined;
     const semantic = edit.handle.semantic;
-    const anchors = state.snapshot.semantic.anchors;
+    const anchors = state.snapshot.semantic?.anchors ?? [];
     if (semantic.kind === "moment") {
       const currentIndex = anchors.findIndex((anchor) => anchor.id === semantic.anchorId);
       const anchorIndex = nearestAnchorIndex(
@@ -355,9 +355,9 @@ export function createTimeline(store: Store): Timeline {
     if (state === undefined) return undefined;
     const target = semanticTarget(edit, nextFrame);
     if (target?.kind === "selection" && edit.handle.semantic?.kind === "selection") {
-      const current = state.snapshot.semantic.selections.find((selection) => selection.id === edit.handle.semantic!.id);
-      const nextStart = state.snapshot.semantic.anchors.find((anchor) => anchor.id === target.startAnchorId)?.frame;
-      const nextEnd = state.snapshot.semantic.anchors.find((anchor) => anchor.id === target.endAnchorId)?.frame;
+      const current = state.snapshot.semantic?.selections.find((selection) => selection.id === edit.handle.semantic!.id);
+      const nextStart = state.snapshot.semantic?.anchors.find((anchor) => anchor.id === target.startAnchorId)?.frame;
+      const nextEnd = state.snapshot.semantic?.anchors.find((anchor) => anchor.id === target.endAnchorId)?.frame;
       if (current === undefined || nextStart === undefined || nextEnd === undefined) return undefined;
       const instantBoundary = edit.handle.temporal?.kind === "instant"
         && edit.handle.temporal.authority.kind === "semantic"
@@ -374,8 +374,8 @@ export function createTimeline(store: Store): Timeline {
       };
     }
     if (target?.kind === "moment" && edit.handle.semantic?.kind === "moment") {
-      const current = state.snapshot.semantic.moments.find((moment) => moment.id === edit.handle.semantic!.id);
-      const next = state.snapshot.semantic.anchors.find((anchor) => anchor.id === target.anchorId)?.frame;
+      const current = state.snapshot.semantic?.moments.find((moment) => moment.id === edit.handle.semantic!.id);
+      const next = state.snapshot.semantic?.anchors.find((anchor) => anchor.id === target.anchorId)?.frame;
       if (current === undefined || next === undefined) return undefined;
       const delta = next - current.frame;
       if (edit.handle.gesture === "trim-start") {
@@ -604,7 +604,7 @@ export function createTimeline(store: Store): Timeline {
     .sort((left, right) => (left.binding.lane.order ?? 0) - (right.binding.lane.order ?? 0));
 
   const buildSemanticLane = (snapshot: StudioSnapshot): void => {
-    if (snapshot.semantic.segments.length === 0) {
+    if (snapshot.semantic === undefined || snapshot.semantic.segments.length === 0) {
       return;
     }
     const presentation = snapshot.semantic.presentation;
@@ -897,7 +897,7 @@ export function createTimeline(store: Store): Timeline {
           const pointerAnchorIndex = handle.semantic !== undefined
             ? nearestAnchorIndex(
                 pointerFrame,
-                state?.snapshot.semantic.anchors.map((_, index) => index) ?? [],
+                state?.snapshot.semantic?.anchors.map((_, index) => index) ?? [],
               )
             : undefined;
           activeEdit = {

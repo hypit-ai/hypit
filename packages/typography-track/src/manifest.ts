@@ -1,8 +1,9 @@
+import { temporalContextAttributeVocabulary } from "@hypit/temporal-markup";
 import { readFile } from "node:fs/promises";
 
 import { narrativeDependency } from "@hypit/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
-import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackDependency } from "@hypit/semantic-track";
 import {
   compositionDependency,
   compositionTypes,
@@ -428,8 +429,7 @@ export const typographyTrackMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this Track and prefixes the identity of every item spec it seals." },
-          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
-            summary: "Chooses the SemanticTrack that owns the frame domain and resolves every item window." },
+          ...temporalContextAttributeVocabulary,
         ],
         children: [
           { tag: "Point", cardinality: "many",
@@ -500,8 +500,7 @@ export const typographyTrackMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this Mask, under which its VisualTrack is published." },
-          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
-            summary: "Chooses the SemanticTrack whose frame domain the masked Track is rendered into." },
+          ...temporalContextAttributeVocabulary,
           { name: "text", kind: "reference", required: true, accepts: [typographyTrackTypes.program],
             summary: "Chooses the authored Text Program whose items give the mask its shape and timing." },
           { name: "material", kind: "reference", required: true, accepts: [mediaTypes.compositableSurface],

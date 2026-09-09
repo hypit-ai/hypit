@@ -1,3 +1,4 @@
+import { temporalContextAttributeVocabulary } from "@hypit/temporal-markup";
 import { readFile } from "node:fs/promises";
 
 import { artifactDependency, artifactTypes } from "@hypit/artifact";
@@ -5,7 +6,7 @@ import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackDependency } from "@hypit/semantic-track";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { temporalDependency, temporalInstantSchema, temporalTypes, temporalWindowSchema } from "@hypit/temporal";
@@ -116,17 +117,17 @@ export const emojiRevealMarkupSurfaces = [
       preview: previewImage("Track.png"),
       attributes: [
         { name: "id", kind: "identifier", required: true, summary: "Names the reveal Program and Track." },
-        { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track], summary: "Chooses the SemanticTrack whose frame domain projects the outer Window and every Moment." },
+        ...temporalContextAttributeVocabulary,
         { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas], summary: "Chooses the Canvas used for normalized top placement." },
         { name: "style", kind: "reference", required: true, accepts: [emojiRevealTypes.style], summary: "Chooses the strip Style." },
         { name: "placeholder", kind: "reference", required: true, accepts: [artifactTypes.blob], summary: "Supplies the one image drawn in every unrevealed slot." },
         ...temporalWindowAttributeVocabulary,
       ],
-      children: [{ tag: "Item", cardinality: "many", summary: "One answer slot, either settled from the start or revealed at exactly one semantic Moment.", attributes: [
+      children: [{ tag: "Item", cardinality: "many", summary: "One answer slot, either settled from the start or revealed at one event.", attributes: [
         { name: "id", kind: "identifier", required: true, summary: "Names this answer slot and the timing subject it owns." },
         { name: "icon", kind: "reference", required: true, accepts: [artifactTypes.blob], summary: "Supplies this answer as an image Artifact from the same visual icon family as the placeholder." },
         { name: "preset", kind: "literal", required: false, values: ["true", "false"], summary: "Settles this Item from the start of the Track Window; preset Items have no at." },
-        { name: "at", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Chooses this non-preset Item's reveal Moment; required unless preset is true." },
+        { name: "at", kind: "expression", required: false, accepts: [narrativeTypes.moment], summary: "Chooses this non-preset Item's reveal Moment or authored time, such as 2s or 12f; required unless preset is true." },
       ] }],
       ports: [
         { name: "program", type: emojiRevealTypes.program, summary: "The adaptive strip with its projected outer Window and fully traced Moment activations." },
@@ -139,7 +140,7 @@ export const emojiRevealMarkupSurfaces = [
 </emoji:Track>`,
       notes: [
         "Item order is display order: preset Items come first, then non-preset Items in strict chronological reveal order.",
-        "A non-preset Item.at accepts only a Moment: Selection boundaries, numeric instants and boundary fallbacks are intentionally absent.",
+        "A non-preset Item.at chooses one reveal trigger: a Script Moment or an authored time. The answer then persists to the outer Window's end.",
         "The outer Track Window is separate from the child reveal Moments and uses the shared temporal Window protocol.",
       ],
     } },

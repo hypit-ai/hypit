@@ -1,3 +1,4 @@
+import { createTemporalSpace, resolveTemporalContext } from "@hypit/temporal-markup";
 import {
   assertAttributes, assertEmptyElement, optionalTextAttribute, textAttribute, type MarkupAttributeValue, type StructuredSurfaceHandler,
   type SurfaceComponentDraft, type SurfaceRecordDraft, type SurfaceResolvedReference,
@@ -5,7 +6,6 @@ import {
 import { artifactTypes } from "@hypit/artifact";
 import { narrativeTypes } from "@hypit/narrative";
 import { sameType, type CanonicalValue, type TypeRef } from "@hypit/protocol";
-import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
@@ -48,23 +48,24 @@ export const decodeEmojiRevealStyleSurface: StructuredSurfaceHandler = ({ elemen
 };
 
 export const decodeEmojiRevealTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  assertAttributes(element, ["id", "semantic", "canvas", "style", "placeholder", ...temporalWindowAttributeNames]);
+  assertAttributes(element, ["id", "semantic", "space", "canvas", "style", "placeholder", ...temporalWindowAttributeNames]);
   const id = textAttribute(element, "id");
-  const semantic = reference(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
+  const context = resolveTemporalContext({ element, resolveReference });
+  const time = createTemporalSpace({ id: id, element, ...context });
   const canvas = reference(element.attributes.canvas, `${element.name}.canvas`, spatialTypes.canvas, resolveReference);
   const style = reference(element.attributes.style, `${element.name}.style`, emojiRevealTypes.style, resolveReference);
   const placeholder = reference(element.attributes.placeholder, `${element.name}.placeholder`, artifactTypes.blob, resolveReference);
-  const outer = createTemporalWindowProjection({ id, subjectId: id, element, semantic, resolveReference });
+  const outer = createTemporalWindowProjection({ id, subjectId: id, element, ...context, space: time.space, resolveReference });
   const headerId = `${id}.header`;
   const records: SurfaceRecordDraft[] = [...outer.records, {
     id: headerId, type: emojiRevealTypes.header,
     value: { kind: "inline", value: sealEmojiRevealHeader({ id }) as unknown as CanonicalValue }, range: element.range,
   }];
-  const temporalComponents: SurfaceComponentDraft[] = [...outer.components];
-  const temporalFragments = [...outer.fragments];
+  const temporalComponents: SurfaceComponentDraft[] = [...time.components, ...outer.components];
+  const temporalFragments = [...time.fragments, ...outer.fragments];
   const items: { specName: string; iconName: string; activationName?: string }[] = [];
-  const inputs: Record<string, typeof semantic.ref> = {
-    header: { kind: "record", id: headerId }, semantic: semantic.ref, canvas: canvas.ref, style: style.ref,
+  const inputs: Record<string, typeof time.space.ref> = {
+    header: { kind: "record", id: headerId }, space: time.space.ref, canvas: canvas.ref, style: style.ref,
     placeholder: placeholder.ref, outer: outer.ref,
   };
   const ids = new Set<string>();
@@ -89,10 +90,9 @@ export const decodeEmojiRevealTrackSurface: StructuredSurfaceHandler = ({ elemen
     inputs[specName] = { kind: "record", id: specId }; inputs[iconName] = icon.ref;
     if (preset) items.push({ specName, iconName });
     else {
-      reference(child.attributes.at, `${child.name}.at`, narrativeTypes.moment, resolveReference);
       const activation = createTemporalInstantProjection({
         id: `${id}.item.${suffix}.activation`, subjectId: itemId,
-        element: child, semantic, resolveReference, semanticAttribute: "at", projectedAttribute: false,
+        element: child, ...context, space: time.space, resolveReference, semanticAttribute: "at", projectedAttribute: false,
       });
       records.push(...activation.records); temporalComponents.push(...activation.components); temporalFragments.push(...activation.fragments);
       const activationName = `item-${suffix}-activation`;

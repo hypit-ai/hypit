@@ -64,9 +64,9 @@ caption.primary {
   x: 0.5; y: 0.9; width: 0.84; height: 0.22;
   anchor-x: center; anchor-y: bottom;
   align: center; block-align: end; inline-size: fixed;
-  wrap: word; max-lines: 2; max-words-per-line: 4;
+  wrap: word;
   size: 58; line-height: 1; fill: #FFFFFF;
-  background: #00000000; padding: 0; radius: 0;
+  background: #00000000; padding: "0"; radius: 0;
   karaoke: current; active-fill: #FFD54A;
   cue-enter: spring; cue-enter-frames: 4;
   cue-enter-start-scale: 0.75;
@@ -74,6 +74,35 @@ caption.primary {
   lead-frames: 4; tail-frames: 4; handoff: cut;
 }
 ```
+
+## Language, spacing and line layout
+
+The same Caption pipeline serves English and Chinese. Script emits English lexical words and
+individual Han characters as Display Words; punctuation stays with its display word. Fine uses
+those units for timing and active Paint, while authored Cues remain complete reading phrases.
+Dual Text retains its complete alignment unit even when it displays or speaks several words.
+
+`word-gap` applies between Latin words and at Chinese/Latin boundaries. Adjacent Han characters and
+full-width punctuation carry no extra word gap. `letter-spacing` controls glyph tracking. Exact
+font fallbacks supply the required glyphs; the layout does not select a font by language.
+
+| Control | Behavior |
+| --- | --- |
+| `width`, `size`, `padding`, `letter-spacing`, `word-gap` | Determine the available space and the text's occupied width. |
+| `wrap: word` | Flows at display-unit boundaries and permits an over-wide word to break. Han units are already characters. |
+| `wrap: grapheme` | Also permits breaking inside a Latin word. |
+| `max-words-per-line` | Optional counted row breaks between complete alignment units. Counts Display Words, normally characters for Chinese; it does not make new Cues. An indivisible Dual Text unit can exceed this count. |
+| `max-lines` | Requires `max-words-per-line`; rejects too many counted rows. It does not measure browser wrapping or guarantee one physical line. |
+
+Both count limits are omitted above so the example flows by available width. For a compact
+single-line treatment, author coherent Cues and choose a font, size and width that fit those Cues.
+`karaoke: off` keeps a complete Cue steady; `current` and `trail` follow its timed units, which are
+normally individual characters in Chinese. The Hypit Skill's Caption craft page owns grouping and
+visual direction.
+
+`font` accepts an exact face or ordered stack. A local file declared through `media:Font` can be the
+primary face or a `<caption-fine:Fallback font={...}/>` child, just like a bundled face. See
+[Media font assets](../media/README.md#font-files) and [the open catalog](../fonts-open/README.md).
 
 The [Fine Studio Companion](../caption-fine-studio/src/index.ts) reads the same schedule and per-Cue
 Style references. It presents the actual Cue timing and exposes supported Style edits in the Inspector.

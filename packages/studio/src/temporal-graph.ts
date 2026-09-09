@@ -46,7 +46,7 @@ function signed(value: unknown): string {
 
 function expression(value: unknown): string {
   const point = value as PointExpression;
-  if (point.ref === "absolute") return duration(point.at);
+  if (point.ref === "absolute") return `${duration(point.at)}${point.offset === undefined ? "" : signed(point.offset)}`;
   if (typeof point.ref !== "string") return "?";
   return point.offset === undefined ? point.ref : `${point.ref}${signed(point.offset)}`;
 }
@@ -60,12 +60,12 @@ function source(value: unknown): StudioTemporalSource | undefined {
   } | undefined;
   if (held?.kind !== "program" && held?.kind !== "selection"
     && held?.kind !== "segment" && held?.kind !== "moment") return undefined;
-  if (typeof held.spaceId !== "string" || typeof held.narrativeId !== "string" || typeof held.id !== "string") {
+  if (typeof held.spaceId !== "string" || typeof held.id !== "string") {
     return undefined;
   }
   return {
     spaceId: held.spaceId,
-    narrativeId: held.narrativeId,
+    ...(typeof held.narrativeId === "string" ? { narrativeId: held.narrativeId } : {}),
     kind: held.kind,
     id: held.id,
   };

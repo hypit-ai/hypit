@@ -1,5 +1,5 @@
+import { createTemporalSpace, resolveTemporalContext } from "@hypit/temporal-markup";
 import { mediaTypes } from "@hypit/media";
-import { semanticTrackTypes } from "@hypit/semantic-track";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
@@ -104,9 +104,10 @@ function occupancy(element: StructuredElement): AudioOccupancy {
 }
 
 export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  allowed(element, ["id", "semantic"]);
+  allowed(element, ["id", "semantic", "space"]);
   const id = text(element, "id");
-  const semantic = resolved(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
+  const context = resolveTemporalContext({ element, resolveReference });
+  const time = createTemporalSpace({ id: id, element, ...context });
   const headerId = `${id}.header`;
   const records: SurfaceRecordDraft[] = [{
     id: headerId,
@@ -114,12 +115,12 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     value: { kind: "inline", value: sealAudioTrackHeader({ id }) },
     range: element.range,
   }];
-  const temporalComponents: SurfaceComponentDraft[] = [];
-  const temporalFragments: ReturnType<typeof createTemporalWindowProjection>["fragments"][number][] = [];
+  const temporalComponents: SurfaceComponentDraft[] = [...time.components];
+  const temporalFragments: ReturnType<typeof createTemporalWindowProjection>["fragments"][number][] = [...time.fragments];
   const fragmentItems: Parameters<typeof createAudioTrackFragment>[0][number][] = [];
   const inputs: Record<string, { kind: "record"; id: string } | { kind: "component-output"; component: string; output: string }> = {
     header: { kind: "record", id: headerId },
-    semantic: semantic.ref,
+    space: time.space.ref,
   };
   let itemIndex = 0;
   for (const child of element.children) {
@@ -137,7 +138,7 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     const suffix = String(itemIndex).padStart(4, "0");
     const clipId = optionalText(child, "id") ?? `${id}.clip.${suffix}`;
     const source = resolved(child.attributes.source, `${child.name}.source`, mediaTypes.synchronized, resolveReference);
-    const temporal = createTemporalWindowProjection({ id: clipId, element: child, semantic, resolveReference });
+    const temporal = createTemporalWindowProjection({ id: clipId, element: child, ...context, space: time.space, resolveReference });
     records.push(...temporal.records);
     temporalComponents.push(...temporal.components);
     temporalFragments.push(...temporal.fragments);

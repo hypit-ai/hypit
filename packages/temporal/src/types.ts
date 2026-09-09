@@ -40,12 +40,13 @@ export type TemporalInstantExpression =
   | { readonly ref: "segment.start"; readonly offset?: TemporalDuration }
   | { readonly ref: "segment.end"; readonly offset?: TemporalDuration }
   | { readonly ref: "moment.cue"; readonly offset?: TemporalDuration }
-  | { readonly ref: "absolute"; readonly at: TemporalDuration };
+  | { readonly ref: "absolute"; readonly at: TemporalDuration; readonly offset?: TemporalDuration };
 
 /** Runtime dependency used to resolve an Instant. This is not its authoring authority. */
 export type TemporalSource = {
   readonly spaceId: string;
-  readonly narrativeId: string;
+  /** Present when the boundary originates in a Script. */
+  readonly narrativeId?: string;
   readonly kind: "program" | "selection" | "segment" | "moment";
   readonly id: string;
 };

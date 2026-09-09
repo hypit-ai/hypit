@@ -404,10 +404,10 @@ same Frame and moves the whole stack.
 
 ### deck:DepthStack
 
-`id`, `semantic`, `canvas`, `frame` and `appearance` are all required, as is `until`, which says
-what ends the deck: the literal `"program.end"`, a Moment, or a Selection. Only with a Selection may
-you add `until-boundary="start" | "end"` to choose which edge of it ends the deck; the default is
-`end`, and giving the attribute in the other two cases is refused rather than ignored.
+`id`, `canvas`, `frame` and `appearance` are required, together with `semantic` for performance time
+or `space` for authored animation. `until` says
+what ends the deck: a Moment, a Selection or Segment boundary, or an authored time such as `8s`.
+With a Selection or Segment, `until-boundary="start" | "end"` chooses its edge; the default is `end`.
 
 ### deck:Card
 
@@ -489,7 +489,8 @@ optional metadata line.
 card's whole appearance — background, border, radius, tail, avatar, the three text rows, and the
 enter/hold/exit motion — and every key has a default, so a recipe may set only what it changes.
 
-`comment:Track` takes `id`, `canvas` and `semantic`, all three required.
+`comment:Track` takes `id`, `canvas` and one time source: `semantic` for performance time or `space`
+for authored animation.
 
 `comment:Sticker` requires `id`, `frame` and `style`, and takes the same windows as a screen overlay
 above. Its copy is either the `comment=` attribute or the element's own text — both is refused. The
@@ -575,5 +576,5 @@ All four track families together in one source file:
 </film:Film>
 ```
 
-The `stack-order` in each SVS Recipe determines z-ordering: speech visual at 10, media at 40,
-captions at 70, text at 90. Higher values render on top.
+In this example, the Recipes place the performance picture at 10, media at 40, captions at 70 and
+text at 90. Higher values paint on top; the author chooses these relationships for the composition.

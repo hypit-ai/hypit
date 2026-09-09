@@ -1,4 +1,4 @@
-import { semanticTrackTypes } from "@hypit/semantic-track";
+import { createTemporalSpace, resolveTemporalContext } from "@hypit/temporal-markup";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes, verifyMediaFrameRange } from "@hypit/media";
 import type {
@@ -25,7 +25,7 @@ function referenceAttribute(element: StructuredElement, name: string): string {
 
 export const decodeHyperframesRenderSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   const names = Object.keys(element.attributes).sort();
-  if (names.some((name) => !["composition", "id", "semantic", "start-frame", "end-frame-exclusive"].includes(name))) {
+  if (names.some((name) => !["composition", "id", "semantic", "space", "start-frame", "end-frame-exclusive"].includes(name))) {
     throw new Error(`${element.name} contains unsupported attributes`);
   }
   if (element.children.some((child) => child.kind === "element" || child.value.trim().length > 0)) {
@@ -40,14 +40,7 @@ export const decodeHyperframesRenderSurface: StructuredSurfaceHandler = ({ eleme
     || composition.type.name !== compositionTypes.composition.name) {
     throw new Error(`${element.name}.composition must reference Composition`);
   }
-  const semanticPath = referenceAttribute(element, "semantic");
-  const semantic = resolveReference(semanticPath);
-  if (semantic === undefined
-    || semantic.type.module.name !== semanticTrackTypes.track.module.name
-    || semantic.type.module.version !== semanticTrackTypes.track.module.version
-    || semantic.type.name !== semanticTrackTypes.track.name) {
-    throw new Error(`${element.name}.semantic must reference SemanticTrack`);
-  }
+  const time = createTemporalSpace({ id, element, ...resolveTemporalContext({ element, resolveReference }) });
   const selected = element.attributes["start-frame"] !== undefined || element.attributes["end-frame-exclusive"] !== undefined;
   const frame = (name: string): number => {
     const text = stringAttribute(element, name);
@@ -60,13 +53,13 @@ export const decodeHyperframesRenderSurface: StructuredSurfaceHandler = ({ eleme
   const rangeId = `${id}.frame-range`;
   return {
     records: range === undefined ? [] : [{ id: rangeId, type: mediaTypes.frameRange, value: { kind: "inline", value: range }, range: element.range }],
-    components: [{
+    components: [...time.components, {
       id,
       fragment: fragment.id,
-      inputs: { composition: composition.ref, semantic: semantic.ref, ...(selected ? { range: { kind: "record" as const, id: rangeId } } : {}) },
+      inputs: { composition: composition.ref, space: time.space.ref, ...(selected ? { range: { kind: "record" as const, id: rangeId } } : {}) },
       outputs: { video: `${id}.video` },
       range: element.range,
     }],
-    fragments: [fragment],
+    fragments: [...time.fragments, fragment],
   };
 };

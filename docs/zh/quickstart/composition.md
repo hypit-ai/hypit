@@ -16,8 +16,8 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 
 ## film:Film
 
-将所有 Track 组装为单一的 Composition。Film 本身没有领域知识——它不知道什么是字幕、
-什么是 Media、什么是语音。它接收任何 VisualTrack 或 AudioTrack，并按堆叠顺序将它们分层。
+将选定的 VisualTrack 和 AudioTrack 组装为单一的 Composition。每份视觉贡献保留自己的
+定时呈现和绘制顺序；声音通过选定的 AudioTrack 加入。
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
@@ -34,7 +34,8 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 | `canvas` | 是 | 与 Track 布局共享的显式 CanvasSpace |
-| `semantic` | 是 | 来自 `speech:Track` 的 SemanticTrack——定义时长和帧率 |
+| `semantic` | 二选一 | 选定表演的 SemanticTrack，提供时长与帧率 |
+| `space` | 二选一 | 作者声明的 ProgramSpace；与 `semantic` 选择其一 |
 | `appearance` | 是 | SVS Film Recipe——画布清除颜色 |
 
 ### film:Track
@@ -57,8 +58,9 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 
 ### Track 堆叠
 
-Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 Track 的 SVS Recipe 中的
-`stack-order` 属性决定。较低的值在后面；较高的值渲染在上面。
+Film 收集对等的 Track。每个 Track 可以包含多个独立定时、独立排序的呈现，称为 Present。
+许多组件通过 Recipe 的 `stack-order` 暴露绘制顺序：较低的值在后面，较高的值在前面。
+调整 Film 子元素的书写顺序不会改变这一绘制顺序。
 
 典型的堆叠顺序：
 
@@ -69,8 +71,9 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 | 70 | 字幕 |
 | 90 | 文字叠加层 |
 
-一个组件可以在不同的 z 位置发出多个视觉元素（Presents），这些元素会与其他组件的 Presents
-交错排列。最终渲染会将所有 Presents 展平，按绝对堆叠键排序，然后绘制到一个画布上。
+不同组件的 Present 可以交错排列。每个 Present 内部又拥有自己的元素树：多个视频、文字
+和图形可以共享布局、遮罩或协同运动。项目组件可以用 HTML/CSS 浏览器程序实现这样的场景，
+独立字幕或覆盖画面仍可以作为对等贡献。根据共同的表现关系分组，尺寸和素材类型不决定边界。
 
 **输出：** `{main.composition}`——完整的 Composition，传递给渲染器。
 
@@ -86,7 +89,8 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 | `composition` | 是 | 来自 `film:Film` 的 Composition |
-| `semantic` | 是 | 来自 `speech:Track` 的 SemanticTrack |
+| `semantic` | 二选一 | Composition 选定的 SemanticTrack |
+| `space` | 二选一 | Composition 使用的 ProgramSpace；与 `semantic` 选择其一 |
 
 渲染器：
 
@@ -98,6 +102,24 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 
 **输出：** `{final.video}`——以普通内容寻址 `BlobArtifact` 表示的最终视频。这是最常见的
 Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参考输入等后续 Blob 消费者。
+
+## 完全由组件绘制的影片
+
+对于口播作品，Script 的 Selection 和 Moment 保留话语与呈现之间的关系。聊天动画或图解
+也可以自行安排阅读节奏：声明影片时钟，让场景组件、Film 和 Render 使用它。
+
+```svml
+<import as="time" from="@hypit/program-space@1"/>
+<time:Space id="animation" frame-rate="30" duration="8s"/>
+<!-- scene.track 由使用同一时钟的组件产生。 -->
+<film:Film id="main" canvas={canvas} space={animation} appearance={recipes.film.main}>
+  <film:Track source={scene.track}/>
+</film:Film>
+<render:Video id="final" composition={main.composition} space={animation}/>
+```
+
+场景事件可以采用作者指定的秒数或帧数。在口播编排中，同一种表现也可以跟随投影后的 Script
+事件。组件直接绘制画面，声明时长无需背景图片或静音表演；未选择 AudioTrack 时，交付视频无声。
 
 ## 完整的管线流程
 

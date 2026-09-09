@@ -1,7 +1,7 @@
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
-import { programSpaceDependency } from "@hypit/program-space";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 
 const string = { kind: "string", minLength: 1 } as const;
 const unsignedInteger = { kind: "number", integer: true, minimum: 0 } as const;
@@ -16,11 +16,11 @@ const instant: ValueSchema = { kind: "oneOf", variants: [
   ...["program.start", "program.end", "selection.start", "selection.end", "segment.start", "segment.end", "moment.cue"].map((ref) => object({
     ref: { schema: { kind: "literal", value: ref } }, offset: { schema: duration, optional: true },
   })),
-  object({ ref: { schema: { kind: "literal", value: "absolute" } }, at: { schema: duration } }),
+  object({ ref: { schema: { kind: "literal", value: "absolute" } }, at: { schema: duration }, offset: { schema: duration, optional: true } }),
 ] };
 const sourceSchema: ValueSchema = { kind: "oneOf", variants: [
   ...["program", "selection", "segment", "moment"].map((kind) => object({
-    spaceId: { schema: string }, narrativeId: { schema: string },
+    spaceId: { schema: string }, narrativeId: { schema: string, optional: true },
     kind: { schema: { kind: "literal", value: kind } }, id: { schema: string },
   })),
 ] };
@@ -75,7 +75,7 @@ export const temporalManifest: ModuleManifest = {
   capabilities: [],
   producers: [
     { name: temporalProducers.projectProgramInstant.name,
-      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "spec", type: temporalTypes.instantSpec }],
+      inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "spec", type: temporalTypes.instantSpec }],
       outputs: [{ name: "instant", type: temporalTypes.instant }], needs: [] },
     { name: temporalProducers.projectSelectionInstant.name,
       inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "selection", type: narrativeTypes.selection }, { name: "spec", type: temporalTypes.instantSpec }],

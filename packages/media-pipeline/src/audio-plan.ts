@@ -24,7 +24,6 @@ export function verifyAudioProgramPlan(value: unknown): asserts value is AudioPr
   assert(item.sampleRate === 48_000, "AudioProgramPlan sample rate must be 48000");
   const planSpace = {
     id: "audio-program-plan",
-    narrativeId: "audio-program-plan",
     durationSec: item.frameCount * item.frameRate.denominator / item.frameRate.numerator,
     frameRate: item.frameRate,
   };

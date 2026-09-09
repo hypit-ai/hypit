@@ -46,7 +46,6 @@ export function alignSemanticTake(
   const localNarrative = segmentNarrative(narrative, excerpt);
   const programSpace = sealProgramSpace({
     id: `${excerpt.narrativeId}.segment.${excerpt.id}`,
-    narrativeId: excerpt.narrativeId,
     durationSec: media.timeline.frameCount * media.timeline.frameRate.denominator
       / media.timeline.frameRate.numerator,
     frameRate: media.timeline.frameRate,

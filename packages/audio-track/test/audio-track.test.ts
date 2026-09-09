@@ -43,12 +43,11 @@ import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup
 import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
 import { visualIrManifest } from "@hypit/visual-ir";
 
-const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-  durationSec: 10,
+const space = sealProgramSpace({ id: "test-space", durationSec: 10,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const header = sealAudioTrackHeader({ id: "sound" });
-const semantic = semanticTrackFixture(space, { anchors: [
+const semantic = semanticTrackFixture(space, { narrativeId: "test-narrative", anchors: [
   { identity: "a", frame: 30 }, { identity: "b", frame: 60 },
   { identity: "c", frame: 90 }, { identity: "d", frame: 120 },
 ] });
@@ -249,7 +248,7 @@ test("dynamic Fragment keeps every material and temporal dependency as an explic
     { mediaName: "impact", specName: "impact-spec", windowName: "impact-window" },
   ]);
   assert.deepEqual(fragment.inputs.map((input) => input.name), [
-    "header", "impact", "impact-spec", "impact-window", "music", "music-spec", "music-window", "semantic", "voice", "voice-spec", "voice-window",
+    "header", "impact", "impact-spec", "impact-window", "music", "music-spec", "music-window", "space", "voice", "voice-spec", "voice-window",
   ]);
   assert.equal(fragment.exports[1]?.name, "track");
 });

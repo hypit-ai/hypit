@@ -81,8 +81,7 @@ function speechBasis(
   durationSec = 2,
 ): AlignmentBasis {
   if (narrative.segments.length !== 1) throw new Error("Test alignment requires one Segment.");
-  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-    durationSec,
+  const programSpace = sealProgramSpace({ id: "test-space", durationSec,
     frameRate: { numerator: 1_000, denominator: 1 },
   });
   const audioDigest = fixtureResource(`fixture:audio:${narrative.segments.map((segment) => segment.id).join("+")}:${durationSec}`);
@@ -327,8 +326,7 @@ test("a collapsed WhisperX word is assigned the available interval between its n
 test("three Script words may share the two video frames covered by one evidence word", () => {
   const narrative = parseScript("pigeonhole.svml", "<line>alpha beta gamma</line>");
   const original = speechBasis(narrative, 1);
-  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-    durationSec: 1,
+  const programSpace = sealProgramSpace({ id: "test-space", durationSec: 1,
     frameRate: { numerator: 32, denominator: 1 },
   });
   const basis: AlignmentBasis = {
@@ -354,8 +352,7 @@ test("Evidence is interpreted only through the explicitly connected alignment cl
     basis,
     words: [{ text: "Hello", startSec: 0.1, endSec: 0.4 }, { text: "world", startSec: 0.5, endSec: 0.9 }],
   });
-  const anotherSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-    durationSec: 2,
+  const anotherSpace = sealProgramSpace({ id: "test-space", durationSec: 2,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const anotherBasis: AlignmentBasis = {
@@ -370,8 +367,7 @@ test("Evidence is interpreted only through the explicitly connected alignment cl
 test("the final map is quantized once into the selected ProgramSpace", () => {
   const narrative = parseScript("frames.svml", "<line>Hello.</line>");
   const original = speechBasis(narrative, 1);
-  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-    durationSec: 1,
+  const programSpace = sealProgramSpace({ id: "test-space", durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const basis: AlignmentBasis = {

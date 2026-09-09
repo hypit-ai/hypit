@@ -35,7 +35,6 @@ export function projectSemanticProgramSpace(track: SemanticTrack): ProgramSpace 
   const frameRate = track.items[0]!.take.media.timeline.frameRate;
   return sealProgramSpace({
     id: track.id,
-    narrativeId: track.narrativeId,
     durationSec: semanticTrackFrameCount(track) * frameRate.denominator / frameRate.numerator,
     frameRate,
   });

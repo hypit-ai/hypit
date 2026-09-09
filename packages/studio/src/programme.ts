@@ -10,6 +10,7 @@ import {
 } from "@hypit/semantic-track";
 import type { SemanticTrack } from "@hypit/semantic-track";
 import { semanticTrackTypes } from "@hypit/semantic-track";
+import { assertProgramSpaceIdentity, programSpaceTypes } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 import type { StudioResolvedTrack, StudioTemporalBinding } from "@hypit/studio-adapter";
 import type { RuntimeHostTransientExecution } from "@hypit/runtime-host-node";
@@ -35,7 +36,8 @@ export type Preview = {
   readonly values: ReadonlyMap<string, unknown>;
   readonly temporalBindings: ReadonlyMap<string, readonly StudioTemporalBinding[]>;
   readonly composition: Composition;
-  readonly timing: "measured";
+  readonly timing: "measured" | "authored";
+  readonly narrativeId?: string;
   readonly timingOutput?: { readonly name: string; readonly ref: string };
   readonly timingCandidateId?: string;
   readonly timingCandidateOrigin: "run" | "source" | "none";
@@ -75,7 +77,7 @@ function selectedValue(
   output: string,
 ): StoredValue | undefined {
   const selection = state.plan.outputBindings.find((item) => item.output === output);
-  if (selection === undefined) return undefined;
+  if (selection === undefined) return state.program.records.find((item) => item.id === output)?.value;
   const executed = state.records.find((item) => item.id === selection.record)?.value;
   if (executed !== undefined) return executed;
   // Inline Source and Run candidates both belong to this freshly recompiled
@@ -109,6 +111,7 @@ export async function preview(input: {
   readonly domain: StudioDomain;
   readonly outputRefs: readonly string[];
   readonly compositionRef: string;
+  readonly timeRef: string;
   readonly projections: readonly StudioViewRequirement[];
   /** Runtime-owned execution for capabilities explicitly safe outside a Build. */
   readonly transientExecution?: RuntimeHostTransientExecution;
@@ -165,17 +168,17 @@ export async function preview(input: {
   const satisfactions = new Map(
     input.run.run.graph.satisfactions.map((item) => [item.output, item.candidate]),
   );
-  const timingOutput = targets.find((target) => sameType(target.typeRef, semanticTrackTypes.track));
-  const timingValue = timingOutput === undefined
-    ? undefined
-    : selectedValue(executed.state, timingOutput.ref);
-  if (timingOutput === undefined || timingValue?.kind !== "inline") {
-    throw new Error("Studio requires a resolved SemanticTrack projection.");
-  }
-  const semantic = timingValue.value as unknown as SemanticTrack;
-  const spans = semanticTrackSpans(semantic);
-  const anchors = semanticAnchorFrames(semantic);
-  const space = projectSemanticProgramSpace(semantic);
+  const timingOutput = input.source.exports.find((target) => target.ref === input.timeRef);
+  const timingRecord = executed.state.program.records.find((record) => record.id === input.timeRef);
+  const timingType = timingOutput?.typeRef ?? timingRecord?.type;
+  const timingValue = selectedValue(executed.state, input.timeRef);
+  if (timingValue?.kind !== "inline" || timingType === undefined) throw new Error("Studio requires a resolved film time source.");
+  const semantic = sameType(timingType, semanticTrackTypes.track) ? timingValue.value as unknown as SemanticTrack : undefined;
+  if (semantic === undefined && !sameType(timingType, programSpaceTypes.programSpace)) throw new Error("Unsupported Studio time source.");
+  const spans = semantic === undefined ? [] : semanticTrackSpans(semantic);
+  const anchors = semantic === undefined ? new Map<string, number>() : semanticAnchorFrames(semantic);
+  const space = semantic === undefined ? timingValue.value as unknown as ProgramSpace : projectSemanticProgramSpace(semantic);
+  assertProgramSpaceIdentity(space);
   const rate = space.frameRate;
   const compositionValue = selectedValue(executed.state, input.compositionRef);
   if (compositionValue?.kind !== "inline") {
@@ -247,15 +250,16 @@ export async function preview(input: {
       values.set(record.id, record.value.value);
     }
   }
-  const timingCandidateId = satisfactions.get(timingOutput.ref);
+  const timingCandidateId = satisfactions.get(input.timeRef);
   return {
     source: input.source,
     tracks,
     values,
     temporalBindings,
     composition,
-    timing: "measured",
-    timingOutput: { name: timingOutput.name, ref: timingOutput.ref },
+    timing: semantic === undefined ? "authored" : "measured",
+    ...(semantic === undefined ? {} : { narrativeId: semantic.narrativeId }),
+    timingOutput: { name: timingOutput?.name ?? space.id, ref: input.timeRef },
     ...(timingCandidateId === undefined ? {} : { timingCandidateId }),
     timingCandidateOrigin: timingCandidateId === undefined ? "source" : "run",
     served,

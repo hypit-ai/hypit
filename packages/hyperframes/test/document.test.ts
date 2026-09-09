@@ -22,8 +22,7 @@ const fixtureFont: FontArtifactRef = {
 };
 
 function fixture() {
-  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-    durationSec: 1001 / 1000,
+  const programSpace = sealProgramSpace({ id: "test-space", durationSec: 1001 / 1000,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   });
   const picture = {
@@ -118,8 +117,7 @@ test("HyperFrames flattens generic peer visual Track Presents without absorbing 
 test("Text shrink preserves authored hug sizing and trims metrics inside the content box", () => {
   const programSpace = sealProgramSpace({
     id: "text-space",
-    narrativeId: "text-narrative",
-    durationSec: 1,
+        durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const track = sealVisualTrack({
@@ -325,8 +323,7 @@ test("HyperFrames clips a long animation by Present visibility instead of reject
 });
 
 test("content-bound fonts and typed compositable Surfaces cross the same Artifact boundary", () => {
-  const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-    durationSec: 1,
+  const space = sealProgramSpace({ id: "test-space", durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const font: FontArtifactRef = {
@@ -400,8 +397,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
 });
 
 test("exact timed sampling lowers loop boundaries and held frames without zero-rate browser media", () => {
-  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-    durationSec: 8 / 30,
+  const programSpace = sealProgramSpace({ id: "test-space", durationSec: 8 / 30,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const artifact = {
@@ -465,8 +461,7 @@ test("a Track naming five takes still lowers to DOM identities a Windows path ca
   const trackId = "speech-visual:opening-monologue-take-1+opening-monologue-take-2"
     + "+opening-monologue-take-3+opening-monologue-take-4+opening-monologue-take-5";
   const presentId = `${trackId}:clip-1`;
-  const programSpace = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-    durationSec: 8 / 30,
+  const programSpace = sealProgramSpace({ id: "test-space", durationSec: 8 / 30,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const track = sealVisualTrack({ programSpaceId: "test-space",

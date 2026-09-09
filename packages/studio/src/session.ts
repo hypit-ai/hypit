@@ -73,6 +73,7 @@ export async function readStudioSession(input: {
     domain: input.domain,
     outputRefs,
     compositionRef: inspection.filmComposition,
+    timeRef: inspection.timeRef,
     projections: inspection.projections,
     ...(input.transientExecution === undefined ? {} : { transientExecution: input.transientExecution }),
   });

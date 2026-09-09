@@ -84,8 +84,7 @@ import {
   semanticTrackTypes,
 } from "@hypit/semantic-track";
 
-const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-  durationSec: 2,
+const space = sealProgramSpace({ id: "test-space", durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const semantic = semanticTrackFixture(space);
@@ -113,18 +112,18 @@ const compositionRecord = await admitRecord(closure, sealRecord({
   type: compositionTypes.composition,
   value: stored(composition),
 }), validatorRegistry());
-const semanticRecord = await admitRecord(closure, sealRecord({
-  id: "semantic",
-  type: semanticTrackTypes.track,
-  value: stored(semantic),
+const spaceRecord = await admitRecord(closure, sealRecord({
+  id: "space",
+  type: programSpaceTypes.programSpace,
+  value: stored(space),
 }), validatorRegistry());
-const linked = link(closure, [compositionRecord, semanticRecord]);
+const linked = link(closure, [compositionRecord, spaceRecord]);
 const instance = elaborateGraphFragment(linked, renderHyperframesFragment, {
   id: "final",
   fragment: renderHyperframesFragment.id,
   inputs: {
     composition: { kind: "record", id: compositionRecord.id },
-    semantic: { kind: "record", id: semanticRecord.id },
+    space: { kind: "record", id: spaceRecord.id },
   },
 });
 const contribution = bindAuthorFragment(instance, { video: "final.video" });
@@ -156,7 +155,6 @@ function validatorRegistry(): TypeValidatorRegistry {
 
 test("HyperFrames rendering is an explicit exact Need after ordinary document compilation", async () => {
   assert.deepEqual(build().plan.steps.map((step) => step.producer.name).sort(), [
-    "project-program-space",
     hyperframesProducers.compile.name,
     renderHyperframesProducers.requestVisual.name,
     mediaPipelineProducers.planAudio.name,
@@ -410,12 +408,12 @@ test("selected render frames reach both visual and audio Needs through the ordin
   const range = { startFrame: 15, endFrameExclusive: 45 };
   const rangeRecord = await admitRecord(closure, sealRecord({ id: "selection", type: mediaTypes.frameRange,
     value: stored(range) }), validatorRegistry());
-  const program = link(closure, [compositionRecord, semanticRecord, rangeRecord]);
+  const program = link(closure, [compositionRecord, spaceRecord, rangeRecord]);
   const fragment = createRenderHyperframesFragment(true);
   const selected = elaborateGraphFragment(program, fragment, {
     id: "selected", fragment: fragment.id, inputs: {
       composition: { kind: "record", id: compositionRecord.id },
-      semantic: { kind: "record", id: semanticRecord.id },
+      space: { kind: "record", id: spaceRecord.id },
       range: { kind: "record", id: rangeRecord.id },
     },
   });

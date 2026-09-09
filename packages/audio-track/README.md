@@ -1,5 +1,9 @@
 # `@hypit/audio-track`
 
+The Track Surface accepts `semantic={speech.semantic}` or `space={animation}`. Semantic context
+resolves Script Selections and Moments; authored space supports clock-based animation. Shared `at`
+inputs accept a Moment or a time such as `2s`; `at` with `for` produces a Window where required.
+
 Place music, ambience and sound effects in the assembled video. A reveal sound can follow a Script
 Moment; music can occupy a Segment or the program; an explicitly timed sound can use clock placement.
 Performance audio normally comes from [Speech Track](../speech-track/README.md) and can continue
@@ -11,7 +15,7 @@ music ducking for the actual performance. The resulting `.track` is a peer Audio
 
 ## Authoring clips
 
-The current Markup Track requires `semantic`; its Fragment derives ProgramSpace from that input.
+The Markup Track selects `semantic` or `space`; its Fragment receives the resulting ProgramSpace.
 Each Clip accepts one shared temporal Window form: `during="program"`, a Selection or Segment,
 a Moment paired with `for`, or explicit `start`/`end` expressions. The source must already contain
 normalized audio. This excerpt assumes imports, Script, SemanticTrack, Clock and source media exist:

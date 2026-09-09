@@ -1,5 +1,9 @@
 # `@hypit/deck-track`
 
+The Track Surface accepts `semantic={speech.semantic}` or `space={animation}`. Semantic context
+resolves Script Selections and Moments; authored space supports clock-based animation. Shared `at`
+inputs accept a Moment or a time such as `2s`; `at` with `for` produces a Window where required.
+
 The official, deliberately narrow depth-stack Deck author package.
 
 `DepthStack` owns ordered Cards, semantic activation points, a finite visible neighborhood,

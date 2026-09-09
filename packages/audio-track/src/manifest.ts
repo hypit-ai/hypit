@@ -1,10 +1,11 @@
+import { temporalContextAttributeVocabulary } from "@hypit/temporal-markup";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { narrativeDependency } from "@hypit/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import { blobRefObjectSchema } from "@hypit/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackDependency } from "@hypit/semantic-track";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import { temporalWindowAttributeVocabulary } from "@hypit/temporal-markup";
 
@@ -75,10 +76,10 @@ export const audioTrackMarkupSurfaces = [{
     name: "track", tag: "Track", mode: "structured",
     outputs: [audioTrackTypes.header, audioTrackTypes.clipSpec, temporalTypes.instantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window, audioTrackTypes.program, compositionTypes.audioTrack],
     vocabulary: {
-      summary: "One Audio Track: explicitly prepared audio Clips placed on a shared SemanticTrack and lowered to one ordinary peer AudioTrack.",
+      summary: "One Audio Track: explicitly prepared audio Clips placed on the selected film time axis and lowered to one ordinary peer AudioTrack.",
       attributes: [
         { name: "id", kind: "identifier", required: true, summary: "Names this Audio Track and prefixes the identity of every Clip that does not name itself." },
-        { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track], summary: "Selects the continuous semantic frame domain every Clip window resolves into." },
+        ...temporalContextAttributeVocabulary,
       ],
       children: [
         { tag: "Clip", cardinality: "many",

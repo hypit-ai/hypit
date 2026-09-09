@@ -1,3 +1,4 @@
+import { projectSemanticProgramSpace } from "@hypit/semantic-track";
 import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import type { SemanticTrack } from "@hypit/semantic-track";
 import {
@@ -22,7 +23,7 @@ export function projectProgramInstantFixture(input: {
   readonly semantic: SemanticTrack;
   readonly projection: TemporalInstantExpression;
 }) {
-  return projectProgramInstant({ ...input, subjectId: input.subjectId ?? input.itemId, authority: fixed });
+  return projectProgramInstant({ ...input, space: projectSemanticProgramSpace(input.semantic), subjectId: input.subjectId ?? input.itemId, authority: fixed });
 }
 
 export function projectMomentInstantFixture(input: {
@@ -43,8 +44,8 @@ export function projectProgramWindow(input: {
 }) {
   const subjectId = input.subjectId ?? input.itemId;
   return composeTemporalWindow({ id: input.itemId, subjectId },
-    projectProgramInstant({ itemId: `${input.itemId}.start`, subjectId, semantic: input.semantic, projection: input.projection.start, authority: fixed }),
-    projectProgramInstant({ itemId: `${input.itemId}.end`, subjectId, semantic: input.semantic, projection: input.projection.end, authority: fixed }));
+    projectProgramInstant({ itemId: `${input.itemId}.start`, subjectId, space: projectSemanticProgramSpace(input.semantic), projection: input.projection.start, authority: fixed }),
+    projectProgramInstant({ itemId: `${input.itemId}.end`, subjectId, space: projectSemanticProgramSpace(input.semantic), projection: input.projection.end, authority: fixed }));
 }
 
 export function projectSelectionWindow(input: {

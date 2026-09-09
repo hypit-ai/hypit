@@ -39,9 +39,18 @@ The common public values are defined in [types.ts](src/types.ts), with exports i
 - a Surface/Fragment connecting the common document, program and timing to those Producers.
 
 `caption:Program` remains the common author Surface. `Use` selects exactly one of `role`, `selection`
-or `attribute`; `Mute` selects a Role or Selection. Overlapping unit Style applications are resolved
-in authored order, while word attributes produce separate `wordRuns`. This is explicit application,
-not CSS inheritance. A family chooses whether and how it supports word-specific runs.
+or `attribute`; `Mute` selects a Role or Selection. For Role/Selection applications, the last matching
+`Use` in Source order selects the complete Style for each unit. It replaces the previous choice
+without merging Style parameters. A Selection can cover a phrase, a whole Segment, several Segments
+or the program through its structural anchors; there is no separate Segment selector.
+
+Word attributes produce separate `wordRuns`. Conflicting Styles on the same attributed word are
+rejected; these runs do not use the Role/Selection override rule. A family chooses whether and how
+it supports word-specific runs.
+
+Mute applications combine their selected unit ids independently of Style order. They suppress those
+display words, preserving the speech and semantic timeline. Visible lead and tail still belong to
+the family schedule, so muting a word is not a time-based mask of every neighboring Cue.
 
 Reuse `captionProducers.temporalizeDocument` with inputs `document`, `semantic` and `program`, or the
 corresponding exported timing Fragment. It emits a `TimedCaptionProjection` whose Cues contain
@@ -60,3 +69,9 @@ changing Cue grouping, lead or tail again.
 family replaces Fine's uniform-word layout and parameters, not the common speech truth. Its own
 Manifest, activation and vocabulary belong to the project package; no change to this common package
 is required merely to add a new visual family.
+
+That family can render a standalone Caption Track or coordinate caption text with graphics in a
+shared scene. Its output uses ordinary VisualTrack elements or a renderer program with explicit
+resources. Caption retains the authored words and their semantic relationship while the component
+owns the visual boundary. The Program does not automatically route different families to different
+renderers; choose the implementing component and its coverage explicitly.

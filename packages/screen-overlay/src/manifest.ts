@@ -1,10 +1,11 @@
+import { temporalContextAttributeVocabulary } from "@hypit/temporal-markup";
 import { readFile } from "node:fs/promises";
 
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { narrativeDependency } from "@hypit/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackDependency } from "@hypit/semantic-track";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import { temporalWindowAttributeVocabulary } from "@hypit/temporal-markup";
@@ -85,8 +86,7 @@ export const screenOverlayMarkupSurfaces = [
           summary: "Names this overlay so its Program and Track can be referenced elsewhere in the Source." },
         { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
           summary: "Chooses the Canvas every item is painted across." },
-        { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
-          summary: "Chooses the SemanticTrack that owns the frame domain and resolves temporal bindings." },
+        ...temporalContextAttributeVocabulary,
       ],
       children: [
         { tag: "Flash", cardinality: "many",

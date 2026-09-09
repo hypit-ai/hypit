@@ -180,13 +180,14 @@ function semanticTimeline(
   registry: StudioCompanionRegistry,
   built: Preview,
   script: ScriptMap | undefined,
-): SemanticTimeline {
+): SemanticTimeline | undefined {
+  if (built.narrativeId === undefined) return undefined;
   const records = built.source.compiled.program.records.filter((item) =>
     sameType(item.type, narrativeTypes.narrative)
     && item.value.kind === "inline"
-    && (item.value.value as NarrativeValue).id === built.space.narrativeId);
+    && (item.value.value as NarrativeValue).id === built.narrativeId);
   if (records.length > 1) {
-    throw new Error(`Studio Narrative id ${built.space.narrativeId} resolves to more than one authored value.`);
+    throw new Error(`Studio Narrative id ${built.narrativeId} resolves to more than one authored value.`);
   }
   const record = records[0];
   const narrative = record?.value.kind === "inline"
@@ -260,7 +261,7 @@ function semanticTimeline(
   };
   return {
     spaceId: built.space.id,
-    narrativeId: built.space.narrativeId,
+    narrativeId: built.narrativeId,
     // Semantic is a Studio lane with its own registered meaning. Do not copy
     // the authored Speech Track id into this label: it is the timebase, not a
     // second Speech output.
@@ -302,7 +303,7 @@ export function snapshot(registry: StudioCompanionRegistry, built: Preview, inpu
   readonly surfaces: MarkupSurfaceRegistryLike;
 }): StudioSnapshot {
   const located = authored(built.source.observations.placements);
-  const script = scriptMap(built.source.observations.sourceMaps, built, built.space.narrativeId);
+  const script = built.narrativeId === undefined ? undefined : scriptMap(built.source.observations.sourceMaps, built, built.narrativeId);
   const semantic = semanticTimeline(registry, built, script);
   const tracks: Track[] = [];
   for (const item of built.tracks) {
@@ -438,16 +439,16 @@ export function snapshot(registry: StudioCompanionRegistry, built: Preview, inpu
       durationSec: frameCount * input.frameRate.denominator / input.frameRate.numerator,
     },
     tracks: rows,
-    semantic,
+    ...(semantic === undefined ? {} : { semantic }),
     preview: input.preview,
     provenance: {
-      timing: "measured",
-      picture: "measured",
+      timing: built.timing,
+      picture: "resolved",
       note: note(built),
     },
   };
 }
 
 function note(_built: Preview): string {
-  return "Timings and material are the Candidates selected by the Run Source.";
+  return "Composition and timing are resolved from the selected Run Source.";
 }

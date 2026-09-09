@@ -36,7 +36,7 @@ export function assertTemporalInstantFor(
   if (!expected.subjectId || instant.subjectId !== expected.subjectId) {
     throw new Error(`Temporal Instant subject ${instant.subjectId} does not match ${expected.subjectId}.`);
   }
-  if (!instant.source.spaceId || !instant.source.narrativeId) {
+  if (!instant.source.spaceId) {
     throw new Error("Temporal Instant has no ProgramSpace identity.");
   }
   if (!Number.isSafeInteger(instant.frame) || instant.frame < 0) {
@@ -44,9 +44,8 @@ export function assertTemporalInstantFor(
   }
   if (expected.space !== undefined) {
     assertProgramSpaceIdentity(expected.space);
-    if (instant.source.spaceId !== expected.space.id
-      || instant.source.narrativeId !== expected.space.narrativeId) {
-      throw new Error("Temporal Instant belongs to a different ProgramSpace or Narrative.");
+    if (instant.source.spaceId !== expected.space.id) {
+      throw new Error("Temporal Instant belongs to a different ProgramSpace.");
     }
     if (instant.frame > programSpaceFrameCount(expected.space)) {
       throw new Error("Temporal Instant falls outside its ProgramSpace.");
@@ -66,9 +65,8 @@ export function assertTemporalWindowFor(
   }
   assertTemporalInstantFor(window.start, expected);
   assertTemporalInstantFor(window.end, expected);
-  if (window.start.source.spaceId !== window.end.source.spaceId
-    || window.start.source.narrativeId !== window.end.source.narrativeId) {
-    throw new Error("Temporal Window endpoints belong to different ProgramSpaces or Narratives.");
+  if (window.start.source.spaceId !== window.end.source.spaceId) {
+    throw new Error("Temporal Window endpoints belong to different ProgramSpaces.");
   }
   if (window.span.startFrame !== window.start.frame
     || window.span.endFrameExclusive !== window.end.frame
@@ -89,7 +87,10 @@ function evaluateInstant(
   environment: InstantEnvironment,
   space: ProgramSpace,
 ): Rational {
-  if (expression.ref === "absolute") return durationInFrames(expression.at, space);
+  if (expression.ref === "absolute") {
+    const at = durationInFrames(expression.at, space);
+    return expression.offset === undefined ? at : add(at, durationInFrames(expression.offset, space));
+  }
   let base: number;
   switch (expression.ref) {
     case "program.start": base = environment.program.start.frame; break;
@@ -178,7 +179,7 @@ export function projectSelectionInstant(input: {
   const selection = locateSelection(input.semantic, input.selection);
   return projectedInstant(
     { id: input.itemId, subjectId: input.subjectId, projection: input.projection, authority: input.authority },
-    { spaceId: space.id, narrativeId: space.narrativeId, kind: "selection", id: selection.id },
+    { spaceId: space.id, narrativeId: input.semantic.narrativeId, kind: "selection", id: selection.id },
     projectTemporalInstant(input.projection, { program, selection }, space),
   );
 }
@@ -196,7 +197,7 @@ export function projectMomentInstant(input: {
   const moment = locateMoment(input.semantic, input.moment);
   return projectedInstant(
     { id: input.itemId, subjectId: input.subjectId, projection: input.projection, authority: input.authority },
-    { spaceId: space.id, narrativeId: space.narrativeId, kind: "moment", id: moment.id },
+    { spaceId: space.id, narrativeId: input.semantic.narrativeId, kind: "moment", id: moment.id },
     projectTemporalInstant(input.projection, { program, moment }, space),
   );
 }
@@ -204,15 +205,15 @@ export function projectMomentInstant(input: {
 export function projectProgramInstant(input: {
   readonly itemId: string;
   readonly subjectId: string;
-  readonly semantic: SemanticTrack;
+  readonly space: ProgramSpace;
   readonly projection: TemporalInstantExpression;
   readonly authority: TemporalInstantSpec["authority"];
 }): ProjectedInstant {
-  const space = projectSemanticProgramSpace(input.semantic);
-  const program = locateProgram(input.semantic);
+  const space = input.space;
+  const program = { id: "program" as const, start: { frame: 0 }, end: { frame: programSpaceFrameCount(space) } };
   return projectedInstant(
     { id: input.itemId, subjectId: input.subjectId, projection: input.projection, authority: input.authority },
-    { spaceId: space.id, narrativeId: space.narrativeId, kind: "program", id: program.id },
+    { spaceId: space.id, kind: "program", id: program.id },
     projectTemporalInstant(input.projection, { program }, space),
   );
 }
@@ -230,7 +231,7 @@ export function projectSegmentInstant(input: {
   const segment = locateSegment(input.semantic, input.segment);
   return projectedInstant(
     { id: input.itemId, subjectId: input.subjectId, projection: input.projection, authority: input.authority },
-    { spaceId: space.id, narrativeId: space.narrativeId, kind: "segment", id: segment.id },
+    { spaceId: space.id, narrativeId: input.semantic.narrativeId, kind: "segment", id: segment.id },
     projectTemporalInstant(input.projection, { program, segment }, space),
   );
 }
@@ -244,8 +245,8 @@ export function composeTemporalWindow(
   if (!spec.subjectId || start.subjectId !== spec.subjectId || end.subjectId !== spec.subjectId) {
     throw new Error("Temporal Window endpoints must explicitly name the Window subject.");
   }
-  if (start.source.spaceId !== end.source.spaceId || start.source.narrativeId !== end.source.narrativeId) {
-    throw new Error("Temporal Window endpoints must belong to one ProgramSpace and Narrative.");
+  if (start.source.spaceId !== end.source.spaceId) {
+    throw new Error("Temporal Window endpoints must belong to one ProgramSpace.");
   }
   if (end.frame < start.frame) throw new Error("Temporal Window endpoints are reversed.");
   if (end.frame === start.frame) throw new Error("Temporal Window endpoints produce a zero window.");

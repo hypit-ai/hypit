@@ -449,7 +449,7 @@ export function resolveTimelineEditHandles(
       ? [endpoint.authority.source]
       : []);
     const first = sources[0];
-    if (first === undefined
+    if (first === undefined || first.narrativeId === undefined
       || first.spaceId !== semantic?.spaceId
       || first.narrativeId !== semantic.narrativeId
       || !sources.every((candidate) => candidate.kind === first.kind

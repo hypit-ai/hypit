@@ -91,8 +91,7 @@ import type {
   MarkupAttributeValue,
 } from "@hypit/markup";
 
-const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-  durationSec: 8,
+const space = sealProgramSpace({ id: "test-space", durationSec: 8,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const canvas = sealCanvasSpace({
@@ -128,19 +127,19 @@ const semanticTrack = semanticTrackFixture(space, {
   ],
 });
 const outer: NarrativeSelectionRef = {
-  narrativeId: space.narrativeId,
+  narrativeId: "script",
   id: "ranking-window",
   startAnchorId: "outer-start",
   endAnchorId: "outer-end",
 };
 const terminal: NarrativeMomentRef = {
-  narrativeId: space.narrativeId,
+  narrativeId: "script",
   id: "ranking-complete",
   anchorId: "terminal",
 };
-const rankingSegment: NarrativeExcerpt = { narrativeId: space.narrativeId, kind: "segment", id: "ranking", tokenStart: 0, tokenEndExclusive: 1 };
+const rankingSegment: NarrativeExcerpt = { narrativeId: "script", kind: "segment", id: "ranking", tokenStart: 0, tokenEndExclusive: 1 };
 const selection = (id: string, startAnchorId: string, endAnchorId: string): NarrativeSelectionRef => ({
-  narrativeId: space.narrativeId, id, startAnchorId, endAnchorId,
+  narrativeId: "script", id, startAnchorId, endAnchorId,
 });
 const early = selection("early", "early-start", "early-end");
 const overlapping = selection("overlapping", "overlap-start", "overlap-end");
@@ -174,7 +173,7 @@ function schedule(
   let candidates = createTriggeredRankingCandidateSet();
   for (const [index, value] of values.entries()) {
     candidates = appendTriggeredRankingCandidate(candidates, value, semanticTrack, {
-      narrativeId: space.narrativeId,
+      narrativeId: "script",
       id: `${value.id}-moment`,
       anchorId: anchors[index]!,
     });
@@ -303,7 +302,7 @@ test("RankingSchedule requires one item-owned Moment per Item and distinct chron
   const owner = header("top-three");
   const values = [topSpec("a"), topSpec("b")];
   let missing = createTriggeredRankingCandidateSet();
-  missing = appendTriggeredRankingCandidate(missing, values[0]!, semanticTrack, { narrativeId: space.narrativeId, id: "a-at", anchorId: "one" });
+  missing = appendTriggeredRankingCandidate(missing, values[0]!, semanticTrack, { narrativeId: "script", id: "a-at", anchorId: "one" });
   assert.throws(() => buildRankingSchedule({
     header: owner, items: specs(owner, values), semantic: semanticTrack, outer, candidates: missing, terminal,
   }), /item-owned Moments differ/u);

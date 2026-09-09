@@ -5,9 +5,21 @@ Selection, Segment, Moment or explicit clock expressions to ordinary Instant pro
 composition. A domain consumer receives the projected values and explicit ProgramSpace; it does not
 locate Script words or infer a semantic source inside its renderer.
 
-The package exports `createTemporalWindowProjection`, `createTemporalInstantProjection`, their
-attribute vocabulary, and the exact duration/instant parsers. These are helpers for component
+The package exports `createTemporalWindowProjection`, `createTemporalInstantProjection`,
+`resolveTemporalContext`, `createTemporalSpace`, attribute vocabulary, and the exact duration/instant parsers. These are helpers for component
 Surfaces, not standalone author tags or a new Track.
+
+## Time context
+
+A Track Surface can accept `semantic={speech.semantic}` or `space={animation}`. Resolve that choice
+with `resolveTemporalContext({ element, resolveReference })`, and pass the result to
+`createTemporalSpace({ id, element, ...context })`. Preserve its component and fragment drafts.
+Supply `...context, space: time.space` to each temporal projection helper, and pass `time.space.ref`
+to the domain Fragment. Its input Type is `programSpaceTypes.programSpace`.
+
+A semantic context locates Script references and supplies the performance's time axis. A declared
+space supplies a clock for authored animation. Literal times and program boundaries work in either
+context. A Script reference needs `semantic` to locate it; the renderer never invents that mapping.
 
 ## Window forms
 
@@ -18,6 +30,7 @@ A Surface using the shared Window vocabulary accepts one complete form:
 | `during="program"` | The complete program Window. |
 | `during={story.segment.opening}` | A Segment's Window. |
 | `during={story.selection.proof}` | A Selection's Window, including its authored endpoint affinity. |
+| `at="2s" for="8f"` | Start two seconds into the program and last eight frames. |
 | `at={story.moment.reveal} for="8f"` | Start at a Moment and last eight program frames. |
 | `until={story.moment.reveal} for="250ms"` | End at a Moment after a span of 250 milliseconds. |
 | `start="program.start" end="moment.cue" moment={story.moment.reveal}` | Compose independently authored endpoints. |
@@ -41,6 +54,7 @@ An Instant consumer has a different job: an event or activation with one tempora
 | `at={story.moment.reveal}` | The authored Moment. |
 | `at={story.selection.proof} boundary="start"` | An explicitly chosen Selection boundary. |
 | `at={story.segment.opening} boundary="end"` | An explicitly chosen Segment boundary. |
+| `at="2.6s"` | An authored event 2.6 seconds from program start. |
 | `instant="program.start + 8f"` | A projected clock expression. |
 
 The domain component decides what happens after that point. An answer may remain visible, a Sequence

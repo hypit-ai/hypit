@@ -1,8 +1,8 @@
+import { programSpaceTypes } from "@hypit/program-space";
 import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation, GraphFragment } from "@hypit/elaborator";
 import { mediaTypes } from "@hypit/media";
-import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { textTypes } from "@hypit/text";
 import { temporalTypes } from "@hypit/temporal";
@@ -56,7 +56,7 @@ export function createRankingFragment(
   const selected = definition(variant);
   const inputs: Array<GraphFragment["inputs"][number]> = [
     { name: "header", type: rankingTypes.header },
-    { name: "semantic", type: semanticTrackTypes.track },
+    { name: "space", type: programSpaceTypes.programSpace },
     { name: "outer", type: temporalTypes.window },
     ...(variant === "top-three" ? [
       { name: "terminal", type: temporalTypes.instant },
@@ -66,8 +66,6 @@ export function createRankingFragment(
     { name: "style", type: selected.style },
   ];
   const operations: FragmentOperation[] = [
-    { id: "space", producer: semanticTrackProducers.projectProgramSpace,
-      inputs: { track: input("semantic") }, result: { kind: "output", name: "space" } },
     { id: "specs", producer: rankingProducers.createSpecs, inputs: { header: input("header") }, result: { kind: "output", name: "set" } },
     { id: "resolved", producer: selected.create, inputs: {}, result: { kind: "output", name: "set" } },
     { id: "candidates", producer: variant === "column"
@@ -135,7 +133,7 @@ export function createRankingFragment(
     operations.push({
       id: "schedule",
       producer: variant === "column" ? rankingProducers.columnSchedule : rankingProducers.tierSchedule,
-      inputs: { header: input("header"), items: specs, space: operation("space"), outer: input("outer"), windows: candidates },
+      inputs: { header: input("header"), items: specs, space: input("space"), outer: input("outer"), windows: candidates },
       result: { kind: "output", name: "schedule" },
     });
   } else {
@@ -143,7 +141,7 @@ export function createRankingFragment(
     id: "schedule",
     producer: rankingProducers.schedule,
     inputs: {
-      header: input("header"), items: specs, space: operation("space"),
+      header: input("header"), items: specs, space: input("space"),
         outer: input("outer"), candidates, terminal: input("terminal"),
     },
     result: { kind: "output", name: "schedule" },
@@ -162,7 +160,7 @@ export function createRankingFragment(
   operations.push({
     id: "visual",
     producer: selected.render,
-    inputs: { space: operation("space"), program: operation("program") },
+    inputs: { space: input("space"), program: operation("program") },
     result: { kind: "output", name: "track" },
   });
   const hasAudio = sound.appearName !== undefined || sound.moveName !== undefined;
@@ -191,7 +189,7 @@ export function createRankingFragment(
     }
     operations.push({
       id: "audio", producer: rankingProducers.renderAudio,
-      inputs: { space: operation("space"), events: operation("events"), style: input("sound-style"), sounds },
+      inputs: { space: input("space"), events: operation("events"), style: input("sound-style"), sounds },
       result: { kind: "output", name: "track" },
     });
   }

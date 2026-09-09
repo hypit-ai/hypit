@@ -41,6 +41,8 @@ export type CaptionUnitSubset = {
 function tokenBoundary(narrative: Narrative, anchorId: string, owner: string): number {
   const anchor = narrative.semanticIndex.anchors.find((candidate) => candidate.id === anchorId);
   if (anchor === undefined) throw new Error(`${owner} names unknown semantic anchor ${anchorId}`);
+  if (anchor.kind === "program-start") return 0;
+  if (anchor.kind === "program-end") return narrative.tokens.length;
   const segment = narrative.segments.find((candidate) => candidate.id === anchor.segmentId);
   if (segment === undefined) throw new Error(`${owner} names an anchor outside its Segment`);
   if (anchor.kind === "segment-start") return segment.tokenStart;

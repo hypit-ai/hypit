@@ -37,7 +37,7 @@ export type StudioTimelinePresentation = {
 
 export type StudioTemporalSource = {
   readonly spaceId: string;
-  readonly narrativeId: string;
+  readonly narrativeId?: string;
   readonly kind: "program" | "selection" | "segment" | "moment";
   readonly id: string;
 };
@@ -504,7 +504,7 @@ export type StudioTrackCompanionContext = {
   readonly values: ReadonlyMap<string, unknown>;
   /** Temporal values in this Track's actual executed dependency closure. */
   readonly temporalBindings: readonly StudioTemporalBinding[];
-  readonly semantic: StudioSemanticTimeline;
+  readonly semantic: StudioSemanticTimeline | undefined;
   readonly generic: () => readonly StudioEntityDraft[];
 };
 
@@ -550,7 +550,7 @@ export type StudioFilmCompanion = {
     readonly surface: string;
     readonly outputType: TypeRef;
   };
-  readonly semantic: { readonly attribute: string; readonly type: TypeRef };
+  readonly timeSources: readonly { readonly attribute: string; readonly type: TypeRef }[];
   readonly tracks: {
     readonly childSurface: string;
     readonly sourceAttribute: string;

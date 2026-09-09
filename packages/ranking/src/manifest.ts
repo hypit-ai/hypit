@@ -1,3 +1,4 @@
+import { temporalContextAttributeVocabulary } from "@hypit/temporal-markup";
 import { readFile } from "node:fs/promises";
 
 import { artifactDependency } from "@hypit/artifact";
@@ -6,7 +7,7 @@ import { mediaDependency, mediaTypes } from "@hypit/media";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackDependency } from "@hypit/semantic-track";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { temporalDependency, temporalInstantSchema, temporalTypes, temporalWindowSchema } from "@hypit/temporal";
@@ -495,14 +496,13 @@ const allRankingMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this board so its Schedule, Program and Tracks can be referenced elsewhere in the Source." },
-          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
-            summary: "Chooses the SemanticTrack that owns the frame domain and resolves the board and Item windows." },
+          ...temporalContextAttributeVocabulary,
           { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
             summary: "Chooses the Canvas coordinate space used by the independent explanation stage." },
           { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
             summary: "Chooses the compact Frame occupied only by the tier table." },
           { name: "during", kind: "expression", required: true, values: ["program"], accepts: [narrativeTypes.selection, narrativeTypes.excerpt],
-            summary: "Spans the complete SemanticTrack when written as program, or projects the referenced Segment or Selection into the board lifetime." },
+            summary: "Spans the complete film clock when written as program, or projects the referenced Segment or Selection into the board lifetime." },
           { name: "style", kind: "reference", required: true, accepts: [rankingTypes.tierStyle],
             summary: "Chooses the TierBoardStyle this board is drawn in, and only that variant's." },
           { name: "appear-sound", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
@@ -564,14 +564,13 @@ const allRankingMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this board so its Schedule, Program and Tracks can be referenced elsewhere in the Source." },
-          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
-            summary: "Chooses the SemanticTrack that owns the frame domain and resolves every reveal window." },
+          ...temporalContextAttributeVocabulary,
           { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
             summary: "Chooses the Canvas coordinate space used by the independent reveal stage." },
           { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
             summary: "Chooses the fixed Frame occupied by the vertical rank rail." },
           { name: "during", kind: "expression", required: true, values: ["program"], accepts: [narrativeTypes.selection, narrativeTypes.excerpt],
-            summary: "Spans the complete SemanticTrack when written as program, or projects the referenced Segment or Selection into the Column lifetime." },
+            summary: "Spans the complete film clock when written as program, or projects the referenced Segment or Selection into the Column lifetime." },
           { name: "style", kind: "reference", required: true, accepts: [rankingTypes.columnStyle],
             summary: "Chooses the ColumnStyle this board is drawn in, and only that variant's." },
           { name: "appear-sound", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
@@ -634,14 +633,13 @@ const allRankingMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this board so its Schedule, Program and Tracks can be referenced elsewhere in the Source." },
-          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
-            summary: "Chooses the SemanticTrack that owns the frame domain and resolves every Item Moment." },
+          ...temporalContextAttributeVocabulary,
           { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
             summary: "Chooses the Frame the whole board occupies." },
-          { name: "during", kind: "reference", required: true, accepts: [narrativeTypes.selection],
-            summary: "Chooses the Selection the board is on screen for." },
-          { name: "terminal", kind: "reference", required: true, accepts: [narrativeTypes.moment],
-            summary: "Chooses the Moment the board settles on and ends after." },
+          { name: "during", kind: "expression", required: true, values: ["program"], accepts: [narrativeTypes.selection, narrativeTypes.excerpt],
+            summary: "Chooses the board's whole-program, Selection or Segment lifetime." },
+          { name: "terminal", kind: "expression", required: true, accepts: [narrativeTypes.moment],
+            summary: "Chooses the terminal Moment or authored time, such as 8s." },
           { name: "style", kind: "reference", required: true, accepts: [rankingTypes.topThreeStyle],
             summary: "Chooses the TopThreeStyle this board is drawn in, and only that variant's." },
           { name: "appear-sound", kind: "reference", required: false, accepts: [mediaTypes.synchronized],

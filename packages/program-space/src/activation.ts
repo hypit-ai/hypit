@@ -1,6 +1,6 @@
 import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 
-import { decodeClockSurface } from "./surface.js";
+import { decodeClockSurface, decodeSpaceSurface } from "./surface.js";
 import { programSpaceManifest, programSpaceMarkupSurfaces, programSpaceModuleRef } from "./index.js";
 
 export const hypitPackage = {
@@ -10,6 +10,10 @@ export const hypitPackage = {
     module: programSpaceModuleRef,
     declaration: programSpaceMarkupSurfaces.find((item) => item.name === "clock")!,
     handler: decodeClockSurface,
+  }), createMarkupSurfaceHostFacet({
+    module: programSpaceModuleRef,
+    declaration: programSpaceMarkupSurfaces.find((item) => item.name === "space")!,
+    handler: decodeSpaceSurface,
   })],
 };
 export default hypitPackage;

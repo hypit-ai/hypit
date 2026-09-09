@@ -43,8 +43,7 @@ const canvas = sealCanvasSpace({
   widthPx: 1080, heightPx: 1920,
   origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
 });
-const space = sealProgramSpace({ id: "test-space", narrativeId: "test-narrative",
-  durationSec: 2, frameRate: { numerator: 30, denominator: 1 },
+const space = sealProgramSpace({ id: "test-space", durationSec: 2, frameRate: { numerator: 30, denominator: 1 },
 });
 const header = sealScreenOverlayHeader({ id: "screen" });
 const semantic = semanticTrackFixture(space);
@@ -125,7 +124,7 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
 
 test("the Screen Overlay Fragment publishes its Program and peer VisualTrack", () => {
   const fragment = createScreenOverlayFragment([{ specName: "spec", windowName: "window" }]);
-  assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "semantic", "spec", "window"]);
+  assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "space", "spec", "window"]);
   assert.deepEqual(fragment.exports.map((output) => [output.name, output.type.name]), [
     ["program", "ScreenOverlayProgram"],
     ["track", "VisualTrack"],

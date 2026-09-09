@@ -127,7 +127,7 @@ test("Fine Caption schedules visibility outside semantic Word timing and cuts on
   ]);
 
   const track = renderFineCaption(schedule, program, document,
-    sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3, frameRate: { numerator: 30, denominator: 1 } }));
+    sealProgramSpace({ id: "test-space", durationSec: 3, frameRate: { numerator: 30, denominator: 1 } }));
   assert.deepEqual(track.presents.map((present) => present.span), [
     { startFrame: 6, endFrameExclusive: 36 },
     { startFrame: 36, endFrameExclusive: 62 },
@@ -157,7 +157,7 @@ test("Fine Caption uniformly springs the whole Cue through exact scales", () => 
     scheduleFineCaption(projection, animatedProgram, document),
     animatedProgram,
     document,
-    sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3,
+    sealProgramSpace({ id: "test-space", durationSec: 3,
       frameRate: { numerator: 30, denominator: 1 } }),
   );
   const cueMotion = track.presents[0]?.elements.find((element) => element.id === "cue-motion");
@@ -189,7 +189,7 @@ test("Fine Caption follows measured Role regions and hides null Frames", () => {
   const { document, program, projection } = fixture(`<line>
   <BOY>one two || three four
 </line>`);
-  const space = sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3,
+  const space = sealProgramSpace({ id: "test-space", durationSec: 3,
     frameRate: { numerator: 30, denominator: 1 } });
   const regions: SpatialRegionTimeline = {
     canvas: { widthPx: 1080, heightPx: 1920, origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square" },
@@ -217,7 +217,7 @@ test("Fine Caption keeps authored placement when a Cue Role has no measured trac
   const { document, program, projection } = fixture(`<line>
   <BOY>one two || three four
 </line>`);
-  const space = sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3,
+  const space = sealProgramSpace({ id: "test-space", durationSec: 3,
     frameRate: { numerator: 30, denominator: 1 } });
   const regions: SpatialRegionTimeline = {
     canvas: { widthPx: 1080, heightPx: 1920, origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square" },
@@ -241,7 +241,7 @@ test("Fine Caption rejects a Cue that exceeds its structural row budget instead 
   const schedule = scheduleFineCaption(projection, constrainedProgram, document);
   assert.throws(
     () => renderFineCaption(schedule, constrainedProgram, document,
-      sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3,
+      sealProgramSpace({ id: "test-space", durationSec: 3,
         frameRate: { numerator: 30, denominator: 1 } })),
     /constructs 2 rows.+maximum is 1/u,
   );
@@ -277,7 +277,7 @@ test("Fine Caption gives overlapping acoustic Words one current Karaoke owner", 
     scheduleFineCaption(overlapped, karaokeProgram, document),
     karaokeProgram,
     document,
-    sealProgramSpace({ id: "test-space", narrativeId: "story", durationSec: 3,
+    sealProgramSpace({ id: "test-space", durationSec: 3,
       frameRate: { numerator: 30, denominator: 1 } }),
   );
   const firstActive = track.presents[0]?.elements.find((element) => element.id === "atom-1-active");

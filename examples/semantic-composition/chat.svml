@@ -1,0 +1,25 @@
+<?svml using="@hypit/markup@1"?>
+<svml>
+  <import as="time" from="@hypit/program-space@1"/>
+  <import as="spatial" from="@hypit/spatial@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="chat" from="@example/chat-scene@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="style" source="./chat.svs"/>
+
+  <time:Space id="animation" frame-rate="30" duration="8s"/>
+  <spatial:Canvas id="canvas" width="540" height="960"/>
+  <fonts:Stack id="font" family="inter" weight="600" style="normal"/>
+  <chat:Scene id="conversation" space={animation} canvas={canvas} font={font}
+    during="program" title="Launch crew">
+    <chat:Message id="question" sender="Maya" side="left" at="0.5s" text="Are we ready to launch?"/>
+    <chat:Message id="reply" sender="Leo" side="right" at="2s" text="The video is ready."/>
+    <chat:Message id="turn" sender="Maya" side="left" at="3.5s" text="Great. One tiny change..."/>
+    <chat:Message id="reveal" sender="Leo" side="right" at="5.2s" text="I left the whole scene editable."/>
+  </chat:Scene>
+  <film:Film id="main" canvas={canvas} space={animation} appearance={style.film.main}>
+    <film:Track source={conversation.track}/>
+  </film:Film>
+  <render:Video id="final" composition={main.composition} space={animation}/>
+</svml>

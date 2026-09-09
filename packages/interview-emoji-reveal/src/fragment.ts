@@ -1,8 +1,8 @@
+import { programSpaceTypes } from "@hypit/program-space";
 import { compositionTypes } from "@hypit/composition";
 import { artifactTypes } from "@hypit/artifact";
 import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation } from "@hypit/elaborator";
-import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
 
@@ -19,7 +19,6 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export function createEmojiRevealFragment(items: readonly EmojiRevealFragmentItem[]) {
   if (items.length === 0) throw new Error("Emoji Reveal Fragment requires at least one Item.");
   const operations: FragmentOperation[] = [
-    { id: "emoji:space", producer: semanticTrackProducers.projectProgramSpace, inputs: { track: input("semantic") }, result: { kind: "output", name: "space" } },
     { id: "emoji:set:empty", producer: emojiRevealProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } },
   ];
   let current = "emoji:set:empty";
@@ -30,23 +29,23 @@ export function createEmojiRevealFragment(items: readonly EmojiRevealFragmentIte
       : emojiRevealProducers.appendItem, inputs: {
       set: operation(current), spec: input(item.specName), icon: input(item.iconName),
       ...(item.activationName === undefined ? {} : {
-        space: operation("emoji:space"), activation: input(item.activationName),
+        space: input("space"), activation: input(item.activationName),
       }),
     }, result: { kind: "output", name: "set" } });
     current = id;
   });
   operations.push(
     { id: "emoji:program", producer: emojiRevealProducers.finalize, inputs: {
-      header: input("header"), space: operation("emoji:space"), outer: input("outer"), style: input("style"),
+      header: input("header"), space: input("space"), outer: input("outer"), style: input("style"),
       placeholder: input("placeholder"), set: operation(current),
     }, result: { kind: "output", name: "program" } },
     { id: "emoji:track", producer: emojiRevealProducers.render, inputs: {
-      canvas: input("canvas"), space: operation("emoji:space"), program: operation("emoji:program"),
+      canvas: input("canvas"), space: input("space"), program: operation("emoji:program"),
     }, result: { kind: "output", name: "track" } },
   );
   return sealGraphFragment({
     inputs: [
-      { name: "header", type: emojiRevealTypes.header }, { name: "semantic", type: semanticTrackTypes.track },
+      { name: "header", type: emojiRevealTypes.header }, { name: "space", type: programSpaceTypes.programSpace },
       { name: "canvas", type: spatialTypes.canvas }, { name: "outer", type: temporalTypes.window }, { name: "style", type: emojiRevealTypes.style },
       { name: "placeholder", type: artifactTypes.blob },
       ...items.flatMap((item) => [

@@ -1,7 +1,11 @@
 # `@hypit/comment-sticker`
 
-An optional author package for timed social-comment cards. It lowers every sticker to one ordinary,
-self-contained `VisualTrack`; it has no privileged Film behavior and never samples a sibling Track.
+The Track Surface accepts `semantic={speech.semantic}` or `space={animation}`. Semantic context
+resolves Script Selections and Moments; authored space supports clock-based animation. Shared `at`
+inputs accept a Moment or a time such as `2s`; `at` with `for` produces a Window where required.
+
+An author package for timed social-comment cards. It publishes an ordinary `VisualTrack` containing
+the cards' independently timed appearances.
 
 The author surface keeps the three independent concerns visible:
 
