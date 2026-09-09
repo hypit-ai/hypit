@@ -11,7 +11,7 @@
 
   film.vertical { background: #090A0F; }
 
-  speech.visual {
+  media.performance { stack-order: 0;
     fit: cover;
     frame-x: 0.5;
     frame-y: 0.5;

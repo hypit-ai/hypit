@@ -19,6 +19,16 @@ A board whose rows share layout and persistent state benefits from one component
 photo and title can remain peer Tracks. An object that survives several camera cuts keeps the same
 authored identity while its state develops. Let shared behavior define the unit.
 
+A performance moving from full screen into a side viewport and a diagram filling the released space
+can share one component. It owns their relative layout, overlap, masking and coordinated motion.
+A-roll names the performance carrying semantic time; it does not reserve the picture for Speech
+Track. Ordinary presentation can reuse Media; a new relationship can be authored directly. A
+one-off scene is a useful component too. Caption and independent overlays can remain separate.
+
+Give a reusable scene the prepared performance, its outer Window and the Moment that changes its
+layout. Replacing a product or rewriting the Script then changes content and semantic anchors while
+preserving the behavior. The final frame positions come from the selected Takes.
+
 Sketch its intended Source use with this video's actual content. The tag and its children should
 read like a concise account of the visual idea: which subjects are compared, which answer is already
 known, and which statement reveals the next one. This makes the important choices visible early and

@@ -54,6 +54,8 @@ Use actual screenshots or recordings when the interface's wording, numbers, navi
 are evidence. A generated context shot may surround that screen; explicit compositing is useful
 when the exact interface must remain editable and legible. A screenshot as a model reference helps
 direct appearance but does not establish that every generated label remained accurate.
+For acquiring that material, [browser capture](../../production/browser-capture.md) provides direct
+screenshots and ordinary scripts for real page interaction and recording.
 
 Keep the screen on the visible screen plane, with believable perspective, gaze and physical access.
 For a reverse angle, reason about which background sector the camera now sees instead of mirroring
@@ -76,7 +78,7 @@ evidence, and the feeling of the shot rather than from a fixed layout recipe.
 | Full-frame | A `9:16` character-and-scene image and reference-generated performance are the common fit for vertical creator footage. Frame the face, body and real setting for the later composite. |
 | Upper or lower split | A square camera image and performance often cover a `9:8` half of a vertical Canvas cleanly, with a small top/bottom crop. A close, intimate phone view may instead be a vertically generated performance whose other half is covered. |
 | Foreground cutout | A vertical performance often preserves a natural amount of the speaking body. Remove its background, normalize the alpha-bearing result, and use that same prepared performance as the SemanticTake. |
-| Circular picture-in-picture | A square source with the face near its own center is a useful starting point. Give Speech Track a square Frame and rounded clip whose radius is half the side; its semantic, visual and audio outputs remain one assembly. |
+| Circular picture-in-picture | A square source with the face near its own center is a useful starting point. Present the semantic performance through Media Performance with a square Frame and rounded clip whose radius is half the side. |
 | Audio-only A-roll | The performance contributes semantic time and sound but no picture. Another Track fills the Segment with the intended demonstration, POV, B-roll, Typography or MG. |
 
 For a non-overlapping upper/lower split, equal stacking order can express two peer regions; the
@@ -92,7 +94,8 @@ visual evidence and intended target composition decide.
 
 The source image and video direction describe a complete physical scene and camera view. Position a
 face high or low, left or right, through framing and meaningful scene relationships when that serves
-the final layout. Editorial graphics remain separate layers and are not objects for the generated
+the final layout. Editorial graphics are composed with the generated material; they may share a component when their
+layout or motion belongs together. They are not objects for the generated
 person to see, touch or point toward. [Image direction](image-direction.md#frame-the-image-for-what-it-will-become)
 owns the camera-image wording; [Spatial layout](../../production/spatial.md) owns Frame, fit and crop.
 
@@ -161,7 +164,7 @@ require another kind of Take or Track. Choose which role the cutout serves in th
 
 | Role | Consume the prepared output |
 | --- | --- |
-| A speaking performance establishing semantic time | `cutout-media.media` → SemanticTake → Speech Track; include its visual and audio outputs in Film. |
+| A speaking performance establishing semantic time | `cutout-media.media` → SemanticTake → Speech Track; show its prepared picture through Media or a project component and include `speech.audio` when wanted. |
 | A visual overlay on an existing semantic timeline | `cutout-media.media` → a Media Item's `media` input; select its Window and include the Track's visual output in Film. |
 
 When the intended artifact is a fixed flattened arrangement of still images, use

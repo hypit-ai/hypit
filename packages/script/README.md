@@ -48,7 +48,7 @@ The Surface exports one full Narrative plus narrow, immutable views:
   Role cues and right-side Dual Text pronunciation, for a speech-video model;
 - `script.segment.<id>.speech` is ordinary pronunciation-only `Text` for duration estimation or TTS;
 - `script.caption` is one complete `CaptionDocument`: ordered display Words, N:M Alignment Units,
-  and authored Cue Breaks;
+  and authored Cue Breaks, empty when the Script has no visible Caption words;
 - `script.selection.<id>` is a reusable explicit Selection;
 - `script.moment.<id>` is a reusable explicit Moment.
 

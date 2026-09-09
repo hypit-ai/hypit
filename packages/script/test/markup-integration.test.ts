@@ -208,3 +208,20 @@ test("a module can use Markup's generic structured parser without adding another
     (error: unknown) => error instanceof MarkupFrontendError && error.code === "MARKUP_SURFACE_OUTPUT",
   );
 });
+
+test("a wordless Script publishes its Segment and an empty CaptionDocument", async () => {
+  const result = await decodeMarkup({
+    name: "wordless.svml",
+    text: '<svml><import from="@hypit/script@1"/><script id="story"><empty></empty></script></svml>',
+  }, scriptContext());
+  const narrative = result.records.find((record) => record.id === "story")!;
+  assert.equal(narrative.value.kind, "inline");
+  const value = (narrative.value as { kind: "inline"; value: unknown }).value as Narrative;
+  assert.deepEqual(value.tokens, []);
+  assert.equal(value.segments[0]?.id, "empty");
+  assert.ok(result.records.some((record) => record.id === "story.segment.empty"));
+  assert.deepEqual(result.records.find((record) => record.id === "story.caption")?.value, {
+    kind: "inline",
+    value: { narrativeId: "story", id: "story.caption", units: [], words: [], cueBreaks: [] },
+  });
+});

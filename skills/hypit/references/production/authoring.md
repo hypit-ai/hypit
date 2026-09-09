@@ -106,18 +106,15 @@ Candidate for a Logical Output:
 
 - `<file>` admits project media as a zero-input Candidate;
 - `<build-record>` names one public Output from one earlier Build Result;
-- a Run Fragment may provide one or more Candidates, including a generic Card from
-  `@hypit/stand-in` or a timed composition of that Card;
+- a Run Fragment computes one or more Candidates from its explicit inputs;
 - `<satisfy>` selects one declared Candidate for one Logical Output.
 
 Candidate selection is an implementation decision for this Run. Core checks nominal Type
 compatibility and plans the combined Author and Run graphs. It replaces the displaced upstream
 subgraph while preserving any upstream Outputs that the selected Candidate itself consumes.
 
-The Card carries only its Canvas dimensions. When a timed video is needed, the timed composition
-passes that image to Media Pipeline with the Run's duration and clock.
-[Runs and substitutes](runs.md#a-complete-layout-preview) provides a complete example with media
-normalization and estimated semantic timing.
+[Runs](runs.md#generate-material-while-composing) shows how to target prepared material while
+component work continues, then reuse that material for focused rendering and delivery.
 
 ## Reuse produced work explicitly
 

@@ -1,3 +1,5 @@
+import { appendMediaPerformance } from "./performance.js";
+import type { SemanticTrack } from "@hypit/semantic-track";
 import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-kit";
 import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
 import { canonicalize } from "@hypit/protocol";
@@ -88,6 +90,10 @@ function sequenceInputs(inputs: ProducerHandlerContext["inputs"]) {
 
 export const mediaTrackComponent = {
   producers: [
+    { producer: mediaTrackProducers.appendPerformance, handler: ({ inputs }) => ({ outputs: { set: output(appendMediaPerformance(
+      itemInputs(inputs), inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
+      inline<ContentFit>(inputs.fit?.value, "ContentFit"), inline<MediaSampleLayerSpec>(inputs.sampleSpec?.value, "MediaSampleLayerSpec"),
+    )) }, needs: {} }) },
     { producer: mediaTrackProducers.createLayers, handler: () => ({ outputs: { layers: output(createMediaLayerSet()) }, needs: {} }) },
     { producer: mediaTrackProducers.appendPaintLayer, handler: ({ inputs }) => ({ outputs: { layers: output(appendMediaPaintLayer(
       inline<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"),

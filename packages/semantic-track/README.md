@@ -11,3 +11,11 @@ part of this semantic truth.
 The package exposes pure projections to `ProgramSpace` and `AudioTrack`, plus the
 selection/segment/moment lookup functions used by semantic components. It performs no media I/O,
 mixing, transcription or rendering.
+
+## Prepared material in a semantic window
+
+`projectSemanticMedia(track, window?)` returns each intersecting Take's `media`, `segmentId`, global
+`span` and local `source` frame span. The default window is the whole performance. An interval
+beginning inside a Take preserves its source offset. Audio-only Takes remain represented so the
+consumer can choose the streams it displays. This projection makes no layout or layering decisions;
+Media and custom visual components can consume the same prepared performance.

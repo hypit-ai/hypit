@@ -1,3 +1,4 @@
+import { projectSemanticAudioTrack, projectSemanticMedia } from "@hypit/semantic-track";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
@@ -8,19 +9,8 @@ import {
   appendSpeechTrackTake,
   assembleSpeechTrack,
   createSpeechTrackSet,
-  projectSpeechTrackVisual,
   sealSpeechTrackHeader,
-  sealSpeechTrackVisualSpec,
 } from "@hypit/speech-track";
-
-const frame = { xPx: 40, yPx: 80, widthPx: 640, heightPx: 900 };
-const fit = {
-  sizing: "cover" as const,
-  framePoint: { x: 0.5, y: 0.5 },
-  contentPoint: { x: 0.5, y: 0.5 },
-  offsetPx: { x: 0, y: 0 },
-  constraint: "bounded" as const,
-};
 
 function semantic(id: string, visual: boolean): SemanticTake {
   const media: SynchronizedMedia = {
@@ -50,39 +40,19 @@ function semantic(id: string, visual: boolean): SemanticTake {
   };
 }
 
-test("one Track assembles a continuous SemanticTrack and only visual Takes become presents", () => {
-  const header = sealSpeechTrackHeader({ id: "speech" });
-  const visualSpec = sealSpeechTrackVisualSpec({
-    stackingOrder: 30,
-    presentation: {
-      clip: { kind: "rounded", radiusPx: 320 },
-      padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 },
-      border: { widthPx: 4, style: "solid", color: "#ffffff" },
-      shadows: [],
-    },
-    sampleAppearance: {
-      opacity: 1,
-      filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 },
-    },
-    motion: { sustain: [] },
-    samplingMotion: { keyframes: [
-      { atProgress: 0, zoom: 1, offsetX: 0, offsetY: 0, rotationDeg: 0 },
-      { atProgress: 1, zoom: 1.08, offsetX: 0, offsetY: -18, rotationDeg: 0 },
-    ] },
-  });
-  let set = createSpeechTrackSet();
-  set = appendSpeechTrackTake(set, semantic("voiceover", false), frame, fit, visualSpec);
-  set = appendSpeechTrackTake(set, semantic("answer", true), frame, fit, visualSpec);
-
-  const semanticTrack = assembleSpeechTrack(header, set);
-  const visualTrack = projectSpeechTrackVisual(semanticTrack, set);
-
-  assert.deepEqual(semanticTrack.items.map((item) => item.take.segment.segmentId), ["voiceover", "answer"]);
-  assert.equal(visualTrack.presents.length, 1);
-  assert.equal(visualTrack.presents[0]?.id, "speech:visual:answer");
-  assert.deepEqual(visualTrack.presents[0]?.span, { startFrame: 30, endFrameExclusive: 60 });
-  const styles = visualTrack.presents[0]?.elements.flatMap((element) => element.style) ?? [];
-  assert.equal(styles.find((style) => style.name === "border-radius")?.value, "320px");
-  assert.equal(styles.find((style) => style.name === "border")?.value, "4px solid #ffffff");
-  assert.equal(visualTrack.presents[0]?.elements.some((element) => element.animation !== undefined), true);
+test("semantic assembly retains audio and material timing without requiring placement", () => {
+  const track = assembleSpeechTrack(sealSpeechTrackHeader({ id: "speech" }),
+    appendSpeechTrackTake(appendSpeechTrackTake(createSpeechTrackSet(), semantic("voiceover", false)), semantic("answer", true)));
+  assert.deepEqual(track.items.map(item => item.take.segment.segmentId), ["voiceover", "answer"]);
+  const audio = projectSemanticAudioTrack(track);
+  assert.deepEqual(audio.clips.map(clip => clip.target), [
+    { startSample: 0, endSampleExclusive: 48000 }, { startSample: 48000, endSampleExclusive: 96000 },
+  ]);
+  const selected = projectSemanticMedia(track, { startFrame: 20, endFrameExclusive: 45 });
+  assert.deepEqual(selected.map(({ span, source }) => ({ span, source })), [
+    { span: { startFrame: 20, endFrameExclusive: 30 }, source: { startFrame: 20, endFrameExclusive: 30 } },
+    { span: { startFrame: 30, endFrameExclusive: 45 }, source: { startFrame: 0, endFrameExclusive: 15 } },
+  ]);
+  assert.equal(selected[0]!.media.visual, undefined);
+  assert.equal(selected[1]!.media.visual?.artifact.resource, fixtureResource("answer:video"));
 });

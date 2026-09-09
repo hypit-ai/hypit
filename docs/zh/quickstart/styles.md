@@ -5,7 +5,7 @@ description: SVS Recipe 语言——用于影片、字幕、媒体、文本及�
 
 # SVS 样式表
 
-SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。它们用于配置影片外观、字幕外观、Media 呈现与运动、文本样式、语音估算参数、生成设置和字体选择。SVS 中的值称为 **Recipe**——它们是不可变的类型化记录，由消费组件进行验证和解释。
+SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。它们用于配置影片外观、字幕外观、Media 呈现与运动、文本样式、生成设置和字体选择。SVS 中的值称为 **Recipe**——它们是不可变的类型化记录，由消费组件进行验证和解释。
 
 ## 基本语法
 
@@ -233,36 +233,6 @@ text.title {
 </text:Area>
 ```
 
-## 语音估算
-
-确定性语音时长估算的参数。
-
-```svs
-speech.normal {
-  language: en;
-  pace: normal;
-  rounding: round;
-}
-```
-
-| 属性 | 描述 |
-|---|---|
-| `language` | 语言代码（如 `en`） |
-| `pace` | 语速：`slow`、`normal`、`fast` |
-| `rate` | 正数的每秒读音单位数；不能和 `pace` 同时使用 |
-| `rounding` | 取整模式：`none`、`round`、`ceil` |
-
-英语三个具名档位分别解析为每秒 `4.2`、`4.6`、`5.0` 个音节。项目需要连续可调值时，用数值 `rate` 代替 `pace`。所有属性都必须显式提供：`language`、`rounding`，并且在 `pace` 与
-`rate` 中恰好选择一个。Estimate 包不会补充隐藏策略默认值。
-
-通过 `estimated:SemanticTake` 的 `policy` 属性引用；作者写字面量时长之前用 `hypit measure` 量稿，用的也是同一套策略：
-
-```svml
-<estimated:SemanticTake id="hook-estimated" narrative={story}
-  segment={story.segment.hook} media={hook-media.media}
-  policy={recipes.speech.normal}/>
-```
-
 ## Speaker Text Template
 
 这个 Recipe 选择纯数据 `speaker-v1` Text Template 声明的 Prompt 轴。模型、分辨率、参考素材与时长仍是 `seedance:ReferenceVideo` 的显式输入，不藏在 Recipe 里。
@@ -372,11 +342,6 @@ Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多
 <?svml using="@hypit/svs@1"?>
 
 <sheet version="1" id="studio">
-  speech.normal {
-    language: en;
-    pace: normal;
-    rounding: round;
-  }
 
   speaker.host {
     composition-stability: soft-locked;
@@ -410,10 +375,6 @@ Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多
 
 ```svml
 <import as="recipes" source="./recipes.svs"/>
-
-<estimated:SemanticTake id="hook-estimated" narrative={story}
-  segment={story.segment.hook} media={hook-media.media}
-  policy={recipes.speech.normal}/>
 
 <text:Render id="hook-prompt" template={speaker-kit.speaker-v1}
   recipe={recipes.speaker.host}>...</text:Render>

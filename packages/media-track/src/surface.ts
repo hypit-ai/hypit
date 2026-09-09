@@ -85,6 +85,7 @@ type FragmentLayer =
 type FragmentSound = { readonly sourceName: string; readonly specName: string };
 
 type FragmentItem = {
+  readonly performance?: { readonly fitName: string; readonly sampleName: string };
   readonly suffix: string;
   readonly windowName: string;
   readonly frameName: string;
@@ -170,7 +171,8 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
       set: operation(set), header: input("header"), space: operation("track:space"), canvas: input("canvas"),
       layers: operation(layers), frame: input(item.frameName), spec, sounds: operation(sounds), window: input(item.windowName),
     };
-    operations.push({ id: appendId, producer: mediaTrackProducers.appendItem, inputs: common, result: { kind: "output", name: "set" } });
+    operations.push({ id: appendId, producer: item.performance === undefined ? mediaTrackProducers.appendItem : mediaTrackProducers.appendPerformance,
+      inputs: { ...common, ...(item.performance === undefined ? {} : { semantic: input("semantic"), fit: input(item.performance.fitName), sampleSpec: input(item.performance.sampleName) }) }, result: { kind: "output", name: "set" } });
     set = appendId;
   }
   for (const sequence of sequences) {
@@ -328,6 +330,21 @@ export function decodeMediaSamplingKeyframe(element: StructuredElement): MediaSa
   };
 }
 
+function decodeSamplingMotion(element: StructuredElement, ignoreSiblingChildren = false): MediaSamplingMotion | undefined {
+  const keyframes = element.children.flatMap((child) => {
+    if (child.kind === "text") {
+      if (child.value.trim().length > 0) throw new Error(`${element.name} accepts only Sampling children.`);
+      return [];
+    }
+    if (!child.name.endsWith(":Sampling") && child.name !== "Sampling") {
+      if (ignoreSiblingChildren) return [];
+      throw new Error(`${element.name} accepts only Sampling children.`);
+    }
+    return [decodeMediaSamplingKeyframe(child)];
+  });
+  return keyframes.length === 0 ? undefined : { keyframes };
+}
+
 function sourceLayer(
   state: SurfaceBuilder,
   context: SourceLayerContext,
@@ -339,18 +356,7 @@ function sourceLayer(
   const appearance = element.attributes.appearance === undefined
     ? context.defaultRecipe
     : recipe(reference(element.attributes.appearance, `${element.name}.appearance`, svsRecipeType, resolve), `${element.name}.appearance`);
-  const keyframes = element.children.flatMap((child) => {
-    if (child.kind === "text") {
-      if (child.value.trim().length > 0) throw new Error(`${element.name} accepts only Sampling children.`);
-      return [];
-    }
-    if (!child.name.endsWith(":Sampling") && child.name !== "Sampling") {
-      if (context.ignoreSiblingChildren === true) return [];
-      throw new Error(`${element.name} accepts only Sampling children.`);
-    }
-    return [decodeMediaSamplingKeyframe(child)];
-  });
-  const motion = keyframes.length === 0 ? undefined : { keyframes };
+  const motion = decodeSamplingMotion(element, context.ignoreSiblingChildren);
   const layerSuffix = `${context.unitSuffix}-layer-${suffix(layerIndex)}`;
   const layerId = context.defaultLayerId ?? optionalText(element, "id") ?? `${context.trackId}.${layerSuffix}`;
   const fitName = `${layerSuffix}-fit`;
@@ -379,6 +385,7 @@ function unitLayers(
     readonly appearance: SvsRecipe;
     readonly directSource?: DeclaredVisualSource;
     readonly allowFramePaint: boolean;
+    readonly allowEmpty?: boolean;
   },
   resolve: (path: string) => SurfaceResolvedReference | undefined,
 ): readonly FragmentLayer[] {
@@ -424,7 +431,7 @@ function unitLayers(
       trackId: input.trackId, unitSuffix: input.unitSuffix, defaultRecipe: input.appearance, sourceElement: child,
     }, layerIndex, resolve));
   }
-  if (layers.length === 0) throw new Error(`${input.element.name} requires a direct source or at least one Paint/Layer child.`);
+  if (layers.length === 0 && !input.allowEmpty) throw new Error(`${input.element.name} requires a direct source or at least one Paint/Layer child.`);
   return layers;
 }
 
@@ -507,14 +514,16 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
   let hasAudio = false;
   for (const child of element.children) {
     if (child.kind === "text") {
-      if (child.value.trim().length > 0) throw new Error(`${element.name} accepts only Item and Sequence children.`);
+      if (child.value.trim().length > 0) throw new Error(`${element.name} accepts only Performance, Item and Sequence children.`);
       continue;
     }
-    if (child.name.endsWith(":Item") || child.name === "Item") {
+    const isPerformance = child.name.endsWith(":Performance") || child.name === "Performance";
+    if (isPerformance || child.name.endsWith(":Item") || child.name === "Item") {
       itemIndex += 1;
       const itemSuffix = suffix(itemIndex);
       allowed(child, [
-        "id", "image", "media", "surface", "extent", "frame", "appearance", "motion", "source-audio", "audio-gain",
+        "id", "frame", "appearance", "motion",
+        ...(isPerformance ? [] : ["image", "media", "surface", "extent", "source-audio", "audio-gain"]),
         "clip", ...temporalWindowAttributeNames,
       ]);
       const id = optionalText(child, "id") ?? `${trackId}.item.${itemSuffix}`;
@@ -528,10 +537,21 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
         : recipe(reference(child.attributes.motion, `${child.name}.motion`, svsRecipeType, resolveReference), `${child.name}.motion`);
       const temporal = createTemporalWindowProjection({ id, element: child, semantic, resolveReference });
       state.records.push(...temporal.records); temporalComponents.push(...temporal.components); temporalFragments.push(...temporal.fragments);
-      const directSource = declaredVisualSource(child, resolveReference);
-      validateUnitChildren(child, directSource !== undefined, true);
+      const performance = isPerformance ? {
+        fitName: `item-${itemSuffix}-fit`, sampleName: `item-${itemSuffix}-sample`,
+      } : undefined;
+      const directSource = isPerformance ? undefined : declaredVisualSource(child, resolveReference);
+      validateUnitChildren(child, isPerformance || directSource !== undefined, true);
+      if (performance !== undefined) {
+        state.addRecord(performance.fitName, `${id}.fit`, spatialTypes.fit, decodeMediaFit(appearance), child.range);
+        if (appearance.properties.playback !== undefined || appearance.properties["trim-start"] !== undefined || appearance.properties["trim-end"] !== undefined) {
+          throw new Error(`${child.name} follows the performance's source time. Select its interval with during or start/end.`);
+        }
+        state.addRecord(performance.sampleName, `${id}.sample`, mediaTrackTypes.sampleLayerSpec,
+          decodeMediaSampleSpec(appearance, "content", "timed", decodeSamplingMotion(child, true), true), child.range);
+      }
       const layers = unitLayers(state, { trackId, unitSuffix: `item-${itemSuffix}`, element: child, appearance,
-        ...(directSource === undefined ? {} : { directSource }), allowFramePaint: true }, resolveReference);
+        ...(directSource === undefined ? {} : { directSource }), allowFramePaint: true, allowEmpty: isPerformance }, resolveReference);
       const selectedAudio = sourceAudio(child);
       const specName = `item-${itemSuffix}-spec`;
       const windowName = `item-${itemSuffix}-window`;
@@ -548,12 +568,12 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
         }
       }
       if (selectedAudio !== undefined || fragmentSounds.length > 0) hasAudio = true;
-      items.push({ suffix: itemSuffix, windowName, frameName, specName,
+      items.push({ suffix: itemSuffix, windowName, frameName, specName, ...(performance === undefined ? {} : { performance }),
         ...(clipPathName === undefined ? {} : { clipPathName }), layers, sounds: fragmentSounds });
       continue;
     }
     if (!(child.name.endsWith(":Sequence") || child.name === "Sequence")) {
-      throw new Error(`${element.name} accepts only Item and Sequence children.`);
+      throw new Error(`${element.name} accepts only Performance, Item and Sequence children.`);
     }
     sequenceIndex += 1;
     const sequenceSuffix = suffix(sequenceIndex);
@@ -632,7 +652,7 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
     sequences.push({ suffix: sequenceSuffix, terminalName, frameName, specName,
       ...(clipPathName === undefined ? {} : { clipPathName }), members, sounds: sequenceSounds });
   }
-  if (items.length === 0 && sequences.length === 0) throw new Error(`${element.name} requires at least one Item or Sequence.`);
+  if (items.length === 0 && sequences.length === 0) throw new Error(`${element.name} requires at least one Performance, Item or Sequence.`);
   const fragment = createMediaTrackSurfaceFragment(state.inputTypes, items, sequences, hasAudio);
   return {
     records: state.records,

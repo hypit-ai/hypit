@@ -62,7 +62,7 @@ hypit measure main.svml --segment hook --language en --pace normal --rounding ro
 </seedance:ReferenceVideo>
 ```
 
-`hypit measure` 按口播策略——`language`、`pace`（英语 `slow = 4.2`、`normal = 4.6`、`fast = 5.0` 音节/秒）或数值 `rate`、`rounding`——统计 Segment 台词的读音单位，不调用任何外部服务。图里没有任何东西在计算时长，所以 `hypit plan` 在 Build 开始前就是完整的。同一套策略写在 `estimated:SemanticTake` 上或它引用的 SVS Recipe 里（参见 [SVS 样式表](./styles.md#speech-estimation)），用于把 Segment 的词按音节权重铺到预览媒体上。
+`hypit measure` 按口播策略——`language`、`pace`（英语 `slow = 4.2`、`normal = 4.6`、`fast = 5.0` 音节/秒）或数值 `rate`、`rounding`——统计 Segment 台词的读音单位，不调用任何外部服务。请求时长在 Build 开始前已经明确。用估时结果调整稿子并选择模型支持的时长；实际词时间由生成表演后的语义处理提供。
 
 ## text:Value
 

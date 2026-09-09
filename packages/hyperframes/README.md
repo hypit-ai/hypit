@@ -3,11 +3,10 @@
 Deterministic reference lowering from the generic `Composition` contract to a portable
 `HyperframesDocument`.
 
-This package implements the one closed `hypit.visual-ir@1` target declared by every
-VisualTrack. The vocabulary is owned by `@hypit/visual-ir`; Track and Composition values are
-owned by `@hypit/composition`. Neither is an author component
-and not arbitrary CSS. Unknown properties and alternate browser semantics fail before document
-compilation; visuals outside the structural vocabulary enter as typed `CompositableSurface` values.
+This package renders `hypit.visual-ir@1` structural elements and `hypit.browser-program@1`
+local programs. Structural elements cover ordinary boxes, exact-font text and frame-sampled media.
+A browser program carries HTML, CSS and frame-driven JavaScript for a component's own composition.
+Track and Composition remain owned by `@hypit/composition`; the browser format is owned here.
 
 This package understands only `VisualTrack`, `ProgramSpace` and canvas geometry. It
 does not know Caption, Speech, B-roll, Seedance or any other author-domain component. It flattens
@@ -45,3 +44,26 @@ The ordinary test suite validates deterministic HTML, frame sampling markers and
 The local Provider owns the Chrome integration tests. Run its tests with `HYPIT_BROWSER_TESTS=1`
 to exercise real multi-worker rendering, compare selected video frames with a full render, and check
 straight-alpha composition. These tests use the engine capture API and require Chrome and FFmpeg.
+
+## Local browser programs
+
+`browserProgram({ html, css, setup, data }, artifacts)` builds a program payload. Place it on a
+`kind: "program"` VisualElement inside a normal Present. `html` is a local fragment; `{{child-id}}`
+places a direct typed child. Every child is placed once, including sampled video and exact-font text.
+This keeps actual video available to the renderer's exact source-frame preparation.
+
+CSS is scoped to the generated program root with `@scope`; `:scope` styles that root. The HTML can
+contain arbitrary local structure, SVG, internal stacking, masks and backdrop filters. The optional
+`setup` string is a JavaScript function body with `root` and `data` arguments. It returns a synchronous
+`render(localFrame)` function, evaluated on initial load and every `hf-seek`. Express animation state
+as a function of this frame and inputs so any worker can begin at any frame. Async work belongs to
+material preparation before rendering; browser resources belong in the program's declared artifacts.
+Use `hyperframesResourceUri(artifact.resource)` in resource-bearing markup or CSS.
+
+Ordinary child sampling follows the Present clock. Reframing the parent leaves source playback
+unchanged. `projectSemanticMedia` from `hypit/semantic-track` gives a component selected prepared
+clips with their exact program and source spans. Speech audio is an independently selected Track.
+
+`program.format` is explicit: this backend reports an unsupported format rather than interpreting
+another renderer's program. Core and the build graph do not contain browser-specific cases.
+The `examples/semantic-composition` project demonstrates a complete package using this interface.

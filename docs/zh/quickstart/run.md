@@ -24,7 +24,7 @@ hypit get <build-id> --output final.video --to output/final.mp4
 
 快速开始只需全局安装一次 Distribution。此后本页所有命令都直接写作 `hypit`，在任何独立视频项目中都一样。
 
-只有 `build` 会真正提交工作。`plan` 是普通预览；`check` 用于编辑源码，`doctor` 用于配置和排查部署。它们都安全，但不是每次 Build 前必须重复的仪式。
+只有 `build` 会真正提交工作。`plan` 展示选中的工作；`check` 用于编辑源码，`doctor` 用于配置和排查部署。它们都安全，但不是每次 Build 前必须重复的仪式。
 
 当项目包含多份 Author、Recipe 和 Run Source 时，一种顺手的目录约定是：
 
@@ -43,7 +43,7 @@ my-video/
     final.svrun             最终交付意图
   assets/                   项目自己的输入素材
   kits/                     可选的项目内 Recipe Kit
-  packages/                 可选的项目本地 Author 包
+  packages/                 作品需要时创建的项目本地 Author 包
   output/                   显式导出给人或其他工具的副本
   hypit.runtime.json        执行环境
   hypit.results.json        可选的 Result 仓库选择
@@ -186,7 +186,7 @@ Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本�
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
-文件相对于 `.svrun` 读取。如果它在 Target 路线上成为已经完成的公开 Output，就像生成媒体一样写入 Build Result。系统没有隐式历史查找；黑场、预览图与人工交付的产物也使用同一个机制。
+文件相对于 `.svrun` 读取。如果它在 Target 路线上成为已经完成的公开 Output，就像生成媒体一样写入 Build Result。系统没有隐式历史查找；用户提供的图片、录制的视频和其他兼容产物也使用同一个机制。
 
 ## Runtime Profile
 

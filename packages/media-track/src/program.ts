@@ -402,6 +402,7 @@ function sourceAudioClip(
     candidate.kind === "sample" && candidate.id === value.sourceAudio!.fromLayer)!;
   assert(layer.source.kind === "timed" && layer.source.audio !== undefined && layer.occupancy !== undefined,
     `Media projection ${value.id} selected audio from an invalid layer.`);
+  assert(layer.sampling === undefined, "Explicit visual sampling has no source-audio projection; connect the Semantic AudioTrack for performance sound.");
   const source = layer.source;
   const audio = source.audio;
   assert(audio !== undefined, `Media projection ${value.id} selected audio from an invalid layer.`);

@@ -27,7 +27,7 @@ hypit get <build-id> --output final.video --to output/final.mp4
 The Quickstart installs the Distribution once. Every command on this page then works as `hypit`
 from any independent video project.
 
-Only `build` submits work. `plan` is the normal preview. `check` is an editing aid; `doctor` is a
+Only `build` submits work. `plan` shows the selected work. `check` is an editing aid; `doctor` is a
 deployment diagnostic. They are safe to run, but not mandatory ceremony before every Build.
 
 One convenient layout for a project with several Author, Recipe and Run Sources is:
@@ -47,7 +47,7 @@ my-video/
     final.svrun             final delivery intention
   assets/                   project-owned input media
   kits/                     optional project-authored Recipe Kits
-  packages/                 optional project-local Author packages
+  packages/                 project-local Author packages when the work introduces them
   output/                   explicit exports for people and other tools
   hypit.runtime.json        execution environment
   hypit.results.json        optional Result repository selection
@@ -219,7 +219,7 @@ to one current Logical Output:
 
 The file is read relative to the `.svrun`. If it becomes a completed public Output on the Target
 route, it is written into the Build Result like any generated media. There is no hidden history
-lookup. A black video, preview image or human-supplied result uses the same mechanism.
+lookup. A supplied image, recorded video or other compatible result uses the same mechanism.
 
 ## Runtime Profile
 

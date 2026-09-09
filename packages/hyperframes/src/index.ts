@@ -9,3 +9,5 @@ export {
   hyperframesTypes,
 } from "./manifest.js";
 export type * from "./types.js";
+export { browserProgram, BROWSER_PROGRAM_FORMAT } from "./browser-program.js";
+export type { BrowserProgram } from "./browser-program.js";

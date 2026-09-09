@@ -8,10 +8,10 @@ import { compileHyperframesDocument } from "@hypit/hyperframes";
 import type { Narrative } from "@hypit/narrative";
 import { parseScript, narrativeValue } from "@hypit/script";
 import { materializeSemanticTake } from "@hypit/speech";
-import { appendSpeechTrackTake, assembleSpeechTrack, createSpeechTrackSet, projectSpeechTrackVisual,
-  sealSpeechTrackHeader, sealSpeechTrackVisualSpec } from "@hypit/speech-track";
+import { appendSpeechTrackTake, assembleSpeechTrack, createSpeechTrackSet,
+  sealSpeechTrackHeader } from "@hypit/speech-track";
 import { projectSemanticProgramSpace } from "@hypit/semantic-track";
-import { appendMediaItem, appendTimedMediaLayer, createMediaLayerSet, createMediaSoundSet, createMediaTrackSet,
+import { appendMediaPerformance, appendMediaItem, appendTimedMediaLayer, createMediaLayerSet, createMediaSoundSet, createMediaTrackSet,
   finalizeMediaTrack, projectMediaVisualTrack, sealMediaItemSpec, sealMediaSampleLayerSpec, sealMediaTrackHeader } from "@hypit/media-track";
 import { projectProgramWindow } from "../../../test/temporal-fixture.js";
 import { MemoryResourceStore, ffmpegBytes, normalizeTestVideo, transparentVideoFixture, writeTestArtifact } from "../../../test/alpha-video-fixture.js";
@@ -44,14 +44,8 @@ test("transparent normalized media composites through both SemanticTake/Speech T
     const fit = { sizing: "contain" as const, framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.5, y: 0.5 },
       offsetPx: { x: 0, y: 0 }, constraint: "bounded" as const };
     const frame = { xPx: 0, yPx: 0, widthPx: 96, heightPx: 64 };
-    const set = appendSpeechTrackTake(createSpeechTrackSet(), take, frame, fit, sealSpeechTrackVisualSpec({
-      stackingOrder: 1,
-      presentation: { clip: { kind: "frame" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 }, shadows: [] },
-      sampleAppearance: { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } },
-      motion: { sustain: [] },
-    }));
+    const set = appendSpeechTrackTake(createSpeechTrackSet(), take);
     const semantic = assembleSpeechTrack(sealSpeechTrackHeader({ id: "speech" }), set);
-    const speechVisual = projectSpeechTrackVisual(semantic, set);
     const space = projectSemanticProgramSpace(semantic);
     const header = sealMediaTrackHeader({ id: "broll" });
     const layers = appendTimedMediaLayer(createMediaLayerSet(), broll, fit, sealMediaSampleLayerSpec({ id: "cutout",
@@ -66,6 +60,15 @@ test("transparent normalized media composites through both SemanticTake/Speech T
       layers, { ...frame, xPx: 96 }, spec, createMediaSoundSet(), projectProgramWindow({
         itemId: spec.id, semantic, projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
       }));
+    const performanceHeader = sealMediaTrackHeader({ id: "performance" });
+    const performanceSpec = { ...spec, id: "performance", stackingOrder: 1 };
+    const performance = appendMediaPerformance({ set: createMediaTrackSet(), header: performanceHeader, space,
+      canvas: { widthPx: 192, heightPx: 64, origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square" },
+      layers: createMediaLayerSet(), frame, spec: performanceSpec, sounds: createMediaSoundSet(),
+      window: projectProgramWindow({ itemId: performanceSpec.id, semantic, projection: { start: { ref: "program.start" }, end: { ref: "program.end" } } }),
+    }, semantic, fit, sealMediaSampleLayerSpec({ id: "content", occupancy: { mode: "once", align: "start" },
+      appearance: { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } } }));
+    const speechVisual = projectMediaVisualTrack(space, finalizeMediaTrack(performance, performanceHeader, space));
     const brollVisual = projectMediaVisualTrack(space, finalizeMediaTrack(items, header, space));
     const document = compileHyperframesDocument(sealComposition({ id: "alpha-proof",
       canvas: { width: 192, height: 64, clearColor: "#143cdc" }, tracks: [speechVisual, brollVisual] }), space);

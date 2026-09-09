@@ -204,5 +204,5 @@ test("a local mask owns exactly one mask root and one content root inside its Pr
   assert.throws(() => assertCompositionIdentity(sealComposition({
     id: "nested-mask-source",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [nested],
-  }), space), /must have a box or mask parent/u);
+  }), space), /must have a box, mask or program parent/u);
 });

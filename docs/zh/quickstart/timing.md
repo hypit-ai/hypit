@@ -58,29 +58,29 @@ Hypit 不会根据 Script 文本或音频自动检测、分流语言。
 
 ## 装配 SemanticTrack
 
-`speech:Track` 按文档顺序拼接已经语义化的 Take，并从同一批 item 投影出三个严格对齐的侧面：
+`speech:Track` 按文档顺序拼接已经语义化的 Take，提供语义时间线及原声音频；Media 独立呈现表演画面：
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="speech-frame" within={vertical}
   left="0%" top="0%" right="100%" bottom="100%"/>
 
-<speech:Track id="speech"
-  visual-frame={speech-frame}
-  visual-appearance={recipes.speech.visual}
-  visual-z="0">
+<speech:Track id="speech">
   <speech:Take source={opening-semantic.take}/>
   <speech:Take source={answer-semantic.take}/>
 </speech:Track>
+<media-track:Track id="performance" semantic={speech.semantic} canvas={vertical}>
+  <media-track:Performance during="program" frame={speech-frame}
+    appearance={recipes.media.performance}/>
+</media-track:Track>
 ```
 
 | 输出 | 类型 | 含义 |
 |---|---|---|
 | `{speech.semantic}` | SemanticTrack | 全局语义与帧域真相 |
-| `{speech.visual}` | VisualTrack | 与语义 item 对齐的同源画面 |
 | `{speech.audio}` | AudioTrack | 与语义 item 对齐的同源声音 |
 
-三个侧面都是同一批有序 Take 的投影，不能各自漂移。`SemanticTrack` 通过局部 Take 长度的前缀和
+画面组件和原声音频使用同一批素材及源位置。`SemanticTrack` 通过局部 Take 长度的前缀和
 得到全局帧位置，同时提供 Film 和 Render 所需的节目时长与帧域。
 
 ## 消费语义时间
@@ -102,7 +102,7 @@ SemanticTrack，并在构建确定性 Track 时把这些身份投影成帧：
 
 <film:Film id="main" canvas={vertical}
   semantic={speech.semantic} appearance={recipes.film.vertical}>
-  <film:Track source={speech.visual}/>
+  <film:Track source={performance.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={cards.visual}/>
   <film:Track source={captions.track}/>
@@ -115,13 +115,8 @@ SemanticTrack，并在构建确定性 Track 时把这些身份投影成帧：
 整段使用 `during={story.segment.answer}`，作者范围使用 Selection，点事件使用 Moment，完整节目使用 `during="program"`。组件统一消费 `semantic={speech.semantic}`。
 
 ```text
-原始 Take ─► Normalize ─► SynchronizedMedia ─► SemanticTake ─┐
-原始 Take ─► Normalize ─► SynchronizedMedia ─► SemanticTake ─┤
-                                                              ▼
-                                                         speech:Track
-                                                  ┌───────────┼───────────┐
-                                                  ▼           ▼           ▼
-                                             .semantic     .visual      .audio
-                                                  │           │           │
-                                                  └──────► Film / Tracks ◄─┘
+prepared Takes → Speech Track ── .semantic → Media / project scene → .visual ─┐
+                         │             └──→ Caption / semantic graphics ───┤
+                         └───── .audio ────────────────────────────────────┤
+                                                                         Film
 ```

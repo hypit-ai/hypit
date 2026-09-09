@@ -1,6 +1,7 @@
 <?svml using="@hypit/markup@1"?>
 
 <svml>
+  <import as="media-track" from="@hypit/media-track@1"/>
   <import from="@hypit/script@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="media" from="@hypit/media@1"/>
@@ -183,12 +184,15 @@
   <whisperx:SemanticTake id="first-place-rule-semantic" narrative={story}
     segment={story.segment.first-place-rule} media={first-place-rule-media.media} language="en"/>
 
-  <speech:Track id="speech" visual-frame={full-frame}
-    visual-appearance={recipes.speech.visual} visual-z="10">
+  <speech:Track id="speech">
     <speech:Take source={uber-rule-semantic.take}/>
     <speech:Take source={shortcuts-rule-semantic.take}/>
     <speech:Take source={first-place-rule-semantic.take}/>
   </speech:Track>
+  <media-track:Track id="speech-picture" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Performance during="program" frame={full-frame}
+      appearance={recipes.media.performance}/>
+  </media-track:Track>
 
   <audio-track:Track id="music-bed" semantic={speech.semantic}>
     <audio-track:Clip source={soundtrack-media.media} during="program"
@@ -237,7 +241,7 @@
 
   <film:Film id="main" canvas={vertical} semantic={speech.semantic}
     appearance={recipes.film.vertical}>
-    <film:Track source={speech.visual}/>
+    <film:Track source={speech-picture.visual}/>
     <film:Track source={speech.audio}/>
     <film:Track source={captions.track}/>
     <film:Track source={rule-reveal.track}/>

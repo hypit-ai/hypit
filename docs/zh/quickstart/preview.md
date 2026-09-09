@@ -7,7 +7,7 @@ description: 打开一份素材已经满足的 Run，检查画面、时间线并
 
 Hypit Studio 打开一份 `.svrun`，把它的 Film 或 Render target 回溯到可解释的 Semantic 与 Track 投影，并用四个区域呈现：左上 Source、中上 Preview、右上 Inspector、下方 Timeline。
 
-Studio 不提交生成，也不创建 Build。需要生成的素材必须由 Run 明确选择：可以是项目文件、由 `<build-record>` 引用的历史 Build Output，也可以是用 `satisfy` 选择的普通替身 Fragment。Studio 可以请求所选 Runtime Profile 执行 Provider 明确允许临时创作执行的媒体 Need，例如检查和归一化；它不根据价格猜权限、不替换 Candidate，也不暗中制造占位。其余 Need 会带着准确 capability 失败。
+Studio 打开 Run 选择的编排，使用项目文件和已完成的 Build Output。通过 `<build-record>` 和 `satisfy` 保留正在编辑的素材。Provider 支持临时创作执行时，Studio 可请求所选 Runtime Profile 完成检查、归一化等媒体操作。生成和 Build 提交通过 CLI 进行；Studio 提供播放、语义定位和对实际 Source 的编辑。
 
 ```bash
 hypit-studio --run examples/ranking-football/swap-effect-banana/studio.svrun \

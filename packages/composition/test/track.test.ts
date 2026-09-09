@@ -102,7 +102,7 @@ test("Composition accepts case-insensitive hexadecimal canvas colors", () => {
   assert.doesNotThrow(() => assertCompositionIdentity(composition, programSpace));
 });
 
-test("VisualTrack rejects cross-Track pixel sampling styles", () => {
+test("VisualTrack accepts authored backdrop compositing", () => {
   const { programSpace, visual, sound } = fixture();
   const content = structuredClone(visual) as VisualTrack;
   const first = content.presents[0]!.elements[0]!;
@@ -117,7 +117,7 @@ test("VisualTrack rejects cross-Track pixel sampling styles", () => {
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [sound, invasive],
   });
-  assert.throws(() => assertCompositionIdentity(composition, programSpace), /cross-Track style backdrop-filter/);
+  assert.doesNotThrow(() => assertCompositionIdentity(composition, programSpace));
 });
 
 test("VisualTrack style values cannot smuggle a second declaration", () => {
@@ -312,9 +312,9 @@ test("Visual Present animations may finish before or after their visibility wind
       }],
     }],
   });
-  assert.throws(() => assertCompositionIdentity(sealComposition({
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
     id: "animated-invasive",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [invasive],
-  }), programSpace), /cross-Track style backdrop-filter/);
+  }), programSpace));
 });

@@ -1,0 +1,8 @@
+<?svml using="@hypit/run-markup@1"?>
+<svrun version="1">
+  <author source="./production.svml"/>
+  <target output="detail.video"/>
+  <!-- Replace the Build id with the Result containing this production's Take. -->
+  <build-record id="kept-take" build="bld_..." output="opening-semantic.take"/>
+  <satisfy output="opening-semantic.take" candidate="kept-take"/>
+</svrun>

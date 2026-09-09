@@ -67,10 +67,6 @@ Several images spread over one literal duration the same way, each held for its 
 </media:StillVideo>
 ```
 
-For a short-lived diagnostic clip, `guide="clip-time"` burns one coherent band containing the
-clip-local timecode, current frame and progress ruler. Omit it for clean production pixels. The
-guide says nothing about the clip's eventual position in a Film.
-
 `StillVideo` returns a video-only MP4 `BlobArtifact`, not `SynchronizedMedia`. The Surface publishes the
 duration and the weights as Records; `plan-still-video` divides the whole frame count among the
 pictures (every picture holds at least one frame, the rest go by weight with leftovers to the largest
@@ -79,12 +75,10 @@ encoding is one `render-still-video` Need. Pictures of different sizes are fitte
 frame and letterboxed. Inspection and normalization remain the same explicit steps used by imported
 or generated moving video. The resulting Blob is ordinary time-bearing visual media. Its later role
 comes entirely from the downstream Source relationships; StillVideo itself owns only the authored
-images, duration, frame clock and optional guide.
+images, duration and frame clock.
 
-The package also exposes one-picture Run Fragments. `still-video` takes `duration`, `clock`,
-`layout` and `source-0`; `clip-time-still-video` takes `duration`, `clock` and `source`, supplying
-the diagnostic layout itself. A Run can select either ordinary branch as a Candidate through an
-explicit `candidate` / `satisfy` decision.
+The package also exposes the one-picture Run Fragment `still-video`. It takes `duration`, `clock`,
+`layout` and `source-0`. A Run can select its `video` export as a Candidate through `satisfy`.
 
 Four ordinary author operations reuse that same inspection/execution boundary:
 

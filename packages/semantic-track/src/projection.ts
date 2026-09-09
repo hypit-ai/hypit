@@ -10,6 +10,26 @@ import type { ProgramSpace } from "@hypit/program-space";
 import { assertSemanticTrackIdentity, semanticTrackFrameCount, semanticTrackSpans } from "./identity.js";
 import type { SemanticTrack } from "./types.js";
 
+/** Prepared material in an authored program interval, with its original source position retained. */
+export function projectSemanticMedia(track: SemanticTrack, window = {
+  startFrame: 0, endFrameExclusive: semanticTrackFrameCount(track),
+}) {
+  assertSemanticTrackIdentity(track);
+  if (!Number.isSafeInteger(window.startFrame) || !Number.isSafeInteger(window.endFrameExclusive)
+    || window.startFrame < 0 || window.endFrameExclusive <= window.startFrame
+    || window.endFrameExclusive > semanticTrackFrameCount(track)) throw new Error("Semantic media window is outside the performance.");
+  return semanticTrackSpans(track).flatMap(({ item, startFrame, endFrameExclusive }) => {
+    const start = Math.max(window.startFrame, startFrame);
+    const end = Math.min(window.endFrameExclusive, endFrameExclusive);
+    return end <= start ? [] : [{
+      segmentId: item.take.segment.segmentId,
+      media: item.take.media,
+      span: { startFrame: start, endFrameExclusive: end },
+      source: { startFrame: start - startFrame, endFrameExclusive: end - startFrame },
+    }];
+  });
+}
+
 export function projectSemanticProgramSpace(track: SemanticTrack): ProgramSpace {
   assertSemanticTrackIdentity(track);
   const frameRate = track.items[0]!.take.media.timeline.frameRate;

@@ -1,7 +1,6 @@
-# Runs, Candidates and substitutes
+# Runs, Targets and reuse
 
-Read this when choosing deliverables, reusing an Output, replacing media, or preparing a layout
-study before a performance exists. [Authoring](authoring.md#reuse-produced-work-explicitly) explains
+Read this when choosing deliverables, reusing an Output, or selecting media for an execution. [Authoring](authoring.md#reuse-produced-work-explicitly) explains
 which produced value still fits an edit; [Builds](builds.md) explains finding and executing it.
 
 A Run says what this execution should complete and which existing or alternative values it should
@@ -16,7 +15,7 @@ One Run uses these author-facing declarations:
 | Declaration | Role |
 | --- | --- |
 | `<author source="./main.svml"/>` | Select the Run's one Author entry. |
-| `<import as="stand-in" from="@hypit/stand-in@1"/>` | Make one installed Run Fragment library available. |
+| `<import as="media" from="@hypit/media-pipeline@1"/>` | Make one installed Run Fragment library available. |
 | `<target output="final.video"/>` | Demand one public Author Output; several Targets may be declared. |
 | `<file .../>` | Admit one project file as a typed zero-input Candidate. |
 | `<build-record .../>` | Admit one exact public Output from one earlier Build Result. |
@@ -64,109 +63,60 @@ Selecting a completed SemanticTake instead preserves its media, Script associati
 together. Choose the Output whose meaning matches what should stay; the receiving Type identifies
 which kind of value fits that position.
 
-## Use a Fragment when the substitute needs computation
+## Use a Fragment when a Candidate needs computation
 
-A Run Fragment connects the computations that produce a Candidate. This composition draws one
-generic Card, then asks Media Pipeline to hold it for the chosen duration with a clip-local guide:
+A Run Fragment connects computations that produce a Candidate. For example, an authored still image
+can become a timed video through Media Pipeline's ordinary `still-video` Fragment:
 
 ```svrun
-<import as="stand-in" from="@hypit/stand-in@1"/>
-<fragment id="card" using="stand-in:timed-card">
-  <input name="canvas" from="canvas"/>
+<import as="media" from="@hypit/media-pipeline@1"/>
+<fragment id="product-hold" using="media:still-video">
   <input name="duration" value="5"/>
   <input name="clock" from="clock"/>
+  <input name="layout" from="product-layout"/>
+  <input name="source-0" from="product-image"/>
 </fragment>
-<satisfy output="performance.video" candidate="card.video"/>
+<satisfy output="product-clip.video" candidate="product-hold.video"/>
 ```
+
+Here `product-layout` is an Author value of Type `@hypit/media-pipeline@1#StillVideoLayout`,
+containing `{"weights":[1]}`; `product-image` is an authored image Blob. The package README owns the
+Fragment's exact inputs. [Media](media.md#give-a-still-a-duration-when-that-is-its-role) shows the
+simpler `StillVideo` Surface for authoring this directly in the Source.
 
 Place imports after `author` and before execution declarations. `using` names a Fragment from an
 installed package. `from` on an input names a public value of the Run's Author entry, including a
 computed Output. The latter retains its own dependencies and any Candidate selection. It does not
 name another Run Candidate or automatically expose an imported Source's private bindings.
 
-The resulting Candidate is named `card.video`. Selecting it replaces the performance request while
-retaining the preparation and composition that consume that video. A substitute can also consume
-an existing computed Output; that Output remains part of the selected dependencies.
+The resulting Candidate is named `product-hold.video`. Selecting it replaces the computation at
+`product-clip.video` while retaining the preparation and composition that consume that video.
 
-## Use the most representative visual evidence available
+## Generate material while composing
 
-Supplied and produced images and videos are the primary visual evidence for a production. Select a
-usable video itself when it exists. While an intended video is still unavailable, an actual image
-from the work can be held with `media-pipeline:still-video` or
-`media-pipeline:clip-time-still-video`; it carries real subject, color and camera evidence into the
-composition, although it cannot establish the future motion or performance. A generic Card is useful
-only when no suitable pixels exist and a current component or wiring question is worth answering
-before generation completes.
-
-For example, keep a previously produced presenter image, give it provisional clip time, and use that
-video Candidate at the position where the future performance will enter:
-
-```svrun
-<import as="media" from="@hypit/media-pipeline@1"/>
-<build-record id="presenter-image" build="bld_..." output="presenter.image"/>
-<satisfy output="presenter.image" candidate="presenter-image"/>
-
-<fragment id="held-presenter" using="media:clip-time-still-video">
-  <input name="duration" value="5"/>
-  <input name="clock" from="clock"/>
-  <input name="source" from="presenter.image"/>
-</fragment>
-<satisfy output="performance.video" candidate="held-presenter.video"/>
-```
-
-Preview choices answer the question that exists now; they are not a sequence of production states.
-A production may skip them entirely, use one while media is being generated, or replace one as soon
-as more representative media is available. The Card normally loses its purpose first. A held image
-used in place of future motion loses that purpose when the video exists. Run Candidate selection
-makes each choice explicit without inventing an acceptance or promotion workflow.
-
-## A complete layout preview
+Media requests depend on the Script, direction, references and requested duration. Once those
+choices are ready and the commission covers their cost, a Run can target the prepared Takes while
+component and Recipe work continues. Shared decisions such as where a presenter leaves room for
+an overlay belong in Treatment and image direction; encode them in both the material and composition.
 
 The small [production Source](examples/production.svml), [Recipe](examples/look.svs),
-[production Run](examples/production.svrun) and [preview Run](examples/preview.svrun) demonstrate
-the same Film with two execution choices. Copy the files together into a video project to study or
-adapt them. Their simple performance request illustrates system wiring; the actual video's casting,
-references and direction come from its Treatment and the relevant Playbook.
+[material Run](examples/material.svrun) and [production Run](examples/production.svrun) illustrate
+these execution choices. Copy them together into a project. The simple performance request shows
+system wiring; the work's actual casting, references and direction come from its Treatment and Craft.
 
-The Source declares measured timing and an estimated alternative. The estimated Surface publishes
-its authored `estimated.policy` as a typed value. The preview Run uses the estimate package's Run
-Fragment to supply the Candidate for the original measured Take:
+`material.svrun` targets `opening-semantic.take`. While it runs, the author can work on the title and
+its placement. Once the Take completes, select it with `build-record` in the production Run so that
+rendering uses the produced performance and its word timing. If material is already available, use
+it directly. Choose Targets according to the dependencies the current work needs.
 
-```svrun
-<fragment id="timing" using="estimate:semantic-take">
-  <input name="narrative" from="story"/>
-  <input name="segment" from="story.segment.opening"/>
-  <input name="media" from="performance-preview-media.media"/>
-  <input name="policy" from="estimated.policy"/>
-</fragment>
-<satisfy output="opening-semantic.take" candidate="timing.take"/>
-```
+For a focused composition change, [detail.svrun](examples/detail.svrun) targets frames 30–90 from the
+same Source and reuses that Take. Replace its example Build id with the actual Result id. The new
+Build evaluates the changed composition and selected render interval. The final Run can reuse the
+same Take for full delivery.
 
-Together with the card selection, this leaves Card drawing, StillVideo rendering, video-only
-normalization and timing estimation as the media work. The original generated performance and
-WhisperX alignment are outside this preview's selected graph. The estimator retains the real
-Segment, Token and Anchor identities and distributes their positions across the prepared media's
-frame count. Those positions show provisional rhythm; real alignment supplies the performance's
-actual word timing.
-
-From the directory containing the copied example:
-
-```bash
-hypit check preview.svrun
-hypit plan preview.svrun
-hypit-studio --run preview.svrun
-```
-
-Studio can materialize this preview with a selected local media Provider that supports the required
-transient capabilities. If the chosen environment does not provide them for Studio, build the
-selected preview media through that environment and reuse its completed Outputs. The normal
-production Run still requests generation and measured alignment, under the work's spending authority.
-
-For an existing production with usable footage, select its Result or file directly. If only an
-authored or generated picture exists, StillVideo gives downstream composition more relevant pixels
-than a Card. The held picture can establish its own identity, color and framing; the actual shot is
-the evidence for motion, performance and the changing relationship between a face and graphics.
-[Studio](studio.md) explains what the selected preview can show.
+[Rendering](rendering.md#choose-a-render-interval-in-frames) explains frame ranges and reuse;
+[Review](review.md) explains judging the actual arrangement. [Studio](studio.md) provides an
+interactive view when playback, parameter editing or a component's Companion is useful.
 
 ## Preserve the choices that still apply
 

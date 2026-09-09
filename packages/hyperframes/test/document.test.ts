@@ -523,3 +523,45 @@ test("a Track naming five takes still lowers to DOM identities a Windows path ca
   assert.ok(document.html.includes(`data-hypit-track-id="${trackId}"`));
   assert.ok(document.html.includes(`data-hypit-element-id="${presentId}:foreground"`));
 });
+
+test("browser programs own local HTML while retaining typed child resources and format boundaries", async () => {
+  const { browserProgram } = await import("../src/browser-program.js");
+  const { programSpace, picture } = fixture();
+  const visual = sealVisualTrack({ id: "scene", programSpaceId: programSpace.id, visualIr: VISUAL_IR_V1,
+    presents: [{ id: "scene", span: { startFrame: 0, endFrameExclusive: 30 }, stacking: { order: 0, tieBreak: "scene" },
+      elements: [{ id: "root", kind: "program", order: 0, style: [], program: browserProgram({
+        html: '<section class="viewport">{{photo}}<svg><path d="M0 0H20"/></svg></section>',
+        css: '.viewport { backdrop-filter:blur(4px); display:grid; }',
+        setup: 'return frame => { root.dataset.frame = String(frame); };',
+      }) }, { id: "photo", parent: "root", kind: "image", order: 1, artifact: picture, style: [] }] }] });
+  const composition = sealComposition({ id: "scene", canvas: { width: 200, height: 200, clearColor: "#000000" }, tracks: [visual] });
+  const document = compileHyperframesDocument(composition, programSpace);
+  assert.equal(document.artifacts.length, 1);
+  assert.ok(document.html.includes('<section class="viewport">'));
+  assert.ok(document.html.includes('@scope'));
+  const missing = structuredClone(composition);
+  const root = missing.tracks[0]!;
+  if (root.kind !== "visual" || root.presents[0]!.elements[0]!.kind !== "program") throw new Error("fixture");
+  const program = root.presents[0]!.elements[0]!.program;
+  (program as { format: string }).format = "another.renderer@1";
+  assert.throws(() => compileHyperframesDocument(missing, programSpace), /does not support visual program format/);
+});
+
+test("browser program state follows direct seeks and reports authored evaluation failures", async () => {
+  const { runInNewContext } = await import("node:vm");
+  const { browserProgramScript } = await import("../src/browser-program.js");
+  const root = { frame: -1 };
+  let seek: (event: { detail: { time: number } }) => void = () => {};
+  const window: { addEventListener: (name: string, callback: typeof seek) => void; __hypitBrowserProgramError?: string } = {
+    addEventListener: (_name, callback) => { seek = callback; },
+  };
+  runInNewContext(browserProgramScript([{ id: "scene", startFrame: 30, durationFrames: 90,
+    program: { html: "", setup: 'return frame => { if(frame===60) throw new Error("bad pose"); root.frame=frame; };' },
+  }], 30, 1), { window, document: { getElementById: () => root } });
+  seek({ detail: { time: 2.5 } });
+  assert.equal(root.frame, 45);
+  seek({ detail: { time: 1.2 } });
+  assert.equal(root.frame, 6);
+  seek({ detail: { time: 3 } });
+  assert.match(window.__hypitBrowserProgramError!, /bad pose/);
+});

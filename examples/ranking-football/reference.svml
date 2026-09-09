@@ -221,11 +221,14 @@
   <whisperx:SemanticTake id="messi-semantic" narrative={story}
     segment={story.segment.messi} media={messi-media.media} language="en"/>
 
-  <speech:Track id="speech" visual-frame={speech-frame}
-    visual-appearance={recipes.speech.visual} visual-z="0">
+  <speech:Track id="speech">
     <speech:Take source={ronaldo-semantic.take}/>
     <speech:Take source={messi-semantic.take}/>
   </speech:Track>
+  <media-track:Track id="speech-picture" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Performance during="program" frame={speech-frame}
+      appearance={recipes.media.performance}/>
+  </media-track:Track>
   <audio-track:Track id="music-bed" semantic={speech.semantic}>
     <audio-track:Clip source={soundtrack-media.media} during="program"
       playback="once-start" gain="0.12" fade-in="300ms" fade-out="600ms"/>
@@ -301,7 +304,7 @@
 
   <film:Film id="main" canvas={vertical} semantic={speech.semantic}
     appearance={recipes.film.vertical}>
-    <film:Track source={speech.visual}/>
+    <film:Track source={speech-picture.visual}/>
     <film:Track source={speech.audio}/>
     <film:Track source={football-tiers.visual}/>
     <film:Track source={football-tiers.audio}/>

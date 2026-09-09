@@ -1,11 +1,4 @@
-/**
- * The one code-free terminal visual language accepted by the official video
- * stack. Author packages may own any Program they want, but a VisualTrack that
- * participates in Composition must lower to this closed profile or contribute
- * a typed CompositableSurface.
- *
- * This is a video contract, not a Core concept and not an author component.
- */
+/** Structural style vocabulary. Renderer programs own their richer layout and code formats. */
 export const VISUAL_IR_V1 = "hypit.visual-ir@1" as const;
 
 /**
@@ -30,6 +23,9 @@ export const VISUAL_STYLE_NAMES_V1 = [
   "align-self",
   "aspect-ratio",
   "background",
+  "backdrop-filter",
+  "mix-blend-mode",
+  "isolation",
   "background-clip",
   "background-color",
   "background-image",
@@ -161,7 +157,6 @@ export const VISUAL_STYLE_NAMES_V1 = [
 export type VisualStyleNameV1 = typeof VISUAL_STYLE_NAMES_V1[number];
 
 const STYLE_NAMES = new Set<string>(VISUAL_STYLE_NAMES_V1);
-const CROSS_TRACK_STYLES = new Set(["backdrop-filter", "mix-blend-mode"]);
 
 export const VISUAL_STYLE_ENUM_VALUES_V1 = {
   "box-sizing": ["border-box", "content-box"],
@@ -191,9 +186,6 @@ export function assertVisualStyleV1(
   value: string | number,
   label: string,
 ): void {
-  if (CROSS_TRACK_STYLES.has(name)) {
-    throw new Error(`${label} contains cross-Track style ${name}.`);
-  }
   if (!/^-?[a-z][a-z0-9-]*$/u.test(name)) {
     throw new Error(`${label} contains invalid style name ${name}.`);
   }

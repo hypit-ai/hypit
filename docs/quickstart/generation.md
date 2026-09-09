@@ -68,9 +68,8 @@ hypit measure main.svml --segment hook --language en --pace normal --rounding ro
 `hypit measure` counts pronunciation units of the Segment's speech at a delivery policy — `language`,
 `pace` (`slow = 4.2`, `normal = 4.6`, `fast = 5.0` syllables per second for English) or a numeric
 `rate` and `rounding` — with no external call. Nothing in the graph computes a duration,
-so `hypit plan` is complete before a Build starts. The same policy, written on
-`estimated:SemanticTake` or as an SVS Recipe it names (see
-[SVS Stylesheets](./styles.md#speech-estimation)), weights a Segment's words across preview media.
+so the requested durations are available before a Build starts. Use the estimate to shape the
+wording and choose a supported request duration; the produced performance supplies actual word timing.
 
 ## text:Value
 

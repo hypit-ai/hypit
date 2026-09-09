@@ -7,7 +7,11 @@ description: Open a satisfied Run, inspect its picture and timeline, and edit re
 
 Hypit Studio opens one `.svrun`, traces its Film or Render target back to explainable Semantic and Track projections, and presents four regions: Source at the upper left, Preview in the center, Inspector at the upper right, and Timeline below.
 
-Studio never submits generation or creates a Build. Generated material must be selected explicitly by the Run: from a project file, an earlier Build through `<build-record>`, or an ordinary stand-in Fragment selected with `satisfy`. Studio may ask the selected Runtime Profile to execute exact media Needs whose Provider marks them safe for transient authoring, such as inspection and normalization. It does not infer that permission from pricing, choose another Candidate or invent a placeholder. Other Needs fail with their capability named.
+Studio opens the composition selected by the Run, using project files and completed Build Outputs.
+Use `<build-record>` and `satisfy` to keep the material being edited. Studio can ask the selected
+Runtime Profile to perform media operations such as inspection and normalization when the Provider
+supports transient authoring. Generation and Build submission use the CLI; Studio provides playback,
+semantic navigation and edits to the actual Sources.
 
 ```bash
 hypit-studio --run examples/ranking-football/swap-effect-banana/studio.svrun \

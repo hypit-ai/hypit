@@ -2,7 +2,7 @@
 
 <sheet version="1">
   film.vertical { background: #09090B; }
-  speech.visual { fit: cover; }
+  media.performance { stack-order: 0; fit: cover; }
   speech.normal { language: en; pace: normal; rounding: round; }
   media.aroll { video: primary-moving; audio: default; span-authority: video; }
 </sheet>

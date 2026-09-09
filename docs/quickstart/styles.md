@@ -6,8 +6,7 @@ description: The SVS Recipe language — CSS-like stylesheets for film, caption,
 # SVS Stylesheets
 
 SVS (`.svs`) files define reusable, typed configuration values using a CSS-like syntax. They
-configure Film appearance, caption appearance, Media presentation and motion, text styling, speech estimation
-parameters, generation settings, and typography choices. SVS values are called **Recipes** — they are
+configure Film appearance, caption appearance, Media presentation and motion, text styling, generation settings, and typography choices. SVS values are called **Recipes** — they are
 immutable typed Records that consuming components validate and interpret.
 
 ## Basic syntax
@@ -238,40 +237,6 @@ Compiled with exact font bytes into a `text:Style`, then referenced by a concret
 </text:Area>
 ```
 
-## Speech estimation
-
-Parameters for deterministic speech duration estimation.
-
-```svs
-speech.normal {
-  language: en;
-  pace: normal;
-  rounding: round;
-}
-```
-
-| Property | Description |
-|---|---|
-| `language` | Language code (e.g. `en`) |
-| `pace` | Speaking pace: `slow`, `normal`, `fast` |
-| `rate` | Positive pronunciation units per second; mutually exclusive with `pace` |
-| `rounding` | Rounding mode: `none`, `round`, `ceil` |
-
-The English named presets resolve to `4.2`, `4.6`, and `5.0` syllables per
-second. Use a numeric `rate` in place of `pace` when the project needs a
-continuous author-controlled value.
-Every property is explicit: `language`, `rounding`, and exactly
-one of `pace` or `rate` are required. The Estimate package supplies no hidden policy defaults.
-
-Referenced by `estimated:SemanticTake` via the `policy` attribute, and used by `hypit measure`
-when the author measures a line before writing its literal duration:
-
-```svml
-<estimated:SemanticTake id="hook-estimated" narrative={story}
-  segment={story.segment.hook} media={hook-media.media}
-  policy={recipes.speech.normal}/>
-```
-
 ## Speaker Text Template
 
 The Recipe selects the prompt axes declared by the data-only `speaker-v1` Text Template. Model,
@@ -397,11 +362,6 @@ A complete `recipes.svs` file for a four-take talking-head project:
 <?svml using="@hypit/svs@1"?>
 
 <sheet version="1" id="studio">
-  speech.normal {
-    language: en;
-    pace: normal;
-    rounding: round;
-  }
 
   speaker.host {
     composition-stability: soft-locked;
@@ -435,10 +395,6 @@ This file is imported once in the `.svml` source and its values are referenced t
 
 ```svml
 <import as="recipes" source="./recipes.svs"/>
-
-<estimated:SemanticTake id="hook-estimated" narrative={story}
-  segment={story.segment.hook} media={hook-media.media}
-  policy={recipes.speech.normal}/>
 
 <text:Render id="hook-prompt" template={speaker-kit.speaker-v1}
   recipe={recipes.speaker.host}>...</text:Render>

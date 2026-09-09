@@ -165,39 +165,3 @@ export function createStillVideoFragment(count: number) {
 }
 
 export const stillVideoFragment = createStillVideoFragment(1);
-
-/** One picture held with a clip-local timecode, frame count and progress ruler for diagnosis. */
-export const clipTimeStillVideoFragment = sealGraphFragment({
-  inputs: [
-    { name: "duration", type: speechTypes.duration },
-    { name: "clock", type: programSpaceTypes.clock },
-    { name: "source", type: artifactTypes.blob },
-  ],
-  operations: [
-    {
-      id: "layout",
-      producer: mediaPipelineProducers.clipTimeLayout,
-      inputs: {},
-      result: { kind: "output", name: "layout" },
-    },
-    {
-      id: "plan",
-      producer: mediaPipelineProducers.planStill,
-      inputs: { duration: input("duration"), clock: input("clock"), layout: operation("layout") },
-      result: { kind: "output", name: "request" },
-    },
-    {
-      id: "bind",
-      producer: mediaPipelineProducers.bindStill,
-      inputs: { request: operation("plan"), source: input("source") },
-      result: { kind: "output", name: "request" },
-    },
-    {
-      id: "render",
-      producer: mediaPipelineProducers.renderStill,
-      inputs: { request: operation("bind") },
-      result: { kind: "need", name: "video" },
-    },
-  ],
-  exports: [{ name: "video", type: artifactTypes.blob, root: operation("render") }],
-});

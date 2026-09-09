@@ -7,7 +7,6 @@ export {
   extractFrameFragment,
   synchronizedMediaFragment,
   stillVideoFragment,
-  clipTimeStillVideoFragment,
   createStillVideoFragment,
   transformMediaFragment,
 } from "./fragment.js";

@@ -23,7 +23,7 @@ and layers them by stacking order.
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
-  <film:Track source={speech.visual}/>
+  <film:Track source={performance.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={captions.track}/>
   <film:Track source={product-broll.visual}/>
@@ -50,7 +50,7 @@ Common Track sources:
 
 | Source | Type | From |
 |---|---|---|
-| `{speech.visual}` | VisualTrack | `speech:Track` — sparse same-source speech visuals |
+| `{performance.visual}` | VisualTrack | `media-track:Track` — presentation of the semantic performance |
 | `{speech.audio}` | AudioTrack | `speech:Track` — synchronized audio |
 | `{captions.track}` | VisualTrack | a Caption Style-family Track — timed captions |
 | `{cards.visual}` | VisualTrack | `media-track:Track` — media overlays or B-roll |
@@ -66,7 +66,7 @@ Typical stacking order:
 
 | stack-order | Content |
 |---|---|
-| 10 | Example Speech visual (author-selected, not a built-in default) |
+| 10 | Performance presentation (author-selected) |
 | 40 | Media overlays |
 | 70 | Captions |
 | 90 | Text overlays |
@@ -174,10 +174,13 @@ illustration. The complete runnable project is `examples/podcast/`; the commands
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
   <whisperx:SemanticTake id="opening-semantic" narrative={story}
     segment={story.segment.opening} media={take-media.media} language="en"/>
-  <speech:Track id="speech"
-    visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
+  <speech:Track id="speech">
     <speech:Take source={opening-semantic.take}/>
   </speech:Track>
+<media-track:Track id="performance" semantic={speech.semantic} canvas={vertical}>
+  <media-track:Performance during="program" frame={speech-frame}
+    appearance={recipes.media.performance}/>
+</media-track:Track>
 
   <!-- 4. Tracks: captions, Media, text -->
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
@@ -202,7 +205,7 @@ illustration. The complete runnable project is `examples/podcast/`; the commands
   <!-- 5. Film: compose all tracks -->
   <film:Film id="main" canvas={vertical} semantic={speech.semantic}
     appearance={recipes.film.vertical}>
-    <film:Track source={speech.visual}/>
+    <film:Track source={performance.visual}/>
     <film:Track source={speech.audio}/>
     <film:Track source={cards.visual}/>
     <film:Track source={captions.track}/>
@@ -228,7 +231,7 @@ width and is rejected.
   film.vertical {
     background: #09090B;
   }
-  speech.visual { fit: cover; }
+  media.performance { stack-order: 0; fit: cover; }
   media.card {
     stack-order: 40; fit: cover; playback: hold-start;
     frame-paint: #111116; clip: rounded; radius: 20;

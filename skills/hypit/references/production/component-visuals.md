@@ -23,7 +23,7 @@ The public representation has these parts:
 | Present | An independently timed and stacked appearance |
 | `span` | Program frames from `startFrame` through the frame before `endFrameExclusive` |
 | `stacking` | Absolute paint order among Presents; higher order appears above lower order |
-| Elements | One rooted tree of boxes, text, media, masks or compositable surfaces |
+| Elements | One rooted tree of boxes, text, media, masks, compositable surfaces or renderer programs |
 | Animation | Keyframes relative to the containing Present's start |
 
 Use several Presents when items have separate lifetimes or stacking positions. A persistent board
@@ -83,3 +83,33 @@ placement, sampling and lifetime.
 For an effect that transforms an image, pass that image as an explicit input to the effect's
 preparation. For a local mask, own the mask and content in the same element tree. These relationships
 make the required materials available both in Studio and in a render of any selected interval.
+
+## Compose video and graphics in one browser program
+
+When a scene's video viewport and graphics share motion or layout, one component can draw them
+together. `browserProgram` from `hypit/hyperframes` creates a `program` element's payload. Its HTML
+owns the local structure; CSS supplies layout, stacking, masks, filters and blending; optional
+`setup(root, data)` code returns `render(localFrame)`. This function sets the complete state at that
+frame. A range render may start in the middle, so compute state from the frame and authored inputs.
+
+Use ordinary typed children for prepared video, images and exact-font text. A `{{child-id}}` slot in
+the HTML places each direct child exactly once. These children retain their declared resources,
+video sampling and font handling while participating in the program's HTML layout. Extra artifacts
+used by the program belong in its `artifacts` list; `hyperframesResourceUri` supplies their resource
+URLs. The rendering environment materializes those references.
+
+For a semantic performance, `projectSemanticMedia(semantic, window.span)` from
+`hypit/semantic-track` returns each intersecting Take's prepared media, program span and source
+span. Subtract the outer Window's start to obtain Present-local video sampling intervals. Preserve
+the returned source offset: moving or reframing a video changes its presentation while playback
+continues from the same place. Original sound can remain `speech.audio` in Film.
+
+A reusable scene might expose `during={story.selection.explanation}` for its lifetime and
+`reveal={story.moment.demonstrate}` for its layout change. The Surface projects these independently;
+the Producer receives a Window and an Instant. The installed Distribution's
+`examples/semantic-composition/packages/responsive-explainer` shows this complete package: video
+moves from full screen to a side viewport while a diagram enters, with Caption available as a peer.
+
+The program format belongs to the renderer package. `hypit.browser-program@1` runs in the
+HyperFrames browser; another renderer implements the formats it supports. Core still schedules
+ordinary Needs and has no knowledge of scenes, video windows or browser layout.

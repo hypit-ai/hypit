@@ -81,7 +81,7 @@ test("optional padding extends speech before rounding", () => {
 test("a policy written as attributes reads the same values a Recipe would", () => {
   const policy = speechEstimatePolicyFromAttributes(
     { language: "en", rate: "4.75", rounding: "round" },
-    "estimated:SemanticTake",
+    "example:MeasuredDuration",
   );
   assert.equal(policy.rate, 4.75);
   assert.throws(
