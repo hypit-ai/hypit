@@ -18,11 +18,7 @@ npx skills add hypit-ai/hypit -g
 
 在任意位置启动 Coding Agent。首次使用时，Agent 会自行安装 Hypit 工具。
 
-### **👉 [免费获得 100 个拥有独特音色的 AI 人物形象](https://drive.google.com/drive/u/2/folders/18J9Fz7mkU3OQNJ-2Res3eIyFQ2cemIK5)**
-
 ## 2. 复刻一条视频，换成你的产品
-
-<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/clone_a_video_with_your_product.mp4"></video>
 
 给 Agent 一个文件或链接，并说明要改什么：
 
@@ -31,6 +27,10 @@ npx skills add hypit-ai/hypit -g
 ```
 
 YouTube、Instagram 等平台链接都可以，Agent 会自动下载。主持人、产品、语言、画幅、行动号召，都可以在同一句话里说明。
+
+### **👉 [免费获得 100 个拥有独特音色的 AI 人物形象](https://drive.google.com/drive/u/2/folders/18J9Fz7mkU3OQNJ-2Res3eIyFQ2cemIK5)**
+
+<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/clone_a_video_with_your_product.mp4"></video>
 
 ## 3. 登录 Hypit，或使用自己的 key
 

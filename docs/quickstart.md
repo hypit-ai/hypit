@@ -20,8 +20,6 @@ Start a Coding Agent anywhere. The Agent installs the Hypit tools on first use.
 
 ## 2. Clone a video and swap in your product
 
-<video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/clone_a_video_with_your_product.mp4"></video>
-
 Give the Agent a file or a link, and say what changes:
 
 ```text
@@ -30,6 +28,10 @@ Give the Agent a file or a link, and say what changes:
 
 YouTube, Instagram and other platform links work; the Agent downloads the source. Change the host,
 product, language, aspect ratio or call to action in the same sentence.
+
+### **👉 [Get 100 FREE AI Avatars with unique voices](https://drive.google.com/drive/u/2/folders/18J9Fz7mkU3OQNJ-2Res3eIyFQ2cemIK5)**
+
+<video controls playsInline preload="metadata" width="100%" src="./quickstart/videos/clone_a_video_with_your_product.mp4"></video>
 
 ## 3. Log in to Hypit, or bring your own keys
 
