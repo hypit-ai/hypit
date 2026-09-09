@@ -1,3 +1,8 @@
+---
+title: Making videos with an Agent
+description: Give your Agent a reference video or a brief and receive an editable video project.
+---
+
 # Making videos with an Agent
 
 Give your Agent a reference video, a brief, or both. You can bring a face, product, logo, or existing
