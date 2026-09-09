@@ -16,6 +16,7 @@ or rotation. A vivid attitude and an easy speaking gesture give this settled vie
 [idle principle](../craft/image-direction.md#choose-an-idle-state-for-the-encounter) relates that pose
 to addressing the viewer; the generated performance can move and react within the encounter.
 
+Cast the person's vocal appeal with [Voice direction](../craft/voice-direction.md).
 Use that same image and the person's recurring voice reference for every ordinary talking Take.
 Each Take can return to the same useful visual premise and contribute another piece of the edited
 performance.
@@ -34,10 +35,10 @@ The installed Kit package owns its exact assembly, reference order and Recipe ch
 passage direction each contribute. A work whose camera, cast, or performance relationship differs can
 use another Kit or ordinary authored direction.
 
-A fitting Speaker Recipe can combine stable framing with
-`edit-rhythm: pause-trim-jump-cuts`. The camera can
-stay fixed while the edit removes dead pauses and the performer remains expressive. This is a prompt
-instruction to the generator; it does not run an automatic trimming operation on the returned file.
+For this edited talking-head form, start with the Speaker Recipe's
+`edit-rhythm: pause-trim-jump-cuts`. The camera can stay fixed while the performer remains expressive.
+[Video direction](../craft/video-direction.md#direct-camera-and-cuts-as-part-of-the-passage) explains
+choosing the rhythm for the passage; the installed Kit documents the wording this option supplies.
 
 Action supplies what the scene means to this person. For a teasing ranking host, amused disbelief,
 a knowing look and a compact dismissive gesture are more useful than a limb-by-limb animation plan.

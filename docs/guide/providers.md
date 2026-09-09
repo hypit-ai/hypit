@@ -146,7 +146,7 @@ An Endpoint may additionally return current Provider-shaped documents from `read
 with only a web page keeps that page as its interface. `hypit pricing <run> --runtime <profile>` places
 the material beside the Run's Needs without creating a Build. The Agent can calculate and explain the
 cost from those two facts, while the user's decision remains the spending authority. The shared
-interface remains only a source URL and Provider-shaped JSON, so a newly supported relay does not
+interface carries a source URL, Provider-shaped JSON and an optional concise rate summary, so a newly supported relay does not
 require a new Hypit pricing category.
 
 `hypit plan --runtime <profile>` remains local and prints the Endpoint behind each request. Planning

@@ -31,6 +31,13 @@ facts leave materially different goals, private facts, meaningful value choices,
 spending authority unresolved. Routine casting, art direction, shot choice, Caption treatment,
 component design, prompts, and implementation belong to the Agent.
 
+Preserve the user's agreed paid scope here as a production constraint: the billing accounts identified
+by non-secret labels or Endpoint references, the work they cover, and the accepted estimate, range or
+budget. Retain any limits the user attached to that agreement. Distinguish your proposed estimate
+from what the user has accepted, and an estimate from a firm spending ceiling. Keep the agreement
+current when the user changes it so another conversation can continue under the same authority.
+[Builds](../production/builds.md#work-within-the-agreed-paid-scope) owns how it applies to paid work.
+
 ## Treatment is the director's answer
 
 `TREATMENT.md` turns the Brief, relevant reference understanding, and current creative judgment into

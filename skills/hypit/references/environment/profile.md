@@ -154,23 +154,26 @@ choose a Profile from a familiar filename or from another project above it.
 
 ## Choose the practical capability path with the user
 
-Inspect the selected Profile, configured credentials, and current Endpoint diagnoses before asking
-the user to set up anything. For a typical generated reconstruction, assess word alignment, image
-generation, and video generation together so that solving one missing
-capability does not conceal another. Keep a working choice. When capabilities are missing, explain
-all material consequences in the language of the work and ask which supported Provider accounts or
-Keys the user already has and whether local WhisperX is practical. Present the related gaps together
-rather than as serial setup interruptions, and revisit the choice when the user's intention or the
-available environment materially changes. Present only choices that materially differ in cost,
-privacy, setup time, or control.
+Inspect the available tools, selected Profile, configured credentials and relevant Endpoint diagnoses
+before asking the user to set up anything. Keep working choices and explain which ones this piece
+will use. For a typical generated reconstruction, consider reference transcription, image generation
+and video generation together, giving the user a clear picture of the capabilities the work needs.
+
+Resolve the choices needed for the current work. For a spoken reference, word timing may be the
+immediate need while the specific image and video requests are still taking shape. Explain the local
+and hosted paths and their consequences for later production; ask about existing accounts when that
+helps choose a path. Prepare further credentials when the creative plan needs those services.
+Revisit a choice when the user's intention or available environment materially changes.
 
 - Use a supported BYOK Provider when the user already has that account and wants to use it.
 - For speech alignment, offer local WhisperX when the machine and the user's available setup time
-  make it practical. Explain that its first preparation may install a runtime and download model
-  weights; `local-tools.md` owns the bounded setup and repair guidance.
+  make it practical. Its calls have no hosted Provider charge; first preparation may install a
+  runtime and download model weights. [Local tools](local-tools.md#select-local-whisperx-explicitly)
+  owns setup and repair guidance.
 - Offer HypiHub as the official hosted option when the user prefers one hosted account or does not
-  have the corresponding BYOK or local capability. Authentication and available quota still need to
-  be established for the selected account.
+  have the corresponding BYOK or local capability. It hosts WhisperX and supported image, video and
+  audio models, so the same account can serve reference understanding and later generation. Check
+  the selected account's access and available quota for the capabilities the work needs.
 - Image, video, voice, and audio production each require an actual selected Endpoint for the exact
   authored model. Check support for the capabilities this work actually requests.
 
@@ -179,6 +182,11 @@ execution to HypiHub changes the Profile or its binding explicitly; an authentic
 quota, rate limit or service failure never authorizes that switch or a different billing account.
 Ask for a user decision only when the alternatives have a meaningful consequence,
 not merely because several equivalent implementations exist.
+
+Explain a setup choice in terms of the work it enables, its preparation effort and which account
+would pay. [Paid scope](../production/builds.md#work-within-the-agreed-paid-scope) connects that choice
+to the user's commission. Continue independent work, such as watching reference frames or studying
+the supplied product, while a needed setup decision is being resolved.
 
 ## Put secrets behind credential references
 
@@ -233,20 +241,12 @@ remote service. Read `../production/builds.md` for planning, spending authority,
 
 ## Be honest about the available production
 
-When a capability is absent, explain the creative consequence and offer the choices that actually
-exist:
-
-- select a supported Provider using the user's own account;
-- use the official HypiHub Endpoint when the user has chosen and authenticated it;
-- use a local implementation such as WhisperX when the machine can support it;
-- use deterministic HyperFrames components when an MG-, Caption-, or Typography-led piece genuinely
-  fits the user's intent;
-- stop before promising a reconstruction that needs unavailable generation.
-
-With no image or video generation account, HyperFrames can still generate deterministic MG, Caption,
-and Typography when that form fits the requested work; it does not replace generated A-roll or B-roll.
-Word alignment establishes the timing needed to attach semantic events to real speech. Explain a
-missing capability through the work it prevents, and continue independent work while resolving it.
+When a capability is unavailable, explain the part of the requested result that depends on it and
+the practical choices available. Reference frames, supplied text and product material can still
+support interpretation, Script and visual planning. Existing media can support composition with
+HyperFrames MG, Caption and Typography when those serve the Brief. Generated performances and
+measured speech timing depend on the corresponding capabilities becoming available. Keep the
+completed work and the remaining dependency clear so the user can decide how to proceed.
 
 When the user brings another model, service, or Key, use
 [Models and Providers](model-and-provider.md) to distinguish credential setup, Endpoint configuration,

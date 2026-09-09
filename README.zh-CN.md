@@ -138,7 +138,7 @@ OpenAgents 等 Skill Hub 安装的是同一个 `skills/hypit/` 真目录。首�
 /hypit 做一个 ranking 视频，把 Hypit 排到 S 级。
 ```
 
-Agent 会检查环境，只索要这条视频需要的凭据，先给出预览，再执行构建。
+Agent 会检查环境，索要这条视频需要的凭据，生成素材并构建成片。
 
 ### **👉 [免费获得 100 个拥有独特音色的 AI 人物形象](https://drive.google.com/drive/u/2/folders/18J9Fz7mkU3OQNJ-2Res3eIyFQ2cemIK5)**
 
@@ -171,7 +171,7 @@ Agent 会检查环境，只索要这条视频需要的凭据，先给出预览�
 
 欢迎提交 Pull Request，文档、示例和翻译与代码同样重要。可以认领一个已有的 issue，也可以为你想做的事新开一个，我们会协助你把它合并进来。环境准备、CI 会跑的检查和 Pull Request 流程见 [CONTRIBUTING.zh-CN.md](./CONTRIBUTING.zh-CN.md)。
 
-在原创或复刻视频时，如果你觉得 Agent 创作的某个组件在无关项目中也有明确且很高的复用价值，它会是很好的贡献候选。你可以让 Agent 把它移入 Hypit 仓库的 `packages/` 文件夹，再提交给我们，发起一个 Pull Request。普通的一次性组件也可以留在项目内部。
+创建组件是正常的视频制作工作，组件通常留在拥有它的视频项目中。所有者希望分享时，可以把同一份包作为版本化 tarball 直接交付，也可以发布到自己的 npm scope 或私有 registry。希望某个组件由 Hypit 官方 Distribution 维护时，先通过 issue 说明它解决的共同产品需求；官方收录与普通的社区分享是两件事。
 
 [开发指南](https://hypit.ai/zh/guide/develop/)说明了前置条件、日常命令和仓库结构。
 

@@ -60,7 +60,7 @@ its setup and payoff fit the new casting and Brief. The new person may invite a 
 a better version of the joke. A supplied pet might express the same confidence through a planted
 pose, gaze, or comic authority. Let the new character make the work feel inhabited.
 
-The portrait supplies visual identity; [voice direction](../playbooks/craft/voice-and-performance.md)
+The portrait supplies visual identity; [voice direction](../playbooks/craft/voice-direction.md)
 uses supplied audio or a voice chosen for the target performance. The original photo's setting and
 pose may give way to the shot the video needs. Use [reference relationships](../playbooks/craft/generated-dependencies.md)
 to decide where the supplied image enters that production.

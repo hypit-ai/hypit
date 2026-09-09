@@ -28,6 +28,7 @@ Bring the relevant directing knowledge into those decisions: use
 other layers will follow,
 [image direction](../playbooks/craft/image-direction.md) for generated camera images,
 [video direction](../playbooks/craft/video-direction.md) for generated performance and action,
+[voice direction](../playbooks/craft/voice-direction.md) for casting and directing a character's voice,
 [voice and performance](../playbooks/craft/voice-and-performance.md) for A-roll and recurring voices,
 [B-roll](../playbooks/craft/b-roll.md) for coverage,
 [Caption](../playbooks/craft/captions.md) for speech-linked text, and

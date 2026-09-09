@@ -35,7 +35,8 @@ choices so they are easy to revise. The [café example](examples/image-direction
 shows one compact arrangement; a derived view can say even less when its reference already supplies
 the person and world.
 
-For these phone-video portraits, four paragraphs give the direction a clear shape:
+For these phone-video portraits, use this recommended four-paragraph structure. Keep the capture
+wording intact; write the other three with the few anchors this picture needs:
 
 | Paragraph | Directing question | What to express |
 | --- | --- | --- |
@@ -83,7 +84,7 @@ recessed entrance and tables along the pavement implies surfaces, depth and a wa
 In a record shop, shelves turning into an aisle and a nearby browsing bin can do the same work.
 Choose the few features that make this particular view come to mind.
 
-Surface texture and spatial structure contribute different things. Grain or plaster texture can
+Surface texture and spatial structure contribute different things. Wood grain or plaster texture can
 give a surface variation while the whole background still reads as one flat plane. A door recess,
 window bay, shelving return or relationship between furniture and the room can establish how that
 space continues. Describe the useful feature directly. A broad wall can belong naturally to this
@@ -115,6 +116,13 @@ Name hues without adding brightness instructions to them. Purple, coral red, blu
 give direction; casual additions such as "bright," "deep," "dark," or "light" can change the overall
 image when only a hue was intended. The Kit supplies the natural-lighting premise. Add a particular
 time, weather condition, or light event when the intended scene actually needs it.
+
+For clean phone-footage realism, build atmosphere through the scene's colors, materials and character.
+Wood grain, fabric weave and foliage give actual objects tangible detail. Added "fine sensor grain"
+asks for noise across the image; "natural falloff" and "dim" or "dark" lighting directions can push
+the picture toward gray, muddy shadows. These choices can undermine the clarity of this photographic
+style. Let the fixed capture paragraph establish its natural lighting and video texture, and put the
+scene's distinctive detail into the people, place and objects.
 
 For this photographic style, prefer colored, textured materials over broad white or flat gray areas:
 colored plaster, wood, fabric, and foliage can supply surface variation and a more deliberate palette.

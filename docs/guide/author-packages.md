@@ -248,6 +248,35 @@ authority.
 The fixture deliberately uses explicit role filenames so a new author does not need to infer the
 architecture from a large production package.
 
+## 10. Keep or share the same package
+
+Creating this package is ordinary production work. While it belongs only to the current video, keep
+it private under that project's `packages/`. When its owner wants another project to use it, compile
+the same package and either send a versioned `npm pack` tarball or publish it under the owner's npm
+scope or private registry. The consumer installs the chosen release with its package manager and
+commits the resulting lockfile; the logical Module import remains unchanged while that interface is
+compatible.
+
+For a public release, remove `private: true` and add ordinary npm discovery and ownership metadata:
+
+```json
+{
+  "description": "A speech-timed score strip for Hypit videos.",
+  "keywords": ["hypit", "hypit-author-package", "scoreboard"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/studio/score-strip.git"
+  },
+  "license": "MIT"
+}
+```
+
+Its README should include a copyable Source example, public outputs, visual evidence of the component,
+and the Hypit release used to check it. After installation, `hypit vocabulary <package>` reads the
+selected release's own Surface declarations. Package discovery, publication, versions and integrity
+remain with npm or the selected private registry; Hypit loads the package only when Source imports
+one of its logical offers.
+
 ## The complete literal shapes
 
 The fixture is the authoritative small example. These are the same object shapes in abbreviated

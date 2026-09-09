@@ -137,7 +137,7 @@ Runtime 会先解析该 Endpoint 自己声明的凭据槽。它可以对真实�
 声明 `pricing: { kind: "local" }`。Endpoint 还可以通过 `readPricing` 返回 Provider 当前发布的
 原始费率文档；只有网页的服务继续以该网页作为价格入口。`hypit pricing <run> --runtime <profile>`
 把这些材料放在 Run 的 Needs 旁边，而且不会创建 Build。Agent 可以据此计算并解释费用，用户的
-决定仍然是支出授权。共享接口只有来源 URL 和保持 Provider 原始形状的 JSON，因此接入新的
+决定仍然是支出授权。共享接口包含来源 URL、保持 Provider 原始形状的 JSON 和可选的简短费率说明，因此接入新的
 中转站不需要先给 Hypit 增加一种价格表分类。
 
 `hypit plan --runtime <profile>` 仍然完全在本地执行并列出每个请求的 Endpoint。上游文件尚未

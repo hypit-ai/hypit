@@ -139,7 +139,7 @@ Or start without a reference video:
 /hypit Make a ranking video that puts Hypit in S tier.
 ```
 
-Your agent can check the environment, request only the credentials the video needs, preview the result, and build it.
+Your agent can check the environment, request the credentials the video needs, generate the material, and build the finished composition.
 
 ### **👉 [Get 100 FREE AI Avatars with unique voices](https://drive.google.com/drive/u/2/folders/18J9Fz7mkU3OQNJ-2Res3eIyFQ2cemIK5)**
 
@@ -174,10 +174,11 @@ Pull requests are welcome, and documentation, examples and translations count as
 up an open issue or open one for what you want to work on, and we will help you land it.
 [CONTRIBUTING.md](./CONTRIBUTING.md) has the setup, the checks CI runs and the pull request flow.
 
-When creating an original or reconstructed video, a component with clear, high reuse value across
-unrelated videos is a great candidate for contribution. You can ask your Agent to move it into
-Hypit's `packages/` folder, then submit it to us in a Pull Request. Ordinary one-off components can
-remain project-local.
+Creating a component is ordinary video-production work, and the component normally stays with the
+video project that owns it. When its owner wants to share it, the same package can be handed off as
+a versioned tarball or published under the owner's npm scope or private registry. Proposals for a
+component maintained in Hypit's official Distribution begin with an issue describing the shared
+product need; official inclusion is separate from normal community sharing.
 
 The [Development Guide](https://hypit.ai/guide/develop/) covers the prerequisites, the daily
 commands and the repository layout.

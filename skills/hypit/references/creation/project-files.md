@@ -99,12 +99,14 @@ referenced in place; its documentary role does not require a duplicate.
   Typography, MG, Effect and Audio behavior belong to the same connected account.
 - `transcript.json` is word-level speech evidence. It is evidence, not the director's interpretation.
 - `evidence/` contains only media worth reopening, with ordinary human-readable names.
-- `BRIEF.md` preserves the user's goal, facts, constraints, and requested changes.
+- `BRIEF.md` preserves the user's goal, facts, constraints, requested changes and
+  [agreed paid scope](brief.md#brief-preserves-user-authority).
 - `TREATMENT.md` is the director's current answer to the Brief: the intended new piece in complete
   creative terms, before implementation details.
 - `authors/`, `recipes/`, and `runs/` are the exact production implementation.
 - `PROGRESS.md` is a short photograph of the work now: the live question, what remains to examine or
-  make, next useful action, real blockers, active Build ids and reusable Results. When handing work
+  make, next useful action, real blockers, active Build ids and reusable Results. Keep cost information
+  relevant to the remaining work here when it affects the agreed budget. When handing work
   over, retain the relevant Run and Runtime Profile, exact Build id and public Output names needed
   to continue. Run Candidates own
   the actual reuse choices; the note points to them. Established conclusions belong in their owning
