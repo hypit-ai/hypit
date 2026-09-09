@@ -78,13 +78,18 @@ test("OAuth token exchange uses the Endpoint-declared request timeout", async ()
   await assert.rejects(
     async () => await acquireOAuthCredential({ ...acquisition, requestTimeoutMs: 20 }, {
       open: (url) => returnAuthorization(url, () => {}),
-      fetch: async (_input, init) => await new Promise<Response>((_resolve, reject) => {
+      fetch: async (_input, init) => await new Promise<Response>((resolve, reject) => {
         const signal = init?.signal;
         if (signal?.aborted === true) {
           reject(signal.reason);
           return;
         }
-        signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
+        // A real pending request keeps the event loop alive; AbortSignal.timeout does not.
+        const response = setTimeout(() => resolve(Response.json({ access_token: "late" })), 1_000);
+        signal?.addEventListener("abort", () => {
+          clearTimeout(response);
+          reject(signal.reason);
+        }, { once: true });
       }),
     }),
     /token exchange timed out after 20 ms.*no credential was stored/u,
