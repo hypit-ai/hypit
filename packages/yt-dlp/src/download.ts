@@ -12,7 +12,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdtemp, readdir, rename, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, readdir, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -88,7 +88,16 @@ export async function downloadVideo(url: string, target: string): Promise<void> 
     const finished = (await readdir(work)).filter((name) => !name.endsWith(".part"));
     const [file] = finished.sort();
     if (file === undefined) throw new Error(`yt-dlp reported success for ${url} but wrote no file`);
-    await rename(join(work, file), target);
+    const staged = join(work, file);
+    try {
+      await rename(staged, target);
+    } catch (cause) {
+      // Staging lives in the OS temp directory, which is often on a different volume from the
+      // project. A rename cannot cross volumes, so copy the bytes over instead; the staging
+      // directory is removed either way.
+      if ((cause as NodeJS.ErrnoException).code !== "EXDEV") throw cause;
+      await copyFile(staged, target);
+    }
   } finally {
     await rm(work, { recursive: true, force: true });
   }
