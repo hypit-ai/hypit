@@ -213,7 +213,7 @@ export type BuildDiagnostic = {
 
 /** Immutable finite program selected by one Author Graph plus one Run Graph. */
 export type BuildDefinition = {
-  readonly format: "hypit.build-definition@2";
+  readonly format: "hypit.build-definition@1";
   readonly program: LinkedProgram;
   /** Selected zero-input values. Candidate identity has already served its planning purpose. */
   readonly initialRecords: readonly TypedRecord[];

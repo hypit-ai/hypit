@@ -30,7 +30,7 @@ test("Studio library joins this environment's Builds with project Build Result f
   const relevant = activeBuild("bld_20260902T130000000Z_0000000001", "/project");
   const unrelated = activeBuild("bld_20260902T130000001Z_0000000001", "/another-project");
   const manifests = [relevant, unrelated].map((entry) => ({
-    format: "hypit.build-result@2" as const,
+    format: "hypit.build-result@1" as const,
     id: entry.id,
     source: entry.source!,
     ...(entry.run === undefined ? {} : { run: entry.run }),
@@ -120,7 +120,7 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
     await mkdir(join(directory, "files"), { recursive: true });
     await writeFile(join(directory, "files", "final.mp4"), bytes);
     await writeFile(join(directory, "result.json"), `${JSON.stringify({
-      format: "hypit.build-result@2",
+      format: "hypit.build-result@1",
       title: "First cut",
       source: { path: join(root, "main.svml") },
       run: { path: join(root, "build.svrun") },

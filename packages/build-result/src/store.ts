@@ -346,7 +346,7 @@ export class FileBuildResult {
     const temporary = join(resolve(root), `.preparing-${seed.id}-${randomUUID()}`);
     await mkdir(temporary);
     const manifest: BuildResultManifest = {
-      format: "hypit.build-result@2",
+      format: "hypit.build-result@1",
       id: seed.id,
       ...(seed.title === undefined ? {} : { title: seed.title }),
       source: seed.source,

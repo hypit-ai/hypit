@@ -18,7 +18,7 @@ test("author check keeps the default summary compact and reserves Output types f
   const presentation = {
     kind: "check-author",
     machine: {
-      format: "hypit.cli-check@2",
+      format: "hypit.cli-check@1",
       sourceKind: "author",
       ok: true,
       source: "/project/main.svml",
@@ -41,7 +41,7 @@ test("author check keeps the default summary compact and reserves Output types f
 
 test("JSON mode writes exactly the stable command view", () => {
   const machine = {
-    format: "hypit.cli-doctor@3" as const,
+    format: "hypit.cli-doctor@1" as const,
     ok: false,
     project: "/project",
     profile: "/project/hypit.runtime.ts",
@@ -57,7 +57,7 @@ test("plan presents useful choices and readable requests without default graph i
   const presentation = {
     kind: "plan",
     machine: {
-      format: "hypit.cli-plan@3",
+      format: "hypit.cli-plan@1",
       ok: true,
       run: "/project/build.svrun",
       targetCount: 1,
@@ -91,7 +91,7 @@ test("plan presents useful choices and readable requests without default graph i
 
 test("plan names the Provider and price page behind each request, and points at --runtime when it cannot", () => {
   const base = {
-    format: "hypit.cli-plan@3",
+    format: "hypit.cli-plan@1",
     ok: true,
     run: "/project/build.svrun",
     targetCount: 1,
@@ -195,7 +195,7 @@ test("run check treats historical reuse as a normal summary", () => {
   const output = capture(human, {
     kind: "check-run",
     machine: {
-      format: "hypit.cli-check@2",
+      format: "hypit.cli-check@1",
       sourceKind: "run",
       ok: true,
       run: "/project/build.svrun",

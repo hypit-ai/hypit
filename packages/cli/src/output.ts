@@ -39,7 +39,7 @@ export type CliDiagnostic = {
 };
 
 export type DoctorOutput = {
-  readonly format: "hypit.cli-doctor@3";
+  readonly format: "hypit.cli-doctor@1";
   readonly ok: boolean;
   readonly project: string;
   readonly profile?: string;
@@ -49,7 +49,7 @@ export type DoctorOutput = {
 };
 
 export type AuthorCheckOutput = {
-  readonly format: "hypit.cli-check@2";
+  readonly format: "hypit.cli-check@1";
   readonly sourceKind: "author";
   readonly ok: true;
   readonly source: string;
@@ -70,7 +70,7 @@ export type AuthorCheckOutput = {
 };
 
 export type RunCheckOutput = {
-  readonly format: "hypit.cli-check@2";
+  readonly format: "hypit.cli-check@1";
   readonly sourceKind: "run";
   readonly ok: true;
   readonly run: string;
@@ -112,7 +112,7 @@ export type PlanProvider = {
 };
 
 export type PlanOutput = {
-  readonly format: "hypit.cli-plan@3";
+  readonly format: "hypit.cli-plan@1";
   readonly ok: boolean;
   readonly run: string;
   readonly targetCount: number;

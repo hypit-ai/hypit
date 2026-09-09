@@ -152,7 +152,7 @@ export async function runCli(
     const profile = resolve(args.profile);
     const selected = await selectRuntimeProfile(await commandProjectRoot(), profile);
     writeOperational({
-      format: "hypit.cli-runtime-selection@2",
+      format: "hypit.cli-runtime-selection@1",
       selected: true,
       profile: selected.profile,
       project: selected.projectRoot,
@@ -165,7 +165,7 @@ export async function runCli(
   if (args.command === "runtime" && args.action === "unset") {
     const cleared = await clearRuntimeProfile(await commandProjectRoot());
     writeOperational({
-      format: "hypit.cli-runtime-selection@2",
+      format: "hypit.cli-runtime-selection@1",
       selected: false,
       removed: cleared !== undefined,
       ...(cleared === undefined ? {} : { profile: cleared.profile, project: cleared.projectRoot }),
@@ -279,7 +279,7 @@ export async function runCli(
           packageContributions,
         });
         const machine = {
-          format: "hypit.cli-check@2" as const,
+          format: "hypit.cli-check@1" as const,
           sourceKind: "run" as const,
           ok: true,
           run: projectPath(loaded.source, effectiveWorkspaceRoot),
@@ -312,7 +312,7 @@ export async function runCli(
       const values = authorFacing.filter((item) => item.ref.kind !== "logical-output");
       const modules = result.program.closure.modules.map((item) => `${item.manifest.name}@${item.manifest.version}`);
       const machine = {
-        format: "hypit.cli-check@2" as const,
+        format: "hypit.cli-check@1" as const,
         sourceKind: "author" as const,
         ok: true,
         source: projectPath(workspace.entry.name, effectiveWorkspaceRoot),
@@ -428,7 +428,7 @@ export async function runCli(
         const acceptedView = buildStatusView({ id: built.id, runtime: built.view });
         const targets = built.view.targets.slice(0, args.limit);
         writeOperational({
-          format: "hypit.cli-build@3",
+          format: "hypit.cli-build@1",
           build: args.title === undefined ? acceptedView : { ...acceptedView, title: args.title },
         }, "Build submitted", "success", [
           ["Build", built.id],
@@ -487,7 +487,7 @@ export async function runCli(
         operationLimit: args.limit,
       });
       const machine = {
-        format: "hypit.cli-build@3" as const,
+        format: "hypit.cli-build@1" as const,
         build: args.title === undefined || buildView.title !== undefined
           ? buildView
           : { ...buildView, title: args.title },
@@ -613,7 +613,7 @@ export async function runCli(
     writeCliOutput(io, args.presentation, {
       kind: "plan",
       machine: {
-        format: "hypit.cli-plan@3",
+        format: "hypit.cli-plan@1",
         ok: (preflight?.ok ?? true) && unresolvedRequestCount === 0
           && unsupportedRequestCount === 0 && requestIssueCount === 0,
         run: projectPath(loaded.path, effectiveWorkspaceRoot),

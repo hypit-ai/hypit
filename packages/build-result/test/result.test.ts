@@ -180,7 +180,7 @@ test("filesystem decodes Result and writer data before exposing it", async () =>
     const directory = buildResultDirectory(root, malformed);
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
-      format: "hypit.build-result@2",
+      format: "hypit.build-result@1",
       source: { path: "main.svml" },
       targets: ["video"],
       outputs: {
@@ -221,7 +221,7 @@ test("reserved-looking domain objects remain ordinary Composite data", async () 
     const directory = buildResultDirectory(root, id);
     await mkdir(join(directory, "values"), { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
-      format: "hypit.build-result@2",
+      format: "hypit.build-result@1",
       source: { path: "main.svml" },
       targets: ["value"],
       outcome: "complete",
@@ -251,7 +251,7 @@ test("describing a Composite Output reads only its manifest", async () => {
     const directory = buildResultDirectory(root, id);
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
-      format: "hypit.build-result@2",
+      format: "hypit.build-result@1",
       source: { path: "main.svml" },
       targets: ["take"],
       outcome: "complete",
