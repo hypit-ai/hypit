@@ -166,7 +166,7 @@ function windowsCommandLine(args: readonly string[]): string {
  * its own beside the log; `-PassThru` reports the new process, which is the pid everything after this
  * waits on and stores.
  */
-async function startWithOwnConsole(
+export async function startWithOwnConsole(
   start: ManagedProgramCommand,
   root: string,
   logPath: string,
