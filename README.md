@@ -43,7 +43,7 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 
 **To be clear:** cloning a video is the fastest way in, not the only one. You can start from our templates, or just describe the video you want and your agent writes the workflow from scratch. Generation models are optional too: a workflow can compile captions, motion graphics and code-rendered visuals into a finished video without calling a single model, so a video can cost exactly $0.
 
-![SVML source and live video preview](./docs/public/demo.gif)
+![SVML source and live video preview](https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/demo.gif)
 
 <p align="center"><em>SVML source on the left, with the corresponding video rendered live on the right.</em></p>
 
@@ -53,8 +53,8 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 npx skills add hypit-ai/hypit -g
 ```
 
-OpenAgents and other Skill hubs install the same canonical `skills/hypit/` directory. On first use,
-the Skill prepares the executable Hypit Distribution separately; your video project can live anywhere.
+This installs the Skill. On first use, your agent checks for the Hypit executable and helps prepare
+it if needed. Your video project can live anywhere.
 
 ## Examples
 
@@ -66,14 +66,14 @@ the Skill prepares the executable Hypit Distribution separately; your video proj
   <tr>
     <th width="16%">Reference</th>
     <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/f573bdac-62da-4b5d-825d-54d5880a7026" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/ugc-reference.mp4" controls muted></video></td>
     <td width="28%"></td>
   </tr>
   <tr>
     <th width="16%">Clones</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/3ffd9951-e423-4a48-ad8f-5c596627be69" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/eb62372d-2464-4a4b-83ee-41e227f99a8e" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/9ba050f6-355d-460c-b684-7344cf49c051" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/ugc-clone-1.mp4" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/ugc-clone-2.mp4" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/ugc-clone-3.mp4" controls muted></video></td>
   </tr>
   <tr>
     <td colspan="4"><p><b>"GOAT DEBATE"</b> — a 20-second football tier list that puts Ronaldo in D and Messi in S. Two Seedance 2 Mini 720p trolling A-rolls, a 2K goth girl portrait and ten 1K brain-rot B-rolls by GPT Image 2, WhisperX word alignment, a sound-synced ranking board, color-box karaoke captions, buttery-smooth animation and catchy background music, concurrently rendered in 64 headless Chromium processes.</p><p>Three clones included: swap the narrator to banana cat, flip the rankings and Ronaldo becomes GOAT, or replace all players with tech founders — same viral structure, different viral video.</p><p>Total cost: <b>$1.15</b>.</p></td>
@@ -88,14 +88,14 @@ the Skill prepares the executable Hypit Distribution separately; your video proj
   <tr>
     <th width="16%">Reference</th>
     <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/22df72b8-4831-4eb6-957d-676ae9b04f2d" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/podcast-reference.mp4" controls muted></video></td>
     <td width="28%"></td>
   </tr>
   <tr>
     <th width="16%">Clones</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/9c14c5ae-bd12-4961-9d57-a46d3a2154c6" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/f44c653b-f520-4715-9530-4c2f42114387" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/92f9bf8b-4f83-4d9b-a0e8-ca27fab2cc94" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/podcast-clone-1.mp4" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/podcast-clone-2.mp4" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/podcast-clone-3.mp4" controls muted></video></td>
   </tr>
   <tr>
     <td colspan="4"><p><b>"DAILY CREATINE"</b> — an 18-second podcast clip where a muscle barbie forces creatine on a skinny college kid. Three confrontational A-rolls and an aspirational lifestyle B-roll by Seedance 2 Mini 720p, two 2K AI character portraits and three 1K montage panels by GPT Image 2, WhisperX word alignment, split-screen interview layout, speaker-aware karaoke captions, a product-handoff moment and background music, concurrently rendered in 64 headless Chromium processes.</p><p>Three clones included: swap both hosts to Pepe and Doge arguing about doggy arms, replace the creatine with retinol where a pretty boy roasts a tomboy's pores, or ditch the physical product for a CheatGPT app where a himbo jock out-GPAs a PhD student — same podcast format, three ad verticals.</p><p>Total cost: <b>$1.07</b>.</p></td>
@@ -110,14 +110,14 @@ the Skill prepares the executable Hypit Distribution separately; your video proj
   <tr>
     <th width="16%">Reference</th>
     <td width="28%"></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/666ad535-3231-44fb-b9bc-271817ae79de" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/interview-reference.mp4" controls muted></video></td>
     <td width="28%"></td>
   </tr>
   <tr>
     <th width="16%">Clones</th>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/c39a0425-2dcb-4709-b894-6a9423d351e3" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/8f71552c-0ad1-4d29-8c4e-3b937ab7c887" controls muted></video></td>
-    <td width="28%"><video src="https://github.com/user-attachments/assets/d9cab2e7-e08b-48ef-8d25-bc28ca9efc17" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/interview-clone-1.mp4" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/interview-clone-2.mp4" controls muted></video></td>
+    <td width="28%"><video src="https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/interview-clone-3.mp4" controls muted></video></td>
   </tr>
   <tr>
     <td colspan="4"><p><b>"NICE RIDE"</b> — a 26-second street interview where a mob wife drops three rules for making her first million. Three A-rolls by Seedance 2 Mini 720p, one 2K AI character portrait by GPT Image 2, WhisperX word alignment, head-tracked speaker-colored captions driven by face bounding boxes from Google Video Intelligence and YOLOv8 AnimeFace, a sound-synced emoji reveal board with color flashes and reveal sound effects, plus background music, concurrently rendered in 64 headless Chromium processes.</p><p>Three clones included: swap hosts to Wojak and Chad, translate everything to Spanish with exactly the same punchlines, or swap the Lambo for an F1 car where Ada explains to Leon how driving Uber led to an accidental Grand Prix win — same three-stage reveal, distinct street-interview remixes.</p><p>Total cost: <b>$1.09</b>.</p></td>
@@ -166,7 +166,7 @@ Drop in a video and your agent clones the whole workflow — or describe what yo
 
 Star us, and you will receive all release notifications from GitHub without any delay!
 
-![Stay tuned with us](./docs/public/star.gif)
+![Stay tuned with us](https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/star.gif)
 
 ## How to Contribute
 

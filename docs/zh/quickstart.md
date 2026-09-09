@@ -5,6 +5,8 @@ description: 无需手写 SVML 或 SVS，通过 Coding Agent 创建、审阅并�
 
 你不需要了解 SVML、SVS、JavaScript 或命令行。用日常语言向 Coding Agent 描述视频，Agent 会通过 `/hypit` skill 理解参考、设计内容、制作视频，并交付可继续修改的项目。
 
+录屏用于展示对话和编辑操作。界面与个别命令可能有所不同，当前的使用方式请参照下文。
+
 ## 你需要准备什么
 
 - 一个能够使用 skill 的 Coding Agent，例如 Claude Code 或 Codex；
@@ -18,15 +20,15 @@ description: 无需手写 SVML 或 SVS，通过 Coding Agent 创建、审阅并�
 npx skills add hypit-ai/hypit -g
 ```
 
-然后在任意处启动 Coding Agent，Hypit skill 将全局可用。Skill 提供制作知识；Agent 会检查 Hypit 命令是否可用，并在需要时安装可执行工具。
+然后在任意处启动 Coding Agent，Hypit skill 将全局可用。Skill 提供制作知识；Agent 会检查 Hypit 命令是否可用，并在需要时准备可执行工具，说明其中需要你选择的安装事项。
 
 ### **👉 [免费获得 100 个拥有独特音色的 AI 人物形象](https://drive.google.com/drive/u/2/folders/18J9Fz7mkU3OQNJ-2Res3eIyFQ2cemIK5)**
 
 ## 2. 描述你想制作的视频
 
-<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/describe_the_video_you_want.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/describe_the_video_you_want.mp4"></video>
 
-你可以选择以下两种方式之一。
+可以从一条想改编的参考视频开始，也可以从一个创意开始。
 
 ### 复刻一条参考视频
 
@@ -36,14 +38,14 @@ npx skills add hypit-ai/hypit -g
 /hypit 克隆这条视频：/path/to/video.mp4
 ```
 
-你也可以直接提供在线视频平台的链接。Agent 会使用 `yt-dlp` 自动下载视频。例如：
+你也可以直接提供在线视频平台的链接。对于支持的平台，Agent 会使用 `yt-dlp` 下载视频。例如：
 
 ```text
 /hypit 克隆这条视频：https://www.youtube.com/watch?v=VIDEO_ID
 /hypit 克隆这条视频：https://www.instagram.com/reel/REEL_ID/
 ```
 
-如果需要改变内容，也可以一并说明，例如更换主持人、语言、产品、画幅比例、视觉风格或行动号召。参考视频会被当作剪辑结构的证据；Agent 不会只给你一份分析报告，而是会创建一套可以审阅、修改和 Build 的完整视频程序。
+如果需要改变内容，也可以一并说明，例如更换主持人、语言、产品、画幅比例、视觉风格或行动号召。Agent 会理解原片为什么有效，并根据你的目标改编剧本、人物表演和画面关系。你会得到成片和可继续编辑的项目。
 
 ### 原创一条视频
 
@@ -55,60 +57,67 @@ npx skills add hypit-ai/hypit -g
 
 你还可以补充目标受众、时长、语言、语气、品牌色、主持人、发布平台或画幅比例等要求。Agent 会把 brief 转换成完整计划，并自行补全制作所需的细节。
 
-## 3. 按 Agent 提示提供凭据
+## 3. 选择项目使用的服务
 
-<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/provide_credentials_when_the_agent_asks.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/provide_credentials_when_the_agent_asks.mp4"></video>
 
-在你描述视频之后，Agent 会检查项目需要哪些模型和服务。如果缺少必要凭据，Agent 会向你询问，并说明该凭据的用途。你可以选择两种方式：
+Agent 会先检查当前项目已有的工具和服务，说明缺少什么，并帮助你选择接入方式。对于有对白的参考视频，WhisperX 提供理解视频所需的转写和词时间。Agent 会检查本地是否已有可用环境；需要时，可以帮助准备本地环境，也可以使用你选择的托管服务。
 
-1. **使用 Hypit 推荐的 hypit.ai OAuth 登录。** 告诉 Agent 通过 hypit.ai 登录。一次 OAuth 登录即可覆盖 Hypit 托管服务提供的所有模型，不需要为每个模型分别收集 key。
-2. **使用你自己的 Provider key。** 你可以直接和 Agent 约定要使用哪些模型，并提供相应 Provider 的 API key。Agent 只会索取当前项目需要的 key，不会询问无关凭据。
+你可以使用自己的 Provider 账号，也可以选择 HypiHub，通过一个账号使用托管转写和生成服务。告诉 Agent 你已经使用哪些服务，以及更倾向本地配置还是托管工具。确定连接某项服务后，它再打开登录。录屏展示的是 HypiHub 登录选项。
 
-不要把密钥粘贴到公开文档中，也不要提交到 Git。Agent 会使用已配置的安全凭据存储来保存这些凭据。
+通过服务的登录或凭据配置完成连接。凭据保存在配置的凭据存储中，项目记录使用哪些服务。
 
-## 4. 让 Agent 完成制作
+## 4. 约定付费范围
 
-<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/let_the_agent_do_the_production_work.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/approve_and_submit_the_paid_build.mp4"></video>
+
+使用付费服务前，Agent 会说明使用的账号、准备执行的工作和可查到的价格信息。一起确定制作范围与预算，例如：
+
+```text
+使用我选定的账号完成这条视频，包括转写和素材生成，总预算不超过 5 美元。制作过程中及时告诉我进展。
+```
+
+这份授权覆盖约定范围内后续开展的工作。如果你只想先分析，就先授权分析；明确制作方向后，再估算制作费用。扩大范围、更换付费账号或超出预算时，再由你作出新的决定。
+
+录屏展示如何确认一项制作请求。实际费用，以及哪些处理在本地或托管服务上执行，取决于当前项目选择的服务。
+
+## 5. 让 Agent 制作视频
+
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/let_the_agent_do_the_production_work.mp4"></video>
 
 Agent 会从你的目的出发理解参考视频，结合带时间的帧图和台词，弄清故事、节奏，以及字幕、B-roll、图形的作用与出现时机。换人或换产品的要求会从一开始影响剧本和设计。
 
-它把这些决定写入项目文件，选择或编写合适的组件，用图片与视频模型制作素材，再按语义时间线编排。Studio 和局部渲染帮助检查版面、时机与可读性。已有素材会被复用；重要的决定、进展和问题会及时告诉你。
+它记录制作方向，写好图片和表演的 prompt，安排素材之间的参考关系。独立素材正在生成时，可以同时编写组件、准备编排。有对白的素材提供字幕与图形所依附的语义时间；纯动画也可以按自身的表达节奏安排时间。
 
-## 5. 在 Studio 查看编排
+实际素材到位后，Agent 检查版面、运动和时机如何配合，并调整相应组件。已有素材保留用于复用；创作决定、进展和问题会及时告诉你。
 
-<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/review_the_mock_studio.mp4"></video>
+Build 会保存已完成的素材和输出。如果某次执行失败，Agent 会说明情况，并在约定范围内通过新的 Run 和 Build 使用已有成果继续制作。
 
-Studio 展示当前 Run 选定的素材、字幕和图形。Agent 可以用已有素材检查构图，也可以在生成素材后继续调整编排。
+## 6. 查看成片
 
-查看故事是否清楚、字幕是否易读、产品或 ranking 板是否突出、B-roll 是否放在合适的位置。直接描述你想要的改变：
-
-```text
-ranking 板出现得太晚，字幕太小。让板子跟着介绍排名的台词出现，并把字幕放大一些。
-```
-
-Agent 会修改对应部分，再展示更新后的画面。
-
-## 6. 确认后提交付费 Build
-
-<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/approve_and_submit_the_paid_build.mp4"></video>
-
-开始新的付费工作前，Agent 会说明所选模型、将要执行的外部工作和可查到的价格信息。你可以授权明确的制作范围：
-
-```text
-按这个方案生成素材并完成视频，预算在我们刚确认的范围内。
-```
-
-Agent 提交 Build 并跟进结果。已完成的素材和输出会保存在项目的 Result 中；出现失败时，它会说明原因，并在新的 Run 和 Build 中复用可用产物。
-
-## 7. 查看成片
-
-<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/review_the_paid_result.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/review_the_paid_result.mp4"></video>
 
 Build 完成后，Agent 会提供最终视频及保存位置。查看内容、字幕、转场、构图和声音是否符合你的目标。需要修改时，直接告诉 Agent；项目保留可编辑的源码和已生成素材。
 
-## 8. 继续用自然语言提出修改
+### 在 Studio 里了解可编辑项目
 
-<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/request_natural_language_changes.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/review_the_mock_studio.mp4"></video>
+
+交付成片时，Agent 也可以打开 Studio，展示这条视频的可编辑编排。你可以通过预览、时间线和属性面板，了解素材、字幕与图形如何配合。
+
+录屏用占位素材展示时间线和编辑界面。在你的项目里，Agent 会打开选用了实际制作素材的 Run。远程协作时，也可以通过截图或短录屏了解项目。
+
+你可以提出具体要求，例如：
+
+```text
+让 ranking 板跟着介绍排名的台词出现，并把字幕放大一些。
+```
+
+Agent 会修改对应的源码或组件，并检查更新后的编排。
+
+## 7. 继续用自然语言提出修改
+
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/request_natural_language_changes.mp4"></video>
 
 Build 成功后，你仍然可以用对话继续指导项目。你可以更换主持人、替换 B-roll、改变 ranking 板的样式、翻译台词、调整语气或切换画幅比例。例如：
 
@@ -118,9 +127,9 @@ Build 成功后，你仍然可以用对话继续指导项目。你可以更换�
 
 Agent 会把每项要求落实到对应的源码和组件，保留你要求不变的部分，并复用已有产物。新的付费生成遵循你授权的范围。
 
-## 9. 并行制作多个变体
+## 8. 并行制作多个变体
 
-<video controls playsInline preload="metadata" width="100%" src="../quickstart/videos/create_multiple_variants_in_parallel.mp4"></video>
+<video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-09/create_multiple_variants_in_parallel.mp4"></video>
 
 如果需要多个版本，先告诉 Agent 哪些维度可以变化。它会与你讨论具体方向，例如：
 

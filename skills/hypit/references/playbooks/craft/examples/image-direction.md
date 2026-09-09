@@ -11,7 +11,7 @@ with the result it describes.
 
 ## Goth girl outside a Korean cafe
 
-![Goth presenter outside a Korean café, with a wooden shopfront, red architectural details, plants and grape bingsu](https://hypit.s3.us-east-1.amazonaws.com/assets/skills/hypit/image-direction/v1/goth-korean-cafe.webp)
+![Goth presenter outside a Korean café, with a wooden shopfront, red architectural details, plants and grape bingsu](https://storage.googleapis.com/hypit-public-assets/assets/skills/hypit/image-direction/v1/goth-korean-cafe.webp)
 
 Production example: the prompt below was used directly to generate the shown image.
 
@@ -66,7 +66,7 @@ The four paragraphs keep their roles; the scene determines their particular fram
 
 ## Shanghai record-store owner
 
-![Shanghai record-store owner: green knit, bob, and headphones in a working record shop](https://hypit.s3.us-east-1.amazonaws.com/assets/skills/hypit/image-direction/v1/shanghai-record-store.webp)
+![Shanghai record-store owner: green knit, bob, and headphones in a working record shop](https://storage.googleapis.com/hypit-public-assets/assets/skills/hypit/image-direction/v1/shanghai-record-store.webp)
 
 Here the striking beauty and cool music-lover presence have a different expression: a bob, jade-green
 knit, headphones, and a few record-shop details. Green clothing and walnut shelves distinguish the
@@ -119,7 +119,7 @@ Look at that image and direct its appeal within the target work, using the same 
 
 ## Mob Wife: strong glamour in a captured world
 
-![Mob Wife: strong glamour in a captured world](https://hypit.s3.us-east-1.amazonaws.com/assets/skills/hypit/image-direction/v1/mob-wife.webp)
+![Mob Wife: strong glamour in a captured world](https://storage.googleapis.com/hypit-public-assets/assets/skills/hypit/image-direction/v1/mob-wife.webp)
 
 The beauty comparison and "Stay out of my husband's business" give this person a vivid presence.
 Fur, layered gold, red lips, and an expensive restaurant reinforce it. Simple material names leave
@@ -143,7 +143,7 @@ The restaurant's background palette is mainly red and gold. It feels like an ups
 
 ## Orange-cat CEO: comic authority through body and setting
 
-![Orange-cat CEO: comic authority through body and setting](https://hypit.s3.us-east-1.amazonaws.com/assets/skills/hypit/image-direction/v1/orange-cat-ceo.webp)
+![Orange-cat CEO: comic authority through body and setting](https://storage.googleapis.com/hypit-public-assets/assets/skills/hypit/image-direction/v1/orange-cat-ceo.webp)
 
 The boss's authority organizes the picture. A round face, large belly, crooked tie, straining suit
 buttons, and undersized cat tree make that authority funny. A leather chair, office window, laptop,
@@ -165,7 +165,7 @@ The office's background design combines gray and orange textures. It looks like 
 
 ## Mermaid: an impossible subject in a photographed world
 
-![Mermaid: an impossible subject in a photographed world](https://hypit.s3.us-east-1.amazonaws.com/assets/skills/hypit/image-direction/v1/mermaid.webp)
+![Mermaid: an impossible subject in a photographed world](https://storage.googleapis.com/hypit-public-assets/assets/skills/hypit/image-direction/v1/mermaid.webp)
 
 The mermaid identity, explicit beauty, and friendly curiosity direct the person. Wet hair, shells,
 pearls, coral, and fish establish the underwater world. Sea blue and coral orange give it a color
