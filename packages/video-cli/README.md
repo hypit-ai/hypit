@@ -99,7 +99,8 @@ Grid `samples` retain the requested times; `frames` contain the actual extracted
 It also reports every page path for `tiles`. The media layer reads existing timed text; transcription
 and its Endpoint remain separate. `boundaries` reports adjacent-frame
 change candidates and their measured scores; it does not suppress short changes or call them shots.
-`fetch` turns a link into a file with the pinned yt-dlp. Commands that create evidence write only
+`fetch` turns a link into a file with the pinned yt-dlp; [the downloader package](../yt-dlp/README.md)
+owns its dependencies, download choices and file handling. Commands that create evidence write only
 what `--to` names and refuse to overwrite. `vocabulary` reads the installed
 manifests: every package with its tags and models, or one package's Surfaces with their attributes,
 children and example, or the value shapes a drawing Producer must emit.
