@@ -107,6 +107,14 @@ children and example, or the value shapes a drawing Producer must emit.
 Install the `hypit` Distribution globally once. It resolves its own TypeScript loader and CLI, so it
 neither invokes npm per command nor requires a project to contain Hypit's `package.json`.
 
+`hypit capture screenshot <url-or-file> --to <image>` saves browser material, and
+`hypit capture run <script.mjs> [-- arguments]` runs ordinary project interactions with a prepared
+Puppeteer page and screenshot/recording helpers. `hypit capture --help` lists viewport, region,
+readiness and browser options. `hypit capture install-browser` prepares the package's tested browser
+revision; an already installed compatible browser can be selected explicitly. The independently maintained `@hypit/browser-capture` package owns
+browser lifecycle and capture; Video CLI owns command presentation. This preparation tool outputs
+ordinary project files and opens no Runtime Profile or Build. The package README owns the script API.
+
 `--workspace` is only the Source Workspace containment boundary. `--asset-root` may additionally admit
 explicit asset bytes without widening Source imports. `--package-root` is only the Host
 override used to resolve installed packages. By default, a project with

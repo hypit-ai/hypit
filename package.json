@@ -5,6 +5,10 @@
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "exports": {
+    "./browser-capture": {
+      "types": "./dist/public/browser-capture.d.ts",
+      "import": "./packages/browser-capture/src/index.ts"
+    },
     "./artifact": {
       "types": "./dist/public/artifact.d.ts",
       "import": "./packages/artifact/src/index.ts"
@@ -141,6 +145,7 @@
     "node": ">=22.12.0"
   },
   "devDependencies": {
+    "@hypit/browser-capture": "workspace:*",
     "@hypit/artifact": "workspace:*",
     "@hypit/audio-track": "workspace:*",
     "@hypit/audio-track-studio": "workspace:*",
@@ -233,6 +238,9 @@
     "vitepress": "^1.6.4"
   },
   "dependencies": {
+    "@puppeteer/browsers": "3.2.2",
+    "puppeteer-core": "25.10.0",
+    "sharp": "0.35.3",
     "cmu-pronouncing-dictionary": "3.0.0",
     "tsx": "4.21.0",
     "typescript": "5.9.3",

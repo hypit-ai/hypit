@@ -11,6 +11,7 @@ import { isCreationCommand, runCreationCli } from "./creation.js";
 import { videoCliDistribution } from "./distribution.js";
 import { runMediaCli } from "./media.js";
 import { runVocabularyCli } from "./vocabulary.js";
+import { runCaptureCli } from "./capture.js";
 
 export {
   createVideoCompiler,
@@ -23,6 +24,7 @@ export { creationCommands, isCreationCommand, runCreationCli, writeCreationHelp 
 export type { CreationCommand, CreationEnvironment, CreationHost } from "./creation.js";
 export { isMediaCommand, mediaCommands, runMediaCli, writeMediaHelp } from "./media.js";
 export type { MediaCommand, MediaProbe } from "./media.js";
+export { runCaptureCli, writeCaptureHelp } from "./capture.js";
 export { listPackages, listSurfaces, runVocabularyCli, visualSchema, writeVocabularyHelp } from "./vocabulary.js";
 export type { PackageListing, SurfaceListing } from "./vocabulary.js";
 /** The project's selected Runtime Profile, read the way `hypit` reads it, for tools that run beside the CLI. */
@@ -39,6 +41,7 @@ export function runVideoCli(
   installExternalPackageResolution([hypitHostPackageRoot()]);
   if (isCreationCommand(argv[0])) return runCreationCli(argv, io);
   if (argv[0] === "media") return runMediaCli(argv, io);
+  if (argv[0] === "capture") return runCaptureCli(argv, io);
   if (argv[0] === "vocabulary") return runVocabularyCli(argv, io);
   return runCli(argv, io, {
     ...videoCliDistribution,

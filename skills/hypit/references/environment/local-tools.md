@@ -104,7 +104,7 @@ answers its health probe; `hypit doctor` then checks the selected Endpoint as pa
 
 If local installation is incompatible with the machine, blocked by the network, or making no useful
 progress within the user's available time, report the exact evidence and offer another Provider for
-the same capability. Repeated installation attempts are not a substitute for a working ear.
+the same capability. Continue independent reference or production work while that choice is resolved.
 
 ## Repair from the narrowest evidence
 

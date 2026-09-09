@@ -1,0 +1,15 @@
+{
+  "name": "@hypit/browser-capture",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@puppeteer/browsers": "3.2.2",
+    "puppeteer-core": "25.10.0",
+    "sharp": "0.35.3"
+  }
+}
