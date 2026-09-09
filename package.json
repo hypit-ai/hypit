@@ -1,6 +1,11 @@
 {
   "name": "@hypit/hypit",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "homepage": "https://hypit.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hypit-ai/hypit.git"
+  },
   "description": "Hypit video authoring Distribution for AI agents",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
@@ -145,6 +150,7 @@
     "examples/semantic-composition/hypit.runtime.json"
   ],
   "scripts": {
+    "pack:distribution": "node scripts/pack-distribution.mjs",
     "build:public-types": "node scripts/build-public-types.mjs",
     "check": "tsc -p tsconfig.json --noEmit",
     "docs:dev": "vitepress dev docs",

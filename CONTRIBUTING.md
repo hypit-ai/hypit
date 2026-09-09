@@ -50,6 +50,14 @@ pnpm check         # TypeScript type-check
 pnpm test          # package and service-adapter tests
 ```
 
+## Package the Distribution
+
+Run `npm run pack:distribution` to build public types and write the release tarball to
+`dist/release/`. This stages npm's selected files in a temporary directory and adapts the English
+README for the npm page: public image URLs, both GIFs, and a link to the full video examples.
+The repository READMEs remain unchanged. `dist/release/README.md` shows the packaged text.
+Publish the resulting tarball with `npm publish dist/release/hypit-hypit-<version>.tgz --access public`.
+
 ## Open the pull request
 
 Branch names and commit subjects share the same prefix: `feat/`, `fix/`, `docs/` for branches and

@@ -42,6 +42,14 @@ pnpm check         # TypeScript 类型检查
 pnpm test          # 包与服务适配器测试
 ```
 
+## 打包 Distribution
+
+运行 `npm run pack:distribution`，构建公共类型并将发布 tarball 写入 `dist/release/`。
+脚本在临时目录中使用 npm 选定的文件，从英文 README 生成 npm 页面版本：使用公开图片地址，
+保留两个 GIF，并将完整视频示例改为链接。仓库的两份 README 保持原样。
+`dist/release/README.md` 可用于检查打包后的文案。
+使用 `npm publish dist/release/hypit-hypit-<version>.tgz --access public` 发布生成的 tarball。
+
 ## 提交 Pull Request
 
 分支名与提交信息使用同一套前缀：分支用 `feat/`、`fix/`、`docs/`，提交信息用 `feat:`、`fix:`、`docs:`。
