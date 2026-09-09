@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { canonicalStringify } from "@hypit/protocol";
 
 import { processAlive, stopProcessTree } from "./process-control.js";
+import { startWithOwnConsole } from "./programs.js";
 
 export type RuntimeWorkerLaunch = {
   readonly command: string;
@@ -215,26 +216,42 @@ export async function ensureRuntimeProcess(
     await rm(location.ready, { force: true });
     await rotateLog(location.log);
     const log = await open(location.log, "a");
-    let child;
+    const workerArgs = [
+      ...launch.args,
+      "_worker",
+      absolute,
+      "--ready-file",
+      location.ready,
+      "--worker-owner",
+      owner,
+      ...(launch.workerArgs ?? []),
+    ];
+    let child: { readonly pid?: number | undefined; readonly unref?: (() => unknown) | undefined };
     try {
-      child = spawn(launch.command, [
-        ...launch.args,
-        "_worker",
-        absolute,
-        "--ready-file",
-        location.ready,
-        "--worker-owner",
-        owner,
-        ...(launch.workerArgs ?? []),
-      ], {
-        cwd: process.cwd(),
-        // See the managed program start in `programs.ts`: on Windows, detaching costs the console and
-        // every console descendant then gets a window of its own.
-        detached: process.platform !== "win32",
-        windowsHide: true,
-        stdio: ["ignore", log.fd, log.fd],
-        env: process.env,
-      });
+      // Outliving this CLI process is the point, and what grants it differs by platform. Windows
+      // ties a process to the console it inherits, so a plain child died with the command that
+      // started it and its Builds then sat at `0/n steps` with an empty Worker log. `programs.ts`
+      // explains why a hidden console of its own is the combination neither spawn option reaches.
+      if (process.platform === "win32") {
+        const started = await startWithOwnConsole(
+          { command: launch.command, args: workerArgs, cwd: process.cwd() },
+          process.cwd(),
+          location.log,
+        );
+        if (started.pid === undefined) {
+          const refusal = started.detail === undefined ? "" : `: ${started.detail}`;
+          throw new Error(`Runtime Worker process did not start${refusal}`);
+        }
+        child = { pid: started.pid };
+      } else {
+        child = spawn(launch.command, workerArgs, {
+          cwd: process.cwd(),
+          detached: true,
+          windowsHide: true,
+          stdio: ["ignore", log.fd, log.fd],
+          env: process.env,
+        });
+      }
       if (child.pid === undefined) throw new Error("Runtime Worker process has no pid");
       const startedAt = Date.now();
       await writeFile(location.pid, JSON.stringify({
@@ -244,7 +261,7 @@ export async function ensureRuntimeProcess(
         pid: child.pid,
         startedAt,
       } satisfies ProcessRecord), "utf8");
-      child.unref();
+      child.unref?.();
       try {
         const ready = await waitForReady(absolute, dataRoot, owner, timeoutMs);
         if (ready.configuration === "changed") {
