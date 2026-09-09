@@ -29,4 +29,18 @@ const {
 installDistributionPackageResolution([distributionRoot]);
 const { hypitHostPackageRoot } = await import("../packages/runtime-host-node/src/index.ts");
 installExternalPackageResolution([hypitHostPackageRoot()]);
-await import("../packages/video-cli/src/cli.ts");
+const args = process.argv.slice(2);
+if (args[0] === "studio" || (args[0] === "help" && args[1] === "studio")) {
+  const { runStudio } = await import("../packages/studio/start.ts");
+  try {
+    await runStudio(args[0] === "help" ? ["--help"] : args.slice(1).filter((arg) => arg !== "--debug"), {
+      write: (text) => process.stdout.write(text),
+    });
+  } catch (error) {
+    const { renderCliError } = await import("../packages/cli/src/index.ts");
+    process.stderr.write(renderCliError(error, { debug: args.includes("--debug") }));
+    process.exitCode = 1;
+  }
+} else {
+  await import("../packages/video-cli/src/cli.ts");
+}

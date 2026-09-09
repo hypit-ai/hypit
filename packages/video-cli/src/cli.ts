@@ -64,7 +64,9 @@ const io: CliIo = {
 async function main(): Promise<void> {
   const commandArgs = argv[0] === "capture" && argv.includes("--") ? argv.slice(0, argv.indexOf("--")) : argv;
   if (argv.length === 0 || argv[0] === "help" || commandArgs.includes("--help")) {
-    const topic = argv[0] === "help" ? argv[1] : argv.includes("--help") ? argv[0] : undefined;
+    const topic = argv[0] === "help" ? argv[1]
+      : argv[0] === "--help" ? undefined
+      : argv.includes("--help") ? argv[0] : undefined;
     if (isCreationCommand(topic)) {
       writeCreationHelp(io, topic);
       return;
@@ -86,7 +88,7 @@ async function main(): Promise<void> {
     if (topic === undefined) {
       io.write(`\nCreation tools (one request through the selected Runtime Profile, no Build)\n${
         creationCommands.map((item) => `  ${item}`).join("\n")}\n  hypit help <tool> for each\n`
-        + `\nPreparation (local tools and project files)\n  media ${mediaCommands.join(" | ")}\n  capture screenshot | run | install-browser\n  vocabulary\n  hypit help media, hypit help capture, hypit help vocabulary\n`);
+        + `\nStudio\n  studio --run <build.svrun>\n  hypit studio --help for session options\n\nPreparation (local tools and project files)\n  media ${mediaCommands.join(" | ")}\n  capture screenshot | run | install-browser\n  vocabulary\n  hypit help media, hypit help capture, hypit help vocabulary\n`);
     }
     return;
   }

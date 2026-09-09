@@ -52,7 +52,7 @@ projection + family parameters → explicit family schedule
 schedule + document + program + ProgramSpace → VisualTrack
 ```
 
-Use `hypit/caption` for the common Program and timing helpers and `hypit/narrative` for the Script's
+Use `@hypit/hypit/caption` for the common Program and timing helpers and `@hypit/hypit/narrative` for the Script's
 document and unit types. The common Caption layer handles display-versus-spoken
 wording, N:M alignment units and complete-unit Selection boundaries. Do not transcribe again,
 rebuild timing by splitting a string, or use the video model's requested duration as speech evidence.

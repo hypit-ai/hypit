@@ -23,7 +23,7 @@ graph. The rendering function receives ProgramSpace, Window and Instants, so it 
 Script parsing, speech models or Runtime. The browser program evaluates any requested frame directly,
 including frames reached by scrubbing, range rendering or concurrent workers.
 
-Compile with `npm run build`. The package uses the public `hypit/*` interfaces and can live in any
+Compile with `npm run build`. The package uses the public `@hypit/hypit/*` interfaces and can live in any
 video project's `packages/`. It is an example to adapt, not an official component to install for every
 animation. The complete runnable Source is [chat.svml](../../chat.svml); see the surrounding
 example README for commands. `font` receives a FontStack, for example from `fonts:Stack`.

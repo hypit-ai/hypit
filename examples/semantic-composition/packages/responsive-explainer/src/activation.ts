@@ -1,18 +1,18 @@
 import { assertAttributes, assertEmptyElement, canonicalize, createMarkupSurfaceHostFacet, sameType,
-  sealGraphFragment, textAttribute } from "hypit/author-kit";
-import type { ComponentPackage, ModuleManifest, StructuredSurfaceHandler, SurfaceResolvedReference, TypeRef } from "hypit/author-kit";
-import { compositionTypes } from "hypit/composition";
-import { mediaTypes } from "hypit/media";
-import type { FontStackRef } from "hypit/media";
-import { narrativeTypes } from "hypit/narrative";
-import { semanticTrackTypes } from "hypit/semantic-track";
-import type { SemanticTrack } from "hypit/semantic-track";
-import { spatialTypes } from "hypit/spatial";
-import type { CanvasSpace } from "hypit/spatial";
-import { temporalTypes } from "hypit/temporal";
-import type { TemporalInstant, TemporalWindow } from "hypit/temporal";
+  sealGraphFragment, textAttribute } from "@hypit/hypit/author-kit";
+import type { ComponentPackage, ModuleManifest, StructuredSurfaceHandler, SurfaceResolvedReference, TypeRef } from "@hypit/hypit/author-kit";
+import { compositionTypes } from "@hypit/hypit/composition";
+import { mediaTypes } from "@hypit/hypit/media";
+import type { FontStackRef } from "@hypit/hypit/media";
+import { narrativeTypes } from "@hypit/hypit/narrative";
+import { semanticTrackTypes } from "@hypit/hypit/semantic-track";
+import type { SemanticTrack } from "@hypit/hypit/semantic-track";
+import { spatialTypes } from "@hypit/hypit/spatial";
+import type { CanvasSpace } from "@hypit/hypit/spatial";
+import { temporalTypes } from "@hypit/hypit/temporal";
+import type { TemporalInstant, TemporalWindow } from "@hypit/hypit/temporal";
 import { createTemporalInstantProjection, createTemporalWindowProjection, temporalWindowAttributeNames,
-  temporalWindowAttributeVocabulary } from "hypit/temporal-markup";
+  temporalWindowAttributeVocabulary } from "@hypit/hypit/temporal-markup";
 import { renderExplainer } from "./render.js";
 import type { ExplainerOptions } from "./render.js";
 

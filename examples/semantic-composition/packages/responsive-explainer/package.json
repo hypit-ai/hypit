@@ -7,5 +7,5 @@
   "exports": { ".": "./dist/render.js" },
   "files": ["dist", "README.md"],
   "scripts": { "build": "tsc -p tsconfig.json", "prepack": "npm run build" },
-  "devDependencies": { "hypit": "workspace:*", "typescript": "5.9.3", "@types/node": "24.10.1" }
+  "devDependencies": { "@hypit/hypit": "workspace:*", "typescript": "5.9.3", "@types/node": "24.10.1" }
 }

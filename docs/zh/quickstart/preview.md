@@ -11,7 +11,7 @@ Studio 在浏览器中打开可编辑的视频项目。你可以播放编排、�
 
 ```bash
 cd /path/to/my-video
-hypit-studio --run build.svrun
+hypit studio --run build.svrun
 ```
 
 打开命令打印的网址。Studio 使用这份 Run 选择的 Author Source 和素材。编辑时要保留已生成素材，可以通过 [`build-record` 与 `satisfy`](./run.md) 选择已完成的 Output。

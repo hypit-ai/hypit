@@ -5,7 +5,7 @@ description: 命名、模块边界、TypeScript 配置与 wire 数据。
 
 # 代码规范
 
-这些规范面向 Hypit 仓库内的工作。项目扩展使用所有者自己的 scope 和公开的 `hypit/*` SDK 子路径，见 [包与扩展](./packages.md)。
+这些规范面向 Hypit 仓库内的工作。项目扩展使用所有者自己的 scope 和公开的 `@hypit/hypit/*` SDK 子路径，见 [包与扩展](./packages.md)。
 
 ## 命名
 

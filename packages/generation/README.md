@@ -1,8 +1,8 @@
-# `hypit/generation`
+# `@hypit/hypit/generation`
 
 Provider-neutral generated-media contracts shared by exact image, video and audio model packages.
 
-External Model and Provider packages import this public subpath from the `hypit` Distribution.
+External Model and Provider packages import this public subpath from the `@hypit/hypit` Distribution.
 It gives both sides the same request and result vocabulary without a dependency between their
 implementations. `sealGenerationPortTable` describes a model's inputs; `GenerationWireMapping` and
 `compileWireRequest` can translate those inputs to one Provider's documented wire fields.

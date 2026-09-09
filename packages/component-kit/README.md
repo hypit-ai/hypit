@@ -22,19 +22,19 @@ Distribution reserves `@hypit/*`. A Source imports the package's logical Module 
 `<import as="score" from="@studio/score-strip@1"/>`. That `1` is not its npm release version.
 
 External Author Packages use the released Distribution's public subpaths. The small framework-facing
-surface is `hypit/author-kit`; domain values continue to come from their own owners:
+surface is `@hypit/hypit/author-kit`; domain values continue to come from their own owners:
 
 | Owner | Interface |
 | --- | --- |
-| `hypit/author-kit` | Module declarations, deterministic handlers, sealed Fragments and Markup Surface handlers |
-| `hypit/temporal-markup` | author-time semantic Window/Instant projection helpers |
-| `hypit/composition`, `hypit/visual-ir` | peer Track values and renderer-independent visual representation |
-| `hypit/studio-adapter` (optional, in Companion code) | editor entity projection, Inspector bindings and executed temporal lineage |
+| `@hypit/hypit/author-kit` | Module declarations, deterministic handlers, sealed Fragments and Markup Surface handlers |
+| `@hypit/hypit/temporal-markup` | author-time semantic Window/Instant projection helpers |
+| `@hypit/hypit/composition`, `@hypit/hypit/visual-ir` | peer Track values and renderer-independent visual representation |
+| `@hypit/hypit/studio-adapter` (optional, in Companion code) | editor entity projection, Inspector bindings and executed temporal lineage |
 
-The Author Package keeps one development dependency on `hypit`, compiles its activation to
+The Author Package keeps one development dependency on `@hypit/hypit`, compiles its activation to
 JavaScript, and publishes only its own files. The active Distribution supplies these subpaths at
 execution, so a component does not carry a second Core or choose its own framework version. This
-package remains the internal deterministic-handler owner; `hypit/author-kit` is the deliberately
+package remains the internal deterministic-handler owner; `@hypit/hypit/author-kit` is the deliberately
 small public composition boundary, not a facade for every video domain.
 
 An ESM package names its activation entry in `package.json`, for example
@@ -46,7 +46,7 @@ The activation module connects the implementation pieces; this is a wiring excer
 local Manifest, ComponentPackage and Surface declarations/handlers already exist:
 
 ```ts
-import { createMarkupSurfaceHostFacet } from "hypit/author-kit";
+import { createMarkupSurfaceHostFacet } from "@hypit/hypit/author-kit";
 import { manifest, moduleRef, surfaces } from "./manifest.js";
 import { component } from "./component.js";
 import { decodeTrack } from "./surface.js";

@@ -61,7 +61,7 @@ material preparation before rendering; browser resources belong in the program's
 Use `hyperframesResourceUri(artifact.resource)` in resource-bearing markup or CSS.
 
 Ordinary child sampling follows the Present clock. Reframing the parent leaves source playback
-unchanged. `projectSemanticMedia` from `hypit/semantic-track` gives a component selected prepared
+unchanged. `projectSemanticMedia` from `@hypit/hypit/semantic-track` gives a component selected prepared
 clips with their exact program and source spans. Speech audio is an independently selected Track.
 
 `program.format` is explicit: this backend reports an unsupported format rather than interpreting

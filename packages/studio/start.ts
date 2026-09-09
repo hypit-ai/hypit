@@ -1,31 +1,24 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
-import { createServer } from "vite";
-import { findRuntimeProfile, resolveProjectRoot } from "@hypit/cli";
-import { resolveDistributionPackageImport } from "@hypit/package-loader-node";
-import { videoCliDistribution, videoStudioCompanionPackages } from "@hypit/video-cli";
-
-import { openStudioBuildLibrary } from "./src/build-library.js";
-import { loadStudioCompanionRegistry } from "./src/companion-assembly.js";
-import { loadStudioDomain } from "./src/domain.js";
-import { loadStudioRun } from "./src/run.js";
-import { studioPlugin } from "./src/server.js";
-import { inspectStudioRun } from "./src/studio-preflight.js";
+import type { CliIo } from "@hypit/cli";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-function usage(message?: string): never {
-  if (message !== undefined) process.stderr.write(`${message}\n\n`);
-  process.stderr.write(`Usage:
-  hypit-studio --run <build.svrun> [--runtime <hypit.runtime.json>]
+export function writeStudioHelp(io: Pick<CliIo, "write">): void {
+  io.write(`hypit studio
+Open a Run in the browser to inspect its composition, Sources and Results.
+
+  hypit studio --run <build.svrun> [--runtime <hypit.runtime.json>]
     [--port <number>] [--workspace <directory>] [--package-root <directory>]
 
-Studio opens one explicit Run Source, requires a Film/Render target and a
-resolved deterministic composition, and writes only the selected file
-inside that exact Run and Author Source closure.
+Paths are relative to the invoking project. Without --runtime, Studio uses
+that project's selected Runtime Profile. The server prints its browser URL;
+press Ctrl+C to stop it.
 `);
-  process.exit(1);
+}
+
+function invalidArguments(message: string): never {
+  throw new Error(`${message}. See hypit studio --help.`);
 }
 
 function argumentsByName(argv: readonly string[]): ReadonlyMap<string, string> {
@@ -35,101 +28,116 @@ function argumentsByName(argv: readonly string[]): ReadonlyMap<string, string> {
     const flag = argv[index];
     const value = argv[index + 1];
     if (flag === undefined || !flag.startsWith("--") || value === undefined || value.startsWith("--")) {
-      usage(`Malformed argument near ${flag ?? "end of command"}`);
+      invalidArguments(`Malformed argument near ${flag ?? "end of command"}`);
     }
     const name = flag.slice(2);
-    if (!accepted.has(name)) usage(`Unknown option --${name}`);
+    if (!accepted.has(name)) invalidArguments(`Unknown option --${name}`);
     result.set(name, value);
   }
   return result;
 }
 
-const raw = process.argv.slice(2);
-const values = argumentsByName(raw[0] === "--" ? raw.slice(1) : raw);
-const invokedFrom = process.env.INIT_CWD ?? process.cwd();
-const runArgument = values.get("run");
-if (runArgument === undefined || runArgument.trim().length === 0) usage("Missing --run");
-const runPath = resolve(invokedFrom, runArgument);
-const packageRootArgument = values.get("package-root");
-const workspaceArgument = values.get("workspace");
-const requestedWorkspaceRoot = workspaceArgument === undefined
-  ? undefined
-  : resolve(invokedFrom, workspaceArgument);
-const workspaceRoot = await resolveProjectRoot({
-  ...(requestedWorkspaceRoot === undefined ? {} : { workspaceRoot: requestedWorkspaceRoot }),
-  cwd: invokedFrom,
-});
-const packageRoot = packageRootArgument === undefined
-  ? workspaceRoot
-  : resolve(invokedFrom, packageRootArgument);
-const runtimeArgument = values.get("runtime");
-const selectedRuntime = runtimeArgument === undefined
-  ? await findRuntimeProfile(workspaceRoot)
-  : undefined;
-const runtimePath = runtimeArgument === undefined
-  ? selectedRuntime?.profile
-  : resolve(invokedFrom, runtimeArgument);
-const port = Number(values.get("port") ?? "5179");
-if (!Number.isSafeInteger(port) || port <= 0) usage("--port must be a positive integer");
+export async function runStudio(argv: readonly string[], io: Pick<CliIo, "write">): Promise<void> {
+  if (argv.includes("--help") || argv.includes("-h")) {
+    writeStudioHelp(io);
+    return;
+  }
+  const values = argumentsByName(argv[0] === "--" ? argv.slice(1) : argv);
+  const invokedFrom = process.env.INIT_CWD ?? process.cwd();
+  const runArgument = values.get("run");
+  if (runArgument === undefined || runArgument.trim().length === 0) invalidArguments("Missing --run");
+  const { createServer } = await import("vite");
+  const { findRuntimeProfile, resolveProjectRoot } = await import("@hypit/cli");
+  const { resolveDistributionPackageImport } = await import("@hypit/package-loader-node");
+  const { videoCliDistribution, videoStudioCompanionPackages } = await import("@hypit/video-cli");
+  const { openStudioBuildLibrary } = await import("./src/build-library.js");
+  const { loadStudioCompanionRegistry } = await import("./src/companion-assembly.js");
+  const { loadStudioDomain } = await import("./src/domain.js");
+  const { loadStudioRun } = await import("./src/run.js");
+  const { studioPlugin } = await import("./src/server.js");
+  const { inspectStudioRun } = await import("./src/studio-preflight.js");
+  const runPath = resolve(invokedFrom, runArgument);
+  const packageRootArgument = values.get("package-root");
+  const workspaceArgument = values.get("workspace");
+  const requestedWorkspaceRoot = workspaceArgument === undefined
+    ? undefined
+    : resolve(invokedFrom, workspaceArgument);
+  const workspaceRoot = await resolveProjectRoot({
+    ...(requestedWorkspaceRoot === undefined ? {} : { workspaceRoot: requestedWorkspaceRoot }),
+    cwd: invokedFrom,
+  });
+  const packageRoot = packageRootArgument === undefined
+    ? workspaceRoot
+    : resolve(invokedFrom, packageRootArgument);
+  const runtimeArgument = values.get("runtime");
+  const selectedRuntime = runtimeArgument === undefined
+    ? await findRuntimeProfile(workspaceRoot)
+    : undefined;
+  const runtimePath = runtimeArgument === undefined
+    ? selectedRuntime?.profile
+    : resolve(invokedFrom, runtimeArgument);
+  const port = Number(values.get("port") ?? "5179");
+  if (!Number.isSafeInteger(port) || port <= 0) invalidArguments("--port must be a positive integer");
 
-const distributionPackageRoot = videoCliDistribution.packageRoot ?? resolve(here, "../..");
-const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
-const registry = await loadStudioCompanionRegistry({
-  distributionPackageRoot,
-  distributionPackages: videoStudioCompanionPackages,
-  sourcePackages: domain.packages,
-});
-const buildLibrary = await openStudioBuildLibrary(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
-let run;
-try {
-  run = await loadStudioRun({
-    run: runPath,
-    domain,
-    registry,
-    buildLibrary,
+  const distributionPackageRoot = videoCliDistribution.packageRoot ?? resolve(here, "../..");
+  const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
+  const registry = await loadStudioCompanionRegistry({
+    distributionPackageRoot,
+    distributionPackages: videoStudioCompanionPackages,
+    sourcePackages: domain.packages,
   });
-} catch (error) {
-  await buildLibrary.close();
-  throw error;
-}
-const source = run.authorSource;
-try {
-  inspectStudioRun(registry, run.source, run);
-} catch (error) {
-  await buildLibrary.close();
-  throw error;
-}
-const distributionImports = {
-  name: "hypit-distribution-imports",
-  enforce: "pre" as const,
-  resolveId(specifier: string): string | undefined {
-    return resolveDistributionPackageImport(distributionPackageRoot, specifier);
-  },
-};
-const server = await createServer({
-  configFile: false,
-  root: here,
-  server: {
-    port,
-    // Vite resolves package assets through pnpm's real paths. The package root
-    // must therefore be readable for self-hosted fonts and other declared
-    // Studio dependencies, while the author workspace remains separately
-    // available for Source and material previews.
-    fs: { allow: [workspaceRoot, packageRoot, distributionPackageRoot, here] },
-  },
-  plugins: [distributionImports, studioPlugin({
-    source,
-    runPath,
-    workspaceRoot,
-    domain,
-    registry,
-    ...(buildLibrary === undefined ? {} : { buildLibrary }),
-  })],
-});
-server.httpServer?.once("close", () => {
-  void buildLibrary.close().catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : String(error));
+  const buildLibrary = await openStudioBuildLibrary(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
+  let run;
+  try {
+    run = await loadStudioRun({
+      run: runPath,
+      domain,
+      registry,
+      buildLibrary,
+    });
+  } catch (error) {
+    await buildLibrary.close();
+    throw error;
+  }
+  const source = run.authorSource;
+  try {
+    inspectStudioRun(registry, run.source, run);
+  } catch (error) {
+    await buildLibrary.close();
+    throw error;
+  }
+  const distributionImports = {
+    name: "hypit-distribution-imports",
+    enforce: "pre" as const,
+    resolveId(specifier: string): string | undefined {
+      return resolveDistributionPackageImport(distributionPackageRoot, specifier);
+    },
+  };
+  const server = await createServer({
+    configFile: false,
+    root: here,
+    server: {
+      port,
+      // Vite resolves package assets through pnpm's real paths. The package root
+      // must therefore be readable for self-hosted fonts and other declared
+      // Studio dependencies, while the author workspace remains separately
+      // available for Source and material previews.
+      fs: { allow: [workspaceRoot, packageRoot, distributionPackageRoot, here] },
+    },
+    plugins: [distributionImports, studioPlugin({
+      source,
+      runPath,
+      workspaceRoot,
+      domain,
+      registry,
+      ...(buildLibrary === undefined ? {} : { buildLibrary }),
+    })],
   });
-});
-await server.listen();
-server.printUrls();
+  server.httpServer?.once("close", () => {
+    void buildLibrary.close().catch((error: unknown) => {
+      console.error(error instanceof Error ? error.message : String(error));
+    });
+  });
+  await server.listen();
+  server.printUrls();
+}

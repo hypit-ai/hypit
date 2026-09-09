@@ -9,7 +9,7 @@ useful Studio presentation. [Review](review.md) owns the judgment made from the 
 From the video project, use the installed Distribution's command:
 
 ```bash
-hypit-studio --run build.svrun
+hypit studio --run build.svrun
 ```
 
 Supply `--runtime <profile>` when intentionally using a different Profile from the project's
@@ -102,8 +102,8 @@ project package can supply its own without editing Studio or adding a Studio Pro
 otherwise unselected package does not activate a plugin. The installed `@hypit/studio-adapter`
 README gives the exact ABI, a minimal Companion and the activation wiring.
 
-An external Companion imports `hypit/studio-adapter` and the relevant public `hypit/*` domain APIs,
-with `hypit` as a development dependency. Ship the compiled Companion with the component. Its
+An external Companion imports `@hypit/hypit/studio-adapter` and the relevant public `@hypit/hypit/*` domain APIs,
+with `@hypit/hypit` as a development dependency. Ship the compiled Companion with the component. Its
 Source-selected activation contributes the editor facet alongside the component's existing facets.
 
 Expose meaningful deterministic schedule/program outputs when the Companion needs more than the

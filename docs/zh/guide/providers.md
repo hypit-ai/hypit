@@ -22,17 +22,17 @@ description: 选择账户、连接服务或添加模型，沿用同一套视频�
 
 ## 添加 Model
 
-项目包使用 `hypit/model-kit`、`hypit/generation` 和 `hypit/author-kit`。声明准确的请求端口、参数取值、输出类型和能力。作者 Surface 把 Prompt Text 与参考素材连接到请求，再将生成素材作为普通图输出公开。
+项目包使用 `@hypit/hypit/model-kit`、`@hypit/hypit/generation` 和 `@hypit/hypit/author-kit`。声明准确的请求端口、参数取值、输出类型和能力。作者 Surface 把 Prompt Text 与参考素材连接到请求，再将生成素材作为普通图输出公开。
 
 [Model SDK](https://github.com/hypit-ai/hypit/blob/main/packages/model-kit/README.md) 提供请求定义与 activation 示例。包拥有模型接口；凭据与 HTTP 映射由 Provider 负责。
 
 ## 添加 Provider
 
-将选定的 `hypit` 版本作为开发依赖，使用公开 SDK：
+将选定的 `@hypit/hypit` 版本作为开发依赖，使用公开 SDK：
 
 ```ts
-import { defineEndpointPackage } from "hypit/endpoint-kit";
-import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "hypit/endpoint-kit";
+import { defineEndpointPackage } from "@hypit/hypit/endpoint-kit";
+import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit/endpoint-kit";
 ```
 
 实现服务支持的准确能力与输出类型，将请求端口映射到服务 API，解析声明的凭据并返回结果。即时操作可以直接返回；远程任务可以先提交得到 ID，再轮询完成情况、收集输出文件。并发和动作限制由 Endpoint 的资源声明负责。

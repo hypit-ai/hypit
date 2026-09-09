@@ -1,5 +1,5 @@
 {
-  "name": "hypit",
+  "name": "@hypit/hypit",
   "version": "0.1.0",
   "description": "Hypit video authoring Distribution for AI agents",
   "license": "SEE LICENSE IN LICENSE",
@@ -95,8 +95,7 @@
     }
   },
   "bin": {
-    "hypit": "./bin/hypit.mjs",
-    "hypit-studio": "./bin/hypit-studio.mjs"
+    "hypit": "./bin/hypit.mjs"
   },
   "packageManager": "pnpm@10.33.0",
   "files": [
@@ -155,7 +154,7 @@
     "test:whisperx-service": "uv run --project services/whisperx --frozen python -m unittest discover -s services/whisperx/tests -p \"test_*.py\"",
     "test:image-opencv": "node test/run.mjs image-opencv",
     "hypit": "node bin/hypit.mjs",
-    "studio": "pnpm --filter @hypit/studio exec node --import tsx start.ts",
+    "studio": "node bin/hypit.mjs studio",
     "prepack": "npm run build:public-types"
   },
   "engines": {

@@ -1,8 +1,8 @@
-import { sealVisualTrack } from "hypit/composition";
-import type { ProgramSpace } from "hypit/program-space";
-import { canonicalize } from "hypit/author-kit";
-import type { BlobRef, ComponentPackage, ProducerHandler, TypedRecord } from "hypit/author-kit";
-import { VISUAL_IR_V1 } from "hypit/visual-ir";
+import { sealVisualTrack } from "@hypit/hypit/composition";
+import type { ProgramSpace } from "@hypit/hypit/program-space";
+import { canonicalize } from "@hypit/hypit/author-kit";
+import type { BlobRef, ComponentPackage, ProducerHandler, TypedRecord } from "@hypit/hypit/author-kit";
+import { VISUAL_IR_V1 } from "@hypit/hypit/visual-ir";
 import { exampleProducers, exampleTypes } from "./manifest.js";
 
 const inline = <T>(record: { readonly value: { readonly kind: string; readonly value?: unknown } } | undefined): T => {

@@ -300,36 +300,36 @@ importers:
 
   examples/minimal-author-package/packages/example-component:
     devDependencies:
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../../../..
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
-      hypit:
-        specifier: workspace:*
-        version: link:../../../..
       typescript:
         specifier: 5.9.3
         version: 5.9.3
 
   examples/semantic-composition/packages/chat-scene:
     devDependencies:
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../../../..
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
-      hypit:
-        specifier: workspace:*
-        version: link:../../../..
       typescript:
         specifier: 5.9.3
         version: 5.9.3
 
   examples/semantic-composition/packages/responsive-explainer:
     devDependencies:
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../../../..
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
-      hypit:
-        specifier: workspace:*
-        version: link:../../../..
       typescript:
         specifier: 5.9.3
         version: 5.9.3

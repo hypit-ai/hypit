@@ -78,5 +78,5 @@ belong in those scripts through normal Puppeteer APIs. A simple screenshot waits
 `--wait-for` and `--wait-ms` add an authored readiness condition. The package does not interpret
 websites or silently rewrite page content.
 
-For a library import in an installed Distribution, use `hypit/browser-capture`. The workspace package
+For a library import in an installed Distribution, use `@hypit/hypit/browser-capture`. The workspace package
 also exports the same API as `@hypit/browser-capture`.

@@ -1,6 +1,6 @@
 import { registerHooks } from "node:module";
 import { join, resolve } from "node:path";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 import {
@@ -47,8 +47,10 @@ function distributionPackageEntry(root: string, specifier: string): string | und
 }
 
 function distributionPublicEntry(root: string, specifier: string): string | undefined {
-  if (!specifier.startsWith("hypit/")) return undefined;
+  const address = packageAddress(specifier);
+  if (address === undefined) return undefined;
   const manifestPath = join(root, "package.json");
+  if (!existsSync(manifestPath)) return undefined;
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
     readonly name?: string;
     readonly exports?: Readonly<Record<string, string | {
@@ -56,16 +58,17 @@ function distributionPublicEntry(root: string, specifier: string): string | unde
       readonly default?: string;
     }>>;
   };
-  if (manifest.name !== "hypit") return undefined;
-  const declared = manifest.exports?.[`./${specifier.slice("hypit/".length)}`];
+  if (manifest.name !== address.name) return undefined;
+  const declared = manifest.exports?.[address.subpath.length === 0 ? "." : `./${address.subpath}`];
   const target = typeof declared === "string" ? declared : declared?.import ?? declared?.default;
   return target === undefined ? undefined : resolve(root, target);
 }
 
 /** Resolve one import owned by an explicit Hypit Distribution. */
 export function resolveDistributionPackageImport(root: string, specifier: string): string | undefined {
-  if (specifier.startsWith("@hypit/")) return distributionPackageEntry(resolve(root), specifier);
-  if (specifier.startsWith("hypit/")) return distributionPublicEntry(resolve(root), specifier);
+  if (specifier.startsWith("@hypit/")) {
+    return distributionPublicEntry(resolve(root), specifier) ?? distributionPackageEntry(resolve(root), specifier);
+  }
   return undefined;
 }
 
@@ -82,7 +85,7 @@ export function installDistributionPackageResolution(roots: readonly string[]): 
   const rootUrls = installed.map((root) => pathToFileURL(`${root}/`).href);
   registerHooks({
     resolve(specifier, context, nextResolve) {
-      if (specifier.startsWith("@hypit/") || specifier.startsWith("hypit/")) {
+      if (specifier.startsWith("@hypit/")) {
         // A contributor checkout may resolve through workspace links. An installed
         // monolithic Distribution resolves from its own packages/services tree.
         // Accept ordinary resolution only when its real target remains inside this
@@ -123,7 +126,7 @@ export function installExternalPackageResolution(roots: readonly string[]): void
   const parentUrls = externalInstalled.map((root) => pathToFileURL(join(root, "__hypit_external__.mjs")).href);
   registerHooks({
     resolve(specifier, context, nextResolve) {
-      if (specifier.startsWith("@hypit/") || specifier.startsWith("hypit/") || !barePackageSpecifier(specifier)) {
+      if (specifier.startsWith("@hypit/") || !barePackageSpecifier(specifier)) {
         return nextResolve(specifier, context);
       }
       try {

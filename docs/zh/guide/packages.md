@@ -30,13 +30,13 @@ Hypit 把视频需要什么，与哪些代码和服务完成它，分别表达�
 
 ## 安装与 Source 导入
 
-Skill、可执行 Distribution 和视频项目分别安装与更新。`hypit` Distribution 包含官方作者包和公开扩展 API。所选 Runtime Adapter 可以通过 `hypit runtime up` 准备额外服务依赖；可选作者素材可以按 CLI 给出的准确 `hypit packages install` 命令安装。项目组件自己的依赖由项目管理。
+Skill、可执行 Distribution 和视频项目分别安装与更新。`@hypit/hypit` Distribution 包含官方作者包和公开扩展 API。所选 Runtime Adapter 可以通过 `hypit runtime up` 准备额外服务依赖；可选作者素材可以按 CLI 给出的准确 `hypit packages install` 命令安装。项目组件自己的依赖由项目管理。
 
 Source 使用 `@your-studio/scoreboard@1` 这样的逻辑 Module 地址。npm 安装的包版本决定实际实现，逻辑 `@1` 标识作者接口。视频 Build 使用这些已安装的版本；缺包时会报告安装所需的信息。
 
 ## 编写与分享扩展
 
-外部包使用 `hypit/author-kit`、`hypit/composition`、`hypit/model-kit` 或 `hypit/endpoint-kit` 等公开子路径。将选定的 `hypit` 版本作为开发依赖，把扩展编译为 JavaScript，分发它自己的代码与素材。`package.json` 中的 activation 入口描述它提供的能力；加载选中的扩展时，当前 Distribution 提供公开 Hypit API。
+外部包使用 `@hypit/hypit/author-kit`、`@hypit/hypit/composition`、`@hypit/hypit/model-kit` 或 `@hypit/hypit/endpoint-kit` 等公开子路径。将选定的 `@hypit/hypit` 版本作为开发依赖，把扩展编译为 JavaScript，分发它自己的代码与素材。`package.json` 中的 activation 入口描述它提供的能力；加载选中的扩展时，当前 Distribution 提供公开 Hypit API。
 
 - [添加作者包](./author-packages.md)：从随发行包提供的可构建组件开始。
 - [组件结构](./component-anatomy.md)：组件内部各部分的职责。

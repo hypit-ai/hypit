@@ -1,7 +1,7 @@
 # `@hypit/text`
 
-External components use `hypit/text` for graph Text types, template helpers and Producer references,
-with `hypit` as a development dependency. Source imports retain `@hypit/text@1`.
+External components use `@hypit/hypit/text` for graph Text types, template helpers and Producer references,
+with `@hypit/hypit` as a development dependency. Source imports retain `@hypit/text@1`.
 
 Domain-neutral text values and deterministic text programs.
 

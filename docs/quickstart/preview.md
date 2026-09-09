@@ -13,7 +13,7 @@ It is also a useful way to hand over a finished project alongside the exported v
 
 ```bash
 cd /path/to/my-video
-hypit-studio --run build.svrun
+hypit studio --run build.svrun
 ```
 
 Open the address printed by the command. Studio uses the Author Source and material selected in

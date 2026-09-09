@@ -5,10 +5,10 @@ Read this to locate, install, or update the executable Hypit Distribution after 
 ## Keep three lifecycles separate
 
 The installed Skill supplies production judgment. The executable Distribution supplies `hypit`,
-`hypit-studio`, official packages, and Runtime hosts. A video project supplies the work's Sources,
+`hypit studio`, official packages, and Runtime hosts. A video project supplies the work's Sources,
 Runs, assets, local packages, Profile selection, and Results. They can live in unrelated locations
 and none is installed as a side effect of another. `npx skills add hypit-ai/hypit -g` installs the
-Skill's knowledge; the executable is the separate npm package `hypit`.
+Skill's knowledge; the executable is the separate npm package `@hypit/hypit`.
 
 ## Find the installation already available
 
@@ -26,8 +26,8 @@ a separate setup question from whether the executable is installed.
 If the shell cannot find `hypit`, inspect the project's and npm's global package records:
 
 ```bash
-npm ls hypit --depth=0
-npm ls --global hypit --depth=0
+npm ls @hypit/hypit --depth=0
+npm ls --global @hypit/hypit --depth=0
 npm prefix --global
 ```
 
@@ -42,13 +42,13 @@ launcher, and retain the working command and location in project notes when usef
 The usual machine-wide installation command for a published release is:
 
 ```bash
-npm install --global hypit
+npm install --global @hypit/hypit
 ```
 
 A project can instead keep Hypit in its own dependencies and lockfile:
 
 ```bash
-npm install --save-dev hypit
+npm install --save-dev @hypit/hypit
 npm exec --no -- hypit --help
 ```
 

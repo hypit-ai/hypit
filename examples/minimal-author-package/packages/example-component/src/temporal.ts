@@ -1,4 +1,4 @@
-import { createTemporalInstantProjection, createTemporalWindowProjection, temporalInstantAttributeNames, temporalWindowAttributeNames } from "hypit/temporal-markup";
+import { createTemporalInstantProjection, createTemporalWindowProjection, temporalInstantAttributeNames, temporalWindowAttributeNames } from "@hypit/hypit/temporal-markup";
 
 /** The fixture intentionally exposes both projection helpers and their vocabularies. */
 export { temporalInstantAttributeNames, temporalWindowAttributeNames };

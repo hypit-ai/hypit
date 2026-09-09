@@ -1,6 +1,6 @@
 # `@hypit/caption`
 
-External components use `hypit/caption` from their `hypit` development dependency. The package
+External components use `@hypit/hypit/caption` from their `@hypit/hypit` development dependency. The package
 owns the types and helpers below; Source imports retain the `@hypit/caption@1` Module identity.
 
 

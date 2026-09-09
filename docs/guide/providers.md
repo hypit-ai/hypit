@@ -29,7 +29,7 @@ preparing their dependencies. [Runs and Builds](../quickstart/run.md) shows the 
 
 ## Add a Model
 
-Develop a project package against `hypit/model-kit`, `hypit/generation` and `hypit/author-kit`.
+Develop a project package against `@hypit/hypit/model-kit`, `@hypit/hypit/generation` and `@hypit/hypit/author-kit`.
 Declare the exact request ports, parameter values, result type and capability. Its author Surface
 connects prompt Text and reference media to the request, then publishes the resulting media as a
 normal graph Output.
@@ -40,11 +40,11 @@ HTTP mapping belong to the Provider.
 
 ## Add a Provider
 
-Use the selected `hypit` release as a development dependency and import the public SDK:
+Use the selected `@hypit/hypit` release as a development dependency and import the public SDK:
 
 ```ts
-import { defineEndpointPackage } from "hypit/endpoint-kit";
-import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "hypit/endpoint-kit";
+import { defineEndpointPackage } from "@hypit/hypit/endpoint-kit";
+import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit/endpoint-kit";
 ```
 
 Implement the exact capabilities and result types the service supports. Map request ports to the

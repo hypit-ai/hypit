@@ -57,7 +57,7 @@ The following files are included in the Distribution and show how the responsibi
 | [Ranking Companion](../ranking-studio/src/index.ts) | Read the same program, present persistent rows and activation lanes, and connect edits to actual Source inputs. |
 
 A project component can use these relationships with its own behavior. External TypeScript uses
-`hypit/author-kit`, `hypit/temporal-markup` and the appropriate `hypit/*` domain APIs; the official
+`@hypit/hypit/author-kit`, `@hypit/hypit/temporal-markup` and the appropriate `@hypit/hypit/*` domain APIs; the official
 implementation's `@hypit/*` imports are internal workspace spellings. Copy the relevant idea into
 the project's own package, with its own Module identity, instead of editing the installed Ranking.
 

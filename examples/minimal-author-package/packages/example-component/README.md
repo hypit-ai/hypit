@@ -1,15 +1,15 @@
 # Example component fixture
 
 A small complete package for learning Manifest, Surface, Fragment, Producer and activation wiring. Framework-facing imports come from
-`hypit/author-kit`; video-domain imports use their owning `hypit/*` subpaths. Its only Hypit
-framework dependency is the released `hypit` Distribution; TypeScript and Node types are ordinary
+`@hypit/hypit/author-kit`; video-domain imports use their owning `@hypit/hypit/*` subpaths. Its only Hypit
+framework dependency is the released `@hypit/hypit` Distribution; TypeScript and Node types are ordinary
 build tooling. No Runtime dependency is bundled into its tarball.
 
 It contains a Module Manifest with nominal Types and deterministic Producers, validators, a structured
 Surface decoder returning `records`, `components`, `fragments` and `exports`, and sealed Fragments with
 literal `fragment-input`, `fragment-operation` and `output` references. `src/temporal.ts` shows the
-Surface-side `hypit/temporal-markup` Window/Moment projections; that package is distinct from the
-graph-side `hypit/temporal` Producers.
+Surface-side `@hypit/hypit/temporal-markup` Window/Moment projections; that package is distinct from the
+graph-side `@hypit/hypit/temporal` Producers.
 
 The Surfaces demonstrate a box, a text surface, a media slot and a Style decoder. The slot is a graph
 input; it is not a file bundled by the package. `preview/Box.png` is a real catalogue frame supplied
@@ -29,7 +29,7 @@ name. The checked-in fixture's `workspace:*` dependency connects it to the repos
 development. In the copied package, replace that development dependency with the selected release:
 
 ```bash
-npm install --save-dev hypit@<selected-release>
+npm install --save-dev @hypit/hypit@<selected-release>
 npm run build
 npm pack
 ```

@@ -42,7 +42,7 @@ fit, clipping, rounded corners, border and other presentation choices. A selecte
 inside a Take begins at the matching source frame. Presentation continues across Take boundaries.
 
 A project component can also consume `.semantic` and use `projectSemanticMedia` from
-`hypit/semantic-track` to obtain selected material spans and their source positions. When video and
+`@hypit/hypit/semantic-track` to obtain selected material spans and their source positions. When video and
 graphics share layout or motion, that component can own both in one visual program. Independent
 Caption or other overlays can remain separate Tracks.
 

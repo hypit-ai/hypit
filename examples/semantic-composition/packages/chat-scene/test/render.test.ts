@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { BrowserProgram } from "hypit/hyperframes";
+import type { BrowserProgram } from "@hypit/hypit/hyperframes";
 import type { FontStackRef } from "@hypit/media";
 import type { ProgramSpace } from "@hypit/program-space";
 import { composeTemporalWindow, projectMomentInstant, projectProgramInstant } from "@hypit/temporal";

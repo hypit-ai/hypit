@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "24.10.1",
-    "hypit": "workspace:*",
+    "@hypit/hypit": "workspace:*",
     "typescript": "5.9.3"
   }
 }

@@ -55,7 +55,7 @@ receives its own appropriate projection, but all refer to the same authored even
 moves the event without asking each component to search for a word or inspect the Script parser.
 
 For a component that also serves authored animation, `resolveTemporalContext` and `createTemporalSpace`
-from `hypit/temporal-markup` supply the chosen film clock. Clock expressions project directly through
+from `@hypit/hypit/temporal-markup` supply the chosen film clock. Clock expressions project directly through
 that space; Script references use its semantic context. The drawing code consumes the resolved
 values in either case. The installed `examples/semantic-composition/packages/chat-scene` demonstrates
 repeated content children with their own events and a program drawn entirely in code.
@@ -119,7 +119,7 @@ are ordinary Source and Recipe decisions.
 ## Write the smallest component that expresses the role
 
 Declare the new package in the project's `packages/` and ordinary package configuration. Read the
-installed `hypit/author-kit` README for the public package boundary and inspect a close installed sibling for
+installed `@hypit/hypit/author-kit` README for the public package boundary and inspect a close installed sibling for
 the relevant implementation, rather than depending on a monorepo example directory being present.
 `@hypit/interview-emoji-reveal` demonstrates persistent Moment-driven state; `@hypit/ranking`
 demonstrates reveal Windows and settled rows; `@hypit/media-track` demonstrates occupancy and Handoffs.
@@ -169,7 +169,7 @@ A Moment needs the semantic context that locates its Script anchor.
 Keep each child's `subjectId` meaningful to the component while qualifying graph ids by its owning
 Track, so multiple instances can coexist. A finite create/append/finalize graph supports any authored
 number of messages or cards with ordinary fixed Producer ports. The exact helpers and vocabulary
-live in `hypit/temporal-markup`; the `@example/chat-scene` package demonstrates both time sources.
+live in `@hypit/hypit/temporal-markup`; the `@example/chat-scene` package demonstrates both time sources.
 
 A scene may publish computed event times when another component needs them, just as it publishes a
 Track. This shares pre-render data. When the author already specifies a common trigger, consumers
@@ -180,7 +180,7 @@ draw nothing; inside it, each slot shows its preset/activated answer or its plac
 entrance motion relative to that slot's activation frame. Deriving state directly from declared inputs
 and the requested frame keeps Studio scrubbing and partial or concurrent rendering deterministic.
 
-Emit the public VisualTrack representation through `hypit/composition` and `hypit/visual-ir`.
+Emit the public VisualTrack representation through `@hypit/hypit/composition` and `@hypit/hypit/visual-ir`.
 [Component visuals](component-visuals.md) explains Presents, element trees, local animation,
 prepared surfaces and a complete drawing function. [Spatial layout](spatial.md) explains incoming
 Frames, and [Fonts and text](fonts-and-text.md) explains font resources.

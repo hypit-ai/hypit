@@ -1,6 +1,6 @@
 # `@hypit/speech`
 
-External components use `hypit/speech` from their `hypit` development dependency. The package
+External components use `@hypit/hypit/speech` from their `@hypit/hypit` development dependency. The package
 owns the types and helpers below; Source imports retain the `@hypit/speech@1` Module identity.
 
 

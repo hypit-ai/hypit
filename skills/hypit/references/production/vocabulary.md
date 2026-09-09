@@ -68,12 +68,12 @@ Keep the boundary useful:
 - Runtime Profiles own external execution and credentials;
 - Provider packages implement media tools and external services.
 
-Read the installed `hypit/author-kit` README for the public package boundary and a relevant component
+Read the installed `@hypit/hypit/author-kit` README for the public package boundary and a relevant component
 for an implementation example. Give the new package its own Module identity and use the project
 owner's scope; the selected Distribution owns the reserved `@hypit/*` namespace.
 
-TypeScript imports use public SDK paths such as `hypit/author-kit`, `hypit/composition`,
-`hypit/text`, `hypit/caption` or `hypit/studio-adapter`. Source imports instead name logical Modules,
+TypeScript imports use public SDK paths such as `@hypit/hypit/author-kit`, `@hypit/hypit/composition`,
+`@hypit/hypit/text`, `@hypit/hypit/caption` or `@hypit/hypit/studio-adapter`. Source imports instead name logical Modules,
 such as `@hypit/caption@1`. When learning from installed official source, translate its internal
 workspace imports to the corresponding public SDK paths in the project package.
 

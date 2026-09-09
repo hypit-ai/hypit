@@ -1,11 +1,11 @@
-# `hypit/runtime-kit`
+# `@hypit/hypit/runtime-kit`
 
 Host facets for the two environmental choices a Local Runtime Profile may select:
 
 * an Endpoint implements external capabilities;
 * a Credential Store resolves explicit credential references.
 
-External packages use this public subpath from their `hypit` development dependency. The built
+External packages use this public subpath from their `@hypit/hypit` development dependency. The built
 package's `hypit.activation` entry exports a default package contribution with
 `format: "hypit.node-package@1"` and the declared `hostFacets`.
 

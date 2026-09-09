@@ -55,7 +55,7 @@ interval, while the two Sampling keys direct a gradual push-in inside the unchan
 For a fixed card, full picture, circle or cutout this is ordinary Media presentation. If video and
 graphics must resize, mask or move together, write a project component that owns that relationship.
 `projectSemanticMedia` supplies the same material spans to its drawing function. The component can
-use a browser program from `hypit/hyperframes` while Caption and independent overlays remain peers.
+use a browser program from `@hypit/hypit/hyperframes` while Caption and independent overlays remain peers.
 
 ## Place the frame, then fit its contents
 

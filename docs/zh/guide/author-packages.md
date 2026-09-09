@@ -9,12 +9,12 @@ description: 制作项目组件、将其用于视频，并在有需要时分享�
 
 ## 从完整的包开始
 
-安装的 `hypit` Distribution 包含 [`examples/minimal-author-package/packages/example-component`](https://github.com/hypit-ai/hypit/tree/main/examples/minimal-author-package/packages/example-component)。将该目录复制到视频项目的 `packages/`，把包名与 Module 改为自己的 scope 和名称，将示例中的 `workspace:*` Hypit 开发依赖改成项目所用的 Distribution 版本。
+安装的 `@hypit/hypit` Distribution 包含 [`examples/minimal-author-package/packages/example-component`](https://github.com/hypit-ai/hypit/tree/main/examples/minimal-author-package/packages/example-component)。将该目录复制到视频项目的 `packages/`，把包名与 Module 改为自己的 scope 和名称，将示例中的 `workspace:*` Hypit 开发依赖改成项目所用的 Distribution 版本。
 
 在复制后的包目录执行：
 
 ```bash
-npm install --save-dev hypit@<selected-release>
+npm install --save-dev @hypit/hypit@<selected-release>
 npm run build
 ```
 
@@ -30,7 +30,7 @@ Style 一类 Surface 在裸作者 id 下公开其值，例如 `style={board-styl
 
 ## 实现并查看场景
 
-作者包 API 使用 `hypit/author-kit`，消费的领域值使用对应公开子路径。[组件结构](./component-anatomy.md) 介绍 Manifest、Surface、Fragment 和 Producer 如何配合。项目文案与素材作为输入，组件自己的面板、边框与装饰由实现绘制。
+作者包 API 使用 `@hypit/hypit/author-kit`，消费的领域值使用对应公开子路径。[组件结构](./component-anatomy.md) 介绍 Manifest、Surface、Fragment 和 Producer 如何配合。项目文案与素材作为输入，组件自己的面板、边框与装饰由实现绘制。
 
 preview Source 为作者提供可打开或渲染的小例子。查看能说明行为的状态：进入、关键变化、停留布局和退出。也要在实际编排中查看，这时内容、空间和时机才有具体用途。
 

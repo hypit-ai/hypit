@@ -1,18 +1,18 @@
-import { assertAttributes, assertEmptyElement, canonicalize, createMarkupSurfaceHostFacet, sameType, sealGraphFragment, textAttribute } from "hypit/author-kit";
-import type { ComponentPackage, FragmentOperation, ModuleManifest, StructuredSurfaceHandler, SurfaceResolvedReference, TypeRef } from "hypit/author-kit";
-import { compositionTypes } from "hypit/composition";
-import { mediaTypes } from "hypit/media";
-import type { FontStackRef } from "hypit/media";
-import { programSpaceTypes } from "hypit/program-space";
-import type { ProgramSpace } from "hypit/program-space";
-import { semanticTrackTypes } from "hypit/semantic-track";
-import { spatialTypes } from "hypit/spatial";
-import type { CanvasSpace } from "hypit/spatial";
-import { assertTemporalInstantFor, temporalTypes } from "hypit/temporal";
-import type { TemporalInstant, TemporalWindow } from "hypit/temporal";
+import { assertAttributes, assertEmptyElement, canonicalize, createMarkupSurfaceHostFacet, sameType, sealGraphFragment, textAttribute } from "@hypit/hypit/author-kit";
+import type { ComponentPackage, FragmentOperation, ModuleManifest, StructuredSurfaceHandler, SurfaceResolvedReference, TypeRef } from "@hypit/hypit/author-kit";
+import { compositionTypes } from "@hypit/hypit/composition";
+import { mediaTypes } from "@hypit/hypit/media";
+import type { FontStackRef } from "@hypit/hypit/media";
+import { programSpaceTypes } from "@hypit/hypit/program-space";
+import type { ProgramSpace } from "@hypit/hypit/program-space";
+import { semanticTrackTypes } from "@hypit/hypit/semantic-track";
+import { spatialTypes } from "@hypit/hypit/spatial";
+import type { CanvasSpace } from "@hypit/hypit/spatial";
+import { assertTemporalInstantFor, temporalTypes } from "@hypit/hypit/temporal";
+import type { TemporalInstant, TemporalWindow } from "@hypit/hypit/temporal";
 import { createTemporalInstantProjection, createTemporalSpace, createTemporalWindowProjection, resolveTemporalContext,
   temporalContextAttributeVocabulary, temporalInstantAttributeNames, temporalInstantAttributeVocabulary,
-  temporalWindowAttributeNames, temporalWindowAttributeVocabulary } from "hypit/temporal-markup";
+  temporalWindowAttributeNames, temporalWindowAttributeVocabulary } from "@hypit/hypit/temporal-markup";
 import { renderChat } from "./render.js";
 import type { ChatOptions, Message } from "./render.js";
 

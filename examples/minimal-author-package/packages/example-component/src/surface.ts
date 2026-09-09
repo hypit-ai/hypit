@@ -1,9 +1,9 @@
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceComponentDraft, SurfaceRecordDraft, SurfaceResolvedReference } from "hypit/author-kit";
+import type { StructuredElement, StructuredSurfaceHandler, SurfaceComponentDraft, SurfaceRecordDraft, SurfaceResolvedReference } from "@hypit/hypit/author-kit";
 import { exampleBoxFragment, exampleMediaFragment, exampleTextFragment } from "./fragment.js";
 import { exampleMarkupSurfaces, exampleTypes } from "./manifest.js";
-import { mediaTypes } from "hypit/media";
-import { svsRecipeType } from "hypit/svs";
-import { artifactTypes } from "hypit/artifact";
+import { mediaTypes } from "@hypit/hypit/media";
+import { svsRecipeType } from "@hypit/hypit/svs";
+import { artifactTypes } from "@hypit/hypit/artifact";
 
 function text(element: StructuredElement, name: string): string {
   const value = element.attributes[name];

@@ -1,4 +1,4 @@
-import { createMarkupSurfaceHostFacet } from "hypit/author-kit";
+import { createMarkupSurfaceHostFacet } from "@hypit/hypit/author-kit";
 import { decodeExampleSurface, exampleComponent, exampleManifest, exampleMarkupSurfaces, exampleModuleRef } from "./index.js";
 
 export const hypitPackage = {

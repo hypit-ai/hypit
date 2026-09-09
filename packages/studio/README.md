@@ -7,7 +7,7 @@ resulting Tracks with HyperFrames.
 
 ```bash
 cd /path/to/external-video-project
-hypit-studio --run build.svrun
+hypit studio --run build.svrun
 ```
 
 When `--runtime` is omitted, Studio reads the resolved project's `.hypit/runtime`
@@ -69,8 +69,8 @@ project nor its packages are added to the Hypit Distribution or contributor work
 The Host resolves selected project packages from the project first and official
 `@hypit/*` imports from the read-only tool Distribution. The `@hypit/*`
 namespace is Distribution-owned and cannot be shadowed by a project install.
-External Companions compile against `hypit/studio-adapter` and the other public `hypit/*`
-subpaths, with `hypit` as a development dependency. The active Distribution supplies those APIs
+External Companions compile against `@hypit/hypit/studio-adapter` and the other public `@hypit/hypit/*`
+subpaths, with `@hypit/hypit` as a development dependency. The active Distribution supplies those APIs
 at runtime. Ship the Companion's compiled JavaScript with its component package.
 
 The companion owns what its Track means: matching, required same-Surface values,
