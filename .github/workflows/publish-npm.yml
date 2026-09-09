@@ -95,4 +95,4 @@ jobs:
       - name: Publish the prepared tarball
         env:
           VERSION: ${{ needs.package.outputs.version }}
-        run: npm publish "release/hypit-hypit-$VERSION.tgz" --access public --tag latest
+        run: npm publish "./release/hypit-hypit-$VERSION.tgz" --access public --tag latest
