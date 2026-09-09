@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const output = resolve(root, "dist/release");
 const github = "https://github.com/hypit-ai/hypit/blob/main/";
-const assets = "https://storage.googleapis.com/hypit-public-assets/showcase/2026-09-09/";
+const assets = "https://storage.googleapis.com/hypit-public-assets/showcase/npm/2026-09-10/";
 
 // Run through npm so its CLI entry is portable, including on Windows.
 const npmCli = process.env.npm_execpath;
@@ -31,8 +31,8 @@ readme = readme.slice(0, examples)
   + readme.slice(next);
 readme = readme
   .replace(/<picture>[\s\S]*?<\/picture>/u,
-    '<img alt="Hypit" src="https://raw.githubusercontent.com/hypit-ai/hypit/main/docs/public/hypit-logo-dark.svg" width="400" height="122">')
-  .replaceAll("https://github.com/user-attachments/assets/981c28e8-ddab-4164-85bc-03b5d71275dc", `${assets}demo.gif`)
+    `<img alt="Hypit" src="${assets}logo.svg" width="400" height="143">`)
+  .replaceAll("https://github.com/user-attachments/assets/981c28e8-ddab-4164-85bc-03b5d71275dc", `${assets}demo-compact.gif`)
   .replaceAll("https://github.com/user-attachments/assets/cc929974-96b8-4166-b81d-008e130b0f24", `${assets}star.gif`)
   .replaceAll('href="./', `href="${github}`)
   .replaceAll("](./", `](${github}`)
