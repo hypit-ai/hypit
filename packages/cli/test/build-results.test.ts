@@ -126,7 +126,7 @@ test("builds, history, inspect and get read project Build Results without openin
       "get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination,
     ], root);
     assert.deepEqual(exported, {
-      format: "hypit.cli-get@4",
+      format: "hypit.cli-get@1",
       build: "bld_20260902T110000000Z_0000000001",
       output: "stage.value",
       type: "example.result@1/Value",
@@ -313,7 +313,7 @@ test("result edit changes only the exact project Result presentation without ope
       readonly highlightedOutputs: readonly string[];
     };
     assert.deepEqual(edited, {
-      format: "hypit.cli-result-edit@3",
+      format: "hypit.cli-result-edit@1",
       build: "bld_20260902T110000000Z_0000000001",
       title: "Episode 12 B-roll",
       note: "Use the close-up for the opening beat.",

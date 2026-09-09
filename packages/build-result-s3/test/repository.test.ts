@@ -231,7 +231,7 @@ test("S3 uses the shared Result decoder before exposing a manifest", async () =>
   const build = "bld_20260902T100000012Z_0000000001";
   const physical = `${(Number.MAX_SAFE_INTEGER - Date.parse("2026-09-02T10:00:00.012Z")).toString().padStart(16, "0")}-${build}`;
   client.objects.set(`${physical}/result.json`, new TextEncoder().encode(JSON.stringify({
-    format: "hypit.build-result@2",
+    format: "hypit.build-result@1",
     source: { path: "main.svml" },
     targets: [],
     outputs: null,

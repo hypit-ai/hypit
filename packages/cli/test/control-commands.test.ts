@@ -47,7 +47,7 @@ test("activity opens Runtime control without constructing execution Providers", 
     readonly at: number;
     readonly builds: readonly unknown[];
   };
-  assert.equal(result.format, "hypit.cli-activity@2");
+  assert.equal(result.format, "hypit.cli-activity@1");
   assert.equal(typeof result.at, "number");
   assert.deepEqual(result.builds, []);
 });
@@ -93,7 +93,7 @@ test("status --watch follows active execution, then reads its finished Result", 
       repository: {
         async read() {
           return {
-            format: "hypit.build-result@2",
+            format: "hypit.build-result@1",
             id: "build-watch",
             source: { path: "main.svml" },
             targets: [],
@@ -136,7 +136,7 @@ test("status reads a finished project Result without a Runtime", async () => {
         async read(build: string) {
           calls.push(`result.read:${build}`);
           return {
-            format: "hypit.build-result@2",
+            format: "hypit.build-result@1",
             id: build,
             source: { path: "main.svml" },
             targets: [],
@@ -170,7 +170,7 @@ test("finished status defaults to the Result outcome without repeating internal 
       repository: {
         async read() {
           return {
-            format: "hypit.build-result@2",
+            format: "hypit.build-result@1",
             id: "build-finished",
             source: { path: "main.svml" },
             targets: ["final.video"],
@@ -317,7 +317,7 @@ test("result finish writes only an already-decided Result that needs attention",
 
   assert.equal(finishes, 1);
   assert.deepEqual(JSON.parse(output), {
-    format: "hypit.cli-result-finish@2",
+    format: "hypit.cli-result-finish@1",
     build: "build-blocked",
     outcome: "complete",
   });
@@ -346,7 +346,7 @@ test("result discard invokes only the exact one-shot Result control", async () =
 
   assert.deepEqual(calls, ["discard:build-submitting", "result-control.close"]);
   assert.deepEqual(JSON.parse(output), {
-    format: "hypit.cli-result-discard@2", build: "build-submitting", discarded: true,
+    format: "hypit.cli-result-discard@1", build: "build-submitting", discarded: true,
   });
 });
 
@@ -408,7 +408,7 @@ test("doctor diagnoses project Results without requiring a Runtime Profile", asy
   }, distribution);
   assert.deepEqual(calls, [`results:${projectRoot}`]);
   assert.deepEqual(JSON.parse(output), {
-    format: "hypit.cli-doctor@3",
+    format: "hypit.cli-doctor@1",
     ok: true,
     project: projectRoot,
     diagnosticCount: 0,
@@ -480,7 +480,7 @@ test("runtime logs returns only the requested tail and hides its path by default
   ], { write: (text) => { output += text; } }, distribution);
 
   assert.deepEqual(JSON.parse(output), {
-    format: "hypit.cli-runtime-logs@2",
+    format: "hypit.cli-runtime-logs@1",
     lines: ["two", "three"],
     totalLines: 3,
     omittedLines: 1,
@@ -541,7 +541,7 @@ test("cancelling a completed Build reports that no cancellation was requested", 
       repository: {
         async read() {
           return {
-            format: "hypit.build-result@2",
+            format: "hypit.build-result@1",
             id: "build-complete",
             source: { path: "main.svml" },
             targets: [],
@@ -561,7 +561,7 @@ test("cancelling a completed Build reports that no cancellation was requested", 
   ], { write: (text) => { output += text; } }, distribution);
 
   assert.deepEqual(JSON.parse(output), {
-    format: "hypit.cli-cancel@3",
+    format: "hypit.cli-cancel@1",
     requested: false,
     build: {
       id: "build-complete",

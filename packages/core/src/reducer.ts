@@ -290,11 +290,11 @@ export function defineBuild(
     invariant(!targets.has(target.output), "DUPLICATE_BUILD_TARGET", `${target.output} is targeted twice`, target.output);
     targets.add(target.output);
   }
-  return { format: "hypit.build-definition@2", ...input };
+  return { format: "hypit.build-definition@1", ...input };
 }
 
 function initialBuildView(definition: BuildDefinition): BuildState {
-  invariant(definition.format === "hypit.build-definition@2", "UNSUPPORTED_BUILD_DEFINITION", definition.format);
+  invariant(definition.format === "hypit.build-definition@1", "UNSUPPORTED_BUILD_DEFINITION", definition.format);
   verifyBuildPlan(definition.program, definition.initialRecords, definition.plan);
   return {
     format: "hypit.build@1",

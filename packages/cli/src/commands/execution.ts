@@ -44,7 +44,7 @@ export async function runExecutionCommand(input: {
     const finished = result?.outcome !== undefined;
     const build = result === undefined ? null : buildStatusView({ id: result.id, result });
     const outcome = result?.outcome;
-    write({ format: "hypit.cli-status@3", build }, result === undefined
+    write({ format: "hypit.cli-status@1", build }, result === undefined
       ? "Build Result not found"
       : outcome === "complete" ? "Build complete"
         : outcome === "failed" ? "Build failed"
@@ -73,7 +73,7 @@ export async function runExecutionCommand(input: {
     const resultControl = await selectedHost.openResultControl();
     const discarded = await resultControl.discardSubmission(args.build)
       .finally(async () => await resultControl.close());
-    write({ format: "hypit.cli-result-discard@2", build: args.build, discarded }, discarded
+    write({ format: "hypit.cli-result-discard@1", build: args.build, discarded }, discarded
       ? "Incomplete Build discarded"
       : "Incomplete Build not found", discarded ? "success" : "warning", [
         ["Build", args.build],
@@ -106,7 +106,7 @@ export async function runExecutionCommand(input: {
         if (args.watch && currentView === previous) return;
         previous = currentView;
         const value = {
-          format: "hypit.cli-activity@2" as const,
+          format: "hypit.cli-activity@1" as const,
           at: Date.now(),
           worker: worker.state,
           builds,
@@ -203,7 +203,7 @@ export async function runExecutionCommand(input: {
                 : resultOutcome === "cancelled"
                   ? "Build cancelled"
                   : args.watch && activity === undefined ? "Build finished" : "Build active";
-      write({ format: "hypit.cli-status@3", build }, !found
+      write({ format: "hypit.cli-status@1", build }, !found
         ? "Build not found" : humanTitle,
       !found
         ? "warning"
@@ -261,18 +261,18 @@ export async function runExecutionCommand(input: {
         const existing = await openedResults.repository.read(args.build)
           .finally(async () => await openedResults.close());
         if (existing?.outcome === undefined) {
-          write({ format: "hypit.cli-result-finish@2", build: args.build, found: false },
+          write({ format: "hypit.cli-result-finish@1", build: args.build, found: false },
             "Result cannot be finished", "warning", [["Build", args.build]],
             ["No decided Result write exists for this Build."]);
           io.setExitCode?.(1);
           return;
         }
-        write({ format: "hypit.cli-result-finish@2", build: args.build, outcome: existing.outcome },
+        write({ format: "hypit.cli-result-finish@1", build: args.build, outcome: existing.outcome },
           "Result already finished", "info", [["Build", args.build], ["Outcome", existing.outcome]]);
         return;
       }
       write({
-        format: "hypit.cli-result-finish@2",
+        format: "hypit.cli-result-finish@1",
         build: args.build,
         outcome: finished.outcome,
         ...(finished.issue === undefined ? {} : { attention: {
@@ -299,7 +299,7 @@ export async function runExecutionCommand(input: {
       ...(finished === undefined ? {} : { result: finished }),
     });
     const machine = {
-      format: "hypit.cli-cancel@3" as const,
+      format: "hypit.cli-cancel@1" as const,
       requested: active?.cancellationRequested === true,
       build,
     };

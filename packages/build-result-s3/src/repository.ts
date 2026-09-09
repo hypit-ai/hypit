@@ -181,7 +181,7 @@ export class S3BuildResultRepository implements BuildResultRepository {
     assert((await this.read(seed.id)) === undefined, `Build Result ${seed.id} already exists`);
     const forwards = await normalizeBuildResultForwards(this, seed.forwards ?? []);
     const manifest: BuildResultManifest = {
-      format: "hypit.build-result@2",
+      format: "hypit.build-result@1",
       id: seed.id,
       ...(seed.title === undefined ? {} : { title: seed.title }),
       source: seed.source,

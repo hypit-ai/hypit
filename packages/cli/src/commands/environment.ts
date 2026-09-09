@@ -93,7 +93,7 @@ export async function runEnvironmentCommand(input: {
       : existing === undefined ? [] : [existing];
     const ready = reports.length === 1;
     write({
-      format: "hypit.cli-package@2",
+      format: "hypit.cli-package@1",
       action: args.action,
       package: args.package,
       ready,
@@ -119,7 +119,7 @@ export async function runEnvironmentCommand(input: {
     ]);
     const diagnostics = [...(runtimeResult?.diagnostics ?? []), ...projectResult.diagnostics];
     const machine = {
-      format: "hypit.cli-doctor@3" as const,
+      format: "hypit.cli-doctor@1" as const,
       ok: !diagnostics.some((item) => item.severity === "error"),
       project: projectRoot,
       ...(profile === undefined ? {} : { profile }),
@@ -158,7 +158,7 @@ export async function runEnvironmentCommand(input: {
         ? desiredState ? "External programs stopped" : "Some external programs are still running"
         : "External program status";
     write({
-      format: "hypit.cli-programs@2",
+      format: "hypit.cli-programs@1",
       action: args.action,
       ready,
       programs: result.programs.slice(0, args.limit).map((item) => ({
@@ -200,7 +200,7 @@ export async function runEnvironmentCommand(input: {
       const ok = processState.state === "running"
         && external.programs.every((item) => item.state.state === "ready");
       write({
-        format: "hypit.cli-runtime-up@2",
+        format: "hypit.cli-runtime-up@1",
         ready: ok,
         worker: processState.state,
         preparedPackages: prepared.length,
@@ -223,7 +223,7 @@ export async function runEnvironmentCommand(input: {
       const lines = logs.text.length === 0 ? [] : logs.text.replace(/\n$/u, "").split("\n");
       const shown = lines.slice(-args.lines);
       write({
-        format: "hypit.cli-runtime-logs@2",
+        format: "hypit.cli-runtime-logs@1",
         lines: shown,
         totalLines: lines.length,
         omittedLines: Math.max(0, lines.length - shown.length),
@@ -238,7 +238,7 @@ export async function runEnvironmentCommand(input: {
       const worker = await controller.worker.down({
         ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
       });
-      write({ format: "hypit.cli-runtime-down@2", worker: worker.state },
+      write({ format: "hypit.cli-runtime-down@1", worker: worker.state },
         "Runtime Worker is down", "success", [["Worker", worker.state]],
         ["Managed programs were left running. Stop them explicitly with hypit programs down."]);
       return;
@@ -266,7 +266,7 @@ export async function runEnvironmentCommand(input: {
       const attention = activity.builds.some((item) => item.issue !== undefined) || (active > 0 && !ready);
       const unavailable = external.programs.filter((item) => item.state.state !== "ready");
       const machine = {
-        format: "hypit.cli-runtime-status@2" as const,
+        format: "hypit.cli-runtime-status@1" as const,
         ready,
         attention,
         worker: {
@@ -328,7 +328,7 @@ export async function runEnvironmentCommand(input: {
           writable: item.writable,
         }));
         write({
-          format: "hypit.cli-auth-status@2",
+          format: "hypit.cli-auth-status@1",
           endpoint: args.endpoint,
           credentials: view,
           ...(credentials.length <= args.limit ? {} : { omittedCredentials: credentials.length - args.limit }),
@@ -363,7 +363,7 @@ export async function runEnvironmentCommand(input: {
         }
         const stored = await credentialsControl.putCredential(item.endpoint, item.slot, secret);
         write({
-          format: "hypit.cli-auth-change@2",
+          format: "hypit.cli-auth-change@1",
           endpoint: args.endpoint,
           slot: stored.slot,
           configured: true,
@@ -373,7 +373,7 @@ export async function runEnvironmentCommand(input: {
         if (item === undefined) throw new Error(`Endpoint ${args.endpoint} has no matching credential`);
         const removed = await credentialsControl.deleteCredential(item.endpoint, item.slot);
         write({
-          format: "hypit.cli-auth-change@2",
+          format: "hypit.cli-auth-change@1",
           endpoint: args.endpoint,
           slot: removed.credential.slot,
           configured: false,

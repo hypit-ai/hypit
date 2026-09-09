@@ -46,7 +46,7 @@ export async function runProjectResultCommand(input: {
       outputCount: Object.keys(manifest.outputs).length,
     }));
     write({
-      format: "hypit.cli-builds@3",
+      format: "hypit.cli-builds@1",
       builds,
       ...(page.next === undefined ? {} : { next: page.next }),
     }, "Build results", "info", [["Builds", String(builds.length)]],
@@ -75,7 +75,7 @@ export async function runProjectResultCommand(input: {
       output: await outputView(repository, manifest, args.outputName),
     })));
     write({
-      format: "hypit.cli-history@4",
+      format: "hypit.cli-history@1",
       output: args.outputName,
       ...(source === undefined ? {} : { source: projectPath(source, projectRoot) }),
       entries,
@@ -107,7 +107,7 @@ export async function runProjectResultCommand(input: {
     const visibleOutputs = args.presentation.verbose ? build.outputs : focusedOutputs;
     const outputCount = build.outputs.length + (build.omittedOutputs ?? 0);
     const hiddenOutputCount = args.outputName === undefined ? outputCount - focusedOutputs.length : 0;
-    write({ format: "hypit.cli-inspect@4", build }, "Build Result",
+    write({ format: "hypit.cli-inspect@1", build }, "Build Result",
       manifest.outcome === "failed" ? "error"
         : manifest.outcome === "cancelled" ? "warning"
           : manifest.outcome === "complete" ? "success" : "info", [
@@ -149,7 +149,7 @@ export async function runProjectResultCommand(input: {
         : args.highlightedOutputs.length === 0 ? {} : { highlightedOutputs: args.highlightedOutputs }),
     });
     const presentation = {
-      format: "hypit.cli-result-edit@3" as const,
+      format: "hypit.cli-result-edit@1" as const,
       build: manifest.id,
       title: manifest.title ?? null,
       note: manifest.note ?? null,
@@ -169,7 +169,7 @@ export async function runProjectResultCommand(input: {
 
   const exported = await exportBuildResultOutput(repository, args.build, args.outputName, args.destination);
   const machine = {
-    format: "hypit.cli-get@4" as const,
+    format: "hypit.cli-get@1" as const,
     build: exported.build,
     output: exported.output,
     type: cliTypeName(exported.type),

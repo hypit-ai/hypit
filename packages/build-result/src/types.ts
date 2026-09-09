@@ -173,7 +173,7 @@ export type BuildResultOperation = {
 };
 
 export type BuildResultManifest = {
-  readonly format: "hypit.build-result@2";
+  readonly format: "hypit.build-result@1";
   /** Injected from the Repository address; `result.json` does not repeat its containing Build id. */
   readonly id: string;
   readonly title?: string;
