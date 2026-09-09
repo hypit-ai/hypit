@@ -130,6 +130,18 @@ test("Caption punctuation assigns ASCII quotes to the enclosed display words", (
   ]);
 });
 
+test("Mixed-script brand names preserve following character units and authored Cue breaks", () => {
+  const parsed = parseScript("mixed-script.svml", "<line>用Hypit生成视频，||我的AI助手做3个视频。</line>");
+  const document = captionDocument(parsed, "story.caption", "story");
+  assert.deepEqual(parsed.tokens.map((token) => token.text), [
+    "用", "Hypit", "生", "成", "视", "频", "我", "的", "AI", "助", "手", "做", "3", "个", "视", "频",
+  ]);
+  assert.deepEqual(document.words.slice(0, 6).map((word) => word.text), [
+    "用", "Hypit", "生", "成", "视", "频，",
+  ]);
+  assert.equal(document.cueBreaks[0]?.afterUnitId, document.units[5]?.id);
+});
+
 test("Script keeps ordinary compounds and formatted numbers lexical", () => {
   const parsed = parseScript(
     "punctuation-compounds.svml",

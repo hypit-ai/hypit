@@ -99,6 +99,12 @@ Dual Text preserves display spelling while supplying an explicit pronunciation. 
 Unit is indivisible for Caption timing and authored Cue Breaks. Roles are lexical speaking cues;
 the Source's model references and action direction bind them to the intended performers.
 
+English words and numbers normally form lexical units; Han characters form individual units, as do
+Hiragana and Katakana characters. A Latin name adjacent to Han text remains separate from the
+following characters. Display punctuation attaches to neighboring words without adding timing units.
+These units support precise timing and highlighting. A Caption Cue can hold a whole phrase of them;
+`||` chooses its handoff independently of character counts or visual line wrapping.
+
 ## Selection and Moment affinity
 
 A marker selects the adjacent semantic anchor; it does not write a timecode. Inside a spoken

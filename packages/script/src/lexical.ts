@@ -3,8 +3,14 @@ export type LexicalUnit = {
   readonly index: number;
 };
 
-const LEXICAL_UNIT =
-  /(?:\p{N}{1,3}(?:[,，]\p{N}{3})+|\p{N}+)(?:[.．]\p{N}+)?(?:-\p{N}+(?:[.．]\p{N}+)?)*(?!\p{N}|-[\p{L}\p{M}])|[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]\p{M}*|[\p{L}\p{M}\p{N}]+(?:['’.-][\p{L}\p{M}\p{N}]+)*/gu;
+const CHARACTER_UNIT = String.raw`[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]`;
+// A Latin name beside Han prose ends at the script boundary, even without an authored space.
+const WORD_CHARACTER = String.raw`(?:(?!${CHARACTER_UNIT})[\p{L}\p{M}\p{N}])`;
+const LEXICAL_UNIT = new RegExp([
+  String.raw`(?:\p{N}{1,3}(?:[,，]\p{N}{3})+|\p{N}+)(?:[.．]\p{N}+)?(?:-\p{N}+(?:[.．]\p{N}+)?)*(?!\p{N}|-[\p{L}\p{M}])`,
+  String.raw`${CHARACTER_UNIT}\p{M}*`,
+  String.raw`${WORD_CHARACTER}+(?:['’.-]${WORD_CHARACTER}+)*`,
+].join("|"), "gu");
 
 const OPENING_PUNCTUATION = new Set([
   "(", "[", "{", "（", "【", "《", "「", "『", "〔", "〈", "“", "‘",
