@@ -9,7 +9,7 @@ and edge cases.
 [Source syntax](../production/source-syntax.md) covers the surrounding imports, references, Recipes
 and Runs; [Tracks](../production/tracks.md) covers the consumers of Script meaning.
 [Media preparation](../production/media.md) explains connecting actual footage to a Segment, and
-[Runs](../production/runs.md) explains choosing estimated timing for a layout study.
+[Runs](../production/runs.md) explains targeting material and reusing produced Takes.
 
 ## Script is the target's sole verbal authority
 
@@ -18,25 +18,28 @@ visual Style parameters, prompts, or provider decisions. Semantic word attribute
 `useful{emphasis}` can identify a word's role for a Caption family. Brief may preserve required claims and Treatment may describe
 the purpose of a passage, but the adopted wording appears in Source only once.
 
-Use Script's distinct authoring concepts for distinct jobs:
+Choose Script structure from the thought being expressed and the performance carrying it:
 
-- a **Segment** is a named structural passage whose accepted media can become one SemanticTake;
-- a **Role Cue** says who speaks a turn without creating a character or choosing a voice;
+- a **Segment** groups a performable passage around its thought, delivery and action; its accepted
+  media can become one SemanticTake;
+- a **Role Cue** assigns a spoken turn to a performer and carries that label into the model's dialogue;
 - **Dual Text** gives one authored unit separate display and pronunciation text;
 - `||` says that one on-screen **Caption Cue** hands off to the next after a complete Alignment Unit;
 - a **word attribute** gives a Caption family an authored role on one displayed word;
-- a **Selection** names a semantic range;
-- a **Moment** names a semantic point.
+- a **Selection** names the span of meaning an element serves, such as a demonstration covering an
+  explanation or a comparison held through a claim;
+- a **Moment** names an event such as an answer or verdict, where graphics, sound or effects can
+  respond together. The component decides how the resulting state continues.
 
 ```svml
 <script id="story">
   <hook>
-    <HOST> @claim! I made @proof <Hypit | hi pit> || work overnight @/proof.
+    <HOST> @claim! I made @proof <Hypit | Hai-Pit> || work overnight @/proof.
   </hook>
 </script>
 ```
 
-Here the viewer reads `Hypit` while the performance says `hi pit`. The pair is one indivisible
+Here the viewer reads `Hypit` while the performance says `Hai-Pit`. The pair is one indivisible
 Alignment Unit. `||` ends one on-screen Caption Cue after that unit and lets the next Cue begin with
 `work`; `proof` remains one semantic range, and `claim` is a semantic point that other layers can use.
 
@@ -97,6 +100,29 @@ one Han, Hiragana or Katakana character per lexical unit; compounds, decimal num
 side of Dual Text preserve their own lexical structure. This is why Cue breaks, word attributes and
 semantic markers attach to complete authored units instead of punctuation or visual line positions.
 
+## Write the intended pronunciation
+
+Choose pronunciation while writing the Script. For coined names, unfamiliar brands and abbreviations
+whose reading needs direction, use Dual Text to keep the intended display spelling and give the
+performer a clear spoken form. Write that form as readable words, syllables or letter names in the
+performed language. This lets the request express the sound the work needs.
+
+```svml
+<script id="story">
+  <opening>
+    <HOST> I make videos with <Hypit | Hai-Pit> and write with <ChatGPT | chat G P T>.
+  </opening>
+  <closing>
+    <HOST> Here is what I made with <Hypit | Hai-Pit>.
+  </closing>
+</script>
+```
+
+Each pair applies to that occurrence. Carry the chosen spoken form into every occurrence of the
+name, including other Segments, so separately generated performances receive the same direction.
+The right-hand wording reaches the model through the Segment's `.dialogue`; Caption keeps the
+display spelling. Settle these readings before measuring the Script and requesting its performance.
+
 ## Use the Script's deliberate projections
 
 One Script publishes the full Narrative and the narrow views needed by the rest of the work:
@@ -110,6 +136,27 @@ One Script publishes the full Narrative and the narrow views needed by the rest 
 | `{story.caption}` | Display Words, Alignment Units, attributes, Roles, and authored Cue Breaks for Caption. |
 | `{story.selection.proof}` | The named semantic range. |
 | `{story.moment.claim}` | The named semantic point. |
+
+For example, this Segment inside `story` assigns two speaking turns:
+
+```svml
+<exchange>
+  <HOST> Let me show you.
+  <GUEST> That looks much easier.
+</exchange>
+```
+
+`{story.segment.exchange.dialogue}` supplies:
+
+```text
+HOST: Let me show you.
+GUEST: That looks much easier.
+```
+
+Pass that Text to the speaking prompt. In action direction, relate HOST and GUEST to the supplied
+character views and voices. The selected [Prompt Kit](../production/prompt-kits.md) owns its reference
+order; [podcast direction](../playbooks/formats/two-person-podcast.md#direct-conversation-inside-a-take)
+shows how those roles and references form one performed exchange.
 
 These are projections of one authored Script, not copies to maintain. The performance request,
 Caption system, and semantic timing therefore remain connected even when their visible and spoken

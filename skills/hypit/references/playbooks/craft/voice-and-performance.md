@@ -2,6 +2,7 @@
 
 Read this when deciding who performs spoken material, how a recurring person keeps one voice, or
 whether an off-screen passage continues an A-roll performance or uses independent speech.
+[Voice direction](voice-direction.md) owns casting an appealing voice and writing its direction.
 
 ## Let the Segment reveal the A-roll
 
@@ -77,19 +78,16 @@ a voice merely by appearing in the picture; when that character speaks elsewhere
 reference follows them into that performance.
 
 When the user supplies the exact private voice they want, prepare a clean representative excerpt as
-the Voice Reference. Otherwise direct Voice Design from the person's role, energy, age range,
-language, accent, vocal texture, pace, and delivery. Voice Design acts as a broadly capable casting
-and voice-design partner; a public character type or an imagined voice can be designed directly.
+the Voice Reference. Otherwise use [Voice direction](voice-direction.md) to cast the character through
+Voice Design and choose its sample line. A public character type or an imagined voice can be designed
+directly.
 
 About five seconds of clear, natural speech is usually enough to establish a useful reference while
 remaining easy to reuse across models. Choose words that exercise the delivery the work needs. Keep
 the sample free of other speakers, music, clipping, heavy room echo, and long silence. The selected
 model's documentation owns any exact count, duration, or format limits for its references.
 
-Direct the voice from the intended character and performance. Appearance alone is not acoustic
-evidence, but the Agent can choose a voice that supports the person's role, personality, setting, and
-the work's tone. Once accepted, reuse that same Resource wherever the same person must sound like
-themselves.
+Once accepted, reuse that same Resource wherever the same person must sound like themselves.
 
 ## Let one reference support different performances
 
@@ -185,17 +183,14 @@ other relationships.
 
 `../../creation/script-and-time.md` owns measurement, literal duration, and alignment. Once the
 accepted performance has semantic time, its dependent layers follow the delivery that really
-happened. Repair a weak performance at its direction, wording, reference, or generation according to
-the visible and audible problem.
+happened.
 
 ## Carry the character through the performance
 
-Direct voice and visible performance toward the same character: pace, emotion, gesture, gaze and
-interaction with the scene. Carry that identity across recurring Takes while allowing the energy
-and delivery to develop with the conversation.
+[Voice direction](voice-direction.md#let-one-voice-express-different-thoughts) connects recurring vocal
+identity with changing delivery; [Video direction](video-direction.md#direct-the-reason-for-an-action)
+connects each passage's meaning with expression, gesture and interaction.
 
-Review covered passages with their picture and with the underlying speech source made clear. A clean
-mix cannot rescue the wrong performer, and a good voice sample cannot rescue an unconvincing Take.
-Use `sound-mix.md` for music, effects, ambience, gain, and the completed mix. Use
-`../../creation/transformations.md` for the broader question of which useful shots and identity
-references should directly condition another generation.
+Use [Sound and mix](sound-mix.md) for music, effects, ambience, gain, and the completed mix.
+[Transformations](../../creation/transformations.md) connects casting and reference choices to the
+target's argument, relationships and presentation.

@@ -39,9 +39,19 @@ things belong together.
 
 ## Make time visible
 
-Use `hypit transcribe` to establish word-level times for spoken work. Keep that transcript beside the
-reference: it is the temporal spine for connecting speech to cuts, illustrations, reveals and
-emphasis. For speechless work, locate meaning through actions and changes in the scene.
+Use `hypit transcribe` when understanding a spoken reference. Its wording and word-level times give
+a strong starting point for following the argument and connecting speech to cuts, illustrations,
+reveals and emphasis. Keep that transcript beside the reference and interpret its wording with the
+surrounding argument, visible names and supplied context. Small transcription errors can coexist
+with a clear understanding of what the passage means.
+
+WhisperX's recognized spelling reflects the recognizer's interpretation of the audio. Coined words
+and unfamiliar names are especially prone to substitutions, so a spelling difference alone cannot
+establish a pronunciation error. The transcript helps recover the reference's content and locate
+its moments. For the new work, [Script pronunciation](script-and-time.md#write-the-intended-pronunciation)
+expresses the words and readings the generation request should perform.
+
+For speechless work, locate meaning through actions and changes in the scene.
 
 The local `hypit media` commands expose the source at the scale needed:
 

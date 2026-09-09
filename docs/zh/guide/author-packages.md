@@ -194,6 +194,32 @@ pnpm install --frozen-lockfile
 
 `<import>` 只会 activate 作者词汇。它绝不授予网络、文件系统或凭据权限。
 
+## 10. 保留或分享同一份包
+
+创建这个包是正常的视频制作工作。只有当前视频需要它时，就把它作为私有包保存在项目的
+`packages/` 中。所有者希望其他项目使用时，编译同一份包，再通过版本化的 `npm pack` tarball
+直接交付，或发布到所有者自己的 npm scope 或私有 registry。使用方通过自己的包管理器安装选定
+版本并提交 lockfile；只要逻辑接口保持兼容，Source 中的 Module import 就不需要变化。
+
+公开发布时，移除 `private: true`，并补充普通的 npm 发现与归属信息：
+
+```json
+{
+  "description": "A speech-timed score strip for Hypit videos.",
+  "keywords": ["hypit", "hypit-author-package", "scoreboard"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/studio/score-strip.git"
+  },
+  "license": "MIT"
+}
+```
+
+README 应包含可直接使用的 Source 示例、公开输出、组件的视觉证据，以及验证时采用的 Hypit
+版本。安装后，`hypit vocabulary <package>` 会读取所选版本自己的 Surface 声明。包的发现、发布、
+版本和完整性继续由 npm 或选定的私有 registry 负责；只有 Source 导入了某个逻辑能力时，Hypit
+才加载对应包。
+
 ## 实现分流
 
 没有高度相似 sibling 时，只读规范文档、已安装包的 vocabulary 输出和

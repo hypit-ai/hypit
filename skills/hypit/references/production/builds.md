@@ -43,8 +43,9 @@ work. The next attempt's choices belong in that Run; the earlier Build retains i
 
 When a Provider task-submission request times out without a task ID or another usable receipt,
 the Result can establish the request failure and absence of a receipt, while the remote outcome remains
-unknown. A later submission is a new Build and a new spending decision; proceed under the user's
-authority and select any Outputs already available from the earlier attempt in its Run.
+unknown. A later submission is a new Build. Assess its paid requests against the
+[agreed scope and cost](#work-within-the-agreed-paid-scope), and select any Outputs already available
+from the earlier attempt in its Run.
 
 When a usable receipt does exist and gives access to a generated asset, the Agent can retrieve that
 asset as an ordinary project file and select it with `file` and `satisfy` in the new Run. This supplies
@@ -80,17 +81,21 @@ hypit pricing path/to/build.svrun
 ```
 
 `pricing` is an explicit read-only network operation. It creates no Build and submits no generation.
-It places each Need beside the current documents or page supplied by its selected Endpoint. Providers
-may expose a narrow model record or a broader catalogue; Hypit does not impose a common price-table
-shape or calculate a total. Use the Need's authored duration, resolution, count, or other billing facts
-to calculate and explain the relevant cost. Missing or broad pricing material is uncertainty to report,
-not a system prohibition on an otherwise authorized Build.
+The default report groups matching requests by their selected Endpoint and pricing material, showing
+known parameters, request counts, and the Provider's rate summary or document with its source URL. Explicit
+no-charge work is summarized in one count. Missing pricing declarations and failed queries stay
+visible as uncertainty; a declared price page remains useful when the Provider supplies no document.
 
-The default human view groups matching Needs and keeps Provider documents folded to their source URLs.
-Use `--json` when you need the original documents for calculation, or `--verbose` to inspect them in the
-terminal. A mixed production naturally has separate image, video, voice, alignment, and local-processing
-entries. Read each relevant entry against its own Need, then explain the production's expected cost in
-ordinary language.
+Use the stated units and conditions together with authored duration, resolution, count, or other
+billing facts to calculate and explain the expected cost. Providers may publish several price tiers
+for one model; match the request to the applicable conditions. A future audio input may not have a
+known duration yet. Use its per-audio-second rate with an explicitly estimated length from the
+production plan, keeping that estimate distinct from measured usage. Hypit itself calculates no total.
+
+`--json` puts each group's `requests` beside its `pricingDocuments`, retaining the Provider's original
+data. Both views include all pricing groups by default. `--limit <count>` shortens only the human
+view; `--verbose` shows original documents and the no-charge work. Read the relevant groups and explain
+the expected cost of the described work, the account that would pay and any material uncertainty.
 
 Read the remaining Needs against this change. A Caption or MG-only revision should keep its existing
 media generation satisfied; replacing selected B-roll should leave the unchanged performance satisfied.
@@ -98,10 +103,34 @@ Rendering and other required processing may still appear as Needs. Explain each 
 from the user's goal or an explicit generation decision. If a request appears because a Candidate was
 lost or never selected, repair the Run and plan again before asking to spend or submitting work.
 
-Before new paid work, tell the user which requests and Provider Endpoints the plan selected and report
-the available calculation or link its Provider source. Existing explicit authorization for that described work is sufficient; otherwise
-obtain authorization before `build`. Authorization to correct downstream work does not silently extend
-to regenerating unchanged media. Additional paid work outside the authorized scope needs a new decision.
+## Work within the agreed paid scope
+
+Spending authority covers a described piece of work through the selected billing accounts and the
+cost or budget the user accepts. Explain those terms before asking for authorization, using the
+available Provider rates and the work's expected usage. Give an estimate at the precision the current
+plan supports, with material uncertainty visible. Account access and available quota describe what
+can run; the user's agreement establishes what you may spend to make it.
+
+The commission can cover a whole production, including reference transcription, generated media
+and semantic alignment, or just the reference analysis before the user decides to commission the
+video. Early hosted transcription fits either scope. Establish its coverage before invoking
+`hypit transcribe`, which immediately calls the selected Endpoint. For that reference, source
+duration and the Provider's published rates can support the estimate; a production Run need not
+exist yet. Local WhisperX has no hosted Provider call charge. As the creative plan becomes concrete,
+`plan` and `pricing` expose the exact remaining requests for that Run.
+
+Carry covered work forward and keep the user informed. The same agreement can apply across tool
+calls and Builds; a new command is not itself a new authorization request. Ask for a new decision
+when the work expands beyond the agreed scope or cost, or would use an account outside that agreement.
+Use the current plan, available Results and costs already incurred or committed to judge the
+remaining work. Treat estimates as estimates where actual charges are unavailable.
+
+Preserve the user's agreement in [Brief](../creation/brief.md#brief-preserves-user-authority), and
+resume from it alongside the current Run, Results and Progress. Normal composition work carries
+usable generated media forward. A request to revise Caption or MG authorizes that revision;
+additional media generation follows an intentional production choice covered by the paid scope.
+Explain a meaningful change while proceeding when it is already covered; seek the user's decision
+when it changes what they have agreed to fund.
 
 ## Submit one durable Build
 

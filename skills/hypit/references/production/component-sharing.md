@@ -2,9 +2,14 @@
 
 Read this when someone else needs a project component, Prompt Kit, Model, or Provider.
 
+Creating a component and distributing it answer different questions. Create the component when the
+work needs its visual role, semantic behavior or interaction. Distribution begins when its owner
+wants another project or person to use the same package. Its component model and ownership stay the
+same across that boundary.
+
 ## Share the package that owns the component
 
-A component can begin under the video project's `packages/` directory. Give it an owner-scoped name,
+A component normally begins under the video project's `packages/` directory. Give it an owner-scoped name,
 such as `@studio/score-strip`. Sharing it means giving the other project that package's code, assets,
 and usage instructions. Neither author nor consumer needs a Hypit repository checkout.
 
@@ -61,6 +66,48 @@ pnpm add @studio/score-strip@1.2.0
 The project lockfile records the installed dependency tree. Updates are explicit package-manager
 operations; Builds use the selected installed code. A missing package is an installation problem.
 
+## Make a public release discoverable
+
+People can find a public component through its npm page, source repository, or a community link.
+Ordinary package metadata makes those existing discovery surfaces useful. For example, add fields
+like these to the package that already owns the component:
+
+```json
+{
+  "description": "A speech-timed score strip for Hypit videos.",
+  "keywords": ["hypit", "hypit-author-package", "scoreboard"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/studio/score-strip.git"
+  },
+  "license": "MIT"
+}
+```
+
+The description and keywords help npm search; they do not define the component ABI. The README should
+show the visual role, a copyable Source import and element example, the package's public outputs, and
+the selected Hypit release used to check it. Include the Surface poster and, when motion or state is
+central to the idea, a short representative clip or animation. The source repository, publisher,
+license and selected release give a recipient the facts needed to choose whether to install it.
+
+After installation, inspect the package's own declarations:
+
+```bash
+hypit vocabulary @studio/score-strip
+```
+
+That output explains the installed release's Surfaces and vocabulary. npm or the selected private
+registry remains the authority for package bytes and versions; the project lockfile records the
+consumer's exact choice.
+
+## Adapt the package under its owner's identity
+
+Ordinary changes to words, media, timing, palette or exposed parameters remain in the consuming
+project's Source and Recipes. When someone changes the reusable mechanics or public behavior, the
+fork can take that owner's package scope and Module identity, subject to the original license. The
+new package is then installed, versioned and imported through the same mechanism as any other shared
+component.
+
 ## Include what the recipient needs
 
 The package's `files` and `exports` should include its built activation, runtime code, preview assets,
@@ -88,3 +135,10 @@ A Prompt Kit can export an `.svs` Source through ordinary package `exports` with
 That reads the selected package data. The same packing, installation, versioning, and file-completeness
 rules apply. [Project handoff](../creation/project-files.md#hand-over-an-editable-production) explains
 sharing the Sources, Runs, assets and Results needed to continue a video on another machine.
+
+## Official Distribution ownership is a separate decision
+
+A package maintained in the official Hypit Distribution becomes part of Hypit's product and release
+surface. A proposal for that ownership begins with an issue that explains the shared production need
+and maintenance boundary. Community reuse remains under the package owner's own releases, independent
+of that product decision.

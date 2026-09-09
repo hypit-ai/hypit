@@ -90,6 +90,11 @@ Surface. Setting a prompt option cannot create a media reference or execute a po
 
 ## Speaker: edited UGC from one useful view
 
+For ordinary direct-to-camera social video, explicitly select
+`edit-rhythm: pause-trim-jump-cuts` as the starting rhythm. Read the Hypit Skill's Video direction page
+for the directing judgment, and the [Speaker template](kits/speaker-v1.svs) for the exact wording of
+its Recipe choices. Choose `performance` and `gesture` for the character's intended presence.
+
 Reuse the same person-and-scene image and voice for ordinary Takes belonging to one UGC performance.
 Each Take can begin from that shared reference and meet the others at a natural cut. There is no
 required previous-tail-frame chain. Independent generation follows the intended edited form.
@@ -107,9 +112,10 @@ speaker.host {
 ```
 
 `edit-rhythm: pause-trim-jump-cuts` asks the model for an edited pause-trim rhythm at phrase boundaries.
-It is compatible with a fixed camera and active performance. `continuous-take` is another authored
-choice, not a universal requirement. Actual speed changes, trimming or audio extraction are explicit
-media operations; selecting this Recipe does not perform them on the returned video.
+It is compatible with a fixed camera and active performance. The template uses `continuous-take`
+when `edit-rhythm` is omitted; select that value when the passage calls for a continuous
+shot. Actual speed changes, trimming or audio extraction are explicit media operations; selecting
+this Recipe does not perform them on the returned video.
 
 ## Podcast: two views and living listeners
 
