@@ -72,6 +72,12 @@ OpenCV 的集成测试可以显式 opt-in；它们不得联网调用付费服务
 | `pnpm test:whisperx-service` | Python WhisperX 服务 | Python 3.13、uv、frozen sync |
 | `pnpm test:image-opencv` | OpenCV 图像变换 | 服务自带的解释器，位于 `services/image-opencv/.venv`；要用别的解释器就设 `HYPIT_OPENCV_PYTHON` |
 
+要运行本地 HyperFrames 浏览器渲染测试，先在当前 shell 环境中设置 `HYPIT_BROWSER_TESTS=1`，再从仓库根目录执行以下命令。需要可用的 Chrome、ffmpeg 和 ffprobe。
+
+```sh
+node --import tsx --test packages/provider-hyperframes-local/test/provider.test.ts
+```
+
 ## 测试 fixtures
 
 测试夹具放在 `packages/<name>/test/fixtures/`。它们是普通的 `.svml`、`.svs` 和 `.svrun` 文件，用于覆盖特定的编译路径。

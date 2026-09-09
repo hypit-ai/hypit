@@ -41,10 +41,10 @@ hypit/
 ├── packages/              workspace packages
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources
-├── services/              Python 服务 (whisperx, image-opencv)
+├── services/              本地媒体与转写服务
 ├── test/                  repository boundary tests and shared fixtures
 ├── package.json           root workspace manifest
-├── pnpm-workspace.yaml    workspace: [packages/*]
+├── pnpm-workspace.yaml    package, service and example-component workspaces
 └── tsconfig.json          TypeScript config
 ```
 

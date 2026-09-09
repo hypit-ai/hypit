@@ -92,6 +92,12 @@ explicitly opt-in, use no committed secret and fail before spending money unless
 | `pnpm test:whisperx-service` | Python WhisperX service | Python 3.13, uv, frozen sync |
 | `pnpm test:image-opencv` | the shared OpenCV Raster interpreter across both request variants | the service's own interpreter at `services/image-opencv/.venv`; set `HYPIT_OPENCV_PYTHON` to use another |
 
+For the local HyperFrames browser render tests, set `HYPIT_BROWSER_TESTS=1` in your shell environment, then run the command below from the repository root. Chrome, ffmpeg and ffprobe must be available.
+
+```sh
+node --import tsx --test packages/provider-hyperframes-local/test/provider.test.ts
+```
+
 ## Test fixtures
 
 Test fixtures go in `packages/<name>/test/fixtures/`. They are
