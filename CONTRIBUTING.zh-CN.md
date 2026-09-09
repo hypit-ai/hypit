@@ -50,6 +50,15 @@ pnpm test          # 包与服务适配器测试
 `dist/release/README.md` 可用于检查打包后的文案。
 使用 `npm publish dist/release/hypit-hypit-<version>.tgz --access public` 发布生成的 tarball。
 
+使用 GitHub Actions 时，先把下一个稳定 npm 版本写入 `package.json` 并提交到 `main`，再进入
+**Actions → Publish npm → Run workflow**，选择 `main` 并填写该版本。不勾选 **Publish to npm**
+时，只运行 Linux/Windows 检查并提供 README 和 tarball 下载；勾选后，在检查通过后将本次打出的
+tarball 发布为 `latest`。每次运行使用启动时选定的提交。push 和 tag 不触发发布，工作流不修改版本或创建标签。
+
+npm 包的 Trusted Publisher 应配置 GitHub Actions：组织 `hypit-ai`、仓库 `hypit`、工作流
+`publish-npm.yml`，允许直接 `npm publish`，环境名称留空。发布 job 使用 OIDC，不需要保存 npm Token。
+已发布的版本不能覆盖；`0.1.2` 等 npm 版本与逻辑接口 `@1` 分开管理。
+
 ## 提交 Pull Request
 
 分支名与提交信息使用同一套前缀：分支用 `feat/`、`fix/`、`docs/`，提交信息用 `feat:`、`fix:`、`docs:`。

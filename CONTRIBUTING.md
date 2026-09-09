@@ -58,6 +58,17 @@ README for the npm page: public image URLs, both GIFs, and a link to the full vi
 The repository READMEs remain unchanged. `dist/release/README.md` shows the packaged text.
 Publish the resulting tarball with `npm publish dist/release/hypit-hypit-<version>.tgz --access public`.
 
+For GitHub Actions, commit the next stable npm version in `package.json` to `main`, then open
+**Actions → Publish npm → Run workflow** on `main` and enter that version. Leave **Publish to npm**
+unchecked to run Linux/Windows checks and download the packaged README and tarball; check it to
+publish that run's tarball as `latest` after those checks pass. Each run uses the commit selected
+when it starts. Pushes and tags do not publish, and the workflow does not change versions or create tags.
+
+The npm package's Trusted Publisher settings must allow GitHub Actions from organization `hypit-ai`,
+repository `hypit`, workflow `publish-npm.yml`, with direct `npm publish` enabled and no environment
+name. The publishing job uses OIDC; no npm token secret is needed. An already published version
+cannot be overwritten. npm versions such as `0.1.2` are separate from the logical `@1` interfaces.
+
 ## Open the pull request
 
 Branch names and commit subjects share the same prefix: `feat/`, `fix/`, `docs/` for branches and

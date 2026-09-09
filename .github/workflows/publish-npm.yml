@@ -1,0 +1,98 @@
+name: Publish npm
+run-name: "npm ${{ inputs.version }} — ${{ inputs.publish && 'publish' || 'package only' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version already committed in main's package.json"
+        type: string
+        required: true
+      publish:
+        description: "Publish to npm (unchecked: checks and downloadable package only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+
+  package:
+    needs: checks
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Confirm release version
+        id: version
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+          if (!/^\d+\.\d+\.\d+$/.test(version) || version !== process.env.EXPECTED_VERSION) {
+            throw new Error('Enter the stable version already committed in main/package.json.');
+          }
+          appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\n`);
+          JS
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile
+      - name: Build the npm package and README
+        run: npm run pack:distribution
+      - name: Check the packaged CLI
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          npm install --prefix "$RUNNER_TEMP/hypit-install" "$PWD/dist/release/hypit-hypit-$VERSION.tgz" --no-audit --no-fund
+          "$RUNNER_TEMP/hypit-install/node_modules/.bin/hypit" --version
+          "$RUNNER_TEMP/hypit-install/node_modules/.bin/hypit" studio --help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: |
+            dist/release/*.tgz
+            dist/release/README.md
+          if-no-files-found: error
+      - name: Record the release inputs
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "Prepared @hypit/hypit@$VERSION from $GITHUB_SHA. Download npm-package to inspect the tarball and README." >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    if: inputs.publish
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Use npm with trusted publishing support
+        run: npm install --global npm@11
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-package
+          path: release
+      - name: Publish the prepared tarball
+        env:
+          VERSION: ${{ needs.package.outputs.version }}
+        run: npm publish "release/hypit-hypit-$VERSION.tgz" --access public --tag latest
