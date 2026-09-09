@@ -42,6 +42,7 @@ docs/.vitepress/dist/
 .svml-cache/
 .hypit/
 examples/**/assets/
+examples/**/reused/*.mp4
 examples/**/build/
 examples/**/output/
 examples/**/.svml/
