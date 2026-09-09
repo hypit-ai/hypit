@@ -36,19 +36,22 @@ test("one live detached Runtime Worker survives repeated starts and stale startu
       process.exit(0);
     });
   `;
+  // This checks process ownership, not startup speed. Creating a Windows console on a shared
+  // runner can take longer than five seconds while the rest of the suite is running.
+  const startupTimeoutMs = 30_000;
   try {
     const [first, concurrent] = await Promise.all([
       ensureRuntimeProcess(
         profile,
         dataRoot,
         { command: process.execPath, args: ["-e", program] },
-        5_000,
+        startupTimeoutMs,
       ),
       ensureRuntimeProcess(
         profile,
         dataRoot,
         { command: process.execPath, args: ["-e", program] },
-        5_000,
+        startupTimeoutMs,
       ),
     ]);
     assert.equal(first.state, "running");
