@@ -120,6 +120,7 @@ test("KIE exposes the rate-card records returned for the request's wire model", 
     credentials: async () => { throw new Error("public pricing must not require credentials"); },
   }), [{
     source: "https://api.kie.ai/client/v1/model-pricing/page",
+    summary: "bytedance/seedance-2-mini, 720P no video: USD 0.041; 8.2 credits (per second)",
     data: {
       model: "bytedance/seedance-2-mini",
       records: [{

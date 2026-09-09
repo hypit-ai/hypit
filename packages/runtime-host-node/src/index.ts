@@ -174,6 +174,7 @@ export type RuntimeHostCapabilityPricing = RuntimeHostCapabilityProvider & {
   readonly pricingDocuments?: readonly {
     readonly source: string;
     readonly data: CanonicalValue;
+    readonly summary?: string;
   }[];
   /** A failed pricing-source read. The Provider's static price page remains available. */
   readonly pricingError?: string;

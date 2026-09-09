@@ -415,7 +415,7 @@ test("Runtime pricing reads Provider-owned material with only the selected Endpo
         const resolved = await credentials();
         assert.equal(resolved.apiKey?.secret, "selected-key");
         assert.deepEqual(request.constraints, { seconds: 5 });
-        return [{ source: "https://prices.example/models/generate", data: { usdPerSecond: 0.25 } }];
+        return [{ source: "https://prices.example/models/generate", data: { usdPerSecond: 0.25 }, summary: "USD 0.25 per second" }];
       },
       capabilities: [{ capability: generate, returns, lifecycle: "immediate", handler }],
     }) }),
@@ -438,6 +438,7 @@ test("Runtime pricing reads Provider-owned material with only the selected Endpo
       pricingDocuments: [{
         source: "https://prices.example/models/generate",
         data: { usdPerSecond: 0.25 },
+        summary: "USD 0.25 per second",
       }],
     }, {
       request: "render", capability: render, status: "resolved", endpoint: "local", use: "example.local",

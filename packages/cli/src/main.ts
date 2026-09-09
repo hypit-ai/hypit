@@ -13,7 +13,7 @@ import type {
   CliRuntime,
   CliRuntimeController,
 } from "./runtime-port.js";
-import { writeCliHelp, writeCliOutput } from "./output.js";
+import { createPricingOutput, writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliIo, CliMachineView } from "./output.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
@@ -577,18 +577,12 @@ export async function runCli(
       }
       const pricing = await describePlanPricing(planHost, evaluated.state, evaluated);
       const needs = describePlanNeeds(evaluated.state, evaluated, pricing);
-      const shown = args.limit;
       writeCliOutput(io, args.presentation, {
         kind: "pricing",
-        machine: {
-          format: "hypit.cli-pricing@1",
-          run: projectPath(loaded.path, effectiveWorkspaceRoot),
-          requestCount: pricing.length,
-          pricing: pricing.slice(0, shown),
-          ...(pricing.length <= shown ? {} : { omittedPricing: pricing.length - shown }),
-          needs: needs.slice(0, shown),
-          ...(needs.length <= shown ? {} : { omittedNeeds: needs.length - shown }),
-        },
+        ...(args.limit === undefined ? {} : { limit: args.limit }),
+        machine: createPricingOutput(
+          projectPath(loaded.path, effectiveWorkspaceRoot), pricing, needs, args.presentation.verbose,
+        ),
       });
       return;
     }

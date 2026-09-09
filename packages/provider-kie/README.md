@@ -52,6 +52,9 @@ pages with that wire model in KIE's `modelDescription` query, and preserves the 
 Provider contains no Hypit model-price table and does not interpret KIE's descriptions or formulas.
 All returned parameter rows remain intact for the Agent to read beside the Need. Reading this public
 catalogue does not resolve the generation API credential and submits no work.
+The optional document summary presents each row's model description, USD price, credit price and
+billing unit. Comparison prices and promotion fields remain in the original data for JSON or verbose
+inspection; the summary does not guess a matching tier from KIE's description text.
 
 There is deliberately no Grok image capability and no MiMo capability in this release. Seedream's
 `nsfwCheck` is explicit author request content; KIE cannot silently enable or disable it. A

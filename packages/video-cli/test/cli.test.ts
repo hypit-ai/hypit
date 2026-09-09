@@ -5,6 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { runVideoCli, videoCliDistribution } from "@hypit/video-cli";
+import { runCli as runCommand } from "@hypit/cli";
 
 import { videoTestPackages } from "./packages.js";
 
@@ -94,6 +95,58 @@ test("check compiles a data-only package Source export without a project copy", 
     const checked = JSON.parse(output) as { readonly sourceKind: string; readonly units: number };
     assert.equal(checked.sourceKind, "author");
     assert.equal(checked.units, 2);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("pricing keeps every planned generation after the old 20-request cutoff and exposes authored parameters", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-pricing-"));
+  try {
+    const ids = Array.from({ length: 25 }, (_, index) => `portrait-${index}`);
+    await writeFile(join(root, "main.svml"), `<?svml using="@hypit/markup@1"?>
+<svml>
+  <import as="copy" from="@hypit/text@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
+  ${ids.map((id) => `<copy:Value id="${id}-prompt">An original ${id}.</copy:Value>
+  <gpt:Image id="${id}" prompt={${id}-prompt} aspect-ratio="9:16" resolution="2K"/>`).join("\n")}
+</svml>`);
+    const source = join(root, "build.svrun");
+    await writeFile(source, `<?svml using="@hypit/run-markup@1"?>
+<svrun version="1"><author source="./main.svml"/>
+  ${ids.map((id) => `<target output="${id}.image"/>`).join("\n")}
+</svrun>`);
+    let queried = 0;
+    let output = "";
+    await runCommand(["pricing", source, "--workspace", root, "--runtime", join(root, "runtime.json"),
+      "--json", "--limit", "1"], { write: (text) => { output += text; } }, {
+      ...videoCliDistribution,
+      bootstrapPackages: videoTestPackages,
+      openRuntimeHost: async (path, options) => ({
+        ...await videoCliDistribution.openRuntimeHost(path, options),
+        pricing: async (requests) => {
+          queried = requests.length;
+          return requests.map((request) => ({
+            request: request.request, capability: request.capability, status: "resolved" as const,
+            endpoint: "test.vendor", use: "test.provider",
+            pricingDocuments: [{ source: "https://vendor.example/rates", data: { creditsPerImage: 2 } }],
+          }));
+        },
+        createRuntime: async () => { throw new Error("pricing cannot execute a Build"); },
+      }),
+    });
+    const report = JSON.parse(output);
+    assert.equal(queried, 25);
+    assert.equal(report.format, "hypit.cli-pricing@1");
+    assert.equal(report.requestCount, 25);
+    assert.equal(report.groups.length, 1);
+    const group = report.groups[0];
+    assert.equal(group.requests.length, 25);
+    assert.deepEqual(group.pricingDocuments[0].data, { creditsPerImage: 2 });
+    for (const request of group.requests) {
+      assert.equal(request.summary.fields.resolution, "2K");
+      assert.equal(request.summary.fields.aspectRatio, "9:16");
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }

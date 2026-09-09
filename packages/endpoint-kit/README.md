@@ -68,6 +68,11 @@ session; capabilities that require durable quota shared with Builds stay Build-o
 Endpoint packages are selected by a Runtime Profile, never activated by author imports. This package
 depends on no Node filesystem, scheduler implementation or video domain.
 
+`pricing: { kind: "local" }` explicitly declares work on this machine without a Provider call charge.
+`pricing: { kind: "page", url }` identifies published pricing information; it does not determine an
+account's eventual bill. An absent declaration leaves pricing unknown. Callers can summarize explicit
+no-charge work while keeping unknown pricing and Endpoint selection failures visible.
+
 An Endpoint may also expose `readPricing`. It receives the same complete `EndpointRequest` used for
 support selection and resolves only that Endpoint's declared credentials when its source requires
 them. The Provider returns current pricing documents together with their source URLs. Their data shape
@@ -75,6 +80,18 @@ belongs to the Provider: one service may return a model rate card, another a bro
 and another may expose only its declared pricing page. Hypit preserves the material instead of
 inventing a shared rate-table taxonomy, interpreting formulas, calculating totals, or turning pricing
 information into spending authority.
+
+An `EndpointPricingDocument` may add a concise `summary` for the default human view. It should retain
+the published rates, units and applicable conditions. The Provider owns this description because it
+knows its API's price fields and which fields merely describe marketing comparisons. The original
+`data` remains available in JSON and verbose output. Without a summary, the CLI displays the data.
+
+Use the Provider's execution mapping to select the upstream model and the request's known parameters
+to narrow the published material when the service supports it. Preserve applicable units and
+conditions. A future media input supplies its declared slot and role, not its eventual duration or
+other measured properties. Pricing readers receive no graph to traverse; incomplete usage still
+allows returning the model's rate information. Requests sharing a catalogue lookup can share that read
+inside the Provider, whose API determines what can be cached together.
 
 Three facts remain separate at this boundary:
 

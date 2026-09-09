@@ -147,16 +147,17 @@ export type PricingEntry = PlanProvider & {
 export type PricingDocument = {
   readonly source: string;
   readonly data: CanonicalValue;
+  readonly summary?: string;
 };
 
 export type PricingOutput = {
   readonly format: "hypit.cli-pricing@1";
   readonly run: string;
   readonly requestCount: number;
-  readonly pricing: readonly PricingEntry[];
-  readonly omittedPricing?: number;
-  readonly needs: readonly PlanNeed[];
-  readonly omittedNeeds?: number;
+  readonly noChargeRequestCount: number;
+  readonly groups: readonly (Omit<PricingEntry, "request"> & {
+    readonly requests: readonly PlanNeed[];
+  })[];
 };
 
 export type PlanNeed = {
@@ -200,6 +201,8 @@ export type CliPresentation =
   | {
       readonly kind: "pricing";
       readonly machine: PricingOutput;
+      /** Optional human display limit, applied after grouping; JSON always contains every group. */
+      readonly limit?: number;
     }
   | {
       readonly kind: "operational";
@@ -451,7 +454,7 @@ function providerGroupKey(provider: PlanProvider): string {
   });
 }
 
-function providerRejectionText(provider: PlanProvider, verbose: boolean): string {
+function providerRejectionText(provider: Pick<PlanProvider, "rejections">, verbose: boolean): string {
   const rejections = provider.rejections ?? [];
   if (rejections.length === 0) return "no configured Endpoint accepts this request";
   const shown = verbose ? rejections : rejections.slice(0, 1);
@@ -580,14 +583,83 @@ function renderPlan(
 }
 
 function pricingDocumentLines(document: PricingDocument, colors: Palette, verbose: boolean): string[] {
-  if (!verbose) {
-    return [`      ${colors.dim("Pricing data")}  ${document.source} ${colors.dim("· use --json or --verbose for the Provider document")}`];
-  }
-  const rendered = JSON.stringify(document.data, undefined, 2);
+  const rendered = !verbose && document.summary !== undefined
+    ? document.summary : JSON.stringify(document.data, undefined, 2);
   return [
     `      ${colors.dim("Source")}  ${document.source}`,
     ...rendered.split("\n").map((line) => `      ${line}`),
   ];
+}
+
+/** Factor shared request parameters without losing the combinations of the remaining parameters. */
+function pricingNeedLines(needs: readonly PlanNeed[], colors: Palette, verbose: boolean): string[] {
+  if (verbose || needs.length < 2) return groupedNeedLines(needs, colors, verbose);
+  const first = needs[0]!;
+  const sharedFields = Object.fromEntries(Object.entries(first.summary?.fields ?? {}).filter(([key, value]) => {
+    const measured = typeof value === "string" ? MEASURE.exec(value) : null;
+    return needs.every((need) => {
+      const other = need.summary?.fields[key];
+      return other === value || (measured !== null && typeof other === "string"
+        && MEASURE.exec(other)?.[2] === measured[2]);
+    });
+  }));
+  const sharedReferences = needs.every((need) =>
+    JSON.stringify(need.summary?.references ?? {}) === JSON.stringify(first.summary?.references ?? {}));
+  const sharedPending = needs.every((need) =>
+    JSON.stringify(need.pending.map((input) => input.kind).sort())
+      === JSON.stringify(first.pending.map((input) => input.kind).sort()));
+  const common = needs.map(({ issue: _issue, ...need }) => ({
+    ...need,
+    summary: {
+      fields: Object.fromEntries(Object.keys(sharedFields).map((key) => [key, need.summary!.fields[key]!])),
+      references: sharedReferences ? need.summary?.references ?? {} : {},
+    },
+    pending: sharedPending ? need.pending : [],
+  }));
+  const varying = needs.map((need) => ({
+    ...need,
+    summary: {
+      fields: Object.fromEntries(Object.entries(need.summary?.fields ?? {}).filter(([key]) => !Object.hasOwn(sharedFields, key))),
+      references: sharedReferences ? {} : need.summary?.references ?? {},
+    },
+    pending: sharedPending ? [] : need.pending,
+  }));
+  const hasParameters = (need: PlanNeed) => Object.keys(need.summary?.fields ?? {}).length > 0
+    || Object.keys(need.summary?.references ?? {}).length > 0 || need.pending.length > 0 || need.issue !== undefined;
+  return [
+    ...(common.some(hasParameters) ? [`    ${needSummaryText(common)}`] : []),
+    ...(varying.some(hasParameters) ? groupedNeedLines(varying, colors, false) : []),
+  ];
+}
+
+/** Group Provider facts without interpreting their documents or inferring charges from model names. */
+export function createPricingOutput(
+  run: string,
+  entries: readonly PricingEntry[],
+  needs: readonly PlanNeed[],
+  includeNoCharge = false,
+): PricingOutput {
+  const needsByRequest = new Map(needs.map((need) => [need.request, need]));
+  const groups = new Map<string, Omit<PricingEntry, "request"> & { requests: PlanNeed[] }>();
+  let noChargeRequestCount = 0;
+  for (const { request, ...entry } of entries) {
+    if (entry.status === "resolved" && entry.pricing?.kind === "local") {
+      noChargeRequestCount++;
+      if (!includeNoCharge) continue;
+    }
+    const key = JSON.stringify(entry);
+    let group = groups.get(key);
+    if (group === undefined) {
+      group = { ...entry, requests: [] };
+      groups.set(key, group);
+    }
+    const need = needsByRequest.get(request);
+    if (need !== undefined) group.requests.push(need);
+  }
+  return {
+    format: "hypit.cli-pricing@1", run, requestCount: entries.length,
+    noChargeRequestCount, groups: [...groups.values()],
+  };
 }
 
 function renderPricing(
@@ -601,26 +673,14 @@ function renderPricing(
   lines.push(...facts([
     ["Run", shortPath(machine.run)],
     ["Requests", String(machine.requestCount)],
+    ["No Provider charge", `${machine.noChargeRequestCount} requests`],
   ], colors));
-  if (machine.pricing.length > 0) lines.push("", colors.strong("Requests and pricing sources"));
-  const groups = new Map<string, PricingEntry[]>();
-  for (const item of machine.pricing) {
-    const key = JSON.stringify({
-      capability: item.capability,
-      status: item.status,
-      endpoint: item.endpoint,
-      use: item.use,
-      pricing: item.pricing,
-      endpoints: item.endpoints,
-      rejections: item.rejections,
-      binding: item.binding,
-      pricingDocuments: item.pricingDocuments,
-      pricingError: item.pricingError,
-    });
-    groups.set(key, [...(groups.get(key) ?? []), item]);
+  if (machine.noChargeRequestCount > 0 && !verbose) {
+    lines.push(`  ${colors.dim("No-charge request details: --verbose")}`);
   }
-  for (const group of groups.values()) {
-    const item = group[0]!;
+  if (machine.groups.length > 0) lines.push("", colors.strong("Requests and Provider rates"));
+  const shown = view.limit === undefined ? machine.groups : machine.groups.slice(0, view.limit);
+  for (const item of shown) {
     const selected = item.status === "resolved"
       ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})`)}`
       : item.status === "ambiguous"
@@ -629,7 +689,8 @@ function renderPricing(
           ? colors.error(providerRejectionText(item, verbose))
         : colors.error("no selected Endpoint accepts this request");
     lines.push(`  ${colors.accent(verbose ? item.capability : capabilityLabel(item.capability))}`);
-    lines.push(`    ${selected}${group.length === 1 ? "" : ` each ×${group.length}`}`);
+    lines.push(`    ${selected} · ${item.requests.length} request${item.requests.length === 1 ? "" : "s"}`);
+    lines.push(...pricingNeedLines(item.requests, colors, verbose));
     if (item.pricing?.kind === "local") {
       lines.push(`      ${colors.dim("local, no Provider charge")}`);
     }
@@ -643,14 +704,12 @@ function renderPricing(
       lines.push(`      ${colors.dim("Pricing page")}  ${item.pricing.url}`);
     } else if ((item.pricingDocuments?.length ?? 0) === 0 && item.pricing === undefined
       && item.status === "resolved" && item.pricingError === undefined) {
-      lines.push(`      ${colors.dim("No pricing source declared by this Provider")}`);
+      lines.push(`      ${colors.warning("Pricing unknown: no pricing source declared by this Provider")}`);
     }
-    const requests = new Set(group.map((entry) => entry.request));
-    const needs = machine.needs.filter((need) => requests.has(need.request));
-    lines.push(...groupedNeedLines(needs, colors, verbose));
+    lines.push("");
   }
-  if ((machine.omittedPricing ?? 0) > 0) {
-    lines.push(`  ${colors.dim(`${machine.omittedPricing} more requests · use --limit <count>`)}`);
+  if (shown.length < machine.groups.length) {
+    lines.push(`  ${colors.dim(`${machine.groups.length - shown.length} more groups · omit --limit or use --json for all groups`)}`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -731,7 +790,10 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "  hypit pricing <run-source> [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>]",
       "",
       "Pricing is an explicit read-only network operation. It starts no Build and submits no generation.",
-      "The command shows each Need beside its Provider source; use --json or --verbose for the raw document.",
+      "Matching requests share their parameters and Provider rates, with source URLs.",
+      "Provider summaries appear when available; --verbose and --json retain the full documents.",
+      "Explicit no-charge requests are summarized; --verbose includes their details.",
+      "All groups are shown by default. --limit <count> limits human groups; --json always includes all groups.",
       "Hypit calculates no total.",
     ],
     build: [
