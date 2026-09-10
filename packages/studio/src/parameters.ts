@@ -238,8 +238,16 @@ function referencedParameters(input: {
   const file = sourceFor(input.root, target.sourcePath, input.files);
   if (file === undefined) return [];
   return input.declarations.flatMap((declaration) => {
+    const nestedPath = target.references[declaration.name];
+    const nested = nestedPath === undefined || declaration.referenced === undefined ? [] : referencedParameters({
+      root: input.root, files: input.files, draft: input.draft, placements: input.placements,
+      referenceName: `${input.referenceName}.${declaration.name}`,
+      referencePath: nestedPath,
+      ...(target.resolvedReferences[declaration.name] === undefined ? {} : { referenceRef: target.resolvedReferences[declaration.name] }),
+      declarations: declaration.referenced,
+    });
     const range = target.attributeValueRanges[declaration.name];
-    if (range === undefined) return [];
+    if (range === undefined) return nested;
     const preimage = file.text.slice(range.start, range.end);
     const reference = target.references[declaration.name];
     const value = reference === undefined ? (target.attributes[declaration.name] ?? preimage) : reference;
@@ -263,7 +271,7 @@ function referencedParameters(input: {
       ...(!writable
         ? { disabledReason: reference === undefined ? "该几何值由组件声明为只读。" : "引用由作者在 SVML 中绑定，面板不替换引用关系。" }
         : {}),
-    } satisfies StudioSourceBinding];
+    } satisfies StudioSourceBinding, ...nested];
   });
 }
 
@@ -484,7 +492,7 @@ export function resolveTimelineEditHandles(
     moveEffect?: "translate-window" | "move-start",
   ): StudioEditHandle => {
     const unavailable = affected.find(({ endpoint }) => endpoint.authority.kind === "fixed");
-    if (unavailable !== undefined) return disabled(gesture, "该端点由 Program 或 Segment 结构固定，不能从组件时间线反写。");
+    if (unavailable !== undefined) return disabled(gesture, "该时间表达未开放时间轴回写。");
     const projected: ({ readonly missing: string } | StudioEditSource)[] = [];
     for (const { endpoint, role } of affected) {
       if (endpoint.authority.kind !== "parameter") continue;
@@ -527,24 +535,15 @@ export function resolveTimelineEditHandles(
   }
   const start = { endpoint: projection.start, role: "start" as const };
   const end = { endpoint: projection.end, role: "end" as const };
-  const move = projection.end.authority.kind === "parameter" && projection.end.authority.relation === "after-start"
-    ? [start]
-    : projection.start.authority.kind === "parameter" && projection.start.authority.relation === "before-end"
-      ? [end]
-      : [start, end];
-  const trimStart = projection.start.authority.kind === "parameter" && projection.start.authority.relation === "before-end"
-    ? [start]
-    : projection.end.authority.kind === "parameter" && projection.end.authority.relation === "after-start"
-      ? [start, end]
-      : [start];
-  const trimEnd = projection.end.authority.kind === "parameter" && projection.end.authority.relation === "after-start"
-    ? [end]
-    : projection.start.authority.kind === "parameter" && projection.start.authority.relation === "before-end"
-      ? [start, end]
-      : [end];
+  if (projection.end.authority.kind === "parameter" && projection.end.authority.relation === "after-start") {
+    return [handle("move", [start], "translate-window"), handle("trim-end", [end])];
+  }
+  if (projection.start.authority.kind === "parameter" && projection.start.authority.relation === "before-end") {
+    return [handle("move", [end], "translate-window"), handle("trim-start", [start])];
+  }
   return [
-    handle("move", move, "translate-window"),
-    handle("trim-start", trimStart),
-    handle("trim-end", trimEnd),
+    handle("move", [start, end], "translate-window"),
+    handle("trim-start", [start]),
+    handle("trim-end", [end]),
   ];
 }

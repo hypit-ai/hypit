@@ -184,6 +184,11 @@ silently becoming one policy. Studio resolves the declarations against the
 current Source closure, publishes only real writable fields, renders all DOM
 and CSS itself, and commits changes through `parameter.adjust`.
 
+Fields can declare `number` display scaling, supported suffixes, limits and step; `unit` alone is
+only a label. Select options can carry separate scalar values, labels, descriptions and color/font
+preview hints. Text may be multiline; colors may offer package-chosen swatches. See
+[Inspector presentation and conversion](../studio/INSPECTOR.md) for examples and ownership.
+
 Structured controls keep a local draft and commit one complete canonical value.
 Their codec is the author language (`@hypit/svs` for Recipe values), not a
 Companion callback. Companions cannot inject DOM, CSS, parsing code or filesystem

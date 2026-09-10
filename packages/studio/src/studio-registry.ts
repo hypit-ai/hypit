@@ -14,6 +14,7 @@ import type {
   StudioSpan,
 } from "@hypit/studio-adapter";
 import { studioParameterControls } from "@hypit/studio-adapter";
+import { parameterOption } from "./parameter-values.js";
 import { compositionTypes } from "@hypit/composition";
 import { sameModule, sameType } from "@hypit/protocol";
 import type { ModuleRef, TypeRef } from "@hypit/protocol";
@@ -66,6 +67,27 @@ function validateInspector(
     }
     if (field.control === "select" && (field.options === undefined || field.options.length === 0)) {
       throw new Error(`${subject} Inspector field ${field.binding} has no select options`);
+    }
+    const choices = (field.options ?? []).map(parameterOption);
+    if (choices.some(option => !option.label.trim() || !["string", "number", "boolean"].includes(typeof option.value)
+      || typeof option.value === "number" && !Number.isFinite(option.value))
+      || new Set(choices.map(option => JSON.stringify(option.value))).size !== choices.length) {
+      throw new Error(`${subject} Inspector field ${field.binding} has invalid or repeated choices`);
+    }
+    const numeric = field.number;
+    if (numeric !== undefined) {
+      if (field.control !== "number" || numeric.scale !== undefined && (!Number.isFinite(numeric.scale) || numeric.scale <= 0)
+        || numeric.step !== undefined && (!Number.isFinite(numeric.step) || numeric.step <= 0)
+        || numeric.minimum !== undefined && !Number.isFinite(numeric.minimum)
+        || numeric.maximum !== undefined && !Number.isFinite(numeric.maximum)
+        || numeric.minimum !== undefined && numeric.maximum !== undefined && numeric.minimum > numeric.maximum
+        || numeric.suffixes !== undefined && (numeric.suffixes.length === 0 || numeric.suffixes.some(suffix => !suffix.trim()))) {
+        throw new Error(`${subject} Inspector field ${field.binding} has an invalid numeric presentation`);
+      }
+    }
+    if (field.multiline && field.control !== "text") throw new Error(`${subject} multiline editing requires text`);
+    if (field.swatches !== undefined && (field.control !== "color" || field.swatches.some(color => !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(color)))) {
+      throw new Error(`${subject} color suggestions require hex colors`);
     }
   }
 }

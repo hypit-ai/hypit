@@ -48,22 +48,25 @@ export const audioTrackStudioTrackCompanions: readonly StudioTrackCompanion[] = 
     ],
     inspector: [
       {
-        binding: "playback", label: "Playback", domain: "how",
+        binding: "playback", label: "Playback", domain: "when",
         page: { id: "playback", label: "Playback" }, section: { id: "playback", label: "Playback" },
         control: "select", options: ["once", "once-start", "once-end", "loop", "loop-start", "loop-end", "stretch"],
       },
       ...(["trim-start", "trim-end"] as const).map((binding) => ({
-        binding, label: binding === "trim-start" ? "Trim Start" : "Trim End", domain: "how" as const,
-        page: { id: "playback", label: "Playback" }, section: { id: "trim", label: "Trim" }, control: "text" as const,
+        binding, label: binding === "trim-start" ? "Trim Start" : "Trim End", domain: "when" as const,
+        page: { id: "playback", label: "Playback" }, section: { id: "trim", label: "Trim" }, control: "number" as const,
+        number: { suffixes: ["ms", "s", "f"], minimum: 0 },
       })),
       ...(["min-rate", "max-rate", "gain"] as const).map((binding) => ({
         binding, label: binding === "min-rate" ? "Minimum Rate" : binding === "max-rate" ? "Maximum Rate" : "Gain",
         domain: "how" as const, page: { id: "mix", label: "Mix" }, section: { id: "mix", label: "Mix" },
         control: "number" as const,
+        unit: "%", number: { scale: 100, minimum: 0, step: 1 },
       })),
       ...(["fade-in", "fade-out"] as const).map((binding) => ({
         binding, label: binding === "fade-in" ? "Fade In" : "Fade Out", domain: "when" as const,
-        page: { id: "fade", label: "Fade" }, section: { id: "fade", label: "Fade" }, control: "text" as const,
+        page: { id: "fade", label: "Fade" }, section: { id: "fade", label: "Fade" }, control: "number" as const,
+        number: { suffixes: ["ms", "s", "f"], minimum: 0 },
       })),
     ],
     requiredValues: ["program"], project: projectAudio,

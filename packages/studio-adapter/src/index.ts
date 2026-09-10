@@ -122,6 +122,24 @@ export const studioParameterControls = [
 export type StudioParameterControl = typeof studioParameterControls[number];
 export type StudioParameterLanguage = "svml" | "svs" | "svrun";
 
+/** Data-only choices. Packages supply meaning; Studio owns all option rendering. */
+export type StudioParameterOption = string | {
+  readonly value: string | number | boolean;
+  readonly label: string;
+  readonly description?: string;
+  readonly preview?: { readonly kind: "color"; readonly color: string }
+    | { readonly kind: "font"; readonly family: string; readonly sample?: string };
+};
+
+/** Displayed number = authored number × scale. Suffixes are retained, never converted. */
+export type StudioNumberPresentation = {
+  readonly scale?: number;
+  readonly suffixes?: readonly string[];
+  readonly minimum?: number;
+  readonly maximum?: number;
+  readonly step?: number;
+};
+
 /** A real author endpoint. Its existence never implies Inspector visibility. */
 export type StudioSourceBinding = {
   readonly id: string;
@@ -170,8 +188,12 @@ export type StudioInspectorFieldDeclaration = {
   readonly summary?: string;
   /** Omit when the binding's public schema selects the finite Studio control. */
   readonly control?: StudioParameterControl;
-  readonly options?: readonly string[];
+  readonly options?: readonly StudioParameterOption[];
   readonly unit?: string;
+  readonly number?: StudioNumberPresentation;
+  readonly multiline?: boolean;
+  /** Optional suggested colors, independent of the accepted color value. */
+  readonly swatches?: readonly string[];
 };
 
 /** Resolved Inspector DTO. Studio renders it and executes its exact source write. */

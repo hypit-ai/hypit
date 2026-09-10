@@ -1,5 +1,10 @@
 # `@hypit/fonts-open`
 
+The optional `@hypit/fonts-open/studio` export supplies data-only catalog choices for Companions.
+`openFontStudioFields(owner)` returns the explicit nested font binding and Inspector fields for a
+Style reference such as `program` or `style`. It edits the referenced catalog face's family, keeping
+its authored weight, style and fallback faces. Ordinary font validation still applies.
+
 Workspace package exposing 109 redistributable open font families as exact,
 Resource-backed `FontArtifactRef` values. The installed packages carry their font bytes and license
 files. Author compilation and rendering never download fonts or inspect system font directories.

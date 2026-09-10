@@ -89,11 +89,38 @@ changes every consumer that uses it; create and select a separate authored insta
 needs independent variation. Lists and records have a local draft with Apply and Reset; Apply writes
 the complete validated value. Check save status and the resulting preview.
 
-Dragging a Selection boundary or Moment changes that identity in Script. Every Track consuming it
-then follows the changed semantic relation. A clock-based handle instead changes its declared time
-parameter. Use the displayed handles and their actual authority; a visible item is not automatically
-independently draggable. A derived or fixed value without a supported inverse may be read-only.
-Do not replace a semantic relation with guessed seconds just to make a rectangle move.
+Where groups position, size, fitting and layout. When groups timing, playback, trims and motion.
+How groups content, typography, color, effects and audio levels. Components name their own pages
+and sections within these questions. Numeric units sit outside the editable value: a width authored
+as `78%` keeps `%` when edited, while a fractional opacity may display as a percentage and write
+back as a fraction. Dropdowns can have readable option names and previews; their underlying value
+is what the Source receives. Color fields support exact hex values and suggested swatches.
+
+For catalog fonts, Caption, Typography and Ranking can expose the primary font family's dropdown
+through the selected Style. It edits the shared font declaration; its weight and style must be
+available in the chosen family. A local font continues to use its exact file. A project component
+can offer its own font or preset choices through Companion fields.
+
+Dragging a direct Selection or Moment changes that identity in Script. Every Track consuming it
+then follows the changed relation. The authored time form determines what the gesture changes:
+
+| Time form | Timeline editing |
+| --- | --- |
+| `during={story.selection.proof}` | Move both boundaries by the same number of semantic stops; the duration can change. Trim either boundary independently. |
+| `at={story.moment.reveal} for="8f"` | Move the Moment, or trim the trailing edge to change the duration. |
+| `until={story.moment.reveal} for="8f"` | Move the Moment, or trim the leading edge to change the duration. |
+| `at="2s" for="8f"` | Move the clock position, or trim the trailing duration; `until/for` works conversely. |
+| `instant="moment.cue"` or `instant="moment.cue + 2f"` with a bound Moment | Move the local offset while retaining the Moment; an omitted offset starts at zero. |
+| `start="..." end="..."` | Trim one endpoint's time expression, or move both by the same frame delta. Referenced Script markers stay in place. |
+
+A semantic stop is a distinct frame position occupied by word or structural boundaries. Select a
+semantic marker to see its exact anchors; when several share a frame, the Inspector offers the
+choices supported by its editable consumers. Direct Segment/Program spans follow their structural
+boundaries without timeline dragging. Components declare their own handles and writable fields.
+
+Clock-based dragging writes the changed value or offset in whole frames at the current frame rate.
+Unedited expressions retain their units: `2s` keeps its duration across frame-rate changes, while
+`60f` keeps its frame count. Direct semantic dragging changes the Script anchors instead.
 
 Source edits outside Studio are observed too. If a stale UI edit conflicts with a newer file, read
 the current Source and retry the intended change against it instead of overwriting the newer work.

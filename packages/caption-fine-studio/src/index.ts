@@ -1,3 +1,4 @@
+import { openFontStudioFields } from "@hypit/fonts-open/studio";
 import { captionFineMarkupSurfaces, captionFineModuleRef } from "@hypit/caption-fine";
 import type { FineCaptionSchedule } from "@hypit/caption-fine";
 import { compositionTypes } from "@hypit/composition";
@@ -12,6 +13,9 @@ import type {
 import { requiredReferencedValue, requiredSurfaceValue, textLayer } from "@hypit/studio-adapter";
 
 const styleSurface = captionFineMarkupSurfaces.find((surface) => surface.name === "style");
+
+const fontInspector = openFontStudioFields("program");
+
 const recipeVocabulary = styleSurface?.vocabulary.attributes
   .find((attribute) => attribute.name === "recipe")?.recipe ?? [];
 
@@ -83,6 +87,8 @@ const captionColorProperties = new Set([
   "active-underline-color", "active-box-background", "active-box-border-color",
 ]);
 const captionTextProperties = new Set(["loop"]);
+const captionPercentProperties = new Set(["x", "y", "width", "height", "opacity", "active-opacity", "active-scale"]);
+const captionPixelProperties = new Set(["size", "letter-spacing", "word-gap", "radius", "stroke-width", "border-width", "shadow-blur", "glow-blur"]);
 
 export const captionFineInspectorFields: readonly StudioInspectorFieldDeclaration[] = recipeVocabulary.map((property) => {
   const placement = captionPlacement.get(property.name);
@@ -96,6 +102,8 @@ export const captionFineInspectorFields: readonly StudioInspectorFieldDeclaratio
     control: options !== undefined ? "select" : captionColorProperties.has(property.name) ? "color"
       : captionTextProperties.has(property.name) ? "text" : "number",
     ...(options === undefined ? {} : { options }),
+    ...(captionPercentProperties.has(property.name) ? { unit: "%", number: { scale: 100, step: 1 } } : {}),
+    ...(captionPixelProperties.has(property.name) ? { unit: "px", number: { step: 1 } } : {}),
   };
 });
 
@@ -153,10 +161,11 @@ export const captionFineStudioTrackCompanions: readonly StudioTrackCompanion[] =
     bindings: [
       {
         name: "program",
+        referenced: [fontInspector.binding],
         recipe: { through: ["recipe"], bindings: recipeVocabulary.map(({ name }) => ({ name })) },
       },
     ],
-    inspector: captionFineInspectorFields,
+    inspector: [...fontInspector.fields, ...captionFineInspectorFields],
     requiredValues: ["schedule"], project: projectCaption,
     lane: { heightPx: 48 },
   },

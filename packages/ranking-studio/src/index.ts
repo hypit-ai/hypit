@@ -1,8 +1,12 @@
+import { openFontStudioFields } from "@hypit/fonts-open/studio";
 import { rankingMarkupSurfaces, rankingModuleRef, rankingTypes } from "@hypit/ranking";
 import type { RankingProgram, RankingSchedule } from "@hypit/ranking";
 import { compositionTypes } from "@hypit/composition";
 import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioEntityDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-adapter";
 import { artifactPreview, authoredChildFor, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalSemanticSource } from "@hypit/studio-adapter";
+
+
+const fontInspector = openFontStudioFields("style");
 
 const frameParameters: readonly StudioSourceBindingDeclaration[] = [
   { name: "within" },
@@ -76,7 +80,7 @@ const rankingInspectorPlacement = {
 } as const satisfies Readonly<Record<string, RankingInspectorPlacement>>;
 
 function rankingInspector(surface: "column-style" | "tier-style" | "top-three-style"): readonly StudioInspectorFieldDeclaration[] {
-  return rankingProperties(surface).map((property) => {
+  return [...fontInspector.fields, ...rankingProperties(surface).map((property) => {
     const placement = rankingInspectorPlacement[property.name as keyof typeof rankingInspectorPlacement];
     if (placement === undefined) throw new Error(`Ranking Studio has no explicit placement for ${property.name}.`);
     return {
@@ -85,12 +89,13 @@ function rankingInspector(surface: "column-style" | "tier-style" | "top-three-st
       ...placement,
       ...(property.summary === undefined ? {} : { summary: property.summary }),
     };
-  });
+  })];
 }
 
 function rankingStyle(surface: "column-style" | "tier-style" | "top-three-style"): StudioSourceBindingDeclaration {
   return {
     name: "style",
+    referenced: [fontInspector.binding],
     recipe: { through: ["recipe"], bindings: rankingProperties(surface).map(({ name, schema, fallback }) => ({
       name,
       schema,
@@ -162,7 +167,7 @@ const frameInspector: readonly StudioInspectorFieldDeclaration[] = frameParamete
   .filter(({ writable }) => writable === true)
   .map(({ name }) => ({
     binding: `frame.${name}`, label: title(name), domain: "where",
-    page: { id: "frame", label: "Frame" }, section: { id: "frame", label: "Frame" }, control: "text",
+    page: { id: "frame", label: "Frame" }, section: { id: "frame", label: "Frame" }, control: "number", number: { suffixes: ["%", "px"], step: 1 },
   }));
 
 export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [

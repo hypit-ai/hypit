@@ -115,6 +115,8 @@
     "packages/*/*.html",
     "packages/*/package.json",
     "packages/*/README.md",
+    "packages/temporal-markup/EDITING.md",
+    "packages/studio/INSPECTOR.md",
     "services/image-opencv/pyproject.toml",
     "services/image-opencv/package.json",
     "services/image-opencv/uv.lock",

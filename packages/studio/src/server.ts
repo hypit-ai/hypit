@@ -15,12 +15,13 @@ import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { loadStudioRun } from "./run.js";
-import { serializeParameterValue, validateParameterValue } from "./parameter-values.js";
+import { parameterAuthorValue, parameterOption, serializeParameterValue, validateParameterValue } from "./parameter-values.js";
 import { readStudioSession } from "./session.js";
 import type { Range, StudioFailure, StudioLibraryRequest, StudioLibraryView, StudioMutation, StudioSnapshot } from "./shared.js";
 import { createStudioStoryboard } from "./storyboard.js";
 import type { StudioStoryboard } from "./storyboard.js";
 import { findSurfacePreview } from "./surface-preview.js";
+import { formatTemporalPointEdit, semanticGestureSpan } from "./temporal-edit.js";
 import { replaceSourceFiles } from "./source-transaction.js";
 
 export type StudioPluginOptions = {
@@ -272,7 +273,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       throw new Error("A timeline target must use valid whole frames.");
     }
     if (temporal.kind === "window") {
-      if (mutation.gesture === "move"
+      if (mutation.gesture === "move" && handle.semantic?.kind !== "selection"
         && endFrameExclusive - startFrame !== clip.endFrameExclusive - clip.startFrame) {
         throw new Error("Move must preserve the Window duration.");
       }
@@ -288,6 +289,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
 
     const patches: Patch[] = [];
     const semanticTarget = mutation.target.semantic;
+    if (handle.semantic !== undefined && semanticTarget === undefined) throw new Error("A semantic edit requires explicit target anchors.");
     if (semanticTarget !== undefined) {
       if (handle.semantic?.kind !== semanticTarget.kind) {
         throw new Error(`Entity ${mutation.entityId} is not bound to a writable ${semanticTarget.kind}.`);
@@ -299,15 +301,9 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         || script.narrativeId !== current.semantic.narrativeId) {
         throw new Error("The timeline entity and writable Script do not belong to the selected Narrative.");
       }
-      if (semanticTarget.kind === "selection") {
-        const startIndex = current.semantic.anchors.findIndex((anchor) => anchor.id === semanticTarget.startAnchorId);
-        const endIndex = current.semantic.anchors.findIndex((anchor) => anchor.id === semanticTarget.endAnchorId);
-        if (startIndex < 0 || endIndex < 0 || startIndex >= endIndex
-          || current.semantic.anchors[startIndex]!.frame >= current.semantic.anchors[endIndex]!.frame) {
-          throw new Error("A Selection must span two ordered semantic Anchors with positive time.");
-        }
-      } else if (!current.semantic.anchors.some((anchor) => anchor.id === semanticTarget.anchorId)) {
-        throw new Error(`Moment Anchor ${semanticTarget.anchorId} does not exist in the current semantic Candidate.`);
+      const projected = semanticGestureSpan(current.semantic.anchors, handle, semanticTarget);
+      if (projected === undefined || projected.startFrame !== startFrame || projected.endFrameExclusive !== endFrameExclusive) {
+        throw new Error("The semantic edit does not produce the requested timeline projection.");
       }
       const absolute = resolve(options.workspaceRoot, script.sourcePath);
       const source = await readFile(absolute, "utf8");
@@ -367,20 +363,15 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       }
       return snapshot?.semantic?.moments.find((candidate) => candidate.id === id)?.frame;
     };
-    const projectedPointValue = (endpoint: StudioTemporalInstantProjection, desired: number): string => {
-      if (endpoint.reference === "absolute") return frame(desired);
-      const base = projectionBaseFrame(endpoint);
-      if (base === undefined) throw new Error(`The ${endpoint.reference} projection base is unavailable.`);
-      const offset = desired - base;
-      return offset === 0 ? endpoint.reference : `${endpoint.reference}${offset > 0 ? "+" : ""}${offset}f`;
-    };
+    const projectedPointValue = (endpoint: StudioTemporalInstantProjection, desired: number): string =>
+      formatTemporalPointEdit(endpoint.reference, desired, projectionBaseFrame(endpoint));
     const writeEndpoint = (
       endpoint: StudioTemporalInstantProjection,
       desired: number,
       role: "start" | "end",
     ): void => {
       if (desired === endpoint.frame) return;
-      if (endpoint.authority.kind === "fixed") throw new Error(`The ${role} endpoint is structurally fixed.`);
+      if (endpoint.authority.kind === "fixed") throw new Error(`The ${role} endpoint has no timeline write target.`);
       if (endpoint.authority.kind === "semantic") {
         if (semanticFrame(endpoint) !== desired) throw new Error(`The ${role} endpoint does not match its semantic Anchor.`);
         return;
@@ -414,20 +405,22 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     if (parameter === undefined) {
       throw new Error(`Entity ${mutation.entityId} has no writable parameter ${mutation.parameterId}.`);
     }
+    const authorValue = parameterAuthorValue(parameter, mutation.value);
     if (parameter.schema !== undefined) {
-      validateParameterValue(mutation.value, parameter.schema, parameter.label);
+      validateParameterValue(authorValue, parameter.schema, parameter.label);
     } else if (parameter.control === "boolean" && typeof mutation.value !== "boolean") {
       throw new Error(`${parameter.label} expects true or false.`);
     } else if (parameter.control === "number" && (typeof mutation.value !== "number" || !Number.isFinite(mutation.value))) {
       throw new Error(`${parameter.label} expects a number.`);
-    } else if ((parameter.control === "text" || parameter.control === "color" || parameter.control === "select")
+    } else if ((parameter.control === "text" || parameter.control === "color")
       && typeof mutation.value !== "string") {
       throw new Error(`${parameter.label} expects text.`);
     }
-    if (parameter.options !== undefined && (typeof mutation.value !== "string" || !parameter.options.includes(mutation.value))) {
+    if (parameter.options !== undefined && !parameter.options.some(option => parameterOption(option).value === authorValue)) {
       throw new Error(`${parameter.label} does not accept ${mutation.value}.`);
     }
-    const encoded = serializeParameterValue(mutation.value, parameter.language);
+    if (parameter.control === "color") validateParameterValue(authorValue, { kind: "string", format: "color" }, parameter.label);
+    const encoded = serializeParameterValue(authorValue, parameter.language);
     const replacement = `${parameter.source.prefix ?? ""}${encoded}${parameter.source.suffix ?? ""}`;
     return replacement === parameter.source.preimage ? [] : [{
       ...parameter.source,

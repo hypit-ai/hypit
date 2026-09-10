@@ -58,7 +58,7 @@ placeMedia([
 placeMedia(["stack-order"], "where", "Frame", "Stacking");
 placeMedia(["clip", "radius", "padding"], "where", "Frame", "Geometry");
 placeMedia(["opacity", "blur", "brightness", "contrast", "saturation"], "how", "Image", "Image");
-placeMedia(["playback", "trim-start", "trim-end"], "how", "Playback", "Playback");
+placeMedia(["playback", "trim-start", "trim-end"], "when", "Playback", "Playback");
 placeMedia(["border-width", "border-style", "border-color", "shadows", "frame-paint"], "how", "Frame", "Paint");
 placeMedia(["enter", "enter-frames", "enter-easing", "enter-direction", "enter-amount", "enter-origin"], "when", "Enter", "Enter");
 placeMedia(["sustain"], "when", "Sustain", "Sustain");
@@ -66,6 +66,8 @@ placeMedia(["exit", "exit-frames", "exit-easing", "exit-direction", "exit-amount
 
 const mediaColorProperties = new Set(["border-color"]);
 const mediaTextProperties = new Set(["padding", "shadows", "frame-paint", "sustain"]);
+const mediaPercentProperties = new Set(["frame-x", "frame-y", "content-x", "content-y", "opacity", "brightness", "contrast", "saturation"]);
+const mediaPixelProperties = new Set(["fit-offset-x", "fit-offset-y", "radius", "blur", "border-width"]);
 
 function mediaRecipe(name: "appearance" | "motion"): {
   readonly bindings: readonly { readonly name: string }[];
@@ -88,6 +90,9 @@ function mediaRecipe(name: "appearance" | "motion"): {
         ...placement,
         ...(property.summary === undefined ? {} : { summary: property.summary }),
         control,
+        ...(mediaPercentProperties.has(property.name) ? { unit: "%", number: { scale: 100, step: 1 } } : {}),
+        ...(mediaPixelProperties.has(property.name) ? { unit: "px", number: { step: 1 } } : {}),
+        ...(["enter-frames", "exit-frames", "trim-start", "trim-end"].includes(property.name) ? { unit: "f", number: { step: 1 } } : {}),
         ...(options === undefined ? {} : { options }),
       };
     }),
@@ -209,7 +214,7 @@ export const mediaTrackStudioTrackCompanions: readonly StudioTrackCompanion[] = 
       ...frameParameters.filter(({ writable }) => writable === true).map(({ name }) => ({
         binding: `frame.${name}`, label: title(name), domain: "where" as const,
         page: { id: frameSizeParameters.has(name) ? "size" : "placement", label: frameSizeParameters.has(name) ? "Size" : "Placement" },
-        section: { id: "frame", label: "Frame" }, control: "text" as const,
+        section: { id: "frame", label: "Frame" }, control: "number" as const, number: { suffixes: ["%", "px"], step: 1 },
       })),
       ...extentParameters.map(({ name }) => ({
         binding: `extent.${name}`, label: title(name), domain: "where" as const,

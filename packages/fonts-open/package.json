@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./studio": "./src/studio.ts"
   },
   "hypit": {
     "activation": "./src/activation.ts"
@@ -126,5 +127,8 @@
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/markup": "workspace:*"
+  },
+  "devDependencies": {
+    "@hypit/studio-adapter": "workspace:*"
   }
 }

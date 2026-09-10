@@ -9,6 +9,10 @@ The package exports `createTemporalWindowProjection`, `createTemporalInstantProj
 `resolveTemporalContext`, `createTemporalSpace`, attribute vocabulary, and the exact duration/instant parsers. These are helpers for component
 Surfaces, not standalone author tags or a new Track.
 
+The editing behavior is specified in [Author-directed time editing](EDITING.md).
+It separates direct bindings, durations, and explicit offsets from derived results, with a precise
+write target for each supported gesture.
+
 ## Time context
 
 A Track Surface can accept `semantic={speech.semantic}` or `space={animation}`. Resolve that choice

@@ -90,3 +90,14 @@ test("authored at/for projects on a declared clock while Script events keep thei
   const context = resolveTemporalContext({ element: element({ space: reference("animation") }), resolveReference: path => path === "animation" ? space : undefined });
   assert.deepEqual(context, { space });
 });
+
+
+test("bare references and explicit offsets expose the same local parameter edit", () => {
+  for (const instant of ["moment.cue", "moment.cue + 0f", "moment.cue - 2f", "20f"]) {
+    const projection = createTemporalInstantProjection({
+      id: "event", element: element({ instant: instant!, ...(instant!.startsWith("moment") ? { moment: reference("moment") } : {}) }),
+      semantic, resolveReference,
+    });
+    assert.deepEqual(specs(projection)[0]!.authority, { kind: "parameter", binding: "instant", relation: "direct" });
+  }
+});

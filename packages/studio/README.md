@@ -99,10 +99,24 @@ Timeline gestures use explicit temporal authority. Moving a shared Selection or
 Moment edits Script and moves its consumers after recompilation. A parameter-based
 handle edits its exact authored parameter. Fixed or derived values with no supported
 inverse remain read-only. Seeing an entity does not promise every drag gesture.
+
+A direct `during={selection}` move advances both endpoints by the same number of semantic
+stops (distinct frame positions), so its duration may change. `at/for` moves its event and
+offers a trailing duration trim; `until/for` offers the corresponding leading trim.
+An Instant reference expression edits only its offset; a bare reference has an implicit zero offset.
+`start/end` trims edit the corresponding expression; moving the window shifts both by the same
+frame delta. Edited clock values and offsets are written in frames at the current ProgramSpace rate.
+The semantic marker Inspector exposes exact anchor identities and, where a
+declared handle supports it, offers choices among coincident anchors.
+See [temporal author forms](../temporal-markup/EDITING.md) for the complete behavior.
+
 Tasks and Artifacts are inspection surfaces; selecting an Artifact does not write a
 Run Candidate. Use `build-record`/`satisfy` in the Run for explicit Output reuse.
 
 ## Component presentation
+
+[Inspector fields](INSPECTOR.md) describes Where/When/How grouping, numeric unit conversion,
+rich choices, fonts, color suggestions and exact Source writeback.
 
 Studio is an application boundary. Core and domain computation do not import it or
 register UI metadata. The installed Distribution explicitly selects one independent

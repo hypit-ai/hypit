@@ -8,6 +8,7 @@ import { mountMaterialPreview } from "./material-preview.js";
 import type { State, Store } from "./selection.js";
 import { createHandle } from "./resize.js";
 import { createZoom } from "./zoom.js";
+import { chooseSemanticGesture, semanticGestureSpan } from "../temporal-edit.js";
 import { applyStudioMutation } from "./writeback.js";
 
 export type Timeline = {
@@ -220,107 +221,17 @@ export function createTimeline(store: Store): Timeline {
     readonly clip: StudioSnapshot["tracks"][number]["clips"][number];
     readonly handle: StudioEditHandle;
     readonly startFrame: number;
-    readonly pointerAnchorIndex?: number;
     readonly pointerId: number;
     readonly node: HTMLElement;
     readonly originalLeft: string;
     readonly originalWidth: string;
   } | undefined;
 
-  const nearestAnchorIndex = (
-    frame: number,
-    indices: readonly number[],
-    preferredIndex?: number,
-  ): number | undefined => {
-    if (state === undefined) return undefined;
-    const anchors = state.snapshot.semantic?.anchors ?? [];
-    const preferredKind = preferredIndex === undefined ? undefined : anchors[preferredIndex]?.kind;
-    return [...indices].sort((left, right) => {
-      const leftAnchor = anchors[left]!;
-      const rightAnchor = anchors[right]!;
-      return Math.abs(leftAnchor.frame - frame) - Math.abs(rightAnchor.frame - frame)
-        || Number(leftAnchor.kind !== preferredKind) - Number(rightAnchor.kind !== preferredKind)
-        || Math.abs(left - (preferredIndex ?? left)) - Math.abs(right - (preferredIndex ?? right))
-        || left - right;
-    })[0];
-  };
-
-  const semanticTarget = (
-    edit: NonNullable<typeof activeEdit>,
-    nextFrame: number,
-  ): { readonly kind: "selection"; readonly startAnchorId: string; readonly endAnchorId: string }
-    | { readonly kind: "moment"; readonly anchorId: string }
-    | undefined => {
-    if (state === undefined || edit.handle.semantic === undefined) return undefined;
-    const semantic = edit.handle.semantic;
-    const anchors = state.snapshot.semantic?.anchors ?? [];
-    if (semantic.kind === "moment") {
-      const currentIndex = anchors.findIndex((anchor) => anchor.id === semantic.anchorId);
-      const anchorIndex = nearestAnchorIndex(
-        nextFrame,
-        anchors.map((_, index) => index),
-        currentIndex < 0 ? undefined : currentIndex,
-      );
-      return anchorIndex === undefined ? undefined : { kind: "moment", anchorId: anchors[anchorIndex]!.id };
-    }
-    const startIndex = anchors.findIndex((anchor) => anchor.id === semantic.startAnchorId);
-    const endIndex = anchors.findIndex((anchor) => anchor.id === semantic.endAnchorId);
-    if (startIndex < 0 || endIndex < 0 || startIndex >= endIndex) return undefined;
-    let nextStart = startIndex;
-    let nextEnd = endIndex;
-    if (edit.handle.gesture === "trim-start") {
-      const allowed = anchors.flatMap((anchor, index) =>
-        index < endIndex && anchor.frame < anchors[endIndex]!.frame ? [index] : []);
-      nextStart = nearestAnchorIndex(nextFrame, allowed, startIndex) ?? startIndex;
-    } else if (edit.handle.gesture === "trim-end") {
-      const allowed = anchors.flatMap((anchor, index) =>
-        index > startIndex && anchor.frame > anchors[startIndex]!.frame ? [index] : []);
-      nextEnd = nearestAnchorIndex(nextFrame, allowed, endIndex) ?? endIndex;
-    } else if (edit.handle.gesture === "move") {
-      const instantBoundary = edit.handle.temporal?.kind === "instant"
-        && edit.handle.temporal.authority.kind === "semantic"
-        && edit.handle.temporal.authority.source.kind === "selection"
-        ? edit.handle.temporal.authority.boundary
-        : undefined;
-      if (instantBoundary === "start") {
-        const allowed = anchors.flatMap((anchor, index) =>
-          index < endIndex && anchor.frame < anchors[endIndex]!.frame ? [index] : []);
-        nextStart = nearestAnchorIndex(nextFrame, allowed, startIndex) ?? startIndex;
-        return { kind: "selection", startAnchorId: anchors[nextStart]!.id, endAnchorId: anchors[nextEnd]!.id };
-      }
-      if (instantBoundary === "end") {
-        const allowed = anchors.flatMap((anchor, index) =>
-          index > startIndex && anchor.frame > anchors[startIndex]!.frame ? [index] : []);
-        nextEnd = nearestAnchorIndex(nextFrame, allowed, endIndex) ?? endIndex;
-        return { kind: "selection", startAnchorId: anchors[nextStart]!.id, endAnchorId: anchors[nextEnd]!.id };
-      }
-      const pointerIndex = edit.pointerAnchorIndex ?? startIndex;
-      const deltas = anchors.flatMap((_, index) => {
-        const delta = index - pointerIndex;
-        const movedStart = startIndex + delta;
-        const movedEnd = endIndex + delta;
-        return movedStart >= 0 && movedEnd < anchors.length
-          && anchors[movedStart]!.frame < anchors[movedEnd]!.frame
-          ? [delta]
-          : [];
-      });
-      const targetPointer = nearestAnchorIndex(
-        nextFrame,
-        deltas.map((delta) => pointerIndex + delta),
-        pointerIndex,
-      );
-      const delta = targetPointer === undefined ? 0 : targetPointer - pointerIndex;
-      nextStart += delta;
-      nextEnd += delta;
-    } else {
-      return undefined;
-    }
-    return {
-      kind: "selection",
-      startAnchorId: anchors[nextStart]!.id,
-      endAnchorId: anchors[nextEnd]!.id,
-    };
-  };
+  const semanticTarget = (edit: NonNullable<typeof activeEdit>, nextFrame: number) =>
+    state === undefined ? undefined : chooseSemanticGesture({
+      anchors: state.snapshot.semantic?.anchors ?? [], handle: edit.handle,
+      pointerStart: edit.startFrame, pointerNow: nextFrame, frameCount: state.snapshot.space.frameCount,
+    });
 
   const absoluteWindowTarget = (
     edit: NonNullable<typeof activeEdit>,
@@ -353,40 +264,8 @@ export function createTimeline(store: Store): Timeline {
   ): { readonly startFrame: number; readonly endFrameExclusive: number } | undefined => {
     if (state === undefined) return undefined;
     const target = semanticTarget(edit, nextFrame);
-    if (target?.kind === "selection" && edit.handle.semantic?.kind === "selection") {
-      const current = state.snapshot.semantic?.selections.find((selection) => selection.id === edit.handle.semantic!.id);
-      const nextStart = state.snapshot.semantic?.anchors.find((anchor) => anchor.id === target.startAnchorId)?.frame;
-      const nextEnd = state.snapshot.semantic?.anchors.find((anchor) => anchor.id === target.endAnchorId)?.frame;
-      if (current === undefined || nextStart === undefined || nextEnd === undefined) return undefined;
-      const instantBoundary = edit.handle.temporal?.kind === "instant"
-        && edit.handle.temporal.authority.kind === "semantic"
-        && edit.handle.temporal.authority.source.kind === "selection"
-        ? edit.handle.temporal.authority.boundary
-        : undefined;
-      if (instantBoundary === "start" || instantBoundary === "end") {
-        const frame = instantBoundary === "start" ? nextStart : nextEnd;
-        return { startFrame: frame, endFrameExclusive: frame + 1 };
-      }
-      return {
-        startFrame: nextStart + edit.clip.startFrame - current.startFrame,
-        endFrameExclusive: nextEnd + edit.clip.endFrameExclusive - current.endFrameExclusive,
-      };
-    }
-    if (target?.kind === "moment" && edit.handle.semantic?.kind === "moment") {
-      const current = state.snapshot.semantic?.moments.find((moment) => moment.id === edit.handle.semantic!.id);
-      const next = state.snapshot.semantic?.anchors.find((anchor) => anchor.id === target.anchorId)?.frame;
-      if (current === undefined || next === undefined) return undefined;
-      const delta = next - current.frame;
-      if (edit.handle.gesture === "trim-start") {
-        return { startFrame: next, endFrameExclusive: edit.clip.endFrameExclusive };
-      }
-      if (edit.handle.gesture === "trim-end") {
-        return { startFrame: edit.clip.startFrame, endFrameExclusive: next };
-      }
-      return edit.handle.moveEffect === "move-start"
-        ? { startFrame: edit.clip.startFrame + delta, endFrameExclusive: edit.clip.endFrameExclusive }
-        : { startFrame: edit.clip.startFrame + delta, endFrameExclusive: edit.clip.endFrameExclusive + delta };
-    }
+    if (target !== undefined) return semanticGestureSpan(state.snapshot.semantic?.anchors ?? [], edit.handle, target);
+    if (edit.handle.semantic !== undefined) return undefined;
     return edit.handle.temporal === undefined ? undefined : absoluteWindowTarget(edit, nextFrame);
   };
   lanes.addEventListener("pointerdown", (event) => {
@@ -860,17 +739,10 @@ export function createTimeline(store: Store): Timeline {
           const pointerFrame = handle.coordinate === "semantic-anchor"
             ? rawFrameAt(event.clientX)
             : frameAt(event.clientX);
-          const pointerAnchorIndex = handle.semantic !== undefined
-            ? nearestAnchorIndex(
-                pointerFrame,
-                state?.snapshot.semantic?.anchors.map((_, index) => index) ?? [],
-              )
-            : undefined;
           activeEdit = {
             clip,
             handle,
             startFrame: pointerFrame,
-            ...(pointerAnchorIndex === undefined ? {} : { pointerAnchorIndex }),
             pointerId: event.pointerId,
             node,
             originalLeft: node.style.left,

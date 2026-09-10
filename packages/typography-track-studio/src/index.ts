@@ -1,8 +1,11 @@
+import { openFontStudioFields } from "@hypit/fonts-open/studio";
 import { typographyTrackMarkupSurfaces, typographyTrackModuleRef, typographyTrackTypes } from "@hypit/typography-track";
 import type { TypographyTrackProgram } from "@hypit/typography-track";
 import { compositionTypes } from "@hypit/composition";
 import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioEntityDraft, StudioInspectorFieldDeclaration } from "@hypit/studio-adapter";
 import { childEntities, requiredSurfaceValue, temporalLineageFor, temporalSemanticSource, textLayer } from "@hypit/studio-adapter";
+
+const fontInspector = openFontStudioFields("style");
 
 const typographyProperties = (typographyTrackMarkupSurfaces
   .find((surface) => surface.name === "style")?.vocabulary.attributes
@@ -105,11 +108,12 @@ export const typographyTrackStudioTrackCompanions: readonly StudioTrackCompanion
       { name: "content" },
       {
         name: "style",
+        referenced: [fontInspector.binding],
         recipe: { through: ["recipe"], bindings: typographyProperties.map(({ name }) => ({ name })) },
       },
       { name: "motion" },
     ],
-    inspector: typographyInspector,
+    inspector: [...fontInspector.fields, ...typographyInspector],
     requiredValues: ["program"], project: projectTypography,
     lane: { heightPx: 48 },
   },

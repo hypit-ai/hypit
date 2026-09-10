@@ -863,6 +863,7 @@ button:focus-visible, textarea:focus-visible {
   box-shadow: 0 10px 26px rgba(0, 0, 0, .42);
 }
 .parameter-select.open-up .parameter-select-menu { top: auto; bottom: calc(100% + 4px); }
+.parameter-select.rich-options .parameter-select-menu { width: 240px; max-height: 240px; }
 .parameter-select-menu[hidden] { display: none; }
 .parameter-select-option {
   width: 100%;
@@ -880,6 +881,19 @@ button:focus-visible, textarea:focus-visible {
 .parameter-select-option.active { background: #202226; color: #d5d7dc; }
 .parameter-select-option:focus-visible { outline: 0; background: #292b30; color: var(--text); }
 .parameter-right > small { flex: none; color: var(--text-3); font-size: 10px; }
+.parameter-value[type="number"] { appearance: textfield; }
+.parameter-value[type="number"]::-webkit-inner-spin-button { opacity: .55; }
+.parameter-value:invalid { border-color: #a45c60; }
+.parameter-value[readonly] { color: var(--text-3); }
+.parameter-multiline { min-height: 64px; resize: vertical; text-align: left; line-height: 1.5; }
+.parameter-select-option { padding: 6px 8px; white-space: normal; text-align: left; }
+.parameter-select-option > small { display: block; margin-top: 3px; color: var(--text-3); font: 10px/1.4 var(--font-ui); }
+.parameter-option-swatch { display: inline-block; width: 12px; height: 12px; margin-right: 7px; border-radius: 2px; vertical-align: middle; box-shadow: inset 0 0 0 1px #ffffff22; }
+.parameter-option-font { display: block; margin-top: 4px; font-size: 18px; }
+.control-color .parameter-right { flex-wrap: wrap; }
+.parameter-swatches { display: flex; flex-wrap: wrap; gap: 5px; padding-top: 3px; }
+.parameter-swatches button { width: 18px; height: 18px; border: 1px solid #ffffff22; border-radius: 3px; }
+.parameter-swatches button:focus-visible { outline: 1px solid var(--text); outline-offset: 2px; }
 .status.saving { color: var(--text-2); }
 .status.saved { color: var(--ok); }
 

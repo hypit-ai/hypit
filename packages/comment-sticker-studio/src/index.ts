@@ -117,12 +117,13 @@ export const commentStickerStudioTrackCompanions: readonly StudioTrackCompanion[
     inspector: [
       ...frameParameters.filter(({ writable }) => writable === true).map(({ name }) => ({
         binding: `frame.${name}`, label: title(name), domain: "where" as const,
-        page: { id: "frame", label: "Frame" }, section: { id: "frame", label: "Frame" }, control: "text" as const,
+        page: { id: "frame", label: "Frame" }, section: { id: "frame", label: "Frame" }, control: "number" as const, number: { suffixes: ["%", "px"], step: 1 },
       })),
       ...commentInspector,
       ...["comment", "author", "header", "meta"].map((binding) => ({
         binding, label: title(binding), domain: "how" as const,
         page: { id: "copy", label: "Copy" }, section: { id: "copy", label: "Copy" }, control: "text" as const,
+        ...(binding === "comment" ? { multiline: true } : {}),
       })),
     ],
     requiredValues: ["program"], project: projectComments,

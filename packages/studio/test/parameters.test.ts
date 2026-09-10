@@ -133,7 +133,6 @@ test("at/for and until/for derive complementary semantic and duration inverses",
   }, withMoment);
   assert.deepEqual(atFor.map((handle) => [handle.gesture, handle.semantic?.kind, handle.sources?.map((source) => source.role)]), [
     ["move", "moment", undefined],
-    ["trim-start", "moment", ["duration"]],
     ["trim-end", undefined, ["duration"]],
   ]);
 
@@ -143,7 +142,6 @@ test("at/for and until/for derive complementary semantic and duration inverses",
   assert.deepEqual(untilFor.map((handle) => [handle.gesture, handle.semantic?.kind, handle.sources?.map((source) => source.role)]), [
     ["move", "moment", undefined],
     ["trim-start", undefined, ["duration"]],
-    ["trim-end", "moment", ["duration"]],
   ]);
 });
 
@@ -196,6 +194,29 @@ test("absolute Window edits work without a semantic lane and use the Companion's
   ]);
 });
 
+test("independent reference endpoints expose local edits without claiming their Script identities", () => {
+  const endpoints = (["start", "end"] as const).map((name, index) => ({
+    kind: "instant" as const, expression: index === 0 ? "selection.start" : "moment.cue",
+    reference: index === 0 ? "selection.start" as const : "moment.cue" as const,
+    frame: index === 0 ? 2 : 20,
+    source: { ...temporalIdentity, kind: index === 0 ? "selection" as const : "moment" as const, id: index === 0 ? "claim" : "beat" },
+    authority: { kind: "parameter" as const, binding: name, relation: "direct" as const },
+  }));
+  const bindings = (["start", "end"] as const).map((name, index) => ({
+    id: name, binding: name, name, value: endpoints[index]!.expression,
+    language: "svml" as const, writable: true,
+    source: { endpoint: `main::${name}`, path: "main.svml", range: { start: index * 20, end: index * 20 + 10 }, preimage: endpoints[index]!.expression },
+  }));
+  const handles = resolveTimelineEditHandles(bindings, { projection: {
+    kind: "window", start: endpoints[0]!, end: endpoints[1]!, startFrame: 2, endFrameExclusive: 20,
+  }, phases: [] }, semantic);
+  assert.deepEqual(handles.map(({ gesture, enabled, semantic, sources }) => ({ gesture, enabled, semantic, roles: sources?.map(source => source.role) })), [
+    { gesture: "move", enabled: true, semantic: undefined, roles: ["start", "end"] },
+    { gesture: "trim-start", enabled: true, semantic: undefined, roles: ["start"] },
+    { gesture: "trim-end", enabled: true, semantic: undefined, roles: ["end"] },
+  ]);
+});
+
 test("parameter Source paths stay relative to the author workspace", () => {
   const text = "start=\"1f\"";
   const parameters = sourceBindingsForDraft({
@@ -223,6 +244,37 @@ test("parameter Source paths stay relative to the author workspace", () => {
 
   assert.equal(parameters[0]!.source.path, "main.svml");
   assert.equal(parameters[0]!.source.preimage, "1f");
+});
+
+test("nested declared references reach the font attribute, not the referring Style", () => {
+  const text = '<Font family="montserrat"/>';
+  const base = (id: string): StudioPlacement => ({
+    id, sourcePath: "main.svml", tag: "Test", module: { name: "example", version: "1" },
+    surface: "test", range: { start: 0, end: text.length }, records: [], values: [],
+    outputs: [`main::record::${id}`], outputPorts: [], children: [], attributes: {},
+    attributeValueRanges: {}, referenceAttributes: {}, referenceTypes: {}, references: [],
+  });
+  const track: StudioPlacement = { ...base("track"),
+    referenceAttributes: { style: "shared-style" },
+    resolvedReferenceAttributes: { style: "main::record::style" },
+  };
+  const style: StudioPlacement = { ...base("style"), referenceAttributes: { font: "shared-font" },
+    resolvedReferenceAttributes: { font: "main::record::font" },
+  };
+  const font: StudioPlacement = { ...base("font"), attributes: { family: "montserrat" },
+    attributeValueRanges: { family: { start: 14, end: 24 } },
+  };
+  const parameters = sourceBindingsForDraft({
+    root: "/workspace", files: [{ path: "main.svml", text, language: "svml" }],
+    placement: track, placements: [track, style, font],
+    draft: { id: "track:entity", authoredId: "track", display: { title: "track", layers: [] },
+      startFrame: 0, endFrameExclusive: 10, stackOrder: 0, elementRange: track.range },
+    declarations: [{ name: "style", referenced: [{ name: "font", referenced: [{ name: "family", writable: true }] }] }],
+  });
+  const family = parameters.find(parameter => parameter.binding === "style.font.family");
+  assert.equal(family?.value, "montserrat");
+  assert.equal(family?.source.preimage, "montserrat");
+  assert.equal(family?.writable, true);
 });
 
 test("a derived entity follows its actual Style and Companion-owned Recipe presentation", () => {

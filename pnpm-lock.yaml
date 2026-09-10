@@ -594,6 +594,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:*
         version: link:../composition
+      '@hypit/fonts-open':
+        specifier: workspace:*
+        version: link:../fonts-open
       '@hypit/narrative':
         specifier: workspace:*
         version: link:../narrative
@@ -1081,6 +1084,10 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+    devDependencies:
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
     optionalDependencies:
       '@fontsource-variable/archivo':
         specifier: 5.3.0
@@ -2340,6 +2347,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:*
         version: link:../composition
+      '@hypit/fonts-open':
+        specifier: workspace:*
+        version: link:../fonts-open
       '@hypit/ranking':
         specifier: workspace:*
         version: link:../ranking
@@ -3178,6 +3188,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:*
         version: link:../composition
+      '@hypit/fonts-open':
+        specifier: workspace:*
+        version: link:../fonts-open
       '@hypit/studio-adapter':
         specifier: workspace:*
         version: link:../studio-adapter

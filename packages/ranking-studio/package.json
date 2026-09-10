@@ -4,11 +4,16 @@
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "hypit": { "activation": "./src/activation.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@hypit/ranking": "workspace:*",
     "@hypit/composition": "workspace:*",
-    "@hypit/studio-adapter": "workspace:*"
+    "@hypit/studio-adapter": "workspace:*",
+    "@hypit/fonts-open": "workspace:*"
   }
 }

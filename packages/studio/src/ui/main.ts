@@ -1,6 +1,6 @@
 import type { Clip, StudioFailure, StudioInspectorDomain, StudioSnapshot } from "../shared.js";
 import type { CanonicalValue, ValueSchema } from "@hypit/protocol";
-import { validateParameterValue } from "../parameter-values.js";
+import { parameterAuthorValue, parameterNumber, parameterOption, validateParameterValue } from "../parameter-values.js";
 import { createCodePane } from "./code.js";
 import { icon } from "./icons.js";
 import { createLibraryPane } from "./library.js";
@@ -9,6 +9,8 @@ import type { Highlight } from "./code.js";
 import { intentAtOffset, spanAtOffset } from "./markers.js";
 import { clipAtOffset, createStore } from "./selection.js";
 import { createStage } from "./stage.js";
+import { semanticGestureSpan } from "../temporal-edit.js";
+import type { SemanticTarget } from "../temporal-edit.js";
 import { applyStudioMutation } from "./writeback.js";
 import { createTimeline } from "./timeline.js";
 import "../style.css";
@@ -193,8 +195,13 @@ function textValue(value: CanonicalValue): string {
 }
 
 function commitControl(entityId: string, parameter: Clip["inspector"][number], replacement: CanonicalValue): void {
-  if (sameValue(replacement, parameter.value)) return;
-  void writeParameter(entityId, parameter, replacement);
+  try {
+    if (sameValue(parameterAuthorValue(parameter, replacement), parameter.value)) return;
+    void writeParameter(entityId, parameter, replacement);
+  } catch (error) {
+    status.textContent = "Invalid value"; status.className = "status error";
+    status.title = error instanceof Error ? error.message : String(error);
+  }
 }
 
 let openColorPicker: {
@@ -228,8 +235,11 @@ function selectControl(
   trigger.setAttribute("aria-expanded", "false");
   const selected = document.createElement("span");
   selected.className = "parameter-select-value";
-  const current = textValue(parameter.value);
-  selected.textContent = current;
+  const choices = (parameter.options ?? []).map(parameterOption);
+  if (choices.some(option => option.description || option.preview)) control.classList.add("rich-options");
+  const current = choices.find(option => option.value === parameter.value)
+    ?? choices.find(option => String(option.value) === String(parameter.value));
+  selected.textContent = current?.label ?? textValue(parameter.value);
   const chevron = document.createElement("span");
   chevron.className = "parameter-select-chevron";
   chevron.innerHTML = icon("chevron");
@@ -243,22 +253,32 @@ function selectControl(
   menu.hidden = true;
   trigger.setAttribute("aria-controls", menu.id);
 
-  const options = (parameter.options ?? []).map((option) => {
+  const options = choices.map((option) => {
     const item = document.createElement("button");
     item.type = "button";
     item.className = `parameter-select-option${option === current ? " active" : ""}`;
-    item.textContent = option;
+    const label = document.createElement("span"); label.textContent = option.label;
+    item.append(label);
+    if (option.description) { const description = document.createElement("small"); description.textContent = option.description; item.append(description); }
+    if (option.preview?.kind === "color") {
+      const swatch = document.createElement("span"); swatch.className = "parameter-option-swatch";
+      swatch.style.backgroundColor = option.preview.color; item.prepend(swatch);
+    } else if (option.preview?.kind === "font") {
+      const sample = document.createElement("span"); sample.className = "parameter-option-font";
+      sample.style.fontFamily = option.preview.family; sample.textContent = option.preview.sample ?? option.label;
+      sample.setAttribute("aria-hidden", "true"); item.append(sample);
+    }
     item.setAttribute("role", "option");
     item.setAttribute("aria-selected", String(option === current));
     item.addEventListener("click", () => {
-      selected.textContent = option;
+      selected.textContent = option.label;
       for (const sibling of options) {
         sibling.classList.toggle("active", sibling === item);
         sibling.setAttribute("aria-selected", String(sibling === item));
       }
       close(false);
       trigger.focus();
-      commitControl(entityId, parameter, option);
+      commitControl(entityId, parameter, option.value);
     });
     return item;
   });
@@ -359,7 +379,7 @@ function colorValueControl(
   value.value = initial;
   value.setAttribute("aria-label", label);
   value.spellcheck = false;
-  const alpha = exact && initial.length === 9 ? initial.slice(7) : "";
+  let alpha = exact && initial.length === 9 ? initial.slice(7) : "";
   const replacement = (): string => `${picker.value.toUpperCase()}${alpha}`;
   const close = (): void => {
     if (openColorPicker?.root === colorControl) openColorPicker = undefined;
@@ -390,7 +410,12 @@ function colorValueControl(
   });
   value.addEventListener(draft ? "input" : "change", () => {
     const next = value.value.trim();
-    swatch.style.background = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(next) ? next : "transparent";
+    const valid = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(next);
+    swatch.style.background = valid ? next : "transparent";
+    if (valid) {
+      picker.value = next.slice(0, 7);
+      alpha = next.length === 9 ? next.slice(7) : "";
+    }
     change(next);
   });
   colorControl.append(swatch, picker);
@@ -612,40 +637,71 @@ function parameterControl(entityId: string, parameter: Clip["inspector"][number]
   name.title = parameter.summary ?? parameter.label;
   const right = document.createElement("span");
   right.className = "parameter-right parameter-control";
+  let unitLabel = parameter.unit;
   if (parameter.control === "select") {
     right.append(selectControl(entityId, parameter));
   } else if (parameter.control === "color") {
     right.append(colorValueControl(parameter.label, textValue(parameter.value), (next) => {
       commitControl(entityId, parameter, next);
     }));
+    if (parameter.swatches?.length) {
+      const palette = document.createElement("span"); palette.className = "parameter-swatches";
+      for (const color of parameter.swatches) {
+        const swatch = document.createElement("button"); swatch.type = "button";
+        swatch.style.backgroundColor = color; swatch.title = color; swatch.setAttribute("aria-label", `Use ${color}`);
+        swatch.addEventListener("click", () => commitControl(entityId, parameter, color)); palette.append(swatch);
+      }
+      right.append(palette);
+    }
   } else if (parameter.control === "list" || parameter.control === "record") {
     right.append(structuredControl(entityId, parameter));
   } else {
+    if (parameter.multiline && parameter.control === "text") {
+      const value = document.createElement("textarea"); value.className = "parameter-value parameter-multiline";
+      value.value = textValue(parameter.value); value.setAttribute("aria-label", parameter.label);
+      value.addEventListener("change", () => commitControl(entityId, parameter, value.value)); right.append(value);
+      row.append(name, right); return row;
+    }
     const value = document.createElement("input");
     value.type = parameter.control === "boolean" ? "checkbox" : "text";
-    if (parameter.control === "number") value.inputMode = "decimal";
     value.className = "parameter-value";
     value.setAttribute("aria-label", parameter.label);
     value.spellcheck = false;
     if (value.type === "checkbox") value.checked = parameter.value === true || parameter.value === "true";
-    else value.value = textValue(parameter.value);
+    else if (parameter.control === "number") {
+      try {
+        const numeric = parameterNumber(parameter.value, parameter.number);
+        value.type = "number"; value.inputMode = "decimal"; value.value = String(numeric.value);
+        const schema = parameter.schema?.kind === "number" ? parameter.schema : undefined;
+        const scale = parameter.number?.scale ?? 1;
+        const minimum = parameter.number?.minimum ?? (schema?.minimum === undefined ? undefined : schema.minimum * scale);
+        const maximum = parameter.number?.maximum ?? (schema?.maximum === undefined ? undefined : schema.maximum * scale);
+        value.step = String(parameter.number?.step ?? (schema?.integer ? scale : "any"));
+        if (minimum !== undefined) value.min = String(minimum);
+        if (maximum !== undefined) value.max = String(maximum);
+        value.required = true;
+        unitLabel = numeric.suffix || parameter.unit;
+      } catch (error) {
+        value.value = textValue(parameter.value); value.readOnly = true;
+        value.title = error instanceof Error ? error.message : String(error);
+      }
+    } else value.value = textValue(parameter.value);
     value.dataset.parameterId = parameter.id;
-    value.title = parameter.summary ?? parameter.label;
+    if (!value.title) value.title = parameter.summary ?? parameter.label;
     value.addEventListener("change", () => {
       if (value.type === "checkbox") {
         commitControl(entityId, parameter, value.checked);
       } else if (parameter.control === "number") {
-        const number = Number(value.value);
-        if (Number.isFinite(number)) commitControl(entityId, parameter, number);
+        if (value.reportValidity()) commitControl(entityId, parameter, value.valueAsNumber);
       } else {
         commitControl(entityId, parameter, value.value);
       }
     });
     right.append(value);
   }
-  if (parameter.unit !== undefined) {
+  if (unitLabel !== undefined) {
     const unit = document.createElement("small");
-    unit.textContent = parameter.unit;
+    unit.textContent = unitLabel;
     right.append(unit);
   }
   row.append(name, right);
@@ -689,6 +745,7 @@ async function writeParameter(entityId: string, parameter: Clip["inspector"][num
     parameterWriteState = "Failed";
     status.textContent = error instanceof Error ? "Save failed" : parameterWriteState;
     status.className = "status error";
+    status.title = error instanceof Error ? error.message : String(error);
   }
 }
 
@@ -785,24 +842,76 @@ function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): v
   inspector.replaceChildren(empty);
 }
 
+/** Exact identity choice for coincident anchors, through the same Companion-declared handles. */
+function semanticAnchorInspector(snapshot: StudioSnapshot, kind: "selection" | "moment", id: string): HTMLElement {
+  const semantic = snapshot.semantic;
+  const consumers = snapshot.tracks.flatMap((track) => track.clips).flatMap((clip) => clip.editHandles
+    .filter((handle) => handle.enabled && handle.semantic?.kind === kind && handle.semantic.id === id)
+    .map((handle) => ({ clip, handle })));
+  const current = kind === "selection" ? semantic?.selections.find((item) => item.id === id)
+    : semantic?.moments.find((item) => item.id === id);
+  if (!semantic || !current) return group("Timing", []);
+  const endpoints = "anchorId" in current ? [["Moment", current.anchorId]]
+    : [["Start", current.startAnchorId], ["End", current.endAnchorId]];
+  return group("Semantic anchors", endpoints.map(([label, anchorId]) => {
+    const anchor = semantic.anchors.find((item) => item.id === anchorId)!;
+    const describe = (item: typeof anchor) => {
+      const word = semantic.tokens.find((token) => token.id === item.tokenId)?.text;
+      return `${item.kind.replaceAll("-", " ")}${word ? ` · ${word}` : ""}${item.segmentId ? ` · ${item.segmentId}` : ""}`;
+    };
+    const candidates = semantic.anchors.filter((item) => item.frame === anchor.frame).flatMap((item) => {
+      const target: SemanticTarget = "anchorId" in current ? { kind: "moment", anchorId: item.id }
+        : { kind: "selection", startAnchorId: label === "Start" ? item.id : current.startAnchorId,
+            endAnchorId: label === "End" ? item.id : current.endAnchorId };
+      const owner = consumers.find(({ handle }) => semanticGestureSpan(semantic.anchors, handle, target) !== undefined);
+      return owner ? [{ item, target, ...owner }] : [];
+    });
+    if (candidates.length < 2) return property(label!, describe(anchor));
+    const row = document.createElement("label");
+    row.className = "property";
+    const name = document.createElement("span");
+    name.textContent = label!;
+    const control = document.createElement("select");
+    control.className = "parameter-value";
+    control.setAttribute("aria-label", `${label} semantic anchor`);
+    for (const { item } of candidates) {
+      const option = document.createElement("option"); option.value = item.id; option.textContent = describe(item);
+      control.append(option);
+    }
+    control.value = anchorId!;
+    control.addEventListener("change", () => {
+      const choice = candidates.find(({ item }) => item.id === control.value)!;
+      const span = semanticGestureSpan(semantic.anchors, choice.handle, choice.target)!;
+      const temporal = choice.handle.temporal!;
+      control.disabled = true;
+      status.textContent = "Saving"; status.className = "status saving";
+      void applyStudioMutation({ type: "timeline.adjust", revision: snapshot.revision,
+        entityId: choice.clip.id, gesture: choice.handle.gesture,
+        target: temporal.kind === "instant" ? { kind: "instant", frame: span.startFrame, semantic: choice.target }
+          : { kind: "window", ...span, semantic: choice.target },
+      }).then(() => { status.textContent = "Saved"; status.className = "status saved"; })
+        .catch((error: unknown) => {
+          control.value = anchorId!; status.textContent = "Save failed"; status.className = "status error";
+          status.title = error instanceof Error ? error.message : String(error);
+        }).finally(() => { control.disabled = false; });
+    });
+    row.append(name, control);
+    return row;
+  }));
+}
+
 function renderSemanticSelectionInspector(snapshot: StudioSnapshot, selectionId: string): void {
   const selection = snapshot.semantic?.selections.find((item) => item.id === selectionId);
   if (selection === undefined) { inspector.replaceChildren(); return; }
   defaultWorkspaceHeading();
-  const empty = document.createElement("div");
-  empty.className = "inspector-empty";
-  empty.textContent = "Adjust on the timeline";
-  inspector.replaceChildren(empty);
+  inspector.replaceChildren(semanticAnchorInspector(snapshot, "selection", selectionId));
 }
 
 function renderSemanticMomentInspector(snapshot: StudioSnapshot, momentId: string): void {
   const moment = snapshot.semantic?.moments.find((item) => item.id === momentId);
   if (moment === undefined) { inspector.replaceChildren(); return; }
   defaultWorkspaceHeading();
-  const empty = document.createElement("div");
-  empty.className = "inspector-empty";
-  empty.textContent = "Adjust on the timeline";
-  inspector.replaceChildren(empty);
+  inspector.replaceChildren(semanticAnchorInspector(snapshot, "moment", momentId));
 }
 
 // The word being spoken at the playhead, which is the point of carrying token
