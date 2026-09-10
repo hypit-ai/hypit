@@ -90,12 +90,36 @@ async function exists(path: string): Promise<boolean> {
   return await stat(path).then((item) => item.isFile(), () => false);
 }
 
+/**
+ * Replace `to` with `from`, waiting out a reader.
+ *
+ * POSIX replaces atomically whatever else has the destination open. Windows resolves a replacing
+ * rename through `MoveFileEx`, which refuses with EPERM while any handle holds the destination, and
+ * reading a Build Result while its Build is still running is an ordinary thing to do: one `hypit
+ * inspect`, one Studio window or one poll landing inside the write is enough. The Build then carried
+ * a `complete` decision whose manifest was never written.
+ */
+async function replaceFile(from: string, to: string): Promise<void> {
+  const deadline = Date.now() + 2_000;
+  while (true) {
+    try {
+      await rename(from, to);
+      return;
+    } catch (error) {
+      const code = error instanceof Error && "code" in error ? error.code : undefined;
+      const contended = code === "EPERM" || code === "EACCES" || code === "EBUSY";
+      if (!contended || Date.now() >= deadline) throw error;
+      await new Promise((settle) => { setTimeout(settle, 20).unref(); });
+    }
+  }
+}
+
 async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   const temporary = `${path}.part-${randomUUID()}`;
   try {
     await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: "wx" });
-    await rename(temporary, path);
+    await replaceFile(temporary, path);
   } catch (error) {
     await rm(temporary, { force: true });
     throw error;
@@ -123,7 +147,7 @@ async function copyArtifactAtomic(
       await output.write(chunk);
     }
     await output.close();
-    await rename(temporary, destination);
+    await replaceFile(temporary, destination);
   } catch (error) {
     await output.close().catch(() => undefined);
     await rm(temporary, { force: true });
