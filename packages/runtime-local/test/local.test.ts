@@ -880,18 +880,24 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
     // outcomes into the failure so a Build that stalled is named rather than guessed at.
     const ids = ["bld_20260902T120000010Z_0000000001", "bld_20260902T120000011Z_0000000001"];
     const deadline = Date.now() + 30_000;
-    let outcomes: readonly (string | undefined)[] = [];
+    // The manifest carries the reason beside the outcome, and a Build that failed for a reason
+    // nobody printed is what the earlier runs of this test came down to.
+    let state = "";
     while (true) {
-      outcomes = await Promise.all(ids.map(async (id) => (await results.read(id))?.outcome));
-      if (outcomes.every((outcome) => outcome === "complete")) break;
+      const manifests = await Promise.all(ids.map(async (id) => await results.read(id)));
+      state = ids.map((id, at) => {
+        const manifest = manifests[at];
+        const reason = manifest?.failure === undefined ? "" : ` (${manifest.failure})`;
+        return `${id} is ${manifest?.outcome ?? "unwritten"}${reason}`;
+      }).join(", ");
+      if (manifests.every((manifest) => manifest?.outcome === "complete")) break;
       // Only `complete` ends this wait, so a Build that reached `failed` would otherwise be waited
       // on until the deadline and reported as a stall. Say which outcome it actually reached.
-      const settledOtherwise = outcomes.filter((outcome) => outcome !== undefined && outcome !== "complete");
-      if (settledOtherwise.length > 0) {
-        assert.fail(`Builds reached ${ids.map((id, at) => `${id} is ${outcomes[at] ?? "unwritten"}`).join(", ")}`);
+      if (manifests.some((manifest) => manifest?.outcome !== undefined && manifest.outcome !== "complete")) {
+        assert.fail(`Builds reached ${state}`);
       }
       if (Date.now() > deadline) {
-        assert.fail(`Builds did not complete within 30s: ${ids.map((id, at) => `${id} is ${outcomes[at] ?? "unwritten"}`).join(", ")}`);
+        assert.fail(`Builds did not complete within 30s: ${state}`);
       }
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
