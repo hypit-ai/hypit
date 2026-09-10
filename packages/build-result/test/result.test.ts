@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { promisify } from "node:util";
 
 import { buildResultDirectory, FileBuildResult, FileBuildResultRepository } from "@hypit/build-result";
 import type { BlobRef, BuildState, TypeRef } from "@hypit/protocol";
@@ -15,6 +17,39 @@ const takeType: TypeRef = {
   module: { name: "example.speech", version: "1" },
   name: "SemanticTake",
 };
+
+test("a short-lived writer stays alive through a transient file replacement failure", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-result-replace-"));
+  try {
+    const script = `
+      import fs from 'node:fs/promises';
+      import { syncBuiltinESMExports } from 'node:module';
+      const rename = fs.rename;
+      let contended = false;
+      fs.rename = async (from, to) => {
+        if (!contended && String(to).endsWith('result.json')) {
+          contended = true;
+          throw Object.assign(new Error('temporary file contention'), { code: 'EBUSY' });
+        }
+        return rename(from, to);
+      };
+      syncBuiltinESMExports();
+      const { FileBuildResult } = await import(${JSON.stringify(new URL("../src/store.ts", import.meta.url).href)});
+      await FileBuildResult.create(process.argv[1], {
+        id: 'bld_20260902T100000000Z_0000000001',
+        source: { path: '/project/main.svml' }, targets: [], publishedOutputs: [],
+      });
+      if (!contended) throw new Error('replacement was not exercised');
+      process.stdout.write('result saved');
+    `;
+    const { stdout } = await promisify(execFile)(process.execPath,
+      ["--import", "tsx", "--input-type=module", "-e", script, root]);
+    assert.equal(stdout, "result saved");
+    assert.ok((await new FileBuildResultRepository(root).read("bld_20260902T100000000Z_0000000001")) !== undefined);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 function state(input: {
   readonly status?: BuildState["status"];

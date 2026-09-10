@@ -3,8 +3,6 @@ title: Packages and Extension
 description: How video projects select components, models and services as ordinary packages.
 ---
 
-# Packages and Extension
-
 Hypit separates what a video asks for from the code and services that fulfill it. A new graphic,
 model or API source can be supplied by a package and selected by the project. Each package owns its
 interface and implementation; the execution system runs the resulting dependency graph.

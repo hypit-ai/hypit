@@ -3,8 +3,6 @@ title: Media & Generation
 description: Declaring media assets and generating video with Seedance.
 ---
 
-# Media & Generation
-
 This page covers components that declare static assets and generate new media — the raw materials
 that flow into the timing and track stages downstream.
 

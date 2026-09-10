@@ -3,8 +3,6 @@ title: 轨道
 description: 对等 Track 组件——字幕、媒体、排版与作者声明的音频。
 ---
 
-# 轨道
-
 每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套）；视觉层的
 z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍 Caption、Media、Typography 与 Audio
 Track 的作者语法。

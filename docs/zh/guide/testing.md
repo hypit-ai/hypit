@@ -3,8 +3,6 @@ title: 测试
 description: 测试运行器、测试模式与环境门控的测试。
 ---
 
-# 测试
-
 ## 测试运行器
 
 Hypit 使用 Node.js 内置的测试运行器（`node:test`），而不是 Jest、Vitest 或 Mocha。

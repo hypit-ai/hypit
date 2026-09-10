@@ -90,12 +90,35 @@ async function exists(path: string): Promise<boolean> {
   return await stat(path).then((item) => item.isFile(), () => false);
 }
 
+/**
+ * Replace `to` with `from`, allowing brief filesystem contention to clear.
+ *
+ * Windows CI observed EPERM when publishing result.json after execution completed. Sharing modes
+ * and filesystem filters can temporarily prevent replacement; an open reader alone does not prove
+ * the cause. Retry the same rename briefly, keeping the old file intact until replacement succeeds.
+ * Persistent permission or sharing errors still fail this write with the original filesystem error.
+ */
+async function replaceFile(from: string, to: string): Promise<void> {
+  const deadline = Date.now() + 2_000;
+  while (true) {
+    try {
+      await rename(from, to);
+      return;
+    } catch (error) {
+      const code = error instanceof Error && "code" in error ? error.code : undefined;
+      const contended = code === "EPERM" || code === "EACCES" || code === "EBUSY";
+      if (!contended || Date.now() >= deadline) throw error;
+      await new Promise((settle) => { setTimeout(settle, 20); });
+    }
+  }
+}
+
 async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   const temporary = `${path}.part-${randomUUID()}`;
   try {
     await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: "wx" });
-    await rename(temporary, path);
+    await replaceFile(temporary, path);
   } catch (error) {
     await rm(temporary, { force: true });
     throw error;
@@ -123,7 +146,7 @@ async function copyArtifactAtomic(
       await output.write(chunk);
     }
     await output.close();
-    await rename(temporary, destination);
+    await replaceFile(temporary, destination);
   } catch (error) {
     await output.close().catch(() => undefined);
     await rm(temporary, { force: true });

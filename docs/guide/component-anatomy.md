@@ -3,8 +3,6 @@ title: Component Anatomy
 description: Turn a scene's creative interface into a reusable graph contribution.
 ---
 
-# Component Anatomy
-
 A component connects an author-facing idea to its implementation. For a ranking board, that idea
 might be “introduce each contender on its line, then move its icon into the ranked position.” Its
 inputs express those relationships; its code supplies the drawing and motion.

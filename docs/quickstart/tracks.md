@@ -3,8 +3,6 @@ title: Tracks
 description: Peer track components — captions, media, typography and authored audio.
 ---
 
-# Tracks
-
 Every audiovisual contribution entering the final composition is a peer **Track**. Tracks are flat
 (no nesting), and visual z-order is determined by the `stack-order` property in SVS. This page
 covers Caption, Media, Typography and Audio Track authoring.

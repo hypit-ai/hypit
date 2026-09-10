@@ -3,8 +3,6 @@ title: Studio Temporal Lineage
 description: How author choice becomes an Instant or Window and returns to its real source.
 ---
 
-# Studio Temporal Lineage
-
 Time has three layers:
 
 ```text

@@ -3,8 +3,6 @@ title: Run Source 与 Build
 description: 声明 Build 目标、复用结果以及配置运行时环境。
 ---
 
-# Run Source 与 Build
-
 Author Source 定义视频本身。Run Source 从中挑选最终目标，以及是否用明确的 Candidate 来满足它们。
 官方 Distribution 提供 Local Runtime；它的 Profile 声明执行这份计划可用的凭据、Provider Endpoint 与服务。
 

@@ -3,8 +3,6 @@ title: Run Source & Builds
 description: Declaring build targets, reusing results and configuring the runtime.
 ---
 
-# Run Source & Builds
-
 The Author Source defines the video. A Run Source chooses which of its public outputs to produce and
 which explicit Candidates, if any, should satisfy them. The official Distribution supplies the Local
 Runtime; its Profile names the credentials, Provider Endpoints and services available to execute the

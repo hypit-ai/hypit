@@ -3,8 +3,6 @@ title: SVS Stylesheets
 description: The SVS Recipe language — CSS-like stylesheets for film, caption, media, text and generation settings.
 ---
 
-# SVS Stylesheets
-
 SVS (`.svs`) files define reusable, typed configuration values using a CSS-like syntax. They
 configure Film appearance, caption appearance, Media presentation and motion, text styling, generation settings, and typography choices. SVS values are called **Recipes** — they are
 immutable typed Records that consuming components validate and interpret.

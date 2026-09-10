@@ -771,6 +771,12 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
   let mostLimited = 0;
   let markFirstStarted: (() => void) | undefined;
   const firstStarted = new Promise<void>((resolve) => { markFirstStarted = resolve; });
+  // The overlap this test is about has to be waited for, not timed. Holding the first handler for a
+  // fixed span asks the machine to admit the later Build inside that span, which a loaded runner
+  // misses; holding it until the second handler actually starts asks the Worker the question.
+  let markSecondStarted: (() => void) | undefined;
+  const secondStarted = new Promise<void>((resolve) => { markSecondStarted = resolve; });
+  let unrestrictedStarts = 0;
   const components: ComponentPackage = {
     producers: [
       {
@@ -780,9 +786,21 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
           const intent = inputs.intent.value.value as { readonly name: string };
           unrestrictedActive += 1;
           mostUnrestricted = Math.max(mostUnrestricted, unrestrictedActive);
-          markFirstStarted?.();
-          markFirstStarted = undefined;
-          await new Promise((resolve) => setTimeout(resolve, 80));
+          unrestrictedStarts += 1;
+          if (unrestrictedStarts === 1) {
+            markFirstStarted?.();
+            markFirstStarted = undefined;
+            // A Worker that serialized the Builds never starts the second one, so this waits out
+            // its bound and the assertion below reports that rather than hanging here.
+            await Promise.race([
+              secondStarted,
+              new Promise<void>((settle) => { setTimeout(settle, 10_000).unref(); }),
+            ]);
+          } else {
+            markSecondStarted?.();
+            markSecondStarted = undefined;
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
           unrestrictedActive -= 1;
           return {
             outputs: { prompt: { kind: "inline", value: `Greet ${intent.name}` } },
@@ -828,6 +846,8 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
       },
     }],
   });
+  let controller: AbortController | undefined;
+  let work: Promise<void> | undefined;
   try {
     const runtime = await createLocalRuntime({
       ...fixture,
@@ -850,8 +870,8 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
       endpoints: [endpoint],
     });
     await runtime.build(durableBuildRequest(directory, "bld_20260902T120000010Z_0000000001", createGreetingBuild()));
-    const controller = new AbortController();
-    const work = runtime.work({ idlePollMs: 5, signal: controller.signal });
+    controller = new AbortController();
+    work = runtime.work({ idlePollMs: 5, signal: controller.signal });
     await firstStarted;
     await runtime.build(durableBuildRequest(directory, "bld_20260902T120000011Z_0000000001", createGreetingBuild()));
     const results = new FileBuildResultRepository(join(directory, "results"));
@@ -860,12 +880,31 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
     // outcomes into the failure so a Build that stalled is named rather than guessed at.
     const ids = ["bld_20260902T120000010Z_0000000001", "bld_20260902T120000011Z_0000000001"];
     const deadline = Date.now() + 30_000;
-    let outcomes: readonly (string | undefined)[] = [];
+    // The manifest carries the reason beside the outcome, and a Build that failed for a reason
+    // nobody printed is what the earlier runs of this test came down to.
+    let state = "";
     while (true) {
-      outcomes = await Promise.all(ids.map(async (id) => (await results.read(id))?.outcome));
-      if (outcomes.every((outcome) => outcome === "complete")) break;
+      const manifests = await Promise.all(ids.map(async (id) => await results.read(id)));
+      state = ids.map((id, at) => {
+        const manifest = manifests[at];
+        const reason = manifest?.failure === undefined ? "" : ` (${manifest.failure})`;
+        return `${id} is ${manifest?.outcome ?? "unwritten"}${reason}`;
+      }).join(", ");
+      if (manifests.every((manifest) => manifest?.outcome === "complete")) break;
+      // Only `complete` ends this wait, so a Build that reached `failed` would otherwise be waited
+      // on until the deadline and reported as a stall. Say which outcome it actually reached.
+      if (manifests.some((manifest) => manifest?.outcome !== undefined && manifest.outcome !== "complete")) {
+        assert.fail(`Builds reached ${state}`);
+      }
       if (Date.now() > deadline) {
-        assert.fail(`Builds did not complete within 30s: ${ids.map((id, at) => `${id} is ${outcomes[at] ?? "unwritten"}`).join(", ")}`);
+        // A Build with no Result at all has not failed, it has stopped being scheduled. `wakeAt`
+        // absent means it is waiting for a resource release, and the Operations say whether one is
+        // still outstanding; both are what distinguishes a lost wake-up from ordinary waiting.
+        const executions = await fixture.executionStore.list();
+        const operations = await Promise.all(ids.map(async (id) => await fixture.operationStore.list({ build: id })));
+        assert.fail(`Builds did not complete within 30s: ${state}`
+          + `; executions ${JSON.stringify(executions)}`
+          + `; operations ${JSON.stringify(operations)}`);
       }
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
@@ -875,7 +914,17 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
     assert.equal(mostLimited, 1, "declared capacity must span independent Builds");
     await runtime.close();
   } finally {
-    await rm(directory, { recursive: true, force: true });
+    // The work loop holds the SQLite state, so it stops before that state closes. Closing under a
+    // running Worker turns its next claim into an unhandled rejection, and leaving it open makes
+    // the removal below fail with EBUSY on Windows; either one replaces the error that failed the
+    // test. A loop that will not stop is its own finding and must not hold up this cleanup.
+    controller?.abort();
+    await Promise.race([
+      work?.catch(() => undefined) ?? Promise.resolve(),
+      new Promise<void>((settle) => { setTimeout(settle, 5_000).unref(); }),
+    ]);
+    try { fixture.close(); } catch { /* the passing path closed it already */ }
+    await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
 

@@ -53,7 +53,13 @@ test("one live detached Runtime Worker survives repeated starts and stale startu
         { command: process.execPath, args: ["-e", program] },
         startupTimeoutMs,
       ),
-    ]);
+    ]).catch(async (reason: unknown) => {
+      // Whichever call rejects first is reported, and that is usually the sibling giving up on the
+      // launch lock, whose message says nothing about the launch it was waiting for. The Worker log
+      // is where that answer is, so carry it into the failure.
+      const log = await runtimeProcessLogs(dataRoot).catch(() => ({ text: "" }));
+      throw new Error(`${String(reason)}${log.text.trim() === "" ? "; the Worker log is empty" : `; worker log: ${log.text.trim()}`}`);
+    });
     assert.equal(first.state, "running");
     assert.ok(first.pid);
     assert.equal(concurrent.pid, first.pid);

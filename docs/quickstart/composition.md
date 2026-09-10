@@ -3,8 +3,6 @@ title: Film & Rendering
 description: Composing tracks into a film and rendering to video.
 ---
 
-# Film & Rendering
-
 Film is the final assembly stage. It takes all peer Tracks, validates them, and produces a
 Composition. The renderer then compiles that Composition into an MP4 video.
 

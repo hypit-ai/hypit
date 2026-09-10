@@ -3,8 +3,6 @@ title: 组件结构
 description: 将场景的创作接口变成可复用的图贡献。
 ---
 
-# 组件结构
-
 组件把作者面对的创作想法与具体实现连接起来。对于榜单，这个想法可以是“说到每个候选时介绍它，再让图标移动到对应排名位置”。输入表达这些关系，代码完成绘制和运动。
 
 [添加作者包](./author-packages.md) 提供完整可构建的起点。[Ranking](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/README.md) 则展示更丰富的语义事件、持久视觉状态和 Studio Companion。

@@ -3,8 +3,6 @@ title: Adding an Author Package
 description: Build a project component, use it in a video, and share it when useful.
 ---
 
-# Adding an Author Package
-
 Creating a component is part of making a video. Start with the behavior the scene needs: what stays
 together, what changes, and which events drive it. An ordinary media presentation may use Media
 Track. A video viewport that moves aside while a diagram appears can belong to one project component,

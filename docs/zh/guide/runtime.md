@@ -3,8 +3,6 @@ title: Runtime
 description: Hypit Source 与 Core 之外的执行边界。
 ---
 
-# Runtime
-
 Hypit 把四个决定分开：
 
 | 所有者 | 决定什么 |

@@ -3,8 +3,6 @@ title: Making videos with an Agent
 description: Give your Agent a reference video or a brief and receive an editable video project.
 ---
 
-# Making videos with an Agent
-
 Give your Agent a reference video, a brief, or both. You can bring a face, product, logo, or existing
 footage and explain what the new video should achieve. The Agent studies the material, develops a
 creative direction, and makes the pictures, performances, graphics, sound, and edits work together.

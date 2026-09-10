@@ -1,0 +1,38 @@
+name: Windows stress
+
+# Manual only. The runtime-local failures reproduce about one run in three on a Windows runner and
+# not at all on Linux, so catching one means running the suite there repeatedly under its own load.
+on:
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: How many times to run the suite
+        default: "10"
+
+jobs:
+  stress:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run the suite repeatedly
+        shell: bash
+        run: |
+          failed=0
+          for i in $(seq 1 ${{ inputs.iterations }}); do
+            if node test/run.mjs > "iter-$i.log" 2>&1; then
+              echo "iteration $i passed"
+            else
+              failed=$((failed + 1))
+              echo "=== iteration $i FAILED ==="
+              grep -B2 -A22 "^not ok" "iter-$i.log" | head -80
+            fi
+          done
+          echo "failures: $failed of ${{ inputs.iterations }}"
+          [ "$failed" -eq 0 ]
