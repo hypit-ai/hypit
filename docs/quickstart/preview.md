@@ -3,8 +3,6 @@ title: Hypit Studio
 description: Explore a composition, its Sources and Results, and edit its timing and appearance.
 ---
 
-# Hypit Studio
-
 Studio opens an editable video project in the browser. Play the composition, move through its
 frames, select words or graphics on the timeline, and change the properties a component exposes.
 It is also a useful way to hand over a finished project alongside the exported video.

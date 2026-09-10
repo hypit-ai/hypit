@@ -3,8 +3,6 @@ title: Studio 时间谱系
 description: 作者选择如何成为 Instant 或 Window，并准确回到真正的作者源。
 ---
 
-# Studio 时间谱系
-
 时间只有三层：
 
 ```text

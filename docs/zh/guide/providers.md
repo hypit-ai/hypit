@@ -3,8 +3,6 @@ title: 模型与 Provider
 description: 选择账户、连接服务或添加模型，沿用同一套视频执行系统。
 ---
 
-# 模型与 Provider
-
 **Model** 定义要生成什么：输入、支持的参数和输出类型。**Provider** 知道如何通过某个服务完成这个请求。**Endpoint** 是配置好的 Provider 实例，包含服务地址、凭据引用和容量。Runtime Profile 将所需能力绑定到 Endpoint。
 
 ## 根据需求选择修改位置

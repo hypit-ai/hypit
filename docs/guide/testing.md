@@ -3,8 +3,6 @@ title: Testing
 description: Test runner, patterns and environment-gated tests.
 ---
 
-# Testing
-
 ## Test runner
 
 Hypit uses the Node.js built-in test runner (`node:test`), not Jest, Vitest or Mocha.

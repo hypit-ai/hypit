@@ -3,8 +3,6 @@ title: Timing & Assembly
 description: Per-take normalization and alignment, followed by SemanticTrack assembly.
 ---
 
-# Timing & Assembly
-
 For spoken video, a `SemanticTrack` connects the authored Script to the actual performance. This is
 the natural time source for captions, word-triggered graphics and coverage. Build it in segment-sized pieces:
 

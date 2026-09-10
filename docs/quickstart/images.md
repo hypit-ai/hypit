@@ -3,8 +3,6 @@ title: Image Operations
 description: Compose, correct and cut out images before they reach a generator or a Track.
 ---
 
-# Image Operations
-
 Three packages work on a picture and hand back a picture. None of them produces a Track: each output
 is an image you reference downstream — as a Seedance reference frame, as a Media Item, or as the
 source of another operation.

@@ -3,8 +3,6 @@ title: Film 与渲染
 description: 将 Track 组合为 Film 并渲染为视频。
 ---
 
-# Film 与渲染
-
 Film 是最终的组装阶段。它接收所有对等的 Track，对其进行验证，并生成一个
 Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 

@@ -3,8 +3,6 @@ title: Script
 description: Script Surface——Segment、Role Cue、Dual Text、Selection、Moment 与文本投影。
 ---
 
-# Script
-
 `<script>` 元素承载旁白或讲者说出的每一个字。Script 以**散文为先**：它不包含时间码、不引用媒体、不设定样式、不携带生成参数。管线中的其他组件都会读取 Script；Script 本身不读取任何内容。
 
 ```svml

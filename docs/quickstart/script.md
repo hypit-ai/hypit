@@ -3,8 +3,6 @@ title: Script
 description: The Script Surface — Segments, Role Cues, Dual Text, Selections, Moments and text projections.
 ---
 
-# Script
-
 The `<script>` element holds every word the narrator or speakers say. Script is **prose-first**: it
 contains no timecodes, no media references, no styling, no generation parameters. Everything else in
 the pipeline reads the Script; the Script reads nothing.

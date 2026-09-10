@@ -3,8 +3,6 @@ title: Conventions
 description: Naming, module boundaries, TypeScript configuration and wire data.
 ---
 
-# Conventions
-
 These conventions describe work inside the Hypit repository. Project extensions use their owner's scope and the public `@hypit/hypit/*` SDK subpaths; see [Packages and Extension](./packages.md).
 
 ## Naming

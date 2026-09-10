@@ -3,8 +3,6 @@ title: Runtime
 description: The execution boundary outside Hypit source and Core.
 ---
 
-# Runtime
-
 Hypit keeps four decisions separate:
 
 | Owner | Decides |

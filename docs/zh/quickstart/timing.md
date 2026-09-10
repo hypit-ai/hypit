@@ -3,8 +3,6 @@ title: 时序与装配
 description: 逐 Take 归一化与语义对齐，然后装配为 SemanticTrack。
 ---
 
-# 时序与装配
-
 对于说话视频，`SemanticTrack` 把作者的 Script 与实际表演联系起来，是字幕、随词语出现的图形和覆盖画面的自然时间来源。它按 Segment 粒度构建：
 
 1. 把每个已接受的音视频 Take 归一化到同一个精确帧域；

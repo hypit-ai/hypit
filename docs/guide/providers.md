@@ -3,8 +3,6 @@ title: Models and Providers
 description: Choose an account, connect a service or add a model without changing the video execution system.
 ---
 
-# Models and Providers
-
 A **Model** defines what you ask to generate: its inputs, supported parameters and output type.
 A **Provider** knows how to fulfill that request through a particular service. An **Endpoint** is a
 configured instance of that Provider, with its service address, credential reference and capacity.

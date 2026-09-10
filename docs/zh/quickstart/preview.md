@@ -3,8 +3,6 @@ title: Hypit Studio
 description: 浏览编排、Source 和 Result，编辑作品的时机与外观。
 ---
 
-# Hypit Studio
-
 Studio 在浏览器中打开可编辑的视频项目。你可以播放编排、逐帧查看，在时间线上选择词语或图形，并修改组件公开的属性。交付成片时，也可以一起打开 Studio，展示作品的可编辑结构。
 
 ## 打开要编辑的作品
