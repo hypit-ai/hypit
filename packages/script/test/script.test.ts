@@ -58,8 +58,8 @@ test("Program boundaries are distinct writable semantic Anchors", () => {
   });
   const selection = parseScript("program-boundaries.svml", withSelection).selections[0]!;
   assert.deepEqual([selection.startAnchorId, selection.endAnchorId], ["program:start", "program:end"]);
-  assert.match(withSelection, /^~@focus /u);
-  assert.match(withSelection, / @\/focus~$/u);
+  assert.match(withSelection, /^~@focus(?=[ <])/u);
+  assert.match(withSelection, /@\/focus~$/u);
 
   const withMoment = adjustScriptMoment({
     sourceName: "program-boundaries.svml",
@@ -71,7 +71,7 @@ test("Program boundaries are distinct writable semantic Anchors", () => {
     adjustment: { id: "cue", anchorId: "program:end" },
   });
   assert.equal(parseScript("program-boundaries.svml", withMoment).moments[0]!.anchorId, "program:end");
-  assert.match(withMoment, / @cue!$/u);
+  assert.match(withMoment, /@cue!$/u);
 });
 
 test("Moment source edits relocate one marker to an exact semantic Anchor", () => {

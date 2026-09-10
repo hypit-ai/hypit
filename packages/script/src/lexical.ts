@@ -50,6 +50,27 @@ export function lexicalCount(value: string): number {
   return lexicalUnits(value).length;
 }
 
+/** Source positions for markers; unlike timing units, these include attached punctuation. */
+export function lexicalEditRanges(value: string): readonly { start: number; end: number }[] {
+  const units = lexicalUnits(value);
+  return units.map((unit, index) => {
+    const previousEnd = index === 0 ? 0 : units[index - 1]!.index + units[index - 1]!.text.length;
+    const nextStart = units[index + 1]?.index ?? value.length;
+    const leading = value.slice(previousEnd, unit.index);
+    let start = unit.index;
+    for (const [position, character] of [...leading.matchAll(/./gu)].map((match) => [match.index, match[0]] as const)) {
+      if (isOpeningPunctuation(character, leading, position, index > 0)) { start = previousEnd + position; break; }
+    }
+    let end = unit.index + unit.text.length;
+    const trailing = value.slice(end, nextStart);
+    for (const match of trailing.matchAll(/./gu)) {
+      if (/\s/u.test(match[0]) || isOpeningPunctuation(match[0], trailing, match.index, true)) break;
+      end += match[0].length;
+    }
+    return { start, end };
+  });
+}
+
 /** Canonical prose spacing; punctuation remains display/speech information, never a timing token. */
 export function cleanProjection(value: string): string {
   return value

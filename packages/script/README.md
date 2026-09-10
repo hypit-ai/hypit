@@ -135,3 +135,15 @@ These are alternative spellings, not two occurrences to put in the same Script. 
 pause. In the second, the next “my” starts both touching boundaries, so the coffee Selection owns it.
 Plain `@/coffee @smoothie` leaves the gap between previous word end and next word start outside both.
 The media consumer still decides playback and visual coverage inside those projected Windows.
+
+## Marker writeback
+
+`adjustScriptSelection` and `adjustScriptMoment` accept explicit anchor identities. A Selection's
+two endpoints are written together. Script owns their legal source sites: token punctuation and
+postfix attributes stay attached, Segment boundaries stay structural, and coincident markers are
+ordered together. Equivalent horizontal marker spacing is normalized on edit; empty self-closing
+Segments expand when needed to make their distinct boundaries writable.
+
+Writeback reparses the result to retain the intended identities and unchanged narrative/caption
+content. These checks concern authored order, not frame order. A consumer's temporal projection
+determines whether the resulting Instant or Window is usable.

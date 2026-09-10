@@ -1,6 +1,7 @@
 import type { SourceRange } from "@hypit/protocol";
 
-import { narrativeValue } from "./narrative.js";
+import { canonicalStringify } from "@hypit/protocol";
+import { captionDocument, narrativeValue } from "./narrative.js";
 import { parseScript } from "./parser.js";
 import type { Affinity, ParsedNarrative, SemanticAnchor } from "./types.js";
 
@@ -47,18 +48,16 @@ export function scriptAnchorEditSites(parsed: ParsedNarrative): readonly ScriptA
     const segment = segments.get(segmentId);
     if (segment === undefined) throw new Error(`Semantic Anchor ${anchor.id} names unknown Segment ${segmentId}.`);
     if (anchor.kind === "segment-start") {
-      const first = parsed.tokens[segment.tokenStart];
       return {
         anchorId: anchor.id, kind: anchor.kind, segmentId,
-        offset: first?.range.start ?? segment.contentRange.start,
+        offset: segment.contentRange.start,
         affinity: "left", placement: "before",
       };
     }
     if (anchor.kind === "segment-end") {
-      const last = parsed.tokens[segment.tokenEndExclusive - 1];
       return {
         anchorId: anchor.id, kind: anchor.kind, segmentId,
-        offset: last?.range.end ?? segment.contentRange.end,
+        offset: segment.contentRange.end,
         affinity: "right", placement: "after",
       };
     }
@@ -66,10 +65,10 @@ export function scriptAnchorEditSites(parsed: ParsedNarrative): readonly ScriptA
     if (token === undefined) throw new Error(`Semantic Anchor ${anchor.id} names no Script Token.`);
     return anchor.kind === "token-start" ? {
       anchorId: anchor.id, kind: anchor.kind, segmentId,
-      offset: token.range.start, affinity: "right", placement: "before",
+      offset: token.editRange.start, affinity: "right", placement: "before",
     } : {
       anchorId: anchor.id, kind: anchor.kind, segmentId,
-      offset: token.range.end, affinity: "left", placement: "after",
+      offset: token.editRange.end, affinity: "left", placement: "after",
     };
   });
 }
@@ -77,16 +76,6 @@ export function scriptAnchorEditSites(parsed: ParsedNarrative): readonly ScriptA
 function marker(id: string, edge: "open" | "close", affinity: Affinity): string {
   if (edge === "open") return affinity === "left" ? `~@${id}` : `@${id}`;
   return affinity === "left" ? `@/${id}` : `@/${id}~`;
-}
-
-function insertion(id: string, edge: "open" | "close", site: ScriptAnchorEditSite): string {
-  const value = marker(id, edge, site.affinity);
-  return site.placement === "before" ? `${value} ` : ` ${value}`;
-}
-
-function momentInsertion(id: string, site: ScriptAnchorEditSite): string {
-  const value = site.affinity === "left" ? `~@${id}!` : `@${id}!`;
-  return site.placement === "before" ? `${value} ` : ` ${value}`;
 }
 
 function applyEdits(source: string, edits: readonly Edit[]): string {
@@ -102,73 +91,120 @@ function applyEdits(source: string, edits: readonly Edit[]): string {
   return next;
 }
 
-/**
- * Relocate one shared Selection by anchor identity. The returned Source is accepted only when
- * reparsing proves the requested public Narrative, so Studio never edits prose by frame guess.
- */
-export function adjustScriptSelection(input: {
+type AdjustmentInput = {
   readonly sourceName: string;
   readonly source: string;
   readonly parsed: ParsedNarrative;
-  readonly adjustment: ScriptSelectionAdjustment;
-}): string {
-  const selection = input.parsed.selections.find((candidate) => candidate.id === input.adjustment.id);
-  if (selection === undefined) throw new Error(`Script Selection ${input.adjustment.id} does not exist.`);
-  const sites = new Map(scriptAnchorEditSites(input.parsed).map((site) => [site.anchorId, site] as const));
-  const start = sites.get(input.adjustment.startAnchorId);
-  const end = sites.get(input.adjustment.endAnchorId);
-  if (start === undefined) throw new Error(`Selection start Anchor ${input.adjustment.startAnchorId} does not exist.`);
-  if (end === undefined) throw new Error(`Selection end Anchor ${input.adjustment.endAnchorId} does not exist.`);
+};
 
-  const edits: Edit[] = [];
-  if (selection.startAnchorId !== start.anchorId) {
-    edits.push({ range: selection.open.range, replacement: "" });
-    edits.push({ range: { start: start.offset, end: start.offset }, replacement: insertion(selection.id, "open", start) });
+type NamedAnchor = { readonly id: string; readonly edge: "open" | "close" | "moment"; readonly anchorId: string };
+
+/** One canonical boundary spelling, independent of the order of previous gestures. */
+function rewrite(input: AdjustmentInput, markers: readonly NamedAnchor[]): string {
+  const ranges = [
+    ...input.parsed.moments.map((item) => item.range),
+    ...input.parsed.selections.flatMap((item) => [item.open.range, item.close.range]),
+  ].map((range) => ({ start: range.start - input.parsed.sourceRange.start, end: range.end - input.parsed.sourceRange.start }))
+    .sort((a, b) => a.start - b.start);
+  const removals: Edit[] = [];
+  for (const range of ranges) {
+    let start = range.start;
+    let end = range.end;
+    while (start > 0 && /[ \t]/u.test(input.source[start - 1]!)) start -= 1;
+    while (end < input.source.length && /[ \t]/u.test(input.source[end]!)) end += 1;
+    const previous = removals.at(-1);
+    if (previous && start <= previous.range.end) {
+      removals[removals.length - 1] = { range: { start: previous.range.start, end }, replacement: "" };
+    } else removals.push({ range: { start, end }, replacement: "" });
   }
-  if (selection.endAnchorId !== end.anchorId) {
-    edits.push({ range: selection.close.range, replacement: "" });
-    edits.push({ range: { start: end.offset, end: end.offset }, replacement: insertion(selection.id, "close", end) });
+  const edits = removals.map(({ range }): Edit => {
+    const original = input.source.slice(range.start, range.end);
+    // Keep line indentation; elsewhere all horizontal spellings of this gap are one space.
+    const indentation = range.start === 0 || /[\r\n]/u.test(input.source[range.start - 1]!);
+    const gap = indentation ? /^[ \t]*/u.exec(original)![0] : /[ \t]/u.test(original) ? " " : "";
+    return { range, replacement: gap };
+  });
+  for (const segment of input.parsed.segments) {
+    if (segment.selfClosing) edits.push({ range: { start: segment.range.start - input.parsed.sourceRange.start, end: segment.range.end - input.parsed.sourceRange.start }, replacement: `<${segment.id}></${segment.id}>` });
   }
-  if (edits.length === 0) return input.source;
-  const next = applyEdits(input.source, edits);
+  const base = applyEdits(input.source, edits);
+  const parsed = parseScript(input.sourceName, base);
+  const sites = new Map(scriptAnchorEditSites(parsed).map((site, order) => [site.anchorId, { ...site, order }]));
+  const groups = new Map<number, Array<NamedAnchor & { affinity: Affinity; order: number }>>();
+  for (const value of markers) {
+    const site = sites.get(value.anchorId);
+    if (!site) throw new Error(`Semantic Anchor ${value.anchorId} does not exist.`);
+    let offset = site.offset;
+    // Reuse horizontal separators without moving a word marker ahead of line indentation.
+    let gapStart = offset;
+    while (gapStart > 0 && /[ \t]/u.test(base[gapStart - 1]!)) gapStart -= 1;
+    if (gapStart > 0 && !/[\r\n]/u.test(base[gapStart - 1]!)) offset = gapStart;
+    const group = groups.get(offset) ?? [];
+    group.push({ ...value, affinity: site.affinity, order: site.order });
+    groups.set(offset, group);
+  }
+  const insertions: Edit[] = [...groups].map(([offset, group]) => {
+    group.sort((a, b) => a.order - b.order
+      || (a.edge === "open" ? 0 : a.edge === "moment" ? 1 : 2) - (b.edge === "open" ? 0 : b.edge === "moment" ? 1 : 2)
+      || a.id.localeCompare(b.id));
+    let replacement = group.map((item) => item.edge === "moment"
+      ? `${item.affinity === "left" ? "~" : ""}@${item.id}!`
+      : marker(item.id, item.edge, item.affinity)).join("");
+    let end = offset;
+    while (end < base.length && /[ \t]/u.test(base[end]!)) end += 1;
+    if (end > offset) replacement += " ";
+    // Only undelimited names followed by an ASCII name character need a separator.
+    if (/[a-z0-9_-]$/u.test(replacement) && /[A-Za-z0-9_-]/u.test(base[offset] ?? "")) replacement += " ";
+    return { range: { start: offset, end }, replacement };
+  });
+  const next = applyEdits(base, insertions);
   const reparsed = parseScript(input.sourceName, next);
-  const rewritten = reparsed.selections.find((candidate) => candidate.id === selection.id);
-  if (rewritten?.startAnchorId !== start.anchorId || rewritten.endAnchorId !== end.anchorId) {
-    throw new Error(`Script refused to move Selection ${selection.id} to the requested Anchors.`);
+  const actual = namedAnchors(reparsed);
+  if (canonicalStringify(actual) !== canonicalStringify(markers)) {
+    throw new Error("Script marker adjustment did not preserve the requested semantic bindings.");
   }
-  const before = narrativeValue(input.parsed, "comparison") as unknown as { readonly selections: readonly { readonly id: string }[] };
-  const after = narrativeValue(reparsed, "comparison") as unknown as { readonly selections: readonly { readonly id: string }[] };
-  if (before.selections.length !== after.selections.length
-    || before.selections.some((item) => !after.selections.some((candidate) => candidate.id === item.id))) {
-    throw new Error("Script Selection adjustment changed authored identities.");
+  // Compare public content, not source offsets or marker-induced parser atom boundaries.
+  const content = (value: ParsedNarrative) => ({
+    ...narrativeValue(value, "comparison") as Record<string, unknown>, selections: [], moments: [],
+    caption: captionDocument(value, "caption", "comparison"),
+  });
+  if (canonicalStringify(content(input.parsed)) !== canonicalStringify(content(reparsed))) {
+    throw new Error("Script marker adjustment changed authored content.");
   }
   return next;
 }
 
-/** Relocate one Moment to an exact semantic Anchor without changing its identity. */
-export function adjustScriptMoment(input: {
-  readonly sourceName: string;
-  readonly source: string;
-  readonly parsed: ParsedNarrative;
-  readonly adjustment: ScriptMomentAdjustment;
-}): string {
-  const moment = input.parsed.moments.find((candidate) => candidate.id === input.adjustment.id);
-  if (moment === undefined) throw new Error(`Script Moment ${input.adjustment.id} does not exist.`);
-  const site = scriptAnchorEditSites(input.parsed).find((candidate) => candidate.anchorId === input.adjustment.anchorId);
-  if (site === undefined) throw new Error(`Moment Anchor ${input.adjustment.anchorId} does not exist.`);
-  if (moment.anchorId === site.anchorId) return input.source;
-  const next = applyEdits(input.source, [
-    { range: moment.range, replacement: "" },
-    { range: { start: site.offset, end: site.offset }, replacement: momentInsertion(moment.id, site) },
-  ]);
-  const reparsed = parseScript(input.sourceName, next);
-  const rewritten = reparsed.moments.find((candidate) => candidate.id === moment.id);
-  if (rewritten?.anchorId !== site.anchorId) {
-    throw new Error(`Script refused to move Moment ${moment.id} to the requested Anchor.`);
-  }
-  if (reparsed.moments.length !== input.parsed.moments.length
-    || input.parsed.moments.some((item) => !reparsed.moments.some((candidate) => candidate.id === item.id))) {
-    throw new Error("Script Moment adjustment changed authored identities.");
-  }
-  return next;
+function namedAnchors(parsed: ParsedNarrative): NamedAnchor[] {
+  return [
+    ...parsed.selections.flatMap((item): NamedAnchor[] => [
+      { id: item.id, edge: "open", anchorId: item.startAnchorId },
+      { id: item.id, edge: "close", anchorId: item.endAnchorId },
+    ]),
+    ...parsed.moments.map((item): NamedAnchor => ({ id: item.id, edge: "moment", anchorId: item.anchorId })),
+  ];
+}
+
+/** Rewrite a Selection's two endpoints together; Script owns order, not projected time. */
+export function adjustScriptSelection(input: AdjustmentInput & { readonly adjustment: ScriptSelectionAdjustment }): string {
+  const { adjustment, parsed } = input;
+  const selection = parsed.selections.find((item) => item.id === adjustment.id);
+  if (!selection) throw new Error(`Script Selection ${adjustment.id} does not exist.`);
+  const order = parsed.semanticIndex.anchors.map((anchor) => anchor.id);
+  const start = order.indexOf(adjustment.startAnchorId);
+  const end = order.indexOf(adjustment.endAnchorId);
+  if (start < 0 || end < start) throw new Error("Selection endpoints must follow Script anchor order.");
+  if (selection.startAnchorId === adjustment.startAnchorId && selection.endAnchorId === adjustment.endAnchorId) return input.source;
+  return rewrite(input, namedAnchors(parsed).map((item) => item.id !== adjustment.id ? item : {
+    ...item, anchorId: item.edge === "open" ? adjustment.startAnchorId : adjustment.endAnchorId,
+  }));
+}
+
+/** Relocate a Moment by identity, independently of coincident projected Frames. */
+export function adjustScriptMoment(input: AdjustmentInput & { readonly adjustment: ScriptMomentAdjustment }): string {
+  const moment = input.parsed.moments.find((item) => item.id === input.adjustment.id);
+  if (!moment) throw new Error(`Script Moment ${input.adjustment.id} does not exist.`);
+  if (moment.anchorId === input.adjustment.anchorId) return input.source;
+  return rewrite(input, namedAnchors(input.parsed).map((item) => item.id !== input.adjustment.id ? item : {
+    ...item, anchorId: input.adjustment.anchorId,
+  }));
 }

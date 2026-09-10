@@ -5,6 +5,7 @@ import {
   displayWordSurfaces,
   joinProjection,
   lexicalUnits,
+  lexicalEditRanges,
   splitLeadingClosingPunctuation,
 } from "./lexical.js";
 import type {
@@ -433,7 +434,17 @@ export function parseScript(
     }
     current.lexicalRun += speech;
     const tokenStart = tokens.length;
-    for (const match of lexicalUnits(speech)) {
+    const editRanges = lexicalEditRanges(speech);
+    const units = lexicalUnits(speech);
+    // A punctuation-only piece can follow a display attribute or escaped source piece.
+    const preceding = tokens.at(-1);
+    const closing = splitLeadingClosingPunctuation(speech).previous;
+    if (preceding?.segmentId === current.id && preceding.editRange.end === sourceOffset + start && closing && speech.startsWith(closing)) {
+      tokens[tokens.length - 1] = { ...preceding, editRange: {
+        start: preceding.editRange.start, end: sourceOffset + start + closing.length,
+      } };
+    }
+    for (const [unitIndex, match] of units.entries()) {
       const normalized = normalizeWord(match.text);
       if (!normalized) continue;
       const index = tokens.length;
@@ -451,6 +462,10 @@ export function parseScript(
         range: {
           start: sourceOffset + start + match.index,
           end: sourceOffset + start + match.index + match.text.length,
+        },
+        editRange: {
+          start: sourceOffset + start + editRanges[unitIndex]!.start,
+          end: sourceOffset + start + editRanges[unitIndex]!.end,
         },
       });
     }
@@ -661,6 +676,10 @@ export function parseScript(
         fail("SCRIPT_ATTRIBUTE_TARGET", "A token attribute must immediately follow a display token.", offset);
       }
       markLastCaptionSurface(block.attributes, offset);
+      const token = tokens.at(-1)!;
+      tokens[tokens.length - 1] = { ...token, editRange: {
+        start: token.editRange.start, end: sourceOffset + offset + block.length,
+      } };
       offset += block.length;
       continue;
     }

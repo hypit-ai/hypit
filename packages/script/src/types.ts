@@ -45,6 +45,8 @@ export type ParsedToken = NarrativeToken & {
   readonly index: number;
   readonly segmentTokenIndex: number;
   readonly range: SourceRange;
+  /** Writable word surface, including attached punctuation and display attributes. */
+  readonly editRange: SourceRange;
 };
 export type ParsedTurn = NarrativeTurn & { readonly range: SourceRange };
 
