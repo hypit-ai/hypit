@@ -828,6 +828,8 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
       },
     }],
   });
+  let controller: AbortController | undefined;
+  let work: Promise<void> | undefined;
   try {
     const runtime = await createLocalRuntime({
       ...fixture,
@@ -850,8 +852,8 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
       endpoints: [endpoint],
     });
     await runtime.build(durableBuildRequest(directory, "bld_20260902T120000010Z_0000000001", createGreetingBuild()));
-    const controller = new AbortController();
-    const work = runtime.work({ idlePollMs: 5, signal: controller.signal });
+    controller = new AbortController();
+    work = runtime.work({ idlePollMs: 5, signal: controller.signal });
     await firstStarted;
     await runtime.build(durableBuildRequest(directory, "bld_20260902T120000011Z_0000000001", createGreetingBuild()));
     const results = new FileBuildResultRepository(join(directory, "results"));
@@ -875,11 +877,17 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
     assert.equal(mostLimited, 1, "declared capacity must span independent Builds");
     await runtime.close();
   } finally {
-    // A throw above skips `runtime.close()`, so SQLite keeps the file open and the removal below
-    // fails with EBUSY on Windows, replacing the error that actually failed the test. Closing here
-    // is a repeat on the passing path, which the state rejects.
-    try { fixture.close(); } catch { /* the passing path already closed it */ }
-    await rm(directory, { recursive: true, force: true });
+    // The work loop holds the SQLite state, so it stops before that state closes. Closing under a
+    // running Worker turns its next claim into an unhandled rejection, and leaving it open makes
+    // the removal below fail with EBUSY on Windows; either one replaces the error that failed the
+    // test. A loop that will not stop is its own finding and must not hold up this cleanup.
+    controller?.abort();
+    await Promise.race([
+      work?.catch(() => undefined) ?? Promise.resolve(),
+      new Promise<void>((settle) => { setTimeout(settle, 5_000).unref(); }),
+    ]);
+    try { fixture.close(); } catch { /* the passing path closed it already */ }
+    await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
 
