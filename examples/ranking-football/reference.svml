@@ -36,19 +36,22 @@
     </messi>
   </script>
 
-  <text:Value id="presenter-shot">
-    Generate a close half-body view of a woman seated to the right, speaking to the camera with a handheld microphone.
-    Keep her head, broad shoulders and arms comfortably inside the frame, with her seated legs visible below her torso.
-    She is comfortably near the camera, with natural head-to-body proportions. Her face sits toward the upper right.
-    A small desk at her left balances the composition and leaves useful space for the player's icon on the left.
-  </text:Value>
-  <text:Value id="presenter-direction">
-    She is exceptionally beautiful, with Japanese-American features and the captivating presence of a Korean girl-group idol.
+  <text:Value id="presenter-person">
+    A Japanese-American woman in her early twenties, exceptionally, strikingly beautiful, with the looks of a top Korean girl-group idol.
     She has a small, refined face, very fair skin, broad shoulders and excellent head-to-shoulder proportions.
     Her light goth makeup has a sweet, cool attitude and a feline quality around the eyes.
     Her long black hair is straight with blunt bangs. She wears attractive earrings, a choker and layered jewelry,
     a spiked baseball cap marked HYPIT in uppercase Gothic lettering, and a black cotton goth-style short-sleeved top.
-    She sits on a chair in a university classroom. The desk beside her has a cluttered open storage compartment.
+  </text:Value>
+  <text:Value id="presenter-shot">
+    Generate a close half-body view of her seated on a chair to the right, speaking to the camera with a handheld microphone, her free hand gesturing naturally.
+    Keep her head, shoulders and arms comfortably inside the frame, with her seated legs visible below her torso.
+    She is comfortably near the camera. Her face points straight toward the lens, with no head tilt or rotation, and sits toward the upper right.
+    A small desk at her left balances the composition and leaves useful space for the player's icon on the left.
+    The desk beside her has a cluttered open storage compartment.
+  </text:Value>
+  <text:Value id="presenter-setting">
+    The setting is a university classroom.
     Behind her are a classroom door and casually arranged football posters in varied sizes:
     a sky-blue-and-white striped jersey, a football, a Ballon d'Or and an abstract football design.
     There are no players, school names or school logos on the posters.
@@ -56,8 +59,9 @@
     her black outfit and hair give her a clear presence against it.
   </text:Value>
   <text:Render id="presenter-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={presenter-person}/>
     <text:Set name="shot" text={presenter-shot}/>
-    <text:Set name="direction" text={presenter-direction}/>
+    <text:Set name="setting" text={presenter-setting}/>
   </text:Render>
   <gpt:Image id="presenter" prompt={presenter-prompt} aspect-ratio="9:16" resolution="2K"/>
 

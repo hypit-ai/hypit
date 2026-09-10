@@ -41,50 +41,56 @@
   </script>
 
   <!-- The main host establishes the person, place and capture language. -->
-  <text:Value id="girl-shot">
-    Generate a close half-body podcast view. A woman sits toward the right, her body angled slightly left,
-    looking at her conversation partner outside the left edge. Her face remains clearly readable.
-    She sits back comfortably in a fabric armchair with her legs crossed, near enough to the camera for her
-    face and upper body to feel present, while her shoulders, arms and seated legs stay comfortably framed.
-  </text:Value>
-  <text:Value id="girl-direction">
-    She is exceptionally beautiful, with Japanese-American features and Korean girl-group-idol presence:
-    a small refined face, very fair skin, large attractive eyes with blue contact lenses, and long straight
+  <text:Value id="girl-person">
+    A Japanese-American woman in her early twenties, exceptionally, strikingly beautiful, with the looks of a top Korean girl-group idol.
+    She has a small refined face, very fair skin, large attractive eyes with blue contact lenses, and long straight
     black hair with blunt bangs. Her strikingly muscular physique contrasts with her delicate face.
     Her shoulders are very broad, her head-to-shoulder proportions excellent, and her arms have pronounced
     muscle definition and visible veins. She wears a black strapless top with an angel-wing design and
     relaxed tweed trousers with an asymmetrical pattern of pale stripes.
-    The setting is outside a pleasant Korean street-side restaurant, with textured dark wooden walls,
-    plants and other tables. A half-eaten grape bingsu sits on a table in the lower left.
+  </text:Value>
+  <text:Value id="girl-shot">
+    Generate a close half-body podcast view. She sits toward the right, her body angled slightly left,
+    looking at her conversation partner outside the left edge. Her face remains clearly readable.
+    She sits back comfortably in a fabric armchair with her legs crossed, near enough to the camera for her
+    face and upper body to feel present, while her shoulders, arms and seated legs stay comfortably framed.
+    A half-eaten grape bingsu sits on a table in the lower left.
     A podcast microphone extends from the left, marked HYPIT in attractive uppercase lettering.
+  </text:Value>
+  <text:Value id="girl-setting">
+    The setting is outside a pleasant Korean street-side restaurant, with textured dark wooden walls,
+    plants and other tables.
+    Wood brown and coral red establish the background palette, with green plants as accents.
     Natural light falls comfortably across her face; the wooden wall retains its own color and texture.
   </text:Value>
   <text:Render id="girl-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={girl-person}/>
     <text:Set name="shot" text={girl-shot}/>
-    <text:Set name="direction" text={girl-direction}/>
+    <text:Set name="setting" text={girl-setting}/>
   </text:Render>
   <gpt:Image id="girl" prompt={girl-prompt} aspect-ratio="9:16" resolution="2K"/>
 
+  <text:Value id="guy-person">
+    A young American man, exceptionally handsome, with the looks of a young Hollywood actor and an endearing nerdy presence.
+    He has fair skin, a slim build, broad shoulders and excellent head-to-shoulder proportions, messy curly hair
+    and black-framed glasses. He wears a pale finely striped T-shirt with a small abstract
+    devil-tail graphic, black trousers and a cool necklace. Create this other host rather than mirroring the woman.
+  </text:Value>
   <text:Value id="guy-shot">
-    Generate the complementary half-body camera view across this conversation.
-    A slim young man sits toward the left, angled and looking right toward the woman outside the frame.
-    Match the comfortable camera distance and scale of the first view. The microphone now enters from the right;
-    a bowl of mango bingsu on the lower-right table balances him.
+    Use the first image for the conversational geometry and generate the complementary half-body camera view.
+    He sits casually in the corresponding fabric chair toward the left, angled and looking right toward the woman outside the frame.
+    Match the comfortable camera distance and scale of the first view. The microphone now enters from the right
+    and reads HYPIT; a bowl of mango bingsu on the lower-right table balances him.
   </text:Value>
-  <text:Value id="guy-direction">
-    He is a handsome, skinny American young man with an endearing nerdy presence, messy curly hair,
-    black-framed glasses and an attractive face. He wears a pale finely striped T-shirt with a small abstract
-    devil-tail graphic, black trousers and a cool necklace. He sits casually in the corresponding fabric chair.
-    Keep the same restaurant, textured wooden surfaces and natural lighting, but show the other part of the
-    space with different background objects appropriate to this camera's direction. The microphone reads HYPIT.
-  </text:Value>
-  <text:Value id="guy-references">
-    Use the first image for the restaurant, capture language and conversational geometry. Create the other host and the opposite camera view; do not mirror the woman or duplicate her background.
+  <text:Value id="guy-setting">
+    Use the first image for the restaurant and capture language. Keep its textured wooden surfaces and natural
+    lighting, but show the other part of the space with different background objects appropriate to this
+    camera's direction rather than duplicating her background.
   </text:Value>
   <text:Render id="guy-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={guy-person}/>
     <text:Set name="shot" text={guy-shot}/>
-    <text:Set name="direction" text={guy-direction}/>
-    <text:Set name="references" text={guy-references}/>
+    <text:Set name="setting" text={guy-setting}/>
   </text:Render>
   <gpt:Image id="guy" prompt={guy-prompt} aspect-ratio="9:16" resolution="2K">
     <gpt:Reference image={girl.image}/>
@@ -108,134 +114,143 @@
   </mimo:VoiceDesign>
   <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
 
+  <text:Value id="split-person">
+    Preserve the man's identity and styling from the first image and the woman's identity and styling from the second.
+  </text:Value>
   <text:Value id="split-shot">
     Create a horizontal split-screen image: the man fills the upper panel and the woman fills the lower panel.
+    The first image supplies his camera view for the upper panel; the second supplies hers for the lower panel.
     Both panels are close views of their faces and upper bodies, with their microphones visible.
-  </text:Value>
-  <text:Value id="split-direction">
-    Keep each person's identity, styling, restaurant surroundings and natural lighting.
     The man looks right and the woman looks left, as in their individual views.
     Keep the horizontal dividing line clean and preserve the sense that both are present in the conversation.
   </text:Value>
-  <text:Value id="split-references">
-    The first image supplies the man and his camera view for the upper panel. The second supplies the woman and her camera view for the lower panel.
+  <text:Value id="split-setting">
+    Keep each reference image's restaurant surroundings and natural lighting in its corresponding panel.
   </text:Value>
   <text:Render id="split-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={split-person}/>
     <text:Set name="shot" text={split-shot}/>
-    <text:Set name="direction" text={split-direction}/>
-    <text:Set name="references" text={split-references}/>
+    <text:Set name="setting" text={split-setting}/>
   </text:Render>
   <gpt:Image id="split" prompt={split-prompt} aspect-ratio="9:16" resolution="2K">
     <gpt:Reference image={guy.image}/>
     <gpt:Reference image={girl.image}/>
   </gpt:Image>
 
-  <text:Value id="girl-hold-shot">
-    Keep the first image's camera view, framing, natural lighting, seated pose and microphone position.
+  <text:Value id="girl-hold-person">
+    Image one supplies the woman. Preserve her beauty, identity and muscular physique.
   </text:Value>
-  <text:Value id="girl-hold-direction">
+  <text:Value id="girl-hold-shot">
+    Keep the first image's camera view, framing, seated pose and microphone position.
     The woman holds the creatine tub from the second image with the hand on the right side of the frame,
     while the hand on the left points toward it. She still looks left as if talking to her partner.
-    Preserve her beauty, identity and muscular physique. The tub belongs naturally in her hand and the scene.
+    Image two supplies the exact product, including its label and proportions. The tub belongs naturally in her hand and the scene.
   </text:Value>
-  <text:Value id="girl-hold-references">
-    Image one supplies the host and the complete scene. Image two supplies the exact product, including its label and proportions.
+  <text:Value id="girl-hold-setting">
+    Image one supplies the complete scene. Keep its surroundings and natural lighting.
   </text:Value>
   <text:Render id="girl-hold-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={girl-hold-person}/>
     <text:Set name="shot" text={girl-hold-shot}/>
-    <text:Set name="direction" text={girl-hold-direction}/>
-    <text:Set name="references" text={girl-hold-references}/>
+    <text:Set name="setting" text={girl-hold-setting}/>
   </text:Render>
   <gpt:Image id="girl-hold" prompt={girl-hold-prompt} aspect-ratio="9:16" resolution="2K">
     <gpt:Reference image={girl.image}/>
     <gpt:Reference image={creatine.image}/>
   </gpt:Image>
 
-  <text:Value id="guy-hold-shot">
-    Keep the first image's camera view, framing, natural lighting, seated pose and microphone position.
+  <text:Value id="guy-hold-person">
+    Image one supplies the man. Preserve his identity and clothing.
   </text:Value>
-  <text:Value id="guy-hold-direction">
+  <text:Value id="guy-hold-shot">
+    Keep the first image's camera view, framing, seated pose and microphone position.
     The man holds the creatine tub from the second image with the hand on the left side of the frame.
     He still looks right as if speaking to his partner. Keep his other hand naturally at rest.
-    Preserve his identity and clothing; the tub belongs naturally in his hand and the scene.
+    Image two supplies the same product held by the woman. The tub belongs naturally in his hand and the scene.
   </text:Value>
-  <text:Value id="guy-hold-references">
-    Image one supplies the host and the complete scene. Image two supplies the same product held by the woman.
+  <text:Value id="guy-hold-setting">
+    Image one supplies the complete scene. Keep its surroundings and natural lighting.
   </text:Value>
   <text:Render id="guy-hold-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={guy-hold-person}/>
     <text:Set name="shot" text={guy-hold-shot}/>
-    <text:Set name="direction" text={guy-hold-direction}/>
-    <text:Set name="references" text={guy-hold-references}/>
+    <text:Set name="setting" text={guy-hold-setting}/>
   </text:Render>
   <gpt:Image id="guy-hold" prompt={guy-hold-prompt} aspect-ratio="9:16" resolution="2K">
     <gpt:Reference image={guy.image}/>
     <gpt:Reference image={creatine.image}/>
   </gpt:Image>
 
-  <text:Value id="coffee-shot">
-    Generate a lively raised-arm selfie of the woman turning toward her phone inside a cafe.
-    The view feels comfortably close and casually composed.
-  </text:Value>
-  <text:Value id="coffee-direction">
+  <text:Value id="coffee-person">
+    The first image supplies her identity and physique. Preserve her exceptionally attractive face,
+    muscular shoulders and strong arms.
     She has changed into a lightweight pale-gray sleeveless zip-front sports layer over a beige bandeau,
-    with the hood and an additional pink baseball cap. Her expression is playful and sociable, with one casual
-    hand gesture. Preserve her exceptionally attractive face, muscular shoulders and strong arms.
+    with the hood and an additional pink baseball cap.
+  </text:Value>
+  <text:Value id="coffee-shot">
+    Generate a lively raised-arm selfie of the woman turning toward her phone.
+    The view feels comfortably close and casually composed. Her expression is playful and sociable,
+    with one casual hand gesture.
+  </text:Value>
+  <text:Value id="coffee-setting">
+    Change her location to a cafe.
     Other customers are faintly present in the cafe. Afternoon light through the windows gives her face
     natural illumination; cafe furniture and surroundings retain their color.
   </text:Value>
-  <text:Value id="coffee-references">
-    The first image supplies her identity and physique. Change her clothing, pose and location to the cafe selfie described here.
-  </text:Value>
   <text:Render id="coffee-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={coffee-person}/>
     <text:Set name="shot" text={coffee-shot}/>
-    <text:Set name="direction" text={coffee-direction}/>
-    <text:Set name="references" text={coffee-references}/>
+    <text:Set name="setting" text={coffee-setting}/>
   </text:Render>
   <gpt:Image id="coffee" prompt={coffee-prompt} aspect-ratio="9:16" resolution="2K">
     <gpt:Reference image={girl.image}/>
   </gpt:Image>
 
+  <text:Value id="smoothie-person">
+    Preserve the woman from the first image, with her very beautiful face and clearly muscular arms and shoulders.
+    Change her outfit to a navy Adidas sports tank and charcoal over-ear headphones.
+  </text:Value>
   <text:Value id="smoothie-shot">
-    Generate a lively mirror selfie of the woman standing in a dessert shop.
+    Generate a lively mirror selfie of the woman standing.
     She holds her phone in one hand, watches its screen, and holds a bowl of strawberry bingsu in the other.
+    Her phone has a playful CASETiFY case with a cute rabbit design.
+    She parts her lips with an amused expression as if about to taste the bingsu.
+    The composition feels spontaneous rather than rigid.
   </text:Value>
-  <text:Value id="smoothie-direction">
-    She wears a navy Adidas sports tank and charcoal over-ear headphones. Her phone has a playful CASETiFY
-    case with a cute rabbit design. She parts her lips with an amused expression as if about to taste the bingsu.
-    Keep her very beautiful face and clearly muscular arms and shoulders. The shop is lit naturally through
-    its windows, with a readable background. The composition feels spontaneous rather than rigid.
-  </text:Value>
-  <text:Value id="smoothie-references">
-    Preserve the woman from the first image while creating this different outfit, activity and location. This dessert scene broadly supports her food routine; it is not a literal smoothie demonstration.
+  <text:Value id="smoothie-setting">
+    Change the location to a dessert shop, lit naturally through its windows, with a readable background.
+    This dessert scene broadly supports her food routine; it is not a literal smoothie demonstration.
   </text:Value>
   <text:Render id="smoothie-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={smoothie-person}/>
     <text:Set name="shot" text={smoothie-shot}/>
-    <text:Set name="direction" text={smoothie-direction}/>
-    <text:Set name="references" text={smoothie-references}/>
+    <text:Set name="setting" text={smoothie-setting}/>
   </text:Render>
   <gpt:Image id="smoothie" prompt={smoothie-prompt} aspect-ratio="9:16" resolution="2K">
     <gpt:Reference image={girl.image}/>
   </gpt:Image>
 
-  <text:Value id="pasta-shot">
-    Generate a low-angle photograph as if a phone has been set on a table in the woman's home courtyard.
-    She is close enough for her attentive expression and practical hand movements to be clearly readable.
-  </text:Value>
-  <text:Value id="pasta-direction">
+  <text:Value id="pasta-person">
+    Use the first image for her identity and physique. Keep her exceptionally attractive face,
+    strong arms and broad muscular shoulders.
     She wears a pink spaghetti-strap apron over a textured pale T-shirt, with a pale hair clip holding back
-    part of her hair. She is preparing macaroni at a stovetop, with pasta ready to go into a pot.
-    Keep her exceptionally attractive face, strong arms and broad muscular shoulders.
+    part of her hair.
+  </text:Value>
+  <text:Value id="pasta-shot">
+    Generate a low-angle photograph as if a phone has been set on a table.
+    She is close enough for her attentive expression and practical hand movements to be clearly readable.
+    She is preparing macaroni at a stovetop, with pasta ready to go into a pot.
+  </text:Value>
+  <text:Value id="pasta-setting">
+    Create this home-cooking scene independently of the other lifestyle images, in her home courtyard.
     The covered courtyard has a warm modern Korean domestic feel, with a slatted wooden roof and hanging plants.
     Afternoon sunlight enters the courtyard and gives her face natural illumination, while the covered area
     and surrounding wood keep the scene tonally grounded.
   </text:Value>
-  <text:Value id="pasta-references">
-    Use the first image for her identity and physique; create the home-cooking scene independently of the other lifestyle images.
-  </text:Value>
   <text:Render id="pasta-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={pasta-person}/>
     <text:Set name="shot" text={pasta-shot}/>
-    <text:Set name="direction" text={pasta-direction}/>
-    <text:Set name="references" text={pasta-references}/>
+    <text:Set name="setting" text={pasta-setting}/>
   </text:Render>
   <gpt:Image id="pasta" prompt={pasta-prompt} aspect-ratio="9:16" resolution="2K">
     <gpt:Reference image={girl.image}/>

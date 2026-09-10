@@ -17,7 +17,7 @@ Choose a Kit whose fixed assumptions serve that intention:
 
 | Direction needed | Where to look |
 | --- | --- |
-| The fixed phone-video capture wording, with this picture's framing, subject and environment | The installed `@hypit/gpt-image-kits` README and its `phone-ugc-v1` template |
+| The fixed phone-video capture wording, followed by Person, Shot and Setting | The installed `@hypit/gpt-image-kits` README and its `phone-ugc-v1` template |
 | A speaking performer, podcast, street encounter, video call, silent B-roll, or motion/camera transfer | The installed `@hypit/seedance-kits` README and its corresponding exported template |
 
 These are packaged Sources, so their README and exported `.svs` files supply the template names,
@@ -26,9 +26,9 @@ Text slots, defaults and Recipe choices. A package's Surface vocabulary serves a
 describes generation. Read the chosen template when its fixed text or a choice's exact wording matters.
 
 For an ordinary speaking passage, connect the Segment's `.dialogue` and this passage's action;
-the selected Recipe supplies recurring performance choices. For an image, bring the framing and
-subject/environment direction from Craft. Keep the template's reference roles consistent with the
-actual media connected to the model. The owning package documents that order.
+the selected Recipe supplies recurring performance choices. For an image, bring Person, Shot and
+Setting direction from Craft. Keep reference responsibilities consistent with the actual media
+connected to the model. The owning package documents that order.
 
 Fit includes assumptions as well as available knobs. A two-view conversation and a combined
 split-screen opening may need different prompt structures. Keep the useful Kit for passages it

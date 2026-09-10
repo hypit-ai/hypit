@@ -22,7 +22,7 @@ not need a matching playbook before it can be understood or made.
 
 | Read | When the current question concerns |
 | --- | --- |
-| [Directing generated images](craft/image-direction.md) | phone-video realism, character presence, image prompts, materials and palette, or preparing a useful visual reference |
+| [Directing generated images](craft/image-direction.md) | phone-video capture, compelling people, camera relationships and settings; four-paragraph image direction and reference use |
 | [Directing a voice](craft/voice-direction.md) | casting an appealing voice, choosing its vocal character, writing Voice Design direction or selecting a sample line |
 | [Voice and performance](craft/voice-and-performance.md) | how Segment performances create semantic time, who is A-roll, recurring voice identity, visual A-roll presentations, or genuinely independent narration |
 | [Directing generated video](craft/video-direction.md) | choosing a generation relationship, directing visible performance or silent action, camera behavior, cuts, or request duration |
@@ -44,7 +44,7 @@ unless the decision has changed.
 
 | Read | When a concrete directing example would help |
 | --- | --- |
-| [Image direction examples](craft/examples/image-direction.md) | complete phone-video prompts, their visible results, and the aesthetic relationships behind them |
+| [Image direction examples](craft/examples/image-direction.md) | four-paragraph production prompts for the balcony portrait and five reviewed character portraits |
 | [Conversation image examples](craft/examples/conversation-images.md) | complementary podcast and interview views, product references, lifestyle B-roll, and changing camera relationships |
 
 ## Formats

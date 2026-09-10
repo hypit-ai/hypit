@@ -8,27 +8,27 @@
   text-template.phone-ugc-v1.block.capture {
     kind: fixed;
     order: 10;
-    text: "A photograph with the texture of real iPhone footage, captured as a single frame from a video actually shot on an iPhone. The image looks real, without an oily, overprocessed finish, and has the texture of video footage. The background is clearly visible, with no depth-of-field blur. Skin texture is natural and fine, the lighting is natural, and the image is coherent and free of visual artifacts.";
+    text: "A photograph captured as a single frame from a video actually shot on an iPhone, with the texture of real iPhone footage. The image looks real, without an oily, overprocessed finish. The background is clearly visible, with no depth-of-field blur. Skin texture is natural and fine, and the lighting is natural. The image is coherent and free of visual artifacts.";
+  }
+
+  text-template.phone-ugc-v1.block.person {
+    kind: slot;
+    order: 20;
+    slot: person;
+    optional: true;
   }
 
   text-template.phone-ugc-v1.block.shot {
     kind: slot;
-    order: 20;
+    order: 30;
     slot: shot;
     optional: false;
   }
 
-  text-template.phone-ugc-v1.block.direction {
-    kind: slot;
-    order: 30;
-    slot: direction;
-    optional: false;
-  }
-
-  text-template.phone-ugc-v1.block.references {
+  text-template.phone-ugc-v1.block.setting {
     kind: slot;
     order: 40;
-    slot: references;
+    slot: setting;
     optional: true;
   }
 </sheet>

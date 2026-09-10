@@ -11,18 +11,15 @@ separately and imported as files.
 Use `phone-ugc-v1` from `@hypit/gpt-image-kits` for this photographic language. Its fixed paragraph is:
 
 ```text
-A photograph with the texture of real iPhone footage, captured as a single frame from a video
-actually shot on an iPhone. The image looks real, without an oily, overprocessed finish, and has
-the texture of video footage. The background is clearly visible, with no depth-of-field blur.
-Skin texture is natural and fine, the lighting is natural, and the image is coherent and free
-of visual artifacts.
+A photograph captured as a single frame from a video actually shot on an iPhone, with the texture of real iPhone footage. The image looks real, without an oily, overprocessed finish. The background is clearly visible, with no depth-of-field blur. Skin texture is natural and fine, and the lighting is natural. The image is coherent and free of visual artifacts.
 ```
 
-Each direction below follows that paragraph. When using the Kit, put its framing sentences in `shot`,
-its scene and subject direction in `direction`, and any reference responsibilities in `references`.
-The Kit supplies the capture paragraph once. Set the output aspect ratio, such as `9:16`, on the
-model; do not spend prompt attention repeating it. Without the Kit, prepend the paragraph to the
-selected direction. Connect the stated reference images as actual model inputs.
+When adapting these production directions with the current Kit, arrange person and appearance in
+`person`, the camera encounter in `shot`, and the surrounding place in `setting`. Include reference
+responsibilities where they apply. A derived view can stay brief where its references already
+establish the facts; the `person` and `setting` blocks can be omitted. The Kit supplies Capture once.
+Set the output aspect ratio, such as `9:16`, on the model. Connect the stated reference images as
+actual model inputs. The historical directions below retain their production wording and order.
 
 These renditions preserve complete production directions as evidence, including additional
 time-of-day, brightness, exposure, or lighting language that belonged to those particular shots.

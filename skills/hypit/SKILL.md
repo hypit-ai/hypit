@@ -50,8 +50,10 @@ unfold; semantic anchors locate events that belong to speech. A piece can use bo
 
 Before writing or adapting an image prompt, read
 [Image direction](references/playbooks/craft/image-direction.md) and apply it to the intended picture,
-including when starting from an existing project's prompt. For phone-footage images, use its
-recommended paragraph structure and assemble the fixed capture wording through its Kit.
+including when starting from an existing project's prompt. UGC, podcast and street-interview images
+usually share the Kit's fixed iPhone-video capture language. Follow it with Person, Shot and Setting:
+strong, specific casting; a deliberate camera encounter; and a place with a considered palette.
+The Craft owns the explicit appearance, proportion and reusable speaking-view guidance.
 Before choosing, designing or changing a character's voice, read
 [Voice direction](references/playbooks/craft/voice-direction.md). Before writing or adapting a video
 prompt, performance Recipe or action, read [Video direction](references/playbooks/craft/video-direction.md)

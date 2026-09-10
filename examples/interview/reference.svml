@@ -52,66 +52,77 @@
     </bitcoin-rule>
   </script>
 
-  <text:Value id="shared-view-shot">
-    Generate a close street-interview photograph showing two people from roughly mid-thigh upward.
-    The guest stands just left of center, partly facing the camera and looking toward the interviewer on the right.
-    Keep their faces, gestures and the handheld microphone readable, with comfortable room around them.
-  </text:Value>
-  <text:Value id="shared-view-direction">
-    On an affluent New York street, a matte sky-blue Lamborghini is parked at the curb with its nose toward
-    the left. Its badge is visible low in the frame between the two people standing near the front of the car.
-    The guest has a glamorous mob-wife presence. She is about twenty, exceptionally beautiful, with
-    Japanese-Italian features, very fair skin and the refined, striking beauty of a Hollywood leading actress.
+  <text:Value id="shared-view-person">
+    The guest is a Japanese-Italian woman about twenty, with a glamorous mob-wife presence.
+    She is exceptionally beautiful, with very fair skin and the refined, striking beauty of a Hollywood leading actress.
+    She has broad shoulders and excellent head-to-shoulder proportions.
     Her long black hair falls in loose waves. Sunglasses rest on her head. She wears an expensive-looking dark
     fur coat over a leopard-print strapless short dress, a gold-set cross necklace, and a luxurious structured
-    Hermes handbag on her left arm. Her hands rest naturally near her bag, leaving room for an easy gesture.
-    The interviewer is a handsome, cheerful young American college student in profile on the right.
+    Hermes handbag.
+    The interviewer is a cheerful young American college student, exceptionally handsome, with the looks of a young Hollywood actor.
+    He has fair skin, broad shoulders and excellent head-to-shoulder proportions.
     He has tousled curls spilling from a backward American-flag baseball cap, a purple designer graphic T-shirt,
-    a studded belt and fashionable flared jeans. He holds one microphone marked HYPIT toward her mouth.
+    a studded belt and fashionable flared jeans.
+  </text:Value>
+  <text:Value id="shared-view-shot">
+    Generate a close street-interview photograph showing two people from roughly mid-thigh upward.
+    The guest stands just left of center, partly facing the camera and looking toward the interviewer in profile on the right.
+    Her handbag hangs on her left arm. Her hands rest naturally near her bag, leaving room for an easy gesture.
+    He holds one microphone marked HYPIT toward her mouth.
+    Keep their faces, gestures and the handheld microphone readable, with comfortable room around them.
+    They stand near the front of a matte sky-blue Lamborghini parked at the curb with its nose toward the left.
+    Its badge is visible low in the frame between the two people.
+  </text:Value>
+  <text:Value id="shared-view-setting">
+    The setting is an affluent New York street.
     The stone facades, railings and trees establish a real neighborhood. No other people are in the frame.
+    The street's palette is sandstone and green; the sky-blue car and purple shirt provide accents.
   </text:Value>
   <text:Render id="shared-view-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={shared-view-person}/>
     <text:Set name="shot" text={shared-view-shot}/>
-    <text:Set name="direction" text={shared-view-direction}/>
+    <text:Set name="setting" text={shared-view-setting}/>
   </text:Render>
   <gpt:Image id="shared-view" prompt={shared-view-prompt} aspect-ratio="9:16" resolution="2K"/>
 
-  <text:Value id="guest-view-shot">
-    Create a closer camera view centered on the woman from the reference. She looks toward the right side of the frame.
-  </text:Value>
-  <text:Value id="guest-view-direction">
+  <text:Value id="guest-view-person">
+    Use the first image as the complete identity reference for the woman.
     Preserve her face, black hair, sunglasses, fur coat, leopard-print dress, jewelry and handbag.
-    Keep the same street, car and natural light from this new camera position.
+  </text:Value>
+  <text:Value id="guest-view-shot">
+    Create a closer camera view centered on her. She looks toward the right side of the frame.
     The interviewer's microphone enters from the right toward her mouth; her face and upper body remain clearly visible.
   </text:Value>
-  <text:Value id="guest-view-references">
-    Use the first image as the complete identity and scene reference. This is another view of the same interview.
+  <text:Value id="guest-view-setting">
+    Use the first image as the complete scene reference. This is another view of the same interview.
+    Keep the same street, car and natural light from this new camera position.
   </text:Value>
   <text:Render id="guest-view-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={guest-view-person}/>
     <text:Set name="shot" text={guest-view-shot}/>
-    <text:Set name="direction" text={guest-view-direction}/>
-    <text:Set name="references" text={guest-view-references}/>
+    <text:Set name="setting" text={guest-view-setting}/>
   </text:Render>
   <gpt:Image id="guest-view" prompt={guest-view-prompt} aspect-ratio="9:16" resolution="2K">
     <gpt:Reference image={shared-view.image}/>
   </gpt:Image>
 
+  <text:Value id="interviewer-view-person">
+    Use the first image as the identity reference for the man.
+    Preserve his handsome face, tousled curls, backward cap and purple shirt.
+  </text:Value>
   <text:Value id="interviewer-view-shot">
-    Create a closer camera view centered on the man from the reference, slightly larger in frame.
+    Create a closer camera view centered on him, slightly larger in frame.
     He continues looking left and holding the microphone in the same interviewing pose.
-    Keep part of the woman's body visible along the left edge.
+    Keep part of the woman's body visible along the left edge so this view remains part of their shared space.
+    Preserve the left-right relationship between the two people.
   </text:Value>
-  <text:Value id="interviewer-view-direction">
-    Preserve his handsome face, tousled curls, backward cap, purple shirt and the same street and car.
-    Keep the natural light and the left-right relationship between the two people coherent.
-  </text:Value>
-  <text:Value id="interviewer-view-references">
-    Use the first image as the identity and scene reference. Preserve the woman at the edge so this view remains part of their shared space.
+  <text:Value id="interviewer-view-setting">
+    Use the first image as the scene reference. Keep the same street, car and natural light.
   </text:Value>
   <text:Render id="interviewer-view-prompt" template={image-kit.phone-ugc-v1}>
+    <text:Set name="person" text={interviewer-view-person}/>
     <text:Set name="shot" text={interviewer-view-shot}/>
-    <text:Set name="direction" text={interviewer-view-direction}/>
-    <text:Set name="references" text={interviewer-view-references}/>
+    <text:Set name="setting" text={interviewer-view-setting}/>
   </text:Render>
   <gpt:Image id="interviewer-view" prompt={interviewer-view-prompt} aspect-ratio="9:16" resolution="2K">
     <gpt:Reference image={shared-view.image}/>

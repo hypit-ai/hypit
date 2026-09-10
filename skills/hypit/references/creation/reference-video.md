@@ -162,6 +162,10 @@ duration. Use [transformations](transformations.md) to think through that adapta
 Selections for meaningful spans and Moments for events in the target Script, and let the accepted
 performance establish their time. [Script and time](script-and-time.md) owns that authoring language.
 
+For generated camera imagery, [image direction](../playbooks/craft/image-direction.md#compress-the-idea-into-decisive-anchors)
+turns the observed appearance into a coherent styling and scene direction, with the decisive details
+the target needs. The reference notes retain the observations behind those choices.
+
 The recorded account should explain the whole piece from opening to close and make its distinct
 visual systems and their changes locatable. It should be concrete enough to direct the new work:
 what to preserve or adapt, how it is expressed, and why it belongs. Continue investigating an
