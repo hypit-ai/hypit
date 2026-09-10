@@ -897,7 +897,14 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
         assert.fail(`Builds reached ${state}`);
       }
       if (Date.now() > deadline) {
-        assert.fail(`Builds did not complete within 30s: ${state}`);
+        // A Build with no Result at all has not failed, it has stopped being scheduled. `wakeAt`
+        // absent means it is waiting for a resource release, and the Operations say whether one is
+        // still outstanding; both are what distinguishes a lost wake-up from ordinary waiting.
+        const executions = await fixture.executionStore.list();
+        const operations = await Promise.all(ids.map(async (id) => await fixture.operationStore.list({ build: id })));
+        assert.fail(`Builds did not complete within 30s: ${state}`
+          + `; executions ${JSON.stringify(executions)}`
+          + `; operations ${JSON.stringify(operations)}`);
       }
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
