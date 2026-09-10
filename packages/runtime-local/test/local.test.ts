@@ -771,6 +771,12 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
   let mostLimited = 0;
   let markFirstStarted: (() => void) | undefined;
   const firstStarted = new Promise<void>((resolve) => { markFirstStarted = resolve; });
+  // The overlap this test is about has to be waited for, not timed. Holding the first handler for a
+  // fixed span asks the machine to admit the later Build inside that span, which a loaded runner
+  // misses; holding it until the second handler actually starts asks the Worker the question.
+  let markSecondStarted: (() => void) | undefined;
+  const secondStarted = new Promise<void>((resolve) => { markSecondStarted = resolve; });
+  let unrestrictedStarts = 0;
   const components: ComponentPackage = {
     producers: [
       {
@@ -780,9 +786,21 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
           const intent = inputs.intent.value.value as { readonly name: string };
           unrestrictedActive += 1;
           mostUnrestricted = Math.max(mostUnrestricted, unrestrictedActive);
-          markFirstStarted?.();
-          markFirstStarted = undefined;
-          await new Promise((resolve) => setTimeout(resolve, 80));
+          unrestrictedStarts += 1;
+          if (unrestrictedStarts === 1) {
+            markFirstStarted?.();
+            markFirstStarted = undefined;
+            // A Worker that serialized the Builds never starts the second one, so this waits out
+            // its bound and the assertion below reports that rather than hanging here.
+            await Promise.race([
+              secondStarted,
+              new Promise<void>((settle) => { setTimeout(settle, 10_000).unref(); }),
+            ]);
+          } else {
+            markSecondStarted?.();
+            markSecondStarted = undefined;
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
           unrestrictedActive -= 1;
           return {
             outputs: { prompt: { kind: "inline", value: `Greet ${intent.name}` } },
@@ -866,6 +884,12 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
     while (true) {
       outcomes = await Promise.all(ids.map(async (id) => (await results.read(id))?.outcome));
       if (outcomes.every((outcome) => outcome === "complete")) break;
+      // Only `complete` ends this wait, so a Build that reached `failed` would otherwise be waited
+      // on until the deadline and reported as a stall. Say which outcome it actually reached.
+      const settledOtherwise = outcomes.filter((outcome) => outcome !== undefined && outcome !== "complete");
+      if (settledOtherwise.length > 0) {
+        assert.fail(`Builds reached ${ids.map((id, at) => `${id} is ${outcomes[at] ?? "unwritten"}`).join(", ")}`);
+      }
       if (Date.now() > deadline) {
         assert.fail(`Builds did not complete within 30s: ${ids.map((id, at) => `${id} is ${outcomes[at] ?? "unwritten"}`).join(", ")}`);
       }
