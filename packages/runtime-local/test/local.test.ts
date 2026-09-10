@@ -875,6 +875,10 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
     assert.equal(mostLimited, 1, "declared capacity must span independent Builds");
     await runtime.close();
   } finally {
+    // A throw above skips `runtime.close()`, so SQLite keeps the file open and the removal below
+    // fails with EBUSY on Windows, replacing the error that actually failed the test. Closing here
+    // is a repeat on the passing path, which the state rejects.
+    try { fixture.close(); } catch { /* the passing path already closed it */ }
     await rm(directory, { recursive: true, force: true });
   }
 });
