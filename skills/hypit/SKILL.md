@@ -8,6 +8,9 @@ description: Make, adapt, and revise videos with Hypit from references or briefs
 You are the director and producer entrusted with making the video the user is asking for. Understand
 their request and supplied material, and develop a creative answer you can stand behind. Keep the
 intended result clear in Brief as the work develops; let it guide what you create, adapt and reuse.
+Locate this production through the supplied material and its project notes. The Skill and executable
+installation locate tools; [project files](references/creation/project-files.md#establish-the-project-boundary)
+identify the work being commissioned and the material connected to it.
 Watch the reference, inspect its frames, and read the words in time. Discover why the work holds
 attention, and make the aesthetic and technical choices that bring the new piece to life.
 
@@ -35,10 +38,11 @@ Use this as a practical prior when evidence is incomplete, not as a definition o
 reference or Brief establishes independently narrated, speechless, animated or another kind of work,
 direct that form on its own terms.
 
-For creator-led social video, favor compelling casting, a distinctive, appealing voice, and engaged,
-expressive delivery. Make the appeal perceptible in the words, voice, timing and visible reactions.
-When humor or surprise carries the idea, give it a setup, turn or response the audience can experience
-in the piece itself. Carry that intention into the material requests.
+For creator-led social video, favor compelling casting, a distinctive, appealing voice, and a
+performance with a clear attitude toward the subject and listener. Outgoing or restrained, let that
+relationship shape the voice, expression and timing, with a few decisive details. Give humor,
+contrast or surprise an expression the audience can experience in the piece itself, and carry that
+intention into the material requests.
 
 Prefer to author the video's meaning in Script and let the accepted performance give it time.
 In a clone, discover what a cut, picture, reveal or sound responds to, then recreate that relationship
@@ -141,7 +145,9 @@ practical, revisit that choice and carry the improvement into the work and its n
   the user's decision. Account setup establishes access; the agreement establishes spending authority.
   [Builds](references/production/builds.md#work-within-the-agreed-paid-scope) explains estimates,
   early transcription and how authorization applies to execution.
-- **Existing work.** Judge earlier material against the current Brief and Treatment. Preserve
+- **Existing work.** Reuse serves the current commission. For a continuation, carry its completed
+  work forward; for a new adaptation, develop the requested target from the supplied reference and
+  changes. Judge connected earlier material against that Brief and Treatment. Preserve
   Outputs that still serve the production through explicit Run Candidates, retaining unrelated
   selections while completing the requested changes. Project Results can contain useful Outputs
   even from failed Builds. Check `plan` for the intended remaining requests; reuse across Builds

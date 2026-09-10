@@ -59,6 +59,13 @@ that a second podcast angle reverses the eye line while preserving the shared co
 does not need package names, element attributes, provider selection, Build order, or Result ids. Those
 belong to production files.
 
+Describe how the intended appeal reaches the viewer. If contrast carries the premise, say what
+expectation the piece sets up and how its words, situation, reveal or response play with it. The
+difference can suggest an idea; the piece still needs to express what makes that idea compelling.
+Give the performer a clear attitude toward the subject and listener. Let
+[voice direction](../playbooks/craft/voice-direction.md) and
+[video direction](../playbooks/craft/video-direction.md) carry the choice into casting and performance.
+
 Reference Analysis says why the old piece works; Treatment says what the new piece will be. Original
 work reaches Treatment from the Brief, relevant examples, and the Agent's judgment rather than from
 one dominant reference. These are different sources of creative evidence.

@@ -137,8 +137,10 @@ If the current Logical Output was renamed, the two names may differ: `build-reco
 the old Result's public name, while `satisfy output` names the current graph position. Hypit does not
 infer that two names carry the same creative meaning.
 
-Use `hypit builds`, `hypit inspect <build-id>`, and `hypit history <output-name>` to find a produced
-Output, then write that exact choice into the Run. Results retain public Outputs even when no file
+Use `hypit builds`, `hypit inspect <build-id>`, and `hypit history <output-name>` within the selected
+production's Result repository, following its recorded Builds and Runs to the needed Output. In a
+shared repository, the Source and Run establish which target an entry belongs to; an output name
+alone does not. Write that exact choice into the Run. Results retain public Outputs even when no file
 was exported into `assets/` or `output/`; inspect them before concluding that material is missing.
 A failed or cancelled Build may still contain completed public Outputs worth using. Reuse those
 Outputs rather than submitting their generation again to recover a later failure. A later Build

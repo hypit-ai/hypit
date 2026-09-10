@@ -4,33 +4,79 @@ Read this before writing or adapting a video prompt, performance Recipe or actio
 establish who and where; generated video brings the Script and visual idea to life through speech,
 interaction, camera behavior or silent action.
 
-For creator-led social video, favor an engaged, expressive performance that draws the viewer into
-what is being said. Give personality and humor an audible or visible expression: a revealing choice
-of emphasis, an amused reaction, a turn in attitude or a payoff in the delivery. Let the audience
-experience the idea through the performed words and actions.
+For creator-led social video, favor an appealing, engaged performance: the speaker responds to what
+they are saying and draws someone into the thought. Voice, expression and movement carry that
+relationship together. Expressiveness concerns how clearly the attitude comes through; it can be
+outgoing or restrained.
 
 ## Direct the reason for an action
 
-Start with the social situation and attitude: affectionate ridicule, candid surprise, playful
-skepticism, delighted conviction or another relationship the audience can recognize. Write a short
-passage direction around that attitude and the few reactions through which it develops. An eager
-lean, an incredulous look, a knowing shrug or a sudden smile can make the spoken idea tangible.
+Give the passage a clear expressive intention, then specify the few details that decide how it
+lands. Start with how the speaker regards the subject and relates to the listener: eagerly sharing
+a discovery with a friend, weighing an ambitious claim with skeptical interest, or affectionately
+roasting something they know well. Such directions suggest voice, expression, posture and rhythm
+together. Their value is the performable relationship they contain.
 
-Let the meaning motivate the change: a claim invites skepticism, an example wins the speaker over,
-or a final judgment lands with confidence. A description such as "funny" or "ironic" becomes useful
-direction when the words, expression or timing give the viewer something to recognize. Choose the
-decisive beats and let the model perform the connecting behavior naturally.
+As with [Image direction](image-direction.md#compress-the-idea-into-decisive-anchors), high-level
+language should carry sensory direction. The model can realize "admiring but incredulous" across a
+whole passage. A pointed emphasis or a revealing gesture can then settle its most consequential
+expression. The prompt names the attitude; the performance makes the audience experience it.
 
-For example, alongside a Script that moves from a claim through a demonstration to a verdict:
+For example, alongside a Script that questions a price and ends with an ironic compliment:
 
 ```text
-The host is eager to show a friend why this works. Give the bold claim a playfully skeptical look,
-brighten as the example proves it, then land the verdict with delighted certainty and a knowing nod.
+She is venting to a friend with affectionate exasperation at how overpriced this is. Give the
+price an incredulous emphasis; let the final compliment land with a teasing smile in her voice.
 ```
+
+The first sentence directs the entire encounter. The details make the price and the ironic turn
+read clearly; the remaining phrasing and movement can grow naturally from that attitude. A detail
+earns its place when it clarifies a judgment, reveals a response or preserves an important physical
+relationship. Attaching a hand movement to every phrase adds choreography without necessarily
+strengthening the expression.
+
+Let the thought determine whether the attitude develops or holds: an example may win a skeptical
+speaker over, while a firm argument may sustain the same conviction throughout. When adapting a
+reference, recover that relationship before selecting movements or vocal details for the new work.
 
 Carry the character, voice and useful physical relationships across Takes while directing the
 attitude each passage calls for. The same speaker can invite, question, tease and persuade as the
-argument develops. Stable framing leaves room for these changes in face, voice and posture.
+argument develops. Shared direction can preserve their manner; the passage supplies the particular
+response. Stable framing leaves room for changes in face, voice and posture.
+
+## Give restraint an expressive purpose
+
+Seriousness can mean weighing a claim, insisting on a fact or challenging an assumption. A relaxed
+person can tease, dismiss or show interest with very little effort. Choose the behavior that conveys
+that attitude. A small, deliberate response can carry more conviction than constant movement.
+
+For a serious judgment:
+
+```text
+She weighs the claim with skeptical interest. Her brow tightens at the price; she gives the number
+a pointed emphasis, then lands her judgment with a small, decisive nod.
+```
+
+For a languid response:
+
+```text
+He lounges back in the chair, amused that anyone finds this impressive. He draws out the setup
+with a sideways glance, then tosses off the verdict in a light, dismissive tone.
+```
+
+These are different intentions, not prescribed poses for every serious or relaxed person. Breathing,
+blinking and small posture adjustments supply ordinary life; the speaker's response to the content
+supplies the performance. Direct that response even when the body stays almost still.
+
+Contrast describes a relationship between things; it leaves the performer's attitude unspecified.
+Turn the chosen relationship into something the person can express: "She tries to sound composed,
+but cannot quite hide her pride in the result" gives voice and expression a shared direction.
+Humor reaches the viewer through the words, situation, response or delivery. A straight-faced
+performance can sharpen a clear joke through pointed emphasis or a dry turn of phrase; an unusual
+appearance alone does not make an even explanation funny. [Treatment](../../creation/brief.md#treatment-is-the-directors-answer)
+owns how the premise becomes a viewer experience; action directs the person's part in creating it.
+
+## Ground actions in the generated scene
 
 The prompt describes what this generation should make visible over time. Give a performer physical
 relationships with the camera, people, props and parts of the setting that actually exist in the
@@ -58,7 +104,7 @@ encoder.
 | Recurring voice references | a speaker's intended voice identity when the model accepts them |
 | Script dialogue | the exact words, intended pronunciation and speaking turns for a visible performance |
 | Prompt Kit or Recipe | a reusable prompt relationship that fits this kind of work |
-| Passage direction | attitude, attention, physical interaction, camera behavior and motivated cuts |
+| Passage direction | attitude, vocal delivery, attention, physical interaction, camera behavior and motivated cuts |
 
 Keep those responsibilities explicit in Source. Prompt prose does not create a media edge, and a
 reference does not explain which fact it should preserve. A selected model may accept only some of
@@ -134,6 +180,9 @@ Use `hypit measure` on a spoken Segment at its intended pace, including time for
 interaction, pauses and actions. [Script and time](../../creation/script-and-time.md#measure-before-choosing-durations)
 owns the command, rounding and the relationship between estimated duration and real aligned time.
 Choose that pace from the intended performance and carry it into the voice and passage direction.
+For brisk social delivery with trim cuts, `fast` is a useful starting choice; the name `normal`
+does not make it the right rhythm for every piece. A shorter duration gives the words less room,
+while the direction still supplies the stresses, attitude and reactions that make them engaging.
 Measurement sizes the words; emphasis, attitude and motivated reactions give their delivery character.
 The target's delivery determines how much generated media the passage needs; the reference video's
 seconds help explain its rhythm without becoming the target duration automatically.

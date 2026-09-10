@@ -78,7 +78,9 @@ no duration-estimation node on the generation route.
 
 The Recipe carries recurring choices exposed by the selected template. `dialogue` receives the
 Script Segment's `.dialogue` Text, retaining pronunciation and Role turns. Optional `action` supplies
-this passage's attitude, attention, interaction and any motivated cuts admitted by the Kit.
+this passage's attitude, vocal delivery, attention, interaction and any motivated cuts admitted by
+the Kit. In Speaker, `performance` selects the recurring approach to voice and visible expression;
+`gesture` selects body language, while `action` directs the particular thought and response.
 Do not retype the complete spoken text into action or treat each Role turn as a required new Take.
 For B-roll, `story` carries the silent visual events rather than spoken dialogue.
 

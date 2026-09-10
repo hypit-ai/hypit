@@ -74,6 +74,9 @@ Inspect the relationships that make the composition work:
 - **semantic timing and motion** — cuts, Caption Cues, MG states and Effects occur on the
   intended word, phrase, pause, or clock event; entry, settling, active behavior and exit make the
   intended emphasis and handoff perceptible;
+- **shared layout** — a layout established for a passage remains coherent while its individual
+  contents change; inspect the handoffs as well as the populated states, so replacing a card or
+  ending a Selection does not accidentally release space the passage still needs;
 - **Caption** — every meaningfully different speaker, position, color, emphasis, Cue shape, and motion
   configuration remains readable, belongs to the speech, and preserves the intended face and action;
 - **Typography and UI** — independent writing has the correct hierarchy, content, persistence, and

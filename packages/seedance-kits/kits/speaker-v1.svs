@@ -75,19 +75,19 @@
   }
 
   text-template.speaker-v1.choice.performance.natural-explainer {
-    text: "PERFORMANCE: natural explainer energy with clear eye focus, expressive eyebrows, small nods, and a friendly conversational rhythm.";
+    text: "PERFORMANCE: engaged, friendly conversation with responsive intonation and clear emphasis as the thought develops. Let gaze, expression, and gesture convey the speaker's attitude to what they are saying.";
   }
 
   text-template.speaker-v1.choice.performance.high-energy-ugc {
-    text: "PERFORMANCE: vivid high-energy short-form delivery with expressive face changes on key words.";
+    text: "PERFORMANCE: vivid, energetic short-form delivery with nimble phrasing, animated intonation, and emphatic key ideas. Let the voice and visible reactions develop together as the speaker makes their point.";
   }
 
   text-template.speaker-v1.choice.performance.calm-authority {
-    text: "PERFORMANCE: composed, confident, precise, and trustworthy, with deliberate emphasis.";
+    text: "PERFORMANCE: composed, thoughtful conviction with measured phrasing and purposeful vocal emphasis. Let focused attention and small, deliberate reactions express how the speaker weighs the idea and reaches a judgment.";
   }
 
   text-template.speaker-v1.choice.performance.reactive-playful {
-    text: "PERFORMANCE: playful and reactive, with amused looks, quick smiles, skeptical eyebrows, and lively timing.";
+    text: "PERFORMANCE: playful, responsive delivery with teasing inflection, lively timing, and an audible smile where the thought amuses the speaker. Let curiosity, skepticism, or delight come through in the voice and matching visible reactions as the passage calls for them.";
   }
 
   text-template.speaker-v1.block.gesture {
@@ -131,6 +131,6 @@
     order: 100;
     slot: action;
     optional: true;
-    label: "ACTION DIRECTION:";
+    label: "PERFORMANCE AND ACTION DIRECTION:";
   }
 </sheet>

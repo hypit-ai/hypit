@@ -6,14 +6,34 @@ names.
 
 ## Establish the project boundary
 
-Understand the current request and keep its intended result in [Brief](brief.md). Locate the work
-through the user's supplied paths, the current project and its notes, following linked assets or
-shared libraries where their relationship to this production is clear.
+Understand the current request and keep its intended result in [Brief](brief.md). Supplied paths,
+the selected production's notes and their explicit references establish which work belongs here.
+A request to continue or revise a named production carries that work forward. A new adaptation
+starts from the supplied reference and requested changes, with its own target and working files.
+When the target is clear, choose a suitable project location and tell the user where the work lives.
+Clarify the intended target when the request leaves genuinely different productions possible.
 
-Judge earlier work by what it contributes to that target: a reference, a component, or material that
-still fits the intended person, product, words and presentation. Explain what can be carried forward
-and what the requested changes require. A proposal to deliver a different existing video changes
-the commission and belongs in the conversation with the user.
+The current shell directory may be the Skill or executable installation rather than a video project.
+Keep discovery tied to the question being answered:
+
+| What is needed | Where the useful evidence lives |
+| --- | --- |
+| An executable or prepared local service | `hypit paths`, package-manager records, the selected Profile and Provider-documented tool locations |
+| Surface syntax or reusable behavior | Installed vocabulary, the owning package's documentation and a relevant component example |
+| This production's inputs and completed work | Supplied files, its notes, Sources, Runs and selected Result repository, including explicitly linked shared assets |
+
+Follow a path beyond the project when a supplied location, recorded dependency or documented tool
+location explains its purpose. A nearby project with a similar name or subject does not establish
+that connection. If the expected input is missing, report the missing item and resolve its location
+or prepare the new material the commission needs. This keeps discovery useful without turning
+the machine's other productions into an implicit asset library.
+
+Judge connected earlier work by its contribution: a reference, reusable behavior, or material that
+fits the intended person, product, words and presentation. Learning a component from an example
+carries its mechanics into the new work; casting, prompts, assets and accounts remain this
+production's choices. Explain useful reuse alongside what the requested changes require. Finding
+a similar finished video answers an availability question, not whether this commission is complete.
+A proposal to substitute a different existing video belongs in the conversation with the user.
 
 Run commands from the video project's root. A small `package.json` makes that root explicit and
 can later hold the project's component dependencies:
