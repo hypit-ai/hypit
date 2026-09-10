@@ -24,7 +24,12 @@ export function createCatalogDescriptor(options: {
     if (item.ref.kind === "operation-result") {
       throw new Error(`public output ${item.name} was not lowered to a stable Record or Logical Output`);
     }
-    return item.ref.kind === "logical-output" ? [{ name: item.name, ref: item.ref }] : [];
+    if (item.ref.kind !== "logical-output") return [];
+    const outputId = item.ref.id;
+    const element = options.compilation.provenance.elements.find((element) => element.outputs.some((output) => output.id === outputId));
+    const authored = element?.outputs.find((output) => output.id === outputId);
+    const displayName = element?.components.find((component) => component.id === authored?.component)?.local;
+    return [{ name: item.name, ref: item.ref, ...(displayName === undefined ? {} : { displayName }) }];
   });
   const names = new Set<string>();
   const outputs = new Set<string>();

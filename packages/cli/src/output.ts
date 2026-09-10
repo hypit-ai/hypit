@@ -43,6 +43,8 @@ export type DoctorOutput = {
   readonly ok: boolean;
   readonly project: string;
   readonly profile?: string;
+  readonly profileSource?: "argument" | "project" | "none";
+  readonly selectionFile?: string;
   readonly diagnosticCount: number;
   readonly diagnostics: readonly CliDiagnostic[];
   readonly omittedDiagnostics?: number;
@@ -272,9 +274,16 @@ function renderDoctor(view: Extract<CliPresentation, { kind: "doctor" }>, io: Cl
   const lines = [colors.accent(colors.strong("Hypit Doctor")), ""];
   lines.push(...facts([
     ["Project", shortPath(view.machine.project)],
-    ...(view.machine.profile === undefined ? [] : [["Profile", shortPath(view.machine.profile)] as const]),
+    ["Runtime Profile", view.machine.profile === undefined ? "not selected" : shortPath(view.machine.profile)],
+    ...(view.machine.profileSource === "argument"
+      ? [["Runtime selection", "command argument (this invocation only)"] as const]
+      : view.machine.selectionFile === undefined ? [] : [["Runtime selection", shortPath(view.machine.selectionFile)] as const]),
+    ["Scope", view.machine.profile === undefined ? "project Results only" : "selected Runtime and project Results"],
   ], colors));
   lines.push("");
+  if (view.machine.profile === undefined) {
+    lines.push("Select an existing Profile with hypit runtime use <profile>, or pass --runtime <profile> to check it.", "");
+  }
   if (view.machine.diagnostics.length === 0) {
     lines.push(heading("success", "No problems found", io, colors));
   } else {
@@ -770,7 +779,8 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("hypit doctor")),
       colors.dim("Diagnose project Results and, when selected or supplied, one Runtime Profile."),
       "",
-      "  hypit doctor [<runtime-profile>] [--workspace <project>]",
+      "  hypit doctor [--runtime <profile>] [--workspace <project>]",
+      "  A positional Profile is also accepted in place of --runtime.",
       "  Without a Runtime Profile, checks only the project's selected Result Store.",
     ],
     plan: [
@@ -819,6 +829,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "  hypit runtime down [<profile>]    stop the Worker; external programs keep running",
       "",
       "The project is resolved first. Selection is read only from that project's .hypit/runtime.",
+      "All runtime actions accept --workspace <project>; operational actions also accept --runtime <profile>.",
       "No Profile filename discovery or parent-project inheritance is performed.",
       "Remote Endpoints such as HypiHub are not started by this command; use doctor to test them.",
     ],
@@ -836,22 +847,26 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("hypit programs")),
       colors.dim("Prepare and operate external programs declared by Endpoints in one Runtime Profile."),
       "",
-      "  hypit programs up [<profile>] [--max-wait-ms <ms>]",
-      "  hypit programs status [<profile>]",
-      "  hypit programs down [<profile>]",
+      "  hypit programs up [--runtime <profile>] [--workspace <project>] [--max-wait-ms <ms>]",
+      "  hypit programs status [--runtime <profile>] [--workspace <project>]",
+      "  hypit programs down [--runtime <profile>] [--workspace <project>]",
+      "  A positional Profile is also accepted in place of --runtime.",
     ],
     activity: [
       colors.accent(colors.strong("hypit activity")),
       colors.dim("Inspect active Builds and Provider pool capacity."),
       "",
-      "  hypit activity [--runtime <profile>] [--watch]",
-      "  hypit activity [--runtime <profile>] --watch --jsonl",
+      "  hypit activity [--workspace <project>] [--runtime <profile>] [--watch]",
+      "  hypit activity [--workspace <project>] [--runtime <profile>] --watch --jsonl",
     ],
     paths: [
       colors.accent(colors.strong("hypit paths")),
       colors.dim("Show project, Runtime and host state locations without creating them."),
       "",
-      "  hypit paths [--runtime <profile>]",
+      "  hypit paths [--workspace <project>] [--runtime <profile>]",
+      "  Shows whether Runtime selection comes from a command argument or the project's .hypit/runtime.",
+      "  Without --workspace, the nearest package.json above cwd defines the project (otherwise cwd).",
+      "  Relative command-line paths start at cwd, including when --workspace is supplied.",
     ],
     builds: [
       colors.accent(colors.strong("hypit builds")),
@@ -863,7 +878,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("hypit status")),
       colors.dim("Show one Build now, or keep watching it without owning execution."),
       "",
-      "  hypit status <build-id> [--runtime <profile>] [--watch]",
+      "  hypit status <build-id> [--workspace <project>] [--runtime <profile>] [--watch]",
       "  --watch                   observe until a Result outcome or operator attention",
       "  --max-wait-ms <ms>        stop watching after a bounded wait",
     ],
@@ -892,14 +907,14 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("hypit cancel")),
       colors.dim("Stop one Build and request cancellation of submitted work when supported."),
       "",
-      "  hypit cancel <build-id> [--runtime <profile>] [--reason <text>]",
+      "  hypit cancel <build-id> [--workspace <project>] [--runtime <profile>] [--reason <text>]",
     ],
     result: [
       colors.accent(colors.strong("hypit result")),
       colors.dim("Edit one Result, finish an interrupted Result write, or discard an incomplete submission."),
       "",
-      "  hypit result finish <build-id> [--runtime <profile>]",
-      "  hypit result discard <build-id> [--runtime <profile>]",
+      "  hypit result finish <build-id> [--workspace <project>] [--runtime <profile>]",
+      "  hypit result discard <build-id> [--workspace <project>] [--runtime <profile>]",
       "  hypit result edit <build-id> [--workspace <project>] [--title <text>] [--note <text>]",
       "                           [--highlight <output> ...]",
       "  --clear-title            remove the Result's human title",
@@ -913,6 +928,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "  hypit auth status <endpoint-instance> [--runtime <profile>] [--slot <name>]",
       "  hypit auth login <endpoint-instance> [--runtime <profile>] [--slot <name>] [--from <secret-file>]",
       "  hypit auth logout <endpoint-instance> [--runtime <profile>] [--slot <name>]",
+      "  All auth actions accept --workspace <project> to use that project's selection.",
     ],
   };
   const selected = topics[topic];

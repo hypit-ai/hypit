@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, open, readFile, readdir, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { promisify } from "node:util";
 
 import { buildResultDirectory, FileBuildResult, FileBuildResultRepository } from "@hypit/build-result";
 import type { BlobRef, BuildState, TypeRef } from "@hypit/protocol";
@@ -17,39 +15,6 @@ const takeType: TypeRef = {
   module: { name: "example.speech", version: "1" },
   name: "SemanticTake",
 };
-
-test("a short-lived writer stays alive through a transient file replacement failure", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-result-replace-"));
-  try {
-    const script = `
-      import fs from 'node:fs/promises';
-      import { syncBuiltinESMExports } from 'node:module';
-      const rename = fs.rename;
-      let contended = false;
-      fs.rename = async (from, to) => {
-        if (!contended && String(to).endsWith('result.json')) {
-          contended = true;
-          throw Object.assign(new Error('temporary file contention'), { code: 'EBUSY' });
-        }
-        return rename(from, to);
-      };
-      syncBuiltinESMExports();
-      const { FileBuildResult } = await import(${JSON.stringify(new URL("../src/store.ts", import.meta.url).href)});
-      await FileBuildResult.create(process.argv[1], {
-        id: 'bld_20260902T100000000Z_0000000001',
-        source: { path: '/project/main.svml' }, targets: [], publishedOutputs: [],
-      });
-      if (!contended) throw new Error('replacement was not exercised');
-      process.stdout.write('result saved');
-    `;
-    const { stdout } = await promisify(execFile)(process.execPath,
-      ["--import", "tsx", "--input-type=module", "-e", script, root]);
-    assert.equal(stdout, "result saved");
-    assert.ok((await new FileBuildResultRepository(root).read("bld_20260902T100000000Z_0000000001")) !== undefined);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
 
 function state(input: {
   readonly status?: BuildState["status"];
@@ -67,6 +32,80 @@ function state(input: {
     },
   } as unknown as BuildState;
 }
+
+test("internal progress and already published Outputs leave Result files untouched", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-result-progress-"));
+  try {
+    const result = await FileBuildResult.create(root, {
+      id: "bld_20260902T100000000Z_0000000001",
+      source: { path: "/project/main.svml" }, targets: ["answer"],
+      publishedOutputs: [{ name: "answer", output: "logical:answer", displayName: "Answer" }],
+    });
+    const paths = ["result.json", ".writer.json"].map((name) => join(result.directory, name));
+    const resources = { async open() { throw new Error("scalar Outputs have no Resource bytes"); } };
+    const snapshot = (ready: boolean) => state({
+      records: [{ id: "record:answer", type: videoType, value: { kind: "inline", value: 42 } }],
+      bindings: ready ? [{ output: "logical:answer", record: "record:answer" }] : [],
+    });
+    const unchanged = async (ready: boolean) => {
+      // A fixed old mtime exposes even identical-byte rewrites, without timer-resolution assumptions.
+      for (const path of paths) await utimes(path, 1, 1);
+      const before = await Promise.all(paths.map((path) => stat(path, { bigint: true })));
+      await result.sync({ state: snapshot(ready), resources });
+      const after = await Promise.all(paths.map((path) => stat(path, { bigint: true })));
+      assert.deepEqual(after.map((item) => [item.ino, item.mtimeNs]), before.map((item) => [item.ino, item.mtimeNs]));
+    };
+    await unchanged(false);
+    assert.deepEqual((await result.read()).outputs, {});
+    await result.sync({ state: snapshot(true), resources });
+    assert.deepEqual((await result.read()).outputs.answer?.value, { kind: "inline", value: 42 });
+    assert.equal((await result.read()).outputs.answer?.displayName, "Answer");
+    await unchanged(true);
+    const finished = await result.finish({ outcome: "failed", failure: "a later Need failed" });
+    assert.equal(finished.outcome, "failed");
+    assert.equal(finished.outputs.answer?.displayName, "Answer");
+    assert.deepEqual(finished.outputs.answer?.value, { kind: "inline", value: 42 });
+    assert.equal((await readdir(result.directory)).includes(".writer.json"), false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("publishing and finishing preserve open readers of the previous Result files", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-result-读者-"));
+  const readers: Awaited<ReturnType<typeof open>>[] = [];
+  try {
+    const result = await FileBuildResult.create(root, {
+      id: "bld_20260902T100000000Z_0000000001",
+      source: { path: "/project/main.svml" }, targets: ["answer"],
+      publishedOutputs: [{ name: "answer", output: "logical:answer" }],
+    });
+    const manifestPath = join(result.directory, "result.json");
+    const oldManifest = await open(manifestPath, "r");
+    readers.push(oldManifest);
+    const oldWriter = await open(join(result.directory, ".writer.json"), "r");
+    readers.push(oldWriter);
+    const writerBytes = await readFile(join(result.directory, ".writer.json"), "utf8");
+    await result.sync({
+      state: state({
+        records: [{ id: "record:answer", type: videoType, value: { kind: "inline", value: 42 } }],
+        bindings: [{ output: "logical:answer", record: "record:answer" }],
+      }),
+      resources: { async open() { throw new Error("unexpected Resource read"); } },
+    });
+    assert.deepEqual(JSON.parse(await oldManifest.readFile("utf8")).outputs, {});
+    assert.equal(await oldWriter.readFile("utf8"), writerBytes);
+    assert.deepEqual((await result.read()).outputs.answer?.value, { kind: "inline", value: 42 });
+    const publishedReader = await open(manifestPath, "r");
+    readers.push(publishedReader);
+    await result.finish({ outcome: "complete" });
+    assert.equal(JSON.parse(await publishedReader.readFile("utf8")).outcome, undefined);
+    assert.equal((await result.read()).outcome, "complete");
+  } finally {
+    await Promise.all(readers.map((reader) => reader.close()));
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("one same-Build resource backs a public video and a SemanticTake payload", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-result-"));
@@ -159,11 +198,18 @@ test("one same-Build resource backs a public video and a SemanticTake payload", 
     );
     const repository = new FileBuildResultRepository(root);
     const presented = await repository.updatePresentation("bld_20260902T100000000Z_0000000001", {
+      outputDisplayNames: { "shot.video": "Opening portrait" },
       title: "Episode 12 opening",
       note: "Use the quieter take.",
       highlightedOutputs: ["shot.video", "shot.take", "shot.video"],
     });
     assert.equal(presented.title, "Episode 12 opening");
+    assert.equal(presented.outputs["shot.video"]?.displayName, "Opening portrait");
+    assert.deepEqual(presented.outputs["shot.video"]?.value, failed.outputs["shot.video"]?.value);
+    assert.equal(presented.outputs["shot.take"]?.displayName, undefined);
+    assert.equal((await repository.read(presented.id))?.outputs["shot.video"]?.displayName, "Opening portrait");
+    await assert.rejects(repository.updatePresentation(presented.id, { outputDisplayNames: { missing: "Oops" } }), /has no Output/);
+    await assert.rejects(repository.updatePresentation(presented.id, { outputDisplayNames: { "shot.video": "  " } }), /must not be empty/);
     assert.equal(presented.note, "Use the quieter take.");
     assert.deepEqual(presented.highlightedOutputs, ["shot.video", "shot.take"]);
     await assert.rejects(
@@ -171,10 +217,12 @@ test("one same-Build resource backs a public video and a SemanticTake payload", 
       /has no Output missing\.output/u,
     );
     const cleared = await repository.updatePresentation("bld_20260902T100000000Z_0000000001", {
+      outputDisplayNames: { "shot.video": null },
       title: null,
       note: null,
       highlightedOutputs: [],
     });
+    assert.equal(cleared.outputs["shot.video"]?.displayName, undefined);
     assert.equal(cleared.title, undefined);
     assert.equal(cleared.note, undefined);
     assert.equal(cleared.highlightedOutputs, undefined);

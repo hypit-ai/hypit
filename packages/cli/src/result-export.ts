@@ -1,3 +1,4 @@
+import { fileReferenceIdentity } from "@hypit/build-result";
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
@@ -53,7 +54,7 @@ async function openResultFile(
   file: BuildResultFileRef,
 ): Promise<AsyncIterable<Uint8Array>> {
   const input = await repository.openFile(build, file);
-  if (input === undefined) throw new Error(`Build ${build} file ${file.path} is unavailable`);
+  if (input === undefined) throw new Error(`File ${fileReferenceIdentity(build, file)} is unavailable`);
   return input;
 }
 
@@ -83,20 +84,28 @@ async function exportComposite(
   const temporary = join(dirname(target), `.${basename(target)}.part-${randomUUID()}`);
   try {
     await mkdir(temporary);
-    const copied = new Set<string>();
+    const copied = new Map<string, BuildResultFileRef>();
+    const paths = new Set<string>();
+    const bindings = [];
     for (const binding of resolvedOutput.value.document.resources) {
-      const file = binding.file;
-      if (copied.has(file.path)) continue;
-      copied.add(file.path);
-      assert(file.path !== "value.json", "Composite Result file value.json conflicts with its exported value document");
-      await writeStream(
-        containedPath(temporary, file.path),
-        await openResultFile(repository, resolvedOutput.build, file),
-      );
+      const file = await repository.describeFile(resolvedOutput.build, binding.file);
+      const identity = fileReferenceIdentity(resolvedOutput.build, file);
+      let local = copied.get(identity);
+      if (local === undefined) {
+        let path = file.kind === "build-file" ? file.path : `files/file-${copied.size + 1}`;
+        const name = basename(path);
+        let index = copied.size + 1;
+        while (paths.has(path) || path === "value.json") path = `files/import-${index++}/${name}`;
+        paths.add(path);
+        local = { kind: "build-file", path, size: file.size, mediaType: file.mediaType };
+        copied.set(identity, local);
+        await writeStream(containedPath(temporary, path), await openResultFile(repository, resolvedOutput.build, file));
+      }
+      bindings.push({ at: binding.at, file: local });
     }
     await writeFile(
       join(temporary, "value.json"),
-      `${JSON.stringify(resolvedOutput.value.document, null, 2)}\n`,
+      `${JSON.stringify({ ...resolvedOutput.value.document, resources: bindings }, null, 2)}\n`,
       { flag: "wx" },
     );
     await rename(temporary, target);
@@ -122,7 +131,7 @@ export async function exportBuildResultOutput(
   const target = resolve(destination);
   if (resolvedOutput.value.kind === "value") {
     await exportComposite(repository, { ...resolvedOutput, value: resolvedOutput.value }, target);
-  } else if (resolvedOutput.value.kind === "build-file") {
+  } else if ((resolvedOutput.value.kind === "build-file" || resolvedOutput.value.kind === "external-file")) {
     const resource = resolvedOutput.value;
     await exportFile(target, async (temporary) => {
       await writeStream(
@@ -142,7 +151,7 @@ export async function exportBuildResultOutput(
     type: publishedOutput.type,
     kind: resolvedOutput.value.kind === "inline"
       ? "scalar"
-      : resolvedOutput.value.kind === "build-file" ? "resource" : "composite",
+      : (resolvedOutput.value.kind === "build-file" || resolvedOutput.value.kind === "external-file") ? "resource" : "composite",
     path: target,
   };
 }

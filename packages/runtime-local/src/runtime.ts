@@ -268,6 +268,7 @@ export async function createLocalRuntime(
       try {
         const publishedOutputs = request.catalog.publishedOutputs.map((published) => ({
           name: published.name,
+          ...(published.displayName === undefined ? {} : { displayName: published.displayName }),
           output: published.ref.id,
         }));
         const names = new Map<string, string>();
@@ -291,6 +292,7 @@ export async function createLocalRuntime(
           targets,
           publishedOutputs,
           ...(resultRequest.forwards === undefined ? {} : { forwards: resultRequest.forwards }),
+          ...(resultRequest.resourceReferences === undefined ? {} : { resourceReferences: resultRequest.resourceReferences }),
         });
       } finally {
         await opened.close?.();

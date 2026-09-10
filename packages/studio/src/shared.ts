@@ -190,12 +190,14 @@ export type StudioTaskView = {
   readonly note?: string;
   readonly highlightedOutputs?: readonly string[];
   readonly createdAt: number;
-  readonly status: "queued" | "running" | "waiting" | "complete" | "failed" | "cancelled" | "active" | "blocked" | "unknown";
+  readonly finishedAt?: number;
+  readonly ongoing: boolean;
+  readonly status: "queued" | "running" | "waiting" | "complete" | "failed" | "cancelled" | "saving-result" | "attention";
+  readonly detail?: string;
+  readonly requests?: { readonly total: number; readonly completed: number };
   readonly source: string;
   readonly run?: string;
   readonly targets: readonly string[];
-  readonly acceptedRecords: number;
-  readonly outstandingCommands: number;
   readonly operations: readonly {
     readonly status: "pending" | "completed" | "failed" | "cancelled";
     readonly phase?: string;
@@ -206,7 +208,10 @@ export type StudioTaskView = {
 };
 
 export type StudioArtifactView = {
-  /** Build-qualified identity derived from the public Output and its value path. */
+  readonly nameEditable?: boolean;
+  /** Author-provided display name; the Output identifier remains unchanged. */
+  readonly displayName?: string;
+  /** File-owner identity; references to the same file share one card. */
   readonly id: string;
   readonly build: string;
   readonly createdAt: number;
@@ -214,18 +219,27 @@ export type StudioArtifactView = {
   readonly highlighted: boolean;
   readonly buildTitle?: string;
   readonly buildNote?: string;
-  readonly valuePath: string;
-  readonly ownerBuild: string;
+  readonly ownerBuild?: string;
   readonly ownerOutput: string;
   readonly filePath: string;
   readonly size: number;
   readonly mediaType: string;
   readonly source: string;
   readonly run?: string;
+  readonly origins: readonly { readonly build: string; readonly output: string; readonly run?: string; readonly source: string }[];
+};
+
+export type StudioLibraryRequest = {
+  readonly media?: "image" | "video" | "audio";
+  readonly section: "tasks" | "artifacts";
+  readonly before?: string;
+  readonly run?: string;
+  readonly build?: string;
 };
 
 /** Read-only view of the Runtime context selected for this Studio environment. */
 export type StudioLibraryView = {
+  readonly section: StudioLibraryRequest["section"];
   readonly environment: string;
   readonly runtime?: string;
   /** Cursor for the next older page of immutable Build Results. */

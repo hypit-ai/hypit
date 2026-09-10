@@ -1,3 +1,4 @@
+import { fileReferenceIdentity, ownedFileReference } from "@hypit/build-result";
 import { randomUUID } from "node:crypto";
 import type {
   BuildResultRepository,
@@ -24,15 +25,17 @@ import type { RunFrontend } from "@hypit/run";
 export type LoadedRunFile = NodeCompiledRun & {
   readonly path: string;
   readonly compiler: NodeRunCompiler;
+  readonly resultResourceReferences: Readonly<Record<string, BuildResultFileRef>>;
 };
 
 type BuildResultResolutionSession = {
   readonly files: Map<string, ArtifactAttachment>;
+  readonly references: Map<string, BuildResultFileRef>;
   readonly outputs: Map<string, Promise<RepositoryBuildResultOutput | undefined>>;
 };
 
 function createBuildResultResolutionSession(): BuildResultResolutionSession {
-  return { files: new Map(), outputs: new Map() };
+  return { files: new Map(), outputs: new Map(), references: new Map() };
 }
 
 export async function checkRunFile(options: {
@@ -88,9 +91,10 @@ export async function resolveBuildResultValue(
   const manifest = await repository.read(build);
   if (manifest?.outcome === undefined) return undefined;
   const resultAttachment = async (owner: string, file: BuildResultFileRef): Promise<ArtifactAttachment> => {
-    const address = `${owner}\u0000${file.path}`;
+    const address = fileReferenceIdentity(owner, file);
     const existing = session.files.get(address);
     if (existing !== undefined) return existing;
+    file = await repository.describeFile(owner, file);
     const artifact: BlobRef = {
       kind: "blob",
       resource: `res_${randomUUID()}`,
@@ -101,11 +105,12 @@ export async function resolveBuildResultValue(
       artifact,
       async open() {
         const stream = await repository.openFile(owner, file);
-        if (stream === undefined) throw new Error(`Build ${owner} file ${file.path} is unavailable`);
+        if (stream === undefined) throw new Error(`File ${address} is unavailable`);
         return stream;
       },
     };
     session.files.set(address, attachment);
+    session.references.set(artifact.resource, ownedFileReference(owner, file));
     return attachment;
   };
   const attachments = new Map<string, ArtifactAttachment>();
@@ -120,7 +125,7 @@ export async function resolveBuildResultValue(
   const owner = resolved.build === build ? manifest : await repository.read(resolved.build);
   if (owner?.outcome === undefined) return undefined;
   let value: StoredValue;
-  if (resolved.value.kind === "build-file") {
+  if (resolved.value.kind === "build-file" || resolved.value.kind === "external-file") {
     const attachment = await resultAttachment(resolved.build, resolved.value);
     attachments.set(attachment.artifact.resource, attachment);
     value = attachment.artifact;
@@ -147,8 +152,7 @@ function createRunCompiler(options: {
   readonly frontends: readonly RunFrontend[];
   readonly packageContributions: readonly NodePackageContribution[];
   readonly results?: BuildResultRepository;
-}): NodeRunCompiler {
-  const resultSession = createBuildResultResolutionSession();
+}, resultSession = createBuildResultResolutionSession()): NodeRunCompiler {
   const fragments = new RunFragmentRegistry();
   for (const item of options.packageContributions) {
     installRunFragmentHostFacets(item.hostFacets ?? [], fragments);
@@ -180,7 +184,14 @@ export async function loadRunFile(options: {
   readonly packageContributions: readonly NodePackageContribution[];
   readonly results?: BuildResultRepository;
 }): Promise<LoadedRunFile> {
-  const compiler = createRunCompiler(options);
+  const resultSession = createBuildResultResolutionSession();
+  const compiler = createRunCompiler(options, resultSession);
   const compiled = await compiler.compileSource(options.workspace.entry, options.workspace);
-  return { path: options.workspace.entry.id, compiler, ...compiled };
+  const references = new Map<string, BuildResultFileRef>(compiled.attachments.flatMap((attachment) =>
+    attachment.location === undefined ? [] : [[attachment.artifact.resource, {
+      kind: "external-file" as const, uri: attachment.location,
+      size: attachment.artifact.size, mediaType: attachment.artifact.mediaType,
+    }]]));
+  for (const [resource, file] of resultSession.references) references.set(resource, file);
+  return { path: options.workspace.entry.id, compiler, ...compiled, resultResourceReferences: Object.fromEntries(references) };
 }

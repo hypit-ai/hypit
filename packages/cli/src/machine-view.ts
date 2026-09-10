@@ -15,7 +15,7 @@ type AttentionView = { readonly message: string; readonly action?: string };
 export type OperationalMachineView =
   | { readonly format: "hypit.cli-runtime-init@1"; readonly profile: string; readonly project: string; readonly selected: true }
   | { readonly format: "hypit.cli-runtime-selection@1"; readonly selected: boolean; readonly removed?: boolean; readonly profile?: string; readonly project?: string }
-  | { readonly format: "hypit.cli-paths@1"; readonly project: string; readonly projectState: string; readonly profile?: string; readonly runtimeData?: string; readonly hostState: string; readonly machinePackages: string; readonly distribution?: string }
+  | { readonly format: "hypit.cli-paths@1"; readonly project: string; readonly projectState: string; readonly profileSource: "argument" | "project" | "none"; readonly selectionFile: string; readonly profile?: string; readonly runtimeData?: string; readonly hostState: string; readonly machinePackages: string; readonly distribution?: string }
   | { readonly format: "hypit.cli-package@1"; readonly action: "install" | "status"; readonly package: string; readonly ready: boolean }
   | { readonly format: "hypit.cli-programs@1"; readonly action: "up" | "down" | "status"; readonly ready: boolean; readonly programs: readonly ProgramStateView[]; readonly omittedPrograms?: number }
   | { readonly format: "hypit.cli-runtime-up@1"; readonly ready: boolean; readonly worker: string; readonly preparedPackages: number; readonly programs: { readonly total: number; readonly ready: number; readonly items: readonly ProgramStateView[] } }

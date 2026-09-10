@@ -11,9 +11,12 @@ Open a Run in the browser to inspect its composition, Sources and Results.
   hypit studio --run <build.svrun> [--runtime <hypit.runtime.json>]
     [--port <number>] [--workspace <directory>] [--package-root <directory>]
 
-Paths are relative to the invoking project. Without --runtime, Studio uses
-that project's selected Runtime Profile. The server prints its browser URL;
-press Ctrl+C to stop it.
+Relative command-line paths start at the current directory; --workspace selects
+the project, without rebasing those paths. Otherwise the nearest package.json
+above the current directory defines the project (or the current directory if none).
+Without --runtime, Studio uses that project's .hypit/runtime selection.
+The server prints its project, Run, Runtime selection and browser URL.
+Press Ctrl+C to stop it.
 `);
 }
 
@@ -76,6 +79,15 @@ export async function runStudio(argv: readonly string[], io: Pick<CliIo, "write"
   const runtimePath = runtimeArgument === undefined
     ? selectedRuntime?.profile
     : resolve(invokedFrom, runtimeArgument);
+  console.info([
+    `  Project            ${workspaceRoot}`,
+    `  Run                ${runPath}`,
+    `  Runtime Profile    ${runtimePath ?? "not selected"}`,
+    `  Runtime selection  ${runtimeArgument !== undefined
+      ? "command argument (this session only)" : selectedRuntime?.selectionFile ?? "none"}`,
+    ...(packageRoot === workspaceRoot ? [] : [`  Package root       ${packageRoot}`]),
+    "",
+  ].join("\n"));
   const port = Number(values.get("port") ?? "5179");
   if (!Number.isSafeInteger(port) || port <= 0) invalidArguments("--port must be a positive integer");
 

@@ -60,9 +60,9 @@ app.innerHTML = `
 
 const store = createStore();
 const code = createCodePane();
-const library = createLibraryPane(code);
+const stage = createStage(store, (id) => library.selectArtifact(id));
+const library = createLibraryPane(code, (artifact) => stage.openArtifact(artifact), (artifact) => stage.renameArtifact(artifact));
 const timeline = createTimeline(store);
-const stage = createStage(store);
 app.querySelector<HTMLElement>("[data-library]")!.append(library.element);
 app.querySelector<HTMLElement>("[data-timeline]")!.append(timeline.element);
 app.querySelector<HTMLElement>("[data-stage]")!.append(stage.element);
@@ -72,8 +72,9 @@ app.querySelector<HTMLElement>("[data-stage]")!.append(stage.element);
 const shell = app.querySelector<HTMLElement>(".studio-shell")!;
 const upperShell = app.querySelector<HTMLElement>(".upper-shell")!;
 const workspacePanel = app.querySelector<HTMLElement>(".workspace-panel")!;
+const sidebarMinimum = 320;
 const sourceHandle = createHandle({
-  axis: "column", initial: Math.round(window.innerWidth * 0.34), minimum: 280,
+  axis: "column", initial: 416, minimum: sidebarMinimum,
   maximum: () => Math.max(360, upperShell.clientWidth - 720),
   apply: (size) => { upperShell.style.setProperty("--source-width", `${size}px`); },
   remember: "hypit-studio.v3.source-width",
@@ -81,7 +82,7 @@ const sourceHandle = createHandle({
 sourceHandle.classList.add("source-handle");
 upperShell.insertBefore(sourceHandle, app.querySelector<HTMLElement>("[data-stage]")!);
 const workspaceHandle = createHandle({
-  axis: "column", initial: Math.round(window.innerWidth * 0.22), minimum: 270, invert: true,
+  axis: "column", initial: Math.round(window.innerWidth * 0.22), minimum: sidebarMinimum, invert: true,
   maximum: () => Math.max(320, upperShell.clientWidth - 680),
   apply: (size) => { upperShell.style.setProperty("--workspace-width", `${size}px`); },
   remember: "hypit-studio.v3.workspace-width",
@@ -993,7 +994,6 @@ const response = await fetch("/__studio/session");
 const initial = await response.json() as StudioSnapshot | StudioFailure;
 if (response.ok && "tracks" in initial) applySnapshot(initial);
 else applyFailure(initial as StudioFailure);
-void library.refresh();
 
 type Hot = { on(event: string, listener: (value: unknown) => void): void };
 const hot = (import.meta as ImportMeta & { hot?: Hot }).hot;

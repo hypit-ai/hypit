@@ -56,6 +56,7 @@ function distribution(
       supportsFrontend: () => false,
       compileSource: async (entry: { readonly id: string }) => ({
         closure: { entry: entry.id, units: [] },
+        provenance: { format: "hypit.author-provenance@1", elements: [] },
         program: { closure: { format: "hypit.closure@1", modules: [{ manifest: {
           format: "hypit.module@1",
           name: "example.value",

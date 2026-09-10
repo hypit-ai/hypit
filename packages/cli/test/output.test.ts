@@ -16,6 +16,21 @@ function capture(
 
 const human = { json: false, color: "auto", verbose: false } as const;
 
+test("doctor makes its checked scope and explicit Runtime selection visible", () => {
+  const machine = {
+    format: "hypit.cli-doctor@1" as const, ok: true, project: "/project",
+    diagnosticCount: 0, diagnostics: [],
+  };
+  const resultsOnly = capture(human, { kind: "doctor", machine });
+  assert.match(resultsOnly, /Runtime Profile\s+not selected/u);
+  assert.match(resultsOnly, /Scope\s+project Results only/u);
+  const selected = capture(human, { kind: "doctor", machine: {
+    ...machine, profile: "/project/chosen.json", profileSource: "argument",
+  } });
+  assert.match(selected, /command argument \(this invocation only\)/u);
+  assert.match(selected, /Scope\s+selected Runtime and project Results/u);
+});
+
 test("author check keeps the default summary compact and reserves Output types for verbose", () => {
   const presentation = {
     kind: "check-author",

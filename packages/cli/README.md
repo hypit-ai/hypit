@@ -15,6 +15,31 @@ Human output is compact by default. `--json` emits a command-specific view rathe
 Runtime or Repository objects. `--verbose` adds operational detail; it never turns the command into
 an internal state dump.
 
+## Project and Runtime context
+
+`--workspace` explicitly selects the project. Otherwise the nearest `package.json` above the command's
+current directory establishes its root; with none, the current directory is the root. Source and Run
+arguments locate files within that context. Relative command-line paths are resolved from the current
+directory, including when `--workspace` is supplied.
+
+Runtime-aware commands use an explicit `--runtime` for that invocation, or read exactly the resolved
+project's `.hypit/runtime` pointer. `runtime use` writes the pointer; a Profile filename by itself does
+not select it. Project selection is also available on `paths`, `doctor`, execution status/control,
+Runtime operations, `programs` and `auth`. Machine-wide `packages` operations have no project selector.
+
+`paths` shows the effective locations and whether the Profile came from a command argument, a project
+selection or neither. Its JSON fields `profileSource` and `selectionFile` expose that distinction; the
+selection-file location is shown even when no selection exists. `doctor` states whether it checked
+only project Results or also a selected Runtime. An unselected Runtime is not a completed environment
+diagnosis. Result repository selection and project-package resolution remain independent of Runtime.
+
+For a command invoked outside the project, name both the project and its input explicitly:
+
+```bash
+hypit paths --workspace /path/to/video-project
+hypit plan /path/to/video-project/build.svrun --workspace /path/to/video-project
+```
+
 `plan` lists every Endpoint request in the frozen Build graph. Exact-model packages expose their own
 port tables and request-assembly edges, so the CLI can show authored prompt, duration and generation
 settings without searching arbitrary records for a request-shaped object. When an input file will be

@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@hypit/protocol": "workspace:*"
+    "@hypit/protocol": "workspace:*",
+    "koffi": "3.2.1"
   }
 }

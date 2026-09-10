@@ -144,7 +144,12 @@ alone does not. Write that exact choice into the Run. Results retain public Outp
 was exported into `assets/` or `output/`; inspect them before concluding that material is missing.
 A failed or cancelled Build may still contain completed public Outputs worth using. Reuse those
 Outputs rather than submitting their generation again to recover a later failure. A later Build
-that forwards an earlier Output does not copy its bytes.
+that forwards an earlier Output does not copy its bytes. New structured Outputs also keep references
+to reused media inside them; wrapping a video in another value does not create another video file.
+
+A `<file>` Candidate refers to the selected file. Replacing that file changes subsequent reads;
+removing it leaves a missing dependency. A new Build records the selected reference without copying
+the file into every Result. A Candidate that generates new media saves its new output normally.
 
 The current Build's generated media normally continues downstream as the material for the commissioned
 work. Reusing it explicitly lets Caption, MG, Effects, composition, and final encoding change without

@@ -51,6 +51,7 @@ export function mergeAttachments(groups: readonly (readonly ArtifactAttachment[]
     merged.set(key, {
       artifact: { ...item.artifact },
       open: item.open,
+      ...(item.location === undefined ? {} : { location: item.location }),
     });
   }
   return [...merged.values()]

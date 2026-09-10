@@ -345,6 +345,9 @@ test("TierBoard separates its board Frame from the Canvas stage and holds drop I
   assert.equal(track.presents.find((item) => item.id.endsWith(":item:preset:settled"))?.span.startFrame, 10);
   const direct = track.presents.find((item) => item.id.endsWith(":item:early:reveal"))!;
   const drop = track.presents.find((item) => item.id.endsWith(":item:late:reveal"))!;
+  assert.equal(direct.subjectId, "early");
+  assert.equal(track.presents.find((item) => item.id.endsWith(":item:early:settled"))?.subjectId, "early");
+  assert.equal(track.presents.find((item) => item.id.endsWith(":board"))?.subjectId, program.id);
   assert.ok(direct.elements[0]?.animation);
   const geometry = tierBoardGeometry(tierFrame.widthPx, tierFrame.heightPx, style);
   const stage = tierStageGeometry(canvas.widthPx, canvas.heightPx, style);

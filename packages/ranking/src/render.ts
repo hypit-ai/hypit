@@ -183,6 +183,7 @@ function iconElement(input: {
 
 function present(input: {
   readonly id: string;
+  readonly subjectId: string;
   readonly start: number;
   readonly end: number;
   readonly stacking: number;
@@ -191,6 +192,7 @@ function present(input: {
 }): VisualPresent {
   return {
     id: input.id,
+    subjectId: input.subjectId,
     span: { startFrame: input.start, endFrameExclusive: input.end },
     stacking: { order: input.stacking, tieBreak: input.tieBreak },
     elements: input.elements,
@@ -307,7 +309,7 @@ export function renderTierBoard(space: ProgramSpace, program: TierBoardProgram):
     }));
   }
   presents.push(present({
-    id: `${program.id}:board`, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
+    id: `${program.id}:board`, subjectId: program.id, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
     stacking: style.boardStackingOrder, tieBreak: `${program.id}:0000:board`, elements: boardElements,
   }));
   const entries = new Map(schedule.entries.map((entry) => [entry.itemId, entry]));
@@ -351,7 +353,7 @@ export function renderTierBoard(space: ProgramSpace, program: TierBoardProgram):
         : (localFrame) => fromHighTierItemPose(
             localFrame, duration, stage, absoluteCell, style.motion.appearFrames, style.motion.moveFrames));
       presents.push(present({
-        id: `${program.id}:item:${item.id}:reveal`,
+        id: `${program.id}:item:${item.id}:reveal`, subjectId: item.id,
         start: entry.window.startFrame,
         end: entry.window.endFrameExclusive,
         stacking: item.stackingOrder ?? (item.entry === "drop" ? style.stageStackingOrder : style.itemStackingOrder),
@@ -360,7 +362,7 @@ export function renderTierBoard(space: ProgramSpace, program: TierBoardProgram):
       }));
     }
     if (entry.settled.endFrameExclusive > entry.settled.startFrame) presents.push(present({
-      id: `${program.id}:item:${item.id}:settled`,
+      id: `${program.id}:item:${item.id}:settled`, subjectId: item.id,
       start: entry.settled.startFrame,
       end: entry.settled.endFrameExclusive,
       stacking: item.stackingOrder ?? style.itemStackingOrder,
@@ -506,7 +508,7 @@ export function renderColumn(space: ProgramSpace, program: ColumnProgram): Visua
       ],
     }));
   }
-  presents.push(present({ id: `${program.id}:board`, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
+  presents.push(present({ id: `${program.id}:board`, subjectId: program.id, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
     stacking: style.boardStackingOrder, tieBreak: `${program.id}:0000:board`, elements: boardElements }));
   for (const [index, item] of program.items.entries()) {
     const entry = entries.get(item.id)!;
@@ -549,13 +551,13 @@ export function renderColumn(space: ProgramSpace, program: ColumnProgram): Visua
         stageSize: style.stageSizePx, finalSize: contentSize, easing: style.motion.easing,
       });
       presents.push(present({
-        id: `${program.id}:item:${item.id}:stage`, start: entry.window.startFrame, end: entry.window.endFrameExclusive,
+        id: `${program.id}:item:${item.id}:stage`, subjectId: item.id, start: entry.window.startFrame, end: entry.window.endFrameExclusive,
         stacking: item.stackingOrder ?? style.stageStackingOrder,
         tieBreak: `${program.id}:item:${String(item.rank).padStart(4, "0")}:${item.id}:stage`, elements: itemElements(rootAnimation),
       }));
     }
     if (entry.settled.endFrameExclusive > entry.settled.startFrame) presents.push(present({
-      id: `${program.id}:item:${item.id}:settled`, start: entry.settled.startFrame, end: entry.settled.endFrameExclusive,
+      id: `${program.id}:item:${item.id}:settled`, subjectId: item.id, start: entry.settled.startFrame, end: entry.settled.endFrameExclusive,
       stacking: item.stackingOrder ?? style.itemStackingOrder,
       tieBreak: `${program.id}:item:${String(item.rank).padStart(4, "0")}:${item.id}:settled`, elements: itemElements(),
     }));
@@ -599,7 +601,7 @@ export function renderTopThree(space: ProgramSpace, program: TopThreeProgram): V
     }));
   }
   const presents: VisualPresent[] = [present({
-    id: `${program.id}:slots`, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
+    id: `${program.id}:slots`, subjectId: program.id, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
     stacking: style.boardStackingOrder, tieBreak: `${program.id}:0000:slots`, elements: boardElements,
   })];
   for (const [index, item] of program.items.entries()) {
@@ -640,12 +642,12 @@ export function renderTopThree(space: ProgramSpace, program: TopThreeProgram): V
       return elements;
     };
     presents.push(present({
-      id: `${program.id}:item:${item.id}:stage`, start: entry.stage.startFrame, end: entry.stage.endFrameExclusive,
+      id: `${program.id}:item:${item.id}:stage`, subjectId: item.id, start: entry.stage.startFrame, end: entry.stage.endFrameExclusive,
       stacking: item.stackingOrder ?? style.itemStackingOrder,
       tieBreak: `${program.id}:item:${String(index).padStart(4, "0")}:${item.id}:stage`, elements: itemElements(true),
     }));
     if (entry.settled.endFrameExclusive > entry.settled.startFrame) presents.push(present({
-      id: `${program.id}:item:${item.id}:settled`, start: entry.settled.startFrame, end: entry.settled.endFrameExclusive,
+      id: `${program.id}:item:${item.id}:settled`, subjectId: item.id, start: entry.settled.startFrame, end: entry.settled.endFrameExclusive,
       stacking: item.stackingOrder ?? style.itemStackingOrder,
       tieBreak: `${program.id}:item:${String(index).padStart(4, "0")}:${item.id}:settled`, elements: itemElements(false),
     }));

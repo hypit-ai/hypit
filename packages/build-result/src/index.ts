@@ -23,3 +23,6 @@ export {
 } from "./store.js";
 export type * from "./types.js";
 export type * from "./writer.js";
+
+export { currentFileReference, fileReferenceIdentity, ownedFileReference, localExternalFiles } from "./file-reference.js";
+export type { ExternalFileAccess } from "./file-reference.js";

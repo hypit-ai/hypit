@@ -4,7 +4,7 @@ type CommandBase = {
   readonly presentation: CliOutputOptions;
 };
 
-export type RuntimeOption = {
+export type RuntimeOption = ProjectOption & {
   readonly runtimeProfile: string | undefined;
 };
 

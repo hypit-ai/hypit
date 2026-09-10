@@ -22,6 +22,11 @@ Open the URL actually printed by the process and retain it with the Run it serve
 requested port is 5179; `--port` selects another, and an occupied port can cause Vite to choose a
 different one. Reuse an existing session when it serves the intended project and Run.
 
+The startup output identifies the project, absolute Run path, Runtime Profile and selection source.
+An explicit `--runtime` applies to this session; the project's default comes from `.hypit/runtime`.
+When launching from another directory, use `--workspace` to select the project and supply the Run
+path from the current directory, as shown in [project boundaries](../creation/project-files.md#establish-the-project-boundary).
+
 Studio watches the Run and its loaded Author/Recipe Sources and recompiles them after changes.
 Changing package code, adding a package import, changing Companion activation, or selecting another
 Runtime or Result repository requires restarting that Studio session: those implementations and
@@ -49,8 +54,17 @@ include when the user wants to continue editing on another machine.
 | Preview | The selected Film composition rendered by HyperFrames in the browser. Play or seek to inspect the actual selected media and graphics. |
 | Timeline | Semantic Segments, Selections and Moments, plus the component-projected Track entities and their visible intervals, materials or event lanes. A rectangle may describe occupancy, activation or persistent visibility; read the component's meaning. |
 | Inspector | With nothing selected, project, Canvas, time and Run facts. For a selected entity, only its declared adjustable fields, organized under Where, How and When where applicable. |
-| Tasks | Finished project Results and, with a selected Runtime, read-only active Build/Operation information. This is a view of execution, not a replacement Build submission mechanism. |
-| Artifacts | Public media files from project Results, including files inside Composite Outputs. Previewing one does not select it as a Candidate in the Run. |
+| Tasks | One card per Build, grouped into ongoing and finished. Active status and progress come from the selected Runtime; completed, failed and cancelled Builds come from project Results. Cards retain the source Run, times and any failure or attention reason. |
+| Artifacts | Image, video and audio file Outputs from project Results, including those already published by ongoing Builds. Use the sidebar to choose all media, videos, images or audio. View media on a Build opens its Outputs; opening the Artifacts tab returns to project media. Composite Outputs such as normalized media and Semantic Takes stay intact and do not add their internal files to this gallery. Click a card to view it in the central preview; video and audio have playback and a time slider. Back to composition returns to the existing composition position. Previewing a file does not select it as a Candidate in the Run. |
+
+Open either library tab or click Refresh to read its latest state. These lists do not poll.
+Refresh replaces the view; scrolling to the end loads more. Media categories query matching files
+across Result pages, so an intervening Build without that kind of media does not require a separate action. A failed refresh keeps the
+previous view and displays the error. Multiple references to one stored file share a media card;
+its source details retain the originating Builds and Outputs. Highlighted Outputs appear first.
+Names show up to two lines. Double-click a name or press F2 to edit; Enter or leaving the field
+saves, and Escape cancels. Renaming changes the displayed Output name in the finished Result,
+not its reference identifier or media file.
 
 Use [Builds and Results](builds.md) to inspect Output names, export media, finish an incomplete Result,
 edit Result presentation metadata or select an earlier Output. Studio reads the same project Result

@@ -1,3 +1,4 @@
+import { assertOrderedBuildId } from "@hypit/protocol";
 import type {
   BlobRef,
   BuildState,
@@ -9,12 +10,19 @@ import type {
 export type BuildResultOutcome = "complete" | "failed" | "cancelled";
 
 export type BuildResultFileRef = {
-  readonly kind: "build-file";
-  /** Forward-only path relative to the owning Build's result directory. */
-  readonly path: string;
   readonly size: number;
   readonly mediaType: string;
-};
+} & ({
+  readonly kind: "build-file";
+  /** Absent for a file owned by the containing Result; explicit when reused elsewhere. */
+  readonly build?: string;
+  /** Forward-only path relative to the owning Build's result directory. */
+  readonly path: string;
+} | {
+  readonly kind: "external-file";
+  /** Explicit address supplied by the Workspace; remains a live external dependency. */
+  readonly uri: string;
+});
 
 /** A normalized half-open byte range within one Result file. */
 export type BuildResultFileRange = {
@@ -38,7 +46,7 @@ export type BuildResultResourceBinding = {
 
 /**
  * Durable encoding of one Composite value. Domain data stays ordinary canonical data while
- * Result-local Resource addresses live beside it, so reserved-looking domain objects cannot be
+ * Resource references live beside it, so reserved-looking domain objects cannot be
  * mistaken for persistence metadata.
  */
 export type BuildResultValueDocument = {
@@ -77,12 +85,18 @@ export function assertBuildResultFileRef(value: unknown, subject: string): asser
     throw new Error(`${subject} is not a Build file reference`);
   }
   const item = value as Readonly<Record<string, unknown>>;
-  if (item.kind !== "build-file"
+  if ((item.kind !== "build-file" && item.kind !== "external-file")
     || typeof item.size !== "number" || !Number.isSafeInteger(item.size) || item.size < 0
     || typeof item.mediaType !== "string" || item.mediaType.length === 0) {
     throw new Error(`${subject} is not a valid Build file reference`);
   }
-  assertBuildResultPath(item.path, `${subject}.path`);
+  if (item.kind === "external-file") {
+    if (typeof item.uri !== "string" || item.uri.length === 0) throw new Error(`${subject}.uri is missing`);
+    new URL(item.uri);
+  } else {
+    assertBuildResultPath(item.path, `${subject}.path`);
+    if (item.build !== undefined) assertOrderedBuildId(item.build as string);
+  }
 }
 
 function valueAtPath(value: CanonicalValue, path: BuildResultValuePath, subject: string): CanonicalValue {
@@ -150,6 +164,8 @@ export type BuildResultOutputValue =
   | { readonly kind: "value"; readonly path: string };
 
 export type BuildResultOutput = {
+  /** Author-provided display name; the Output identifier remains unchanged. */
+  readonly displayName?: string;
   readonly type: TypeRef;
   readonly value: BuildResultOutputValue;
 };
@@ -198,6 +214,8 @@ export type FinishedBuildResultManifest = BuildResultManifest & {
 };
 
 export type BuildResultPublishedOutput = {
+  /** Author-provided display name; the Output identifier remains unchanged. */
+  readonly displayName?: string;
   readonly name: string;
   readonly output: string;
 };
@@ -217,12 +235,19 @@ export type BuildResultSeed = {
   readonly targets: readonly string[];
   readonly publishedOutputs: readonly BuildResultPublishedOutput[];
   readonly forwards?: readonly BuildResultForward[];
+  /** Known file locations for admitted Resource identities, including nested uses. */
+  readonly resourceReferences?: Readonly<Record<string, BuildResultFileRef>>;
 };
 
 /** Validate the one-name-per-Output public Result surface before storage is touched. */
 export function assertBuildResultSeed(seed: BuildResultSeed): void {
   if (seed.title !== undefined && seed.title.trim().length === 0) {
     throw new Error("Build Result title must not be empty");
+  }
+  for (const [resource, file] of Object.entries(seed.resourceReferences ?? {})) {
+    if (resource.length === 0) throw new Error("Resource reference has no identity");
+    assertBuildResultFileRef(file, `Resource ${resource}`);
+    if (file.kind === "build-file" && file.build === undefined) throw new Error(`Resource ${resource} needs its owning Build`);
   }
   const names = new Set<string>();
   const outputs = new Set<string>();
@@ -275,6 +300,8 @@ export type BuildResultFinish = {
 };
 
 export type BuildResultPresentationUpdate = {
+  /** Exact public Output names; null removes an override. */
+  readonly outputDisplayNames?: Readonly<Record<string, string | null>>;
   /** `null` removes the current title; omission leaves it unchanged. */
   readonly title?: string | null;
   /** `null` removes the current note; omission leaves it unchanged. */
@@ -325,13 +352,14 @@ export type RepositoryBuildResultOutputDescription = {
 
 export type BuildResultWriter = {
   read(): Promise<BuildResultManifest>;
+  /** Publish newly accepted public Outputs; no storage writes when none are new. */
   sync(input: BuildResultSync): Promise<BuildResultManifest>;
   finish(input: BuildResultFinish): Promise<BuildResultManifest>;
 };
 
 /**
- * Project result history addressed only by Build id, Output name and Build-relative file path.
- * Filesystem paths, bucket keys and service URLs remain implementation details.
+ * Project result history addressed by Build id and Output name. File references carry their
+ * ownership or explicit external address; each repository supplies the corresponding byte access.
  */
 export type BuildResultRepository = {
   create(seed: BuildResultSeed): Promise<BuildResultWriter>;
@@ -346,6 +374,8 @@ export type BuildResultRepository = {
   /** Follow explicit Output forwarding and describe its terminal value without opening content. */
   describeOutput(build: string, output: string): Promise<RepositoryBuildResultOutputDescription | undefined>;
   resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined>;
+  /** Read current metadata for a file reference, including external dependencies. */
+  describeFile(build: string, file: BuildResultFileRef): Promise<BuildResultFileRef>;
   openFile(
     build: string,
     file: BuildResultFileRef,

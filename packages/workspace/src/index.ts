@@ -9,6 +9,8 @@ import type { BlobRef } from "@hypit/protocol";
 /** Repeatably openable transfer bytes admitted by the selected Workspace. */
 export type ArtifactAttachment = {
   readonly artifact: BlobRef;
+  /** Stable external address, when the Workspace supplies a file by reference. */
+  readonly location?: string;
   open(): Awaitable<AsyncIterable<Uint8Array>>;
 };
 

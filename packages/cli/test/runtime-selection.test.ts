@@ -18,6 +18,57 @@ test("check has no Runtime context", () => {
   );
 });
 
+test("Runtime-aware commands accept an explicit project without changing relative argument paths", () => {
+  const project = resolve("another-project");
+  for (const command of [
+    ["paths"], ["doctor"], ["status", "build-id"], ["activity"], ["cancel", "build-id"],
+    ["result", "finish", "build-id"], ["result", "discard", "build-id"],
+    ["runtime", "up"], ["runtime", "down"], ["runtime", "status"], ["runtime", "logs"],
+    ["programs", "up"], ["programs", "down"], ["programs", "status"],
+    ["auth", "status", "endpoint"], ["auth", "login", "endpoint"], ["auth", "logout", "endpoint"],
+  ]) {
+    const parsed = parseCommand([...command, "--workspace", project, "--runtime", "chosen.json"]);
+    assert.ok("workspaceRoot" in parsed && "runtimeProfile" in parsed, command.join(" "));
+    assert.equal(parsed.workspaceRoot, project);
+    assert.equal(parsed.runtimeProfile, resolve("chosen.json"));
+  }
+  assert.throws(() => parseCommand(["doctor", "one.json", "--runtime", "two.json"]), /not both/u);
+});
+
+test("paths reports project selection, invocation override and no selection without changing the pointer", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-path-context-"));
+  try {
+    const profile = join(root, "selected.json");
+    const override = join(root, "override.json");
+    await writeFile(profile, "{}\n");
+    await writeFile(override, "{}\n");
+    const distribution = {
+      openRuntimeHost: async (path: string) => ({ resolvePaths: async () => ({ runtimeDataRoot: `${path}.data` }) }),
+    } as unknown as CliDistribution;
+    const readPaths = async (options: string[] = []) => {
+      let output = "";
+      await runCli(["paths", "--workspace", root, "--json", ...options],
+        { write(text) { output += text; } }, distribution);
+      return JSON.parse(output);
+    };
+    const absent = await readPaths();
+    assert.equal(absent.project, resolve(root));
+    assert.equal(absent.profileSource, "none");
+    assert.equal(absent.profile, undefined);
+    assert.equal(absent.selectionFile, join(root, ".hypit", "runtime"));
+    const selected = await selectRuntimeProfile(root, profile);
+    const project = await readPaths();
+    assert.equal(project.profileSource, "project");
+    assert.equal(project.profile, selected.profile);
+    const explicit = await readPaths(["--runtime", override]);
+    assert.equal(explicit.profileSource, "argument");
+    assert.equal(explicit.profile, override);
+    assert.equal((await readPaths()).profile, selected.profile);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("project resolution precedes exact project Runtime selection", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-selection-"));
   try {

@@ -53,9 +53,20 @@ Sources can live below the root, with file and Source imports relative to the de
 
 | Boundary | When to set it explicitly |
 | --- | --- |
-| `--workspace <directory>` | Choose the Source containment root when running from another directory |
+| `--workspace <directory>` | Choose the project root for Sources, Runtime selection, project packages and Results when running from another directory |
 | `--asset-root <directory>` | Admit assets stored elsewhere while keeping Source imports in their workspace |
 | `--package-root <directory>` | Resolve project packages from another installation location |
+
+Relative command-line paths start at the shell's current directory. `--workspace` selects the project
+without rebasing the Run, Source or `--runtime` argument. For example, from outside a project:
+
+```bash
+hypit paths --workspace /path/to/video-project
+hypit studio --run /path/to/video-project/build.svrun --workspace /path/to/video-project
+```
+
+`paths` shows the resolved project and where its Runtime selection came from. Source imports and asset
+references inside files remain relative to their declaring file.
 
 For example, `hypit check authors/main.svml --asset-root /path/to/shared-media` admits intentionally
 referenced shared media. Keep the same relevant boundaries for subsequent commands. An ordinary
@@ -179,6 +190,12 @@ straightforward handoff. Include the hidden directory and keep its date/Build su
 Results forward an Output to its original owning Build, so copying only the latest Build directory
 can omit media still in use. A custom filesystem or S3 repository needs the corresponding files or
 access and an explicit destination selection; changing `hypit.results.json` does not move them.
+
+External input files remain live dependencies, including when referenced inside structured Outputs.
+The Node workspace records their resolved file addresses. When moving to another machine, provide
+those inputs and update affected references to their new locations. Copying Result directories alone
+does not collect external files; an explicit `hypit get` export does collect the selected Output's
+referenced bytes.
 
 The recipient installs the selected Distribution and project dependencies, configures their Runtime,
 and inspects the received Results. Planning the intended Run shows whether its reuse choices still

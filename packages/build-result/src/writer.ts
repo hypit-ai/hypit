@@ -13,8 +13,9 @@ import type {
 
 export type BuildResultWriterState = {
   readonly resources: Readonly<Record<string, string>>;
+  readonly resourceReferences?: Readonly<Record<string, BuildResultFileRef>>;
   readonly values: Readonly<Record<string, string>>;
-  readonly publishedOutputs: readonly { readonly name: string; readonly output: string }[];
+  readonly publishedOutputs: readonly { readonly name: string; readonly output: string; readonly displayName?: string }[];
   readonly forwards: readonly { readonly output: string; readonly build: string; readonly sourceOutput: string }[];
 };
 
@@ -28,6 +29,8 @@ export type BuildResultWriteTarget = {
 };
 
 export type BuildResultSyncResult = {
+  /** Whether accepted public Outputs were added to the manifest. */
+  readonly changed: boolean;
   readonly manifest: BuildResultManifest;
   readonly writer: BuildResultWriterState;
 };
@@ -97,6 +100,8 @@ export async function syncBuildResultOutputs(input: {
   const outputs: Record<string, BuildResultOutput> = { ...input.manifest.outputs };
 
   const materialize = async (artifact: BlobRef): Promise<BuildResultFileRef> => {
+    const reference = input.writer.resourceReferences?.[artifact.resource];
+    if (reference !== undefined) return { ...reference, mediaType: artifact.mediaType };
     const identity = artifact.resource;
     assert(identity.length > 0, "Build resource has no instance identity");
     let path = resources.get(identity);
@@ -166,14 +171,20 @@ export async function syncBuildResultOutputs(input: {
   }).sort((left, right) => outputRank(left.record, left.forward) - outputRank(right.record, right.forward)
     || left.published.name.localeCompare(right.published.name));
 
+  if (ready.length === 0) {
+    return { changed: false, manifest: input.manifest, writer: input.writer };
+  }
+
   for (const { published, record, forward } of ready) {
     outputs[published.name] = {
+      ...(published.displayName === undefined ? {} : { displayName: published.displayName }),
       type: record.type,
       value: forward ?? await outputValue(record),
     };
   }
 
   return {
+    changed: true,
     manifest: { ...input.manifest, outputs },
     writer: {
       ...input.writer,

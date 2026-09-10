@@ -359,9 +359,9 @@ test("command options fail closed instead of being silently ignored", async () =
   const io = { write() {} };
   await assert.rejects(
     async () => await runCli([
-      "status", "build-1", "--runtime", "/tmp/runtime.json", "--workspace", "/tmp",
+      "status", "build-1", "--runtime", "/tmp/runtime.json", "--asset-root", "/tmp",
     ], io, distribution),
-    /--workspace does not apply to status/u,
+    /--asset-root does not apply to status/u,
   );
   await assert.rejects(
     async () => await runCli([
@@ -411,6 +411,7 @@ test("doctor diagnoses project Results without requiring a Runtime Profile", asy
     format: "hypit.cli-doctor@1",
     ok: true,
     project: projectRoot,
+    profileSource: "none",
     diagnosticCount: 0,
     diagnostics: [],
   });

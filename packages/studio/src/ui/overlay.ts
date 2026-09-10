@@ -14,7 +14,7 @@ export type Box = {
   readonly widthPx: number; readonly heightPx: number;
 };
 
-export type Measure = (clipId: string) => Box | undefined;
+export type Measure = (clipId: string) => (Box & { readonly stackOrder: number }) | undefined;
 
 export type Overlay = {
   readonly element: SVGSVGElement;
@@ -62,21 +62,24 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
   element.setAttribute("class", "stage-overlay");
   element.setAttribute("preserveAspectRatio", "none");
 
-  let live: readonly Clip[] = [];
+  let entities: readonly Clip[] = [];
   let canvas = { width: 1, height: 1 };
-  let last: { snapshot: StudioSnapshot; selected: Clip | undefined; frame: number } | undefined;
+  let last: { snapshot: StudioSnapshot; selected: Clip | undefined } | undefined;
 
   /**
    * The box is measured off the picture rather than restated from the Source:
    * motion moves an element across its span, so only what was drawn knows where
    * it ended up. A Present that has not mounted has no box to draw.
    */
-  const drawnBox = (clip: Clip): Box | undefined => {
-    const ids = clip.presentId === undefined ? clip.renderIds : [clip.presentId];
-    const boxes = ids.flatMap((id) => {
+  const drawnParts = (clip: Clip) => {
+    const ids = clip.renderIds.length > 0 ? clip.renderIds : clip.presentId === undefined ? [] : [clip.presentId];
+    return ids.flatMap((id) => {
       const found = measure(id);
       return found === undefined ? [] : [found];
     });
+  };
+  const drawnBox = (clip: Clip): Box | undefined => {
+    const boxes = drawnParts(clip);
     if (boxes.length === 0) return undefined;
     const left = Math.min(...boxes.map((box) => box.xPx));
     const top = Math.min(...boxes.map((box) => box.yPx));
@@ -87,23 +90,23 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
 
   const draw = (): void => {
     if (last === undefined) return;
-    const { snapshot, selected, frame } = last;
+    const { snapshot, selected } = last;
         canvas = { width: snapshot.space.canvasWidth, height: snapshot.space.canvasHeight };
     element.setAttribute("viewBox", `0 0 ${canvas.width} ${canvas.height}`);
     element.replaceChildren();
-    // Only clips actually on screen can be picked out of the picture.
-    live = store.clipsAt(frame);
+    // An editing interval can end before its visual representation disappears.
+    // The renderer decides which associated parts are visible at this frame.
+    entities = snapshot.tracks.flatMap((track) => track.clips);
 
     if (selected === undefined) return;
     const tones = intentTones(snapshot);
     const tone = tones.get(selected.authoredId);
-    const onScreen = frame >= selected.startFrame && frame < selected.endFrameExclusive;
     const box = drawnBox(selected);
     // A Present that is not on screen at this frame was never drawn, so there
     // is nothing to put a box around.
     if (box === undefined) return;
     const group = document.createElementNS(SVG_NS, "g");
-    group.setAttribute("class", `box${onScreen ? "" : " box-elsewhere"}${tone === undefined ? "" : ` tone-${tone}`}`);
+    group.setAttribute("class", `box${tone === undefined ? "" : ` tone-${tone}`}`);
 
     group.append(rect(box, "box-content"));
 
@@ -111,16 +114,15 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
     label.setAttribute("x", String(box.xPx + 10));
     label.setAttribute("y", String(Math.max(28, box.yPx - 12)));
     label.setAttribute("class", "box-label");
-    label.textContent = onScreen ? selected.display.title : `${selected.display.title} (not at this frame)`;
+    label.textContent = selected.display.title;
     group.append(label);
     element.append(group);
   };
 
-  store.subscribe(({ snapshot, selection, playhead }) => {
+  store.subscribe(({ snapshot, selection }) => {
     last = {
       snapshot,
       selected: selection.kind === "clip" ? store.clip(selection.clipId) : undefined,
-      frame: playhead.frame,
     };
     draw();
   });
@@ -133,12 +135,11 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
       if (box.width === 0 || box.height === 0) return undefined;
       const x = (clientX - box.left) / box.width * canvas.width;
       const y = (clientY - box.top) / box.height * canvas.height;
-      // clipsAt already returns topmost first, so the first hit is the one an
-      // author would say they clicked on.
-      return live.find((clip) => {
-        const box = drawnBox(clip);
-        return box !== undefined && inside(box, x, y);
-      });
+      // Hit individual parts, not the empty space inside a group's union box.
+      return entities.flatMap((clip) => drawnParts(clip)
+        .filter((part) => inside(part, x, y))
+        .map((part) => ({ clip, order: part.stackOrder })))
+        .sort((left, right) => right.order - left.order)[0]?.clip;
     },
   };
 }

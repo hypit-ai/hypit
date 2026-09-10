@@ -99,6 +99,14 @@ Each authored model needs an Endpoint that supports its exact requested capabili
 Runtime selection is project-local. Commands read that project's `.hypit/runtime` pointer and do not
 choose a Profile from a familiar filename or from another project above it.
 
+Use `hypit paths` to see the actual project, Profile, selection source and storage locations.
+`--runtime <profile>` selects a Profile for that invocation; `runtime use <profile>` records the
+project's default. From elsewhere, `hypit paths --workspace /path/to/project` inspects that project.
+The same project option applies to `doctor`, `runtime`, `programs`, `auth` and Build status/control.
+`doctor` without a selected Profile checks project Results only; its Scope line states that boundary.
+The [project boundary](../creation/project-files.md#establish-the-project-boundary) explains how the
+current directory, `package.json` and explicit paths determine which project these commands address.
+
 ## Keep the owners separate
 
 | Owner | What it decides |

@@ -1,5 +1,6 @@
 import type {
   BuildResultFileRef,
+  ExternalFileAccess,
   BuildResultFileRange,
   BuildResultFinish,
   BuildResultManifest,
@@ -22,6 +23,8 @@ import {
   encodeBuildResultManifest,
   normalizeBuildResultForwards,
   syncBuildResultOutputs,
+  currentFileReference,
+  localExternalFiles,
 } from "@hypit/build-result";
 import { assertOrderedBuildId, buildIdCreatedAt } from "@hypit/protocol";
 
@@ -31,6 +34,7 @@ import type { AwsBuildResultS3ClientOptions, BuildResultS3Client } from "./clien
 export type S3BuildResultRepositoryOptions = AwsBuildResultS3ClientOptions & {
   readonly prefix?: string;
   readonly client?: BuildResultS3Client;
+  readonly externalFiles?: ExternalFileAccess;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -102,6 +106,7 @@ class S3BuildResultWriter implements BuildResultWriter {
         },
       },
     });
+    if (!updated.changed) return manifest;
     await this.#repository.writeWriter(this.#build, updated.writer);
     await this.#repository.writeManifest(this.#build, updated.manifest);
     return updated.manifest;
@@ -132,10 +137,12 @@ class S3BuildResultWriter implements BuildResultWriter {
 export class S3BuildResultRepository implements BuildResultRepository {
   readonly #client: BuildResultS3Client;
   readonly #prefix: string;
+  readonly #externalFiles: ExternalFileAccess;
 
   constructor(options: S3BuildResultRepositoryOptions) {
     assert(options.bucket.trim().length > 0, "S3 Build Result bucket must not be empty");
     this.#prefix = normalizePrefix(options.prefix);
+    this.#externalFiles = options.externalFiles ?? localExternalFiles;
     this.#client = options.client ?? new AwsBuildResultS3Client(options);
   }
 
@@ -194,6 +201,7 @@ export class S3BuildResultRepository implements BuildResultRepository {
         resources: {},
         values: {},
         publishedOutputs: seed.publishedOutputs,
+        ...(seed.resourceReferences === undefined ? {} : { resourceReferences: seed.resourceReferences }),
         forwards,
       });
       await this.writeManifest(seed.id, manifest);
@@ -285,8 +293,9 @@ export class S3BuildResultRepository implements BuildResultRepository {
         currentOutput = entry.value.output;
         continue;
       }
-      return entry.value.kind === "build-file"
-        ? { type: entry.type, kind: "resource", size: entry.value.size, mediaType: entry.value.mediaType }
+      const file = entry.value.kind === "external-file" ? await currentFileReference(entry.value, this.#externalFiles) : entry.value;
+      return file.kind === "build-file" || file.kind === "external-file"
+        ? { type: entry.type, kind: "resource", size: file.size, mediaType: file.mediaType }
         : entry.value.kind === "value"
           ? { type: entry.type, kind: "composite" }
           : { type: entry.type, kind: "scalar" };
@@ -324,15 +333,19 @@ export class S3BuildResultRepository implements BuildResultRepository {
         };
       }
       const terminalKind = (entry.value as { readonly kind?: unknown }).kind;
-      assert(terminalKind === "build-file" || terminalKind === "inline",
+      assert(terminalKind === "build-file" || terminalKind === "external-file" || terminalKind === "inline",
         `Build ${currentBuild} Output ${currentOutput} has unsupported Result value kind ${String(terminalKind)}`);
       return {
         build: currentBuild,
         output: currentOutput,
         type: entry.type,
-        value: entry.value,
+        value: entry.value.kind === "external-file" ? await currentFileReference(entry.value, this.#externalFiles) : entry.value,
       };
     }
+  }
+
+  async describeFile(_build: string, file: BuildResultFileRef): Promise<BuildResultFileRef> {
+    return await currentFileReference(file, this.#externalFiles);
   }
 
   async openFile(
@@ -340,13 +353,14 @@ export class S3BuildResultRepository implements BuildResultRepository {
     file: BuildResultFileRef,
     range?: BuildResultFileRange,
   ): Promise<AsyncIterable<Uint8Array> | undefined> {
+    if (file.kind === "external-file") return await this.#externalFiles.open(file.uri, range);
     if (range !== undefined) {
       assert(Number.isSafeInteger(range.start) && range.start >= 0, "Build Result file range start is invalid");
       assert(Number.isSafeInteger(range.endExclusive) && range.endExclusive > range.start,
         "Build Result file range end is invalid");
       assert(range.endExclusive <= file.size, "Build Result file range exceeds the declared file size");
     }
-    return await this.#client.open(this.#key(build, file.path), range);
+    return await this.#client.open(this.#key(file.build ?? build, file.path), range);
   }
 
   /** Verify that the configured bucket/prefix can be listed without loading Result history. */

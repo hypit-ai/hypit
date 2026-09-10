@@ -1,3 +1,5 @@
+import { currentFileReference, localExternalFiles } from "./file-reference.js";
+import type { ExternalFileAccess } from "./file-reference.js";
 import { randomUUID } from "node:crypto";
 import {
   mkdir,
@@ -40,6 +42,7 @@ import {
   encodeBuildResultManifest,
 } from "./decode.js";
 import { syncBuildResultOutputs } from "./writer.js";
+import { replaceFile } from "./replace-file.js";
 
 const manifestName = "result.json";
 const writerStateName = ".writer.json";
@@ -83,34 +86,27 @@ export function applyBuildResultPresentation(
     if (highlighted.length === 0) delete base.highlightedOutputs;
     else base.highlightedOutputs = highlighted;
   }
+  if (update.outputDisplayNames !== undefined) {
+    const outputs = { ...manifest.outputs };
+    for (const [name, value] of Object.entries(update.outputDisplayNames)) {
+      const entry = manifest.outputs[name];
+      assert(Object.hasOwn(manifest.outputs, name) && entry !== undefined,
+        `Build Result ${manifest.id} has no Output ${name}`);
+      const { displayName: _priorName, ...rest } = entry;
+      if (value === null) outputs[name] = rest;
+      else {
+        const displayName = value.trim();
+        assert(displayName.length > 0, "Output display name must not be empty");
+        outputs[name] = { ...rest, displayName };
+      }
+    }
+    return { ...base, outputs };
+  }
   return base;
 }
 
 async function exists(path: string): Promise<boolean> {
   return await stat(path).then((item) => item.isFile(), () => false);
-}
-
-/**
- * Replace `to` with `from`, allowing brief filesystem contention to clear.
- *
- * Windows CI observed EPERM when publishing result.json after execution completed. Sharing modes
- * and filesystem filters can temporarily prevent replacement; an open reader alone does not prove
- * the cause. Retry the same rename briefly, keeping the old file intact until replacement succeeds.
- * Persistent permission or sharing errors still fail this write with the original filesystem error.
- */
-async function replaceFile(from: string, to: string): Promise<void> {
-  const deadline = Date.now() + 2_000;
-  while (true) {
-    try {
-      await rename(from, to);
-      return;
-    } catch (error) {
-      const code = error instanceof Error && "code" in error ? error.code : undefined;
-      const contended = code === "EPERM" || code === "EACCES" || code === "EBUSY";
-      if (!contended || Date.now() >= deadline) throw error;
-      await new Promise((settle) => { setTimeout(settle, 20); });
-    }
-  }
 }
 
 async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
@@ -244,6 +240,7 @@ export async function resolveBuildResultOutput(
   root: string,
   build: string,
   output: string,
+  externalFiles: ExternalFileAccess = localExternalFiles,
 ): Promise<ResolvedBuildResultOutput | undefined> {
   const seen = new Set<string>();
   let currentBuild = build;
@@ -277,14 +274,14 @@ export async function resolveBuildResultOutput(
       };
     }
     const terminalKind = (entry.value as { readonly kind?: unknown }).kind;
-    assert(terminalKind === "build-file" || terminalKind === "inline",
+    assert(terminalKind === "build-file" || terminalKind === "external-file" || terminalKind === "inline",
       `Build ${currentBuild} Output ${currentOutput} has unsupported Result value kind ${String(terminalKind)}`);
     return {
       build: currentBuild,
       output: currentOutput,
       directory,
       type: entry.type,
-      value: entry.value,
+      value: entry.value.kind === "external-file" ? await currentFileReference(entry.value, externalFiles) : entry.value,
     };
   }
 }
@@ -293,6 +290,7 @@ export async function describeBuildResultOutput(
   root: string,
   build: string,
   output: string,
+  externalFiles: ExternalFileAccess = localExternalFiles,
 ): Promise<RepositoryBuildResultOutputDescription | undefined> {
   const seen = new Set<string>();
   let currentBuild = build;
@@ -309,8 +307,9 @@ export async function describeBuildResultOutput(
       currentOutput = entry.value.output;
       continue;
     }
-    return entry.value.kind === "build-file"
-      ? { type: entry.type, kind: "resource", size: entry.value.size, mediaType: entry.value.mediaType }
+    const file = entry.value.kind === "external-file" ? await currentFileReference(entry.value, externalFiles) : entry.value;
+    return file.kind === "build-file" || file.kind === "external-file"
+      ? { type: entry.type, kind: "resource", size: file.size, mediaType: file.mediaType }
       : entry.value.kind === "value"
         ? { type: entry.type, kind: "composite" }
         : { type: entry.type, kind: "scalar" };
@@ -357,12 +356,12 @@ export class FileBuildResult {
     this.directory = resolve(directory);
   }
 
-  static async create(root: string, seed: BuildResultSeed): Promise<FileBuildResult> {
+  static async create(root: string, seed: BuildResultSeed, externalFiles: ExternalFileAccess = localExternalFiles): Promise<FileBuildResult> {
     assertOrderedBuildId(seed.id);
     assertBuildResultSeed(seed);
     const forwards = await normalizeBuildResultForwards({
       read: async (build) => await readBuildResult(buildResultDirectory(root, build)),
-      resolve: async (build, output) => await resolveBuildResultOutput(root, build, output),
+      resolve: async (build, output) => await resolveBuildResultOutput(root, build, output, externalFiles),
     }, seed.forwards ?? []);
     const directory = buildResultDirectory(root, seed.id);
     await mkdir(dirname(directory), { recursive: true });
@@ -383,6 +382,7 @@ export class FileBuildResult {
         resources: {},
         values: {},
         publishedOutputs: seed.publishedOutputs,
+        ...(seed.resourceReferences === undefined ? {} : { resourceReferences: seed.resourceReferences }),
         forwards,
       });
       await rename(temporary, directory);
@@ -428,6 +428,7 @@ export class FileBuildResult {
         },
       },
     });
+    if (!updated.changed) return manifest;
     await writeJsonAtomic(join(this.directory, writerStateName), updated.writer);
     await writeManifestAtomic(join(this.directory, manifestName), updated.manifest);
     return updated.manifest;
@@ -457,15 +458,17 @@ export class FileBuildResult {
 
 /** Default zero-configuration project repository backed by one ordinary directory tree. */
 export class FileBuildResultRepository implements BuildResultRepository {
+  readonly externalFiles: ExternalFileAccess;
   readonly root: string;
 
-  constructor(root: string) {
+  constructor(root: string, externalFiles: ExternalFileAccess = localExternalFiles) {
+    this.externalFiles = externalFiles;
     assert(root.trim().length > 0, "Build Result root must not be empty");
     this.root = resolve(root);
   }
 
   async create(seed: BuildResultSeed): Promise<FileBuildResult> {
-    return await FileBuildResult.create(this.root, seed);
+    return await FileBuildResult.create(this.root, seed, this.externalFiles);
   }
 
   async openWriter(build: string): Promise<FileBuildResult | undefined> {
@@ -500,14 +503,18 @@ export class FileBuildResultRepository implements BuildResultRepository {
   }
 
   async describeOutput(build: string, output: string): Promise<RepositoryBuildResultOutputDescription | undefined> {
-    return await describeBuildResultOutput(this.root, build, output);
+    return await describeBuildResultOutput(this.root, build, output, this.externalFiles);
   }
 
   async resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined> {
-    const resolvedOutput = await resolveBuildResultOutput(this.root, build, output);
+    const resolvedOutput = await resolveBuildResultOutput(this.root, build, output, this.externalFiles);
     if (resolvedOutput === undefined) return undefined;
     const { directory: _directory, ...portable } = resolvedOutput;
     return portable;
+  }
+
+  async describeFile(_build: string, file: BuildResultFileRef): Promise<BuildResultFileRef> {
+    return await currentFileReference(file, this.externalFiles);
   }
 
   async openFile(
@@ -515,7 +522,8 @@ export class FileBuildResultRepository implements BuildResultRepository {
     file: BuildResultFileRef,
     range?: BuildResultFileRange,
   ): Promise<AsyncIterable<Uint8Array> | undefined> {
-    const directory = buildResultDirectory(this.root, build);
+    if (file.kind === "external-file") return await this.externalFiles.open(file.uri, range);
+    const directory = buildResultDirectory(this.root, file.build ?? build);
     const path = containedResultPath(directory, file.path);
     if (!await exists(path)) return undefined;
     if (range === undefined) return createReadStream(path);

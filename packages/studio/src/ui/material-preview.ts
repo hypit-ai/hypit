@@ -129,7 +129,7 @@ async function audioWaveform(url: string): Promise<string | undefined> {
   }
 }
 
-function audioPreview(url: string): Promise<string | undefined> {
+export function audioPreview(url: string): Promise<string | undefined> {
   const held = generatedAudio.get(url);
   if (held !== undefined) return held;
   const pending = audioWaveform(url).catch(() => undefined).then((waveform) => {

@@ -308,6 +308,7 @@ export type StudioEntityDisplay = {
 };
 
 export type StudioLaneDescription = {
+  /** Height of this single timeline lane; overlapping entities share it. */
   readonly heightPx: number;
   readonly groupId?: string;
   readonly attachedTo?: string;
@@ -482,10 +483,12 @@ export type StudioEntityDraft = {
   readonly display: StudioEntityDisplay;
   readonly startFrame: number;
   readonly endFrameExclusive: number;
+  /** Back-to-front timeline order. Ties preserve projection order. Selection raises only the timeline item. */
   readonly stackOrder: number;
   readonly elementRange?: Range;
   readonly markerId?: string;
   readonly presentId?: string;
+  /** Rendered parts belonging to this entity, including phases beyond its editable timeline interval. */
   readonly renderIds?: readonly string[];
   /** Resolved author references that differ per derived entity, such as one Cue's actual Style. */
   readonly parameterReferences?: Readonly<Record<string, string>>;

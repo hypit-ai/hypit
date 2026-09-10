@@ -17,7 +17,6 @@ export type Timeline = {
   readonly fit: () => void;
 };
 
-const opened = new Set<string>();
 const itemMetrics = {
   // Ordinary items fill their rows. Only the semantic lane owns compact word cells.
   insetYPx: 1,
@@ -577,18 +576,15 @@ export function createTimeline(store: Store): Timeline {
     detail: string,
     height: number,
     attached = false,
-    hasState = false,
   ): HTMLElement => {
     const label = document.createElement("div");
-    label.className = `track-label track-${kind}${hasState ? " track-label-has-state" : ""}`;
+    label.className = `track-label track-${kind}`;
     if (attached) label.classList.add("track-label-attached");
     label.style.height = `${height}px`;
     label.title = `${name} · ${detail}`;
     label.innerHTML = `${attached
       ? '<span class="track-attachment-mark" aria-hidden="true"></span>'
-      : '<span class="track-icon"></span>'}<span class="track-copy"><strong></strong></span>${hasState
-        ? '<span class="track-state"></span>'
-        : ""}`;
+      : '<span class="track-icon"></span>'}<span class="track-copy"><strong></strong></span>`;
     if (!attached) setIcon(label.querySelector(".track-icon")!, iconName);
     label.querySelector("strong")!.textContent = name;
     return label;
@@ -604,7 +600,7 @@ export function createTimeline(store: Store): Timeline {
     .sort((left, right) => (left.binding.lane.order ?? 0) - (right.binding.lane.order ?? 0));
 
   const buildSemanticLane = (snapshot: StudioSnapshot): void => {
-    if (snapshot.semantic === undefined || snapshot.semantic.segments.length === 0) {
+    if (snapshot.semantic === undefined) {
       return;
     }
     const presentation = snapshot.semantic.presentation;
@@ -781,17 +777,6 @@ export function createTimeline(store: Store): Timeline {
     attached = false,
   ): void => {
     const tone = track.binding.tone;
-    const freeFrom: number[] = [];
-    const rowOf = new Map<string, number>();
-    for (const clip of [...track.clips].sort((a, b) => b.stackOrder - a.stackOrder || a.startFrame - b.startFrame)) {
-      let row = freeFrom.findIndex((free) => free <= clip.startFrame);
-      if (row < 0) { row = freeFrom.length; freeFrom.push(0); }
-      freeFrom[row] = clip.endFrameExclusive;
-      rowOf.set(clip.id, row);
-    }
-    const depth = Math.max(1, freeFrom.length);
-    const folded = depth > 1 && !opened.has(track.id);
-    const shownRows = folded ? 1 : depth;
     const laneHeight = track.binding.lane.heightPx;
     const displayedItems = track.clips.length;
     const label = createTrackLabel(
@@ -799,44 +784,26 @@ export function createTimeline(store: Store): Timeline {
       tone,
       track.binding.icon,
       `${displayedItems} item${displayedItems === 1 ? "" : "s"}`,
-      shownRows * laneHeight,
+      laneHeight,
       attached,
-      depth > 1,
     );
     label.classList.add(`track-facet-${track.binding.facet}`);
-    if (depth > 1) {
-      const fold = document.createElement("button");
-      fold.type = "button";
-      fold.className = "track-fold";
-      fold.textContent = folded ? `+${depth - 1}` : "−";
-      fold.title = folded ? `Show ${depth} rows` : "Collapse rows";
-      fold.setAttribute("aria-expanded", String(!folded));
-      fold.addEventListener("click", (event) => {
-        event.stopPropagation();
-        if (opened.has(track.id)) opened.delete(track.id);
-        else opened.add(track.id);
-        build(snapshot);
-        paint();
-      });
-      label.querySelector(".track-state")!.append(fold);
-    }
     labels.append(label);
 
     const lane = document.createElement("div");
     lane.className = `lane track-tone-${tone} track-facet-${track.binding.facet}${attached ? " lane-attached" : ""}`;
-    lane.style.height = `${shownRows * laneHeight}px`;
+    lane.style.height = `${laneHeight}px`;
     lane.style.setProperty("--lane-height", `${laneHeight}px`);
     const laneWidth = lanes.clientWidth;
     const materialMounts: {
       readonly target: HTMLElement;
       readonly preview: Extract<StudioSnapshot["tracks"][number]["clips"][number]["display"]["layers"][number], { readonly kind: "preview" }>["preview"];
     }[] = [];
-    for (const clip of track.clips) {
+    // Stable order preserves Companion projection order when stack levels tie.
+    for (const clip of [...track.clips].sort((a, b) => a.stackOrder - b.stackOrder)) {
       const from = place(clip.startFrame, snapshot.space.frameCount, zoom.window());
       const to = place(clip.endFrameExclusive, snapshot.space.frameCount, zoom.window());
       if (to <= 0 || from >= 1) continue;
-      const row = rowOf.get(clip.id) ?? 0;
-      if (folded && row > 0) continue;
       const node = document.createElement("button");
       node.type = "button";
       node.className = `clip clip-tone-${tone} clip-facet-${track.binding.facet} clip-chrome-${clip.presentation.chrome}`;
@@ -847,7 +814,6 @@ export function createTimeline(store: Store): Timeline {
       node.style.width = `max(2px, calc(${Math.max(0, to - from) * 100}% - ${itemMetrics.gapPx}px))`;
       const visibleWidthPx = visibleItemWidth(from, to, laneWidth);
       node.classList.toggle("clip-preview-wide", visibleWidthPx >= 92);
-      node.style.top = `${row * laneHeight}px`;
       node.title = `${clip.display.title} · ${clip.startFrame}-${clip.endFrameExclusive}f`;
       node.innerHTML = `<span class="clip-head"><span class="clip-name"></span><span class="clip-meta"></span></span><span class="clip-body"><span class="clip-layers" aria-hidden="true"></span><span class="clip-phases"></span></span><span class="clip-selection" aria-hidden="true"></span>`;
       const layers = node.querySelector<HTMLElement>(".clip-layers")!;
@@ -940,8 +906,7 @@ export function createTimeline(store: Store): Timeline {
       const attachedTo = track.binding.lane.attachedTo;
       if (attachedTo !== undefined) continue;
       buildTrack(snapshot, track, nextClipNodes);
-      const slot = track.binding.lane.groupId;
-      if (slot === undefined) continue;
+      const slot = track.binding.lane.groupId ?? track.binding.groupId;
       const attachments = attachedTracks(snapshot, slot, track.binding.groupId);
       for (const attachment of attachments) {
         buildTrack(snapshot, attachment, nextClipNodes, true);

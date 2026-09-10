@@ -3,6 +3,8 @@ import type {
 } from "@hypit/protocol";
 
 export type BuildPublishedOutput = {
+  /** Author-provided display name; the Output identifier remains unchanged. */
+  readonly displayName?: string;
   readonly name: string;
   readonly ref: LogicalOutputRef;
 };

@@ -17,7 +17,7 @@ import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { loadStudioRun } from "./run.js";
 import { serializeParameterValue, validateParameterValue } from "./parameter-values.js";
 import { readStudioSession } from "./session.js";
-import type { Range, StudioFailure, StudioLibraryView, StudioMutation, StudioSnapshot } from "./shared.js";
+import type { Range, StudioFailure, StudioLibraryRequest, StudioLibraryView, StudioMutation, StudioSnapshot } from "./shared.js";
 import { createStudioStoryboard } from "./storyboard.js";
 import type { StudioStoryboard } from "./storyboard.js";
 import { findSurfacePreview } from "./surface-preview.js";
@@ -93,8 +93,9 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   const watchedFiles = new Set<string>();
   const storyboards = new Map<string, Promise<StudioStoryboard>>();
 
-  const readLibrary = async (before?: string): Promise<StudioLibraryView> => {
-    return await options.buildLibrary?.library(before) ?? {
+  const readLibrary = async (request: StudioLibraryRequest): Promise<StudioLibraryView> => {
+    return await options.buildLibrary?.library(request) ?? {
+      section: request.section,
       environment: options.workspaceRoot,
       tasks: [],
       artifacts: [],
@@ -525,6 +526,28 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           })();
           return;
         }
+        if (request.method === "PUT" && url.pathname === "/__studio/artifact-name") {
+          void (async () => {
+            try {
+              const chunks: Buffer[] = [];
+              for await (const chunk of request) chunks.push(Buffer.from(chunk));
+              const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {
+                build?: unknown; output?: unknown; displayName?: unknown;
+              };
+              if (typeof body.build !== "string" || typeof body.output !== "string"
+                || (typeof body.displayName !== "string" && body.displayName !== null)) {
+                json(response, 400, { error: "Expected Build, Output and displayName" });
+                return;
+              }
+              if (options.buildLibrary === undefined) throw new Error("Result Repository is unavailable");
+              const displayName = await options.buildLibrary.renameArtifact(body.build, body.output, body.displayName);
+              json(response, 200, { displayName: displayName ?? null });
+            } catch (error) {
+              json(response, 422, { error: error instanceof Error ? error.message : String(error) });
+            }
+          })();
+          return;
+        }
         if (request.method === "POST" && url.pathname === "/__studio/mutation") {
           void (async () => {
             try {
@@ -577,8 +600,21 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           return;
         }
         if (url.pathname === "/__studio/library") {
+          const section = url.searchParams.get("section");
+          if (section !== "tasks" && section !== "artifacts") {
+            json(response, 400, { error: "Choose tasks or artifacts with the section parameter" });
+            return;
+          }
+          const media = url.searchParams.get("media") ?? undefined;
+          if (media !== undefined && media !== "image" && media !== "video" && media !== "audio") {
+            json(response, 400, { error: "Choose image, video or audio with the media parameter" });
+            return;
+          }
           const before = url.searchParams.get("before") ?? undefined;
-          void readLibrary(before).then(
+          const run = url.searchParams.get("run") ?? undefined;
+          const build = url.searchParams.get("build") ?? undefined;
+          void readLibrary({ section, ...(media === undefined ? {} : { media }), ...(before === undefined ? {} : { before }),
+            ...(run === undefined ? {} : { run }), ...(build === undefined ? {} : { build }) }).then(
             (view) => json(response, 200, view),
             (error) => json(response, 500, { error: error instanceof Error ? error.message : String(error) }),
           );
@@ -662,13 +698,12 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           void (async () => {
             const build = url.searchParams.get("build");
             const output = url.searchParams.get("output");
-            const valuePath = url.searchParams.get("path");
-            if (build === null || output === null || valuePath === null || options.buildLibrary === undefined) {
+            if (build === null || output === null || options.buildLibrary === undefined) {
               response.statusCode = 404;
               response.end();
               return;
             }
-            const artifact = await options.buildLibrary.openArtifact(build, output, valuePath);
+            const artifact = await options.buildLibrary.openArtifact(build, output);
             if (artifact === undefined) {
               response.statusCode = 404;
               response.end();

@@ -48,6 +48,22 @@ nominal output Type and authored input names of the component. A Companion does 
 author attribute. Omitting `project` uses generic terminal entities; `poster` adds the declared
 Surface preview when one exists, without changing the component's rendered video.
 
+Each lane occupies one timeline row. Entities overlap in ascending `stackOrder`,
+with later projected entities above earlier ones when orders tie. Studio keeps
+overlapping entities mounted and raises the selected entity within its lane;
+selection does not change the rendered composition or write stacking back to Source.
+Expose `presentId` or `renderIds` for visual entities so picture selection can
+address the same entity shown in the timeline. Attached lanes represent distinct
+Companion projections, not extra rows allocated to avoid temporal overlap.
+
+An entity's timeline interval describes the operation being edited; its rendered
+parts may remain visible afterward. Associate every relevant phase through
+`renderIds` (for example, an entrance and the settled object). Studio picks the
+currently visible part in rendered stacking order and selects the same entity,
+without extending its editable interval. Give the parent the board or background
+parts and its children their own parts when they should be independently selectable.
+The component decides this granularity. A composite can remain one selectable entity.
+
 Merge the facet into the package's existing activation. In this example `authorContribution`
 exports its existing modules, deterministic component and Markup facets:
 

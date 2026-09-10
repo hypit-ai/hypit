@@ -133,6 +133,7 @@ function projectRanking(context: StudioTrackCompanionContext): readonly StudioEn
     return [{
       id: `${context.track.outputRef}:entity:${entry.itemId}`,
       authoredId: entry.itemId,
+      renderIds: context.spans.filter((span) => span.subjectId === entry.itemId).map((span) => span.id),
       ...(semanticSource?.id === undefined ? {} : { markerId: semanticSource.id }),
       display: {
         title: label,
@@ -147,7 +148,8 @@ function projectRanking(context: StudioTrackCompanionContext): readonly StudioEn
       ...(temporal === undefined ? {} : { temporal }),
     }];
   }).sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id));
-  return [group, ...reveals];
+  const childRenderIds = new Set(reveals.flatMap((entity) => entity.renderIds ?? []));
+  return [{ ...group, renderIds: group.renderIds!.filter((id) => !childRenderIds.has(id)) }, ...reveals];
 }
 
 const commonBindings: readonly StudioSourceBindingDeclaration[] = [

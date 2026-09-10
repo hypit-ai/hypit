@@ -41,6 +41,7 @@ export function isEnvironmentCommand(args: CliCommand): args is EnvironmentComma
 export async function runEnvironmentCommand(input: {
   readonly args: EnvironmentCommand;
   readonly runtimeProfile: string | undefined;
+  readonly runtimeSelectionFile: string | undefined;
   readonly io: CliIo;
   readonly distribution: CliDistribution;
   readonly projectRoot: string;
@@ -50,8 +51,13 @@ export async function runEnvironmentCommand(input: {
   readonly write: OperationalWriter;
 }): Promise<void> {
   const {
-    args, runtimeProfile, io, distribution, projectRoot, packageRootForProject, runtimeHost, runtimeController, write,
+    args, runtimeProfile, runtimeSelectionFile, io, distribution, projectRoot, packageRootForProject, runtimeHost, runtimeController, write,
   } = input;
+  const profileSource: "none" | "argument" | "project" = runtimeProfile === undefined
+    ? "none" : runtimeSelectionFile === undefined ? "argument" : "project";
+  const selectionDescription = profileSource === "argument"
+    ? "command argument (this invocation only)"
+    : runtimeSelectionFile ?? "none";
   const reportProgramProgress = args.presentation.json
     ? undefined
     : (event: { readonly id: string; readonly phase: "checking" | "installing" | "starting" | "waiting" | "ready"; readonly logPath?: string }): void => {
@@ -81,6 +87,8 @@ export async function runEnvironmentCommand(input: {
     const machine = {
       format: "hypit.cli-paths@1" as const,
       project: projectRoot,
+      profileSource,
+      selectionFile: resolve(projectRoot, ".hypit/runtime"),
       projectState: hypitProjectStateRoot(projectRoot),
       ...(runtimeProfile === undefined ? {} : { profile: runtimeProfile }),
       ...(runtimePaths === undefined ? {} : { runtimeData: runtimePaths.runtimeDataRoot }),
@@ -92,11 +100,14 @@ export async function runEnvironmentCommand(input: {
       ["Project", machine.project],
       ["Project state", machine.projectState],
       ["Runtime Profile", machine.profile ?? "not selected"],
+      ["Runtime selection", selectionDescription],
       ["Runtime data", machine.runtimeData ?? "not selected"],
       ["Host state", machine.hostState],
       ["Machine packages", machine.machinePackages],
       ["Distribution", machine.distribution ?? "embedded"],
-    ]);
+    ], runtimeProfile === undefined
+      ? ["Select an existing Profile with hypit runtime use <profile> --workspace <project>, or create one with hypit runtime init."]
+      : []);
     return;
   }
 
@@ -140,6 +151,8 @@ export async function runEnvironmentCommand(input: {
       format: "hypit.cli-doctor@1" as const,
       ok: !diagnostics.some((item) => item.severity === "error"),
       project: projectRoot,
+      profileSource,
+      ...(runtimeSelectionFile === undefined ? {} : { selectionFile: runtimeSelectionFile }),
       ...(profile === undefined ? {} : { profile }),
       diagnosticCount: diagnostics.length,
       diagnostics: diagnostics.slice(0, args.limit),

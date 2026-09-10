@@ -33,6 +33,11 @@ The repository exposes the same logical shape as the filesystem adapter:
 Filesystem and S3 use the same Record-to-Result encoder. The adapter only writes the selected
 relative document or byte path; it does not interpret domain values. A Value Document keeps canonical
 domain data separate from the paths of nested Resources.
+Nested reuse retains each Resource's original Build and path. Workspace files remain explicit external
+references rather than being uploaded merely because this repository uses S3. The shared
+[Result value and reference model](../build-result/README.md) describes ownership and external access.
+Synchronization uploads new public Outputs and then their updated manifest. Internal graph progress
+and repeated synchronization of already published Outputs produce no object writes.
 
 Physical object prefixes use a reversible descending-time form derived from the ordered Build id, so
 S3 can return a newest-first delimiter page directly. This is only adapter key layout: callers still

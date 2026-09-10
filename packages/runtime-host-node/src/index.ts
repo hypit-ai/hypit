@@ -119,6 +119,7 @@ export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialCon
       readonly repository: BuildResultRepositoryLocation;
       readonly title?: string;
       readonly forwards?: readonly BuildResultForward[];
+      readonly resourceReferences?: Readonly<Record<string, import("@hypit/build-result").BuildResultFileRef>>;
     };
   }, options?: {
     readonly follow?: boolean;

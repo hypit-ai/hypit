@@ -157,7 +157,7 @@ export function parseCommand(argv: readonly string[]): CliCommand {
     }
     case "status": {
       const [build, rest] = requiredPositional(tail, "status requires one Build id");
-      const options = commandOptions(command, rest, "--runtime", "--watch", "--max-wait-ms", "--limit");
+      const options = commandOptions(command, rest, "--runtime", "--workspace", "--watch", "--max-wait-ms", "--limit");
       if (!options.watch && options.maxWaitMs !== undefined) {
         throw new Error("--max-wait-ms applies to status --watch");
       }
@@ -172,7 +172,7 @@ export function parseCommand(argv: readonly string[]): CliCommand {
       };
     }
     case "activity": {
-      const options = commandOptions(command, tail, "--runtime", "--watch", "--jsonl", "--limit");
+      const options = commandOptions(command, tail, "--runtime", "--workspace", "--watch", "--jsonl", "--limit");
       if (options.presentation.jsonl === true && !options.watch) {
         throw new Error("--jsonl applies only to activity --watch");
       }
@@ -189,7 +189,7 @@ export function parseCommand(argv: readonly string[]): CliCommand {
     }
     case "cancel": {
       const [build, rest] = requiredPositional(tail, "cancel requires one Build id");
-      const options = commandOptions(command, rest, "--runtime", "--reason");
+      const options = commandOptions(command, rest, "--runtime", "--workspace", "--reason");
       return {
         command,
         build,
@@ -205,17 +205,20 @@ export function parseCommand(argv: readonly string[]): CliCommand {
     case "auth": return parseAuthCommand(tail);
     case "doctor": {
       const [profile, rest] = optionalPositional(tail);
-      const options = commandOptions(command, rest, "--workspace", "--limit");
+      const options = commandOptions(command, rest, "--workspace", "--runtime", "--limit");
+      if (profile !== undefined && options.runtimeProfile !== undefined) {
+        throw new Error("doctor accepts the Runtime Profile either positionally or with --runtime, not both");
+      }
       return {
         command,
         presentation: options.presentation,
         limit: options.limit,
         ...optionalProject(options),
-        ...runtimeOption(profile),
+        ...runtimeOption(profile ?? options.runtimeProfile),
       };
     }
     case "paths": {
-      const options = commandOptions(command, tail, "--runtime");
+      const options = commandOptions(command, tail, "--runtime", "--workspace");
       return { command, presentation: options.presentation, ...optionalRuntime(options) };
     }
     case "_worker": {
@@ -244,7 +247,7 @@ function parseResultCommand(tail: readonly string[]): ProjectResultCommand | Exe
   }
   const [build, rest] = requiredPositional(values, `result ${action} requires one Build id`);
   if (action === "finish" || action === "discard") {
-    const options = commandOptions(`result ${action}`, rest, "--runtime");
+    const options = commandOptions(`result ${action}`, rest, "--runtime", "--workspace");
     return { command: "result", action, build, presentation: options.presentation, ...optionalRuntime(options) };
   }
   const options = commandOptions("result edit", rest,
@@ -306,7 +309,7 @@ function parseRuntimeCommand(tail: readonly string[]): RuntimeSelectionCommand |
     : action === "status"
       ? ["--runtime", "--limit"] as const
       : ["--runtime", "--lines"] as const;
-  const options = commandOptions(`runtime ${action}`, rest, ...allowed);
+  const options = commandOptions(`runtime ${action}`, rest, "--workspace", ...allowed);
   rejectDuplicateProfile("runtime", profile, options.runtimeProfile);
   const runtime = runtimeOption(profile ?? options.runtimeProfile);
   const common = {
@@ -314,6 +317,7 @@ function parseRuntimeCommand(tail: readonly string[]): RuntimeSelectionCommand |
     action,
     presentation: options.presentation,
     ...runtime,
+    ...optionalProject(options),
   };
   if (action === "up" || action === "down") {
     return { ...common, action, ...(options.maxWaitMs === undefined ? {} : { maxWaitMs: options.maxWaitMs }) };
@@ -329,7 +333,7 @@ function parseProgramsCommand(tail: readonly string[]): ProgramsCommand {
   }
   const [profile, rest] = optionalPositional(values);
   const options = commandOptions(`programs ${action}`, rest,
-    "--runtime", "--limit", "--max-wait-ms");
+    "--runtime", "--workspace", "--limit", "--max-wait-ms");
   if (action !== "up" && options.maxWaitMs !== undefined) {
     throw new Error("--max-wait-ms applies to programs up");
   }
@@ -341,6 +345,7 @@ function parseProgramsCommand(tail: readonly string[]): ProgramsCommand {
     presentation: options.presentation,
     limit: options.limit,
     ...runtime,
+    ...optionalProject(options),
   };
   return action === "up"
     ? { ...common, action, ...(options.maxWaitMs === undefined ? {} : { maxWaitMs: options.maxWaitMs }) }
@@ -362,7 +367,7 @@ function parseAuthCommand(tail: readonly string[]): AuthCommand {
   }
   const [endpoint, rest] = requiredPositional(values, `auth ${action} requires one Endpoint instance`);
   const options = commandOptions(`auth ${action}`, rest,
-    "--runtime", "--slot", ...(action === "login" ? ["--from"] as const : []),
+    "--runtime", "--workspace", "--slot", ...(action === "login" ? ["--from"] as const : []),
     ...(action === "status" ? ["--limit"] as const : []));
   const common = {
     command: "auth" as const,
@@ -576,7 +581,7 @@ function optionalProject(options: RawOptions): ProjectOption {
 }
 
 function optionalRuntime(options: RawOptions): RuntimeOption {
-  return runtimeOption(options.runtimeProfile);
+  return { ...runtimeOption(options.runtimeProfile), ...optionalProject(options) };
 }
 
 function runtimeOption(profile: string | undefined): RuntimeOption {

@@ -3,12 +3,14 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   rm,
   stat,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "@hypit/resource-store-fs";
@@ -554,6 +556,7 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
       browse: async (request) => await base.browse(request),
       describeOutput: async (build, output) => await base.describeOutput(build, output),
       resolve: async (build, output) => await base.resolve(build, output),
+      describeFile: async (build, file) => await base.describeFile(build, file),
       openFile: async (build, file) => await base.openFile(build, file),
     };
     return { repository };
@@ -603,6 +606,7 @@ test("a failed Result creation leaves no active Build", async () => {
     async browse() { return { results: [] }; },
     async describeOutput() { return undefined; },
     async resolve() { return undefined; },
+    async describeFile(_build, file) { return file; },
     async openFile() { return undefined; },
   };
   try {
@@ -666,7 +670,7 @@ test("an immediate Command left in started state fails its Build without invokin
   }
 });
 
-test("a selected historical file is staged once before its Build becomes active", async () => {
+test("a selected file is staged once and remains referenced in the produced Composite Result", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000009Z_0000000001-"));
   const initial = createGreetingBuild();
   const bytes = new Uint8Array([4, 3, 2, 1]);
@@ -699,7 +703,7 @@ test("a selected historical file is staged once before its Build becomes active"
     }, {
       producer: producers.assemble,
       handler: ({ inputs }) => ({
-        outputs: { document: { kind: "inline", value: { text: inputs.generated!.id } } },
+        outputs: { document: { kind: "inline", value: { layers: [{ content: inputs.generated!.value }] } } },
         needs: {},
       }),
     }],
@@ -718,11 +722,13 @@ test("a selected historical file is staged once before its Build becomes active"
         const source = (need.constraints as { readonly source: typeof historical }).source;
         assert.equal(await resources.has(source.resource), true);
         assert.deepEqual(await resources.get(source.resource), bytes);
-        return { value: { kind: "inline", value: "generated from history" } };
+        return { value: { kind: "inline", value: { image: source } } };
       },
     }],
   });
   try {
+    const inputPath = join(directory, "selected.png");
+    await writeFile(inputPath, bytes);
     const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
       components: [components],
@@ -742,7 +748,10 @@ test("a selected historical file is staged once before its Build becomes active"
           return (async function* () { yield bytes; })();
         },
       }],
-      result: resultDestination(directory),
+      result: { ...resultDestination(directory), resourceReferences: {
+        [historical.resource]: { kind: "external-file", uri: pathToFileURL(inputPath).href,
+          size: bytes.length, mediaType: historical.mediaType },
+      } },
     });
     assert.equal(attachmentOpens, 1);
     const work = new FileResourceStore(join(directory, ".hypit", "work", "bld_20260902T120000009Z_0000000001"));
@@ -754,6 +763,16 @@ test("a selected historical file is staged once before its Build becomes active"
     assert.equal(endpointCalls, 1);
     assert.equal(attachmentOpens, 1);
     assert.equal(await work.has(historical.resource), false);
+    const results = new FileBuildResultRepository(join(directory, "results"));
+    const resolved = (await results.resolve("bld_20260902T120000009Z_0000000001", "final.document"))!;
+    assert.equal(resolved.value.kind, "value");
+    if (resolved.value.kind !== "value") throw new Error("expected composite");
+    assert.deepEqual(resolved.value.document.resources.map((binding) => binding.file), [{
+      kind: "external-file", uri: pathToFileURL(inputPath).href, size: bytes.length, mediaType: historical.mediaType,
+    }]);
+    const resultDirectory = join(directory, "results", "2026-09-02", "bld_20260902T120000009Z_0000000001");
+    assert.deepEqual((await readdir(resultDirectory)).sort(), ["result.json", "values"]);
+    assert.deepEqual(await readFile(inputPath), Buffer.from(bytes));
     await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

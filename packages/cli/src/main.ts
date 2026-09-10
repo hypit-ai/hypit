@@ -177,12 +177,14 @@ export async function runCli(
   }
 
   let runtimeProfile = acceptsRuntimeContext(args) ? args.runtimeProfile : undefined;
+  let runtimeSelectionFile: string | undefined;
   const runtimeWasExplicit = runtimeProfile !== undefined;
   let runtimeNeedsHint = runtimeWasExplicit;
   if (acceptsRuntimeContext(args) && runtimeProfile === undefined) {
     const selected = await findRuntimeProfile(await commandProjectRoot());
     if (selected !== undefined) {
       runtimeProfile = selected.profile;
+      runtimeSelectionFile = selected.selectionFile;
       runtimeNeedsHint = false;
     }
   }
@@ -196,6 +198,7 @@ export async function runCli(
     await runEnvironmentCommand({
       args,
       runtimeProfile,
+      runtimeSelectionFile,
       io,
       distribution,
       projectRoot: await commandProjectRoot(),
@@ -387,6 +390,7 @@ export async function runCli(
         result: {
           repository: buildResults.location,
           ...(args.title === undefined ? {} : { title: args.title }),
+          resourceReferences: loadedRun.resultResourceReferences,
           forwards: result.resultForwards.filter((forward) =>
             catalog.publishedOutputs.some((published) => published.ref.id === forward.output)),
         },

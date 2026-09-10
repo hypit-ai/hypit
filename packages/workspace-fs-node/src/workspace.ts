@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readFile, realpath, stat } from "node:fs/promises";
@@ -177,6 +178,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     if (!this.#attachments.has(attachmentKey)) {
       this.#attachments.set(attachmentKey, {
         artifact: { ...artifact },
+        location: pathToFileURL(canonical).href,
         open: () => createReadStream(canonical),
       });
     }
@@ -189,7 +191,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
         const byResource = left.artifact.resource.localeCompare(right.artifact.resource);
         return byResource === 0 ? left.artifact.mediaType.localeCompare(right.artifact.mediaType) : byResource;
       })
-      .map((item) => ({ artifact: { ...item.artifact }, open: item.open }));
+      .map((item) => ({ ...item, artifact: { ...item.artifact } }));
   }
 }
 

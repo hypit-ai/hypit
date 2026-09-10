@@ -259,6 +259,7 @@
   },
   "dependencies": {
     "@puppeteer/browsers": "3.2.2",
+    "koffi": "3.2.1",
     "puppeteer-core": "25.10.0",
     "sharp": "0.35.3",
     "cmu-pronouncing-dictionary": "3.0.0",

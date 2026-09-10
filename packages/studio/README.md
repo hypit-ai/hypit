@@ -14,11 +14,55 @@ When `--runtime` is omitted, Studio reads the resolved project's `.hypit/runtime
 selection made by `hypit runtime use`. It does not search parent projects for a
 Profile. `--workspace` explicitly selects the project boundary; `--package-root`
 overrides the author package resolution root when those locations intentionally differ.
+Startup prints the project, Run, Profile and whether the Profile came from the command argument or
+the project's selection file. Relative command-line paths start at the invoking directory;
+`--workspace` selects the project without rebasing `--run` or `--runtime`.
 The upper-left library is intentionally not a filesystem browser:
 
 - Source is the exact Run + Author closure and writes back only the selected file;
-- Tasks combine finished project Results with read-only active `BuildView` and Operation information;
-- Artifacts are public files exposed by project Build Results.
+- Tasks show one card per Build, with All, In progress and Finished filters. Active progress comes from
+  the selected Runtime's read-only control interface; completed, failed and cancelled Builds come
+  from the project's Result Repository. Saving a Result and an issue requiring attention remain
+  visible, with the source Run and available progress or failure reason.
+- Artifacts show top-level file Outputs whose declared MIME type is image, video or audio,
+  including files already published by ongoing Builds. Composite Outputs retain their structure:
+  the library does not extract their embedded resources. Forwarded file Outputs resolve to their
+  owner; references to the same owner file share one card and retain their origins. Highlighted
+  Outputs sort first, without excluding other media.
+
+Source, Tasks and Artifacts use the shared `ui/sidebar-panel.ts` layout and navigation buttons. Each view
+owns its toolbar content, data and actions; the shared shell owns geometry and navigation styling.
+
+Views load on entry; returning to Tasks preserves its loaded list and selection. Explicit Refresh reads the latest state. There is no library polling.
+Refresh replaces the current snapshot; scrolling to the end loads more finished Results. Failed
+refreshes preserve the last view and show the error. Artifacts show project media through an icon sidebar: All media, Videos, Images and Audio.
+The header names the category and offers Refresh. Selecting a Task adds its name beside the category in the existing header, establishing a session-local task context without shifting the list; its arrow opens that Build's media. The context remains across tab changes. Click its name to return to the selected Task, or clear it to browse project media. Task selection does not write Source, Result or Runtime state. Selected tasks expand the complete error text with a copy action. Source details are available on each media card. A media category is sent to the server, which
+walks Result metadata pages until it collects a useful batch of matching files or reaches the end.
+This keeps Build storage unchanged while avoiding empty category pages. The browser appends
+older matches on scroll; Refresh reads the latest results for the current category.
+
+Media cards use fixed-size square cells, contain the file at its own aspect ratio, and show up to two
+wrapped name lines below. Selection colors the thumbnail area and name separately, without an
+outer card border. Resizing the
+sidebar distributes spare width between columns, then adds a column when another fixed-size
+card fits. Card size stays unchanged. Video thumbnails decode a frame in the browser; audio waveforms are also
+browser presentation, not additional Result files. Thumbnails load as their cells enter view.
+The CLI carries the author's component name from compilation provenance into the Result's
+optional Output `displayName`. The public Output identifier stays intact for references;
+Outputs without a display name show that identifier unchanged. Double-click a name or press F2
+to edit it in full; Enter or blur saves, Escape cancels. Failed saves retain the text and show the
+reason. A completed, failed or cancelled Build's name is written through Result Repository
+`updatePresentation` to that exact Output's `displayName`. Ongoing Builds become editable when
+they finish, following the existing Result presentation-edit boundary. Renaming never changes
+Output identity, referenced media files or other Builds' names for the same file.
+
+The composition has a frame-snapped progress slider and current/total time.
+Clicking a card opens the file in the central preview and pauses the composition. Images need
+no transport; video and audio share the play/mute controls and a seconds-based scrubber above
+the playback bar. The previous/next buttons skip five seconds for media, and step one frame
+for the composition. Back to composition restores the existing composition playhead. Selecting
+or seeking in the composition timeline also returns to it. Opening media changes no Source,
+Run, or Candidate selection.
 
 No project manifest, Studio database, output-directory scan or inferred campaign
 folder structure is involved. With no selected Runtime, finished Result tasks and
@@ -32,7 +76,10 @@ The selected targets must reach one Film and its resolved time source. Studio re
 distinct Films in one view; use separate Runs/sessions for those. A SemanticTrack supplies the
 Script lane and performance timing, including wordless Segments with media spans. A declared
 ProgramSpace supplies authored animation time without a Script lane. Both show their component
-tracks and use the same rendering and parameter-editing machinery.
+tracks and use the same rendering and parameter-editing machinery. When the snapshot contains
+a semantic timeline, its lane and label stay pinned directly below the time ruler while
+component tracks scroll. Its presence follows the resolved semantic timeline, including
+wordless content, rather than a component name or the presence of spoken words.
 
 Open the URL printed by Vite. Studio requests port 5179 by default, accepts `--port`,
 and Vite can choose another available port when it is occupied. Reuse that process
@@ -82,7 +129,7 @@ source binding is never shown merely because Studio can reach it. Material layer
 Resource id or Surface identity, never a Studio HTTP URL. Studio always owns
 time formatting and transport resolution, so chrome and material cannot hide a
 title or its time.
-Studio owns session-wide behavior and chrome: Companion assembly, collision rules,
+Studio owns session-wide behavior and chrome: Companion assembly, single-row overlap display,
 fallback defaults, selection treatment, playback, zoom,
 scrolling, the finite Inspector control set and source mutation transport. A
 companion cannot ship arbitrary DOM or CSS into the application.

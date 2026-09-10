@@ -104,6 +104,15 @@ through the same adapter registry as an explicit `@hypit/build-result-s3` select
 filesystem Repository shortcut.
 Runtime working Resources remain internal and Build-local; there is no ResourceStore selector. After
 a Result has an outcome, history is read from the selected repository, not Runtime SQLite.
+The submission passes known Resource references to the Result writer, separately from the execution
+graph. Staging bytes for a running Build does not make them new Result files: external and reused
+resources keep their addresses even when a Producer embeds them inside a new Composite value.
+
+While execution advances, Result synchronization publishes newly accepted public Outputs. The
+repository leaves its files or objects untouched when no new public Output is available; internal
+execution progress remains in SQLite. Once execution has a final decision, all accepted public Outputs
+and the outcome are saved before active state and working Resources are removed. This order applies
+to completed, failed and cancelled Builds alike.
 
 Saving a finished Result is a separate, idempotent storage action. If that write is interrupted, the
 Build keeps its already-decided outcome and reports exact operator attention. `hypit result finish

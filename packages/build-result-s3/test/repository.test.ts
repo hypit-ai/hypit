@@ -16,6 +16,7 @@ const takeType: TypeRef = {
 
 class MemoryS3 implements BuildResultS3Client {
   readonly objects = new Map<string, Uint8Array>();
+  readonly writes: string[] = [];
   readonly listRequests: {
     readonly prefix: string;
     readonly limit?: number;
@@ -24,10 +25,12 @@ class MemoryS3 implements BuildResultS3Client {
   }[] = [];
 
   async put(key: string, bytes: Uint8Array): Promise<void> {
+    this.writes.push(key);
     this.objects.set(key, Uint8Array.from(bytes));
   }
 
   async putStream(key: string, chunks: AsyncIterable<Uint8Array>): Promise<void> {
+    this.writes.push(key);
     const values: Uint8Array[] = [];
     let size = 0;
     for await (const chunk of chunks) {
@@ -80,6 +83,33 @@ class MemoryS3 implements BuildResultS3Client {
     this.objects.delete(key);
   }
 }
+
+test("S3 publishes new Outputs without uploading unchanged Result documents", async () => {
+  const client = new MemoryS3();
+  const repository = new S3BuildResultRepository({ bucket: "unused", prefix: "project", client });
+  const writer = await repository.create({
+    id: "bld_20260902T100000000Z_0000000001",
+    source: { path: "/project/main.svml" }, targets: ["answer"],
+    publishedOutputs: [{ name: "answer", output: "logical:answer" }],
+  });
+  const resources = { async open() { throw new Error("unexpected Resource read"); } };
+  const count = client.writes.length;
+  await writer.sync({ state: state({ records: [], bindings: [] }), resources });
+  assert.equal(client.writes.length, count);
+  const accepted = state({
+    records: [{ id: "record:answer", type: videoType, value: { kind: "inline", value: 42 } }],
+    bindings: [{ output: "logical:answer", record: "record:answer" }],
+  });
+  await writer.sync({ state: accepted, resources });
+  const published = client.writes.length;
+  assert.ok(published > count);
+  assert.deepEqual((await writer.read()).outputs.answer?.value, { kind: "inline", value: 42 });
+  await writer.sync({ state: accepted, resources });
+  assert.equal(client.writes.length, published);
+  await writer.finish({ outcome: "cancelled" });
+  assert.equal((await writer.read()).outcome, "cancelled");
+  assert.deepEqual((await writer.read()).outputs.answer?.value, { kind: "inline", value: 42 });
+});
 
 function state(input: {
   readonly status?: BuildState["status"];
@@ -197,10 +227,13 @@ test("S3 keeps the same Build Result model as the filesystem repository", async 
   );
   assert.deepEqual((await repository.browse({ limit: 20 })).results.map((item) => item.id), ["bld_20260902T100000000Z_0000000001"]);
   const presented = await repository.updatePresentation("bld_20260902T100000000Z_0000000001", {
+    outputDisplayNames: { "shot.video": "Opening portrait" },
     title: "Episode 12 opening",
     note: "Preferred composite.",
     highlightedOutputs: ["shot.video"],
   });
+  assert.equal(presented.outputs["shot.video"]?.displayName, "Opening portrait");
+  assert.equal((await repository.read(presented.id))?.outputs["shot.video"]?.displayName, "Opening portrait");
   assert.equal(presented.title, "Episode 12 opening");
   assert.equal(presented.note, "Preferred composite.");
   assert.deepEqual(presented.highlightedOutputs, ["shot.video"]);
@@ -404,4 +437,57 @@ test("S3 reduces repeated reuse to its finished content owner without copying by
   for await (const chunk of opened) chunks.push(chunk);
   assert.equal(new TextDecoder().decode(Uint8Array.from(chunks.flatMap((chunk) => [...chunk]))), "historical video");
   assert.equal([...client.objects.keys()].filter((key) => key.includes("/files/")).length, 1);
+});
+
+test("S3 Composite values retain external and prior-Result Resource references", async () => {
+  const client = new MemoryS3();
+  let external = new Uint8Array([1, 2, 3]);
+  const repository = new S3BuildResultRepository({ bucket: "test", prefix: "project", client,
+    externalFiles: {
+      async size(uri) { assert.equal(uri, "asset://selected/photo"); return external.length; },
+      async open(uri, range) {
+        assert.equal(uri, "asset://selected/photo");
+        return (async function* () { yield range === undefined ? external : external.slice(range.start, range.endExclusive); })();
+      },
+    },
+  });
+  const originalId = "bld_20260902T100000000Z_0000000001";
+  const reusedId = "bld_20260902T100000001Z_0000000001";
+  const video: BlobRef = { kind: "blob", resource: "res_generated", size: 2, mediaType: "video/mp4" };
+  const original = await repository.create({ id: originalId, source: { path: "main.svml" },
+    targets: ["video"], publishedOutputs: [{ name: "video", output: "video" }] });
+  await original.sync({ state: state({ records: [{ id: "r", type: videoType, value: video }],
+    bindings: [{ output: "video", record: "r" }] }),
+    resources: { async open() { return (async function* () { yield new Uint8Array([8, 9]); })(); } } });
+  await original.finish({ outcome: "complete" });
+  const saved = (await repository.resolve(originalId, "video"))!;
+  assert.equal(saved.value.kind, "build-file");
+  if (saved.value.kind !== "build-file") throw new Error("expected file");
+  const photo: BlobRef = { kind: "blob", resource: "res_photo", size: 3, mediaType: "image/png" };
+  const writer = await repository.create({ id: reusedId, source: { path: "main.svml" }, targets: ["layout"],
+    publishedOutputs: [{ name: "layout", output: "layout" }], resourceReferences: {
+      [photo.resource]: { kind: "external-file", uri: "asset://selected/photo", size: 3, mediaType: "image/png" },
+      [video.resource]: { ...saved.value, build: originalId },
+    } });
+  await writer.sync({ state: state({ records: [{ id: "r", type: takeType,
+    value: { kind: "inline", value: { layers: [{ parts: [photo, { clip: video, repeated: photo }] }] } } }],
+    bindings: [{ output: "layout", record: "r" }] }),
+    resources: { async open() { throw new Error("Referenced resources cannot be uploaded again"); } } });
+  await writer.finish({ outcome: "complete" });
+  assert.equal([...client.objects.keys()].filter((key) => key.includes("/files/")).length, 1);
+  const resolved = (await repository.resolve(reusedId, "layout"))!;
+  assert.equal(resolved.value.kind, "value");
+  if (resolved.value.kind !== "value") throw new Error("expected composite");
+  assert.equal(resolved.value.document.resources.length, 3);
+  const oldVideo = resolved.value.document.resources.find((binding) => binding.file.kind === "build-file")!;
+  assert.deepEqual(oldVideo.file, { ...saved.value, build: originalId });
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of (await repository.openFile(reusedId, oldVideo.file))!) chunks.push(chunk);
+  assert.deepEqual(Buffer.concat(chunks), Buffer.from([8, 9]));
+  const externalRef = resolved.value.document.resources.find((binding) => binding.file.kind === "external-file")!.file;
+  external = new Uint8Array([4, 5, 6, 7]);
+  assert.equal((await repository.describeFile(reusedId, externalRef)).size, 4);
+  const selected: Uint8Array[] = [];
+  for await (const chunk of (await repository.openFile(reusedId, externalRef, { start: 1, endExclusive: 3 }))!) selected.push(chunk);
+  assert.deepEqual(Buffer.concat(selected), Buffer.from([5, 6]));
 });

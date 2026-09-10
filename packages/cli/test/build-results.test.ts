@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileBuildResult, FileBuildResultRepository } from "@hypit/build-result";
@@ -13,6 +14,7 @@ import { runMarkupFrontend } from "@hypit/run-markup";
 import { NodeFilesystemWorkspace } from "@hypit/workspace-fs-node";
 
 import type { CliDistribution } from "../src/distribution.js";
+import { createCatalogDescriptor } from "../src/build-planning.js";
 import { runCli } from "../src/main.js";
 import { loadRunFile } from "../src/run-file.js";
 
@@ -471,6 +473,13 @@ test("build-record selects one exact Result Output without leaking its storage a
       packageContributions: [],
       results: countedRepository,
     });
+    const catalog = createCatalogDescriptor({ source: authorFile, compilation: loaded.author });
+    assert.equal(catalog.publishedOutputs.find((output) => output.name === "shot.video")?.displayName, "shot");
+    const renamed = createCatalogDescriptor({ source: authorFile, compilation: {
+      ...loaded.author,
+      exports: loaded.author.exports.map((output) => ({ ...output, name: `public.${output.name}` })),
+    } });
+    assert.equal(renamed.publishedOutputs.find((output) => output.name === "public.shot.video")?.displayName, "shot");
     const candidate = loaded.run.graph.candidates[0];
     assert.equal(candidate?.root.kind, "value");
     const value = candidate?.root.kind === "value" ? candidate.root.value.value : undefined;
@@ -486,12 +495,104 @@ test("build-record selects one exact Result Output without leaking its storage a
       sourceOutput: "shot.video",
     }]);
     assert.equal(loaded.attachments.length, 1);
+    assert.deepEqual(Object.values(loaded.resultResourceReferences), [{
+      kind: "build-file", build: "bld_20260902T110000001Z_0000000001",
+      path: "files/file-0001.mp4", size: bytes.byteLength, mediaType: "video/mp4",
+    }]);
     assert.equal(opens, 0, "compilation does not read or summarize historical bytes");
     const reused: number[] = [];
     for await (const chunk of await loaded.attachments[0]!.open()) reused.push(...chunk);
     assert.deepEqual(Uint8Array.from(reused), bytes);
     assert.equal(opens, 1, "Runtime staging opens the historical Result exactly once");
     assert.equal(loaded.compiler.planCompilation(loaded).state.plan.steps.length, 0);
+
+    // New Composite records may wrap imported values at arbitrary depth. Their Resource ownership
+    // must survive multiple Builds, including a mix of old media and newly produced bytes.
+    let imported = loaded;
+    const owner = "bld_20260902T110000001Z_0000000001";
+    for (const id of ["bld_20260902T110000002Z_0000000001", "bld_20260902T110000003Z_0000000001"]) {
+      const rootValue = imported.run.graph.candidates[0]!.root;
+      assert.equal(rootValue.kind, "value");
+      if (rootValue.kind !== "value") throw new Error("expected value");
+      const extra = { kind: "blob" as const, resource: `res_${id}`, size: 1, mediaType: "image/png" };
+      const current = await repository.create({
+        id, source: { path: authorFile }, targets: ["shot.video"],
+        publishedOutputs: [{ name: "shot.video", output: "wrapped" }],
+        resourceReferences: imported.resultResourceReferences,
+      });
+      await current.sync({
+        state: { status: "complete", records: [{ id: "record:wrapped", type: videoType,
+          value: { kind: "inline", value: { layers: [{ nested: rootValue.value.value }], extra } } }],
+          plan: { outputBindings: [{ output: "wrapped", record: "record:wrapped", type: videoType }] },
+        } as unknown as BuildState,
+        resources: { async open(artifact) {
+          assert.equal(artifact.resource, extra.resource, "Only genuinely new bytes may be copied");
+          return (async function* () { yield new Uint8Array([7]); })();
+        } },
+      });
+      await current.finish({ outcome: "complete" });
+      assert.deepEqual(await readdir(join(current.directory, "files")), ["file-0001.png"]);
+      const saved = await repository.resolve(id, "shot.video");
+      assert.equal(saved?.value.kind, "value");
+      if (saved?.value.kind !== "value") throw new Error("expected composite");
+      const original = saved.value.document.resources.find((binding) => binding.file.mediaType === "video/mp4")!;
+      assert.deepEqual(original.file, { kind: "build-file", build: owner, path: "files/file-0001.mp4", size: bytes.length, mediaType: "video/mp4" });
+      const received: number[] = [];
+      for await (const chunk of (await repository.openFile(id, original.file))!) received.push(...chunk);
+      assert.deepEqual(Uint8Array.from(received), bytes);
+      await writeFile(runFile, (await readFile(runFile, "utf8")).replace(/build="[^"]+"/, `build="${id}"`));
+      imported = await loadRunFile({ workspace: await authorCompiler.openFile(runFile), authorCompiler,
+        frontends: [runMarkupFrontend], packageContributions: [], results: repository });
+    }
+
+    // Explicit export collects a standalone bundle, including same-named files with different owners.
+    const bundle = join(root, "exported-layout");
+    await jsonCommand(["get", "bld_20260902T110000003Z_0000000001", "--output", "shot.video", "--to", bundle], root);
+    const exported = JSON.parse(await readFile(join(bundle, "value.json"), "utf8")) as import("@hypit/build-result").BuildResultValueDocument;
+    assert.equal(exported.resources.length, 3);
+    const exportedPaths = new Set<string>();
+    for (const binding of exported.resources) {
+      assert.equal(binding.file.kind, "build-file");
+      if (binding.file.kind !== "build-file") throw new Error("expected local export");
+      assert.equal(binding.file.build, undefined);
+      exportedPaths.add(binding.file.path);
+      assert.deepEqual(await readFile(join(bundle, binding.file.path)),
+        binding.file.mediaType === "video/mp4" ? Buffer.from(bytes) : Buffer.from([7]));
+    }
+    assert.equal(exportedPaths.size, 3);
+
+    // A file Candidate is a live address, even when republished by separate Builds.
+    const externalPath = join(root, "selected.mp4");
+    await writeFile(externalPath, bytes);
+    await writeFile(runFile, `<?svml using="@hypit/run-markup@1"?>
+<svrun version="1"><author source="./main.svml"/><target output="shot.video"/>
+<file id="selected" type="example.result-reuse@1#Video" from="./selected.mp4" media-type="video/mp4"/>
+<satisfy output="shot.video" candidate="selected"/></svrun>`);
+    const externalRun = await loadRunFile({ workspace: await authorCompiler.openFile(runFile), authorCompiler,
+      frontends: [runMarkupFrontend], packageContributions: [], results: repository });
+    assert.deepEqual(Object.values(externalRun.resultResourceReferences), [{
+      kind: "external-file", uri: pathToFileURL(await realpath(externalPath)).href, size: bytes.length, mediaType: "video/mp4",
+    }]);
+    for (const id of ["bld_20260902T110000004Z_0000000001", "bld_20260902T110000005Z_0000000001"]) {
+      const current = await repository.create({ id, source: { path: authorFile }, targets: ["shot.video"],
+        publishedOutputs: [{ name: "shot.video", output: logicalOutput!.id }],
+        resourceReferences: externalRun.resultResourceReferences });
+      await current.sync({ state: externalRun.compiler.planCompilation(externalRun).state,
+        resources: { async open() { throw new Error("External files must stay references"); } } });
+      await current.finish({ outcome: "complete" });
+      assert.deepEqual(await readdir(current.directory), ["result.json"]);
+    }
+    const externalBuild = "bld_20260902T110000005Z_0000000001";
+    await writeFile(externalPath, "replacement");
+    const changed = await repository.resolve(externalBuild, "shot.video");
+    assert.equal(changed?.value.kind, "external-file");
+    if (changed?.value.kind !== "external-file") throw new Error("expected file");
+    assert.equal(changed.value.size, 11);
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of (await repository.openFile(externalBuild, changed.value))!) chunks.push(chunk);
+    assert.equal(Buffer.concat(chunks).toString(), "replacement");
+    await rm(externalPath);
+    await assert.rejects(repository.resolve(externalBuild, "shot.video"), /ENOENT/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

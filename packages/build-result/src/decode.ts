@@ -70,14 +70,9 @@ function resultPath(value: unknown, subject: string): string {
 
 function outputValue(value: unknown, subject: string): BuildResultOutputValue {
   const item = object(value, subject);
-  if (item.kind === "build-file") {
+  if (item.kind === "build-file" || item.kind === "external-file") {
     assertBuildResultFileRef(item, subject);
-    return {
-      kind: "build-file",
-      path: item.path,
-      size: item.size,
-      mediaType: item.mediaType,
-    };
+    return { ...item };
   }
   if (item.kind === "build-output") {
     return {
@@ -106,6 +101,7 @@ function outputs(value: unknown, subject: string): Readonly<Record<string, Build
     text(name, `${subject} Output name`);
     const item = object(value, `${subject}[${JSON.stringify(name)}]`);
     return [name, {
+      ...(item.displayName === undefined ? {} : { displayName: text(item.displayName, `${subject}.displayName`) }),
       type: typeRef(item.type, `${subject}[${JSON.stringify(name)}].type`),
       value: outputValue(item.value, `${subject}[${JSON.stringify(name)}].value`),
     }] as const;
@@ -255,7 +251,7 @@ export function decodeBuildResultWriterState(
     if (logicalOutputs.has(output)) throw new Error(`${subject} publishes Logical Output ${output} more than once`);
     names.add(name);
     logicalOutputs.add(output);
-    return { name, output };
+    return { name, output, ...(published.displayName === undefined ? {} : { displayName: text(published.displayName, `${subject}.displayName`) }) };
   });
   const forwardedOutputs = new Set<string>();
   const forwards = item.forwards.map((value, index) => {
@@ -270,6 +266,12 @@ export function decodeBuildResultWriterState(
     };
   });
   return {
+    ...(item.resourceReferences === undefined ? {} : { resourceReferences: Object.fromEntries(
+      Object.entries(object(item.resourceReferences, `${subject}.resourceReferences`)).map(([resource, reference]) => {
+        assertBuildResultFileRef(reference, `${subject}.resourceReferences.${resource}`);
+        return [resource, reference];
+      }),
+    ) }),
     resources: pathMap(item.resources, `${subject}.resources`),
     values: pathMap(item.values, `${subject}.values`),
     publishedOutputs,
