@@ -96,15 +96,24 @@ test("measure prints the seconds a line takes so the author can write the litera
       "measure", "--text", "Video editing begins with meaning, not a pile of clips on a timeline.",
       "--language", "en", "--pace", "normal", "--rounding", "round", "--json",
     ], out.io, noHost);
-    const view = JSON.parse(out.text()) as { readonly seconds: number; readonly units: number; readonly language: string };
+    const view = JSON.parse(out.text()) as { readonly seconds: number; readonly units: number; readonly language: string; readonly rate: number };
     assert.equal(view.units, 20);
     assert.equal(view.language, "en");
     assert.equal(view.seconds, 4);
+    assert.equal(view.rate, 4.6);
 
     const human = capture();
     await runCreationCli(["measure", "--text", "hello world"], human.io, noHost);
     assert.match(human.text(), /^\d+(\.\d+)?s\n/u);
     assert.match(human.text(), /Choose the request duration/u);
+    assert.match(human.text(), /4\.6 units\/s \(normal\)/u);
+
+    const chinese = capture();
+    await runCreationCli(["measure", "--text", "这段中文有节奏", "--language", "zh", "--rate", "6", "--padding", "0.5"], chinese.io, noHost);
+    assert.match(chinese.text(), /^1\.667s/u);
+    assert.match(chinese.text(), /7 pronunciation units · zh · 6 units\/s/u);
+    assert.match(chinese.text(), /padding 0\.5s/u);
+    await assert.rejects(runCreationCli(["measure", "--text", "Hello", "--pace", "fast", "--rate", "6"], capture().io, noHost), /either --pace or --rate/u);
 
     for (const [text, seconds] of [["Hello.", 2 / 4.6], [Array.from({ length: 460 }, () => "day").join(" "), 100]] as const) {
       const measured = capture();
@@ -135,11 +144,42 @@ test("a Profile that does not serve the capability stops before anything is spen
       } }),
     };
     await assert.rejects(
-      runCreationCli(["transcribe", "speech.wav", "--to", "speech.json"], capture().io, unserved),
+      runCreationCli(["transcribe", "speech.wav", "--to", "speech.json", "--language", "en"], capture().io, unserved),
       /No Endpoint in .*hypit\.runtime\.json serves @hypit\/whisperx@1#whisperx-alignment; hypit plan --runtime/u,
     );
     assert.equal(invoked, false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("transcribe requires a spoken language before opening a host", async () => {
+  const noHost: CreationEnvironment = { cwd: "/tmp", openHost: async () => { throw new Error("host must not open"); } };
+  await assert.rejects(runCreationCli(["transcribe", "speech.wav", "--to", "speech.json"], capture().io, noHost),
+    /requires --language en\|zh\|es/u);
+});
+
+test("Chinese transcription explicitly sends zh and retains individual character windows", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-transcribe-zh-"));
+  try {
+    await writeFile(join(root, "speech.wav"), wav(32_000));
+    const selected = host([]);
+    const env: CreationEnvironment = { cwd: root, openHost: async () => ({ profile: join(root, "runtime.json"), host: {
+      ...selected,
+      invoke: async (need) => {
+        const request = need.constraints as unknown as WhisperXAlignmentRequest;
+        assert.equal(request.language, "zh");
+        return { value: { kind: "inline", value: canonicalize({ passages: interpretWhisperXTranscript({
+          segments: [{ words: [{ word: "你", start: 0.1, end: 0.24 }, { word: "好！", start: 0.5, end: 1.1 }] }],
+        }, request.sampleFrames) }) } };
+      },
+    } }) };
+    await runCreationCli(["transcribe", "speech.wav", "--language", "zh", "--to", "speech.json"], capture().io, env);
+    const result = JSON.parse(await readFile(join(root, "speech.json"), "utf8"));
+    assert.equal(result.language, "zh");
+    assert.deepEqual(result.passages[0].words, [
+      { text: "你", start_seconds: 0.1, end_seconds: 0.24 },
+      { text: "好！", start_seconds: 0.5, end_seconds: 1.1 },
+    ]);
+  } finally { await rm(root, { recursive: true, force: true }); }
 });

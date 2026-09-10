@@ -37,14 +37,23 @@ Result or state. It names the Endpoint and its price page before it runs, and wr
 to the chosen file. `measure` estimates a passage locally:
 
 ```bash
-hypit transcribe reference.mp4 --to notes/reference.transcript.json [--language en|zh|es]
+hypit transcribe reference.mp4 --to notes/reference.transcript.json --language en
 hypit measure main.svml --segment hook --language en --pace normal --rounding round
 ```
 
+For `transcribe`, set `--language` to the spoken language: `en`, `zh` or `es`. Chinese speech uses `zh`, including
+Chinese speech containing English names; the requested language selects the recognition/alignment
+model, independently of the eventual caption font or script's simplified/traditional characters.
+
 `transcribe` uses the Profile's `whisperx-alignment` Endpoint (after
 extracting 16 kHz mono speech audio with ffmpeg). `measure` counts a Segment's pronunciation units at a
-delivery policy and prints the seconds to write as the literal `duration`; it opens no Profile and
-spends nothing. `--runtime <profile>` names the Profile; otherwise the project's `hypit runtime use`
+delivery policy and prints estimated seconds, the resolved rate, padding and rounding. Choose the
+literal `duration` from that estimate and the intended performance. `measure` opens no Profile and
+spends nothing. It accepts `--pace slow|normal|fast` or `--rate <units/s>`; JSON includes the resolved
+`rate` even when using a named pace. [Estimate](../estimate/README.md#units-and-delivery) explains
+Chinese/English units and choosing a whole-passage density.
+
+For `transcribe`, `--runtime <profile>` names the Profile; otherwise the project's `hypit runtime use`
 selection is read. Anything the Author Graph declares as an output is a Build, however quickly it
 comes back: pictures, clips and accepted voice references (`@hypit/mimo-speech`) carry the identity of the Source
 that produced them, so they are declared in the Source and go through `plan` and `build`. To hear a

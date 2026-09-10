@@ -126,6 +126,14 @@ name, including other Segments, so separately generated performances receive the
 The right-hand wording reaches the model through the Segment's `.dialogue`; Caption keeps the
 display spelling. Settle these readings before measuring the Script and requesting its performance.
 
+The same distinction helps Chinese copy express numbers and names clearly. For example,
+`今年<2026|二零二六>年` displays the year compactly while specifying how it is said;
+`只要<¥19.9|十九块九>` chooses a conversational price reading. Choose the spoken form for this
+sentence's meaning and delivery. Measuring the Segment with `--language zh` then uses that spoken
+wording, including the syllables hidden behind its compact numeric display. Caption retains the
+authored simplified or traditional characters; transcription supplies timing rather than rewriting
+the displayed Script.
+
 ## Use the Script's deliberate projections
 
 One Script publishes the full Narrative and the narrow views needed by the rest of the work:
@@ -219,10 +227,18 @@ estimates how many seconds they need at the chosen language and pace, using loca
 ```bash
 hypit measure path/to/source.svml --segment opening --language en --pace normal
 hypit measure --text "You expect me to type every coffee?" --language en --pace normal --rounding ceil
+hypit measure path/to/source.svml --segment opening --language zh --pace fast --rounding round
 ```
 
-Use `--pace slow|normal|fast`, or `--rate` for pronunciation units per second; `--padding` adds time
-for the intended pause or action. Keep related performances at a coherent delivery density. Initial
+Choose `--pace slow|normal|fast` from the intended delivery: conversational explanation may suit
+`normal`, while brisk, tightly cut social delivery often suits `fast`. The CLI prints the actual
+units-per-second rate; `--rate` lets you choose it directly. Mandarin counts Han characters as
+approximate syllables and embedded English by syllable; English counts syllables rather than words.
+Set `--language zh` for Chinese copy, including copy with English product names, and measure the
+pronunciation side of Dual Text with `--segment`.
+
+The density includes ordinary phrasing pauses. `--padding` reserves additional time for an intended
+reaction, demonstration or held pause. Keep related performances at a coherent delivery density. Initial
 estimates can retain fractions with `--rounding none`. `ceil` rounds upward to a whole second, while
 `round` chooses the nearest one. Most video requests use whole seconds; choose the final literal with
 the selected model's supported values and the intended performance in mind.

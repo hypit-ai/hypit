@@ -9,6 +9,7 @@ import {
   countSpeechEstimateUnits,
   estimateSpeechDuration,
   resolveSpeechEstimateLanguage,
+  resolveSpeechEstimateRate,
   speechEstimatePolicyFromAttributes,
 } from "@hypit/estimate";
 import type { CanonicalValue, CapabilityRef, Need, StoredValue } from "@hypit/protocol";
@@ -275,8 +276,9 @@ async function transcribe(argv: readonly string[], io: CliIo, environment: Creat
   const parsed = parseArguments(argv, ["--language", "--to", "--runtime", "--workspace"]);
   assert(parsed.positionals.length === 1, "transcribe takes exactly one audio or video file");
   const source = resolve(environment.cwd, parsed.positionals[0]!);
-  const language = parsed.options.get("--language") ?? "en";
-  assert(language === "en" || language === "zh" || language === "es", "--language must be en, zh or es");
+  const language = parsed.options.get("--language");
+  assert(language === "en" || language === "zh" || language === "es",
+    "transcribe requires --language en|zh|es for the spoken language (use --language zh for Chinese)");
   const to = await destination(parsed, environment.cwd);
   const { profile, host } = await environment.openHost(
     parsed.options.get("--runtime"),
@@ -382,6 +384,7 @@ async function measure(argv: readonly string[], io: CliIo, environment: Creation
   }
   const pace = parsed.options.get("--pace");
   const rate = parsed.options.get("--rate");
+  assert(pace === undefined || rate === undefined, "measure takes either --pace or --rate, not both");
   const policy = speechEstimatePolicyFromAttributes({
     language: parsed.options.get("--language") ?? "auto",
     ...(rate === undefined ? { pace: pace ?? "normal" } : { rate }),
@@ -391,6 +394,7 @@ async function measure(argv: readonly string[], io: CliIo, environment: Creation
   const language = resolveSpeechEstimateLanguage(text, policy.language);
   const units = countSpeechEstimateUnits(text, language);
   const seconds = estimateSpeechDuration(sealText(text), policy);
+  const resolvedRate = resolveSpeechEstimateRate(policy, language);
   const view = {
     format: "hypit.video-cli-measure@1",
     ...where,
@@ -398,11 +402,13 @@ async function measure(argv: readonly string[], io: CliIo, environment: Creation
     units,
     language,
     policy,
+    rate: resolvedRate,
     seconds,
   };
   if (parsed.json) { io.write(`${JSON.stringify(view, null, 2)}\n`); return; }
-  const delivery = policy.rate === undefined ? `${policy.pace} pace` : `${policy.rate} units/s`;
-  io.write(`${seconds}s\n\n  ${units} pronunciation units · ${language} · ${delivery} · rounding ${policy.rounding}\n`
+  const delivery = `${resolvedRate} units/s${policy.pace === undefined ? "" : ` (${policy.pace})`}`;
+  io.write(`${Number(seconds.toFixed(3))}s\n\n  ${units} pronunciation units · ${language} · ${delivery}\n`
+    + `  padding ${policy.paddingSec ?? 0}s · rounding ${policy.rounding}\n`
     + `  ${"segment" in where ? `${where.segment} in ${where.source}` : `${text.length} characters`}\n`
     + "  Choose the request duration from this estimate, the intended performance, and the selected model's supported values.\n");
 }
@@ -416,7 +422,7 @@ export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
       "hypit transcribe",
       "Establish word times with the whisperx-alignment Endpoint of the selected Runtime Profile.",
       "",
-      "  hypit transcribe <audio|video> --to <transcript.json> [--language en|zh|es] [--runtime <profile>] [--workspace <project>]",
+      "  hypit transcribe <audio|video> --to <transcript.json> --language en|zh|es [--runtime <profile>] [--workspace <project>]",
       "",
       "Extracts 16 kHz mono speech audio with ffmpeg and writes every word with its start and end in",
       "seconds. One immediate request; no Build, Result or state.",

@@ -48,6 +48,11 @@ reveals and emphasis. Keep that transcript beside the reference and interpret it
 surrounding argument, visible names and supplied context. Small transcription errors can coexist
 with a clear understanding of what the passage means.
 
+Pass the reference's spoken language explicitly: `--language zh` for Chinese, `en` for English,
+or `es` for Spanish. A Chinese passage can contain English brands and names while still using `zh`.
+Its timed Chinese characters help locate a phrase precisely; group those characters into meaningful
+phrases when describing the reference and writing the new Script.
+
 [Environment selection](../environment/profile.md#choose-the-practical-capability-path-with-the-user)
 explains assessing local preparation and choosing the local or hosted path for this transcription.
 
@@ -78,7 +83,7 @@ their changes and handoffs.
 
 ```bash
 hypit transcribe references/ad/source.mp4 \
-  --to references/ad/transcript.json
+  --language en --to references/ad/transcript.json
 
 hypit media tile references/ad/source.mp4 --start 0 --end 12 --every 1 \
   --to references/ad/evidence/opening.jpg

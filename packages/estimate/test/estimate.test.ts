@@ -4,6 +4,7 @@ import { sealText } from "@hypit/text";
 
 import {
   countSpeechEstimateUnits,
+  detectSpeechEstimateLanguage,
   estimateSpeechDuration,
   sealSpeechEstimatePolicy,
   speechEstimatePolicyFromAttributes,
@@ -32,7 +33,7 @@ test("normal English speech estimate follows the delivery-density policy", () =>
   assert.equal(result, 4);
 });
 
-test("English pace presets occupy adjacent integer durations", () => {
+test("English pace choices give a passage room for deliberate or brisk delivery", () => {
   const source = sealText(Array.from({ length: 49 }, () => "day").join(" "));
   const estimate = (pace: "slow" | "normal" | "fast") => estimateSpeechDuration(
     source,
@@ -42,7 +43,7 @@ test("English pace presets occupy adjacent integer durations", () => {
       rounding: normal.rounding,
     }),
   );
-  assert.deepEqual([estimate("slow"), estimate("normal"), estimate("fast")], [12, 11, 10]);
+  assert.deepEqual([estimate("slow"), estimate("normal"), estimate("fast")], [12, 11, 9]);
 });
 
 test("a numeric rate gives SVS a continuous author-controlled pace", () => {
@@ -122,4 +123,22 @@ test("an SVS Recipe configures one reusable estimate policy without becoming exe
     path: "speech.invalid",
     properties: { provider: "unknown-provider" },
   }), /unknown property/u);
+});
+
+test("Chinese estimates count Han pronunciation units, including names outside the basic Unicode plane", () => {
+  assert.equal(detectSpeechEstimateLanguage("𠮷"), "zh");
+  assert.equal(countSpeechEstimateUnits("這段中文有節奏。", "zh"), 7);
+  assert.equal(countSpeechEstimateUnits("𠮷野家", "zh"), 3);
+  assert.equal(countSpeechEstimateUnits("二零二六年", "zh"), 5);
+  assert.equal(countSpeechEstimateUnits("用 video 做视频", "zh"), 7);
+});
+
+test("Chinese mixed-language punctuation preserves English word boundaries", () => {
+  for (const separator of [" ", ",", "，", "/", "。", "："]) {
+    assert.equal(countSpeechEstimateUnits(`用 idea${separator}video 做视频`, "zh"), 10);
+  }
+  const source = sealText("用 idea，video 做视频");
+  assert.equal(estimateSpeechDuration(source, {
+    language: "zh", rate: 5, rounding: "none", paddingSec: 0.5,
+  }), 2.5);
 });

@@ -14,9 +14,9 @@ const PACE_RATE: Readonly<Record<
   ResolvedSpeechEstimateLanguage,
   Readonly<Record<SpeechEstimatePace, number>>
 >> = {
-  // English is calibrated as delivery density, not pause-free articulation rate.
-  en: { slow: 4.2, normal: 4.6, fast: 5 },
-  // Preserve the existing non-English behavior until those languages are audited.
+  // Authoring delivery densities, including ordinary pauses, not measured model
+  // guarantees or pause-free articulation rates. See README for units and rationale.
+  en: { slow: 4.2, normal: 4.6, fast: 5.6 },
   zh: { slow: 4.2, normal: 5.25, fast: 6.5625 },
   ja: { slow: 6, normal: 7.5, fast: 9.375 },
   es: { slow: 4.72, normal: 5.9, fast: 7.375 },
@@ -35,7 +35,7 @@ function looksSpanish(text: string): boolean {
 }
 
 export function detectSpeechEstimateLanguage(text: string): ResolvedSpeechEstimateLanguage {
-  const han = (text.match(/[\u3400-\u9fff]/gu) ?? []).length;
+  const han = (text.match(/\p{Script=Han}/gu) ?? []).length;
   const kana = (text.match(/[\u3040-\u30ff]/gu) ?? []).length;
   const ascii = (text.match(/[A-Za-z]/gu) ?? []).length;
   if (kana > Math.max(han, ascii / 4)) return "ja";
@@ -117,10 +117,9 @@ export function countSpeechEstimateUnits(
   language: ResolvedSpeechEstimateLanguage,
 ): number {
   if (language === "zh" || language === "ja") {
-    const cjk = (text.match(/[\u3400-\u9fff\u3040-\u30ff]/gu) ?? []).length;
-    const latin = text
-      .replace(/[\u3400-\u9fff\u3040-\u30ff]/gu, " ")
-      .split(/\s+/u)
+    const characters = /[\p{Script=Han}\u3040-\u30ff]/gu;
+    const cjk = (text.match(characters) ?? []).length;
+    const latin = words(text.replace(characters, " "))
       .filter((word) => /[A-Za-z]/u.test(word));
     return cjk + latin.reduce((sum, word) => sum + englishSyllables(word), 0);
   }
