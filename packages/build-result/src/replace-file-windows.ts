@@ -37,7 +37,10 @@ function failure(syscall: string, from: string, to: string): Error {
 export function replaceWindowsFile(from: string, to: string): void {
   const filename = Buffer.from(toNamespacedPath(to), "utf16le");
   const nameOffset = koffi.offsetof(renameInfo, "FileName");
-  const info = Buffer.alloc(Math.max(koffi.sizeof(renameInfo), nameOffset + filename.length));
+  // Win32 requires a NUL-terminated FileName even though FileNameLength excludes
+  // that terminator. Buffer.alloc leaves the final WCHAR zero-initialized.
+  // https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info
+  const info = Buffer.alloc(Math.max(koffi.sizeof(renameInfo), nameOffset + filename.length + 2));
   info.writeUInt32LE(REPLACE_IF_EXISTS | POSIX_SEMANTICS, koffi.offsetof(renameInfo, "Flags"));
   info.writeUInt32LE(filename.length, koffi.offsetof(renameInfo, "FileNameLength"));
   filename.copy(info, nameOffset);

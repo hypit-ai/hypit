@@ -281,8 +281,9 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     }],
   });
 
+  let firstRuntime: Awaited<ReturnType<typeof createLocalRuntime>> | undefined;
   try {
-    const firstRuntime = await createLocalRuntime({
+    firstRuntime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
       components: [components],
       endpoints: [endpointPackage],
@@ -339,8 +340,8 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     const cancelled = await finishClaimedBuild(firstRuntime);
     assert.equal(cancelled.outcome, "cancelled");
     assert.equal(cancels, 1);
-    await firstRuntime.close();
   } finally {
+    await firstRuntime?.close();
     await rm(directory, { recursive: true, force: true });
   }
 });
@@ -645,8 +646,9 @@ test("an immediate Command left in started state fails its Build without invokin
       },
     }],
   };
+  let runtime: Awaited<ReturnType<typeof createLocalRuntime>> | undefined;
   try {
-    const runtime = await createLocalRuntime({
+    runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
       components: [components],
     });
@@ -664,8 +666,8 @@ test("an immediate Command left in started state fails its Build without invokin
       .read("bld_20260902T120000008Z_0000000001");
     assert.equal(failed?.outcome, "failed");
     assert.match(failed?.failure ?? "", /stopped before its result was stored/u);
-    await runtime.close();
   } finally {
+    await runtime?.close();
     await rm(directory, { recursive: true, force: true });
   }
 });
