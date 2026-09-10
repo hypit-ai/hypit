@@ -13,6 +13,8 @@ organize a particular appearance; the selected details make that direction speci
 
 ## Japanese sailor on an apartment balcony
 
+![Sailor-style presenter on a balcony, with navy clothing, terracotta tiles and green plants](https://storage.googleapis.com/hypit-public-assets/assets/skills/hypit/image-direction/2026-09-10/japanese-sailor-balcony.webp)
+
 The user selected the result generated from this exact prompt. The Person paragraph gives a
 specific casting direction, strong beauty, broad shoulders and head-to-shoulder proportions, with
 long straight hair and sailor styling. Shot establishes the frontal speaking state, free-hand
@@ -42,6 +44,8 @@ view instead directs attention toward the partner. See the [idle guidance](../im
 
 ## Goth girl outside a Korean cafe
 
+![Goth presenter outside a navy-and-yellow Korean café, holding a microphone beside a dessert table](https://storage.googleapis.com/hypit-public-assets/assets/skills/hypit/image-direction/2026-09-10/goth-korean-cafe.webp)
+
 Soft goth styling gives the person a clear visual character within an ordinary café setting. The grape bingsu and nearby table connect her rightward placement to a visit already underway.
 
 ```text
@@ -55,6 +59,8 @@ She is seated outside a street-side café in Korea. Behind her are entrance step
 ```
 
 ## Clean Girl in a Korean cafe
+
+![Clean-girl presenter in navy knit beside a café counter, with green tiles and wooden shelves](https://storage.googleapis.com/hypit-public-assets/assets/skills/hypit/image-direction/2026-09-10/clean-girl-cafe.webp)
 
 Clean-girl makeup, a sleek ponytail and navy knit give the person a clear style. The wooden counter and iced latte connect the seated composition to the café; pistachio green and walnut support the navy outfit.
 
@@ -70,6 +76,8 @@ She is in a neighborhood café in Seoul. Behind her are wooden shelves, a tiled 
 
 ## Coquette girl in a bay-window bedroom
 
+![Coquette presenter with a pink bow and lace top, seated in a green bay-window bedroom](https://storage.googleapis.com/hypit-public-assets/assets/skills/hypit/image-direction/2026-09-10/coquette-bedroom.webp)
+
 Coquette styling is carried by the hair bow, doe-eyed makeup and pink lace. A bay-window alcove supports the centered seat, while green and wood give the pink clothing a distinct place in the palette.
 
 ```text
@@ -84,6 +92,8 @@ She is in an apartment bedroom. Behind her are a bay window with floral curtains
 
 ## Harajuku Decora girl outside a fashion shop
 
+![Decora presenter with pink double buns and a lilac hoodie outside colorful Harajuku shops](https://storage.googleapis.com/hypit-public-assets/assets/skills/hypit/image-direction/2026-09-10/harajuku-decora.webp)
+
 Decora supplies the styling idea; pink double buns, a graphic hoodie and a few accessories make it specific. The shop entrance gives the centered standing view a natural frame.
 
 ```text
@@ -97,6 +107,8 @@ She is on a shopping street in Harajuku, Tokyo. Behind her are a shop window dis
 ```
 
 ## Streetwear guy beside a basketball court
+
+![Streetwear presenter in a navy graphic shirt beside a terracotta-and-teal basketball court](https://storage.googleapis.com/hypit-public-assets/assets/skills/hypit/image-direction/2026-09-10/streetwear-basketball.webp)
 
 A hip-hop-star beauty comparison, short twists and relaxed streetwear establish the person. The bench and open court explain the offset framing, with terracotta and teal giving the surroundings a deliberate palette.
 
