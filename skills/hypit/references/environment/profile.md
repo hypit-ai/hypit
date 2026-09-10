@@ -36,7 +36,7 @@ explains where to inspect existing preparation and known service configuration.
 
 - Recommend local WhisperX when the machine and preparation time make it practical. Its calls have
   no hosted Provider charge; first preparation may install a runtime and download model weights.
-  Where Hugging Face is unreachable, such as from mainland China, set `HF_ENDPOINT=https://hf-mirror.com`.
+  Where Hugging Face is unreachable or unstable, such as from mainland China, set `HF_ENDPOINT=https://hf-mirror.com`.
   [Local tools](local-tools.md#select-local-whisperx-explicitly) owns setup and repair guidance.
 - Use a supported BYOK Provider when the user already has that account and wants to use it.
 - Offer HypiHub when the user prefers one hosted account or wants an alternative to local preparation.
