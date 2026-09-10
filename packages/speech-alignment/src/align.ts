@@ -66,12 +66,26 @@ function pairedCost(
 ): number {
   const sourceText = comparisonText(source);
   const evidenceText = comparisonText(evidence);
+  // Identical wording with different token boundaries is a segmentation difference. Its cost
+  // must not grow with the number of letters a recognizer happens to emit for one word.
+  if (sourceText === evidenceText) return source.length === 1 && evidence.length === 1 ? 0 : 0.055;
   const width = Math.max([...sourceText].length, [...evidenceText].length, 1);
   const distance = editDistance([...sourceText], [...evidenceText]) / width;
   const grouping = 0.055 * Math.max(0, source.length + evidence.length - 2);
   const exactWords = exactWordLcs(source, evidence);
   const unmatchedWordBoundaries = source.length + evidence.length - 2 * exactWords;
   return distance * evidenceReliability(evidence) + grouping + 0.06 * unmatchedWordBoundaries;
+}
+
+function exactRunLength(target: string, parts: readonly string[], start: number): number {
+  if (target.length === 0) return 0;
+  let joined = "";
+  for (let index = start; index < parts.length; index += 1) {
+    joined += parts[index];
+    if (joined === target) return index - start + 1;
+    if (!target.startsWith(joined)) return 0;
+  }
+  return 0;
 }
 
 function better(candidate: Cell, current: Cell | undefined): boolean {
@@ -155,34 +169,44 @@ export function alignWordGroups(
     }
   };
 
+  const sourceTexts = source.map((token) => normalizeForAlignment(token.text));
+  const evidenceTexts = evidence.map((word) => normalizeForAlignment(word.text));
   for (let sourceIndex = 0; sourceIndex <= source.length; sourceIndex += 1) {
     for (let evidenceIndex = 0; evidenceIndex <= evidence.length; evidenceIndex += 1) {
       if (!rows[sourceIndex]![evidenceIndex]) continue;
+      const pair = (sourceCount: number, evidenceCount: number): void => {
+        const sourceGroup = source.slice(sourceIndex, sourceIndex + sourceCount);
+        const evidenceGroup = evidence.slice(evidenceIndex, evidenceIndex + evidenceCount);
+        const exactOneToOne = sourceCount === 1
+          && evidenceCount === 1
+          && sourceGroup[0]!.normalized === normalizeForAlignment(evidenceGroup[0]!.text);
+        const cost = pairedCost(sourceGroup, evidenceGroup);
+        update(
+          sourceIndex,
+          evidenceIndex,
+          sourceIndex + sourceCount,
+          evidenceIndex + evidenceCount,
+          {
+            sourceSegmentId,
+            sourceTokenIds: sourceGroup.map((token) => token.id),
+            evidenceWordStart: evidenceIndex,
+            evidenceWordEndExclusive: evidenceIndex + evidenceCount,
+            relation: relation(sourceCount, evidenceCount, exactOneToOne),
+            cost,
+          },
+          exactOneToOne ? 1 : 0,
+        );
+      };
       for (let sourceCount = 1; sourceCount <= maxGroupSize && sourceIndex + sourceCount <= source.length; sourceCount += 1) {
         for (let evidenceCount = 1; evidenceCount <= maxGroupSize && evidenceIndex + evidenceCount <= evidence.length; evidenceCount += 1) {
-          const sourceGroup = source.slice(sourceIndex, sourceIndex + sourceCount);
-          const evidenceGroup = evidence.slice(evidenceIndex, evidenceIndex + evidenceCount);
-          const exactOneToOne = sourceCount === 1
-            && evidenceCount === 1
-            && sourceGroup[0]!.normalized === normalizeForAlignment(evidenceGroup[0]!.text);
-          const cost = pairedCost(sourceGroup, evidenceGroup);
-          update(
-            sourceIndex,
-            evidenceIndex,
-            sourceIndex + sourceCount,
-            evidenceIndex + evidenceCount,
-            {
-              sourceSegmentId,
-              sourceTokenIds: sourceGroup.map((token) => token.id),
-              evidenceWordStart: evidenceIndex,
-              evidenceWordEndExclusive: evidenceIndex + evidenceCount,
-              relation: relation(sourceCount, evidenceCount, exactOneToOne),
-              cost,
-            },
-            exactOneToOne ? 1 : 0,
-          );
+          pair(sourceCount, evidenceCount);
         }
       }
+      // Bound fuzzy alternatives, but follow a complete exact split/merge regardless of token count.
+      const evidenceRun = exactRunLength(sourceTexts[sourceIndex] ?? "", evidenceTexts, evidenceIndex);
+      if (evidenceRun > maxGroupSize) pair(1, evidenceRun);
+      const sourceRun = exactRunLength(evidenceTexts[evidenceIndex] ?? "", sourceTexts, sourceIndex);
+      if (sourceRun > maxGroupSize) pair(sourceRun, 1);
       if (sourceIndex < source.length) {
         const token = source[sourceIndex]!;
         update(

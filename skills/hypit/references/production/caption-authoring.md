@@ -97,6 +97,12 @@ grouping. Compose adjacent Han characters without Latin word gaps, preserve punc
 word, and use the selected fonts' actual widths for layout. Exercise mixed-script names as well as
 plain English when the family will carry Chinese copy.
 
+For speech-following emphasis, activate each complete unit from its projected start and end.
+A Cue-wide left-to-right progress bar follows elapsed time and text width, which is a different
+effect from following spoken characters. Keep within-glyph wiping an explicit visual choice.
+Use uneven unit durations and a pause in a short example to check that the chosen effect follows
+the intended clock.
+
 `caption:Mute` suppresses selected display units while preserving speech. A new family should use
 the common mute application when scheduling, as Fine does. Validate that schedule, document, narrative
 and ProgramSpace belong together; do not silently accept timing from another video.

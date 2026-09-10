@@ -403,3 +403,23 @@ test("a backwards character measurement is treated as missing token timing", () 
   const middle = map.tokens[1]!;
   assert.equal(middle.endFrameExclusive > middle.startFrame, true);
 });
+
+test("exact segmentation differences have no word-count ceiling", () => {
+  const name = "ElevenLabs";
+  const split = parseScript("letters.svml", `<line>用${name}做视频</line>`);
+  const letters = [...`用${name}做视频`].map((text, index) => ({
+    text, startSec: (100 + index * 200) / 1000, endSec: (200 + index * 200) / 1000,
+  }));
+  const map = locate(split, { words: letters, durationSec: 4 });
+  assert.deepEqual(map.tokens.slice(0, 3).map((token, index) => [split.tokens[index]!.text, token.startFrame, token.endFrameExclusive]),
+    [["用", 100, 200], [name, 300, 2200], ["做", 2300, 2400]]);
+
+  const merged = parseScript("merged-zh.svml", "<line>这是非常自然的节奏</line>");
+  const text = "这是非常自然的节奏";
+  const starts = [...text].map((_, index) => (100 + index * 150) / 1000);
+  const ends = starts.map(start => start + 0.08);
+  const mergedMap = locate(merged, { words: [{ text, startSec: starts[0]!, endSec: ends.at(-1)! }],
+    chars: characters(text, starts, ends), durationSec: 3 });
+  assert.deepEqual(mergedMap.tokens.map(token => [token.startFrame, token.endFrameExclusive]),
+    starts.map((start, index) => [Math.round(start * 1000), Math.round(ends[index]! * 1000)]));
+});

@@ -302,3 +302,99 @@ test("Fine Caption rejects token-specific Style runs instead of disguising a str
     /one uniform token rule/u,
   );
 });
+
+function unevenChineseCaption(properties: SvsRecipe["properties"] = {}) {
+  const { document, program, projection } = fixture("<line>你真好看</line>");
+  const { "max-lines": _lines, "max-words-per-line": _words, ...flow } = recipe.properties;
+  const style = fineCaptionStyle("plain", {
+    ...recipe, properties: { ...flow, ...properties },
+  }, [font]);
+  const windows = [[10, 13], [13, 32], [36, 42], [42, 55]] as const;
+  const timed: TimedCaptionProjection = {
+    ...projection,
+    cues: [{ ...projection.cues[0]!, endFrameExclusive: 55,
+      units: document.units.map((unit, index) => ({ unitId: unit.id,
+        startFrame: windows[index]![0], endFrameExclusive: windows[index]![1] })),
+    }],
+  };
+  const styled = { ...program, styles: [style] };
+  const track = renderFineCaption(scheduleFineCaption(timed, styled, document), styled, document,
+    sealProgramSpace({ id: "test-space", durationSec: 3, frameRate: { numerator: 30, denominator: 1 } }));
+  return { track, windows };
+}
+
+function numericStyleAt(element: import("@hypit/composition").VisualElement, frame: number, name: string): number {
+  const frames = element.animation!.keyframes;
+  const left = [...frames].reverse().find((item) => item.atFrame <= frame)!;
+  const right = frames.find((item) => item.atFrame > frame) ?? left;
+  const value = (item: typeof left) => Number(item.style.find((item) => item.name === name)!.value);
+  return left === right ? value(left)
+    : value(left) + (value(right) - value(left)) * (frame - left.atFrame) / (right.atFrame - left.atFrame);
+}
+
+for (const mode of ["current", "trail"] as const) {
+  test(`Chinese ${mode} karaoke, underline and boxes follow unequal character times and pauses`, () => {
+    const { track, windows } = unevenChineseCaption({
+      karaoke: mode, "active-underline": mode, "active-box": mode,
+    });
+    const present = track.presents[0]!;
+    for (const [index, [start, end]] of windows.entries()) {
+      for (const suffix of ["active", "underline", "box"]) {
+        const element = present.elements.find((item) => item.id === `atom-${index + 1}-${suffix}`)!;
+        assert.ok(element);
+        for (let frame = present.span.startFrame; frame < present.span.endFrameExclusive; frame++) {
+          const active = frame >= start && (mode === "trail" || frame < end);
+          assert.equal(numericStyleAt(element, frame - present.span.startFrame, "opacity"), Number(active),
+            `${suffix} character ${index + 1} at frame ${frame}`);
+        }
+        assert.equal(element.animation!.keyframes.some((keyframe) =>
+          keyframe.style.some(({ name }) => name === "clip-path")), false);
+      }
+    }
+    assert.equal(present.elements.find((item) => item.id === "cue")!.style
+      .some(({ name }) => name === "column-gap"), false);
+  });
+}
+
+test("Chinese wipe remains an explicit within-character effect with each character's own interval", () => {
+  const { track, windows } = unevenChineseCaption({ karaoke: "trail", "karaoke-transition": "wipe" });
+  const present = track.presents[0]!;
+  for (const [index, [start, end]] of windows.entries()) {
+    const active = present.elements.find((item) => item.id === `atom-${index + 1}-active`)!;
+    const clip = (frame: number) => active.animation!.keyframes
+      .find((item) => item.atFrame === frame - present.span.startFrame)!.style[0]!.value;
+    assert.equal(clip(start), "inset(0 100% 0 0)");
+    assert.equal(clip(end), "inset(0 0% 0 0)");
+  }
+});
+
+test("Chinese typewriter reveals whole characters at their own starts, including uneven holds", () => {
+  const { track, windows } = unevenChineseCaption({ "atom-reveal": "typewriter", karaoke: "trail" });
+  const present = track.presents[0]!;
+  for (const [index, [start]] of windows.entries()) {
+    for (const layer of ["base", "active"]) {
+      const glyph = present.elements.find((item) => item.id === `atom-${index + 1}-${layer}-1-grapheme-1`)!;
+      assert.ok(glyph);
+      for (let frame = present.span.startFrame; frame < present.span.endFrameExclusive; frame++) {
+        assert.equal(numericStyleAt(glyph, frame - present.span.startFrame, "opacity"), Number(frame >= start));
+      }
+    }
+  }
+  assert.equal(present.elements.some((element) => element.animation?.keyframes.some((keyframe) =>
+    keyframe.style.some(({ name }) => name === "clip-path"))), false);
+});
+
+test("Typewriter keeps combining graphemes whole and preserves unequal-width Latin letters", () => {
+  const { document, program, projection } = fixture("<line>Wi e\u0301 || 繁體</line>");
+  const style = fineCaptionStyle("plain", { ...recipe,
+    properties: { ...recipe.properties, "atom-reveal": "typewriter" } }, [font]);
+  const styled = { ...program, styles: [style] };
+  const track = renderFineCaption(scheduleFineCaption(projection, styled, document), styled, document,
+    sealProgramSpace({ id: "test-space", durationSec: 3, frameRate: { numerator: 30, denominator: 1 } }));
+  const text = track.presents[0]!.elements.filter((element) => element.kind === "text");
+  assert.deepEqual(text.map((element) => element.text), ["W", "i", "e\u0301"]);
+  assert.equal(numericStyleAt(text[0]!, 4, "opacity"), 1);
+  assert.equal(numericStyleAt(text[1]!, 8, "opacity"), 0);
+  assert.equal(numericStyleAt(text[1]!, 9, "opacity"), 1);
+  assert.equal(numericStyleAt(text[2]!, 14, "opacity"), 1);
+});

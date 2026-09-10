@@ -97,8 +97,23 @@ font fallbacks supply the required glyphs; the layout does not select a font by 
 Both count limits are omitted above so the example flows by available width. For a compact
 single-line treatment, author coherent Cues and choose a font, size and width that fit those Cues.
 `karaoke: off` keeps a complete Cue steady; `current` and `trail` follow its timed units, which are
-normally individual characters in Chinese. The Hypit Skill's Caption craft page owns grouping and
-visual direction.
+normally individual characters in Chinese.
+
+| Effect | Recipe | Visible behavior |
+| --- | --- | --- |
+| Whole-character emphasis | `karaoke: current; karaoke-transition: step` | The complete current unit takes the active Paint at its start, returning to base Paint at its end. |
+| Accumulating emphasis | `karaoke: trail; karaoke-transition: step` | Each complete unit takes the active Paint at its start and keeps it for the rest of the Cue. |
+| Sweeping fill | `karaoke: trail; karaoke-transition: wipe` | Paint sweeps inside each unit's glyphs during that unit's own time window. |
+| Spoken-unit appearance | `atom-reveal: on-start` | Each complete unit appears at its start. |
+| Typing appearance | `atom-reveal: typewriter` | Whole graphemes appear in sequence within each unit, starting with its first grapheme at the unit's start. A normal Han unit appears as a complete character. |
+
+`step` is the default Karaoke transition. Choose it for ordinary Chinese character highlighting;
+`wipe` deliberately produces partial glyph fills. Cue width and duration do not supply a substitute
+clock for either mode. `atom-reveal` controls text appearing, independently of Karaoke recoloring
+already visible text. A Dual Text span shares one timing unit, so its display words activate together
+under `step`; keep pronunciation markup scoped to the name or expression that needs it.
+
+The Hypit Skill's Caption craft page owns grouping and visual direction.
 
 `font` accepts an exact face or ordered stack. A local file declared through `media:Font` can be the
 primary face or a `<caption-fine:Fallback font={...}/>` child, just like a bundled face. See

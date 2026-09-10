@@ -480,23 +480,6 @@ function karaokeWipeAnimation(
   ] };
 }
 
-function typewriterAnimation(
-  text: string,
-  parameters: FineCaptionParameters,
-  startFrame: number,
-  endFrame: number,
-  durationFrames: number,
-): VisualAnimation | undefined {
-  if (parameters.motion.atomReveal !== "typewriter") return undefined;
-  const graphemes = Math.max(1, [...new Intl.Segmenter("und", { granularity: "grapheme" }).segment(text)].length);
-  const span = Math.max(1, endFrame - startFrame);
-  const offsets = Array.from({ length: graphemes + 1 }, (_, index) => startFrame + Math.round(span * index / graphemes));
-  return animationFrom(durationFrames, [...stepOffsets(startFrame), ...offsets], (frame) => {
-    const progress = frame < startFrame ? 0 : Math.floor(clamp((frame - startFrame) / span, 0, 1) * graphemes) / graphemes;
-    return [{ name: "clip-path", value: wipeClip(progress, parameters.layout.direction) }];
-  });
-}
-
 function activeResponseAnimation(
   parameters: FineCaptionParameters,
   startFrame: number,
@@ -867,9 +850,7 @@ function cueElements(
     // the karaoke wipe keeps sitting on the letterforms it reveals.
     const gaps = wordGaps(surfaces);
     const wordGap = uniformGap(gaps);
-    const atomText = joinSurfaces(surfaces, " ");
     const entryId = `${atomId}-entry`;
-    const typewriterId = `${atomId}-typewriter`;
     const loopId = `${atomId}-loop`;
     const responseId = `${atomId}-response`;
     if (parameters.layout.maxWordsPerLine !== undefined
@@ -884,7 +865,6 @@ function cueElements(
       wordsOnLine = 0;
     }
     const entryAnimation = atomLifecycleAnimation(parameters, timing.start, timing.end, durationFrames);
-    const writerAnimation = typewriterAnimation(atomText, parameters, timing.start, timing.end, durationFrames);
     const atomLoop = parameters.motion.loopTarget === "active-atom"
       ? loopAnimation(parameters, durationFrames, activationTiming) : undefined;
     const responseAnimation = activeResponseAnimation(
@@ -907,19 +887,8 @@ function cueElements(
       ...(entryAnimation === undefined ? {} : { animation: entryAnimation }),
     });
     push({
-      id: typewriterId,
-      parent: entryId,
-      kind: "box",
-      style: [
-        { name: "display", value: "inline-flex" },
-        { name: "min-width", value: "0" },
-        { name: "transform-origin", value: parameters.layout.direction === "rtl" ? "right center" : "left center" },
-      ],
-      ...(writerAnimation === undefined ? {} : { animation: writerAnimation }),
-    });
-    push({
       id: loopId,
-      parent: typewriterId,
+      parent: entryId,
       kind: "box",
       style: [
         { name: "display", value: "inline-flex" },
@@ -983,10 +952,53 @@ function cueElements(
         attributes: [{ name: "data-caption-active-box", value: "isolated" }],
       });
     }
+    const graphemes = parameters.motion.atomReveal === "typewriter"
+      ? surfaces.map((text) =>
+        [...new Intl.Segmenter("und", { granularity: "grapheme" }).segment(text)].map((part) => part.segment))
+      : [];
+    const graphemeCount = graphemes.reduce((sum, word) => sum + word.length, 0);
+    const pushText = (element: Omit<VisualTextElement, "order">, wordIndex: number): void => {
+      if (parameters.motion.atomReveal !== "typewriter") {
+        push(element);
+        return;
+      }
+      // Reveal complete glyphs, not fractions of a Word's width. Variable-width Latin letters,
+      // Han characters and combining sequences all retain their actual layout widths.
+      const isMargin = (name: string): boolean => name.startsWith("margin-");
+      push({
+        id: element.id,
+        ...(element.parent === undefined ? {} : { parent: element.parent }),
+        kind: "box",
+        style: [
+          { name: "display", value: "inline" },
+          { name: "min-width", value: "0" },
+          ...element.style.filter(({ name }) => isMargin(name) || name === "opacity"),
+        ],
+        ...(element.attributes === undefined ? {} : { attributes: element.attributes }),
+      });
+      const preceding = graphemes.slice(0, wordIndex).reduce((sum, word) => sum + word.length, 0);
+      const { attributes: _attributes, ...glyph } = element;
+      for (const [index, text] of (graphemes[wordIndex] ?? []).entries()) {
+        const revealFrame = timing.start + Math.floor(
+          (timing.end - timing.start) * (preceding + index) / Math.max(1, graphemeCount),
+        );
+        push({
+          ...glyph,
+          id: `${element.id}-grapheme-${index + 1}`,
+          parent: element.id,
+          text,
+          style: [
+            ...element.style.filter(({ name }) => !isMargin(name) && name !== "opacity"),
+            { name: "display", value: "inline" },
+          ],
+          animation: activationStepAnimation("trail", revealFrame, durationFrames, durationFrames),
+        });
+      }
+    };
     for (const [wordIndex, wordId] of atom.wordIds.entries()) {
       const text = wordText.get(wordId);
       if (text === undefined) throw new Error(`Fine Caption Atom references unknown word ${wordId}`);
-      push({
+      pushText({
         id: `${atomId}-base-${wordIndex + 1}`,
         parent: atomId,
         kind: "text",
@@ -997,7 +1009,7 @@ function cueElements(
         ],
         ...glyphPaintFields(parameters.basePaint),
         fonts,
-      });
+      }, wordIndex);
     }
     const addActivatedTextLayer = (
       suffix: string,
@@ -1026,7 +1038,7 @@ function cueElements(
       });
       for (const [wordIndex, wordId] of atom.wordIds.entries()) {
         const text = wordText.get(wordId)!;
-        push({
+        pushText({
           id: `${activeId}-${wordIndex + 1}`,
           parent: activeId,
           kind: "text",
@@ -1041,7 +1053,7 @@ function cueElements(
           ...(kind === "glyph" ? glyphPaintFields(parameters.activePaint) : {}),
           fonts,
           attributes: [{ name: kind === "glyph" ? "data-caption-active-word" : "data-caption-underlined-word", value: wordId }],
-        });
+        }, wordIndex);
       }
     };
     if (parameters.karaoke.mode !== "off") addActivatedTextLayer("active", parameters.karaoke.mode, "glyph");

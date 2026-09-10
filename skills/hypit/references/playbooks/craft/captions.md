@@ -131,6 +131,18 @@ The same timing supports a stable complete Cue, current-character color or a tra
 Chinese speech, a readable phrase with restrained emphasis often works better than a separate bounce
 or reveal on every character. Choose the response for the performance's energy.
 
+For whole-character highlighting, use `karaoke: current` with `karaoke-transition: step`.
+Choose `trail` instead of `current` when the already spoken characters should stay highlighted.
+`step` activates the complete timed unit at its start; `wipe` is a different visual choice that
+sweeps inside its glyphs. Both follow each unit's own speech time, including uneven delivery and
+pauses. Making a Cue longer changes its reading group, not its character timing.
+
+Text appearing and text changing color are separate choices. `atom-reveal: all` keeps the complete
+Cue available to read while Karaoke supplies emphasis; `on-start` reveals whole spoken units, and
+`typewriter` reveals whole graphemes within them. A pronunciation span such as `<Hypit|Hai-Pit>`
+remains one shared timing unit. Scope it to the expression needing a pronunciation hint so the
+surrounding Chinese characters retain their own timing.
+
 With Fine's uniform-flow family, direct the common Cue to remain on one line by considering its
 grouping together with the Recipe's font size, usable width and word gap. A stable line lets each
 handoff replace one readable block without repeatedly changing the block's height and the viewer's

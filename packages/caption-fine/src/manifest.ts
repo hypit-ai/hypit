@@ -206,7 +206,7 @@ export const captionFineMarkupSurfaces = [
               { name: "karaoke", required: false, values: ["off", "current", "trail"], fallback: "off",
                 summary: "Decides whether the active Paint marks only the Word being spoken or every Word up to it." },
               { name: "karaoke-transition", required: false, values: ["step", "wipe"], fallback: "step",
-                summary: "Decides whether the karaoke Paint snaps at the Word boundary or sweeps across the glyphs." },
+                summary: "step activates each whole timed unit at its start (normally one Han character in Chinese); wipe sweeps inside that unit's glyphs during its own interval." },
               { name: "active-box", required: false, values: ["off", "current", "trail"], fallback: "off",
                 summary: "Decides whether a highlight box sits behind the Word being spoken or behind every Word up to it." },
               { name: "active-box-continuity", required: false, values: ["isolated", "joined"], fallback: "isolated",
