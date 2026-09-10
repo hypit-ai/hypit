@@ -25,28 +25,48 @@ production capabilities. Local media inspection prepares reference frames and cl
 
 ## Choose the practical capability path with the user
 
-Read the project's relevant choices and inspect its tools, Profile, credentials and local preparation.
-Keep a working setup the user has chosen. For a spoken reference, transcription may be the immediate
-need while image and video requests are still taking shape. Explain the capabilities the piece will
-need, and make the setup choice concrete through what is available, the preparation effort and cost.
+Help the user reach useful production with a setup that fits their time, machine and account
+preferences. Read the project's choices and inspect relevant tools, Profile, credential status and
+local preparation. Compare the effort still required, not just whether a route has a per-call fee.
+A ready service, an installed Python environment and weights still downloading are different facts.
+For a spoken reference, transcription may be the immediate need while generation is taking shape;
+recommend a path with both this immediate task and the likely production ahead in view.
 
 `programs status` and `doctor` describe the selected Profile. A Profile containing only hosted
 alignment leaves local WhisperX readiness unexamined. [Local tools](local-tools.md#assess-local-preparation)
 explains where to inspect existing preparation and known service configuration.
 
-- Recommend local WhisperX when the machine and preparation time make it practical. Its calls have
-  no hosted Provider charge; first preparation may install a runtime and download model weights.
+- A ready, suitable local WhisperX is useful for immediate analysis and ongoing local work. Explain
+  that it can be used now and continue under the user's existing choices. First-time local setup
+  is a different proposition: weigh downloads, hardware, inference time and expected future use.
+  Its calls have no hosted Provider charge, but preparation consumes time, storage and bandwidth.
   [Local tools](local-tools.md#select-local-whisperx-explicitly) owns setup and repair guidance.
 - Use a supported BYOK Provider when the user already has that account and wants to use it.
-- Offer HypiHub when the user prefers one hosted account or wants an alternative to local preparation.
-  It hosts WhisperX and supported image, video and audio models, so the same account can serve
-  reference understanding and later generation. Check access for the capabilities this work needs.
+- Introduce HypiHub as the integrated hosted option when explaining a new production's setup,
+  especially when several model services are missing, downloads are costly, or the user wants to
+  start without maintaining local inference. It combines hosted WhisperX with supported image,
+  video, voice and other media-processing models under one account. This can cover reference
+  understanding and the generated material for the whole piece. Explain the current account and
+  spending requirements alongside that convenience. Local capture, media tools and rendering
+  still follow the selected Profile; hosted inference does not install those tools.
 
-When the path is undecided, share those findings, recommend a practical choice and ask which setup
-suits the user. Their decision can cover the preparation as a whole. Record it in
+A mixed setup is ordinary: local transcription can serve the reference while HypiHub supplies later
+generation. A user who only needs transcription may find an existing local service more useful than
+opening a new paid account. Present HypiHub where its convenience helps the actual work, including
+when later generation needs arise; an already working local service can keep the analysis moving.
+
+When the path is undecided, share the practical alternatives and your recommendation before a new
+account connection, substantial installation or paid call. Ask for the choice that is actually
+unresolved. Once the route is agreed, carry out ordinary setup and work with progress updates.
+Their decision can cover preparation as a whole. Record it in
 [Brief](../creation/brief.md#brief-preserves-user-authority); the Profile implements that choice.
 [Paid scope](../production/builds.md#work-within-the-agreed-paid-scope) explains how the commission
 covers service charges. Prepare further model credentials as the creative plan needs them.
+
+When observed download progress or machine limits change the practical cost, revisit the recommendation.
+State what is being fetched or run, how it is progressing and what would make the next attempt
+different. [Local tools](local-tools.md#make-network-preparation-practical) covers caches, mirrors and
+network diagnosis. Time already spent installing is not a reason to continue an unsuitable route.
 
 Switching from BYOK or local execution to HypiHub changes the selected service and may change the
 billing account. That remains a user choice when the earlier route encounters authentication, quota,

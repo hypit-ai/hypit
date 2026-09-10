@@ -117,9 +117,26 @@ function fileBackedProgram(marker: string): ManagedProgram {
   };
 }
 
-test("up starts one Endpoint's program and down stops it", async () => {
+test("up preserves installation logs through service startup and down stops it", async () => {
   const marker = join(await mkdtemp(join(tmpdir(), "hypit-marker-")), "ready");
-  const { root, path, options } = await project(() => fileBackedProgram(marker));
+  const installed = `${marker}.installed`;
+  const { root, path, options } = await project(() => ({
+    ...fileBackedProgram(marker),
+    installation: {
+      commands: [nodeProgram(`
+        process.stdout.write('prepared dependency\\n');
+        require('node:fs').writeFileSync(process.argv[1], 'ready');
+      `, installed)],
+      async probe() {
+        try {
+          await readFile(installed, "utf8");
+          return { state: "ready" as const };
+        } catch {
+          return { state: "down" as const, detail: "not prepared" };
+        }
+      },
+    },
+  }));
   const progress: string[] = [];
 
   const started = await bringManagedProgramsUp(path, {
@@ -131,7 +148,8 @@ test("up starts one Endpoint's program and down stops it", async () => {
   assert.equal(started.programs[0]!.endpoint, "one");
   assert.equal(started.programs[0]!.action, "started");
   assert.deepEqual(started.programs[0]!.state, { state: "ready" });
-  assert.deepEqual(progress, ["example:checking", "example:starting", "example:waiting", "example:ready"]);
+  assert.deepEqual(progress, ["example:checking", "example:installing", "example:starting", "example:waiting", "example:ready"]);
+  assert.match(await readFile(join(root, "programs", "example", "install.log"), "utf8"), /prepared dependency/u);
 
   const pid = started.programs[0]!.pid!;
   assert.equal(await readFile(join(root, "programs", "example", "process.pid"), "utf8"), `${pid}\n`);
@@ -152,6 +170,7 @@ test("up starts one Endpoint's program and down stops it", async () => {
   await sleep(100);
   assert.throws(() => process.kill(pid, 0), "the detached program is gone");
   await assert.rejects(async () => await readFile(join(root, "programs", "example", "process.pid"), "utf8"));
+  await rm(installed, { force: true });
   await rm(root, { recursive: true, force: true });
 });
 
@@ -274,7 +293,44 @@ test("a failing install stops before starting anything, and says which command f
   const detail = result.programs[0]!.detail ?? "";
   assert.ok(detail.startsWith(`${process.execPath} failed:`), detail);
   assert.match(detail, /failed: no such project/u);
-  assert.equal(result.programs[0]!.logPath, undefined, "nothing was started, so nothing logged");
+  assert.match(await readFile(result.programs[0]!.logPath!, "utf8"), /no such project/u);
+});
+
+test("installation output is readable while preparation is still running", async () => {
+  const { root, path, options } = await project((root) => ({
+    id: "downloader",
+    installation: {
+      commands: [nodeProgram(`
+        const fs = require('node:fs');
+        process.stdout.write('fetching dependency\\n');
+        const timer = setInterval(() => {
+          if (fs.existsSync(process.argv[1])) { clearInterval(timer); process.stderr.write('download complete\\n'); }
+        }, 10);
+      `, join(root, "release"))],
+      probe: async () => ({ state: "down", detail: "not installed" }),
+    },
+    probe: async () => ({ state: "down", detail: "not running" }),
+  }));
+  let logPath: string | undefined;
+  let done = false;
+  const pending = bringManagedProgramsUp(path, { ...options,
+    onProgress: (event) => { if (event.phase === "installing") logPath = event.logPath; },
+  }).finally(() => { done = true; });
+  try {
+    let output = "";
+    for (let attempt = 0; attempt < 100; attempt++) {
+      if (logPath) output = await readFile(logPath, "utf8").catch(() => "");
+      if (output.includes("fetching dependency")) break;
+      await sleep(20);
+    }
+    assert.match(output, /fetching dependency/u);
+    assert.equal(done, false);
+  } finally {
+    await writeFile(join(root, "release"), "continue");
+    await pending;
+  }
+  assert.match(await readFile(logPath!, "utf8"), /download complete/u);
+  await rm(root, { recursive: true, force: true });
 });
 
 test("up stops waiting when a started program exits", async () => {

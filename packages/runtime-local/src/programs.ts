@@ -36,6 +36,7 @@ export type ManagedProgramReport = {
 export type ManagedProgramProgress = {
   readonly id: string;
   readonly phase: "checking" | "installing" | "starting" | "waiting" | "ready";
+  readonly logPath?: string;
 };
 
 export type ManagedProgramOptions = LoadRuntimeConfigOptions & {
@@ -97,24 +98,31 @@ async function readPid(root: string, program: ManagedProgram): Promise<number | 
   }
 }
 
-function run(root: string, command: ManagedProgramCommand): Promise<{ ok: boolean; detail: string }> {
-  return new Promise((resolve) => {
-    const child = spawn(command.command, [...command.args], {
-      cwd: command.cwd ?? root,
-      env: { ...process.env, ...command.env },
-      shell: false,
-      windowsHide: true,
-      stdio: ["ignore", "pipe", "pipe"],
+async function run(root: string, command: ManagedProgramCommand, logPath: string): Promise<{ ok: boolean; detail: string }> {
+  const log = await open(logPath, "a+");
+  try {
+    const offset = (await log.stat()).size;
+    const exit = await new Promise<{ code: number | null; error?: string }>((resolve) => {
+      const child = spawn(command.command, [...command.args], {
+        cwd: command.cwd ?? root,
+        env: { ...process.env, ...command.env },
+        shell: false,
+        windowsHide: true,
+        stdio: ["ignore", log.fd, log.fd],
+      });
+      child.on("error", (error) => resolve({ code: null, error: error.message }));
+      child.on("close", (code) => resolve({ code }));
     });
-    let output = "";
-    child.stdout.on("data", (chunk: Buffer) => { output += chunk.toString(); });
-    child.stderr.on("data", (chunk: Buffer) => { output += chunk.toString(); });
-    child.on("error", (error) => resolve({ ok: false, detail: error.message }));
-    child.on("close", (code) => resolve({
-      ok: code === 0,
-      detail: code === 0 ? "" : (output.trim().split("\n").at(-1) ?? `exited ${code}`),
-    }));
-  });
+    if (exit.code === 0) return { ok: true, detail: "" };
+    const end = (await log.stat()).size;
+    const start = Math.max(offset, end - 8192);
+    const tail = Buffer.alloc(end - start);
+    const { bytesRead } = await log.read(tail, 0, tail.length, start);
+    const line = tail.subarray(0, bytesRead).toString().trim().split(/\r?\n/u).at(-1);
+    return { ok: false, detail: exit.error ?? (line || `exited ${exit.code}`) };
+  } finally {
+    await log.close();
+  }
 }
 
 /**
@@ -254,20 +262,23 @@ async function bringUp(
   }
 
   let installed = false;
+  const logPath = join(directory(root, program), "program.log");
+  const installLogPath = join(directory(root, program), "install.log");
   if (program.installation !== undefined) {
     const installation = await program.installation.probe();
     if (installation.state !== "ready") {
-      onProgress?.({ id: program.id, phase: "installing" });
       await mkdir(directory(root, program), { recursive: true });
+      await rotateLog(installLogPath);
+      onProgress?.({ id: program.id, phase: "installing", logPath: installLogPath });
       for (const command of program.installation.commands) {
-        const result = await run(root, command);
+        const result = await run(root, command, installLogPath);
         if (!result.ok) {
-          return { ...base, action: "unchanged", state: initial, detail: `${command.command} failed: ${result.detail}` };
+          return { ...base, action: "unchanged", state: initial, logPath: installLogPath, detail: `${command.command} failed: ${result.detail}` };
         }
       }
       const after = await program.installation.probe();
       if (after.state !== "ready") {
-        return { ...base, action: "unchanged", state: initial, detail: `installation is ${after.state}: ${after.detail}` };
+        return { ...base, action: "unchanged", state: initial, logPath: installLogPath, detail: `installation is ${after.state}: ${after.detail}` };
       }
       installed = true;
     }
@@ -276,12 +287,16 @@ async function bringUp(
     // Nothing to keep running: installation was the whole job.
     const state = await program.probe();
     if (state.state === "ready") onProgress?.({ id: program.id, phase: "ready" });
-    return { ...base, action: state.state === "ready" && installed ? "installed" : "unchanged", state };
+    return {
+      ...base,
+      action: state.state === "ready" && installed ? "installed" : "unchanged",
+      state,
+      ...(installed ? { logPath: installLogPath } : {}),
+    };
   }
 
-  onProgress?.({ id: program.id, phase: "starting" });
+  onProgress?.({ id: program.id, phase: "starting", logPath });
   await mkdir(directory(root, program), { recursive: true });
-  const logPath = join(directory(root, program), "program.log");
   await rotateLog(logPath);
   const log = await open(logPath, "a");
   try {

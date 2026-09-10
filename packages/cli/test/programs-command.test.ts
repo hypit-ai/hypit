@@ -40,6 +40,7 @@ function distribution(calls: string[], reports: readonly CliManagedProgramReport
     openRuntimeHost: async (path: string) => ({
       profile: path,
       prepare: async () => [],
+      createRuntime: async () => ({ close: async () => {} }),
       controller: async () => controller(path, calls, reports),
     }),
   } as unknown as CliDistribution;
@@ -99,9 +100,9 @@ test("program startup reports actions, not no-op checks", async () => {
       controller: async () => ({
         worker: {},
         programs: {
-          async up(options: { readonly onProgress?: (event: { readonly id: string; readonly phase: "checking" | "starting" | "waiting" | "ready" }) => void }) {
+          async up(options: { readonly onProgress?: (event: { readonly id: string; readonly phase: "checking" | "starting" | "waiting" | "ready"; readonly logPath?: string }) => void }) {
             options.onProgress?.({ id: "example", phase: "checking" });
-            options.onProgress?.({ id: "example", phase: "starting" });
+            options.onProgress?.({ id: "example", phase: "starting", logPath: "/tmp/example/program.log" });
             options.onProgress?.({ id: "example", phase: "waiting" });
             options.onProgress?.({ id: "example", phase: "ready" });
             return { dataRoot: "/tmp", programs: [{ id: "example", endpoint: "example", state: { state: "ready" } }] };
@@ -116,8 +117,47 @@ test("program startup reports actions, not no-op checks", async () => {
   }, selected);
 
   assert.match(output, /· Starting example/u);
+  assert.match(output, /log \/tmp\/example\/program\.log/u);
   assert.match(output, /External programs ready/u);
   assert.doesNotMatch(output, /· (?:Checking|Waiting for|Ready) example/u);
+});
+
+test("programs and runtime startup retain failure evidence in human and JSON output", async () => {
+  const report: CliManagedProgramReport = {
+    id: "local-service",
+    endpoint: "selected.local",
+    action: "unchanged",
+    state: { state: "down", detail: "health endpoint is not answering" },
+    detail: "service is still loading",
+    pid: 321,
+    logPath: "/tmp/local-service/program.log",
+  };
+  for (const command of ["programs", "runtime"]) {
+    for (const json of [false, true]) {
+      let output = "";
+      let exitCode: number | undefined;
+      await runCli([command, "up", "/project/hypit.runtime.json", ...(json ? ["--json"] : [])], {
+        write(text) { output += text; },
+        setExitCode(code) { exitCode = code; },
+      }, distribution([], [report]));
+      assert.equal(exitCode, 1);
+      if (json) {
+        const parsed = JSON.parse(output);
+        const item = command === "programs" ? parsed.programs[0] : parsed.programs.items[0];
+        assert.equal(item.state, "down");
+        assert.equal(item.stateDetail, report.state.state === "ready" ? undefined : report.state.detail);
+        assert.equal(item.endpoint, report.endpoint);
+        assert.equal(item.detail, report.detail);
+        assert.equal(item.logPath, report.logPath);
+        assert.equal(item.pid, report.pid);
+      } else {
+        assert.match(output, /health endpoint is not answering/u);
+        assert.match(output, /service is still loading/u);
+        assert.match(output, /PID 321/u);
+        assert.match(output, /\/tmp\/local-service\/program\.log/u);
+      }
+    }
+  }
 });
 
 test("runtime up validates the Runtime before it starts Programs", async () => {

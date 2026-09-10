@@ -58,6 +58,10 @@ supplied as a tarball can be installed directly, for example
 `npm install --global /path/to/hypit-release.tgz`. Report the actual installation error when the
 release cannot be obtained.
 
+If installation is slow or a registry mirror lacks the selected release, use
+[network preparation](local-tools.md#make-network-preparation-practical) to inspect the actual download
+source and choose a reachable route. Keep the requested version when changing registries.
+
 ## Let the installation channel own updates
 
 Install, update, and remove the Distribution through the same package or release channel. Updating
@@ -67,8 +71,8 @@ executable Distribution. After installation or an update, use the selected launc
 `profile.md` for the current project's capabilities and Runtime choices.
 
 The installed Distribution is the authority for exact Surface syntax. If a package or Surface named
-by the Skill is absent from `hypit vocabulary`, report the version mismatch and update the selected
-installation instead of inventing a translation.
+by the Skill is absent from `hypit vocabulary`, check package selection and the installed release.
+Explain whether the work needs an available package, a supported alternative or a Distribution update.
 
 A contributor checkout can execute its own Distribution after its documented workspace setup, but it
 is a development arrangement, not an assumed location for ordinary production. Use one only when the

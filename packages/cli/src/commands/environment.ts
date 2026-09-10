@@ -10,8 +10,26 @@ import { acquireOAuthCredential } from "../oauth.js";
 import { writeCliOutput } from "../output.js";
 import type { CliIo } from "../output.js";
 import { hypitHostStateRoot, hypitProjectStateRoot } from "../paths.js";
-import type { CliRuntimeController } from "../runtime-port.js";
+import type { CliManagedProgramReport, CliRuntimeController } from "../runtime-port.js";
 import type { OperationalWriter } from "./types.js";
+
+function programRecord(item: CliManagedProgramReport) {
+  return {
+    ...item,
+    state: item.state.state,
+    ...(item.state.state === "ready" ? {} : { stateDetail: item.state.detail }),
+  };
+}
+
+function programDescription(item: CliManagedProgramReport): string {
+  const details = [...new Set([
+    ...(item.state.state === "ready" ? [] : [item.state.detail]),
+    ...(item.detail === undefined ? [] : [item.detail]),
+  ])];
+  return `${item.id}: ${item.state.state}${details.length === 0 ? "" : ` — ${details.join("; ")}`}`
+    + (item.pid === undefined ? "" : ` · PID ${item.pid}`)
+    + (item.logPath === undefined ? "" : ` · log ${item.logPath}`);
+}
 
 export function isEnvironmentCommand(args: CliCommand): args is EnvironmentCommand {
   return args.command === "paths" || args.command === "packages" || args.command === "doctor"
@@ -36,7 +54,7 @@ export async function runEnvironmentCommand(input: {
   } = input;
   const reportProgramProgress = args.presentation.json
     ? undefined
-    : (event: { readonly id: string; readonly phase: "checking" | "installing" | "starting" | "waiting" | "ready" }): void => {
+    : (event: { readonly id: string; readonly phase: "checking" | "installing" | "starting" | "waiting" | "ready"; readonly logPath?: string }): void => {
       if (!args.presentation.verbose && event.phase !== "installing" && event.phase !== "starting") return;
       const verb = {
         checking: "Checking",
@@ -45,7 +63,7 @@ export async function runEnvironmentCommand(input: {
         waiting: "Waiting for",
         ready: "Ready",
       }[event.phase];
-      io.write(`  · ${verb} ${event.id}\n`);
+      io.write(`  · ${verb} ${event.id}${event.logPath === undefined ? "" : ` · log ${event.logPath}`}\n`);
     };
   const reportPackageProgress = args.presentation.json
     ? undefined
@@ -151,7 +169,7 @@ export async function runEnvironmentCommand(input: {
     const ready = result.programs.every((item) => item.state.state === "ready");
     const desiredState = args.action === "down" ? !result.programs.some((item) => item.state.state === "ready") : ready;
     const lifecycleOk = args.action === "status" || desiredState;
-    const shownPrograms = result.programs.filter((item) => item.state.state !== "ready").slice(0, args.limit);
+    const shownPrograms = result.programs.filter((item) => args.presentation.verbose || item.state.state !== "ready").slice(0, args.limit);
     const title = args.action === "up"
       ? desiredState ? "External programs ready" : "External programs need attention"
       : args.action === "down"
@@ -161,11 +179,7 @@ export async function runEnvironmentCommand(input: {
       format: "hypit.cli-programs@1",
       action: args.action,
       ready,
-      programs: result.programs.slice(0, args.limit).map((item) => ({
-        id: item.id,
-        state: item.state.state,
-        ...(args.presentation.verbose && item.action !== undefined ? { action: item.action } : {}),
-      })),
+      programs: result.programs.slice(0, args.limit).map(programRecord),
       ...(result.programs.length <= args.limit ? {} : { omittedPrograms: result.programs.length - args.limit }),
     }, title,
     args.action === "status" ? ready ? "success" : "info" : lifecycleOk ? "success" : "warning", [
@@ -173,7 +187,7 @@ export async function runEnvironmentCommand(input: {
         ["Programs", String(result.programs.length)] as const,
         ["Ready", String(result.programs.filter((item) => item.state.state === "ready").length)] as const,
       ]),
-    ], shownPrograms.map((item) => `${item.id}: ${item.state.state}`));
+    ], shownPrograms.map(programDescription));
     if (!lifecycleOk) io.setExitCode?.(1);
     return;
   }
@@ -207,6 +221,7 @@ export async function runEnvironmentCommand(input: {
         programs: {
           total: external.programs.length,
           ready: external.programs.filter((item) => item.state.state === "ready").length,
+          items: external.programs.map(programRecord),
         },
       }, ok ? "Local Runtime ready" : "Local Runtime needs attention", ok ? "success" : "warning", [
         ...(!args.presentation.verbose && ok ? [] : [
@@ -214,7 +229,8 @@ export async function runEnvironmentCommand(input: {
           ["Worker", processState.state] as const,
           ["Managed programs", `${external.programs.filter((item) => item.state.state === "ready").length}/${external.programs.length} ready`] as const,
         ]),
-      ]);
+      ], external.programs.filter((item) => args.presentation.verbose || item.state.state !== "ready")
+        .map(programDescription));
       if (!ok) io.setExitCode?.(1);
       return;
     }

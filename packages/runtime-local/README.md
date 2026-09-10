@@ -3,6 +3,16 @@
 The default local Runtime for Hypit. It owns the Worker, scheduler and active SQLite execution
 worklist. Project-owned Build Results hold finished public Outputs.
 
+Managed Program preparation writes subprocess stdout and stderr directly to that Program's
+`install.log`, so dependency-download output is readable before installation finishes. Installation
+and startup progress expose `logPath`; failed installation reports retain it with a short error.
+The files belong to the Program's configured state directory. Service output uses `program.log`
+and, on Windows, a separate `program.err.log` for stderr. Keeping installation output separate
+preserves it when Windows opens fresh service logs at startup.
+The CLI retains Program failure reasons, PIDs and log paths in `programs` and `runtime up` reports.
+Human output stays compact for successful preparation; `programs status --verbose` also shows
+ready helpers, and JSON retains the reported details independently of verbosity.
+
 A Runtime Profile selects only the environmental parts that genuinely vary:
 
 ```json

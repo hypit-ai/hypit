@@ -1,6 +1,15 @@
 import type { CliBuildResultView, CliBuildStatusView, CliOutputView } from "./view.js";
 
-type ProgramStateView = { readonly id: string; readonly state: string; readonly action?: string };
+type ProgramStateView = {
+  readonly id: string;
+  readonly state: string;
+  readonly action?: string;
+  readonly endpoint?: string;
+  readonly stateDetail?: string;
+  readonly detail?: string;
+  readonly pid?: number;
+  readonly logPath?: string;
+};
 type AttentionView = { readonly message: string; readonly action?: string };
 
 export type OperationalMachineView =
@@ -9,7 +18,7 @@ export type OperationalMachineView =
   | { readonly format: "hypit.cli-paths@1"; readonly project: string; readonly projectState: string; readonly profile?: string; readonly runtimeData?: string; readonly hostState: string; readonly machinePackages: string; readonly distribution?: string }
   | { readonly format: "hypit.cli-package@1"; readonly action: "install" | "status"; readonly package: string; readonly ready: boolean }
   | { readonly format: "hypit.cli-programs@1"; readonly action: "up" | "down" | "status"; readonly ready: boolean; readonly programs: readonly ProgramStateView[]; readonly omittedPrograms?: number }
-  | { readonly format: "hypit.cli-runtime-up@1"; readonly ready: boolean; readonly worker: string; readonly preparedPackages: number; readonly programs: { readonly total: number; readonly ready: number } }
+  | { readonly format: "hypit.cli-runtime-up@1"; readonly ready: boolean; readonly worker: string; readonly preparedPackages: number; readonly programs: { readonly total: number; readonly ready: number; readonly items: readonly ProgramStateView[] } }
   | { readonly format: "hypit.cli-runtime-logs@1"; readonly lines: readonly string[]; readonly totalLines: number; readonly omittedLines: number; readonly path?: string }
   | { readonly format: "hypit.cli-runtime-down@1"; readonly worker: string }
   | { readonly format: "hypit.cli-runtime-status@1"; readonly ready: boolean; readonly attention: boolean; readonly worker: { readonly state: string; readonly configuration?: string }; readonly builds: Readonly<Record<string, number>>; readonly programs: { readonly total: number; readonly ready: number; readonly unavailable: readonly ProgramStateView[] }; readonly capacity: { readonly active: number } }

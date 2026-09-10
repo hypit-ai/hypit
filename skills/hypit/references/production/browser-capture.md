@@ -77,8 +77,11 @@ path and actual dimensions, plus recorded duration and frame rate. Output paths 
 
 ## Browser and recording choices
 
-Prepare the package's tested browser once with `hypit capture install-browser`. It uses Puppeteer's
-browser cache and leaves existing browsers in place. `--channel chrome` selects an installed Chrome; `--browser <executable>` selects another explicit compatible path. `--headed` opens a visible
+Use an installed compatible browser or prepare the package's tested browser once with
+`hypit capture install-browser`. Installation uses Puppeteer's browser cache and leaves existing
+browsers in place. [Network preparation](../environment/local-tools.md#make-network-preparation-practical)
+explains diagnosing a slow download. `--channel chrome` selects an installed Chrome;
+`--browser <executable>` selects another explicit compatible path. `--headed` opens a visible
 window. The script's `options.launch` accepts ordinary Puppeteer launch options, including a chosen
 `userDataDir` when a dedicated persistent browser profile is useful. CLI browser options override
 the script's choices. `--timeout-ms` sets page operation and navigation timeouts.

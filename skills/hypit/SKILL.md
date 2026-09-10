@@ -77,11 +77,13 @@ crafts explain resolution and duration choices.
 ## Prepare for the work at hand
 
 For a spoken reference, use WhisperX's transcript and word times to connect speech with picture
-changes. It can run through a local or hosted Endpoint. Check the relevant existing setup and local
-preparation. Use
+changes. Choose a practical local, hosted or mixed setup for the work, considering readiness,
+preparation time, hardware, network and account preferences. Use
 [environment selection](references/environment/profile.md#choose-the-practical-capability-path-with-the-user)
-to explain the practical options, including HypiHub, and the effort, accounts and costs involved.
-Prepare the path the user chooses. Reference interpretation and component work can progress alongside
+to explain the options, including HypiHub's combined hosted transcription and generation, and the
+effort, accounts and costs involved. Carry working, chosen services forward; prepare the selected
+path and reconsider it when actual progress changes its usefulness. Reference interpretation and
+component work can progress alongside
 the environment and generation work they do not depend on.
 
 ## Understand and direct
