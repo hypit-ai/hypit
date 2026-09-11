@@ -3,6 +3,7 @@ import type { SourceRange } from "@hypit/protocol";
 import { canonicalStringify } from "@hypit/protocol";
 import { captionDocument, narrativeValue } from "./narrative.js";
 import { parseScript } from "./parser.js";
+import { cleanHorizontalProse } from "./lexical.js";
 import type { Affinity, ParsedNarrative, SemanticAnchor } from "./types.js";
 
 export type ScriptAnchorEditSite = {
@@ -99,6 +100,34 @@ type AdjustmentInput = {
 
 type NamedAnchor = { readonly id: string; readonly edge: "open" | "close" | "moment"; readonly anchorId: string };
 
+/** Normalize only parser-owned prose. Indentation is read from this edit's input, never stored. */
+function normalizedProse(source: string, parsed: ParsedNarrative, original: string): string {
+  const bodyStarts = new Set(parsed.segments.flatMap(segment => [segment.contentRange.start,
+    ...segment.atoms.filter(atom => atom.kind === "role").map(atom => atom.range.end)]));
+  const bodyEnds = new Set(parsed.segments.map(segment => segment.contentRange.end));
+  const indentation = original.split(/\r\n|\r|\n/u).map(line => /^[ \t]*/u.exec(line)![0].length);
+  const lines: Array<{ start: number; end: number; indentEnd: number }> = [];
+  let offset = 0;
+  const parts = source.split(/(\r\n|\r|\n)/u);
+  for (let index = 0; index < parts.length; index += 2) {
+    const text = parts[index]!;
+    lines.push({ start: offset, end: offset + text.length, indentEnd: offset + indentation[index / 2]! });
+    offset += text.length + (parts[index + 1]?.length ?? 0);
+  }
+  const edits: Edit[] = [];
+  for (const range of parsed.proseRanges) for (const line of lines) {
+    const start = Math.max(range.start, line.indentEnd);
+    const end = Math.min(range.end, line.end);
+    if (start >= end) continue;
+    let text = cleanHorizontalProse(source.slice(start, end));
+    const outside = !parsed.segments.some(segment => range.start >= segment.contentRange.start && range.end <= segment.contentRange.end);
+    if (start === line.indentEnd || bodyStarts.has(start) || outside) text = text.replace(/^[ \t]+/u, "");
+    if (end === line.end || bodyEnds.has(end) || outside) text = text.replace(/[ \t]+$/u, "");
+    edits.push({ range: { start, end }, replacement: text });
+  }
+  return applyEdits(source, edits);
+}
+
 /** One canonical boundary spelling, independent of the order of previous gestures. */
 function rewrite(input: AdjustmentInput, markers: readonly NamedAnchor[]): string {
   const ranges = [
@@ -106,28 +135,12 @@ function rewrite(input: AdjustmentInput, markers: readonly NamedAnchor[]): strin
     ...input.parsed.selections.flatMap((item) => [item.open.range, item.close.range]),
   ].map((range) => ({ start: range.start - input.parsed.sourceRange.start, end: range.end - input.parsed.sourceRange.start }))
     .sort((a, b) => a.start - b.start);
-  const removals: Edit[] = [];
-  for (const range of ranges) {
-    let start = range.start;
-    let end = range.end;
-    while (start > 0 && /[ \t]/u.test(input.source[start - 1]!)) start -= 1;
-    while (end < input.source.length && /[ \t]/u.test(input.source[end]!)) end += 1;
-    const previous = removals.at(-1);
-    if (previous && start <= previous.range.end) {
-      removals[removals.length - 1] = { range: { start: previous.range.start, end }, replacement: "" };
-    } else removals.push({ range: { start, end }, replacement: "" });
-  }
-  const edits = removals.map(({ range }): Edit => {
-    const original = input.source.slice(range.start, range.end);
-    // Keep line indentation; elsewhere all horizontal spellings of this gap are one space.
-    const indentation = range.start === 0 || /[\r\n]/u.test(input.source[range.start - 1]!);
-    const gap = indentation ? /^[ \t]*/u.exec(original)![0] : /[ \t]/u.test(original) ? " " : "";
-    return { range, replacement: gap };
-  });
+  const edits: Edit[] = ranges.map(range => ({ range, replacement: "" }));
   for (const segment of input.parsed.segments) {
     if (segment.selfClosing) edits.push({ range: { start: segment.range.start - input.parsed.sourceRange.start, end: segment.range.end - input.parsed.sourceRange.start }, replacement: `<${segment.id}></${segment.id}>` });
   }
-  const base = applyEdits(input.source, edits);
+  const unmarked = applyEdits(input.source, edits);
+  const base = normalizedProse(unmarked, parseScript(input.sourceName, unmarked), input.source);
   const parsed = parseScript(input.sourceName, base);
   const sites = new Map(scriptAnchorEditSites(parsed).map((site, order) => [site.anchorId, { ...site, order }]));
   const groups = new Map<number, Array<NamedAnchor & { affinity: Affinity; order: number }>>();
@@ -135,6 +148,9 @@ function rewrite(input: AdjustmentInput, markers: readonly NamedAnchor[]): strin
     const site = sites.get(value.anchorId);
     if (!site) throw new Error(`Semantic Anchor ${value.anchorId} does not exist.`);
     let offset = site.offset;
+    const lineStart = Math.max(base.lastIndexOf("\n", offset - 1), base.lastIndexOf("\r", offset - 1)) + 1;
+    const indentEnd = lineStart + /^[ \t]*/u.exec(base.slice(lineStart))![0].length;
+    if (offset < indentEnd) offset = indentEnd;
     // Reuse horizontal separators without moving a word marker ahead of line indentation.
     let gapStart = offset;
     while (gapStart > 0 && /[ \t]/u.test(base[gapStart - 1]!)) gapStart -= 1;
@@ -193,7 +209,6 @@ export function adjustScriptSelection(input: AdjustmentInput & { readonly adjust
   const start = order.indexOf(adjustment.startAnchorId);
   const end = order.indexOf(adjustment.endAnchorId);
   if (start < 0 || end < start) throw new Error("Selection endpoints must follow Script anchor order.");
-  if (selection.startAnchorId === adjustment.startAnchorId && selection.endAnchorId === adjustment.endAnchorId) return input.source;
   return rewrite(input, namedAnchors(parsed).map((item) => item.id !== adjustment.id ? item : {
     ...item, anchorId: item.edge === "open" ? adjustment.startAnchorId : adjustment.endAnchorId,
   }));
@@ -203,7 +218,6 @@ export function adjustScriptSelection(input: AdjustmentInput & { readonly adjust
 export function adjustScriptMoment(input: AdjustmentInput & { readonly adjustment: ScriptMomentAdjustment }): string {
   const moment = input.parsed.moments.find((item) => item.id === input.adjustment.id);
   if (!moment) throw new Error(`Script Moment ${input.adjustment.id} does not exist.`);
-  if (moment.anchorId === input.adjustment.anchorId) return input.source;
   return rewrite(input, namedAnchors(input.parsed).map((item) => item.id !== input.adjustment.id ? item : {
     ...item, anchorId: input.adjustment.anchorId,
   }));

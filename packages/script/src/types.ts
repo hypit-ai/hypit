@@ -81,6 +81,8 @@ export type ParsedNarrative = Omit<
 > & {
   /** Exact Script body range, used only for source-preserving Program-boundary edits. */
   readonly sourceRange: SourceRange;
+  /** Ordinary source prose/whitespace; excludes tags, Dual Text, attributes and comments. */
+  readonly proseRanges: readonly SourceRange[];
   readonly segments: readonly ParsedSegment[];
   readonly tokens: readonly ParsedToken[];
   readonly turns: readonly ParsedTurn[];

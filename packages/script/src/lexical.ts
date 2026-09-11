@@ -72,16 +72,29 @@ export function lexicalEditRanges(value: string): readonly { start: number; end:
 }
 
 /** Canonical prose spacing; punctuation remains display/speech information, never a timing token. */
-export function cleanProjection(value: string): string {
+function attachProseSpacing(value: string): string {
   return value
-    .replace(/\s+/gu, " ")
-    .replace(/\s+([,.;:!?%…，。！？；：、％‰）】》」』〕〉}\]])/gu, "$1")
-    .replace(/([([{（【《「『〔〈“‘])\s+/gu, "$1")
+    .replace(/ +([,.;:!?%…，。！？；：、％‰）】》」』〕〉}\]])/gu, "$1")
+    .replace(/([([{（【《「『〔〈“‘]) +/gu, "$1")
     // Do not erase a cross-script space: `here 你好` must remain two semantic regions.
     // Only collapse explicit spaces inside one CJK run; the lexical tokenizer already keeps
     // adjacent Latin and CJK runs separate when no space was authored.
-    .replace(/([\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}])\s+(?=[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}])/gu, "$1")
-    .trim();
+    .replace(/([\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]) +(?=[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}])/gu, "$1");
+}
+
+export function cleanProjection(value: string): string {
+  return attachProseSpacing(value.replace(/\s+/gu, " ")).trim();
+}
+
+/** Source formatting keeps line breaks and lexical boundaries, including spaced decimal-like prose. */
+export function cleanHorizontalProse(value: string): string {
+  const collapsed = value.replace(/[ \t]+/gu, " ");
+  const attached = attachProseSpacing(collapsed);
+  const words = (text: string) => lexicalUnits(text).map(unit => unit.text);
+  // A separator in `3 .14` cannot be erased into the different token `3.14`.
+  const before = words(collapsed);
+  const after = words(attached);
+  return before.length === after.length && before.every((word, index) => word === after[index]) ? attached : collapsed;
 }
 
 /** Structural markers split atoms but must not invent prose whitespace when those atoms rejoin. */

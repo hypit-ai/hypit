@@ -141,8 +141,18 @@ The media consumer still decides playback and visual coverage inside those proje
 `adjustScriptSelection` and `adjustScriptMoment` accept explicit anchor identities. A Selection's
 two endpoints are written together. Script owns their legal source sites: token punctuation and
 postfix attributes stay attached, Segment boundaries stay structural, and coincident markers are
-ordered together. Equivalent horizontal marker spacing is normalized on edit; empty self-closing
-Segments expand when needed to make their distinct boundaries writable.
+ordered together. Writeback reads the current source, removes the markers, normalizes ordinary
+same-line prose, and places the markers at their requested anchors. Repeated spaces and tabs in
+prose become necessary separators; punctuation uses the same attachment rules as Script's text
+projection. Newlines, blank lines and each line's leading spaces/tabs remain intact. A marker at
+the start of a line is placed after its indentation; whitespace after that marker is prose, not
+additional indentation. Marker-only lines remain blank when the marker leaves. Comments, tags,
+Dual Text and display attributes retain their own syntax and are not passed through prose cleanup.
+
+Normalization keeps lexical units unchanged and does not restore earlier whitespace spellings.
+It has no persistent formatting state: the same text structure and anchor relationships produce
+the same spelling on repeated edits. Empty self-closing Segments expand when needed to make their
+distinct boundaries writable.
 
 Writeback reparses the result to retain the intended identities and unchanged narrative/caption
 content. These checks concern authored order, not frame order. A consumer's temporal projection

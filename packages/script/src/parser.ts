@@ -142,6 +142,7 @@ export function parseScript(
 
   const segments: ParsedSegment[] = [];
   const tokens: ParsedToken[] = [];
+  const proseRanges: Array<{ start: number; end: number }> = [];
   const captionRegions: ParsedCaptionRegion[] = [];
   const selections = new Map<string, RawSelection>();
   const moments = new Map<string, RawMoment>();
@@ -238,12 +239,13 @@ export function parseScript(
     raw: string,
     absoluteStart: number,
     dual = false,
-  ): Array<{ readonly value: string; readonly start: number; readonly end: number }> => {
-    const pieces: Array<{ value: string; start: number; end: number }> = [];
+  ): Array<{ readonly value: string; readonly start: number; readonly end: number; readonly positions: readonly number[] }> => {
+    const pieces: Array<{ value: string; start: number; end: number; positions: readonly number[] }> = [];
     let buffer = "";
     let bufferStart = 0;
+    const positions = [absoluteStart];
     const flush = (end: number): void => {
-      if (buffer) pieces.push({ value: buffer, start: absoluteStart + bufferStart, end: absoluteStart + end });
+      if (buffer) pieces.push({ value: buffer, start: absoluteStart + bufferStart, end: absoluteStart + end, positions });
       buffer = "";
       bufferStart = end;
     };
@@ -256,10 +258,12 @@ export function parseScript(
           ?? fail("SCRIPT_ESCAPE", `Unknown Script escape "${raw.slice(index, index + 2)}".`, absoluteStart + index);
         buffer += escape.value;
         index += escape.length;
+        positions.push(absoluteStart + index);
         continue;
       }
       buffer += raw[index];
       index += 1;
+      positions.push(absoluteStart + index);
     }
     flush(raw.length);
     return pieces;
@@ -425,6 +429,7 @@ export function parseScript(
     start: number,
     end: number,
     captureCaptionRegion = true,
+    sourcePositions?: readonly number[],
   ): void => {
     if (!current) {
       if (speech.trim() || caption.trim()) {
@@ -436,12 +441,14 @@ export function parseScript(
     const tokenStart = tokens.length;
     const editRanges = lexicalEditRanges(speech);
     const units = lexicalUnits(speech);
+    // Decoded characters may occupy more than one source character (for example \@).
+    const position = (index: number): number => sourceOffset + (sourcePositions?.[index] ?? start + index);
     // A punctuation-only piece can follow a display attribute or escaped source piece.
     const preceding = tokens.at(-1);
     const closing = splitLeadingClosingPunctuation(speech).previous;
     if (preceding?.segmentId === current.id && preceding.editRange.end === sourceOffset + start && closing && speech.startsWith(closing)) {
       tokens[tokens.length - 1] = { ...preceding, editRange: {
-        start: preceding.editRange.start, end: sourceOffset + start + closing.length,
+        start: preceding.editRange.start, end: position(closing.length),
       } };
     }
     for (const [unitIndex, match] of units.entries()) {
@@ -460,12 +467,12 @@ export function parseScript(
         text: match.text,
         normalized,
         range: {
-          start: sourceOffset + start + match.index,
-          end: sourceOffset + start + match.index + match.text.length,
+          start: position(match.index),
+          end: position(match.index + match.text.length),
         },
         editRange: {
-          start: sourceOffset + start + editRanges[unitIndex]!.start,
-          end: sourceOffset + start + editRanges[unitIndex]!.end,
+          start: position(editRanges[unitIndex]!.start),
+          end: position(editRanges[unitIndex]!.end),
         },
       });
     }
@@ -501,7 +508,7 @@ export function parseScript(
     let emittedCaption = false;
     const addLiteral = (part: string, start: number): void => {
       for (const piece of literalPieces(part, start, true)) {
-        addText(piece.value, emittedCaption ? "" : caption, piece.start, piece.end, false);
+        addText(piece.value, emittedCaption ? "" : caption, piece.start, piece.end, false, piece.positions);
         emittedCaption = true;
       }
     };
@@ -669,7 +676,8 @@ export function parseScript(
       offset += 1;
     }
     const raw = source.slice(textStart, offset);
-    for (const piece of literalPieces(raw, textStart)) addText(piece.value, piece.value, piece.start, piece.end);
+    if (raw) proseRanges.push({ start: sourceOffset + textStart, end: sourceOffset + offset });
+    for (const piece of literalPieces(raw, textStart)) addText(piece.value, piece.value, piece.start, piece.end, true, piece.positions);
     if (source[offset] === "{") {
       const block = parseAttributeBlock(source.slice(offset), offset);
       if (!raw || /\s$/u.test(raw)) {
@@ -834,6 +842,7 @@ export function parseScript(
   return {
 
     sourceRange: { start: sourceOffset, end: sourceOffset + source.length },
+    proseRanges,
     segments,
     tokens,
     turns,

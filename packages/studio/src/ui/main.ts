@@ -194,11 +194,19 @@ function textValue(value: CanonicalValue): string {
   return typeof value === "string" ? value : value === null ? "" : String(value);
 }
 
+function restoreParameterControls(entityId: string): void {
+  const current = store.current();
+  if (current?.selection.kind === "clip" && current.selection.clipId === entityId) {
+    renderInspector(current.snapshot, entityId);
+  }
+}
+
 function commitControl(entityId: string, parameter: Clip["inspector"][number], replacement: CanonicalValue): void {
   try {
     if (sameValue(parameterAuthorValue(parameter, replacement), parameter.value)) return;
     void writeParameter(entityId, parameter, replacement);
   } catch (error) {
+    restoreParameterControls(entityId);
     status.textContent = "Invalid value"; status.className = "status error";
     status.title = error instanceof Error ? error.message : String(error);
   }
@@ -728,6 +736,7 @@ async function writeParameter(entityId: string, parameter: Clip["inspector"][num
   const state = store.current();
   if (state === undefined) return;
   parameterWriteState = "Saving";
+  status.title = "";
   status.textContent = parameterWriteState;
   status.className = "status saving";
   try {
@@ -742,6 +751,9 @@ async function writeParameter(entityId: string, parameter: Clip["inspector"][num
     status.textContent = parameterWriteState;
     status.className = "status saved";
   } catch (error) {
+    // Validation and stale-revision rejections do not publish a new snapshot.
+    // Restore the accepted value just as a rejected compilation does.
+    restoreParameterControls(entityId);
     parameterWriteState = "Failed";
     status.textContent = error instanceof Error ? "Save failed" : parameterWriteState;
     status.className = "status error";
@@ -1076,6 +1088,7 @@ window.addEventListener("keydown", (event) => {
 function applySnapshot(snapshot: StudioSnapshot): void {
   failureView.textContent = "";
   status.className = "status";
+  status.title = "";
   status.textContent = "";
   renderMeta(snapshot);
   library.show(snapshot);
