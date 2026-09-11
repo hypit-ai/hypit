@@ -11,6 +11,10 @@ admits them into the current Build's working byte area. Image references use Hyp
 `reference_image_urls`, `reference_videos`, and `reference_audios` fields (with `ref_video_url`
 for one video). First/last-frame images use `first_frame` and `last_frame`.
 
+Seedance 2.5 (`@hypit/seedance` model `2.5`) maps to `bytedance/seedance-2-5` and supports
+`480p`, `720p` and `1080p`. The Provider passes the authored `resolution` to `POST /v1/videos`;
+omitting it in the Seedance Surface defaults to `720p`.
+
 The current HypiHub GPT Image 2 route exposes the same request surface as its KIE upstream:
 
 | Resolution | Ratios unavailable at this Endpoint | `background` |
