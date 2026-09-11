@@ -115,7 +115,7 @@ should reveal the behavior that makes someone choose this component, with useful
 
 When a Studio Companion helps, expose the same meaningful entities and choices: a board's lifetime,
 a row's reveal, a Caption Cue's actual Style. Editing the displayed entity should change the owning
-Source fact. [Studio](studio.md#give-a-project-component-a-useful-companion) owns those bindings.
+Source fact. [Companion authoring](studio-companions.md) owns those bindings.
 
 For an existing example, read the installed `@hypit/ranking` README and the part of its implementation
 that answers the current question. It connects semantic reveals, settled state, layout and editor

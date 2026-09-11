@@ -1,6 +1,10 @@
 node_modules/
 dist/
 coverage/
+# Local architecture notes and repository-specific working instructions.
+/design/
+/.agents/development/
+/AGENTS.md
 .nyc_output/
 .DS_Store
 *.log

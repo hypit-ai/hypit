@@ -225,7 +225,8 @@ practical, revisit that choice and carry the improvement into the work and its n
 | drawing a component's elements, animation, resources or prepared surfaces | `references/production/component-visuals.md` |
 | writing a Caption family with new word relationships, scheduling or layout | `references/production/caption-authoring.md` |
 | `plan`, Provider pricing information, `build`, a retry or interrupted submission, following work, Results and exports | `references/production/builds.md` |
-| opening Studio, understanding its views and edits, or adding a component Companion | `references/production/studio.md` |
+| opening Studio, using its views, editing parameters or moving semantic timing | `references/production/studio.md` |
+| giving a component useful timeline entities, picture selection and author controls | `references/production/studio-companions.md` |
 | Film assembly, pure MG with authored time, picture and sound, final rendering or a selected frame interval | `references/production/rendering.md` |
 | judging the preview or finished Result and deciding what to fix | `references/production/review.md` |
 | recognizing a whole-work format, combining formats, or discovering another directing Craft | `references/playbooks/index.md` |

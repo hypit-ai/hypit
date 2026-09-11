@@ -1,7 +1,8 @@
-# Working in Studio and adding a Companion
+# Work in Studio
 
 Read this when opening a Run, using its timeline and Inspector, or giving a project component a
-useful Studio presentation. [Review](review.md) owns the judgment made from the visible work;
+useful Studio presentation. For component implementation, read [Companion authoring](studio-companions.md).
+[Review](review.md) owns the judgment made from the visible work;
 [Track authoring](track-authoring.md) owns the component's production behavior.
 
 ## Open the actual Run
@@ -51,11 +52,16 @@ include when the user wants to continue editing on another machine.
 | View | What it shows and what it can change |
 | --- | --- |
 | Source | The exact Run, Author and imported Source/Recipe files. Select a file and use Edit source; changes save automatically, and Cmd/Ctrl+S saves immediately. Check save/error state. This is not a project filesystem browser. |
-| Preview | The selected Film composition rendered by HyperFrames in the browser. Play or seek to inspect the actual selected media and graphics. |
+| Preview | The selected Film composition rendered by HyperFrames in the browser. Play or seek with the transport or timeline. Selecting a component-declared visual part selects its corresponding timeline entity; adjust its exposed position in the Inspector. |
 | Timeline | Semantic Segments, Selections and Moments, plus the component-projected Track entities and their visible intervals, materials or event lanes. A rectangle may describe occupancy, activation or persistent visibility; read the component's meaning. |
 | Inspector | With nothing selected, project, Canvas, time and Run facts. For a selected entity, only its declared adjustable fields, organized under Where, How and When where applicable. |
 | Tasks | One card per Build, grouped into ongoing and finished. Active status and progress come from the selected Runtime; completed, failed and cancelled Builds come from project Results. Cards retain the source Run, times and any failure or attention reason. |
 | Artifacts | Image, video and audio file Outputs from project Results, including those already published by ongoing Builds. Use the sidebar to choose all media, videos, images or audio. View media on a Build opens its Outputs; opening the Artifacts tab returns to project media. Composite Outputs such as normalized media and Semantic Takes stay intact and do not add their internal files to this gallery. Click a card to view it in the central preview; video and audio have playback and a time slider. Back to composition returns to the existing composition position. Previewing a file does not select it as a Candidate in the Run. |
+
+A declared lane stays one row even when items overlap. Later items cover earlier ones at equal
+stacking order; selecting an item brings its full rectangle forward within that lane. This changes
+editor selection, not the Film's paint order. The same behavior applies to attached child lanes.
+When semantic time is present, its lane stays below the time ruler while the other lanes scroll.
 
 Open either library tab or click Refresh to read its latest state. These lists do not poll.
 Refresh replaces the view; scrolling to the end loads more. Media categories query matching files
@@ -107,6 +113,8 @@ then follows the changed relation. The authored time form determines what the ge
 | Time form | Timeline editing |
 | --- | --- |
 | `during={story.selection.proof}` | Move both boundaries by the same number of semantic stops; the duration can change. Trim either boundary independently. |
+| `at={story.moment.reveal}` on an event | Move its Moment anchor. |
+| `at={story.selection.proof} boundary="start"` or `boundary="end"` on an event | Move only that Selection boundary. |
 | `at={story.moment.reveal} for="8f"` | Move the Moment, or trim the trailing edge to change the duration. |
 | `until={story.moment.reveal} for="8f"` | Move the Moment, or trim the leading edge to change the duration. |
 | `at="2s" for="8f"` | Move the clock position, or trim the trailing duration; `until/for` works conversely. |
@@ -115,51 +123,37 @@ then follows the changed relation. The authored time form determines what the ge
 
 A semantic stop is a distinct frame position occupied by word or structural boundaries. Select a
 semantic marker to see its exact anchors; when several share a frame, the Inspector offers the
-choices supported by its editable consumers. Direct Segment/Program spans follow their structural
-boundaries without timeline dragging. Components declare their own handles and writable fields.
+choices supported by its editable consumers. Word starts, word ends and structural boundaries
+are all eligible anchors; a pause can belong to
+either neighboring interval. Direct Segment/Program spans follow their structural boundaries
+without timeline dragging. The executed time authority determines the available gestures, and
+the Companion connects them to the component's entities and Source bindings.
 
 Clock-based dragging writes the changed value or offset in whole frames at the current frame rate.
 Unedited expressions retain their units: `2s` keeps its duration across frame-rate changes, while
 `60f` keeps its frame count. Direct semantic dragging changes the Script anchors instead.
 
+Script marker moves use the [same semantic affinities](../creation/script-and-time.md#bind-meaning-to-script-identities)
+as authored markers. Writeback normalizes ordinary same-line spacing while preserving line breaks,
+indentation, words, punctuation, pronunciation and display attributes. The resulting formatting
+becomes the next edit's starting point. A shared Selection or Moment remains one relationship:
+editing through any consumer updates its other consumers according to their own projections.
+
+A successful parameter or timeline edit saves the owning Source and recompiles the selected Run
+for the view. Rejected edits retain the accepted Source and values. Result renaming instead updates
+Result presentation metadata; it does not change the authored composition or trigger a Build.
+
 Source edits outside Studio are observed too. If a stale UI edit conflicts with a newer file, read
 the current Source and retry the intended change against it instead of overwriting the newer work.
-All successful edits return to the ordinary Sources; they do not create a second Studio project.
+Composition edits return to the ordinary Sources; they do not create a second Studio project.
 
 ## Give a project component a useful Companion
 
-The component's Producers own its rendered video. A **Studio Companion** explains that component to
-the editor: which output it understands, what its timeline entities mean, which materials to show,
-which authored parameters to expose and how an edit relates back to Source.
+A Companion makes the component's own production relationships legible and editable: a board's
+lifetime, a reveal event, a Cue's actual Style, or a scene's layout choices. Its Producers still own
+the rendered work. Generic Track presentation is useful when no additional authoring concepts are
+needed; a component with meaningful child events or controls can publish those directly.
 
-Generic VisualTrack and AudioTrack presentation already exists. Add a Companion when it makes the
-new role legible or editable: for example, a score board's outer lifetime and per-score activations,
-or a Caption family's Cue text and actual per-Cue Style. A static vocabulary preview helps recognize
-a component; it does not supply these live entities or edit bindings.
-
-Keep Companion code separate from domain computation and contribute its Host facet from the
-Source-selected project package's activation. The Distribution supplies official Companions; a
-project package can supply its own without editing Studio or adding a Studio Profile. Installing an
-otherwise unselected package does not activate a plugin. The installed `@hypit/studio-adapter`
-README gives the exact ABI, a minimal Companion and the activation wiring.
-
-An external Companion imports `@hypit/hypit/studio-adapter` and the relevant public `@hypit/hypit/*` domain APIs,
-with `@hypit/hypit` as a development dependency. Ship the compiled Companion with the component. Its
-Source-selected activation contributes the editor facet alongside the component's existing facets.
-
-Expose meaningful deterministic schedule/program outputs when the Companion needs more than the
-terminal Track. Ask for exact same-Surface output ports through `requiredValues`, or follow one
-exact typed authored reference. Preserve child identities and consume the real Window/Instant graph
-edges so Studio can trace temporal authority. Never infer a Moment from matching frame numbers,
-an id prefix or a parsed attribute name.
-
-Declare Source bindings separately from visible Inspector fields. Offer the parameters useful to
-this production, including explicit reference paths into Recipes. The Companion selects finite
-presentation and controls; Studio owns DOM, CSS, validation and Source writes. A Companion does not
-need its own filesystem mutation, Provider calls or rendering loop.
-
-For implementation patterns, read the installed `@hypit/ranking-studio` for persistent state and
-activation lanes, `@hypit/caption-fine-studio` for Cue/Style relationships, or
-`@hypit/media-track-studio` for media occupancy. Verify the new component in an ordinary Run:
-select the intended entity, adjust one exposed value, inspect the exact Source change and seek to
-the affected frames. For shared semantic timing, also inspect the other consumers of that marker.
+Read [Companion authoring](studio-companions.md) for entities and child lanes, picture selection,
+parameter controls, unit conversion, semantic writeback and package activation. It builds on the
+same [component design](component-design.md) decisions used to make the video.

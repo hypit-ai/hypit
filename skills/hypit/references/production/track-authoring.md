@@ -195,7 +195,7 @@ Document which Outputs are public, including useful deterministic program values
 ## Verify the behavior the component introduced
 
 When the new role needs its own timeline presentation or Inspector, read
-[Studio and Companions](studio.md#give-a-project-component-a-useful-companion). Expose the domain
+[Companion authoring](studio-companions.md). Expose the domain
 schedule and temporal identities at their actual boundaries so the editor consumes them directly
 instead of reconstructing them from pixels.
 
