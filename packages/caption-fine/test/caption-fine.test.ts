@@ -333,12 +333,15 @@ function numericStyleAt(element: import("@hypit/composition").VisualElement, fra
 }
 
 for (const mode of ["current", "trail"] as const) {
-  test(`Chinese ${mode} karaoke, underline and boxes follow unequal character times and pauses`, () => {
-    const { track, windows } = unevenChineseCaption({
+  test(`Chinese ${mode} karaoke, underline and boxes light whole words across unequal times and pauses`, () => {
+    const { track } = unevenChineseCaption({
       karaoke: mode, "active-underline": mode, "active-box": mode,
     });
     const present = track.presents[0]!;
-    for (const [index, [start, end]] of windows.entries()) {
+    // `你真好看` reads as 你 / 真好 / 看, so the two characters of 真好 share one window covering
+    // both of their measured intervals and the pause between them.
+    const activations = [[10, 13], [13, 42], [13, 42], [42, 55]] as const;
+    for (const [index, [start, end]] of activations.entries()) {
       for (const suffix of ["active", "underline", "box"]) {
         const element = present.elements.find((item) => item.id === `atom-${index + 1}-${suffix}`)!;
         assert.ok(element);
