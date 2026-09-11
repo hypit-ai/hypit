@@ -34,6 +34,37 @@ async function endpointFor(request: Need, fetch: typeof globalThis.fetch): Promi
   return resolution.registration.endpoint;
 }
 
+test("HypiHub Seedance 2.5 resolves and submits 1080p without downgrading", async () => {
+  const request: Need = {
+    ...need(sealSeedanceRequest("seedance-2.5", {
+      prompt: ["A presenter speaks to camera."], resolution: ["1080p"], aspectRatio: ["9:16"],
+      duration: [5], generateAudio: [true], webSearch: [false],
+    }) as unknown as CanonicalValue),
+    capability: seedanceEndpoints.v25!.capability,
+    returns: seedanceEndpoints.v25!.returns,
+  };
+  let submitted: unknown;
+  const endpoint = await endpointFor(request, async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/models/bytedance%2Fseedance-2-5")) return Response.json({ endpoints: ["videos"] });
+    if (url.endsWith("/videos")) {
+      submitted = JSON.parse(String(init?.body));
+      return Response.json({ id: "job_seedance25_1080p", status: "queued" });
+    }
+    throw new Error(`Unexpected request ${url}`);
+  });
+  const started = await endpoint.start({
+    command: { kind: "fulfill-need", id: "command:seedance25", need: request },
+    need: request, resources: new MemoryResourceStore(),
+    credentials: { apiKey: { secret: "test-key" } }, operation: "operation:seedance25",
+  });
+  assert.equal(started.status, "pending");
+  assert.deepEqual(submitted, {
+    model: "bytedance/seedance-2-5", prompt: "A presenter speaks to camera.",
+    resolution: "1080p", aspect_ratio: "9:16", seconds: 5, generate_audio: true, web_search: false,
+  });
+});
+
 test("HypiHub portrait matting uses the video job lifecycle and stores transparent output", async () => {
   const resources = new MemoryResourceStore();
   const source = await resources.put(new Uint8Array([1, 2, 3]), "video/mp4");

@@ -98,7 +98,7 @@ choose the exact model independently of three invocation shapes. All shapes cons
 ordinary `Text` prompt and output `{id.video}`.
 
 Seedance 2.5 uses the same Surfaces; it is not a Runtime substitution for another model. Its exact
-contract accepts 480p/720p, up to 30 image, 10 video and 10 audio references, and either `-1` for
+contract accepts 480p/720p/1080p, up to 30 image, 10 video and 10 audio references, and either `-1` for
 model-selected duration or an integer from 4 through 30 seconds:
 
 ```svml
