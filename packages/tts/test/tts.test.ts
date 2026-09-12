@@ -53,7 +53,7 @@ const context = (source: string, voice: SurfaceResolvedReference = voiceReferenc
 });
 
 test("TTS declares the exact audio request shapes", () => {
-  assert.deepEqual(ttsModels, ["mimo-v2.5-tts-voicedesign", "eleven_ttv_v3", "mimo-v2.5-tts-voiceclone"]);
+  assert.deepEqual(ttsModels, ["voice-design-1", "mimo-v2.5-tts-voicedesign", "eleven_ttv_v3", "voice-clone", "mimo-v2.5-tts-voiceclone"]);
   assert.ok(Object.values(ttsPorts).every((ports) => ports.result === "audio"));
   assert.ok(Object.values(ttsEndpoints).every((endpoint) => endpoint.returns.name === generationTypes.audioSet.name));
   assert.throws(() => sealTtsRequest("mimo-v2.5-tts-voicedesign", {

@@ -7,8 +7,10 @@ import { textTypes } from "@hypit/text";
 
 export const ttsModuleRef = { name: "@hypit/tts", version: "1" } as const;
 export const ttsModels = [
+  "voice-design-1",
   "mimo-v2.5-tts-voicedesign",
   "eleven_ttv_v3",
+  "voice-clone",
   "mimo-v2.5-tts-voiceclone",
 ] as const;
 export type TtsModel = typeof ttsModels[number];
@@ -19,7 +21,7 @@ const spokenText = { kind: "text" } as const;
 const instruction = { kind: "text" } as const;
 
 function table(model: TtsModel): GenerationPortTable {
-  if (model === "mimo-v2.5-tts-voicedesign" || model === "eleven_ttv_v3") {
+  if (model === "voice-design-1" || model === "mimo-v2.5-tts-voicedesign" || model === "eleven_ttv_v3") {
     return sealGenerationPortTable({
       model,
       result: "audio",
@@ -42,11 +44,9 @@ function table(model: TtsModel): GenerationPortTable {
   });
 }
 
-export const ttsPorts: Readonly<Record<TtsModel, GenerationPortTable>> = {
-  "mimo-v2.5-tts-voicedesign": table("mimo-v2.5-tts-voicedesign"),
-  "eleven_ttv_v3": table("eleven_ttv_v3"),
-  "mimo-v2.5-tts-voiceclone": table("mimo-v2.5-tts-voiceclone"),
-};
+export const ttsPorts = Object.fromEntries(
+  ttsModels.map((model) => [model, table(model)]),
+) as Readonly<Record<TtsModel, GenerationPortTable>>;
 
 export function sealTtsRequest(
   model: TtsModel,
@@ -65,8 +65,10 @@ export function sealTtsRequestDraft(
 const base = defineExactModelModule({
   module: ttsModuleRef,
   endpoints: ([
+    ["fishVoiceDesign", "voice-design-1", "FishVoiceDesignRequest"],
     ["voiceDesign", "mimo-v2.5-tts-voicedesign", "MimoVoiceDesignRequest"],
     ["elevenVoiceDesign", "eleven_ttv_v3", "ElevenVoiceDesignRequest"],
+    ["fishVoiceClone", "voice-clone", "FishVoiceCloneRequest"],
     ["voiceClone", "mimo-v2.5-tts-voiceclone", "MimoVoiceCloneRequest"],
   ] as const).map(([key, model, requestTypeName]) => ({
     key,
@@ -78,10 +80,16 @@ const base = defineExactModelModule({
 
 export const ttsEndpoints = base.endpoints;
 export const voiceDesignEndpoints = {
+  "voice-design-1": ttsEndpoints.fishVoiceDesign,
   "mimo-v2.5-tts-voicedesign": ttsEndpoints.voiceDesign,
   "eleven_ttv_v3": ttsEndpoints.elevenVoiceDesign,
 } as const;
 export type VoiceDesignModel = keyof typeof voiceDesignEndpoints;
+export const voiceCloneEndpoints = {
+  "voice-clone": ttsEndpoints.fishVoiceClone,
+  "mimo-v2.5-tts-voiceclone": ttsEndpoints.voiceClone,
+} as const;
+export type VoiceCloneModel = keyof typeof voiceCloneEndpoints;
 
 const spokenAttributes: readonly SurfaceAttributeVocabulary[] = [
   {
@@ -123,8 +131,8 @@ export const ttsMarkupSurfaces = [
           name: "model",
           kind: "literal",
           required: false,
-          summary: "Chooses the exact voice design model; ElevenLabs when omitted.",
-          values: ["mimo", "mimo-v2.5-tts-voicedesign", "eleven", "eleven_ttv_v3"],
+          summary: "Chooses the exact voice design model; Fish Audio when omitted.",
+          values: ["fish", "voice-design-1", "mimo", "mimo-v2.5-tts-voicedesign", "eleven", "eleven_ttv_v3"],
         },
       ],
       ports: referencePort,
@@ -140,10 +148,10 @@ export const ttsMarkupSurfaces = [
   },
   {
     name: "voiceClone", tag: "VoiceClone", mode: "structured",
-    outputs: [
-      ttsEndpoints.voiceClone.draftType,
-      ...Object.values(ttsEndpoints.voiceClone.mediaBindings).map((binding) => binding.type),
-    ],
+    outputs: Object.values(voiceCloneEndpoints).flatMap((endpoint) => [
+      endpoint.draftType,
+      ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
+    ]),
     vocabulary: {
       summary: "Creates independent speech in the voice heard in one accepted audio reference.",
       attributes: [
@@ -154,6 +162,13 @@ export const ttsMarkupSurfaces = [
           required: true,
           summary: "The audio Resource carrying the voice identity to reproduce.",
           accepts: [artifactTypes.blob],
+        },
+        {
+          name: "model",
+          kind: "literal",
+          required: false,
+          summary: "Chooses the exact voice clone model; Fish Audio when omitted.",
+          values: ["fish", "voice-clone", "mimo", "mimo-v2.5-tts-voiceclone"],
         },
       ],
       ports: audioPort,
