@@ -141,9 +141,6 @@ importers:
       '@hypit/media-track-studio':
         specifier: workspace:*
         version: link:packages/media-track-studio
-      '@hypit/mimo-speech':
-        specifier: workspace:*
-        version: link:packages/mimo-speech
       '@hypit/minimax-h3':
         specifier: workspace:*
         version: link:packages/minimax-h3
@@ -273,6 +270,9 @@ importers:
       '@hypit/text':
         specifier: workspace:*
         version: link:packages/text
+      '@hypit/tts':
+        specifier: workspace:*
+        version: link:packages/tts
       '@hypit/typography-track':
         specifier: workspace:*
         version: link:packages/typography-track
@@ -1818,27 +1818,6 @@ importers:
         specifier: workspace:*
         version: link:../studio-adapter
 
-  packages/mimo-speech:
-    dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@hypit/generation':
-        specifier: workspace:*
-        version: link:../generation
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/model-kit':
-        specifier: workspace:*
-        version: link:../model-kit
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/text':
-        specifier: workspace:*
-        version: link:../text
-
   packages/minimax-h3:
     dependencies:
       '@hypit/artifact':
@@ -2065,15 +2044,15 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@hypit/mimo-speech':
-        specifier: workspace:*
-        version: link:../mimo-speech
       '@hypit/seedance':
         specifier: workspace:*
         version: link:../seedance
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
+      '@hypit/tts':
+        specifier: workspace:*
+        version: link:../tts
       '@hypit/volcengine-matting':
         specifier: workspace:*
         version: link:../volcengine-matting
@@ -2286,9 +2265,9 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@hypit/mimo-speech':
+      '@hypit/tts':
         specifier: workspace:*
-        version: link:../mimo-speech
+        version: link:../tts
 
   packages/ranking:
     dependencies:
@@ -3127,6 +3106,27 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  packages/tts:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/typography-track:
     dependencies:

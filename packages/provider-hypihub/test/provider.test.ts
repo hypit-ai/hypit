@@ -5,7 +5,7 @@ import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
 import { defineEndpointPackage } from "@hypit/endpoint-kit";
 import type { AsyncEndpoint } from "@hypit/endpoint-kit";
 import type { CanonicalValue, Need } from "@hypit/protocol";
-import { mimoSpeechEndpoints, sealMimoSpeechRequest } from "@hypit/mimo-speech";
+import { ttsEndpoints, sealTtsRequest } from "@hypit/tts";
 import { generationTypes } from "@hypit/generation";
 import { sealSeedanceRequest, seedanceEndpoints } from "@hypit/seedance";
 import { sealSpeechEvidenceAudio } from "@hypit/speech";
@@ -248,10 +248,10 @@ test("HypiHub doctor checks the authenticated catalogue only when actively invok
   assert.deepEqual(diagnostics, []);
 });
 
-test("HypiHub declares both MiMo speech capabilities; who serves them is the Profile's binding", async () => {
+test("HypiHub declares every TTS capability; who serves them is the Profile's binding", async () => {
   const registry = new EndpointRegistry();
   await createHypiHubProvider({ fetch: async () => { throw new Error("audio must not call fetch"); } }).install(registry);
-  const needs = Object.values(mimoSpeechEndpoints).map((endpoint) => ({
+  const needs = Object.values(ttsEndpoints).map((endpoint) => ({
     id: `need:hypihub-${endpoint.key}`,
     capability: endpoint.capability,
     returns: endpoint.returns,
@@ -267,15 +267,15 @@ test("HypiHub declares both MiMo speech capabilities; who serves them is the Pro
     instance: "mimo.official",
     pool: "mimo.official",
     capabilities: [{
-      capability: mimoSpeechEndpoints.voiceDesign.capability,
-      returns: mimoSpeechEndpoints.voiceDesign.returns,
+      capability: ttsEndpoints.voiceDesign.capability,
+      returns: ttsEndpoints.voiceDesign.returns,
       lifecycle: "immediate",
       handler: () => ({ value: { kind: "inline", value: null } }),
     }],
   });
   await other.install(registry);
   assert.equal(registry.resolve(needs[0]!).status, "ambiguous");
-  registry.bind(mimoSpeechEndpoints.voiceDesign.capability, "mimo.official");
+  registry.bind(ttsEndpoints.voiceDesign.capability, "mimo.official");
   const resolved = registry.resolve(needs[0]!);
   assert.equal(resolved.status, "resolved");
   assert.equal(resolved.status === "resolved" ? resolved.registration.id : undefined, "mimo.official");
@@ -306,14 +306,14 @@ test("HypiHub stores both preview JSON and ordinary speech JSON as audio Resourc
   await provider.install(registry);
   const cases = [
     {
-      endpoint: mimoSpeechEndpoints.voiceDesign,
-      constraints: sealMimoSpeechRequest("mimo-v2.5-tts-voicedesign", {
+      endpoint: ttsEndpoints.voiceDesign,
+      constraints: sealTtsRequest("mimo-v2.5-tts-voicedesign", {
         text: ["A short voice sample."], voiceDescription: ["Warm and confident."],
       }),
     },
     {
-      endpoint: mimoSpeechEndpoints.voiceClone,
-      constraints: sealMimoSpeechRequest("mimo-v2.5-tts-voiceclone", {
+      endpoint: ttsEndpoints.voiceClone,
+      constraints: sealTtsRequest("mimo-v2.5-tts-voiceclone", {
         text: ["Independent narration."], instruction: ["Quietly direct."],
         voiceReference: [{ role: "audio", artifact: voiceReference }],
       }),

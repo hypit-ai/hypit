@@ -55,7 +55,7 @@ Chinese/English units and choosing a whole-passage density.
 
 For `transcribe`, `--runtime <profile>` names the Profile; otherwise the project's `hypit runtime use`
 selection is read. Anything the Author Graph declares as an output is a Build, however quickly it
-comes back: pictures, clips and accepted voice references (`@hypit/mimo-speech`) carry the identity of the Source
+comes back: pictures, clips and accepted voice references (`@hypit/tts`) carry the identity of the Source
 that produced them, so they are declared in the Source and go through `plan` and `build`. To hear a
 voice or learn a passage's real length before authoring the rest, build a Run whose target is that
 speech output and reuse it as a Candidate.

@@ -9,7 +9,7 @@ flag cap. [reference.svrun](reference.svrun) targets a finished video without ea
 The shared image establishes both identities, clothing, the car and street. Guest and interviewer
 close views each reference that image. The interviewer view keeps a portion of the guest at its left
 edge, preserving their spatial relationship. All three are generated; the old `host.png`, `wife.png`
-and `guy.png` are not inputs to this entry. Two MiMo Voice Design requests supply recurring voices.
+and `guy.png` are not inputs to this entry. Two Voice Design requests supply recurring voices.
 
 The street-interview Kit consumes interviewer, guest and shared images in that order, followed by
 the corresponding interviewer/guest voice references. Three Seedance Mini Takes carry eleven, eight
