@@ -184,6 +184,8 @@ practical, revisit that choice and carry the improvement into the work and its n
 
 ## Where the current question is answered
 
+Read each reference file in full, never only part of it.
+
 | When the question is about | Read |
 | --- | --- |
 | how Source, media, Tracks, execution and Results connect | `references/production/system.md` |
