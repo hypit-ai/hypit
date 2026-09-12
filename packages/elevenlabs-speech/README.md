@@ -11,19 +11,14 @@ Runtime Endpoint such as `@hypit/provider-hypihub`.
 
 ```xml
 <import as="eleven" from="@hypit/elevenlabs-speech@1"/>
-<import as="mimo" from="@hypit/mimo-speech@1"/>
 
 <eleven:VoiceDesign id="host" speech={story.segment.voiceSample.speech}>
   A clear young woman with a grounded, confident conversational delivery.
 </eleven:VoiceDesign>
-
-<mimo:VoiceClone id="narration" speech={story.segment.reveal.speech} voice={host.reference}>
-  Quietly confident, with a short pause before the final word.
-</mimo:VoiceClone>
 ```
 
-`host.reference` is a normal audio Resource, so it can feed a Voice Clone model from another
-package or an A-roll video model that accepts reference audio.
+`host.reference` is not a special identity record. It is a normal audio Resource, so the same
+accepted reference can be supplied anywhere an audio reference is accepted.
 
 Official API reference: <https://elevenlabs.io/docs/api-reference/text-to-voice/design>
 

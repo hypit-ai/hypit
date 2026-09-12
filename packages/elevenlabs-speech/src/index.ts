@@ -95,7 +95,7 @@ export const elevenLabsSpeechMarkupSurfaces = [
       notes: [
         "The element accepts no child elements; only its text is read.",
         "The spoken sample must be between 100 and 1000 characters.",
-        "The result is an ordinary audio Resource that can be supplied anywhere an audio reference is accepted, including a Voice Clone model from another package.",
+        "The result is an ordinary audio Resource that can be supplied anywhere an audio reference is accepted.",
       ],
     },
   },
