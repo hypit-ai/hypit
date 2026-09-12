@@ -91,13 +91,23 @@ catalog to verify configured capabilities; ordinary preflight never makes that r
 declares HypiHub's public pricing page, `https://hypit.ai/commercial/pricing/`, as its price source.
 For each selected Need, `readPricing` resolves the corresponding HypiHub model and returns the service's
 authenticated `GET /v1/pricing?model=<model>` response unchanged together with that URL. It covers
-generation, alignment, Voice Design, and Voice Clone through the same mechanism;
+generation, alignment, Voice Design and Voice Clone through the same mechanism;
 the Provider does not maintain a second list of billing formulas or calculate a request total.
 
-HypiHub declares MiMo Voice Design and Voice Clone together with every other capability it serves; it
-never hides one. Voice Design produces an accepted voice-reference Resource, and Voice Clone uses
-that reference to produce independent speech. Hypit does not expose MiMo preset voices. When another
-selected Endpoint offers the same capability (a local WhisperX or the official MiMo
+HypiHub declares every speech capability it serves together with every other capability; it never
+hides one. Voice Design produces an accepted voice-reference Resource, and Voice Clone uses that
+reference to produce independent speech. All of them use `POST /v1/audio/speech`:
+
+| Package | Capability | HypiHub model | Request fields |
+| --- | --- | --- | --- |
+| `@hypit/mimo-speech` | `mimo-v2.5-tts-voicedesign` | `mimo-v2.5-tts-voicedesign` | `input`, `voice_description` |
+| `@hypit/mimo-speech` | `mimo-v2.5-tts-voiceclone` | `mimo-v2.5-tts-voiceclone` | `input`, `reference_audio`, optional `prompt` |
+| `@hypit/fishaudio-speech` | `voice-design-1` | `fishaudio/voice-design-1` | `input`, `voice_description` |
+| `@hypit/fishaudio-speech` | `voice-clone` | `fishaudio/voice-clone` | `input`, `reference_audio`, optional `prompt`, constant `voice_description` title |
+| `@hypit/elevenlabs-speech` | `eleven_ttv_v3` | `eleven_ttv_v3` | `input`, `voice_description` |
+
+Each returned preview becomes one member of the audio set. Hypit does not expose preset voices. When
+another selected Endpoint offers the same capability (a local WhisperX or the official MiMo
 Provider), the Runtime Profile's `bindings` say which Endpoint serves it.
 
 Execution policy remains local to this Provider:
