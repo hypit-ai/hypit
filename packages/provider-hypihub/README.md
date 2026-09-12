@@ -95,13 +95,10 @@ generation, alignment, Voice Design, and Voice Clone through the same mechanism;
 the Provider does not maintain a second list of billing formulas or calculate a request total.
 
 HypiHub declares every `@hypit/tts` capability together with every other capability it serves; it
-never hides one. Voice Design (Fish Audio `voice-design-1` → `fishaudio/voice-design-1`, MiMo
-`mimo-v2.5-tts-voicedesign` and ElevenLabs `eleven_ttv_v3`) maps to `POST /v1/audio/speech` with
-`input` and `voice_description` and produces an accepted voice-reference Resource; each returned
-preview becomes one member of the audio set. Voice Clone (Fish Audio `voice-clone` →
-`fishaudio/voice-clone`, MiMo `mimo-v2.5-tts-voiceclone`) sends `input`, `reference_audio` and an
-optional `prompt`; the Fish Audio route also sends the constant `voice_description` title the
-service requires for its transient voice. Hypit does not expose preset voices. When another
+never hides one. Voice Design (MiMo `mimo-v2.5-tts-voicedesign` and ElevenLabs `eleven_ttv_v3`)
+maps to `POST /v1/audio/speech` with `input` and `voice_description` and produces an accepted
+voice-reference Resource; each returned preview becomes one member of the audio set. Voice Clone
+uses that reference to produce independent speech. Hypit does not expose preset voices. When another
 selected Endpoint offers the same capability (a local WhisperX or the official MiMo
 Provider), the Runtime Profile's `bindings` say which Endpoint serves it.
 

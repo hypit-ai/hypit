@@ -13,8 +13,8 @@ import type {
 } from "@hypit/markup";
 
 import { createTtsAudioFragment } from "./fragment.js";
-import { sealTtsRequestDraft, voiceCloneEndpoints, voiceDesignEndpoints } from "./index.js";
-import type { VoiceCloneModel, VoiceDesignModel } from "./index.js";
+import { ttsEndpoints, sealTtsRequestDraft, voiceDesignEndpoints } from "./index.js";
+import type { VoiceDesignModel } from "./index.js";
 
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
   return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
@@ -164,26 +164,16 @@ function speechInput(
   } as const;
 }
 
-const voiceDesignModels: Readonly<Record<string, VoiceDesignModel>> = {
-  "fish": "voice-design-1", "voice-design-1": "voice-design-1",
-  "mimo": "mimo-v2.5-tts-voicedesign", "mimo-v2.5-tts-voicedesign": "mimo-v2.5-tts-voicedesign",
-  "eleven": "eleven_ttv_v3", "eleven_ttv_v3": "eleven_ttv_v3",
-};
-const voiceCloneModels: Readonly<Record<string, VoiceCloneModel>> = {
-  "fish": "voice-clone", "voice-clone": "voice-clone",
-  "mimo": "mimo-v2.5-tts-voiceclone", "mimo-v2.5-tts-voiceclone": "mimo-v2.5-tts-voiceclone",
-};
-
-function selectedModel<M extends string>(element: StructuredElement, models: Readonly<Record<string, M>>): M {
-  const requested = element.attributes.model === undefined ? "fish" : stringAttribute(element, "model");
-  const model = models[requested];
-  if (model === undefined) throw new Error(`${element.name}.model must be one of ${Object.keys(models).join(", ")}`);
-  return model;
+function voiceDesignModel(element: StructuredElement): VoiceDesignModel {
+  const requested = element.attributes.model === undefined ? "eleven" : stringAttribute(element, "model");
+  if (requested === "mimo" || requested === "mimo-v2.5-tts-voicedesign") return "mimo-v2.5-tts-voicedesign";
+  if (requested === "eleven" || requested === "eleven_ttv_v3") return "eleven_ttv_v3";
+  throw new Error(`${element.name}.model must be mimo or eleven`);
 }
 
 export const decodeVoiceDesignSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   attributes(element, ["id", "speech"], ["model"]);
-  const model = selectedModel(element, voiceDesignModels);
+  const model = voiceDesignModel(element);
   return output(
     element,
     voiceDesignEndpoints[model],
@@ -194,15 +184,14 @@ export const decodeVoiceDesignSurface: StructuredSurfaceHandler = ({ element, re
 };
 
 export const decodeVoiceCloneSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "speech", "voice"], ["model"]);
-  const model = selectedModel(element, voiceCloneModels);
+  attributes(element, ["id", "speech", "voice"]);
   const instruction = body(element, false);
   const ports: Record<string, readonly GenerationPortValue[]> = {};
   if (instruction !== undefined) ports.instruction = [instruction];
   return output(
     element,
-    voiceCloneEndpoints[model],
-    sealTtsRequestDraft(model, ports),
+    ttsEndpoints.voiceClone,
+    sealTtsRequestDraft("mimo-v2.5-tts-voiceclone", ports),
     "audio",
     [speechInput(element, resolveReference)],
     [{

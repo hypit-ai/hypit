@@ -2,14 +2,13 @@
 
 Exact model contracts and author Surfaces for voice design and voice clone speech synthesis.
 
-The package owns two distinct speech operations, each served by exact models chosen with the
-`model` attribute:
+The package owns two distinct speech operations:
 
 - Voice Design creates an ordinary audio voice reference from a natural-language description and a
-  short authored speech sample: Fish Audio `voice-design-1` (`fish`, the default), Xiaomi
-  `mimo-v2.5-tts-voicedesign` (`mimo`) and ElevenLabs `eleven_ttv_v3` (`eleven`);
-- Voice Clone uses one accepted audio voice reference to create independent speech: Fish Audio
-  `voice-clone` (`fish`, the default) and Xiaomi `mimo-v2.5-tts-voiceclone` (`mimo`).
+  short authored speech sample. Two exact models serve it: ElevenLabs `eleven_ttv_v3` (the
+  default) and Xiaomi `mimo-v2.5-tts-voicedesign`, chosen with the `model` attribute;
+- Voice Clone (`mimo-v2.5-tts-voiceclone`) uses one accepted audio voice reference to create
+  independent speech.
 
 It contains no API URL, credential, retry, queue or vendor wire encoding. Those belong to a Runtime
 Endpoint such as `@hypit/provider-hypihub` or `@hypit/provider-xiaomi-mimo`. Every model returns the
@@ -33,7 +32,6 @@ whichever model designed it.
 
 Official API references:
 
-- Fish Audio: <https://docs.fish.audio/>
 - Xiaomi MiMo: <https://mimo.mi.com/docs/zh-CN/quick-start/usage-guide/audio/speech-synthesis-v2.5>
 - ElevenLabs Voice Design: <https://elevenlabs.io/docs/api-reference/text-to-voice/design>
 
