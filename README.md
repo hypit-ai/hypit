@@ -201,3 +201,5 @@ commands and the repository layout.
 ## License
 
 Hypit is released under the [Hypit Open Source License](./LICENSE). The videos and other outputs you create belong to you; third-party models and services may have their own terms.
+
+Partnership Community: [LINUX DO](https://linux.do/)
