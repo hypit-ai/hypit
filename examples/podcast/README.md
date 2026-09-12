@@ -34,7 +34,7 @@ creatine packaging. [reference.svs](reference.svs) owns this entry's appearance 
 
 ## Performance and coverage
 
-Two MiMo Voice Design requests establish recurring voices. Three Seedance Mini Takes carry the
+Two Fish Audio Voice Design requests establish recurring voices. Three Seedance Mini Takes carry the
 Script: a five-second split opening, an eight-second product explanation, and a six-second handoff.
 The opening uses its own small Text Template in `kits/split-opening.svs`, with dialogue bound from
 Script. The other two use the podcast Kit. A silent listener still glances, adjusts posture and reacts.

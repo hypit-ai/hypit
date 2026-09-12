@@ -5,7 +5,7 @@
   <import from="@hypit/script@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="media" from="@hypit/media@1"/>
-  <import as="mimo" from="@hypit/mimo-speech@1"/>
+  <import as="fish" from="@hypit/fishaudio-speech@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="program" from="@hypit/program-space@1"/>
@@ -129,13 +129,13 @@
   </gpt:Image>
 
   <text:Value id="boy-voice-sample">Hey yo! Is this Lamborghini yours?</text:Value>
-  <mimo:VoiceDesign id="boy-voice" speech={boy-voice-sample}>
+  <fish:VoiceDesign id="boy-voice" speech={boy-voice-sample}>
     A young American man with a bright, casual street-interviewer delivery; energetic, lightly raspy, confident, and conversational, with quick natural pacing.
-  </mimo:VoiceDesign>
+  </fish:VoiceDesign>
   <text:Value id="wife-voice-sample">That's manifesting, baby.</text:Value>
-  <mimo:VoiceDesign id="wife-voice" speech={wife-voice-sample}>
+  <fish:VoiceDesign id="wife-voice" speech={wife-voice-sample}>
     A young woman with a playful, self-assured delivery; warm, expressive, slightly husky, and flirtatious, with crisp conversational English.
-  </mimo:VoiceDesign>
+  </fish:VoiceDesign>
   <media:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
   <media:Audio id="rule-reveal-sound" src="./assets/rule-reveal.wav"/>
   <!-- Prepared reveal artwork shares the palette of the Caption and flashes. -->
