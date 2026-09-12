@@ -10,7 +10,7 @@ import { credentialRef } from "@hypit/runtime";
 import type { CredentialRef } from "@hypit/runtime";
 
 export const xiaomiMimoProviderModuleRef = { name: "@hypit/provider-xiaomi-mimo", version: "1" } as const;
-const mimoModelModule = { name: "@hypit/tts", version: "1" } as const;
+const mimoModelModule = { name: "@hypit/mimo-speech", version: "1" } as const;
 const modelNames = ["mimo-v2.5-tts-voicedesign", "mimo-v2.5-tts-voiceclone"] as const;
 type Model = typeof modelNames[number];
 

@@ -3,7 +3,7 @@
 <svml>
   <import from="@hypit/script@1"/>
   <import as="asset" from="@hypit/media@1"/>
-  <import as="tts" from="@hypit/tts@1"/>
+  <import as="mimo" from="@hypit/mimo-speech@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
@@ -105,13 +105,13 @@
   <gpt:Image id="creatine" prompt={creatine-prompt} aspect-ratio="1:1" resolution="2K"/>
 
   <text:Value id="guy-voice-sample">OK Sarah, so what is the one single thing that you literally can't live without?</text:Value>
-  <tts:VoiceDesign id="guy-voice" speech={guy-voice-sample}>
+  <mimo:VoiceDesign id="guy-voice" speech={guy-voice-sample}>
     A young American man with a curious, friendly podcast-host delivery; clear, relaxed, lightly nasal, and conversational, with an easy medium pace.
-  </tts:VoiceDesign>
+  </mimo:VoiceDesign>
   <text:Value id="girl-voice-sample">Creatine. Five grams a day, every day.</text:Value>
-  <tts:VoiceDesign id="girl-voice" speech={girl-voice-sample}>
+  <mimo:VoiceDesign id="girl-voice" speech={girl-voice-sample}>
     A young woman speaking conversational American English with a confident, lively podcast delivery; clear, bright, athletic, and matter-of-fact, with expressive emphasis and natural pacing.
-  </tts:VoiceDesign>
+  </mimo:VoiceDesign>
   <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
 
   <text:Value id="split-person">
