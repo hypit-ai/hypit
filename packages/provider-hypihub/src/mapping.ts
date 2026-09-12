@@ -27,11 +27,21 @@ const seedance = (name: string, model: string): GenerationWireMapping => ({
   },
 });
 
-const voiceDesign = (model: string): GenerationWireMapping => ({
-  capability: { module: TTS, name: model }, result: "audio", routes: [{ model }],
+const voiceDesign = (name: string, model = name): GenerationWireMapping => ({
+  capability: { module: TTS, name }, result: "audio", routes: [{ model }],
   fields: {
     text: { as: "value", field: "input" },
     voiceDescription: { as: "value", field: "voice_description" },
+  },
+});
+
+const voiceClone = (name: string, model = name, constants?: GenerationWireMapping["constants"]): GenerationWireMapping => ({
+  capability: { module: TTS, name }, result: "audio", routes: [{ model }],
+  ...(constants === undefined ? {} : { constants }),
+  fields: {
+    text: { as: "value", field: "input" },
+    instruction: { as: "value", field: "prompt" },
+    voiceReference: { as: "urlArray", field: "reference_audio" },
   },
 });
 
@@ -125,16 +135,12 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
       images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
     },
   },
+  voiceDesign("voice-design-1", "fishaudio/voice-design-1"),
   voiceDesign("mimo-v2.5-tts-voicedesign"),
   voiceDesign("eleven_ttv_v3"),
-  {
-    capability: { module: TTS, name: "mimo-v2.5-tts-voiceclone" }, result: "audio", routes: [{ model: "mimo-v2.5-tts-voiceclone" }],
-    fields: {
-      text: { as: "value", field: "input" },
-      instruction: { as: "value", field: "prompt" },
-      voiceReference: { as: "urlArray", field: "reference_audio" },
-    },
-  },
+  // Fish Audio names its transient cloned voice; the title has no authored meaning.
+  voiceClone("voice-clone", "fishaudio/voice-clone", { voice_description: "reference" }),
+  voiceClone("mimo-v2.5-tts-voiceclone"),
 ];
 
 function capabilityKey(ref: CapabilityRef): string {

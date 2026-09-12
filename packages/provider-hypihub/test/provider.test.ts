@@ -274,9 +274,10 @@ test("HypiHub declares every TTS capability; who serves them is the Profile's bi
     }],
   });
   await other.install(registry);
-  assert.equal(registry.resolve(needs[0]!).status, "ambiguous");
+  const mimoDesign = needs.find((item) => item.id === "need:hypihub-voiceDesign")!;
+  assert.equal(registry.resolve(mimoDesign).status, "ambiguous");
   registry.bind(ttsEndpoints.voiceDesign.capability, "mimo.official");
-  const resolved = registry.resolve(needs[0]!);
+  const resolved = registry.resolve(mimoDesign);
   assert.equal(resolved.status, "resolved");
   assert.equal(resolved.status === "resolved" ? resolved.registration.id : undefined, "mimo.official");
 });
