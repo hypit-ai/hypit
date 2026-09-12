@@ -6,10 +6,10 @@ The package owns two distinct speech operations, each served by exact models cho
 `model` attribute:
 
 - Voice Design creates an ordinary audio voice reference from a natural-language description and a
-  short authored speech sample: Fish Audio `voice-design-1` (the default), Xiaomi
-  `mimo-v2.5-tts-voicedesign` and ElevenLabs `eleven_ttv_v3`;
+  short authored speech sample: Fish Audio `voice-design-1` (`fish`, the default), Xiaomi
+  `mimo-v2.5-tts-voicedesign` (`mimo`) and ElevenLabs `eleven_ttv_v3` (`eleven`);
 - Voice Clone uses one accepted audio voice reference to create independent speech: Fish Audio
-  `voice-clone` (the default) and Xiaomi `mimo-v2.5-tts-voiceclone`.
+  `voice-clone` (`fish`, the default) and Xiaomi `mimo-v2.5-tts-voiceclone` (`mimo`).
 
 It contains no API URL, credential, retry, queue or vendor wire encoding. Those belong to a Runtime
 Endpoint such as `@hypit/provider-hypihub` or `@hypit/provider-xiaomi-mimo`. Every model returns the

@@ -14,6 +14,7 @@ import type {
 
 import { createTtsAudioFragment } from "./fragment.js";
 import { sealTtsRequestDraft, voiceCloneEndpoints, voiceDesignEndpoints } from "./index.js";
+import type { VoiceCloneModel, VoiceDesignModel } from "./index.js";
 
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
   return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
@@ -163,18 +164,26 @@ function speechInput(
   } as const;
 }
 
-function selectedModel<M extends string>(element: StructuredElement, endpoints: Readonly<Record<M, unknown>>, fallback: M): M {
-  if (element.attributes.model === undefined) return fallback;
-  const requested = stringAttribute(element, "model");
-  if (!Object.hasOwn(endpoints, requested)) {
-    throw new Error(`${element.name}.model must be one of ${Object.keys(endpoints).join(", ")}`);
-  }
-  return requested as M;
+const voiceDesignModels: Readonly<Record<string, VoiceDesignModel>> = {
+  "fish": "voice-design-1", "voice-design-1": "voice-design-1",
+  "mimo": "mimo-v2.5-tts-voicedesign", "mimo-v2.5-tts-voicedesign": "mimo-v2.5-tts-voicedesign",
+  "eleven": "eleven_ttv_v3", "eleven_ttv_v3": "eleven_ttv_v3",
+};
+const voiceCloneModels: Readonly<Record<string, VoiceCloneModel>> = {
+  "fish": "voice-clone", "voice-clone": "voice-clone",
+  "mimo": "mimo-v2.5-tts-voiceclone", "mimo-v2.5-tts-voiceclone": "mimo-v2.5-tts-voiceclone",
+};
+
+function selectedModel<M extends string>(element: StructuredElement, models: Readonly<Record<string, M>>): M {
+  const requested = element.attributes.model === undefined ? "fish" : stringAttribute(element, "model");
+  const model = models[requested];
+  if (model === undefined) throw new Error(`${element.name}.model must be one of ${Object.keys(models).join(", ")}`);
+  return model;
 }
 
 export const decodeVoiceDesignSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   attributes(element, ["id", "speech"], ["model"]);
-  const model = selectedModel(element, voiceDesignEndpoints, "voice-design-1");
+  const model = selectedModel(element, voiceDesignModels);
   return output(
     element,
     voiceDesignEndpoints[model],
@@ -186,7 +195,7 @@ export const decodeVoiceDesignSurface: StructuredSurfaceHandler = ({ element, re
 
 export const decodeVoiceCloneSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   attributes(element, ["id", "speech", "voice"], ["model"]);
-  const model = selectedModel(element, voiceCloneEndpoints, "voice-clone");
+  const model = selectedModel(element, voiceCloneModels);
   const instruction = body(element, false);
   const ports: Record<string, readonly GenerationPortValue[]> = {};
   if (instruction !== undefined) ports.instruction = [instruction];
