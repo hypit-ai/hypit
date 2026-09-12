@@ -3,7 +3,7 @@
 Immediate Runtime Endpoint for Xiaomi's official MiMo V2.5 Voice Design and Voice Clone APIs.
 
 This package owns the `chat/completions` wire shape, `api-key` credential, timeout, response bounds,
-voice-reference encoding and ResourceStore ingestion. It names `@hypit/tts@1` capabilities
+voice-reference encoding and ResourceStore ingestion. It names `@hypit/mimo-speech@1` capabilities
 as versioned data and does not import the model package at runtime.
 
 Runtime Profile example:

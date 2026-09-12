@@ -5,23 +5,20 @@ import type { SurfaceAttributeVocabulary, SurfacePortVocabulary } from "@hypit/m
 import { defineExactModelModule } from "@hypit/model-kit";
 import { textTypes } from "@hypit/text";
 
-export const ttsModuleRef = { name: "@hypit/tts", version: "1" } as const;
-export const ttsModels = [
-  "voice-design-1",
+export const mimoSpeechModuleRef = { name: "@hypit/mimo-speech", version: "1" } as const;
+export const mimoSpeechModels = [
   "mimo-v2.5-tts-voicedesign",
-  "eleven_ttv_v3",
-  "voice-clone",
   "mimo-v2.5-tts-voiceclone",
 ] as const;
-export type TtsModel = typeof ttsModels[number];
+export type MimoSpeechModel = typeof mimoSpeechModels[number];
 
-// Neither vendor documents a fixed character ceiling. Service-side limits stay service-side
+// Xiaomi documents no fixed character ceiling. Service-side limits stay service-side
 // instead of becoming an invented model constraint in Author Source.
 const spokenText = { kind: "text" } as const;
 const instruction = { kind: "text" } as const;
 
-function table(model: TtsModel): GenerationPortTable {
-  if (model === "voice-design-1" || model === "mimo-v2.5-tts-voicedesign" || model === "eleven_ttv_v3") {
+function table(model: MimoSpeechModel): GenerationPortTable {
+  if (model === "mimo-v2.5-tts-voicedesign") {
     return sealGenerationPortTable({
       model,
       result: "audio",
@@ -44,52 +41,39 @@ function table(model: TtsModel): GenerationPortTable {
   });
 }
 
-export const ttsPorts = Object.fromEntries(
-  ttsModels.map((model) => [model, table(model)]),
-) as Readonly<Record<TtsModel, GenerationPortTable>>;
+export const mimoSpeechPorts: Readonly<Record<MimoSpeechModel, GenerationPortTable>> = {
+  "mimo-v2.5-tts-voicedesign": table("mimo-v2.5-tts-voicedesign"),
+  "mimo-v2.5-tts-voiceclone": table("mimo-v2.5-tts-voiceclone"),
+};
 
-export function sealTtsRequest(
-  model: TtsModel,
+export function sealMimoSpeechRequest(
+  model: MimoSpeechModel,
   ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
 ): GenerationRequest {
-  return sealGenerationPortRequest(ttsPorts[model], ports);
+  return sealGenerationPortRequest(mimoSpeechPorts[model], ports);
 }
 
-export function sealTtsRequestDraft(
-  model: TtsModel,
+export function sealMimoSpeechRequestDraft(
+  model: MimoSpeechModel,
   ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
 ) {
-  return sealGenerationRequestDraft(ttsPorts[model], ports);
+  return sealGenerationRequestDraft(mimoSpeechPorts[model], ports);
 }
 
 const base = defineExactModelModule({
-  module: ttsModuleRef,
+  module: mimoSpeechModuleRef,
   endpoints: ([
-    ["fishVoiceDesign", "voice-design-1", "FishVoiceDesignRequest"],
     ["voiceDesign", "mimo-v2.5-tts-voicedesign", "MimoVoiceDesignRequest"],
-    ["elevenVoiceDesign", "eleven_ttv_v3", "ElevenVoiceDesignRequest"],
-    ["fishVoiceClone", "voice-clone", "FishVoiceCloneRequest"],
     ["voiceClone", "mimo-v2.5-tts-voiceclone", "MimoVoiceCloneRequest"],
   ] as const).map(([key, model, requestTypeName]) => ({
     key,
     requestTypeName,
     producerName: `request-${model}`,
-    ports: ttsPorts[model],
+    ports: mimoSpeechPorts[model],
   })),
 });
 
-export const ttsEndpoints = base.endpoints;
-export const voiceDesignEndpoints = {
-  "voice-design-1": ttsEndpoints.fishVoiceDesign,
-  "mimo-v2.5-tts-voicedesign": ttsEndpoints.voiceDesign,
-  "eleven_ttv_v3": ttsEndpoints.elevenVoiceDesign,
-} as const;
-export type VoiceDesignModel = keyof typeof voiceDesignEndpoints;
-export const voiceCloneEndpoints = {
-  "voice-clone": ttsEndpoints.fishVoiceClone,
-  "mimo-v2.5-tts-voiceclone": ttsEndpoints.voiceClone,
-} as const;
-export type VoiceCloneModel = keyof typeof voiceCloneEndpoints;
+export const mimoSpeechEndpoints = base.endpoints;
 
 const spokenAttributes: readonly SurfaceAttributeVocabulary[] = [
   {
@@ -119,27 +103,18 @@ const audioPort: readonly SurfacePortVocabulary[] = [{
   summary: "The independent speech, addressed as `<id>.audio`.",
 }];
 
-export const ttsMarkupSurfaces = [
+export const mimoSpeechMarkupSurfaces = [
   {
     name: "voiceDesign", tag: "VoiceDesign", mode: "structured",
-    outputs: Object.values(voiceDesignEndpoints).map((endpoint) => endpoint.draftType),
+    outputs: [mimoSpeechEndpoints.voiceDesign.draftType],
     vocabulary: {
       summary: "Creates a reusable voice reference from a natural-language voice description.",
-      attributes: [
-        ...spokenAttributes,
-        {
-          name: "model",
-          kind: "literal",
-          required: false,
-          summary: "Chooses the exact voice design model; voice-design-1 when omitted.",
-          values: Object.keys(voiceDesignEndpoints),
-        },
-      ],
+      attributes: spokenAttributes,
       ports: referencePort,
       text: "The element's own text is the voice description and is required.",
-      example: `<tts:VoiceDesign id="host" speech={story.segment.voiceSample.speech}>
+      example: `<mimo:VoiceDesign id="host" speech={story.segment.voiceSample.speech}>
   A clear young woman with a grounded, confident conversational delivery.
-</tts:VoiceDesign>`,
+</mimo:VoiceDesign>`,
       notes: [
         "The element accepts no child elements; only its text is read.",
         "The result is an ordinary audio Resource that can be supplied anywhere an audio reference is accepted.",
@@ -148,10 +123,10 @@ export const ttsMarkupSurfaces = [
   },
   {
     name: "voiceClone", tag: "VoiceClone", mode: "structured",
-    outputs: Object.values(voiceCloneEndpoints).flatMap((endpoint) => [
-      endpoint.draftType,
-      ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
-    ]),
+    outputs: [
+      mimoSpeechEndpoints.voiceClone.draftType,
+      ...Object.values(mimoSpeechEndpoints.voiceClone.mediaBindings).map((binding) => binding.type),
+    ],
     vocabulary: {
       summary: "Creates independent speech in the voice heard in one accepted audio reference.",
       attributes: [
@@ -163,19 +138,12 @@ export const ttsMarkupSurfaces = [
           summary: "The audio Resource carrying the voice identity to reproduce.",
           accepts: [artifactTypes.blob],
         },
-        {
-          name: "model",
-          kind: "literal",
-          required: false,
-          summary: "Chooses the exact voice clone model; voice-clone when omitted.",
-          values: Object.keys(voiceCloneEndpoints),
-        },
       ],
       ports: audioPort,
       text: "The element's own text is an optional delivery instruction.",
-      example: `<tts:VoiceClone id="narration" speech={story.segment.reveal.speech} voice={host.reference}>
+      example: `<mimo:VoiceClone id="narration" speech={story.segment.reveal.speech} voice={host.reference}>
   Quietly confident, with a short pause before the final word.
-</tts:VoiceClone>`,
+</mimo:VoiceClone>`,
       notes: [
         "The element accepts no child elements; only its text is read.",
         "The voice reference remains a normal audio Resource rather than a separate identity record.",
@@ -184,9 +152,9 @@ export const ttsMarkupSurfaces = [
   },
 ] as const;
 
-export const ttsManifest = { ...base.manifest } as const;
-export const ttsComponent = base.component;
-export const ttsDefinition = { ...base, manifest: ttsManifest };
+export const mimoSpeechManifest = { ...base.manifest } as const;
+export const mimoSpeechComponent = base.component;
+export const mimoSpeechDefinition = { ...base, manifest: mimoSpeechManifest };
 
-export { createTtsAudioFragment } from "./fragment.js";
-export { decodeVoiceCloneSurface, decodeVoiceDesignSurface } from "./surface.js";
+export { createMimoSpeechAudioFragment } from "./fragment.js";
+export { decodeMimoVoiceCloneSurface, decodeMimoVoiceDesignSurface } from "./surface.js";

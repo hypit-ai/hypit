@@ -130,11 +130,8 @@ B-roll or graphics happen to hide a visible performance. Use Voice Design to est
 reusable voice and Voice Clone to perform the actual Segment; the casting sample and the finished
 delivery have different jobs.
 
-Use `hypit vocabulary @hypit/tts` for the installed Voice Design and Voice Clone author
-Surfaces. Both elements accept an optional `model` naming one exact model from that vocabulary;
-omitting it selects `voice-design-1` or `voice-clone`. Every result is an ordinary audio Resource that Voice Clone
-and reference-audio video models accept, whichever model produced it.
-The Source chooses those model semantics; the Runtime Profile independently chooses the
+Use `hypit vocabulary @hypit/mimo-speech` for the installed Voice Design and Voice Clone author
+Surfaces. The Source chooses those model semantics; the Runtime Profile independently chooses the
 Endpoint that can perform them.
 
 ## Treat narration as a sound-picture relationship
