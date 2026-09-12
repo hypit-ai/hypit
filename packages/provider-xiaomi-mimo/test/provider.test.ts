@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/driver-node";
-import { mimoSpeechEndpoints, sealMimoSpeechRequest } from "@hypit/mimo-speech";
+import { ttsEndpoints, sealTtsRequest } from "@hypit/tts";
 import type { CanonicalValue, Need } from "@hypit/protocol";
 import { createXiaomiMimoProvider } from "@hypit/provider-xiaomi-mimo";
 
 function need(
-  endpoint: (typeof mimoSpeechEndpoints)[keyof typeof mimoSpeechEndpoints],
+  endpoint: (typeof ttsEndpoints)[keyof typeof ttsEndpoints],
   constraints: CanonicalValue,
   id: string,
 ): Need {
@@ -44,8 +44,8 @@ test("the official Provider maps Voice Design and Voice Clone to Xiaomi's wire",
   const voiceReference = await resources.put(new Uint8Array([1, 2, 3, 4]), "audio/wav");
   const cases = [
     {
-      endpoint: mimoSpeechEndpoints.voiceDesign,
-      request: sealMimoSpeechRequest("mimo-v2.5-tts-voicedesign", {
+      endpoint: ttsEndpoints.voiceDesign,
+      request: sealTtsRequest("mimo-v2.5-tts-voicedesign", {
         text: ["Keep every authored word."],
         voiceDescription: ["A clear, grounded female voice."],
       }),
@@ -58,8 +58,8 @@ test("the official Provider maps Voice Design and Voice Clone to Xiaomi's wire",
       },
     },
     {
-      endpoint: mimoSpeechEndpoints.voiceClone,
-      request: sealMimoSpeechRequest("mimo-v2.5-tts-voiceclone", {
+      endpoint: ttsEndpoints.voiceClone,
+      request: sealTtsRequest("mimo-v2.5-tts-voiceclone", {
         text: ["Keep every authored word."],
         instruction: ["Calm and restrained."],
         voiceReference: [{ role: "audio", artifact: voiceReference }],

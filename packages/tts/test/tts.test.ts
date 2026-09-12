@@ -9,13 +9,13 @@ import { sealText, textTypes } from "@hypit/text";
 
 import mimoNodePackage from "../src/activation.js";
 import {
-  decodeMimoVoiceCloneSurface,
-  decodeMimoVoiceDesignSurface,
-  mimoSpeechEndpoints,
-  mimoSpeechMarkupSurfaces,
-  mimoSpeechModels,
-  mimoSpeechPorts,
-  sealMimoSpeechRequest,
+  decodeVoiceCloneSurface,
+  decodeVoiceDesignSurface,
+  ttsEndpoints,
+  ttsMarkupSurfaces,
+  ttsModels,
+  ttsPorts,
+  sealTtsRequest,
 } from "../src/index.js";
 
 function parsed(source: string) {
@@ -52,14 +52,14 @@ const context = (source: string, voice: SurfaceResolvedReference = voiceReferenc
   resolveAsset: () => { throw new Error("no asset"); },
 });
 
-test("MiMo Speech declares the two exact audio request shapes", () => {
-  assert.deepEqual(mimoSpeechModels, ["mimo-v2.5-tts-voicedesign", "mimo-v2.5-tts-voiceclone"]);
-  assert.ok(Object.values(mimoSpeechPorts).every((ports) => ports.result === "audio"));
-  assert.ok(Object.values(mimoSpeechEndpoints).every((endpoint) => endpoint.returns.name === generationTypes.audioSet.name));
-  assert.throws(() => sealMimoSpeechRequest("mimo-v2.5-tts-voicedesign", {
+test("TTS declares the exact audio request shapes", () => {
+  assert.deepEqual(ttsModels, ["mimo-v2.5-tts-voicedesign", "eleven_ttv_v3", "mimo-v2.5-tts-voiceclone"]);
+  assert.ok(Object.values(ttsPorts).every((ports) => ports.result === "audio"));
+  assert.ok(Object.values(ttsEndpoints).every((endpoint) => endpoint.returns.name === generationTypes.audioSet.name));
+  assert.throws(() => sealTtsRequest("mimo-v2.5-tts-voicedesign", {
     text: ["Do not rewrite me."],
   }), /voiceDescription is required/u);
-  assert.throws(() => sealMimoSpeechRequest("mimo-v2.5-tts-voiceclone", {
+  assert.throws(() => sealTtsRequest("mimo-v2.5-tts-voiceclone", {
     text: ["Do not rewrite me."],
   }), /voiceReference is required/u);
 });
@@ -67,13 +67,13 @@ test("MiMo Speech declares the two exact audio request shapes", () => {
 test("the installed author package contributes the two explicit speech operations", () => {
   assert.equal(mimoNodePackage.format, "hypit.node-package@1");
   assert.equal(mimoNodePackage.modules[0]?.manifest.version, "1");
-  assert.deepEqual(mimoSpeechMarkupSurfaces.map((surface) => surface.name), ["voiceDesign", "voiceClone"]);
+  assert.deepEqual(ttsMarkupSurfaces.map((surface) => surface.name), ["voiceDesign", "voiceClone"]);
 });
 
 test("VoiceDesign publishes one reusable voice reference", async () => {
-  const result = await decodeMimoVoiceDesignSurface(context(`<mimo:VoiceDesign id="host" speech={story.segment.opening.speech}>
+  const result = await decodeVoiceDesignSurface(context(`<tts:VoiceDesign id="host" speech={story.segment.opening.speech}>
     A clear, confident young woman with a grounded conversational tone.
-  </mimo:VoiceDesign>`));
+  </tts:VoiceDesign>`));
   assert.deepEqual(result.components[0]!.outputs, { audio: "host.reference" });
   const exported = result.fragments[0]!.exports.find((item) => item.name === "audio");
   assert.deepEqual(exported?.type, artifactTypes.blob);
@@ -87,9 +87,9 @@ test("VoiceDesign publishes one reusable voice reference", async () => {
 });
 
 test("VoiceClone binds an accepted audio Resource and publishes independent speech", async () => {
-  const result = await decodeMimoVoiceCloneSurface(context(`<mimo:VoiceClone id="narration" speech={story.segment.opening.speech} voice={host.reference}>
+  const result = await decodeVoiceCloneSurface(context(`<tts:VoiceClone id="narration" speech={story.segment.opening.speech} voice={host.reference}>
     Calm and restrained.
-  </mimo:VoiceClone>`));
+  </tts:VoiceClone>`));
   assert.deepEqual(result.components[0]!.outputs, { audio: "narration.audio" });
   assert.deepEqual(result.components[0]!.inputs["voice:artifact"], { kind: "record", id: "host.reference" });
   assert.ok(result.components[0]!.inputs["voice:binding"] !== undefined);
@@ -103,8 +103,8 @@ test("VoiceClone refuses a known non-audio Resource", () => {
       value: { kind: "blob", resource: "res_image", size: 4, mediaType: "image/png" },
     },
   };
-  assert.throws(() => decodeMimoVoiceCloneSurface(context(
-    `<mimo:VoiceClone id="narration" speech={story.segment.opening.speech} voice={host.reference}/>` ,
+  assert.throws(() => decodeVoiceCloneSurface(context(
+    `<tts:VoiceClone id="narration" speech={story.segment.opening.speech} voice={host.reference}/>` ,
     image,
   )), /must reference audio media/u);
 });

@@ -19,6 +19,6 @@
   },
   "devDependencies": {
     "@hypit/driver-node": "workspace:*",
-    "@hypit/mimo-speech": "workspace:*"
+    "@hypit/tts": "workspace:*"
   }
 }

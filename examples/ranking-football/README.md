@@ -9,7 +9,7 @@ A tier board preserves its state while the argument, Caption and overlapping ima
 
 - `presenter.image`: the striking goth host, seated to the right in a sky-blue football classroom.
 - Eight `broll-*.image` outputs: independent text-to-image jokes for the annotated Script passages.
-- `presenter-voice.reference`: one MiMo Voice Design request reused by both Takes.
+- `presenter-voice.reference`: one Voice Design request reused by both Takes.
 - `ronaldo-take.video` and `messi-take.video`: Seedance Mini performances with audio, followed by
   normalization and WhisperX alignment. Both use the same presenter image; there is no tail-frame chain.
 - Eleven supplied player photographs identify the board entries. Nine are presets and two enter
