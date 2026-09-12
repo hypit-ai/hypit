@@ -93,6 +93,9 @@ importers:
       '@hypit/deck-track-studio':
         specifier: workspace:*
         version: link:packages/deck-track-studio
+      '@hypit/elevenlabs-speech':
+        specifier: workspace:*
+        version: link:packages/elevenlabs-speech
       '@hypit/estimate':
         specifier: workspace:*
         version: link:packages/estimate
@@ -102,6 +105,9 @@ importers:
       '@hypit/film-studio':
         specifier: workspace:*
         version: link:packages/film-studio
+      '@hypit/fishaudio-speech':
+        specifier: workspace:*
+        version: link:packages/fishaudio-speech
       '@hypit/fonts-open':
         specifier: workspace:*
         version: link:packages/fonts-open
@@ -970,6 +976,27 @@ importers:
         specifier: workspace:*
         version: link:../source
 
+  packages/elevenlabs-speech:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/endpoint-kit:
     dependencies:
       '@hypit/protocol':
@@ -1069,6 +1096,27 @@ importers:
       '@hypit/studio-adapter':
         specifier: workspace:*
         version: link:../studio-adapter
+
+  packages/fishaudio-speech:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/fonts-open:
     dependencies:
@@ -2065,6 +2113,12 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@hypit/elevenlabs-speech':
+        specifier: workspace:*
+        version: link:../elevenlabs-speech
+      '@hypit/fishaudio-speech':
+        specifier: workspace:*
+        version: link:../fishaudio-speech
       '@hypit/mimo-speech':
         specifier: workspace:*
         version: link:../mimo-speech

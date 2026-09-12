@@ -18,6 +18,8 @@
   },
   "devDependencies": {
     "@hypit/driver-node": "workspace:*",
+    "@hypit/elevenlabs-speech": "workspace:*",
+    "@hypit/fishaudio-speech": "workspace:*",
     "@hypit/mimo-speech": "workspace:*",
     "@hypit/seedance": "workspace:*",
     "@hypit/speech": "workspace:*",

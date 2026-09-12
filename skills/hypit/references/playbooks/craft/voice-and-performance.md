@@ -130,9 +130,12 @@ B-roll or graphics happen to hide a visible performance. Use Voice Design to est
 reusable voice and Voice Clone to perform the actual Segment; the casting sample and the finished
 delivery have different jobs.
 
-Use `hypit vocabulary @hypit/mimo-speech` for the installed Voice Design and Voice Clone author
-Surfaces. The Source chooses those model semantics; the Runtime Profile independently chooses the
-Endpoint that can perform them.
+Each vendor's speech models are one package with its own Source import: `@hypit/mimo-speech`
+(Xiaomi MiMo Voice Design and Voice Clone), `@hypit/fishaudio-speech` (Fish Audio Voice Design and
+Voice Clone) and `@hypit/elevenlabs-speech` (ElevenLabs Voice Design). Use `hypit vocabulary` with a
+package name for its author Surfaces. A voice reference designed by one package is an ordinary audio
+Resource that another package's Voice Clone accepts. The Source chooses those model semantics; the
+Runtime Profile independently chooses the Endpoint that can perform them.
 
 ## Treat narration as a sound-picture relationship
 
