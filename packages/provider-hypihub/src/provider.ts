@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { requestDeadline } from "@hypit/runtime-kit";
 import type { AsyncEndpoint, EndpointCredential, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointPricingReader, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
 import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
@@ -20,6 +21,29 @@ import { HypiHubUploader } from "./upload.js";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-kit";
 import { createHypiHubAuth, hypiHubCredentialNeedsRefresh } from "./oauth.js";
 import type { HypiHubAuth } from "./oauth.js";
+
+function distributionVersion(): string {
+  try {
+    const manifest = JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8")) as {
+      readonly name?: unknown; readonly version?: unknown;
+    };
+    if (manifest.name !== "@hypit/hypit" || typeof manifest.version !== "string" || manifest.version.length === 0) {
+      return "unknown";
+    }
+    return manifest.version;
+  } catch {
+    return "unknown";
+  }
+}
+
+const userAgent = `hypit/${distributionVersion()}`;
+
+const identifiedFetch = (fetcher: typeof globalThis.fetch): typeof globalThis.fetch =>
+  async (input, init) => {
+    const headers: Record<string, string> = { "user-agent": userAgent };
+    new Headers(init?.headers).forEach((value, name) => { headers[name] = value; });
+    return await fetcher(input, { ...init, headers });
+  };
 
 export const hypiHubProviderModuleRef = { name: "@hypit/provider-hypihub", version: "1" } as const;
 
@@ -118,7 +142,7 @@ class HypiHubClient {
     this.timeout = options.timeout;
     this.oauthTimeout = options.oauthTimeout;
     this.downloadAttempts = options.downloadAttempts;
-    this.fetcher = options.fetcher;
+    this.fetcher = identifiedFetch(options.fetcher);
     this.uploader = new HypiHubUploader({
       baseUrl: this.baseUrl,
       requestTimeoutMs: this.timeout,
