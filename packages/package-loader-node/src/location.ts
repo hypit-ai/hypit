@@ -81,8 +81,14 @@ export function declaredExternalPackageRoot(root: string, from: string | URL, na
   while (true) {
     const manifest = join(cursor, "package.json");
     if (existsSync(manifest)) {
-      const value = JSON.parse(readFileSync(manifest, "utf8")) as { dependencies?: Record<string, string> };
-      const version = value.dependencies?.[name];
+      const value = JSON.parse(readFileSync(manifest, "utf8")) as {
+        dependencies?: Record<string, string>;
+        optionalDependencies?: Record<string, string>;
+      };
+      // An upstream asset a package ships as optional is still selected by one exact version here.
+      // `hypit packages install` places it under the machine npm root named by this selection, so
+      // reading only the required map makes the documented repair unusable for every optional asset.
+      const version = value.dependencies?.[name] ?? value.optionalDependencies?.[name];
       return version === undefined ? undefined : externalPackageInstallRoot(root, name, version);
     }
     const parent = dirname(cursor);

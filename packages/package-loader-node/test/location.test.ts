@@ -120,3 +120,35 @@ test("package Source resolution reads one public export without activating packa
     await rm(project, { recursive: true, force: true });
   }
 });
+
+test("a machine npm fallback resolves an upstream asset the importer declares optionally", async () => {
+  const distribution = await mkdtemp(join(tmpdir(), "hypit-optional-distribution-"));
+  const machine = await mkdtemp(join(tmpdir(), "hypit-optional-machine-"));
+  try {
+    const asset = await machinePackage(
+      externalPackageInstallRoot(machine, "optional-only", "3.2.1"), "optional-only",
+      { version: "3.2.1" }, { "files/asset.css": "/* asset */\n" });
+    const importer = join(distribution, "packages", "fonts", "surface.mjs");
+    await mkdir(join(importer, ".."), { recursive: true });
+    // `hypit packages install <name>@<version>` tells the author to install exactly this asset, so
+    // the version selection must read the same declaration the install was addressed to.
+    await writeFile(join(importer, "..", "package.json"), JSON.stringify({
+      optionalDependencies: { "optional-only": "3.2.1" },
+    }));
+    const options = {
+      from: importer,
+      distributionRoots: [distribution],
+      externalRoots: [machine],
+    } as const;
+
+    const canonical = await realpath(asset);
+    assert.equal(locateNodePackage("optional-only", options).root, canonical);
+    assert.equal(
+      resolveNodePackageResource("optional-only", "files/asset.css", options),
+      join(canonical, "files", "asset.css"),
+    );
+  } finally {
+    await rm(distribution, { recursive: true, force: true });
+    await rm(machine, { recursive: true, force: true });
+  }
+});
