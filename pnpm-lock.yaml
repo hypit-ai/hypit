@@ -406,6 +406,30 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  packages/alibaba-video:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/artifact:
     dependencies:
       '@hypit/protocol':
@@ -2317,6 +2341,12 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+
+  packages/provider-wanx:
+    dependencies:
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
 
   packages/provider-whisperx-local:
     dependencies:

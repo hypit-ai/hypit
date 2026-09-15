@@ -1,0 +1,17 @@
+{
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/execution",
+  "credentials": { "os": { "use": "@hypit/credential-store-os" } },
+  "endpoints": {
+    "wanx.personal": {
+      "use": "@example/provider-wanx",
+      "config": {
+        "baseUrl": "https://dashscope.aliyuncs.com",
+        "apiKey": { "store": "os", "key": "wanx.personal" },
+        "model": "wan3.0-video",
+        "pollIntervalMs": 5000
+      }
+    }
+  },
+  "bindings": { "@hypit/alibaba-video@1#alibaba-qwen-vvg": "wanx.personal" }
+}

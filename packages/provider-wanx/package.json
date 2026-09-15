@@ -1,0 +1,11 @@
+{
+  "name": "@example/provider-wanx",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "hypit": { "activation": "./src/activation.ts" },
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@hypit/hypit": "workspace:*"
+  }
+}
