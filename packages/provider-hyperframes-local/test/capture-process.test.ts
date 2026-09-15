@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -58,4 +58,32 @@ test("renderer stdout and stderr diagnostics are drained before reporting succes
     assert.ok(messages.some((item) => item.stream === "stdout" && item.message.includes("browser ready")));
     assert.ok(messages.some((item) => item.stream === "stderr" && item.message.includes("render diagnostic")));
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("a completed render remains successful when ps is unavailable", async () => {
+  if (process.platform === "win32") return;
+  const root = await mkdtemp(join(tmpdir(), "hypit-render-no-ps-"));
+  const previousPath = process.env.PATH;
+  try {
+    const entry = join(root, "complete.mjs");
+    const ps = join(root, "ps");
+    const pgrep = join(root, "pgrep");
+    await Promise.all([
+      writeFile(entry, "process.once('message', () => process.send({ type: 'completed' }));"),
+      writeFile(ps, "#!/bin/sh\nexit 126\n"),
+      writeFile(pgrep, "#!/bin/sh\nexit 1\n"),
+    ]);
+    await Promise.all([chmod(ps, 0o755), chmod(pgrep, 0o755)]);
+    process.env.PATH = root;
+
+    await runCaptureProcess(
+      { config: resolveExecutionOptions({}) } as CaptureInput,
+      new AbortController().signal,
+      () => {},
+      pathToFileURL(entry),
+    );
+  } finally {
+    process.env.PATH = previousPath;
+    await rm(root, { recursive: true, force: true });
+  }
 });
