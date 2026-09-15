@@ -23,6 +23,7 @@
     "@hypit/project-context-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/provider-hypihub": "workspace:*",
+    "@hypit/provider-orcarouter": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-host-node": "workspace:*",
     "@hypit/runtime-local": "workspace:*",

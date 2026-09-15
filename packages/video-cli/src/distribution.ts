@@ -43,6 +43,14 @@ export const videoCliDistribution: CliDistribution = {
       "hyperframes.local": {
         use: "@hypit/provider-hyperframes-local",
       },
+      // A first-class account beside HypiHub. Its one credential slot accepts either a pasted
+      // `sk-orca-…` key or an account authorization; both yield the same OrcaRouter key.
+      "orcarouter.default": {
+        use: "@hypit/provider-orcarouter",
+        config: {
+          apiKey: { store: "os", key: "orcarouter.apiKey" },
+        },
+      },
     },
   },
   createCompiler: createVideoCompiler,

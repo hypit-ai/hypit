@@ -22,6 +22,7 @@ export {
   openTransientRuntimeConfigExecution,
   prepareRuntimeConfigPackages,
   preflightRuntimeConfig,
+  openRuntimeCredentialStore,
   readRuntimeConfigPricing,
   parseLocalRuntimeProfile,
   resolveRuntimeConfigPaths,

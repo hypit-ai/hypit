@@ -16,6 +16,7 @@ import type { SemanticTarget } from "../temporal-edit.js";
 import { applyStudioMutation } from "./writeback.js";
 import { createTimeline } from "./timeline.js";
 import { createComments } from "./comments.js";
+import { createAccountsPane } from "./accounts.js";
 import "../style.css";
 
 await initializeI18n();
@@ -119,6 +120,7 @@ shell.insertBefore(createHandle({
   remember: "hypit-studio.v3.timeline-height",
 }), app.querySelector<HTMLElement>("[data-timeline]")!);
 const inspector = app.querySelector<HTMLElement>("[data-inspector]")!;
+const accounts = createAccountsPane();
 const workspaceHeading = app.querySelector<HTMLElement>("[data-workspace-heading]")!;
 const meta = app.querySelector<HTMLElement>("[data-meta]")!;
 const project = app.querySelector<HTMLElement>("[data-project]")!;
@@ -147,6 +149,21 @@ app.querySelectorAll<HTMLButtonElement>(".view-tabs [data-view]").forEach((butto
 });
 window.addEventListener("hashchange", changeView);
 changeView();
+
+// The account panel owns the Project view: its state comes from the Runtime's credential store and
+// the OrcaRouter catalogue, neither of which is part of a Source snapshot. Leaving the Project view
+// releases an authorization that was still waiting for a code.
+void accounts.refresh().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : String(error));
+});
+let accountsShown = true;
+window.addEventListener("hashchange", () => {
+  const shown = (window.location.hash === "#comments" ? "comments" : "studio") === "studio";
+  if (shown === accountsShown) return;
+  accountsShown = shown;
+  if (shown) void accounts.refresh().catch(() => undefined);
+  else accounts.release();
+});
 
 timeline.element.addEventListener("studio:write", (event) => {
   const state = (event as CustomEvent<{ readonly state?: string }>).detail.state;
@@ -775,6 +792,7 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
     defaultWorkspaceHeading();
     const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
     inspector.replaceChildren(
+      uiGroup("account.panel", [accounts.element]),
       uiGroup("inspector.project", [
         property("inspector.author", snapshot.source.path, "property-code"),
         property("inspector.run", snapshot.run.path, "property-code"),

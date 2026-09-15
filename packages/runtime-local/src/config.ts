@@ -1346,6 +1346,50 @@ export function createRuntimeResultWriter(root: string, options: LoadRuntimeConf
   });
 }
 
+/**
+ * Open only the CredentialStores the selected Runtime Profile declares, together with the credential
+ * slots the named Endpoint instance declares. A deployment control that needs to read or write one
+ * slot through the same Store the Provider will use — rather than opening a store of its own — uses
+ * this; it never builds a Build, a Worker or an execution Provider.
+ */
+export async function openRuntimeCredentialStore(
+  path: string,
+  endpointInstance: string,
+  options: LoadRuntimeConfigOptions = {},
+): Promise<{
+  readonly store: CredentialStore;
+  readonly credentials: readonly import("@hypit/endpoint-kit").EndpointCredentialDescription[];
+  close(): Promise<void>;
+}> {
+  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
+  const registry = options.registry ?? new RuntimeAdapterRegistry();
+  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
+  const credentials = await openCredentialStores(document, root, hostStateRoot, registry);
+  const endpoint = document.endpoints.find((item) => item.instance === endpointInstance);
+  if (endpoint === undefined) {
+    return {
+      store: credentials.store,
+      credentials: [],
+      close: credentials.close,
+    };
+  }
+  try {
+    const endpointPackage = await registry.createEndpoint(endpoint.use, adapterContext(root, hostStateRoot, {
+      ...endpoint,
+      pool: endpoint.pool ?? endpoint.instance,
+    }));
+    return {
+      store: credentials.store,
+      credentials: endpointPackage.credentials,
+      close: credentials.close,
+    };
+  } catch (error) {
+    await credentials.close();
+    throw error;
+  }
+}
+
 export async function createRuntimeCredentialsFromConfig(
   path: string,
   endpointInstance: string,

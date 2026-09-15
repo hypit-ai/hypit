@@ -11,6 +11,8 @@ type OAuthAcquisitionOptions = {
   readonly onProgress?: (message: string) => void;
   readonly fetch?: typeof globalThis.fetch;
   readonly open?: (url: string) => void;
+  /** Reads one pasted authorization code when the declared delivery has no redirect. */
+  readonly readCode?: (prompt: string) => Promise<string | undefined>;
 };
 
 function base64url(bytes: Uint8Array): string {
@@ -40,6 +42,7 @@ export async function acquireOAuthCredential(
   // S256 is part of OAuth PKCE. It authenticates this browser exchange; it is not content identity.
   const challenge = base64url(createHash("sha256").update(verifier).digest());
   const state = base64url(randomBytes(24));
+  const outOfBand = acquisition.delivery === "out-of-band";
   const server = createServer();
   const callback = new Promise<string>((resolveCode, reject) => {
     let settled = false;
@@ -86,18 +89,28 @@ export async function acquireOAuthCredential(
     });
     server.once("error", reject);
   });
-  await new Promise<void>((resolveListen, rejectListen) => {
-    server.listen(0, "127.0.0.1", () => resolveListen());
-    server.once("error", rejectListen);
-  });
-  const address = server.address();
-  if (address === null || typeof address === "string") throw new Error("could not open a local OAuth callback");
-  const redirectUri = `http://127.0.0.1:${address.port}/callback`;
+  let redirectUri: string | undefined;
+  if (!outOfBand) {
+    await new Promise<void>((resolveListen, rejectListen) => {
+      server.listen(0, "127.0.0.1", () => resolveListen());
+      server.once("error", rejectListen);
+    });
+    const address = server.address();
+    if (address === null || typeof address === "string") throw new Error("could not open a local OAuth callback");
+    redirectUri = `http://127.0.0.1:${address.port}/callback`;
+  }
   const authorize = new URL(acquisition.authorizationEndpoint);
-  authorize.searchParams.set("response_type", "code");
-  authorize.searchParams.set("client_id", acquisition.clientId);
-  authorize.searchParams.set("redirect_uri", redirectUri);
-  authorize.searchParams.set("scope", acquisition.scopes.join(" "));
+  // A declared parameter set replaces the RFC 6749 one; the challenge and state below are never
+  // delegable, because the PKCE binding and the CSRF check are the client's own.
+  for (const [name, value] of Object.entries(acquisition.authorizeParams ?? {})) {
+    authorize.searchParams.set(name, value);
+  }
+  if (acquisition.authorizeParams === undefined) {
+    authorize.searchParams.set("response_type", "code");
+    authorize.searchParams.set("client_id", acquisition.clientId);
+    authorize.searchParams.set("redirect_uri", redirectUri!);
+    authorize.searchParams.set("scope", acquisition.scopes.join(" "));
+  }
   authorize.searchParams.set("state", state);
   authorize.searchParams.set("code_challenge", challenge);
   authorize.searchParams.set("code_challenge_method", "S256");
@@ -109,22 +122,38 @@ export async function acquireOAuthCredential(
   } else {
     options.open(authorize.toString());
   }
-  const code = await callback;
+  const code = outOfBand ? await pastedCode(options) : await callback;
   options.onProgress?.("Authorization returned. Exchanging token…");
   const deadline = AbortSignal.timeout(acquisition.requestTimeoutMs);
+  const exchange = acquisition.exchange;
+  const exchanged = exchange === undefined
+    ? {
+        encoding: "form" as const,
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: redirectUri!,
+          client_id: acquisition.clientId,
+          code_verifier: verifier,
+        }).toString(),
+      }
+    : {
+        encoding: exchange.encoding,
+        headers: exchange.encoding === "json"
+          ? { "content-type": "application/json" }
+          : { "content-type": "application/x-www-form-urlencoded" },
+        body: exchange.encoding === "json"
+          ? JSON.stringify({ ...exchange.fields, code, code_verifier: verifier })
+          : new URLSearchParams({ ...exchange.fields, code, code_verifier: verifier }).toString(),
+      };
   let tokenResponse: Response;
   let body: string;
   try {
     tokenResponse = await (options.fetch ?? globalThis.fetch)(acquisition.tokenEndpoint, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: redirectUri,
-        client_id: acquisition.clientId,
-        code_verifier: verifier,
-      }),
+      headers: exchanged.headers,
+      body: exchanged.body,
       signal: deadline,
     });
     body = await tokenResponse.text();
@@ -138,24 +167,40 @@ export async function acquireOAuthCredential(
     throw error;
   }
   if (!tokenResponse.ok) throw new Error(`OAuth token exchange failed (${tokenResponse.status}): ${body.slice(0, 200)}`);
-  const parsed = JSON.parse(body) as {
-    readonly access_token?: unknown;
-    readonly refresh_token?: unknown;
-    readonly expires_at?: unknown;
-    readonly expires_in?: unknown;
-  };
-  if (typeof parsed.access_token !== "string" || parsed.access_token.length === 0) {
-    throw new Error("OAuth token response contained no access token");
+  const parsed = JSON.parse(body) as Record<string, unknown>;
+  const credentialField = acquisition.exchange?.credentialField ?? "access_token";
+  const credential = parsed[credentialField];
+  if (typeof credential !== "string" || credential.length === 0) {
+    throw new Error(`OAuth token response contained no ${credentialField}`);
+  }
+  // Read the granted scope back: a narrower grant is refused here rather than assumed later.
+  const requiredScope = acquisition.exchange?.requiredScope;
+  if (requiredScope !== undefined && parsed.scope !== requiredScope) {
+    throw new Error(
+      `OAuth authorization granted scope ${JSON.stringify(parsed.scope ?? null)}, not ${JSON.stringify(requiredScope)}; `
+      + "the account or workspace role does not permit the requested grant",
+    );
   }
   options.onProgress?.("Token received. Saving credential…");
-  const expiresAt = tokenExpiry(parsed);
+  if (acquisition.exchange?.credentialFormat === "opaque") return credential;
+  const expiresAt = tokenExpiry(parsed as { readonly expires_at?: unknown; readonly expires_in?: unknown });
   return encodeOAuth2Credential({
-    accessToken: parsed.access_token,
+    accessToken: credential,
     ...(typeof parsed.refresh_token === "string" && parsed.refresh_token.length > 0
       ? { refreshToken: parsed.refresh_token }
       : {}),
     ...(expiresAt === undefined ? {} : { expiresAt }),
   });
+}
+
+/** Read the displayed code back from the person who approved it. */
+async function pastedCode(options: OAuthAcquisitionOptions): Promise<string> {
+  if (options.readCode === undefined) {
+    throw new Error("this sign-in shows its authorization code; interactive input is unavailable, so use --from <file> instead");
+  }
+  const code = (await options.readCode("Authorization code: "))?.trim();
+  if (code === undefined || code.length === 0) throw new Error("no authorization code was entered");
+  return code;
 }
 
 function callbackPage(success: boolean): string {

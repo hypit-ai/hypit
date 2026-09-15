@@ -39,6 +39,29 @@ export function decodeOAuth2Credential(secret: string): OAuth2Credential | undef
   return candidate as OAuth2Credential;
 }
 
+/** How the consent screen hands its authorization code back to this program. */
+export type CredentialAcquisitionDelivery = "loopback" | "out-of-band";
+
+/**
+ * The exchange request and credential shape, for a service that does not implement the RFC 6749
+ * authorization-code grant the host otherwise sends. Declaring it keeps that service's wire spelling
+ * in its Endpoint package rather than in the host's OAuth code.
+ */
+export type CredentialExchange = {
+  readonly encoding: "form" | "json";
+  /** Literal fields sent beside `code` and `code_verifier` on every exchange request. */
+  readonly fields?: Readonly<Record<string, string>>;
+  /** Response field carrying the credential; defaults to `access_token`. */
+  readonly credentialField?: string;
+  /**
+   * `oauth2` stores the host's refreshable credential envelope; `opaque` stores the returned value
+   * as an ordinary secret, for a durable key grant with no refresh lifecycle.
+   */
+  readonly credentialFormat?: "oauth2" | "opaque";
+  /** The scope the credential must actually carry; a narrower grant is refused, never assumed. */
+  readonly requiredScope?: string;
+};
+
 /** Host-facing way to acquire one credential; Provider-specific values stay in its Endpoint package. */
 export type CredentialAcquisition = {
   readonly kind: "oauth2-pkce";
@@ -48,6 +71,17 @@ export type CredentialAcquisition = {
   readonly scopes: readonly string[];
   /** Maximum duration of the service-owned token exchange after browser authorization returns. */
   readonly requestTimeoutMs: number;
+  /**
+   * Where the code is delivered. `loopback` (the default) runs the local callback server the
+   * RFC 6749 parameters describe. `out-of-band` serves a consent endpoint that accepts no redirect:
+   * the code is displayed to the user and pasted into the terminal, which is why that flow must send
+   * S256 — a code in human hands is redeemable only with the verifier.
+   */
+  readonly delivery?: CredentialAcquisitionDelivery;
+  /** Authorize query parameters in the service's own spelling, replacing the RFC 6749 set. */
+  readonly authorizeParams?: Readonly<Record<string, string>>;
+  /** Exchange request and credential shape, when the service does not use the RFC 6749 grant. */
+  readonly exchange?: CredentialExchange;
 };
 
 export type CredentialStore = {

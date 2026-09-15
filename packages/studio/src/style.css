@@ -1687,3 +1687,60 @@ button:focus-visible, textarea:focus-visible {
   background: var(--item-head);
 }
 .track-band-label .clip-body, .track-band-label .clip-meta { display: none; }
+
+/* OrcaRouter account panel. It sits in the Project view and uses the same control
+   vocabulary as the inspector, so the two authentication choices read as one provider
+   with two ways in rather than as a separate settings screen. */
+.account-panel { display: grid; gap: 10px; min-width: 0; }
+.account-head { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.account-mark { display: grid; place-items: center; width: 18px; height: 18px; color: var(--brand-400); }
+.account-mark .icon { width: 16px; height: 16px; }
+.account-head strong { min-width: 0; overflow: hidden; color: var(--text); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.account-state {
+  padding: 2px 6px; border: 1px solid var(--line-strong); border-radius: 3px;
+  color: var(--text-3); font: 10px/1.4 var(--font-ui); white-space: nowrap;
+}
+.account-panel[data-account-state="ready"] .account-state { border-color: var(--ok); color: var(--ok); }
+.account-panel[data-account-state="needsReauth"] .account-state { border-color: var(--danger); color: var(--danger); }
+.account-hint { margin: 0; color: var(--text-3); font: 10px/1.5 var(--font-ui); overflow-wrap: anywhere; }
+/* Both entry points stay on screen together: pasting a key never hides the account login, and the
+   account login never hides the key field. Only the entry that stored the current key is tagged.
+   They sit side by side when the panel is wide enough and stack in the narrower inspector column,
+   so neither choice is ever cut off. */
+.account-methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; align-items: start; }
+.account-method-head { display: flex; justify-content: space-between; gap: 6px; min-width: 0; color: var(--text-2); font: 600 11px/1.3 var(--font-ui); }
+.account-method-tag { color: var(--ok); font-size: 9px; font-weight: 500; white-space: nowrap; }
+.account-method-body {
+  display: grid; gap: 6px; min-width: 0; padding: 8px;
+  border: 1px solid var(--line-strong); border-radius: 4px; background: var(--panel-raised);
+}
+.account-method-body[hidden] { display: none; }
+.account-attach { display: flex; align-items: center; gap: 6px; color: var(--text-3); font: 10px/1.4 var(--font-ui); }
+.account-field { display: grid; gap: 4px; min-width: 0; }
+.account-field > span { color: var(--text-3); font: 10px/1.4 var(--font-ui); }
+.account-field input {
+  width: 100%; min-width: 0; height: 27px; padding: 0 8px;
+  border: 1px solid #2b2e34; border-radius: 4px;
+  background: #1a1b1f; color: var(--text); font: 11px/1.2 var(--font-mono);
+}
+.account-field input:focus-visible { border-color: #6a6e77; outline: 0; background: #131417; }
+.account-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.account-primary, .account-secondary {
+  flex: 1 1 auto; min-width: 0; height: 27px; padding: 0 10px;
+  border: 1px solid var(--line-strong); border-radius: 4px;
+  color: var(--text); font: 11px/1.2 var(--font-ui); white-space: nowrap;
+}
+.account-primary { border-color: var(--interaction-accent); background: var(--brand-soft); }
+.account-primary:disabled, .account-secondary:disabled { opacity: .5; }
+.account-secondary { background: var(--field); color: var(--text-2); }
+.account-link {
+  margin: 0; padding: 6px 8px; border: 1px dashed var(--line-strong); border-radius: 4px;
+  color: var(--text-2); font: 10px/1.5 var(--font-mono); overflow-wrap: anywhere;
+}
+.account-models { display: grid; gap: 6px; min-width: 0; padding-top: 4px; border-top: 1px solid var(--line); }
+.account-models-head { display: flex; justify-content: space-between; gap: 8px; color: var(--text-3); font: 10px/1.4 var(--font-ui); }
+.account-catalog { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-panel[data-catalog-source="seed"] .account-catalog { color: var(--tone-orange-rail); }
+.account-panel[data-catalog-source="live"] .account-catalog { color: var(--ok); }
+.account-code { display: grid; gap: 8px; }
+.account-code[hidden] { display: none; }

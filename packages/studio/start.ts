@@ -87,6 +87,7 @@ export async function runStudio(argv: readonly string[], io: Pick<CliIo, "write"
   const { loadStudioDomain } = await import("./src/domain.js");
   const { loadStudioRun } = await import("./src/run.js");
   const { studioPlugin } = await import("./src/server.js");
+  const { StudioAccounts } = await import("./src/accounts.js");
   const { studioFeedbackPlugin } = await import("./src/feedback-server.js");
   const { inspectStudioRun } = await import("./src/studio-preflight.js");
   const languages = await studioLanguages(values.get("locale-pack") ?? [], invokedFrom, packageRoot);
@@ -130,6 +131,21 @@ export async function runStudio(argv: readonly string[], io: Pick<CliIo, "write"
     throw error;
   }
   const source = run.authorSource;
+  // The account panel reads and writes the credential through the selected Runtime Profile's own
+  // CredentialStore and its declared CredentialRef, so it works with any store the Profile selects
+  // and never introduces a second one. Without a Profile there is no writable store to use.
+  const accounts = new StudioAccounts({
+    endpoint: "orcarouter.default",
+    ...(runtimePath === undefined ? {} : {
+      profile: async () => {
+        const { openRuntimeCredentialStore } = await import("@hypit/runtime-local");
+        return await openRuntimeCredentialStore(runtimePath, "orcarouter.default", {
+          packageRoot,
+          ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
+        });
+      },
+    }),
+  });
   try {
     inspectStudioRun(registry, run.source, run);
   } catch (error) {
@@ -160,6 +176,7 @@ export async function runStudio(argv: readonly string[], io: Pick<CliIo, "write"
       workspaceRoot,
       domain,
       registry,
+      accounts,
       ...(buildLibrary === undefined ? {} : { buildLibrary }),
     })],
   });

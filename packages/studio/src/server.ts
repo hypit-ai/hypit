@@ -23,6 +23,7 @@ import type { StudioStoryboard } from "./storyboard.js";
 import { findSurfacePreview } from "./surface-preview.js";
 import { formatTemporalPointEdit, semanticGestureSpan } from "./temporal-edit.js";
 import { replaceSourceFiles } from "./source-transaction.js";
+import type { StudioAccounts } from "./accounts.js";
 
 export type StudioPluginOptions = {
   readonly source: string;
@@ -31,7 +32,28 @@ export type StudioPluginOptions = {
   readonly registry: StudioCompanionRegistry;
   readonly workspaceRoot: string;
   readonly buildLibrary?: StudioBuildLibrary;
+  /** OrcaRouter account panel state: both authentication choices and the model catalogue. */
+  readonly accounts?: StudioAccounts;
 };
+
+/** One account request body, bounded so a malformed caller cannot stream without end. */
+async function accountBody(request: import("node:http").IncomingMessage): Promise<Record<string, unknown>> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.from(chunk);
+    size += buffer.byteLength;
+    if (size > 64 * 1024) throw new Error("The account request body is too large");
+    chunks.push(buffer);
+  }
+  const text = Buffer.concat(chunks).toString("utf8");
+  if (text.trim().length === 0) return {};
+  const parsed: unknown = JSON.parse(text);
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("The account request body must be an object");
+  }
+  return parsed as Record<string, unknown>;
+}
 
 function json(response: import("node:http").ServerResponse, status: number, value: unknown): void {
   response.statusCode = status;
@@ -572,6 +594,62 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             } catch (error) {
               const message = error instanceof Error ? error.message : String(error);
               json(response, conflict(error) ? 409 : error instanceof StudioMutationRejected ? 422 : 500, { error: message });
+            }
+          })();
+          return;
+        }
+        if (url.pathname === "/__studio/account" && options.accounts !== undefined) {
+          const accounts = options.accounts;
+          void (async () => {
+            try {
+              const body = request.method === "POST" ? await accountBody(request) : {};
+              const action = typeof body.action === "string" ? body.action : "view";
+              switch (action) {
+                case "view":
+                  json(response, 200, await accounts.view());
+                  return;
+                case "save-api-key": {
+                  if (typeof body.key !== "string") throw new Error("Expected the OrcaRouter API key as text");
+                  json(response, 200, await accounts.saveApiKey(body.key));
+                  return;
+                }
+                case "clear":
+                  json(response, 200, await accounts.clear());
+                  return;
+                case "begin-connect":
+                  json(response, 200, await accounts.beginConnect());
+                  return;
+                case "submit-code": {
+                  if (typeof body.code !== "string" || typeof body.generation !== "number") {
+                    throw new Error("Expected the displayed code and the authorization it belongs to");
+                  }
+                  json(response, 200, await accounts.submitCode(body.generation, body.code));
+                  return;
+                }
+                case "cancel-connect": {
+                  if (typeof body.generation !== "number") throw new Error("Expected the authorization to cancel");
+                  json(response, 200, await accounts.cancel(body.generation));
+                  return;
+                }
+                case "models": {
+                  const capability = body.capability;
+                  if (capability !== "chat" && capability !== "multimodal" && capability !== "embedding"
+                    && capability !== "image" && capability !== "video" && capability !== "rerank") {
+                    throw new Error("Expected a catalogue capability");
+                  }
+                  const modality = body.modality;
+                  if (modality !== undefined && modality !== "image" && modality !== "audio" && modality !== "video") {
+                    throw new Error("Expected an input modality");
+                  }
+                  json(response, 200, await accounts.models(capability, modality as "image" | "audio" | "video" | undefined));
+                  return;
+                }
+                default:
+                  json(response, 400, { error: `Unknown account action ${action}` });
+                  return;
+              }
+            } catch (error) {
+              json(response, 400, { error: error instanceof Error ? error.message : String(error) });
             }
           })();
           return;

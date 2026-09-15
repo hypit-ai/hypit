@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./oauth-host": "./src/oauth.ts"
   },
   "dependencies": {
     "@hypit/build-result": "workspace:*",

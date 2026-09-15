@@ -390,6 +390,7 @@ export async function runEnvironmentCommand(input: {
             ...(reportCredentialProgress === undefined ? {} : {
               onProgress: (message) => reportCredentialProgress(`  · ${message}\n`),
             }),
+            ...(io.readSecret === undefined ? {} : { readCode: (prompt) => io.readSecret!(prompt) }),
           })
           : args.credentialFile === undefined
             ? await io.readSecret?.(`${item.label}: `)

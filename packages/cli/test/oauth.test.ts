@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { createConnection } from "node:net";
 import test from "node:test";
@@ -93,5 +94,55 @@ test("OAuth token exchange uses the Endpoint-declared request timeout", async ()
       }),
     }),
     /token exchange timed out after 20 ms.*no credential was stored/u,
+  );
+});
+
+test("out-of-band acquisition shows the code, exchanges it with S256, and never starts a listener", async () => {
+  const sent: { readonly url: string; readonly body: Record<string, string> }[] = [];
+  const opened: string[] = [];
+  const raw = await acquireOAuthCredential({
+    ...acquisition,
+    delivery: "out-of-band",
+    authorizeParams: { callback_url: "oob", app_name: "Test Tool", scope: "api" },
+    exchange: { encoding: "json", fields: { code_challenge_method: "S256" }, credentialField: "key", credentialFormat: "opaque", requiredScope: "api" },
+  }, {
+    open: (url) => opened.push(url),
+    readCode: async () => "displayed-code",
+    fetch: async (input, init) => {
+      sent.push({ url: String(input), body: JSON.parse(String(init?.body)) as Record<string, string> });
+      return Response.json({ key: "sk-orca-test", user_id: "1", scope: "api" });
+    },
+  });
+
+  // A pasted code yields the durable key itself, not a refreshable token envelope.
+  assert.equal(raw, "sk-orca-test");
+  const authorize = new URL(opened[0]!);
+  assert.equal(authorize.pathname, "/authorize");
+  assert.equal(authorize.searchParams.get("callback_url"), "oob");
+  assert.equal(authorize.searchParams.get("code_challenge_method"), "S256");
+  assert.equal(authorize.searchParams.get("response_type"), null);
+  assert.equal(sent[0]!.url, acquisition.tokenEndpoint);
+  assert.equal(sent[0]!.body.code, "displayed-code");
+  assert.equal(sent[0]!.body.code_challenge_method, "S256");
+  assert.equal(sent[0]!.body.grant_type, undefined);
+  const verifier = sent[0]!.body.code_verifier!;
+  assert.equal(Buffer.from(createHash("sha256").update(verifier).digest()).toString("base64url"),
+    authorize.searchParams.get("code_challenge"));
+  // The verifier is never placed on the URL a browser or its history can see.
+  assert.ok(!opened[0]!.includes(verifier));
+});
+
+test("out-of-band acquisition refuses a narrower granted scope", async () => {
+  await assert.rejects(
+    async () => await acquireOAuthCredential({
+      ...acquisition,
+      delivery: "out-of-band",
+      exchange: { encoding: "json", credentialField: "key", credentialFormat: "opaque", requiredScope: "api" },
+    }, {
+      open: () => {},
+      readCode: async () => "displayed-code",
+      fetch: async () => Response.json({ key: "sk-orca-test", scope: "connector" }),
+    }),
+    /granted scope "connector", not "api"/u,
   );
 });

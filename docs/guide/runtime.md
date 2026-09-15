@@ -67,6 +67,22 @@ binding states which instance to use. For example, with an explicitly configured
 }
 ```
 
+The Distribution also ships the OrcaRouter Provider, whose one credential slot accepts either a key
+the user pastes or an authorization. Point it at the store the profile selects:
+
+```json
+"endpoints": {
+  "orcarouter.default": {
+    "use": "@hypit/provider-orcarouter",
+    "config": { "apiKey": { "store": "env", "key": "ORCAROUTER_API_KEY" } }
+  }
+}
+```
+
+`hypit auth login orcarouter.default` runs the authorization when the slot is writable, and
+`hypit auth status` reports whether the key on file is usable. See
+[Models and Providers](./providers.md#orcarouter).
+
 Installing a package makes it available; selecting it gives it a role in this environment. The Model
 owns request meaning, and the Provider owns support, service mapping and pricing. A failed service
 request does not silently select another account. Read the chosen Provider's README for its settings.

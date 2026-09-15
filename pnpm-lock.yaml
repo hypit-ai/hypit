@@ -162,6 +162,9 @@ importers:
       '@hypit/narrative':
         specifier: workspace:*
         version: link:packages/narrative
+      '@hypit/orcarouter':
+        specifier: workspace:*
+        version: link:packages/orcarouter
       '@hypit/performance':
         specifier: workspace:*
         version: link:packages/performance
@@ -189,6 +192,9 @@ importers:
       '@hypit/provider-media-local':
         specifier: workspace:*
         version: link:packages/provider-media-local
+      '@hypit/provider-orcarouter':
+        specifier: workspace:*
+        version: link:packages/provider-orcarouter
       '@hypit/provider-whisperx-local':
         specifier: workspace:*
         version: link:packages/provider-whisperx-local
@@ -2043,6 +2049,27 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/orcarouter:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@hypit/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/package-loader-node:
     dependencies:
       '@hypit/component-kit':
@@ -2317,6 +2344,31 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+
+  packages/provider-orcarouter:
+    dependencies:
+      '@hypit/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@hypit/orcarouter':
+        specifier: workspace:*
+        version: link:../orcarouter
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/runtime-kit':
+        specifier: workspace:*
+        version: link:../runtime-kit
+    devDependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/cli':
+        specifier: workspace:*
+        version: link:../cli
 
   packages/provider-whisperx-local:
     dependencies:
@@ -3031,6 +3083,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/provider-orcarouter':
+        specifier: workspace:*
+        version: link:../provider-orcarouter
       '@hypit/ranking-studio':
         specifier: workspace:*
         version: link:../ranking-studio
@@ -3043,6 +3098,9 @@ importers:
       '@hypit/runtime-host-node':
         specifier: workspace:*
         version: link:../runtime-host-node
+      '@hypit/runtime-local':
+        specifier: workspace:*
+        version: link:../runtime-local
       '@hypit/screen-overlay-studio':
         specifier: workspace:*
         version: link:../screen-overlay-studio
@@ -3373,6 +3431,9 @@ importers:
       '@hypit/provider-hypihub':
         specifier: workspace:*
         version: link:../provider-hypihub
+      '@hypit/provider-orcarouter':
+        specifier: workspace:*
+        version: link:../provider-orcarouter
       '@hypit/runtime':
         specifier: workspace:*
         version: link:../runtime

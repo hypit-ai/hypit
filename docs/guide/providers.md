@@ -8,8 +8,8 @@ A **Provider** knows how to fulfill that request through a particular service. A
 configured instance of that Provider, with its service address, credential reference and capacity.
 The Runtime Profile binds the requested capability to an Endpoint.
 
-Hypit's official Distribution includes local Providers and the HypiHub Provider. Other services
-connect through packages owned by the production or their authors. The Agent can implement a new
+Hypit's official Distribution includes local Providers, the HypiHub Provider and the OrcaRouter
+Provider. Other services connect through packages owned by the production or their authors. The Agent can implement a new
 service through the public SDK, just as it can create a visual component for a video.
 [Service partners](./service-partners.md) introduces independent partners through that same path.
 
@@ -29,6 +29,28 @@ A Profile chooses the route; an error on that route does not authorize spending 
 For an existing installation, inspect the selected Profile and credential status first. A starter
 Profile supplies configuration examples; choose the services you want before connecting accounts or
 preparing their dependencies. [Runs and Builds](../quickstart/run.md) shows the commands.
+
+## OrcaRouter
+
+[OrcaRouter](https://www.orcarouter.ai) is an OpenAI-compatible AI gateway: one endpoint serves the
+models of many vendors, with adaptive routing, failover and gateway-level guardrails. Its Provider is
+`@hypit/provider-orcarouter`, and it offers the `chat` capability against
+`https://api.orcarouter.ai/v1`.
+
+The Endpoint declares one credential slot with two explicit entry points. `OrcaRouter - API` takes an
+`sk-orca-…` key the user already holds; `OrcaRouter - Auth` runs an OAuth 2.0 + PKCE authorization
+that returns a key belonging to the same account. Both store an ordinary API key in the Credential
+Store the Runtime Profile selects, and a key obtained either way reaches the relay the same way.
+
+The model list is read from `GET /v1/models` with the configured key, so the models offered are the
+ones that account may call. Nothing is inferred from a model's name: a chat control only offers
+entries whose catalogue record declares a chat-capable endpoint type, and attaching images only
+offers entries whose record declares image input. When the catalogue cannot be read, the panel keeps
+a small verified fallback and says that it is degraded rather than showing an empty list.
+
+A PKCE-issued key is durable, not a refreshable token: it is reused until the user revokes it at
+`https://www.orcarouter.ai/console/authorized-apps`. A rejected key asks for a new authorization
+instead of refreshing.
 
 ## Add a Model
 

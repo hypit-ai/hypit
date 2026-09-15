@@ -5,7 +5,7 @@ description: 选择账户、连接服务或添加模型，沿用同一套视频�
 
 **Model** 定义要生成什么：输入、支持的参数和输出类型。**Provider** 知道如何通过某个服务完成这个请求。**Endpoint** 是配置好的 Provider 实例，包含服务地址、凭据引用和容量。Runtime Profile 将所需能力绑定到 Endpoint。
 
-官方发行包含本地 Provider 和 HypiHub Provider。其他服务通过项目或作者自己的包接入；Agent 可以使用公开 SDK 编写所需接入，就像为视频创建视觉组件。[服务合作方介绍](../../guide/service-partners.md) 集中介绍独立合作服务，它们沿用同一套扩展方式。
+官方发行包含本地 Provider、HypiHub Provider 和 OrcaRouter Provider。其他服务通过项目或作者自己的包接入；Agent 可以使用公开 SDK 编写所需接入，就像为视频创建视觉组件。[服务合作方介绍](../../guide/service-partners.md) 集中介绍独立合作服务，它们沿用同一套扩展方式。
 
 ## 根据需求选择修改位置
 
@@ -19,6 +19,17 @@ description: 选择账户、连接服务或添加模型，沿用同一套视频�
 两个服务即使提供同一个模型，请求格式、限制和可用参数也可能不同。Provider 检查请求是否受该服务支持，并说明不匹配的原因。Profile 决定使用哪个来源；该来源报错并不授权通过另一个账户花钱。
 
 已有安装时，先检查所选 Profile 和凭据状态。起始 Profile 提供配置示例；连接账户或准备依赖前，先选择想使用的服务。[Run 与 Build](../quickstart/run.md) 介绍相关命令。
+
+## OrcaRouter
+
+[OrcaRouter](https://www.orcarouter.ai) 是 OpenAI 兼容的 AI 网关：一个端点提供多家厂商的模型，并带有自适应路由、故障转移和网关级防护。它的 Provider 是
+`@hypit/provider-orcarouter`，通过 `https://api.orcarouter.ai/v1` 提供 `chat` 能力。
+
+Endpoint 只声明一个凭据槽，但提供两个入口：`OrcaRouter - API` 填写用户已有的 `sk-orca-…` 密钥；`OrcaRouter - Auth` 运行 OAuth 2.0 + PKCE 授权，返回属于同一账户的密钥。两者都把普通 API 密钥存入 Runtime Profile 选择的 Credential Store，无论密钥来自哪个入口，到达中转服务的方式完全相同。
+
+模型列表通过配置的密钥读取 `GET /v1/models`，因此可选模型就是该账户真正可调用的模型。能力不靠模型名推断：文本控件只提供目录中标明支持 chat 端点的条目，附加图片时只提供目录中明确声明图片输入的条目。目录读取失败时，面板保留一份小的已验证备用列表并标明其为降级状态，而不是显示空列表。
+
+PKCE 签发的密钥是长期密钥，不是可刷新的令牌：在用户于 `https://www.orcarouter.ai/console/authorized-apps` 撤销之前一直复用。密钥被拒绝时应重新授权，而不是尝试刷新。
 
 ## 添加 Model
 
