@@ -38,14 +38,14 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
       format: { as: "value", field: "format", whenAbsent: "WEBM" },
     },
   },
-  seedance("seedance-2", "bytedance/seedance-2"),
-  seedance("seedance-2-fast", "bytedance/seedance-2-fast"),
-  seedance("seedance-2-mini", "bytedance/seedance-2-mini"),
-  seedance("seedance-2.5", "bytedance/seedance-2-5"),
+  seedance("seedance-2", "seedance-2"),
+  seedance("seedance-2-fast", "seedance-2-fast"),
+  seedance("seedance-2-mini", "seedance-2-mini"),
+  seedance("seedance-2.5", "seedance-2.5"),
   {
     capability: { module: GPT_IMAGE, name: "gpt-image-2" }, result: "image", routes: [
-      { model: "gpt-image-2-image-to-image", whenPresent: ["images"] },
-      { model: "gpt-image-2-text-to-image" },
+      { model: "gpt-image-2", whenPresent: ["images"] },
+      { model: "gpt-image-2" },
     ],
     fields: {
       prompt: { as: "value", field: "prompt" },
@@ -67,8 +67,8 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
   })),
   {
     capability: { module: SEEDREAM, name: "seedream-5-lite" }, result: "image", routes: [
-      { model: "seedream/5-lite-image-to-image", whenPresent: ["images"] },
-      { model: "seedream/5-lite-text-to-image" },
+      { model: "seedream-5-lite", whenPresent: ["images"] },
+      { model: "seedream-5-lite" },
     ],
     fields: {
       prompt: { as: "value", field: "prompt" },
@@ -81,11 +81,11 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
   },
   {
     capability: { module: MINIMAX, name: "minimax-h3" }, result: "video", routes: [
-      { model: "minimax-h3/image-to-video", whenPresent: ["lastFrame"] },
-      { model: "minimax-h3/image-to-video", whenPresent: ["firstFrame"] },
-      { model: "minimax-h3/reference-to-video", whenPresent: ["referenceImage"] },
-      { model: "minimax-h3/reference-to-video", whenPresent: ["referenceVideo"] },
-      { model: "minimax-h3/text-to-video" },
+      { model: "minimax-h3", whenPresent: ["lastFrame"] },
+      { model: "minimax-h3", whenPresent: ["firstFrame"] },
+      { model: "minimax-h3", whenPresent: ["referenceImage"] },
+      { model: "minimax-h3", whenPresent: ["referenceVideo"] },
+      { model: "minimax-h3" },
     ],
     fields: {
       prompt: { as: "value", field: "prompt" }, duration: { as: "value", field: "seconds" },
@@ -99,8 +99,8 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
   },
   {
     capability: { module: GROK, name: "grok-imagine-video" }, result: "video", routes: [
-      { model: "grok-imagine/image-to-video", whenPresent: ["images"] },
-      { model: "grok-imagine/text-to-video" },
+      { model: "grok-imagine-video", whenPresent: ["images"] },
+      { model: "grok-imagine-video" },
     ],
     fields: {
       prompt: { as: "value", field: "prompt" }, duration: { as: "value", field: "seconds" },
