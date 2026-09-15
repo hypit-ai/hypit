@@ -1,0 +1,9 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import as="wording" from="@hypit/text@1"/>
+  <import as="alibaba" from="@hypit/alibaba-video@1"/>
+
+  <wording:Value id="prompt">A serene mountain lake at sunrise, soft golden light, cinematic wide shot.</wording:Value>
+  <alibaba:TextVideo id="take" model="qwen-vvg" prompt={prompt} duration="5" resolution="720p" aspect-ratio="16:9"/>
+</svml>
