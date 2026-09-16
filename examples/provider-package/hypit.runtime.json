@@ -1,11 +1,11 @@
 {
   "format": "hypit.runtime-local@1",
   "dataRoot": ".hypit/execution",
-  "credentials": { "os": { "use": "@hypit/credential-store-os" } },
+  "credentials": { "file": { "use": "@hypit/credential-store-file" } },
   "endpoints": {
     "images.personal": {
       "use": "@example/provider-images",
-      "config": { "baseUrl": "https://images.example", "apiKey": { "store": "os", "key": "images.personal" } }
+      "config": { "baseUrl": "https://images.example", "apiKey": { "store": "file", "key": "images.personal" } }
     }
   },
   "bindings": { "@hypit/gpt-image@1#gpt-image-2": "images.personal" }

@@ -2,8 +2,8 @@
   "format": "hypit.runtime-local@1",
   "dataRoot": ".hypit/runtimes/local",
   "credentials": {
-    "os": {
-      "use": "@hypit/credential-store-os"
+    "file": {
+      "use": "@hypit/credential-store-file"
     }
   },
   "endpoints": {
@@ -31,7 +31,7 @@
       "use": "@hypit/provider-hypihub",
       "config": {
         "apiKey": {
-          "store": "os",
+          "store": "file",
           "key": "hypihub.default"
         }
       }

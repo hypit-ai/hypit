@@ -87,6 +87,9 @@ importers:
       '@hypit/credential-store-env':
         specifier: workspace:*
         version: link:packages/credential-store-env
+      '@hypit/credential-store-file':
+        specifier: workspace:*
+        version: link:packages/credential-store-file
       '@hypit/credential-store-os':
         specifier: workspace:*
         version: link:packages/credential-store-os
@@ -934,6 +937,15 @@ importers:
         version: link:../protocol
 
   packages/credential-store-env:
+    dependencies:
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/runtime-kit':
+        specifier: workspace:*
+        version: link:../runtime-kit
+
+  packages/credential-store-file:
     dependencies:
       '@hypit/runtime':
         specifier: workspace:*
@@ -3346,6 +3358,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:*
         version: link:../composition
+      '@hypit/credential-store-file':
+        specifier: workspace:*
+        version: link:../credential-store-file
       '@hypit/credential-store-os':
         specifier: workspace:*
         version: link:../credential-store-os

@@ -2,8 +2,8 @@
   "format": "hypit.runtime-local@1",
   "dataRoot": ".hypit/runtimes/local",
   "credentials": {
-    "os": {
-      "use": "@hypit/credential-store-os"
+    "file": {
+      "use": "@hypit/credential-store-file"
     }
   },
   "endpoints": {
@@ -12,7 +12,7 @@
       "config": {
         "baseUrl": "https://hypit.ai",
         "apiKey": {
-          "store": "os",
+          "store": "file",
           "key": "hypihub.oauth"
         },
         "defaultConcurrency": 4,
