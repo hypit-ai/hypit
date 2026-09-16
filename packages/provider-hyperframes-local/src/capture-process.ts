@@ -62,7 +62,13 @@ export async function runCaptureProcess(
 ): Promise<void> {
   signal.throwIfAborted();
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(process.execPath, ["--import", import.meta.resolve("tsx"), fileURLToPath(entry)], {
+    // The launcher's resolver hooks are process-local, so this child preloads the same
+    // environment before it imports any package the Distribution owns.
+    const child = spawn(process.execPath, [
+      "--import", import.meta.resolve("tsx"),
+      "--import", new URL("./capture-bootstrap.ts", import.meta.url).href,
+      fileURLToPath(entry),
+    ], {
       detached: process.platform !== "win32", windowsHide: true,
       stdio: ["ignore", "pipe", "pipe", "ipc"],
     });
