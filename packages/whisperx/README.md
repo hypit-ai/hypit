@@ -11,8 +11,9 @@ Evidence wrapper or pass-through normalization node in the graph.
 
 `<whisperx:SemanticTake>` is the real-media semantic Surface. It consumes one normalized
 `SynchronizedMedia` and exactly one Script Segment. When that Segment contains Tokens, it also
-requires `language="en"`, `language="zh"` or `language="es"`. The language is passed directly to
-WhisperX; Script text and audio are not used to choose it implicitly. `@hypit/media-pipeline`
+requires `language` set to one of the codes WhisperX ships an alignment model for; `whisperXLanguages`
+exports that list and `isWhisperXLanguage` guards it. The language is passed directly to WhisperX;
+Script text and audio are not used to choose it implicitly. `@hypit/media-pipeline`
 projects the Take's audio to canonical 16 kHz mono `SpeechEvidenceAudio`; WhisperX sees only those
 bytes. A deterministic local alignment then combines the returned evidence with the Segment and
 emits one self-contained `SemanticTake`.

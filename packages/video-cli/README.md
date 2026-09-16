@@ -63,7 +63,8 @@ hypit transcribe reference.mp4 --to notes/reference.transcript.json --language e
 hypit measure main.svml --segment hook --language en --pace normal --rounding round
 ```
 
-For `transcribe`, set `--language` to the spoken language: `en`, `zh` or `es`. Chinese speech uses `zh`, including
+For `transcribe`, set `--language` to the spoken language's WhisperX code (`en`, `zh`, `es`, `ja`, `ko`, `de`, `fr`
+and the rest of WhisperX's alignment table). Chinese speech uses `zh`, including
 Chinese speech containing English names; the requested language selects the recognition/alignment
 model, independently of the eventual caption font or script's simplified/traditional characters.
 

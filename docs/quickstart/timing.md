@@ -57,8 +57,11 @@ authored Segment:
   segment={story.segment.answer} media={answer-media.media} language="en"/>
 ```
 
-`language` is required on every alignment call and currently accepts `en` or `zh`. It is passed
-unchanged to WhisperX; Hypit does not detect or route languages from Script text or audio.
+`language` is required on every alignment call and accepts any code WhisperX ships an alignment
+model for on both the local and the hosted Endpoint: `ar`, `ca`, `cs`, `da`, `de`, `el`, `en`, `es`,
+`eu`, `fa`, `fi`, `fr`, `gl`, `he`, `hi`, `hr`, `hu`, `it`, `ja`, `ka`, `ko`, `lv`, `ml`, `nl`, `nn`,
+`no`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sv`, `te`, `tl`, `tr`, `uk`, `ur`, `vi` and `zh`. It is
+passed unchanged to WhisperX; Hypit does not detect or route languages from Script text or audio.
 
 Each output contains the normalized media, the Segment identity, every authored word's local frame
 window, and all of that Segment's structural anchors. There are two anchors for the Segment and two

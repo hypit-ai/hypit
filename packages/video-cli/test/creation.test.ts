@@ -159,7 +159,9 @@ test("a Profile that does not serve the capability stops before anything is spen
 test("transcribe requires a spoken language before opening a host", async () => {
   const noHost: CreationEnvironment = { cwd: "/tmp", openHost: async () => { throw new Error("host must not open"); } };
   await assert.rejects(runCreationCli(["transcribe", "speech.wav", "--to", "speech.json"], capture().io, noHost),
-    /requires --language en\|zh\|es/u);
+    /requires --language <code>.*WhisperX aligns ar, .*, ko, .*, zh$/u);
+  await assert.rejects(runCreationCli(["transcribe", "speech.wav", "--to", "speech.json", "--language", "kr"], capture().io, noHost),
+    /requires --language <code>/u);
 });
 
 test("Chinese transcription explicitly sends zh and retains individual character windows", async () => {

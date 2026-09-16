@@ -51,8 +51,11 @@ Timeline 内的所有 Take 共享作者显式声明的 Clock。
   segment={story.segment.answer} media={answer-media.media} language="en"/>
 ```
 
-每次对齐都必须显式填写 `language`，目前只接受 `en` 或 `zh`。该值会原样传给 WhisperX；
-Hypit 不会根据 Script 文本或音频自动检测、分流语言。
+每次对齐都必须显式填写 `language`，接受本地和托管 Endpoint 上 WhisperX 都自带对齐模型的语言
+代码：`ar`、`ca`、`cs`、`da`、`de`、`el`、`en`、`es`、`eu`、`fa`、`fi`、`fr`、`gl`、`he`、`hi`、
+`hr`、`hu`、`it`、`ja`、`ka`、`ko`、`lv`、`ml`、`nl`、`nn`、`no`、`pl`、`pt`、`ro`、`ru`、`sk`、
+`sl`、`sv`、`te`、`tl`、`tr`、`uk`、`ur`、`vi` 和 `zh`。该值会原样传给 WhisperX；Hypit 不会根据
+Script 文本或音频自动检测、分流语言。
 
 每个输出都自带归一化媒体、Segment 身份、每个作者词语的局部帧窗口以及该 Segment 的全部
 结构锚点：Segment 有两个锚点，每个词也有两个锚点。声学证据只是这一步的实现输入；下游

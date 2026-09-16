@@ -73,8 +73,10 @@ reveals and emphasis. Keep that transcript beside the reference and interpret it
 surrounding argument, visible names and supplied context. Small transcription errors can coexist
 with a clear understanding of what the passage means.
 
-Pass the reference's spoken language explicitly: `--language zh` for Chinese, `en` for English,
-or `es` for Spanish. A Chinese passage can contain English brands and names while still using `zh`.
+Pass the reference's spoken language explicitly as its WhisperX code: `--language zh` for Chinese,
+`en` for English, `es` for Spanish, `ja`, `ko`, `de`, `fr` and so on; the CLI lists every accepted
+code when given one it cannot align. A Chinese passage can contain English brands and names while
+still using `zh`.
 Its timed Chinese characters help locate a phrase precisely; group those characters into meaningful
 phrases when describing the reference and writing the new Script.
 

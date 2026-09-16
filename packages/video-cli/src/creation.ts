@@ -20,8 +20,7 @@ import { sealSpeechEvidenceAudio } from "@hypit/speech";
 import { speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { AlignedTranscriptEvidence } from "@hypit/speech-evidence";
 import { sealText } from "@hypit/text";
-import { whisperXCapabilities, whisperXRequestForEvidenceAudio } from "@hypit/whisperx";
-import type { WhisperXLanguage } from "@hypit/whisperx";
+import { isWhisperXLanguage, whisperXCapabilities, whisperXLanguages, whisperXRequestForEvidenceAudio } from "@hypit/whisperx";
 
 import { videoCliDistribution } from "./distribution.js";
 import { runProcess } from "./process.js";
@@ -283,8 +282,9 @@ async function transcribe(argv: readonly string[], io: CliIo, environment: Creat
   assert(parsed.positionals.length === 1, "transcribe takes exactly one audio or video file");
   const source = resolve(environment.cwd, parsed.positionals[0]!);
   const language = parsed.options.get("--language");
-  assert(language === "en" || language === "zh" || language === "es",
-    "transcribe requires --language en|zh|es for the spoken language (use --language zh for Chinese)");
+  assert(isWhisperXLanguage(language),
+    `transcribe requires --language <code> for the spoken language (use --language zh for Chinese); `
+    + `WhisperX aligns ${whisperXLanguages.join(", ")}`);
   const to = await destination(parsed, environment.cwd);
   const { profile, host } = await environment.openHost(
     parsed.options.get("--runtime"),
@@ -298,7 +298,7 @@ async function transcribe(argv: readonly string[], io: CliIo, environment: Creat
     id: "need:hypit-transcribe",
     capability: whisperXCapabilities.alignment,
     returns: speechEvidenceTypes.alignedTranscript,
-    constraints: whisperXRequestForEvidenceAudio(audio, { language: language as WhisperXLanguage }),
+    constraints: whisperXRequestForEvidenceAudio(audio, { language }),
     result: "record:hypit-transcribe",
   };
   const provider = await selectedProvider(host, need, profile);
@@ -437,7 +437,7 @@ export function writeCreationHelp(io: CliIo, topic?: CreationCommand): void {
       "hypit transcribe",
       "Establish word times with the whisperx-alignment Endpoint of the selected Runtime Profile.",
       "",
-      "  hypit transcribe <audio|video> --to <transcript.json> --language en|zh|es [--runtime <profile>] [--workspace <project>]",
+      "  hypit transcribe <audio|video> --to <transcript.json> --language <code> [--runtime <profile>] [--workspace <project>]",
       "",
       "Extracts 16 kHz mono speech audio with ffmpeg and writes every word with its start and end in",
       "seconds. One immediate request; no Build, Result or state.",

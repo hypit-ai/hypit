@@ -1,5 +1,6 @@
 import { assertSpeechEvidenceAudioIdentity } from "@hypit/speech";
 import type { SpeechEvidenceAudio } from "@hypit/speech";
+import { isWhisperXLanguage } from "./types.js";
 import type { WhisperXAlignmentRequest, WhisperXLanguage } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -15,7 +16,7 @@ export function verifyWhisperXAlignmentRequest(value: unknown): WhisperXAlignmen
     && request.audio.mediaType === "audio/wav"
     && Number.isSafeInteger(request.sampleFrames)
     && request.sampleFrames > 0
-    && (request.language === "en" || request.language === "zh" || request.language === "es"),
+    && isWhisperXLanguage(request.language),
   "WhisperX alignment request is invalid");
   return request;
 }
