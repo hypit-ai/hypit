@@ -4,3 +4,16 @@ packages:
   # Shipped examples are repository fixtures. Real authored projects always live outside this
   # tool checkout and resolve their own project-local packages through the Host's project root.
   - examples/*/packages/*
+
+# pnpm 10 ignores dependency build scripts unless they are explicitly allowlisted here.
+# Without these, a fresh `pnpm install --frozen-lockfile` leaves the checkout unable to
+# render or build — see #222:
+#  - puppeteer: postinstall downloads Chrome into ~/.cache/puppeteer, which the local
+#    HyperFrames Endpoint binds at render-visual time. Without it, `hypit build` dies at
+#    step 5/7 with "Could not find Chrome" while `hypit doctor` still reports green.
+#  - esbuild: postinstall fetches the platform native binary used by the toolchain.
+#  - onnxruntime-node: postinstall fetches the native ONNX runtime used by WhisperX.
+onlyBuiltDependencies:
+  - puppeteer
+  - esbuild
+  - onnxruntime-node
