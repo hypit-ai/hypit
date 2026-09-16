@@ -31,6 +31,9 @@ hypit measure main.svml --segment hook --language en
 
 When the work needs execution, the project selects a Runtime Profile. `hypit runtime init` creates
 an editable starter; its Endpoint entries describe available routes, not choices made by the user.
+The starter selects `@hypit/credential-store-file`, which keeps each credential in one owner-private
+document per user on Linux, macOS and Windows alike. A macOS or Windows author can select
+`@hypit/credential-store-os` instead to keep the secret in that platform's credential locker.
 Keep an existing chosen service, or configure the chosen local or hosted Provider and its capability
 bindings. HypiHub is the recommended integrated hosted route in the official Distribution; other
 services use project Provider packages. If the user chooses HypiHub,

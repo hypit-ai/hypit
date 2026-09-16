@@ -242,9 +242,12 @@ and project implementation; see [Build execution scope](../production/builds.md#
 
 ## Put secrets behind credential references
 
-A Profile names a Credential Store and key; the secret stays in that store. The writable OS store
-uses macOS Keychain or Windows Credential Locker. The environment store reads one explicitly named
-environment variable and is read-only.
+A Profile names a Credential Store and key; the secret stays in that store. The writable file store
+keeps one owner-private document per credential under the Host state root and works on Linux, macOS
+and Windows; the Distribution's starter Profile selects it. The OS store uses macOS Keychain or Windows
+Credential Locker and cannot be opened on Linux. The environment store reads one explicitly named
+environment variable and is read-only, and a Profile that selects it expects the Worker's own
+environment to supply the value.
 
 Inspect one Endpoint's credential slots without revealing their values:
 

@@ -21,14 +21,16 @@ operations. Installing the same package in another project preserves its `use` n
   "endpoints": {
     "art.personal": {
       "use": "@studio/provider-art",
-      "config": { "apiKey": { "store": "os", "key": "art.personal" } }
+      "config": { "apiKey": { "store": "file", "key": "art.personal" } }
     }
   }
 }
 ```
 
 This is a Profile fragment: the Provider defines its actual config fields, and the complete Profile
-selects the `os` Credential Store as well. Separate instances can use separate accounts. A binding
+selects a Credential Store for `file` as well, such as `@hypit/credential-store-file` on any platform
+or `@hypit/credential-store-os` where a macOS or Windows credential locker is available. Separate
+instances can use separate accounts. A binding
 names the chosen instance when several offer the same capability. The default pool identity is the
 instance; declare a shared pool only for a real shared account, deployment, or compute quota.
 

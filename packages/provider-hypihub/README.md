@@ -90,7 +90,7 @@ Runtime Profile example:
       "pool": "hypihub.default",
       "config": {
         "baseUrl": "https://hypit.ai",
-        "apiKey": { "store": "os", "key": "hypihub.oauth" },
+        "apiKey": { "store": "file", "key": "hypihub.oauth" },
         "defaultConcurrency": 3,
         "pollIntervalMs": 10000
       }
