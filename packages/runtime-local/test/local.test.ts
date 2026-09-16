@@ -215,6 +215,63 @@ test("Endpoint-declared credentials use the selected writable Store without a Pr
   }
 });
 
+test("a credential its Store cannot read stays manageable: listed, replaced and removed", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-auth-"));
+  const values = new Map<string, string>([["generation.api-key", "damaged"]]);
+  const credentialStore: WritableCredentialStore = {
+    owns(ref) { return ref.store === "memory"; },
+    async resolve(ref) {
+      if (ref.store !== "memory") return undefined;
+      const stored = values.get(ref.key);
+      if (stored === undefined) return undefined;
+      // A Store that holds a value it cannot decrypt, decompress or parse reports that, and the
+      // management commands must survive the report instead of failing with it.
+      if (stored === "damaged") throw new Error("file CredentialStore document /state/credentials/9f2.json is not valid JSON");
+      return { secret: stored };
+    },
+    async put(ref, value) { values.set(ref.key, value.secret); },
+    async delete(ref) { return values.delete(ref.key); },
+  };
+  const endpoint = defineEndpointPackage({
+    module: providerModule,
+    facet: "generation",
+    instance: "generation.damaged-test",
+    pool: "generation.damaged-test",
+    credentials: { apiKey: credentialRef("memory", "generation.api-key") },
+    credentialInputs: { apiKey: { label: "Generation API key" } },
+    capabilities: [{
+      capability: capabilities.generation,
+      returns: types.generated,
+      lifecycle: "asynchronous",
+      endpoint: {
+        start() { throw new Error("unused"); },
+        poll() { throw new Error("unused"); },
+      },
+    }],
+  });
+  try {
+    const runtime = await createLocalRuntime({
+      ...projectRuntimeFixture(directory),
+      credentialStore,
+      endpoints: [endpoint],
+    });
+    const [reported] = await runtime.credentials("generation.damaged-test");
+    assert.equal(reported?.configured, false);
+    assert.match(reported?.detail ?? "", /is not valid JSON/u);
+    assert.equal(reported?.writable, true);
+
+    assert.equal((await runtime.putCredential("generation.damaged-test", "apiKey", "replacement")).configured, true);
+    values.set("generation.api-key", "damaged");
+    const removed = await runtime.deleteCredential("generation.damaged-test", "apiKey");
+    assert.equal(removed.deleted, true);
+    assert.equal(removed.credential.configured, false);
+    assert.equal(removed.credential.detail, undefined);
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("project local Runtime advances, polls and cancels work with replaceable packages", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-"));
   const initial = createGreetingBuild();

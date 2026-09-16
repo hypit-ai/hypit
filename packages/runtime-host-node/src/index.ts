@@ -78,6 +78,11 @@ export type RuntimeHostCredentialStatus = {
   readonly ref: CredentialRef;
   readonly acquisition?: CredentialAcquisition;
   readonly configured: boolean;
+  /**
+   * Why this slot could not be read, when its store holds something it cannot resolve. Management
+   * commands never depend on reading: login replaces that value and logout removes it.
+   */
+  readonly detail?: string;
   readonly writable: boolean;
 };
 

@@ -532,6 +532,9 @@ test("auth status exposes declared acquisition without acquiring or revealing cr
             configured: false, writable: true, ref: { store: "os", key: "private-reference" } },
           { endpoint: "service.project", slot: "external", label: "External key", kind: "secret",
             configured: false, writable: false, ref: { store: "env", key: "PRIVATE_KEY" } },
+          { endpoint: "service.project", slot: "damaged", label: "Damaged key", kind: "secret",
+            configured: false, writable: true, ref: { store: "file", key: "private-reference" },
+            detail: "file CredentialStore document /state/credentials/9f2.json is not valid JSON" },
         ],
         putCredential: async () => { throw new Error("Status must not acquire a credential"); },
         close() {},
@@ -554,10 +557,13 @@ test("auth status exposes declared acquisition without acquiring or revealing cr
       });
       assert.equal(view.credentials[1].acquisition, undefined);
       assert.equal(view.credentials[2].writable, false);
+      assert.equal(view.credentials[0].detail, undefined);
+      assert.equal(view.credentials[3].detail, "file CredentialStore document /state/credentials/9f2.json is not valid JSON");
     } else {
       assert.match(output, /login opens OAuth: https:\/\/service.example\/authorize/u);
       assert.match(output, /login uses secure secret input/u);
       assert.match(output, /managed by its external credential source/u);
+      assert.match(output, /damaged: unreadable — file CredentialStore document \/state\/credentials\/9f2\.json is not valid JSON/u);
     }
   }
 });

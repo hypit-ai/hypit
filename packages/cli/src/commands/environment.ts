@@ -377,6 +377,7 @@ export async function runEnvironmentCommand(input: {
           label: item.label,
           kind: item.kind,
           configured: item.configured,
+          ...(item.detail === undefined ? {} : { detail: item.detail }),
           writable: item.writable,
           ...(item.acquisition === undefined ? {} : { acquisition: {
             kind: item.acquisition.kind,
@@ -391,12 +392,19 @@ export async function runEnvironmentCommand(input: {
         }, "Credential status", "info", [
           ["Endpoint", args.endpoint],
           ["Configured", `${credentials.filter((item) => item.configured).length}/${credentials.length}`],
-        ], credentials.slice(0, args.limit).map((item) => {
-          const entry = !item.writable ? "managed by its external credential source"
-            : item.acquisition === undefined ? "login uses secure secret input"
-            : `login opens OAuth: ${item.acquisition.authorizationEndpoint}`;
-          return `${item.slot}: ${item.configured ? "configured" : "missing"} · ${item.writable ? "writable" : "read-only"} · ${entry}`;
-        }));
+        ], [
+          ...credentials.slice(0, args.limit).map((item) => {
+            const entry = !item.writable ? "managed by its external credential source"
+              : item.acquisition === undefined ? "login uses secure secret input"
+              : `login opens OAuth: ${item.acquisition.authorizationEndpoint}`;
+            return `${item.slot}: ${item.configured ? "configured" : "missing"} · ${item.writable ? "writable" : "read-only"} · ${entry}`;
+          }),
+          // A stored value this Store cannot read is not silently "missing": the reason belongs in
+          // the same answer, and the slot stays replaceable through `auth login`.
+          ...credentials.slice(0, args.limit)
+            .filter((item) => item.detail !== undefined)
+            .map((item) => `${item.slot}: unreadable — ${item.detail}`),
+        ]);
       } else if (args.action === "login") {
         const [item] = credentials;
         if (item === undefined) throw new Error(`Endpoint ${args.endpoint} has no matching credential`);

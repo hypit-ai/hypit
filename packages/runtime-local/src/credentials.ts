@@ -28,11 +28,26 @@ export function createLocalCredentialControl(
       : `Endpoint ${endpoint} repeats credential slot ${slot}`);
     return matches[0]!;
   };
-  const status = async (item: typeof descriptions[number]) => ({
-    ...structuredClone(item),
-    configured: await options.credentialStore.resolve(item.ref) !== undefined,
-    writable: await writableCredentialStore(options.credentialStore, item.ref) !== undefined,
-  });
+  /**
+   * A credential a Store holds but cannot resolve is not configured, and saying why must not make
+   * the slot unmanageable: `auth login` replaces that value and `auth logout` removes it, so neither
+   * may fail because reading it did. Planning and execution still reject it, where it would execute.
+   */
+  const status = async (item: typeof descriptions[number]) => {
+    let configured = false;
+    let detail: string | undefined;
+    try {
+      configured = await options.credentialStore.resolve(item.ref) !== undefined;
+    } catch (error) {
+      detail = error instanceof Error ? error.message : String(error);
+    }
+    return {
+      ...structuredClone(item),
+      configured,
+      ...(detail === undefined ? {} : { detail }),
+      writable: await writableCredentialStore(options.credentialStore, item.ref) !== undefined,
+    };
+  };
 
   return {
     async credentials(endpoint) {
