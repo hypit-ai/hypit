@@ -18,6 +18,29 @@ function turnForRegion(parsed: ParsedNarrative, region: ParsedCaptionRegion): Pa
 function projectCaption(parsed: ParsedNarrative, id: string, narrativeId: string): CaptionDocument {
   const units: CaptionAlignmentUnit[] = [];
   const words: CaptionDisplayWord[] = [];
+  // Display surfaces carry no whitespace of their own, and a region's own `display` is trimmed, so
+  // the gap between two regions survives only in the Caption projection. Walk that prose once in
+  // display order, consuming the characters each surface covers. A surface can reach across a
+  // space to attach punctuation, so only whitespace met before a surface's first character is a
+  // boundary; whitespace inside one belongs to the surface the author already sees as one word.
+  const captionText = [...parsed.captionProjection.text];
+  let captionCursor = 0;
+  const spacedBefore = (surface: string): boolean => {
+    let spaced = false;
+    let leading = true;
+    for (const character of surface) {
+      while (/\s/u.test(captionText[captionCursor] ?? "")) {
+        captionCursor += 1;
+        if (leading) spaced = true;
+      }
+      if (captionText[captionCursor] !== character) {
+        throw new Error(`Caption surface ${JSON.stringify(surface)} does not follow the Caption projection`);
+      }
+      captionCursor += 1;
+      leading = false;
+    }
+    return spaced;
+  };
   for (const region of parsed.captionProjection.regions) {
     if (region.kind === "hidden") continue;
     const turn = turnForRegion(parsed, region);
@@ -46,6 +69,7 @@ function projectCaption(parsed: ParsedNarrative, id: string, narrativeId: string
           turnId: turn.id,
           ...(turn.role === undefined ? {} : { role: turn.role }),
           text: surface,
+          spacedBefore: spacedBefore(surface),
           attributes,
         });
         return wordId;

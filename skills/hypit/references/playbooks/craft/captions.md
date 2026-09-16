@@ -125,8 +125,9 @@ or character count cannot make that choice. Count the display side of Dual Text 
 | Chinese | Keep compounds, names, modifiers and their objects together. Let a complete short clause share a Cue when it fits; repeated tiny character groups fragment both meaning and the screen. |
 | Mixed Chinese and English | Read the phrase as a whole. A Latin brand name or number can occupy several Han characters' width; its lexical unit count does not predict that width. |
 
-Fine already leaves adjacent Han characters together without English word gaps. Its `word-gap`
-controls spaced boundaries, including Chinese/Latin transitions; `letter-spacing` adjusts tracking.
+Fine spaces the boundaries the Script writes a space at, and its `word-gap` sets that width;
+`letter-spacing` adjusts tracking. Chinese prose written solid stays solid, so write the space where
+one belongs, including beside a Latin brand name or number.
 The same timing supports a stable complete Cue, current-character color or a trail. For flowing
 Chinese speech, a readable phrase with restrained emphasis often works better than a separate bounce
 or reveal on every character. Choose the response for the performance's energy.

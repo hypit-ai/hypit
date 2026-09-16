@@ -20,7 +20,7 @@ import type { CanvasSpace, SpatialFrame, SpatialRegionTimeline } from "@hypit/sp
 
 import { assertFineCaptionParameters, FINE_CAPTION_FAMILY } from "./style.js";
 import { assertFineCaptionSchedule } from "./schedule.js";
-import { joinSurfaces, uniformGap, wordGapBetween, wordGaps } from "./spacing.js";
+import { joinSurfaces, uniformGap, wordGaps } from "./spacing.js";
 import type {
   FineCaptionActiveUnderline,
   FineCaptionGlyphPaint,
@@ -666,6 +666,7 @@ function cueElements(
   atomFrames: ReadonlyMap<string, { readonly start: number; readonly end: number }>,
   parameters: FineCaptionParameters,
   wordText: ReadonlyMap<string, string>,
+  wordSpaced: ReadonlyMap<string, boolean>,
   durationFrames: number,
   styleId: string,
   trackedPlacement?: {
@@ -695,12 +696,11 @@ function cueElements(
   const activationFrames = exclusiveActivationFrames(atoms, atomFrames);
   const gapPx = `${compactNumber(parameters.layout.wordGapPx)}px`;
   const atomSurfaces = atoms.map((atom) => atom.wordIds.map((wordId) => wordText.get(wordId) ?? ""));
+  const atomWordSpacing = atoms.map((atom) => atom.wordIds.map((wordId) => wordSpaced.get(wordId) ?? false));
+  const atomWordGaps = atomWordSpacing.map((spacing) => wordGaps(spacing));
   // A Cue whose boundaries all agree carries one `column-gap`, which is also what keeps a row that
-  // wraps from opening on a margin. A Cue that mixes scripts spaces each element instead.
-  const atomGaps = atomSurfaces.map((surfaces, index) => {
-    const previous = atomSurfaces[index - 1];
-    return previous === undefined ? false : wordGapBetween(previous.at(-1) ?? "", surfaces[0] ?? "");
-  });
+  // wraps from opening on a margin. A Cue whose boundaries differ spaces each element instead.
+  const atomGaps = wordGaps(atomWordSpacing.map((spacing) => spacing[0] ?? false));
   const cueGap = uniformGap(atomGaps);
   // The Visual IR carries physical margins, so the leading edge follows the Cue's own direction.
   const marginStart = parameters.layout.direction === "rtl" ? "margin-right" : "margin-left";
@@ -795,8 +795,9 @@ function cueElements(
           for (const wordId of prefixAtom.wordIds) {
             if (!wordText.has(wordId)) throw new Error(`Fine Caption Atom references unknown word ${wordId}`);
           }
-          return joinSurfaces(atomSurfaces[index] ?? [], "\u00A0");
+          return joinSurfaces(atomSurfaces[index] ?? [], atomWordGaps[index] ?? [], "\u00A0");
         }),
+        atomGaps.slice(0, prefixIndex + 1),
         " ",
       );
       const layerId = `joined-box-${prefixIndex + 1}`;
@@ -848,7 +849,7 @@ function cueElements(
     const surfaces = atomSurfaces[atomIndex] ?? [];
     // The base glyphs and the activated copy stacked over them are laid out from this one list, so
     // the karaoke wipe keeps sitting on the letterforms it reveals.
-    const gaps = wordGaps(surfaces);
+    const gaps = atomWordGaps[atomIndex] ?? [];
     const wordGap = uniformGap(gaps);
     const entryId = `${atomId}-entry`;
     const loopId = `${atomId}-loop`;
@@ -1082,6 +1083,7 @@ export function renderFineCaption(
   }
   const styles = new Map(program.styles.map((style) => [style.id, style]));
   const wordText = new Map(document.words.map((word) => [word.id, word.text]));
+  const wordSpaced = new Map(document.words.map((word) => [word.id, word.spacedBefore]));
   const atomById = new Map(document.units.map((atom) => [atom.id, atom]));
   for (const style of styles.values()) {
     if (style.rendering === null) continue;
@@ -1132,7 +1134,7 @@ export function renderFineCaption(
       span: { startFrame, endFrameExclusive },
       visibility: cue.visibility,
       stacking: { order: parameters.stackingOrder, tieBreak: `${program.id}:${cue.id}` },
-      elements: cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames, cue.styleId, trackedPlacement),
+      elements: cueElements(resolvedAtoms, atomFrames, parameters, wordText, wordSpaced, durationFrames, cue.styleId, trackedPlacement),
     }];
   });
   const track = sealVisualTrack({

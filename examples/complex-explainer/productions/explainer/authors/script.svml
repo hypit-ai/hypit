@@ -7,10 +7,10 @@
       <HOST> 一分钟带你了解最近超火的 || 开源视频复刻项目 @opening-brand! high pit。 || @begin! 开始咯！
     </opening>
     <introduction>
-      <HOST> Hypit是一个开源视频复刻框架， || @intro-language! 自创了一套视频领域语言。 || @intro-install! 把hypit skill装进你的 || @intro-codex! codex或者@intro-claude! <claude|cloud>， || @intro-thirty! 只要半小时就能拿到 || @intro-examples! 你想复刻的任何爆款视频， || 并且还换@intro-face! 上了你自己的脸 || 和@intro-product! 产品。
+      <HOST> Hypit 是一个开源视频复刻框架， || @intro-language! 自创了一套视频领域语言。 || @intro-install! 把 hypit skill 装进你的 || @intro-codex! codex 或者@intro-claude! <claude|cloud>， || @intro-thirty! 只要半小时就能拿到 || @intro-examples! 你想复刻的任何爆款视频， || 并且还换@intro-face! 上了你自己的脸 || 和@intro-product! 产品。
     </introduction>
     <competitors>
-      <HOST> 隔壁的 Creatify和@competitor-other! Higgsfield， || 一个月要@competitor-monthly! 收你几十美元 || @competitor-templates! 但只能照着模板做， || @competitor-cases! 不仅复刻不了爆款， || @competitor-watermark! 还会给你打他们家的水印哦。
+      <HOST> 隔壁的 Creatify 和@competitor-other! Higgsfield， || 一个月要@competitor-monthly! 收你几十美元 || @competitor-templates! 但只能照着模板做， || @competitor-cases! 不仅复刻不了爆款， || @competitor-watermark! 还会给你打他们家的水印哦。
     </competitors>
     <two-roads>
       <HOST> 那接下来我给你拆解 || @road-half! Hypit 的底层逻辑。 || @road-overview! 说白了， || 现在用 AI 做视频就@roads! 两条路嘛。
@@ -19,13 +19,13 @@
       <HOST> @road-editor! 第一条路是 || @road-operate! 让 AI 操作剪辑软件。 || @road-capcut! 别看有@road-premiere! 那么@road-resolve! 多种， || @road-same! 但逻辑都是一样的： || @road-assets! AI 先帮你把素材生成好， || @road-drag! 再一个个去贴到 || 时间轴和画布上。
     </editor-road>
     <keyframe-cost>
-      <HOST> @road-place! 虽然贴的还可以， || @road-fail! 但做动效就不行咯。 || 想让@road-number! 一个数字弹出来、 || 或者@road-image! 一张图飞进来， || @road-keys! 要么让 AI 在时间轴上 || 标出二十几个时间点， || @road-tokens! 烧掉几十万的token， || @road-generated! 要么用seedance直出， || @road-unstable! 不仅效果不稳定， || @road-styles! 而且还改不了样式。
+      <HOST> @road-place! 虽然贴的还可以， || @road-fail! 但做动效就不行咯。 || 想让@road-number! 一个数字弹出来、 || 或者@road-image! 一张图飞进来， || @road-keys! 要么让 AI 在时间轴上 || 标出二十几个时间点， || @road-tokens! 烧掉几十万的 token， || @road-generated! 要么用 seedance 直出， || @road-unstable! 不仅效果不稳定， || @road-styles! 而且还改不了样式。
     </keyframe-cost>
     <code-road>
-      <HOST> @code-start! 第二条路是让 AI 去写代码。 || @code-remotion! Remotion和@code-hyperframes! Hyperframes， || 本质都是写@code-html! html， || @code-play! 动效想怎么做怎么做。
+      <HOST> @code-start! 第二条路是让 AI 去写代码。 || @code-remotion! Remotion 和@code-hyperframes! Hyperframes， || 本质都是写@code-html! html， || @code-play! 动效想怎么做怎么做。
     </code-road>
     <reuse-cost>
-      <HOST> @code-once! 但代价是每条视频只能用一次了！ || @code-variant! 下次想做个差不多的， || @code-copy! 得让 AI 把几千行的html || @code-duplicate! 原封不动抄一遍， || @code-tokens! 又会烧掉几十万的token；
+      <HOST> @code-once! 但代价是每条视频只能用一次了！ || @code-variant! 下次想做个差不多的， || @code-copy! 得让 AI 把几千行的 html || @code-duplicate! 原封不动抄一遍， || @code-tokens! 又会烧掉几十万的 token；
     </reuse-cost>
     <timing-cost>
       <HOST> @code-time! 而且更要命的是， || @code-different! 每条素材的稿子和配音都不一样， || @code-match! 为了让动效对上口播的时间， || @code-retime! 每次 AI 都得重新抄一遍时间点。
@@ -52,7 +52,7 @@
       <HOST> @result-meta! 这条视频就是用 @result-brand! Hypit || 复刻的一条爆款， || @result-guess! 你们猜得出原博主是哪位吗？
     </reference-reveal>
     <closing>
-      <HOST> 哎呀说好一分钟的 || @outro-overtime! 怎么超时这么久了。 || @outro-github! <Github|Git Hub> 搜索 Hypit， || @outro-copy! 一键复制skill || @outro-install! 装进你的 coding agent； || @outro-gift! 还能免费领取 || 一百个口播数字人哦！ || @outro-bye! 我们下期见， || 拜拜～
+      <HOST> 哎呀说好一分钟的 || @outro-overtime! 怎么超时这么久了。 || @outro-github! <Github|Git Hub> 搜索 Hypit， || @outro-copy! 一键复制 skill || @outro-install! 装进你的 coding agent； || @outro-gift! 还能免费领取 || 一百个口播数字人哦！ || @outro-bye! 我们下期见， || 拜拜～
     </closing>
   </script>
 </svml>

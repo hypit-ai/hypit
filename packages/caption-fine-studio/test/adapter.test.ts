@@ -38,8 +38,8 @@ test("Caption Companion projects Cue text and Style from public domain values", 
     narrativeId: "story",
     units: [{ id: "unit-1", segmentId: "segment-1", turnId: "turn-1", wordIds: ["word-1", "word-2"], sourceTokenIds: ["token-1"] }],
     words: [
-      { id: "word-1", unitId: "unit-1", segmentId: "segment-1", turnId: "turn-1", text: "真实", attributes: [] },
-      { id: "word-2", unitId: "unit-1", segmentId: "segment-1", turnId: "turn-1", text: "字幕", attributes: [] },
+      { id: "word-1", unitId: "unit-1", segmentId: "segment-1", turnId: "turn-1", text: "真实", spacedBefore: false, attributes: [] },
+      { id: "word-2", unitId: "unit-1", segmentId: "segment-1", turnId: "turn-1", text: "字幕", spacedBefore: false, attributes: [] },
     ],
     cueBreaks: [],
   };

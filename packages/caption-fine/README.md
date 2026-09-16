@@ -94,8 +94,9 @@ explicit authored group, not a renderer-selected segmentation, and does not intr
 The underlying character anchors remain available to other Timeline consumers. `wipe` and
 `typewriter` still animate inside the complete unit over its interval when deliberately selected.
 
-`word-gap` applies between Latin words and at Chinese/Latin boundaries. Adjacent Han characters and
-full-width punctuation carry no extra word gap. `letter-spacing` controls glyph tracking. Exact
+`word-gap` sets the space at every boundary the Script writes one at, so Chinese prose written
+solid carries no word gap; write a space where one belongs, including at a Chinese/Latin boundary.
+`letter-spacing` controls glyph tracking. Exact
 font fallbacks supply the required glyphs; the layout does not select a font by language.
 
 | Control | Behavior |

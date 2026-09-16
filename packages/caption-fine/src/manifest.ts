@@ -75,7 +75,7 @@ export const captionFineMarkupSurfaces = [
               { name: "letter-spacing", required: false, fallback: "0",
                 summary: "Adds pixels of tracking between glyphs." },
               { name: "word-gap", required: false, fallback: "a quarter of size",
-                summary: "Sets pixel spacing between Latin words and at Chinese/Latin boundaries. Adjacent Han characters and full-width punctuation have no extra word gap; use letter-spacing for tracking." },
+                summary: "Sets the pixel width of the space at each boundary the Script writes one at; use letter-spacing for tracking." },
               { name: "size", required: true,
                 summary: "Sets the type size in pixels." },
               { name: "kerning", required: false, values: ["auto", "normal", "none"], fallback: "auto",

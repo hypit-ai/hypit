@@ -31,6 +31,7 @@ export const narrativeExcerptSchema: ValueSchema = object({
 const captionDisplayWord = object({
   id: { schema: string }, unitId: { schema: string }, segmentId: { schema: string },
   turnId: { schema: string }, role: { schema: string, optional: true }, text: { schema: string },
+  spacedBefore: { schema: { kind: "boolean" } },
   attributes: { schema: { kind: "array", items: object({
     name: { schema: string },
     value: { schema: { kind: "oneOf", variants: [string, { kind: "number" }, { kind: "boolean" }] } },

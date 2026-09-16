@@ -56,6 +56,8 @@ export type CaptionDisplayWord = {
   readonly turnId: string;
   readonly role?: string;
   readonly text: string;
+  /** A space separates this word from the one before it in the authored Caption prose. */
+  readonly spacedBefore: boolean;
   /** Reserved for Script-native word attributes; empty until an inline Mark is authored. */
   readonly attributes: readonly CaptionWordAttribute[];
 };
