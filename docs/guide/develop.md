@@ -12,7 +12,7 @@ description: Getting started with Hypit development.
 | Python | 3.10–3.13 | local WhisperX and OpenCV Managed Programs |
 | uv | latest | Python environment management |
 | ffmpeg / ffprobe | recent stable | media processing |
-| Chrome / Chromium | managed by HyperFrames | local HyperFrames rendering |
+| Chrome / Chromium | downloaded by `hypit runtime up` | local HyperFrames rendering |
 
 Node.js and pnpm are the only hard requirements. The rest are needed only for live Builds.
 

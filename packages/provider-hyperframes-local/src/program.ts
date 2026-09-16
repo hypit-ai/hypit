@@ -29,13 +29,13 @@ export function localHyperframesBrowserProgram(
 ): ManagedProgram {
   const cliPath = () => typeof input.hyperframesCliPath === "string" ? input.hyperframesCliPath : input.hyperframesCliPath();
   const probeBrowser = async (): Promise<ManagedProgramState> => {
-    let executable: string;
-    try { executable = cliPath(); } catch (error) { return { state: "down", detail: error instanceof Error ? error.message : String(error) }; }
-    const located = await run(input.nodePath, [executable, "browser", "path"]);
-    if (!located.ok) return { state: "down", detail: `HyperFrames browser is unavailable: ${located.output}` };
-    const path = located.output.trim();
-    if (path.length === 0 || path.includes("\n") || path.includes("\r")) {
-      return { state: "mismatch", detail: "HyperFrames returned an invalid browser path" };
+    try { cliPath(); } catch (error) { return { state: "down", detail: error instanceof Error ? error.message : String(error) }; }
+    // Readiness asks the engine's own resolver, so it answers for the browser the renderer will
+    // launch: its managed download, a configured override, or Puppeteer's cache.
+    const { resolveHeadlessShellPath } = await import("@hyperframes/engine");
+    const path = resolveHeadlessShellPath({});
+    if (path === undefined) {
+      return { state: "down", detail: "HyperFrames render browser is not downloaded; run hypit runtime up" };
     }
     const version = await run(path, ["--version"]);
     if (!version.ok || version.output.length === 0) {

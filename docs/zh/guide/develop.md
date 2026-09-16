@@ -12,7 +12,7 @@ description: 开始 Hypit 开发工作。
 | Python | 3.10–3.13 | 本地 WhisperX 与 OpenCV Managed Program |
 | uv | latest | Python 环境管理 |
 | ffmpeg / ffprobe | 较新的稳定版 | 媒体处理 |
-| Chrome / Chromium | 由 HyperFrames 管理 | 本地 HyperFrames 渲染 |
+| Chrome / Chromium | 由 `hypit runtime up` 下载 | 本地 HyperFrames 渲染 |
 
 只有 Node.js 与 pnpm 是硬性要求。其余都只在跑真实 Builds 时才需要。
 
