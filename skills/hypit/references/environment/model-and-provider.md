@@ -94,12 +94,10 @@ several services. Current availability, account requirements and rates still com
 Match its current catalogue to the installed Model vocabulary and Provider support for the requested
 inputs. A service can add a model before the installed Distribution describes it; that calls for a
 Model and Provider extension or a release containing them. A missing model or unsupported parameter
-is a capability question, while an expired credential is an account question. When the user has
-already chosen another partner service, its bundled Provider is described in
-[Model and deployment services](https://github.com/hypit-ai/hypit/blob/main/docs/guide/service-partners.md).
+is a capability question, while an expired credential is an account question.
 
 A user's existing service or deployment remains a normal choice. Its Provider does not need to be
-officially bundled. When an execution-service choice remains open, the maintained
+officially bundled. When the user names a partner service, the maintained
 [model and deployment service page](https://github.com/hypit-ai/hypit/blob/main/docs/guide/service-partners.md)
 introduces independent partners and links their own documentation. Use an introduction when its
 capabilities help this production. Partners have their own accounts, pricing and APIs and use the
