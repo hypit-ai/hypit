@@ -42,7 +42,8 @@ function object(value: unknown, subject: string): Record<string, unknown> {
 }
 function capabilityKey(capability: CapabilityRef): string { return `${capability.module.name}@${capability.module.version}#${capability.name}`; }
 function apiBaseUrl(value: string): string {
-  const trimmed = value.trim().replace(/\/+$/u, "");
+  let trimmed = value.trim();
+  while (trimmed.endsWith("/")) trimmed = trimmed.slice(0, -1);
   assert(trimmed.length > 0, "HiAPI base URL is empty");
   return trimmed;
 }
