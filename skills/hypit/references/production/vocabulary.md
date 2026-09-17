@@ -48,8 +48,7 @@ For example, Seedance's `person-reference="true"` identifies a supplied image/vi
 person or generated human likeness; false describes a reference without it, and audio has no such
 visual field. Its installed README owns the exact Reference and frame-mode forms. The
 [Provider](../environment/model-and-provider.md) translates these facts into the selected service's
-media preparation without adding service instructions to the creative prompt; a service whose API
-has no field for a declared fact accepts the declaration without transmitting it, as its README states.
+media preparation without adding service instructions to the creative prompt.
 
 ## Choose a component for its behavior
 
