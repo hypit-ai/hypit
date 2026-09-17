@@ -21,7 +21,9 @@ array with its `role` (`first_frame`, `last_frame`, `reference_image`, `referenc
 `reference_audio`), then `resolution`, `ratio`, `duration` and, for Seedance, `generate_audio`;
 `web-search="true"` adds `tools: [{ "type": "web_search" }]`. Seedance visual references may carry
 `person-reference`; the Provider accepts the declaration and transmits nothing for it, since the Ark
-protocol has no such field.
+protocol has no such field. Seedance 2.0 and 2.5 reject reference images and videos that contain a
+real human face; TokenDance offers no way to register authorized portrait material, so such a request
+fails with the service's moderation error.
 
 Seedream requests send the Ark `size` in pixels: the authored `quality` selects the 2K, 3K or 4K
 tier and `aspect-ratio` the entry from the Ark reference table for Seedream 5.0 lite. Output uses

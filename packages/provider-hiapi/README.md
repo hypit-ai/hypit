@@ -38,7 +38,9 @@ Service limits this Provider reports as unsupported before submitting:
 - Grok Imagine renders 480p or 720p; `grok-imagine-1.5/image-to-video` animates exactly one image.
 
 Seedance visual references may carry `person-reference`; the Provider accepts the declaration and
-transmits nothing for it, since HiAPI has no field for it.
+transmits nothing for it, since HiAPI has no field for it. Seedance rejects reference images and
+videos that contain a real human face; HiAPI offers no way to register authorized portrait material,
+so such a request fails with the service's moderation error.
 
 Reference images and audio travel inline as `data:` URLs, which HiAPI documents for its Seedance
 inputs. A reference video must be a public HTTPS URL; configure `publicAssetUrl` when embedding the

@@ -21,7 +21,9 @@ the prompt and each media input as a typed item with its `role` (`first_frame`, 
 `generate_audio`. Monid documents no web search field for these endpoints, so `web-search="true"`
 is unsupported. Seedance 2.5 frame mode (`first-frame` present) requires `aspect-ratio="adaptive"`.
 Seedance visual references may carry `person-reference`; the Provider accepts the declaration and
-transmits nothing for it, since the endpoint has no field for it.
+transmits nothing for it, since the endpoint has no field for it. Seedance rejects reference images
+and videos that contain a real human face; Monid offers no way to register authorized portrait
+material, so such a request fails with the upstream moderation error.
 
 Reference media are uploaded through the workspace file system Monid provides for this purpose
 (`sfs`): `/put` signs an upload for `hypit/<resource>.<ext>`, the bytes are `PUT` to that URL, and
