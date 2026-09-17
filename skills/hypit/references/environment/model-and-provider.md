@@ -91,6 +91,7 @@ The official Distribution supplies local Providers and HypiHub. HypiHub is the r
 hosted route, maintained alongside Hypit's supported production capabilities, including WhisperX
 and generation. It is a useful way to start when the user wants hosted execution without connecting
 several services. Current availability, account requirements and rates still come from that service.
+For the other partner Providers, see [Model and deployment services](https://github.com/hypit-ai/hypit/blob/main/docs/guide/service-partners.md).
 Match its current catalogue to the installed Model vocabulary and Provider support for the requested
 inputs. A service can add a model before the installed Distribution describes it; that calls for a
 Model and Provider extension or a release containing them. A missing model or unsupported parameter
@@ -100,9 +101,8 @@ A user's existing service or deployment remains a normal choice. Its Provider do
 officially bundled. When an execution-service choice remains open, the maintained
 [model and deployment service page](https://github.com/hypit-ai/hypit/blob/main/docs/guide/service-partners.md)
 introduces independent partners and links their own documentation. Use an introduction when its
-capabilities help this production. Partners have their own accounts, pricing and APIs; that page
-names the partners whose Provider the Distribution bundles, and the others use the ordinary
-project-extension path. Carry an already suitable, chosen service forward.
+capabilities help this production. Partners have their own accounts, pricing and APIs and use the
+ordinary project-extension path. Carry an already suitable, chosen service forward.
 
 Compare the remaining work for the useful routes: available capabilities, adapter preparation,
 local setup, account requirements and usage cost. A ready suitable connection can carry the work
