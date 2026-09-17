@@ -20,12 +20,32 @@ export type TokenDancePreparedRequest = {
   readonly compile: (resolve: GenerationArtifactUrlResolver) => Promise<Record<string, unknown>>;
 };
 
+/** Documented byte limits for one protocol's media inputs; an absent kind is not accepted inline. */
+export type TokenDanceMediaLimits = {
+  readonly image?: number;
+  readonly video?: number;
+  readonly audio?: number;
+  /** Documented cap on the whole JSON request body, when inline media count toward it. */
+  readonly body?: number;
+};
+
+const MB = 1_000_000;
+
+/**
+ * Ark: images under 30 MB and audio at most 15 MB may travel as Base64 within a 64 MB request body;
+ * videos take URLs only. MiniMax: every kind is uploaded through its file API within these sizes.
+ */
+export const tokenDanceMediaLimits: Readonly<Record<TokenDanceProtocol, TokenDanceMediaLimits>> = {
+  "ark-video": { image: 30 * MB, audio: 15 * MB, body: 64 * MB },
+  "ark-image": { image: 30 * MB },
+  "minimax-video": { image: 30 * MB, video: 50 * MB, audio: 15 * MB },
+};
+
 export type TokenDanceRoute = GenerationWireMapping & {
   readonly key: string;
   readonly returns: TypeRef;
   readonly protocol: TokenDanceProtocol;
-  /** Media the protocol documents as acceptable inline; other references need a public URL. */
-  readonly inlineMedia: (mediaType: string) => boolean;
+  readonly mediaLimits: TokenDanceMediaLimits;
   readonly supports: (request: EndpointRequest) => EndpointSupport;
   readonly prepare: (constraints: CanonicalValue) => TokenDancePreparedRequest;
   readonly packageResult: (artifacts: readonly BlobRef[]) => StoredValue;
@@ -140,8 +160,7 @@ export const tokenDanceRoutes: readonly TokenDanceRoute[] = tokenDanceMappings.m
     key: capabilityKey(mapping.capability),
     returns: mapping.result === "image" ? generationTypes.imageSet : generationTypes.videoSet,
     protocol,
-    // Ark documents Base64 for images and audio only; MiniMax v2 accepts data URIs for every media kind.
-    inlineMedia: (mediaType) => protocol === "minimax-video" || !mediaType.startsWith("video/"),
+    mediaLimits: tokenDanceMediaLimits[protocol],
     supports: (request) => {
       const reason = rejection(mapping, request.constraints as unknown as GenerationRequest);
       return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };

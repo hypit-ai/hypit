@@ -34,9 +34,13 @@ Service limits this Provider reports as unsupported before submitting:
 - Seedance 2.5 frame mode (`first-frame` present) requires `aspect-ratio="adaptive"`.
 - MiniMax H3 text-to-video requires an explicit `aspect-ratio`; frame and reference modes may omit it.
 
-Reference media travel inline as `data:` URLs where the protocol documents Base64 input: images and
-audio for Ark, every media kind for MiniMax. An Ark reference video needs a public URL; configure
-`publicAssetUrl` when embedding the Provider, otherwise such a request fails before submission.
+Reference media reach each protocol the way its documentation provides. Ark takes images under
+30 MB and audio up to 15 MB inline as `data:` URLs within a 64 MB request body; the Provider checks
+both before submitting. An Ark reference video takes a URL only; configure `publicAssetUrl` when
+embedding the Provider, otherwise such a request fails before submission. MiniMax inputs are
+uploaded through the gateway's `POST /minimax/v1/files/upload` with `purpose:
+video_generation_input` (images up to 30 MB, videos up to 50 MB, audio up to 15 MB) and referenced
+as `mm_file://{file_id}`; MiniMax keeps such files for seven days.
 
 Runtime Profile example:
 

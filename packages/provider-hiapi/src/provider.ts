@@ -7,6 +7,7 @@ import type { BlobRef, CapabilityRef } from "@hypit/protocol";
 import { credentialRef } from "@hypit/runtime";
 import type { CredentialRef, ResourceStore } from "@hypit/runtime";
 import { hiApiRouteForCapability, hiApiRoutes } from "./routes.js";
+import type { HiApiMediaLimits } from "./routes.js";
 import { HiApiHttpError, HiApiServiceError, hiApiTaskFailure } from "./errors.js";
 
 export const hiApiProviderModuleRef = { name: "@hypit/provider-hiapi", version: "1" } as const;
@@ -87,16 +88,26 @@ class HiApiClient {
   }
 }
 
-function resolverFor(context: EndpointInvocationContext, publicAssetUrl: CreateHiApiProviderOptions["publicAssetUrl"]): GenerationArtifactUrlResolver {
+function resolverFor(limits: HiApiMediaLimits, context: EndpointInvocationContext, publicAssetUrl: CreateHiApiProviderOptions["publicAssetUrl"]): GenerationArtifactUrlResolver {
   const resolved = new Map<string, Promise<string>>();
+  let imageBytes = 0;
   return (artifact, fields) => {
     const existing = resolved.get(artifact.resource);
     if (existing !== undefined) return existing;
     const promise = (async () => {
       if (publicAssetUrl !== undefined) return await publicAssetUrl(artifact, context.resources, fields);
       // HiAPI documents data URLs for image and audio inputs; reference videos must be public HTTPS URLs.
-      assert(!artifact.mediaType.startsWith("video/"),
-        "HiAPI accepts reference videos only by public URL; configure publicAssetUrl for this Endpoint");
+      const kind = artifact.mediaType.split("/", 1)[0];
+      assert(kind === "image" || kind === "audio",
+        `HiAPI accepts ${artifact.mediaType} references only by public URL; configure publicAssetUrl for this Endpoint`);
+      const limit = limits[kind];
+      assert(limit === undefined || artifact.size <= limit,
+        `HiAPI accepts ${kind} references up to ${(limit ?? 0) / 1_000_000} MB for this model; ${artifact.resource} is ${artifact.size} bytes`);
+      if (kind === "image") {
+        imageBytes += artifact.size;
+        assert(limits.imagesTotal === undefined || imageBytes <= limits.imagesTotal,
+          `HiAPI accepts reference images up to ${(limits.imagesTotal ?? 0) / 1_000_000} MB combined for this model`);
+      }
       const bytes = await context.resources.get(artifact.resource);
       assert(bytes !== undefined && bytes.byteLength === artifact.size, `Reference Resource ${artifact.resource} is unavailable or has changed`);
       return `data:${artifact.mediaType};base64,${Buffer.from(bytes).toString("base64")}`;
@@ -116,7 +127,7 @@ function endpoint(client: HiApiClient, pollIntervalMs: number, maxOperationMs: n
         await context.reportProgress?.({ phase: `Preparing HiAPI request: ${request.model}` });
         let body: Record<string, unknown>;
         try {
-          body = await request.compile(resolverFor(context, publicAssetUrl));
+          body = await request.compile(resolverFor(request.mediaLimits, context, publicAssetUrl));
         } catch (error) {
           throw new HiApiServiceError(error instanceof HiApiServiceError ? error.code : "HIAPI_ERROR",
             `HiAPI request preparation failed; model=${request.model}; generation not submitted: ${failureMessage(error)}`);

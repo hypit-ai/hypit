@@ -43,8 +43,12 @@ videos that contain a real human face; HiAPI offers no way to register authorize
 so such a request fails with the service's moderation error.
 
 Reference images and audio travel inline as `data:` URLs, which HiAPI documents for its Seedance
-inputs. A reference video must be a public HTTPS URL; configure `publicAssetUrl` when embedding the
-Provider, otherwise such a request fails before submission.
+inputs, within the per-file sizes each model page states: 30 MB images and 15 MB audio for
+`seedance-2.0-mini` and the Seedance 2.5 models (2.5 also caps combined images at 120 MB), 10 MB
+images for `seedream-5.0-lite/image-to-image` and `grok-imagine/image-to-video`, 20 MB for
+`grok-imagine-1.5/image-to-video`, 30 MB for `Nano-Banana-Pro`. The Provider checks these before
+submitting. A reference video must be a public HTTPS URL; configure `publicAssetUrl` when embedding
+the Provider, otherwise such a request fails before submission.
 
 Runtime Profile example:
 

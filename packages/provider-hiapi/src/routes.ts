@@ -11,8 +11,30 @@ import type { BlobRef, CapabilityRef, CanonicalValue, StoredValue, TypeRef } fro
 import type { EndpointRequest, EndpointSupport } from "@hypit/endpoint-kit";
 import { hiApiMappings } from "./mapping.js";
 
+/** Documented byte limits for inline media on one HiAPI model; an absent kind carries no documented cap. */
+export type HiApiMediaLimits = {
+  readonly image?: number;
+  readonly audio?: number;
+  /** Documented cap on the combined size of all reference images. */
+  readonly imagesTotal?: number;
+};
+
+const MB = 1_000_000;
+
+/** Per-file sizes HiAPI's model pages state for images and audio; videos travel by public URL. */
+const hiApiMediaLimits: Readonly<Record<string, HiApiMediaLimits>> = {
+  "seedance-2.0-mini": { image: 30 * MB, audio: 15 * MB },
+  "seedance-2.5/image-to-video": { image: 30 * MB, audio: 15 * MB, imagesTotal: 120 * MB },
+  "seedance-2.5/reference-to-video": { image: 30 * MB, audio: 15 * MB, imagesTotal: 120 * MB },
+  "seedream-5.0-lite/image-to-image": { image: 10 * MB },
+  "Nano-Banana-Pro": { image: 30 * MB },
+  "grok-imagine/image-to-video": { image: 10 * MB },
+  "grok-imagine-1.5/image-to-video": { image: 20 * MB },
+};
+
 export type HiApiPreparedRequest = {
   readonly model: string;
+  readonly mediaLimits: HiApiMediaLimits;
   readonly compile: (resolve: GenerationArtifactUrlResolver) => Promise<Record<string, unknown>>;
 };
 
@@ -110,6 +132,7 @@ export const hiApiRoutes: readonly HiApiRoute[] = hiApiMappings.map((mapping) =>
     const model = selectWireModelForRequest(mapping, request);
     return {
       model,
+      mediaLimits: hiApiMediaLimits[model] ?? {},
       compile: async (resolve) => ({
         model,
         input: normalize(mapping, (await compileWireRequest(mapping, request, resolve)).input as Record<string, unknown>),
