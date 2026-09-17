@@ -66,7 +66,10 @@ describe availability; the user's request and recorded choices establish what to
 
 When the path is undecided, share the practical alternatives and your recommendation before a new
 account connection, substantial installation or paid call. Ask for the choice that is actually
-unresolved. Once the route is agreed, carry out ordinary setup and work with progress updates.
+unresolved: the recommended HypiHub, which continues this flow unchanged, or a partner API, which
+the user picks from [this page](https://github.com/hypit-ai/hypit/blob/main/docs/guide/service-partners.md)
+([中文](https://github.com/hypit-ai/hypit/blob/main/docs/zh/guide/service-partners.md)) without a list from you.
+Once the route is agreed, carry out ordinary setup and work with progress updates.
 Their decision can cover preparation as a whole. Record it in
 [Brief](../creation/brief.md#brief-preserves-user-authority); the Profile implements that choice.
 [Paid scope](../production/builds.md#work-within-the-agreed-paid-scope) explains how the commission
