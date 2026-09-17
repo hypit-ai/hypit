@@ -671,6 +671,26 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
     const spreadInspection = await inspectArtifact(resources, spread);
     assert.equal(spreadInspection.streams.length, 1);
     assert.equal(spreadInspection.streams[0]?.decodedUnitCount, 15, "two pictures spread over the same frame count");
+    const rationalSpread = await executeArtifact(need(
+      "need:render-still-rational-spread",
+      mediaPipelineCapabilities.renderStill,
+      artifactTypes.blob,
+      canonicalize({
+        request: {
+          frameRate: { numerator: 30_000, denominator: 1_001 },
+          frameCount: 15,
+          output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
+          segments: [
+            { startFrame: 0, endFrameExclusive: 10, source: extractedFrame },
+            { startFrame: 10, endFrameExclusive: 15, source: extractedFrame },
+          ],
+        },
+      }),
+    ));
+    const rationalInspection = await inspectArtifact(resources, rationalSpread);
+    const rationalVideo = rationalInspection.streams.find((item) => item.kind === "video");
+    assert.equal(rationalVideo?.decodedUnitCount, 15, "rational frame ticks survive concatenating held images");
+    assert.deepEqual(rationalVideo?.averageFrameRate, { numerator: 30_000, denominator: 1_001 });
     const stillSelection = selectMediaStreams(stillInspection, sealMediaSelectionRequest({
       video: { mode: "primary-moving" },
       audio: { mode: "none" },

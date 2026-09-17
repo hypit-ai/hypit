@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# recent.design mirror + vector search + live viewer. See ../SKILL.md.
+exec uv run --quiet --script "$(dirname "$(readlink -f "$0")")/rd.py" "$@" 2> >(grep -v -i 'warning' >&2)

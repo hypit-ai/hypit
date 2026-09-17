@@ -1,0 +1,45 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "surreel-studio",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "surreel-studio"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "STUDIO",
+        "class_name": "StudioDO"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["StudioDO"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "limits": {
+    "cpu_ms": 300000
+  },
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "studio.getvideos.app",
+      "custom_domain": true
+    }
+  ]
+}

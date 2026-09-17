@@ -180,6 +180,11 @@
     "test:image-opencv": "node test/run.mjs image-opencv",
     "hypit": "node bin/hypit.mjs",
     "studio": "node bin/hypit.mjs studio",
+    "surreel": "node scripts/surreel.mjs dev",
+    "surreel:build": "node scripts/surreel.mjs build",
+    "surreel:serve": "node scripts/surreel.mjs serve",
+    "surreel:check": "node scripts/surreel.mjs check",
+    "surreel:server": "pnpm --filter @surreel/server dev",
     "prepack": "npm run build:public-types"
   },
   "engines": {

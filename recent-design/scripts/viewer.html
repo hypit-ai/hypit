@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>recent.design — local search</title>
+<style>
+  :root { --bg:#0e0e0f; --panel:#161618; --line:#26262a; --text:#ececee; --dim:#8b8b93; --accent:#7aa2ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 ui-sans-serif, system-ui, sans-serif;
+         display:grid; grid-template-columns: 1fr 420px; height:100vh; overflow:hidden; }
+  main { overflow:auto; padding:16px 20px 40px; }
+  aside { border-left:1px solid var(--line); display:grid; grid-template-rows:auto auto 1fr; min-height:0; background:var(--panel); }
+  form { display:flex; gap:8px; flex-wrap:wrap; align-items:center; position:sticky; top:-16px; padding:16px 0 12px;
+         background:var(--bg); z-index:2; }
+  input, select, button { font:inherit; color:var(--text); background:var(--panel); border:1px solid var(--line);
+         border-radius:8px; padding:8px 10px; }
+  input[type=search] { flex:1 1 320px; }
+  input[type=range] { padding:0; width:90px; }
+  button { cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  label { color:var(--dim); font-size:12px; display:flex; gap:6px; align-items:center; }
+  #meta { color:var(--dim); font-size:12px; margin:0 0 12px; font-variant-numeric: tabular-nums; }
+  #grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; display:flex; flex-direction:column; }
+  .media { position:relative; aspect-ratio: 4/3; background:#000; }
+  .media img, .media video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .media video { opacity:0; transition:opacity .2s; }
+  .score { position:absolute; top:6px; left:6px; background:#000a; padding:1px 6px; border-radius:6px; font-size:11px;
+           font-variant-numeric: tabular-nums; }
+  .body { padding:8px 10px 10px; display:flex; flex-direction:column; gap:4px; }
+  .title { font-weight:600; }
+  .sub { color:var(--dim); font-size:12px; }
+  .desc { font-size:12px; color:#b9b9c0; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .actions { display:flex; gap:6px; margin-top:4px; }
+  .actions button, .actions a { font-size:12px; padding:4px 8px; border-radius:6px; color:var(--text);
+           border:1px solid var(--line); text-decoration:none; background:transparent; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); margin:0; padding:10px 12px 6px; }
+  #screen-wrap { padding:0 12px 10px; }
+  #screen { width:100%; border:1px solid var(--line); border-radius:8px; background:#000; min-height:120px; display:block; }
+  #screen-url { font-size:11px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:4px; }
+  #log { overflow:auto; padding:0 12px 12px; font:12px/1.5 ui-monospace, monospace; min-height:0; }
+  .ev { border-bottom:1px solid var(--line); padding:3px 0; }
+  .ev time { color:var(--dim); margin-right:6px; }
+  .k-search { color:var(--accent); } .k-warn { color:#ffb86b; } .k-browser { color:#8be9a8; }
+  .bar { height:3px; background:var(--line); margin:0 12px; border-radius:2px; overflow:hidden; }
+  .bar > i { display:block; height:100%; width:0; background:var(--accent); transition:width .3s; }
+</style>
+</head>
+<body>
+<main>
+  <form id="f">
+    <input type="search" id="q" placeholder="describe it: dark shader hero, playful onboarding, brutalist type…" autofocus>
+    <select id="mode"><option>hybrid</option><option>text</option><option>visual</option></select>
+    <label>visual <input type="range" id="visual" min="0" max="1" step="0.1" value="0.5"></label>
+    <select id="feed">
+      <option value="">all feeds</option><option value="x">design (x)</option><option>websites</option>
+      <option>og-images</option><option>app-store-screenshots</option><option>app-icons</option>
+      <option>tools</option><option>skills</option>
+    </select>
+    <input id="tags" placeholder="tags: dark,minimal" style="width:150px">
+    <button>Search</button>
+    <label><input type="checkbox" id="follow" checked> follow agent</label>
+  </form>
+  <p id="meta">…</p>
+  <div id="grid"></div>
+</main>
+<aside>
+  <div>
+    <h2>Browser <span id="shot-state"></span></h2>
+    <div id="screen-wrap"><img id="screen" alt="live browser view"><div id="screen-url"></div></div>
+  </div>
+  <div><h2>Activity</h2><div class="bar"><i id="prog"></i></div></div>
+  <div id="log"></div>
+</aside>
+<script>
+const $ = s => document.querySelector(s);
+let lastTs = 0, shownTs = 0, since = 0;
+
+function card(r) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  const vid = r.mediaType === 'video' ? `<video muted loop playsinline preload="none" src="${r.media}"></video>` : '';
+  el.innerHTML = `
+    <div class="media">
+      <img loading="lazy" src="/poster/${r.id}.webp" onerror="this.src='${r.poster || ''}'" alt="">
+      ${vid}
+      ${r.score != null ? `<span class="score">${r.score.toFixed(2)}</span>` : ''}
+    </div>
+    <div class="body">
+      <div class="title"></div>
+      <div class="sub"></div>
+      <div class="desc"></div>
+      <div class="actions">
+        <button data-like>similar</button>
+        <button data-open>open in browser</button>
+        <a href="${r.url}" target="_blank" rel="noopener">site</a>
+        ${r.source ? `<a href="${r.source}" target="_blank" rel="noopener">source</a>` : ''}
+      </div>
+    </div>`;
+  el.querySelector('.title').textContent = r.title || r.id;
+  el.querySelector('.sub').textContent = `${r.category}/${r.format} · ${r.by || ''} · ${r.tags.slice(0, 4).join(', ')}`;
+  el.querySelector('.desc').textContent = r.description || '';
+  const v = el.querySelector('video');
+  if (v) {
+    el.querySelector('.media').addEventListener('mouseenter', () => { v.style.opacity = 1; v.play().catch(() => {}); });
+    el.querySelector('.media').addEventListener('mouseleave', () => { v.pause(); v.style.opacity = 0; });
+  }
+  el.querySelector('[data-like]').onclick = () => run({ like: r.id });
+  el.querySelector('[data-open]').onclick = () => fetch(`/api/open?id=${r.id}`);
+  return el;
+}
+
+function render(rec) {
+  if (!rec || !rec.results) return;
+  shownTs = rec.ts;
+  const label = rec.like ? `similar to ${rec.like}` : `“${rec.query}”`;
+  $('#meta').textContent = `${label} · ${rec.results.length} results · ${new Date(rec.ts * 1000).toLocaleTimeString()}`;
+  const g = $('#grid');
+  g.replaceChildren(...rec.results.map(card));
+}
+
+async function run(extra = {}) {
+  const p = new URLSearchParams({
+    q: $('#q').value, mode: $('#mode').value, visual: $('#visual').value,
+    feed: $('#feed').value, tags: $('#tags').value.replace(/\s/g, ''), k: 40, ...extra,
+  });
+  $('#meta').textContent = 'searching…';
+  const rec = await (await fetch('/api/search?' + p)).json();
+  if (rec.error) { $('#meta').textContent = rec.error; return; }
+  render(rec);
+}
+$('#f').onsubmit = e => { e.preventDefault(); run(); };
+
+async function pollLast() {
+  if (!$('#follow').checked) return;
+  const rec = await (await fetch('/api/last')).json().catch(() => null);
+  if (rec && rec.ts && rec.ts > shownTs) {
+    if (rec.query) $('#q').value = rec.query;
+    render(rec);
+  }
+}
+
+async function pollEvents() {
+  const evs = await (await fetch('/api/events?since=' + since)).json().catch(() => []);
+  const log = $('#log');
+  for (const e of evs) {
+    since = Math.max(since, e.ts);
+    const d = document.createElement('div');
+    d.className = 'ev k-' + e.kind;
+    const t = document.createElement('time');
+    t.textContent = new Date(e.ts * 1000).toLocaleTimeString();
+    d.append(t, `${e.kind}: ${e.msg}`);
+    log.prepend(d);
+    if (e.total) $('#prog').style.width = `${Math.round(100 * (e.done ?? e.seen ?? 0) / e.total)}%`;
+  }
+  while (log.children.length > 300) log.lastChild.remove();
+}
+
+async function pollScreen() {
+  try {
+    const r = await fetch('/api/screen');
+    if (!r.ok) throw new Error('no browser');
+    const blob = await r.blob();
+    const img = $('#screen');
+    const old = img.src;
+    img.src = URL.createObjectURL(blob);
+    if (old.startsWith('blob:')) URL.revokeObjectURL(old);
+    $('#screen-url').textContent = decodeURIComponent(r.headers.get('x-page-url') || '');
+    $('#shot-state').textContent = '· live';
+  } catch {
+    $('#shot-state').textContent = '· offline (recent-design chrome)';
+  }
+}
+
+setInterval(pollLast, 1000);
+setInterval(pollEvents, 1000);
+(async function loop() { await pollScreen(); setTimeout(loop, 1200); })();
+pollEvents(); pollLast();
+</script>
+</body>
+</html>

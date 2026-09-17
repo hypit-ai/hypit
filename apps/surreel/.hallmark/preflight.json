@@ -1,0 +1,8 @@
+{
+  "scanned": "2026-09-17",
+  "framework": "Flutter",
+  "fonts": ["Space Grotesk", "DM Sans"],
+  "palette": "Night lime in lib/ui/design.dart",
+  "motion": "motion-cut (no Motion/GSAP)",
+  "preserved": ["wordmark", "lime accent", "format-first create", "nav labels"]
+}

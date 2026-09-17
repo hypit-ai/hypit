@@ -689,6 +689,7 @@ export async function executeNormalizeMedia(
       await runProcess({
         executable: env.ffmpegPath,
         argv: ["-y", ...visualInput, "-an", "-vf", filter,
+          // setpts can clear the filter's frame-rate metadata; keep CFR on the planned rational clock.
           "-frames:v", String(plan.frameCount), "-r", fps, "-fps_mode", "cfr", ...encoderArgs, output],
         timeoutMs: env.processTimeoutMs,
         maxStdoutBytes: 64 * 1024,
@@ -802,7 +803,9 @@ export async function executeRenderStillVideo(
       "select=eq(n\\,0)",
       "loop=loop=-1:size=1:start=0",
       `trim=start_frame=0:end_frame=${frames}`,
-      `setpts=N*${denominator}/(${numerator}*TB)`,
+      // Image demuxer ticks can be coarser than the authored clock, losing frames at concat boundaries.
+      `settb=expr=${denominator}/${numerator}`,
+      "setpts=N",
     ].join(",");
     let argv: string[];
     if (need.request.segments.length === 1) {
@@ -931,6 +934,7 @@ export async function executeTransformMedia(
   const need = transformNeed(constraints);
   const media = need.media;
   const plan = compileTransformPlan(media, need.program.operations);
+  const fps = `${media.timeline.frameRate.numerator}/${media.timeline.frameRate.denominator}`;
   const work = await mkdtemp(join(tmpdir(), "hypit-media-transform-"));
   try {
     const visualPath = join(work, "visual.mp4");

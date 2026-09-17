@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 64 64" role="img" aria-label="Surreel">
+  <title>Surreel</title>
+  <rect width="64" height="64" fill="#0C0E0F"/>
+  <g transform="translate(16 16)" fill="#A9D750">
+    <path d="M9 3H29L23 13H10L6 20H0Z"/>
+    <path d="M9 19H22L26 12H32L23 29H3Z"/>
+  </g>
+</svg>

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "talking-head",
+    "title": "Talking-head UGC",
+    "playbook": "talking-head.md",
+    "crafts": ["image-direction", "voice-direction", "video-direction", "captions"],
+    "imageSkills": ["gpt-image-people", "ugc-realistic"],
+    "videoSkills": ["ugc-realistic", "ugc-ad-formats"]
+  },
+  {
+    "id": "narration-led",
+    "title": "Narration-led",
+    "playbook": "narration-led-demo.md",
+    "crafts": ["voice-direction", "voice-and-performance", "b-roll", "graphic-compositions"],
+    "imageSkills": ["gpt-image-people"],
+    "videoSkills": ["ugc-ad-formats", "seedance-home-video"]
+  },
+  {
+    "id": "presenter-led",
+    "title": "Presenter-led explainer",
+    "playbook": "presenter-led-explainer.md",
+    "crafts": ["voice-and-performance", "image-direction", "video-direction", "graphic-compositions"],
+    "imageSkills": ["gpt-image-people", "ugc-realistic"],
+    "videoSkills": ["ugc-ad-formats", "h3-video"]
+  },
+  {
+    "id": "ranking",
+    "title": "Ranking / listicle",
+    "playbook": "ranking-listicle.md",
+    "crafts": ["graphic-compositions", "captions", "voice-direction"],
+    "imageSkills": ["gpt-image-people"],
+    "videoSkills": ["ugc-ad-formats"]
+  },
+  {
+    "id": "short-drama",
+    "title": "Short drama",
+    "playbook": "short-drama.md",
+    "crafts": ["image-direction", "video-direction", "voice-and-performance", "visual-continuity"],
+    "imageSkills": ["gpt-image-people"],
+    "videoSkills": ["ad-story-framework", "h3-video"]
+  },
+  {
+    "id": "street-interview",
+    "title": "Street interview",
+    "playbook": "street-interview.md",
+    "crafts": ["image-direction", "video-direction", "caption-tracking", "voice-and-performance"],
+    "imageSkills": ["gpt-image-people", "ugc-realistic"],
+    "videoSkills": ["ad-story-framework", "ugc-ad-formats"]
+  },
+  {
+    "id": "podcast",
+    "title": "Two-person podcast",
+    "playbook": "two-person-podcast.md",
+    "crafts": ["image-direction", "voice-and-performance", "visual-continuity"],
+    "imageSkills": ["gpt-image-people", "ugc-realistic"],
+    "videoSkills": ["ugc-ad-formats"]
+  }
+]

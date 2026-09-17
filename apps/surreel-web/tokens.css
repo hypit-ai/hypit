@@ -1,0 +1,58 @@
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 */
+/* Hallmark · genre: atmospheric · macrostructure: Workbench · theme: Night lime
+ * tone: austere · audience: creators · use: queue swipe send
+ * nav: N3 side-rail + phone tab bar · footer: Ft2 inline status
+ * enrichment: none · accent: lime hue 126
+ */
+
+:root {
+  --color-paper: oklch(19.5% 0.014 145);
+  --color-paper-2: oklch(24.8% 0.016 145);
+  --color-paper-3: oklch(29.8% 0.018 145);
+  --color-sidebar: oklch(16.2% 0.012 145);
+  --color-ink: oklch(95.8% 0.014 135);
+  --color-ink-2: oklch(73.8% 0.030 145);
+  --color-hint: oklch(61.8% 0.022 145);
+  --color-rule: oklch(36.8% 0.020 145);
+  --color-accent: oklch(82.0% 0.170 126);
+  --color-accent-ink: oklch(19.8% 0.048 142);
+  --color-focus: oklch(82.0% 0.170 126);
+  --color-error: oklch(81.8% 0.072 32);
+  --color-success: oklch(82.0% 0.170 126);
+  --color-bloom: oklch(82.0% 0.170 126 / 18%);
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-touch: 48px;
+  --text-display: 40px;
+  --text-display-s: 32px;
+  --text-title: 24px;
+  --text-body: 15px;
+  --text-small: 13px;
+  --text-micro: 12px;
+  --tracking-display: -0.04em;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-premium: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 180ms;
+  --dur-press: 160ms;
+  --dur-deck: 400ms;
+  --dur-deck-exit: 280ms;
+  --scale-press: 0.97;
+  --scale-hover: 1.04;
+  --rule-hairline: 1px;
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --radius-input: 8px;
+  --radius-pill: 999px;
+  --z-canvas: 0;
+  --z-sticky: 20;
+  --z-nav: 30;
+  --z-dialog: 40;
+  --z-grain: 60;
+}

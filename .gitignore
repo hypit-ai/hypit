@@ -1,4 +1,5 @@
 node_modules/
+/.surreel-tools/
 dist/
 coverage/
 # Local architecture notes and repository-specific working instructions.

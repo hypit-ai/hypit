@@ -1,0 +1,35 @@
+/* Hallmark · genre: atmospheric · macrostructure: Workbench · theme: Night lime */
+
+:root {
+  --color-paper: #111711;
+  --color-paper-2: #1c231c;
+  --color-paper-3: #283028;
+  --color-sidebar: #0b0f0b;
+  --color-ink: #edf3ea;
+  --color-ink-2: #9fb09f;
+  --color-hint: #7e897e;
+  --color-rule: #394239;
+  --color-accent: #a9d750;
+  --color-accent-ink: #071b06;
+  --color-focus: #a9d750;
+  --color-error: #eeb3a7;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "DM Sans", sans-serif;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --text-display: 40px;
+  --text-display-s: 32px;
+  --text-title: 22px;
+  --text-body: 15px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 180ms;
+  --rule-hairline: 1px;
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --radius-input: 8px;
+}

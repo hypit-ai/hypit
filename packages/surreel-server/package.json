@@ -1,0 +1,21 @@
+{
+  "name": "@surreel/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/server.ts"
+  },
+  "scripts": {
+    "dev": "node --import tsx src/main.ts",
+    "start": "node --import tsx src/main.ts",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@codegraff/sdk": "0.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "tsx": "4.21.0"
+  }
+}

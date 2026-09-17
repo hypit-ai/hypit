@@ -1,4 +1,5 @@
 packages:
+  - apps/surreel-web
   - packages/*
   - services/*
   # Shipped examples are repository fixtures. Real authored projects always live outside this

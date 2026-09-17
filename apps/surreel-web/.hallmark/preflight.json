@@ -1,0 +1,9 @@
+{
+  "date": "2026-09-17",
+  "designMd": "apps/surreel-web/design.md",
+  "fontStack": "Space Grotesk + DM Sans (self-hosted TTF)",
+  "palette": "Night lime OKLCH tokens.css",
+  "motion": "motion-cut (CSS only)",
+  "spacing": "4pt --space-*",
+  "framework": "Vite + React 19"
+}
