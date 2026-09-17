@@ -91,7 +91,36 @@ under `endpoints` and select it in `bindings` in the [Runtime Profile](./runtime
 
 The [complete project Provider example](https://github.com/hypit-ai/hypit/tree/main/examples/provider-package)
 demonstrates reference uploads, task receipts, collection and pricing using an illustrative API.
-It also ships with the executable, so the Agent can adapt it without a repository checkout.
+It also ships with the executable, so the Agent can adapt it without a repository checkout. It holds
+two packages: `provider-images` for a generated image, and `provider-videos` for a generated video
+whose service receives the wider reference vocabulary — images, videos, audio and first/last frames —
+and returns its result through a separate collection step.
+
+Implement the capability that matches your service's request shape; a service that renders both
+images and video can declare both capabilities in one package. A service often supports a narrower
+range than the Model's vocabulary allows, such as fewer resolutions or a lower maximum duration.
+That difference belongs to the Provider: report it from the capability's `supports` so `plan` refuses
+the request with a reason, rather than editing the shared Model or silently narrowing the author's
+request.
+
+## Model a remote video task
+
+A service that renders video usually submits a job, polls it and then downloads the result, which
+the Endpoint SDK expresses as three separate actions:
+
+- `start` submits the request and returns `pending` with the service's task id. The HTTP bound covers
+  the API call, not the render, so `start` returns as soon as the service accepts the job. Record the
+  task id through `checkpoint` before returning, so an interrupted Build still names the remote work
+  it began.
+- `poll` returns `pending` while the job runs, `ready` when it finishes, or `failed` with the
+  service's own error code. Return `wakeAfter(handle, delayMs)` to schedule the next check.
+- `collect` downloads the finished media and stores it through `context.resources`, returning the
+  Model's declared result value. Keeping collection separate from polling lets download capacity be
+  configured independently of task capacity.
+
+Inputs whose bytes do not exist until an upstream step runs stay ordinary graph edges. The URL
+resolver passed to `compileWireRequest` is where your Provider uploads a reference and returns the
+service's URL for it, so no other part of the system learns the service's upload protocol.
 
 ## Prices and permission
 

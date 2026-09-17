@@ -164,6 +164,14 @@ actual protocol. It demonstrates reference upload, receipt, polling, collection,
 without introducing a second scheduler. For a new Model, the Model SDK README includes the definition
 and author-package activation example.
 
+It ships two packages, and the request shape decides which one to follow: `provider-images` for a
+generated image, `provider-videos` for a generated video. A video service usually receives a wider
+reference vocabulary — images, videos, audio and first/last frames, each role mapping to its own wire
+field — and returns its result through a separate `collect` step after `poll` reports the job ready.
+A service that only supports part of the Model's declared range, such as fewer resolutions or a lower
+maximum duration, reports that from `supports` so `plan` refuses the request with a reason; the shared
+Model stays unchanged and the author's number is never silently narrowed.
+
 ## Use the public SDK
 
 | Import | Responsibility |

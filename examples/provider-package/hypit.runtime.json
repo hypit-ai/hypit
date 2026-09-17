@@ -6,7 +6,14 @@
     "images.personal": {
       "use": "@example/provider-images",
       "config": { "baseUrl": "https://images.example", "apiKey": { "store": "platform", "key": "images.personal" } }
+    },
+    "videos.personal": {
+      "use": "@example/provider-videos",
+      "config": { "baseUrl": "https://videos.example", "apiKey": { "store": "platform", "key": "videos.personal" } }
     }
   },
-  "bindings": { "@hypit/gpt-image@1#gpt-image-2": "images.personal" }
+  "bindings": {
+    "@hypit/gpt-image@1#gpt-image-2": "images.personal",
+    "@hypit/seedance@1#seedance-2-mini": "videos.personal"
+  }
 }

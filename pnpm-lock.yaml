@@ -364,6 +364,21 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  examples/provider-package/packages/provider-videos:
+    devDependencies:
+      '@hypit/driver-node':
+        specifier: workspace:*
+        version: link:../../../../packages/driver-node
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../../../..
+      '@hypit/seedance':
+        specifier: workspace:*
+        version: link:../../../../packages/seedance
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   examples/semantic-composition/packages/chat-scene:
     devDependencies:
       '@hypit/hypit':

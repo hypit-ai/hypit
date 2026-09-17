@@ -57,7 +57,19 @@ import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit
 
 [Endpoint SDK](https://github.com/hypit-ai/hypit/blob/main/packages/endpoint-kit/README.md) 维护处理接口、activation、资源声明和价格 API。将包编译为 JavaScript，由项目包管理器安装。在 [Runtime Profile](./runtime.md) 的 `endpoints` 中配置实例，并通过 `bindings` 选择它。
 
-[完整项目 Provider 示例](https://github.com/hypit-ai/hypit/tree/main/examples/provider-package) 使用示意 API 展示参考上传、任务回执、结果收集与价格读取。示例随执行包分发，Agent 无需仓库 checkout 就能读取和改写。
+[完整项目 Provider 示例](https://github.com/hypit-ai/hypit/tree/main/examples/provider-package) 使用示意 API 展示参考上传、任务回执、结果收集与价格读取。示例随执行包分发，Agent 无需仓库 checkout 就能读取和改写。它包含两个包：`provider-images` 对应生成图像，`provider-videos` 对应生成视频——后者的服务接收更宽的参考词汇（图像、视频、音频以及首尾帧），并通过独立的结果收集步骤返回产物。
+
+实现与服务请求形态相匹配的那个 Capability；同时生成图像和视频的服务可以在同一个包里声明两个 Capability。服务实际支持的范围常常比 Model 词汇表更窄，例如分辨率更少或最长时长更低。这个差异属于 Provider：在 Capability 的 `supports` 中报告它，让 `plan` 带原因拒绝请求，而不是修改共享 Model 或悄悄收窄作者的请求。
+
+## 为远程视频任务建模
+
+渲染视频的服务通常先提交任务、再轮询、最后下载结果，Endpoint SDK 将其表达为三个独立动作：
+
+- `start` 提交请求并以该服务的任务 id 返回 `pending`。HTTP 超时约束的是这次 API 调用而非渲染本身，因此 `start` 在服务受理任务后立即返回。返回前通过 `checkpoint` 记录任务 id，这样即使 Build 被中断，也能指出它已发起的远程工作。
+- `poll` 在任务运行期间返回 `pending`，完成时返回 `ready`，失败时带服务自身的错误码返回 `failed`。用 `wakeAfter(handle, delayMs)` 安排下一次检查。
+- `collect` 下载已完成的素材，通过 `context.resources` 存储，并返回 Model 声明的结果值。把收集与轮询分离，可以让下载并发与任务并发分别配置。
+
+字节尚不存在、要等上游步骤产出的输入，仍是普通图边。`compileWireRequest` 接收的 URL resolver 就是 Provider 上传参考并返回服务 URL 的位置，系统的其他部分因此无需了解该服务的上传协议。
 
 ## 价格与授权
 
