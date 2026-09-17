@@ -11,22 +11,48 @@ work. Its Provider is maintained with Hypit. Local execution remains available t
 Providers, and users can connect their own services through project Providers.
 
 The services introduced below are independent partners. They have their own accounts, terms,
-prices, model availability and APIs. A partnership is an introduction, not a shared HypiHub account
-or an automatically installed integration. Choose a service for the work and connect its supported
-capabilities through the ordinary [Model and Provider](./providers.md) extension path.
+prices, model availability and APIs. A partnership is an introduction, not a shared HypiHub account.
+The Distribution bundles an API-key Provider for each service named below; each Provider maps the
+installed models that service offers and reports that service's input limits, and its README lists
+both. A model the service offers beyond that set connects through the ordinary
+[Model and Provider](./providers.md) extension path.
 
 ## Model and tool API partners
+
+### TokenDance
+
+[TokenDance](https://tokendance.space) is a multi-model gateway.
+[`@hypit/provider-tokendance`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-tokendance/README.md)
+serves the Seedance 2.0 and 2.5 models, Seedream 5.0 lite and MiniMax H3 through the Ark and
+MiniMax protocols TokenDance documents. Its
+[documentation index](https://tokendance.space/llms.txt) and live model catalogue supply the
+details of other models.
+
+### HiAPI
+
+[HiAPI](https://www.hiapi.ai) offers image, video and audio models through one asynchronous task
+API. [`@hypit/provider-hiapi`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-hiapi/README.md)
+serves the Seedance, Seedream 5.0 lite, MiniMax H3, GPT Image 2, Nano Banana and Grok Imagine
+models the Distribution describes. Its [model index](https://www.hiapi.ai/docs/models.json) lists
+the rest.
+
+### Pollo
+
+[Pollo AI](https://docs.pollo.ai) offers video and image models through per-model generation
+paths. [`@hypit/provider-pollo`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-pollo/README.md)
+serves MiniMax H3, Grok Imagine 1.5, GPT Image 2 and Nano Banana. Pollo takes reference media by
+public URL only, so a request with reference media needs a URL the embedding caller supplies.
 
 ### Monid
 
 [Monid](https://monid.ai) is a Hypit service partner.
-[Its documentation](https://docs.monid.ai/) describes discovering tools, inspecting their inputs and
-prices, and calling them through its interfaces. For a video production, identify the concrete
-image, video, audio or other tool that meets the material requirement. Its
-[HTTP API documentation](https://docs.monid.ai/api/overview.html) supplies the connection details.
-An installed compatible Provider can be reused; otherwise the Agent can implement the required
-request and result mapping in a project package. Availability of a tool does not itself install
-a Hypit Provider for it.
+[Its documentation](https://monid.ai/docs) describes discovering tools, inspecting their inputs and
+prices, and calling them through its interfaces.
+[`@hypit/provider-monid`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-monid/README.md)
+serves the Seedance 2.0 and 2.5 endpoints and uploads reference media through Monid's workspace
+file system. For another Monid tool, its
+[HTTP API documentation](https://monid.ai/docs/api/overview) supplies the connection details, and
+the Agent can implement the required request and result mapping in a project package.
 
 ## Your own model deployment
 
