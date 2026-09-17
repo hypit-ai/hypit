@@ -1,5 +1,9 @@
 import { spawnSync } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 import { mediaTypes, verifyRenderedVisual } from "@hypit/media";
 import type { CompositableSurfaceRef, RenderedVisual } from "@hypit/media";
 import { sealProgramSpace } from "@hypit/program-space";
@@ -111,11 +115,54 @@ test("the selected HyperFrames Provider owns one idempotent browser installation
     id: "hyperframes",
     nodePath: process.execPath,
     hyperframesCliPath: "/hyperframes-cli.js",
+    engineModule: import.meta.resolve("@hyperframes/engine"),
     ffprobePath: "ffprobe",
   });
   assert.equal(program.id, "hyperframes");
   assert.equal(program.start, undefined);
   assert.deepEqual(program.installation?.commands[0]?.args.slice(-2), ["browser", "ensure"]);
+});
+
+/** A stand-in engine whose browser resolution the probe must follow, not second-guess. */
+async function engineStub(root: string, resolves: string | undefined): Promise<string> {
+  const file = join(root, "engine.mjs");
+  await writeFile(file, `export function resolveHeadlessShellPath() { return ${JSON.stringify(resolves)}; }
+`);
+  return pathToFileURL(file).href;
+}
+
+test("the browser probe reports what the engine will launch, not what a system Chrome offers", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-browser-probe-"));
+  try {
+    const probe = async (engineModule: string) => localHyperframesBrowserProgram({
+      id: "hyperframes", nodePath: process.execPath, hyperframesCliPath: "/hyperframes-cli.js", engineModule, ffprobePath: "ffprobe",
+    }).installation!.probe();
+
+    // The engine names a runnable executable: ready, whatever else is on the machine.
+    assert.deepEqual(await probe(await engineStub(root, process.execPath)), { state: "ready" });
+
+    // The engine names a cached build that has since disappeared.
+    const missing = join(root, "chrome-headless-shell", "chrome-headless-shell");
+    const stale = await probe(await engineStub(root, missing));
+    assert.equal(stale.state, "down");
+    assert.match(stale.detail ?? "", /no rendering browser installed at .*chrome-headless-shell/u);
+    assert.match(stale.detail ?? "", /hyperframes browser ensure/u);
+
+    // The engine finds no managed build and its puppeteer fallback is not installed either.
+    const none = await probe(await engineStub(root, undefined));
+    assert.equal(none.state, "down");
+    assert.match(none.detail ?? "", /no rendering browser installed; the render engine launches its managed chrome-headless-shell, not a system Chrome/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("the browser probe follows the real engine's resolution", { skip: !liveEnabled }, async () => {
+  const program = localHyperframesBrowserProgram({
+    id: "hyperframes", nodePath: process.execPath, hyperframesCliPath: "/hyperframes-cli.js",
+    engineModule: import.meta.resolve("@hyperframes/engine"), ffprobePath: "ffprobe",
+  });
+  assert.deepEqual(await program.installation!.probe(), { state: "ready" });
 });
 
 test("local HyperFrames Provider really renders a silent frame-exact MP4 with parallel workers", {

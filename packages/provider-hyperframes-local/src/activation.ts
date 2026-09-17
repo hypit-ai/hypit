@@ -78,6 +78,7 @@ const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         id: context.instance,
         nodePath,
         hyperframesCliPath,
+        engineModule: import.meta.resolve("@hyperframes/engine"),
         ffprobePath,
         ffmpegPath,
       }),

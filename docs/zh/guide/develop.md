@@ -16,6 +16,10 @@ description: 开始 Hypit 开发工作。
 
 只有 Node.js 与 pnpm 是硬性要求。其余都只在跑真实 Builds 时才需要。
 
+渲染用的浏览器是 HyperFrames 自己的 `chrome-headless-shell`，不是机器上已装的 Chrome。Profile 首次
+选中 `hyperframes.local` 时，`hypit runtime up` 会下载它；在此之前 `hypit doctor` 会报告它缺失；
+`hyperframes browser ensure` 可以手动完成同样的事。
+
 ## 日常工作流
 
 ```bash

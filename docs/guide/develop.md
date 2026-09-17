@@ -16,6 +16,10 @@ description: Getting started with Hypit development.
 
 Node.js and pnpm are the only hard requirements. The rest are needed only for live Builds.
 
+The rendering browser is HyperFrames' own `chrome-headless-shell`, not a Chrome installed on the
+machine. `hypit runtime up` downloads it the first time a Profile selects `hyperframes.local`, and
+`hypit doctor` reports it missing until then; `hyperframes browser ensure` does the same by hand.
+
 ## Daily workflow
 
 ```bash
