@@ -152,7 +152,8 @@ On an image or video reference, `person-reference="true"` declares a person/avat
 material, including a generated human likeness. Use false for a reference without that content;
 omission leaves the classification unspecified. Audio references do not use this visual flag.
 Frame mode provides `first-frame-person-reference` and `last-frame-person-reference`. The selected
-Provider carries this fact through the service's media preparation.
+Provider carries this fact through the service's media preparation; a service without such a field
+accepts the declaration without transmitting it.
 
 A video reference can guide dance, physical action or camera movement while images guide the new
 appearance. Choose an excerpt that carries the intended motion within the selected model and

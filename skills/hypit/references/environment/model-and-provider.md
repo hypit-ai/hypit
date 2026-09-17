@@ -87,8 +87,9 @@ unsupported combination explicitly, such as requesting 2K where it only offers 1
 
 ## Choose a service for the work
 
-The official Distribution supplies local Providers and HypiHub. HypiHub is the recommended integrated
-hosted route, maintained alongside Hypit's supported production capabilities, including WhisperX
+The official Distribution supplies local Providers, HypiHub, and API-key Providers for TokenDance, HiAPI,
+Pollo and Monid; each bundled gateway's README lists the installed models it serves and the input
+limits it reports as unsupported. HypiHub is the recommended integrated hosted route, maintained alongside Hypit's supported production capabilities, including WhisperX
 and generation. It is a useful way to start when the user wants hosted execution without connecting
 several services. Current availability, account requirements and rates still come from that service.
 Match its current catalogue to the installed Model vocabulary and Provider support for the requested
