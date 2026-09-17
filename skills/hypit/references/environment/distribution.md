@@ -74,8 +74,9 @@ source and choose a reachable route. Keep the requested version when changing re
 ## Let the installation channel own updates
 
 The Distribution supplies local execution Providers, HypiHub, and API-key Providers for TokenDance,
-HiAPI, Pollo and Monid, plus public SDKs and examples for project extensions. A service the user brings can use an installed or project-authored Provider;
-its absence from the official bundle is an extension question. Follow
+HiAPI, Pollo and Monid, plus public SDKs and examples for project extensions. A service the user
+brings can use an installed or project-authored Provider; its absence from the official bundle is an
+extension question. Follow
 [Models and Providers](model-and-provider.md) for that connection. Installing the executable does
 not choose a service account or prepare every model that a production might eventually use.
 
