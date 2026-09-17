@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { assertMappingCoversPorts } from "@hypit/generation";
 import type { BlobRef, CanonicalValue } from "@hypit/protocol";
+import { minimaxH3Ports, sealMinimaxH3Request } from "@hypit/minimax-h3";
 import { seedancePorts, sealSeedanceRequest } from "@hypit/seedance";
 
 import { monidMappings } from "../src/mapping.js";
@@ -12,7 +13,10 @@ const resolve = async () => "https://sfs.monid.ai/signed";
 
 test("every Monid mapping covers its model's ports", () => {
   for (const mapping of monidMappings) {
-    assertMappingCoversPorts(seedancePorts[mapping.capability.name as keyof typeof seedancePorts], mapping);
+    const ports = mapping.capability.module.name === "@hypit/minimax-h3"
+      ? minimaxH3Ports
+      : seedancePorts[mapping.capability.name as keyof typeof seedancePorts];
+    assertMappingCoversPorts(ports, mapping);
   }
 });
 

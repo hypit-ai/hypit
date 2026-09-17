@@ -65,11 +65,14 @@ function httpsUrl(value: unknown, subject: string): string {
   assert(typeof value === "string" && /^https?:\/\//u.test(value), `${subject} has no URL`);
   return value;
 }
-/** The relayed ModelArk result; Monid returns the task's `video_url` in the run output. */
+/**
+ * The relayed result. The ModelArk endpoints return the task's `video_url`; MiniMax-H3 returns the
+ * video at `content.url`. The link expires, so collection downloads it rather than storing it.
+ */
 function outputVideoUrl(run: Record<string, unknown>): string {
   const output = object(run.output, "Monid run output");
-  const nested = output.content !== undefined ? object(output.content, "Monid run output content").video_url : undefined;
-  return httpsUrl(output.video_url ?? nested, "Monid run output");
+  const content = output.content === undefined ? undefined : object(output.content, "Monid run output content");
+  return httpsUrl(output.video_url ?? content?.video_url ?? content?.url, "Monid run output");
 }
 const extensions: Readonly<Record<string, string>> = {
   "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "video/mp4": "mp4", "video/quicktime": "mov",
@@ -160,7 +163,7 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
         const route = monidRouteForCapability(context.need.capability);
         assert(route !== undefined, "Monid does not implement this exact capability");
         const request = route.prepare(context.need.constraints);
-        await context.reportProgress?.({ phase: `Preparing Monid request: bytedance ${request.endpoint}` });
+        await context.reportProgress?.({ phase: `Preparing Monid request: ${request.service} ${request.endpoint}` });
         let input: Record<string, unknown>;
         try {
           input = await request.compile(resolverFor(client, context, publicAssetUrl));
@@ -168,8 +171,8 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
           throw new MonidServiceError(error instanceof MonidServiceError ? error.code : "MONID_ERROR",
             `Monid request preparation failed; endpoint=${request.endpoint}; generation not submitted: ${failureMessage(error)}`);
         }
-        await context.reportProgress?.({ phase: `Submitting Monid request: bytedance ${request.endpoint}` });
-        const { body: run } = await client.run({ provider: "bytedance", endpoint: request.endpoint, input }, apiKey(context.credentials));
+        await context.reportProgress?.({ phase: `Submitting Monid request: ${request.service} ${request.endpoint}` });
+        const { body: run } = await client.run({ provider: request.service, endpoint: request.endpoint, input }, apiKey(context.credentials));
         const handle: Handle = { contract: "hypit.monid-operation@1", runId: runId(run), route: route.key, startedAt: Date.now() };
         const receipt = { id: handle.runId };
         const ended = monidTerminalStatuses.includes(String(run.status) as typeof monidTerminalStatuses[number]);
@@ -230,7 +233,7 @@ export function createMonidProvider(options: CreateMonidProviderOptions = {}) {
   const asyncEndpoint = endpoint(client, pollIntervalMs, operationTimeoutMs, options.publicAssetUrl);
   return defineEndpointPackage({
     module: monidProviderModuleRef, facet: "gateway", instance: options.instance ?? "monid.default", pool: options.pool ?? options.instance ?? "monid.default",
-    pricing: { kind: "page", url: "https://monid.ai/tools/bytedance" },
+    pricing: { kind: "page", url: "https://monid.ai/tools" },
     credentials: { apiKey: options.apiKey ?? credentialRef("os", "monid.api-key") },
     credentialInputs: { apiKey: { label: "Monid API key" } },
     defaultConcurrency: options.defaultConcurrency ?? 4,

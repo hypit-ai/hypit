@@ -9,6 +9,7 @@
   "dependencies": {
     "@hypit/endpoint-kit": "workspace:*",
     "@hypit/generation": "workspace:*",
+    "@hypit/minimax-h3": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-kit": "workspace:*"

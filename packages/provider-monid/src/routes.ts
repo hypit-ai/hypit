@@ -4,19 +4,22 @@ import {
   generationTypes,
   sealGeneratedVideoSet,
 } from "@hypit/generation";
-import type { GenerationArtifactUrlResolver, GenerationRequest, GenerationWireMapping } from "@hypit/generation";
+import type { GenerationArtifactUrlResolver, GenerationRequest } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CapabilityRef, CanonicalValue, StoredValue, TypeRef } from "@hypit/protocol";
 import type { EndpointRequest, EndpointSupport } from "@hypit/endpoint-kit";
 import { monidMappings } from "./mapping.js";
+import type { MonidMapping } from "./mapping.js";
 
 export type MonidPreparedRequest = {
-  /** Monid endpoint path under the `bytedance` provider. */
+  /** Monid provider relaying the endpoint. */
+  readonly service: string;
+  /** Monid endpoint path under that provider. */
   readonly endpoint: string;
   readonly compile: (resolve: GenerationArtifactUrlResolver) => Promise<Record<string, unknown>>;
 };
 
-export type MonidRoute = GenerationWireMapping & {
+export type MonidRoute = MonidMapping & {
   readonly key: string;
   readonly returns: TypeRef;
   readonly supports: (request: EndpointRequest) => EndpointSupport;
@@ -35,7 +38,21 @@ function strings(value: unknown): readonly string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.length > 0) : [];
 }
 
-function rejection(mapping: GenerationWireMapping, request: GenerationRequest): string | undefined {
+function referenceToVideo(request: GenerationRequest): boolean {
+  return present(request, "referenceImage") || present(request, "referenceVideo") || present(request, "referenceAudio");
+}
+
+function rejection(mapping: MonidMapping, request: GenerationRequest): string | undefined {
+  if (mapping.capability.name === "minimax-h3") {
+    // MiniMax-H3 resolves the framing from the uploaded image in frame mode and defaults
+    // reference-to-video to adaptive. Text-to-video carries no such source, and the endpoint
+    // takes no adaptive ratio there, so the aspect ratio has to be stated.
+    if (!present(request, "firstFrame") && !present(request, "lastFrame") && !referenceToVideo(request)
+      && scalar(request, "aspectRatio") === undefined) {
+      return "MiniMax H3 text-to-video on Monid requires an aspect ratio";
+    }
+    return undefined;
+  }
   if (scalar(request, "webSearch") === true) {
     return "Monid's Seedance endpoints document no web search field";
   }
@@ -54,6 +71,7 @@ function arkInput(input: Record<string, unknown>): Record<string, unknown> {
   const first = input.first_frame;
   const last = input.last_frame;
   return {
+    ...(typeof input.model === "string" ? { model: input.model } : {}),
     content: [
       { type: "text", text: input.text },
       ...(typeof first === "string" ? [contentItem("image_url", first, "first_frame")] : []),
@@ -67,6 +85,15 @@ function arkInput(input: Record<string, unknown>): Record<string, unknown> {
     duration: input.duration,
     generate_audio: input.generate_audio,
   };
+}
+
+/**
+ * MiniMax-H3 takes a required ratio: frame mode and reference-to-video both resolve to adaptive,
+ * and rejection() has already required a stated ratio for text-to-video.
+ */
+function minimaxH3Input(input: Record<string, unknown>): Record<string, unknown> {
+  const body = arkInput(input);
+  return { ...body, ratio: body.ratio ?? "adaptive" };
 }
 
 function capabilityKey(capability: CapabilityRef): string {
@@ -85,9 +112,11 @@ export const monidRoutes: readonly MonidRoute[] = monidMappings.map((mapping) =>
     const request = constraints as unknown as GenerationRequest;
     const reason = rejection(mapping, request);
     if (reason !== undefined) throw new Error(reason);
+    const body = mapping.capability.name === "minimax-h3" ? minimaxH3Input : arkInput;
     return {
+      service: mapping.service,
       endpoint: selectWireModelForRequest(mapping, request),
-      compile: async (resolve) => arkInput((await compileWireRequest(mapping, request, resolve)).input as Record<string, unknown>),
+      compile: async (resolve) => body((await compileWireRequest(mapping, request, resolve)).input as Record<string, unknown>),
     };
   },
   packageResult: (artifacts) => ({

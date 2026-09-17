@@ -2435,6 +2435,9 @@ importers:
       '@hypit/generation':
         specifier: workspace:*
         version: link:../generation
+      '@hypit/minimax-h3':
+        specifier: workspace:*
+        version: link:../minimax-h3
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol

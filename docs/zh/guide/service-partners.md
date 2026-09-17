@@ -42,7 +42,7 @@ Pollo 只接受公网 URL 形式的参考素材，带参考素材的请求需要
 [Monid](https://monid.ai) 是 Hypit 的服务合作方。
 [它的文档](https://monid.ai/docs)介绍了工具发现、输入与价格查询，以及调用方式。
 [`@hypit/provider-monid`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-monid/README.md)
-提供 Seedance 2.0、2.5 系列端点，并通过 Monid 的工作区文件系统上传参考素材。
+提供 Seedance 2.0、2.5 系列端点与 MiniMax H3，并通过 Monid 的工作区文件系统上传参考素材。
 使用 Monid 的其他工具时，[HTTP API 文档](https://monid.ai/docs/api/overview)提供接入依据，
 Agent 可以在项目包中实现这次所需的请求与结果映射。
 
