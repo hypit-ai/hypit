@@ -689,7 +689,7 @@ export async function executeNormalizeMedia(
       await runProcess({
         executable: env.ffmpegPath,
         argv: ["-y", ...visualInput, "-an", "-vf", filter,
-          "-frames:v", String(plan.frameCount), "-fps_mode", "cfr", ...encoderArgs, output],
+          "-frames:v", String(plan.frameCount), "-r", fps, "-fps_mode", "cfr", ...encoderArgs, output],
         timeoutMs: env.processTimeoutMs,
         maxStdoutBytes: 64 * 1024,
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
@@ -951,7 +951,8 @@ export async function executeTransformMedia(
       argv.push("-map", "0:v:0", "-an", "-vf", plan.videoFilters.join(","));
     }
     argv.push(
-      "-frames:v", String(plan.frameCount), "-fps_mode", "cfr",
+      "-frames:v", String(plan.frameCount),
+      "-r", `${media.timeline.frameRate.numerator}/${media.timeline.frameRate.denominator}`, "-fps_mode", "cfr",
       "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
       "-movflags", "+faststart", output,
     );
