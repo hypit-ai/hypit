@@ -75,7 +75,11 @@ reference also carries an optional `personReference` classification, which is wh
 { "references": [{ "url": "https://…/reference.png", "person": true }] }
 ```
 
-`firstFrame` and `lastFrame` accept at most one item each, so they map with `url`, not `urlArray`.
+`firstFrame` and `lastFrame` accept at most one item each, so their body fields are URLs.
+This illustrative service accepts their optional person classification on `POST /uploads` through
+`x-person-reference: true` or `false`. Their mappings declare `resourceFields: ["personReference"]`,
+and the URL resolver sends that header when supplied. Replace this with the real service’s
+documented transport; a field that the service cannot carry must be refused, never discarded.
 
 **The service's range is narrower than the Model's, and the Provider states that.** Seedance 2 Mini
 admits 480p/720p and 4–15 seconds; this illustrative service renders 720p up to 10 seconds. The
@@ -103,7 +107,8 @@ A task that reports `succeeded` without an output URL is a service contract viol
 job, and fails loudly. A `failed` task keeps the service's own error code and the received task id
 as evidence, and redacts URLs from the message it republishes.
 
-Every port the Model declares is mapped here, because `assertMappingCoversPorts` is what proves it:
+`assertMappingCoversPorts` checks declared ports and required item fields. Optional fields need
+request-level checks and transport tests as well:
 a mapping that forgets a reference role or an item field fails at load rather than after a paid
 generation returns the wrong video. Where a Model port is genuinely optional, `whenAbsent` states
 what the service should receive when the author omits it — the service then gets the value the

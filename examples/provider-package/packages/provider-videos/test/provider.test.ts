@@ -161,3 +161,41 @@ test("project video Provider keeps the received task id when the render fails re
   assert.equal(checkpointed, true);
   assert.deepEqual(calls, ["/videos", "/videos/job-one"]);
 });
+
+test("first and last frame person flags reach the upload API, including false", async () => {
+  const resources = new MemoryResourceStore();
+  const image = await resources.put(new Uint8Array([1]), "image/png");
+  const flags: (string | null)[] = [];
+  const provider = createVideoProvider({
+    instance: "videos.personal", pool: "videos.personal", baseUrl: "https://videos.example",
+    apiKey: { store: "os", key: "example" },
+    fetch: async (input, init) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/uploads") {
+        flags.push(new Headers(init?.headers).get("x-person-reference"));
+        return Response.json({ url: `https://assets.example/frame-${flags.length}.png` });
+      }
+      assert.equal(path, "/videos");
+      const sent = JSON.parse(String(init?.body));
+      assert.equal(sent.input.firstFrame, "https://assets.example/frame-1.png");
+      assert.equal(sent.input.lastFrame, "https://assets.example/frame-2.png");
+      return Response.json({ id: "frames" });
+    },
+  });
+  const need = { id: "need:frames", capability, returns: generationTypes.videoSet, result: "record:frames",
+    constraints: canonicalize(sealSeedanceRequest("seedance-2-mini", {
+      prompt: ["A presenter"], duration: [5], resolution: ["720p"], aspectRatio: ["9:16"],
+      generateAudio: [true], webSearch: [false],
+      firstFrame: [{ role: "image", artifact: image, fields: { personReference: true } }],
+      lastFrame: [{ role: "image", artifact: image, fields: { personReference: false } }],
+    })),
+  };
+  const registry = new EndpointRegistry(); await provider.install(registry);
+  const selected = registry.resolve(need);
+  assert.equal(selected.status, "resolved");
+  assert.equal(selected.registration.kind, "asynchronous");
+  await selected.registration.endpoint.start({ need, command: { kind: "fulfill-need", id: "frames", need },
+    operation: "frames", resources, credentials: { apiKey: { secret: "test" } },
+  });
+  assert.deepEqual(flags, ["true", "false"]);
+});

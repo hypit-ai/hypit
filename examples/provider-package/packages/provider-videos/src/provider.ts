@@ -22,8 +22,8 @@ export const mapping: GenerationWireMapping = {
     referenceImage: { as: "itemObject", field: "references", urlKey: "url", fieldKeys: { personReference: "person" } },
     referenceVideo: { as: "itemObject", field: "videoReferences", urlKey: "url", fieldKeys: { personReference: "person" } },
     referenceAudio: { as: "urlArray", field: "audioReferences" },
-    firstFrame: { as: "url", field: "firstFrame" },
-    lastFrame: { as: "url", field: "lastFrame" },
+    firstFrame: { as: "url", field: "firstFrame", resourceFields: ["personReference"] },
+    lastFrame: { as: "url", field: "lastFrame", resourceFields: ["personReference"] },
   },
 };
 
@@ -109,11 +109,13 @@ export function createVideoProvider(options: {
       // This service has no catalogue query; its known request limits were checked above.
       await context.reportProgress?.({ phase: `Preparing video request: ${model}` });
       const request = await compileWireRequest(mapping, authored,
-        async (artifact) => {
+        async (artifact, fields) => {
           const bytes = await context.resources.get(artifact.resource);
           if (bytes === undefined) throw new Error("Reference media is unavailable");
           const upload = await fetcher(`${base}/uploads`, {
-            method: "POST", headers: { "content-type": artifact.mediaType, authorization: `Bearer ${secret}` },
+            method: "POST", headers: { "content-type": artifact.mediaType, authorization: `Bearer ${secret}`,
+              ...(fields?.personReference === undefined ? {} : { "x-person-reference": String(fields.personReference) }),
+            },
             body: new Blob([new Uint8Array(bytes)]), signal: AbortSignal.timeout(120_000),
           });
           if (!upload.ok) throw new Error(`Video service POST /uploads returned HTTP ${upload.status}`);
