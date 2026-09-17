@@ -91,11 +91,12 @@ The official Distribution supplies local Providers and HypiHub. HypiHub is the r
 hosted route, maintained alongside Hypit's supported production capabilities, including WhisperX
 and generation. It is a useful way to start when the user wants hosted execution without connecting
 several services. Current availability, account requirements and rates still come from that service.
-For the other partner Providers, see [Model and deployment services](https://github.com/hypit-ai/hypit/blob/main/docs/guide/service-partners.md).
 Match its current catalogue to the installed Model vocabulary and Provider support for the requested
 inputs. A service can add a model before the installed Distribution describes it; that calls for a
 Model and Provider extension or a release containing them. A missing model or unsupported parameter
-is a capability question, while an expired credential is an account question.
+is a capability question, while an expired credential is an account question. When the user has
+already chosen another partner service, its bundled Provider is described in
+[Model and deployment services](https://github.com/hypit-ai/hypit/blob/main/docs/guide/service-partners.md).
 
 A user's existing service or deployment remains a normal choice. Its Provider does not need to be
 officially bundled. When an execution-service choice remains open, the maintained
