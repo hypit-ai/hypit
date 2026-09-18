@@ -1,3 +1,4 @@
+import { PaperPlaneTiltIcon } from "@phosphor-icons/react";
 import { useRef, useState, type FormEvent } from "react";
 import { launchUri, socialCaption, socialTarget, socialTargets } from "../socials.ts";
 import { studio } from "../store.ts";
@@ -117,6 +118,7 @@ export function Socials() {
         </form>
       ) : (
         <div className="empty">
+          <PaperPlaneTiltIcon size={40} weight="thin" className="empty-icon" aria-hidden />
           <p className="caption">Nothing to send.</p>
           <p className="note">Keep a film in Review first.</p>
           <a className="btn btn-ghost" href="#/review">

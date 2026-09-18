@@ -219,6 +219,12 @@ a {
 
 .live.is-on span {
   background: var(--color-accent);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
 }
 
 .icon-btn {
@@ -256,6 +262,14 @@ a {
   flex-direction: column;
   gap: var(--space-md);
   padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  animation: page-enter 280ms var(--ease-out) both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 .caption,
@@ -340,7 +354,14 @@ a {
 
 .still-empty {
   min-height: 96px;
-  background: var(--color-paper-3);
+  background: linear-gradient(90deg, var(--color-paper-3) 25%, var(--color-paper-2) 50%, var(--color-paper-3) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .still .caption,
@@ -1284,6 +1305,53 @@ input::placeholder {
   .dialog-scrim {
     place-items: center;
   }
+}
+
+.review-act-keep .preview {
+  animation: review-keep var(--dur-deck-exit) var(--ease-out) both;
+}
+
+.review-act-skip .preview {
+  animation: review-skip var(--dur-deck-exit) var(--ease-out) both;
+}
+
+@keyframes review-keep {
+  to {
+    opacity: 0;
+    transform: scale(1.06);
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes review-skip {
+  to {
+    opacity: 0;
+    transform: translateX(-24px) scale(0.95);
+  }
+}
+
+.empty-icon {
+  color: var(--color-rule);
+}
+
+.generating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-pill);
+  background: var(--color-paper-2);
+  color: var(--color-accent);
+  font-size: var(--text-small);
+}
+
+.generating::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  animation: pulse-dot 1.5s ease-in-out infinite;
 }
 
 @media (prefers-reduced-transparency: reduce) {

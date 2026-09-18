@@ -62,6 +62,7 @@ export function Queue() {
   const ready = queueReady(format, answers, reference) && batch.length > 0;
   const lead = format.fields[0];
   const extra = format.fields.slice(1);
+  const active = projects.filter(isActive);
   const reel = projects.filter((project) => isActive(project) || projectVideo(project) !== undefined).slice(0, 8);
   const [filmId, setFilmId] = useState(reel[0]?.id ?? "");
   const [expanded, setExpanded] = useState<{ id: string; origin: ReturnType<typeof originBox> } | null>(null);
@@ -212,6 +213,10 @@ export function Queue() {
             </li>
           </ul>
         </div>
+      ) : null}
+
+      {active.length > 0 && films.length === 0 ? (
+        <p className="generating" role="status">{active.length} {active.length === 1 ? "take" : "takes"} generating</p>
       ) : null}
 
       {films.length > 0 ? (

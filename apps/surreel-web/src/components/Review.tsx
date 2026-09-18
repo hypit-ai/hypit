@@ -1,5 +1,5 @@
-import { CheckIcon, XIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { CheckIcon, FilmReelIcon, XIcon } from "@phosphor-icons/react";
+import { useRef, useState } from "react";
 import { studio } from "../store.ts";
 import { inReview, projectVideo } from "../types.ts";
 import { useStudio } from "../useStudio.ts";
@@ -11,6 +11,8 @@ export function Review() {
   const inbox = projects.filter(inReview);
   const [filmId, setFilmId] = useState(inbox[0]?.id ?? "");
   const [expanded, setExpanded] = useState<{ id: string; origin: ReturnType<typeof originBox> } | null>(null);
+  const [acting, setActing] = useState<"keep" | "skip" | null>(null);
+  const actTimer = useRef(0);
   const current = inbox.find((project) => project.id === filmId) ?? inbox[0];
   const films = inbox.map((project) => {
     const video = projectVideo(project);
@@ -31,6 +33,7 @@ export function Review() {
       {error ? <p className="banner">{error}</p> : null}
       {inbox.length === 0 ? (
         <div className="empty">
+          <FilmReelIcon size={40} weight="thin" className="empty-icon" aria-hidden />
           <p className="note">Turn the wheel. Keep what sells. Queue a page first.</p>
           <a className="btn btn-ghost" href="#/queue">
             Queue a page
@@ -46,20 +49,48 @@ export function Review() {
             label="Inbox films"
             testId="review-deck"
           />
-          {src ? <video className="bleed preview" src={src} controls playsInline preload="metadata" /> : <div className="bleed preview" />}
+          <div className={acting ? `review-act-${acting}` : undefined}>
+            {src ? <video className="bleed preview" src={src} controls playsInline preload="metadata" /> : <div className="bleed preview" />}
+          </div>
           {expanded && expandedFilm ? (
             <FilmExpand item={expandedFilm} origin={expanded.origin} detailsHref={`#/project/${expanded.id}`} onClose={() => setExpanded(null)} />
           ) : null}
           {current ? (
             <div className="deck-actions">
-              <button type="button" className="round-act" data-testid="skip-review" onClick={() => void studio.setReview(current, "rejected")}>
+              <button
+                type="button"
+                className="round-act"
+                data-testid="skip-review"
+                disabled={acting !== null}
+                onClick={() => {
+                  setActing("skip");
+                  if (actTimer.current) clearTimeout(actTimer.current);
+                  actTimer.current = window.setTimeout(() => {
+                    setActing(null);
+                    void studio.setReview(current, "rejected");
+                  }, 280);
+                }}
+              >
                 <XIcon size={20} weight="bold" aria-hidden />
                 Skip
               </button>
               <p className="note" role="status" aria-atomic="true">
                 {inbox.length} {inbox.length === 1 ? "film" : "films"} left
               </p>
-              <button type="button" className="round-act keep" data-testid="keep-review" onClick={() => void studio.setReview(current, "approved")}>
+              <button
+                type="button"
+                className="round-act keep"
+                data-testid="keep-review"
+                disabled={acting !== null}
+                onClick={() => {
+                  setActing("keep");
+                  if (actTimer.current) clearTimeout(actTimer.current);
+                  actTimer.current = window.setTimeout(() => {
+                    setActing(null);
+                    void studio.setReview(current, "approved");
+                  }, 280);
+                }}
+              >
                 <CheckIcon size={20} weight="bold" aria-hidden />
                 Keep
               </button>
