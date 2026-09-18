@@ -50,6 +50,9 @@
   --radius-control: 10px;
   --radius-input: 8px;
   --radius-pill: 999px;
+  --blur-surface: blur(20px) saturate(1.4);
+  --blur-scrim: blur(12px);
+  --color-edge: oklch(95.8% 0.014 135 / 6%);
   --z-canvas: 0;
   --z-sticky: 20;
   --z-nav: 30;

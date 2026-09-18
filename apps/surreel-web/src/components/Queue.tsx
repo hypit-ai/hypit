@@ -14,6 +14,7 @@ import { briefTemplates } from "../templates.ts";
 import { isActive, projectVideo, statusLabel } from "../types.ts";
 import { useStudio } from "../useStudio.ts";
 import { clipDurations } from "../timing.ts";
+import { FilmExpand, originBox } from "./FilmExpand.tsx";
 import { FormatDeck, WheelDeck } from "./FormatDeck.tsx";
 
 const aspects = ["9:16", "16:9", "1:1"] as const;
@@ -63,6 +64,7 @@ export function Queue() {
   const extra = format.fields.slice(1);
   const reel = projects.filter((project) => isActive(project) || projectVideo(project) !== undefined).slice(0, 8);
   const [filmId, setFilmId] = useState(reel[0]?.id ?? "");
+  const [expanded, setExpanded] = useState<{ id: string; origin: ReturnType<typeof originBox> } | null>(null);
   const missingLead = Boolean(lead && !sourceUrl && !(answers[lead.id] ?? "").trim());
   const films = reel.map((project) => {
     const video = projectVideo(project);
@@ -74,9 +76,7 @@ export function Queue() {
       tone: isActive(project) ? ("live" as const) : project.status === "failed" ? ("alert" as const) : undefined,
     };
   });
-  const openFilm = (id: string) => {
-    window.location.hash = `#/project/${id}`;
-  };
+  const expandedFilm = films.find((item) => item.id === expanded?.id);
 
   useEffect(() => {
     const pending = sessionStorage.getItem("surreel.format");
@@ -220,12 +220,12 @@ export function Queue() {
             items={films}
             selectedId={filmId}
             onChange={setFilmId}
-            onActivate={openFilm}
+            onActivate={(id, origin) => setExpanded({ id, origin: originBox(origin) })}
             label="Past films"
             testId="film-deck"
             size="compact"
           />
-          <p className="note">Turn the wheel through past takes. Tap the front film to open it.</p>
+          <p className="note">Turn the wheel through past takes. Tap the front film to fill the screen.</p>
         </>
       ) : null}
 
@@ -371,6 +371,9 @@ export function Queue() {
       <button type="submit" className="btn" data-testid="create-video" disabled={queuing} aria-busy={queuing || undefined}>
         {queuing ? "Queuing" : batch.length > 1 ? `Queue ${batch.length} takes` : `Queue ${duration}s`}
       </button>
+      {expanded && expandedFilm ? (
+        <FilmExpand item={expandedFilm} origin={expanded.origin} detailsHref={`#/project/${expanded.id}`} onClose={() => setExpanded(null)} />
+      ) : null}
     </form>
   );
 }

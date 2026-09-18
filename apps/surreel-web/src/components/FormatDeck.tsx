@@ -32,7 +32,7 @@ export function WheelDeck({
   items: readonly WheelCard[];
   selectedId: string;
   onChange: (id: string) => void;
-  onActivate?: (id: string) => void;
+  onActivate?: (id: string, origin: DOMRect) => void;
   label: string;
   testId: string;
   size?: "full" | "compact";
@@ -67,7 +67,10 @@ export function WheelDeck({
     const next = items[slotOf(nextIndex, count)];
     if (!next) return;
     if (next.id !== selectedId) onChange(next.id);
-    else if (activate) onActivate?.(next.id);
+    else if (activate) {
+      const front = stage.current?.querySelector<HTMLElement>(".deck-card.is-front");
+      onActivate?.(next.id, (front ?? stage.current)?.getBoundingClientRect() ?? new DOMRect());
+    }
   }
 
   function land(target: number, activate = false) {

@@ -12,10 +12,11 @@ export function Formats() {
             key={format.id}
             className={index === 0 ? "folio-hero" : "folio-tile"}
             href="#/queue"
-            aria-label={`${format.title}. Still packs ${format.imageSkills.join(", ")}. Motion packs ${format.videoSkills.join(", ")}.`}
+            aria-label={`${format.title}. ${format.subtitle}. Still packs ${format.imageSkills.join(", ")}. Motion packs ${format.videoSkills.join(", ")}.`}
             onClick={() => sessionStorage.setItem("surreel.format", format.id)}
           >
             <FilmStill src={`/images/${format.image}.jpg`} kind="image" caption={format.title} className="still folio-still" eager={index === 0} />
+            <p className="folio-sub">{format.subtitle}</p>
           </a>
         ))}
       </div>

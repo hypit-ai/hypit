@@ -63,7 +63,7 @@ export function HelpDialog() {
   return (
     <DialogFrame titleId="help-title">
       <h2 id="help-title">Paste a page. Keep a take.</h2>
-      <p>Drop a product or site URL. Browser Use opens the live page, follows what explains the offer, and writes a facts-only brief. Swipe the format wheel to rotate the chosen type. Past takes use the same wheel — turn it on Queue and Review, tap the front film to open it. Then each angle uses its Surreel packs and Hypit playbook. Motion renders on Seedance 2 Fast only. Captions come from Hypit caption craft on the finished plate, never burned by Seedance and never transcribed from the film. A take that skips those packs is refused. Keep what sells. Send copies the social caption and opens TikTok, Instagram, YouTube, or X. You still post the file there.</p>
+      <p>Drop a product or site URL. Browser Use opens the live page, follows what explains the offer, and writes a facts-only brief. Swipe the format wheel to rotate the chosen type. Past takes use the same wheel — turn it, tap the front film to fill the screen, then Details if you need the project. Then each angle uses its Surreel packs and Hypit playbook. Motion renders on Seedance 2 Fast only. Captions come from Hypit caption craft on the finished plate, never burned by Seedance and never transcribed from the film. A take that skips those packs is refused. Keep what sells. Send copies the social caption and opens TikTok, Instagram, YouTube, or X. You still post the file there.</p>
       <div className="dialog-actions">
         <a className="btn" href="#/queue">
           Start a queue

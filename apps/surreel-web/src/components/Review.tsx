@@ -3,13 +3,25 @@ import { useState } from "react";
 import { studio } from "../store.ts";
 import { inReview, projectVideo } from "../types.ts";
 import { useStudio } from "../useStudio.ts";
+import { FilmExpand, originBox } from "./FilmExpand.tsx";
 import { WheelDeck } from "./FormatDeck.tsx";
 
 export function Review() {
   const { projects, api, error } = useStudio();
   const inbox = projects.filter(inReview);
   const [filmId, setFilmId] = useState(inbox[0]?.id ?? "");
+  const [expanded, setExpanded] = useState<{ id: string; origin: ReturnType<typeof originBox> } | null>(null);
   const current = inbox.find((project) => project.id === filmId) ?? inbox[0];
+  const films = inbox.map((project) => {
+    const video = projectVideo(project);
+    return {
+      id: project.id,
+      src: video ? api.artifactUrl(video.url) : "",
+      kind: video ? ("video" as const) : ("image" as const),
+      caption: project.title,
+    };
+  });
+  const expandedFilm = films.find((item) => item.id === expanded?.id);
   const currentVideo = current ? projectVideo(current) : undefined;
   const src = currentVideo ? api.artifactUrl(currentVideo.url) : undefined;
 
@@ -26,23 +38,18 @@ export function Review() {
         </div>
       ) : (
         <div>
-          <p className="note">Turn the wheel through the batch. Keep what sells.</p>
           <WheelDeck
-            items={inbox.map((project) => {
-              const video = projectVideo(project);
-              return {
-                id: project.id,
-                src: video ? api.artifactUrl(video.url) : "",
-                kind: video ? ("video" as const) : ("image" as const),
-                caption: project.title,
-              };
-            })}
+            items={films}
             selectedId={current?.id ?? filmId}
             onChange={setFilmId}
-            label="Past films"
+            onActivate={(id, origin) => setExpanded({ id, origin: originBox(origin) })}
+            label="Inbox films"
             testId="review-deck"
           />
           {src ? <video className="bleed preview" src={src} controls playsInline preload="metadata" /> : <div className="bleed preview" />}
+          {expanded && expandedFilm ? (
+            <FilmExpand item={expandedFilm} origin={expanded.origin} detailsHref={`#/project/${expanded.id}`} onClose={() => setExpanded(null)} />
+          ) : null}
           {current ? (
             <div className="deck-actions">
               <button type="button" className="round-act" data-testid="skip-review" onClick={() => void studio.setReview(current, "rejected")}>
@@ -58,6 +65,7 @@ export function Review() {
               </button>
             </div>
           ) : null}
+          <p className="note">Turn the wheel. Tap the front film to fill the screen. Keep what sells.</p>
         </div>
       )}
     </div>

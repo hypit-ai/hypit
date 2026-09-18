@@ -50,7 +50,8 @@ export function ProjectDetail({ id }: { id: string }) {
       </a>
       <h1 className="caption title">{project.title}</h1>
       <p className="note">
-        {statusLabel(project.status)} {project.aspectRatio} {project.duration}s
+        <span className="status-tag">{statusLabel(project.status)}</span>
+        {project.aspectRatio} · {project.duration}s
       </p>
       {error ? <p className="banner">{error}</p> : null}
       {src ? <video className="bleed preview" src={src} controls playsInline preload="metadata" /> : <div className="bleed preview" />}
