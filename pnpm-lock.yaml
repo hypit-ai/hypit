@@ -315,6 +315,9 @@ importers:
       '@hypit/volcengine-matting':
         specifier: workspace:*
         version: link:packages/volcengine-matting
+      '@hypit/wan':
+        specifier: workspace:*
+        version: link:packages/wan
       '@hypit/whisperx':
         specifier: workspace:*
         version: link:packages/whisperx
