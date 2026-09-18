@@ -232,6 +232,7 @@
     "@hypit/narrative": "workspace:*",
     "@hypit/performance": "workspace:*",
     "@hypit/performance-studio": "workspace:*",
+    "@hypit/pixverse": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/project-context-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
