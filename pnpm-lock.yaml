@@ -2447,6 +2447,9 @@ importers:
       '@hypit/runtime-kit':
         specifier: workspace:*
         version: link:../runtime-kit
+      '@hypit/wan':
+        specifier: workspace:*
+        version: link:../wan
     devDependencies:
       '@hypit/seedance':
         specifier: workspace:*
@@ -3644,6 +3647,27 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  packages/wan:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/whisperx:
     dependencies:

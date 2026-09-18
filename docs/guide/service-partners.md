@@ -49,8 +49,8 @@ public URL only, so a request with reference media needs a URL the embedding cal
 [Its documentation](https://monid.ai/docs) describes discovering tools, inspecting their inputs and
 prices, and calling them through its interfaces.
 [`@hypit/provider-monid`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-monid/README.md)
-serves the Seedance 2.0 and 2.5 endpoints and MiniMax H3, and uploads reference media through
-Monid's workspace file system. For another Monid tool, its
+serves the Seedance 2.0 and 2.5 endpoints, MiniMax H3 and the Wan 2.7 image models, and uploads
+reference media through Monid's workspace file system. For another Monid tool, its
 [HTTP API documentation](https://monid.ai/docs/api/overview) supplies the connection details, and
 the Agent can implement the required request and result mapping in a project package.
 

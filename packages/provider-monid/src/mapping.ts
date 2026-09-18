@@ -3,6 +3,7 @@ import type { GenerationWireMapping } from "@hypit/generation";
 
 const SEEDANCE: ModuleRef = { name: "@hypit/seedance", version: "1" };
 const MINIMAX_H3: ModuleRef = { name: "@hypit/minimax-h3", version: "1" };
+const WAN: ModuleRef = { name: "@hypit/wan", version: "1" };
 
 /**
  * One mapping plus the Monid provider that relays the endpoint. Monid addresses an endpoint by
@@ -57,10 +58,33 @@ const minimaxH3: MonidMapping = {
   },
 };
 
+/**
+ * Monid's `alibaba` Wan 2.7 image endpoints. Both variants take the same fields; the Pro variant
+ * adds a 4K band. Input images are plain public URLs rather than role-tagged items, and the model
+ * reads exclusions from the prompt, so it has no negative-prompt field.
+ */
+const wan = (name: string, endpoint: string): MonidMapping => ({
+  service: "alibaba",
+  capability: { module: WAN, name }, result: "image",
+  routes: [{ model: endpoint }],
+  fields: {
+    prompt: { as: "value", field: "prompt" },
+    images: { as: "urlArray", field: "images" },
+    resolution: { as: "value", field: "size" },
+    count: { as: "value", field: "n" },
+    imageSet: { as: "value", field: "enable_sequential" },
+    extendedReasoning: { as: "value", field: "thinking_mode" },
+    watermark: { as: "value", field: "watermark" },
+    seed: { as: "value", field: "seed" },
+  },
+});
+
 export const monidMappings: readonly MonidMapping[] = [
   seedance("seedance-2", "/v1/video/seedance-2.0"),
   seedance("seedance-2-fast", "/v1/video/seedance-2.0-fast"),
   seedance("seedance-2-mini", "/v1/video/seedance-2.0-mini"),
   seedance("seedance-2.5", "/v1/video/seedance-2.5"),
   minimaxH3,
+  wan("wan-2.7-image", "/v1/image/wan2.7-image"),
+  wan("wan-2.7-image-pro", "/v1/image/wan2.7-image-pro"),
 ];

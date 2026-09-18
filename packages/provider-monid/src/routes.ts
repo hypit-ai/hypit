@@ -2,6 +2,7 @@ import {
   compileWireRequest,
   selectWireModelForRequest,
   generationTypes,
+  sealGeneratedImageSet,
   sealGeneratedVideoSet,
 } from "@hypit/generation";
 import type { GenerationArtifactUrlResolver, GenerationRequest } from "@hypit/generation";
@@ -22,6 +23,8 @@ export type MonidPreparedRequest = {
 export type MonidRoute = MonidMapping & {
   readonly key: string;
   readonly returns: TypeRef;
+  /** What the run produces, which decides how many results collection expects. */
+  readonly media: "image" | "video";
   readonly supports: (request: EndpointRequest) => EndpointSupport;
   readonly prepare: (constraints: CanonicalValue) => MonidPreparedRequest;
   readonly packageResult: (artifacts: readonly BlobRef[]) => StoredValue;
@@ -42,7 +45,20 @@ function referenceToVideo(request: GenerationRequest): boolean {
   return present(request, "referenceImage") || present(request, "referenceVideo") || present(request, "referenceAudio");
 }
 
+function wanRejection(mapping: MonidMapping, request: GenerationRequest): string | undefined {
+  const set = scalar(request, "imageSet") === true;
+  if (scalar(request, "resolution") === "4K" && (present(request, "images") || set)) {
+    return "Wan renders 4K from a prompt alone, without reference images or an image set";
+  }
+  const count = scalar(request, "count");
+  if (typeof count === "number" && count > 4 && !set) {
+    return `Wan renders at most 4 pictures outside an image set, not ${count}`;
+  }
+  return undefined;
+}
+
 function rejection(mapping: MonidMapping, request: GenerationRequest): string | undefined {
+  if (mapping.capability.module.name === "@hypit/wan") return wanRejection(mapping, request);
   if (mapping.capability.name === "minimax-h3") {
     // MiniMax-H3 resolves the framing from the uploaded image in frame mode and defaults
     // reference-to-video to adaptive. Text-to-video carries no such source, and the endpoint
@@ -103,7 +119,8 @@ function capabilityKey(capability: CapabilityRef): string {
 export const monidRoutes: readonly MonidRoute[] = monidMappings.map((mapping) => ({
   ...mapping,
   key: capabilityKey(mapping.capability),
-  returns: generationTypes.videoSet,
+  returns: mapping.result === "image" ? generationTypes.imageSet : generationTypes.videoSet,
+  media: mapping.result === "image" ? "image" as const : "video" as const,
   supports: (request) => {
     const reason = rejection(mapping, request.constraints as unknown as GenerationRequest);
     return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };
@@ -112,7 +129,10 @@ export const monidRoutes: readonly MonidRoute[] = monidMappings.map((mapping) =>
     const request = constraints as unknown as GenerationRequest;
     const reason = rejection(mapping, request);
     if (reason !== undefined) throw new Error(reason);
-    const body = mapping.capability.name === "minimax-h3" ? minimaxH3Input : arkInput;
+    // The Wan endpoints take the compiled fields as their body; the ModelArk endpoints fold their
+    // media into one role-tagged `content` array first.
+    const body = mapping.capability.module.name === "@hypit/wan" ? (input: Record<string, unknown>) => input
+      : mapping.capability.name === "minimax-h3" ? minimaxH3Input : arkInput;
     return {
       service: mapping.service,
       endpoint: selectWireModelForRequest(mapping, request),
@@ -121,7 +141,9 @@ export const monidRoutes: readonly MonidRoute[] = monidMappings.map((mapping) =>
   },
   packageResult: (artifacts) => ({
     kind: "inline",
-    value: canonicalize(sealGeneratedVideoSet({ videos: artifacts })),
+    value: canonicalize(mapping.result === "image"
+      ? sealGeneratedImageSet({ images: artifacts })
+      : sealGeneratedVideoSet({ videos: artifacts })),
   }),
 }));
 

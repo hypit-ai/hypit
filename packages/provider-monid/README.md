@@ -2,7 +2,7 @@
 
 Hypit Runtime Provider for a [Monid](https://monid.ai) workspace. It runs Monid's generation
 endpoints through `POST /v1/run`, polls `GET /v1/runs/{runId}` until the run is terminal, downloads
-the returned video and stores it in the current Build.
+every returned file and stores it in the current Build.
 
 | Capability | Monid endpoint |
 | --- | --- |
@@ -11,16 +11,17 @@ the returned video and stores it in the current Build.
 | `@hypit/seedance@1#seedance-2-mini` | `bytedance` `/v1/video/seedance-2.0-mini` |
 | `@hypit/seedance@1#seedance-2.5` | `bytedance` `/v1/video/seedance-2.5` |
 | `@hypit/minimax-h3@1#minimax-h3` | `minimax` `/v1/video/minimax-h3` |
+| `@hypit/wan@1#wan-2.7-image` | `alibaba` `/v1/image/wan2.7-image` |
+| `@hypit/wan@1#wan-2.7-image-pro` | `alibaba` `/v1/image/wan2.7-image-pro` |
 
 Monid's catalogue lists further generation endpoints, including the H3 Fast, Max and Max Turbo
-variants and Hailuo 2.3; their models are not the ones the Distribution describes. Input schemas
-are published through the authenticated `inspect` operation, which is where the request bodies
-above come from.
+variants, Hailuo 2.3 and the Kling, Gemini and Qwen families; their models are not the ones the
+Distribution describes. Input schemas are published through the authenticated `inspect` operation,
+which is where the request bodies below come from.
 
-Every mapped endpoint relays a BytePlus ModelArk request: one `content` array holding the prompt
-and each media input as a typed item with its `role` (`first_frame`, `last_frame`,
-`reference_image`, `reference_video`, `reference_audio`), then `resolution`, `ratio` and
-`duration`.
+The video endpoints relay a BytePlus ModelArk request: one `content` array holding the prompt and
+each media input as a typed item with its `role` (`first_frame`, `last_frame`, `reference_image`,
+`reference_video`, `reference_audio`), then `resolution`, `ratio` and `duration`.
 
 The Seedance endpoints add `generate_audio`. Monid documents no web search field for them, so
 `web-search="true"` is unsupported, and Seedance 2.5 frame mode (`first-frame` present) requires
@@ -36,6 +37,17 @@ resolves the framing from the uploaded image and reference-to-video defaults to 
 text-to-video request carrying no `aspect-ratio` is reported unsupported before any reference is
 resolved, and the other two modes are sent as `adaptive`. H3 returns its video at `content.url`
 rather than the ModelArk `video_url`.
+
+The Wan image endpoints take their fields directly: `prompt`, `images` as plain URLs, `size` for the
+band, `n`, `enable_sequential`, `thinking_mode`, `watermark` and `seed`. Both variants accept the
+same fields, and the Pro variant adds the `4K` band. Two service limits are reported before any
+reference is resolved: `4K` renders from a prompt alone, without reference images or an image set,
+and a request renders at most four pictures outside an image set. An image set returns several
+files, so collection downloads each one.
+
+The endpoints also document a custom colour palette and per-image bounding boxes. Neither has a
+representation in the model port vocabulary, which carries scalars and media rather than object
+arrays, so the Provider transmits neither.
 
 Reference media are uploaded through the workspace file system Monid provides for this purpose
 (`sfs`): `/put` signs an upload for `hypit/<resource>.<ext>`, the bytes are `PUT` to that URL, and

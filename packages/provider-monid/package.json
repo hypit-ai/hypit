@@ -12,7 +12,8 @@
     "@hypit/minimax-h3": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/runtime": "workspace:*",
-    "@hypit/runtime-kit": "workspace:*"
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/wan": "workspace:*"
   },
   "devDependencies": {
     "@hypit/seedance": "workspace:*"

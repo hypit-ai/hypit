@@ -31,7 +31,7 @@ type Handle = {
   readonly runId: string;
   readonly route: string;
   readonly startedAt: number;
-  readonly url?: string;
+  readonly urls?: readonly string[];
 };
 
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
@@ -66,13 +66,21 @@ function httpsUrl(value: unknown, subject: string): string {
   return value;
 }
 /**
- * The relayed result. The ModelArk endpoints return the task's `video_url`; MiniMax-H3 returns the
- * video at `content.url`. The link expires, so collection downloads it rather than storing it.
+ * The relayed result. The ModelArk endpoints return the task's `video_url` and MiniMax-H3 its
+ * `content.url`; an image endpoint returns one entry per rendered picture. Every link expires, so
+ * collection downloads them rather than storing the addresses.
  */
-function outputVideoUrl(run: Record<string, unknown>): string {
+function outputUrls(run: Record<string, unknown>): readonly string[] {
   const output = object(run.output, "Monid run output");
   const content = output.content === undefined ? undefined : object(output.content, "Monid run output content");
-  return httpsUrl(output.video_url ?? content?.video_url ?? content?.url, "Monid run output");
+  const listed = [output.results, output.images, output.urls, content?.results, content?.images]
+    .find((value): value is readonly unknown[] => Array.isArray(value) && value.length > 0);
+  if (listed !== undefined) {
+    return listed.map((item, index) => httpsUrl(
+      typeof item === "string" ? item : object(item, `Monid run output ${index}`).url,
+      `Monid run output ${index}`));
+  }
+  return [httpsUrl(output.video_url ?? output.url ?? content?.video_url ?? content?.url, "Monid run output")];
 }
 const extensions: Readonly<Record<string, string>> = {
   "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "video/mp4": "mp4", "video/quicktime": "mov",
@@ -180,7 +188,7 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
         if (!ended) return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: String(run.status) }), receipt };
         const rejected = monidRunFailure(run, handle.runId);
         if (rejected !== undefined) return { ...failure(rejected), receipt };
-        return { status: "ready", handle: canonicalize({ ...handle, url: outputVideoUrl(run) }), receipt };
+        return { status: "ready", handle: canonicalize({ ...handle, urls: outputUrls(run) }), receipt };
       } catch (error) {
         return failure(error);
       }
@@ -201,7 +209,7 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
         }
         const rejected = monidRunFailure(run, handle.runId);
         if (rejected !== undefined) return { ...failure(rejected), receipt };
-        return { status: "ready", handle: canonicalize({ ...handle, url: outputVideoUrl(run) }), receipt };
+        return { status: "ready", handle: canonicalize({ ...handle, urls: outputUrls(run) }), receipt };
       } catch (error) {
         return failure(error);
       }
@@ -211,10 +219,15 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
         const handle = object(context.handle, "Monid handle") as unknown as Handle;
         const route = monidRouteForCapability(context.need.capability);
         assert(route !== undefined && handle.route === route.key, "Monid collection route differs");
-        await context.reportProgress?.({ phase: "Receiving generated video" });
-        const downloaded = await client.download(httpsUrl(handle.url, "Monid handle"));
-        const blob = await context.resources.put(downloaded.bytes, downloaded.mediaType);
-        return { status: "completed", result: { value: route.packageResult([blob]) }, receipt: { id: handle.runId } };
+        const urls = handle.urls ?? [];
+        assert(urls.length > 0, "Monid handle carries no result");
+        await context.reportProgress?.({ phase: `Receiving ${urls.length} generated ${route.media}${urls.length === 1 ? "" : "s"}` });
+        const blobs: BlobRef[] = [];
+        for (const url of urls) {
+          const downloaded = await client.download(httpsUrl(url, "Monid handle"));
+          blobs.push(await context.resources.put(downloaded.bytes, downloaded.mediaType));
+        }
+        return { status: "completed", result: { value: route.packageResult(blobs) }, receipt: { id: handle.runId } };
       } catch (error) {
         return failure(error);
       }

@@ -4,6 +4,7 @@ import { assertMappingCoversPorts } from "@hypit/generation";
 import type { BlobRef, CanonicalValue } from "@hypit/protocol";
 import { minimaxH3Ports, sealMinimaxH3Request } from "@hypit/minimax-h3";
 import { seedancePorts, sealSeedanceRequest } from "@hypit/seedance";
+import { wanPorts } from "@hypit/wan";
 
 import { monidMappings } from "../src/mapping.js";
 import { monidRouteForCapability } from "../src/routes.js";
@@ -15,7 +16,9 @@ test("every Monid mapping covers its model's ports", () => {
   for (const mapping of monidMappings) {
     const ports = mapping.capability.module.name === "@hypit/minimax-h3"
       ? minimaxH3Ports
-      : seedancePorts[mapping.capability.name as keyof typeof seedancePorts];
+      : mapping.capability.module.name === "@hypit/wan"
+        ? wanPorts[mapping.capability.name as keyof typeof wanPorts]
+        : seedancePorts[mapping.capability.name as keyof typeof seedancePorts];
     assertMappingCoversPorts(ports, mapping);
   }
 });
