@@ -57,6 +57,35 @@ export function temporalizeCaptionDocument(
     current.units.push(entry.timing);
   }
   flush();
+  /*
+   * Acoustic Word windows touch, so consecutive Cues claim the same frame.
+   *
+   * An aligner reports each word ending where the next one starts, and `tokenFrameSpan` keeps
+   * the frame that instant falls in, so adjacent windows overlap by exactly one frame. That is
+   * a real measurement and `@hypit/timeline` preserves it on purpose. Inside a Cue the visual
+   * layer already resolves it — see `exclusiveActivationFrames` in `@hypit/caption-fine`, whose
+   * rule is that as soon as the next authored unit starts, the previous one stops.
+   *
+   * Across a Cue boundary nothing applied that rule, so two Cues owned one frame and any
+   * renderer that draws Cues at a single position drew both of them on top of each other. It
+   * could not be resolved downstream either: a Fine Caption envelope must satisfy
+   * `visibleEnd >= semanticEnd`, so clipping the previous Cue there contradicts an invariant
+   * the same file asserts. Giving each Cue one unambiguous owner here keeps the raw Token
+   * measurements intact in the Timeline and leaves every downstream invariant true.
+   */
+  for (const [index, cue] of cues.entries()) {
+    const next = cues[index + 1];
+    if (next === undefined || next.startFrame >= cue.endFrameExclusive) continue;
+    const endFrameExclusive = Math.max(cue.startFrame + 1, next.startFrame);
+    const last = cue.units.length - 1;
+    cues[index] = {
+      ...cue,
+      endFrameExclusive,
+      units: cue.units.map((unit, unitIndex) => unitIndex === last && unit.endFrameExclusive > endFrameExclusive
+        ? { ...unit, endFrameExclusive: Math.max(unit.startFrame + 1, endFrameExclusive) }
+        : unit),
+    };
+  }
   const result: TimedCaptionProjection = {
     spaceId: space.id,
     narrativeId: document.narrativeId,
