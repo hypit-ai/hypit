@@ -21,6 +21,7 @@ function shim(): string {
   var frameSeconds = 1 / fps;
   var currentSeconds = 0;
   var playing = false;
+  var playbackClock;
   var seekRevision = 0;
   if (root) {
     root.style.width = (root.getAttribute('data-width') || '0') + 'px';
@@ -217,19 +218,34 @@ function shim(): string {
     return Promise.all(waits).then(function () { return revision === seekRevision; });
   }
 
+  function playbackSeconds() {
+    if (!playbackClock) return currentSeconds;
+    // rAF timestamps describe the start of a refresh. Timeline/overlay work may
+    // delay delivery, while media keeps playing. Sample the shared transport
+    // origin here instead of seeking running media back to that stale frame.
+    // timeOrigin makes the monotonic timestamps comparable across the iframe.
+    var elapsed = (performance.timeOrigin + performance.now() - playbackClock.startedAtMs) / 1000;
+    var frame = Math.round(playbackClock.fromFrame + elapsed * fps);
+    var frameCount = Number(root && root.getAttribute('data-hypit-frame-count'));
+    if (frameCount > 0) frame = Math.min(frame, frameCount - 1);
+    return Math.max(0, frame) / fps;
+  }
+
   window.__hypitSetMuted = function (value) {
     muted = !!value;
-    return apply(currentSeconds, !playing);
+    return apply(playing ? playbackSeconds() : currentSeconds, !playing);
   };
   window.__hypitSeekFrame = function (frame) {
     playing = false;
+    playbackClock = undefined;
     return apply(frame / fps, true);
   };
-  window.__hypitPlayFrame = function (frame) {
+  window.__hypitPlayFrame = function (frame, clock) {
     playing = true;
+    playbackClock = clock;
     if (programmeAudio.length && !audioContext) audioContext = new AudioContext();
     if (audioContext && audioContext.state === 'suspended') audioContext.resume();
-    return apply(frame / fps, false);
+    return apply(clock ? playbackSeconds() : frame / fps, false);
   };
   window.__hypitFrameReady = apply(0, true);
   window.addEventListener('load', function () { window.__hypitFrameReady = apply(currentSeconds, true); });

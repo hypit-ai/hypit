@@ -158,7 +158,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
 
   type SeekWindow = Window & {
     __hypitSeekFrame?: (frame: number) => Promise<boolean>;
-    __hypitPlayFrame?: (frame: number) => Promise<boolean>;
+    __hypitPlayFrame?: (frame: number, clock: { fromFrame: number; startedAtMs: number }) => Promise<boolean>;
     __hypitSetMuted?: (muted: boolean) => Promise<boolean>;
   };
   let state: State | undefined;
@@ -173,6 +173,14 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
   let fromFrame = 0;
   let began = 0;
   let placed = 0;
+
+  const playPicture = (frame: number): void => {
+    // The iframe may receive this frame after synchronous timeline/overlay work.
+    // Share the transport origin so it can sample the clock when it actually runs.
+    void (iframe.contentWindow as SeekWindow | null)?.__hypitPlayFrame?.(frame, {
+      fromFrame, startedAtMs: performance.timeOrigin + began,
+    });
+  };
 
   const seekPicture = (frame: number): void => {
     const request = ++placed;
@@ -201,16 +209,23 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     iframe.style.transform = `scale(${valid})`;
   };
 
-  const stop = (): void => {
+  const stop = (sampleClock = true): void => {
     const wasPlaying = playing;
     playing = false;
     setIcon(playIcon, "play");
     uiAttr(play, "aria-label", "player.play");
     if (raf !== 0) cancelAnimationFrame(raf);
     raf = 0;
-    // Settle the picture on the frame the transport stopped at.
+    // The iframe can have advanced past the last UI update. Pause both views at
+    // the current transport time rather than seeking back to that stale frame.
     if (wasPlaying && state !== undefined && ready) {
-      seekPicture(state.playhead.frame);
+      if (!sampleClock) { seekPicture(state.playhead.frame); return; }
+      const at = Math.min(state.snapshot.space.frameCount - 1,
+        fromFrame + Math.round((performance.now() - began) / 1000 * fps(state.snapshot)));
+      const moved = at !== state.playhead.frame || state.playhead.origin !== "play";
+      store.seek(at, "play");
+      // An unchanged Store does not notify the subscriber that pauses media.
+      if (!moved) seekPicture(at);
     }
   };
 
@@ -224,10 +239,10 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     const total = state.snapshot.space.frameCount;
     const rate = fps(state.snapshot);
     fromFrame = state.playhead.frame >= total - 1 ? 0 : state.playhead.frame;
-    if (ready) (iframe.contentWindow as SeekWindow | null)?.__hypitPlayFrame?.(fromFrame);
     began = performance.now();
-    const step = (now: number): void => {
-      const at = fromFrame + Math.round((now - began) / 1000 * rate);
+    if (ready) playPicture(fromFrame);
+    const step = (): void => {
+      const at = fromFrame + Math.round((performance.now() - began) / 1000 * rate);
       if (!playing || at >= total) { store.seek(total - 1, "play"); stop(); return; }
       store.seek(at, "play");
       raf = requestAnimationFrame(step);
@@ -365,7 +380,9 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     if (value.snapshot.revision !== mounted) {
       scrubPreview.clear();
       mounted = value.snapshot.revision;
-      if (artifactPreview.selected === undefined) stop();
+      // load() is already notifying the Store. Keep its chosen playhead instead
+      // of emitting a nested seek that later subscribers would see out of order.
+      if (artifactPreview.selected === undefined) stop(false);
       ready = false;
       const preview = value.snapshot.preview;
       iframe.srcdoc = preview.srcdoc;
@@ -385,8 +402,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
       began = performance.now();
     }
     if (!ready) return;
-    const frame = (iframe.contentWindow as SeekWindow | null);
-    if (playing) frame?.__hypitPlayFrame?.(value.playhead.frame);
+    if (playing) playPicture(value.playhead.frame);
     else seekPicture(value.playhead.frame);
     // The overlay subscribed first, so it measured the picture as it was before
     // this seek. Redraw now that the picture has moved.
