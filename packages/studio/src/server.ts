@@ -722,12 +722,27 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             response.end();
             return;
           }
-          response.statusCode = 200;
+          const size = file.bytes.byteLength;
+          let range: BuildResultFileRange | undefined;
+          try {
+            range = requestedByteRange(request.headers.range, size);
+          } catch (error) {
+            if (!(error instanceof RangeError)) throw error;
+            response.statusCode = 416;
+            response.setHeader("content-range", `bytes */${size}`);
+            response.end();
+            return;
+          }
+          response.statusCode = range === undefined ? 200 : 206;
           response.setHeader("content-type", file.mediaType);
+          response.setHeader("content-length", String(range === undefined ? size : range.endExclusive - range.start));
           response.setHeader("cache-control", "no-store");
           response.setHeader("accept-ranges", "bytes");
+          if (range !== undefined) {
+            response.setHeader("content-range", `bytes ${range.start}-${range.endExclusive - 1}/${size}`);
+          }
           if (request.method === "HEAD") response.end();
-          else response.end(Buffer.from(file.bytes));
+          else response.end(range === undefined ? file.bytes : file.bytes.subarray(range.start, range.endExclusive));
           return;
         }
         if (url.pathname === "/__studio/artifact") {
