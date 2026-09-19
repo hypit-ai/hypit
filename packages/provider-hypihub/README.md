@@ -20,6 +20,13 @@ Seedance 2.5 (`@hypit/seedance` model `2.5`) maps to `seedance-2.5` and supports
 `480p`, `720p` and `1080p`. The Provider passes the authored `resolution` to `POST /v1/videos`;
 omitting it in the Seedance Surface defaults to `720p`.
 
+`@hypit/pixverse` models `pixverse-v6` and `pixverse-c1` map to `pixverse/v6` and `pixverse/c1` on
+`POST /v1/videos`. The model's own `quality` band travels as `resolution` and its duration as
+`seconds`; frames use `first_frame` and `last_frame`, image references use `reference_image_urls`,
+and V6's video references use `reference_videos`. A reference-video request carries no `seconds`.
+This body has no field for V6's `seed` or `multi-clip`, so a request that states either is refused
+by name before any reference is uploaded.
+
 The current HypiHub GPT Image 2 route has these service-specific limits:
 
 | Resolution | Ratios unavailable at this Endpoint | `background` |
@@ -32,7 +39,8 @@ HypiHub owns this support check independently: it leaves the GPT Image model pac
 the model or another Provider.
 
 Model identity and input mode are separate. The mapping uses HypiHub's canonical model names:
-`gpt-image-2`, `seedream-5-lite`, `minimax-h3`, `grok-imagine-video` and the individual Seedance names.
+`gpt-image-2`, `seedream-5-lite`, `minimax-h3`, `grok-imagine-video`, `pixverse/v6`,
+`pixverse/c1` and the individual Seedance names.
 An image request without references uses `/images/generations`; image edits use `/images/edits`
 with the same model name. Video requests use `/videos`, preserving reference images, reference
 videos and first/last frames in their distinct fields. Old operation-specific names are not needed

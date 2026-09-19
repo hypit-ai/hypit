@@ -8,6 +8,7 @@ const NANO_BANANA: ModuleRef = { name: "@hypit/nano-banana", version: "1" };
 const SEEDREAM: ModuleRef = { name: "@hypit/seedream", version: "1" };
 const MINIMAX: ModuleRef = { name: "@hypit/minimax-h3", version: "1" };
 const GROK: ModuleRef = { name: "@hypit/grok-imagine", version: "1" };
+const PIXVERSE: ModuleRef = { name: "@hypit/pixverse", version: "1" };
 const MIMO_SPEECH: ModuleRef = { name: "@hypit/mimo-speech", version: "1" };
 const FISHAUDIO_SPEECH: ModuleRef = { name: "@hypit/fishaudio-speech", version: "1" };
 const ELEVENLABS_SPEECH: ModuleRef = { name: "@hypit/elevenlabs-speech", version: "1" };
@@ -29,6 +30,26 @@ const seedance = (name: string): GenerationWireMapping => ({
   },
 });
 
+/**
+ * PixVerse V6 and C1 on `POST /v1/videos`. Both take the same body; V6 additionally accepts
+ * reference videos, which carry the length of the run in place of `seconds`. The model's own
+ * `quality` band is HypiHub's `resolution`.
+ */
+const pixverse = (name: string, model: string): GenerationWireMapping => ({
+  capability: { module: PIXVERSE, name }, result: "video", routes: [{ model }],
+  fields: {
+    prompt: { as: "value", field: "prompt" },
+    firstFrame: { as: "url", field: "first_frame" },
+    lastFrame: { as: "url", field: "last_frame" },
+    referenceImage: { as: "urlArray", field: "reference_image_urls" },
+    ...(name === "pixverse-v6" ? { referenceVideo: { as: "urlArray" as const, field: "reference_videos" } } : {}),
+    duration: { as: "value", field: "seconds" },
+    quality: { as: "value", field: "resolution" },
+    aspectRatio: { as: "value", field: "aspect_ratio" },
+    generateAudio: { as: "value", field: "generate_audio" },
+  },
+});
+
 export const hypiHubMappings: readonly GenerationWireMapping[] = [
   {
     capability: { module: { name: "@hypit/volcengine-matting", version: "1" }, name: "matte-portrait-video" },
@@ -42,6 +63,8 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
   seedance("seedance-2-fast"),
   seedance("seedance-2-mini"),
   seedance("seedance-2.5"),
+  pixverse("pixverse-v6", "pixverse/v6"),
+  pixverse("pixverse-c1", "pixverse/c1"),
   {
     capability: { module: GPT_IMAGE, name: "gpt-image-2" }, result: "image", routes: [{ model: "gpt-image-2" }],
     fields: {
