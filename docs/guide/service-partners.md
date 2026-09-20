@@ -43,6 +43,16 @@ paths. [`@hypit/provider-pollo`](https://github.com/hypit-ai/hypit/blob/main/pac
 serves MiniMax H3, Grok Imagine 1.5, GPT Image 2 and Nano Banana. Pollo takes reference media by
 public URL only, so a request with reference media needs a URL the embedding caller supplies.
 
+### BeatAPI
+
+[BeatAPI](https://docs.beatapi.io/quick-guide) offers video and image models through one
+asynchronous task API.
+[`@hypit/provider-beatapi`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-beatapi/README.md)
+serves the Seedance 2.0 and 2.5 models, MiniMax H3, Grok Imagine 1.5, GPT Image 2 and Nano Banana,
+and uploads reference media through BeatAPI's file endpoint. Its
+[video](https://docs.beatapi.io/video-api) and [image](https://docs.beatapi.io/image-api) model
+indexes list the rest.
+
 ### Monid
 
 [Monid](https://monid.ai) is a Hypit service partner.

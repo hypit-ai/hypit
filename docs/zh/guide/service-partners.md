@@ -37,6 +37,14 @@ HypiHub 是 Hypit 推荐的集成托管服务，提供已支持的生成与 Whis
 提供 MiniMax H3、Grok Imagine 1.5、GPT Image 2 和 Nano Banana。
 Pollo 只接受公网 URL 形式的参考素材，带参考素材的请求需要由嵌入方提供 URL。
 
+### BeatAPI
+
+[BeatAPI](https://docs.beatapi.io/quick-guide) 通过一个异步任务接口提供视频和图片模型。
+[`@hypit/provider-beatapi`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-beatapi/README.md)
+提供 Seedance 2.0、2.5 系列、MiniMax H3、Grok Imagine 1.5、GPT Image 2 和 Nano Banana，
+并通过 BeatAPI 的文件接口上传参考素材。
+其余模型见它的[视频](https://docs.beatapi.io/video-api)与[图片](https://docs.beatapi.io/image-api)模型索引。
+
 ### Monid
 
 [Monid](https://monid.ai) 是 Hypit 的服务合作方。
