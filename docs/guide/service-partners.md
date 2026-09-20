@@ -53,6 +53,16 @@ and uploads reference media through BeatAPI's file endpoint. Its
 [video](https://docs.beatapi.io/video-api) and [image](https://docs.beatapi.io/image-api) model
 indexes list the rest.
 
+### Higgsfield
+
+[Higgsfield](https://docs.higgsfield.ai/docs) offers video and image models through one
+asynchronous request lifecycle, with one endpoint path per model and workflow.
+[`@hypit/provider-higgsfield`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-higgsfield/README.md)
+serves the Seedance 2.0 and 2.5 models and uploads reference media through Higgsfield's presigned
+upload, since the API takes input media only by public URL. Its
+[model reference](https://docs.higgsfield.ai/docs/models.md) and
+[console catalogue](https://console.higgsfield.ai) list the rest.
+
 ### Monid
 
 [Monid](https://monid.ai) is a Hypit service partner.

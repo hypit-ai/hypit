@@ -238,6 +238,7 @@
     "@hypit/protocol": "workspace:*",
     "@hypit/provider-beatapi": "workspace:*",
     "@hypit/provider-hiapi": "workspace:*",
+    "@hypit/provider-higgsfield": "workspace:*",
     "@hypit/provider-hyperframes-local": "workspace:*",
     "@hypit/provider-hypihub": "workspace:*",
     "@hypit/provider-image-opencv-local": "workspace:*",

@@ -192,6 +192,9 @@ importers:
       '@hypit/provider-hiapi':
         specifier: workspace:*
         version: link:packages/provider-hiapi
+      '@hypit/provider-higgsfield':
+        specifier: workspace:*
+        version: link:packages/provider-higgsfield
       '@hypit/provider-hyperframes-local':
         specifier: workspace:*
         version: link:packages/provider-hyperframes-local
@@ -2318,6 +2321,28 @@ importers:
       '@hypit/seedream':
         specifier: workspace:*
         version: link:../seedream
+
+  packages/provider-higgsfield:
+    dependencies:
+      '@hypit/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/runtime-kit':
+        specifier: workspace:*
+        version: link:../runtime-kit
+    devDependencies:
+      '@hypit/seedance':
+        specifier: workspace:*
+        version: link:../seedance
 
   packages/provider-hyperframes-local:
     dependencies:

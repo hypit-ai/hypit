@@ -45,6 +45,15 @@ Pollo 只接受公网 URL 形式的参考素材，带参考素材的请求需要
 并通过 BeatAPI 的文件接口上传参考素材。
 其余模型见它的[视频](https://docs.beatapi.io/video-api)与[图片](https://docs.beatapi.io/image-api)模型索引。
 
+### Higgsfield
+
+[Higgsfield](https://docs.higgsfield.ai/docs) 通过一套异步请求流程提供视频和图片模型，
+每个模型与工作流对应一个接口路径。
+[`@hypit/provider-higgsfield`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-higgsfield/README.md)
+提供 Seedance 2.0 与 2.5 模型。该接口只接受公网 URL 形式的输入素材，
+参考素材通过 Higgsfield 的预签名上传接口传输。
+其余模型见它的[模型索引](https://docs.higgsfield.ai/docs/models.md)与[控制台目录](https://console.higgsfield.ai)。
+
 ### Monid
 
 [Monid](https://monid.ai) 是 Hypit 的服务合作方。
