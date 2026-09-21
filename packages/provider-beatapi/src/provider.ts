@@ -181,7 +181,13 @@ function endpoint(client: BeatApiClient, pollIntervalMs: number, maxOperationMs:
         if (Date.now() - handle.startedAt > maxOperationMs) {
           return { status: "failed", receipt, failure: { code: "BEATAPI_OPERATION_TIMEOUT", message: `BeatAPI task ${handle.taskId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        const task = await client.json(`/v1/tasks/${encodeURIComponent(handle.taskId)}`, apiKey(context.credentials));
+        let task: Record<string, unknown>;
+        try {
+          task = await client.json(`/v1/tasks/${encodeURIComponent(handle.taskId)}`, apiKey(context.credentials));
+        } catch (error) {
+          if (error instanceof BeatApiHttpError && error.status < 500) return { ...failure(error), receipt };
+          return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "retrying" }), receipt };
+        }
         const status = String(task.status);
         if (pendingStatuses.includes(status)) {
           return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: status }), receipt };

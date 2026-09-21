@@ -208,7 +208,14 @@ function endpoint(client: TokenDanceClient, pollIntervalMs: number, maxOperation
         if (Date.now() - handle.startedAt > maxOperationMs) {
           return { status: "failed", receipt, failure: { code: "TOKENDANCE_OPERATION_TIMEOUT", message: `TokenDance task ${handle.taskId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        const task = taskBody(route.protocol, await client.json(paths[route.protocol].task(handle.taskId), apiKey(context.credentials)));
+        let response: Record<string, unknown>;
+        try {
+          response = await client.json(paths[route.protocol].task(handle.taskId), apiKey(context.credentials));
+        } catch (error) {
+          if (error instanceof TokenDanceHttpError && error.status < 500) return { ...failure(error), receipt };
+          return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "retrying" }), receipt };
+        }
+        const task = taskBody(route.protocol, response);
         const status = String(task.status);
         if (status === "queued" || status === "running") return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: status }), receipt };
         const rejected = tokenDanceTaskFailure(task, handle.taskId);

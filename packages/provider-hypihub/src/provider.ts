@@ -494,7 +494,14 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
             receipt: { id: handle.jobId },
             failure: { code: "HYPIHUB_OPERATION_TIMEOUT", message: `HypiHub job ${handle.jobId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        const job = await client.json(`/jobs/${encodeURIComponent(handle.jobId)}`, authFor(context, client)); const status = job.status;
+        let job: Record<string, unknown>;
+        try {
+          job = await client.json(`/jobs/${encodeURIComponent(handle.jobId)}`, authFor(context, client));
+        } catch (error) {
+          if (error instanceof HypiHubHttpError && error.status < 500) return failure(error);
+          return wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "retrying" });
+        }
+        const status = job.status;
         if (status === "queued" || status === "running" || status === "in_progress") return wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: String(status) });
         const rejected = hypiHubJobFailure(job, handle.jobId);
         if (rejected !== undefined) return { ...failure(rejected), receipt: { id: handle.jobId } };

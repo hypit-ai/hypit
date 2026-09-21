@@ -202,7 +202,13 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
         if (Date.now() - handle.startedAt > maxOperationMs) {
           return { status: "failed", receipt, failure: { code: "MONID_OPERATION_TIMEOUT", message: `Monid run ${handle.runId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        const run = await client.getRun(handle.runId, apiKey(context.credentials));
+        let run: Record<string, unknown>;
+        try {
+          run = await client.getRun(handle.runId, apiKey(context.credentials));
+        } catch (error) {
+          if (error instanceof MonidHttpError && error.status < 500) return { ...failure(error), receipt };
+          return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "retrying" }), receipt };
+        }
         const status = String(run.status);
         if (!monidTerminalStatuses.includes(status as typeof monidTerminalStatuses[number])) {
           return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: status }), receipt };

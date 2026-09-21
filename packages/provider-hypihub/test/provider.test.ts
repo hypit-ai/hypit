@@ -786,7 +786,7 @@ test("HypiHub exposes model groups beneath its own total capacity", async () => 
   assert.throws(() => createHypiHubProvider({ capabilityConcurrency: { invented: 1 } }), /unknown HypiHub capacity/);
 });
 
-test("HypiHub polling errors and operation deadlines fail without settlement polling", async () => {
+test("HypiHub operation deadlines fail while polling transport errors keep the job pending", async () => {
   const request = need({});
   let requests = 0;
   const registry = new EndpointRegistry();
@@ -807,8 +807,8 @@ test("HypiHub polling errors and operation deadlines fail without settlement pol
   assert.equal(timedOut.status === "failed" && timedOut.failure.code, "HYPIHUB_OPERATION_TIMEOUT");
   assert.equal(requests, 0);
   const offline = await endpoint.poll({ ...common, handle: { ...common.handle, startedAt: Date.now() } });
-  assert.equal(offline.status, "failed");
-  assert.match(offline.status === "failed" ? offline.failure.message : "", /offline/);
+  assert.equal(offline.status, "pending");
+  assert.equal(offline.status === "pending" && offline.progress?.phase, "retrying");
   assert.equal(requests, 1);
 });
 

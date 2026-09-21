@@ -133,7 +133,13 @@ function endpoint(client: PolloClient, pollIntervalMs: number, maxOperationMs: n
         if (Date.now() - handle.startedAt > maxOperationMs) {
           return { status: "failed", receipt, failure: { code: "POLLO_OPERATION_TIMEOUT", message: `Pollo task ${handle.taskId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        const task = await client.json(`/v1/generation/${encodeURIComponent(handle.taskId)}/status`, apiKey(context.credentials));
+        let task: Record<string, unknown>;
+        try {
+          task = await client.json(`/v1/generation/${encodeURIComponent(handle.taskId)}/status`, apiKey(context.credentials));
+        } catch (error) {
+          if (error instanceof PolloHttpError && error.status < 500) return { ...failure(error), receipt };
+          return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "retrying" }), receipt };
+        }
         assert(Array.isArray(task.generations) && task.generations.length > 0, "Pollo task has no generations");
         const generations = task.generations.map((item, index) => object(item, `Pollo generation ${index + 1}`));
         const rejected = polloTaskFailure(generations, handle.taskId);
