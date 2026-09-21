@@ -57,6 +57,27 @@ pnpm check         # TypeScript type-check
 pnpm test          # package and service-adapter tests
 ```
 
+## Report renderer bugs
+
+For rendering bugs, make the report reproducible before proposing a root cause. Include:
+
+1. **Environment** — OS, Hypit CLI version, render provider, browser/renderer version when exposed,
+   resolution, fps, and whether the run uses a local or external provider.
+2. **Minimal reproduction** — the smallest composition that still fails, plus the command or build
+   needed to render it.
+3. **Control variant** — a version with one suspected subsystem removed (for example picture or
+   audio) while keeping the text graph unchanged.
+4. **Timing evidence** — authored and compiled spans for affected elements, including whether any
+   spans overlap.
+5. **Output evidence** — the affected frame or timestamp and a concise measurement or comparison
+   against the clean control when the defect is visual.
+6. **Isolation results** — list the changes already tested so maintainers do not repeat eliminated
+   hypotheses.
+
+When source text or assets are sensitive, replace the content with neutral placeholders while
+preserving the structure, timing, styles, and subsystem that trigger the defect. Avoid claiming the
+renderer is at fault until the source graph and the relevant control variants have been checked.
+
 ## Package the Distribution
 
 Run `npm run pack:distribution` to build public types and write the release tarball to
@@ -97,8 +118,8 @@ cannot be overwritten. npm versions such as `0.1.2` are separate from the logica
 
 Release notes should identify the changed user behavior and the affected installation. The npm
 Distribution and an installed Skill update separately: link the relevant Skill changes and describe
-both update paths when a release changes both. A saved video project and its existing materials
-are independent of either installation. After publication, verify the workflow result and npm's
+both update paths when a release changes both. A saved video project and its existing materials are
+independent of either installation. After publication, verify the workflow result and npm's
 published version before telling users the update is available.
 
 ## Open the pull request
