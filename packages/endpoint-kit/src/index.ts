@@ -492,3 +492,50 @@ export function wakeAfter(
     ...(progress === undefined ? {} : { progress }),
   };
 }
+
+/** A service reported a failure with a stable code. */
+export class EndpointServiceError extends Error {
+  constructor(readonly code: string, message: string) { super(message); }
+}
+/** A non-success HTTP response, with the wait the service asked for when it gave one. */
+export class EndpointHttpError extends EndpointServiceError {
+  constructor(code: string, message: string, readonly status: number, readonly retryAfterMs?: number) { super(code, message); }
+}
+/** The request produced no response: connection failure, interrupted read, or request timeout. */
+export class EndpointTransportError extends Error {}
+/** A success response whose body cannot be used. */
+export class EndpointResponseError extends Error {}
+
+/** Report a rejected send or read as a transport error. */
+export async function transport<T>(request: Promise<T>): Promise<T> {
+  try { return await request; } catch (error) {
+    if (error instanceof EndpointTransportError) throw error;
+    throw new EndpointTransportError(error instanceof Error ? error.message : String(error), { cause: error });
+  }
+}
+
+/** The wait a `Retry-After` header asks for, in milliseconds; either delay-seconds or an HTTP-date. */
+export function retryAfterMs(headers: Headers, now = Date.now()): number | undefined {
+  const value = headers.get("retry-after")?.trim();
+  if (value === undefined || value.length === 0) return undefined;
+  const delay = /^\d+$/u.test(value) ? Number(value) * 1000 : Date.parse(value) - now;
+  return Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : undefined;
+}
+
+/**
+ * Decide a poll action's outcome from the error it threw. Transport errors and HTTP 429/5xx keep the
+ * job pending for the next poll; every other error, including credential and response errors, fails it.
+ */
+export function pollAgainOrFail(error: unknown, options: {
+  readonly handle: CanonicalValue;
+  readonly pollIntervalMs: number;
+  readonly failure: (error: unknown) => EndpointOutcome;
+}): EndpointOutcome {
+  if (error instanceof EndpointTransportError) {
+    return wakeAfter(options.handle, options.pollIntervalMs, Date.now(), { phase: "retrying" });
+  }
+  if (error instanceof EndpointHttpError && (error.status === 429 || error.status >= 500)) {
+    return wakeAfter(options.handle, error.retryAfterMs ?? options.pollIntervalMs, Date.now(), { phase: "retrying" });
+  }
+  return options.failure(error);
+}

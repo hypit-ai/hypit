@@ -1,3 +1,5 @@
+import { EndpointHttpError, EndpointServiceError } from "@hypit/endpoint-kit";
+
 /** Monid's `{ code, message }` error envelope and run outcome fields, kept at the service boundary. */
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -12,12 +14,10 @@ export function safeMonidReason(value: string): string {
   return value.replace(/https?:\/\/\S+/giu, "[redacted-url]");
 }
 
-export class MonidServiceError extends Error {
-  constructor(readonly code: string, message: string) { super(message); }
-}
+export class MonidServiceError extends EndpointServiceError {}
 
-export class MonidHttpError extends MonidServiceError {
-  constructor(readonly status: number, response: { readonly headers: Headers }, bodyText: string,
+export class MonidHttpError extends EndpointHttpError {
+  constructor(status: number, response: { readonly headers: Headers }, bodyText: string,
     request: { readonly method: string; readonly path: string }) {
     let body: Record<string, unknown> | undefined;
     try { body = record(JSON.parse(bodyText)); } catch { /* Non-JSON gateway failures still have HTTP evidence. */ }
@@ -27,7 +27,7 @@ export class MonidHttpError extends MonidServiceError {
       `Monid HTTP ${status}`, `${request.method} ${request.path}`,
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
     ];
-    super("MONID_HTTP_ERROR", `${facts.join("; ")}${reason === undefined ? "" : `: ${safeMonidReason(reason)}`}`);
+    super("MONID_HTTP_ERROR", `${facts.join("; ")}${reason === undefined ? "" : `: ${safeMonidReason(reason)}`}`, status);
   }
 }
 

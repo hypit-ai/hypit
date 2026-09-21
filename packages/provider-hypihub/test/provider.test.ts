@@ -789,11 +789,13 @@ test("HypiHub exposes model groups beneath its own total capacity", async () => 
 test("HypiHub operation deadlines fail while polling transport errors keep the job pending", async () => {
   const request = need({});
   let requests = 0;
+  let reply: (() => Response) | undefined;
   const registry = new EndpointRegistry();
   await createHypiHubProvider({ pollIntervalMs: 0, operationTimeoutMs: 60_000,
     fetch: async (url) => {
       requests++; assert.match(String(url), /\/jobs\/test$/);
-      throw new Error("offline");
+      if (reply === undefined) throw new Error("offline");
+      return reply();
     } }).install(registry);
   const selected = registry.resolve(request);
   assert.equal(selected.status, "resolved"); assert.equal(selected.registration.kind, "asynchronous");
@@ -806,10 +808,23 @@ test("HypiHub operation deadlines fail while polling transport errors keep the j
   assert.equal(timedOut.status, "failed");
   assert.equal(timedOut.status === "failed" && timedOut.failure.code, "HYPIHUB_OPERATION_TIMEOUT");
   assert.equal(requests, 0);
-  const offline = await endpoint.poll({ ...common, handle: { ...common.handle, startedAt: Date.now() } });
+  const live = { ...common, handle: { ...common.handle, startedAt: Date.now() } };
+  const offline = await endpoint.poll(live);
   assert.equal(offline.status, "pending");
   assert.equal(offline.status === "pending" && offline.progress?.phase, "retrying");
   assert.equal(requests, 1);
+  reply = () => new Response("", { status: 429, headers: { "retry-after": "3" } });
+  const before = Date.now();
+  const limited = await endpoint.poll(live);
+  assert.equal(limited.status, "pending");
+  assert.ok(limited.status === "pending" && limited.wakeAt! >= before + 3_000);
+  reply = () => new Response("{}", { status: 404 });
+  const missing = await endpoint.poll(live);
+  assert.equal(missing.status, "failed");
+  assert.equal(requests, 3);
+  const unconfigured = await endpoint.poll({ ...live, credentials: {} });
+  assert.equal(unconfigured.status, "failed");
+  assert.equal(requests, 3);
 });
 
 test("reference URL reuse includes its authored classification and forwards it to custom transport", async () => {

@@ -1,3 +1,5 @@
+import { EndpointHttpError, EndpointServiceError } from "@hypit/endpoint-kit";
+
 /** BeatAPI's `{ error: { code, message, request_id, retry_after_seconds } }` envelope and terminal task errors. */
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -12,12 +14,10 @@ export function safeBeatApiReason(value: string): string {
   return value.replace(/https?:\/\/\S+/giu, "[redacted-url]");
 }
 
-export class BeatApiServiceError extends Error {
-  constructor(readonly code: string, message: string) { super(message); }
-}
+export class BeatApiServiceError extends EndpointServiceError {}
 
-export class BeatApiHttpError extends BeatApiServiceError {
-  constructor(readonly status: number, response: { readonly headers: Headers }, bodyText: string,
+export class BeatApiHttpError extends EndpointHttpError {
+  constructor(status: number, response: { readonly headers: Headers }, bodyText: string,
     request: { readonly method: string; readonly path: string; readonly model?: string }) {
     let body: Record<string, unknown> | undefined;
     try { body = record(JSON.parse(bodyText)); } catch { /* Non-JSON gateway failures still have HTTP evidence. */ }
@@ -32,7 +32,8 @@ export class BeatApiHttpError extends BeatApiServiceError {
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
       ...(retryAfter === undefined ? [] : [`retry-after=${retryAfter}s`]),
     ];
-    super(code, `${facts.join("; ")}${reason === undefined ? "" : `: ${safeBeatApiReason(reason)}`}`);
+    super(code, `${facts.join("; ")}${reason === undefined ? "" : `: ${safeBeatApiReason(reason)}`}`,
+      status, retryAfter === undefined ? undefined : Math.round(retryAfter * 1000));
   }
 }
 

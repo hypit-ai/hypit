@@ -1,6 +1,6 @@
 import { requestDeadline } from "@hypit/runtime-kit";
 import type { AsyncEndpoint, EndpointCredential, EndpointInvocationContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
-import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
+import { EndpointResponseError, EndpointServiceError, EndpointTransportError, defineEndpointPackage, pollAgainOrFail, transport, wakeAfter } from "@hypit/endpoint-kit";
 import type { GenerationArtifactUrlResolver } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CapabilityRef } from "@hypit/protocol";
@@ -56,7 +56,7 @@ function failureMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 function failure(error: unknown): EndpointOutcome {
-  return { status: "failed", failure: { code: error instanceof TokenDanceServiceError ? error.code : "TOKENDANCE_ERROR", message: failureMessage(error) } };
+  return { status: "failed", failure: { code: error instanceof EndpointServiceError ? error.code : "TOKENDANCE_ERROR", message: failureMessage(error) } };
 }
 function httpsUrl(value: unknown, subject: string): string {
   assert(typeof value === "string" && /^https?:\/\//u.test(value), `${subject} has no download URL`);
@@ -66,12 +66,12 @@ function httpsUrl(value: unknown, subject: string): string {
 class TokenDanceClient {
   constructor(readonly baseUrl: string, readonly timeout: number, readonly fetcher: typeof globalThis.fetch) {}
   async json(path: string, key: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
-    const deadline = requestDeadline(this.timeout);
+    const deadline = requestDeadline(this.timeout, () => new EndpointTransportError("TokenDance request timed out"));
     try {
-      const response = await deadline.wait(this.fetcher(`${this.baseUrl}${path}`, {
+      const response = await transport(deadline.wait(this.fetcher(`${this.baseUrl}${path}`, {
         ...init, signal: deadline.signal, headers: { authorization: `Bearer ${key}`, ...(init.headers ?? {}) },
-      }));
-      const text = await deadline.wait(response.text());
+      })));
+      const text = await transport(deadline.wait(response.text()));
       if (!response.ok) {
         const input = typeof init.body === "string" ? JSON.parse(init.body) as Record<string, unknown> : undefined;
         throw new TokenDanceHttpError(response.status, response, text, {
@@ -79,7 +79,7 @@ class TokenDanceClient {
         });
       }
       let body: unknown;
-      try { body = text.length === 0 ? {} : JSON.parse(text); } catch { throw new Error(`TokenDance returned invalid JSON (${response.status})`); }
+      try { body = text.length === 0 ? {} : JSON.parse(text); } catch { throw new EndpointResponseError(`TokenDance returned invalid JSON (${response.status})`); }
       return object(body, "TokenDance response");
     } finally { deadline.finish(); }
   }
@@ -145,7 +145,7 @@ async function prepare(client: TokenDanceClient, context: EndpointInvocationCont
     assert(cap === undefined || Buffer.byteLength(body) <= cap,
       `TokenDance ${route.protocol} accepts request bodies up to ${(cap ?? 0) / 1_000_000} MB; inline references make this one ${Buffer.byteLength(body)} bytes`);
   } catch (error) {
-    throw new TokenDanceServiceError(error instanceof TokenDanceServiceError ? error.code : "TOKENDANCE_ERROR",
+    throw new TokenDanceServiceError(error instanceof EndpointServiceError ? error.code : "TOKENDANCE_ERROR",
       `TokenDance request preparation failed; model=${request.model}; generation not submitted: ${failureMessage(error)}`);
   }
   return { route, model: request.model, body };
@@ -208,14 +208,7 @@ function endpoint(client: TokenDanceClient, pollIntervalMs: number, maxOperation
         if (Date.now() - handle.startedAt > maxOperationMs) {
           return { status: "failed", receipt, failure: { code: "TOKENDANCE_OPERATION_TIMEOUT", message: `TokenDance task ${handle.taskId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        let response: Record<string, unknown>;
-        try {
-          response = await client.json(paths[route.protocol].task(handle.taskId), apiKey(context.credentials));
-        } catch (error) {
-          if (error instanceof TokenDanceHttpError && error.status < 500) return { ...failure(error), receipt };
-          return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "retrying" }), receipt };
-        }
-        const task = taskBody(route.protocol, response);
+        const task = taskBody(route.protocol, await client.json(paths[route.protocol].task(handle.taskId), apiKey(context.credentials)));
         const status = String(task.status);
         if (status === "queued" || status === "running") return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: status }), receipt };
         const rejected = tokenDanceTaskFailure(task, handle.taskId);
@@ -223,7 +216,7 @@ function endpoint(client: TokenDanceClient, pollIntervalMs: number, maxOperation
         assert(status === "succeeded", `TokenDance returned unknown task status ${status}`);
         return { status: "ready", handle: canonicalize({ ...handle, url: taskVideoUrl(route.protocol, task) }), receipt };
       } catch (error) {
-        return failure(error);
+        return pollAgainOrFail(error, { handle: context.handle, pollIntervalMs, failure });
       }
     },
     async collect(context) {

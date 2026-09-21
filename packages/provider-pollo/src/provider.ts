@@ -1,6 +1,6 @@
 import { requestDeadline } from "@hypit/runtime-kit";
 import type { AsyncEndpoint, EndpointCredential, EndpointInvocationContext, EndpointOutcome } from "@hypit/endpoint-kit";
-import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
+import { EndpointResponseError, EndpointServiceError, EndpointTransportError, defineEndpointPackage, pollAgainOrFail, transport, wakeAfter } from "@hypit/endpoint-kit";
 import type { GenerationArtifactUrlResolver } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CapabilityRef } from "@hypit/protocol";
@@ -55,21 +55,21 @@ function failureMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 function failure(error: unknown): EndpointOutcome {
-  return { status: "failed", failure: { code: error instanceof PolloServiceError ? error.code : "POLLO_ERROR", message: failureMessage(error) } };
+  return { status: "failed", failure: { code: error instanceof EndpointServiceError ? error.code : "POLLO_ERROR", message: failureMessage(error) } };
 }
 
 class PolloClient {
   constructor(readonly baseUrl: string, readonly timeout: number, readonly fetcher: typeof globalThis.fetch) {}
   async json(path: string, key: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
-    const deadline = requestDeadline(this.timeout);
+    const deadline = requestDeadline(this.timeout, () => new EndpointTransportError("Pollo request timed out"));
     try {
-      const response = await deadline.wait(this.fetcher(`${this.baseUrl}${path}`, {
+      const response = await transport(deadline.wait(this.fetcher(`${this.baseUrl}${path}`, {
         ...init, signal: deadline.signal, headers: { "x-api-key": key, ...(init.headers ?? {}) },
-      }));
-      const text = await deadline.wait(response.text());
+      })));
+      const text = await transport(deadline.wait(response.text()));
       if (!response.ok) throw new PolloHttpError(response.status, text, { method: init.method ?? "GET", path });
       let body: unknown;
-      try { body = text.length === 0 ? {} : JSON.parse(text); } catch { throw new Error(`Pollo returned invalid JSON (${response.status})`); }
+      try { body = text.length === 0 ? {} : JSON.parse(text); } catch { throw new EndpointResponseError(`Pollo returned invalid JSON (${response.status})`); }
       return object(body, "Pollo response");
     } finally { deadline.finish(); }
   }
@@ -108,7 +108,7 @@ function endpoint(client: PolloClient, pollIntervalMs: number, maxOperationMs: n
         try {
           body = await request.compile(resolverFor(context, publicAssetUrl));
         } catch (error) {
-          throw new PolloServiceError(error instanceof PolloServiceError ? error.code : "POLLO_ERROR",
+          throw new PolloServiceError(error instanceof EndpointServiceError ? error.code : "POLLO_ERROR",
             `Pollo request preparation failed; path=${request.path}; generation not submitted: ${failureMessage(error)}`);
         }
         await context.reportProgress?.({ phase: `Submitting Pollo request: ${request.path}` });
@@ -133,13 +133,7 @@ function endpoint(client: PolloClient, pollIntervalMs: number, maxOperationMs: n
         if (Date.now() - handle.startedAt > maxOperationMs) {
           return { status: "failed", receipt, failure: { code: "POLLO_OPERATION_TIMEOUT", message: `Pollo task ${handle.taskId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        let task: Record<string, unknown>;
-        try {
-          task = await client.json(`/v1/generation/${encodeURIComponent(handle.taskId)}/status`, apiKey(context.credentials));
-        } catch (error) {
-          if (error instanceof PolloHttpError && error.status < 500) return { ...failure(error), receipt };
-          return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "retrying" }), receipt };
-        }
+        const task = await client.json(`/v1/generation/${encodeURIComponent(handle.taskId)}/status`, apiKey(context.credentials));
         assert(Array.isArray(task.generations) && task.generations.length > 0, "Pollo task has no generations");
         const generations = task.generations.map((item, index) => object(item, `Pollo generation ${index + 1}`));
         const rejected = polloTaskFailure(generations, handle.taskId);
@@ -156,7 +150,7 @@ function endpoint(client: PolloClient, pollIntervalMs: number, maxOperationMs: n
         });
         return { status: "ready", handle: canonicalize({ ...handle, urls }), receipt };
       } catch (error) {
-        return failure(error);
+        return pollAgainOrFail(error, { handle: context.handle, pollIntervalMs, failure });
       }
     },
     async collect(context) {

@@ -1,6 +1,6 @@
 import { requestDeadline } from "@hypit/runtime-kit";
 import type { AsyncEndpoint, EndpointCredential, EndpointInvocationContext, EndpointOutcome } from "@hypit/endpoint-kit";
-import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
+import { EndpointResponseError, EndpointServiceError, EndpointTransportError, defineEndpointPackage, pollAgainOrFail, transport, wakeAfter } from "@hypit/endpoint-kit";
 import type { GenerationArtifactUrlResolver } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CapabilityRef } from "@hypit/protocol";
@@ -55,7 +55,7 @@ function failureMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 function failure(error: unknown): EndpointOutcome {
-  return { status: "failed", failure: { code: error instanceof MonidServiceError ? error.code : "MONID_ERROR", message: failureMessage(error) } };
+  return { status: "failed", failure: { code: error instanceof EndpointServiceError ? error.code : "MONID_ERROR", message: failureMessage(error) } };
 }
 function runId(run: Record<string, unknown>): string {
   assert(typeof run.runId === "string" && run.runId.length > 0, "Monid response has no runId");
@@ -90,18 +90,18 @@ const extensions: Readonly<Record<string, string>> = {
 class MonidClient {
   constructor(readonly baseUrl: string, readonly timeout: number, readonly pollIntervalMs: number, readonly fetcher: typeof globalThis.fetch) {}
   async json(path: string, key: string, init: RequestInit = {}): Promise<{ readonly status: number; readonly body: Record<string, unknown> }> {
-    const deadline = requestDeadline(this.timeout);
+    const deadline = requestDeadline(this.timeout, () => new EndpointTransportError("Monid request timed out"));
     try {
-      const response = await deadline.wait(this.fetcher(`${this.baseUrl}${path}`, {
+      const response = await transport(deadline.wait(this.fetcher(`${this.baseUrl}${path}`, {
         ...init, signal: deadline.signal, headers: { authorization: `Bearer ${key}`, ...(init.headers ?? {}) },
-      }));
-      const text = await deadline.wait(response.text());
+      })));
+      const text = await transport(deadline.wait(response.text()));
       let body: unknown;
       try { body = text.length === 0 ? {} : JSON.parse(text); } catch { body = undefined; }
       // A synchronous run mirrors the provider's HTTP status while still returning the run itself.
       const run = body !== null && typeof body === "object" && !Array.isArray(body) && typeof (body as Record<string, unknown>).runId === "string";
       if (!response.ok && !run) throw new MonidHttpError(response.status, response, text, { method: init.method ?? "GET", path });
-      assert(body !== undefined, `Monid returned invalid JSON (${response.status})`);
+      if (body === undefined) throw new EndpointResponseError(`Monid returned invalid JSON (${response.status})`);
       return { status: response.status, body: object(body, "Monid response") };
     } finally { deadline.finish(); }
   }
@@ -176,7 +176,7 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
         try {
           input = await request.compile(resolverFor(client, context, publicAssetUrl));
         } catch (error) {
-          throw new MonidServiceError(error instanceof MonidServiceError ? error.code : "MONID_ERROR",
+          throw new MonidServiceError(error instanceof EndpointServiceError ? error.code : "MONID_ERROR",
             `Monid request preparation failed; endpoint=${request.endpoint}; generation not submitted: ${failureMessage(error)}`);
         }
         await context.reportProgress?.({ phase: `Submitting Monid request: ${request.service} ${request.endpoint}` });
@@ -202,13 +202,7 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
         if (Date.now() - handle.startedAt > maxOperationMs) {
           return { status: "failed", receipt, failure: { code: "MONID_OPERATION_TIMEOUT", message: `Monid run ${handle.runId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        let run: Record<string, unknown>;
-        try {
-          run = await client.getRun(handle.runId, apiKey(context.credentials));
-        } catch (error) {
-          if (error instanceof MonidHttpError && error.status < 500) return { ...failure(error), receipt };
-          return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "retrying" }), receipt };
-        }
+        const run = await client.getRun(handle.runId, apiKey(context.credentials));
         const status = String(run.status);
         if (!monidTerminalStatuses.includes(status as typeof monidTerminalStatuses[number])) {
           return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: status }), receipt };
@@ -217,7 +211,7 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
         if (rejected !== undefined) return { ...failure(rejected), receipt };
         return { status: "ready", handle: canonicalize({ ...handle, urls: outputUrls(run) }), receipt };
       } catch (error) {
-        return failure(error);
+        return pollAgainOrFail(error, { handle: context.handle, pollIntervalMs, failure });
       }
     },
     async collect(context) {

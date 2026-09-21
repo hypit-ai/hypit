@@ -1,3 +1,5 @@
+import { EndpointHttpError, EndpointServiceError, retryAfterMs } from "@hypit/endpoint-kit";
+
 /** HypiHub's public error envelope, kept at the service boundary. */
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -12,13 +14,10 @@ export function safeHypiHubReason(value: string): string {
   return value.replace(/https?:\/\/\S+/giu, "[redacted-url]");
 }
 
-export class HypiHubServiceError extends Error {
-  constructor(readonly code: string, message: string) { super(message); }
-}
+export class HypiHubServiceError extends EndpointServiceError {}
 
-export class HypiHubHttpError extends HypiHubServiceError {
-  readonly retryAfterMs?: number;
-  constructor(readonly status: number, response: { readonly headers: Headers }, bodyText: string,
+export class HypiHubHttpError extends EndpointHttpError {
+  constructor(status: number, response: { readonly headers: Headers }, bodyText: string,
     request: { readonly method: string; readonly url: string; readonly model?: string }) {
     let body: Record<string, unknown> | undefined;
     try { body = record(JSON.parse(bodyText)); } catch { /* Non-JSON gateway failures still have HTTP evidence. */ }
@@ -41,10 +40,8 @@ export class HypiHubHttpError extends HypiHubServiceError {
       ...(retryAfter === undefined ? [] : [`retry-after=${retryAfter}`]),
     ];
     super(code, `${facts.join("; ")}${reason === undefined ? "" : `: ${safeHypiHubReason(reason)}`}`
-      + (body === undefined && bodyText.length > 2000 ? " [response excerpt truncated]" : ""));
-    const delay = retryAfter === undefined ? NaN : /^\d+$/u.test(retryAfter)
-      ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now();
-    if (Number.isFinite(delay)) this.retryAfterMs = Math.max(0, delay);
+      + (body === undefined && bodyText.length > 2000 ? " [response excerpt truncated]" : ""),
+    status, retryAfterMs(response.headers));
   }
 }
 

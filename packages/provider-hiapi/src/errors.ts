@@ -1,3 +1,5 @@
+import { EndpointHttpError, EndpointServiceError } from "@hypit/endpoint-kit";
+
 /** HiAPI's `{ code, message, error_code }` envelope and task `error` object, kept at the service boundary. */
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -12,12 +14,10 @@ export function safeHiApiReason(value: string): string {
   return value.replace(/https?:\/\/\S+/giu, "[redacted-url]");
 }
 
-export class HiApiServiceError extends Error {
-  constructor(readonly code: string, message: string) { super(message); }
-}
+export class HiApiServiceError extends EndpointServiceError {}
 
-export class HiApiHttpError extends HiApiServiceError {
-  constructor(readonly status: number, response: { readonly headers: Headers }, bodyText: string,
+export class HiApiHttpError extends EndpointHttpError {
+  constructor(status: number, response: { readonly headers: Headers }, bodyText: string,
     request: { readonly method: string; readonly path: string; readonly model?: string }) {
     let body: Record<string, unknown> | undefined;
     try { body = record(JSON.parse(bodyText)); } catch { /* Non-JSON gateway failures still have HTTP evidence. */ }
@@ -29,7 +29,7 @@ export class HiApiHttpError extends HiApiServiceError {
       ...(request.model === undefined ? [] : [`model=${request.model}`]),
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
     ];
-    super(code, `${facts.join("; ")}${reason === undefined ? "" : `: ${safeHiApiReason(reason)}`}`);
+    super(code, `${facts.join("; ")}${reason === undefined ? "" : `: ${safeHiApiReason(reason)}`}`, status);
   }
 }
 

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { requestDeadline } from "@hypit/runtime-kit";
 import type { AsyncEndpoint, EndpointCredential, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointPricingReader, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/endpoint-kit";
-import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
+import { EndpointResponseError, EndpointServiceError, EndpointTransportError, defineEndpointPackage, pollAgainOrFail, transport, wakeAfter } from "@hypit/endpoint-kit";
 import { selectWireModelForRequest } from "@hypit/generation";
 import type { GenerationRequest } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
@@ -98,7 +98,7 @@ function failureMessage(error: unknown): string {
 }
 function failure(error: unknown): EndpointOutcome {
   const message = failureMessage(error);
-  return { status: "failed", failure: { code: error instanceof HypiHubServiceError ? error.code : "HYPIHUB_ERROR", message } };
+  return { status: "failed", failure: { code: error instanceof EndpointServiceError ? error.code : "HYPIHUB_ERROR", message } };
 }
 
 function jobId(value: Record<string, unknown>): string {
@@ -150,11 +150,11 @@ class HypiHubClient {
   async json(path: string, auth: HypiHubAuth, init: RequestInit = {}, refreshOnUnauthorized = true,
     onResponse?: (response: Response) => Promise<void>): Promise<Record<string, unknown>> {
     const token = await auth.token();
-    const deadline = requestDeadline(this.timeout);
+    const deadline = requestDeadline(this.timeout, () => new EndpointTransportError("HypiHub request timed out"));
     try {
-      const response = await deadline.wait(this.fetcher(`${this.baseUrl}${path}`, { ...init, signal: deadline.signal, headers: { authorization: `Bearer ${token}`, ...(init.headers ?? {}) } }));
+      const response = await transport(deadline.wait(this.fetcher(`${this.baseUrl}${path}`, { ...init, signal: deadline.signal, headers: { authorization: `Bearer ${token}`, ...(init.headers ?? {}) } })));
       if (response.status !== 401 && onResponse !== undefined) await deadline.wait(onResponse(response));
-      const text = await deadline.wait(response.text()); let body: unknown = {};
+      const text = await transport(deadline.wait(response.text())); let body: unknown = {};
       if (response.status === 401 && refreshOnUnauthorized && auth.canRefresh()) {
         deadline.finish();
         await auth.refresh();
@@ -167,7 +167,7 @@ class HypiHubClient {
           ...(typeof input?.model === "string" ? { model: input.model } : {}),
         });
       }
-      try { body = text.length === 0 ? {} : JSON.parse(text); } catch { throw new Error(`HypiHub returned invalid JSON (${response.status})`); }
+      try { body = text.length === 0 ? {} : JSON.parse(text); } catch { throw new EndpointResponseError(`HypiHub returned invalid JSON (${response.status})`); }
       return object(body, "HypiHub response");
     } finally { deadline.finish(); }
   }
@@ -427,7 +427,7 @@ async function prepareGeneration(client: HypiHubClient, context: EndpointInvocat
   try {
     await verifyModelRoute(client, auth, request.model, request.operation);
   } catch (error) {
-    throw new HypiHubServiceError(error instanceof HypiHubServiceError ? error.code : "HYPIHUB_ERROR",
+    throw new HypiHubServiceError(error instanceof EndpointServiceError ? error.code : "HYPIHUB_ERROR",
       `HypiHub model catalogue check failed; model=${request.model}; operation=${request.operation}; references uploaded=0; generation not submitted: ${failureMessage(error)}`);
   }
   await context.reportProgress?.({ phase: `Preparing HypiHub request: ${request.model} (${request.operation})` });
@@ -446,7 +446,7 @@ async function prepareGeneration(client: HypiHubClient, context: EndpointInvocat
   try {
     compiled = await request.compile(resolve);
   } catch (error) {
-    throw new HypiHubServiceError(error instanceof HypiHubServiceError ? error.code : "HYPIHUB_ERROR",
+    throw new HypiHubServiceError(error instanceof EndpointServiceError ? error.code : "HYPIHUB_ERROR",
       `HypiHub request preparation failed; model=${request.model}; operation=${request.operation}; generation not submitted: ${failureMessage(error)}`);
   }
   return { route, auth, compiled, operation: request.operation };
@@ -494,21 +494,14 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
             receipt: { id: handle.jobId },
             failure: { code: "HYPIHUB_OPERATION_TIMEOUT", message: `HypiHub job ${handle.jobId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        let job: Record<string, unknown>;
-        try {
-          job = await client.json(`/jobs/${encodeURIComponent(handle.jobId)}`, authFor(context, client));
-        } catch (error) {
-          if (error instanceof HypiHubHttpError && error.status < 500) return failure(error);
-          return wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "retrying" });
-        }
-        const status = job.status;
+        const job = await client.json(`/jobs/${encodeURIComponent(handle.jobId)}`, authFor(context, client)); const status = job.status;
         if (status === "queued" || status === "running" || status === "in_progress") return wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: String(status) });
         const rejected = hypiHubJobFailure(job, handle.jobId);
         if (rejected !== undefined) return { ...failure(rejected), receipt: { id: handle.jobId } };
         if (status !== "succeeded" && status !== "completed") throw new Error(`HypiHub returned unknown job status ${String(status)}`);
         return { status: "ready", handle: context.handle, receipt: { id: handle.jobId } };
       } catch (error) {
-        return failure(error);
+        return pollAgainOrFail(error, { handle: context.handle, pollIntervalMs, failure });
       }
     },
     async collect(context) {

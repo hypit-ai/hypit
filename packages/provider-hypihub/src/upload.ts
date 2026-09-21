@@ -1,8 +1,9 @@
+import { EndpointServiceError } from "@hypit/endpoint-kit";
 import { requestDeadline } from "@hypit/runtime-kit";
 import { createHash } from "node:crypto";
 
 import type { HypiHubAuth } from "./oauth.js";
-import { HypiHubHttpError, HypiHubServiceError, safeHypiHubReason } from "./errors.js";
+import { HypiHubHttpError, safeHypiHubReason } from "./errors.js";
 
 type UploadAuth = HypiHubAuth | string;
 
@@ -360,7 +361,7 @@ export class HypiHubUploader {
           this.log(`upload cancellation still pending upload=${uploadId} reason=${this.safeReason(cancelError)}`);
         }
       }
-      throw error instanceof HypiHubServiceError ? error : new Error(this.safeReason(error));
+      throw error instanceof EndpointServiceError ? error : new Error(this.safeReason(error));
     }
   }
 

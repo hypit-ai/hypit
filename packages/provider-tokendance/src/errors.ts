@@ -1,3 +1,5 @@
+import { EndpointHttpError, EndpointServiceError } from "@hypit/endpoint-kit";
+
 /** TokenDance relays each protocol's own error body; keep the code, the message and the HTTP facts. */
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -12,12 +14,10 @@ export function safeTokenDanceReason(value: string): string {
   return value.replace(/https?:\/\/\S+/giu, "[redacted-url]");
 }
 
-export class TokenDanceServiceError extends Error {
-  constructor(readonly code: string, message: string) { super(message); }
-}
+export class TokenDanceServiceError extends EndpointServiceError {}
 
-export class TokenDanceHttpError extends TokenDanceServiceError {
-  constructor(readonly status: number, response: { readonly headers: Headers }, bodyText: string,
+export class TokenDanceHttpError extends EndpointHttpError {
+  constructor(status: number, response: { readonly headers: Headers }, bodyText: string,
     request: { readonly method: string; readonly path: string; readonly model?: string }) {
     let body: Record<string, unknown> | undefined;
     try { body = record(JSON.parse(bodyText)); } catch { /* Non-JSON gateway failures still have HTTP evidence. */ }
@@ -31,7 +31,7 @@ export class TokenDanceHttpError extends TokenDanceServiceError {
       ...(request.model === undefined ? [] : [`model=${request.model}`]),
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
     ];
-    super(code, `${facts.join("; ")}${reason === undefined ? "" : `: ${safeTokenDanceReason(reason)}`}`);
+    super(code, `${facts.join("; ")}${reason === undefined ? "" : `: ${safeTokenDanceReason(reason)}`}`, status);
   }
 }
 

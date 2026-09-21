@@ -1,6 +1,6 @@
 import { requestDeadline } from "@hypit/runtime-kit";
 import type { AsyncEndpoint, EndpointCredential, EndpointInvocationContext, EndpointOutcome } from "@hypit/endpoint-kit";
-import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
+import { EndpointResponseError, EndpointServiceError, EndpointTransportError, defineEndpointPackage, pollAgainOrFail, transport, wakeAfter } from "@hypit/endpoint-kit";
 import type { GenerationArtifactUrlResolver } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CapabilityRef } from "@hypit/protocol";
@@ -75,18 +75,18 @@ function failureMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 function failure(error: unknown): EndpointOutcome {
-  return { status: "failed", failure: { code: error instanceof BeatApiServiceError ? error.code : "BEATAPI_ERROR", message: failureMessage(error) } };
+  return { status: "failed", failure: { code: error instanceof EndpointServiceError ? error.code : "BEATAPI_ERROR", message: failureMessage(error) } };
 }
 
 class BeatApiClient {
   constructor(readonly baseUrl: string, readonly timeout: number, readonly fetcher: typeof globalThis.fetch) {}
   async json(path: string, key: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
-    const deadline = requestDeadline(this.timeout);
+    const deadline = requestDeadline(this.timeout, () => new EndpointTransportError("BeatAPI request timed out"));
     try {
-      const response = await deadline.wait(this.fetcher(`${this.baseUrl}${path}`, {
+      const response = await transport(deadline.wait(this.fetcher(`${this.baseUrl}${path}`, {
         ...init, signal: deadline.signal, headers: { authorization: `Bearer ${key}`, ...(init.headers ?? {}) },
-      }));
-      const text = await deadline.wait(response.text());
+      })));
+      const text = await transport(deadline.wait(response.text()));
       if (!response.ok) {
         const input = typeof init.body === "string" ? JSON.parse(init.body) as Record<string, unknown> : undefined;
         throw new BeatApiHttpError(response.status, response, text, {
@@ -94,7 +94,7 @@ class BeatApiClient {
         });
       }
       let body: unknown;
-      try { body = text.length === 0 ? {} : JSON.parse(text); } catch { throw new Error(`BeatAPI returned invalid JSON (${response.status})`); }
+      try { body = text.length === 0 ? {} : JSON.parse(text); } catch { throw new EndpointResponseError(`BeatAPI returned invalid JSON (${response.status})`); }
       return object(object(body, "BeatAPI response").data, "BeatAPI response data");
     } finally { deadline.finish(); }
   }
@@ -154,7 +154,7 @@ function endpoint(client: BeatApiClient, pollIntervalMs: number, maxOperationMs:
         try {
           body = await request.compile(resolverFor(client, context, publicAssetUrl));
         } catch (error) {
-          throw new BeatApiServiceError(error instanceof BeatApiServiceError ? error.code : "BEATAPI_ERROR",
+          throw new BeatApiServiceError(error instanceof EndpointServiceError ? error.code : "BEATAPI_ERROR",
             `BeatAPI request preparation failed; model=${request.model}; generation not submitted: ${failureMessage(error)}`);
         }
         await context.reportProgress?.({ phase: `Submitting BeatAPI request: ${request.model}` });
@@ -181,13 +181,7 @@ function endpoint(client: BeatApiClient, pollIntervalMs: number, maxOperationMs:
         if (Date.now() - handle.startedAt > maxOperationMs) {
           return { status: "failed", receipt, failure: { code: "BEATAPI_OPERATION_TIMEOUT", message: `BeatAPI task ${handle.taskId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        let task: Record<string, unknown>;
-        try {
-          task = await client.json(`/v1/tasks/${encodeURIComponent(handle.taskId)}`, apiKey(context.credentials));
-        } catch (error) {
-          if (error instanceof BeatApiHttpError && error.status < 500) return { ...failure(error), receipt };
-          return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "retrying" }), receipt };
-        }
+        const task = await client.json(`/v1/tasks/${encodeURIComponent(handle.taskId)}`, apiKey(context.credentials));
         const status = String(task.status);
         if (pendingStatuses.includes(status)) {
           return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: status }), receipt };
@@ -200,7 +194,7 @@ function endpoint(client: BeatApiClient, pollIntervalMs: number, maxOperationMs:
         const urls = media.map((item, index) => httpsUrl(object(item, `BeatAPI output ${index + 1}`).url, `BeatAPI output ${index + 1}`));
         return { status: "ready", handle: canonicalize({ ...handle, urls }), receipt };
       } catch (error) {
-        return failure(error);
+        return pollAgainOrFail(error, { handle: context.handle, pollIntervalMs, failure });
       }
     },
     async collect(context) {

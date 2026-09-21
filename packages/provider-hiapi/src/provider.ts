@@ -1,6 +1,6 @@
 import { requestDeadline } from "@hypit/runtime-kit";
 import type { AsyncEndpoint, EndpointCredential, EndpointInvocationContext, EndpointOutcome } from "@hypit/endpoint-kit";
-import { defineEndpointPackage, wakeAfter } from "@hypit/endpoint-kit";
+import { EndpointResponseError, EndpointServiceError, EndpointTransportError, defineEndpointPackage, pollAgainOrFail, transport, wakeAfter } from "@hypit/endpoint-kit";
 import type { GenerationArtifactUrlResolver } from "@hypit/generation";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, CapabilityRef } from "@hypit/protocol";
@@ -56,18 +56,18 @@ function failureMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 function failure(error: unknown): EndpointOutcome {
-  return { status: "failed", failure: { code: error instanceof HiApiServiceError ? error.code : "HIAPI_ERROR", message: failureMessage(error) } };
+  return { status: "failed", failure: { code: error instanceof EndpointServiceError ? error.code : "HIAPI_ERROR", message: failureMessage(error) } };
 }
 
 class HiApiClient {
   constructor(readonly baseUrl: string, readonly timeout: number, readonly fetcher: typeof globalThis.fetch) {}
   async json(path: string, key: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
-    const deadline = requestDeadline(this.timeout);
+    const deadline = requestDeadline(this.timeout, () => new EndpointTransportError("HiAPI request timed out"));
     try {
-      const response = await deadline.wait(this.fetcher(`${this.baseUrl}${path}`, {
+      const response = await transport(deadline.wait(this.fetcher(`${this.baseUrl}${path}`, {
         ...init, signal: deadline.signal, headers: { authorization: `Bearer ${key}`, ...(init.headers ?? {}) },
-      }));
-      const text = await deadline.wait(response.text());
+      })));
+      const text = await transport(deadline.wait(response.text()));
       if (!response.ok) {
         const input = typeof init.body === "string" ? JSON.parse(init.body) as Record<string, unknown> : undefined;
         throw new HiApiHttpError(response.status, response, text, {
@@ -75,7 +75,7 @@ class HiApiClient {
         });
       }
       let body: unknown;
-      try { body = text.length === 0 ? {} : JSON.parse(text); } catch { throw new Error(`HiAPI returned invalid JSON (${response.status})`); }
+      try { body = text.length === 0 ? {} : JSON.parse(text); } catch { throw new EndpointResponseError(`HiAPI returned invalid JSON (${response.status})`); }
       return object(object(body, "HiAPI response").data, "HiAPI response data");
     } finally { deadline.finish(); }
   }
@@ -130,7 +130,7 @@ function endpoint(client: HiApiClient, pollIntervalMs: number, maxOperationMs: n
         try {
           body = await request.compile(resolverFor(request.mediaLimits, context, publicAssetUrl));
         } catch (error) {
-          throw new HiApiServiceError(error instanceof HiApiServiceError ? error.code : "HIAPI_ERROR",
+          throw new HiApiServiceError(error instanceof EndpointServiceError ? error.code : "HIAPI_ERROR",
             `HiAPI request preparation failed; model=${request.model}; generation not submitted: ${failureMessage(error)}`);
         }
         await context.reportProgress?.({ phase: `Submitting HiAPI request: ${request.model}` });
@@ -155,13 +155,7 @@ function endpoint(client: HiApiClient, pollIntervalMs: number, maxOperationMs: n
         if (Date.now() - handle.startedAt > maxOperationMs) {
           return { status: "failed", receipt, failure: { code: "HIAPI_OPERATION_TIMEOUT", message: `HiAPI task ${handle.taskId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        let task: Record<string, unknown>;
-        try {
-          task = await client.json(`/v1/tasks/${encodeURIComponent(handle.taskId)}`, apiKey(context.credentials));
-        } catch (error) {
-          if (error instanceof HiApiHttpError && error.status < 500) return { ...failure(error), receipt };
-          return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "retrying" }), receipt };
-        }
+        const task = await client.json(`/v1/tasks/${encodeURIComponent(handle.taskId)}`, apiKey(context.credentials));
         const status = String(task.status);
         if (status === "queued" || status === "handling" || status === "archiving") {
           return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: status }), receipt };
@@ -177,7 +171,7 @@ function endpoint(client: HiApiClient, pollIntervalMs: number, maxOperationMs: n
         });
         return { status: "ready", handle: canonicalize({ ...handle, urls }), receipt };
       } catch (error) {
-        return failure(error);
+        return pollAgainOrFail(error, { handle: context.handle, pollIntervalMs, failure });
       }
     },
     async collect(context) {

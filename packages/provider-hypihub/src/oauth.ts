@@ -1,4 +1,5 @@
 import type { EndpointCredential } from "@hypit/endpoint-kit";
+import { EndpointTransportError, transport } from "@hypit/endpoint-kit";
 import { decodeOAuth2Credential, encodeOAuth2Credential } from "@hypit/runtime";
 import { requestDeadline } from "@hypit/runtime-kit";
 import { HypiHubHttpError } from "./errors.js";
@@ -66,9 +67,9 @@ export function createHypiHubAuth(options: {
       throw new Error("HypiHub OAuth credential is read-only; run hypit auth login with a writable Credential Store");
     }
     refreshing = (async () => {
-      const deadline = requestDeadline(options.requestTimeoutMs, () => new Error("HypiHub OAuth refresh timed out"));
+      const deadline = requestDeadline(options.requestTimeoutMs, () => new EndpointTransportError("HypiHub OAuth refresh timed out"));
       try {
-        const response = await deadline.wait(options.fetch(tokenEndpoint, {
+        const response = await transport(deadline.wait(options.fetch(tokenEndpoint, {
           method: "POST",
           headers: { "content-type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({
@@ -77,8 +78,8 @@ export function createHypiHubAuth(options: {
             client_id: OAUTH_CLIENT_ID,
           }),
           signal: deadline.signal,
-        }));
-        const text = await deadline.wait(response.text());
+        })));
+        const text = await transport(deadline.wait(response.text()));
         if (!response.ok) throw new HypiHubHttpError(response.status, response, text, {
           method: "POST", url: tokenEndpoint,
         });
