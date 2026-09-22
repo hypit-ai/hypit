@@ -9,7 +9,7 @@ source of another operation.
 
 They all need an endpoint. `image-compose` and `image-transform` ask for the raster capability, which
 `@hypit/provider-image-opencv-local` answers by running OpenCV in a bounded Python process on
-your own machine; `background-removal` asks for its own capability, which a selected project Provider implements. Select the supporting Endpoint in your [Runtime Profile](/guide/runtime)
+your own machine; `background-removal` asks for its own capability, which a selected project Provider implements. Select the supporting Endpoint in your [Runtime Profile](../guide/runtime.md)
 when using these operations.
 
 ## Composing layers
