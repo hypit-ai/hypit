@@ -255,7 +255,10 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     await runProcess({ executable: ffmpegPath,
       argv: ["-v", "error", "-y", "-framerate", `${fps.num}/${fps.den}`, "-i", join(outputFrames, "%09d.png"),
         "-frames:v", String(frameCount), "-an", "-c:v", "libx264", "-crf", String(crf),
-        "-preset", config.quality === "draft" ? "veryfast" : "medium", "-pix_fmt", "yuv420p", "-movflags", "+faststart", output],
+        "-preset", config.quality === "draft" ? "veryfast" : "medium",
+        // Chromium composites in sRGB: convert with the BT.709 matrix and tag the stream so players decode it the same way.
+        "-vf", "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
+        "-movflags", "+faststart", output],
       timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
     const outputStat = await stat(output);
     assert(outputStat.size > 0 && outputStat.size <= config.maxRenderedBytes, "HyperFrames output is empty or exceeds its byte limit");
