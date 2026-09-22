@@ -65,15 +65,14 @@ export type PackageListing = {
 };
 
 export async function listPackages(projectRoot: string): Promise<readonly PackageListing[]> {
-  // Every scope, and the project's own directory, from both the project's node_modules and the
-  // Distribution's: the packages a project does not carry are in the Distribution, and the ones it
-  // does are beside it.
+  // Discover installed scopes and unlinked packages in both the project and the Distribution.
   const roots = [...new Set([
-    join(projectRoot, "node_modules"),
-    ...(videoCliDistribution.packageRoot === undefined ? [] : [join(videoCliDistribution.packageRoot, "node_modules")]),
+    projectRoot,
+    ...(videoCliDistribution.packageRoot === undefined ? [] : [videoCliDistribution.packageRoot]),
   ])];
   const candidates: { readonly name: string; readonly directory: string }[] = [];
-  for (const modules of roots) {
+  for (const root of roots) {
+    const modules = join(root, "node_modules");
     const scopes = (await readdir(modules, { withFileTypes: true }).catch(() => []))
       .filter((entry) => entry.isDirectory() && entry.name.startsWith("@"))
       .map((entry) => entry.name)
@@ -85,12 +84,14 @@ export async function listPackages(projectRoot: string): Promise<readonly Packag
       }
     }
   }
-  // A project's own packages are its `packages/<name>/`, where the loader finds them by name whether
-  // or not a package manager linked them.
-  for (const entry of (await readdir(join(projectRoot, "packages")).catch(() => [] as string[])).sort()) {
-    const directory = join(projectRoot, "packages", entry);
-    const own = await readJson<{ readonly name?: string }>(join(directory, "package.json"));
-    if (own?.name !== undefined && !candidates.some((item) => item.name === own.name)) candidates.push({ name: own.name, directory });
+  // The loader also finds packages by name under `packages/<name>/`, even without package-manager
+  // links. Published Distributions carry their built-in packages here.
+  for (const root of roots) {
+    for (const entry of (await readdir(join(root, "packages")).catch(() => [] as string[])).sort()) {
+      const directory = join(root, "packages", entry);
+      const own = await readJson<{ readonly name?: string }>(join(directory, "package.json"));
+      if (own?.name !== undefined && !candidates.some((item) => item.name === own.name)) candidates.push({ name: own.name, directory });
+    }
   }
   const listing: PackageListing[] = [];
   for (const { name, directory } of candidates) {
