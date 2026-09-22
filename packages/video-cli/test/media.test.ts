@@ -135,6 +135,47 @@ test("fetch refuses anything but an http link and an explicit video destination"
   await assert.rejects(runMediaCli(["media", "fetch", "https://example.com/v", "--to", "x.txt"], io().io, tmpdir()), /must end in/);
 });
 
+test("album artwork does not turn an audio cut into video", { skip: !ffmpeg && "ffmpeg is not installed" }, async () => {
+  const work = await mkdtemp(join(tmpdir(), "hypit-covered-audio-"));
+  try {
+    const audio = join(work, "plain.mp3");
+    const artwork = join(work, "cover.jpg");
+    const covered = join(work, "covered.mp3");
+    const tone = spawnSync("ffmpeg", [
+      "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+      "sine=frequency=440:duration=1", "-c:a", "libmp3lame", audio,
+    ], { encoding: "utf8" });
+    assert.equal(tone.status, 0, tone.stderr);
+    await sharp({ create: { width: 32, height: 32, channels: 3, background: "#ee3344" } }).jpeg().toFile(artwork);
+    const attach = spawnSync("ffmpeg", [
+      "-hide_banner", "-loglevel", "error", "-y", "-i", audio, "-i", artwork,
+      "-map", "0:a:0", "-map", "1:v:0", "-c", "copy", "-id3v2_version", "3",
+      "-disposition:v:0", "attached_pic", covered,
+    ], { encoding: "utf8" });
+    assert.equal(attach.status, 0, attach.stderr);
+
+    for (const [index, source] of [audio, covered].entries()) {
+      const info = await probeMedia(source);
+      assert.equal(info.hasAudio, true);
+      assert.equal(info.hasVideo, false, "album artwork is not a timed video stream");
+      const output = join(work, `cut-${index}.wav`);
+      const cut = io();
+      await runMediaCli(["media", "cut", source, "--start", "0", "--end", "0.5", "--to", output, "--json"], cut.io, work);
+      const result = JSON.parse(cut.text()) as { hasVideo: boolean; hasAudio: boolean; actualSeconds: number };
+      assert.equal(result.hasVideo, false);
+      assert.equal(result.hasAudio, true);
+      assert.ok(Math.abs(result.actualSeconds - 0.5) < 0.01);
+      const probe = spawnSync("ffprobe", [
+        "-v", "error", "-show_entries", "stream=codec_type,codec_name", "-of", "json", output,
+      ], { encoding: "utf8" });
+      assert.equal(probe.status, 0, probe.stderr);
+      assert.deepEqual(JSON.parse(probe.stdout).streams, [{ codec_name: "pcm_s24le", codec_type: "audio" }]);
+    }
+  } finally {
+    await rm(work, { recursive: true, force: true });
+  }
+});
+
 test("cut prepares recorded audio and joined video without changing the existing evidence cut", { skip: !ffmpeg && "ffmpeg is not installed" }, async () => {
   const work = await mkdtemp(join(tmpdir(), "hypit-recorded-cut-"));
   try {

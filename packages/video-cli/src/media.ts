@@ -157,13 +157,16 @@ function requireVideo(info: MediaProbe, path: string): asserts info is MediaProb
 
 export async function probeMedia(path: string): Promise<MediaProbe> {
   const raw = await runProcess("ffprobe", [
-    "-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height,r_frame_rate", "-of", "json", path,
+    "-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height,r_frame_rate:stream_disposition=attached_pic", "-of", "json", path,
   ]);
   const parsed = JSON.parse(raw.toString("utf8")) as {
     format?: { duration?: string };
-    streams?: readonly { codec_type?: string; width?: number; height?: number; r_frame_rate?: string }[];
+    streams?: readonly {
+      codec_type?: string; width?: number; height?: number; r_frame_rate?: string;
+      disposition?: { attached_pic?: number };
+    }[];
   };
-  const video = parsed.streams?.find((item) => item.codec_type === "video");
+  const video = parsed.streams?.find((item) => item.codec_type === "video" && item.disposition?.attached_pic !== 1);
   const duration = Number(parsed.format?.duration);
   assert(Number.isFinite(duration) && duration > 0, `${path}: duration is unavailable`);
   const hasAudio = parsed.streams?.some((item) => item.codec_type === "audio") ?? false;
