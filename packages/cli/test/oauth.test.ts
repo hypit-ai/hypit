@@ -14,15 +14,22 @@ import { acquireOAuthCredential, authorizeBrowserLaunch } from "../src/oauth.js"
 const acquisition = {
   kind: "oauth2-pkce" as const,
   authorizationEndpoint: "https://identity.example.test/authorize",
+  redirectUri: "https://identity.example.test/callback",
   tokenEndpoint: "https://identity.example.test/token",
   clientId: "client",
   scopes: ["work"],
   requestTimeoutMs: 1_000,
 };
 
+/** Where the hosted callback page forwards the code: the port packed after the last `.` of state. */
+function loopbackCallback(authorization: URL): URL {
+  const state = authorization.searchParams.get("state")!;
+  return new URL(`http://127.0.0.1:${state.slice(state.lastIndexOf(".") + 1)}/callback`);
+}
+
 function returnAuthorization(url: string, page: (html: string) => void): void {
   const authorization = new URL(url);
-  const redirect = new URL(authorization.searchParams.get("redirect_uri")!);
+  const redirect = loopbackCallback(authorization);
   redirect.searchParams.set("state", authorization.searchParams.get("state")!);
   redirect.searchParams.set("code", "authorization-code");
   void globalThis.fetch(redirect).then(async (response) => {
@@ -60,8 +67,7 @@ test("OAuth callback releases another browser connection after sending its page"
   let browserConnection: ReturnType<typeof createConnection> | undefined;
   const raw = await acquireOAuthCredential(acquisition, {
     open: (url) => {
-      const authorization = new URL(url);
-      const redirect = new URL(authorization.searchParams.get("redirect_uri")!);
+      const redirect = loopbackCallback(new URL(url));
       browserConnection = createConnection({ host: redirect.hostname, port: Number(redirect.port) });
       void once(browserConnection, "connect").then(() => {
         browserConnection!.write(`GET /favicon.ico HTTP/1.1\r\nHost: ${redirect.host}\r\n`);
@@ -150,8 +156,9 @@ const value = await acquireOAuthCredential(${JSON.stringify(acquisition)}, {
   onProgress(message) {
     if (!message.startsWith("Opening sign-in: ")) return;
     const authorize = new URL(message.slice("Opening sign-in: ".length));
-    const callback = new URL(authorize.searchParams.get("redirect_uri"));
-    callback.searchParams.set("state", authorize.searchParams.get("state"));
+    const state = authorize.searchParams.get("state");
+    const callback = new URL("http://127.0.0.1:" + state.slice(state.lastIndexOf(".") + 1) + "/callback");
+    callback.searchParams.set("state", state);
     callback.searchParams.set("code", "manual-code");
     setTimeout(() => { void fetch(callback); }, 50);
   },

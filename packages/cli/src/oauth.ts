@@ -87,7 +87,8 @@ export async function acquireOAuthCredential(
   const verifier = base64url(randomBytes(32));
   // S256 is part of OAuth PKCE. It authenticates this browser exchange; it is not content identity.
   const challenge = base64url(createHash("sha256").update(verifier).digest());
-  const state = base64url(randomBytes(24));
+  const nonce = base64url(randomBytes(24));
+  let state = nonce;
   const server = createServer();
   const callback = new Promise<string>((resolveCode, reject) => {
     let settled = false;
@@ -140,7 +141,10 @@ export async function acquireOAuthCredential(
   });
   const address = server.address();
   if (address === null || typeof address === "string") throw new Error("could not open a local OAuth callback");
-  const redirectUri = `http://127.0.0.1:${address.port}/callback`;
+  // The hosted callback page forwards the code to this port when the browser shares this host;
+  // otherwise the page shows `code#state` for the user to deliver to this port themselves.
+  state = `${nonce}.${address.port}`;
+  const redirectUri = acquisition.redirectUri;
   const authorize = new URL(acquisition.authorizationEndpoint);
   authorize.searchParams.set("response_type", "code");
   authorize.searchParams.set("client_id", acquisition.clientId);

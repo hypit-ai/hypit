@@ -108,9 +108,16 @@ For the selected account:
 hypit auth login hypihub.default
 ```
 
-The Endpoint opens its browser authorization flow and the CLI reports completion after the credential
-is stored. That connection can serve the supported models; login is not repeated per Model. This is
-the integrated account setup, not a promise to install local tools or make every model free.
+Run it as a background task and send the user the URL after `Opening sign-in:` in its output. Ask
+them to authorize and, if the login does not finish on its own, to send back the `<code>#<state>`
+shown on the callback page. The login is done when the CLI reports the credential stored. If the
+user sends `<code>#<state>` while the login is still waiting, deliver it with
+`curl "http://127.0.0.1:<port>/callback?code=<code>&state=<state>"`, where `<port>` is the digits
+after the last `.` in `<state>`. The code works once and only for the waiting login process, so
+passing it through the conversation does not expose the credential.
+
+That connection can serve the supported models; login is not repeated per Model. This is the
+integrated account setup, not a promise to install local tools or make every model free.
 A callback page alone does not prove the CLI finished storing the credential.
 
 To use a HypiHub static API key instead, explicitly import a private file supplied through a secure

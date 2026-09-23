@@ -607,6 +607,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       acquisition: {
         kind: "oauth2-pkce",
         authorizationEndpoint: new URL("/oauth/consent", oauthOrigin).toString(),
+        redirectUri: new URL("/oauth/callback", oauthOrigin).toString(),
         tokenEndpoint: new URL("/oauth/token", oauthOrigin).toString(),
         clientId: "hyc_d5d5e8e7131b0c877756e66c",
         scopes: ["user:profile", "user:inference"],
