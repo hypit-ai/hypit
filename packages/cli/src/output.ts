@@ -124,6 +124,10 @@ export type PlanOutput = {
   readonly steps?: number;
   readonly requestCount: number;
   readonly requestIssueCount: number;
+  /** Producers that failed in a step no request reports; a non-zero count makes the plan invalid. */
+  readonly producerFailureCount: number;
+  /** The failing step and message behind each count; present only when the plan has one. */
+  readonly producerFailures?: readonly { readonly step: string; readonly message: string }[];
   /** Present when a Runtime Profile was selected. */
   readonly providerRequestCount?: number;
   readonly localRequestCount?: number;
@@ -518,6 +522,7 @@ function renderPlan(
     ["Requests", String(view.machine.requestCount)],
     ...(view.machine.choiceCount === 0 ? [] : [["Run choices", String(view.machine.choiceCount)] as const]),
     ...(view.machine.requestIssueCount === 0 ? [] : [["Request issues", String(view.machine.requestIssueCount)] as const]),
+    ...(view.machine.producerFailureCount === 0 ? [] : [["Producer failures", String(view.machine.producerFailureCount)] as const]),
     ...((view.machine.providerRequestCount ?? 0) === 0 ? [] : [["Provider requests", String(view.machine.providerRequestCount)] as const]),
     ...((view.machine.localRequestCount ?? 0) === 0 ? [] : [["Local requests", String(view.machine.localRequestCount)] as const]),
     ...((view.machine.unsupportedRequestCount ?? 0) === 0 ? [] : [["Unsupported", String(view.machine.unsupportedRequestCount)] as const]),
@@ -527,6 +532,13 @@ function renderPlan(
     ] as const]),
     ...(!verbose || view.machine.steps === undefined ? [] : [["Steps", String(view.machine.steps)] as const]),
   ], colors));
+  const failures = view.machine.producerFailures ?? [];
+  if (failures.length > 0) {
+    lines.push("", colors.strong("Producer failures"));
+    for (const item of failures) {
+      lines.push(`  ${colors.error(glyph(io, "×", "x"))} ${stepLabel(item.step)}: ${item.message}`);
+    }
+  }
   if (view.machine.providers !== undefined) {
     if (view.machine.providers.length > 0) lines.push("", colors.strong("Providers and price pages"));
     const groups = new Map<string, PlanProvider[]>();

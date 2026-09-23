@@ -82,6 +82,7 @@ test("plan presents useful choices and readable requests without default graph i
       steps: 2,
       requestCount: 1,
       requestIssueCount: 0,
+      producerFailureCount: 0,
       preflight: {
         ok: true,
         capabilityCount: 1,
@@ -108,6 +109,36 @@ test("plan presents useful choices and readable requests without default graph i
   assert.match(verbose, /take\.video\s+← preview/u);
 });
 
+test("plan does not call a plan valid when a Producer failed outside every request", () => {
+  const machine = {
+    format: "hypit.cli-plan@1" as const,
+    ok: false,
+    run: "build.svrun",
+    targetCount: 1,
+    targets: ["final.video"],
+    steps: 6,
+    requestCount: 3,
+    requestIssueCount: 0,
+    producerFailureCount: 1,
+    producerFailures: [{
+      step: "assemble-timeline",
+      message: "Timeline duration 8s must land on an exact frame boundary.",
+    }],
+    choiceCount: 0,
+    choices: [],
+  };
+
+  const rendered = capture(human, { kind: "plan", machine });
+  assert.match(rendered, /Build plan needs attention/u);
+  assert.match(rendered, /Producer failures\s+1/u);
+  assert.match(rendered, /assemble-timeline: Timeline duration 8s must land on an exact frame boundary\./u);
+  assert.deepEqual(createPlanOutput(machine, { verbose: false, limit: 1 }).producerFailures, machine.producerFailures);
+
+  const parsed = JSON.parse(capture({ ...human, json: true }, { kind: "plan", machine }));
+  assert.equal(parsed.producerFailureCount, 1);
+  assert.deepEqual(parsed.producerFailures, machine.producerFailures);
+});
+
 test("plan names the Provider and price page behind each request, and points at --runtime when it cannot", () => {
   const base = {
     format: "hypit.cli-plan@1",
@@ -118,6 +149,7 @@ test("plan names the Provider and price page behind each request, and points at 
     steps: 3,
     requestCount: 2,
     requestIssueCount: 0,
+    producerFailureCount: 0,
     choiceCount: 0,
     choices: [],
   } as const;
@@ -323,6 +355,7 @@ test("plan scope omits unused branches while retaining every demanded request an
   const plan = {
     format: "hypit.cli-plan@1" as const, ok: false, run: "build.svrun", targetCount: 2,
     targets: ["final.video", "poster.image"], steps: 400, requestCount: needs.length, requestIssueCount: 1,
+    producerFailureCount: 0,
     choiceCount: 35, choices: Array.from({ length: 35 }, (_, i) => ({ output: `old-${i}`, candidate: `selected-${i}` })),
     unreached: Array.from({ length: 125 }, (_, i) => ({ output: `unused-${i}`, operation: "old-producer" })),
     needs, providers: needs.map((need) => ({ request: need.request, capability: need.capability, status: "resolved" as const, endpoint: "local" })),
