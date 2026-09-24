@@ -7,6 +7,8 @@
     "app.language": "Language",
     "app.studio": "Studio",
     "app.studio-view": "Studio view",
+    "app.theme-dark": "Switch to dark theme",
+    "app.theme-light": "Switch to light theme",
     "comments.all": "All",
     "comments.caught-up": "All caught up",
     "comments.delete-comment": "Delete comment",

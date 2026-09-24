@@ -16,6 +16,7 @@ import type { SemanticTarget } from "../temporal-edit.js";
 import { applyStudioMutation } from "./writeback.js";
 import { createTimeline } from "./timeline.js";
 import { createComments } from "./comments.js";
+import { themeToggle } from "./theme.js";
 import "../style.css";
 
 await initializeI18n();
@@ -45,6 +46,7 @@ app.innerHTML = `
       <div class="meta" data-meta></div>
       <div class="status" data-status></div>
       <div data-language-menu></div>
+      <div data-theme-toggle></div>
       <div class="view-tabs" role="tablist" ${uiAttribute("aria-label", "app.studio-view")}>
         <button type="button" role="tab" data-view="studio" aria-selected="true">${icon("studio")}${uiLabel("app.studio")}</button>
         <button type="button" role="tab" data-view="comments" aria-selected="false">${icon("comments")}${uiLabel("app.comments")}</button>
@@ -71,6 +73,7 @@ app.innerHTML = `
   <pre class="failure" data-failure></pre>`;
 
 app.querySelector("[data-language-menu]")!.replaceWith(languageMenu());
+app.querySelector("[data-theme-toggle]")!.replaceWith(themeToggle());
 
 const store = createStore();
 const code = createCodePane();

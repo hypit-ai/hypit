@@ -163,14 +163,14 @@ export function mountMaterialPreview(target: HTMLElement, preview: StudioMateria
   if (resolvedAudio.has(url)) {
     const waveform = resolvedAudio.get(url);
     if (waveform !== undefined) {
-      target.style.backgroundImage = `url(${JSON.stringify(waveform)})`;
+      target.style.setProperty("--waveform", `url(${JSON.stringify(waveform)})`);
       target.classList.add("ready");
     }
     return;
   }
   void audioPreview(url).then((waveform) => {
     if (waveform === undefined || !target.isConnected) return;
-    target.style.backgroundImage = `url(${JSON.stringify(waveform)})`;
+    target.style.setProperty("--waveform", `url(${JSON.stringify(waveform)})`);
     target.classList.add("ready");
   });
 }

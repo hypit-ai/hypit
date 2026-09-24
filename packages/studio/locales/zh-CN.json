@@ -7,6 +7,8 @@
     "app.language": "语言",
     "app.studio": "工作台",
     "app.studio-view": "工作区视图",
+    "app.theme-dark": "切换到深色模式",
+    "app.theme-light": "切换到浅色模式",
     "comments.all": "全部",
     "comments.caught-up": "评论都已处理",
     "comments.delete-comment": "删除评论",
