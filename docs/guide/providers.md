@@ -9,7 +9,7 @@ configured instance of that Provider, with its service address, credential refer
 The Runtime Profile binds the requested capability to an Endpoint.
 
 Hypit's official Distribution includes local Providers, the HypiHub Provider, and API-key Providers
-for TokenDance, HiAPI, Pollo and Monid that serve the installed models each service offers. Other services
+for TokenDance, HiAPI, Pollo, BeatAPI, Monid and MuAPI that serve the installed models each service offers. Other services
 connect through packages owned by the production or their authors. The Agent can implement a new
 service through the public SDK, just as it can create a visual component for a video.
 [Model and deployment services](./service-partners.md) introduces independent partners through that

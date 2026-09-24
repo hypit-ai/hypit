@@ -54,6 +54,14 @@ Pollo 只接受公网 URL 形式的参考素材，带参考素材的请求需要
 使用 Monid 的其他工具时，[HTTP API 文档](https://monid.ai/docs/api/overview)提供接入依据，
 Agent 可以在项目包中实现这次所需的请求与结果映射。
 
+### MuAPI
+
+[MuAPI](https://muapi.ai) 将大量模型放在统一的异步提交与轮询 API 后面。
+[`@hypit/provider-muapi`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-muapi/README.md)
+目前通过 MuAPI 文档中的文本生成视频和图像生成视频路径提供发行版已安装的 Seedance 2.5 能力，
+通过 MuAPI 文件接口上传图像参考，并将临时结果 URL 下载到 Build 中。该包只声明发行版中已有的精确模型能力；
+验证其他模型族的输入结构和限制后，再逐步添加对应映射。
+
 ## 自己部署模型
 
 部署平台提供运行模型的地方，部署得到的推理服务沿用 Model–Provider–Endpoint 的关系接入。

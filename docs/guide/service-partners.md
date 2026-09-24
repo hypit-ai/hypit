@@ -64,6 +64,16 @@ reference media through Monid's workspace file system. For another Monid tool, i
 [HTTP API documentation](https://monid.ai/docs/api/overview) supplies the connection details, and
 the Agent can implement the required request and result mapping in a project package.
 
+### MuAPI
+
+[MuAPI](https://muapi.ai) provides a large model catalogue behind one asynchronous submit-and-poll
+API. [`@hypit/provider-muapi`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-muapi/README.md)
+currently serves the installed Seedance 2.5 capability through its documented text-to-video and
+image-to-video model paths, uploads image references through MuAPI's file endpoint, and downloads
+temporary result URLs into the Build. The package intentionally advertises only the exact model
+capability already present in the Distribution; additional MuAPI model families can be added as
+their schemas and limits are verified.
+
 ## Your own model deployment
 
 A deployment platform supplies somewhere to run a model. The resulting inference service connects

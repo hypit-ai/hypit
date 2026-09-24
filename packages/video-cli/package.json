@@ -27,6 +27,7 @@
     "@hypit/provider-hiapi": "workspace:*",
     "@hypit/provider-hypihub": "workspace:*",
     "@hypit/provider-monid": "workspace:*",
+    "@hypit/provider-muapi": "workspace:*",
     "@hypit/provider-pollo": "workspace:*",
     "@hypit/provider-tokendance": "workspace:*",
     "@hypit/render-hyperframes": "workspace:*",

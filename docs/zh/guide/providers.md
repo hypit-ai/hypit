@@ -5,7 +5,7 @@ description: 选择账户、连接服务或添加模型，沿用同一套视频�
 
 **Model** 定义要生成什么：输入、支持的参数和输出类型。**Provider** 知道如何通过某个服务完成这个请求。**Endpoint** 是配置好的 Provider 实例，包含服务地址、凭据引用和容量。Runtime Profile 将所需能力绑定到 Endpoint。
 
-官方发行包含本地 Provider、HypiHub Provider，以及 TokenDance、HiAPI、Pollo、Monid 四个使用 API Key 的 Provider，各自覆盖该服务提供的已安装模型。其他服务通过项目或作者自己的包接入；Agent 可以使用公开 SDK 编写所需接入，就像为视频创建视觉组件。[模型与部署服务](./service-partners.md) 集中介绍独立合作服务，它们沿用同一套扩展方式。选择执行服务，与[选择 Agent 工作环境](./agents.md)是两件事。
+官方发行包含本地 Provider、HypiHub Provider，以及 TokenDance、HiAPI、Pollo、BeatAPI、Monid、MuAPI 六个使用 API Key 的 Provider，各自覆盖该服务提供的已安装模型。其他服务通过项目或作者自己的包接入；Agent 可以使用公开 SDK 编写所需接入，就像为视频创建视觉组件。[模型与部署服务](./service-partners.md) 集中介绍独立合作服务，它们沿用同一套扩展方式。选择执行服务，与[选择 Agent 工作环境](./agents.md)是两件事。
 
 HypiHub 是我们推荐的集成托管服务。**BYOK** 指使用自己账户的 API Key：Key 通过兼容的 Provider 连接到签发它的服务。告诉 Agent 你已有哪个服务及其 API 文档，具体接线和项目包可以由 Agent 完成。Key 负责授权请求，本身不会实现 API 接口。一个项目可以为不同能力使用不同服务，分别使用各自的账户并按各自规则计费。
 

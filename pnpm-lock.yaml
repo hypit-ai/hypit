@@ -207,6 +207,9 @@ importers:
       '@hypit/provider-monid':
         specifier: workspace:*
         version: link:packages/provider-monid
+      '@hypit/provider-muapi':
+        specifier: workspace:*
+        version: link:packages/provider-muapi
       '@hypit/provider-pollo':
         specifier: workspace:*
         version: link:packages/provider-pollo
@@ -2519,6 +2522,28 @@ importers:
         specifier: workspace:*
         version: link:../seedance
 
+  packages/provider-muapi:
+    dependencies:
+      '@hypit/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/runtime-kit':
+        specifier: workspace:*
+        version: link:../runtime-kit
+    devDependencies:
+      '@hypit/seedance':
+        specifier: workspace:*
+        version: link:../seedance
+
   packages/provider-pollo:
     dependencies:
       '@hypit/endpoint-kit':
@@ -3648,6 +3673,9 @@ importers:
       '@hypit/provider-monid':
         specifier: workspace:*
         version: link:../provider-monid
+      '@hypit/provider-muapi':
+        specifier: workspace:*
+        version: link:../provider-muapi
       '@hypit/provider-pollo':
         specifier: workspace:*
         version: link:../provider-pollo

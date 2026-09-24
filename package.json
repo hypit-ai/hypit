@@ -243,6 +243,7 @@
     "@hypit/provider-image-opencv-local": "workspace:*",
     "@hypit/provider-media-local": "workspace:*",
     "@hypit/provider-monid": "workspace:*",
+    "@hypit/provider-muapi": "workspace:*",
     "@hypit/provider-pollo": "workspace:*",
     "@hypit/provider-tokendance": "workspace:*",
     "@hypit/provider-whisperx-local": "workspace:*",
