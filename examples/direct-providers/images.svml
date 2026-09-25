@@ -1,0 +1,7 @@
+<?svml using="@hypit/markup@1"?>
+<svml>
+  <import as="eleven" from="@hypit/elevenlabs-models@1"/>
+  <import as="byte" from="@hypit/byteplus-models@1"/>
+  <eleven:Generate id="product" model="gpt-image-2" prompt="A blue ceramic cup on a plain white background" aspectRatio="1:1" resolution="1K"/>
+  <byte:Generate id="background" model="seedream-5-0-lite-260128" prompt="An empty sunlit studio tabletop" size="2K"/>
+</svml>

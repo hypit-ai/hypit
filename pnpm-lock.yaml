@@ -66,6 +66,9 @@ importers:
       '@hypit/build-result-s3':
         specifier: workspace:*
         version: link:packages/build-result-s3
+      '@hypit/byteplus-models':
+        specifier: workspace:*
+        version: link:packages/byteplus-models
       '@hypit/caption':
         specifier: workspace:*
         version: link:packages/caption
@@ -102,6 +105,12 @@ importers:
       '@hypit/deck-track-studio':
         specifier: workspace:*
         version: link:packages/deck-track-studio
+      '@hypit/direct-model-kit':
+        specifier: workspace:*
+        version: link:packages/direct-model-kit
+      '@hypit/elevenlabs-models':
+        specifier: workspace:*
+        version: link:packages/elevenlabs-models
       '@hypit/elevenlabs-speech':
         specifier: workspace:*
         version: link:packages/elevenlabs-speech
@@ -189,6 +198,12 @@ importers:
       '@hypit/provider-beatapi':
         specifier: workspace:*
         version: link:packages/provider-beatapi
+      '@hypit/provider-byteplus':
+        specifier: workspace:*
+        version: link:packages/provider-byteplus
+      '@hypit/provider-elevenlabs':
+        specifier: workspace:*
+        version: link:packages/provider-elevenlabs
       '@hypit/provider-hiapi':
         specifier: workspace:*
         version: link:packages/provider-hiapi
@@ -616,6 +631,15 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  packages/byteplus-models:
+    dependencies:
+      '@hypit/direct-model-kit':
+        specifier: workspace:*
+        version: link:../direct-model-kit
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
 
   packages/caption:
     dependencies:
@@ -1096,6 +1120,37 @@ importers:
         specifier: workspace:*
         version: link:../studio-adapter
 
+  packages/direct-model-kit:
+    dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@hypit/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime-kit':
+        specifier: workspace:*
+        version: link:../runtime-kit
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@hypit/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+
   packages/driver-node:
     dependencies:
       '@hypit/component-kit':
@@ -1131,6 +1186,15 @@ importers:
       '@hypit/source':
         specifier: workspace:*
         version: link:../source
+
+  packages/elevenlabs-models:
+    dependencies:
+      '@hypit/direct-model-kit':
+        specifier: workspace:*
+        version: link:../direct-model-kit
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
 
   packages/elevenlabs-speech:
     dependencies:
@@ -2281,6 +2345,66 @@ importers:
       '@hypit/seedance':
         specifier: workspace:*
         version: link:../seedance
+
+  packages/provider-byteplus:
+    dependencies:
+      '@hypit/byteplus-models':
+        specifier: workspace:*
+        version: link:../byteplus-models
+      '@hypit/direct-model-kit':
+        specifier: workspace:*
+        version: link:../direct-model-kit
+      '@hypit/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/runtime-kit':
+        specifier: workspace:*
+        version: link:../runtime-kit
+      '@hypit/seedance':
+        specifier: workspace:*
+        version: link:../seedance
+      '@hypit/seedream':
+        specifier: workspace:*
+        version: link:../seedream
+
+  packages/provider-elevenlabs:
+    dependencies:
+      '@hypit/direct-model-kit':
+        specifier: workspace:*
+        version: link:../direct-model-kit
+      '@hypit/elevenlabs-models':
+        specifier: workspace:*
+        version: link:../elevenlabs-models
+      '@hypit/elevenlabs-speech':
+        specifier: workspace:*
+        version: link:../elevenlabs-speech
+      '@hypit/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@hypit/gpt-image':
+        specifier: workspace:*
+        version: link:../gpt-image
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/runtime-kit':
+        specifier: workspace:*
+        version: link:../runtime-kit
 
   packages/provider-hiapi:
     dependencies:

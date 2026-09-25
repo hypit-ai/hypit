@@ -1,0 +1,24 @@
+{
+  "name": "@hypit/direct-model-kit",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./transport": "./src/transport.ts",
+    "./provider": "./src/provider.ts"
+  },
+  "dependencies": {
+    "@hypit/artifact": "workspace:*",
+    "@hypit/generation": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/model-kit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/text": "workspace:*",
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*"
+  },
+  "devDependencies": {
+    "@hypit/driver-node": "workspace:*"
+  }
+}

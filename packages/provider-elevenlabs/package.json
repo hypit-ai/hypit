@@ -1,0 +1,23 @@
+{
+  "name": "@hypit/provider-elevenlabs",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@hypit/elevenlabs-models": "workspace:*",
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/generation": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/direct-model-kit": "workspace:*",
+    "@hypit/gpt-image": "workspace:*",
+    "@hypit/elevenlabs-speech": "workspace:*"
+  }
+}
