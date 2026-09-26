@@ -621,18 +621,22 @@ export async function runCli(
     const localRequestCount = providers?.filter((item) => item.status === "resolved" && item.pricing?.kind === "local").length ?? 0;
     const providerRequestCount = providers?.filter((item) => item.status === "resolved" && item.pricing?.kind !== "local").length;
     const requestIssueCount = needs.filter((item) => item.issue !== undefined).length;
+    const producerFailureCount = evaluated.unreportedFailures.length;
     writeCliOutput(io, args.presentation, {
       kind: "plan",
       machine: createPlanOutput({
         format: "hypit.cli-plan@1",
         ok: (preflight?.ok ?? true) && unresolvedRequestCount === 0
-          && unsupportedRequestCount === 0 && requestIssueCount === 0,
+          && unsupportedRequestCount === 0 && requestIssueCount === 0
+          && producerFailureCount === 0,
         run: projectPath(loaded.path, effectiveWorkspaceRoot),
         targetCount: targets.length,
         targets,
         steps: result.definition.plan.steps.length,
         requestCount: needs.length,
         requestIssueCount,
+        producerFailureCount,
+        ...(producerFailureCount === 0 ? {} : { producerFailures: evaluated.unreportedFailures }),
         ...(providerRequestCount === undefined ? {} : { providerRequestCount }),
         ...(providers === undefined ? {} : { localRequestCount, unresolvedRequestCount, unsupportedRequestCount }),
         choiceCount: allChoices.length,
@@ -650,7 +654,8 @@ export async function runCli(
       }, { verbose: args.presentation.verbose, limit: args.limit }),
     });
     if ((preflight !== undefined && !preflight.ok) || unresolvedRequestCount > 0
-      || unsupportedRequestCount > 0 || requestIssueCount > 0) io.setExitCode?.(1);
+      || unsupportedRequestCount > 0 || requestIssueCount > 0
+      || producerFailureCount > 0) io.setExitCode?.(1);
   } finally {
     await planResults?.close();
   }
