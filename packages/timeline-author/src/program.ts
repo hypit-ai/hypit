@@ -1,5 +1,5 @@
 import { assertProgramClockIdentity, type ProgramClock } from "@hypit/program-space";
-import { durationInFrames } from "@hypit/temporal";
+import { durationInFrames, type TemporalDuration } from "@hypit/temporal";
 import { parseTemporalDuration } from "@hypit/temporal-markup";
 import { assertSemanticTakeIdentity } from "@hypit/speech";
 import type { SemanticTake } from "@hypit/speech";
@@ -93,15 +93,24 @@ export function placementExpression(expression: string, reference: string) {
     duration: parseTemporalDuration(match[2]!, "Timeline offset") };
 }
 
+function exactPlacementFrames(expression: string, duration: TemporalDuration, clock: ProgramClock): number {
+  const frames = durationInFrames(duration, clock);
+  if (frames.denominator !== 1n || frames.numerator > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error(`Timeline duration ${expression} must land on an exact frame boundary.`);
+  }
+  return Number(frames.numerator);
+}
+
+export function assertPlacementFrameBoundary(expression: string, clock: ProgramClock, reference: string): void {
+  const parsed = placementExpression(expression, reference);
+  exactPlacementFrames(expression, parsed.duration, clock);
+}
+
 /** Resolve local assembly expressions before a complete Timeline exists. */
 export function placementFrame(expression: string, clock: ProgramClock, base: number | undefined, reference: string): number {
   const parsed = placementExpression(expression, reference);
   if (parsed.relative && base === undefined) throw new Error(`${reference} has no preceding Take.`);
-  const frames = durationInFrames(parsed.duration, clock);
-  if (frames.denominator !== 1n || frames.numerator > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error(`Timeline duration ${expression} must land on an exact frame boundary.`);
-  }
-  const frame = (parsed.relative ? base! : 0) + parsed.sign * Number(frames.numerator);
+  const frame = (parsed.relative ? base! : 0) + parsed.sign * exactPlacementFrames(expression, parsed.duration, clock);
   if (!Number.isSafeInteger(frame) || frame < 0) throw new Error(`Timeline position ${expression} must resolve to a non-negative frame.`);
   return frame;
 }
