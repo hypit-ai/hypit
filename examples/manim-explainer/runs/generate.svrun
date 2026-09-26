@@ -1,0 +1,10 @@
+<?svml using="@hypit/run-markup@1"?>
+
+<svrun version="1">
+  <author source="../authors/main.svml"/>
+  <target output="part-one.video"/>
+  <target output="part-two.video"/>
+  <target output="part-three.video"/>
+  <target output="part-four.video"/>
+  <target output="part-five.video"/>
+</svrun>

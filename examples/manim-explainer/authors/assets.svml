@@ -1,0 +1,18 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="time" from="@hypit/timeline-author@1"/>
+  <import as="spatial" from="@hypit/spatial@1"/>
+
+  <!-- Reference inputs used by Seedance and accepted local production material. -->
+  <asset:Image id="presenter-reference" src="../assets/speaker-reference.jpg"/>
+  <asset:Audio id="voice-reference" src="../assets/edits/alex.wav" media-type="audio/wav"/>
+  <asset:Video id="host-source" src="../assets/edits/english-seedance-person-full.mp4" media-type="video/mp4"/>
+  <asset:Video id="math-source" src="../manim-renders/math_block.mp4" media-type="video/mp4"/>
+  <asset:Video id="ml-source" src="../manim-renders/ml_block.mp4" media-type="video/mp4"/>
+  <asset:Video id="physics-source" src="../manim-renders/physics_block.mp4" media-type="video/mp4"/>
+
+  <time:Clock id="clock" frame-rate="30"/>
+  <spatial:Canvas id="canvas" width="720" height="1280"/>
+</svml>

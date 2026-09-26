@@ -1,0 +1,35 @@
+{
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/execution",
+  "endpoints": {
+    "media.local": {
+      "use": "@hypit/provider-media-local",
+      "config": {
+        "defaultConcurrency": 2
+      }
+    },
+    "hyperframes.local": {
+      "use": "@hypit/provider-hyperframes-local",
+      "config": {
+        "workers": 8,
+        "defaultConcurrency": 1
+      }
+    },
+    "whisperx.local": {
+      "use": "@hypit/provider-whisperx-local",
+      "config": {
+        "alignmentLanguages": [
+          "en"
+        ],
+        "defaultConcurrency": 1
+      }
+    }
+  },
+  "bindings": {
+    "@hypit/render-hyperframes@1#render-visual": "hyperframes.local",
+    "@hypit/media-pipeline@1#project-speech-evidence-audio": "media.local",
+    "@hypit/media-pipeline@1#render-timeline-audio": "media.local",
+    "@hypit/media-pipeline@1#mux-program-media": "media.local",
+    "@hypit/whisperx@1#whisperx-alignment": "whisperx.local"
+  }
+}

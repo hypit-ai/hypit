@@ -1,0 +1,11 @@
+<?svml using="@hypit/svs@1"?>
+
+<sheet version="1" id="manim-showcase-performance">
+  speaker.host {
+    composition-stability: soft-locked;
+    camera-motion: none;
+    edit-rhythm: pause-trim-jump-cuts;
+    performance: calm-authority;
+    gesture: compact;
+  }
+</sheet>

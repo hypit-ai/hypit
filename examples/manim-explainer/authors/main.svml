@@ -1,0 +1,96 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import as="assets" source="./assets.svml"/>
+  <import as="copy" source="./script.svml"/>
+  <import as="direction" source="./direction.svml"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="time" from="@hypit/timeline-author@1"/>
+  <import as="sound" from="@hypit/sound@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="manim" from="@project/manim-showcase@1"/>
+  <import as="look" source="../recipes/composition.svs"/>
+
+  <!-- The five Seedance clips are the accepted English A-roll performances.
+       The render Run selects their completed video Outputs explicitly. -->
+  <seedance:ReferenceVideo id="part-one" model="2.5" prompt={direction.part-one-prompt}
+    duration="4" resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
+    <seedance:Reference audio={assets.voice-reference}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="part-two" model="2.5" prompt={direction.part-two-prompt}
+    duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
+    <seedance:Reference audio={assets.voice-reference}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="part-three" model="2.5" prompt={direction.part-three-prompt}
+    duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
+    <seedance:Reference audio={assets.voice-reference}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="part-four" model="2.5" prompt={direction.part-four-prompt}
+    duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
+    <seedance:Reference audio={assets.voice-reference}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="part-five" model="2.5" prompt={direction.part-five-prompt}
+    duration="7" resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
+    <seedance:Reference audio={assets.voice-reference}/>
+  </seedance:ReferenceVideo>
+
+  <!-- Accepted A-roll media: each clip is normalized to the shared 30 fps clock,
+       then aligned to exactly one authored Script Segment. -->
+  <pipeline:Normalize id="part-one-media" source={part-one.video}
+    video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="part-two-media" source={part-two.video}
+    video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="part-three-media" source={part-three.video}
+    video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="part-four-media" source={part-four.video}
+    video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="part-five-media" source={part-five.video}
+    video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
+
+  <whisperx:SemanticTake id="part-one-semantic" narrative={copy.story}
+    segment={copy.story.segment.opening} media={part-one-media.media} language="en"/>
+  <whisperx:SemanticTake id="part-two-semantic" narrative={copy.story}
+    segment={copy.story.segment.mathematics} media={part-two-media.media} language="en"/>
+  <whisperx:SemanticTake id="part-three-semantic" narrative={copy.story}
+    segment={copy.story.segment.machine-learning} media={part-three-media.media} language="en"/>
+  <whisperx:SemanticTake id="part-four-semantic" narrative={copy.story}
+    segment={copy.story.segment.physics} media={part-four-media.media} language="en"/>
+  <whisperx:SemanticTake id="part-five-semantic" narrative={copy.story}
+    segment={copy.story.segment.closing} media={part-five-media.media} language="en"/>
+
+  <!-- The assembled speech Timeline is the single authority for word timing,
+       Moments and the final sound/picture placement. -->
+  <time:Timeline id="speech" clock={assets.clock}>
+    <time:Take source={part-one-semantic.take}/>
+    <time:Take source={part-two-semantic.take}/>
+    <time:Take source={part-three-semantic.take}/>
+    <time:Take source={part-four-semantic.take}/>
+    <time:Take source={part-five-semantic.take}/>
+  </time:Timeline>
+
+  <manim:Scene id="showcase" timeline={speech.timeline} canvas={assets.canvas}
+    host={assets.host-source} math={assets.math-source} ml={assets.ml-source}
+    physics={assets.physics-source} during="program"
+    first={copy.story.moment.first} next={copy.story.moment.next}
+    finally={copy.story.moment.finally} these={copy.story.moment.these}/>
+
+  <sound:Style id="voice-style"/>
+  <sound:Track id="voice" timeline={speech.timeline}>
+    <sound:Use style={voice-style}/>
+  </sound:Track>
+
+  <film:Film id="main" canvas={assets.canvas} timeline={speech.timeline} appearance={look.film.main}>
+    <film:Track source={showcase.track}/>
+    <film:Track source={voice.audio}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition} timeline={speech.timeline}/>
+</svml>

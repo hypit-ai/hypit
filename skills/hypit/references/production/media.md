@@ -108,6 +108,17 @@ with an exact local frame count, optional picture and optional audio on the chos
 prepared as a 48 kHz render stem with its level preserved. Balance, fades and music ducking remain
 mix decisions in [Audio Track and sound mix](../playbooks/craft/sound-mix.md).
 
+## Use a Manim render as ordinary video
+
+Manim remains outside the Hypit Build. After rendering, probing and watching the verified file,
+declare it as an ordinary `media:Video` BlobArtifact and use the normal
+[moving-media preparation](#prepare-moving-media-on-the-program-clock) and Track/Film path above.
+
+A normal silent Manim render uses `audio="none"` during normalization. It is not a SemanticTake
+unless it is explicitly associated with Script timing. The render's dimensions, frame rate,
+container and pixel format remain properties to verify from the actual file; see
+[Manim authoring](../creation/manim.md).
+
 ## Associate a performance with Script
 
 For a performance-led work, including pure A-roll and short drama, prefer this path even when the
