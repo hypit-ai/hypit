@@ -1,0 +1,7 @@
+{
+  "retrievedAt": "2026-09-24",
+  "source": "https://api.elevenlabs.io/openapi.json",
+  "sha256": "14b71caad897ed2ebe9504739de2108fa33bb888e5174b53b036895ee47309c3",
+  "refresh": "node scripts/direct-providers/update-elevenlabs-catalog.cjs <official-openapi.json>",
+  "note": "Review schema changes and cross-field constraints before committing; this does not assert account access."
+}

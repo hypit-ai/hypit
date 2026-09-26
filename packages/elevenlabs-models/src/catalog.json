@@ -1,0 +1,3452 @@
+[
+  {
+    "model": "bytedance-seedream-5-lite",
+    "result": "image",
+    "path": "/v1/flows/image",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "resolution": {
+        "field": "resolution"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 10
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "1:1", "3:4", "16:9", "4:3", "9:16"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["2K", "3K"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [],
+    "gated": true
+  },
+  {
+    "model": "bytedance-seedream-5-pro",
+    "result": "image",
+    "path": "/v1/flows/image",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "resolution": {
+        "field": "resolution"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 10
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "1:1", "3:4", "16:9", "4:3", "9:16"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["1K", "2K"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [],
+    "gated": true
+  },
+  {
+    "model": "gemini-2.5-flash-image",
+    "result": "image",
+    "path": "/v1/flows/image",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 5
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": [
+            "auto",
+            "1:1",
+            "2:3",
+            "3:2",
+            "3:4",
+            "4:3",
+            "4:5",
+            "5:4",
+            "9:16",
+            "16:9",
+            "21:9"
+          ]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [],
+    "gated": false
+  },
+  {
+    "model": "gemini-3-pro-image",
+    "result": "image",
+    "path": "/v1/flows/image",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "resolution": {
+        "field": "resolution"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 10
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": [
+            "auto",
+            "1:1",
+            "2:3",
+            "3:2",
+            "3:4",
+            "4:3",
+            "4:5",
+            "5:4",
+            "9:16",
+            "16:9",
+            "21:9"
+          ]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["1K", "2K", "4K"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [],
+    "gated": false
+  },
+  {
+    "model": "gemini-3.1-flash-image",
+    "result": "image",
+    "path": "/v1/flows/image",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "resolution": {
+        "field": "resolution"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 14
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": [
+            "auto",
+            "1:1",
+            "2:3",
+            "3:2",
+            "3:4",
+            "4:3",
+            "4:5",
+            "5:4",
+            "9:16",
+            "16:9",
+            "21:9",
+            "1:4",
+            "4:1",
+            "1:8",
+            "8:1"
+          ]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["512", "1K", "2K", "4K"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [],
+    "gated": false
+  },
+  {
+    "model": "gemini-3.1-flash-lite-image",
+    "result": "image",
+    "path": "/v1/flows/image",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "resolution": {
+        "field": "resolution"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 14
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": [
+            "auto",
+            "1:1",
+            "2:3",
+            "3:2",
+            "3:4",
+            "4:3",
+            "4:5",
+            "5:4",
+            "9:16",
+            "16:9",
+            "21:9"
+          ]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [],
+    "gated": false
+  },
+  {
+    "model": "gpt-image-1",
+    "result": "image",
+    "path": "/v1/flows/image",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "mask": {
+        "field": "mask",
+        "array": false
+      },
+      "quality": {
+        "field": "quality"
+      },
+      "background": {
+        "field": "background"
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 5
+      },
+      {
+        "name": "mask",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "quality",
+        "value": {
+          "kind": "enum",
+          "values": ["low", "medium", "high"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "background",
+        "value": {
+          "kind": "enum",
+          "values": ["transparent", "opaque", "auto"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": ["1:1", "3:2", "2:3"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [
+      {
+        "kind": "requiresPresent",
+        "port": "mask",
+        "needs": ["images"]
+      }
+    ],
+    "gated": false
+  },
+  {
+    "model": "gpt-image-1.5",
+    "result": "image",
+    "path": "/v1/flows/image",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "mask": {
+        "field": "mask",
+        "array": false
+      },
+      "quality": {
+        "field": "quality"
+      },
+      "background": {
+        "field": "background"
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 5
+      },
+      {
+        "name": "mask",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "quality",
+        "value": {
+          "kind": "enum",
+          "values": ["low", "medium", "high"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "background",
+        "value": {
+          "kind": "enum",
+          "values": ["transparent", "opaque", "auto"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": ["1:1", "3:2", "2:3"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [
+      {
+        "kind": "requiresPresent",
+        "port": "mask",
+        "needs": ["images"]
+      }
+    ],
+    "gated": false
+  },
+  {
+    "model": "gpt-image-2",
+    "result": "image",
+    "path": "/v1/flows/image",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "mask": {
+        "field": "mask",
+        "array": false
+      },
+      "quality": {
+        "field": "quality"
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "resolution": {
+        "field": "resolution"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 10
+      },
+      {
+        "name": "mask",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "quality",
+        "value": {
+          "kind": "enum",
+          "values": ["low", "medium", "high"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": [
+            "auto",
+            "1:1",
+            "4:5",
+            "5:4",
+            "3:4",
+            "4:3",
+            "2:3",
+            "3:2",
+            "1:2",
+            "2:1",
+            "9:16",
+            "16:9",
+            "21:9",
+            "1:3",
+            "3:1"
+          ]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["1K", "2K", "4K"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [
+      {
+        "kind": "requiresPresent",
+        "port": "mask",
+        "needs": ["images"]
+      }
+    ],
+    "gated": false
+  },
+  {
+    "model": "gpt-image-2.5-flare",
+    "result": "image",
+    "path": "/v1/flows/image",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "mask": {
+        "field": "mask",
+        "array": false
+      },
+      "quality": {
+        "field": "quality"
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "resolution": {
+        "field": "resolution"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 10
+      },
+      {
+        "name": "mask",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "quality",
+        "value": {
+          "kind": "enum",
+          "values": ["low", "medium", "high", "xhigh", "max"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": [
+            "auto",
+            "1:1",
+            "4:5",
+            "5:4",
+            "3:4",
+            "4:3",
+            "2:3",
+            "3:2",
+            "1:2",
+            "2:1",
+            "9:16",
+            "16:9",
+            "21:9",
+            "1:3",
+            "3:1"
+          ]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["1K", "2K", "4K"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [
+      {
+        "kind": "requiresPresent",
+        "port": "mask",
+        "needs": ["images"]
+      }
+    ],
+    "gated": false
+  },
+  {
+    "model": "gpt-image-2.5-sunburst",
+    "result": "image",
+    "path": "/v1/flows/image",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "mask": {
+        "field": "mask",
+        "array": false
+      },
+      "quality": {
+        "field": "quality"
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "resolution": {
+        "field": "resolution"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 10
+      },
+      {
+        "name": "mask",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "quality",
+        "value": {
+          "kind": "enum",
+          "values": ["low", "medium", "high", "xhigh", "max"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": [
+            "auto",
+            "1:1",
+            "4:5",
+            "5:4",
+            "3:4",
+            "4:3",
+            "2:3",
+            "3:2",
+            "1:2",
+            "2:1",
+            "9:16",
+            "16:9",
+            "21:9",
+            "1:3",
+            "3:1"
+          ]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["1K", "2K", "4K"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [
+      {
+        "kind": "requiresPresent",
+        "port": "mask",
+        "needs": ["images"]
+      }
+    ],
+    "gated": false
+  },
+  {
+    "model": "bytedance-seedance-v2",
+    "result": "video",
+    "path": "/v1/flows/video",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "durationSecs": {
+        "field": "duration_secs"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "generateAudio": {
+        "field": "generate_audio"
+      },
+      "startFrame": {
+        "field": "start_frame",
+        "array": false
+      },
+      "endFrame": {
+        "field": "end_frame",
+        "array": false
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "videos": {
+        "field": "videos",
+        "array": true
+      },
+      "audios": {
+        "field": "audios",
+        "array": true
+      },
+      "resolution": {
+        "field": "resolution"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "durationSecs",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 4,
+          "maximum": 15
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "generateAudio",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "startFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "endFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 9
+      },
+      {
+        "name": "videos",
+        "value": {
+          "kind": "media",
+          "accepts": ["video"]
+        },
+        "minItems": 0,
+        "maxItems": 3
+      },
+      {
+        "name": "audios",
+        "value": {
+          "kind": "media",
+          "accepts": ["audio"]
+        },
+        "minItems": 0,
+        "maxItems": 3
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["480p", "720p", "1080p", "4k"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "images"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "videos"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "audios"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "images"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "videos"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "audios"]
+      },
+      {
+        "kind": "requiresAnyOf",
+        "port": "audios",
+        "anyOf": ["images", "videos"]
+      }
+    ],
+    "gated": true
+  },
+  {
+    "model": "bytedance-seedance-v2-fast",
+    "result": "video",
+    "path": "/v1/flows/video",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "durationSecs": {
+        "field": "duration_secs"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "generateAudio": {
+        "field": "generate_audio"
+      },
+      "startFrame": {
+        "field": "start_frame",
+        "array": false
+      },
+      "endFrame": {
+        "field": "end_frame",
+        "array": false
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "videos": {
+        "field": "videos",
+        "array": true
+      },
+      "audios": {
+        "field": "audios",
+        "array": true
+      },
+      "resolution": {
+        "field": "resolution"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "durationSecs",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 4,
+          "maximum": 15
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "generateAudio",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "startFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "endFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 9
+      },
+      {
+        "name": "videos",
+        "value": {
+          "kind": "media",
+          "accepts": ["video"]
+        },
+        "minItems": 0,
+        "maxItems": 3
+      },
+      {
+        "name": "audios",
+        "value": {
+          "kind": "media",
+          "accepts": ["audio"]
+        },
+        "minItems": 0,
+        "maxItems": 3
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["480p", "720p"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "images"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "videos"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "audios"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "images"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "videos"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "audios"]
+      },
+      {
+        "kind": "requiresAnyOf",
+        "port": "audios",
+        "anyOf": ["images", "videos"]
+      }
+    ],
+    "gated": true
+  },
+  {
+    "model": "bytedance-seedance-v2-mini",
+    "result": "video",
+    "path": "/v1/flows/video",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "durationSecs": {
+        "field": "duration_secs"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "generateAudio": {
+        "field": "generate_audio"
+      },
+      "startFrame": {
+        "field": "start_frame",
+        "array": false
+      },
+      "endFrame": {
+        "field": "end_frame",
+        "array": false
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "videos": {
+        "field": "videos",
+        "array": true
+      },
+      "audios": {
+        "field": "audios",
+        "array": true
+      },
+      "resolution": {
+        "field": "resolution"
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "durationSecs",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 4,
+          "maximum": 15
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "generateAudio",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "startFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "endFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 9
+      },
+      {
+        "name": "videos",
+        "value": {
+          "kind": "media",
+          "accepts": ["video"]
+        },
+        "minItems": 0,
+        "maxItems": 3
+      },
+      {
+        "name": "audios",
+        "value": {
+          "kind": "media",
+          "accepts": ["audio"]
+        },
+        "minItems": 0,
+        "maxItems": 3
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["480p", "720p"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "images"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "videos"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "audios"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "images"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "videos"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "audios"]
+      },
+      {
+        "kind": "requiresAnyOf",
+        "port": "audios",
+        "anyOf": ["images", "videos"]
+      }
+    ],
+    "gated": true
+  },
+  {
+    "model": "bytedance-seedance-v2.5",
+    "result": "video",
+    "path": "/v1/flows/video",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "resolution": {
+        "field": "resolution"
+      },
+      "durationSecs": {
+        "field": "duration_secs"
+      },
+      "generateAudio": {
+        "field": "generate_audio"
+      },
+      "startFrame": {
+        "field": "start_frame",
+        "array": false
+      },
+      "endFrame": {
+        "field": "end_frame",
+        "array": false
+      },
+      "images": {
+        "field": "images",
+        "array": true
+      },
+      "videos": {
+        "field": "videos",
+        "array": true
+      },
+      "audios": {
+        "field": "audios",
+        "array": true
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["480p", "720p", "1080p"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "durationSecs",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 4,
+          "maximum": 30
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "generateAudio",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "startFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "endFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 30
+      },
+      {
+        "name": "videos",
+        "value": {
+          "kind": "media",
+          "accepts": ["video"]
+        },
+        "minItems": 0,
+        "maxItems": 10
+      },
+      {
+        "name": "audios",
+        "value": {
+          "kind": "media",
+          "accepts": ["audio"]
+        },
+        "minItems": 0,
+        "maxItems": 10
+      }
+    ],
+    "requires": [
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "images"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "videos"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "audios"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "images"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "videos"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "audios"]
+      }
+    ],
+    "gated": true
+  },
+  {
+    "model": "creatify-aurora",
+    "result": "video",
+    "path": "/v1/flows/video",
+    "fields": {
+      "image": {
+        "field": "image",
+        "array": false
+      },
+      "audio": {
+        "field": "audio",
+        "array": false
+      },
+      "resolution": {
+        "field": "resolution"
+      },
+      "guidanceScale": {
+        "field": "guidance_scale"
+      },
+      "audioGuidanceScale": {
+        "field": "audio_guidance_scale"
+      }
+    },
+    "ports": [
+      {
+        "name": "image",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "audio",
+        "value": {
+          "kind": "media",
+          "accepts": ["audio"]
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["480p", "720p"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "guidanceScale",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "audioGuidanceScale",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "requires": [],
+    "gated": false
+  },
+  {
+    "model": "veo-3.1-fast-generate-001",
+    "result": "video",
+    "path": "/v1/flows/video",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "negativePrompt": {
+        "field": "negative_prompt"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "enhancePrompt": {
+        "field": "enhance_prompt"
+      },
+      "durationSecs": {
+        "field": "duration_secs"
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "resolution": {
+        "field": "resolution"
+      },
+      "generateAudio": {
+        "field": "generate_audio"
+      },
+      "startFrame": {
+        "field": "start_frame",
+        "array": false
+      },
+      "endFrame": {
+        "field": "end_frame",
+        "array": false
+      },
+      "images": {
+        "field": "images",
+        "array": true,
+        "veo": true
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "negativePrompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "enhancePrompt",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "durationSecs",
+        "value": {
+          "kind": "enum",
+          "values": [4, 6, 8]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": ["16:9", "9:16"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["720p", "1080p", "4K"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "generateAudio",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "startFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "endFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"],
+          "itemFields": [
+            {
+              "name": "referenceRole",
+              "value": {
+                "kind": "enum",
+                "values": ["subject", "style"]
+              }
+            }
+          ]
+        },
+        "minItems": 0,
+        "maxItems": 3
+      }
+    ],
+    "requires": [
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "images"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "images"]
+      }
+    ],
+    "gated": false
+  },
+  {
+    "model": "veo-3.1-generate-001",
+    "result": "video",
+    "path": "/v1/flows/video",
+    "fields": {
+      "prompt": {
+        "field": "prompt"
+      },
+      "negativePrompt": {
+        "field": "negative_prompt"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "enhancePrompt": {
+        "field": "enhance_prompt"
+      },
+      "durationSecs": {
+        "field": "duration_secs"
+      },
+      "aspectRatio": {
+        "field": "aspect_ratio"
+      },
+      "resolution": {
+        "field": "resolution"
+      },
+      "generateAudio": {
+        "field": "generate_audio"
+      },
+      "startFrame": {
+        "field": "start_frame",
+        "array": false
+      },
+      "endFrame": {
+        "field": "end_frame",
+        "array": false
+      },
+      "images": {
+        "field": "images",
+        "array": true,
+        "veo": true
+      }
+    },
+    "ports": [
+      {
+        "name": "prompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "negativePrompt",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "enhancePrompt",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "durationSecs",
+        "value": {
+          "kind": "enum",
+          "values": [4, 6, 8]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "aspectRatio",
+        "value": {
+          "kind": "enum",
+          "values": ["16:9", "9:16"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "resolution",
+        "value": {
+          "kind": "enum",
+          "values": ["720p", "1080p", "4K"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "generateAudio",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "startFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "endFrame",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "images",
+        "value": {
+          "kind": "media",
+          "accepts": ["image"],
+          "itemFields": [
+            {
+              "name": "referenceRole",
+              "value": {
+                "kind": "enum",
+                "values": ["subject", "style"]
+              }
+            }
+          ]
+        },
+        "minItems": 0,
+        "maxItems": 3
+      }
+    ],
+    "requires": [
+      {
+        "kind": "atMostOneOf",
+        "ports": ["startFrame", "images"]
+      },
+      {
+        "kind": "atMostOneOf",
+        "ports": ["endFrame", "images"]
+      }
+    ],
+    "gated": false
+  },
+  {
+    "model": "eleven_v3",
+    "result": "audio",
+    "path": "/v1/text-to-speech/{voiceId}",
+    "ports": [
+      {
+        "name": "text",
+        "value": {
+          "kind": "text",
+          "maxChars": 5000
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "voiceId",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "stability",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "similarityBoost",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "style",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "speed",
+        "value": {
+          "kind": "number",
+          "minimum": 0.7,
+          "maximum": 1.2
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "useSpeakerBoost",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "languageCode",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "previousText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "nextText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "applyTextNormalization",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "on", "off"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "text": {
+        "field": "text"
+      },
+      "voiceId": {
+        "field": "voice_id"
+      },
+      "stability": {
+        "field": "stability"
+      },
+      "similarityBoost": {
+        "field": "similarity_boost"
+      },
+      "style": {
+        "field": "style"
+      },
+      "speed": {
+        "field": "speed"
+      },
+      "useSpeakerBoost": {
+        "field": "use_speaker_boost"
+      },
+      "languageCode": {
+        "field": "language_code"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "previousText": {
+        "field": "previous_text"
+      },
+      "nextText": {
+        "field": "next_text"
+      },
+      "applyTextNormalization": {
+        "field": "apply_text_normalization"
+      }
+    },
+    "requires": [],
+    "operation": "tts"
+  },
+  {
+    "model": "eleven_multilingual_v2",
+    "result": "audio",
+    "path": "/v1/text-to-speech/{voiceId}",
+    "ports": [
+      {
+        "name": "text",
+        "value": {
+          "kind": "text",
+          "maxChars": 10000
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "voiceId",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "stability",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "similarityBoost",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "style",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "speed",
+        "value": {
+          "kind": "number",
+          "minimum": 0.7,
+          "maximum": 1.2
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "useSpeakerBoost",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "languageCode",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "previousText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "nextText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "applyTextNormalization",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "on", "off"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "text": {
+        "field": "text"
+      },
+      "voiceId": {
+        "field": "voice_id"
+      },
+      "stability": {
+        "field": "stability"
+      },
+      "similarityBoost": {
+        "field": "similarity_boost"
+      },
+      "style": {
+        "field": "style"
+      },
+      "speed": {
+        "field": "speed"
+      },
+      "useSpeakerBoost": {
+        "field": "use_speaker_boost"
+      },
+      "languageCode": {
+        "field": "language_code"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "previousText": {
+        "field": "previous_text"
+      },
+      "nextText": {
+        "field": "next_text"
+      },
+      "applyTextNormalization": {
+        "field": "apply_text_normalization"
+      }
+    },
+    "requires": [],
+    "operation": "tts"
+  },
+  {
+    "model": "eleven_flash_v2_5",
+    "result": "audio",
+    "path": "/v1/text-to-speech/{voiceId}",
+    "ports": [
+      {
+        "name": "text",
+        "value": {
+          "kind": "text",
+          "maxChars": 40000
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "voiceId",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "stability",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "similarityBoost",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "style",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "speed",
+        "value": {
+          "kind": "number",
+          "minimum": 0.7,
+          "maximum": 1.2
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "useSpeakerBoost",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "languageCode",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "previousText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "nextText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "applyTextNormalization",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "on", "off"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "text": {
+        "field": "text"
+      },
+      "voiceId": {
+        "field": "voice_id"
+      },
+      "stability": {
+        "field": "stability"
+      },
+      "similarityBoost": {
+        "field": "similarity_boost"
+      },
+      "style": {
+        "field": "style"
+      },
+      "speed": {
+        "field": "speed"
+      },
+      "useSpeakerBoost": {
+        "field": "use_speaker_boost"
+      },
+      "languageCode": {
+        "field": "language_code"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "previousText": {
+        "field": "previous_text"
+      },
+      "nextText": {
+        "field": "next_text"
+      },
+      "applyTextNormalization": {
+        "field": "apply_text_normalization"
+      }
+    },
+    "requires": [],
+    "operation": "tts"
+  },
+  {
+    "model": "eleven_flash_v2",
+    "result": "audio",
+    "path": "/v1/text-to-speech/{voiceId}",
+    "ports": [
+      {
+        "name": "text",
+        "value": {
+          "kind": "text",
+          "maxChars": 30000
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "voiceId",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "stability",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "similarityBoost",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "style",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "speed",
+        "value": {
+          "kind": "number",
+          "minimum": 0.7,
+          "maximum": 1.2
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "useSpeakerBoost",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "languageCode",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "previousText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "nextText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "applyTextNormalization",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "on", "off"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "text": {
+        "field": "text"
+      },
+      "voiceId": {
+        "field": "voice_id"
+      },
+      "stability": {
+        "field": "stability"
+      },
+      "similarityBoost": {
+        "field": "similarity_boost"
+      },
+      "style": {
+        "field": "style"
+      },
+      "speed": {
+        "field": "speed"
+      },
+      "useSpeakerBoost": {
+        "field": "use_speaker_boost"
+      },
+      "languageCode": {
+        "field": "language_code"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "previousText": {
+        "field": "previous_text"
+      },
+      "nextText": {
+        "field": "next_text"
+      },
+      "applyTextNormalization": {
+        "field": "apply_text_normalization"
+      }
+    },
+    "requires": [],
+    "operation": "tts"
+  },
+  {
+    "model": "eleven_turbo_v2_5",
+    "result": "audio",
+    "path": "/v1/text-to-speech/{voiceId}",
+    "ports": [
+      {
+        "name": "text",
+        "value": {
+          "kind": "text",
+          "maxChars": 40000
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "voiceId",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "stability",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "similarityBoost",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "style",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "speed",
+        "value": {
+          "kind": "number",
+          "minimum": 0.7,
+          "maximum": 1.2
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "useSpeakerBoost",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "languageCode",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "previousText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "nextText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "applyTextNormalization",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "on", "off"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "text": {
+        "field": "text"
+      },
+      "voiceId": {
+        "field": "voice_id"
+      },
+      "stability": {
+        "field": "stability"
+      },
+      "similarityBoost": {
+        "field": "similarity_boost"
+      },
+      "style": {
+        "field": "style"
+      },
+      "speed": {
+        "field": "speed"
+      },
+      "useSpeakerBoost": {
+        "field": "use_speaker_boost"
+      },
+      "languageCode": {
+        "field": "language_code"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "previousText": {
+        "field": "previous_text"
+      },
+      "nextText": {
+        "field": "next_text"
+      },
+      "applyTextNormalization": {
+        "field": "apply_text_normalization"
+      }
+    },
+    "requires": [],
+    "operation": "tts"
+  },
+  {
+    "model": "eleven_turbo_v2",
+    "result": "audio",
+    "path": "/v1/text-to-speech/{voiceId}",
+    "ports": [
+      {
+        "name": "text",
+        "value": {
+          "kind": "text",
+          "maxChars": 30000
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "voiceId",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "stability",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "similarityBoost",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "style",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "speed",
+        "value": {
+          "kind": "number",
+          "minimum": 0.7,
+          "maximum": 1.2
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "useSpeakerBoost",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "languageCode",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "previousText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "nextText",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "applyTextNormalization",
+        "value": {
+          "kind": "enum",
+          "values": ["auto", "on", "off"]
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "text": {
+        "field": "text"
+      },
+      "voiceId": {
+        "field": "voice_id"
+      },
+      "stability": {
+        "field": "stability"
+      },
+      "similarityBoost": {
+        "field": "similarity_boost"
+      },
+      "style": {
+        "field": "style"
+      },
+      "speed": {
+        "field": "speed"
+      },
+      "useSpeakerBoost": {
+        "field": "use_speaker_boost"
+      },
+      "languageCode": {
+        "field": "language_code"
+      },
+      "seed": {
+        "field": "seed"
+      },
+      "previousText": {
+        "field": "previous_text"
+      },
+      "nextText": {
+        "field": "next_text"
+      },
+      "applyTextNormalization": {
+        "field": "apply_text_normalization"
+      }
+    },
+    "requires": [],
+    "operation": "tts"
+  },
+  {
+    "model": "eleven_english_sts_v2",
+    "result": "audio",
+    "path": "/v1/speech-to-speech/{voiceId}",
+    "ports": [
+      {
+        "name": "audio",
+        "value": {
+          "kind": "media",
+          "accepts": ["audio"]
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "voiceId",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "stability",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "similarityBoost",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "style",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "speed",
+        "value": {
+          "kind": "number",
+          "minimum": 0.7,
+          "maximum": 1.2
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "useSpeakerBoost",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "removeBackgroundNoise",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "audio": {
+        "field": "audio"
+      },
+      "voiceId": {
+        "field": "voice_id"
+      },
+      "stability": {
+        "field": "stability"
+      },
+      "similarityBoost": {
+        "field": "similarity_boost"
+      },
+      "style": {
+        "field": "style"
+      },
+      "speed": {
+        "field": "speed"
+      },
+      "useSpeakerBoost": {
+        "field": "use_speaker_boost"
+      },
+      "removeBackgroundNoise": {
+        "field": "remove_background_noise"
+      },
+      "seed": {
+        "field": "seed"
+      }
+    },
+    "requires": [],
+    "operation": "sts"
+  },
+  {
+    "model": "eleven_multilingual_sts_v2",
+    "result": "audio",
+    "path": "/v1/speech-to-speech/{voiceId}",
+    "ports": [
+      {
+        "name": "audio",
+        "value": {
+          "kind": "media",
+          "accepts": ["audio"]
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "voiceId",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "stability",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "similarityBoost",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "style",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "speed",
+        "value": {
+          "kind": "number",
+          "minimum": 0.7,
+          "maximum": 1.2
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "useSpeakerBoost",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "removeBackgroundNoise",
+        "value": {
+          "kind": "boolean"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "audio": {
+        "field": "audio"
+      },
+      "voiceId": {
+        "field": "voice_id"
+      },
+      "stability": {
+        "field": "stability"
+      },
+      "similarityBoost": {
+        "field": "similarity_boost"
+      },
+      "style": {
+        "field": "style"
+      },
+      "speed": {
+        "field": "speed"
+      },
+      "useSpeakerBoost": {
+        "field": "use_speaker_boost"
+      },
+      "removeBackgroundNoise": {
+        "field": "remove_background_noise"
+      },
+      "seed": {
+        "field": "seed"
+      }
+    },
+    "requires": [],
+    "operation": "sts"
+  },
+  {
+    "model": "eleven_ttv_v3",
+    "result": "audio",
+    "path": "/v1/text-to-voice/design",
+    "ports": [
+      {
+        "name": "voiceDescription",
+        "value": {
+          "kind": "token",
+          "minLength": 20,
+          "maxLength": 1000
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "text",
+        "value": {
+          "kind": "token",
+          "minLength": 100,
+          "maxLength": 1000
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "loudness",
+        "value": {
+          "kind": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "guidanceScale",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "voiceDescription": {
+        "field": "voice_description"
+      },
+      "text": {
+        "field": "text"
+      },
+      "loudness": {
+        "field": "loudness"
+      },
+      "guidanceScale": {
+        "field": "guidance_scale"
+      },
+      "seed": {
+        "field": "seed"
+      }
+    },
+    "requires": [],
+    "operation": "design"
+  },
+  {
+    "model": "eleven_multilingual_ttv_v2",
+    "result": "audio",
+    "path": "/v1/text-to-voice/design",
+    "ports": [
+      {
+        "name": "voiceDescription",
+        "value": {
+          "kind": "token",
+          "minLength": 20,
+          "maxLength": 1000
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "text",
+        "value": {
+          "kind": "token",
+          "minLength": 100,
+          "maxLength": 1000
+        },
+        "minItems": 1,
+        "maxItems": 1
+      },
+      {
+        "name": "loudness",
+        "value": {
+          "kind": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "guidanceScale",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "voiceDescription": {
+        "field": "voice_description"
+      },
+      "text": {
+        "field": "text"
+      },
+      "loudness": {
+        "field": "loudness"
+      },
+      "guidanceScale": {
+        "field": "guidance_scale"
+      },
+      "seed": {
+        "field": "seed"
+      }
+    },
+    "requires": [],
+    "operation": "design"
+  },
+  {
+    "model": "eleven-audio-isolation",
+    "result": "audio",
+    "path": "/v1/audio-isolation",
+    "ports": [
+      {
+        "name": "audio",
+        "value": {
+          "kind": "media",
+          "accepts": ["audio"]
+        },
+        "minItems": 1,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "audio": {
+        "field": "audio"
+      }
+    },
+    "requires": [],
+    "operation": "isolation"
+  },
+  {
+    "model": "eleven-v3-dialogue",
+    "result": "audio",
+    "path": "/v1/text-to-dialogue",
+    "ports": [
+      {
+        "name": "texts",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1000
+      },
+      {
+        "name": "voiceIds",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 1,
+        "maxItems": 1000
+      },
+      {
+        "name": "stability",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "similarity",
+        "value": {
+          "kind": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "languageCode",
+        "value": {
+          "kind": "text"
+        },
+        "minItems": 0,
+        "maxItems": 1
+      },
+      {
+        "name": "seed",
+        "value": {
+          "kind": "number",
+          "integer": true,
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "minItems": 0,
+        "maxItems": 1
+      }
+    ],
+    "fields": {
+      "texts": {
+        "field": "texts",
+        "array": true
+      },
+      "voiceIds": {
+        "field": "voice_ids",
+        "array": true
+      },
+      "stability": {
+        "field": "stability"
+      },
+      "similarity": {
+        "field": "similarity"
+      },
+      "languageCode": {
+        "field": "language_code"
+      },
+      "seed": {
+        "field": "seed"
+      }
+    },
+    "requires": [],
+    "operation": "dialogue"
+  }
+]
