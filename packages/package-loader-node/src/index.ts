@@ -16,6 +16,7 @@ export {
 export {
   locateNodePackage,
   NodePackageNotFoundError,
+  distributionPackageDeclaring,
   externalPackageInstallRoot,
   resolveNodePackageExecutable,
   resolveNodePackageResource,

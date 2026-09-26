@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 
+import { distributionPackageDeclaring, locateNodePackage } from "@hypit/package-loader-node";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
-import { hypitHostPackageRoot, inspectHostPackage, prepareHostPackages } from "@hypit/runtime-host-node";
+import { hypitHostPackageRoot, inspectHostPackage, parseRegistryPackageSpec, prepareHostPackages } from "@hypit/runtime-host-node";
 
 import type { CliCommand, EnvironmentCommand } from "../command.js";
 import { commandHint } from "../command-hint.js";
@@ -13,6 +14,68 @@ import type { CliIo } from "../output.js";
 import { hypitHostStateRoot, hypitProjectStateRoot } from "../paths.js";
 import type { CliManagedProgramProgress, CliManagedProgramReport, CliRuntimeController } from "../runtime-port.js";
 import type { OperationalWriter } from "./types.js";
+
+type PackageStatus = {
+  readonly ready: boolean;
+  readonly declaredBy?: string;
+  readonly installation?: string;
+  readonly installedVersion?: string;
+  readonly detail?: string;
+};
+
+/**
+ * Whether `specifier` will resolve when a Build needs it.
+ *
+ * The loader finds an external package in two places — the node_modules chain above whoever
+ * requires it, and the machine home addressed by the version that requirer declares — and both
+ * start from the requiring package. So the requirer is located first and the loader asked once,
+ * rather than reimplementing either half here: a second opinion is exactly how this command came
+ * to disagree with the thing it reports on.
+ *
+ * Without a Distribution on disk there is no requirer to find, and the machine home remains the
+ * only place this command can speak about.
+ */
+async function packageStatus(
+  specifier: string,
+  hostRoot: string,
+  distributionRoot: string | undefined,
+): Promise<PackageStatus> {
+  const required = parseRegistryPackageSpec(specifier);
+  if (distributionRoot === undefined) {
+    const existing = await inspectHostPackage(specifier, hostRoot);
+    return existing === undefined
+      ? { ready: false, detail: "not installed in the machine package home" }
+      : { ready: true, installation: existing.root, installedVersion: required.version };
+  }
+  const declaring = distributionPackageDeclaring(distributionRoot, required.name, required.version);
+  if (declaring === undefined) {
+    return { ready: false, detail: `no Distribution package declares ${specifier}` };
+  }
+  try {
+    const located = locateNodePackage(required.name, {
+      from: join(declaring, "__hypit_package_status__.mjs"),
+      distributionRoots: [distributionRoot],
+      externalRoots: [hostRoot],
+      allowExternal: true,
+    });
+    const installed = located.manifest.version;
+    return installed === required.version
+      ? { ready: true, declaredBy: declaring, installation: located.root, installedVersion: installed }
+      : {
+        ready: false,
+        declaredBy: declaring,
+        installation: located.root,
+        ...(installed === undefined ? {} : { installedVersion: installed }),
+        detail: `resolved version is ${installed ?? "unknown"}`,
+      };
+  } catch (error) {
+    return {
+      ready: false,
+      declaredBy: declaring,
+      detail: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
 
 function programRecord(item: CliManagedProgramReport) {
   return {
@@ -119,28 +182,51 @@ export async function runEnvironmentCommand(input: {
 
   if (args.command === "packages") {
     const root = hypitHostPackageRoot();
-    const existing = await inspectHostPackage(args.package, root);
-    const reports = args.action === "install"
-      ? await prepareHostPackages([args.package], {
+    if (args.action === "install") {
+      const reports = await prepareHostPackages([args.package], {
         root,
         ...(reportPackageProgress === undefined ? {} : { onProgress: reportPackageProgress }),
-      })
-      : existing === undefined ? [] : [existing];
-    const ready = reports.length === 1;
+      });
+      const ready = reports.length === 1;
+      write({
+        format: "hypit.cli-package@1",
+        action: args.action,
+        package: args.package,
+        ready,
+        ...(reports[0] === undefined ? {} : { installation: reports[0].root }),
+        ...(reports[0]?.logPath === undefined ? {} : { logPath: reports[0].logPath }),
+      }, "Machine package is ready", ready ? "success" : "warning", [
+        ["Package", args.package],
+        ["Ready", String(ready)],
+        ...(args.presentation.verbose && reports[0] !== undefined ? [["Installation", reports[0].root] as const] : []),
+      ]);
+      if (!ready) io.setExitCode?.(1);
+      return;
+    }
+
+    // Status answers the question a Build asks: will the dependency resolve, at
+    // the declared version? It therefore asks the loader rather than checking
+    // one of the places the loader looks. Reading only the machine home called a
+    // package that resolves perfectly well from the Distribution's own
+    // node_modules "Ready false", and exited 1 saying so.
+    const status = await packageStatus(args.package, root, distribution.packageRoot);
     write({
       format: "hypit.cli-package@1",
       action: args.action,
       package: args.package,
-      ready,
-      ...(reports[0] === undefined ? {} : { installation: reports[0].root }),
-      ...(reports[0]?.logPath === undefined ? {} : { logPath: reports[0].logPath }),
-    }, args.action === "install" ? "Machine package is ready" : "Machine package status",
-    ready ? "success" : "warning", [
+      ready: status.ready,
+      ...(status.installation === undefined ? {} : { installation: status.installation }),
+      ...(status.declaredBy === undefined ? {} : { declaredBy: status.declaredBy }),
+      ...(status.installedVersion === undefined ? {} : { installedVersion: status.installedVersion }),
+      ...(status.detail === undefined ? {} : { detail: status.detail }),
+    }, "Machine package status", status.ready ? "success" : "warning", [
       ["Package", args.package],
-      ["Ready", String(ready)],
-      ...(args.presentation.verbose && reports[0] !== undefined ? [["Installation", reports[0].root] as const] : []),
+      ["Ready", String(status.ready)],
+      ...(status.declaredBy === undefined ? [] : [["Required by", status.declaredBy] as const]),
+      ...(status.detail === undefined ? [] : [["Detail", status.detail] as const]),
+      ...(status.installation === undefined ? [] : [["Installation", status.installation] as const]),
     ]);
-    if (!ready) io.setExitCode?.(1);
+    if (!status.ready) io.setExitCode?.(1);
     return;
   }
 

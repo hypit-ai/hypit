@@ -190,6 +190,47 @@ export function distributionPackageDirectory(root: string, name: string): string
   return undefined;
 }
 
+/**
+ * The Distribution package that declares `name@version` as an external dependency, or undefined
+ * when none does.
+ *
+ * Resolution of an external package starts from whoever requires it — the ancestor walk begins at
+ * that package's directory, and the machine home is addressed by the version that package
+ * declares. A caller holding only `name@version`, as `hypit packages status` does, cannot ask the
+ * question the loader answers until it knows the requirer. Finding it here keeps that one answer
+ * in one place instead of letting each caller approximate it.
+ */
+export function distributionPackageDeclaring(
+  root: string,
+  name: string,
+  version: string,
+): string | undefined {
+  for (const directory of distributionPackageDirectories(root)) {
+    const manifest = join(directory, "package.json");
+    if (!existsSync(manifest)) continue;
+    const value = JSON.parse(readFileSync(manifest, "utf8")) as {
+      dependencies?: Record<string, string>;
+      optionalDependencies?: Record<string, string>;
+    };
+    // npm lets optionalDependencies override dependencies of the same name, and
+    // declaredExternalPackageRoot reads them in that order; match it.
+    const declared = value.optionalDependencies?.[name] ?? value.dependencies?.[name];
+    if (declared === version) return directory;
+  }
+  return undefined;
+}
+
+function* distributionPackageDirectories(root: string): Generator<string> {
+  const base = resolve(root);
+  for (const group of ["packages", "services"]) {
+    const directory = join(base, group);
+    if (!existsSync(directory)) continue;
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isDirectory()) yield join(directory, entry.name);
+    }
+  }
+}
+
 function distributionPackage(root: string, name: string): LocatedNodePackage | undefined {
   const directory = distributionPackageDirectory(root, name);
   return directory === undefined ? nodeModulesPackage(root, name) : readPackage(directory, name);
