@@ -711,6 +711,66 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
   }
 });
 
+test("still video converts sRGB pictures with BT.709 and tags the stream", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-provider-media-still-color-"));
+  try {
+    // HD, so players (and Chromium) decode an untagged stream as BT.709.
+    const picturePath = join(root, "green.png");
+    await run("ffmpeg", [
+      "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=0x20C040:s=1280x720,format=rgb24",
+      "-frames:v", "1", picturePath,
+    ]);
+    const resources = new MemoryResourceStore();
+    const picture = await resources.put(await readFile(picturePath), "image/png");
+    const render = async (id: string, segments: readonly CanonicalValue[]) => {
+      const request = need(id, mediaPipelineCapabilities.renderStill, artifactTypes.blob, canonicalize({
+        request: {
+          frameRate: { numerator: 30, denominator: 1 },
+          frameCount: 6,
+          output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
+          segments,
+        },
+      }));
+      const result = await (await handlerFor(request)).handler({
+        command: { kind: "fulfill-need", id: `command:${id}`, need: request },
+        need: request,
+        resources,
+        credentials: {},
+      });
+      assert.ok(result.value.kind === "blob");
+      const path = join(root, `${id.replace(/\W/g, "-")}.mp4`);
+      await writeFile(path, (await resources.get(result.value.resource))!);
+      return path;
+    };
+    const outputs = [
+      await render("need:still-color-single", [{ startFrame: 0, endFrameExclusive: 6, source: picture }]),
+      await render("need:still-color-spread", [
+        { startFrame: 0, endFrameExclusive: 3, source: picture },
+        { startFrame: 3, endFrameExclusive: 6, source: picture },
+      ]),
+    ];
+    for (const output of outputs) {
+      const tags = spawnSync("ffprobe", [
+        "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=color_range,color_space,color_primaries,color_transfer", "-of", "csv=p=0", output,
+      ], { encoding: "utf8", windowsHide: true }).stdout.trim();
+      assert.equal(tags, "tv,bt709,bt709,bt709", output);
+      const pixel = spawnSync("ffmpeg", [
+        "-v", "error", "-i", output, "-frames:v", "1",
+        "-vf", "crop=2:2:640:360,scale=in_color_matrix=bt709:in_range=tv,format=rgb24",
+        "-f", "rawvideo", "pipe:1",
+      ], { windowsHide: true }).stdout.subarray(0, 3);
+      [0x20, 0xc0, 0x40].forEach((expected, channel) => {
+        assert.ok(Math.abs(pixel[channel]! - expected) <= 3, `${output} channel ${channel}: ${pixel[channel]} vs ${expected}`);
+      });
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
 test("local media Provider renders one frame-domain audio plan and muxes exactly one video-only visual with it", {
   skip: !hasMediaBinaries,
 }, async () => {
