@@ -1,6 +1,6 @@
 {
   "name": "@hypit/hypit",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "homepage": "https://hypit.ai",
   "repository": {
     "type": "git",
@@ -236,6 +236,7 @@
     "@hypit/program-space": "workspace:*",
     "@hypit/project-context-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/provider-anyfast": "workspace:*",
     "@hypit/provider-beatapi": "workspace:*",
     "@hypit/provider-hiapi": "workspace:*",
     "@hypit/provider-hyperframes-local": "workspace:*",

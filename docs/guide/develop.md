@@ -9,7 +9,7 @@ description: Getting started with Hypit development.
 |---|---|---|
 | Node.js | 22.15+ | everything |
 | pnpm | 10.33.x | workspace management; selected by the root `packageManager` field |
-| Python | 3.10–3.13 | local WhisperX and OpenCV Managed Programs |
+| Python | 3.10–3.13 for WhisperX; 3.13 only for OpenCV | local WhisperX and OpenCV Managed Programs |
 | uv | latest | Python environment management |
 | ffmpeg / ffprobe | recent stable | media processing |
 | Chrome / Chromium | downloaded by `hypit runtime up` | local HyperFrames rendering |
