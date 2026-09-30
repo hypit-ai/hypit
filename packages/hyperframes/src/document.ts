@@ -668,11 +668,18 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
     void element.getBoundingClientRect();
     const animation = element.getAnimations()[0];
     if (animation === undefined) throw new Error("Visual IR frame animation did not materialize.");
-    animation.pause();
-    animation.currentTime = 0;
-    // The authored keyframes are already the compact state function. Keep the
-    // browser's paused evaluator instead of expanding every Present frame into
-    // a second table of computed-style strings in every render Worker.
+    // The authored keyframes are already the compact state function. Keep them
+    // instead of expanding every Present frame into a second table of
+    // computed-style strings in every render Worker, but do not leave the CSS
+    // animation live: HyperFrames' css and waapi adapters seek every live
+    // document animation to absolute composition time, which replaces this
+    // Present-relative pose whenever the Present does not start at frame 0.
+    const keyframes = animation.effect.getKeyframes();
+    const timing = animation.effect.getTiming();
+    const properties = [...new Set(keyframes.flatMap((keyframe) => Object.keys(keyframe)))]
+      .filter((name) => name !== "offset" && name !== "computedOffset" && name !== "easing" && name !== "composite");
+    animation.cancel();
+    element.style.animationName = "none";
     const key = start + ":" + end;
     let work = groupsBySpan.get(key);
     if (work === undefined) {
@@ -684,20 +691,43 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
       };
       groupsBySpan.set(key, work);
     }
-    work.payload.animations.push(animation);
+    work.payload.animations.push({ element, keyframes, timing, properties });
   }
   // The shared index owns only frame-span lookup. Animation materialization and
   // absolute currentTime evaluation remain private to this adapter.
   const workIndex = hyperframesCreateFrameWorkIndex([...groupsBySpan.values()]);
+  const read = (style, name) => name.startsWith("--") ? style.getPropertyValue(name) : style[name];
+  const write = (style, name, value) => {
+    if (name.startsWith("--")) style.setProperty(name, value);
+    else style[name] = value;
+  };
   const applyFrame = (time) => {
     const programFrame = Math.max(0, Math.round(Number(time || 0) * numerator / denominator));
+    const active = [];
     for (const work of workIndex.at(programFrame)) {
       const localTime = (programFrame - work.startFrame) * millisecondsPerFrame;
       // Always derive the pose from the absolute requested frame. Worker
       // partitioning, seek order and the previously rendered frame are not
       // inputs to animation state.
-      for (const animation of work.payload.animations) animation.currentTime = localTime;
+      for (const item of work.payload.animations) active.push({ item, localTime });
     }
+    // Evaluate each pose with a transient Animation, read it and cancel it before
+    // this seek returns, so no adapter ever sees it. The Animation constructor,
+    // unlike Element.animate, is not tracked by HyperFrames' waapi adapter. Only
+    // the resulting inline style reaches the captured frame.
+    const probes = active.map(({ item, localTime }) => {
+      const probe = new Animation(new KeyframeEffect(item.element, item.keyframes, item.timing), document.timeline);
+      probe.currentTime = localTime;
+      return probe;
+    });
+    const poses = active.map(({ item }) => {
+      const style = getComputedStyle(item.element);
+      return item.properties.map((name) => read(style, name));
+    });
+    for (const probe of probes) probe.cancel();
+    active.forEach(({ item }, index) => {
+      item.properties.forEach((name, position) => write(item.element.style, name, poses[index][position]));
+    });
     void document.documentElement.getBoundingClientRect();
   };
   void document.documentElement.getBoundingClientRect();

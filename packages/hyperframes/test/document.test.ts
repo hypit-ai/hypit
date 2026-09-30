@@ -325,8 +325,9 @@ test("HyperFrames emits compact absolute-frame animation without creating a Trac
   assert.match(document.html, /animation-duration:1\.001s/u);
   assert.match(document.html, /100%\{opacity:1;transform:translateY\(0%\)\}/u);
   assert.match(document.html, /hyperframesCreateFrameWorkIndex/u);
-  assert.match(document.html, /for \(const animation of work\.payload\.animations\) animation\.currentTime = localTime/u);
-  assert.doesNotMatch(document.html, /const frames = \[\]|getComputedStyle\(element\)|animation\.cancel\(\)/u);
+  assert.match(document.html, /new Animation\(new KeyframeEffect\(/u);
+  assert.doesNotMatch(document.html, /const frames = \[\]/u, "poses are evaluated per seek, not tabulated per Present frame");
+  assert.doesNotMatch(document.html, /\.animate\(/u, "HyperFrames' waapi adapter tracks Element.animate");
   assert.doesNotMatch(document.html, /isolation:isolate/u);
 
   const marker = document.html.indexOf("const millisecondsPerFrame");
@@ -335,42 +336,101 @@ test("HyperFrames emits compact absolute-frame animation without creating a Trac
   const scriptEnd = document.html.indexOf("</script>", marker);
   const { frameWorkIndexRuntime, hyperframesFrameSelectionPrelude } = await import("../src/frame-work.js");
   const runtime = `${frameWorkIndexRuntime}\n${document.html.slice(scriptStart, scriptEnd)}`;
+  const toFrame = (milliseconds: number) => Math.round(milliseconds * 30 / 1_001);
+  // A fake DOM whose opacity is the evaluated local frame. After every seek it
+  // also plays HyperFrames' css/waapi adapters, which move each animation still
+  // live in the document to absolute composition time.
   const evaluate = async (
     spans: readonly { readonly start: number; readonly duration: number }[],
     frames: readonly number[],
     selection?: readonly { readonly startFrame: number; readonly endFrameExclusive: number }[],
   ) => {
     const { runInNewContext } = await import("node:vm");
+    type FakeElement = { pose: number | undefined; readonly style: Record<string, unknown> };
+    type FakeAnimation = { readonly target: FakeElement; currentTime: number; pause(): void; cancel(): void };
     const positions = spans.map((): number[] => []);
-    let pauses = 0;
+    const live = new Set<FakeAnimation>();
+    let materialized = 0;
     let seek: (event: { detail: { time: number } }) => void = () => {};
-    const elements = spans.map((span, index) => ({
-      getBoundingClientRect() {},
-      getAnimations: () => [{
-        set currentTime(value: number) { positions[index]!.push(Math.round(value * 30 / 1_001)); },
-        pause() { pauses += 1; },
-      }],
-      getAttribute: (name: string) => String(name.endsWith("start-frame") ? span.start : span.duration),
-    }));
-    runInNewContext(`${selection === undefined ? "" : hyperframesFrameSelectionPrelude(selection)}\n${runtime}`, {
-      document: { querySelectorAll: () => elements, documentElement: { getBoundingClientRect() {} } },
-      window: { addEventListener(_name: string, callback: typeof seek) { seek = callback; } },
+    const animate = (target: FakeElement, record?: number[], effect?: object): FakeAnimation => {
+      const animation = {
+        target,
+        effect,
+        set currentTime(value: number) {
+          record?.push(toFrame(value));
+          target.pose = toFrame(value);
+        },
+        pause() {},
+        cancel() {
+          live.delete(animation);
+          target.pose = undefined;
+        },
+      };
+      live.add(animation);
+      return animation;
+    };
+    const elements = spans.map((span) => {
+      const element = {
+        pose: undefined as number | undefined,
+        style: {} as Record<string, unknown>,
+        getBoundingClientRect() {},
+        getAnimations: () => [...live].filter((animation) => animation.target === element),
+        getAttribute: (name: string) => String(name.endsWith("start-frame") ? span.start : span.duration),
+      };
+      animate(element, undefined, {
+        getKeyframes: () => {
+          materialized += 1;
+          return [
+            { offset: 0, computedOffset: 0, easing: "linear", composite: "auto", opacity: "0" },
+            { offset: 1, computedOffset: 1, easing: "linear", composite: "auto", opacity: String(span.duration) },
+          ];
+        },
+        getTiming: () => ({ duration: span.duration * 1_001 / 30, fill: "both" }),
+      });
+      return element;
     });
-    for (const frame of frames) seek({ detail: { time: frame * 1_001 / 30_000 } });
-    return { pauses, positions };
+    runInNewContext(`${selection === undefined ? "" : hyperframesFrameSelectionPrelude(selection)}\n${runtime}`, {
+      document: { querySelectorAll: () => elements, documentElement: { getBoundingClientRect() {} }, timeline: {} },
+      window: { addEventListener(_name: string, callback: typeof seek) { seek = callback; } },
+      KeyframeEffect: class {
+        readonly target: FakeElement;
+        constructor(target: FakeElement) { this.target = target; }
+      },
+      Animation: function (effect: { target: FakeElement }) {
+        return animate(effect.target, positions[elements.indexOf(effect.target as typeof elements[number])]);
+      },
+      getComputedStyle: (element: FakeElement) => ({ opacity: String(element.pose) }),
+    });
+    for (const frame of frames) {
+      seek({ detail: { time: frame * 1_001 / 30_000 } });
+      for (const animation of live) animation.currentTime = frame * 1_001 / 30;
+    }
+    // What a captured frame shows: a live animation wins over inline style.
+    const shown = elements.map((element) => element.pose === undefined ? element.style.opacity : String(element.pose));
+    return { materialized, live: live.size, positions, shown };
   };
   assert.deepEqual(await evaluate([{ start: 15, duration: 30 }], [30, 44, 15, 45, 60]), {
-    pauses: 1,
-    positions: [[0, 15, 29, 0]],
+    materialized: 1,
+    live: 0,
+    positions: [[15, 29, 0]],
+    shown: ["0"],
   });
-  assert.deepEqual(await evaluate([{ start: 15, duration: 30 }], [30]), { pauses: 1, positions: [[0, 15]] },
+  assert.deepEqual(await evaluate([{ start: 15, duration: 30 }], [30]), { materialized: 1, live: 0, positions: [[15]], shown: ["15"] },
     "a fresh worker derives the same middle pose without visiting preceding frames");
+  assert.deepEqual(await evaluate([{ start: 30, duration: 60 }], [33, 60, 86]), {
+    materialized: 1,
+    live: 0,
+    positions: [[3, 30, 56]],
+    shown: ["56"],
+  }, "a Present starting after frame 0 keeps its Present-relative pose when HyperFrames seeks live animations");
   assert.deepEqual(await evaluate([
     { start: 0, duration: 30 },
     { start: 90, duration: 30 },
   ], [100], [{ startFrame: 100, endFrameExclusive: 101 }]), {
-    pauses: 1,
-    positions: [[], [0, 10]],
+    materialized: 1,
+    live: 1,
+    positions: [[], [10]],
+    shown: ["100", "10"],
   }, "a selected render does not materialize animations from unrelated Presents");
   assert.deepEqual(await evaluate([
     { start: 0, duration: 5 },
@@ -378,13 +438,15 @@ test("HyperFrames emits compact absolute-frame animation without creating a Trac
     { start: 3, duration: 5 },
     { start: 100, duration: 2 },
   ], [0, 3, 4, 5, 7, 8, 100, 101, 102, 6]), {
-    pauses: 4,
+    materialized: 4,
+    live: 0,
     positions: [
-      [0, 0, 3, 4],
-      [0, 0, 2, 3, 1],
-      [0, 0, 1, 2, 4, 3],
-      [0, 0, 1],
+      [0, 3, 4],
+      [0, 2, 3, 1],
+      [0, 1, 2, 4, 3],
+      [0, 1],
     ],
+    shown: ["4", "1", "3", "1"],
   }, "the point index preserves overlap, half-open boundaries, distant spans and reverse seeks");
 });
 
