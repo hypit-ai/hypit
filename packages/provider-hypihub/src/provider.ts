@@ -107,8 +107,28 @@ function jobId(value: Record<string, unknown>): string {
   return id;
 }
 
-async function verifyModelRoute(client: HypiHubClient, auth: HypiHubAuth, model: string, operation: HypiHubModelOperation): Promise<void> {
-  const card = await client.json(`/models/${encodeURIComponent(model)}`, auth);
+/** A catalogue read that carried no verdict on the model: unreachable transport, or asked to retry. */
+function catalogueUnreadable(error: unknown): boolean {
+  return error instanceof EndpointTransportError
+    || (error instanceof HypiHubHttpError && (error.status === 429 || error.status >= 500));
+}
+
+/**
+ * Confirm the model's catalogue card lists the operation before any reference upload. A read
+ * that carries no verdict (transport failure, 429, 5xx) is skipped with a progress note: the
+ * submission itself is the authority on the model, and refusing here would turn a catalogue
+ * outage into a generation outage. A catalogue that answered still fails fast below.
+ */
+async function verifyModelRoute(client: HypiHubClient, auth: HypiHubAuth, model: string, operation: HypiHubModelOperation,
+  report?: (phase: string) => Promise<void>): Promise<void> {
+  let card: Record<string, unknown>;
+  try {
+    card = await client.json(`/models/${encodeURIComponent(model)}`, auth);
+  } catch (error) {
+    if (!catalogueUnreadable(error)) throw error;
+    await report?.(`HypiHub model catalogue is unreachable (${failureMessage(error)}); submitting ${model} for the service's own verdict`);
+    return;
+  }
   const endpoints = card.endpoints;
   assert(Array.isArray(endpoints) && endpoints.every((value) => typeof value === "string"),
     `HypiHub model ${model} returned no valid operation list; support for ${operation} is unknown`);
@@ -425,7 +445,8 @@ async function prepareGeneration(client: HypiHubClient, context: EndpointInvocat
   const auth = authFor(context, client);
   await context.reportProgress?.({ phase: `Reading HypiHub model catalogue: ${request.model} (${request.operation})` });
   try {
-    await verifyModelRoute(client, auth, request.model, request.operation);
+    await verifyModelRoute(client, auth, request.model, request.operation,
+      async (phase) => { await context.reportProgress?.({ phase }); });
   } catch (error) {
     throw new HypiHubServiceError(error instanceof EndpointServiceError ? error.code : "HYPIHUB_ERROR",
       `HypiHub model catalogue check failed; model=${request.model}; operation=${request.operation}; references uploaded=0; generation not submitted: ${failureMessage(error)}`);
@@ -574,7 +595,8 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
         `WhisperX evidence Resource ${request.audio.resource} is unavailable or has changed`);
       assertWhisperXEvidenceWav(bytes, request.sampleFrames);
       const auth = authFor(context, client);
-      await verifyModelRoute(client, auth, transcriptionModel, "transcriptions");
+      await verifyModelRoute(client, auth, transcriptionModel, "transcriptions",
+        async (phase) => { await context.reportProgress?.({ phase }); });
       await context.reportProgress?.({ phase: "Preparing audio for hosted transcription" });
       const url = options.publicAssetUrl === undefined
         ? await client.upload(request.audio, context.resources, auth)

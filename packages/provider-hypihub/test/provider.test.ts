@@ -944,10 +944,14 @@ test("generation and voice cloning check their exact catalogue operation before 
       try { await selected.registration.handler(context); }
       catch (error) { failed = error as Error & { code?: string }; }
     }
-    if (availability === "available") {
+    if (availability === "available" || availability === "unknown") {
       assert.equal(failed, undefined);
       assert.deepEqual(events, item.references ? ["catalogue", "reference", "submit"] : ["catalogue", "submit"]);
       assert.match(progress.at(-1)!, /Submitting HypiHub request/u);
+      if (availability === "unknown") {
+        assert.ok(progress.some((phase) => /model catalogue is unreachable.*for the service's own verdict/u.test(phase)),
+          "the skipped catalogue check is reported as progress");
+      }
     } else {
       assert.ok(failed);
       assert.deepEqual(events, ["catalogue"], "neither a reference nor another model is tried");
@@ -958,16 +962,57 @@ test("generation and voice cloning check their exact catalogue operation before 
         assert.match(failed.message, /HTTP 404.*request=catalogue-request.*No route for this account/u);
       } else if (availability === "different-operation") {
         assert.match(failed.message, /does not list operation.*listed operations: transcriptions/u);
-      } else if (availability === "undeclared") {
+      } else {
         assert.match(failed.message, /returned no valid operation list.*is unknown/u);
         assert.doesNotMatch(failed.message, /does not list operation|model_not_found/u);
-      } else {
-        assert.match(failed.message, /Connection closed before catalogue response/u);
-        assert.doesNotMatch(failed.message, /model_not_found/u);
       }
       assert.equal(progress.length, 1);
       assert.match(progress[0]!, /Reading HypiHub model catalogue/u);
     }
+  }
+});
+
+test("an unreachable model catalogue defers to the submission's verdict instead of failing the generation", async () => {
+  const resources = new MemoryResourceStore();
+  const image = await resources.put(new Uint8Array([1, 2, 3]), "image/png");
+  const request: Need = {
+    id: "need:catalogue-unreachable", capability: gptImageEndpoints.image!.capability,
+    returns: gptImageEndpoints.image!.returns,
+    constraints: sealGptImage2Request({ prompt: ["Edit this portrait."], aspectRatio: ["1:1"], resolution: ["1K"],
+      images: [{ role: "image", artifact: image }],
+    }) as unknown as CanonicalValue,
+    result: "result:catalogue-unreachable",
+  };
+  for (const mode of ["fetch failed", "503", "429"] as const) {
+    const progress: string[] = [];
+    let submitted: { model?: string } | undefined;
+    const registry = new EndpointRegistry();
+    await createHypiHubProvider({
+      publicAssetUrl: async (artifact) => `https://media.test/${artifact.resource}`,
+      fetch: async (input, init) => {
+        const url = String(input);
+        if (url.includes("/models/")) {
+          if (mode === "fetch failed") throw new Error("fetch failed");
+          return Response.json({ error: { code: "unavailable", message: "Catalogue is being redeployed" } }, {
+            status: mode === "503" ? 503 : 429,
+          });
+        }
+        submitted = JSON.parse(String(init?.body));
+        return Response.json({ id: "job_catalogue-unreachable", status: "queued" });
+      },
+    }).install(registry);
+    const selected = registry.resolve(request);
+    assert.equal(selected.status, "resolved");
+    assert.equal(selected.registration.kind, "asynchronous");
+    const outcome = await selected.registration.endpoint.start({
+      command: { kind: "fulfill-need", id: "command:catalogue-unreachable", need: request }, need: request, resources,
+      credentials: { apiKey: { secret: "test-key" } }, operation: "operation:catalogue-unreachable",
+      reportProgress: async (value: { readonly phase?: string }) => { progress.push(value.phase!); },
+    });
+    assert.equal(outcome.status, "pending");
+    assert.equal(submitted?.model, "gpt-image-2");
+    assert.ok(progress.some((phase) => /model catalogue is unreachable.*for the service's own verdict/u.test(phase)),
+      `the skipped catalogue check is reported as progress for ${mode}`);
   }
 });
 
@@ -1086,6 +1131,38 @@ for (const kind of ["pricing", "speech"] as const) {
     assert.equal(calls, kind === "pricing" ? 1 : 2);
   });
 }
+
+test("hosted transcription proceeds when the model catalogue is unreachable", async () => {
+  const resources = new MemoryResourceStore();
+  const artifact = await resources.put(wav(32_000), 'audio/wav');
+  const request: Need = {
+    id: 'need:transcription-catalogue', capability: whisperXCapabilities.alignment,
+    returns: speechEvidenceTypes.alignedTranscript,
+    constraints: whisperXRequestForEvidenceAudio(sealSpeechEvidenceAudio({ artifact, sampleFrames: 32_000 }), { language: 'en' }) as unknown as CanonicalValue,
+    result: 'record:transcription-catalogue',
+  };
+  const progress: string[] = [];
+  let submissions = 0;
+  const registry = new EndpointRegistry();
+  await createHypiHubProvider({
+    publicAssetUrl: async () => 'https://assets.test/evidence.wav',
+    fetch: async (input) => {
+      if (String(input).includes('/models/')) throw new Error('fetch failed');
+      submissions++;
+      return Response.json({ words: [{ word: 'hello', start: 0.1, end: 0.4 }] });
+    },
+  }).install(registry);
+  const resolution = registry.resolve(request);
+  assert.equal(resolution.status, 'resolved');
+  assert.equal(resolution.registration.kind, 'immediate');
+  await resolution.registration.handler({
+    command: { kind: 'fulfill-need', id: 'command:transcription-catalogue', need: request },
+    need: request, resources, credentials: { apiKey: { secret: 'test-key' } },
+    reportProgress: async (entry: { readonly phase?: string }) => { progress.push(entry.phase!); },
+  });
+  assert.equal(submissions, 1);
+  assert.ok(progress.some((phase) => /model catalogue is unreachable/u.test(phase)));
+});
 
 for (const mode of ['success', 'error', 'body-timeout'] as const) {
   test(`hosted transcription keeps its receipt on ${mode} without resubmitting`, async () => {
