@@ -1044,6 +1044,47 @@ test("terminal jobs preserve service error codes and receipts on both submission
   }
 });
 
+test("a job rejected at the service's billing precheck explains the post-submission sequence", async () => {
+  const request = need(sealSeedanceRequest("seedance-2-mini", {
+    prompt: ["A presenter speaks."], resolution: ["720p"], aspectRatio: ["9:16"],
+    duration: [5], generateAudio: [true], webSearch: [false],
+  }) as unknown as CanonicalValue);
+  const reason = "Credits insufficient : Your current balance isn't enough to run this request. Please top up to continue.";
+  for (const phase of ["start", "poll"] as const) {
+    const endpoint = await endpointFor(request, async (url) => String(url).includes("/models/")
+      ? Response.json({ endpoints: ["videos"] })
+      : Response.json({ id: "job-402", status: "failed", model: "bytedance/seedance-2-mini",
+        error_code: "402", error: reason }));
+    const context = {
+      command: { kind: "fulfill-need", id: "command:billing", need: request } as const, need: request,
+      resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test-key" } }, operation: "billing",
+    };
+    const outcome = phase === "start" ? await endpoint.start(context) : await endpoint.poll({ ...context,
+      handle: { contract: "hypit.hypihub-operation@1", jobId: "job-402", startedAt: Date.now(),
+        route: `${request.capability.module.name}@${request.capability.module.version}#${request.capability.name}` },
+    });
+    assert.equal(outcome.status, "failed");
+    if (outcome.status !== "failed") continue;
+    assert.equal(outcome.failure.code, "402");
+    assert.deepEqual(outcome.receipt, { id: "job-402" });
+    assert.match(outcome.failure.message,
+      /job-402 failed; 402; model=bytedance\/seedance-2-mini: Credits insufficient/u);
+    assert.match(outcome.failure.message, /accepted this job.*billing precheck rejected it.*after submission/u);
+    assert.match(outcome.failure.message, /official@hypit\.ai/u);
+  }
+  const endpoint = await endpointFor(request, async (url) => String(url).includes("/models/")
+    ? Response.json({ endpoints: ["videos"] })
+    : Response.json({ id: "job-other", status: "failed", model: "bytedance/seedance-2-mini",
+      error_code: "upstream_rejected", error: "Reference could not be processed" }));
+  const outcome = await endpoint.start({
+    command: { kind: "fulfill-need", id: "command:billing", need: request }, need: request,
+    resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test-key" } }, operation: "billing",
+  });
+  assert.equal(outcome.status, "failed");
+  if (outcome.status !== "failed") return;
+  assert.doesNotMatch(outcome.failure.message, /billing precheck|official@hypit\.ai/u);
+});
+
 for (const kind of ["pricing", "speech"] as const) {
   test(`${kind} failures retain service evidence across their throwing boundary`, async () => {
     const request: Need = kind === "pricing" ? need(sealSeedanceRequest("seedance-2-mini", {
