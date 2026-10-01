@@ -313,6 +313,15 @@ test("quoted Recipe values may contain Prompt punctuation without changing SVS s
   assert.equal(sheet.recipes[0]?.value.properties.text, "first; second } /* literal */");
 });
 
+test("quoted Recipe text may contain a sheet closing tag", () => {
+  const prompt = "Show a literal </sheet> tag in the output";
+  const source = `<sheet version="1">demo.prompt { text: ${formatSvsValue(prompt)}; }</sheet>`;
+  const sheet = parseSvs("prompt.svs", source);
+  assert.equal(sheet.recipes[0]?.value.properties.text, prompt);
+  assert.throws(() => parseSvs("trailing.svs", `${source} extra`),
+    (error: unknown) => error instanceof SvsSyntaxError && error.code === "SVS_TRAILING");
+});
+
 test("SVS parses and serializes canonical arrays and objects as one Recipe value", () => {
   const source = `<sheet version="1">
   ranking.column {
