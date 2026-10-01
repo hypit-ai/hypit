@@ -510,8 +510,21 @@ export class EndpointResponseError extends Error {}
 export async function transport<T>(request: Promise<T>): Promise<T> {
   try { return await request; } catch (error) {
     if (error instanceof EndpointTransportError) throw error;
-    throw new EndpointTransportError(error instanceof Error ? error.message : String(error), { cause: error });
+    throw new EndpointTransportError(transportMessage(error), { cause: error });
   }
+}
+
+// Node's fetch reports every network failure as "fetch failed"; which one it was (ECONNRESET,
+// UND_ERR_CONNECT_TIMEOUT, ENOTFOUND, a certificate error) is only on `cause`.
+function transportMessage(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const cause = error.cause;
+  if (!(cause instanceof Error)) return error.message;
+  const code = (cause as { code?: unknown }).code;
+  const detail = typeof code === "string" && !cause.message.includes(code)
+    ? `${code} ${cause.message}`.trim()
+    : cause.message;
+  return detail.length > 0 ? `${error.message}: ${detail}` : error.message;
 }
 
 /** The wait a `Retry-After` header asks for, in milliseconds; either delay-seconds or an HTTP-date. */
