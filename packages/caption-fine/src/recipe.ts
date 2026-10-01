@@ -13,6 +13,7 @@ const colors = new Set([
   ...paired("fill", "glow-color", "gradient-from", "gradient-to", "long-shadow-color", "shadow-color", "stroke-color"),
   "background", "border-color", "cue-shadow-color", "underline-color",
   "active-box-background", "active-box-border-color", "active-underline-color",
+  "emphasis-fill", "emphasis-stroke-color",
 ]);
 
 const unitFractions = new Set([
@@ -39,7 +40,7 @@ const numbers = new Set([
     "shadow-blur", "shadow-spread", "shadow-x", "shadow-y", "stroke-width"),
 ]);
 
-const strings = new Set(["padding", "active-box-padding"]);
+const strings = new Set(["padding", "active-box-padding", "emphasis-words"]);
 
 const enums: Readonly<Record<string, readonly string[]>> = {
   "handoff": ["cut", "overlap"],
@@ -88,7 +89,8 @@ export const fineCaptionOptionalRecipeProperties = [
   "active-underline-color", "active-underline-offset", "active-underline-thickness", "anchor-x", "anchor-y",
   "atom-enter", "atom-enter-frames", "atom-exit", "atom-exit-frames", "atom-reveal", "block-align", "border-color", "border-width", "caps", "cue-enter",
   "cue-shadow-blur", "cue-shadow-color", "cue-shadow-opacity", "cue-shadow-spread", "cue-shadow-x", "cue-shadow-y",
-  "cue-enter-frames", "cue-enter-start-scale", "cue-exit", "cue-exit-frames", "direction", "glow-blur", "glow-color",
+  "cue-enter-frames", "cue-enter-start-scale", "cue-exit", "cue-exit-frames", "direction",
+  "emphasis-fill", "emphasis-stroke-color", "emphasis-words", "glow-blur", "glow-color",
   "glow-opacity", "glow-spread", "gradient-angle", "gradient-from", "gradient-to", "height", "inline-size", "karaoke", "karaoke-transition", "kerning",
   "handoff", "lead-frames", "letter-spacing", "long-shadow-angle", "long-shadow-color", "long-shadow-distance", "long-shadow-opacity",
   "loop", "loop-intensity", "loop-period-frames", "loop-target", "max-lines", "max-words-per-line", "opacity", "shadow-blur", "shadow-color",
