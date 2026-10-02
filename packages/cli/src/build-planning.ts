@@ -122,9 +122,27 @@ export type EvaluatedPlanNeed = {
   readonly issue?: string;
 };
 
+/** A Producer failure in a step that carries no planned need; no request report would show it. */
+export type PlanProducerFailure = {
+  readonly step: string;
+  readonly message: string;
+};
+
+/** Keep only the failures no planned need reports; every other failure already reaches a request. */
+export function unreportedFailures(
+  reported: ReadonlySet<string>,
+  failures: ReadonlyMap<string, string>,
+): readonly PlanProducerFailure[] {
+  return [...failures]
+    .filter(([step]) => !reported.has(step))
+    .map(([step, message]): PlanProducerFailure => ({ step, message }));
+}
+
 export type EvaluatedPlan = {
   readonly state: BuildState;
   readonly needs: ReadonlyMap<string, EvaluatedPlanNeed>;
+  /** Producer failures no planned need reports, so no request would otherwise carry them. */
+  readonly unreportedFailures: readonly PlanProducerFailure[];
 };
 
 export type PlanNeedView = {
@@ -309,7 +327,12 @@ export async function evaluatePlanNeeds(
         : `${issue}; package also does not describe the complete request for ${capabilityName(planned.capability)} before Build`,
     });
   }
-  return { state, needs: result };
+  const reported = new Set(plannedNeeds(state).map((planned) => planned.step));
+  return {
+    state,
+    needs: result,
+    unreportedFailures: unreportedFailures(reported, evaluation.failures),
+  };
 }
 
 /** The complete pre-Build requests shared by Endpoint selection and Provider pricing reads. */
