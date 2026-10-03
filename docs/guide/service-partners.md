@@ -19,6 +19,17 @@ both. A model the service offers beyond that set connects through the ordinary
 
 ## Model and tool API partners
 
+### AnyFast
+
+[AnyFast](https://www.anyfast.ai) exposes the documented
+[ByteDance Seedance 2.0 API](https://docs.anyfast.ai/zh/guides/model-api/bytedance/seedance-2-0).
+The repository's [`@hypit/provider-anyfast`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-anyfast/README.md)
+maps `@hypit/seedance@1#seedance-2` to `POST /v1/video/generations`, polls the task, and downloads
+the presigned result. It supports 4–15 seconds, 480p–4k and the documented ratios; `web_search`
+is accepted only for text-to-video. Images and audio can be sent as scoped Base64 data URLs; video
+references need an HTTPS or `asset://` URL publisher. Configure the Endpoint and binding from that
+README, then use `hypit auth login anyfast.seedance-2` to place the key in the selected Credential Store.
+
 ### TokenDance
 
 [TokenDance](https://tokendance.space) is a multi-model gateway.

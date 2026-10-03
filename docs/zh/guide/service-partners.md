@@ -16,6 +16,16 @@ HypiHub 是 Hypit 推荐的集成托管服务，提供已支持的生成与 Whis
 
 ## 模型与工具 API 合作方
 
+### AnyFast
+
+[AnyFast](https://www.anyfast.ai) 提供文档所述的
+[字节跳动 Seedance 2.0 API](https://docs.anyfast.ai/zh/guides/model-api/bytedance/seedance-2-0)。仓库中的
+[`@hypit/provider-anyfast`](https://github.com/hypit-ai/hypit/blob/main/packages/provider-anyfast/README.md)
+把 `@hypit/seedance@1#seedance-2` 映射到 `POST /v1/video/generations`，轮询任务并下载预签名结果。
+它支持 4–15 秒、480p–4k 和文档列出的比例；`web_search` 只接受纯文生视频。图片和音频可以使用
+请求范围内的 Base64 data URL；视频参考必须由发布器提供 HTTPS 或 `asset://` 地址。按该 README
+配置 Endpoint 和 binding，再用 `hypit auth login anyfast.seedance-2` 把密钥写入所选凭据存储。
+
 ### TokenDance
 
 [TokenDance](https://tokendance.space) 是多模型网关。

@@ -69,7 +69,10 @@ setInterval(() => {}, 1000);
       signal: controller.signal });
     const rejected = assert.rejects(checking, /stop probes/u);
     let pids: number[] = [];
-    for (let i = 0; i < 200; i++) {
+    // The default runner executes files concurrently. On a busy host the two
+    // probe children can take longer than two seconds to reach their marker;
+    // wait for the observable start instead of making cancellation flaky.
+    for (let i = 0; i < 1_000; i++) {
       pids = (await readdir(directory)).filter((name) => name.startsWith("running-"))
         .map((name) => Number(name.slice("running-".length)));
       if (pids.length === 2) break;
