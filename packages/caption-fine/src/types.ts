@@ -117,6 +117,11 @@ export type FineCaptionParameters = {
   };
   readonly basePaint: FineCaptionGlyphPaint;
   readonly activePaint: FineCaptionGlyphPaint;
+  /**
+   * Keywords painted with `emphasisPaint` wherever they appear in a Cue, independent of the
+   * spoken Word — the short-video convention of colouring the hook words of every caption.
+   */
+  readonly emphasis: { readonly words: readonly string[]; readonly paint: FineCaptionGlyphPaint };
   readonly underline: FineCaptionUnderline;
   readonly activeUnderline: FineCaptionActiveUnderline;
   readonly cueBox: {

@@ -216,6 +216,18 @@ export function fineCaptionParameters(
     },
     basePaint,
     activePaint: glyphPaint(recipe, "active-", basePaint),
+    emphasis: {
+      words: Object.hasOwn(recipe.properties, "emphasis-words")
+        ? string(recipe, "emphasis-words").split(/[|｜、,，]/u).map((word) => word.trim()).filter((word) => word.length > 0)
+        : [],
+      // Only the fill and the outline change; every other Paint field stays the base glyph's.
+      // A base gradient would paint over the emphasis fill, so the emphasised glyphs drop it.
+      paint: (({ gradient: _gradient, ...plain }) => ({
+        ...plain,
+        fill: color(recipe, "emphasis-fill", "#FFD54A"),
+        stroke: { ...plain.stroke, color: color(recipe, "emphasis-stroke-color", plain.stroke.color) },
+      }))(basePaint),
+    },
     underline: {
       mode: choice(recipe, "underline", ["off", "always"] as const, fineCaptionEditableDefaults["underline"]),
       color: color(recipe, "underline-color", basePaint.fill),
@@ -354,6 +366,7 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
   assertColor(value.activeBox.borderColor, "Fine Caption active box border color");
   assertPaint(value.basePaint, "Fine Caption base Paint");
   assertPaint(value.activePaint, "Fine Caption active Paint");
+  assertPaint(value.emphasis.paint, "Fine Caption emphasis Paint");
 }
 
 export function fineCaptionStyle(

@@ -661,6 +661,34 @@ function exclusiveActivationFrames(
   }));
 }
 
+/**
+ * The Words of one Cue that fall inside an emphasis keyword. Keywords are matched on the Cue's
+ * joined display text, so a keyword spanning several Words (one Han character each) paints all
+ * of them; a Word only partly inside a keyword is painted whole — a glyph cannot be half emphasised.
+ */
+function emphasizedWordIds(
+  atoms: readonly CaptionAlignmentUnit[],
+  wordText: ReadonlyMap<string, CaptionDisplayWord>,
+  keywords: readonly string[],
+): ReadonlySet<string> {
+  const marked = new Set<string>();
+  if (keywords.length === 0) return marked;
+  const spans: { readonly id: string; readonly start: number; readonly end: number }[] = [];
+  let joined = "";
+  for (const id of atoms.flatMap((atom) => atom.wordIds)) {
+    const text = wordText.get(id)?.text ?? "";
+    spans.push({ id, start: joined.length, end: joined.length + text.length });
+    joined += text;
+  }
+  // Words are joined without their separators, so a keyword is matched without its spaces too.
+  for (const keyword of keywords.map((word) => word.replace(/\s+/gu, "")).filter((word) => word.length > 0)) {
+    for (let from = joined.indexOf(keyword); from >= 0; from = joined.indexOf(keyword, from + keyword.length)) {
+      for (const span of spans) if (span.start < from + keyword.length && span.end > from) marked.add(span.id);
+    }
+  }
+  return marked;
+}
+
 function cueElements(
   atoms: readonly CaptionAlignmentUnit[],
   atomFrames: ReadonlyMap<string, { readonly start: number; readonly end: number }>,
@@ -856,6 +884,7 @@ function cueElements(
     }
   }
 
+  const emphasized = emphasizedWordIds(atoms, wordText, parameters.emphasis.words);
   for (const [atomIndex, atom] of atoms.entries()) {
     const timing = atomFrames.get(atom.id);
     if (timing === undefined) throw new Error(`Fine Caption is missing timing for Atom ${atom.id}`);
@@ -1006,16 +1035,17 @@ function cueElements(
     for (const [wordIndex, wordId] of atom.wordIds.entries()) {
       const text = wordText.get(wordId)?.text;
       if (text === undefined) throw new Error(`Fine Caption Atom references unknown word ${wordId}`);
+      const paint = emphasized.has(wordId) ? parameters.emphasis.paint : parameters.basePaint;
       pushText({
         id: `${atomId}-base-${wordIndex + 1}`,
         parent: atomId,
         kind: "text",
         text,
         style: [
-          ...glyphStyle(parameters, parameters.basePaint, parameters.underline),
+          ...glyphStyle(parameters, paint, parameters.underline),
           ...(wordGap === undefined ? spacedStyle(gaps[wordIndex] ?? false) : []),
         ],
-        ...glyphPaintFields(parameters.basePaint),
+        ...glyphPaintFields(paint),
         fonts,
       }, wordIndex);
     }

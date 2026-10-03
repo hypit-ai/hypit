@@ -62,6 +62,7 @@ placeCaption([
   "active-long-shadow-opacity", "active-long-shadow-distance", "active-long-shadow-angle", "active-glow-color",
   "active-glow-opacity", "active-glow-blur", "active-glow-spread",
 ], "how", "paint", "active-paint");
+placeCaption(["emphasis-words", "emphasis-fill", "emphasis-stroke-color"], "how", "paint", "emphasis-paint");
 placeCaption([
   "background", "border-color", "border-width", "padding", "radius", "cue-shadow-color", "cue-shadow-opacity",
   "cue-shadow-x", "cue-shadow-y", "cue-shadow-blur", "cue-shadow-spread",
@@ -87,8 +88,9 @@ const captionColorProperties = new Set([
   "active-fill", "active-gradient-from", "active-gradient-to", "active-stroke-color", "active-shadow-color",
   "active-long-shadow-color", "active-glow-color", "background", "border-color", "cue-shadow-color", "underline-color",
   "active-underline-color", "active-box-background", "active-box-border-color",
+  "emphasis-fill", "emphasis-stroke-color",
 ]);
-const captionTextProperties = new Set(["loop"]);
+const captionTextProperties = new Set(["loop", "emphasis-words"]);
 const captionPercentProperties = new Set(["x", "y", "width", "height", "opacity", "active-opacity", "active-scale"]);
 const captionPixelProperties = new Set(["size", "letter-spacing", "word-gap", "radius", "stroke-width", "border-width", "shadow-blur", "glow-blur"]);
 

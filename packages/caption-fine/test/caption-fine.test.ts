@@ -66,10 +66,10 @@ const recipe: SvsRecipe = {
   },
 };
 
-function fixture(script = "<line>one two || three four</line>") {
+function fixture(script = "<line>one two || three four</line>", styleRecipe: SvsRecipe = recipe) {
   const parsed = parseScript("caption-fine.svml", script);
   const document = captionDocument(parsed, "story.caption", "story");
-  const style = fineCaptionStyle("plain", recipe, [font]);
+  const style = fineCaptionStyle("plain", styleRecipe, [font]);
   const program: CaptionProgram = {
     id: "captions",
     documentId: document.id,
@@ -576,4 +576,26 @@ test("Fine uses author separators in ordinary text, shared groups, active copies
   assert.equal(chinese.find(element => element.id === "atom-2-entry")!.style.some(style => style.name === "margin-left"), false);
   const joined = render("3D");
   assert.equal(joined.some(element => element.style.some(style => (style.name === "column-gap" || style.name === "margin-left") && style.value !== "0px")), false);
+});
+
+test("Fine Caption paints emphasis keywords on the displayed text, independent of the spoken Word", () => {
+  const emphasized: SvsRecipe = { ...recipe, properties: { ...recipe.properties,
+    "emphasis-words": "two|three four", "emphasis-fill": "#FF3B30" } };
+  assert.deepEqual(fineCaptionParameters(emphasized, [font]).emphasis.words, ["two", "three four"]);
+  const { document, program, projection } = fixture(undefined, emphasized);
+  const track = renderFineCaption(scheduleFineCaption(projection, program, document), program, document,
+    sealTimeline({ items: [], id: "test-space", durationSec: 3, frameRate: { numerator: 30, denominator: 1 } }));
+  const bases = track.presents.flatMap((present) => present.elements)
+    .filter((element) => /-base-\d+$/u.test(element.id) && element.kind === "text");
+  const painted = (word: string) => JSON.stringify(bases.find((element) => "text" in element && element.text === word))
+    .includes("#FF3B30");
+  assert.equal(painted("one"), false, "a Word outside every keyword keeps the base fill");
+  assert.equal(painted("two"), true);
+  // A keyword spanning two Words paints both of them.
+  assert.equal(painted("three"), true);
+  assert.equal(painted("four"), true);
+});
+
+test("Fine Caption without emphasis keywords paints every Word with the base fill", () => {
+  assert.deepEqual(fineCaptionParameters(recipe, [font]).emphasis.words, []);
 });
