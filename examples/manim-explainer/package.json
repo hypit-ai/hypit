@@ -1,0 +1,9 @@
+{
+  "name": "hypit-manim-showcase",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@project/manim-showcase": "file:packages/manim-showcase"
+  }
+}

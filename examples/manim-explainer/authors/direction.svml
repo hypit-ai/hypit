@@ -1,0 +1,49 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import as="copy" source="./script.svml"/>
+  <import as="text" from="@hypit/text@1"/>
+  <import as="speaker-kit" source="@hypit/seedance-kits/speaker"/>
+  <import as="settings" source="../recipes/performance.svs"/>
+
+  <text:Value id="part-one-action">
+    HOST is the same adult man in @image1, speaking clear English directly to camera in a stable medium shot. Use a low, resonant, magnetic male voice with calm technical authority. Begin with a small welcoming nod. Emphasize “Manim animations” once, then gesture toward the viewer's left when introducing mathematics. Keep the face, wardrobe, lighting and framing stable. Deliver the exact English script with natural pauses and no visible text or invented words.
+  </text:Value>
+
+  <text:Value id="part-two-action">
+    HOST is the same adult man in @image1, continuing the same English technical explanation with direct eye contact. Keep the low, resonant, magnetic male voice and stable medium shot. Emphasize “First” clearly, then keep the explanation measured and precise. Keep lighting, posture, hands and framing consistent. Deliver the exact English script with no added text or dialogue.
+  </text:Value>
+
+  <text:Value id="part-three-action">
+    HOST is the same adult man in @image1, speaking clear English directly to camera in a stable medium shot. Keep the low, resonant, magnetic male voice. Emphasize “Next” clearly and make one small forward hand cue for machine learning. Keep the face, wardrobe, lighting and framing consistent. Deliver the exact English script with natural pauses and no visible text or invented words.
+  </text:Value>
+
+  <text:Value id="part-four-action">
+    HOST is the same adult man in @image1, speaking clear English directly to camera in a stable medium shot. Keep the low, resonant, magnetic male voice. Emphasize “Finally” clearly and give one focused nod for physics. Keep the face, wardrobe, lighting and framing consistent. Deliver the exact English script with natural pauses and no visible text or invented words.
+  </text:Value>
+
+  <text:Value id="part-five-action">
+    HOST is the same adult man in @image1, speaking clear English directly to camera in a stable medium shot. Keep the low, resonant, magnetic male voice and calm technical authority. Finish with a decisive nod on “same production timeline”. Keep the face, wardrobe, lighting and framing consistent. Deliver the exact English script with natural pauses and no visible text or invented words.
+  </text:Value>
+
+  <text:Render id="part-one-prompt" template={speaker-kit.speaker-v1} recipe={settings.speaker.host}>
+    <text:Set name="dialogue" text={copy.story.segment.opening.dialogue}/>
+    <text:Set name="action" text={part-one-action}/>
+  </text:Render>
+  <text:Render id="part-two-prompt" template={speaker-kit.speaker-v1} recipe={settings.speaker.host}>
+    <text:Set name="dialogue" text={copy.story.segment.mathematics.dialogue}/>
+    <text:Set name="action" text={part-two-action}/>
+  </text:Render>
+  <text:Render id="part-three-prompt" template={speaker-kit.speaker-v1} recipe={settings.speaker.host}>
+    <text:Set name="dialogue" text={copy.story.segment.machine-learning.dialogue}/>
+    <text:Set name="action" text={part-three-action}/>
+  </text:Render>
+  <text:Render id="part-four-prompt" template={speaker-kit.speaker-v1} recipe={settings.speaker.host}>
+    <text:Set name="dialogue" text={copy.story.segment.physics.dialogue}/>
+    <text:Set name="action" text={part-four-action}/>
+  </text:Render>
+  <text:Render id="part-five-prompt" template={speaker-kit.speaker-v1} recipe={settings.speaker.host}>
+    <text:Set name="dialogue" text={copy.story.segment.closing.dialogue}/>
+    <text:Set name="action" text={part-five-action}/>
+  </text:Render>
+</svml>

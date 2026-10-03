@@ -135,6 +135,14 @@ Carry working, chosen services and reusable Outputs forward. Configure their rou
 [Profile](references/environment/profile.md), then prepare only the needed resources and helpers.
 A Profile-wide readiness report describes configuration; the current production determines which
 findings matter next. Installed, selected, prepared and running establish different facts.
+
+For mathematical diagrams, plotted explanations, formula or graph animation, geometric
+transformations, or an explicit request for Manim, read [Manim authoring](references/creation/manim.md)
+before choosing the implementation. In the supported workflow Manim is a project-local external
+pre-renderer, not a Provider, Endpoint or Build-time Python capability. Keep its source and locked
+environment with the production, explain native-environment and render progress, then probe and
+visually inspect the MP4 before admitting it through ordinary media authoring. The Manim reference
+defines the required frame-grid and boundary-frame checks.
 Judge preparation by what it enables for this work. When downloads or model loading dominate,
 use [local preparation and network routes](references/environment/local-tools.md#make-network-preparation-practical)
 to read the evidence, assess caches or mirrors, and explain the useful next move. Settled choices
@@ -272,6 +280,7 @@ practical, revisit that choice and carry the improvement into the work and its n
 | writing `<script>`: current syntax, display/speech, spaces, grouping, Roles, Cue breaks, attributes or marker affinities | `references/production/script-syntax.md` |
 | placing a component in time: semantic bindings, authored clock positions, offsets, durations or what a timeline edit changes | `references/production/timing.md` |
 | project layout, picking work back up, or handing an editable production to someone else | `references/creation/project-files.md` |
+| mathematical diagrams, plots, formulas, geometric animation or an explicit Manim request | `references/creation/manim.md` |
 | directing a generated person, setting, product, B-roll image, camera view, visual reference or image prompt | `references/playbooks/craft/image-direction.md` |
 | choosing, designing or adapting a character's voice, its appeal, vocal qualities or casting sample | `references/playbooks/craft/voice-direction.md` |
 | directing generated video, deciding when performed action or camera behavior needs source footage, visible speech, silent action, cuts or request duration | `references/playbooks/craft/video-direction.md` |

@@ -97,11 +97,13 @@ project/
 │   └── <target>/
 │       ├── BRIEF.md
 │       ├── TREATMENT.md
-│       ├── PROGRESS.md
+│       ├── PROGRESS.md          # optional handoff note when work spans sessions
 │       ├── authors/
 │       ├── recipes/
 │       ├── runs/
+│       ├── manim-scenes/       # optional project-local Manim or other external authoring source
 │       ├── assets/
+│       ├── manim-renders/      # reproducible external-render intermediates, not Build Results
 │       └── drafts/
 ├── assets/                      # inputs shared by several targets
 ├── packages/                    # project Author Packages shared by targets
@@ -175,12 +177,20 @@ was not adopted; it does not need to be copied into `drafts/`.
 When an output is deliberately exported into the project, place it according to its new role. It may
 become an `asset`, a `draft`, or direct input to another production.
 
+`manim-renders/` can hold reproducible outputs from an external authoring tool such as Manim. Keep the
+tool's source, configuration, dependency manifest, lockfile and referenced local assets with the
+production; generated MP4 bytes can remain ignored when they are cheap to rebuild. These files are
+not Hypit Build Results and do not belong under `.hypit/results/`. [Manim authoring](manim.md) defines
+the supported external pre-render handoff.
+
 ## Hand over an editable production
 
 A finished MP4 is a viewing deliverable. To continue making the piece, the recipient also needs the
 authored work and the produced values that its Runs select:
 
 - Sources, Recipes, Runs, project notes and referenced input assets, keeping their relative layout;
+- external authoring source and configuration, including Manim `manim-scenes/`, `pyproject.toml`,
+  `uv.lock`, `manim.cfg` and every local asset needed to reproduce a selected render;
 - project component source or installed-release dependencies, `package.json`, its lockfile and any
   tarballs referenced by `file:` dependencies;
 - the completed Results used by `build-record` Candidates, including their media and Composite value
@@ -199,6 +209,11 @@ The Node workspace records their resolved file addresses. When moving to another
 those inputs and update affected references to their new locations. Copying Result directories alone
 does not collect external files; an explicit `hypit get` export does collect the selected Output's
 referenced bytes.
+
+A rendered Manim MP4 selected by `<media:Video>` or a Run `<file>` follows this external-file rule:
+it is not copied into every Build Result merely because the graph reads it. Preserve the file at its
+relative path for an immediate handoff, or reproduce it from the locked Manim project before checking
+and planning the production on the receiving machine.
 
 The recipient installs the selected Distribution and project dependencies, configures their Runtime,
 and inspects the received Results. Planning the intended Run shows whether its reuse choices still

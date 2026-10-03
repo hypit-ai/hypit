@@ -1,0 +1,17 @@
+<?svml using="@hypit/run-markup@1"?>
+
+<svrun version="1">
+  <author source="../authors/main.svml"/>
+  <target output="final.video"/>
+  <!-- Reuse the accepted presenter videos; downstream alignment and composition stay live. -->
+  <build-record id="part-one-kept" build="bld_20260922T074050519Z_38D612AD42" output="part-one.video"/>
+  <satisfy output="part-one.video" candidate="part-one-kept"/>
+  <build-record id="part-two-kept" build="bld_20260922T074050519Z_38D612AD42" output="part-two.video"/>
+  <satisfy output="part-two.video" candidate="part-two-kept"/>
+  <build-record id="part-three-kept" build="bld_20260922T074050519Z_38D612AD42" output="part-three.video"/>
+  <satisfy output="part-three.video" candidate="part-three-kept"/>
+  <build-record id="part-four-kept" build="bld_20260922T074050519Z_38D612AD42" output="part-four.video"/>
+  <satisfy output="part-four.video" candidate="part-four-kept"/>
+  <build-record id="part-five-kept" build="bld_20260922T074050519Z_38D612AD42" output="part-five.video"/>
+  <satisfy output="part-five.video" candidate="part-five-kept"/>
+</svrun>
