@@ -1,0 +1,42 @@
+{
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/runtimes/direct",
+  "credentials": { "platform": { "use": "@hypit/credential-store-platform" } },
+  "endpoints": {
+    "byteplus.direct": {
+      "use": "@hypit/provider-byteplus",
+      "pool": "byteplus.personal",
+      "config": {
+        "apiKey": { "store": "platform", "key": "byteplus.api-key" },
+        "defaultConcurrency": 2,
+        "actionLimits": {
+          "submit": {
+            "concurrency": 1,
+            "rate": { "limit": 1, "periodMs": 1000 }
+          }
+        }
+      }
+    },
+    "elevenlabs.us": {
+      "use": "@hypit/provider-elevenlabs",
+      "pool": "elevenlabs.personal",
+      "config": {
+        "baseUrl": "https://api.us.elevenlabs.io",
+        "apiKey": { "store": "platform", "key": "elevenlabs.api-key" },
+        "defaultConcurrency": 2,
+        "allowGatedModels": false,
+        "actionLimits": {
+          "submit": {
+            "concurrency": 1,
+            "rate": { "limit": 1, "periodMs": 1000 }
+          }
+        }
+      }
+    },
+    "media.local": { "use": "@hypit/provider-media-local" },
+    "hyperframes.local": {
+      "use": "@hypit/provider-hyperframes-local",
+      "config": { "workers": 2 }
+    }
+  }
+}
