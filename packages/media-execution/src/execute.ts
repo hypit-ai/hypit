@@ -771,6 +771,11 @@ export async function executeNormalizeMedia(
   }
 }
 
+// Authored pictures are sRGB: convert with the BT.709 matrix and tag the stream so players decode
+// it the same way. Same encode tail as the HyperFrames local renderer.
+const stillBt709Yuv420p = "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,"
+  + "setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv";
+
 /**
  * Encode authored images into an exact video-only CFR clip. One picture is held for the whole frame
  * count; several are each held for their planned segment, fitted into the first picture's frame
@@ -807,7 +812,7 @@ export async function executeRenderStillVideo(
     ].join(",");
     let argv: string[];
     if (need.request.segments.length === 1) {
-      const filter = `${hold(need.request.frameCount)},pad=ceil(iw/2)*2:ceil(ih/2)*2:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1`;
+      const filter = `${hold(need.request.frameCount)},pad=ceil(iw/2)*2:ceil(ih/2)*2:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,${stillBt709Yuv420p}`;
       argv = ["-y", "-i", inputs[0]!, "-map", "0:v:0", "-an", "-vf", filter];
     } else {
       const first = await outputInspection({
@@ -824,7 +829,7 @@ export async function executeRenderStillVideo(
       const height = Math.ceil(picture.height / 2) * 2;
       const chains = need.request.segments.map((segment, index) =>
         `[${index}:v]${hold(segment.endFrameExclusive - segment.startFrame)},`
-        + `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,format=yuv420p[s${index}]`);
+        + `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,${stillBt709Yuv420p}[s${index}]`);
       const concat = `${need.request.segments.map((_, index) => `[s${index}]`).join("")}concat=n=${need.request.segments.length}:v=1:a=0[v]`;
       argv = ["-y", ...inputs.flatMap((path) => ["-i", path]), "-filter_complex", `${chains.join(";")};${concat}`, "-map", "[v]", "-an"];
     }
