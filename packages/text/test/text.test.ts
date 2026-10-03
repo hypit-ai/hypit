@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { parseStructuredElement } from "@hypit/markup";
 import type { SurfaceResolvedReference } from "@hypit/markup";
-import { svsRecipeType } from "@hypit/svs";
+import { formatSvsValue, parseSvs, svsRecipeType } from "@hypit/svs";
 
 import {
   bindText,
@@ -15,8 +15,20 @@ import {
   sealTextBindings,
   sealTextTemplate,
   textTypes,
+  textTemplateFromSvsRecipes,
   verifyTextTemplate,
 } from "@hypit/text";
+
+test("Text Templates keep a sheet closing tag in prompt text", () => {
+  const prompt = "Show the literal </sheet> tag in the video";
+  const source = `<sheet version="1">
+    text-template.demo {}
+    text-template.demo.block.example { kind: fixed; order: 0; text: ${formatSvsValue(prompt)}; }
+  </sheet>`;
+  const recipes = parseSvs("template.svs", source).recipes.map((recipe) => recipe.value);
+  const template = textTemplateFromSvsRecipes(recipes, "demo");
+  assert.equal(renderText(template, sealTextBindings({})).value, prompt);
+});
 
 test("text programs compose nested templates, choices, lists and transforms", () => {
   const template = sealTextTemplate({

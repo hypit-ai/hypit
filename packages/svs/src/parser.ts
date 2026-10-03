@@ -241,7 +241,7 @@ export function parseSvs(sourceName: string, source: string): ParsedSvsSheet {
   if (openEnd < 0) fail(sourceName, "SVS_ROOT", "Opening <sheet> is not closed.", cursor);
   const attributes = parseAttributes(sourceName, text.slice(cursor + 6, openEnd), cursor + 6);
   cursor = openEnd + 1;
-  const close = text.indexOf("</sheet>", cursor);
+  const close = text.lastIndexOf("</sheet>");
   if (close < 0) fail(sourceName, "SVS_ROOT_UNCLOSED", "Source is missing </sheet>.", source.length);
   if (text.slice(close + "</sheet>".length).trim().length > 0) {
     fail(sourceName, "SVS_TRAILING", "Only trivia may follow </sheet>.", close + "</sheet>".length);
