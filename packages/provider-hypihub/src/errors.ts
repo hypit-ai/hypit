@@ -45,6 +45,18 @@ export class HypiHubHttpError extends EndpointHttpError {
   }
 }
 
+const billingRejection = /insufficient(?:\s|_)?credits|credits(?:\s|_)?insufficient|balance\s+isn't\s+enough/iu;
+
+/**
+ * A terminal job always carries an id the service created, so a billing code on it means the
+ * service's own precheck rejected the job after submission — a sequence users read as their
+ * balance actually being spent down, which real incidents have contradicted.
+ */
+function rejectedByBillingPrecheck(code: string, reason: string | undefined): boolean {
+  return code === "402" || billingRejection.test(code)
+    || (reason !== undefined && billingRejection.test(reason));
+}
+
 export function hypiHubJobFailure(job: Record<string, unknown>, id: string): HypiHubServiceError | undefined {
   const status = job.status;
   if (!["failed", "queue_expired", "canceled", "cancelled"].includes(String(status))) return undefined;
@@ -52,7 +64,12 @@ export function hypiHubJobFailure(job: Record<string, unknown>, id: string): Hyp
   const code = text(job.error_code) ?? text(error?.code) ?? "HYPIHUB_JOB_FAILED";
   const reason = text(job.error) ?? text(error?.message) ?? text(job.message) ?? text(job.reason) ?? text(job.detail);
   const model = text(job.model);
-  return new HypiHubServiceError(code,
-    `HypiHub job ${id} ${status}; ${code}${model === undefined ? "" : `; model=${model}`}`
-    + (reason === undefined ? "" : `: ${safeHypiHubReason(reason)}`));
+  const message = `HypiHub job ${id} ${status}; ${code}${model === undefined ? "" : `; model=${model}`}`
+    + (reason === undefined ? "" : `: ${safeHypiHubReason(reason)}`);
+  if (!rejectedByBillingPrecheck(code, reason)) return new HypiHubServiceError(code, message);
+  return new HypiHubServiceError(code, `${message}${/[.!?;]$/u.test(message) ? "" : "."} `
+    + "HypiHub accepted this job and gave it an id before its billing precheck rejected it, so the rejection"
+    + " happened after submission; Hypit performs no balance check of its own. If the account balance covers"
+    + " the model card's estimate, share this job id with official@hypit.ai so the credit-ledger reservation"
+    + " can be inspected.");
 }
