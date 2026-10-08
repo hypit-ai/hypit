@@ -1,0 +1,16 @@
+{
+  "name": "@hypit/elevenlabs-models",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@hypit/direct-model-kit": "workspace:*",
+    "@hypit/generation": "workspace:*"
+  }
+}

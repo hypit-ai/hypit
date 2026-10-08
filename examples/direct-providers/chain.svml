@@ -1,0 +1,9 @@
+<?svml using="@hypit/markup@1"?>
+<svml>
+  <import as="eleven" from="@hypit/elevenlabs-models@1"/>
+  <import as="byte" from="@hypit/byteplus-models@1"/>
+  <eleven:Generate id="picture" model="gpt-image-2" prompt="A blue ceramic cup on a plain white tabletop" aspectRatio="9:16" resolution="1K"/>
+  <byte:Generate id="shot" model="dreamina-seedance-2-0-mini-260615" prompt="Slow camera push toward this cup" duration="4" resolution="480p" ratio="adaptive" generateAudio="false">
+    <byte:Input port="firstFrame" source={picture.image}/>
+  </byte:Generate>
+</svml>

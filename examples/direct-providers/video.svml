@@ -1,0 +1,5 @@
+<?svml using="@hypit/markup@1"?>
+<svml>
+  <import as="byte" from="@hypit/byteplus-models@1"/>
+  <byte:Generate id="shot" model="dreamina-seedance-2-0-mini-260615" prompt="A blue ceramic cup on a table, slow camera push in" duration="4" resolution="480p" ratio="9:16" generateAudio="false"/>
+</svml>
