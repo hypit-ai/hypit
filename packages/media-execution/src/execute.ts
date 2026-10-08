@@ -683,8 +683,11 @@ export async function executeNormalizeMedia(
         : ["-f", "concat", "-safe", "0", "-i", await animatedWebpConcat(env, animation, work), "-map", "0:v:0"];
       // The execution format must retain the source's alpha while materializing
       // the program clock. Both encodings publish the same SynchronizedMedia type.
+      // Lossless VP9 decodes to the same pixels at every speed setting, so the
+      // alpha encode uses libvpx's fastest one.
       const encoderArgs = encoding.alpha
-        ? ["-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-lossless", "1", "-auto-alt-ref", "0"]
+        ? ["-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-lossless", "1", "-auto-alt-ref", "0",
+          "-row-mt", "1", "-deadline", "realtime", "-cpu-used", "8"]
         : ["-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-movflags", "+faststart"];
       await runProcess({
         executable: env.ffmpegPath,
