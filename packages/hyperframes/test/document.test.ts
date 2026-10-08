@@ -351,16 +351,25 @@ test("HyperFrames emits compact absolute-frame animation without creating a Trac
     const positions = spans.map((): number[] => []);
     const live = new Set<FakeAnimation>();
     let materialized = 0;
+    let unpausedProbes = 0;
+    let staleUnderlying = 0;
     let seek: (event: { detail: { time: number } }) => void = () => {};
-    const animate = (target: FakeElement, record?: number[], effect?: object): FakeAnimation => {
+    const animate = (target: FakeElement, record?: number[], effect?: object, kind?: "probe"): FakeAnimation => {
+      let paused = false;
       const animation = {
         target,
         effect,
         set currentTime(value: number) {
+          if (kind === "probe") {
+            // A probe must be paused before seeking, and must interpolate over
+            // the authored inline value, not the pose a previous seek wrote.
+            if (!paused) unpausedProbes += 1;
+            if (String(target.style.opacity) !== "authored") staleUnderlying += 1;
+          }
           record?.push(toFrame(value));
           target.pose = toFrame(value);
         },
-        pause() {},
+        pause() { paused = true; },
         cancel() {
           live.delete(animation);
           target.pose = undefined;
@@ -372,7 +381,7 @@ test("HyperFrames emits compact absolute-frame animation without creating a Trac
     const elements = spans.map((span) => {
       const element = {
         pose: undefined as number | undefined,
-        style: {} as Record<string, unknown>,
+        style: { opacity: "authored" } as Record<string, unknown>,
         getBoundingClientRect() {},
         getAnimations: () => [...live].filter((animation) => animation.target === element),
         getAttribute: (name: string) => String(name.endsWith("start-frame") ? span.start : span.duration),
@@ -397,7 +406,7 @@ test("HyperFrames emits compact absolute-frame animation without creating a Trac
         constructor(target: FakeElement) { this.target = target; }
       },
       Animation: function (effect: { target: FakeElement }) {
-        return animate(effect.target, positions[elements.indexOf(effect.target as typeof elements[number])]);
+        return animate(effect.target, positions[elements.indexOf(effect.target as typeof elements[number])], undefined, "probe");
       },
       getComputedStyle: (element: FakeElement) => ({ opacity: String(element.pose) }),
     });
@@ -407,21 +416,25 @@ test("HyperFrames emits compact absolute-frame animation without creating a Trac
     }
     // What a captured frame shows: a live animation wins over inline style.
     const shown = elements.map((element) => element.pose === undefined ? element.style.opacity : String(element.pose));
-    return { materialized, live: live.size, positions, shown };
+    return { materialized, live: live.size, positions, shown, staleUnderlying, unpausedProbes };
   };
   assert.deepEqual(await evaluate([{ start: 15, duration: 30 }], [30, 44, 15, 45, 60]), {
     materialized: 1,
     live: 0,
     positions: [[15, 29, 0]],
     shown: ["0"],
-  });
-  assert.deepEqual(await evaluate([{ start: 15, duration: 30 }], [30]), { materialized: 1, live: 0, positions: [[15]], shown: ["15"] },
+    staleUnderlying: 0,
+    unpausedProbes: 0,
+  }, "every seek restores the authored underlying value and pauses its probe before seeking it");
+  assert.deepEqual(await evaluate([{ start: 15, duration: 30 }], [30]), { materialized: 1, live: 0, positions: [[15]], shown: ["15"], staleUnderlying: 0, unpausedProbes: 0 },
     "a fresh worker derives the same middle pose without visiting preceding frames");
   assert.deepEqual(await evaluate([{ start: 30, duration: 60 }], [33, 60, 86]), {
     materialized: 1,
     live: 0,
     positions: [[3, 30, 56]],
     shown: ["56"],
+    staleUnderlying: 0,
+    unpausedProbes: 0,
   }, "a Present starting after frame 0 keeps its Present-relative pose when HyperFrames seeks live animations");
   assert.deepEqual(await evaluate([
     { start: 0, duration: 30 },
@@ -431,6 +444,8 @@ test("HyperFrames emits compact absolute-frame animation without creating a Trac
     live: 1,
     positions: [[], [10]],
     shown: ["100", "10"],
+    staleUnderlying: 0,
+    unpausedProbes: 0,
   }, "a selected render does not materialize animations from unrelated Presents");
   assert.deepEqual(await evaluate([
     { start: 0, duration: 5 },
@@ -447,6 +462,8 @@ test("HyperFrames emits compact absolute-frame animation without creating a Trac
       [0, 1],
     ],
     shown: ["4", "1", "3", "1"],
+    staleUnderlying: 0,
+    unpausedProbes: 0,
   }, "the point index preserves overlap, half-open boundaries, distant spans and reverse seeks");
 });
 
