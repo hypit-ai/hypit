@@ -68,6 +68,8 @@ it if needed. Your video project can live anywhere.
 Hypit is free to use; your Coding Agent and model services have their own accounts and charges.
 HypiHub is our recommended hosted model service. You can also use your own API or local models;
 tell your agent the service name and API documentation so it can set up the appropriate connection.
+The repository also includes an AnyFast Provider for the documented ByteDance Seedance 2.0 API.
+Its Endpoint and CredentialStore setup is described in [the Provider guide](./packages/provider-anyfast/README.md).
 
 [Agent environments and entry partners](./docs/guide/agents.md) ·
 [Model and deployment services](./docs/guide/service-partners.md)

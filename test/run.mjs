@@ -1,7 +1,7 @@
 /** Resolve test files without depending on platform-specific shell glob syntax. */
 import { spawnSync } from "node:child_process";
-import { globSync } from "node:fs";
-import { join } from "node:path";
+import { accessSync, constants, globSync } from "node:fs";
+import { delimiter, join } from "node:path";
 
 const patterns = [
   "packages/*/test/**/*.test.ts",
@@ -61,13 +61,64 @@ if (suite === undefined) {
  */
 const testTimeoutMs = 120_000;
 
+/**
+ * The media tests exercise the modern FFmpeg options used by the production
+ * pipeline (`-fps_mode` and `-display_rotation`). A machine can have several
+ * FFmpeg installations on PATH, and an older ffmpeg paired with a newer
+ * ffprobe produces misleading test failures. Pick one compatible pair from
+ * the existing PATH without downloading or mutating the host installation.
+ */
+function executable(directory, name) {
+  const names = process.platform === "win32"
+    ? [name, `${name}.exe`, `${name}.cmd`, `${name}.bat`]
+    : [name];
+  for (const candidate of names) {
+    const path = join(directory, candidate);
+    try {
+      accessSync(path, process.platform === "win32" ? constants.F_OK : constants.X_OK);
+      return path;
+    } catch {
+      // Continue through PATH candidates.
+    }
+  }
+  return undefined;
+}
+
+function compatibleMediaDirectory(pathValue) {
+  const directories = [...new Set(pathValue.split(delimiter).filter((value) => value.length > 0))];
+  for (const directory of directories) {
+    const ffmpeg = executable(directory, "ffmpeg");
+    const ffprobe = executable(directory, "ffprobe");
+    if (ffmpeg === undefined || ffprobe === undefined) continue;
+    const help = spawnSync(ffmpeg, ["-hide_banner", "-h", "full"], {
+      encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 4 * 1024 * 1024,
+    });
+    if (help.status !== 0) continue;
+    const helpText = `${help.stdout}\n${help.stderr}`;
+    if (!/\bfps_mode\b/u.test(helpText) || !/\bdisplay_rotation\b/u.test(helpText)) continue;
+    const probe = spawnSync(ffprobe, ["-version"], { stdio: "ignore" });
+    if (probe.status === 0) return directory;
+  }
+  return undefined;
+}
+
+function testEnvironment() {
+  const environment = { ...suite?.env, ...process.env };
+  const pathValue = environment.PATH ?? "";
+  const mediaDirectory = compatibleMediaDirectory(pathValue);
+  if (mediaDirectory === undefined) return environment;
+  const directories = pathValue.split(delimiter).filter((value) => value.length > 0);
+  environment.PATH = [mediaDirectory, ...directories.filter((value) => value !== mediaDirectory)].join(delimiter);
+  return environment;
+}
+
 const result = spawnSync(process.execPath, [
   "--import", "tsx", "--test", `--test-timeout=${testTimeoutMs}`, ...files,
 ], {
   stdio: "inherit",
   windowsHide: true,
   // What the caller already chose wins: these are defaults for running the suite, not a policy.
-  env: { ...suite?.env, ...process.env },
+  env: testEnvironment(),
 });
 if (result.error !== undefined) throw result.error;
 process.exit(result.status ?? 1);
