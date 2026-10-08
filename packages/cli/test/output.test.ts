@@ -236,6 +236,36 @@ test("pricing presents Provider-owned material beside the corresponding Needs", 
   assert.match(verbose, /"per_second_usd": 0\.1045/u);
 });
 
+test("pricing reports Producer failures no request carries instead of a clean rate table", () => {
+  const entries: PricingEntry[] = [{
+    request: "seedance:one", capability: "@hypit/seedance@1#seedance-2", status: "resolved",
+    endpoint: "hypihub.default", use: "@hypit/provider-hypihub",
+    pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
+  }];
+  const needs: PlanNeed[] = [{
+    request: "seedance:one", step: "video::component::presenter.generate", port: "generation",
+    capability: "@hypit/seedance@1#seedance-2", endpoint: "hypihub.default", pending: [],
+  }];
+  const failures = [{
+    step: "assemble-timeline",
+    message: "Timeline duration 8s must land on an exact frame boundary.",
+  }];
+  const machine = createPricingOutput("build.svrun", entries, needs, false, failures);
+
+  const rendered = capture(human, { kind: "pricing", machine });
+  assert.match(rendered, /Producer failures\s+1/u);
+  assert.match(rendered, /assemble-timeline: Timeline duration 8s must land on an exact frame boundary\./u);
+
+  const parsed = JSON.parse(capture({ ...human, json: true }, { kind: "pricing", machine }));
+  assert.equal(parsed.producerFailureCount, 1);
+  assert.deepEqual(parsed.producerFailures, failures);
+
+  const clean = createPricingOutput("build.svrun", entries, needs);
+  assert.equal(clean.producerFailureCount, 0);
+  assert.equal("producerFailures" in clean, false);
+  assert.doesNotMatch(capture(human, { kind: "pricing", machine: clean }), /Producer failures/u);
+});
+
 test("pricing summarizes 24 no-charge requests and retains all 15 priced requests with shared rate documents", () => {
   const entries: PricingEntry[] = [];
   const needs: PlanNeed[] = [];

@@ -189,6 +189,8 @@ export type PricingOutput = {
   readonly run: string;
   readonly requestCount: number;
   readonly noChargeRequestCount: number;
+  readonly producerFailureCount: number;
+  readonly producerFailures?: readonly { readonly step: string; readonly message: string }[];
   readonly groups: readonly (Omit<PricingEntry, "request"> & {
     readonly requests: readonly PlanNeed[];
   })[];
@@ -684,6 +686,7 @@ export function createPricingOutput(
   entries: readonly PricingEntry[],
   needs: readonly PlanNeed[],
   includeNoCharge = false,
+  producerFailures: readonly { readonly step: string; readonly message: string }[] = [],
 ): PricingOutput {
   const needsByRequest = new Map(needs.map((need) => [need.request, need]));
   const groups = new Map<string, Omit<PricingEntry, "request"> & { requests: PlanNeed[] }>();
@@ -704,7 +707,9 @@ export function createPricingOutput(
   }
   return {
     format: "hypit.cli-pricing@1", run, requestCount: entries.length,
-    noChargeRequestCount, groups: [...groups.values()],
+    noChargeRequestCount, producerFailureCount: producerFailures.length,
+    ...(producerFailures.length === 0 ? {} : { producerFailures }),
+    groups: [...groups.values()],
   };
 }
 
@@ -720,9 +725,17 @@ function renderPricing(
     ["Run", shortPath(machine.run)],
     ["Requests", String(machine.requestCount)],
     ["No Provider charge", `${machine.noChargeRequestCount} requests`],
+    ...(machine.producerFailureCount === 0 ? [] : [["Producer failures", String(machine.producerFailureCount)] as const]),
   ], colors));
   if (machine.noChargeRequestCount > 0 && !verbose) {
     lines.push(`  ${colors.dim("No-charge request details: --verbose")}`);
+  }
+  const failures = machine.producerFailures ?? [];
+  if (failures.length > 0) {
+    lines.push("", colors.strong("Producer failures"));
+    for (const item of failures) {
+      lines.push(`  ${colors.error(glyph(io, "×", "x"))} ${stepLabel(item.step)}: ${item.message}`);
+    }
   }
   if (machine.groups.length > 0) lines.push("", colors.strong("Requests and Provider rates"));
   const shown = view.limit === undefined ? machine.groups : machine.groups.slice(0, view.limit);

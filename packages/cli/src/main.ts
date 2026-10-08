@@ -597,8 +597,10 @@ export async function runCli(
         ...(args.limit === undefined ? {} : { limit: args.limit }),
         machine: createPricingOutput(
           projectPath(loaded.path, effectiveWorkspaceRoot), pricing, needs, args.presentation.verbose,
+          evaluated.unreportedFailures,
         ),
       });
+      if (evaluated.unreportedFailures.length > 0) io.setExitCode?.(1);
       return;
     }
     const providers = planHost === undefined ? undefined : await describePlanProviders(planHost, evaluated.state, evaluated);
