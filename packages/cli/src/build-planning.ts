@@ -272,11 +272,14 @@ export async function evaluatePlanNeeds(
   const facets = plannedNeedFacets(contributions);
   const result = new Map<string, EvaluatedPlanNeed>();
 
+  const reported = new Set<string>();
   for (const planned of plannedNeeds(state)) {
+    reported.add(planned.step);
     const facet = plannedNeedFacetFor(facets, state, planned.step, planned.port, planned.capability);
     const need = known.get(planned.need);
     if (need !== undefined) {
       const specification: PlannedNeedSpecification = { constraints: need.constraints, pendingInputs: [] };
+      const issue = evaluation.failures.get(planned.step);
       result.set(planned.need, {
         constraints: need.constraints,
         pendingInputs: [],
@@ -284,6 +287,7 @@ export async function evaluatePlanNeeds(
           ? summarizeConstraints(need.constraints)
           : summarizePresentation(facet.present(specification)),
         pending: [],
+        ...(issue === undefined ? {} : { issue }),
       });
       continue;
     }
@@ -327,7 +331,6 @@ export async function evaluatePlanNeeds(
         : `${issue}; package also does not describe the complete request for ${capabilityName(planned.capability)} before Build`,
     });
   }
-  const reported = new Set(plannedNeeds(state).map((planned) => planned.step));
   return {
     state,
     needs: result,
