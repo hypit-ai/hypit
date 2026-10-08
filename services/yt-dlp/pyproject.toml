@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10,<3.14"
 license = { text = "Hypit Open Source License (Apache-2.0 with additional conditions); see LICENSE at the repository root" }
 dependencies = [
-  "yt-dlp[default]==2026.8.19",
+  "yt-dlp[default,curl-cffi]==2026.8.19",
 ]
 
 [tool.uv]
