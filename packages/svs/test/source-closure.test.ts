@@ -320,6 +320,10 @@ test("quoted Recipe text may contain a sheet closing tag", () => {
   assert.equal(sheet.recipes[0]?.value.properties.text, prompt);
   assert.throws(() => parseSvs("trailing.svs", `${source} extra`),
     (error: unknown) => error instanceof SvsSyntaxError && error.code === "SVS_TRAILING");
+  assert.throws(() => parseSvs("twice.svs", `${source}</sheet>`),
+    (error: unknown) => error instanceof SvsSyntaxError && error.code === "SVS_TRAILING");
+  assert.throws(() => parseSvs("unclosed.svs", source.replace(/<\/sheet>$/u, "")),
+    (error: unknown) => error instanceof SvsSyntaxError && error.code === "SVS_ROOT_UNCLOSED");
 });
 
 test("SVS parses and serializes canonical arrays and objects as one Recipe value", () => {

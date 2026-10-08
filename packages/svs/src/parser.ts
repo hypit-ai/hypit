@@ -241,16 +241,12 @@ export function parseSvs(sourceName: string, source: string): ParsedSvsSheet {
   if (openEnd < 0) fail(sourceName, "SVS_ROOT", "Opening <sheet> is not closed.", cursor);
   const attributes = parseAttributes(sourceName, text.slice(cursor + 6, openEnd), cursor + 6);
   cursor = openEnd + 1;
-  const close = text.lastIndexOf("</sheet>");
-  if (close < 0) fail(sourceName, "SVS_ROOT_UNCLOSED", "Source is missing </sheet>.", source.length);
-  if (text.slice(close + "</sheet>".length).trim().length > 0) {
-    fail(sourceName, "SVS_TRAILING", "Only trivia may follow </sheet>.", close + "</sheet>".length);
-  }
   const recipes: ParsedSvsRecipe[] = [];
   const paths = new Set<string>();
-  while (cursor < close) {
+  while (true) {
     cursor = skipSpace(text, cursor);
-    if (cursor >= close) break;
+    if (cursor >= text.length) fail(sourceName, "SVS_ROOT_UNCLOSED", "Source is missing </sheet>.", source.length);
+    if (text.startsWith("</sheet>", cursor)) break;
     const match = RULE.exec(text.slice(cursor));
     if (!match) fail(sourceName, "SVS_RULE", "Expected a dotted recipe path.", cursor);
     const path = match[0];
@@ -261,8 +257,8 @@ export function parseSvs(sourceName: string, source: string): ParsedSvsSheet {
     cursor = skipSpace(text, cursor);
     if (text[cursor] !== "{") fail(sourceName, "SVS_RULE_OPEN", `Recipe ${path} requires '{'.`, cursor);
     const blockStart = cursor + 1;
-    const blockEnd = closingBrace(text, blockStart, close);
-    if (blockEnd < 0 || blockEnd > close) fail(sourceName, "SVS_RULE_UNCLOSED", `Recipe ${path} is not closed.`, start);
+    const blockEnd = closingBrace(text, blockStart, text.length);
+    if (blockEnd < 0) fail(sourceName, "SVS_RULE_UNCLOSED", `Recipe ${path} is not closed.`, start);
     const parsedProperties = parseProperties(sourceName, text.slice(blockStart, blockEnd), blockStart);
     const value: SvsRecipe = {
 
@@ -272,6 +268,8 @@ export function parseSvs(sourceName: string, source: string): ParsedSvsSheet {
     recipes.push({ value, range: { start, end: blockEnd + 1 }, properties: parsedProperties.parsed });
     cursor = blockEnd + 1;
   }
+  const end = cursor + "</sheet>".length;
+  if (text.slice(end).trim().length > 0) fail(sourceName, "SVS_TRAILING", "Only trivia may follow </sheet>.", end);
   return {
     ...(attributes.id === undefined ? {} : { id: attributes.id }),
     recipes,
