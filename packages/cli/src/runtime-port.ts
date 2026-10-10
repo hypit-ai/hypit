@@ -182,6 +182,8 @@ export type CliInvocationObservation = {
 /** Runtime services consumed by the generic long-compilation command engine. */
 export type CliRuntimeHost = {
   readonly profile: string;
+  /** Validate the selected Runtime configuration without starting execution. */
+  resolvePaths?(): Promise<{ readonly packageRoot?: string; readonly runtimeDataRoot?: string }>;
   /** Availability of the execution service selected by this Runtime implementation. */
   executionStatus(): Promise<{ readonly state: "running" | "stopped" }>;
   /** Make the selected execution service available before accepting durable work. */

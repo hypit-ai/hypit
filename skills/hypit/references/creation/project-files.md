@@ -53,6 +53,58 @@ the nearest component package or an arbitrary working directory into a project. 
 Runtime path does not select a different project.
 Sources can live below the root, with file and Source imports relative to the declaring file.
 
+## Prepare external files as part of Build
+
+A project may declare reproducible local file preparation in `package.json` under
+`hypit.buildInputs`. Each declaration names an `id`, a shell `command`, project-relative `inputs`
+(which may use `*` and `**`), and expected `outputs`. `hypit build` runs a declaration when its
+outputs are missing or its input fingerprint changed, verifies that every output exists, then
+continues the ordinary Run. Successful fingerprints are cached under `.hypit/build-inputs.json`.
+This is a local trusted-project command: it runs with the project root as cwd and inherits the
+Hypit process environment. Keep credentials out of the declaration and command text; use the normal
+Credential Store for Providers.
+
+For example, an external renderer can be wired into Build like this:
+
+```json
+{
+  "hypit": {
+    "project": true,
+    "buildInputs": [
+      {
+        "id": "manim-renders",
+        "command": "bash scripts/render-manim.sh",
+        "inputs": [
+          "manim-scenes/**/*.py",
+          "scripts/render-manim.sh",
+          "manim.cfg",
+          "pyproject.toml",
+          "uv.lock"
+        ],
+        "outputs": [
+          "manim-renders/math_block.mp4",
+          "manim-renders/ml_block.mp4",
+          "manim-renders/physics_block.mp4"
+        ]
+      }
+    ]
+  }
+}
+```
+
+The command is run from the project root. `inputs` are files or project-relative glob patterns;
+include every local file the external renderer reads, including referenced fonts, images or data;
+use a directory glob such as `assets/**/*` only when that directory is dedicated to this renderer.
+`outputs` are project-relative files that the command must create. Add generated
+outputs and `.hypit/build-inputs.json` to `.gitignore`; keep the source, lockfile and render script
+in the project so another checkout can reproduce them. A missing output or changed input fingerprint causes the command to run
+on the next `hypit build`; an unchanged declaration with all outputs present is skipped.
+
+`check`, `plan`, Studio and Runtime commands do not execute these commands. A failed preparation
+stops the CLI before Build submission. The command owns format-specific validation; Hypit verifies
+the declared output paths. Use this for reproducible external intermediates such as rendered
+Manim MP4s, not for Provider requests or work that belongs in the Author graph.
+
 | Boundary | When to set it explicitly |
 | --- | --- |
 | `--project <directory>` | Choose the project root for Sources, Runtime selection, project packages and Results when running from another directory |
@@ -101,11 +153,13 @@ project/
 │   └── <target>/
 │       ├── BRIEF.md
 │       ├── TREATMENT.md
-│       ├── PROGRESS.md
+│       ├── PROGRESS.md          # optional handoff note when work spans sessions
 │       ├── authors/
 │       ├── recipes/
 │       ├── runs/
+│       ├── manim-scenes/       # optional project-local Manim or other external authoring source
 │       ├── assets/
+│       ├── manim-renders/      # reproducible external-render intermediates, not Build Results
 │       └── drafts/
 ├── assets/                      # inputs shared by several targets
 ├── packages/                    # project Author Packages shared by targets
@@ -185,6 +239,9 @@ A finished MP4 is a viewing deliverable. To continue making the piece, the recip
 authored work and the produced values that its Runs select:
 
 - Sources, Recipes, Runs, project notes and referenced input assets, keeping their relative layout;
+- external renderer source, configuration, dependency manifest, lockfile, render script and
+  referenced input assets; preserve generated files for immediate use or reproduce them before
+  checking and planning on the receiving machine;
 - project component source or installed-release dependencies, `package.json`, its lockfile and any
   tarballs referenced by `file:` dependencies;
 - the completed Results used by `build-record` Candidates, including their media and Composite value

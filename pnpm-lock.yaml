@@ -397,6 +397,39 @@ importers:
         specifier: ^0.3.1
         version: link:../../../..
 
+  examples/manim-explainer/packages/manim-showcase:
+    devDependencies:
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../../../..
+      '@hypit/studio-companion':
+        specifier: workspace:*
+        version: link:../../../../packages/studio-companion
+      '@types/node':
+        specifier: 24.10.1
+        version: 24.10.1
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  examples/manim-explainer/packages/provider-vectrust-seedance:
+    devDependencies:
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../../../..
+      '@hypit/runtime-local':
+        specifier: workspace:*
+        version: link:../../../../packages/runtime-local
+      '@hypit/seedance':
+        specifier: workspace:*
+        version: link:../../../../packages/seedance
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   examples/minimal-author-package/packages/example-component:
     dependencies:
       '@hypit/composition':
