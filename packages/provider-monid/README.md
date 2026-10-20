@@ -34,9 +34,9 @@ The Seedance endpoints add `generate_audio`. Monid documents no web search field
 `aspect-ratio="adaptive"`. Seedance visual references require `person-reference`; the Provider
 accepts the declaration and transmits nothing for it, since the endpoint has no field for it.
 
-MiniMax H3 names its model in the body and takes neither of those two fields. The endpoint requires
-a resolution, so a request that states none is sent at `2K`, the resolution the HypiHub Provider
-also selects. It also requires a ratio that is not `adaptive` for text-to-video, while frame mode
+MiniMax H3 names its model in the body and takes neither of those two fields. The Model finalizes
+an omitted resolution as `2K` before any Provider sees the request. This endpoint also requires a
+ratio that is not `adaptive` for text-to-video, while frame mode
 resolves the framing from the uploaded image and reference-to-video defaults to adaptive: a
 text-to-video request carrying no `aspect-ratio` is reported unsupported before any reference is
 resolved, and the other two modes are sent as `adaptive`. H3 returns its video at `content.url`

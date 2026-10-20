@@ -1,6 +1,6 @@
 # Preparing media for a production
 
-Read this when admitting files, connecting generated media, choosing streams, or editing a clip
+Read this when supplying files, connecting generated media, choosing streams, or editing a clip
 before using it in a component or a model reference. [Visual Clips](visual-clips.md)
 owns independent picture placement and playback; [Tracks](tracks.md) routes other content relationships.
 For a source video at a link, read [video download](video-downloads.md).

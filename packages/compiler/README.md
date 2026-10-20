@@ -9,7 +9,7 @@ implemented compiler IR:
 ResolvedSource + registered Frontends + registered manifests
   -> discovered Source/Module closure
   -> typed Source Closure
-  -> Author Module + Graph
+  -> AuthorGraph + public Source exports
 ```
 
 Every Author Source reaches the compiler as a `ResolvedSource` with an exact Frontend. The default
@@ -34,8 +34,9 @@ Workspace without changing Frontends, Surfaces, Source Closure identity or Core.
 The Workspace session owns a separate Source Asset capability. A Frontend/Surface may request an
 asset and assign its exact media type, but it never receives a path, filesystem handle or ambient
 read authority. The Workspace returns a `BlobRef`, the compiler binds that reference into the
-requesting SourceUnit, and the session exposes defensive generic `BlobAttachment`s on the Node
-compilation result. `check` and `plan` perform no ResourceStore write. `build` passes the attachments
+requesting SourceUnit, and the session exposes defensive generic `BlobAttachment`s whose `blob`
+field names that exact reference on the Node compilation result. `check` and `plan` perform no
+ResourceStore write. `build` passes the attachments
 to the selected Runtime for size-checked staging.
 
 SourceUnit recursion and Source Asset resolution are intentionally different capabilities: an
@@ -52,6 +53,12 @@ Graph, extends the execution Program Closure with Modules referenced only by sel
 Fragments, binds Author and Run graph identities into the final immutable graph, and only then asks
 Core for a finite BuildPlan. The Author Graph remains unchanged. There is no Author-only planning
 shortcut.
+
+`prepareCompilation` turns that completed structural selection into a `PreparedBuild`: it derives
+one immutable `PublicationPlan`, seals the `BuildDefinition`, and exposes its materialized read view.
+The publication binds each public Author name to its selected Logical Output, target membership, display name and either a
+current Record source or an exact historical Result address. CLI catalogs, Runtime submission and
+Result writing project this plan; they do not repeat Candidate selection or reconstruct forwarding.
 
 The package contains no Script, video, Provider, queue, credentials or rendering knowledge. A
 non-video application can use it with only its own manifests, Frontends, Surfaces and chosen

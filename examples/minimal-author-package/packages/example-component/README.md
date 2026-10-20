@@ -1,12 +1,12 @@
 # Example component fixture
 
 A small complete package for learning Manifest, Surface, Fragment, Producer and activation wiring. Framework-facing imports come from
-the narrow `@hypit/hypit/author`, `producer`, `admission` and `markup` subpaths; video-domain imports
+the narrow `@hypit/hypit/author`, `producer`, `refinement` and `markup` subpaths; video-domain imports
 use their owning packages, such as `@hypit/composition` and `@hypit/temporal`. Declare these libraries
 as ordinary dependencies and the language Host as a compatible peer. TypeScript and Node types are
 build tooling. Dependencies are installed by the package manager, not bundled into the tarball.
 
-It contains a Module Manifest with nominal Types and deterministic Producers, validators, a structured
+It contains a Module Manifest with nominal Types, deterministic Producers and refinements, a structured
 Surface decoder returning `records`, `components`, `fragments` and `exports`, and sealed Fragments with
 literal `fragment-input`, `fragment-operation` and `output` references. `src/temporal.ts` shows the
 Surface-side `@hypit/temporal/markup` Window/Instant reference resolvers; that package is distinct from the

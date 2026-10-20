@@ -14,19 +14,12 @@ Within one live Build, the machine keeps disposable Record/Need/Command indexes,
 counts, reverse Record dependencies and the remaining Goals. A committed Fact therefore wakes only
 the steps whose inputs changed. These indexes are neither serialized nor shared across Builds and
 can always be reconstructed from the Definition and Facts. `evaluate` still derives the exact Fact
-before mutation; `commit` advances the indexes only after the caller has durably appended it.
-
-The pure `reduce(BuildState)` path remains the standalone reference transition for detached or
-deserialized views. Runtime execution can use the machine's indexed Record lookup directly; a Store
-snapshot whose state was already materialized is adopted once instead of replaying the same Facts a
-second time.
-`BuildDefinition` contains only the selected Program, initial Records, Producer steps,
-`Output -> Record` bindings and Targets. Graphs, satisfactions and Candidate identities end at the
-planning boundary.
-
-`resolveNeedCommand(state, commandId)` resolves the Command belonging to an existing Need, including
-when a stopped Build has no outstanding work. Core owns this identity rule; execution adapters do not
-parse Command IDs. The query does not schedule or execute work.
+before mutation; `commit` advances the indexes only after the caller has durably appended it. The
+constructor replays stored Facts through that same accepted-Fact transition, so replay and live
+execution cannot acquire separate scheduling semantics. `materializeBuild` is only a read-view
+projection over this machine; it is not another reducer.
+`BuildDefinition` contains only the selected Program, its initial Records, Producer steps and Goal
+Record identities. Graphs, satisfactions and Candidate identities end at the planning boundary.
 
 Core does not parse source files, load packages, execute components, call providers, store artifact
 bytes or know what a video is. Those responsibilities remain in compiler and runtime packages.

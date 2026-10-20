@@ -10,7 +10,8 @@ No Hypit checkout is needed to develop or install the extension.
 ```ts
 import { defineEndpoint } from "@hypit/hypit/endpoint";
 import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit/endpoint";
-import { generationTypes, compileWireRequest, sealGeneratedImageSet } from "@hypit/generation";
+import { generationTypes, sealGeneratedImageSet } from "@hypit/generation";
+import { materializeWireRequest, planWireRequest } from "@hypit/generation/provider";
 ```
 
 The shipped [project Provider example](../../examples/provider-package/README.md) follows an image
@@ -104,7 +105,7 @@ account's eventual bill. An absent declaration leaves pricing unknown. Callers c
 no-charge work while keeping unknown pricing and Endpoint selection failures visible.
 
 An Endpoint may also expose `readPricing`. It receives the same complete `EndpointRequest` used for
-support selection and resolves only that Endpoint's declared credentials when its source requires
+the selected Endpoint's support check and resolves only that Endpoint's declared credentials when its source requires
 them. The Provider returns current pricing documents together with their source URLs. Their data shape
 belongs to the Provider: one service may return a model rate card, another a broader mixed catalogue,
 and another may expose only its declared pricing page. Hypit preserves the material instead of
@@ -116,29 +117,30 @@ the published rates, units and applicable conditions. The Provider owns this des
 knows its API's price fields and which fields merely describe marketing comparisons. The original
 `data` remains available in JSON and verbose output. Without a summary, the CLI displays the data.
 
-Use the Provider's execution mapping to select the upstream model and the request's known parameters
-to narrow the published material when the service supports it. Preserve applicable units and
-conditions. A future media input supplies its declared slot and role, not its eventual duration or
-other measured properties. Pricing readers receive no graph to traverse; incomplete usage still
-allows returning the model's rate information. Requests sharing a catalogue lookup can share that read
-inside the Provider, whose API determines what can be cached together.
+Use the Provider's execution mapping and the complete request parameters to narrow published material.
+Preserve applicable units and conditions. A blocked graph dependency is an `EndpointDemand`, not a
+partial `EndpointRequest`, so it exposes only the selected Endpoint's static pricing declaration;
+`readPricing` is deferred until the Producer emits a complete request. Pricing readers receive no graph
+to traverse. Requests sharing a catalogue lookup can share that read inside the Provider, whose API
+determines what can be cached together.
 
-Three facts remain separate at this boundary:
+Four facts remain separate at this boundary:
 
+- the `EndpointDemand` declares a capability and return Type that need a deployment;
 - the `EndpointRequest` describes the work selected by the Run;
 - an `EndpointPricingDocument` describes prices published by that Provider;
 - spending authority belongs to the user's decision about the described work and cost.
 
-The caller can place the first two beside each other for an Agent to calculate and explain. Request
-selection continues to follow the Runtime Profile and Endpoint support, while submission continues to
-follow the user's authority.
+Deployment selection uses only the demand and Runtime Profile binding. It never asks several Providers
+to inspect a request and then chooses whichever accepts it. After one Endpoint is selected, the caller
+can place its support and pricing evidence beside the request for an Agent to explain. Submission
+continues to follow the user's authority.
 
-`supports` receives one complete support description. For an executing Need, concrete graph values
-are already in `constraints`. During pre-Build planning, an upstream value that does not exist yet is
-represented by a semantic `pendingInputs` slot instead. A Provider may use the slot's input and
-media role to enforce support limits, but it never receives graph traversal rules or future bytes.
-It returns either `supported`, or `unsupported` with the Provider's reason. Selection infrastructure
-preserves that reason without interpreting request fields or maintaining a central limitation table.
+`supports` receives only a concrete request after its Producer has consumed every graph input and
+emitted a Need. If an upstream value does not exist yet, there is no Endpoint request to inspect;
+planning reports the blocked Record dependency instead. `supports` returns either `supported`, or
+`unsupported` with the selected Provider's reason. Inspection preserves that reason without
+interpreting request fields or maintaining a central limitation table.
 
 An Endpoint can additionally emit explicit, non-secret diagnostics:
 

@@ -17,7 +17,7 @@ and audible speech without becoming a special media class.
 A-roll names the performance carrying a passage. Its picture may fill the frame, move, disappear or
 be absent while its sound and semantic relationships continue. B-roll, generated shots, imported
 pictures, narration, music and effects use the same ordinary media values in their own roles.
-[Media preparation](media.md) owns admission, normalization and processed variants.
+[Media preparation](media.md) owns supplied material, normalization and processed variants.
 
 ## Timeline publishes absolute time
 

@@ -16,6 +16,14 @@ default local implementation, including submission and active-execution stores, 
 `@hypit/runtime-local`; component and endpoint command execution lives in the environment-neutral
 `@hypit/executor`.
 
+The package also owns the environment-neutral shapes exchanged during command-scoped Runtime
+inspection. `RuntimeEndpointQuery` distinguishes a structural demand from a complete request;
+`RuntimeEndpointObservation` keeps deployment selection separate from concrete request support; and
+`RuntimeEndpointPricingObservation` adds optional Provider-owned pricing material only after one
+Endpoint has resolved and has not rejected the concrete request. Unresolved, ambiguous and unsupported
+observations cannot carry pricing documents or pricing errors. These are immutable observations. They
+do not select an Endpoint, store a Profile or introduce a Runtime registry.
+
 The scheduler never changes graph meaning. Targets and candidates are fixed before execution, and
 resource limits only control when an already selected command may run.
 

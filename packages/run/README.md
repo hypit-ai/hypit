@@ -21,3 +21,7 @@ semantic meaning. `RunFragmentRegistry` accepts trusted Fragment packages only t
 
 The optional official XML-like syntax lives in `@hypit/markup/run`. Another trusted Frontend can emit
 the same `RunDocument` without changing this package or Core.
+
+Run candidate sources use one literal vocabulary after decoding: `value`, `file` and
+`build-output`. The official syntax spells these as `<value>`, `<file>` and `<build-record>`; the
+last tag is authoring language only and decodes to an exact historical Build Output source.

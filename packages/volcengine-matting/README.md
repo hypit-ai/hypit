@@ -74,7 +74,8 @@ captions or graphics.
 
 The capability is `@hypit/volcengine-matting@1#matte-portrait-video`, returning a GeneratedVideoSet.
 The Portrait Surface publishes its first video as `.video`. Its model ports are `source`
-(one video) and optional `format` (`WEBM` or `MOV`). It takes no generation prompt or duration.
+(one video) and `format` (`WEBM` or `MOV`). Authors may omit `format`; Model request finalization
+then writes `WEBM` explicitly before any Provider sees it. It takes no generation prompt or duration.
 
 [HypiHub Provider](../provider-hypihub/README.md) maps it to `POST /v1/videos` with
 `model: "matte-portrait-video"`, `ref_video_url` and `format`. Account availability and credentials

@@ -1,7 +1,7 @@
 # `@hypit/producer`
 
 The minimal host-neutral SDK for trusted deterministic Producers. A package exports enumerable
-Producer facets; Type-owner validation is independently owned by `@hypit/admission`. Both identities
+Producer facets; Type-owner validation is independently owned by `@hypit/refinement`. Both identities
 are data: an exact nominal reference plus handler. Hosts enumerate them without running an opaque
 `install()` callback.
 Producer handlers receive only the
@@ -29,7 +29,7 @@ Author Kit; import only the owner of each responsibility:
 | --- | --- |
 | `@hypit/hypit/protocol` | Module manifests and serializable graph identities |
 | `@hypit/hypit/producer` | deterministic Producer handlers and Producer package facets |
-| `@hypit/hypit/admission` | package-owned Type validators and Admission package facets |
+| `@hypit/hypit/refinement` | package-owned Type refinements and Refinement package facets |
 | `@hypit/hypit/author` | sealed Author Graph Fragments |
 | `@hypit/hypit/markup` | Markup Surface declarations and handlers |
 | `@hypit/temporal/markup` | author-time semantic Window/Instant projection helpers |
@@ -50,10 +50,10 @@ dependencies must actually be included. A TypeScript entry can be used when the 
 Host supports it; a compiled JavaScript entry avoids depending on a TypeScript loader.
 
 The activation module connects the implementation pieces; this is a wiring excerpt, assuming the
-local Manifest, Producer/Admission packages and Surface declarations/handlers already exist:
+local Manifest, Producer/Refinement packages and Surface declarations/handlers already exist:
 
 ```ts
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { manifest, moduleRef, surfaces } from "./manifest.js";
@@ -65,7 +65,7 @@ export const hypitPackage = {
   modules: [{ manifest }],
   facets: [
     createProducerPackageFacet(component),
-    createAdmissionPackageFacet(component),
+    createRefinementPackageFacet(component),
     ...surfaces.map((declaration) => createMarkupSurfaceFacet({
       module: moduleRef, declaration, handler: decodeTrack,
     })),
@@ -78,7 +78,8 @@ If several Surfaces have different handlers, bind each declaration to its actual
 mapping them all to `decodeTrack`. Surface metadata is registered through the Markup Surface facet;
 it does not make Markup syntax part of the semantic Module Manifest.
 
-Structured handlers return `records`, `components`, `fragments` and optionally explicit `exports`.
+Structured handlers return `records`, `components` and optionally explicit `exports`; each component
+directly carries the Graph Fragment it instantiates.
 A resolved input contains its nominal `type` and graph `ref`; only authored values necessarily carry
 an inline `record`. A future generated image has a reference, not image bytes available during
 Source compilation. Decode Recipes or Styles from inline authored values, and retain produced

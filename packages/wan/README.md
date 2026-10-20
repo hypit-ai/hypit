@@ -3,9 +3,10 @@
 Exact author/compute contracts and package-owned author Surfaces for Wan 2.7 Image and Wan 2.7 Image
 Pro.
 
-The model variants are separate endpoints with exact request validation. Their Surfaces project the
-primary result to an ordinary image Artifact. The package contains no Provider selection, API key or
-network execution. The selected Provider implements its exact capability.
+The model variants are separate endpoints with exact request validation. Their Surfaces publish the
+complete generated set as `<id>.images` and explicitly select its first item as the convenience
+Artifact `<id>.image`. The package contains no Provider selection, API key or network execution.
+The selected Provider implements its exact capability.
 
 Import the model variant you mean and connect prompt and references as ordinary graph edges:
 
@@ -29,3 +30,6 @@ is no negative prompt either, so write exclusions into the prompt.
 pictures instead, where `count` names a ceiling of up to twelve and the model chooses how many it
 returns. An image set shapes a storyline the way `extended-reasoning` shapes a single picture, so the
 two are not stated together.
+
+Use `.images` when the authored operation asks for several pictures or a storyline set. Use `.image`
+only when the composition intentionally wants the Model package's primary selection.

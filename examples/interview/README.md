@@ -103,7 +103,7 @@ video or alignment requests. Inspect camera cuts and moving head placement in th
 only Caption or MG needs no repeat generation; changing the footage requires matching measurements.
 
 If reviewing the actual footage reveals an alignment error, the reviewed artifact is a complete,
-validated `NarrativeAlignment` Stored Value—not a frame patch embedded in the Source. A Studio or
+validated `NarrativeAlignment` Value—not a frame patch embedded in the Source. A Studio or
 review tool can write that file, and a Run variant can select it explicitly:
 
 ```svml

@@ -49,7 +49,7 @@ chosen names and the accepted values in the component's own vocabulary and READM
 
 ## Implement and inspect the scene
 
-Use the narrow `author`, `producer`, `admission` and `markup` public subpaths for their respective
+Use the narrow `author`, `producer`, `refinement` and `markup` public subpaths for their respective
 responsibilities, and public domain subpaths for the values you consume. [Component Anatomy](./component-anatomy.md) explains how the Manifest, Surface, Fragment and
 Producer cooperate. Keep project copy and media as inputs; draw the component's own panels, frames
 and decoration in its implementation.

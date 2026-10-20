@@ -213,7 +213,7 @@ Runtime's execution state.
 `hypit get` is useful when handing over a particular output. Exported image/video/audio files can be
 selected as file Candidates. A Composite export contains `value.json` and its resource files for
 inspection and transport; that document uses the Result value format, whereas a Run `<value>` accepts
-a StoredValue wrapper. To retain structured normalized media, local-domain or alignment reuse, keep
+the Value itself. To retain structured normalized media, local-domain or alignment reuse, keep
 its Result available and select each required Output with `build-record`. [Builds and Results](../production/builds.md)
 explains Result reuse and export.
 

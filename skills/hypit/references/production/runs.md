@@ -18,9 +18,9 @@ One Run uses these author-facing declarations:
 | `<author source="./main.svml"/>` | Select the Run's one Author entry. |
 | `<import as="media" from="@hypit/media-operations@1"/>` | Make one installed Run Fragment library available. |
 | `<target output="final.video"/>` | Demand one public Author Output; several Targets may be declared. |
-| `<file .../>` | Admit one project file as a typed zero-input Candidate. |
-| `<build-record .../>` | Admit one exact public Output from one earlier Build Result. |
-| `<value .../>` | Admit a serialized typed value from a JSON file. |
+| `<file .../>` | Supply one project file as a typed zero-input Candidate. |
+| `<build-record .../>` | Supply one exact public Output from one earlier Build Result. |
+| `<value .../>` | Supply a serialized typed value from a JSON file. |
 | `<fragment ...>...</fragment>` | Instantiate a package Fragment whose exports become Candidates. |
 | `<satisfy output="..." candidate="..."/>` | Select one declared Candidate for one Author Logical Output. |
 
@@ -138,14 +138,15 @@ upstream reuse.
 
 ## Other value and export forms
 
-`<value id="settings" type="@owner/module@1#Settings" from="./settings.json"/>` admits a typed
-serialized value as a Candidate. The file contains a StoredValue wrapper, for example
-`{"kind":"inline","value":{"enabled":true}}`. The inner value must match the declared Type.
+`<value id="settings" type="@owner/module@1#Settings" from="./settings.json"/>` supplies a typed
+serialized value as a Candidate. The file contains the Value itself, for example
+`{"enabled":true}`. The complete value must match the declared Type. A structured Value may also
+contain ordinary `BlobRef` objects at any depth; it does not need a separate top-level wrapper.
 Use `build-record` for structured Outputs already held in Results, where their associated media
 resources can be resolved with them.
 
-A Composite export's `value.json` is a Result value document with separate resource bindings, not
-this StoredValue wrapper. [Project handoff](../creation/project-files.md#hand-over-an-editable-production)
+A Composite export's `value.json` is a Result transport document with separate resource bindings,
+not the direct Value accepted by a Run `<value>`. [Project handoff](../creation/project-files.md#hand-over-an-editable-production)
 explains retaining its Result for structured reuse in another project location.
 
 Fragment input `value` supplies a scalar: number, boolean, null or text. Structured inputs use

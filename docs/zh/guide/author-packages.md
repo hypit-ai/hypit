@@ -33,7 +33,7 @@ Style 一类 Surface 在裸作者 id 下公开其值，例如 `style={board-styl
 
 ## 实现并查看场景
 
-作者包按职责使用 `@hypit/hypit/author`、`producer`、`admission` 与 `markup` 等窄公共子路径，消费的领域值使用对应所有者的公开子路径。[组件结构](./component-anatomy.md) 介绍 Manifest、Surface、Fragment 和 Producer 如何配合。项目文案与素材作为输入，组件自己的面板、边框与装饰由实现绘制。
+作者包按职责使用 `@hypit/hypit/author`、`producer`、`refinement` 与 `markup` 等窄公共子路径，消费的领域值使用对应所有者的公开子路径。[组件结构](./component-anatomy.md) 介绍 Manifest、Surface、Fragment 和 Producer 如何配合。项目文案与素材作为输入，组件自己的面板、边框与装饰由实现绘制。
 
 preview Source 为作者提供可打开或渲染的小例子。查看能说明行为的状态：进入、关键变化、停留布局和退出。也要在实际编排中查看，这时内容、空间和时机才有具体用途。
 

@@ -107,13 +107,14 @@ A task that reports `succeeded` without an output URL is a service contract viol
 job, and fails loudly. A `failed` task keeps the service's own error code and the received task id
 as evidence, and redacts URLs from the message it republishes.
 
-`assertMappingCoversPorts` checks declared ports and required item fields. Optional fields need
+The Provider depends on the exact Model package and tests concrete supported and unsupported
+requests. Optional fields need
 request-level checks and transport tests as well:
 a mapping that forgets a reference role or an item field fails at load rather than after a paid
-generation returns the wrong video. Where a Model port is genuinely optional, `whenAbsent` states
-what the service should receive when the author omits it — the service then gets the value the
-author's request implies, not a field left to its own default. The lifecycle test asserts the
-mapping against the Model's own port table.
+generation returns the wrong video. Model-owned defaults are inserted while its request is
+finalized, so the Provider always receives an explicit canonical value and only projects it onto
+the service's field names. The lifecycle test asserts the mapping against the Model's own port
+table.
 
 ## Make it a package in the production
 

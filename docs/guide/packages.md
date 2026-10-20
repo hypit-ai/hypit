@@ -61,7 +61,7 @@ material and Results while verifying the migrated work.
 ## Write and share an extension
 
 An external package develops against the narrow public owners it uses, such as
-`@hypit/hypit/author`, `@hypit/hypit/producer`, `@hypit/hypit/admission`,
+`@hypit/hypit/author`, `@hypit/hypit/producer`, `@hypit/hypit/refinement`,
 `@hypit/hypit/markup`, `@hypit/composition`, `@hypit/generation/model` or
 `@hypit/hypit/endpoint`. Use the selected `@hypit/hypit` release as a
 development dependency, compile the extension to JavaScript, and ship its own code and assets. Its

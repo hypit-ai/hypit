@@ -40,7 +40,7 @@ Source 使用 `@your-studio/scoreboard@1` 这样的逻辑 Module 地址。npm �
 
 ## 编写与分享扩展
 
-外部包只使用自己实际需要的窄公共所有者，例如 `@hypit/hypit/author`、`@hypit/hypit/producer`、`@hypit/hypit/admission`、`@hypit/hypit/markup`、`@hypit/composition`、`@hypit/generation/model` 或 `@hypit/hypit/endpoint`。将选定的 `@hypit/hypit` 版本作为开发依赖，把扩展编译为 JavaScript，分发它自己的代码与素材。`package.json` 中的 activation 入口描述它提供的能力；加载选中的扩展时，当前 Distribution 提供公开 Hypit API。
+外部包只使用自己实际需要的窄公共所有者，例如 `@hypit/hypit/author`、`@hypit/hypit/producer`、`@hypit/hypit/refinement`、`@hypit/hypit/markup`、`@hypit/composition`、`@hypit/generation/model` 或 `@hypit/hypit/endpoint`。将选定的 `@hypit/hypit` 版本作为开发依赖，把扩展编译为 JavaScript，分发它自己的代码与素材。`package.json` 中的 activation 入口描述它提供的能力；加载选中的扩展时，当前 Distribution 提供公开 Hypit API。
 
 - [添加作者包](./author-packages.md)：从随发行包提供的可构建组件开始。
 - [组件结构](./component-anatomy.md)：组件内部各部分的职责。

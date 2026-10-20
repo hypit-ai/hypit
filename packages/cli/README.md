@@ -9,9 +9,11 @@ another Host without changing this package or pretending that a local Profile se
 
 `CliDistribution` and the command surface are separate axes. The Distribution supplies compilation,
 Runtime and Result services; this package's root Host always owns process I/O, Help, conflict checks
-and final command dispatch. An installed Distribution declares its default `CliCommandModule`
-exports in its own `package.json`. A project may add installed command packages explicitly through
-its own `package.json`:
+and final command dispatch. An installed Distribution declares default static `CliCommandModule`
+exports in its own `package.json`. The executable may also pass already-bound application modules
+whose Host ports are captured at assembly; these are reported as application contributions and are
+not loadable project packages. A project may add installed command packages explicitly through its
+own `package.json`:
 
 ```json
 {
@@ -24,7 +26,7 @@ its own `package.json`:
 uninstalls or searches for packages. The Host resolves exactly the declared exports through the
 Distribution or project installation, while the ordinary package manager lockfile owns versions.
 Installing a project package or importing it from Source never grants CLI authority. Two modules
-cannot own the same root or replace a domain-neutral or Distribution command.
+cannot own the same root or replace a domain-neutral, Distribution or application command.
 
 Command packages can import the structural authoring types from `@hypit/hypit/cli`; the selected
 module export must expose a `cliCommandModules` array of `hypit.cli-command@1` values. That public
@@ -65,7 +67,7 @@ promising to restart failed execution or describing the interruption as a Result
 | Command | Default scope | Explicit detail |
 | --- | --- | --- |
 | `check` | Validation, targets and counts | `--verbose`: exported names/types and historical references |
-| `plan` | Targets, demanded requests, Endpoint selection and diagnostics | `--verbose`: Run choices, graph step count and unreached declarations |
+| `plan` | Targets, demanded requests, Endpoint selection and diagnostics | `--verbose`: Run choices and graph step count |
 | `pricing` | Requests that may incur a Provider charge and their rate material | `--verbose`: declared no-charge requests and original documents |
 | `status`, `activity` | Current work, Provider-reported phases and failures | `--verbose`: individual operations; activity also includes capacity reservations |
 | `inspect` | Targets and explicitly highlighted Outputs, outcome and failure evidence | `--output <name>` selects one Output; `--verbose` browses all available Outputs and receipts |
@@ -73,7 +75,8 @@ promising to restart failed execution or describing the interruption as a Result
 
 `runtime`, `programs`, `paths` and the private Worker entry belong to the selected Local Runtime
 command module, not to this generic command engine. They still appear under the one `hypit` command
-because the official Distribution explicitly selects `@hypit/runtime-local/cli`.
+because the official executable binds `createLocalRuntimeCliCommandModules()` to its exact Local
+Host port at application assembly. The module never casts the generic Distribution to discover that port.
 
 Run choices count explicit Candidate selections, which can supply existing work or execute an
 alternative producer. They are not a count of reused files. Result output counts describe all
@@ -134,21 +137,19 @@ hypit paths --project /path/to/video-project
 hypit plan /path/to/video-project/build.svrun --project /path/to/video-project
 ```
 
-`plan` lists every Endpoint request in the frozen Build graph. Exact-model packages expose their own
-port tables and request-assembly edges, so the CLI can show authored prompt, duration and generation
-settings without searching arbitrary records for a request-shaped object. When an input file will be
-made by an earlier Build step, that direct graph edge stays symbolic until the file exists; the rest
-of the request is still shown. A complete request is resolved through the same Endpoint Registry as
-the Build, including the Endpoint's `supports` check.
-Each component's planned-Need presentation owns its useful request fields. An empty presentation
-means the summary is unavailable, not that the request has no parameters. Structured render inputs
-are summarized by their owning packages; the CLI does not traverse upstream graphs to invent them.
+`plan` lists every structural Need in the frozen Build graph. Each Need selects a deployment from its
+capability, return Type and Profile binding even when its Producer is blocked by an upstream Record.
+Only a complete request emitted by an executed Producer is passed to the selected Endpoint's
+`supports` predicate. Blocked requests retain their direct Step/Record dependencies and report support
+as `not-evaluated`; they never carry partial constraints. Concrete request summaries are display-only
+projections of the actual constraints and do not participate in selection, support or submission.
 
 `pricing <run>` uses that selected Runtime to read Provider-owned rate material. The default report
-summarizes requests whose resolved Endpoint explicitly declares `pricing.kind: "local"` as having no
-Provider charge. Requests with missing pricing declarations, failed price reads, or unresolved or
-unsupported Endpoints remain visible. Names, model families and request parameters do not determine
-whether work is free.
+summarizes requests whose selected Endpoint explicitly declares `pricing.kind: "local"` as having no
+Provider charge. Requests with missing pricing declarations, failed price reads, unresolved selections
+or unsupported concrete requests remain visible. A blocked request can show the selected Endpoint's
+static price page or local declaration, but request-sensitive `readPricing` remains deferred. Names,
+model families and request parameters do not determine whether work is free.
 
 Matching capability, Endpoint and pricing material share one group. Each group shows shared request
 parameters once and preserves the counts and combinations of varying parameters. A Provider's optional
@@ -175,6 +176,13 @@ imports the Local Runtime implementation. Result commands do not consult or cons
 the generic CLI opens the resolved project's Result history and cannot silently choose a
 Provider-specific login flow.
 
+Runtime-aware planning opens one command-scoped inspection through that Host port. `endpoints`,
+request-sensitive `pricing`, selected-deployment `preflight`, Worker startup/status and Build Runtime
+creation consume the same frozen Profile and Endpoint declarations. This prevents one command from
+selecting with one Profile revision and submitting through another, without creating cross-command
+state. The query and observation shapes themselves are owned by `@hypit/runtime`; the CLI only
+projects them into its human and machine views.
+
 ## Execution logs
 
 `hypit logs <build-id> [--project <project>] [--runtime <profile>] [--lines <count>]` reads Build
@@ -195,7 +203,7 @@ CLI, Studio and creation tools call that same package; the CLI is not another en
 
 `doctor`, `programs prepare|up|status|down`, and `runtime up` accept repeated `--endpoint <instance>` values.
 The same Endpoint scope reaches Program operations. Omission means the whole Profile. Build preflight
-instead uses the Endpoints resolved for that Build's concrete requests.
+instead uses the Endpoints selected for every structural Need in that Build, including blocked requests.
 An unrelated offered capability does not add another credential or Program requirement.
 Program rows show the configured Endpoint selector alongside an internal Program ID when they differ.
 The `programs` JSON `ok` field reports whether this command succeeded; `ready` reports service

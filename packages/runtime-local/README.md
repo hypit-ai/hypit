@@ -3,11 +3,13 @@
 The default local Runtime for Hypit. It owns the Worker, scheduler and active SQLite execution
 worklist. Project-owned Build Results hold finished public Outputs.
 
-This package also exports `@hypit/runtime-local/cli`, the command contribution that owns
+This package also exports `createLocalRuntimeCliCommandModules()` from `@hypit/runtime-local/cli`.
+The factory binds the exact Local Host port and returns the command contribution that owns
 `runtime`, `programs`, `paths` and the internal Worker entry. The generic `@hypit/cli` Host owns
 none of that local process vocabulary: it consumes a narrow `CliRuntimeHost` port for Build,
-Result, credential and transient-execution operations. The root Hypit application explicitly
-selects this contribution and keeps one `hypit` executable.
+Result, credential and transient-execution operations. The root Hypit executable binds the Local
+contribution at application assembly and keeps one `hypit` executable; a project package cannot
+load an unbound Local Runtime module or make the generic context carry a private Host API.
 
 Managed Program preparation writes subprocess stdout and stderr directly to that Program's
 `install.log`, so dependency-download output is readable before installation finishes. Installation
@@ -66,14 +68,25 @@ offer the same capability, `bindings` says which one serves it, keyed by the cap
 A capability offered by exactly one Endpoint needs no binding. A contested capability without one is
 reported by `doctor` and `plan` and blocks the Need at Build time; a binding to an Endpoint that does
 not offer the capability is an error. `plan`, creation-time tools and the Build resolve Endpoints
-through the same registry with the same bindings.
+through the same registry with the same bindings. Selection uses capability and return Type only.
+`supports` runs afterward against the one selected Endpoint and never disambiguates or falls back to
+another Endpoint.
+
+For one `plan`, `pricing` or `build` command, the Host opens a short-lived Runtime inspection. It reads
+and parses the Profile once, installs the selected adapters once and activates each relevant Endpoint
+once. Endpoint selection, static pricing, preflight, Worker location and Build Runtime creation all use
+that frozen snapshot. A Profile edit applies to the next command, not halfway through the current one.
+The inspection is closed at command end; it is not persisted and does not cache dynamic pricing.
+Its shared Runtime types distinguish a structural or concrete Endpoint query, deployment observation
+and optional pricing enrichment. Runtime Hosts and CLI clients reuse those types instead of maintaining
+parallel status unions.
 
 Disposable authoring clients may open one transient execution. It installs only immediate capabilities
-whose Provider explicitly declares `transient: true`, keeps the same Profile bindings and resolves each
+whose Endpoint explicitly declares `transient: true`, keeps the same Profile bindings and resolves each
 complete Need through its ordinary `supports` predicate. Pricing is informational and is never used as
 an execution permission. The Runtime retains Endpoint handlers, credentials and Program readiness; the
 client supplies its temporary Resources and receives no Endpoint registry. Declared concurrency is shared
-inside that one disposable session only. A Provider that needs durable or cross-Build quota admission must
+inside that one disposable session only. An Endpoint that needs durable or cross-Build quota admission must
 not opt that capability into transient execution.
 
 Build Results belong to the project at `.hypit/results`. Archiving or moving completed Results is a
@@ -85,7 +98,7 @@ default. A Profile `pool` is only for instances that really share one account, d
 quota; exact-model limits may narrow it further. Build identity is not a capacity resource and creates
 no second queue.
 Claims may carry `units` (default 1): one render Need can occupy one request slot and four browser
-slots at once. The same admission rule applies to total Provider capacity, exact models, and local
+slots at once. The same admission rule applies to total Endpoint capacity, exact models, and local
 compute resources. SQLite retains the weighted reservation across execution turns; an ended attempt releases its reservations. This
 coordinates Builds sharing this Runtime's Execution Store; it does not enforce a service's quotas
 across other machines. Short-action limits are described below.
@@ -99,7 +112,7 @@ a new Run and Build can request the remaining work. No original-Build reconcilia
 An explicit cancellation stops new work and makes one best-effort remote cancellation call when
 supported; its acknowledgement is recorded separately from the local cancelled outcome.
 
-`defaultConcurrency` and exact-model limits govern managed Need occupancy. Asynchronous Providers can
+`defaultConcurrency` and exact-model limits govern managed Need occupancy. Asynchronous Endpoints can
 also expose `actionLimits` for `submit`, `poll` and `collect`; each action supports `concurrency` and
 `rate: { limit, periodMs }`. These action budgets share the same Runtime store and real `pool` identity.
 Rate permits replenish with time and are not returned when an action finishes. Rate counts admitted
@@ -109,6 +122,10 @@ account-wide limits, including tasks submitted elsewhere or still running after 
 The Worker yields to sockets and timers between graph reads. Resource waiters are awakened as capacity
 becomes available; known Operations are polled from their own lightweight records. Graph hydration is
 serialized, while network actions and local work remain concurrent under their declared limits.
+SQLite decodes each Operation record into the exact current lifecycle union branch. Required phase
+facts must be present, and facts owned by another phase are refused rather than carried forward as
+hidden state. This is the single `@1` representation; the reader does not guess an older shape or
+maintain a compatibility branch.
 
 HypiHub can be the explicitly selected gateway for users without their own service keys. A bound
 Provider's authentication, quota or transport error never changes that selection. Separate accounts use separate pools even when they implement the same model.
@@ -182,7 +199,7 @@ The logger does not capture the process environment, credential values, request 
 ## Build-scoped execution
 
 The long-lived Worker supervises execution carriers. Each Build has its own module scope,
-component/Provider registries and selected configuration. Editing project code or Profile selections
+Producer/Endpoint registries and selected configuration. Editing project code or Profile selections
 applies to the next Build without restarting the Worker; already loaded modules remain bound to their
 original Build. Installed Distribution modules stay process-owned. The Package Loader owns scoped
 JavaScript/TypeScript loading, including transitive ESM and CommonJS dependencies.

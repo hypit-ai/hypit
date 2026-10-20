@@ -38,7 +38,7 @@ Model 定义生成请求，Provider 实现推理服务的 API，Endpoint 选择�
 
 ## 添加 Model
 
-项目包使用 `@hypit/generation/model`、`@hypit/generation`、`@hypit/hypit/author`、`@hypit/hypit/producer`、`@hypit/hypit/admission` 与 `@hypit/hypit/markup` 等公共 API。声明准确的请求端口、参数取值、输出类型和能力。作者 Surface 把 Prompt Text 与参考素材连接到请求，再将生成素材作为普通图输出公开。
+项目包使用 `@hypit/generation/model`、`@hypit/generation`、`@hypit/hypit/author`、`@hypit/hypit/producer`、`@hypit/hypit/refinement` 与 `@hypit/hypit/markup` 等公共 API。声明准确的请求端口、参数取值、输出类型和能力。作者 Surface 把 Prompt Text 与参考素材连接到请求，再将生成素材作为普通图输出公开。
 
 [Generation Model 作者 API](https://github.com/hypit-ai/hypit/blob/main/packages/generation/README.md#exact-model-authoring) 提供请求定义与 activation 示例。包拥有模型接口；凭据与 HTTP 映射由 Provider 负责。
 

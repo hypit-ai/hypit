@@ -6,6 +6,12 @@ The byte-oriented Source contract shared by Author and Run compilation.
 bytes with the exact trusted Frontend selected by the caller, Workspace mount or package Source
 export. Source itself never guesses from a suffix or body and has no default parser.
 
+`SourceRange` is owned here because offsets locate authoring syntax inside a Source; graph Protocol
+values remain independent of parsers, text encodings and editor positions.
+
+A `ResolvedSourceAsset` contains exactly one Protocol `BlobRef` in its `blob` field. Source owns the
+resolution request and source range; byte transfer ownership remains with the Workspace.
+
 `@hypit/source/text` is the optional adapter used by Hypit's self-described UTF-8 author files. It
 recognizes one bounded Header such as:
 

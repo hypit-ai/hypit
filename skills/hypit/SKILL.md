@@ -297,7 +297,7 @@ practical, revisit that choice and carry the improvement into the work and its n
 | imports, output references, literal values or Recipe rules | `references/production/source-syntax.md` |
 | choosing an existing Prompt Kit, assembling its wording or authoring a new one | `references/production/prompt-kits.md` |
 | Run syntax, material Targets, Candidates, Run Fragments or reusing produced media | `references/production/runs.md` |
-| admitting or reusing images/video/audio, model references, normalization, local domains, NarrativeAlignment, trims or processed variants | `references/production/media.md` |
+| supplying or reusing images/video/audio, model references, normalization, local domains, NarrativeAlignment, trims or processed variants | `references/production/media.md` |
 | placing independent images, prepared video or surfaces and choosing source playback | `references/production/visual-clips.md` |
 | placing independent music, narration, ambience or effects and selecting source playback | `references/production/audio-clips.md` |
 | downloading a reference or source video from a link with yt-dlp | `references/production/video-downloads.md` |

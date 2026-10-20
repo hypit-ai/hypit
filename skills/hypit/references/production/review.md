@@ -59,10 +59,10 @@ current scope clear so the user can give useful direction, and continue the rema
 the agreed commission. [Service selection](../environment/model-and-provider.md#choose-the-practical-capability-path-with-the-user) owns unresolved service choices.
 
 Read missing behavior through its material and use together. For intended speech, listen to
-the selected Film: an available audio file establishes material, while admission and the chosen
+the selected Film: an available audio file establishes material, while its selected Candidate and the chosen
 Audio contribution establish whether that material reaches the Film. For intended physical
 action, examine the footage itself as well as the viewport animation. Use
-[media admission](media.md), [Audio Clips](audio-clips.md) and [Film assembly](rendering.md)
+[media preparation](media.md), [Audio Clips](audio-clips.md) and [Film assembly](rendering.md)
 to complete those relationships. Silence or stillness can equally be intentional when they serve the Brief.
 
 Look at the complete Film at its intended delivery size as well as the components inside it. A component that looks

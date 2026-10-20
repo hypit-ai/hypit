@@ -118,7 +118,7 @@ and any detector in their own execution or measurement boundary.
 ## Write the smallest component that expresses the role
 
 Declare the new package in the project's `packages/` and ordinary package configuration. Read the
-installed `@hypit/hypit/author`, `producer`, `admission` and `markup` READMEs for the public package boundaries and inspect a close installed sibling for
+installed `@hypit/hypit/author`, `producer`, `refinement` and `markup` READMEs for the public package boundaries and inspect a close installed sibling for
 the relevant implementation, rather than depending on a monorepo example directory being present.
 When already selected by a project, `@hypit/interview-emoji-reveal` demonstrates persistent
 Moment-driven state and `@hypit/ranking` demonstrates reveal Windows and settled rows.

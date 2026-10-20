@@ -28,7 +28,9 @@ Recipe Record identity.
 
 Each property ends with `;`. Duplicate properties in one rule and duplicate rule paths are errors.
 Bare words such as `cover` remain strings; use quoted strings when punctuation could conflict with
-the rule syntax. JSON arrays and objects require JSON quoting; they do not evaluate expressions or
+the rule syntax. Double-quoted strings use JSON string syntax, including its quote, backslash and
+control-character escapes; the formatter emits that canonical quoted form. Single-quoted author
+strings may escape their delimiter and backslash. JSON arrays and objects require JSON quoting; they do not evaluate expressions or
 graph references. Units such as `8f` or `50%` remain string values until a consuming package interprets
 them. A consumer that needs graph media or font inputs takes explicit Source references separately.
 

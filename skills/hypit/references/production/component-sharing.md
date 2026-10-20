@@ -123,7 +123,7 @@ an actual Source example, the public outputs, any companion or asset requirement
 release used to check it. Inspect the tarball contents with `npm pack --dry-run`.
 
 An executable Author Package uses the public APIs it needs, such as `@hypit/hypit/author`,
-`@hypit/hypit/producer`, `@hypit/hypit/admission` and `@hypit/hypit/markup`.
+`@hypit/hypit/producer`, `@hypit/hypit/refinement` and `@hypit/hypit/markup`.
 Declare `@hypit/hypit` as a compatible peer and development dependency, and domain packages such as
 `@hypit/composition` or `@hypit/caption` as ordinary dependencies. A Studio Companion also declares
 compatibility with `@hypit/studio-companion` through a peer dependency. Its release contains its own

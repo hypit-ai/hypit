@@ -64,7 +64,7 @@ installed tarball contains a second editable source tree:
 | [Ranking Companion](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/studio.ts) | Read the same program, present persistent rows and activation lanes, and connect edits to actual Source inputs. |
 
 A project component can use these relationships with its own behavior. External TypeScript uses
-`@hypit/hypit/author`, `@hypit/hypit/producer`, `@hypit/hypit/admission`,
+`@hypit/hypit/author`, `@hypit/hypit/producer`, `@hypit/hypit/refinement`,
 `@hypit/hypit/markup`, `@hypit/temporal/markup` and the appropriate domain APIs. Copy the relevant idea into
 the project's own package, with its own Module identity, instead of editing the installed Ranking.
 

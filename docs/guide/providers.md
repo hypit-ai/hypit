@@ -62,7 +62,7 @@ deployment and executing a video Build have separate lifetimes.
 ## Add a Model
 
 Develop a project package against `@hypit/generation/model`, `@hypit/generation`,
-`@hypit/hypit/author`, `@hypit/hypit/producer`, `@hypit/hypit/admission` and `@hypit/hypit/markup`.
+`@hypit/hypit/author`, `@hypit/hypit/producer`, `@hypit/hypit/refinement` and `@hypit/hypit/markup`.
 Declare the exact request ports, parameter values, result type and capability. Its author Surface
 connects prompt Text and reference media to the request, then publishes the resulting media as a
 normal graph Output.

@@ -79,12 +79,12 @@ Keep the boundary useful:
 - Runtime Profiles own external execution and credentials;
 - Provider packages implement media tools and external services.
 
-Read the installed `@hypit/hypit/producer`, `admission`, `author` and `markup` READMEs for the public package boundaries and a relevant component
+Read the installed `@hypit/hypit/producer`, `refinement`, `author` and `markup` READMEs for the public package boundaries and a relevant component
 for an implementation example. Give the new package its own Module identity and use the project
 owner's scope; `@hypit/*` is the Hypit project's publishing namespace, not a scope for project packages.
 
 TypeScript imports use public SDK paths such as `@hypit/hypit/author`, `@hypit/hypit/producer`,
-`@hypit/hypit/admission`, `@hypit/hypit/markup`, `@hypit/composition`,
+`@hypit/hypit/refinement`, `@hypit/hypit/markup`, `@hypit/composition`,
 `@hypit/hypit/text` or `@hypit/caption`; Studio Companions use the independent
 `@hypit/studio-companion` package. Source imports instead name logical Modules,
 such as `@hypit/caption@1`. Declare the domain packages you import as ordinary dependencies;

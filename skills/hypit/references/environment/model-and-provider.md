@@ -244,7 +244,7 @@ Follow one actual request:
 3. Implement immediate execution or the real `start`, `poll` and `collect` lifecycle. Checkpoint
    an acknowledged task receipt promptly; Runtime owns continued scheduling. Report progress and
    preserve public failure evidence without exposing credentials or signed URLs.
-4. Admit returned media through `context.resources` and return the declared result type. Configure
+4. Store returned media through `context.resources` and return the declared result type. Configure
    capacity for the actual resource and expose the service's price source and applicable units.
 5. Compile and install the package with the project's package manager, select its `use` and bindings,
    and exercise the requested path within the user's existing authorization.
@@ -266,7 +266,7 @@ silently changing an author's request.
 | `@hypit/generation` | Generated-media values and request/mapping helpers |
 | `@hypit/hypit/endpoint` | Execution, resources, credentials, support, receipts and capacity |
 | `@hypit/runtime-local/extension` | Profile activation, diagnostics and Managed Programs for the official local Runtime |
-| `@hypit/hypit/author`, `producer`, `admission`, `markup` | Author graphs, deterministic Producers, Type admission and Markup Surfaces respectively |
+| `@hypit/hypit/author`, `producer`, `refinement`, `markup` | Author graphs, deterministic Producers, owner-defined Type refinement and Markup Surfaces respectively |
 
 These packages' READMEs ship with the Distribution and own precise APIs. Use the selected
 `@hypit/hypit` release as the extension's development dependency; ship compiled JavaScript and normal

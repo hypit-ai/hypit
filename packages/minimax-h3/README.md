@@ -19,3 +19,5 @@ selected in the Runtime Profile.
 
 The Surface makes every prompt/media dependency an explicit graph edge and leaves execution to a Provider.
 `FrameVideo` accepts a first frame, a last frame, or both; either frame is an ordinary image Artifact edge.
+When `resolution` is omitted, the Model finalizes it as `2K`; the complete request sent to every
+Provider contains that value explicitly.

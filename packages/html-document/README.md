@@ -17,9 +17,10 @@ Select the document in the Run:
 </svrun>
 ```
 
-The `HtmlDocument` result contains a compiled `HtmlProgram` and its audio plan.
-The Result repository preserves referenced fonts, images, video and audio using
-ordinary resource bindings. Upstream material requirements are handled by the Run.
+The `HtmlDocument` result contains a compiled `HtmlProgram`, its `AudioProgram`, and
+the referenced fonts, images, video and audio needed to materialize the document.
+The Result repository preserves those resources, while the Run selects the upstream
+material used to produce them.
 
 Hosts turn the result into HTML by supplying material URLs:
 

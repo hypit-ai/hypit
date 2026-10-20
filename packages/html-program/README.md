@@ -62,7 +62,7 @@ fonts, images and frame listeners before pixels are accepted.
 - Absolute time stays in Timeline.
 - HTML lowering and the frame-page ABI stay here.
 - Browser lifecycle, filesystem staging, source decoding, screenshots and encoding stay in a Provider.
-- Audio planning stays in Media Operations; concrete audio processing and final mux stay in the
+- Audio program compilation stays in Media Operations; concrete audio processing and final mux stay in the
   selected Provider implementation.
 
 There is no raw-HTML reverse compiler. A snapshot or Provider receives the typed

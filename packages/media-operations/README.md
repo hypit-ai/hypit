@@ -104,19 +104,19 @@ WAV but makes no NarrativeAlignment, speaker or semantic claim; it can therefore
 reference port directly. Frame extraction supports `first`, `last`, `frame:<index>` and
 `time:<seconds>`. Transform operations are ordered author meaning and never an arbitrary FFmpeg string.
 
-The same package also owns two provider-neutral media completion plans/capabilities:
+The same package also owns two provider-neutral media completion paths/capabilities:
 
 ```text
-Composition -> pure AudioProgramPlan -> render-timeline-audio Need -> TimelineAudio
+Composition -> pure AudioProgram -> render-timeline-audio Need -> TimelineAudio
 TimelineVisual + TimelineAudio -> mux-program-media Need -> MuxedMedia
 ```
 
-Compiling an `AudioProgramPlan` is ordinary deterministic code. Reading Artifact bytes, decoding,
+Compiling an `AudioProgram` is ordinary deterministic code. Reading Artifact bytes, decoding,
 resampling, mixing, encoding or muxing is never a Producer shortcut: it is an explicit Provider
-Need. The plan fixes exact 48 kHz sample boundaries, source-time-derived piece rates, gain/fades and the absence
+Need. The program fixes exact 48 kHz sample boundaries, source-time-derived piece rates, gain/fades and the absence
 of hidden normalization/limiting. The local FFmpeg Provider consumes the shared execution body. Other Providers implement the same
 public request and result semantics.
 
-AudioProgramPlan preserves AudioClip `gainEnvelope` and `audibility` on the full program sample
+AudioProgram preserves AudioClip `gainEnvelope` and `audibility` on the full program sample
 clock. The [Composition definition](../composition/README.md#audio-level-automation-on-the-program-clock)
-owns their semantics; the plan does not reinterpret source choice or presentation precedence.
+owns their semantics; the program does not reinterpret source choice or presentation precedence.
